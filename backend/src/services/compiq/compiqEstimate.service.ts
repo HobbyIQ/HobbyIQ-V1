@@ -6878,16 +6878,54 @@ export async function computeEstimate(
     isAnyEstimate ? "rough" : null;
   const responseIsEstimate: boolean = isAnyEstimate;
 
+  // CF-SLOPE-VALUATION-MAIN-ENGINE (Drew, 2026-07-13, PR #419): mirror
+  // the Cardsight UUID router's slope-based valuation on the main CH
+  // engine so iOS sees identical semantics regardless of vendor. When
+  // the comp pool has ≥2 dated records with distinct dates, the linear
+  // regression fit at last-observed-date overrides the median-anchored
+  // responseFmv for Market Value; the projection at now+30d overrides
+  // predictedPrice. Attribution updated to `linear-regression` so the
+  // wire's `predictedPriceAttribution` matches across vendors.
+  //
+  // Falls through cleanly on any of: estimate branches (isAnyEstimate),
+  // thin pools (< 2 records), same-day sales (no time-spread), null
+  // dates. The pre-existing median-anchored numbers stay authoritative
+  // on those paths.
+  const slopeCompsInput = !isAnyEstimate
+    ? comps.map((c) => ({
+        price: c.originalPrice,
+        date: c.date ?? null,
+      }))
+    : [];
+  const { computeSlopeValuation: slopeFn } = await import(
+    "./slopeValuation.js"
+  );
+  const slopeAdj =
+    slopeCompsInput.length >= 2 ? slopeFn(slopeCompsInput) : null;
+  const slopeMarketValue = slopeAdj?.marketValue ?? responseFmv;
+  const slopePredictedPrice =
+    slopeAdj?.predictedPrice ?? __predicted.predictedPrice;
+  const slopePredictedRange =
+    slopeAdj?.predictedPriceRange ?? __predicted.predictedPriceRange;
+  const slopePredictedAttribution = slopeAdj
+    ? {
+        method: "linear-regression" as const,
+        direction: slopeAdj.direction,
+        slopePerMonthPct: slopeAdj.slopePerMonthPct,
+        n: slopeAdj.n,
+      }
+    : __predicted.predictedPriceAttribution;
+
   return {
     cardTitle,
     verdict: verdictText,
     action: result.action ?? "Hold",
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
-    fairMarketValue: responseFmv,
+    fairMarketValue: slopeMarketValue,
     fairMarketValueLow: responseFmvLow,
     fairMarketValueHigh: responseFmvHigh,
-    marketValue: responseFmv,
+    marketValue: slopeMarketValue,
     // CF-A(a): T3 re-bucket fields. populated only when chosenTier==="T3"
     // AND the engine computed a positive fairMarketValue from the base-auto
     // pool. T0/T1/T2 and the variant-mismatch short-circuit emit nulls here.
@@ -6898,9 +6936,9 @@ export async function computeEstimate(
     estimateBasis: responseEstimateBasis,
     isEstimate: responseIsEstimate,
     valuationStatus: responseValuationStatus,
-    predictedPrice: __predicted.predictedPrice,
-    predictedPriceRange: __predicted.predictedPriceRange,
-    predictedPriceAttribution: __predicted.predictedPriceAttribution,
+    predictedPrice: slopePredictedPrice,
+    predictedPriceRange: slopePredictedRange,
+    predictedPriceAttribution: slopePredictedAttribution,
     signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,

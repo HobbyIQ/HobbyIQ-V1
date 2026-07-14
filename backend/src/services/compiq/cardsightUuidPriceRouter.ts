@@ -20,6 +20,7 @@ import {
   computePooledPrediction,
   pooledTrendToTrendIQShape,
 } from "./resolverFallbackHelper.js";
+import { computeSlopeValuation } from "./slopeValuation.js";
 
 interface PriceByCardsightUuidInput {
   cardId: string;
@@ -52,141 +53,8 @@ function median(nums: number[]): number | null {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-// CF-SLOPE-VALUATION (Drew, 2026-07-13, PR #418): fit a linear
-// regression to (dateMs, price) points and return the slope + intercept.
-// The slope IS the direction of the market (positive = moving up,
-// negative = down, near-zero = static). Valuing the card at t=now uses
-// the regression line, so Market Value reflects "where the price
-// currently sits per the observed sales trajectory" — not the median,
-// not the last sale, not a windowed cutoff. Returns null when there's
-// fewer than 2 points with distinct dates (no slope defined).
-interface Regression {
-  slope: number;      // dollars per millisecond
-  // Intercept fitted on x = (tMs - firstT) — price at t=firstT.
-  interceptAtFirstT: number;
-  firstT: number;     // reference date (Unix ms of the earliest sale)
-  n: number;
-}
-
-function fitLinearRegression(
-  records: Array<{ tMs: number; price: number }>,
-): Regression | null {
-  if (records.length < 2) return null;
-  const firstT = records[0].tMs;
-  const distinctTimes = new Set(records.map((r) => r.tMs)).size;
-  if (distinctTimes < 2) return null;
-
-  const n = records.length;
-  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-  for (const r of records) {
-    // Normalize x to (dateMs - firstT) so the intercept fits at the
-    // first sale's date, not the Unix epoch (avoids astronomical values).
-    const x = r.tMs - firstT;
-    const y = r.price;
-    sumX += x;
-    sumY += y;
-    sumXY += x * y;
-    sumXX += x * x;
-  }
-  const denom = n * sumXX - sumX * sumX;
-  if (denom === 0) return null;
-  const slope = (n * sumXY - sumX * sumY) / denom;
-  // Ordinary-least-squares intercept in the normalized x-space:
-  //   intercept = ȳ - slope × x̄
-  // This IS the fitted price at x=0, i.e. at t = firstT.
-  const interceptAtFirstT = (sumY - slope * sumX) / n;
-  return { slope, interceptAtFirstT, firstT, n };
-}
-
-function valueAt(reg: Regression, tMs: number): number {
-  return reg.interceptAtFirstT + reg.slope * (tMs - reg.firstT);
-}
-
-/**
- * Compute Market Value + Predicted Price from a chronologically-ordered
- * pool of raw sales using linear regression.
- *
- * `marketValue` — regression fit at the MOST RECENT sale's date. Reflects
- *   what the market has been paying most recently along the observed
- *   trend line. Never above the highest observed sale for an up-trend
- *   (or below the lowest for a down-trend) because it's evaluated at a
- *   point WITHIN the observed data range.
- * `predictedPrice` — regression fit at now + 30 days. Extrapolates the
- *   slope forward. Can be higher than any observed sale if the trend
- *   is up, lower if down — that's intentional (it's a projection).
- * `direction` — up / down / static based on slope × 30d ("per-month
- *   trend"). Deadband: ±3% per 30d is "static".
- *
- * Returns null on any input that can't produce a slope (fewer than 2
- * dated records, all sales on the same day, etc.).
- */
-interface SlopeValuation {
-  marketValue: number;
-  predictedPrice: number;
-  predictedPriceRange: { low: number; high: number };
-  direction: "up" | "down" | "static";
-  slopePerMonthPct: number;
-  n: number;
-  regressionSlope: number;
-}
-
-const MS_PER_DAY = 86_400_000;
-const STATIC_DEADBAND_PCT = 3;
-
-function computeSlopeValuation(
-  rawRecords: Array<{ date: string | null; price: number }>,
-): SlopeValuation | null {
-  const points = rawRecords
-    .filter((r) => typeof r.date === "string" && r.date.length > 0 && r.price > 0)
-    .map((r) => ({ tMs: Date.parse(r.date!), price: r.price }))
-    .filter((p) => Number.isFinite(p.tMs));
-  if (points.length < 2) return null;
-  points.sort((a, b) => a.tMs - b.tMs);
-  const firstT = points[0].tMs;
-
-  const reg = fitLinearRegression(points);
-  if (!reg) return null;
-
-  const lastT = points[points.length - 1].tMs;
-  const nowT = Date.now();
-  const futureT = nowT + 30 * MS_PER_DAY;
-
-  const marketAtLast = valueAt(reg, lastT);
-  const predictedAt30d = valueAt(reg, futureT);
-
-  // Slope reported as "% per month" so direction thresholds make sense.
-  const monthlyDelta = reg.slope * 30 * MS_PER_DAY;
-  const slopePerMonthPct = marketAtLast > 0
-    ? (monthlyDelta / marketAtLast) * 100
-    : 0;
-
-  const direction: "up" | "down" | "static" =
-    Math.abs(slopePerMonthPct) < STATIC_DEADBAND_PCT
-      ? "static"
-      : slopePerMonthPct > 0
-        ? "up"
-        : "down";
-
-  // Range widens as sample count decreases (uncertainty on thin data).
-  const spreadPct =
-    reg.n >= 20 ? 0.10 :
-    reg.n >= 10 ? 0.15 :
-    reg.n >= 5 ? 0.22 :
-    0.30;
-
-  return {
-    marketValue: Math.max(0, Math.round(marketAtLast * 100) / 100),
-    predictedPrice: Math.max(0, Math.round(predictedAt30d * 100) / 100),
-    predictedPriceRange: {
-      low: Math.max(0, Math.round(predictedAt30d * (1 - spreadPct))),
-      high: Math.round(predictedAt30d * (1 + spreadPct)),
-    },
-    direction,
-    slopePerMonthPct: Math.round(slopePerMonthPct * 10) / 10,
-    n: reg.n,
-    regressionSlope: reg.slope,
-  };
-}
+// CF-SLOPE-VALUATION extracted to ./slopeValuation.js so both this router
+// and the main CH engine (compiqEstimate.service) consume identical math.
 
 function percentile(nums: number[], p: number): number | null {
   if (nums.length < 4) return null;
