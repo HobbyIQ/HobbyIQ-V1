@@ -1,0 +1,304 @@
+// CF-CARDID-SUGGESTER-MULTI-VENDOR + CF-CARDID-SUGGESTER-TOP-N
+// (Drew, 2026-07-14) — pins the multi-vendor cardId suggester behavior:
+//
+//   1. Fires CH search AND CS-native fetch in parallel; unions the pools
+//   2. Both scored by the same field-alignment scorer
+//   3. Highest score wins the primary suggestion
+//   4. CS-native cardId comes back in wire format ({parent}::{parallel})
+//   5. Primary tier: "high" tier suppresses alternatives; medium/low
+//      surfaces up to 2 alternatives for one-tap resolution
+//   6. Dedup across vendors — same physical SKU from CH and CS surfaces
+//      only once (primary or alternative, not both)
+//   7. Alternative min-score gate: trivially-low candidates are filtered
+//
+// The Hartman scenario this fixes: CH's catalog has no CPA-EHA Blue
+// Refractor Auto SKU, so a CH-only suggester returned a wrong-variant
+// pick. CS-native has the SKU exploded from its parallels tree; the
+// multi-vendor merge lets the CS row win the primary.
+
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
+  searchCards: vi.fn(),
+}));
+vi.mock("../src/services/compiq/cardsightUuidSource.js", () => ({
+  fetchCardsightUuidNativeCandidates: vi.fn(),
+}));
+
+import { suggestCardIdForHolding } from "../src/services/portfolioiq/cardIdSuggester.service.js";
+import { searchCards } from "../src/services/compiq/cardhedge.client.js";
+import { fetchCardsightUuidNativeCandidates } from "../src/services/compiq/cardsightUuidSource.js";
+import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
+import type { CardIdentity } from "../src/types/cardIdentity.js";
+
+function makeHolding(overrides: Partial<PortfolioHolding> = {}): PortfolioHolding {
+  return {
+    id: "h-1",
+    playerName: "Eric Hartman",
+    cardYear: 2026,
+    setName: "Bowman Chrome",
+    parallel: "Blue Refractor",
+    cardNumber: "CPA-EHA",
+    isAuto: true,
+    quantity: 1,
+    ...overrides,
+  } as PortfolioHolding;
+}
+
+function csRow(overrides: Partial<CardIdentity> = {}): CardIdentity {
+  return {
+    candidateId: "cardsight:00000000-0000-0000-0000-000000000001::00000000-0000-0000-0000-000000000002",
+    source: "catalog",
+    attribution: "ranked",
+    confidence: 0.9,
+    player: "Eric Hartman",
+    year: 2026,
+    brand: null,
+    setName: "Bowman Chrome",
+    cardNumber: "CPA-EHA",
+    parallel: "Blue Refractor",
+    variation: null,
+    isAuto: true,
+    serialNumber: null,
+    grade: null,
+    gradeCompany: null,
+    gradeValue: null,
+    certNumber: null,
+    totalPopulation: null,
+    populationHigher: null,
+    title: "2026 Bowman Chrome Eric Hartman CPA-EHA Blue Refractor",
+    imageUrl: "https://cs.cdn/blue-refractor.jpg",
+    ...overrides,
+  } as CardIdentity;
+}
+
+beforeEach(() => {
+  vi.mocked(searchCards).mockReset();
+  vi.mocked(fetchCardsightUuidNativeCandidates).mockReset();
+  // Both vendors default to empty pools so tests that don't override
+  // one exercise single-vendor behavior via the OTHER one.
+  vi.mocked(searchCards).mockResolvedValue([]);
+  vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe("CF-CARDID-SUGGESTER-MULTI-VENDOR — Hartman Blue Refractor scenario", () => {
+  it("CS wins when CH doesn't catalog the SKU (Hartman Blue Refractor Auto)", async () => {
+    // CH returns adjacent variants — none are Blue Refractor.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-cpaeha-blue-xfractor",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Blue X-Fractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA",
+        variant: "Blue X-Fractor",  // parallel MISMATCH (partial only)
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-cpaeha-refractor",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA",
+        variant: "Refractor",  // parallel MISMATCH (looser)
+        name: "Eric Hartman",
+      },
+    ]);
+    // CS-native has the exact SKU.
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([csRow()]);
+
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r).not.toBeNull();
+    // Primary is the CS row (compound wire cardId, no cardsight: prefix).
+    expect(r!.candidateSource).toBe("cardsight-uuid");
+    expect(r!.cardId).toBe("00000000-0000-0000-0000-000000000001::00000000-0000-0000-0000-000000000002");
+    // Primary carries the CS image + honest variant.
+    expect(r!.candidate.variant).toBe("Blue Refractor");
+    expect(r!.candidate.image).toBe("https://cs.cdn/blue-refractor.jpg");
+  });
+
+  it("CH wins when both vendors have the SKU (CH primary; CS deduped out of alternatives)", async () => {
+    // Both vendors return the same physical SKU. CH's row scores identically
+    // (same fields align), but CH comes first in the merged pool so on tie
+    // CH survives the sort. CS gets deduped out of alternatives.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-cpaeha-green-refractor",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA",
+        variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([
+      csRow({
+        candidateId: "cardsight:00000000-0000-0000-0000-000000000003::00000000-0000-0000-0000-000000000004",
+        parallel: "Green Refractor",   // same physical SKU as CH
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+      }),
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
+    expect(r!.candidateSource).toBe("cardhedge");
+    expect(r!.cardId).toBe("ch-cpaeha-green-refractor");
+    // Alternatives should NOT include the duplicate CS row (dedup key
+    // year::number::parallel collides).
+    expect(r!.alternatives ?? []).toHaveLength(0);
+  });
+
+  it("no candidates from EITHER vendor → returns null", async () => {
+    vi.mocked(searchCards).mockResolvedValue([]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r).toBeNull();
+  });
+
+  it("CH errors, CS succeeds → CS primary (vendor failure doesn't kill the suggestion)", async () => {
+    vi.mocked(searchCards).mockRejectedValue(new Error("CH 500"));
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([csRow()]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r).not.toBeNull();
+    expect(r!.candidateSource).toBe("cardsight-uuid");
+  });
+
+  it("CS errors, CH succeeds → CH primary (symmetric failure isolation)", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-only", title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockRejectedValue(new Error("CS 500"));
+    const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
+    expect(r).not.toBeNull();
+    expect(r!.candidateSource).toBe("cardhedge");
+  });
+});
+
+describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
+  it("HIGH tier suppresses alternatives (primary is confident enough)", async () => {
+    // Perfect field alignment → tier=high → NO alternatives on the wire.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-perfect",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Blue Refractor Auto",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Blue Refractor Auto",
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-runner-up",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor Auto",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r!.confidenceTier).toBe("high");
+    expect(r!.alternatives).toBeUndefined();
+  });
+
+  it("MEDIUM tier emits up to 2 alternatives ranked by score", async () => {
+    // Partial alignment (year+player+set match but parallel misses) → medium tier.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-primary",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-alt-1",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Purple Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Purple Refractor",
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-alt-2",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Speckle Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Speckle Refractor",
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-alt-3-should-be-clipped",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Yellow Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Yellow Refractor",
+        name: "Eric Hartman",
+      },
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r!.confidenceTier).not.toBe("high");
+    expect(r!.alternatives).toBeDefined();
+    // Cap at 2, primary excluded, in score order.
+    expect(r!.alternatives!.length).toBeLessThanOrEqual(2);
+    const altIds = r!.alternatives!.map((a) => a.cardId);
+    expect(altIds).not.toContain("ch-primary");
+    expect(altIds).not.toContain("ch-alt-3-should-be-clipped");
+  });
+
+  it("CROSS-VENDOR dedup: CH + CS rows for the same (year, number, parallel) surface once", async () => {
+    // Holding year is 2025 while candidates are 2026 — creates a year
+    // mismatch on every candidate so primary lands in medium tier, which
+    // means alternatives DO get emitted (tier=high suppresses them).
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-primary",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+      {
+        card_id: "ch-alt-cand",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Speckle Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Speckle Refractor",
+        name: "Eric Hartman",
+      },
+    ]);
+    // CS returns the SAME physical Speckle Refractor SKU — should be
+    // deduped OUT of alternatives (dedup key year::number::parallel).
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([
+      csRow({
+        candidateId: "cardsight:00000000-0000-0000-0000-000000000010::00000000-0000-0000-0000-000000000011",
+        year: 2026,
+        parallel: "Speckle Refractor",
+      }),
+    ]);
+    const r = await suggestCardIdForHolding(
+      // cardYear=2025 forces medium tier on every candidate; parallel Green
+      // Refractor keeps CH primary winning by parallel-match tiebreak.
+      makeHolding({ parallel: "Green Refractor", cardYear: 2025 }),
+    );
+    expect(r!.candidateSource).toBe("cardhedge");
+    expect(r!.cardId).toBe("ch-primary");
+    expect(r!.confidenceTier).not.toBe("high");
+    // ch-alt-cand should be there; CS Speckle Refractor deduped OUT.
+    const altIds = (r!.alternatives ?? []).map((a) => a.cardId);
+    expect(altIds).toContain("ch-alt-cand");
+    expect(altIds).not.toContain(
+      "00000000-0000-0000-0000-000000000010::00000000-0000-0000-0000-000000000011",
+    );
+  });
+
+  it("alternatives min-score gate filters trivially-low candidates", async () => {
+    // Same year-mismatch trick to force medium tier + emit alternatives.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-primary",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Green Refractor",
+        name: "Eric Hartman",
+      },
+      // Zero-field match — everything wrong.
+      {
+        card_id: "ch-junk",
+        title: "unrelated card",
+        set: "Other Set", year: 1990, number: "999", variant: "Base",
+        name: "Someone Else",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(
+      makeHolding({ parallel: "Green Refractor", cardYear: 2025 }),
+    );
+    // Even if there's room in the alternatives array, low-score junk
+    // shouldn't show up.
+    const altIds = (r!.alternatives ?? []).map((a) => a.cardId);
+    expect(altIds).not.toContain("ch-junk");
+  });
+});

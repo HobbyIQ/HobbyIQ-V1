@@ -6,8 +6,13 @@ vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   searchCards: vi.fn(),
 }));
 
+vi.mock("../src/services/compiq/cardsightUuidSource.js", () => ({
+  fetchCardsightUuidNativeCandidates: vi.fn(),
+}));
+
 import { suggestCardIdForHolding } from "../src/services/portfolioiq/cardIdSuggester.service.js";
 import { searchCards } from "../src/services/compiq/cardhedge.client.js";
+import { fetchCardsightUuidNativeCandidates } from "../src/services/compiq/cardsightUuidSource.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
 function makeHolding(overrides: Partial<PortfolioHolding> = {}): PortfolioHolding {
@@ -24,7 +29,12 @@ function makeHolding(overrides: Partial<PortfolioHolding> = {}): PortfolioHoldin
   } as PortfolioHolding;
 }
 
-beforeEach(() => vi.mocked(searchCards).mockReset());
+beforeEach(() => {
+  vi.mocked(searchCards).mockReset();
+  // Default: CS-native returns empty so existing single-vendor tests
+  // exercise CH-only behavior. Multi-vendor tests below override this.
+  vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe("suggestCardIdForHolding", () => {

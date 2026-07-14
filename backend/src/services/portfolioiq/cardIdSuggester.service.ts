@@ -15,6 +15,8 @@
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { searchCards, type CardHedgeCard } from "../compiq/cardhedge.client.js";
+import { fetchCardsightUuidNativeCandidates } from "../compiq/cardsightUuidSource.js";
+import type { CardIdentity } from "../../types/cardIdentity.js";
 
 /**
  * CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): buckets iOS keys on
@@ -28,6 +30,12 @@ export interface CardIdSuggestion {
   cardId: string;
   confidence: number;   // 0.0 - 1.0
   confidenceTier: SuggestionConfidenceTier;
+  /** CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): which catalog
+   *  the suggestion came from. iOS can badge or route accordingly.
+   *  "cardhedge"       — CH search hit (bubble.io id)
+   *  "cardsight-uuid"  — CS-native UUID hit (compound {parent}::{parallel})
+   */
+  candidateSource: "cardhedge" | "cardsight-uuid";
   /** Per-field alignment score breakdown — surfaces to iOS as a
    *  transparency layer ("we matched 4 of 5 fields"). */
   matchBreakdown: {
@@ -43,6 +51,17 @@ export interface CardIdSuggestion {
     variant?: string;
     image?: string;
   };
+  /** CF-CARDID-SUGGESTER-TOP-N (Drew, 2026-07-14): when the primary
+   *  suggestion isn't in the "high" tier, up to 2 alternative candidates
+   *  the review sheet can present as "or one of these" — user picks in
+   *  one tap instead of full-catalog search. Empty for high-tier picks
+   *  (the primary is confident enough). Ranked by score descending.
+   *
+   *  Alternatives never contain the primary itself (deduped by cardId
+   *  and by (year, cardNumber, parallel) so cross-vendor collisions
+   *  don't surface twice).
+   */
+  alternatives?: Array<Omit<CardIdSuggestion, "alternatives">>;
 }
 
 // CF-CARDID-SUGGESTER-CONFIDENCE-TIERING thresholds. iOS reads
@@ -101,7 +120,65 @@ interface FieldMatchResult {
   mismatched: string[];
 }
 
-function scoreCandidate(candidate: CardHedgeCard, holding: PortfolioHolding): FieldMatchResult {
+/**
+ * CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): normalized candidate
+ * shape covering both CH bubble.io hits and CS-native UUID candidates.
+ * Both vendors share the same scorer against a PortfolioHolding; the
+ * source flag propagates to the caller for wire attribution.
+ */
+interface CommonCandidate {
+  /** Wire cardId — either CH's bubble.io id or CS's compound "{parent}::{parallel}". */
+  cardId: string;
+  source: "cardhedge" | "cardsight-uuid";
+  title: string | null;
+  name: string | null;
+  set: string | null;
+  year: number | string | null;
+  number: string | null;
+  variant: string | null;
+  image: string | null;
+}
+
+function chToCommon(c: CardHedgeCard): CommonCandidate | null {
+  if (!c.card_id) return null;
+  return {
+    cardId: c.card_id,
+    source: "cardhedge",
+    title: c.title ?? null,
+    name: c.name ?? null,
+    set: c.set ?? null,
+    year: c.year ?? null,
+    number: c.number ?? null,
+    variant: c.variant ?? null,
+    image: c.image ?? null,
+  };
+}
+
+/**
+ * Convert a CS-native CardIdentity into the common candidate shape. The
+ * CardIdentity's `candidateId` is `cardsight:{parent}::{parallel}` — strip
+ * the `cardsight:` prefix to get the wire cardId iOS sends back to
+ * /price-by-id (the compound {parent}::{parallel} form the route parses).
+ */
+function csIdentityToCommon(c: CardIdentity): CommonCandidate | null {
+  if (!c.candidateId) return null;
+  const wireCardId = c.candidateId.startsWith("cardsight:")
+    ? c.candidateId.slice("cardsight:".length)
+    : c.candidateId;
+  return {
+    cardId: wireCardId,
+    source: "cardsight-uuid",
+    title: c.title ?? null,
+    name: c.player ?? null,
+    set: c.setName ?? null,
+    year: c.year ?? null,
+    number: c.cardNumber ?? null,
+    variant: c.parallel ?? null,
+    image: c.imageUrl ?? null,
+  };
+}
+
+function scoreCandidate(candidate: CommonCandidate, holding: PortfolioHolding): FieldMatchResult {
   const weights = {
     year: 20,
     cardNumber: 25,
@@ -157,12 +234,21 @@ function scoreCandidate(candidate: CardHedgeCard, holding: PortfolioHolding): Fi
   })();
   check("setName", weights.setName, !!holding.setName, setMatch);
 
-  // parallel/variant
+  // parallel/variant — CF-CARDID-SUGGESTER-STRICT-PARALLEL (Drew,
+  // 2026-07-14): require normalized-equality, NOT substring. Prior
+  // .includes() check let "Blue Refractor" (holding) collide with
+  // "Refractor" (candidate) via `a.includes(b)` — different SKUs, wrong
+  // sub-market, exact same class of bug as the CH bridge guard (PR-B).
+  // Normalization strips hyphens/underscores/slashes and collapses
+  // whitespace so "Blue-Refractor" still collides with "Blue Refractor".
   const parallelMatch = (() => {
     if (!holding.parallel || !candidate.variant) return false;
-    const a = String(holding.parallel).toLowerCase();
-    const b = String(candidate.variant).toLowerCase();
-    return a === b || a.includes(b) || b.includes(a);
+    const norm = (s: string) => s
+      .toLowerCase()
+      .replace(/[-_/]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return norm(String(holding.parallel)) === norm(String(candidate.variant));
   })();
   check("parallel", weights.parallel, !!holding.parallel, parallelMatch);
 
@@ -206,6 +292,29 @@ function scoreCandidate(candidate: CardHedgeCard, holding: PortfolioHolding): Fi
  *   Multiple candidates             → top score / 100, clamped to [0.4, 0.95]
  *   No candidates                   → null suggestion
  */
+/**
+ * Dedup key across vendors: (year, cardNumber, normalized-parallel).
+ * Same physical SKU from CH and CS collides here — CH survives when
+ * both are present (higher score wins the primary, dup is dropped from
+ * alternatives). Deliberately doesn't include player because the holding
+ * already filters by player at the source query.
+ */
+function crossVendorDedupKey(c: CommonCandidate): string {
+  const yr = String(c.year ?? "").trim();
+  const num = String(c.number ?? "").toLowerCase().trim();
+  const par = String(c.variant ?? "")
+    .toLowerCase()
+    .replace(/[-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${yr}::${num}::${par}`;
+}
+
+const CS_SUGGESTER_ENABLED = true;
+const ALTERNATIVE_MIN_SCORE = 0.4;
+const ALTERNATIVE_MAX_COUNT = 2;
+const SUGGESTER_TIMEOUT_MS = 8_000;
+
 export async function suggestCardIdForHolding(
   holding: PortfolioHolding,
 ): Promise<CardIdSuggestion | null> {
@@ -219,54 +328,112 @@ export async function suggestCardIdForHolding(
     rookie: (holding as any).isRookie ? "Rookie" : undefined,
   };
 
-  let candidates: CardHedgeCard[];
-  try {
-    // Hard timeout so a slow / stuck CH call can never hang the batch. 8s
-    // matches the batch-wall-time budget for 36 holdings @ concurrency 3.
-    candidates = await Promise.race([
-      searchCards(query, 5, filters),
-      new Promise<CardHedgeCard[]>((_, reject) =>
-        setTimeout(() => reject(new Error("suggester timeout")), 8_000),
-      ),
-    ]);
-  } catch (err) {
-    console.warn(
-      JSON.stringify({
-        event: "card_id_suggester_error",
-        source: "cardIdSuggester.service",
-        holdingId: holding.id,
-        error: (err as Error)?.message ?? String(err),
-      }),
-    );
+  // CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): fire CH search
+  // AND CS-native fetch in parallel, so a SKU missing from CH's catalog
+  // (e.g. Hartman CPA-EHA Blue Refractor Auto, 2026-07-14 incident) still
+  // gets a suggestion from CS. Both wrapped in the SAME 8s hard timeout
+  // so a slow vendor can never hang the batch. Vendor errors resolve to
+  // empty pools — never fatal to the batch.
+  const chPromise = Promise.race([
+    searchCards(query, 5, filters).catch(() => [] as CardHedgeCard[]),
+    new Promise<CardHedgeCard[]>((_, reject) =>
+      setTimeout(() => reject(new Error("ch suggester timeout")), SUGGESTER_TIMEOUT_MS),
+    ),
+  ]).catch(() => [] as CardHedgeCard[]);
+
+  const csPromise: Promise<CardIdentity[]> = CS_SUGGESTER_ENABLED
+    ? Promise.race([
+        fetchCardsightUuidNativeCandidates(query).catch(() => [] as CardIdentity[]),
+        new Promise<CardIdentity[]>((_, reject) =>
+          setTimeout(() => reject(new Error("cs suggester timeout")), SUGGESTER_TIMEOUT_MS),
+        ),
+      ]).catch(() => [] as CardIdentity[])
+    : Promise.resolve([]);
+
+  const [chRaw, csRaw] = await Promise.all([chPromise, csPromise]);
+  const chCommon = chRaw.map(chToCommon).filter((c): c is CommonCandidate => c !== null);
+  const csCommon = csRaw.map(csIdentityToCommon).filter((c): c is CommonCandidate => c !== null);
+  const merged = [...chCommon, ...csCommon];
+  if (merged.length === 0) {
+    console.warn(JSON.stringify({
+      event: "card_id_suggester_no_candidates",
+      source: "cardIdSuggester.service",
+      holdingId: holding.id,
+      chHits: chRaw.length,
+      csHits: csRaw.length,
+    }));
     return null;
   }
-  if (!candidates || candidates.length === 0) return null;
 
-  const scored = candidates
+  // Score every candidate, sort descending by score.
+  const scored = merged
     .map((c) => ({ candidate: c, match: scoreCandidate(c, holding) }))
     .sort((a, b) => b.match.score - a.match.score);
 
   const top = scored[0];
-  if (!top.candidate.card_id) return null;
-
   const confidence = Math.round(top.match.score * 100) / 100;
+  const tier = tierForConfidence(confidence);
+
+  // CF-CARDID-SUGGESTER-TOP-N (Drew, 2026-07-14): when the primary
+  // suggestion isn't "high" tier, offer up to 2 alternatives so the user
+  // resolves in one tap instead of falling to full-catalog search. Dedup
+  // across vendors on the (year, number, parallel) key so a card that
+  // both CH and CS surface only appears once. Also filter out alternatives
+  // whose score is trivially low — they'd just clutter the sheet.
+  const alternatives: Array<Omit<CardIdSuggestion, "alternatives">> = [];
+  if (tier !== "high") {
+    const primaryKey = crossVendorDedupKey(top.candidate);
+    const primaryCardId = top.candidate.cardId;
+    const seenAltKeys = new Set<string>([primaryKey]);
+    for (let i = 1; i < scored.length && alternatives.length < ALTERNATIVE_MAX_COUNT; i++) {
+      const s = scored[i];
+      if (s.match.score < ALTERNATIVE_MIN_SCORE) break;
+      if (s.candidate.cardId === primaryCardId) continue;
+      const key = crossVendorDedupKey(s.candidate);
+      if (seenAltKeys.has(key)) continue;
+      seenAltKeys.add(key);
+      const altConfidence = Math.round(s.match.score * 100) / 100;
+      alternatives.push({
+        cardId: s.candidate.cardId,
+        confidence: altConfidence,
+        confidenceTier: tierForConfidence(altConfidence),
+        candidateSource: s.candidate.source,
+        matchBreakdown: {
+          fieldsChecked: s.match.fieldsChecked,
+          fieldsMatched: s.match.fieldsMatched,
+          mismatchedFields: s.match.mismatched,
+        },
+        candidate: {
+          title: s.candidate.title ?? s.candidate.name ?? undefined,
+          set: s.candidate.set ?? undefined,
+          year: s.candidate.year ?? undefined,
+          number: s.candidate.number ?? undefined,
+          variant: s.candidate.variant ?? undefined,
+          image: s.candidate.image ?? undefined,
+        },
+      });
+    }
+  }
+
   return {
-    cardId: top.candidate.card_id,
+    cardId: top.candidate.cardId,
     confidence,
-    confidenceTier: tierForConfidence(confidence),
+    confidenceTier: tier,
+    candidateSource: top.candidate.source,
     matchBreakdown: {
       fieldsChecked: top.match.fieldsChecked,
       fieldsMatched: top.match.fieldsMatched,
       mismatchedFields: top.match.mismatched,
     },
     candidate: {
-      title: top.candidate.title ?? top.candidate.name,
-      set: top.candidate.set,
-      year: top.candidate.year,
-      number: top.candidate.number,
-      variant: top.candidate.variant,
-      image: top.candidate.image,
+      title: top.candidate.title ?? top.candidate.name ?? undefined,
+      set: top.candidate.set ?? undefined,
+      year: top.candidate.year ?? undefined,
+      number: top.candidate.number ?? undefined,
+      variant: top.candidate.variant ?? undefined,
+      image: top.candidate.image ?? undefined,
     },
+    ...(alternatives.length > 0 ? { alternatives } : {}),
   };
 }
 
@@ -328,6 +495,16 @@ export async function generateCardIdSuggestions(
         (h as any).suggestionCandidate = suggestion.candidate;
         (h as any).suggestionConfidenceTier = suggestion.confidenceTier;
         (h as any).suggestionMatchBreakdown = suggestion.matchBreakdown;
+        // CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): persist
+        // which vendor sourced the primary suggestion + any alternatives
+        // so the iOS review sheet can badge and offer one-tap picks.
+        (h as any).suggestionCandidateSource = suggestion.candidateSource;
+        if (suggestion.alternatives && suggestion.alternatives.length > 0) {
+          (h as any).suggestionAlternatives = suggestion.alternatives;
+        } else {
+          // Clear any stale alternatives from a prior high-tier flip.
+          delete (h as any).suggestionAlternatives;
+        }
         (h as any).suggestionUpdatedAt = new Date().toISOString();
         (h as any).lastUpdated = new Date().toISOString();
         summary.suggested += 1;
