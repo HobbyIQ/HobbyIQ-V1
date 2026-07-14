@@ -17,6 +17,7 @@ import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { searchCards, type CardHedgeCard } from "../compiq/cardhedge.client.js";
 import { fetchCardsightUuidNativeCandidates } from "../compiq/cardsightUuidSource.js";
 import type { CardIdentity } from "../../types/cardIdentity.js";
+import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 
 /**
  * CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): buckets iOS keys on
@@ -76,17 +77,22 @@ export function tierForConfidence(confidence: number): SuggestionConfidenceTier 
 }
 
 /**
- * Build a CH search query from the holding's structured fields. Deliberately
- * omits noisy tokens ("PSA 10", "GEM MINT") that CH doesn't index — those
- * are grader/grade filters, not search terms.
+ * Build a CH search query from ALREADY-NORMALIZED holding fields.
+ * Caller must run `normalizeHoldingFields()` first — this helper does
+ * NOT re-normalize. Emits year + set + player + parallel + #number in
+ * that order. Deliberately omits noisy tokens ("PSA 10", "GEM MINT")
+ * that CH doesn't index — those are grader/grade filters, not search
+ * terms.
  */
-function buildQuery(holding: PortfolioHolding): string {
+function buildQueryFromNormalized(
+  fields: ReturnType<typeof normalizeHoldingFields>["fields"],
+): string {
   const parts: string[] = [];
-  if (holding.cardYear) parts.push(String(holding.cardYear));
-  if (holding.setName) parts.push(holding.setName);
-  if (holding.playerName) parts.push(holding.playerName);
-  if (holding.parallel) parts.push(holding.parallel);
-  if (holding.cardNumber) parts.push(`#${holding.cardNumber}`);
+  if (fields.cardYear) parts.push(String(fields.cardYear));
+  if (fields.setName) parts.push(fields.setName);
+  if (fields.playerName) parts.push(fields.playerName);
+  if (fields.parallel) parts.push(fields.parallel);
+  if (fields.cardNumber) parts.push(`#${fields.cardNumber}`);
   return parts.join(" ");
 }
 
@@ -319,12 +325,42 @@ export async function suggestCardIdForHolding(
   holding: PortfolioHolding,
 ): Promise<CardIdSuggestion | null> {
   if (!holding.playerName) return null;
-  const query = buildQuery(holding);
+
+  // CF-HOLDING-FIELD-NORMALIZER (Drew, 2026-07-14): scrub messy eBay-
+  // imported fields before building the query — year-doubling, subset
+  // words leaked into parallel/player, casing variance. Historical
+  // holdings imported before we normalize-at-import benefit here
+  // defensively without a data backfill. Also lands cleaner scoring
+  // downstream because the field-alignment check runs on normalized
+  // strings.
+  const normalized = normalizeHoldingFields({
+    playerName: holding.playerName,
+    cardYear: holding.cardYear,
+    setName: holding.setName,
+    parallel: holding.parallel,
+    cardNumber: holding.cardNumber,
+    isAuto: holding.isAuto,
+  });
+  const cleanFields = normalized.fields;
+  if (!cleanFields.playerName) return null;
+
+  const query = buildQueryFromNormalized(cleanFields);
   if (!query.trim()) return null;
 
-  const filters = {
-    player: holding.playerName,
-    set: holding.setName,
+  // Two filter variants: WITH set (strict — CH's canonical set format
+  // required) and WITHOUT set (relaxed — player-only narrowing). We try
+  // strict first; if either vendor returns hits, use them. If BOTH come
+  // back empty AND we had a set filter, retry without. This handles
+  // holdings whose setName doesn't exactly match CH's canonical form
+  // (e.g. "Bowman" vs CH's "Bowman Baseball") without loosening the
+  // filter for holdings that DO match.
+  const strictFilters = {
+    player: cleanFields.playerName,
+    set: cleanFields.setName ?? undefined,
+    rookie: (holding as any).isRookie ? "Rookie" : undefined,
+  };
+  const relaxedFilters = {
+    player: cleanFields.playerName,
     rookie: (holding as any).isRookie ? "Rookie" : undefined,
   };
 
@@ -334,26 +370,67 @@ export async function suggestCardIdForHolding(
   // gets a suggestion from CS. Both wrapped in the SAME 8s hard timeout
   // so a slow vendor can never hang the batch. Vendor errors resolve to
   // empty pools — never fatal to the batch.
-  const chPromise = Promise.race([
-    searchCards(query, 5, filters).catch(() => [] as CardHedgeCard[]),
-    new Promise<CardHedgeCard[]>((_, reject) =>
-      setTimeout(() => reject(new Error("ch suggester timeout")), SUGGESTER_TIMEOUT_MS),
-    ),
-  ]).catch(() => [] as CardHedgeCard[]);
+  const runStrict = async (): Promise<{ chRaw: CardHedgeCard[]; csRaw: CardIdentity[] }> => {
+    const chPromise = Promise.race([
+      searchCards(query, 5, strictFilters).catch(() => [] as CardHedgeCard[]),
+      new Promise<CardHedgeCard[]>((_, reject) =>
+        setTimeout(() => reject(new Error("ch suggester timeout")), SUGGESTER_TIMEOUT_MS),
+      ),
+    ]).catch(() => [] as CardHedgeCard[]);
+    const csPromise: Promise<CardIdentity[]> = CS_SUGGESTER_ENABLED
+      ? Promise.race([
+          fetchCardsightUuidNativeCandidates(query).catch(() => [] as CardIdentity[]),
+          new Promise<CardIdentity[]>((_, reject) =>
+            setTimeout(() => reject(new Error("cs suggester timeout")), SUGGESTER_TIMEOUT_MS),
+          ),
+        ]).catch(() => [] as CardIdentity[])
+      : Promise.resolve([]);
+    const [chRaw, csRaw] = await Promise.all([chPromise, csPromise]);
+    return { chRaw, csRaw };
+  };
 
-  const csPromise: Promise<CardIdentity[]> = CS_SUGGESTER_ENABLED
-    ? Promise.race([
-        fetchCardsightUuidNativeCandidates(query).catch(() => [] as CardIdentity[]),
-        new Promise<CardIdentity[]>((_, reject) =>
-          setTimeout(() => reject(new Error("cs suggester timeout")), SUGGESTER_TIMEOUT_MS),
-        ),
-      ]).catch(() => [] as CardIdentity[])
-    : Promise.resolve([]);
+  let { chRaw, csRaw } = await runStrict();
+  let usedFilterMode: "strict" | "relaxed_retry" = "strict";
 
-  const [chRaw, csRaw] = await Promise.all([chPromise, csPromise]);
+  // Opportunistic retry: if both vendors returned nothing AND we had a
+  // set filter that could be dropped, try again without it. Cardsight
+  // never uses `filters` (its fetch is free-text only) so this only
+  // helps the CH path — but that's exactly where the set-format
+  // mismatch bites.
+  if (chRaw.length === 0 && csRaw.length === 0 && strictFilters.set) {
+    const chRelaxed = await Promise.race([
+      searchCards(query, 5, relaxedFilters).catch(() => [] as CardHedgeCard[]),
+      new Promise<CardHedgeCard[]>((_, reject) =>
+        setTimeout(() => reject(new Error("ch suggester timeout")), SUGGESTER_TIMEOUT_MS),
+      ),
+    ]).catch(() => [] as CardHedgeCard[]);
+    if (chRelaxed.length > 0) {
+      chRaw = chRelaxed;
+      usedFilterMode = "relaxed_retry";
+    }
+  }
+
   const chCommon = chRaw.map(chToCommon).filter((c): c is CommonCandidate => c !== null);
   const csCommon = csRaw.map(csIdentityToCommon).filter((c): c is CommonCandidate => c !== null);
   const merged = [...chCommon, ...csCommon];
+
+  // CF-CARDID-SUGGESTER-QUERY-LOGGING (Drew, 2026-07-14): emit the
+  // resolved query per holding so KQL can chart no-hit patterns and
+  // surface which fields were normalized. Load-bearing for iterating
+  // on the normalizer rule set — you can't fix what you can't see.
+  console.log(JSON.stringify({
+    event: "card_id_suggester_query",
+    source: "cardIdSuggester.service",
+    holdingId: holding.id,
+    query,
+    filterMode: usedFilterMode,
+    normalizerChanges: normalized.changes.length,
+    changesSummary: normalized.changes.map((c) => `${c.rule}:${c.field}`),
+    chHits: chRaw.length,
+    csHits: csRaw.length,
+    totalCandidates: merged.length,
+  }));
+
   if (merged.length === 0) {
     console.warn(JSON.stringify({
       event: "card_id_suggester_no_candidates",
@@ -365,9 +442,20 @@ export async function suggestCardIdForHolding(
     return null;
   }
 
-  // Score every candidate, sort descending by score.
+  // Score against NORMALIZED fields — otherwise the messy original
+  // (e.g. parallel="Chrome Refractor") mismatches a clean vendor variant
+  // ("Refractor") and downgrades the score of the correct match.
+  const holdingForScoring: PortfolioHolding = {
+    ...holding,
+    playerName: cleanFields.playerName ?? holding.playerName,
+    cardYear: cleanFields.cardYear ?? holding.cardYear,
+    setName: cleanFields.setName ?? holding.setName,
+    parallel: cleanFields.parallel ?? holding.parallel,
+    cardNumber: cleanFields.cardNumber ?? holding.cardNumber,
+    isAuto: cleanFields.isAuto ?? holding.isAuto,
+  };
   const scored = merged
-    .map((c) => ({ candidate: c, match: scoreCandidate(c, holding) }))
+    .map((c) => ({ candidate: c, match: scoreCandidate(c, holdingForScoring) }))
     .sort((a, b) => b.match.score - a.match.score);
 
   const top = scored[0];

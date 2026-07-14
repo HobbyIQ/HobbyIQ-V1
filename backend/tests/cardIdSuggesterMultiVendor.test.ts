@@ -172,6 +172,122 @@ describe("CF-CARDID-SUGGESTER-MULTI-VENDOR — Hartman Blue Refractor scenario",
   });
 });
 
+describe("CF-CARDID-SUGGESTER-QUERY-NORMALIZATION — opportunistic set-filter fallback", () => {
+  it("retries WITHOUT set filter when strict returned 0 from both vendors", async () => {
+    // Strict call (with set filter) returns nothing; relaxed call (without)
+    // returns a hit. Both vendors are called for the strict attempt; CH is
+    // re-called for the relaxed retry.
+    let chCallCount = 0;
+    vi.mocked(searchCards).mockImplementation(async (_q, _limit, filters) => {
+      chCallCount++;
+      // Strict attempt: filters has `set` → return empty
+      if (filters && (filters as any).set) return [] as any;
+      // Relaxed retry: no set → return a hit
+      return [{
+        card_id: "ch-relaxed-hit",
+        title: "2026 Bowman Baseball Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Baseball", year: 2026, number: "CPA-EHA",
+        variant: "Green Refractor", name: "Eric Hartman",
+      }] as any;
+    });
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+
+    const r = await suggestCardIdForHolding(makeHolding({
+      // Holding's setName "Bowman Chrome" doesn't match CH's "Bowman Baseball"
+      // so strict CH filter returns empty; relaxed retry succeeds.
+      setName: "Bowman Chrome",
+      parallel: "Green Refractor",
+    }));
+    expect(r).not.toBeNull();
+    expect(r!.cardId).toBe("ch-relaxed-hit");
+    // Called CH twice: once strict, once relaxed.
+    expect(chCallCount).toBe(2);
+  });
+
+  it("does NOT retry when strict already returned hits (efficiency)", async () => {
+    let chCallCount = 0;
+    vi.mocked(searchCards).mockImplementation(async () => {
+      chCallCount++;
+      return [{
+        card_id: "ch-strict-hit",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Green Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA",
+        variant: "Green Refractor", name: "Eric Hartman",
+      }] as any;
+    });
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+
+    const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
+    expect(r!.cardId).toBe("ch-strict-hit");
+    expect(chCallCount).toBe(1);  // strict only, no retry
+  });
+
+  it("does NOT retry when strict returned nothing but there was no set filter to drop", async () => {
+    let chCallCount = 0;
+    vi.mocked(searchCards).mockImplementation(async () => {
+      chCallCount++;
+      return [] as any;
+    });
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+
+    // No setName on the holding → no set filter → nothing to drop → no retry
+    const r = await suggestCardIdForHolding(makeHolding({ setName: undefined }));
+    expect(r).toBeNull();
+    expect(chCallCount).toBe(1);
+  });
+});
+
+describe("CF-HOLDING-FIELD-NORMALIZER — suggester runs on cleaned fields", () => {
+  it("normalizes '2026 2026 Bowman' year-doubling before querying CH", async () => {
+    let capturedQuery: string | undefined;
+    vi.mocked(searchCards).mockImplementation(async (q) => {
+      capturedQuery = q;
+      return [] as any;
+    });
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+
+    await suggestCardIdForHolding(makeHolding({
+      cardYear: 2026,
+      setName: "2026 Bowman",  // year prefix doubles with cardYear
+      parallel: "Green Refractor",
+    }));
+
+    // Post-normalize query should NOT contain "2026 2026"; setName stripped
+    // to "Bowman" via R1.
+    expect(capturedQuery).toBeDefined();
+    expect(capturedQuery).not.toMatch(/2026\s+2026/);
+    expect(capturedQuery).toContain("2026");
+    expect(capturedQuery).toContain("Bowman");
+  });
+
+  it("scoring uses normalized fields — 'Chrome Refractor' holding matches 'Refractor' candidate", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-refractor",
+        title: "2026 Bowman Chrome Eric Hartman CPA-EHA Refractor",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA",
+        variant: "Refractor",  // Clean parallel name
+        name: "Eric Hartman",
+      },
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+
+    // Holding.parallel="Chrome Refractor" — pre-normalize this would
+    // MISMATCH candidate variant="Refractor" via the tightened equality
+    // rule. Post-normalize (R3 strips "Chrome" prefix) the holding parallel
+    // becomes "Refractor" and matches the candidate exactly.
+    const r = await suggestCardIdForHolding(makeHolding({
+      parallel: "Chrome Refractor",
+      cardYear: 2026,
+      setName: "Bowman Chrome",
+    }));
+    expect(r).not.toBeNull();
+    expect(r!.cardId).toBe("ch-refractor");
+    // Should score well — parallel matches after normalization
+    expect(r!.confidence).toBeGreaterThanOrEqual(0.8);
+  });
+});
+
 describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
   it("HIGH tier suppresses alternatives (primary is confident enough)", async () => {
     // Perfect field alignment → tier=high → NO alternatives on the wire.
