@@ -92,7 +92,13 @@ function buildQueryFromNormalized(
   if (fields.setName) parts.push(fields.setName);
   if (fields.playerName) parts.push(fields.playerName);
   if (fields.parallel) parts.push(fields.parallel);
-  if (fields.cardNumber) parts.push(`#${fields.cardNumber}`);
+  // CF-CARDID-SUGGESTER-DROP-HASH (Drew, 2026-07-14): emit card number
+  // as a bare token, NOT prefixed with `#`. The prefix tanks CH's
+  // relevance scoring — 2026-07-14 diagnostic: "Eric Hartman #CPA-EH"
+  // returned 0 hits while "Eric Hartman CPA-EH" returned 12 including
+  // the correct CPA-EHA base card. CH's tokenizer treats the `#` as a
+  // signal boundary, not as decoration.
+  if (fields.cardNumber) parts.push(String(fields.cardNumber));
   return parts.join(" ");
 }
 
