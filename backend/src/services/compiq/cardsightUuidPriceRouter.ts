@@ -139,10 +139,32 @@ export async function priceByCardsightUuid(
   }));
   const trend = computePooledTrend(compForms);
   const trendIQ = trend ? pooledTrendToTrendIQShape(trend) : null;
-  const prediction = surfacedFmv != null ? computePooledPrediction(surfacedFmv, trend) : null;
 
   const roundedFmv = surfacedFmv != null ? Math.round(surfacedFmv * 100) / 100 : null;
-  const marketTierValue = roundedFmv;
+
+  // CF-MARKET-VALUE-IS-TREND-ADJUSTED (Drew, 2026-07-13, PR #417):
+  // Two separate concepts on the wire:
+  //   marketValue     — trend-adjusted CURRENT worth (median × trend).
+  //                     This is what iOS renders as "Market Value" — it
+  //                     reflects what the card is worth NOW given how
+  //                     the market is moving, not the backwards-looking
+  //                     pool median.
+  //   predictedPrice  — same trend continued one more window forward
+  //                     (marketValue × trend). This is what iOS shows
+  //                     as the 30d-out forecast.
+  //
+  // When the pool is too thin to compute a real trend (< 2 records per
+  // window in computePooledTrend), marketValue falls back to the raw
+  // median (no forward adjustment) and predictedPrice stays null.
+  const marketValue = trend != null && roundedFmv != null
+    ? Math.round(roundedFmv * trend.multiplier * 100) / 100
+    : roundedFmv;
+  // Same forward-projection helper as PR #407 — its output is
+  // marketValue × trend, which after our rename becomes the "predicted
+  // next" step, not the current market value.
+  const prediction = trend != null && marketValue != null
+    ? computePooledPrediction(marketValue, trend)
+    : null;
 
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
@@ -150,11 +172,14 @@ export async function priceByCardsightUuid(
     success: true,
     cardId: input.cardId,
     // ── Pricing ────────────────────────────────────────────────────
-    fairMarketValueLive: roundedFmv,
-    marketValue: roundedFmv,
+    // Same trend-adjusted value flows into marketValue,
+    // fairMarketValueLive, and marketTier.value so every "current worth"
+    // surface iOS reads shows the SAME number.
+    fairMarketValueLive: marketValue,
+    marketValue,
     marketTier: {
       label: null,
-      value: marketTierValue,
+      value: marketValue,
     },
     approximate: bucketFmv == null && rawPrices.length < 5,
     estimateBasis:
