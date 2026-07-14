@@ -131,6 +131,81 @@ router.get("/supply-demand-summary", async (req, res, next) => {
 // awaiting user confirmation. iOS renders this as the review queue.
 router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
 
+// CF-EDIT-SHEET-DRY-RUN-SUGGEST (Drew, 2026-07-14): stateless suggester
+// run for the iOS "verify card" edit sheet. Takes edited holding fields
+// in the request body (NOT from Cosmos), runs the multi-vendor
+// suggester against them, returns { suggestion, normalized }. Persists
+// nothing.
+//
+// iOS fires this on every "Search again" tap as the user edits fields
+// — each call returns a fresh suggestion so pre-fill updates in real
+// time. When the user hits Confirm, the existing
+// /api/portfolio/erp/holdings/:id/confirm endpoint commits the chosen
+// cardId + edits.
+//
+// Session-only (no entitlement gate): verify-before-price is the
+// fundamental purchase-import UX, not a premium feature. Server-side
+// cost matches one batch cell (~600ms end-to-end for both vendors).
+router.post("/holdings/dry-run-suggest", async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const holdingLike = {
+      id: "dry-run",
+      playerName: typeof body.playerName === "string" ? body.playerName : null,
+      cardYear: typeof body.cardYear === "number" ? body.cardYear : null,
+      setName: typeof body.setName === "string" ? body.setName : null,
+      parallel: typeof body.parallel === "string" ? body.parallel : null,
+      cardNumber: typeof body.cardNumber === "string" ? body.cardNumber : null,
+      isAuto: typeof body.isAuto === "boolean" ? body.isAuto : null,
+      isRookie: typeof body.isRookie === "boolean" ? body.isRookie : undefined,
+    } as any;
+
+    if (!holdingLike.playerName || holdingLike.playerName.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "playerName is required for suggestion",
+        suggestion: null,
+      });
+    }
+
+    const { suggestCardIdForHolding } = await import(
+      "../services/portfolioiq/cardIdSuggester.service.js"
+    );
+    const { normalizeHoldingFields } = await import(
+      "../services/portfolioiq/holdingFieldNormalizer.service.js"
+    );
+
+    // Return normalized fields so iOS can show the user WHY a field
+    // was auto-cleaned (year-doubling stripped, subset word removed,
+    // etc.) — transparency for the edit sheet.
+    const normalized = normalizeHoldingFields({
+      playerName: holdingLike.playerName,
+      cardYear: holdingLike.cardYear,
+      setName: holdingLike.setName,
+      parallel: holdingLike.parallel,
+      cardNumber: holdingLike.cardNumber,
+      isAuto: holdingLike.isAuto,
+    });
+
+    const suggestion = await suggestCardIdForHolding(holdingLike);
+    res.json({
+      success: true,
+      suggestion,
+      normalized: {
+        fields: normalized.fields,
+        changes: normalized.changes,
+      },
+    });
+  } catch (err: any) {
+    console.error("[portfolio] /holdings/dry-run-suggest failed:", err?.message ?? err);
+    res.status(500).json({
+      success: false,
+      error: err?.message ?? "Dry-run suggestion failed",
+      suggestion: null,
+    });
+  }
+});
+
 // CF-EBAY-SOLD-COMPS-QUERY (2026-07-12): market intelligence from our own
 // sold pool. Query by year/set/parallel/grade/player/cardNumber/isAuto/
 // cardId; returns matches ranked by aspect density + recency + aggregate
