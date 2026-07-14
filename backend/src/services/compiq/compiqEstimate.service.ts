@@ -6932,6 +6932,37 @@ export async function computeEstimate(
     fetchListingsHistoryForWire(playerNameForSignal, 30).catch(() => []),
   ]);
 
+  // CF-CARD-VALUATION-HISTORY (Drew, 2026-07-13, PR #431): fire-and-forget
+  // snapshot of TODAY's valuation. Feeds the future backtest engine's
+  // look-ahead-free queries. Only fires when we have a real cardId to
+  // key on (skip the estimate/no-card branches — nothing to backtest).
+  const snapshotCardId =
+    (typeof body.cardId === "string" && body.cardId.length > 0)
+      ? body.cardId
+      : (typeof cardIdentity?.card_id === "string" ? cardIdentity.card_id : null);
+  if (snapshotCardId) {
+    void (async () => {
+      try {
+        const { upsertValuationSnapshot } = await import(
+          "../portfolioiq/cardValuationHistoryStore.service.js"
+        );
+        await upsertValuationSnapshot({
+          cardId: snapshotCardId,
+          playerName: playerNameForSignal,
+          marketValue: slopeMarketValue,
+          predictedPrice: slopePredictedPrice,
+          salesDirection: slopeAdj?.direction ?? null,
+          salesSlopePerMonthPct: slopeAdj?.slopePerMonthPct ?? null,
+          listingsDirection: supplyDemand?.listingsDirection ?? null,
+          listingsSlopePerMonthPct: supplyDemand?.listingsSlopePerMonthPct ?? null,
+          verdict: supplyDemand?.verdict ?? "unavailable",
+          sampleCount: slopeAdj?.n ?? 0,
+          source: "compiq-estimate",
+        });
+      } catch { /* swallow */ }
+    })();
+  }
+
   return {
     cardTitle,
     verdict: verdictText,
