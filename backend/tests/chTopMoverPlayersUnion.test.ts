@@ -14,6 +14,7 @@ import * as ebay from "../src/services/ebay/ebayListingSearch.service.js";
 import * as store from "../src/services/portfolioiq/listingsSnapshotStore.service.js";
 import * as priority from "../src/services/portfolioiq/priorityWatchlist.service.js";
 import * as topMovers from "../src/services/portfolioiq/chTopMoverPlayers.service.js";
+import * as mlbTop from "../src/services/portfolioiq/mlbTopPlayers.service.js";
 import { runDailyListingsSnapshotJob } from "../src/services/compiq/dailyListingsSnapshotJob.service.js";
 
 function fakeContainer(docs: any[]) {
@@ -64,6 +65,11 @@ describe("loadTopMoverPlayers", () => {
 });
 
 describe("runDailyListingsSnapshotJob — three-layer union (users + priority + CH movers)", () => {
+  beforeEach(() => {
+    // Isolate this suite from the MLB-top layer — pinning behavior of
+    // the first three layers only.
+    vi.spyOn(mlbTop, "loadMlbTopPlayers").mockResolvedValue([]);
+  });
   it("snapshots CH-top-movers even when no users hold them and they're not on the priority list", async () => {
     vi.spyOn(portfolio, "getPortfolioContainer").mockResolvedValue(
       fakeContainer([]),
