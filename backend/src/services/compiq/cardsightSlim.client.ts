@@ -58,6 +58,22 @@ export interface CardsightCardDetail {
   notFound?: boolean;
 }
 
+// CF-CARDSIGHT-COMPLETE-COMPS (Drew, 2026-07-13, PR #416): expanded record
+// shape so downstream engine + iOS see the full Cardsight sale metadata
+// (title, listing_type, image_url, url). Cardsight's /v1/pricing already
+// emits these fields; the narrow prior shape was silently dropping them.
+export interface CardsightSaleRecord {
+  price: number;
+  date: string | null;
+  title?: string | null;
+  source?: string | null;
+  listing_type?: string | null;
+  url?: string | null;
+  image_url?: string | null;
+  parallel_id?: string | null;
+  parallel_name?: string | null;
+}
+
 export interface CardsightPricingResponse {
   card?: {
     card_id?: string;
@@ -65,13 +81,13 @@ export interface CardsightPricingResponse {
     number?: string;
     set?: { name?: string; year?: string; release?: string };
   };
-  raw: { count: number; records: Array<{ price: number; date: string | null }> };
+  raw: { count: number; records: CardsightSaleRecord[] };
   graded: Array<{
     company_name: string;
     grades: Array<{
       grade_value: string;
       count: number;
-      records: Array<{ price: number; date: string | null }>;
+      records: CardsightSaleRecord[];
     }>;
   }>;
   meta: { total_records: number; last_sale_date: string | null };

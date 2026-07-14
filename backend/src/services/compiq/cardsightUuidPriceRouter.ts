@@ -200,12 +200,36 @@ export async function priceByCardsightUuid(
     predictedRange: null,
     regime: null,
     regimeConfidence: null,
-    recentComps: rawRecords.slice(0, 5).map((r) => ({
+    // CF-CARDSIGHT-COMPLETE-COMPS (Drew, 2026-07-13, PR #416): emit EVERY
+    // raw record — not just the top 5 — so iOS' Card Detail shows the full
+    // comp history. Field names match iOS' CompIQPriceRecentComp decoder
+    // (soldDate, imageUrl, saleType) plus price + title + url.
+    recentComps: rawRecords.map((r) => ({
       price: r.price,
-      date: r.date ?? null,
+      soldDate: r.date ?? null,
+      title: r.title ?? null,
+      imageUrl: r.image_url ?? null,
+      saleType: r.listing_type === "fixed"
+        ? "Buy It Now"
+        : r.listing_type === "auction"
+          ? "Auction"
+          : r.listing_type ?? null,
+      belowMarket: false,
+      url: r.url ?? null,
       source: "cardsight",
     })),
-    priceHistory: null,
+    // priceHistory shape: { soldDate, price, listingType }. Emit chronological
+    // (oldest → newest) so iOS' priceHistoryContent regression math sees a
+    // time-ordered series.
+    priceHistory: rawRecords
+      .slice()
+      .filter((r) => typeof r.date === "string")
+      .sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!))
+      .map((r) => ({
+        soldDate: r.date,
+        price: r.price,
+        listingType: r.listing_type ?? null,
+      })),
     priceSource: "cardsight",
     gradeBreakdown: buildGradeBreakdown(pricing),
     gradedEstimates: [],
@@ -291,7 +315,7 @@ function buildEmptyPricingResponse(cardId: string, detail: any): any {
     regime: null,
     regimeConfidence: null,
     recentComps: [],
-    priceHistory: null,
+    priceHistory: [],
     priceSource: "cardsight",
     gradeBreakdown: [],
     gradedEstimates: [],

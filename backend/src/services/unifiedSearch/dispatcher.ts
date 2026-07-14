@@ -729,29 +729,49 @@ async function dispatchFreetextMode(
       "../compiq/cardsightUuidSource.js"
     );
     const cardsightNative = await fetchCardsightUuidNativeCandidates(input);
-    // CF-DEDUP-INCLUDES-PARALLEL (Drew, 2026-07-13, PR #415): after PR
-    // #413 exploded Cardsight UUID parents into per-parallel rows, the
-    // (player, setName, cardNumber) key collided for every parallel of
-    // the same parent — all 40 Hartman CPA-EHA parallels shared one
-    // key, so only the first survived the merge (verified via KQL
-    // `cardsightUuidCount:123 totalAfterMerge:54`). Adding parallel to
-    // the key makes each variant distinct while still correctly deduping
-    // the intended case (same physical card in both vendors).
+    // CF-CROSS-VENDOR-DEDUP (Drew, 2026-07-13, PR #416): CH and Cardsight
+    // word the same set differently ("2026 Bowman Baseball" vs "Chrome
+    // Prospects Autographs"), so setName-based dedup lets duplicates
+    // through — every physical parallel emits twice. Key on the SKU
+    // essentials instead: (player, year, cardNumber, normalizedParallel).
+    // Parallel is normalized (lowercase, collapse whitespace, drop
+    // "refractor" suffix noise when it's the only distinguishing word)
+    // so common vendor phrasings collide correctly.
     const seenKey = (c: CardIdentity) =>
       [
         (c.player ?? "").toLowerCase().trim(),
-        (c.setName ?? "").toLowerCase().trim(),
+        String(c.year ?? "").trim(),
         (c.cardNumber ?? "").toLowerCase().trim(),
-        (c.parallel ?? "").toLowerCase().trim(),
+        normalizeParallelForDedup(c.parallel),
       ].join("::");
-    const seen = new Set(candidates.map(seenKey));
+    // Index CH candidates by dedup key so when we skip a duplicate
+    // Cardsight-native row we can still transfer its imageUrl to the
+    // surviving CH row (CH catalog often lacks images for autos).
+    const chByKey = new Map<string, CardIdentity>();
+    for (const c of candidates) chByKey.set(seenKey(c), c);
+    const seen = new Set(chByKey.keys());
     let dedupedCount = 0;
+    let imageGraftedCount = 0;
     for (const cs of cardsightNative) {
-      if (!seen.has(seenKey(cs))) {
+      const k = seenKey(cs);
+      if (!seen.has(k)) {
         candidates.push(cs);
-        seen.add(seenKey(cs));
+        seen.add(k);
+        chByKey.set(k, cs);
       } else {
         dedupedCount++;
+        // Graft the Cardsight image onto the CH survivor when CH lacks
+        // one. Prevents the "everything shows placeholder" UX Drew hit.
+        const survivor = chByKey.get(k);
+        if (
+          survivor &&
+          (survivor.imageUrl == null || survivor.imageUrl === "") &&
+          typeof cs.imageUrl === "string" &&
+          cs.imageUrl.length > 0
+        ) {
+          survivor.imageUrl = cs.imageUrl;
+          imageGraftedCount++;
+        }
       }
     }
     if (cardsightNative.length > 0) {
@@ -762,6 +782,7 @@ async function dispatchFreetextMode(
         chCandidateCount: orderedCards.length,
         cardsightUuidCount: cardsightNative.length,
         dedupedCount,
+        imageGraftedCount,
         totalAfterMerge: candidates.length,
       }));
     }
@@ -790,6 +811,23 @@ export function extractYearFromSetText(setStr: string | undefined | null): numbe
   if (!setStr) return null;
   const m = String(setStr).match(/\b(19|20)\d{2}\b/);
   return m ? Number(m[0]) : null;
+}
+
+/**
+ * CF-CROSS-VENDOR-DEDUP (Drew, 2026-07-13, PR #416): normalize a parallel
+ * string for cross-vendor collision. Same physical variant may be:
+ *   - "Blue X-Fractor" (Cardsight)
+ *   - "Blue X-Fractor" (CH bubble.io)
+ *   - "Blue X Fractor" (some CH rows drop the hyphen)
+ * All should collide to the same normalized key.
+ */
+export function normalizeParallelForDedup(parallel: string | null | undefined): string {
+  if (!parallel) return "";
+  return parallel
+    .toLowerCase()
+    .replace(/[-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
