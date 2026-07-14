@@ -14,6 +14,12 @@ import {
 // PredictionLogDocument. Single boundary, no signature churn at the 9
 // call sites.
 import { cacheStatsContext } from "../shared/cache.service.js";
+// CF-SOLD-COMPS-READ (Drew, 2026-07-14): read from the unified sold_comps
+// pool as a supplemental comp source. See project_sold_comps_unified_pool.md.
+import {
+  readCompsByCardId,
+  type SoldCompDoc,
+} from "../portfolioiq/soldCompsStore.service.js";
 import {
   parseCardQuery,
   getCompVariantMismatchReasons,
@@ -2608,6 +2614,95 @@ async function fetchComps(
 }
 
 /**
+ * CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
+ * the unified sold_comps pool into vendor-fetched comps for a resolved cardId.
+ *
+ * Reads USER-CONTRIBUTED sources only (ebay-user-purchase, ebay-user-sale,
+ * manual-user-entry). Vendor pulls (cardhedge / cardsight) are already the
+ * source of truth for fetched.comps; reading them back from the pool would
+ * double-count.
+ *
+ * Dedup: (soldAt-day, rounded price). Vendor and user comps share almost no
+ * external-id namespace so exact-id dedup would be too tight AND too loose;
+ * approximate (day + price) covers duplicates without losing signal.
+ *
+ * Gated on COMPIQ_READ_SOLD_COMPS_ENABLED=true (default off). Silent-fail on
+ * Cosmos absence or read error — pricing must never regress on pool errors.
+ * Trust boundary is upstream (see project_sold_comps_unified_pool.md):
+ * only user-CONFIRMED cardIds have been written to sold_comps, so cross-user
+ * aggregation is safe.
+ */
+export async function augmentCompsWithUserPool(
+  fetched: FetchedComps,
+  cardId: string | undefined | null,
+): Promise<FetchedComps> {
+  if (process.env.COMPIQ_READ_SOLD_COMPS_ENABLED !== "true") return fetched;
+  const resolvedCardId = (cardId ?? fetched.card?.card_id ?? "").trim();
+  if (!resolvedCardId) return fetched;
+
+  let userComps: SoldCompDoc[];
+  try {
+    userComps = await readCompsByCardId({
+      cardId: resolvedCardId,
+      sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+    });
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "compiq_sold_comps_read_soft_fail",
+      source: "compiqEstimate.augmentCompsWithUserPool",
+      cardId: resolvedCardId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return fetched;
+  }
+  if (userComps.length === 0) return fetched;
+
+  const seenKeys = new Set<string>();
+  for (const c of fetched.comps) {
+    const day = (c.soldDate ?? "").slice(0, 10);
+    seenKeys.add(`${day}|${Math.round(c.price)}`);
+  }
+
+  const MAX_INJECT = 20;
+  const additions: RawComp[] = [];
+  for (const uc of userComps) {
+    if (additions.length >= MAX_INJECT) break;
+    if (!Number.isFinite(uc.price) || uc.price <= 0) continue;
+    const day = (uc.soldAt ?? "").slice(0, 10);
+    if (!day) continue;
+    const key = `${day}|${Math.round(uc.price)}`;
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    additions.push({
+      price: uc.price,
+      title: uc.title ?? `[user:${uc.source}] ${uc.playerName}`,
+      soldDate: uc.soldAt,
+      listingType: null,
+      imageUrl: uc.imageUrl,
+    });
+  }
+
+  if (additions.length === 0) return fetched;
+
+  const mergedComps = [...fetched.comps, ...additions].sort((a, b) => {
+    const ta = new Date(a.soldDate).getTime();
+    const tb = new Date(b.soldDate).getTime();
+    return tb - ta;
+  });
+
+  console.log(JSON.stringify({
+    event: "compiq.sold_comps.merged",
+    source: "compiqEstimate.augmentCompsWithUserPool",
+    cardId: resolvedCardId,
+    vendorCount: fetched.comps.length,
+    userInjectCount: additions.length,
+    totalCount: mergedComps.length,
+  }));
+
+  return { ...fetched, comps: mergedComps };
+}
+
+/**
  * Apply the CompIQ recency window: discard sales older than `windowDays` days
  * unless that would leave fewer than 3 comps (thin market — keep everything).
  *
@@ -3648,6 +3743,11 @@ export async function computeEstimate(
     queryContext,
     body.parallelId ?? null,
   );
+
+  // CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
+  // the unified sold_comps pool. Gated on COMPIQ_READ_SOLD_COMPS_ENABLED.
+  // See project_sold_comps_unified_pool.md for the trust model.
+  fetched = await augmentCompsWithUserPool(fetched, body.cardId);
 
   // ── Catalog-miss guard ───────────────────────────────────────────────────
   // CF-LAUNCH-HARDENING (2026-06-02): when the free-text path's Cardsight
