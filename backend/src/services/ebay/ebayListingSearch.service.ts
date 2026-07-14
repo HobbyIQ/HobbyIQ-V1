@@ -46,14 +46,27 @@ export interface ListingsSummary {
  * Returns null on auth failure / network error / empty results so the
  * caller can persist a null snapshot (still useful — "no data today" is
  * a signal).
+ *
+ * CF-BROWSE-APP-SCOPE-TOKEN (Drew, 2026-07-13, PR #422): the Browse
+ * search endpoint is a public read — user context isn't required. Prefer
+ * the app-scope EBAY_BROWSE_TOKEN when configured so the daily cron
+ * doesn't depend on any specific user having a live OAuth session. Falls
+ * back to per-user OAuth via getAccessToken for backward compat with
+ * flows that pass a real userId (e.g. iOS-initiated snapshots).
  */
 export async function fetchPlayerListingsSummary(
   userId: string,
   playerName: string,
   qualifier: string | null = null,
 ): Promise<ListingsSummary | null> {
-  if (!userId || !playerName) return null;
-  const token = await getAccessToken(userId).catch(() => null);
+  if (!playerName) return null;
+  const appToken = process.env.EBAY_BROWSE_TOKEN?.trim();
+  let token: string | null = null;
+  if (appToken && appToken.length > 0) {
+    token = appToken;
+  } else if (userId) {
+    token = await getAccessToken(userId).catch(() => null);
+  }
   if (!token) return null;
 
   const q = qualifier ? `${playerName} ${qualifier}` : playerName;
