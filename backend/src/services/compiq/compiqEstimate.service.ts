@@ -16,8 +16,13 @@ import {
 import { cacheStatsContext } from "../shared/cache.service.js";
 // CF-SOLD-COMPS-READ (Drew, 2026-07-14): read from the unified sold_comps
 // pool as a supplemental comp source. See project_sold_comps_unified_pool.md.
+// CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): recordSoldComp for the
+// Cardsight ingest path. CH ingest is handled upstream by tryCardHedge in
+// cardsight.router.ts; we intentionally do NOT re-emit CH-served comps here
+// to avoid double-writes.
 import {
   readCompsByCardId,
+  recordSoldComp,
   type SoldCompDoc,
 } from "../portfolioiq/soldCompsStore.service.js";
 import {
@@ -2614,6 +2619,91 @@ async function fetchComps(
 }
 
 /**
+ * CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): capture every Cardsight-
+ * served comp into the unified sold_comps pool. Fire-and-forget — pricing
+ * hot path is authoritative; ingest is auxiliary.
+ *
+ * COVERAGE model:
+ *   - CH comps are already emitted upstream by tryCardHedge in
+ *     cardsight.router.ts at confidence=0.8 with a rich identity hint. Every
+ *     path that receives CH comps (pinned + routed) flows through that
+ *     emit. We DO NOT re-emit CH comps here — that would double-write.
+ *   - CS comps flowing through findCompsRouted or fetchComps have never
+ *     been captured. This helper closes that gap.
+ *
+ * IDEMPOTENCY: RawComp has no per-sale external id from CS. Compose a
+ * deterministic id from (cardId, soldDate, price-cents) so re-fetching the
+ * same physical sale upserts to the same row.
+ *
+ * TRUST: writes at confidence=0.6 (vendor-observed, not user-verified).
+ * verifiedByUser=false. Downstream consumers filter by source/confidence.
+ * Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED=true (default off).
+ */
+export function ingestVendorCompsToPool(fetched: FetchedComps): void {
+  if (process.env.SOLD_COMPS_VENDOR_INGEST_ENABLED !== "true") return;
+  // CH already covered upstream — skip to avoid double-writes.
+  if (fetched.vendor !== "cardsight") return;
+  const card = fetched.card;
+  if (!card?.card_id) return;
+  const playerName = (card.player ?? "").trim();
+  if (!playerName) return;
+  if (fetched.comps.length === 0) return;
+
+  const cardYear =
+    typeof card.year === "number"
+      ? card.year
+      : card.year != null
+        ? parseInt(String(card.year), 10)
+        : null;
+  const isAuto = /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
+    String(card.number ?? ""),
+  );
+
+  void (async () => {
+    let written = 0;
+    for (const c of fetched.comps) {
+      if (typeof c.price !== "number" || c.price <= 0) continue;
+      if (!c.soldDate) continue;
+      const externalId = `${card.card_id}::${c.soldDate}::${Math.round(c.price * 100)}`;
+      try {
+        await recordSoldComp({
+          cardId: card.card_id,
+          playerName,
+          cardYear: Number.isFinite(cardYear as number) ? (cardYear as number) : null,
+          setName: card.set ?? null,
+          parallel: card.variant ?? null,
+          cardNumber: card.number ?? null,
+          isAuto,
+          price: c.price,
+          soldAt: c.soldDate,
+          source: "cardsight",
+          sourceExternalId: externalId,
+          contributorUserId: null,
+          title: c.title ?? null,
+          imageUrl: c.imageUrl ?? null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.6,
+        });
+        written += 1;
+      } catch {
+        // swallow — vendor ingest is auxiliary
+      }
+    }
+    if (written > 0) {
+      console.log(JSON.stringify({
+        event: "compiq.sold_comps.vendor_ingest",
+        source: "compiqEstimate.ingestVendorCompsToPool",
+        cardId: card.card_id,
+        vendor: fetched.vendor,
+        written,
+        total: fetched.comps.length,
+      }));
+    }
+  })();
+}
+
+/**
  * CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
  * the unified sold_comps pool into vendor-fetched comps for a resolved cardId.
  *
@@ -3743,6 +3833,12 @@ export async function computeEstimate(
     queryContext,
     body.parallelId ?? null,
   );
+
+  // CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): capture Cardsight-served
+  // comps into the pool. Fire-and-forget; runs before READ so this-call comps
+  // don't self-augment (avoids feedback loops). CH comps are already emitted
+  // upstream by tryCardHedge. Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED.
+  ingestVendorCompsToPool(fetched);
 
   // CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
   // the unified sold_comps pool. Gated on COMPIQ_READ_SOLD_COMPS_ENABLED.
