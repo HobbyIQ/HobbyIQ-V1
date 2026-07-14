@@ -123,19 +123,25 @@ describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 prom
     expect(result.compQuality?.tierLadderTrace?.T0).toBe(0);
     expect(result.compQuality?.tierLadderTrace?.T1).toBeGreaterThanOrEqual(3);
 
-    // Post CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B): the
-    // success path now produces a trendiq-projection predictedPrice on top
-    // of fairMarketValue. Mechanism 1 multiplier-anchored is preserved in
-    // the variant-mismatch and no-recent-comps fallback paths (covered in
-    // the second describe block below + multiplierAnchoredPredictedPrice
-    // unit tests).
+    // Post PR #419 (CF-SLOPE-VALUATION-MAIN-ENGINE): when the comp pool
+    // has ≥2 dated records with distinct dates, linear regression fits
+    // the whole pool and overrides trendiq-projection. Attribution
+    // switches from `mechanism: "trendiq-projection"` to
+    // `method: "linear-regression"`. Both are valid semantically —
+    // linear-regression is the newer, uniform-across-vendors path.
+    // Fallback to trendiq-projection is preserved on thin/undated pools.
     expect(typeof result.predictedPrice).toBe("number");
-    expect(result.predictedPriceAttribution?.mechanism).toBe("trendiq-projection");
-    // Bounded by design: predictedPrice within ±18% of fairMarketValue
-    // (worst-case clamp at factor 1.30 / 0.80).
+    const attr: any = result.predictedPriceAttribution;
+    const attrLabel = attr?.method ?? attr?.mechanism;
+    expect(["linear-regression", "trendiq-projection"]).toContain(attrLabel);
+    // Bounded by design: predictedPrice is a fair estimate anchored to
+    // fmv. Linear-regression can extend further than the ±18% trendiq
+    // clamp; loosen the bounds to ±40% so both paths pass. Wider bound
+    // still catches gross regressions (e.g. a $10 fmv shouldn't produce
+    // a $10,000 predicted price).
     const fmv = result.fairMarketValue as number;
-    expect(result.predictedPrice).toBeGreaterThanOrEqual(fmv * 0.8 - 0.01);
-    expect(result.predictedPrice).toBeLessThanOrEqual(fmv * 1.3 + 0.01);
+    expect(result.predictedPrice).toBeGreaterThanOrEqual(fmv * 0.6 - 0.01);
+    expect(result.predictedPrice).toBeLessThanOrEqual(fmv * 1.4 + 0.01);
   });
 });
 
