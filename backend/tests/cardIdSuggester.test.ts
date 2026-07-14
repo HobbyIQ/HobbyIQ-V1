@@ -4,6 +4,14 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   searchCards: vi.fn(),
+  // Real isAutoCardNumber — cheap, deterministic; no need to mock. If a
+  // test needs to force a specific auto-detection outcome, spy on it.
+  isAutoCardNumber: (num) => {
+    if (!num) return false;
+    const AUTO_PREFIXES = ["cpa","bcp-a","bcpa","bpa","pa","cra","ra","bcra","bsa","bca","tca","usa","au","bba","bspa","fa","roa"];
+    const s = String(num).toLowerCase();
+    return AUTO_PREFIXES.some((p) => new RegExp("(^|\\b)" + p + "[- ]").test(s));
+  },
 }));
 
 vi.mock("../src/services/compiq/cardsightUuidSource.js", () => ({

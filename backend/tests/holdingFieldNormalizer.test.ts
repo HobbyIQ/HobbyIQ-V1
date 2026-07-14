@@ -119,6 +119,23 @@ describe("R4 playerName_strip_leading_noise — 'Refractors Eric Hartman' → 'E
     expect(r.fields.playerName).toBe("Eric Hartman");
   });
 
+  it("strips leading 'Sapphire' (2026-07-14 audit: 'Sapphire Owen Carey' for BSPA-OC)", () => {
+    const r = normalizeHoldingFields({ playerName: "Sapphire Owen Carey" });
+    expect(r.fields.playerName).toBe("Owen Carey");
+  });
+
+  it("strips leading 'Bowman' (brand-leak case)", () => {
+    const r = normalizeHoldingFields({ playerName: "Bowman Eric Hartman" });
+    expect(r.fields.playerName).toBe("Eric Hartman");
+  });
+
+  it("R3 does NOT strip 'Sapphire' from a parallel field (Sapphire Refractor is a real SKU)", () => {
+    // Cross-check: the noise vocab was split so R3 (parallel) doesn't
+    // reach the R4-only words. Sapphire Refractor stays intact.
+    const r = normalizeHoldingFields({ parallel: "Sapphire Refractor" });
+    expect(r.fields.parallel).toBe("Sapphire Refractor");
+  });
+
   it("strips leading 'Chrome Prospects' words", () => {
     const r = normalizeHoldingFields({ playerName: "Chrome Prospects Eric Hartman" });
     expect(r.fields.playerName).toBe("Eric Hartman");

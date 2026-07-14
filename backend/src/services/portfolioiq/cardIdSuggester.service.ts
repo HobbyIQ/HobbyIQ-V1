@@ -14,7 +14,7 @@
 // the "silently wrong pricing" failure mode PR #386 shipped to avoid.
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
-import { searchCards, type CardHedgeCard } from "../compiq/cardhedge.client.js";
+import { searchCards, isAutoCardNumber, type CardHedgeCard } from "../compiq/cardhedge.client.js";
 import { fetchCardsightUuidNativeCandidates } from "../compiq/cardsightUuidSource.js";
 import type { CardIdentity } from "../../types/cardIdentity.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
@@ -200,13 +200,22 @@ function scoreCandidate(candidate: CommonCandidate, holding: PortfolioHolding): 
   let fieldsMatched = 0;
   const mismatched: string[] = [];
 
+  // CF-CARDID-SUGGESTER-FAIR-SCORING (Drew, 2026-07-14): the check
+  // signature now takes BOTH sides' presence flags. Prior implementation
+  // gated only on the holding side — so when CH returned a candidate
+  // with a null `name` field the playerName check fired a false
+  // "mismatch" (empty candidate string can't contain holding.playerName).
+  // Fair semantics: if either side lacks signal, skip the field entirely
+  // (no credit, no penalty). You can't call something a mismatch when
+  // you have no data to compare.
   const check = (
     fieldName: string,
     weight: number,
-    isPresent: boolean,
+    holdingHasSignal: boolean,
+    candidateHasSignal: boolean,
     isMatch: boolean,
   ) => {
-    if (!isPresent) return;
+    if (!holdingHasSignal || !candidateHasSignal) return;
     weightChecked += weight;
     fieldsChecked += 1;
     if (isMatch) {
@@ -217,9 +226,27 @@ function scoreCandidate(candidate: CommonCandidate, holding: PortfolioHolding): 
     }
   };
 
-  // year
-  const cYear = Number(candidate.year);
-  check("cardYear", weights.year, !!holding.cardYear,
+  // year — CF-CARDID-SUGGESTER-YEAR-FROM-SET (Drew, 2026-07-14): CH's
+  // `card.year` is often null; the year lives baked into the `set`
+  // string ("2026 Bowman Baseball"). Fall back to extracting a 4-digit
+  // year from set text before deciding the year mismatched. Also
+  // accepts the CS candidate.year when it's stored as a string.
+  const cYearFromField = (() => {
+    // Guard against Number(null) = 0 and Number("") = 0 — both would
+    // pass Number.isFinite but aren't valid years. Only trust the field
+    // when it's a non-empty numeric string OR a real number ≥ 1900.
+    if (candidate.year == null || candidate.year === "") return NaN;
+    const n = Number(candidate.year);
+    return Number.isFinite(n) && n >= 1900 ? n : NaN;
+  })();
+  const cYearFromSet = (() => {
+    const m = String(candidate.set ?? candidate.title ?? "").match(/\b(19|20)\d{2}\b/);
+    return m ? Number(m[0]) : NaN;
+  })();
+  const cYear = Number.isFinite(cYearFromField) ? cYearFromField : cYearFromSet;
+  check("cardYear", weights.year,
+    !!holding.cardYear,
+    Number.isFinite(cYear),
     !!holding.cardYear && Number.isFinite(cYear) && cYear === holding.cardYear);
 
   // cardNumber
@@ -229,16 +256,62 @@ function scoreCandidate(candidate: CommonCandidate, holding: PortfolioHolding): 
     const b = String(candidate.number).toLowerCase();
     return a === b || a.includes(b) || b.includes(a);
   })();
-  check("cardNumber", weights.cardNumber, !!holding.cardNumber, cardNumberMatch);
+  check("cardNumber", weights.cardNumber,
+    !!holding.cardNumber,
+    !!candidate.number,
+    cardNumberMatch);
 
-  // set
-  const setMatch = (() => {
-    if (!holding.setName || !candidate.set) return false;
-    const a = String(holding.setName).toLowerCase();
-    const b = String(candidate.set).toLowerCase();
-    return a === b || a.includes(b) || b.includes(a);
+  // set — CF-CARDID-SUGGESTER-SET-TOKEN-OVERLAP (Drew, 2026-07-14): the
+  // set-string is the LEAST-canonical field across vendors:
+  //   holding.setName    = "Bowman Chrome"       (user's mental model)
+  //   CH.card.set        = "2026 Bowman Baseball" (CH's catalog naming
+  //                          — CPA-EHA autos are catalogued under the
+  //                          flagship set, not Chrome)
+  //   CS.detail.setName  = "Chrome Prospects"    (CS's own naming)
+  // Strict includes-check drops honest matches to a hard 0 at 20 weight.
+  // Fuzzy match: normalize both, split into significant tokens (year
+  // digits + "baseball"/"basketball"/etc. category noise stripped),
+  // count intersection. Full match on all tokens = 1.0; partial = 0.5;
+  // no shared tokens = 0.
+  const setMatchScore = (() => {
+    if (!holding.setName || !candidate.set) return 0;
+    const CATEGORY_NOISE = new Set(["baseball", "basketball", "football", "hockey", "soccer"]);
+    const tokenize = (s: string) => new Set(
+      s.toLowerCase()
+        .replace(/[-_/]/g, " ")
+        .split(/\s+/)
+        .filter((t) => t.length >= 3 && !/^\d{4}$/.test(t) && !CATEGORY_NOISE.has(t)),
+    );
+    const a = tokenize(String(holding.setName));
+    const b = tokenize(String(candidate.set));
+    if (a.size === 0 || b.size === 0) return 0;
+    let shared = 0;
+    for (const t of a) if (b.has(t)) shared++;
+    if (shared === 0) return 0;
+    return shared === a.size && shared === b.size ? 1.0 : 0.5;
   })();
-  check("setName", weights.setName, !!holding.setName, setMatch);
+  // Full-credit when both sides tokenize to the same set; half-credit
+  // on any overlap. Passed as isMatch=true/false via the >= 1.0 gate
+  // (below), and the partial score is folded into weightMatched via
+  // the special-case addition to preserve tiering behavior.
+  const setMatch = setMatchScore >= 1.0;
+  const setPartial = setMatchScore >= 0.5 && setMatchScore < 1.0;
+  if (holding.setName && candidate.set) {
+    weightChecked += weights.setName;
+    fieldsChecked += 1;
+    if (setMatch) {
+      weightMatched += weights.setName;
+      fieldsMatched += 1;
+    } else if (setPartial) {
+      // Partial credit: half the weight, but still counts as "matched"
+      // for the fields tally so the user sees "4/5 fields match" rather
+      // than a red mismatch.
+      weightMatched += weights.setName * 0.5;
+      fieldsMatched += 1;
+    } else {
+      mismatched.push("setName");
+    }
+  }
 
   // parallel/variant — CF-CARDID-SUGGESTER-STRICT-PARALLEL (Drew,
   // 2026-07-14): require normalized-equality, NOT substring. Prior
@@ -256,26 +329,41 @@ function scoreCandidate(candidate: CommonCandidate, holding: PortfolioHolding): 
       .trim();
     return norm(String(holding.parallel)) === norm(String(candidate.variant));
   })();
-  check("parallel", weights.parallel, !!holding.parallel, parallelMatch);
+  check("parallel", weights.parallel,
+    !!holding.parallel,
+    !!candidate.variant,
+    parallelMatch);
 
-  // player
-  const playerMatch = (() => {
-    if (!holding.playerName) return false;
-    const candidateText = String(candidate.name ?? candidate.title ?? "").toLowerCase();
-    return candidateText.includes(String(holding.playerName).toLowerCase());
-  })();
-  check("playerName", weights.playerName, !!holding.playerName, playerMatch);
+  // player — CF-CARDID-SUGGESTER-PLAYER-TRUST-FILTER (Drew, 2026-07-14):
+  // when candidate has NO name/title text (common on CH's search shape
+  // — many rows are set+number+variant only), skip the check. The
+  // player filter passed to CH's search already narrowed the pool to
+  // matching-player rows, so treating a text-less candidate as a player
+  // mismatch is a false negative.
+  const candidatePlayerText = String(candidate.name ?? candidate.title ?? "").toLowerCase().trim();
+  const playerMatch = candidatePlayerText.length > 0
+    && candidatePlayerText.includes(String(holding.playerName ?? "").toLowerCase());
+  check("playerName", weights.playerName,
+    !!holding.playerName,
+    candidatePlayerText.length > 0,
+    playerMatch);
 
-  // isAuto — infer from candidate title/variant when CH shape doesn't
-  // carry a dedicated flag. Title/variant contains "Auto"/"Autograph" →
-  // candidate is an auto.
-  const autoMatch = (() => {
-    if (typeof holding.isAuto !== "boolean") return false;
-    const candidateText = String(candidate.variant ?? candidate.title ?? "").toLowerCase();
-    const candidateIsAuto = /\b(auto|autograph)\b/.test(candidateText);
-    return candidateIsAuto === holding.isAuto;
-  })();
-  check("isAuto", weights.autoFlag, typeof holding.isAuto === "boolean", autoMatch);
+  // isAuto — CF-CARDID-SUGGESTER-AUTO-INFERENCE (Drew, 2026-07-14):
+  // check title/variant text FIRST (Bowman "Refractor Auto" style
+  // labels), then fall back to card-number prefix (CH's autograph SKUs
+  // encode auto-ness in CPA-/BCPA-/CRA-/etc. — reuses isAutoCardNumber
+  // from cardhedge.client). Prior text-only check missed every CH
+  // autograph pick, always firing a false "isAuto mismatch" that
+  // dropped Hartman/Owen Carey CPA autos out of medium tier.
+  const candidateAutoText = String(candidate.variant ?? candidate.title ?? "").toLowerCase();
+  const candidateHasAutoSignal =
+    candidateAutoText.length > 0 || !!candidate.number;
+  const candidateIsAuto =
+    /\b(auto|autograph)\b/.test(candidateAutoText) || isAutoCardNumber(candidate.number);
+  check("isAuto", weights.autoFlag,
+    typeof holding.isAuto === "boolean",
+    candidateHasAutoSignal,
+    candidateIsAuto === holding.isAuto);
 
   const score = weightChecked === 0 ? 0 : weightMatched / weightChecked;
   return {
@@ -445,14 +533,20 @@ export async function suggestCardIdForHolding(
   // Score against NORMALIZED fields — otherwise the messy original
   // (e.g. parallel="Chrome Refractor") mismatches a clean vendor variant
   // ("Refractor") and downgrades the score of the correct match.
+  //
+  // CF-CARDID-SUGGESTER-SCORING-NORMALIZED (Drew, 2026-07-14): use the
+  // normalized values DIRECTLY (no `??` fallback). Prior code fell back
+  // to holding.parallel when normalizer nulled it — undoing R3's
+  // subset-strip for scoring purposes. If normalizer decided parallel
+  // was noise, the scorer needs to see null too.
   const holdingForScoring: PortfolioHolding = {
     ...holding,
-    playerName: cleanFields.playerName ?? holding.playerName,
-    cardYear: cleanFields.cardYear ?? holding.cardYear,
-    setName: cleanFields.setName ?? holding.setName,
-    parallel: cleanFields.parallel ?? holding.parallel,
-    cardNumber: cleanFields.cardNumber ?? holding.cardNumber,
-    isAuto: cleanFields.isAuto ?? holding.isAuto,
+    playerName: cleanFields.playerName as any,
+    cardYear: cleanFields.cardYear as any,
+    setName: cleanFields.setName as any,
+    parallel: cleanFields.parallel as any,
+    cardNumber: cleanFields.cardNumber as any,
+    isAuto: cleanFields.isAuto as any,
   };
   const scored = merged
     .map((c) => ({ candidate: c, match: scoreCandidate(c, holdingForScoring) }))

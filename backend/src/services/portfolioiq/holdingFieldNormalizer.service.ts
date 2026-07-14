@@ -70,6 +70,12 @@ export interface NormalizeResult {
  * Words that CAN appear in the parallel field or leak into playerName
  * that shouldn't be there. Case-insensitive.
  */
+/**
+ * Words that are SET/SUBSET names, not parallel names. Safe to strip
+ * from the parallel field's leading tokens because a real parallel
+ * ("Blue Refractor", "Green Shimmer") wouldn't start with these.
+ * Used by R3 (parallel_strip_subset_prefix).
+ */
 const SUBSET_WORDS = [
   "chrome",
   "prospects",
@@ -80,6 +86,33 @@ const SUBSET_WORDS = [
   "basketball",
   "football",
   "hockey",
+];
+
+/**
+ * Words that CAN legitimately appear in a parallel name but should
+ * NEVER be the leading token of a player's name. Union with
+ * SUBSET_WORDS for R4 (playerName_strip_leading_noise). Kept separate
+ * from SUBSET_WORDS so R3 doesn't wrongly strip "Sapphire" from a
+ * "Sapphire Refractor" parallel string (Sapphire IS a subset but the
+ * parallel-scope word is different than the leaking-into-player case).
+ *
+ * OBSERVED (2026-07-14 audit):
+ *   playerName "Sapphire Owen Carey" for a BSPA-OC card — Sapphire is
+ *   the Bowman Sapphire subset name that leaked into the parser output.
+ */
+const PLAYERNAME_LEADING_NOISE_EXTRA = [
+  "sapphire",
+  "sterling",
+  "heritage",
+  "topps",
+  "bowman",
+  "panini",
+  "prizm",
+  "select",
+  "optic",
+  "mosaic",
+  "refractors",
+  "refractor",
 ];
 
 /**
@@ -174,16 +207,18 @@ const RULES: Rule[] = [
     },
   },
 
-  // ── R4 playerName: strip leading subset words ──────────────────────
-  // OBSERVED: playerName "Refractors Eric Hartman" — the parallel token
-  // "Refractors" (plural) leaked into the name during title parsing.
-  // Strip leading tokens that are known subset words.
+  // ── R4 playerName: strip leading subset/set/brand words ────────────
+  // OBSERVED: playerName "Refractors Eric Hartman" — parallel word leak.
+  // OBSERVED: playerName "Sapphire Owen Carey" — subset word leak.
+  // Union of SUBSET_WORDS + PLAYERNAME_LEADING_NOISE_EXTRA covers both
+  // parallel-word leaks (refractor, refractors) and set/brand leaks
+  // (Sapphire, Sterling, Bowman, Topps, etc.).
   {
     name: "playerName_strip_leading_noise",
     apply(fields, changes) {
       const name = fields.playerName;
       if (!name) return fields;
-      const noiseWords = new Set([...SUBSET_WORDS, "refractors", "refractor"]);
+      const noiseWords = new Set([...SUBSET_WORDS, ...PLAYERNAME_LEADING_NOISE_EXTRA]);
       const tokens = name.split(/\s+/).filter((t) => t.length > 0);
       let i = 0;
       while (i < tokens.length && noiseWords.has(tokens[i].toLowerCase())) i++;

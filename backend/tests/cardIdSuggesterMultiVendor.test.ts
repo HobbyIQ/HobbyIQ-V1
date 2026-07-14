@@ -20,6 +20,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   searchCards: vi.fn(),
+  isAutoCardNumber: (num) => {
+    if (!num) return false;
+    const AUTO_PREFIXES = ["cpa","bcp-a","bcpa","bpa","pa","cra","ra","bcra","bsa","bca","tca","usa","au","bba","bspa","fa","roa"];
+    const s = String(num).toLowerCase();
+    return AUTO_PREFIXES.some((p) => new RegExp("(^|\\b)" + p + "[- ]").test(s));
+  },
 }));
 vi.mock("../src/services/compiq/cardsightUuidSource.js", () => ({
   fetchCardsightUuidNativeCandidates: vi.fn(),
@@ -288,6 +294,84 @@ describe("CF-HOLDING-FIELD-NORMALIZER — suggester runs on cleaned fields", () 
   });
 });
 
+describe("CF-CARDID-SUGGESTER-FAIR-SCORING — three scorer fixes", () => {
+  it("year-from-set-text: candidate.year=null but set='2026 Bowman Baseball' → year matches", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-nullyear",
+        set: "2026 Bowman Baseball",          // year in string, not field
+        year: null,                             // ← the CH bug this fixes
+        number: "CPA-EHA",
+        variant: "Green Refractor",
+        name: "Eric Hartman",
+      } as any,
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding({
+      cardYear: 2026,
+      parallel: "Green Refractor",  // exact-match parallel → high tier possible
+    }));
+    expect(r).not.toBeNull();
+    // cardYear should NOT be in mismatched fields — the set-text fallback found 2026.
+    expect(r!.matchBreakdown.mismatchedFields).not.toContain("cardYear");
+  });
+
+  it("isAuto-from-card-number: CH auto SKU with plain 'Base' variant → isAuto matches", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-auto-via-num",
+        set: "2026 Bowman Baseball", year: 2026,
+        number: "CPA-EHA",                     // ← CPA prefix = auto
+        variant: "Base",                       // ← variant text has no "auto" word
+        name: "Eric Hartman",
+      } as any,
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding({ isAuto: true, parallel: null }));
+    expect(r).not.toBeNull();
+    expect(r!.matchBreakdown.mismatchedFields).not.toContain("isAuto");
+  });
+
+  it("player-trust-filter: candidate with null name/title → player check skipped, not mismatched", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-noname",
+        set: "2026 Bowman Baseball", year: 2026,
+        number: "CPA-EHA", variant: "Green Refractor",
+        name: null, title: null,               // ← CH's actual response shape
+      } as any,
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
+    expect(r).not.toBeNull();
+    // playerName should NOT be in mismatched fields — candidate has no
+    // signal to compare against, so the check is skipped entirely.
+    expect(r!.matchBreakdown.mismatchedFields).not.toContain("playerName");
+  });
+
+  it("combined: real CH candidate (null year, null name, CPA auto, exact parallel) → HIGH tier", async () => {
+    // The exact wire shape CH returns for CPA-EHA cards per the 2026-07-14
+    // probe. Pre-fix all these landed at LOW tier (0.45) because three
+    // false-mismatch checks (cardYear, playerName, isAuto) each cost weight.
+    // Post-fix: 4/4 checkable fields match → HIGH tier.
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-real-shape",
+        set: "2026 Bowman Baseball", year: null,
+        number: "CPA-EHA", variant: "Green Refractor",
+        name: null, title: null,
+      } as any,
+    ]);
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    const r = await suggestCardIdForHolding(makeHolding({
+      parallel: "Green Refractor",
+      isAuto: true,
+    }));
+    expect(r).not.toBeNull();
+    expect(r!.confidenceTier).toBe("high");
+  });
+});
+
 describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
   it("HIGH tier suppresses alternatives (primary is confident enough)", async () => {
     // Perfect field alignment → tier=high → NO alternatives on the wire.
@@ -339,7 +423,10 @@ describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
       },
     ]);
     vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
-    const r = await suggestCardIdForHolding(makeHolding());
+    // Force MEDIUM tier by giving the holding a year that mismatches all
+    // candidates — post fair-scoring fix the primary would otherwise
+    // land in the high tier on 5/6 field alignment.
+    const r = await suggestCardIdForHolding(makeHolding({ cardYear: 2025 }));
     expect(r!.confidenceTier).not.toBe("high");
     expect(r!.alternatives).toBeDefined();
     // Cap at 2, primary excluded, in score order.
