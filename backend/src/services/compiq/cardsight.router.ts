@@ -517,6 +517,63 @@ async function tryCardHedge(
     return null;
   }
 
+  // CF-VENDOR-EMIT-SOLD-COMPS (Drew, 2026-07-14): every trusted CH sale
+  // gets persisted into the unified sold_comps pool. Fire-and-forget;
+  // never blocks the caller, never fails the response on emit error.
+  // Only fires when trusted (trustReason set) — pool never sees
+  // vendor-blob or otherwise-suspect sales.
+  //
+  // Confidence: 0.8 (higher than CS raw pool because trust-guard has
+  // already validated identity via title-cohesion / player-surname).
+  // Downstream consumers can still prefer verified=true (1.0) user data.
+  void (async () => {
+    try {
+      const { recordSoldComp } = await import(
+        "../portfolioiq/soldCompsStore.service.js"
+      );
+      const playerName = identity.playerName?.trim();
+      if (!playerName) return;
+      const cardYear =
+        typeof identity.cardYear === "number"
+          ? identity.cardYear
+          : identity.cardYear != null
+            ? parseInt(String(identity.cardYear), 10)
+            : null;
+      const isAuto =
+        identity.isAuto === true ||
+        /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
+          String(identity.number ?? ""),
+        );
+      for (const c of trusted.comps) {
+        if (typeof c.price !== "number" || c.price <= 0) continue;
+        if (!c.date) continue;
+        // CH sales don't carry a stable per-sale external id.
+        // Use (chCardId + date + price-cents) as the composite key —
+        // idempotent for the same physical sale re-observed on rewrites.
+        const externalId = `${bridge.chCardId}::${c.date}::${Math.round(c.price * 100)}`;
+        await recordSoldComp({
+          cardId: bridge.chCardId,
+          playerName,
+          cardYear: Number.isFinite(cardYear as any) ? (cardYear as number) : null,
+          setName: identity.product ?? null,
+          parallel: identity.parallel ?? null,
+          cardNumber: identity.number ?? null,
+          isAuto,
+          price: c.price,
+          soldAt: c.date,
+          source: "cardhedge",
+          sourceExternalId: externalId,
+          contributorUserId: null,
+          title: c.title ?? null,
+          imageUrl: null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.8,
+        });
+      }
+    } catch { /* swallow — vendor emit is auxiliary */ }
+  })();
+
   return {
     chCardId: bridge.chCardId,
     trustReason: trusted.reason,
