@@ -174,7 +174,12 @@ function explodeParentIntoParallels(
           .map((p) => (p == null ? "" : String(p).trim()))
           .filter((p) => p.length > 0)
           .join(" "),
-      imageUrl: null,
+      // CF-CARDSIGHT-UUID-IMAGE (PR #414 + #416): mark the row so both the
+      // dispatcher's cross-vendor dedup can graft this URL onto a
+      // surviving CH candidate AND the route-level patcher rewrites the
+      // marker to an absolute URL. Any string starting with
+      // `cardsight-parent:` is a routable marker.
+      imageUrl: `cardsight-parent:${detail.id}`,
       // No parallels[] on exploded rows — the row IS the parallel.
       parallels: [],
       raw: { hit, detail, parallel: par },

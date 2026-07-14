@@ -37,12 +37,23 @@ export function patchCardsightImageUrls(
   candidates: any[],
 ): void {
   for (const c of candidates) {
-    // Never overwrite an existing http(s) imageUrl. CH candidates carry
-    // real CDN URLs; the /cardsearch handler has a separate patch for
-    // those.
-    if (typeof c?.imageUrl === "string" && /^https?:\/\//i.test(c.imageUrl)) {
-      continue;
+    // CF-CARDSIGHT-COMPLETE-COMPS (PR #416): the dispatcher populates a
+    // `cardsight-parent:{uuid}` marker on Cardsight-native rows so the
+    // cross-vendor dedup can graft the same-marker string onto a CH
+    // survivor. Rewrite the marker to an absolute proxy URL here — the
+    // marker never reaches iOS.
+    if (typeof c?.imageUrl === "string") {
+      const markerMatch = c.imageUrl.match(
+        /^cardsight-parent:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+      );
+      if (markerMatch) {
+        c.imageUrl = absoluteApiUrl(req, `/api/compiq/card-image/${markerMatch[1]}`);
+        continue;
+      }
+      // Never overwrite an existing http(s) imageUrl.
+      if (/^https?:\/\//i.test(c.imageUrl)) continue;
     }
+
     const cid: string | undefined =
       typeof c?.candidateId === "string" ? c.candidateId : undefined;
     if (!cid) continue;
