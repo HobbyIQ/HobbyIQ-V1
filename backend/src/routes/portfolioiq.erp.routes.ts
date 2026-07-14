@@ -1262,25 +1262,6 @@ router.post("/sales/:id/enrich-from-ebay", async (req: Request, res: Response) =
   }
 });
 
-// CF-CARDID-SUGGESTER (2026-07-12): batch-generate cardId suggestions for
-// pending-review holdings. iOS can call this on-demand when the queue
-// screen opens; import path also fires it fire-and-forget automatically.
-router.post("/holdings/generate-suggestions", async (req: Request, res: Response) => {
-  try {
-    const userId = userIdFrom(req);
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const force = body.force === true;
-    const { generateCardIdSuggestions } = await import(
-      "../services/portfolioiq/cardIdSuggester.service.js"
-    );
-    const summary = await generateCardIdSuggestions(userId, { force });
-    res.json({ success: true, ...summary });
-  } catch (err: any) {
-    console.error("[portfolio.erp] /holdings/generate-suggestions failed:", err?.message ?? err);
-    res.status(500).json({ success: false, error: err?.message ?? "Suggestion generation failed" });
-  }
-});
-
 // CF-EBAY-REVIEW-QUEUE (2026-07-12): confirm-before-commit gate for
 // auto-created holdings. Ships as a first-class review queue on iOS.
 router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
