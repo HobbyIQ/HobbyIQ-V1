@@ -52,6 +52,142 @@ function median(nums: number[]): number | null {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+// CF-SLOPE-VALUATION (Drew, 2026-07-13, PR #418): fit a linear
+// regression to (dateMs, price) points and return the slope + intercept.
+// The slope IS the direction of the market (positive = moving up,
+// negative = down, near-zero = static). Valuing the card at t=now uses
+// the regression line, so Market Value reflects "where the price
+// currently sits per the observed sales trajectory" — not the median,
+// not the last sale, not a windowed cutoff. Returns null when there's
+// fewer than 2 points with distinct dates (no slope defined).
+interface Regression {
+  slope: number;      // dollars per millisecond
+  // Intercept fitted on x = (tMs - firstT) — price at t=firstT.
+  interceptAtFirstT: number;
+  firstT: number;     // reference date (Unix ms of the earliest sale)
+  n: number;
+}
+
+function fitLinearRegression(
+  records: Array<{ tMs: number; price: number }>,
+): Regression | null {
+  if (records.length < 2) return null;
+  const firstT = records[0].tMs;
+  const distinctTimes = new Set(records.map((r) => r.tMs)).size;
+  if (distinctTimes < 2) return null;
+
+  const n = records.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  for (const r of records) {
+    // Normalize x to (dateMs - firstT) so the intercept fits at the
+    // first sale's date, not the Unix epoch (avoids astronomical values).
+    const x = r.tMs - firstT;
+    const y = r.price;
+    sumX += x;
+    sumY += y;
+    sumXY += x * y;
+    sumXX += x * x;
+  }
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) return null;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  // Ordinary-least-squares intercept in the normalized x-space:
+  //   intercept = ȳ - slope × x̄
+  // This IS the fitted price at x=0, i.e. at t = firstT.
+  const interceptAtFirstT = (sumY - slope * sumX) / n;
+  return { slope, interceptAtFirstT, firstT, n };
+}
+
+function valueAt(reg: Regression, tMs: number): number {
+  return reg.interceptAtFirstT + reg.slope * (tMs - reg.firstT);
+}
+
+/**
+ * Compute Market Value + Predicted Price from a chronologically-ordered
+ * pool of raw sales using linear regression.
+ *
+ * `marketValue` — regression fit at the MOST RECENT sale's date. Reflects
+ *   what the market has been paying most recently along the observed
+ *   trend line. Never above the highest observed sale for an up-trend
+ *   (or below the lowest for a down-trend) because it's evaluated at a
+ *   point WITHIN the observed data range.
+ * `predictedPrice` — regression fit at now + 30 days. Extrapolates the
+ *   slope forward. Can be higher than any observed sale if the trend
+ *   is up, lower if down — that's intentional (it's a projection).
+ * `direction` — up / down / static based on slope × 30d ("per-month
+ *   trend"). Deadband: ±3% per 30d is "static".
+ *
+ * Returns null on any input that can't produce a slope (fewer than 2
+ * dated records, all sales on the same day, etc.).
+ */
+interface SlopeValuation {
+  marketValue: number;
+  predictedPrice: number;
+  predictedPriceRange: { low: number; high: number };
+  direction: "up" | "down" | "static";
+  slopePerMonthPct: number;
+  n: number;
+  regressionSlope: number;
+}
+
+const MS_PER_DAY = 86_400_000;
+const STATIC_DEADBAND_PCT = 3;
+
+function computeSlopeValuation(
+  rawRecords: Array<{ date: string | null; price: number }>,
+): SlopeValuation | null {
+  const points = rawRecords
+    .filter((r) => typeof r.date === "string" && r.date.length > 0 && r.price > 0)
+    .map((r) => ({ tMs: Date.parse(r.date!), price: r.price }))
+    .filter((p) => Number.isFinite(p.tMs));
+  if (points.length < 2) return null;
+  points.sort((a, b) => a.tMs - b.tMs);
+  const firstT = points[0].tMs;
+
+  const reg = fitLinearRegression(points);
+  if (!reg) return null;
+
+  const lastT = points[points.length - 1].tMs;
+  const nowT = Date.now();
+  const futureT = nowT + 30 * MS_PER_DAY;
+
+  const marketAtLast = valueAt(reg, lastT);
+  const predictedAt30d = valueAt(reg, futureT);
+
+  // Slope reported as "% per month" so direction thresholds make sense.
+  const monthlyDelta = reg.slope * 30 * MS_PER_DAY;
+  const slopePerMonthPct = marketAtLast > 0
+    ? (monthlyDelta / marketAtLast) * 100
+    : 0;
+
+  const direction: "up" | "down" | "static" =
+    Math.abs(slopePerMonthPct) < STATIC_DEADBAND_PCT
+      ? "static"
+      : slopePerMonthPct > 0
+        ? "up"
+        : "down";
+
+  // Range widens as sample count decreases (uncertainty on thin data).
+  const spreadPct =
+    reg.n >= 20 ? 0.10 :
+    reg.n >= 10 ? 0.15 :
+    reg.n >= 5 ? 0.22 :
+    0.30;
+
+  return {
+    marketValue: Math.max(0, Math.round(marketAtLast * 100) / 100),
+    predictedPrice: Math.max(0, Math.round(predictedAt30d * 100) / 100),
+    predictedPriceRange: {
+      low: Math.max(0, Math.round(predictedAt30d * (1 - spreadPct))),
+      high: Math.round(predictedAt30d * (1 + spreadPct)),
+    },
+    direction,
+    slopePerMonthPct: Math.round(slopePerMonthPct * 10) / 10,
+    n: reg.n,
+    regressionSlope: reg.slope,
+  };
+}
+
 function percentile(nums: number[], p: number): number | null {
   if (nums.length < 4) return null;
   const sorted = [...nums].sort((a, b) => a - b);
@@ -100,10 +236,13 @@ export async function priceByCardsightUuid(
   const newestRawDate = rawDates.length > 0 ? rawDates[rawDates.length - 1] : null;
 
   // Optional graded overlay: if the request pinned (gradeCompany, gradeValue),
-  // prefer that bucket's median over raw.
+  // prefer that bucket's records over raw. When the graded bucket has enough
+  // time-spread the slope regression runs on ITS points; otherwise the
+  // median stands in.
   let bucketFmv: number | null = null;
   let bucketCount = 0;
   let bucketNewest: string | null = null;
+  let bucketRecordsForSlope: Array<{ date: string | null; price: number }> = [];
   if (input.gradeCompany && typeof input.gradeValue === "number") {
     const company = pricing.graded.find(
       (g) => g.company_name.toLowerCase().includes(input.gradeCompany!.toLowerCase()),
@@ -121,6 +260,9 @@ export async function priceByCardsightUuid(
           .filter((d): d is string => typeof d === "string" && d.length > 0)
           .sort();
         bucketNewest = dates.length > 0 ? dates[dates.length - 1] : null;
+        bucketRecordsForSlope = bucket.records
+          .filter((r) => typeof r.price === "number" && r.price > 0)
+          .map((r) => ({ date: r.date ?? null, price: r.price }));
       }
     }
   }
@@ -142,29 +284,29 @@ export async function priceByCardsightUuid(
 
   const roundedFmv = surfacedFmv != null ? Math.round(surfacedFmv * 100) / 100 : null;
 
-  // CF-MARKET-VALUE-IS-TREND-ADJUSTED (Drew, 2026-07-13, PR #417):
-  // Two separate concepts on the wire:
-  //   marketValue     — trend-adjusted CURRENT worth (median × trend).
-  //                     This is what iOS renders as "Market Value" — it
-  //                     reflects what the card is worth NOW given how
-  //                     the market is moving, not the backwards-looking
-  //                     pool median.
-  //   predictedPrice  — same trend continued one more window forward
-  //                     (marketValue × trend). This is what iOS shows
-  //                     as the 30d-out forecast.
+  // CF-SLOPE-VALUATION (Drew, 2026-07-13, PR #418): fit a linear
+  // regression to (date, price) points and value the card at the most
+  // recent sale's date. The slope IS the trend — positive means the
+  // market is rising, negative means falling, near-zero means static.
+  // Direction reported with a ±3%/month deadband.
   //
-  // When the pool is too thin to compute a real trend (< 2 records per
-  // window in computePooledTrend), marketValue falls back to the raw
-  // median (no forward adjustment) and predictedPrice stays null.
-  const marketValue = trend != null && roundedFmv != null
-    ? Math.round(roundedFmv * trend.multiplier * 100) / 100
-    : roundedFmv;
-  // Same forward-projection helper as PR #407 — its output is
-  // marketValue × trend, which after our rename becomes the "predicted
-  // next" step, not the current market value.
-  const prediction = trend != null && marketValue != null
-    ? computePooledPrediction(marketValue, trend)
-    : null;
+  // Walk-through with sales 175/176/204/208 over 30 days:
+  //   slope        ≈ +$1.1/day (~+16% per month)
+  //   marketValue  = value at last observed date ≈ $208
+  //   predictedPrice = value at now + 30d ≈ $241
+  //   direction    = up
+  //
+  // Falls back cleanly to full-pool median when the slope can't compute
+  // (< 2 records, or all on the same day) — predictedPrice stays null.
+  //
+  // When the request pinned a graded bucket, the slope runs on that
+  // bucket's records so a PSA 10-specific trend shows through.
+  const slopeInput = bucketRecordsForSlope.length > 0
+    ? bucketRecordsForSlope
+    : rawRecords.map((r) => ({ date: r.date ?? null, price: r.price }));
+  const slopeVal = computeSlopeValuation(slopeInput);
+  const marketValue = slopeVal != null ? slopeVal.marketValue : roundedFmv;
+  const prediction = slopeVal;
 
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
@@ -188,7 +330,14 @@ export async function priceByCardsightUuid(
         : null,
     predictedPrice: prediction ? prediction.predictedPrice : null,
     predictedPriceRange: prediction ? prediction.predictedPriceRange : null,
-    predictedPriceAttribution: prediction ? prediction.attribution : null,
+    predictedPriceAttribution: prediction
+      ? {
+          method: "linear-regression",
+          direction: prediction.direction,
+          slopePerMonthPct: prediction.slopePerMonthPct,
+          n: prediction.n,
+        }
+      : null,
     trendIQ,
     // ── Identity ───────────────────────────────────────────────────
     cardIdentity: {

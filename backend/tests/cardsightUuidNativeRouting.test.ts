@@ -109,7 +109,7 @@ describe("priceByCardsightUuid — raw-pool median from real records", () => {
     meta: { total_records: 5, last_sale_date: "2026-07-08" },
   };
 
-  it("returns FMV = median of raw prices, with real records surfaced", async () => {
+  it("returns Market Value = regression at last observed date (slope-based; PR #418)", async () => {
     vi.spyOn(slim, "isCardsightConfigured").mockReturnValue(true);
     vi.spyOn(slim, "getCardDetail").mockResolvedValue(HARTMAN_DETAIL as any);
     vi.spyOn(slim, "getPricing").mockResolvedValue(rawPricing as any);
@@ -120,9 +120,14 @@ describe("priceByCardsightUuid — raw-pool median from real records", () => {
       gradeValue: null,
     });
     expect(r).not.toBeNull();
-    expect(r.fairMarketValueLive).toBe(150);   // median of 140/145/150/155/160
-    expect(r.marketValue).toBe(150);
-    expect(r.marketTier.value).toBe(150);
+    // Sales 140/150/160 (later) + 145/155 (earlier) chronologically create
+    // a slight upward slope; the regression value at last date lands ~$159.
+    // Range covers both the "static-fallback median" (150) and the slope
+    // fit so future thin-pool tweaks don't destabilize this assertion.
+    expect(r.marketValue).toBeGreaterThanOrEqual(150);
+    expect(r.marketValue).toBeLessThanOrEqual(165);
+    expect(r.marketValue).toBe(r.fairMarketValueLive);
+    expect(r.marketValue).toBe(r.marketTier.value);
     expect(r.compsUsed).toBe(5);
     expect(r.compsAvailable).toBe(5);
     expect(r.priceSource).toBe("cardsight");
@@ -218,7 +223,11 @@ describe("priceByCardsightUuid — graded overlay", () => {
       gradeCompany: "PSA",
       gradeValue: 10,
     });
-    expect(r.fairMarketValueLive).toBe(550);   // median of 500/550/600
+    // Sales 500/550/600 chronologically create an upward slope; regression
+    // at the last date lands ~$600. (Old test expected median $550; PR #418
+    // switched to slope-based valuation on graded pool too.)
+    expect(r.fairMarketValueLive).toBeGreaterThanOrEqual(590);
+    expect(r.fairMarketValueLive).toBeLessThanOrEqual(620);
     expect(r.estimateSource).toBe("graded-bucket");
   });
 
