@@ -4781,6 +4781,42 @@ export async function sellHolding(req: Request, res: Response) {
   doc.ledger.push(ledgerEntry);
   await writeUserDoc(auth.userId, doc);
 
+  // CF-SOLD-COMPS-FOUNDATION (Drew, 2026-07-14): recorded sale = ground
+  // truth. If the holding carries a canonical cardId (i.e. it was
+  // user-confirmed at some point), emit a sold-comp record so the
+  // sold_comps pool captures REAL sale prices from real users. Same
+  // fire-and-forget pattern as confirm-hook — never blocks the sale
+  // response, never fails the sale on comp write.
+  const soldCardId = String((holding as any).cardId ?? "").trim();
+  if (soldCardId && holding.playerName) {
+    void (async () => {
+      try {
+        const { recordSoldComp } = await import("./soldCompsStore.service.js");
+        await recordSoldComp({
+          cardId: soldCardId,
+          playerName: String(holding.playerName ?? ""),
+          cardYear: holding.cardYear ?? null,
+          setName: holding.setName ?? null,
+          parallel: holding.parallel ?? null,
+          cardNumber: holding.cardNumber ?? null,
+          isAuto: holding.isAuto === true,
+          price: unitSalePrice,
+          soldAt,
+          source: "ebay-user-sale",
+          sourceExternalId: (req.body?.ebayOrderId as string | undefined) ?? null,
+          contributorUserId: auth.userId,
+          title: shimmedCardTitle(holding),
+          imageUrl: (holding as any).ebayImageUrl ?? null,
+          sellerHandle: null,
+          verifiedByUser: true,
+          confidence: 1.0,
+        });
+      } catch {
+        // swallow — comp emission never fails the sale
+      }
+    })();
+  }
+
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the partial-quantity
   // remaining holding when qty remains so iOS reflects the new state
   // without a refetch. holdingRemoved=true means the row is gone — no

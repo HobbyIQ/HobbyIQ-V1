@@ -247,6 +247,52 @@ export async function confirmHoldingReview(
   (doc as any).ebayCorrections = correctionsList;
 
   await writeUserDoc(userId, doc);
+
+  // CF-SOLD-COMPS-FOUNDATION (Drew, 2026-07-14): user just attested to
+  // this cardId — emit a comp record to the shared sold_comps pool.
+  // Fire-and-forget: never block confirm on the comp write, and never
+  // fail confirm if the write throws. Gated on having a real cardId
+  // (else it's a manual entry without SKU verification — no cross-user
+  // pool value).
+  const confirmedCardId = String((holding as any).cardId ?? "").trim();
+  if (confirmedCardId && typeof holding.playerName === "string" && holding.playerName.trim()) {
+    const price = Number((holding as any).purchasePrice ?? (holding as any).totalCostBasis ?? 0);
+    const soldAt = String(
+      (holding as any).purchaseDate
+      ?? (holding as any).addedAt
+      ?? (holding as any).confirmedAt
+      ?? new Date().toISOString(),
+    );
+    if (price > 0 && soldAt) {
+      void (async () => {
+        try {
+          const { recordSoldComp } = await import("./soldCompsStore.service.js");
+          await recordSoldComp({
+            cardId: confirmedCardId,
+            playerName: holding.playerName!,
+            cardYear: holding.cardYear ?? null,
+            setName: holding.setName ?? null,
+            parallel: holding.parallel ?? null,
+            cardNumber: holding.cardNumber ?? null,
+            isAuto: holding.isAuto === true,
+            price,
+            soldAt,
+            source: "ebay-user-purchase",
+            sourceExternalId: extractEbayItemIdFromHolding(doc, holdingId) ?? null,
+            contributorUserId: userId,
+            title: (holding as any).cardTitle ?? extractEbayTitleFromHolding(doc, holdingId) ?? null,
+            imageUrl: (holding as any).ebayImageUrl ?? null,
+            sellerHandle: null,
+            verifiedByUser: true,
+            confidence: 1.0,
+          });
+        } catch {
+          // swallow — comp emission is auxiliary, must never fail confirm
+        }
+      })();
+    }
+  }
+
   return { status: "confirmed", holding, correctionCount: corrections.length };
 }
 
