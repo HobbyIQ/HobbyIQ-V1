@@ -66,6 +66,27 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-PORTFOLIO-SUPPLY-DEMAND-SUMMARY (Drew, 2026-07-13, PR #426):
+// aggregate the supply/demand signal across every holding for the
+// authed user. Returns portfolio-level bias + breakdown + top movers +
+// full per-holding list. iOS renders as a dashboard on Portfolio Home.
+router.get("/supply-demand-summary", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildPortfolioSupplyDemandSummary } = await import(
+      "../services/portfolioiq/supplyDemandSummary.service.js"
+    );
+    const summary = await buildPortfolioSupplyDemandSummary(userId);
+    res.json({ success: true, ...summary });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CF-EBAY-REVIEW-QUEUE (2026-07-12): pending eBay auto-created holdings
 // awaiting user confirmation. iOS renders this as the review queue.
 router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
