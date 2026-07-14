@@ -131,6 +131,29 @@ router.get("/supply-demand-summary", async (req, res, next) => {
 // awaiting user confirmation. iOS renders this as the review queue.
 router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
 
+// CF-CARDID-SUGGESTER (2026-07-12, moved off ERP router 2026-07-14):
+// batch-generate cardId suggestions for the caller's pending-review
+// holdings. Session-only — matches dry-run-suggest below. Verify-before-
+// price is fundamental UX, not a Pro-only feature; free/collector/
+// investor tiers all need it. Was on the ERP router (Pro Seller only)
+// which locked out most users from the review-queue workflow.
+router.post("/holdings/generate-suggestions", async (req, res, next) => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, error: "session required" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const force = body.force === true;
+    const { generateCardIdSuggestions } = await import(
+      "../services/portfolioiq/cardIdSuggester.service.js"
+    );
+    const summary = await generateCardIdSuggestions(userId, { force });
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio] /holdings/generate-suggestions failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Suggestion generation failed" });
+  }
+});
+
 // CF-EDIT-SHEET-DRY-RUN-SUGGEST (Drew, 2026-07-14): stateless suggester
 // run for the iOS "verify card" edit sheet. Takes edited holding fields
 // in the request body (NOT from Cosmos), runs the multi-vendor
