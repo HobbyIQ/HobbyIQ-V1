@@ -5916,7 +5916,17 @@ export async function computeEstimate(
       fairMarketValue: null,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
-      marketValue: null,
+      // CF-SINGLE-COMP-DISPLAY (Drew, 2026-07-14): populate marketValue
+      // (the DISPLAY field iOS reads) from the last-sale price whenever
+      // we have at least one comp in the pool. Prior behavior emitted
+      // marketValue=null and relied on iOS reading estimateSource=
+      // "live-market-last-sale" + lastSale.price separately — but iOS
+      // decodes marketValue directly, so single-comp cards showed a
+      // blank price. Keep fairMarketValue=null (training gate stays
+      // intact); marketValue is display-only. Falls back cleanly to
+      // finalEstimatedValue (trend extrapolation) then null when we
+      // truly have no anchor.
+      marketValue: lastSale?.price ?? finalEstimatedValue ?? null,
       estimatedValue: finalEstimatedValue,
       estimateRange: finalEstimateRange,
       estimateBasis: finalEstimateBasis,
@@ -6306,7 +6316,15 @@ export async function computeEstimate(
   const isRecoveryIsolatedPool =
     fetched.priceSourceInternal === "title-matched-parallel"
     || fetched.priceSourceInternal === "title-match-low-sample";
-  if (!dataSufficiency.sufficient && !isRecoveryIsolatedPool) {
+  // CF-SINGLE-COMP-DISPLAY (Drew, 2026-07-14): only null the price when
+  // we have LITERALLY ZERO usable comps (level="none"). When we have 1
+  // or 2 (level="very_thin"), keep the FMV visible — a single-sale
+  // median IS the market for that sub-market until more comps arrive.
+  // The dataSufficiency object still rides along, so iOS renders the
+  // "approximate / thin data" disclosure; the number itself is honest
+  // display data, and the corpus-emit path (further down) still
+  // excludes it from training via priceSourceInternal gating.
+  if (dataSufficiency.level === "none" && !isRecoveryIsolatedPool) {
     quickSaleValue = null as unknown as number;
     fairMarketValue = null as unknown as number;
     premiumValue = null as unknown as number;
