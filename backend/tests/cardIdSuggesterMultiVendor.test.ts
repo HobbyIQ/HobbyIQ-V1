@@ -294,6 +294,28 @@ describe("CF-HOLDING-FIELD-NORMALIZER — suggester runs on cleaned fields", () 
   });
 });
 
+describe("CF-CARDID-SUGGESTER-DROP-HASH — card number emitted bare, not #-prefixed", () => {
+  it("query built for CH does NOT include a `#` prefix on the card number", async () => {
+    let capturedQuery: string | undefined;
+    vi.mocked(searchCards).mockImplementation(async (q) => {
+      capturedQuery = q;
+      return [] as any;
+    });
+    vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+    await suggestCardIdForHolding(makeHolding({
+      cardYear: 2026,
+      setName: "Bowman Chrome",
+      parallel: "Green Refractor",
+      cardNumber: "CPA-EH",
+    }));
+    expect(capturedQuery).toBeDefined();
+    // The `#` prefix tanked CH tokenizer relevance — must be gone.
+    expect(capturedQuery).not.toContain("#");
+    // But the card number itself must still be in the query.
+    expect(capturedQuery).toContain("CPA-EH");
+  });
+});
+
 describe("CF-CARDID-SUGGESTER-FAIR-SCORING — three scorer fixes", () => {
   it("year-from-set-text: candidate.year=null but set='2026 Bowman Baseball' → year matches", async () => {
     vi.mocked(searchCards).mockResolvedValue([
