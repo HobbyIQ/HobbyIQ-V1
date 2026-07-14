@@ -66,6 +66,26 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-WATCHLIST-BULL-CANDIDATES (Drew, 2026-07-13, PR #429): surface
+// watchlisted players whose supply signal is bullish so users see a
+// "buy candidates" list right in the app.
+router.get("/watchlist-bull-candidates", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildWatchlistBullCandidates } = await import(
+      "../services/portfolioiq/watchlistBullCandidates.service.js"
+    );
+    const result = await buildWatchlistBullCandidates(userId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CF-PORTFOLIO-SUPPLY-DEMAND-SUMMARY (Drew, 2026-07-13, PR #426):
 // aggregate the supply/demand signal across every holding for the
 // authed user. Returns portfolio-level bias + breakdown + top movers +
