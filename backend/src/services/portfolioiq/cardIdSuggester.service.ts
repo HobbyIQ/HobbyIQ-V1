@@ -21,6 +21,38 @@ import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import { inferPrintRunFromReferenceCatalog } from "../compiq/referenceCatalogLookup.js";
 
 /**
+ * CF-CARDID-SUGGESTER-CATALOG-BOOST (Drew, 2026-07-14): confidence bump
+ * applied when the reference-catalog resolves the candidate's SKU.
+ * Additive to the field-alignment score. Boost sized per catalog tier:
+ *
+ *   Verified → +0.10  (cross-source-checked; strongest signal)
+ *   High     → +0.05  (workbook-confident but unverified externally)
+ *   Medium   → +0.02  (workbook-flagged uncertain; small boost only)
+ *
+ * Cap at 0.98 to preserve the semantic ceiling for user-verified
+ * (1.0) confirmations. A borderline-medium (0.75) suggestion that
+ * verifies against a "Verified" catalog row lands at 0.85 → high tier
+ * — which is the intended UX outcome (fewer manual verifications).
+ */
+function catalogConfidenceBoost(
+  catalog: CardIdSuggestion["catalogVerified"],
+): number {
+  if (!catalog) return 0;
+  switch (catalog.confidence) {
+    case "Verified": return 0.10;
+    case "High":     return 0.05;
+    case "Medium":   return 0.02;
+    default:         return 0;
+  }
+}
+
+function applyCatalogBoost(baseConfidence: number, boost: number): number {
+  if (boost === 0) return baseConfidence;
+  const boosted = Math.min(0.98, baseConfidence + boost);
+  return Math.round(boosted * 100) / 100;
+}
+
+/**
  * CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): thin wrapper
  * around inferPrintRunFromReferenceCatalog that returns the shape the
  * suggestion carries onto the wire. Fires only when we have all three
@@ -674,14 +706,26 @@ export async function suggestCardIdForHolding(
   const [primaryCatalog, ...altCatalogs] = await Promise.all([
     primaryCatalogPromise, ...altCatalogPromises,
   ]);
+  // CF-CARDID-SUGGESTER-CATALOG-BOOST (Drew, 2026-07-14): apply boost
+  // per catalog tier + recompute confidenceTier from the boosted value.
+  // Alternatives boosted independently so a verified alt with a middling
+  // field score can outrank a non-verified alt.
   for (let i = 0; i < alternatives.length; i++) {
-    alternatives[i].catalogVerified = altCatalogs[i] ?? null;
+    const cat = altCatalogs[i] ?? null;
+    alternatives[i].catalogVerified = cat;
+    const boostedAlt = applyCatalogBoost(alternatives[i].confidence, catalogConfidenceBoost(cat));
+    if (boostedAlt !== alternatives[i].confidence) {
+      alternatives[i].confidence = boostedAlt;
+      alternatives[i].confidenceTier = tierForConfidence(boostedAlt);
+    }
   }
+  const boostedConfidence = applyCatalogBoost(confidence, catalogConfidenceBoost(primaryCatalog));
+  const boostedTier = tierForConfidence(boostedConfidence);
 
   return {
     cardId: top.candidate.cardId,
-    confidence,
-    confidenceTier: tier,
+    confidence: boostedConfidence,
+    confidenceTier: boostedTier,
     candidateSource: top.candidate.source,
     matchBreakdown: {
       fieldsChecked: top.match.fieldsChecked,
