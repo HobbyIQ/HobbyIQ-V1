@@ -18,12 +18,18 @@ const router = Router();
 
 // ---------- auth gate ----------
 function requireOpsToken(req: Request, res: Response, next: NextFunction): void {
-  const expected = process.env.OPS_REPORT_TOKEN;
+  // CF-OPS-TOKEN-TRIM-SYMMETRY (Drew, 2026-07-13, PR #424): Azure App
+  // Service injects \n on env vars, GitHub Actions can add CRLF when
+  // secrets get piped, PowerShell adds line endings when piping to gh
+  // secret set. Same class of bug as the Tier 1 harness 2026-06-30
+  // whitespace injection. Trim BOTH sides so any transport-added
+  // whitespace stops silently 401'ing.
+  const expected = process.env.OPS_REPORT_TOKEN?.trim();
   if (!expected) {
     res.status(503).json({ success: false, error: "OPS_REPORT_TOKEN is not configured on this server." });
     return;
   }
-  const provided = req.header("x-admin-token") ?? req.header("x-ops-token") ?? "";
+  const provided = (req.header("x-admin-token") ?? req.header("x-ops-token") ?? "").trim();
   if (provided !== expected) {
     res.status(401).json({ success: false, error: "Invalid or missing admin token." });
     return;
