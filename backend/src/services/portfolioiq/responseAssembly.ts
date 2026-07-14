@@ -238,6 +238,31 @@ export interface PortfolioHoldingWire {
     mismatchedFields: string[];
   } | null;
   suggestionUpdatedAt?: string | null;
+  /** CF-CARDID-SUGGESTER-MULTI-VENDOR (PR #438): which vendor sourced
+   *  the primary suggestion. iOS badges the review row accordingly. */
+  suggestionCandidateSource?: "cardhedge" | "cardsight-uuid" | null;
+  /** CF-CARDID-SUGGESTER-TOP-N (PR #438): up to 2 alternative
+   *  candidates surfaced when primary tier != "high". iOS renders as
+   *  one-tap picks in the review sheet. Absent on high-tier picks. */
+  suggestionAlternatives?: Array<{
+    cardId: string;
+    confidence: number;
+    confidenceTier: "high" | "medium" | "low";
+    candidateSource: "cardhedge" | "cardsight-uuid";
+    candidate: {
+      title?: string;
+      set?: string;
+      year?: number | string;
+      number?: string;
+      variant?: string;
+      image?: string;
+    };
+    matchBreakdown?: {
+      fieldsChecked: number;
+      fieldsMatched: number;
+      mismatchedFields: string[];
+    };
+  }> | null;
   // Auxiliary aspect fields we backfilled from Browse (team, sport,
   // manufacturer) — always optional so old holdings still decode.
   team?: string | null;
@@ -482,6 +507,14 @@ export function composeHoldingWireShape(
     suggestionConfidenceTier: (holding as any).suggestionConfidenceTier,
     suggestionMatchBreakdown: (holding as any).suggestionMatchBreakdown,
     suggestionUpdatedAt: (holding as any).suggestionUpdatedAt,
+    // CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): the two new
+    // fields from PR #438 were stored on the holding but NOT serialized
+    // here, so iOS saw undefined candidateSource + missing alternatives
+    // and rendered the review row as "no suggestion" even though Cosmos
+    // had one. Root cause of Drew's 2026-07-14 report: "in review queue
+    // but no suggestion to pick from" for 14 pending holdings.
+    suggestionCandidateSource: (holding as any).suggestionCandidateSource,
+    suggestionAlternatives: (holding as any).suggestionAlternatives,
     // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
     ebayImageUrl: (holding as any).ebayImageUrl,
     ebayShortDescription: (holding as any).ebayShortDescription,
