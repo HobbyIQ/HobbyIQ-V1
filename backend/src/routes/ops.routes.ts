@@ -359,6 +359,59 @@ router.get("/ping", (_req: Request, res: Response) => {
   res.json({ ok: true, build: BUILD_MARKER, ts: new Date().toISOString() });
 });
 
+// CF-OPS-EBAY-PURCHASE-SYNC (Drew, 2026-07-14): admin-triggered eBay
+// order-history import for a specific user. Uses their stored refresh
+// token (Cosmos ebay_tokens) to mint a fresh access token, fetches
+// GetMyeBayBuying for the last N days, upserts any new purchases into
+// their portfolio doc. Idempotent — purchases already present skip on
+// (ebayItemId + ebayTransactionId + ebayOrderId) key.
+//
+// Body: { userId: string, days?: number }
+// days defaults to 30, capped at 90 (eBay Trading API MAX_DURATION_DAYS).
+//
+// Response: { success, purchaseCount, imported, skipped, ebayTotal }
+// If autoBackfillHoldings=true, also runs the auto-holding batch to
+// try creating pending-review holdings for the newly-imported purchases.
+router.post("/purchases/ebay-sync", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as {
+    userId?: string;
+    days?: number;
+    autoBackfillHoldings?: boolean;
+  };
+  if (!body.userId || typeof body.userId !== "string") {
+    return res.status(400).json({ success: false, error: "userId required" });
+  }
+  const days = Number(body.days ?? 30);
+  if (!Number.isFinite(days) || days < 1 || days > 90) {
+    return res.status(400).json({ success: false, error: "days must be integer 1-90" });
+  }
+  try {
+    const { importEbayPurchaseHistory } = await import(
+      "../services/ebay/ebayBuyerHistory.service.js"
+    );
+    const summary = await importEbayPurchaseHistory(body.userId, days);
+
+    // Optional: fire the auto-holding backfill so newly imported
+    // purchases get pending-review holdings ready for the Verify Card
+    // sheet without a second admin round-trip.
+    let backfill: unknown = null;
+    if (body.autoBackfillHoldings) {
+      const { runAutoHoldingBatch } = await import(
+        "../services/ebay/ebayBuyerHistory.service.js"
+      );
+      backfill = await runAutoHoldingBatch(body.userId);
+    }
+
+    return res.json({ success: true, userId: body.userId, days, ...summary, backfill });
+  } catch (err: any) {
+    console.error("[ops] /purchases/ebay-sync failed:", err?.message ?? err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "eBay purchase sync failed",
+    });
+  }
+});
+
 // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): manual snapshot
 // trigger. Takes { userId, player, qualifier? }, hits eBay Browse, and
 // upserts a listings_snapshots doc. Ops-token gated; used to seed data
