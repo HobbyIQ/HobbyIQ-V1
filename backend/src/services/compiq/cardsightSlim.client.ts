@@ -17,8 +17,30 @@
 // When key is absent: every function returns empty/null. Silent no-op —
 // the vendor plugin can register safely even without a key configured.
 
+import { cacheWrap } from "../shared/cache.service.js";
+
+function cacheKey(prefix: string, ...parts: string[]): string {
+  return [prefix, ...parts].join("|");
+}
+
 const BASE_URL = "https://api.cardsight.ai/v1";
 const DEFAULT_TIMEOUT_MS = 8_000;
+
+// CF-CARDSIGHT-CACHE (Drew, 2026-07-14): Cardsight catalog is essentially
+// static — cards don't get renamed and their parallels tree changes on
+// vendor releases, not intraday. Cache aggressively so the Verify Card
+// sheet's edit-loop (which calls dry-run-suggest on every field edit)
+// stops paying the ~350ms cold-catalog+detail-fetch cost per keystroke.
+//
+// TTLs chosen for the different volatility profiles:
+//   - searchCatalog: 6h  — new SKU could appear intraday; stale-safe window
+//   - getCardDetail: 24h — parallels tree even more static
+//
+// Both use skipCacheWhen to avoid locking in transient empty responses
+// (same pattern as CH's cardhedge.client — vendor blips shouldn't
+// blackhole a query for the whole TTL window).
+const SEARCH_CACHE_TTL_SEC = 6 * 3600;
+const DETAIL_CACHE_TTL_SEC = 24 * 3600;
 
 function apiKey(): string | null {
   const key = process.env.CARDSIGHT_API_KEY;
@@ -108,14 +130,35 @@ export async function searchCatalog(
   if (!key) return [];
   const q = query.trim();
   if (!q) return [];
+  const take = opts.take ?? 10;
+  const year = opts.year ?? "";
 
+  return cacheWrap<CardsightCatalogHit[]>(
+    cacheKey("cs:catalog-search", q, String(take), String(year)),
+    async () => _searchCatalogRaw(q, take, opts.year),
+    {
+      freshTtlSeconds: SEARCH_CACHE_TTL_SEC,
+      // Don't lock in a transient empty response — same reasoning as
+      // CH's cardhedge.client search cache (CF-CH-SEARCH-NO-CACHE-EMPTY).
+      skipCacheWhen: (result) => !result || result.length === 0,
+    },
+  );
+}
+
+async function _searchCatalogRaw(
+  q: string,
+  take: number,
+  year: number | undefined,
+): Promise<CardsightCatalogHit[]> {
+  const key = apiKey();
+  if (!key) return [];
   const params = new URLSearchParams({
     q,
     type: "card",
     segment: "baseball",
-    take: String(opts.take ?? 10),
+    take: String(take),
   });
-  if (opts.year !== undefined) params.set("year", String(opts.year));
+  if (year !== undefined) params.set("year", String(year));
 
   try {
     const controller = new AbortController();
@@ -159,6 +202,21 @@ export async function searchCatalog(
 export async function getCardDetail(cardId: string): Promise<CardsightCardDetail | null> {
   const key = apiKey();
   if (!key || !cardId) return null;
+  return cacheWrap<CardsightCardDetail | null>(
+    cacheKey("cs:card-detail", cardId),
+    async () => _getCardDetailRaw(cardId),
+    {
+      freshTtlSeconds: DETAIL_CACHE_TTL_SEC,
+      // Don't cache a 404/null — a card that briefly failed to fetch
+      // (network blip) shouldn't be blackholed for 24h.
+      skipCacheWhen: (result) => result === null,
+    },
+  );
+}
+
+async function _getCardDetailRaw(cardId: string): Promise<CardsightCardDetail | null> {
+  const key = apiKey();
+  if (!key) return null;
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
