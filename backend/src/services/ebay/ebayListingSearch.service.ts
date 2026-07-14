@@ -11,6 +11,10 @@
 // stay well within budget (top-500 players × 1 call each per day).
 
 import { getAccessToken } from "./ebayAuth.service.js";
+import {
+  getAppScopeToken,
+  invalidateAppScopeTokenCache,
+} from "./ebayAppToken.service.js";
 
 const BROWSE_API_BASE_PROD = "https://api.ebay.com/buy/browse/v1";
 const BROWSE_API_BASE_SANDBOX = "https://api.sandbox.ebay.com/buy/browse/v1";
@@ -60,15 +64,11 @@ export async function fetchPlayerListingsSummary(
   qualifier: string | null = null,
 ): Promise<ListingsSummary | null> {
   if (!playerName) return null;
-  const appToken = process.env.EBAY_BROWSE_TOKEN?.trim();
-  let token: string | null = null;
-  if (appToken && appToken.length > 0) {
-    token = appToken;
-  } else if (userId) {
-    token = await getAccessToken(userId).catch(() => null);
-  }
-  if (!token) return null;
 
+  // CF-EBAY-APP-TOKEN (PR #423): prefer the auto-minted app-scope token
+  // (client_credentials, cached with expiry) so the daily cron doesn't
+  // depend on any user's OAuth session. Falls back to per-user OAuth only
+  // when app-scope minting fails (missing credentials, transient issue).
   const q = qualifier ? `${playerName} ${qualifier}` : playerName;
   const effectiveQuery = q.trim();
   const params = new URLSearchParams({
@@ -78,14 +78,35 @@ export async function fetchPlayerListingsSummary(
   });
   const url = `${browseApiBase()}/item_summary/search?${params}`;
 
-  try {
-    const res = await fetch(url, {
+  const runRequest = async (token: string): Promise<Response> =>
+    fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
         Accept: "application/json",
       },
     });
+
+  try {
+    let token = await getAppScopeToken();
+    let usedFallback = false;
+    if (!token && userId) {
+      token = await getAccessToken(userId).catch(() => null);
+      usedFallback = true;
+    }
+    if (!token) return null;
+
+    let res = await runRequest(token);
+    // Retry ONCE if the cached app-scope token was invalidated server-
+    // side. Skip retry when we already used the user OAuth fallback
+    // (that path has its own refresh flow inside ebayAuth.service).
+    if (res.status === 401 && !usedFallback) {
+      invalidateAppScopeTokenCache();
+      const fresh = await getAppScopeToken();
+      if (fresh) {
+        res = await runRequest(fresh);
+      }
+    }
     if (!res.ok) {
       console.warn(JSON.stringify({
         event: "ebay_listing_search_http_error",
