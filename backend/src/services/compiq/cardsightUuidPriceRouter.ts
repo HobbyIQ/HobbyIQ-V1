@@ -189,6 +189,31 @@ export async function priceByCardsightUuid(
     fetchListingsHistoryForWire(detail.name ?? null, 30).catch(() => []),
   ]);
 
+  // CF-CARD-VALUATION-HISTORY (Drew, 2026-07-13, PR #431): fire-and-forget
+  // snapshot of TODAY's valuation for this card. Feeds the future backtest
+  // engine's look-ahead-free "what did the model say on date T" queries.
+  // Fire without awaiting so it never adds to user-facing latency.
+  void (async () => {
+    try {
+      const { upsertValuationSnapshot } = await import(
+        "../portfolioiq/cardValuationHistoryStore.service.js"
+      );
+      await upsertValuationSnapshot({
+        cardId: input.cardId,
+        playerName: detail.name ?? null,
+        marketValue,
+        predictedPrice: prediction ? prediction.predictedPrice : null,
+        salesDirection: slopeVal?.direction ?? null,
+        salesSlopePerMonthPct: slopeVal?.slopePerMonthPct ?? null,
+        listingsDirection: supplyDemand?.listingsDirection ?? null,
+        listingsSlopePerMonthPct: supplyDemand?.listingsSlopePerMonthPct ?? null,
+        verdict: supplyDemand?.verdict ?? "unavailable",
+        sampleCount: slopeVal?.n ?? 0,
+        source: "cardsight-uuid",
+      });
+    } catch { /* swallow — never fail the user response on snapshot write */ }
+  })();
+
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
   return {
