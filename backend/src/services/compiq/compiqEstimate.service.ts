@@ -6922,13 +6922,15 @@ export async function computeEstimate(
   // the signal falls through to null. iOS should treat
   // supplyDemand === null OR supplyDemand.verdict === "unavailable"
   // as "not enough data" and hide the badge.
-  const { buildSupplyDemandSignal } = await import(
+  const { buildSupplyDemandSignal, fetchListingsHistoryForWire } = await import(
     "./supplyDemandSignal.service.js"
   );
-  const supplyDemand = await buildSupplyDemandSignal(
-    typeof queryContext.playerName === "string" ? queryContext.playerName : null,
-    slopeAdj,
-  ).catch(() => null);
+  const playerNameForSignal =
+    typeof queryContext.playerName === "string" ? queryContext.playerName : null;
+  const [supplyDemand, listingsHistory] = await Promise.all([
+    buildSupplyDemandSignal(playerNameForSignal, slopeAdj).catch(() => null),
+    fetchListingsHistoryForWire(playerNameForSignal, 30).catch(() => []),
+  ]);
 
   return {
     cardTitle,
@@ -6954,6 +6956,7 @@ export async function computeEstimate(
     predictedPriceRange: slopePredictedRange,
     predictedPriceAttribution: slopePredictedAttribution,
     supplyDemand,
+    listingsHistory,
     signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,
