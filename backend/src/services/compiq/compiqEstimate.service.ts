@@ -6957,6 +6957,12 @@ export async function computeEstimate(
     predictedPriceAttribution: slopePredictedAttribution,
     supplyDemand,
     listingsHistory,
+    listPriceRecommendations: (await import("./listPriceRecommendations.service.js"))
+      .buildListPriceRecommendations({
+        marketValue: slopeMarketValue,
+        predictedPrice: slopePredictedPrice,
+        predictedPriceRange: slopePredictedRange,
+      }),
     signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,

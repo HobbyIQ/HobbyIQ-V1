@@ -221,6 +221,12 @@ export async function priceByCardsightUuid(
       : null,
     supplyDemand,
     listingsHistory,
+    listPriceRecommendations: (await import("./listPriceRecommendations.service.js"))
+      .buildListPriceRecommendations({
+        marketValue,
+        predictedPrice: prediction ? prediction.predictedPrice : null,
+        predictedPriceRange: prediction ? prediction.predictedPriceRange : null,
+      }),
     trendIQ,
     // ── Identity ───────────────────────────────────────────────────
     cardIdentity: {
