@@ -14,6 +14,8 @@
 import { getPortfolioContainer } from "../portfolioiq/portfolioStore.service.js";
 import { fetchPlayerListingsSummary } from "../ebay/ebayListingSearch.service.js";
 import { upsertSnapshot } from "../portfolioiq/listingsSnapshotStore.service.js";
+import { computeListingsTrend } from "./supplyDemandSignal.service.js";
+import { recordVerdictAndDetectFlip, type VerdictFlip } from "./verdictHistoryStore.service.js";
 
 const DEFAULT_USER_ID = "admin-testing-hobbyiq";
 const DEFAULT_TOP_N = 500;
@@ -26,6 +28,9 @@ export interface SnapshotJobSummary {
   errors: number;
   elapsedMs: number;
   topPlayersSample: Array<{ player: string; holdingCount: number }>;
+  verdictsRecorded: number;
+  flips: VerdictFlip[];
+  majorFlips: VerdictFlip[];
 }
 
 interface PlayerAgg {
@@ -97,6 +102,8 @@ export async function runDailyListingsSnapshotJob(opts: {
 
   let snapshotsCreated = 0;
   let errors = 0;
+  let verdictsRecorded = 0;
+  const flips: VerdictFlip[] = [];
 
   // Concurrency-limited execution — one bounded pool.
   let cursor = 0;
@@ -120,6 +127,30 @@ export async function runDailyListingsSnapshotJob(opts: {
           snapshottedAt: summary.snapshottedAt,
         });
         snapshotsCreated++;
+
+        // CF-VERDICT-FLIP-ALERTS (PR #428): after upserting today's
+        // snapshot, compute today's verdict and detect any flip vs the
+        // most-recent prior day. Sales-side direction isn't available
+        // here (no comps in scope), so we record the LISTINGS-only
+        // verdict — still a valid "supply just moved" signal that can
+        // fire an alert on its own.
+        const trend = await computeListingsTrend(p.displayName, 30).catch(() => null);
+        if (trend) {
+          const flip = await recordVerdictAndDetectFlip({
+            playerDisplay: p.displayName,
+            // Listings-only fold: supply move without demand context.
+            // Mirror the supply/demand matrix with sales=static so the
+            // stored verdict is coherent when a demand read joins later.
+            verdict:
+              trend.direction === "down" ? "supply_tight" :
+              trend.direction === "up" ? "oversupply" :
+              "static",
+            salesDirection: null,
+            listingsDirection: trend.direction,
+          });
+          verdictsRecorded++;
+          if (flip) flips.push(flip);
+        }
       } catch (err) {
         errors++;
         console.warn(JSON.stringify({
@@ -133,6 +164,7 @@ export async function runDailyListingsSnapshotJob(opts: {
   };
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
+  const majorFlips = flips.filter((f) => f.significance === "major");
   const summary: SnapshotJobSummary = {
     playersSeen: players.size,
     playersProcessed: ranked.length,
@@ -143,6 +175,9 @@ export async function runDailyListingsSnapshotJob(opts: {
       player: p.displayName,
       holdingCount: p.holdingCount,
     })),
+    verdictsRecorded,
+    flips,
+    majorFlips,
   };
   console.log(JSON.stringify({
     event: "daily_listings_snapshot_done",
