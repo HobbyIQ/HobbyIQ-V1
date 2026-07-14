@@ -214,6 +214,63 @@ export async function priceByCardsightUuid(
     } catch { /* swallow — never fail the user response on snapshot write */ }
   })();
 
+  // CF-VENDOR-EMIT-SOLD-COMPS (Drew, 2026-07-14): every raw sale we see
+  // from Cardsight-native pricing gets persisted into the unified
+  // sold_comps pool. Fires on cache-miss frequency (getPricing is
+  // uncached by design — new sales land intraday). Fire-and-forget;
+  // never blocks the user response, never fails pricing on emit error.
+  // Idempotent per (source, url) — replayed pulls upsert to same row.
+  //
+  // Confidence: 0.6 (vendor-pulled, not user-verified). Downstream
+  // consumers can prefer verified=true (1.0) user data when both exist.
+  void (async () => {
+    try {
+      const { recordSoldComp } = await import(
+        "../portfolioiq/soldCompsStore.service.js"
+      );
+      const playerName = detail.name ?? null;
+      const setName = detail.setName ?? null;
+      const releaseName = detail.releaseName ?? null;
+      const yearNum =
+        typeof detail.year === "number" && Number.isFinite(detail.year)
+          ? detail.year
+          : null;
+      const numberVal = detail.number ?? null;
+      // isAuto inferred same way explodeParentIntoParallels does
+      const isAuto =
+        /(auto|autograph)/i.test(String(setName ?? "")) ||
+        /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(String(numberVal ?? ""));
+      if (!playerName) return;
+      // Emit one comp per raw record with a valid price
+      for (const r of rawRecords) {
+        if (typeof r.price !== "number" || r.price <= 0) continue;
+        if (!r.date) continue;
+        await recordSoldComp({
+          cardId: input.cardId,
+          playerName,
+          cardYear: yearNum,
+          setName: releaseName ?? setName,
+          parallel: r.parallel_name ?? null,
+          cardNumber: numberVal,
+          isAuto,
+          price: r.price,
+          soldAt: r.date,
+          source: "cardsight",
+          // Prefer eBay URL as the external key (stable per listing).
+          // Falls back to composite id (cardId + date + price) inside
+          // recordSoldComp when null.
+          sourceExternalId: r.url ?? null,
+          contributorUserId: null,
+          title: r.title ?? null,
+          imageUrl: r.image_url ?? null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.6,
+        });
+      }
+    } catch { /* swallow — vendor emit is auxiliary */ }
+  })();
+
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
   return {
