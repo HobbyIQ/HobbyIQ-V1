@@ -353,6 +353,69 @@ router.get("/ping", (_req: Request, res: Response) => {
   res.json({ ok: true, build: BUILD_MARKER, ts: new Date().toISOString() });
 });
 
+// CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): manual snapshot
+// trigger. Takes { userId, player, qualifier? }, hits eBay Browse, and
+// upserts a listings_snapshots doc. Ops-token gated; used to seed data
+// before the daily cron lands (PR #421) and for debug/backfill.
+router.post("/listings/snapshot", requireOpsToken, async (req: Request, res: Response) => {
+  const { userId, player, qualifier } = (req.body ?? {}) as {
+    userId?: string; player?: string; qualifier?: string;
+  };
+  if (!userId || !player) {
+    return res.status(400).json({ success: false, error: "userId + player required" });
+  }
+  const { fetchPlayerListingsSummary } = await import(
+    "../services/ebay/ebayListingSearch.service.js"
+  );
+  const { upsertSnapshot } = await import(
+    "../services/portfolioiq/listingsSnapshotStore.service.js"
+  );
+  const summary = await fetchPlayerListingsSummary(
+    userId, player, qualifier ?? null,
+  );
+  if (!summary) {
+    return res.status(502).json({
+      success: false, error: "eBay Browse returned no data (auth or rate limit?)"
+    });
+  }
+  await upsertSnapshot({
+    playerDisplay: player,
+    totalListings: summary.totalListings,
+    medianAsk: summary.medianAsk,
+    pricedItemCount: summary.pricedItemCount,
+    effectiveQuery: summary.effectiveQuery,
+    snapshottedAt: summary.snapshottedAt,
+  });
+  return res.json({ success: true, summary });
+});
+
+router.get("/listings/trend", requireOpsToken, async (req: Request, res: Response) => {
+  const player = (req.query.player as string | undefined)?.trim();
+  const daysRaw = req.query.days as string | undefined;
+  const days = daysRaw ? Math.max(2, Math.min(90, Number(daysRaw))) : 30;
+  if (!player) {
+    return res.status(400).json({ success: false, error: "player query param required" });
+  }
+  const { computeListingsTrend } = await import(
+    "../services/compiq/supplyDemandSignal.service.js"
+  );
+  const { readSnapshots } = await import(
+    "../services/portfolioiq/listingsSnapshotStore.service.js"
+  );
+  const [trend, snaps] = await Promise.all([
+    computeListingsTrend(player, days),
+    readSnapshots(player, days),
+  ]);
+  return res.json({
+    success: true,
+    player,
+    days,
+    snapshotCount: snaps.length,
+    trend,
+    latestSnapshots: snaps.slice(-5),
+  });
+});
+
 router.get("/report", requireOpsToken, async (req: Request, res: Response) => {
   const startedAt = Date.now();
   const sectionParam = (req.query.section as string | undefined)?.toLowerCase();

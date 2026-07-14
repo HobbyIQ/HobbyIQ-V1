@@ -6916,6 +6916,20 @@ export async function computeEstimate(
       }
     : __predicted.predictedPriceAttribution;
 
+  // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in listings
+  // trend for a full supply+demand read. Player name is extracted from
+  // the CH identity; when it's missing (rare — CH usually has player),
+  // the signal falls through to null. iOS should treat
+  // supplyDemand === null OR supplyDemand.verdict === "unavailable"
+  // as "not enough data" and hide the badge.
+  const { buildSupplyDemandSignal } = await import(
+    "./supplyDemandSignal.service.js"
+  );
+  const supplyDemand = await buildSupplyDemandSignal(
+    typeof queryContext.playerName === "string" ? queryContext.playerName : null,
+    slopeAdj,
+  ).catch(() => null);
+
   return {
     cardTitle,
     verdict: verdictText,
@@ -6939,6 +6953,7 @@ export async function computeEstimate(
     predictedPrice: slopePredictedPrice,
     predictedPriceRange: slopePredictedRange,
     predictedPriceAttribution: slopePredictedAttribution,
+    supplyDemand,
     signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,

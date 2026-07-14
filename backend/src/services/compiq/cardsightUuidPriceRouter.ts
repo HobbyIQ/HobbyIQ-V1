@@ -176,6 +176,19 @@ export async function priceByCardsightUuid(
   const marketValue = slopeVal != null ? slopeVal.marketValue : roundedFmv;
   const prediction = slopeVal;
 
+  // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in the
+  // listings trend (supply-side) to complement the sales slope
+  // (demand-side). Returns null on any of: no player name, sales slope
+  // absent, listings snapshots < 2 days available. Callers should render
+  // the wire's `supplyDemand.verdict === "unavailable"` state gracefully.
+  const { buildSupplyDemandSignal } = await import(
+    "./supplyDemandSignal.service.js"
+  );
+  const supplyDemand = await buildSupplyDemandSignal(
+    detail.name ?? null,
+    slopeVal,
+  ).catch(() => null);
+
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
   return {
@@ -206,6 +219,7 @@ export async function priceByCardsightUuid(
           n: prediction.n,
         }
       : null,
+    supplyDemand,
     trendIQ,
     // ── Identity ───────────────────────────────────────────────────
     cardIdentity: {
