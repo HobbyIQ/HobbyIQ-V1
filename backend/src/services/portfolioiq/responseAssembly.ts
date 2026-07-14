@@ -263,6 +263,16 @@ export interface PortfolioHoldingWire {
       mismatchedFields: string[];
     };
   }> | null;
+  /** CF-CARDID-SUGGESTER-CATALOG-VERIFY (PR — 2026-07-14): reference-
+   *  catalog match on the suggestion's (year, product, parallel).
+   *  Present when a real catalogued SKU exists; iOS badges accordingly. */
+  suggestionCatalogVerified?: {
+    confidence: "Verified" | "High" | "Medium";
+    printRun: number | null;
+    canonicalProduct: string;
+    canonicalCardSet: string;
+    canonicalParallel: string;
+  } | null;
   // Auxiliary aspect fields we backfilled from Browse (team, sport,
   // manufacturer) — always optional so old holdings still decode.
   team?: string | null;
@@ -515,6 +525,11 @@ export function composeHoldingWireShape(
     // but no suggestion to pick from" for 14 pending holdings.
     suggestionCandidateSource: (holding as any).suggestionCandidateSource,
     suggestionAlternatives: (holding as any).suggestionAlternatives,
+    // CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): reference-
+    // catalog match on the suggestion. iOS badges "catalog verified"
+    // when present. null when catalog lookup found no match OR when
+    // env flag is off.
+    suggestionCatalogVerified: (holding as any).suggestionCatalogVerified,
     // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
     ebayImageUrl: (holding as any).ebayImageUrl,
     ebayShortDescription: (holding as any).ebayShortDescription,

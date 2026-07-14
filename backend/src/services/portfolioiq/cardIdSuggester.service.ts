@@ -18,6 +18,38 @@ import { searchCards, isAutoCardNumber, type CardHedgeCard } from "../compiq/car
 import { fetchCardsightUuidNativeCandidates } from "../compiq/cardsightUuidSource.js";
 import type { CardIdentity } from "../../types/cardIdentity.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
+import { inferPrintRunFromReferenceCatalog } from "../compiq/referenceCatalogLookup.js";
+
+/**
+ * CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): thin wrapper
+ * around inferPrintRunFromReferenceCatalog that returns the shape the
+ * suggestion carries onto the wire. Fires only when we have all three
+ * (year, setName, parallel) — else there's nothing to look up.
+ * Fire-and-swallow: catalog lookup must never fail a suggestion.
+ */
+async function catalogVerifyCandidate(
+  cardYear: number | null | undefined,
+  setName: string | null | undefined,
+  parallel: string | null | undefined,
+  isAuto: boolean | null | undefined,
+): Promise<CardIdSuggestion["catalogVerified"]> {
+  if (!cardYear || !setName || !parallel) return null;
+  try {
+    const hit = await inferPrintRunFromReferenceCatalog(
+      setName, cardYear, parallel, { isAuto: isAuto ?? undefined },
+    );
+    if (!hit) return null;
+    return {
+      confidence: hit.confidence as "Verified" | "High" | "Medium",
+      printRun: hit.printRun,
+      canonicalProduct: hit.product,
+      canonicalCardSet: hit.cardSet,
+      canonicalParallel: hit.parallel,
+    };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): buckets iOS keys on
@@ -63,6 +95,23 @@ export interface CardIdSuggestion {
    *  don't surface twice).
    */
   alternatives?: Array<Omit<CardIdSuggestion, "alternatives">>;
+  /** CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): when the
+   *  (year, setName, parallel) combo resolves against the Cosmos
+   *  reference-catalog (Phase 4 data), this candidate is confirmed to
+   *  be a REAL catalogued SKU — not a vendor mis-match. iOS can badge
+   *  it "catalog verified"; downstream can weight it higher in scoring.
+   *
+   *  Populated for both primary and alternatives. `null` when the
+   *  catalog has no matching entry OR when the env flag
+   *  COMPIQ_REFERENCE_CATALOG_ENABLED is off (rollback lever).
+   */
+  catalogVerified?: {
+    confidence: "Verified" | "High" | "Medium";
+    printRun: number | null;
+    canonicalProduct: string;
+    canonicalCardSet: string;
+    canonicalParallel: string;
+  } | null;
 }
 
 // CF-CARDID-SUGGESTER-CONFIDENCE-TIERING thresholds. iOS reads
@@ -603,6 +652,32 @@ export async function suggestCardIdForHolding(
     }
   }
 
+  // CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): resolve
+  // primary + alternatives against the Cosmos reference-catalog. Fires
+  // in parallel; each lookup is process-cached after first hit so
+  // repeated suggestions for the same (product, year) bucket are ~free.
+  // Never blocks and never fails a suggestion — nulls flow through.
+  const primaryCatalogPromise = catalogVerifyCandidate(
+    top.candidate.year != null ? Number(top.candidate.year) : cleanFields.cardYear,
+    top.candidate.set ?? cleanFields.setName,
+    top.candidate.variant ?? cleanFields.parallel,
+    holding.isAuto,
+  );
+  const altCatalogPromises = alternatives.map((a) =>
+    catalogVerifyCandidate(
+      a.candidate.year != null ? Number(a.candidate.year) : cleanFields.cardYear,
+      a.candidate.set ?? cleanFields.setName,
+      a.candidate.variant ?? cleanFields.parallel,
+      holding.isAuto,
+    ),
+  );
+  const [primaryCatalog, ...altCatalogs] = await Promise.all([
+    primaryCatalogPromise, ...altCatalogPromises,
+  ]);
+  for (let i = 0; i < alternatives.length; i++) {
+    alternatives[i].catalogVerified = altCatalogs[i] ?? null;
+  }
+
   return {
     cardId: top.candidate.cardId,
     confidence,
@@ -621,6 +696,7 @@ export async function suggestCardIdForHolding(
       variant: top.candidate.variant ?? undefined,
       image: top.candidate.image ?? undefined,
     },
+    catalogVerified: primaryCatalog ?? null,
     ...(alternatives.length > 0 ? { alternatives } : {}),
   };
 }
@@ -692,6 +768,12 @@ export async function generateCardIdSuggestions(
         } else {
           // Clear any stale alternatives from a prior high-tier flip.
           delete (h as any).suggestionAlternatives;
+        }
+        // CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14)
+        if (suggestion.catalogVerified) {
+          (h as any).suggestionCatalogVerified = suggestion.catalogVerified;
+        } else {
+          delete (h as any).suggestionCatalogVerified;
         }
         (h as any).suggestionUpdatedAt = new Date().toISOString();
         (h as any).lastUpdated = new Date().toISOString();
