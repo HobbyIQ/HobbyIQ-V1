@@ -389,6 +389,32 @@ router.post("/listings/snapshot", requireOpsToken, async (req: Request, res: Res
   return res.json({ success: true, summary });
 });
 
+// CF-DAILY-LISTINGS-CRON (Drew, 2026-07-13, PR #421): daily snapshot
+// job endpoint. Called by a GitHub Actions cron; also triggerable
+// manually via the same ops token. Body:
+//   { userId?: string, topN?: number, concurrency?: number }
+// All fields optional — defaults picked to fit the 5K/day free-tier
+// Browse budget with 10x headroom.
+router.post("/listings/cron-tick", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { userId?: string; topN?: number; concurrency?: number };
+  const { runDailyListingsSnapshotJob } = await import(
+    "../services/compiq/dailyListingsSnapshotJob.service.js"
+  );
+  try {
+    const summary = await runDailyListingsSnapshotJob({
+      userId: body.userId,
+      topN: body.topN,
+      concurrency: body.concurrency,
+    });
+    return res.json({ success: true, summary });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "cron-tick failed",
+    });
+  }
+});
+
 router.get("/listings/trend", requireOpsToken, async (req: Request, res: Response) => {
   const player = (req.query.player as string | undefined)?.trim();
   const daysRaw = req.query.days as string | undefined;
