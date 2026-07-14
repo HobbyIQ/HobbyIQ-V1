@@ -152,7 +152,7 @@ describe("CF-CARDID-SUGGESTER-CATALOG-VERIFY", () => {
     expect(alt?.catalogVerified).toBeNull();
   });
 
-  it("catalog lookup fires with the candidate's normalized fields (not raw holding)", async () => {
+  it("catalog lookup fires with NORMALIZED holding fields (not vendor's raw set string)", async () => {
     vi.mocked(searchCards).mockResolvedValue([
       {
         card_id: "ch-x", set: "2026 Bowman Baseball", year: 2026,
@@ -161,18 +161,20 @@ describe("CF-CARDID-SUGGESTER-CATALOG-VERIFY", () => {
     ]);
     vi.mocked(inferPrintRunFromReferenceCatalog).mockResolvedValue(null);
 
-    // Holding with messy fields — normalizer strips "2026 " prefix + subset words
+    // Holding with messy setName — normalizer strips "2026 " year prefix
     await suggestCardIdForHolding(makeHolding({
       setName: "2026 Bowman Chrome",
-      parallel: "Chrome Green Refractor",
+      parallel: "Green Refractor",
     }));
 
-    // Lookup is called with the CANDIDATE'S set/variant (from the CH row),
-    // not the raw holding fields — the candidate is what's being verified.
+    // CF-CATALOG-LOOKUP-USE-NORMALIZED: the lookup receives the NORMALIZED
+    // setName ("Bowman Chrome"), NOT the vendor's raw "2026 Bowman Baseball"
+    // string. Vendor's set field includes year prefix which never matches
+    // the catalog's clean product keys.
     expect(inferPrintRunFromReferenceCatalog).toHaveBeenCalled();
     const args = vi.mocked(inferPrintRunFromReferenceCatalog).mock.calls[0];
-    expect(args[0]).toBe("2026 Bowman Baseball");   // candidate.set
-    expect(args[1]).toBe(2026);                      // candidate.year (coerced)
-    expect(args[2]).toBe("Green Refractor");         // candidate.variant
+    expect(args[0]).toBe("Bowman Chrome");           // normalized holding.setName
+    expect(args[1]).toBe(2026);                       // normalized holding.cardYear
+    expect(args[2]).toBe("Green Refractor");          // candidate.variant
   });
 });

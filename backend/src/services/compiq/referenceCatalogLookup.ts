@@ -44,6 +44,44 @@ import { slug } from "../../shared/slug.js";
 import { listParallelsByProductYear } from "../../repositories/referenceCatalog.repository.js";
 import type { ParallelDoc } from "../reference/referenceCatalog.types.js";
 
+/**
+ * CF-CATALOG-PRODUCT-FAMILY-FALLBACK (Drew, 2026-07-14): the workbook
+ * data doesn't cleanly separate "Bowman Chrome" from "Bowman" — 2026
+ * Bowman Chrome Prospect Autographs are stored under `product: "Bowman"`
+ * with `cardSet` carrying the "Chrome" distinction. Same for
+ * "Bowman Draft Chrome" (nested under bowman-draft) and "Topps Chrome
+ * Update" (under topps-update).
+ *
+ * When a lookup misses on the requested productKey, walk up the family
+ * ladder to the flagship. Preserves the exact-match precedence (a real
+ * bowman-chrome-sapphire hit still beats a bowman fallback) but
+ * recovers matches when the workbook chose to nest.
+ *
+ * Order matters: most-specific → least-specific. First hit wins.
+ */
+function productFamilyLadder(productKey: string): string[] {
+  const ladder: string[] = [productKey];
+  // Bowman family: bowman-chrome / bowman-draft-chrome / bowman-sterling-chrome / etc.
+  // → try dropping "-chrome" suffix (chrome variants nest under the base line)
+  if (productKey.endsWith("-chrome")) {
+    ladder.push(productKey.slice(0, -"-chrome".length));
+  }
+  // Bowman-family: any bowman-* → bowman flagship as terminal fallback
+  if (productKey.startsWith("bowman-") && productKey !== "bowman") {
+    ladder.push("bowman");
+  }
+  // Topps-family: topps-chrome-update / topps-heritage-high-number → base line
+  if (productKey.startsWith("topps-") && productKey !== "topps") {
+    // Try dropping trailing modifier segments (last "-word") once
+    const parts = productKey.split("-");
+    if (parts.length >= 3) {
+      ladder.push(parts.slice(0, -1).join("-"));
+    }
+  }
+  // De-dupe while preserving order
+  return Array.from(new Set(ladder));
+}
+
 export interface ReferenceCatalogLookupResult {
   printRun: number | null;
   auto: boolean;
@@ -142,59 +180,63 @@ export async function inferPrintRunFromReferenceCatalog(
   if (!year || !Number.isFinite(year)) return null;
   if (!parallel || typeof parallel !== "string" || !parallel.trim()) return null;
 
-  const productKey = slug(product);
+  const requestedProductKey = slug(product);
   const parallelKey = slug(parallel);
-  if (!productKey || !parallelKey) return null;
+  if (!requestedProductKey || !parallelKey) return null;
 
-  let bucket: Bucket;
-  try {
-    bucket = await getBucket(productKey, year);
-  } catch (err) {
-    // Never let a Cosmos blip poison the projection path — log and miss.
-    console.warn(
-      `[referenceCatalogLookup] getBucket failed (${productKey}, ${year}):`,
-      (err as Error)?.message ?? err,
-    );
-    return null;
-  }
+  // CF-CATALOG-PRODUCT-FAMILY-FALLBACK (Drew, 2026-07-14): walk the
+  // product family ladder. Exact match wins; only fall back when the
+  // requested key has zero matches (empty bucket OR bucket exists but
+  // has no parallel-key hit even after suffix fuzz).
+  const ladder = productFamilyLadder(requestedProductKey);
+  for (const productKey of ladder) {
+    let bucket: Bucket;
+    try {
+      bucket = await getBucket(productKey, year);
+    } catch (err) {
+      console.warn(
+        `[referenceCatalogLookup] getBucket failed (${productKey}, ${year}):`,
+        (err as Error)?.message ?? err,
+      );
+      continue;
+    }
+    if (bucket.byParallelKey.size === 0) continue;   // empty bucket → try next in ladder
 
-  // CF-STRESS-TEST-SUFFIX-FUZZ (2026-07-10): the stress-test surfaced
-  // that Chrome-family SKUs are typically named by color alone in the
-  // wild ("Blue"), while the reference catalog stores full names with
-  // the Refractor suffix ("Blue Refractor"). Try exact first; on miss,
-  // fall through to a canonical suffix-augmented lookup so callers
-  // don't have to know which naming convention lives in Cosmos.
-  //
-  // Order matters — exact first so plain-color parallels in flagship
-  // Bowman ("Blue" /150) win over the Chrome refractor version when
-  // the caller genuinely means the flagship parallel.
-  let candidates = bucket.byParallelKey.get(parallelKey);
-  if (!candidates || candidates.length === 0) {
-    for (const suffix of ["-refractor", "-foil", "-prizm"]) {
-      const suffixKey = parallelKey.endsWith(suffix)
-        ? parallelKey
-        : `${parallelKey}${suffix}`;
-      const suffixHit = bucket.byParallelKey.get(suffixKey);
-      if (suffixHit && suffixHit.length > 0) {
-        candidates = suffixHit;
-        break;
+    // CF-STRESS-TEST-SUFFIX-FUZZ (2026-07-10): Chrome-family SKUs are
+    // typically named by color alone ("Blue"), while the reference
+    // catalog stores full names with the Refractor suffix ("Blue
+    // Refractor"). Try exact first; on miss, fall through to a canonical
+    // suffix-augmented lookup so callers don't have to know which naming
+    // convention lives in Cosmos.
+    let candidates = bucket.byParallelKey.get(parallelKey);
+    if (!candidates || candidates.length === 0) {
+      for (const suffix of ["-refractor", "-foil", "-prizm"]) {
+        const suffixKey = parallelKey.endsWith(suffix)
+          ? parallelKey
+          : `${parallelKey}${suffix}`;
+        const suffixHit = bucket.byParallelKey.get(suffixKey);
+        if (suffixHit && suffixHit.length > 0) {
+          candidates = suffixHit;
+          break;
+        }
       }
     }
+    if (!candidates || candidates.length === 0) continue;   // no parallel hit → try next in ladder
+
+    const best = selectBest(candidates, opts?.isAuto);
+    if (!best) continue;
+
+    return {
+      printRun: best.printRun,
+      auto: best.auto,
+      confidence: best.confidence,
+      product: best.product,
+      cardSet: best.cardSet,
+      parallel: best.parallel,
+      source: "reference-catalog",
+    };
   }
-  if (!candidates || candidates.length === 0) return null;
-
-  const best = selectBest(candidates, opts?.isAuto);
-  if (!best) return null;
-
-  return {
-    printRun: best.printRun,
-    auto: best.auto,
-    confidence: best.confidence,
-    product: best.product,
-    cardSet: best.cardSet,
-    parallel: best.parallel,
-    source: "reference-catalog",
-  };
+  return null;
 }
 
 /**

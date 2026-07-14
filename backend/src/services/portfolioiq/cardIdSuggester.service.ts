@@ -689,16 +689,25 @@ export async function suggestCardIdForHolding(
   // in parallel; each lookup is process-cached after first hit so
   // repeated suggestions for the same (product, year) bucket are ~free.
   // Never blocks and never fails a suggestion — nulls flow through.
+  //
+  // CF-CATALOG-LOOKUP-USE-NORMALIZED (Drew, 2026-07-14): use the
+  // NORMALIZED holding fields for the lookup, NOT the vendor's raw
+  // strings. Vendor `candidate.set` is verbatim their internal name
+  // ("2026 Bowman Baseball") including year prefix — slug never matches
+  // the catalog's clean keys ("bowman"). Normalized fields have
+  // year/subset noise stripped by R1/R3 and match the catalog's
+  // canonical form. Vendor fields still fill in for parallel/year when
+  // the normalizer didn't touch them.
   const primaryCatalogPromise = catalogVerifyCandidate(
-    top.candidate.year != null ? Number(top.candidate.year) : cleanFields.cardYear,
-    top.candidate.set ?? cleanFields.setName,
+    cleanFields.cardYear ?? (top.candidate.year != null ? Number(top.candidate.year) : undefined),
+    cleanFields.setName ?? top.candidate.set,
     top.candidate.variant ?? cleanFields.parallel,
     holding.isAuto,
   );
   const altCatalogPromises = alternatives.map((a) =>
     catalogVerifyCandidate(
-      a.candidate.year != null ? Number(a.candidate.year) : cleanFields.cardYear,
-      a.candidate.set ?? cleanFields.setName,
+      cleanFields.cardYear ?? (a.candidate.year != null ? Number(a.candidate.year) : undefined),
+      cleanFields.setName ?? a.candidate.set,
       a.candidate.variant ?? cleanFields.parallel,
       holding.isAuto,
     ),
