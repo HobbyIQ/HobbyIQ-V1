@@ -43,6 +43,18 @@ export interface SupplyDemandSignal {
 }
 
 /**
+ * Daily listings point for the wire — enables iOS' supply-side chart to
+ * plot the actual counts alongside the regression line. Same shape iOS
+ * already uses for the sales side, just swapping "price" semantics
+ * for "count."
+ */
+export interface ListingsHistoryPoint {
+  date: string;              // YYYY-MM-DD
+  totalListings: number;
+  medianAsk: number | null;  // median asking price that day (for future overlay)
+}
+
+/**
  * Fetch listings snapshots for a player and fit a regression on
  * (date, totalListings). Returns the slope valuation shape (same as
  * sales slope) or null when there aren't enough snapshots (need ≥ 2
@@ -63,6 +75,28 @@ export async function computeListingsTrend(
       price: s.totalListings,
     })),
   );
+}
+
+/**
+ * Return the raw daily listings history for iOS' supply-side chart.
+ * Oldest → newest, so the caller can render a time series without
+ * re-sorting. Empty array when the container is unavailable or the
+ * player has no snapshots — same graceful-degrade contract as
+ * computeListingsTrend.
+ */
+export async function fetchListingsHistoryForWire(
+  playerName: string | null,
+  days: number = 30,
+): Promise<ListingsHistoryPoint[]> {
+  if (!playerName) return [];
+  const snaps = await readSnapshots(playerName, days);
+  return snaps
+    .map((s) => ({
+      date: s.date,
+      totalListings: s.totalListings,
+      medianAsk: s.medianAsk,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**

@@ -181,13 +181,13 @@ export async function priceByCardsightUuid(
   // (demand-side). Returns null on any of: no player name, sales slope
   // absent, listings snapshots < 2 days available. Callers should render
   // the wire's `supplyDemand.verdict === "unavailable"` state gracefully.
-  const { buildSupplyDemandSignal } = await import(
+  const { buildSupplyDemandSignal, fetchListingsHistoryForWire } = await import(
     "./supplyDemandSignal.service.js"
   );
-  const supplyDemand = await buildSupplyDemandSignal(
-    detail.name ?? null,
-    slopeVal,
-  ).catch(() => null);
+  const [supplyDemand, listingsHistory] = await Promise.all([
+    buildSupplyDemandSignal(detail.name ?? null, slopeVal).catch(() => null),
+    fetchListingsHistoryForWire(detail.name ?? null, 30).catch(() => []),
+  ]);
 
   // Build the wire response — same field shape iOS decodes from the CH
   // path. Fields not applicable to a Cardsight-only compute are null.
@@ -220,6 +220,7 @@ export async function priceByCardsightUuid(
         }
       : null,
     supplyDemand,
+    listingsHistory,
     trendIQ,
     // ── Identity ───────────────────────────────────────────────────
     cardIdentity: {
