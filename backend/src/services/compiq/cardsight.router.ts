@@ -406,11 +406,30 @@ async function structuredMercyFallback(
  * Resolve an identity hint to a CardHedge card_id via /v1/cards/card-match.
  * Cached 24h on the natural-language query. Returns null on no match or
  * confidence below MIN_BRIDGE_CONFIDENCE.
+ *
+ * CF-CH-RAW-QUERY (Drew, 2026-07-15): when `rawQuery` is passed AND the
+ * env flag CH_USE_RAW_QUERY=true, we send the user's ORIGINAL free-text
+ * to CH's AI matcher instead of the buildCardHedgeQuery reconstruction.
+ * Rationale (from feedback_raw_query_to_ai_matcher memory): the whole
+ * point of an AI matcher is to be FUZZY. Users type "hartman blue" or
+ * "trout auto" — the AI is designed for that. Our parser is over-eager
+ * (splits "Reptilian Refractor" into player+parallel, treats "X-Fractor"
+ * as cardNumber, strips "Speckle" from "Speckle Refractor" — 4 real
+ * Drew holdings broken 2026-07-15). When we reconstruct a rigid string
+ * from broken tokens, we're feeding the AI our parser's bugs.
+ *
+ * The identity hint is still passed downstream to the variant guard
+ * (which knows to reject wrong SKUs) and the structured mercy fallback.
  */
 async function resolveChCardId(
   identity: CardIdentityHint,
+  rawQuery?: string,
 ): Promise<{ chCardId: string; confidence: number } | null> {
-  const query = buildCardHedgeQuery(identity);
+  const useRawQuery =
+    process.env.CH_USE_RAW_QUERY === "true" &&
+    typeof rawQuery === "string" &&
+    rawQuery.trim().length >= 3;
+  const query = useRawQuery ? rawQuery!.trim() : buildCardHedgeQuery(identity);
   if (!query) return null;
 
   const raw = await cacheWrap(
@@ -502,8 +521,12 @@ async function resolveChCardId(
 async function tryCardHedge(
   identity: CardIdentityHint,
   grade: string,
+  rawQuery?: string,
 ): Promise<{ sales: RoutedSale[]; trustReason: string; chCardId: string } | null> {
-  const bridge = await resolveChCardId(identity);
+  // CF-CH-RAW-QUERY (Drew, 2026-07-15): thread raw user query so
+  // resolveChCardId can send it directly to CH's AI matcher instead
+  // of our reconstruction. Env-gated inside resolveChCardId.
+  const bridge = await resolveChCardId(identity, rawQuery);
   if (!bridge) return null;
 
   const chIdentity: CardHedgeIdentity = {
@@ -639,7 +662,10 @@ export async function findCompsRouted(
   }
 
   try {
-    const ch = await tryCardHedge(identity, opts.grade ?? "Raw");
+    // CF-CH-RAW-QUERY: pass the user's raw query as third arg. When
+    // env flag CH_USE_RAW_QUERY=true, resolveChCardId sends it directly
+    // to CH's AI matcher instead of our reconstruction.
+    const ch = await tryCardHedge(identity, opts.grade ?? "Raw", query);
     if (!ch) {
       // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): CH-miss fallback.
       // Env-gated (CARDSIGHT_FALLBACK_ENABLED=true, default off) so we can
