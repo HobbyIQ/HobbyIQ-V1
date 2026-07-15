@@ -324,6 +324,22 @@ export async function confirmHoldingReview(
     }
   })();
 
+  // CF-USER-REPUTATION (Drew, 2026-07-15): bump attestation counters
+  // for reputation scoring. +1 confirmation, +corrections.length for
+  // the parser-noise counter. Fire-and-forget.
+  void (async () => {
+    try {
+      const { bumpUserStats } = await import("./userReputation.service.js");
+      await bumpUserStats({
+        userId,
+        confirmations: 1,
+        totalCorrections: corrections.length,
+      });
+    } catch {
+      // swallow — reputation update is auxiliary
+    }
+  })();
+
   return { status: "confirmed", holding, correctionCount: corrections.length };
 }
 
@@ -388,6 +404,17 @@ export async function rejectHoldingReview(
       });
     } catch {
       // swallow — feedback capture is auxiliary
+    }
+  })();
+
+  // CF-USER-REPUTATION: bump rejection counter (informational — doesn't
+  // hurt reputation but tracked for future heuristics).
+  void (async () => {
+    try {
+      const { bumpUserStats } = await import("./userReputation.service.js");
+      await bumpUserStats({ userId, rejections: 1 });
+    } catch {
+      // swallow
     }
   })();
 
