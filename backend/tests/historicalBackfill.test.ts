@@ -157,7 +157,7 @@ describe("runHistoricalBackfill — dual-vendor accumulation", () => {
     ]);
     expect(result.totalCHSalesWritten).toBe(1);
     expect(result.totalCSSalesWritten).toBe(1);
-    expect(mockedCH).toHaveBeenCalledWith("ch-1", "Raw", 500);
+    expect(mockedCH).toHaveBeenCalledWith("ch-1", "Raw", 100);
     expect(mockedCS).toHaveBeenCalledWith("cs-1");
   });
 

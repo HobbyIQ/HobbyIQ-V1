@@ -34,9 +34,12 @@ const log = (event: string, fields: Record<string, unknown> = {}): void => {
  *  vendors under bulk-load conditions. */
 const CONCURRENCY = 4;
 
-/** How many sales to request from CH per card. CH's default limit is 20;
- *  bump for backfill so we get more of the tail. */
-const CH_MAX_SALES = 500;
+/** How many sales to request from CH per card. Live evidence 2026-07-15:
+ *  CH's /cards/comps endpoint returns HTTP 422 for count > 100 (silent
+ *  server-side validation cap). 100 is the max we can request in a
+ *  single call; for cards with more history, extend to paginated calls
+ *  later. */
+const CH_MAX_SALES = 100;
 
 export interface BackfillTargetIdentity {
   playerName: string;
