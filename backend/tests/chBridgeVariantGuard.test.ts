@@ -220,3 +220,70 @@ describe("matchHonorsIdentity — CF-VARIANT-GUARD-SUPERSET (query-aware accepta
     expect(result.ok).toBe(false);
   });
 });
+
+// CF-AUTO-VARIANT-GUARD (Drew, 2026-07-15) — user asked for AUTOGRAPH
+// but CH's AI matcher resolves to BASE card. Existing parallel/number
+// guards had nothing to reject with when identity.parallel was null.
+// Live symptom: Bobby Witt Jr 2020 Bowman Chrome Auto → engine returned
+// $9 from base card sibling pool (real card is $1,000+).
+describe("matchHonorsIdentity — CF-AUTO-VARIANT-GUARD (auto vs base)", () => {
+  it("rejects base-card match when user asked for auto", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "ch-base", variant: "Base", number: "BCP-42", title: "Bobby Witt Jr 2020 Bowman Chrome" },
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("auto_vs_base_mismatch");
+  });
+
+  it("accepts when auto is in match.variant", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "ch-auto", variant: "Blue Refractor Auto", number: "CPA-EHA" },
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts when auto card number prefix matches (CPA / BCPA / BDPA / etc.)", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "ch-cpa", variant: "Refractor", number: "CPA-EHA" },
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(true);  // CPA- prefix signals autograph
+  });
+
+  it("accepts when 'autograph' appears in match.title", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "ch-auto", variant: "Refractor", number: "SC-42", title: "Player Name 2024 Set Autograph Refractor" },
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("no-ops when identity.isAuto is false or unset (backward-compat)", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "ch-base", variant: "Base", number: "BCP-42" },
+      { /* no isAuto */ },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("Bobby Witt Jr scenario: base card rejected", () => {
+    const result = matchHonorsIdentity(
+      { card_id: "1684548880418x167621040739864400", variant: null, number: "BCP-90", title: "Bobby Witt Jr" },
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("auto_vs_base_mismatch");
+  });
+
+  it("no-ops when match has NO metadata to judge (test-fixture pattern with only card_id/confidence)", () => {
+    // Absence of variant/title/set/number isn't evidence of base — we
+    // can't judge. Accept to avoid spurious rejections on stubs.
+    const result = matchHonorsIdentity(
+      { card_id: "ch-x" },  // no variant/title/set/number
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(true);
+  });
+});
