@@ -27,11 +27,30 @@
 // and shouldn't drift the median forever; historical analysis re-hydrates
 // from event log if we ever need it. TTL runs container-side; we set
 // -1 default and per-doc ttl.
+//
+// CF-SEASONALITY-EXTENDED-TTL (Drew, 2026-07-15): bumped default from
+// 365d to 5 years to retain historical price series for seasonality
+// analysis (YoY comparisons, seasonal price waves on prospect/rookie
+// cards, buying/selling signal detection). Engine's own recency filter
+// (applyRecencyFilter, 21d default) still trims stale comps out of FMV
+// aggregation — this TTL just controls how far back we RETAIN records
+// for chart/signal purposes.
+//
+// Env-configurable via SOLD_COMPS_TTL_YEARS (default 5). Set to "-1"
+// for no-expiry (permanent retention). Cost implication is small at
+// today's write volume (~KB per doc, thousands of docs).
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 
-const TTL_SEC = 365 * 24 * 3600;
+function computeTtlSec(): number {
+  const raw = process.env.SOLD_COMPS_TTL_YEARS;
+  if (raw === "-1") return -1;  // no expiry — permanent retention
+  const years = raw ? parseInt(raw, 10) : NaN;
+  const effectiveYears = Number.isFinite(years) && years > 0 ? years : 5;
+  return effectiveYears * 365 * 24 * 3600;
+}
+const TTL_SEC = computeTtlSec();
 
 export type SoldCompSource =
   | "ebay-user-purchase"    // user bought this card on eBay (verified via confirm)
