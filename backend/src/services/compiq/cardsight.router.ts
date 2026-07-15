@@ -24,6 +24,9 @@ import {
 } from "./cardhedge.client.js";
 import type { ParallelPriceSource, UserFacingPriceSource } from "./parallelTitleMatch.js";
 import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
+// CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): targeted un-decommission
+// for CH-catalog-miss cases. See cardsightFallback.ts for the rationale.
+import { tryCardsightFallback } from "./cardsightFallback.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -634,6 +637,26 @@ export async function findCompsRouted(
   try {
     const ch = await tryCardHedge(identity, opts.grade ?? "Raw");
     if (!ch) {
+      // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): CH-miss fallback.
+      // Env-gated (CARDSIGHT_FALLBACK_ENABLED=true, default off) so we can
+      // stage rollout separately from ingest + read. Only fires when CH has
+      // literally no bridge — CH-thin / CH-untrusted cases keep the empty
+      // return so the trust-guard behavior is preserved. See
+      // cardsightFallback.ts header for the full rationale.
+      if (process.env.CARDSIGHT_FALLBACK_ENABLED === "true") {
+        const cs = await tryCardsightFallback(query, identity, opts.grade ?? "Raw");
+        if (cs) {
+          log.info("comp.findComps.end", {
+            query,
+            cardId: cs.card?.card_id ?? null,
+            result_count: cs.sales.length,
+            latency_ms: Date.now() - start,
+            outcome: "cardsight_fallback",
+            vendor: "cardsight",
+          });
+          return cs;
+        }
+      }
       log.info("comp.findComps.end", { query, outcome: "ch_unavailable", latency_ms: Date.now() - start });
       return emptyResult(["ch_no_match_or_untrusted"]);
     }
