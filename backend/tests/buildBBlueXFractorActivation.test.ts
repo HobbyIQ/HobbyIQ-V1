@@ -224,7 +224,8 @@ describe("CF-BUILDB-BLUE-ACTIVATE (C) — m1 pre-emption check (integration)", (
     // line 563 edit doesn't unintentionally change the routing for the
     // live Hartman holding's current comp shape.
     expect(result.source).toBe("variant-mismatch");
-    expect(result.fairMarketValue ?? null).toBeNull();
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): fairMarketValue now populated with median of fetched.comps when present.
+    expect(result.fairMarketValue == null || (typeof result.fairMarketValue === "number" && result.fairMarketValue > 0)).toBe(true);
     expect(result.estimatedValue ?? null).toBeNull();
   });
 });

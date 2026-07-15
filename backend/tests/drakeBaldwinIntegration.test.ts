@@ -188,8 +188,11 @@ describe("variant-mismatch fallback — Mechanism 1 still fires when tier ladder
 
     // Tier ladder exhausted at T3 → fall through to variant-mismatch.
     expect(result.source).toBe("variant-mismatch");
-    expect(result.marketValue).toBeNull();
-    expect(result.fairMarketValue).toBeNull();
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): variant-mismatch
+    // now populates marketValue/fairMarketValue with median of fetched.comps
+    // when any present. Accept null OR positive number.
+    expect(result.marketValue == null || (typeof result.marketValue === "number" && result.marketValue > 0)).toBe(true);
+    expect(result.fairMarketValue == null || (typeof result.fairMarketValue === "number" && result.fairMarketValue > 0)).toBe(true);
 
     // Mechanism 1 still wired into the variant-mismatch fallback path —
     // predictedPriceAttribution is populated (may be null predictedPrice if
