@@ -79,9 +79,10 @@ describe("tryCardsightPricingBackstop — early exits", () => {
     expect(r).toBeNull();
   });
 
-  it("returns null when all results are filtered out (non-auction / bad price / no date)", async () => {
+  it("returns null when all results are filtered out (bad price / no date)", async () => {
+    // Note: post CF-CS-BACKSTOP-ALL-TYPES, fixed listings are KEPT.
+    // Only records failing (price > 0 && has date) get dropped.
     mockedSearch.mockResolvedValue([
-      rec({ listing_type: "fixed" }),          // ask price — reject
       rec({ price: 0 }),                        // zero — reject
       rec({ price: -50 }),                      // negative — reject
       rec({ date: "" }),                        // no date — reject
@@ -134,15 +135,35 @@ describe("tryCardsightPricingBackstop — happy path", () => {
     expect(r!.sales.length).toBe(25);
   });
 
-  it("belt-and-suspenders: filters out non-auction rows even if server returns them", async () => {
+  it("includes ALL listing types (CF-CS-BACKSTOP-ALL-TYPES)", async () => {
+    // Rationale: Drew 2026-07-15 — "grab ALL types of purchases, that
+    // is important data." Rare Prospect Autos (Sykora, Witt, Hartshorn)
+    // often have ZERO auction sales but multiple Buy-It-Now listings.
+    // Engine downstream (getSaleTypeWeightMultiplier) handles the
+    // weighting distinction so we shouldn't filter server-side.
     mockedSearch.mockResolvedValue([
       rec({ price: 1800, listing_type: "auction" }),
-      rec({ price: 999, listing_type: "fixed" }),   // ASK — should be dropped
-      rec({ price: 1700, listing_type: null }),      // unknown — should be dropped
+      rec({ price: 1700, listing_type: "fixed" }),   // BIN — kept
+      rec({ price: 999, listing_type: null }),        // unknown — kept (raw data)
     ]);
     const r = await tryCardsightPricingBackstop("q", ctx, "Raw");
-    expect(r!.sales.length).toBe(1);
-    expect(r!.sales[0].price).toBe(1800);
+    expect(r!.sales.length).toBe(3);
+    const prices = r!.sales.map((s) => s.price).sort((a, b) => a - b);
+    expect(prices).toEqual([999, 1700, 1800]);
+  });
+
+  it("returns fixed-only pool when no auctions exist (Sykora scenario)", async () => {
+    // Live symptom: CS pricing-search returned 0 auction records for
+    // Travis Sykora Blue Refractor Auto but Drew confirmed the card
+    // is in CS. Sellers only list BIN. This test pins the fix.
+    mockedSearch.mockResolvedValue([
+      rec({ price: 400, listing_type: "fixed" }),
+      rec({ price: 425, listing_type: "fixed" }),
+    ]);
+    const r = await tryCardsightPricingBackstop("Travis Sykora 2024 Bowman", ctx, "Raw");
+    expect(r).not.toBeNull();
+    expect(r!.sales.length).toBe(2);
+    expect(r!.sales.every((s) => (s as { listing_type?: string }).listing_type === "fixed")).toBe(true);
   });
 });
 
@@ -162,10 +183,12 @@ describe("tryCardsightPricingBackstop — period selection by grade", () => {
     expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ period: "1y" }));
   });
 
-  it("always requests listingType='auction' to avoid asks polluting FMV", async () => {
+  it("requests listingType='both' to grab ALL types (CF-CS-BACKSTOP-ALL-TYPES)", async () => {
     mockedSearch.mockResolvedValue([rec()]);
     await tryCardsightPricingBackstop("q", ctx, "Raw");
-    expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ listingType: "auction" }));
+    // Changed from "auction" 2026-07-15 — narrow filter was missing
+    // Prospect Autos that only list as Buy-It-Now.
+    expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ listingType: "both" }));
   });
 });
 
