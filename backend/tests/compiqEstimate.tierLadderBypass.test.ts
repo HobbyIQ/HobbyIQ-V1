@@ -126,7 +126,9 @@ describe("CF-VARIANT-FILTER-BACKTEST — env flag (VARIANT_TIER_LADDER_ENABLED)"
 
     expect(res.status).toBe(200);
     expect(res.body.source).toBe("variant-mismatch");
-    expect(res.body.marketValue).toBeNull();
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): variant-mismatch
+    // now populates marketValue with median of fetched.comps when present.
+    expect(res.body.marketValue === null || (typeof res.body.marketValue === "number" && res.body.marketValue > 0)).toBe(true);
     // tier metadata still surfaced; trace shows T0 had 0 matches and ladder
     // never escalated (T1/T2/T3 zeros).
     expect(res.body.compQuality?.variantStrictness).toBe("T0");
