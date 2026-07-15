@@ -1415,6 +1415,46 @@ router.post("/what-if", requireSession, requireRateLimited("priceChecksPerDay"),
 //
 // Query params: playerName (req), product (req), cardYear, parallel,
 // gradeCompany, gradeValue.
+// CF-PRICE-TIME-SERIES (Drew, 2026-07-15): time-series aggregation for
+// iOS chart + seasonality signals. Reads sold_comps by cardId, buckets
+// by week/month/quarter, returns median + count + source breakdown per
+// bucket. Feeds off historical backfill data (PR #472) + live emissions.
+router.get("/cards/:cardId/price-history", requireSession, async (req, res, next) => {
+  try {
+    const cardId = String(req.params.cardId ?? "").trim();
+    if (!cardId) return res.status(400).json({ error: "cardId path param required" });
+    const windowRaw = String(req.query.window ?? "1y");
+    const bucketRaw = String(req.query.bucket ?? "monthly");
+    const validWindows = ["3m", "1y", "3y", "all"] as const;
+    const validBuckets = ["weekly", "monthly", "quarterly"] as const;
+    if (!(validWindows as readonly string[]).includes(windowRaw)) {
+      return res.status(400).json({ error: `window must be one of ${validWindows.join("|")}` });
+    }
+    if (!(validBuckets as readonly string[]).includes(bucketRaw)) {
+      return res.status(400).json({ error: `bucket must be one of ${validBuckets.join("|")}` });
+    }
+    const minConfRaw = req.query.minConfidence;
+    let minConfidence: number | undefined;
+    if (minConfRaw != null && minConfRaw !== "") {
+      const n = Number(minConfRaw);
+      if (!Number.isFinite(n) || n < 0 || n > 1) {
+        return res.status(400).json({ error: "minConfidence must be 0-1" });
+      }
+      minConfidence = n;
+    }
+    const { buildPriceHistory } = await import(
+      "../services/portfolioiq/priceTimeSeries.service.js"
+    );
+    const result = await buildPriceHistory({
+      cardId,
+      window: windowRaw as "3m" | "1y" | "3y" | "all",
+      bucket: bucketRaw as "weekly" | "monthly" | "quarterly",
+      minConfidence,
+    });
+    return res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
 router.get("/comps-by-player", async (req, res, next) => {
   try {
     const playerName = typeof req.query.playerName === "string" ? req.query.playerName.trim() : "";
