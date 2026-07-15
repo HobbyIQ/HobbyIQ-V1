@@ -446,6 +446,43 @@ router.put("/holdings/:id", portfolio.updateHolding);
 router.patch("/holdings/:id", portfolio.updateHolding);
 router.delete("/holdings/:id", portfolio.deleteHolding);
 router.post("/holdings/:id/sell", portfolio.sellHolding);
+
+// CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): flag a comp in the
+// shared sold_comps pool as wrong. Engine skips flagged comps during
+// FMV aggregation but preserves the provenance record for audit.
+// Body: { cardId: string, compId: string, reason?: string }
+// Auth: session-required (already enforced by router.use above). Trust
+// boundary — future enhancement: check that the flagger is either the
+// contributor OR has a reputation score above threshold OR is ops.
+router.post("/comps/flag-wrong", async (req, res, next) => {
+  try {
+    const { cardId, compId, reason } = req.body ?? {};
+    if (typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: "cardId required" });
+    }
+    if (typeof compId !== "string" || !compId.trim()) {
+      return res.status(400).json({ success: false, error: "compId required" });
+    }
+    const flaggedByUserId = (req as any).userId ?? "";
+    if (!flaggedByUserId) {
+      return res.status(401).json({ success: false, error: "session required" });
+    }
+    const { flagCompAsWrong } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    const result = await flagCompAsWrong({
+      cardId: cardId.trim(),
+      compId: compId.trim(),
+      flaggedByUserId,
+      reason: typeof reason === "string" ? reason : undefined,
+    });
+    const status =
+      result.status === "flagged" ? 200 :
+      result.status === "not-found" ? 404 :
+      result.status === "no-store" ? 503 : 500;
+    return res.status(status).json({ success: result.status === "flagged", ...result });
+  } catch (err) { next(err); }
+});
 // CF-REGRADE-COST-ROLLIN (2026-07-06, iOS ask): atomic grade
 // conversion — updates gradeCompany/gradeValue/certNumber and rolls
 // grading cost into totalCostBasis in one commit. iOS "Mark as
