@@ -2722,6 +2722,24 @@ export function ingestVendorCompsToPool(fetched: FetchedComps): void {
  * only user-CONFIRMED cardIds have been written to sold_comps, so cross-user
  * aggregation is safe.
  */
+/**
+ * CF-USER-COMPS-AGING (Drew, 2026-07-15): user-attested comps older than
+ * this window are dropped from the FMV pool. Real prices move — a
+ * verified comp from a year ago at $200 for a rookie now selling at
+ * $500 misleads the median. The cardId attestation itself is still
+ * valuable identity data; we just don't trust the stale PRICE.
+ *
+ * Threshold chosen to match the raw-comp priceHistory window (60d) plus
+ * a 3x buffer for thin-cohort SKUs where user comps might be the only
+ * source. Configurable via env for future tuning without redeploy.
+ */
+function userCompMaxAgeDays(): number {
+  const raw = process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS;
+  if (!raw) return 180;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 180;
+}
+
 export async function augmentCompsWithUserPool(
   fetched: FetchedComps,
   cardId: string | undefined | null,
@@ -2747,6 +2765,46 @@ export async function augmentCompsWithUserPool(
   }
   if (userComps.length === 0) return fetched;
 
+  // CF-USER-COMPS-AGING: filter stale comps out of the FMV merge before
+  // the dedup + cap loop. Ages measured from soldAt (the sale date the
+  // user reported), not observedAt (when we wrote it). A holding
+  // imported today for a purchase 2 years ago is still stale-priced.
+  const maxAgeDays = userCompMaxAgeDays();
+  const maxAgeMs = maxAgeDays * 86_400_000;
+  const now = Date.now();
+  const freshUserComps: SoldCompDoc[] = [];
+  let agedOutCount = 0;
+  for (const uc of userComps) {
+    const soldMs = Date.parse(uc.soldAt ?? "");
+    if (!Number.isFinite(soldMs)) {
+      // No parseable date → aged-out (can't trust price without knowing when)
+      agedOutCount += 1;
+      continue;
+    }
+    if (now - soldMs > maxAgeMs) {
+      agedOutCount += 1;
+      continue;
+    }
+    // CF-USER-COMPS-SOFT-DELETE (#6): respect flaggedWrong to exclude
+    // user-corrected comps from the FMV pool without deleting the
+    // provenance record.
+    if ((uc as SoldCompDoc & { flaggedWrong?: boolean }).flaggedWrong === true) {
+      continue;
+    }
+    freshUserComps.push(uc);
+  }
+  if (agedOutCount > 0) {
+    console.log(JSON.stringify({
+      event: "compiq.sold_comps.aged_out",
+      source: "compiqEstimate.augmentCompsWithUserPool",
+      cardId: resolvedCardId,
+      agedOutCount,
+      freshCount: freshUserComps.length,
+      maxAgeDays,
+    }));
+  }
+  if (freshUserComps.length === 0) return fetched;
+
   const seenKeys = new Set<string>();
   for (const c of fetched.comps) {
     const day = (c.soldDate ?? "").slice(0, 10);
@@ -2755,7 +2813,7 @@ export async function augmentCompsWithUserPool(
 
   const MAX_INJECT = 20;
   const additions: RawComp[] = [];
-  for (const uc of userComps) {
+  for (const uc of freshUserComps) {
     if (additions.length >= MAX_INJECT) break;
     if (!Number.isFinite(uc.price) || uc.price <= 0) continue;
     const day = (uc.soldAt ?? "").slice(0, 10);

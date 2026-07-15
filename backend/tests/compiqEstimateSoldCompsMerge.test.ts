@@ -22,10 +22,11 @@ import { augmentCompsWithUserPool } from "../src/services/compiq/compiqEstimate.
 
 function fakeContainer(): { container: Container; store: Map<string, any> } {
   const store = new Map<string, any>();
+  const key = (pk: string, id: string) => `${pk}::${id}`;
   const container = {
     items: {
       async upsert(doc: any) {
-        store.set(`${doc.cardId}::${doc.id}`, doc);
+        store.set(key(doc.cardId, doc.id), doc);
         return { resource: doc };
       },
       query(spec: { query: string; parameters?: Array<{ name: string; value: any }> }) {
@@ -45,6 +46,15 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
           },
         };
       },
+    },
+    // CF-USER-COMPS-SOFT-DELETE (#6): flagCompAsWrong uses container.item(id, pk).read()
+    item(id: string, pk: string) {
+      return {
+        async read<T>() {
+          const doc = store.get(key(pk, id));
+          return { resource: doc as T | undefined };
+        },
+      };
     },
   } as unknown as Container;
   return { container, store };
@@ -219,5 +229,97 @@ describe("augmentCompsWithUserPool — fallback behavior", () => {
     const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
     const merged = await augmentCompsWithUserPool(vendor, "cs-hartman-blue");
     expect(merged.comps).toHaveLength(1);
+  });
+});
+
+// CF-USER-COMPS-AGING (#7)
+describe("augmentCompsWithUserPool — aging (drop stale user comps)", () => {
+  it("drops user comps older than the 180-day default window", async () => {
+    // Fresh comp (30 days ago) — should merge
+    const fresh = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    // Stale comp (200 days ago) — should be dropped
+    const stale = new Date(Date.now() - 200 * 86_400_000).toISOString();
+    await recordSoldComp({
+      cardId: "cs-x", playerName: "P", price: 100, soldAt: fresh,
+      source: "ebay-user-purchase", sourceExternalId: "fresh", verifiedByUser: true,
+    });
+    await recordSoldComp({
+      cardId: "cs-x", playerName: "P", price: 500, soldAt: stale,
+      source: "ebay-user-purchase", sourceExternalId: "stale", verifiedByUser: true,
+    });
+    const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
+    const merged = await augmentCompsWithUserPool(vendor, "cs-x");
+    // Only the fresh (100) should merge — vendor 420 + fresh 100 = 2 comps
+    expect(merged.comps).toHaveLength(2);
+    const prices = merged.comps.map((c) => c.price).sort((a, b) => a - b);
+    expect(prices).toEqual([100, 420]);
+  });
+
+  it("respects COMPIQ_USER_COMP_MAX_AGE_DAYS override", async () => {
+    const originalOverride = process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS;
+    process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS = "30";
+    try {
+      const fresh = new Date(Date.now() - 15 * 86_400_000).toISOString();
+      const borderline = new Date(Date.now() - 60 * 86_400_000).toISOString(); // > 30d
+      await recordSoldComp({
+        cardId: "cs-x", playerName: "P", price: 100, soldAt: fresh,
+        source: "ebay-user-purchase", sourceExternalId: "f", verifiedByUser: true,
+      });
+      await recordSoldComp({
+        cardId: "cs-x", playerName: "P", price: 500, soldAt: borderline,
+        source: "ebay-user-purchase", sourceExternalId: "b", verifiedByUser: true,
+      });
+      const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
+      const merged = await augmentCompsWithUserPool(vendor, "cs-x");
+      expect(merged.comps).toHaveLength(2);  // vendor + fresh only
+      expect(merged.comps.map((c) => c.price).sort((a, b) => a - b)).toEqual([100, 420]);
+    } finally {
+      if (originalOverride === undefined) delete process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS;
+      else process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS = originalOverride;
+    }
+  });
+
+  it("drops comps with unparseable soldAt as aged-out (defensive)", async () => {
+    // Directly insert a malformed doc so recordSoldComp guards don't reject.
+    // (recordSoldComp rejects empty soldAt — we're testing the reader's
+    // resilience against pre-existing dirty data.)
+    const container = (await import("../src/services/portfolioiq/soldCompsStore.service.js"))._setContainerForTests;
+    void container;  // no-op to appease TS
+    // Instead: use a garbage-date string that Date.parse can't handle
+    await recordSoldComp({
+      cardId: "cs-x", playerName: "P", price: 100,
+      soldAt: "not-a-real-date",
+      source: "ebay-user-purchase", sourceExternalId: "bad", verifiedByUser: true,
+    });
+    const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
+    const merged = await augmentCompsWithUserPool(vendor, "cs-x");
+    // Bad-date comp dropped → only vendor comp survives
+    expect(merged.comps).toHaveLength(1);
+  });
+});
+
+// CF-USER-COMPS-SOFT-DELETE (#6)
+describe("augmentCompsWithUserPool — soft-delete via flaggedWrong", () => {
+  it("skips flaggedWrong comps during merge (moderation)", async () => {
+    await recordSoldComp({
+      cardId: "cs-x", playerName: "P", price: 100,
+      soldAt: new Date().toISOString(),
+      source: "ebay-user-purchase", sourceExternalId: "clean", verifiedByUser: true,
+    });
+    await recordSoldComp({
+      cardId: "cs-x", playerName: "P", price: 999,
+      soldAt: new Date().toISOString(),
+      source: "ebay-user-purchase", sourceExternalId: "wrong", verifiedByUser: true,
+    });
+    // Flag the second one
+    const { flagCompAsWrong } = await import("../src/services/portfolioiq/soldCompsStore.service.js");
+    await flagCompAsWrong({
+      cardId: "cs-x", compId: "ebay-user-purchase::wrong", flaggedByUserId: "u-mod",
+    });
+    const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
+    const merged = await augmentCompsWithUserPool(vendor, "cs-x");
+    // vendor 420 + clean 100 = 2 comps. The flagged 999 is filtered.
+    expect(merged.comps).toHaveLength(2);
+    expect(merged.comps.map((c) => c.price).sort((a, b) => a - b)).toEqual([100, 420]);
   });
 });

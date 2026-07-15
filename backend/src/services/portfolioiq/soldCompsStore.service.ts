@@ -78,6 +78,18 @@ export interface SoldCompDoc {
    *  the vendor's own confidence signal (CH trustReason etc.). */
   confidence: number;
 
+  // CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): moderation flag.
+  // When true, engine reader (augmentCompsWithUserPool) skips the row
+  // during FMV aggregation. Provenance kept — the doc stays queryable
+  // for audit / reputation calculations, but doesn't skew prices.
+  // Wrong-attestation recovery UX writes this via flagCompAsWrong().
+  flaggedWrong?: boolean;
+  flaggedByUserId?: string | null;
+  flaggedAt?: string | null;
+  /** Free-text reason from the flagger (optional). Kept short for storage
+   *  hygiene; iOS UI enforces max length. */
+  flaggedReason?: string | null;
+
   ttl: number;
 }
 
@@ -199,6 +211,57 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       compSource: input.source,
       error: (err as Error)?.message ?? String(err),
     }));
+  }
+}
+
+/**
+ * CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): flag a specific comp
+ * doc as wrong. Read-modify-write with idempotent flip — same call
+ * multiple times = same end-state. Silent no-op on missing doc or
+ * Cosmos absence.
+ *
+ * The engine's `augmentCompsWithUserPool` skips flaggedWrong rows
+ * during FMV aggregation, so this is effectively a soft-delete for
+ * pricing purposes while preserving the provenance record for audit.
+ *
+ * Auth check happens upstream (route enforces the flagger is either
+ * the contributor or an ops-role); this function trusts the caller.
+ */
+export async function flagCompAsWrong(input: {
+  cardId: string;
+  compId: string;
+  flaggedByUserId: string;
+  reason?: string;
+}): Promise<{ status: "flagged" | "not-found" | "no-store" | "error"; error?: string }> {
+  if (!input.cardId?.trim() || !input.compId?.trim()) {
+    return { status: "error", error: "missing cardId or compId" };
+  }
+  const c = await getContainer();
+  if (!c) return { status: "no-store" };
+  try {
+    const { resource: existing } = await c.item(input.compId, input.cardId).read<SoldCompDoc>();
+    if (!existing) return { status: "not-found" };
+    const updated: SoldCompDoc = {
+      ...existing,
+      flaggedWrong: true,
+      flaggedByUserId: input.flaggedByUserId,
+      flaggedAt: new Date().toISOString(),
+      flaggedReason: input.reason?.trim().slice(0, 500) ?? null,
+    };
+    await c.items.upsert(updated as any);
+    return { status: "flagged" };
+  } catch (err) {
+    const msg = (err as Error)?.message ?? String(err);
+    console.warn(JSON.stringify({
+      event: "sold_comps_flag_error",
+      source: "soldCompsStore.service",
+      cardId: input.cardId,
+      compId: input.compId,
+      error: msg,
+    }));
+    // Cosmos 404 → not found (read may throw)
+    if (msg.includes("NotFound") || msg.includes("404")) return { status: "not-found" };
+    return { status: "error", error: msg };
   }
 }
 
