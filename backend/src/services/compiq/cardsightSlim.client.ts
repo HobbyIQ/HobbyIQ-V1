@@ -96,6 +96,38 @@ export interface CardsightSaleRecord {
   parallel_name?: string | null;
 }
 
+// CF-CS-STRUCTURED-BRIDGE (Drew, 2026-07-15): shapes returned by
+// GET /v1/catalog/cards. Same purpose as CH's card-search — structured
+// filter search that bypasses the AI/fuzzy matcher when we already have
+// identity fields (player + cardNumber + year).
+export interface CardsightCardSummaryParallel {
+  id: string;                     // UUID
+  name: string;                   // "Blue Refractor" etc.
+  numberedTo?: number | null;
+}
+
+export interface CardsightCardSummary {
+  id: string;                     // parent card UUID
+  name: string;                   // player name (mostly)
+  number?: string | null;
+  setId?: string | null;
+  setName?: string | null;
+  releaseId?: string | null;
+  releaseName?: string | null;
+  releaseYear?: string | null;
+  description?: string | null;
+  isParallelOnly?: boolean;
+  attributes?: string[];
+  parallels?: CardsightCardSummaryParallel[];
+}
+
+export interface CardsightPaginatedCardsResponse {
+  cards: CardsightCardSummary[];
+  total_count: number;
+  skip: number;
+  take: number;
+}
+
 // CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): shape returned by
 // GET /v1/pricing/search. Free-text title fuzzy search over marketplace
 // listings — surfaces sales even when neither CH nor CS catalog resolves
@@ -404,6 +436,108 @@ async function _searchPricingByTitleRaw(
       event: "cardsight_pricing_search_error",
       source: "cardsightSlim.client",
       query: q,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
+  }
+}
+
+// ─── Structured catalog lookup (CF-CS-STRUCTURED-BRIDGE) ──────────────────
+
+/** 6h cache — catalog cards don't churn intraday; same TTL as searchCatalog. */
+const STRUCTURED_CATALOG_CACHE_TTL_SEC = 6 * 3600;
+
+/**
+ * Structured lookup against CS's /v1/catalog/cards. Same purpose as CH's
+ * card-search: bypass the fuzzy matcher when we already have (player,
+ * cardNumber, year). Returns the CardSummary array — each entry includes
+ * the parent card UUID + inline parallels[] tree so callers can pick the
+ * exact variant without a second detail call.
+ *
+ * Params: only the ones we actually use. Full spec supports more filters
+ * (releaseId, setId, manufacturer, field=KEY:VALUE, sort) — add as needed.
+ */
+export async function getCatalogCards(opts: {
+  name?: string;
+  number?: string;
+  releaseName?: string;
+  year?: number | string;
+  setName?: string;
+  attributeShortName?: string;
+  take?: number;
+  skip?: number;
+}): Promise<CardsightCardSummary[]> {
+  const key = apiKey();
+  if (!key) return [];
+  const take = Math.min(100, Math.max(1, opts.take ?? 30));
+  const skip = Math.max(0, opts.skip ?? 0);
+
+  const params = new URLSearchParams({
+    take: String(take),
+    skip: String(skip),
+  });
+  if (opts.name) params.set("name", opts.name);
+  if (opts.number) params.set("number", opts.number);
+  if (opts.releaseName) params.set("releaseName", opts.releaseName);
+  if (opts.year !== undefined && opts.year !== null && String(opts.year).length > 0) {
+    params.set("year", String(opts.year));
+  }
+  if (opts.setName) params.set("setName", opts.setName);
+  if (opts.attributeShortName) params.set("attributeShortName", opts.attributeShortName);
+
+  const cacheK = cacheKey(
+    "cs:catalog-cards",
+    opts.name ?? "",
+    opts.number ?? "",
+    opts.releaseName ?? "",
+    opts.year != null ? String(opts.year) : "",
+    opts.setName ?? "",
+    opts.attributeShortName ?? "",
+    String(take),
+    String(skip),
+  );
+
+  return cacheWrap<CardsightCardSummary[]>(
+    cacheK,
+    async () => _getCatalogCardsRaw(params.toString()),
+    {
+      freshTtlSeconds: STRUCTURED_CATALOG_CACHE_TTL_SEC,
+      // Don't lock in a transient empty response — same reasoning as
+      // searchCatalog. Structured misses on a KNOWN cardNumber usually
+      // mean the card exists but our filter combo was wrong, not that
+      // the SKU is missing forever.
+      skipCacheWhen: (result) => !result || result.length === 0,
+    },
+  );
+}
+
+async function _getCatalogCardsRaw(qs: string): Promise<CardsightCardSummary[]> {
+  const key = apiKey();
+  if (!key) return [];
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const res = await fetch(`${BASE_URL}/catalog/cards?${qs}`, {
+      headers: { "X-API-Key": key, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) {
+      console.warn(JSON.stringify({
+        event: "cardsight_catalog_cards_http_error",
+        source: "cardsightSlim.client",
+        status: res.status,
+        qs,
+      }));
+      return [];
+    }
+    const body = (await res.json()) as CardsightPaginatedCardsResponse;
+    return Array.isArray(body?.cards) ? body.cards : [];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_catalog_cards_error",
+      source: "cardsightSlim.client",
+      qs,
       error: (err as Error)?.message ?? String(err),
     }));
     return [];

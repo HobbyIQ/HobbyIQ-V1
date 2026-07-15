@@ -27,6 +27,10 @@ import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
 // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): targeted un-decommission
 // for CH-catalog-miss cases. See cardsightFallback.ts for the rationale.
 import { tryCardsightFallback } from "./cardsightFallback.js";
+// CF-CS-STRUCTURED-BRIDGE (Drew, 2026-07-15): structured CS lookup that
+// bypasses the fuzzy candidate-explode path when we have exact fields.
+// Symmetric with cardHedgeStructuredBridge.
+import { tryCardsightStructuredBridge } from "./cardsightStructuredBridge.js";
 // CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): ultimate backstop when
 // neither CH bridge nor CS catalog resolves the SKU. See
 // cardsightPricingBackstop.ts for the rationale.
@@ -745,6 +749,26 @@ export async function findCompsRouted(
     // to CH's AI matcher instead of our reconstruction.
     const ch = await tryCardHedge(identity, opts.grade ?? "Raw", query);
     if (!ch) {
+      // CF-CS-STRUCTURED-BRIDGE (Drew, 2026-07-15): tier-2a — structured
+      // CS lookup by (player, cardNumber, year) that bypasses the fuzzy
+      // fallback's candidate-explode. Higher precision when we have the
+      // fields; skip otherwise. Fires BEFORE the fuzzy fallback because
+      // when both would succeed, structured is more reliable.
+      // Env-gated (CARDSIGHT_STRUCTURED_BRIDGE_ENABLED=true, default off).
+      if (process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true") {
+        const csStructured = await tryCardsightStructuredBridge(identity, opts.grade ?? "Raw");
+        if (csStructured) {
+          log.info("comp.findComps.end", {
+            query,
+            cardId: csStructured.card?.card_id ?? null,
+            result_count: csStructured.sales.length,
+            latency_ms: Date.now() - start,
+            outcome: "cardsight_structured",
+            vendor: "cardsight",
+          });
+          return csStructured;
+        }
+      }
       // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): CH-miss fallback.
       // Env-gated (CARDSIGHT_FALLBACK_ENABLED=true, default off) so we can
       // stage rollout separately from ingest + read. Only fires when CH has
