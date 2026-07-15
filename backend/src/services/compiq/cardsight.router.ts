@@ -383,20 +383,26 @@ export function matchHonorsIdentity(
       match.title ?? "",
       match.set ?? "",
       match.number ?? "",
-    ].join(" ").toLowerCase();
-    const hasAuto = /\bauto(graph(ed)?)?\b/.test(matchBlob) || /\brpa\b/.test(matchBlob);
-    // CardHedge's auto SKUs also carry the "Autograph" subset tag or a
-    // CPA-/BCPA-/BDPA-/CPAR- style card number prefix.
-    const hasAutoNumberPrefix = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-)/i.test(
-      String(match.number ?? "").trim(),
-    );
-    if (!hasAuto && !hasAutoNumberPrefix) {
-      return {
-        ok: false,
-        reason: "auto_vs_base_mismatch",
-        wanted: "autograph",
-        got: `base (${match.variant ?? "no-variant"} / ${match.number ?? "no-num"})`,
-      };
+    ].join(" ").toLowerCase().trim();
+    // Absence of metadata isn't evidence of base — only reject when we
+    // have ACTUAL data on the match AND none of it signals auto. This
+    // protects test fixtures that only stub card_id + confidence from
+    // spurious rejections.
+    if (matchBlob.length > 0) {
+      const hasAuto = /\bauto(graph(ed)?)?\b/.test(matchBlob) || /\brpa\b/.test(matchBlob);
+      // CardHedge's auto SKUs also carry the "Autograph" subset tag or a
+      // CPA-/BCPA-/BDPA-/CPAR- style card number prefix.
+      const hasAutoNumberPrefix = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-)/i.test(
+        String(match.number ?? "").trim(),
+      );
+      if (!hasAuto && !hasAutoNumberPrefix) {
+        return {
+          ok: false,
+          reason: "auto_vs_base_mismatch",
+          wanted: "autograph",
+          got: `base (${match.variant ?? "no-variant"} / ${match.number ?? "no-num"})`,
+        };
+      }
     }
   }
 

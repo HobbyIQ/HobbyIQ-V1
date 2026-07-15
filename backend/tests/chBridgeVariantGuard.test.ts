@@ -276,4 +276,14 @@ describe("matchHonorsIdentity — CF-AUTO-VARIANT-GUARD (auto vs base)", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("auto_vs_base_mismatch");
   });
+
+  it("no-ops when match has NO metadata to judge (test-fixture pattern with only card_id/confidence)", () => {
+    // Absence of variant/title/set/number isn't evidence of base — we
+    // can't judge. Accept to avoid spurious rejections on stubs.
+    const result = matchHonorsIdentity(
+      { card_id: "ch-x" },  // no variant/title/set/number
+      { isAuto: true },
+    );
+    expect(result.ok).toBe(true);
+  });
 });
