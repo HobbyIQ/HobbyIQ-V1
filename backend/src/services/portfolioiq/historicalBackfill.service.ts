@@ -241,6 +241,28 @@ export async function runHistoricalBackfill(
  * Build backfill targets from a user's active holdings. Skips holdings
  * without any resolved cardId (nothing to backfill against).
  */
+// CF-BACKFILL-CARDID-FORMAT (Drew, 2026-07-15): a holding's `cardId`
+// field can be any of three formats depending on which vendor bridged:
+//   - CH bubble.io id: "1778540952494x233768468903861100"
+//   - CS UUID:         "1617d20b-c6b7-470e-a227-3a5d75735c5a"
+//   - Backstop synth:  "cardsight:{parentUuid}::{parallelUuid}"
+// Live evidence 2026-07-15: of Drew's 17 non-empty cardIds, 16 were
+// bubble format (routed via CH), 1 was CS UUID, 0 backstop-synthetic.
+// The initial buildTargets treated all as CS UUIDs → 0 backfill writes.
+//
+// Classify by format then route to the correct vendor.
+const CS_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89abAB][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CH_BUBBLE_RE = /^\d+x\d+$/;
+
+export function classifyCardIdFormat(cardId: string): "cs_uuid" | "ch_bubble" | "cs_backstop" | "unknown" {
+  const t = cardId.trim();
+  if (!t) return "unknown";
+  if (t.startsWith("cardsight:")) return "cs_backstop";
+  if (CS_UUID_RE.test(t)) return "cs_uuid";
+  if (CH_BUBBLE_RE.test(t)) return "ch_bubble";
+  return "unknown";
+}
+
 export function buildTargetsFromHoldings(holdings: Array<{
   cardId?: string | null;
   chCardId?: string | null;
@@ -255,14 +277,20 @@ export function buildTargetsFromHoldings(holdings: Array<{
 }>): BackfillTarget[] {
   const targets: BackfillTarget[] = [];
   for (const h of holdings) {
-    const csCardId = h.cardId?.trim() ?? "";
-    const chCardId = h.chCardId?.trim() ?? "";
-    // Prefer CS UUIDs; skip clearly-non-CS "cardsight:x::y" compound ids
-    // (those are backstop synthetic and won't resolve via CS getPricing).
-    const isCsBackstopSynthetic = csCardId.startsWith("cardsight:");
-    const effectiveCsCardId = isCsBackstopSynthetic ? null : (csCardId || null);
-    if (!effectiveCsCardId && !chCardId) continue;
     if (!h.playerName?.trim()) continue;
+
+    const cid = h.cardId?.trim() ?? "";
+    const explicitChCardId = h.chCardId?.trim() ?? "";
+    // Route by cardId format. Explicit chCardId field wins if set.
+    let chCardId: string | null = explicitChCardId || null;
+    let csCardId: string | null = null;
+    if (cid) {
+      const kind = classifyCardIdFormat(cid);
+      if (kind === "cs_uuid") csCardId = cid;
+      else if (kind === "ch_bubble" && !chCardId) chCardId = cid;
+      // cs_backstop + unknown → skip (not queryable via either vendor's getX endpoint)
+    }
+    if (!csCardId && !chCardId) continue;
 
     // CH's getCardSales takes a grade filter — use the holding's grade
     // if graded, else Raw.
@@ -271,8 +299,8 @@ export function buildTargetsFromHoldings(holdings: Array<{
       : "Raw";
 
     targets.push({
-      chCardId: chCardId || null,
-      csCardId: effectiveCsCardId,
+      chCardId,
+      csCardId,
       identity: {
         playerName: h.playerName.trim(),
         cardYear: h.cardYear ?? null,

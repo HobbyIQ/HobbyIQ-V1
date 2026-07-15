@@ -197,17 +197,37 @@ describe("runHistoricalBackfill — dual-vendor accumulation", () => {
 });
 
 describe("buildTargetsFromHoldings — holding → target mapping", () => {
-  it("emits target with both cardIds when present", () => {
+  it("routes CH bubble.io format (Nx...) cardId to chCardId (CF-BACKFILL-CARDID-FORMAT)", () => {
+    // Live evidence 2026-07-15: 16 of Drew's 17 non-empty cardIds are
+    // CH bubble format. Previous behavior treated them as CS UUIDs and
+    // wrote 0 backfill records.
     const targets = buildTargetsFromHoldings([{
-      cardId: "cs-uuid",
-      chCardId: "ch-bubble",
-      playerName: "Bobby Witt Jr",
-      cardYear: 2020,
-      setName: "Bowman Chrome",
+      cardId: "1778540952494x233768468903861100",
+      playerName: "Owen Carey",
     }]);
     expect(targets).toHaveLength(1);
-    expect(targets[0].csCardId).toBe("cs-uuid");
-    expect(targets[0].chCardId).toBe("ch-bubble");
+    expect(targets[0].chCardId).toBe("1778540952494x233768468903861100");
+    expect(targets[0].csCardId).toBeNull();
+  });
+
+  it("routes CS UUID format cardId to csCardId", () => {
+    const targets = buildTargetsFromHoldings([{
+      cardId: "1617d20b-c6b7-470e-a227-3a5d75735c5a",
+      playerName: "Bobby Witt Jr",
+    }]);
+    expect(targets).toHaveLength(1);
+    expect(targets[0].csCardId).toBe("1617d20b-c6b7-470e-a227-3a5d75735c5a");
+    expect(targets[0].chCardId).toBeNull();
+  });
+
+  it("explicit chCardId field wins when set (overrides cardId's inferred routing)", () => {
+    const targets = buildTargetsFromHoldings([{
+      cardId: "1617d20b-c6b7-470e-a227-3a5d75735c5a",  // CS UUID
+      chCardId: "1234567890x0987654321",                  // explicit CH
+      playerName: "P",
+    }]);
+    expect(targets[0].chCardId).toBe("1234567890x0987654321");
+    expect(targets[0].csCardId).toBe("1617d20b-c6b7-470e-a227-3a5d75735c5a");
   });
 
   it("skips holdings with no cardId anywhere", () => {
@@ -227,7 +247,7 @@ describe("buildTargetsFromHoldings — holding → target mapping", () => {
 
   it("uses holding's grade for CH sales grade filter when present", () => {
     const targets = buildTargetsFromHoldings([{
-      cardId: "cs-1", chCardId: "ch-1",
+      cardId: "1234567890x098",  // CH bubble format
       playerName: "P", gradeCompany: "PSA", gradeValue: 10,
     }]);
     expect(targets[0].grade).toBe("PSA 10");
@@ -235,9 +255,17 @@ describe("buildTargetsFromHoldings — holding → target mapping", () => {
 
   it("defaults grade to 'Raw' when ungraded", () => {
     const targets = buildTargetsFromHoldings([{
-      cardId: "cs-1", chCardId: "ch-1",
+      cardId: "1234567890x098",  // CH bubble format
       playerName: "P",
     }]);
     expect(targets[0].grade).toBe("Raw");
+  });
+
+  it("skips 'unknown' cardId formats (not a UUID, bubble, or backstop)", () => {
+    const targets = buildTargetsFromHoldings([{
+      cardId: "garbage-not-uuid-not-bubble",
+      playerName: "P",
+    }]);
+    expect(targets).toHaveLength(0);
   });
 });
