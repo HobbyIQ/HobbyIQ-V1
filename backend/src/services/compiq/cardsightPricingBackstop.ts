@@ -82,12 +82,36 @@ export async function tryCardsightPricingBackstop(
   // BIN listings for context. The narrow auction-only filter that
   // shipped in PR #458 discarded valid signal.
   let records: CardsightPricingSearchRecord[];
+  let effectivePeriod: string = period;
   try {
     records = await searchPricingByTitle(query, {
       period,
       listingType: "both",   // include auction + fixed
       limit: 100,             // wider headroom for both types
     });
+    // CF-CS-BACKSTOP-VINTAGE-FALLBACK (Drew, 2026-07-15): if the primary
+    // period returned 0 records, try "all" for vintage / long-tail SKUs
+    // (e.g. Bobby Witt Jr 2020 Bowman Chrome Auto — 5 years old, CS's
+    // 1y window misses it). "all" pulls the entire indexed history.
+    // Engine's own recency filter downweights ancient comps in FMV so
+    // this is safe additive coverage.
+    if (records.length === 0 && period !== "all") {
+      const allRecords = await searchPricingByTitle(query, {
+        period: "all",
+        listingType: "both",
+        limit: 100,
+      });
+      if (allRecords.length > 0) {
+        records = allRecords;
+        effectivePeriod = "all";
+        log("cs_backstop.period_widened", {
+          query,
+          originalPeriod: period,
+          widenedTo: "all",
+          rawCount: records.length,
+        });
+      }
+    }
   } catch (err) {
     log("cs_backstop.error", {
       query,
@@ -98,7 +122,7 @@ export async function tryCardsightPricingBackstop(
   }
 
   if (records.length === 0) {
-    log("cs_backstop.no_records", { query, period, latency_ms: Date.now() - start });
+    log("cs_backstop.no_records", { query, period: effectivePeriod, latency_ms: Date.now() - start });
     return null;
   }
 
@@ -112,7 +136,7 @@ export async function tryCardsightPricingBackstop(
     log("cs_backstop.filtered_empty", {
       query,
       rawCount: records.length,
-      period,
+      period: effectivePeriod,
       latency_ms: Date.now() - start,
     });
     return null;
@@ -151,7 +175,7 @@ export async function tryCardsightPricingBackstop(
 
   log("cs_backstop.served", {
     query,
-    period,
+    period: effectivePeriod,
     salesCount: sales.length,
     auctionCount,
     fixedCount,

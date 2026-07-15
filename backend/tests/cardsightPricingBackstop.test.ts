@@ -183,6 +183,26 @@ describe("tryCardsightPricingBackstop — period selection by grade", () => {
     expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ period: "1y" }));
   });
 
+  it("falls back to period='all' when '1y' returns 0 (CF-CS-BACKSTOP-VINTAGE-FALLBACK)", async () => {
+    // Live evidence: Bobby Witt Jr 2020 Bowman Chrome Auto returned 0
+    // records at 1y (5-year-old card). "all" catches the tail.
+    mockedSearch
+      .mockResolvedValueOnce([])                    // first call (1y) → 0
+      .mockResolvedValueOnce([rec({ price: 400, date: "2021-08-15T00:00:00Z" })]);  // second (all) → hit
+    const r = await tryCardsightPricingBackstop("Bobby Witt Jr 2020 Bowman Chrome Auto", ctx, "Raw");
+    expect(r).not.toBeNull();
+    expect(r!.sales.length).toBe(1);
+    expect(mockedSearch).toHaveBeenCalledTimes(2);
+    expect(mockedSearch).toHaveBeenNthCalledWith(1, "Bobby Witt Jr 2020 Bowman Chrome Auto", expect.objectContaining({ period: "1y" }));
+    expect(mockedSearch).toHaveBeenNthCalledWith(2, "Bobby Witt Jr 2020 Bowman Chrome Auto", expect.objectContaining({ period: "all" }));
+  });
+
+  it("does NOT double-call when '1y' already returned records", async () => {
+    mockedSearch.mockResolvedValue([rec()]);
+    await tryCardsightPricingBackstop("q", ctx, "Raw");
+    expect(mockedSearch).toHaveBeenCalledTimes(1);
+  });
+
   it("requests listingType='both' to grab ALL types (CF-CS-BACKSTOP-ALL-TYPES)", async () => {
     mockedSearch.mockResolvedValue([rec()]);
     await tryCardsightPricingBackstop("q", ctx, "Raw");
