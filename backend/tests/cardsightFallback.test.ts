@@ -134,6 +134,88 @@ describe("tryCardsightFallback — early exits (no cost paths)", () => {
   });
 });
 
+describe("tryCardsightFallback — parallel disambiguation (Green Shimmer regression)", () => {
+  it("picks 'Green Shimmer' over 'Green Grass Refractor' when query has 'shimmer'", async () => {
+    // Live evidence 2026-07-15 (Drew inventory sweep): parser stripped
+    // "Shimmer" from parallel string, so identity.parallel="Green" matched
+    // every "Green *" candidate at partial-match tied score. First-hit
+    // "Green Grass Refractor" won, priced $92 for a real ~$300 card.
+    mockedFetch.mockResolvedValue([
+      csCandidate({
+        candidateId: "cardsight:parent-x::par-grass",
+        parallel: "Green Grass Refractor",
+        title: "Eric Hartman 2026 Bowman Chrome Green Grass Refractor",
+      }),
+      csCandidate({
+        candidateId: "cardsight:parent-x::par-shimmer",
+        parallel: "Green Shimmer",
+        title: "Eric Hartman 2026 Bowman Chrome Green Shimmer",
+      }),
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 300, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback(
+      "2026 bowman baseball Eric Hartman Green Shimmer Auto",  // query text has "shimmer"
+      { playerName: "Eric Hartman", cardYear: 2026, parallel: "Green" },  // parser stripped "Shimmer"
+      "Raw",
+    );
+    expect(r).not.toBeNull();
+    expect(r!.card?.card_id).toBe("cardsight:parent-x::par-shimmer");
+    expect(mockedPricing).toHaveBeenCalledWith("parent-x", { parallelId: "par-shimmer" });
+  });
+
+  it("rejects ALL candidates when parallel specified but none match (better null than wrong)", async () => {
+    // If CS returned only "Green Grass" and "Green Foil" (neither in the
+    // query), we should return null so the caller falls back to sibling-
+    // pool synthesis, NOT confidently ship one of those wrong-color prices.
+    mockedFetch.mockResolvedValue([
+      csCandidate({ parallel: "Green Grass Refractor", title: "Green Grass Refractor" }),
+      csCandidate({ parallel: "Green Foil", title: "Green Foil" }),
+    ]);
+    const r = await tryCardsightFallback(
+      "2026 bowman baseball Eric Hartman Green Shimmer Auto",
+      { playerName: "Eric Hartman", cardYear: 2026, parallel: "Green" },
+      "Raw",
+    );
+    expect(r).toBeNull();
+    // Never even reached pricing — rejected upstream on wrong-variant guard
+    expect(mockedPricing).not.toHaveBeenCalled();
+  });
+
+  it("still accepts exact parallel match without needing extra tokens in query", async () => {
+    mockedFetch.mockResolvedValue([
+      csCandidate({ parallel: "Blue Refractor", title: "Blue Refractor" }),
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 1800, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback(
+      "Eric Hartman 2026 Bowman Blue Refractor",
+      { playerName: "Eric Hartman", cardYear: 2026, parallel: "Blue Refractor" },
+      "Raw",
+    );
+    expect(r).not.toBeNull();
+    expect(r!.sales).toHaveLength(1);
+  });
+
+  it("still passes when candidate is a superset AND all extra tokens are in query", async () => {
+    // identity.parallel="Blue", candidate="Blue Refractor", query has "refractor"
+    mockedFetch.mockResolvedValue([
+      csCandidate({ parallel: "Blue Refractor", title: "Blue Refractor" }),
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 1800, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback(
+      "2026 Bowman Eric Hartman Blue Refractor Auto",
+      { playerName: "Eric Hartman", cardYear: 2026, parallel: "Blue" },
+      "Raw",
+    );
+    expect(r).not.toBeNull();
+  });
+});
+
 describe("tryCardsightFallback — CS year-type quirk (regression pin)", () => {
   it("matches when candidate.year is a string ('2026') and identity.cardYear is a number (2026)", async () => {
     // Live evidence (2026-07-15, post-#454 probe): CS emits year as a

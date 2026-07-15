@@ -57,6 +57,7 @@ function parseCsCandidateId(candidateId: string): { parentId: string; parallelId
 function scoreCandidate(
   candidate: Awaited<ReturnType<typeof fetchCardsightUuidNativeCandidates>>[number],
   identity: CardIdentityHint,
+  queryLower: string,
 ): number | null {
   const wantPlayer = String(identity.playerName ?? "").trim().toLowerCase();
   if (wantPlayer.length === 0) return null;
@@ -107,11 +108,51 @@ function scoreCandidate(
   ) return null;
 
   let score = 5;  // baseline for player + year OK
+  let parallelBonusAwarded = false;
   if (identity.parallel && candidate.parallel) {
     const wp = identity.parallel.trim().toLowerCase();
     const gp = candidate.parallel.trim().toLowerCase();
-    if (wp === gp) score += 5;
-    else if (gp.includes(wp) || wp.includes(gp)) score += 2;
+    if (wp === gp) {
+      score += 5;
+      parallelBonusAwarded = true;
+    } else if (gp.includes(wp)) {
+      // Candidate is more specific than identity ("Green Shimmer" vs "Green").
+      // Live evidence 2026-07-15 (Green Shimmer Auto): parser stripped
+      // "Shimmer" from Drew's parallel string, so identity.parallel="Green"
+      // matched every "Green *" candidate at partial-match score, and the
+      // FIRST green candidate ("Green Grass Refractor") won — priced $92
+      // for a real ~$300 card. Fix: only award partial-match bonus when
+      // the candidate's EXTRA tokens beyond identity.parallel appear in
+      // the original query text. "Green Shimmer Auto" query has "shimmer"
+      // → candidate "Green Shimmer" wins; candidate "Green Grass" loses.
+      const wpTokens = new Set(wp.split(/\s+/).filter((t) => t.length > 0));
+      const extraTokens = gp
+        .split(/\s+/)
+        .filter((t) => t.length > 0 && !wpTokens.has(t));
+      const allExtrasInQuery = extraTokens.every((t) => queryLower.includes(t));
+      if (allExtrasInQuery) {
+        score += 4;
+        parallelBonusAwarded = true;
+      }
+      // else: candidate's extras aren't in the query — this is the WRONG
+      // variant. Don't score it at all so a truly-matching candidate wins.
+    } else if (wp.includes(gp)) {
+      // Identity is more specific ("Green Shimmer" vs candidate "Green" base).
+      // User knows more than CS's parallel row — likely wrong candidate.
+      score += 2;
+      parallelBonusAwarded = true;
+    }
+    // else: no token overlap at all — parallel filter mismatch, skip bonus.
+  }
+
+  // CF-CS-FALLBACK-PARALLEL-STRICT (Drew, 2026-07-15): if the caller
+  // specified a parallel but this candidate earned NO parallel bonus
+  // (either no overlap OR unverified extras), reject the candidate.
+  // Better to fall through to sibling-pool synthesis (which is HONEST
+  // about being an approximation) than confidently ship the price of a
+  // different-colored parallel.
+  if (identity.parallel && identity.parallel.trim() && !parallelBonusAwarded) {
+    return null;
   }
   if (identity.number && candidate.cardNumber) {
     if (identity.number.trim().toLowerCase() === candidate.cardNumber.trim().toLowerCase()) score += 3;
@@ -177,10 +218,15 @@ export async function tryCardsightFallback(
     return null;
   }
 
-  // Score + rank
+  // Score + rank. Pass the lowercased query text so the parallel-match
+  // scorer can validate that a "more-specific" candidate's extra tokens
+  // (e.g. "Shimmer" beyond identity.parallel="Green") actually appear
+  // in the user's request. Prevents wrong-variant pricing when the
+  // parser strips salient tokens.
+  const queryLower = query.trim().toLowerCase();
   let best: { candidate: (typeof candidates)[number]; score: number } | null = null;
   for (const c of candidates) {
-    const s = scoreCandidate(c, identity);
+    const s = scoreCandidate(c, identity, queryLower);
     if (s == null) continue;
     if (!best || s > best.score) best = { candidate: c, score: s };
   }
