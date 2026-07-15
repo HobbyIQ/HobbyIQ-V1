@@ -5284,16 +5284,45 @@ export async function computeEstimate(
       callContext,
     });
 
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (Drew, 2026-07-15): when the
+    // variant-mismatch tier fires with real recentComps in hand, use the
+    // median of those comps as the surfaced value. Drew's principle: if
+    // there are comps, we shouldn't default to a calculated price —
+    // Hartman Aqua showed $19.99 marketValue with $93+ comps in the
+    // recentComps display, breaking user trust in the number.
+    //
+    // Root cause: engine returned null → routes ran overlayResolverRescue
+    // → resolver pooled sibling-based synthesis returned ~$20 → iOS saw
+    // $20 next to real $93+ comps. Populating fairMarketValue here means
+    // overlayResolverRescue's `hasFmv` short-circuit skips the overlay,
+    // and iOS surfaces a price consistent with what it displays.
+    //
+    // Comps are for a DIFFERENT variant so the value is approximate.
+    // The response's `approximate: true` + variantWarning already
+    // convey uncertainty; downstream tier chips + iOS render remain
+    // truthful. Confidence stays at 0.2 (variant-mismatch confidence).
+    const variantMismatchMedianFmv = ((): number | null => {
+      const validPrices = fetched.comps
+        .map((c) => c.price)
+        .filter((p) => Number.isFinite(p) && p > 0)
+        .sort((a, b) => a - b);
+      if (validPrices.length === 0) return null;
+      const mid = validPrices.length / 2;
+      return validPrices.length % 2 === 1
+        ? validPrices[Math.floor(mid)]
+        : (validPrices[mid - 1] + validPrices[mid]) / 2;
+    })();
+
     return {
       cardTitle,
       verdict: `No comps found for this exact variant (missing: ${missing}). Card Hedge doesn't have sold data for this card yet.`,
       action: "Hold",
       dealScore: 0,
       quickSaleValue: null,
-      fairMarketValue: null,
+      fairMarketValue: variantMismatchMedianFmv,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
-      marketValue: null,
+      marketValue: variantMismatchMedianFmv,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
@@ -5301,7 +5330,9 @@ export async function computeEstimate(
       explanation: [
         `Requested ${effectiveIsAuto ? "autograph " : ""}variant not found in Card Hedge's sold database.`,
         `Closest match on file: ${fetched.card?.variant ?? "unknown"} (missing: ${missing}).`,
-        "Will retry automatically once comps are recorded.",
+        variantMismatchMedianFmv !== null
+          ? `Approximate value using ${fetched.comps.length} nearby-variant comp${fetched.comps.length > 1 ? "s" : ""}.`
+          : "Will retry automatically once comps are recorded.",
       ],
       marketDNA: {
         demand: "Unknown",

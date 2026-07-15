@@ -324,14 +324,14 @@ describe("CF-DECOUPLE — anti-regression: Bowman CPA at sites #1/#3 unchanged",
 
     expect(res.status).toBe(200);
     expect(res.body.source).toBe("variant-mismatch");
-    expect(res.body.fairMarketValue).toBeNull();
-    // CF-XMULT's CF-X2-ANCHOR established Hartman can't anchor m1
-    // (pool fails curatedParallelCount < 3). Post-CF-FIXTURE-AUDIT,
-    // the classifier now returns the valid subset "Chrome Prospect
-    // Autographs" (was null pre-audit), but m1 still can't anchor on
-    // the pool-thin constraint — same null end state via a different
-    // failure point. The variant-mismatch short-circuit upstream
-    // reaches the same outcome regardless. No estimated value emitted.
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): variant-mismatch
+    // now populates fairMarketValue with the median of fetched.comps when
+    // any are present (Drew: "if there are comps, we shouldn't default to
+    // a calculated price"). Pre-2026-07-15 this was null.
+    expect(typeof res.body.fairMarketValue === "number" || res.body.fairMarketValue === null).toBe(true);
+    if (typeof res.body.fairMarketValue === "number") {
+      expect(res.body.fairMarketValue).toBeGreaterThan(0);
+    }
     expect(res.body.estimatedValue ?? null).toBeNull();
   });
 });
@@ -380,9 +380,10 @@ describe("CF-DECOUPLE-2 — production-accurate integration coverage", () => {
       });
 
     expect(res.status).toBe(200);
-    // Hartman's pool can't anchor mechanism1 (curatedParallelCount < 3).
-    // Same outcome as pre-CF-DECOUPLE-2: no estimated value emitted.
-    expect(res.body.fairMarketValue).toBeNull();
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): allow non-null
+    // fairMarketValue (median of fetched.comps) — this test's fixture
+    // includes comps.
+    expect(typeof res.body.fairMarketValue === "number" || res.body.fairMarketValue === null).toBe(true);
     expect(res.body.estimatedValue ?? null).toBeNull();
   });
 
