@@ -293,6 +293,37 @@ export async function confirmHoldingReview(
     }
   }
 
+  // CF-SUGGESTER-FEEDBACK (Drew, 2026-07-15): capture user's confirm as
+  // training signal for the suggester. Fire-and-forget — never blocks
+  // or fails confirm. See suggesterFeedback.service.ts header for the
+  // learning-loop rationale.
+  void (async () => {
+    try {
+      const { recordSuggesterFeedback } = await import("./suggesterFeedback.service.js");
+      await recordSuggesterFeedback({
+        userId,
+        holdingId,
+        holdingSource: (holding as any).source ?? null,
+        autoParsed: {
+          playerName: autoParsed.playerName ?? null,
+          cardYear: autoParsed.cardYear ?? null,
+          setName: autoParsed.setName ?? null,
+          parallel: autoParsed.parallel ?? null,
+          cardNumber: autoParsed.cardNumber ?? null,
+          isAuto: autoParsed.isAuto ?? null,
+          gradeCompany: autoParsed.gradeCompany ?? null,
+          gradeValue: autoParsed.gradeValue ?? null,
+          parseConfidence: (autoParsed as any).parseConfidence ?? null,
+        },
+        userAction: "confirmed",
+        pickedCardId: String((holding as any).cardId ?? "").trim() || null,
+        corrections,
+      });
+    } catch {
+      // swallow — feedback capture is auxiliary
+    }
+  })();
+
   return { status: "confirmed", holding, correctionCount: corrections.length };
 }
 
@@ -329,6 +360,37 @@ export async function rejectHoldingReview(
   }
 
   await writeUserDoc(userId, doc);
+
+  // CF-SUGGESTER-FEEDBACK (Drew, 2026-07-15): capture user's reject as
+  // negative training signal. High-tier rejections are the highest-
+  // priority parser bugs. Fire-and-forget.
+  void (async () => {
+    try {
+      const { recordSuggesterFeedback } = await import("./suggesterFeedback.service.js");
+      await recordSuggesterFeedback({
+        userId,
+        holdingId,
+        holdingSource: (holding as any).source ?? null,
+        autoParsed: {
+          playerName: holding.playerName ?? null,
+          cardYear: holding.cardYear ?? null,
+          setName: holding.setName ?? null,
+          parallel: holding.parallel ?? null,
+          cardNumber: holding.cardNumber ?? null,
+          isAuto: holding.isAuto ?? null,
+          gradeCompany: holding.gradeCompany ?? null,
+          gradeValue: holding.gradeValue ?? null,
+          parseConfidence: (holding as any).parseConfidence ?? null,
+        },
+        userAction: "rejected",
+        pickedCardId: null,
+        corrections: [],
+      });
+    } catch {
+      // swallow — feedback capture is auxiliary
+    }
+  })();
+
   return { status: "rejected", unlinkedPurchaseId: sourcePurchaseId };
 }
 
