@@ -31,6 +31,10 @@ import { tryCardsightFallback } from "./cardsightFallback.js";
 // neither CH bridge nor CS catalog resolves the SKU. See
 // cardsightPricingBackstop.ts for the rationale.
 import { tryCardsightPricingBackstop } from "./cardsightPricingBackstop.js";
+// CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): structured lookup path
+// for holdings where we have exact fields (cardNumber). Skips CH's AI
+// matcher entirely — cheaper + more precise. See file header.
+import { structuredCardHedgeBridge } from "./cardHedgeStructuredBridge.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -476,6 +480,21 @@ async function resolveChCardId(
     async () => {
       const match = await chIdentifyCard(query);
       if (!match || !match.card_id) {
+        // CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): tier-1.5 rescue
+        // using CH's /card-search endpoint filtered by player + local
+        // cardNumber match. Runs BEFORE structured mercy because it's
+        // more precise (cardNumber-anchored) — env-gated so it can be
+        // rolled out independently.
+        const structuredHit = await structuredCardHedgeBridge(identity);
+        if (structuredHit) {
+          log.info("router.bridge_rescued_via_ch_structured", {
+            chCardId: structuredHit.chCardId,
+            player: identity.playerName,
+            number: identity.number,
+            reason: "ai_matcher_returned_null",
+          });
+          return JSON.stringify(structuredHit);
+        }
         // CF-CH-STRUCTURED-SEARCH-MERCY: try structured search rescue
         // before conceding bridge_no_match.
         const rescued = await structuredMercyFallback(identity);
@@ -492,6 +511,20 @@ async function resolveChCardId(
         return "";
       }
       if (match.confidence < MIN_BRIDGE_CONFIDENCE) {
+        // CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): also try structured
+        // bridge on below-threshold — often it's more confident than a
+        // shaky AI match when we have cardNumber.
+        const structuredHit = await structuredCardHedgeBridge(identity);
+        if (structuredHit) {
+          log.info("router.bridge_rescued_via_ch_structured", {
+            chCardId: structuredHit.chCardId,
+            player: identity.playerName,
+            number: identity.number,
+            reason: "ai_matcher_below_threshold",
+            originalConfidence: match.confidence,
+          });
+          return JSON.stringify(structuredHit);
+        }
         // CF-CH-STRUCTURED-SEARCH-MERCY: try structured rescue on
         // below-threshold matches too.
         const rescued = await structuredMercyFallback(identity);
