@@ -147,10 +147,13 @@ describe("tryCardsightPricingBackstop — happy path", () => {
 });
 
 describe("tryCardsightPricingBackstop — period selection by grade", () => {
-  it("uses '3m' window for Raw", async () => {
+  it("uses '1y' window for Raw (widened 2026-07-15 for thin-cohort Prospect Autos)", async () => {
     mockedSearch.mockResolvedValue([rec()]);
     await tryCardsightPricingBackstop("q", ctx, "Raw");
-    expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ period: "3m" }));
+    // Was "3m" — widened because Sykora / Witt / Hartshorn / White all
+    // returned 0 records at 3m. Recency filter (21d default) trims
+    // stale comps out of FMV downstream.
+    expect(mockedSearch).toHaveBeenCalledWith("q", expect.objectContaining({ period: "1y" }));
   });
 
   it("uses '1y' window for graded grades (thinner cohort)", async () => {

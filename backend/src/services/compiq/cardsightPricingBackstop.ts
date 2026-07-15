@@ -31,12 +31,18 @@ const log = (event: string, fields: Record<string, unknown> = {}): void => {
   console.log(JSON.stringify({ event, source: "cardsightPricingBackstop", ...fields }));
 };
 
-/** Lookback period per grade — thin-cohort graded SKUs need a wider window
- *  than raw commodity cards. */
+/** Lookback period per grade. Original: 3m for raw / 1y for graded.
+ *  Widened 2026-07-15 based on live evidence: raw Prospect Autos (Travis
+ *  Sykora Blue Refractor Auto, Bobby Witt Jr 2020 Bowman Chrome Auto,
+ *  Josiah Hartshorn True Blue Auto, Thomas White Auto) all landed on
+ *  sibling-pool because 3m returned 0 records. These SKUs sell infrequently
+ *  (weeks-to-months between sales) so 3m is too tight even for "raw"
+ *  category. 1y catches the tail. If freshness matters downstream, the
+ *  engine's own recency filter (applyRecencyFilter, default 21d) already
+ *  trims stale comps out of FMV — the backstop just needs to find them
+ *  in the first place. */
 function periodForGrade(grade: string): "7d" | "14d" | "3m" | "1y" | "all" {
-  const g = grade.trim().toLowerCase();
-  if (g === "raw" || g === "") return "3m";
-  return "1y";  // any graded grade — thinner cohort, wider window
+  return "1y";  // uniformly widened; recency filter handles staleness downstream
 }
 
 /** Cap on how many raw records survive the filter. Prevents a runaway pool
