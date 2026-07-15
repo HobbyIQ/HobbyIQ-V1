@@ -132,3 +132,91 @@ describe("matchHonorsIdentity — short-circuits", () => {
     expect(result.ok).toBe(true);
   });
 });
+
+// CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15) — the parser under-
+// specification rescue. When our parser strips tokens (Reptilian,
+// Speckle, etc.) leaving identity.parallel as a proper SUBSTRING of
+// CH's returned variant, and the user's raw query has the missing
+// tokens, we ACCEPT the superset match. Without this, ~4 real CH-
+// catalog cards silently fail to bridge every time Drew tries to
+// price them.
+describe("matchHonorsIdentity — CF-VARIANT-GUARD-SUPERSET (query-aware acceptance)", () => {
+  it("accepts CH's more-specific parallel when raw query has the extra tokens", () => {
+    // Parser stripped "Reptilian" → identity="Refractor". CH returned
+    // "Reptilian Refractor" (correct SKU). Query text has "reptilian".
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Reptilian Refractor", number: "BCP-102" },
+      { parallel: "Refractor", number: "BCP-102" },
+      "Eric Hartman 2026 Bowman Chrome Reptilian Refractor",
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("STILL rejects superset match when extra tokens are NOT in the query", () => {
+    // identity="Refractor", CH matched "Reptilian Refractor", but user's
+    // query only says "Refractor" — parser wasn't wrong, CH is offering
+    // a different SKU. Reject (correct wrong-variant protection).
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Reptilian Refractor", number: "BCP-102" },
+      { parallel: "Refractor", number: "BCP-102" },
+      "2026 Bowman Chrome Refractor Hartman",  // no "reptilian"
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("parallel_mismatch");
+  });
+
+  it("accepts multi-token superset when ALL extras are in the query", () => {
+    // identity="Refractor", match="Blue Speckle Refractor" — two extras
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Blue Speckle Refractor", number: "CPA-OC" },
+      { parallel: "Refractor", number: "CPA-OC" },
+      "Owen Carey Bowman Chrome Blue Speckle Refractor Auto",
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("REJECTS when even ONE extra token is missing from query", () => {
+    // identity="Refractor", match="Blue Speckle Refractor" — query has
+    // "blue" but NOT "speckle". Reject — CH's Speckle variant is not
+    // corroborated.
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Blue Speckle Refractor", number: "CPA-OC" },
+      { parallel: "Refractor", number: "CPA-OC" },
+      "Owen Carey Bowman Chrome Blue Refractor Auto",  // no "speckle"
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("existing narrowing case (Blue Refractor request → Refractor match) STILL rejected", () => {
+    // Original guard behavior — user MORE specific than CH's match.
+    // Not a superset case, not helped by query check. Still reject.
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Refractor", number: "CPA-EHA" },
+      { parallel: "Blue Refractor", number: "CPA-EHA" },
+      "Eric Hartman Blue Refractor Auto",
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("parallel_mismatch");
+  });
+
+  it("card number superset: accepts when CH's number appears in query", () => {
+    // Parser bug: put "X-FRACTOR" (a parallel) as identity.number.
+    // CH returned real cardNumber "CPA-OC". Query text has "CPA-OC".
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "X-Fractor", number: "CPA-OC" },
+      { parallel: "X-Fractor", number: "X-FRACTOR" },  // parser bug
+      "Owen Carey Bowman Chrome X-Fractor Auto CPA-OC",
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("no rawQuery passed → falls back to strict equality (backward-compat)", () => {
+    // Old behavior when caller doesn't thread rawQuery.
+    const result = matchHonorsIdentity(
+      { card_id: "ch-xyz", variant: "Reptilian Refractor", number: "BCP-102" },
+      { parallel: "Refractor", number: "BCP-102" },
+      // no third arg
+    );
+    expect(result.ok).toBe(false);
+  });
+});
