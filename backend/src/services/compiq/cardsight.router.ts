@@ -27,6 +27,10 @@ import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
 // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): targeted un-decommission
 // for CH-catalog-miss cases. See cardsightFallback.ts for the rationale.
 import { tryCardsightFallback } from "./cardsightFallback.js";
+// CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): ultimate backstop when
+// neither CH bridge nor CS catalog resolves the SKU. See
+// cardsightPricingBackstop.ts for the rationale.
+import { tryCardsightPricingBackstop } from "./cardsightPricingBackstop.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -655,6 +659,30 @@ export async function findCompsRouted(
             vendor: "cardsight",
           });
           return cs;
+        }
+      }
+      // CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): tier-3 fallback when
+      // neither vendor's canonical catalog has the SKU. Searches raw
+      // marketplace listing titles — surfaces real transaction evidence
+      // for cards like Blue Refractor Autos, /150 parallels, etc. that
+      // are catalog-gaps in both CH and CS. No cardId, but real prices.
+      // Env-gated (CARDSIGHT_PRICING_BACKSTOP_ENABLED=true, default off).
+      if (process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true") {
+        const backstop = await tryCardsightPricingBackstop(
+          query,
+          opts.queryContext,
+          opts.grade ?? "Raw",
+        );
+        if (backstop) {
+          log.info("comp.findComps.end", {
+            query,
+            cardId: "",  // no canonical bridge — backstop is bridge-less
+            result_count: backstop.sales.length,
+            latency_ms: Date.now() - start,
+            outcome: "cardsight_pricing_backstop",
+            vendor: "cardsight",
+          });
+          return backstop;
         }
       }
       log.info("comp.findComps.end", { query, outcome: "ch_unavailable", latency_ms: Date.now() - start });

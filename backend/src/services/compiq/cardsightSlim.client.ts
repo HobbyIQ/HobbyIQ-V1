@@ -96,6 +96,30 @@ export interface CardsightSaleRecord {
   parallel_name?: string | null;
 }
 
+// CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): shape returned by
+// GET /v1/pricing/search. Free-text title fuzzy search over marketplace
+// listings — surfaces sales even when neither CH nor CS catalog resolves
+// the SKU. Includes unmatched listings (matched_card omitted).
+export interface CardsightPricingSearchRecord {
+  title: string | null;
+  price: number;
+  date: string | null;
+  source: string;                    // e.g. "ebay"
+  listing_type: "auction" | "fixed" | null;
+  url: string | null;
+  image_url: string | null;
+  parallel_id: string | null;
+  parallel_name: string | null;
+  matched_card?: unknown;            // canonical card when matched — kept opaque
+  grade?: unknown;                   // grade context for graded listings
+}
+
+export interface CardsightPricingSearchResponse {
+  query?: unknown;
+  results: CardsightPricingSearchRecord[];
+  meta?: unknown;
+}
+
 export interface CardsightPricingResponse {
   card?: {
     card_id?: string;
@@ -294,5 +318,94 @@ export async function getPricing(
       error: (err as Error)?.message ?? String(err),
     }));
     return empty;
+  }
+}
+
+// ─── Pricing search backstop (CF-CS-PRICING-BACKSTOP) ─────────────────────
+
+/** 6h cache — same as searchCatalog. Backstop queries are user-driven and
+ *  the underlying listings pool changes hourly-daily, so 6h fresh-window is
+ *  the right balance between hit rate and staleness. */
+const PRICING_SEARCH_CACHE_TTL_SEC = 6 * 3600;
+
+/**
+ * Free-text fuzzy search over marketplace listing titles for HISTORICAL
+ * pricing. Ultimate backstop for cards neither CH nor CS catalog resolves —
+ * returns raw seller-title matches. Includes UNMATCHED listings (matched_card
+ * omitted) which is exactly what we need for CH-catalog-gap SKUs.
+ *
+ * IMPORTANT: default listing_type is "both" but for FMV purposes callers
+ * should pass "auction" only — fixed listings are ASKING prices (never
+ * necessarily a completed sale) and would inflate the median.
+ */
+export async function searchPricingByTitle(
+  q: string,
+  opts: {
+    period?: "7d" | "14d" | "3m" | "1y" | "all";
+    listingType?: "auction" | "fixed" | "both";
+    limit?: number;
+  } = {},
+): Promise<CardsightPricingSearchRecord[]> {
+  const key = apiKey();
+  if (!key) return [];
+  const query = q.trim();
+  if (query.length < 3 || query.length > 300) return [];
+  const period = opts.period ?? "3m";
+  const listingType = opts.listingType ?? "auction";  // completed sales only by default
+  const limit = Math.min(500, Math.max(1, opts.limit ?? 50));
+
+  return cacheWrap<CardsightPricingSearchRecord[]>(
+    cacheKey("cs:pricing-search", query, period, listingType, String(limit)),
+    async () => _searchPricingByTitleRaw(query, period, listingType, limit),
+    {
+      freshTtlSeconds: PRICING_SEARCH_CACHE_TTL_SEC,
+      // Don't cache empty responses — if the pool momentarily missed, next
+      // call should retry (same pattern as searchCatalog).
+      skipCacheWhen: (result) => !result || result.length === 0,
+    },
+  );
+}
+
+async function _searchPricingByTitleRaw(
+  q: string,
+  period: string,
+  listingType: string,
+  limit: number,
+): Promise<CardsightPricingSearchRecord[]> {
+  const key = apiKey();
+  if (!key) return [];
+  const params = new URLSearchParams({
+    q,
+    period,
+    listing_type: listingType,
+    limit: String(limit),
+  });
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const res = await fetch(`${BASE_URL}/pricing/search?${params}`, {
+      headers: { "X-API-Key": key, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) {
+      console.warn(JSON.stringify({
+        event: "cardsight_pricing_search_http_error",
+        source: "cardsightSlim.client",
+        status: res.status,
+        query: q,
+      }));
+      return [];
+    }
+    const body = (await res.json()) as CardsightPricingSearchResponse;
+    return Array.isArray(body?.results) ? body.results : [];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_pricing_search_error",
+      source: "cardsightSlim.client",
+      query: q,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
   }
 }
