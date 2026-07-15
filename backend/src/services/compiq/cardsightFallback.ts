@@ -59,9 +59,33 @@ function scoreCandidate(
   identity: CardIdentityHint,
 ): number | null {
   const wantPlayer = String(identity.playerName ?? "").trim().toLowerCase();
-  const gotPlayer = String(candidate.player ?? "").trim().toLowerCase();
-  if (wantPlayer.length === 0 || gotPlayer.length === 0) return null;
-  const playerMatch = gotPlayer === wantPlayer || gotPlayer.includes(wantPlayer) || wantPlayer.includes(gotPlayer);
+  if (wantPlayer.length === 0) return null;
+
+  // Cardsight's per-parallel candidate populates `player` from
+  // `detail.name` which is often the CARD name in various formats
+  // ("Hartman, Eric" / "Eric Hartman RC" / null on set-only rows).
+  // Widen the match to search across player + title + setName so
+  // real Eric Hartman rows aren't rejected on formatting alone.
+  // Also allow a surname-only fallback for the common "Last, First"
+  // formatting quirk. Live evidence (2026-07-14): CS returned 37
+  // candidates for "Eric Hartman 2026 bowman chrome blue Auto" and
+  // ALL were rejected by exact-full-name gate, causing the fallback
+  // to no-op and pricing to fall back to sibling-pool synthesis.
+  const searchable = [
+    candidate.player,
+    candidate.title,
+    candidate.setName,
+  ]
+    .filter(Boolean)
+    .map((s) => String(s).toLowerCase())
+    .join(" | ");
+
+  const wantTokens = wantPlayer.split(/\s+/).filter((t) => t.length > 0);
+  const surname = wantTokens[wantTokens.length - 1] ?? wantPlayer;
+
+  const playerMatch =
+    searchable.includes(wantPlayer) ||
+    (surname.length >= 4 && searchable.includes(surname));  // surname must be substantive
   if (!playerMatch) return null;
 
   const wantYear = typeof identity.cardYear === "number"
@@ -153,6 +177,15 @@ export async function tryCardsightFallback(
       query,
       candidateCount: candidates.length,
       wantPlayer: identity.playerName,
+      wantYear: identity.cardYear,
+      // Top-3 sample so we can see what CS actually returned when the
+      // matcher rejects everything (iterative-tuning aid).
+      topCandidateSample: candidates.slice(0, 3).map((c) => ({
+        player: c.player,
+        year: c.year,
+        title: c.title,
+        parallel: c.parallel,
+      })),
     });
     return null;
   }
