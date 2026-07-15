@@ -372,6 +372,42 @@ router.get("/ping", (_req: Request, res: Response) => {
 // Response: { success, purchaseCount, imported, skipped, ebayTotal }
 // If autoBackfillHoldings=true, also runs the auto-holding batch to
 // try creating pending-review holdings for the newly-imported purchases.
+// CF-HISTORICAL-BACKFILL (Drew, 2026-07-15): sweep a user's active holdings
+// and pull full-history sales from BOTH CH + CS into sold_comps. Foundation
+// for seasonality signals. Body: { userId }.
+router.post("/historical-backfill/run", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { userId?: string };
+  if (!body.userId || typeof body.userId !== "string") {
+    return res.status(400).json({ success: false, error: "userId required" });
+  }
+  try {
+    const [{ readUserDoc }, { runHistoricalBackfill, buildTargetsFromHoldings }] = await Promise.all([
+      import("../services/portfolioiq/portfolioStore.service.js"),
+      import("../services/portfolioiq/historicalBackfill.service.js"),
+    ]);
+    const doc = await readUserDoc(body.userId);
+    const holdingsObj = (doc as { holdings?: Record<string, unknown> }).holdings ?? {};
+    const active = Object.values(holdingsObj)
+      .filter((h): h is Record<string, unknown> =>
+        !!h && typeof h === "object" &&
+        (h as { cardStatus?: string }).cardStatus !== "sold" &&
+        (h as { cardStatus?: string }).cardStatus !== "rejected",
+      );
+    const targets = buildTargetsFromHoldings(active as any);
+    if (targets.length === 0) {
+      return res.json({ success: true, userId: body.userId, targetCount: 0, note: "no targets with resolved cardIds" });
+    }
+    const result = await runHistoricalBackfill(targets);
+    return res.json({ success: true, userId: body.userId, ...result });
+  } catch (err: any) {
+    console.error("[ops] /historical-backfill/run failed:", err?.message ?? err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "historical backfill failed",
+    });
+  }
+});
+
 router.post("/purchases/ebay-sync", requireOpsToken, async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as {
     userId?: string;
