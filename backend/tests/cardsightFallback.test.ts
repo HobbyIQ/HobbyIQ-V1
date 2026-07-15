@@ -106,7 +106,15 @@ describe("tryCardsightFallback — early exits (no cost paths)", () => {
   });
 
   it("returns null when candidates present but none match the requested player", async () => {
-    mockedFetch.mockResolvedValue([csCandidate({ player: "Different Player" })]);
+    // Full override — no Eric Hartman tokens anywhere (player, title, setName)
+    // so neither exact-match nor surname-fallback match triggers.
+    mockedFetch.mockResolvedValue([
+      csCandidate({
+        player: "Different Player",
+        title: "Different Player 2026 Bowman Chrome Base",
+        setName: "Bowman Chrome",
+      }),
+    ]);
     const r = await tryCardsightFallback("q", { playerName: "Eric Hartman" }, "Raw");
     expect(r).toBeNull();
     expect(mockedPricing).not.toHaveBeenCalled();
@@ -122,6 +130,41 @@ describe("tryCardsightFallback — early exits (no cost paths)", () => {
     mockedFetch.mockResolvedValue([csCandidate()]);
     mockedPricing.mockResolvedValue(makePricing([]));
     const r = await tryCardsightFallback("q", { playerName: "Eric Hartman", cardYear: 2026 }, "Raw");
+    expect(r).toBeNull();
+  });
+});
+
+describe("tryCardsightFallback — widened player matching (CS name-format quirks)", () => {
+  it("matches when CS returns 'Last, First' formatting via surname fallback", async () => {
+    mockedFetch.mockResolvedValue([
+      csCandidate({ player: "Hartman, Eric", title: "Hartman, Eric 2026 BC Blue Refractor" }),
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 1800, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback("q", { playerName: "Eric Hartman", cardYear: 2026 }, "Raw");
+    expect(r).not.toBeNull();
+    expect(r!.sales).toHaveLength(1);
+  });
+
+  it("matches when candidate.player is null but title contains player tokens", async () => {
+    mockedFetch.mockResolvedValue([
+      csCandidate({ player: null as any, title: "Eric Hartman 2026 Bowman Chrome Blue Refractor" }),
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 1800, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback("q", { playerName: "Eric Hartman", cardYear: 2026 }, "Raw");
+    expect(r).not.toBeNull();
+  });
+
+  it("does NOT match on short surname tokens (guards against noise)", async () => {
+    // Surname "Wu" is 2 chars, below the length>=4 gate — should NOT match
+    // via surname fallback alone, must require full name.
+    mockedFetch.mockResolvedValue([
+      csCandidate({ player: "Jane Smith", title: "2026 Bowman Chrome Wu-style Blue", setName: "Bowman Chrome" }),
+    ]);
+    const r = await tryCardsightFallback("q", { playerName: "Eric Wu", cardYear: 2026 }, "Raw");
     expect(r).toBeNull();
   });
 });
