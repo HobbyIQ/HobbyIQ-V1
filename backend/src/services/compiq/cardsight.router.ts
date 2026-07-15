@@ -349,26 +349,65 @@ export function normalizeParallelForVariantGuard(parallel: string | null | undef
 export function matchHonorsIdentity(
   match: { card_id?: string | null; variant?: string | null; number?: string | null } | null,
   identity: { parallel?: string | null; number?: string | null },
+  rawQuery?: string,
 ): { ok: true } | { ok: false; reason: "card_number_mismatch" | "parallel_mismatch"; wanted: string; got: string } {
   if (!match) return { ok: true };  // no match to guard against
-  // Card number guard first — cheap and definitive.
+
+  // CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15): query-aware superset
+  // acceptance. When our identity is a proper subset of CH's returned
+  // parallel/number (e.g. identity.parallel="Refractor", match.variant=
+  // "Reptilian Refractor"), the STRICT-equality guard used to reject
+  // as parallel_mismatch. But CH's more-specific match is usually
+  // CORRECT — our parser just under-specified. When the rawQuery text
+  // contains CH's extra tokens ("reptilian" appears in the user's
+  // query), accept the superset match. When it doesn't, the guard's
+  // original wrong-SKU protection still fires.
+  //
+  // Same fix pattern as PR #457 (CS scoreCandidate). Both guard the
+  // same class of parser-under-specification bug.
+  const queryLower = (rawQuery ?? "").toLowerCase();
+
+  // Card number guard — cheap and definitive. Superset acceptance
+  // applies here too: identity.number="X-FRACTOR" (parser bug) vs
+  // match.number="CPA-OC" is a real conflict, BUT if the parser
+  // parsed the parallel as the cardNumber (a real bug we've seen),
+  // and the query has the parallel text, we can also accept when
+  // match.number appears in the query.
   if (identity.number && match.number) {
     const wantNum = String(identity.number).toLowerCase().trim();
     const gotNum = String(match.number).toLowerCase().trim();
     if (wantNum && gotNum && wantNum !== gotNum) {
-      return { ok: false, reason: "card_number_mismatch", wanted: wantNum, got: gotNum };
+      // Superset guard: match.number appears in the raw query text
+      // (independent evidence CH's number is what the user meant).
+      if (queryLower && queryLower.includes(gotNum)) {
+        // Accept — CH's number is corroborated by the query text.
+      } else {
+        return { ok: false, reason: "card_number_mismatch", wanted: wantNum, got: gotNum };
+      }
     }
   }
-  // Parallel guard — normalize both sides and require EXACT equality. Any
-  // widening ("Refractor" request → "Blue Refractor" catalog) or narrowing
-  // ("Blue Refractor" request → "Refractor" catalog) is a different SKU
-  // with its own sub-market price band. Only a byte-identical normalized
-  // parallel is safe to bridge.
   if (identity.parallel && match.variant) {
     const want = normalizeParallelForVariantGuard(identity.parallel);
     const got = normalizeParallelForVariantGuard(match.variant);
     if (want && got && want !== got) {
-      return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+      // Superset acceptance: identity's parallel is a substring of CH's
+      // match variant, AND the extra tokens appear in the raw query.
+      // Example: identity="refractor", match="reptilian refractor",
+      // query has "reptilian" — accept (parser under-specified, query
+      // corroborates).
+      if (queryLower && got.includes(want)) {
+        const wantTokens = new Set(want.split(/\s+/).filter((t) => t.length > 0));
+        const extraTokens = got.split(/\s+/).filter((t) => t.length > 0 && !wantTokens.has(t));
+        const allExtrasInQuery = extraTokens.every((t) => queryLower.includes(t));
+        if (allExtrasInQuery) {
+          // Accept the superset match. The parser lost tokens the user
+          // clearly asked for; CH restored them.
+        } else {
+          return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+        }
+      } else {
+        return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+      }
     }
   }
   return { ok: true };
@@ -476,7 +515,13 @@ async function resolveChCardId(
       // mismatch, fall through to structured mercy fallback (which is
       // variant-aware via pickBestByParallel and returns null on nothing
       // fits — i.e. no CH bridge, no wrong-variant comps).
-      const guard = matchHonorsIdentity(match, identity);
+      // CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15): pass the raw query
+      // (falling back to the reconstruction) so the guard can accept
+      // CH's more-specific parallel/number matches when the user's
+      // query text corroborates them. Fixes false rejections on
+      // Reptilian / Speckle / X-Fractor and similar parser-under-
+      // specification cases.
+      const guard = matchHonorsIdentity(match, identity, rawQuery ?? query);
       if (!guard.ok) {
         log.warn("router.bridge_variant_guard_reject", {
           player: identity.playerName,
