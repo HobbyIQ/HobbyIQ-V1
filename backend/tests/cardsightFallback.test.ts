@@ -134,6 +134,31 @@ describe("tryCardsightFallback — early exits (no cost paths)", () => {
   });
 });
 
+describe("tryCardsightFallback — CS year-type quirk (regression pin)", () => {
+  it("matches when candidate.year is a string ('2026') and identity.cardYear is a number (2026)", async () => {
+    // Live evidence (2026-07-15, post-#454 probe): CS emits year as a
+    // string on exploded-per-parallel rows even though the type declares
+    // number. Strict !== rejected the match; coerce both to numbers.
+    mockedFetch.mockResolvedValue([
+      csCandidate({ year: "2026" as unknown as number }),  // CS's actual wire shape
+    ]);
+    mockedPricing.mockResolvedValue(makePricing([
+      { price: 1800, date: "2026-07-10T00:00:00Z" },
+    ]));
+    const r = await tryCardsightFallback("q", { playerName: "Eric Hartman", cardYear: 2026 }, "Raw");
+    expect(r).not.toBeNull();
+    expect(r!.sales).toHaveLength(1);
+  });
+
+  it("still rejects on real year mismatch even with string type ('2024' vs 2026)", async () => {
+    mockedFetch.mockResolvedValue([
+      csCandidate({ year: "2024" as unknown as number }),
+    ]);
+    const r = await tryCardsightFallback("q", { playerName: "Eric Hartman", cardYear: 2026 }, "Raw");
+    expect(r).toBeNull();
+  });
+});
+
 describe("tryCardsightFallback — widened player matching (CS name-format quirks)", () => {
   it("matches when CS returns 'Last, First' formatting via surname fallback", async () => {
     mockedFetch.mockResolvedValue([
