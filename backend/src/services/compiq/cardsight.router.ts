@@ -355,11 +355,50 @@ export function normalizeParallelForVariantGuard(parallel: string | null | undef
  * pickBestByParallel — variant-aware — and returns null when nothing fits).
  */
 export function matchHonorsIdentity(
-  match: { card_id?: string | null; variant?: string | null; number?: string | null } | null,
-  identity: { parallel?: string | null; number?: string | null },
+  match: {
+    card_id?: string | null;
+    variant?: string | null;
+    number?: string | null;
+    title?: string | null;
+    set?: string | null;
+  } | null,
+  identity: { parallel?: string | null; number?: string | null; isAuto?: boolean },
   rawQuery?: string,
-): { ok: true } | { ok: false; reason: "card_number_mismatch" | "parallel_mismatch"; wanted: string; got: string } {
+): { ok: true } | { ok: false; reason: "card_number_mismatch" | "parallel_mismatch" | "auto_vs_base_mismatch"; wanted: string; got: string } {
   if (!match) return { ok: true };  // no match to guard against
+
+  // CF-AUTO-VARIANT-GUARD (Drew, 2026-07-15): reject when user asked for
+  // an AUTOGRAPH but CH's match is a base card. Live evidence: Bobby
+  // Witt Jr 2020 Bowman Chrome Auto — CH's AI matcher resolved to the
+  // BASE card (auto is a separate SKU), engine happily priced with the
+  // base's thousands of $10 sales instead of the auto's rare $1000+
+  // sales, and the existing parallel/number guards had nothing to
+  // reject with because identity.parallel was null.
+  //
+  // The check: identity says AUTO, but match's variant + title + set
+  // contain no auto/autograph/RC-auto token → reject as auto_vs_base.
+  if (identity.isAuto === true) {
+    const matchBlob = [
+      match.variant ?? "",
+      match.title ?? "",
+      match.set ?? "",
+      match.number ?? "",
+    ].join(" ").toLowerCase();
+    const hasAuto = /\bauto(graph(ed)?)?\b/.test(matchBlob) || /\brpa\b/.test(matchBlob);
+    // CardHedge's auto SKUs also carry the "Autograph" subset tag or a
+    // CPA-/BCPA-/BDPA-/CPAR- style card number prefix.
+    const hasAutoNumberPrefix = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-)/i.test(
+      String(match.number ?? "").trim(),
+    );
+    if (!hasAuto && !hasAutoNumberPrefix) {
+      return {
+        ok: false,
+        reason: "auto_vs_base_mismatch",
+        wanted: "autograph",
+        got: `base (${match.variant ?? "no-variant"} / ${match.number ?? "no-num"})`,
+      };
+    }
+  }
 
   // CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15): query-aware superset
   // acceptance. When our identity is a proper subset of CH's returned
