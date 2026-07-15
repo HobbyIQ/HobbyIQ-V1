@@ -69,12 +69,24 @@ export async function tryCardsightPricingBackstop(
   const start = Date.now();
   const period = periodForGrade(grade);
 
+  // CF-CS-BACKSTOP-ALL-TYPES (Drew, 2026-07-15): request BOTH auction +
+  // fixed listings and return every record. Rationale from Drew:
+  // "ensure we are grabbing ALL types of purchases — that is important
+  // data." Live evidence: Travis Sykora Blue Refractor Auto (a card
+  // Drew confirmed CS catalogs) returned 0 records at
+  // listing_type=auction but sellers list it Buy-It-Now only.
+  //
+  // Downstream engine already discounts fixed vs auction via
+  // getSaleTypeWeightMultiplier (fixed gets a lower FMV weight), and
+  // iOS's recentComps display benefits from seeing ALL sales including
+  // BIN listings for context. The narrow auction-only filter that
+  // shipped in PR #458 discarded valid signal.
   let records: CardsightPricingSearchRecord[];
   try {
     records = await searchPricingByTitle(query, {
       period,
-      listingType: "auction",  // completed sales only — never mix asks into FMV
-      limit: 50,
+      listingType: "both",   // include auction + fixed
+      limit: 100,             // wider headroom for both types
     });
   } catch (err) {
     log("cs_backstop.error", {
@@ -90,15 +102,10 @@ export async function tryCardsightPricingBackstop(
     return null;
   }
 
-  // Filter: positive price + valid date + belt-and-suspenders auction-only.
-  // The server should already filter by listing_type but defensive-check.
+  // Filter: positive price + valid date. Both auction and fixed pass
+  // through — engine downstream handles the weighting distinction.
   const usable = records
-    .filter((r) =>
-      Number.isFinite(r.price) &&
-      r.price > 0 &&
-      !!r.date &&
-      r.listing_type === "auction",
-    )
+    .filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.date)
     .slice(0, MAX_BACKSTOP_COMPS);
 
   if (usable.length === 0) {
@@ -110,6 +117,9 @@ export async function tryCardsightPricingBackstop(
     });
     return null;
   }
+
+  const auctionCount = usable.filter((r) => r.listing_type === "auction").length;
+  const fixedCount = usable.filter((r) => r.listing_type === "fixed").length;
 
   const isRaw = grade.trim().toLowerCase() === "raw" || grade.trim() === "";
   const sales: RoutedSale[] = usable.map((r) => ({
@@ -143,6 +153,8 @@ export async function tryCardsightPricingBackstop(
     query,
     period,
     salesCount: sales.length,
+    auctionCount,
+    fixedCount,
     rawCount: records.length,
     latency_ms: Date.now() - start,
   });
