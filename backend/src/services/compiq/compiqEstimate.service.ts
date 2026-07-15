@@ -269,6 +269,16 @@ interface RawComp {
   // alongside listingType so recentComps[] + excludedComps[] can show
   // a thumbnail. Null when the upstream record lacks it.
   imageUrl?: string | null;
+  // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): per-comp provenance so the
+  // route response can surface "3 collector-verified + 8 vendor comps"
+  // and iOS can render trust badges on individual recentComps rows.
+  // - source: which pool this row came from ("cardhedge", "cardsight",
+  //   "ebay-user-purchase", "ebay-user-sale", "manual-user-entry",
+  //   "cs_pricing_backstop", or undefined for pre-provenance-era rows)
+  // - verifiedByUser: true when the row is a user attestation (1.0
+  //   confidence in sold_comps hierarchy). Vendor pulls are false.
+  source?: string;
+  verifiedByUser?: boolean;
 }
 
 /** CF-RECENTCOMPS-SALETYPE: map Cardsight's wire-shape listing_type to
@@ -514,6 +524,9 @@ function chSalesToRawComps(
       soldDate: s.date ?? "",
       listingType: s.sale_type ?? null,
       imageUrl: null,
+      // CF-PROVENANCE-DISPLAY: pinned CH path — every row is CH.
+      source: "cardhedge",
+      verifiedByUser: false,
     }))
     .filter((c) => c.price > 0);
 }
@@ -2597,6 +2610,12 @@ async function fetchComps(
       listingType: (s as { listing_type?: string | null }).listing_type ?? null,
       // CF-RECENTCOMPS-IMAGEURL: same defensive cast — preserve image_url.
       imageUrl: (s as { image_url?: string | null }).image_url ?? null,
+      // CF-PROVENANCE-DISPLAY: routed-search vendor is derived from
+      // sales[0].source above (routedVendor); tag each row so mixed-pool
+      // downstream (user comps merged in via augmentCompsWithUserPool)
+      // can be broken out in the provenanceSummary.
+      source: s.source ?? routedVendor,
+      verifiedByUser: false,
     }))
     .filter((c) => c.price > 0);
 
@@ -2827,6 +2846,12 @@ export async function augmentCompsWithUserPool(
       soldDate: uc.soldAt,
       listingType: null,
       imageUrl: uc.imageUrl,
+      // CF-PROVENANCE-DISPLAY: tag each user-injected comp with its
+      // source (ebay-user-purchase / ebay-user-sale / manual-user-entry)
+      // + verifiedByUser=true so downstream routes can compute the
+      // provenanceSummary and iOS can render "collector-verified" badges.
+      source: uc.source,
+      verifiedByUser: uc.verifiedByUser === true,
     });
   }
 
@@ -6463,7 +6488,12 @@ export async function computeEstimate(
     originalPrice: c.originalPrice,
     title: c.title,
     date: c.soldDate,
-    source: "ebay",
+    // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): was hardcoded "ebay" —
+    // now preserves RawComp.source when set (cardhedge / cardsight /
+    // ebay-user-purchase / ebay-user-sale / manual-user-entry). Falls
+    // back to "ebay" for pre-provenance-era rows to preserve wire compat.
+    source: (c as unknown as { source?: string }).source ?? "ebay",
+    verifiedByUser: (c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true,
     id: `${c.price}-${c.soldDate}`,
     // CF-RECENTCOMPS-SALETYPE: thread per-comp listingType through the
     // pipeline-internal comps shape so the route-level recentComps[]
@@ -7403,6 +7433,15 @@ export async function computeEstimate(
             // CF-RECENTCOMPS-IMAGEURL (2026-06-08): pass-through thumbnail
             // URL when present; omit when null so iOS uses a placeholder.
             imageUrl: c.imageUrl ?? undefined,
+            // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): per-comp source
+            // + user-verified badge. iOS renders "collector-verified"
+            // for verifiedByUser=true, "vendor" otherwise. Omitted (not
+            // null) when unknown so pre-provenance-era cache entries
+            // don't show a broken chip.
+            source: (c as unknown as { source?: string }).source ?? undefined,
+            verifiedByUser: (c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true
+              ? true
+              : undefined,
           };
           if (belowMarketThreshold !== null) {
             entry.belowMarket = c.originalPrice < belowMarketThreshold;
@@ -7414,6 +7453,35 @@ export async function computeEstimate(
     // chart. Display-only — never enters the corpus emit at L3912.
     // Built upthread; coexists with recentComps as an independent surface.
     priceHistory,
+    // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of where the
+    // pool's comps came from. iOS renders as "$1,899 — 3 collectors +
+    // 8 vendor comps" trust chip. `collectorCount` counts user
+    // attestations (verifiedByUser=true); `vendorCount` counts
+    // cardhedge + cardsight vendor pulls; `totalCount` is the pool
+    // size after all filters. `topSource` is a display shortcut for
+    // the largest single source (helps single-row UI variants).
+    provenanceSummary: (() => {
+      const bySource: Record<string, number> = {};
+      let collectorCount = 0;
+      let vendorCount = 0;
+      for (const c of comps) {
+        const src = (c as unknown as { source?: string }).source ?? "unknown";
+        bySource[src] = (bySource[src] ?? 0) + 1;
+        if ((c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true) {
+          collectorCount += 1;
+        } else if (src === "cardhedge" || src === "cardsight" || src === "ebay") {
+          vendorCount += 1;
+        }
+      }
+      const topSource = Object.entries(bySource).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      return {
+        totalCount: comps.length,
+        collectorCount,
+        vendorCount,
+        bySource,
+        topSource,
+      };
+    })(),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     // CF-LASTSALE-SCAFFOLD (2026-06-10): mirror the insufficient branch.

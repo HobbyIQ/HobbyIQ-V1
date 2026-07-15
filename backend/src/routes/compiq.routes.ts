@@ -2192,6 +2192,10 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
+        // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of comp
+        // origins for the trust-badge UI. iOS renders as "N collector-
+        // verified + M vendor comps." Null on cache-miss / thin paths.
+        provenanceSummary: (est as any).provenanceSummary ?? null,
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,
@@ -2746,6 +2750,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
+        // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of comp
+        // origins for the trust-badge UI. iOS renders as "N collector-
+        // verified + M vendor comps." Null on cache-miss / thin paths.
+        provenanceSummary: (est as any).provenanceSummary ?? null,
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,
