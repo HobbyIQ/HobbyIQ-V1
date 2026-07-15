@@ -467,15 +467,42 @@ router.post("/comps/flag-wrong", async (req, res, next) => {
     if (!flaggedByUserId) {
       return res.status(401).json({ success: false, error: "session required" });
     }
-    const { flagCompAsWrong } = await import(
+    const { flagCompAsWrong, readCompsByCardId } = await import(
       "../services/portfolioiq/soldCompsStore.service.js"
     );
+    // Look up the contributor BEFORE flagging so we can bump their
+    // reputation counter — the read is partition-hit (cheap).
+    let contributorUserId: string | null = null;
+    try {
+      const rows = await readCompsByCardId({ cardId: cardId.trim() });
+      const target = rows.find((r) => r.id === compId.trim());
+      contributorUserId = target?.contributorUserId ?? null;
+    } catch {
+      // non-fatal — flag can still proceed without contributor lookup
+    }
     const result = await flagCompAsWrong({
       cardId: cardId.trim(),
       compId: compId.trim(),
       flaggedByUserId,
       reason: typeof reason === "string" ? reason : undefined,
     });
+    // CF-USER-REPUTATION (Drew, 2026-07-15): only bump on successful
+    // flags to avoid rewarding failed API calls. Fire-and-forget.
+    if (result.status === "flagged") {
+      void (async () => {
+        try {
+          const { bumpUserStats } = await import(
+            "../services/portfolioiq/userReputation.service.js"
+          );
+          await bumpUserStats({ userId: flaggedByUserId, flagsIssued: 1 });
+          if (contributorUserId && contributorUserId !== flaggedByUserId) {
+            await bumpUserStats({ userId: contributorUserId, flagsAgainst: 1 });
+          }
+        } catch {
+          // swallow — reputation update is auxiliary
+        }
+      })();
+    }
     const status =
       result.status === "flagged" ? 200 :
       result.status === "not-found" ? 404 :
