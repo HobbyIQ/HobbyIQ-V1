@@ -1930,7 +1930,13 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing "query" field' });
     }
-    const cacheKey = normalizeCacheKey("compiq:search", query);
+    // CF-SEARCH-CACHE-V2 (Drew, 2026-07-15): bump prefix from
+    // "compiq:search" → "compiq:search:v2" to invalidate every stale
+    // entry from before the Cardsight fallback landed (PRs #452 / #454 /
+    // #455). Without this, users hitting the exact same query text as a
+    // pre-fallback probe would see the cached sibling-pool synthesis for
+    // up to 6h even though the engine now returns real CS-sourced comps.
+    const cacheKey = normalizeCacheKey("compiq:search:v2", query);
     const result = await cacheWrap(cacheKey, async () => {
       // Parse free-text â†’ structured fields so downstream filters fire.
       const parsed = parseCardQuery(query);
@@ -2235,7 +2241,27 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         // contract is stable.
         gradedEstimates,
       };
-    }, CACHE_TTL_SECONDS);
+    }, {
+      freshTtlSeconds: CACHE_TTL_SECONDS,
+      // CF-SEARCH-CACHE-SKIP-SYNTHETIC (Drew, 2026-07-15): don't cache
+      // low-confidence engine outputs. The engine returns synthetic /
+      // punt answers when it can't price honestly — those answers should
+      // NOT persist because the next call might succeed (CS fallback
+      // succeeded meanwhile, CH catalog gap filled, user attested a
+      // cardId to sold_comps, etc.). Skip cache when:
+      //   - source = "sibling-pool" (synthesized from base pool)
+      //   - source = "variant-mismatch" (engine punted on variant)
+      //   - marketValue AND fairMarketValueLive both null (no meaningful FMV)
+      // The response still returns to the caller unchanged; only the
+      // cache write is skipped so the next call re-computes.
+      skipCacheWhen: (r: any) => {
+        if (!r || typeof r !== "object") return true;
+        const src = (r.source ?? "").toString();
+        if (src === "sibling-pool" || src === "variant-mismatch") return true;
+        if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+        return false;
+      },
+    });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): fire on EVERY response
     // (cache hit + miss) by reading from `result` instead of nesting
     // inside the producer. The route is cacheWrapped at 6h TTL — a hit
