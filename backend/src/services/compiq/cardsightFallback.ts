@@ -91,8 +91,20 @@ function scoreCandidate(
   const wantYear = typeof identity.cardYear === "number"
     ? identity.cardYear
     : identity.cardYear != null ? parseInt(String(identity.cardYear), 10) : null;
-  const gotYear = candidate.year;
-  if (wantYear != null && gotYear != null && wantYear !== gotYear) return null;
+  // CS emits `year` as either number or string on the exploded-per-parallel
+  // candidate (evidence 2026-07-14 log: `"year":"2026"` on a top match).
+  // Coerce both sides to numbers before comparing — strict `!==` between
+  // 2026 (number) and "2026" (string) silently rejected every valid match.
+  const gotYear = typeof candidate.year === "number"
+    ? candidate.year
+    : candidate.year != null ? parseInt(String(candidate.year), 10) : null;
+  if (
+    wantYear != null &&
+    gotYear != null &&
+    Number.isFinite(wantYear) &&
+    Number.isFinite(gotYear) &&
+    wantYear !== gotYear
+  ) return null;
 
   let score = 5;  // baseline for player + year OK
   if (identity.parallel && candidate.parallel) {
