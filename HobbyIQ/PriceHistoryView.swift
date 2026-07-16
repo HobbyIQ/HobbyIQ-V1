@@ -55,6 +55,12 @@ struct PriceHistoryView: View {
     @State private var response: PriceHistoryResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    /// P1.1 (2026-07-16, seasonality-signals-derivation.md): dedicated
+    /// `window=1y, bucket=weekly` response fetched alongside the primary
+    /// chart so the momentum sparkline has enough weekly points for a
+    /// least-squares fit even when the user picks a coarser primary view.
+    /// Nil until first load; failure leaves it nil so the caption hides.
+    @State private var weeklyResponse: PriceHistoryResponse?
 
     var body: some View {
         ScrollView {
@@ -68,6 +74,10 @@ struct PriceHistoryView: View {
                     } else if let errorMessage {
                         errorState(errorMessage)
                     } else if let points = response?.points, points.isEmpty == false {
+                        // P1.1: peak/trough/YoY captions above the chart.
+                        // Every caption self-suppresses when its sample-size
+                        // gate isn't met — no low-confidence prose.
+                        seasonalityCaptions(points: points)
                         chartCard(points: points)
                         statsRow
                     } else {
@@ -83,6 +93,12 @@ struct PriceHistoryView: View {
         .themedNavigationSurface()
         .task(id: reloadKey) {
             await reload()
+        }
+        .task {
+            // P1.1 (2026-07-16): fetch the weekly response once per view
+            // lifetime — the momentum signal is independent of the primary
+            // picker state.
+            await reloadWeekly()
         }
     }
 
@@ -105,6 +121,22 @@ struct PriceHistoryView: View {
             await MainActor.run {
                 errorMessage = "Couldn't load price history."
             }
+        }
+    }
+
+    /// P1.1 (2026-07-16): background fetch of the 1y weekly bucket for
+    /// momentum. Silent failure — a missing weekly response just hides
+    /// the momentum glyph.
+    private func reloadWeekly() async {
+        do {
+            let result = try await APIService.shared.fetchPriceHistory(
+                cardId: cardId,
+                window: PriceHistoryWindow.oneYear.rawValue,
+                bucket: PriceHistoryBucket.weekly.rawValue
+            )
+            await MainActor.run { weeklyResponse = result }
+        } catch {
+            // Silent — momentum glyph is nice-to-have.
         }
     }
 
@@ -137,6 +169,62 @@ struct PriceHistoryView: View {
                 }
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    // MARK: - P1.1 Seasonality captions
+
+    /// Peak / trough / YoY / momentum captions above the chart. Each
+    /// caption self-suppresses per its sample-size gate. Layout:
+    /// left column = peak + trough stacked; right column = YoY + momentum
+    /// glyph. Whole block is skipped when no signal fires.
+    @ViewBuilder
+    private func seasonalityCaptions(points: [PriceHistoryBucketPoint]) -> some View {
+        let peak = PriceHistorySeasonality.peakMonth(from: points)
+        let trough = PriceHistorySeasonality.troughMonth(from: points)
+        let adjacent = PriceHistorySeasonality.peakTroughAreAdjacent(peak: peak, trough: trough)
+        let yoy = PriceHistorySeasonality.yoyChange(from: points)
+        let momentum = PriceHistorySeasonality.weeklyMomentum(from: weeklyResponse?.points ?? [])
+
+        let showPeak = peak != nil && adjacent == false
+        let showTrough = trough != nil && adjacent == false
+        let showYoY = yoy != nil
+        let showMomentum = momentum != nil
+
+        if showPeak || showTrough || showYoY || showMomentum {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let peak, showPeak {
+                        Text("Historically peaks in \(PriceHistorySeasonality.monthLabel(peak))")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    if let trough, showTrough {
+                        Text("Historically softest in \(PriceHistorySeasonality.monthLabel(trough))")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                Spacer(minLength: 0)
+                VStack(alignment: .trailing, spacing: 4) {
+                    if showYoY, let label = PriceHistorySeasonality.yoyLabel(yoy) {
+                        Text(label)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(PriceHistorySeasonality.yoyColor(yoy))
+                    }
+                    if showMomentum {
+                        HStack(spacing: 4) {
+                            Text(PriceHistorySeasonality.momentumGlyph(momentum))
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(PriceHistorySeasonality.momentumColor(momentum))
+                            Text("30d")
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
