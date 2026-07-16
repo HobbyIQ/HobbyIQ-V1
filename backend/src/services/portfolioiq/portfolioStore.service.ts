@@ -2395,11 +2395,16 @@ async function autoPriceHolding(
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     lastUpdated: now,
-    // CF-SOURCE-VENDOR (2026-07-13): stamp CH provenance. Foundation for
-    // multi-vendor pricing (Cardsight + eBay-direct coming). When the
-    // dual-source resolver goes live, this stamps the winning vendor
-    // instead of hardcoded "cardhedge".
-    sourceVendor: "cardhedge",
+    // CF-CARDSIGHT-VENDOR-PROVENANCE (audit PR #492, 2026-07-15): the
+    // dual-source resolver went live with Drew's CF-CARDSIGHT-FALLBACK-
+    // REVIVAL (2026-07-14) + CF-CS-STRUCTURED-BRIDGE / CF-CS-PRICING-
+    // BACKSTOP (2026-07-15). Read the vendor from the estimate response
+    // (populated from fetched.vendor at compiqEstimate.service.ts:7419)
+    // so CS-served holdings get stamped with the correct provenance.
+    // Falls back to "cardhedge" for legacy estimates that predate the
+    // sourceVendor field — worst case behavior matches the pre-PR
+    // hardcode.
+    sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
     sourceVendorUpdatedAt: now,
     // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: writer no longer stamps
     // currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
@@ -5989,8 +5994,10 @@ export async function repriceHoldingsForUser(
           verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
           recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
           lastUpdated: t3Now,
-          // CF-SOURCE-VENDOR (2026-07-13): T3 base-auto floor estimate is CH-derived.
-          sourceVendor: "cardhedge",
+          // CF-CARDSIGHT-VENDOR-PROVENANCE (PR #492): T3 base-auto floor
+          // estimate rides the same engine as the main path — vendor is
+          // whichever the router picked. Read from the estimate response.
+          sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
           sourceVendorUpdatedAt: t3Now,
         };
         evaluateHoldingAlerts(doc, t3Previous, t3Updated);
@@ -6296,8 +6303,9 @@ export async function repriceHoldingsForUser(
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         lastUpdated: now,
-        // CF-SOURCE-VENDOR (2026-07-13): batch-reprice success path.
-        sourceVendor: "cardhedge",
+        // CF-CARDSIGHT-VENDOR-PROVENANCE (PR #492): batch-reprice success
+        // path — reads whichever vendor served each individual estimate.
+        sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
         sourceVendorUpdatedAt: now,
         // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: currentValue / P&L
         // (3 fields) and quickSale / premium / suggestedList (3 fields)

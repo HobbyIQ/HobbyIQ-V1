@@ -215,6 +215,23 @@ export async function tryCardsightStructuredBridge(
   }
 
   const parallelName = winner.parallels?.find((p) => p.id === parallelId)?.name ?? identity.parallel;
+  // CF-CARDSIGHT-STRUCTURED-TITLE (audit PR #492, 2026-07-15): synthesize
+  // a display title so the pinned card-meta cache
+  // (cardsight.router.ts:930-937 cacheCardMeta) has something to persist
+  // when only StructuredBridge served. Without this, a subsequent
+  // /price-by-id request would land on a card-meta record with no title,
+  // breaking iOS hero rendering + downstream title-token matching. Fmt
+  // matches how compiqEstimate.service.ts:2620 rebuilds titles from a
+  // parent-card record ([year, product, player, number, variant].join).
+  const synthesizedTitle = [
+    winner.releaseYear ?? identity.cardYear,
+    winner.releaseName ?? winner.setName ?? identity.product,
+    winner.name ?? identity.playerName,
+    winner.number ?? identity.number,
+    parallelName,
+  ]
+    .filter((v) => v != null && String(v).trim().length > 0)
+    .join(" ");
   const card: RoutedCard = {
     card_id: parallelId ? `cardsight:${winner.id}::${parallelId}` : `cardsight:${winner.id}`,
     player: winner.name ?? identity.playerName,
@@ -222,6 +239,12 @@ export async function tryCardsightStructuredBridge(
     year: winner.releaseYear ?? identity.cardYear,
     number: winner.number ?? identity.number,
     variant: parallelName,
+    title: synthesizedTitle.length > 0 ? synthesizedTitle : undefined,
+    // NOTE: imageUrl not populated here — CardsightCardSummary doesn't
+    // carry image info. A follow-up PR can add a detail fetch to
+    // /v1/catalog/cards/{id} + populate imageUrl, but that adds an HTTP
+    // call to the structured path. iOS falls back to the /card-image-
+    // proxy stack when imageUrl is absent.
   };
 
   log("cs_structured.served", {
