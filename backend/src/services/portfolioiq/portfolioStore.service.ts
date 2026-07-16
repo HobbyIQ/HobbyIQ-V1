@@ -4805,16 +4805,16 @@ export async function listUsersOwningPlayerWithPushOptIn(
 }
 
 /**
- * CF-VERDICT-FLIP-PUSH-FANOUT test hook. Writes the two push-related
- * fields directly on the user doc without going through a full
- * settings API (which lands as a follow-up). Kept here alongside the
- * store so the test helper doesn't drift from the write path.
+ * CF-VERDICT-FLIP-PUSH-PREFS (Drew, 2026-07-16, PR #500 + follow-up).
+ * Writes the two push-related fields on the user doc. Called from the
+ * PATCH /api/portfolio/preferences route in production. Named without
+ * the -ForTests suffix now that a real route consumes it.
  *
- * Test-only surface — never called from a route. Named with the
- * `-ForTests` suffix so future audits see it and don't wire it into
- * a production caller by accident.
+ * Legacy alias `setUserPushPreferenceForTests` is retained so the
+ * existing test file (which was written when this was test-only)
+ * doesn't have to churn.
  */
-export async function setUserPushPreferenceForTests(
+export async function setUserPushPreference(
   userId: string,
   input: {
     pushOnMajorFlip?: boolean;
@@ -4831,6 +4831,8 @@ export async function setUserPushPreferenceForTests(
   }
   await writeUserDoc(userId, doc);
 }
+
+export const setUserPushPreferenceForTests = setUserPushPreference;
 
 export async function sellHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);

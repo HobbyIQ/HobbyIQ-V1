@@ -66,6 +66,110 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-VERDICT-FLIP-PUSH-PREFS-ROUTE (Drew, 2026-07-16, PR #500 follow-up):
+// per-user notification opt-in + APNs device-token registration surface.
+// iOS calls PATCH at app launch (device token) and from Settings (opt-in
+// toggle). GET returns the current state without the raw device token
+// value (masked to just presence) — no need to round-trip the token to
+// the client after registration.
+router.get("/preferences", async (req, res, next) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const doc = await readUserDoc(userId);
+    res.json({
+      success: true,
+      preferences: {
+        pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
+      },
+      apnsDevice: {
+        registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,
+        registeredAt: doc.apnsDeviceTokenUpdatedAt ?? null,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+router.patch("/preferences", async (req, res, next) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const body = (req.body ?? {}) as {
+      pushOnMajorFlip?: unknown;
+      apnsDeviceToken?: unknown;
+    };
+
+    // Nothing to write is a 400 — otherwise a malformed body silently
+    // no-ops and iOS thinks the write landed.
+    const patchesPush = Object.prototype.hasOwnProperty.call(body, "pushOnMajorFlip");
+    const patchesToken = Object.prototype.hasOwnProperty.call(body, "apnsDeviceToken");
+    if (!patchesPush && !patchesToken) {
+      res.status(400).json({
+        success: false,
+        error: "body must include at least one of pushOnMajorFlip, apnsDeviceToken",
+      });
+      return;
+    }
+
+    const input: { pushOnMajorFlip?: boolean; apnsDeviceToken?: string | null } = {};
+
+    if (patchesPush) {
+      if (typeof body.pushOnMajorFlip !== "boolean") {
+        res.status(400).json({ success: false, error: "pushOnMajorFlip must be boolean" });
+        return;
+      }
+      input.pushOnMajorFlip = body.pushOnMajorFlip;
+    }
+
+    if (patchesToken) {
+      // APNs tokens are hex strings 64-200 chars; null explicitly clears
+      // the registration (iOS logs out or revokes permission).
+      const raw = body.apnsDeviceToken;
+      if (raw === null) {
+        input.apnsDeviceToken = null;
+      } else if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (trimmed.length === 0) {
+          input.apnsDeviceToken = null;
+        } else if (trimmed.length < 32 || trimmed.length > 256 || !/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+          res.status(400).json({
+            success: false,
+            error: "apnsDeviceToken must be 32-256 chars, alphanumeric + . _ -",
+          });
+          return;
+        } else {
+          input.apnsDeviceToken = trimmed;
+        }
+      } else {
+        res.status(400).json({ success: false, error: "apnsDeviceToken must be string or null" });
+        return;
+      }
+    }
+
+    await portfolio.setUserPushPreference(userId, input);
+
+    // Echo the effective state so iOS can update its cached copy
+    // without a follow-up GET.
+    const doc = await readUserDoc(userId);
+    res.json({
+      success: true,
+      preferences: {
+        pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
+      },
+      apnsDevice: {
+        registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,
+        registeredAt: doc.apnsDeviceTokenUpdatedAt ?? null,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
 // CF-SIGNAL-WEIGHTED-TOTALS (Drew, 2026-07-13, PR #430): three portfolio
 // valuations side-by-side (gross MV / trend-adjusted / fees-adjusted) +
 // breakdown by verdict class (bull / static / bear).
