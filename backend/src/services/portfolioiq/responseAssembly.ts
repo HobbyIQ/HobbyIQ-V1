@@ -72,6 +72,18 @@ import {
 // verdict. Consumes the holding's own FMV + Predicted + confidence +
 // cost basis and emits a shape iOS can render directly.
 import { computeAction } from "../compiq/actionRecommendation.service.js";
+// CF-COMP-HOLDING-WIRE-PARITY (audit PR #482, 2026-07-15): consume the
+// canonical multipliers introduced in PR #481 for the derived tier/zone
+// bands. Ensures the holding wire's derived math tracks any future
+// tuning changes to the pricing engine in exactly ONE place.
+import {
+  QUICK_SALE_MULTIPLIER,
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PREMIUM_MULTIPLIER,
+  SUGGESTED_LIST_MULTIPLIER,
+  BUY_ZONE_LOW_MULTIPLIER,
+  applyHeadlineMultiplier,
+} from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
 
 /**
  * Map the portfolio holding's categorical `estimateConfidence` tier
@@ -427,6 +439,51 @@ export interface PortfolioHoldingWire {
     sampleSize: number;
     confidence: number;
   };
+
+  // ── CF-COMP-HOLDING-WIRE-PARITY (audit PR #482, 2026-07-15) ─────────
+  //
+  // The whole-app wire-shape audit surfaced 8 fields present on comp
+  // responses (/search, /price, /price-by-id) but absent — or emitted
+  // under a different name/envelope — on the holding wire. iOS decoders
+  // had to branch on which endpoint produced the row; the holding
+  // detail sheet couldn't render zones/trendIQ/confidence tiles because
+  // the data never left the backend.
+  //
+  // Fix: ADDITIVE aliases that mirror the comp-family envelope. The
+  // legacy flat fields (predictedPriceLow/High, predictedPriceMechanism,
+  // estimateLow/High, fairMarketValue) STAY on the wire for backward
+  // compat while iOS decoders migrate at their own pace. Never break
+  // an existing decoder; always add new keys.
+  //
+  //   marketValue          — alias of fairMarketValue (comp routes name)
+  //   fairMarketValueLive  — alias of fairMarketValue (comp routes name)
+  //   predictedPriceRange  — nested form of predictedPriceLow/High
+  //   predictedPriceAttribution.mechanism
+  //                        — nested form of predictedPriceMechanism
+  //   estimateRange        — nested form of estimateLow/High
+  //   marketTier / buyZone / holdZone / sellZone
+  //                        — derived from FMV via pricing.constants
+  //                          multipliers (PR #481). Zones are TUPLES
+  //                          `[low, high]` matching the comp response's
+  //                          PriceZone decoder.
+  //   trendIQ / confidence — null placeholders in PR #482; will be
+  //                          populated in PR #483 once the holding doc
+  //                          persists trendIQ + a per-holding confidence
+  //                          via autoPriceHolding. iOS decoders can
+  //                          bind the field defensively today so the
+  //                          transition is a null → object change,
+  //                          not a schema break.
+  marketValue: number | null;
+  fairMarketValueLive: number | null;
+  predictedPriceRange: { low: number; high: number } | null;
+  predictedPriceAttribution: { mechanism: string } | null;
+  estimateRange: { low: number; high: number } | null;
+  marketTier: { value: number | null; high: number | null };
+  buyZone: [number | null, number | null];
+  holdZone: [number | null, number | null];
+  sellZone: [number | null, number | null];
+  trendIQ: null; // PR #483 will change this to TrendIQResult | null
+  confidence: number | null;
 }
 
 export function composeHoldingWireShape(
@@ -583,12 +640,54 @@ export function composeHoldingWireShape(
     currentValue,
     totalProfitLoss,
     totalProfitLossPct,
-    quickSaleValue: applyMultiplierOrNull(fmvPerUnit, 0.85),
-    premiumValue: applyMultiplierOrNull(fmvPerUnit, 1.15),
-    suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, 1.05),
+    quickSaleValue: applyMultiplierOrNull(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+    premiumValue: applyMultiplierOrNull(fmvPerUnit, PREMIUM_MULTIPLIER),
+    suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, SUGGESTED_LIST_MULTIPLIER),
     freshnessStatus: freshnessFromPricingTimestamp(holding),
     displayableValue,
     displayableValueSource: displayable.source,
+    // ── CF-COMP-HOLDING-WIRE-PARITY (PR #482, 2026-07-15) ─────────
+    // Additive comp-family envelope aliases + derived tier/zone bands.
+    // Every field below either mirrors an existing flat key or derives
+    // from fmvPerUnit via the PR #481 multiplier constants.
+    marketValue: fmvPerUnit,
+    fairMarketValueLive: fmvPerUnit,
+    predictedPriceRange:
+      typeof holding.predictedPriceLow === "number"
+        && typeof holding.predictedPriceHigh === "number"
+        ? { low: holding.predictedPriceLow, high: holding.predictedPriceHigh }
+        : null,
+    predictedPriceAttribution:
+      typeof holding.predictedPriceMechanism === "string" && holding.predictedPriceMechanism.length > 0
+        ? { mechanism: holding.predictedPriceMechanism }
+        : null,
+    estimateRange:
+      typeof holding.estimateLow === "number"
+        && typeof holding.estimateHigh === "number"
+        ? { low: holding.estimateLow, high: holding.estimateHigh }
+        : null,
+    marketTier: {
+      value: fmvPerUnit,
+      high: applyHeadlineMultiplier(fmvPerUnit, PREMIUM_MULTIPLIER),
+    },
+    buyZone: [
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER * BUY_ZONE_LOW_MULTIPLIER),
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+    ],
+    holdZone: [
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+      fmvPerUnit,
+    ],
+    sellZone: [
+      fmvPerUnit,
+      applyHeadlineMultiplier(fmvPerUnit, PREMIUM_MULTIPLIER),
+    ],
+    // trendIQ + confidence: placeholder nulls in PR #482. PR #483 will
+    // wire persistence via autoPriceHolding + emit real values here.
+    // iOS decoders can bind these fields defensively (nullable Codable)
+    // so the future non-null population is a data change, not a schema break.
+    trendIQ: null,
+    confidence: null,
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
     // is OMITTED entirely on every non-CH-last-sale holding (the universal
     // case). Preserves byte-identical wire emission for the existing

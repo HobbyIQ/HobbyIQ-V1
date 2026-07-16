@@ -5394,6 +5394,16 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
             ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
             compsUsed: 0,
             compsAvailable: 0,
+            // CF-BULK-ENVELOPE-PARITY (PR #482): unsupported_sport row
+            // stays null across the estimate slot — the sport is out of
+            // scope, not thin. Emitting the keys matches the
+            // /price-by-id unsupported-sport branch's shape so iOS
+            // decoders can bind the same optional fields uniformly.
+            estimatedValue: null,
+            estimateRange: null,
+            estimateBasis: null,
+            lastSale: null,
+            estimateSource: null,
           };
           writeTelemetryEntries({
             query,
@@ -5448,6 +5458,18 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
           // /price; corpus sampleSize maps from compsUsed.
           compsUsed: (est as any).compsUsed ?? 0,
           compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
+          // CF-BULK-ENVELOPE-PARITY (audit PR #482, 2026-07-15): fill the
+          // estimatedValue / estimateRange / estimateBasis / lastSale gap
+          // that the whole-app wire-shape audit flagged. /search, /price,
+          // and /price-by-id all emit these; /bulk previously omitted them,
+          // so iOS bulk consumers couldn't render the extrapolated slot on
+          // T3-rebucket / product-family-projection / no-recent-comps rows.
+          // Names mirror /search's shape exactly.
+          estimatedValue: (est as any).estimatedValue ?? null,
+          estimateRange: (est as any).estimateRange ?? null,
+          estimateBasis: (est as any).estimateBasis ?? null,
+          lastSale: (est as any).lastSale ?? null,
+          estimateSource: (est as any).estimateSource ?? null,
         };
         // Per-item telemetry â€” fire-and-forget. Each writer rolls its
         // sample-rate gate independently per call, so a 20-item bulk
