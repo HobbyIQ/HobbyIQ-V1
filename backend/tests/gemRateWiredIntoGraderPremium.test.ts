@@ -175,6 +175,62 @@ describe("GEM_RATE_MULTIPLIER_ENABLED killswitch", () => {
   });
 });
 
+describe("logGemRateSignalSkipped — low-confidence telemetry", () => {
+  it("emits gem_rate_signal_skipped when signal exists but confidence is low + grade is top", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    // 2 observations = low confidence
+    const sig = computeGemRateFromObservations([
+      { grade: "PSA 10", price: 200 },
+      { grade: "PSA 9", price: 100 },
+    ]);
+    getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+    const emitted = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_signal_skipped"));
+    expect(emitted.length).toBeGreaterThan(0);
+    const payload = JSON.parse(emitted[0]);
+    expect(payload.event).toBe("gem_rate_signal_skipped");
+    expect(payload.gradingCompany).toBe("PSA");
+    expect(payload.grade).toBe("10");
+    expect(payload.confidence).toBe("low");
+    expect(payload.totalGradedObserved).toBe(2);
+    expect(payload.reason).toBe("low-confidence");
+    spy.mockRestore();
+  });
+
+  it("does NOT emit skipped event for mid-tier grades even when signal is low", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const sig = computeGemRateFromObservations([
+      { grade: "PSA 10", price: 200 },
+      { grade: "PSA 9", price: 100 },
+    ]);
+    getGraderPremium("PSA", "9", 50, "base", 2024, null, sig);
+    const emitted = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_signal_skipped"));
+    expect(emitted.length).toBe(0);
+    spy.mockRestore();
+  });
+
+  it("does NOT emit skipped event when the applied event fires (mutually exclusive)", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const sig = computeGemRateFromObservations([
+      ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+      ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+    ]);
+    getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+    const skipped = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_signal_skipped"));
+    const applied = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_multiplier_applied"));
+    expect(skipped.length).toBe(0);
+    expect(applied.length).toBeGreaterThan(0);
+    spy.mockRestore();
+  });
+});
+
 describe("logGemRateMultiplierApplied — telemetry emission", () => {
   it("emits gem_rate_multiplier_applied when the short-circuit fires", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});

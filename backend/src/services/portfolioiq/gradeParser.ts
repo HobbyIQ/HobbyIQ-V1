@@ -15,7 +15,26 @@
 export interface ParsedGrade {
   gradeCompany: string;
   gradeValue: number;
+  /**
+   * CF-BGS-BLACK-LABEL-INGEST (PR #495 follow-up): true when the input
+   * label carried "Black Label" / "Pristine" / a standalone "BL" token
+   * adjacent to a BGS 10. Absent for every other grade. Consumers
+   * (autoPriceHolding, catalog inference, backfill scripts) use this to
+   * pass "10 Black Label" as the grade string to getGraderPremium so
+   * the 9x fallback tier fires instead of the regular BGS 10 3.5x tier.
+   */
+  isBlackLabel?: boolean;
 }
+
+// Adjacent "Black Label" / "Pristine" / "BL" indicators on a BGS 10.
+// Match any of these anywhere in the input string; scoped to BGS 10 by
+// the caller (this file is a plain regex — the scoping check lives in
+// parseGradeLabel's return path).
+const BGS_BLACK_LABEL_PATTERNS = [
+  /\bblack\s+label\b/i,
+  /\bpristine\b/i,
+  /\bbl\b/i,
+];
 
 // PSA's flagship label vernacular for a 10 — has multiple textual forms.
 // Recognized as PSA 10 even when only the descriptor appears.
@@ -151,6 +170,22 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
 
   // ── Decide ───────────────────────────────────────────────────────────
   if (detectedCompany && detectedValue !== null) {
+    // CF-BGS-BLACK-LABEL-INGEST: elevate a BGS 10 to Black Label ONLY
+    // when the input carries one of the tier indicators AND the tuple
+    // is exactly (BGS, 10). "PSA 10 Pristine" (which some Cardsight
+    // labels use for gem-mint 10s) intentionally does NOT flip this
+    // bit — it's a BGS-only tier.
+    if (
+      detectedCompany === "BGS"
+      && detectedValue === 10
+      && BGS_BLACK_LABEL_PATTERNS.some((re) => re.test(trimmed))
+    ) {
+      return {
+        gradeCompany: detectedCompany,
+        gradeValue: detectedValue,
+        isBlackLabel: true,
+      };
+    }
     return { gradeCompany: detectedCompany, gradeValue: detectedValue };
   }
 

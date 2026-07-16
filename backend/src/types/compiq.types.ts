@@ -13,6 +13,16 @@ export interface CompIQEstimateRequest {
   cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: number;
+  /**
+   * CF-BGS-BLACK-LABEL-INGEST (Drew, 2026-07-16, PR #495 follow-up):
+   * request-side signal that this holding is a BGS 10 Black Label /
+   * Pristine 10 slab (all four subgrades = 10). Ignored unless
+   * gradeCompany === "BGS" AND gradeValue === 10. When honored, the
+   * engine's grade lookups substitute "10 Black Label" for the plain
+   * "10" so getGraderPremium routes to the 9x fallback tier (12/9/7/5.5
+   * tiered) instead of the regular BGS 10 3.5x tier.
+   */
+  isBlackLabel?: boolean;
   isAuto?: boolean;
   /**
    * Pin pricing to a specific Cardsight catalog cardId (UUID).

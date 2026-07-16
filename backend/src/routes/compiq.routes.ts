@@ -7,6 +7,7 @@ import {
   deriveSalesMomentum,
   logSalesMomentumObserved,
   deriveGradeLadderAnchor,
+  composeGradeKey,
   type GradeLadderGrade,
 } from "../services/compiq/compiqEstimate.service.js";
 import {
@@ -4697,10 +4698,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       try {
         pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
-          const gradeKey =
-            body.gradeCompany && body.gradeValue !== undefined
-              ? `${body.gradeCompany} ${body.gradeValue}`
-              : "Raw";
+          const gradeKey = composeGradeKey(
+            body.gradeCompany,
+            body.gradeValue,
+            (body as { isBlackLabel?: boolean }).isBlackLabel,
+          );
           // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): pass parallelId
           // so the fact-pack pool derives from the SAME post-filter set
           // (selectSalesByGrade → filterRecordsByParallel) as the value

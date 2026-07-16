@@ -1179,6 +1179,34 @@ function resolveTierForTable(
 }
 
 /**
+ * CF-BGS-BLACK-LABEL-INGEST (Drew, 2026-07-16, PR #495 follow-up):
+ * canonical helper for composing the "COMPANY GRADE" string that
+ * downstream selectors + getGraderPremium expect, with the Black Label
+ * elevation applied ONLY when the tuple is exactly (BGS, 10) AND the
+ * request-side bit is set. Everywhere the engine reads a request-side
+ * (gradeCompany, gradeValue [, isBlackLabel]) must call this instead
+ * of building the string inline — otherwise the tier gets silently
+ * stripped at some path and the 9x fallback never fires.
+ */
+export function composeGradeKey(
+  gradeCompany: string | null | undefined,
+  gradeValue: number | string | null | undefined,
+  isBlackLabel?: boolean | null,
+): string {
+  const co = String(gradeCompany ?? "").trim();
+  const val = gradeValue == null ? "" : String(gradeValue).trim();
+  if (!co || !val) return "Raw";
+  if (
+    co.toUpperCase() === "BGS"
+    && (val === "10" || Number(val) === 10)
+    && isBlackLabel === true
+  ) {
+    return "BGS 10 Black Label";
+  }
+  return `${co} ${val}`;
+}
+
+/**
  * CF-CONDITION-SENSITIVE-SETS (Drew, 2026-07-15, PR #494): sets known for
  * chronic surface / centering / edge / print-defect issues. PSA 10 pop is
  * scarcer than the raw rate suggests, so the gem premium expands beyond
@@ -1287,6 +1315,32 @@ export function getGraderPremium(
       setBump,
     });
     return formulaMultiplier * setBump;
+  }
+
+  // CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (Drew, 2026-07-16): when we have
+  // a gem-rate signal AND the requested grade IS a top grade AND the
+  // killswitch is on, but confidence is too low to use it, log the near-
+  // miss. Lets the calibration refresh KQL measure "how many top-grade
+  // emissions were one step away from using the formula" — the answer
+  // tells us whether to lower MIN_OBSERVED_GRADED_FOR_CONFIDENT_SIGNAL
+  // from 10 or leave it. Emits at most once per (card, grade) call.
+  if (
+    isGemRateMultiplierEnabled()
+    && gemRateSignal
+    && !shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)
+    && isTopGradeForTelemetry(company, gradeKey)
+  ) {
+    logGemRateSignalSkipped({
+      source: "getGraderPremium",
+      cardId: gemRateSignal.cardId,
+      gradingCompany: company,
+      grade: gradeKey,
+      gemRate: gemRateSignal.gemRate,
+      gemRateBand: gemRateSignal.gemRateBand,
+      confidence: gemRateSignal.confidence,
+      totalGradedObserved: gemRateSignal.totalGradedObserved,
+      reason: gemRateSignal.confidence === "low" ? "low-confidence" : "other",
+    });
   }
 
   // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
@@ -1430,6 +1484,69 @@ export function logGemRateMultiplierApplied(opts: {
   } catch {
     // Telemetry failures must never propagate.
   }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (2026-07-16, PR #495 follow-up):
+ * fires when a top-grade multiplier call has an available gem-rate
+ * signal but shouldUseGemRateMultiplier returned false (typically low
+ * confidence, i.e. fewer than 10 base graded observations). Tells the
+ * refresh KQL:
+ *
+ *   customEvents | where name == "gem_rate_signal_skipped"
+ *   | summarize count(),
+ *       med_obs = percentile(toint(customDimensions.totalGradedObserved), 50)
+ *     by tostring(customDimensions.gradingCompany),
+ *        tostring(customDimensions.grade), bin(timestamp, 7d)
+ *
+ * If med_obs is close to 10, we're right at the threshold — lowering
+ * MIN_OBSERVED_GRADED_FOR_CONFIDENT_SIGNAL unlocks a real population.
+ * If it's under 3, the threshold's fine and we just need more data.
+ */
+export function logGemRateSignalSkipped(opts: {
+  source: string;
+  cardId: string | null;
+  gradingCompany: string;
+  grade: string;
+  gemRate: number;
+  gemRateBand: string;
+  confidence: string;
+  totalGradedObserved: number;
+  reason: string;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "gem_rate_signal_skipped",
+      source: opts.source,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      gemRate: Math.round(opts.gemRate * 1000) / 1000,
+      gemRateBand: opts.gemRateBand,
+      confidence: opts.confidence,
+      totalGradedObserved: opts.totalGradedObserved,
+      reason: opts.reason,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY helper. Mirrors the isTopGrade
+ * check inside gemRateSignal.service.ts so this file doesn't need a
+ * cyclic import back through the service to determine whether a grade
+ * would have been a candidate for the gem-rate override.
+ */
+function isTopGradeForTelemetry(company: string, gradeKey: string): boolean {
+  const c = company.toUpperCase().trim();
+  const g = gradeKey.trim().toUpperCase();
+  return (
+    (c === "PSA" && g === "10")
+    || (c === "BGS" && (g === "10" || g === "10 BLACK LABEL" || g === "9.5"))
+    || (c === "SGC" && g === "10")
+  );
 }
 
 /**

@@ -50,6 +50,21 @@ export interface PortfolioHolding {
   gradingCompany?: string;
   gradeCompany?: string;
   gradeValue?: number;
+  /**
+   * CF-BGS-BLACK-LABEL-INGEST (Drew, 2026-07-16, PR #495 follow-up):
+   * distinguishes a BGS 10 Black Label / Pristine 10 slab from a regular
+   * BGS 10. When true AND gradeCompany === "BGS" AND gradeValue === 10,
+   * autoPriceHolding passes grade "10 Black Label" to getGraderPremium,
+   * which routes to the 9x fallback tier (12/9/7/5.5 tiered) instead of
+   * the regular BGS 10 3.5x tier. Absent / false → treated as regular
+   * BGS 10.
+   *
+   * Only meaningful for BGS 10; the field is ignored for other
+   * (company, grade) tuples. Persisted so the CH taxonomy conflation
+   * of Pristine 10 UUIDs doesn't erase the tier when Drew's own
+   * inventory record already carries it.
+   */
+  isBlackLabel?: boolean;
   quantity?: number;
   purchasePrice?: number;
   totalCostBasis?: number;

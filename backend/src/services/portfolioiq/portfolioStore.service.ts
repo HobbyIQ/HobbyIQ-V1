@@ -1145,6 +1145,7 @@ export function buildEstimateRequestFromHolding(
       String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() ||
       undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+    isBlackLabel: (holding as any).isBlackLabel === true ? true : undefined,
     cardId: pinnedCardId,
     // CF-HOLDING-REFRESH-PARALLELID-THREAD (2026-06-26): thread the
     // holding's stored parallelId into the engine input so the CH
