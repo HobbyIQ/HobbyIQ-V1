@@ -26,10 +26,17 @@ export interface CardParallel {
 /** @deprecated use CardParallel — alias retained for back-compat. */
 export type CardsightParallel = CardParallel;
 
+// CF-LEGACY-UNION-CLEANUP (audit PR #491, 2026-07-15): retired the
+// deprecated "cardsight-catalog" member. Grep-verified zero backend
+// producers of `source: "cardsight-catalog"`. iOS decodes source as a
+// plain String? (CompIQSearchModels.swift:62,984,1004) so the removal
+// is a backend-type contract narrowing only; the iOS display-string
+// switch at CompIQSearchModels.swift:104 keeps its case as harmless
+// dead code. Only wire consumer that ever emitted this string was a
+// preview mock at CompIQPricedCardView.swift:4264 (not a real path).
 export type CardIdentitySource =
   | "psa-cert"
   | "catalog"
-  | "cardsight-catalog"   // DEPRECATED — retained for wire back-compat with older iOS clients
   | "bgs-cert"
   | "sgc-cert"
   | "cgc-cert";

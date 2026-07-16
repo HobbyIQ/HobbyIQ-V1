@@ -51,13 +51,14 @@ export type GradedProjectionConfidenceTier =
   | "rough"         // tier-1 card ratio × parallel anchor (compose noise)
   | "ballpark"      // tier-3 market ratio × any anchor — SURFACES with number
                     // (CF-ALWAYS-A-NUMBER 2026-06-12 reversed the prior 3A drop)
-  | "no-data"       // no anchor at all (no raw/parallel/release value to multiply)
-  | "insufficient"; // DEPRECATED — kept for back-compat in the union; the engine
-                    // no longer emits it. classifyConfidence routes the no-anchor
-                    // case to "no-data" instead. Existing callers consuming the
-                    // type continue to compile; new code should branch on
-                    // "no-data". Remove in a future cleanup CF when all callers
-                    // (assembler, tests, iOS) have shifted off.
+  | "no-data";      // no anchor at all (no raw/parallel/release value to multiply)
+// CF-LEGACY-UNION-CLEANUP (audit PR #491, 2026-07-15): retired the
+// deprecated "insufficient" tier. Grep-verified zero backend producers
+// of `confidence: "insufficient"` / `confidenceTier: "insufficient"`
+// after classifyConfidence was retargeted to "no-data" for the no-
+// anchor case. iOS decodes confidenceTier as a plain String? so any
+// stale wire value from an older tenant would round-trip as an unknown
+// string — no crash.
 
 export type GradedProjectionRatioSource =
   | "card"          // Tier 1: card-specific base graded/raw ratio
@@ -1657,7 +1658,9 @@ function buildObservedAnchorBasis(
 /** Legacy spread reader — kept for any external consumer; new code reads
  *  GRADE_CONFIDENCE[tier].spreadPct directly. */
 function spreadFor(tier: GradedProjectionConfidenceTier): number {
-  if (tier === "no-data" || tier === "insufficient") return 0;
+  // CF-LEGACY-UNION-CLEANUP (PR #491): "insufficient" comparison retired
+  // with the union member — engine no longer produces it.
+  if (tier === "no-data") return 0;
   return GRADE_CONFIDENCE[tier].spreadPct;
 }
 
@@ -1873,7 +1876,6 @@ export function computeGradedProjection(
       anchor.price !== null
       && ratio.ratio !== null
       && tier !== "no-data"
-      && tier !== "insufficient"  // defensive — engine never produces this now
     ) {
       const rawValue = anchor.price * ratio.ratio;
       const cfg = GRADE_CONFIDENCE[tier];
