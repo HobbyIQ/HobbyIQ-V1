@@ -161,6 +161,40 @@ struct APIService {
         return response.suggestions ?? []
     }
 
+    /// CF-LIVE-SUGGEST (2026-07-06): richer live-suggest driver for the
+    /// Find Cards search bar. Hits the same `/api/search/cards`
+    /// dispatcher as `searchVariantList` so results are the same rows
+    /// the full-search picker would render, but with a tighter timeout
+    /// so a slow dispatcher call can't gum up a per-keystroke debounce.
+    /// Failure is swallowed at the call site — live suggestions are
+    /// advisory only.
+    func fetchLiveCardSuggestions(q: String, limit: Int = 8) async throws -> [CompIQVariantHit] {
+        let trimmed = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return [] }
+        let body = CompIQVariantSearchRequest(input: trimmed, hint: "freetext")
+        let response = try await post(
+            path: "/api/search/cards",
+            body: body,
+            responseType: CompIQVariantListResponse.self,
+            timeoutSeconds: 6
+        )
+        return Array((response.results ?? []).prefix(limit))
+    }
+
+    /// CF-LIVE-SUGGEST (2026-07-06): parse-preview endpoint driving the
+    /// "We understood: year=…" hint line. Advisory only — a fetch
+    /// failure hides the line silently and does NOT block the literal
+    /// search. Tight timeout for per-keystroke debounce.
+    func fetchParsePreview(q: String) async throws -> CompIQParsePreviewResponse {
+        let trimmed = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await get(
+            path: "/api/compiq/parse-preview",
+            queryItems: [URLQueryItem(name: "q", value: trimmed)],
+            responseType: CompIQParsePreviewResponse.self,
+            timeoutSeconds: 6
+        )
+    }
+
     func searchVariantList(query: String, hint: String = "freetext") async throws -> CompIQVariantListResponse {
         let body = CompIQVariantSearchRequest(input: query, hint: hint)
         // CF-UNIFIED-SEARCH-ENDPOINT (2026-07-01): switched from the legacy
@@ -184,7 +218,8 @@ struct APIService {
         gradeCompany: String?,
         gradeValue: Double?,
         parallelId: String? = nil,
-        parallelName: String? = nil
+        parallelName: String? = nil,
+        isBlackLabel: Bool? = nil
     ) async throws -> CompIQPriceByIdResponse {
         // CF-PRICE-BY-ID-ROUTE (2026-06-07): when a candidate id is pinned,
         // send id + grade ONLY — omit a meaningful query. Backend treats a
@@ -220,7 +255,8 @@ struct APIService {
             gradeCompany: gradeCompany,
             gradeValue: gradeValue,
             parallelId: cleanParallelId,
-            parallelName: cleanParallelName
+            parallelName: cleanParallelName,
+            isBlackLabel: isBlackLabel
         )
         // CF-FIND-CARDS-REGROUND: price-by-id needs headroom too. With a
         // `query` + `parallelId` + `parallelName` (the natural shape a
@@ -492,6 +528,27 @@ struct APIService {
         try await get(path: "/api/portfolio/holdings/\(holdingId)/history", responseType: HoldingPriceHistoryResponse.self)
     }
 
+    // MARK: - PR #425: Supply/Demand portfolio aggregates
+
+    /// Portfolio-wide bias + per-holding movers. Powers the
+    /// Supply/Demand Dashboard card on Portfolio Home.
+    func fetchSupplyDemandSummary() async throws -> SupplyDemandSummaryResponse {
+        try await get(path: "/api/portfolio/supply-demand-summary", responseType: SupplyDemandSummaryResponse.self)
+    }
+
+    /// Three-column portfolio totals (gross / trend-adjusted / net after
+    /// fees) plus a breakdown by verdict class. Powers the
+    /// Signal-Weighted Totals card on Portfolio Home.
+    func fetchSignalWeightedTotals() async throws -> SignalWeightedTotalsResponse {
+        try await get(path: "/api/portfolio/signal-weighted-totals", responseType: SignalWeightedTotalsResponse.self)
+    }
+
+    /// Watchlisted players whose supply/demand verdict is bullish.
+    /// Powers the Buy Candidates section on DailyIQ.
+    func fetchWatchlistBullCandidates() async throws -> WatchlistBullCandidatesResponse {
+        try await get(path: "/api/portfolio/watchlist-bull-candidates", responseType: WatchlistBullCandidatesResponse.self)
+    }
+
     func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
@@ -692,6 +749,283 @@ struct APIService {
                 URLQueryItem(name: "format", value: format),
             ],
             responseType: ERPTaxExportResponse.self
+        )
+    }
+
+    // MARK: Scope 3 — Purchases / Held Expenses / Inventory Analytics
+    //
+    // Backend routes shipped 2026-07-12 via PRs #377-#381. All hang off the
+    // established `/api/portfolio/erp/*` (and `/holdings/:id/expenses`) namespace.
+
+    /// Imports the user's recent eBay purchase orders into the ERP
+    /// purchases store. Backend caps `days` at 90 and rejects `< 1`.
+    /// Idempotent on `ebayOrderId` — safe to re-run.
+    func importEbayPurchases(days: Int) async throws -> EbayImportSummary {
+        try await post(
+            path: "/api/portfolio/erp/purchases/import/ebay",
+            queryItems: [URLQueryItem(name: "days", value: String(days))],
+            body: EmptyBody(),
+            responseType: EbayImportSummary.self,
+            timeoutSeconds: 60
+        )
+    }
+
+    /// Lists purchases in the given window. Empty query = last 90 days.
+    /// `source` filters to `"ebay"` or `"manual"`; nil returns both.
+    func fetchPurchases(from: String? = nil, to: String? = nil, source: String? = nil) async throws -> PortfolioPurchaseListResponse {
+        var items: [URLQueryItem] = []
+        if let from { items.append(URLQueryItem(name: "from", value: from)) }
+        if let to { items.append(URLQueryItem(name: "to", value: to)) }
+        if let source { items.append(URLQueryItem(name: "source", value: source)) }
+        return try await get(
+            path: "/api/portfolio/erp/purchases",
+            queryItems: items,
+            responseType: PortfolioPurchaseListResponse.self
+        )
+    }
+
+    /// Creates a manual purchase entry. Non-idempotent (each POST = new row).
+    func createPurchase(_ request: PortfolioPurchaseCreateRequest) async throws -> PortfolioPurchaseCreateResponse {
+        try await post(
+            path: "/api/portfolio/erp/purchases",
+            body: request,
+            responseType: PortfolioPurchaseCreateResponse.self
+        )
+    }
+
+    /// Attaches (Set-union merge, idempotent) the given holdings to a
+    /// purchase. Used to attribute cataloged holdings back to an
+    /// auto-imported eBay purchase whose `holdingIds[]` came in empty.
+    func linkPurchaseHoldings(purchaseId: String, holdingIds: [String]) async throws -> PortfolioPurchaseLinkHoldingsResponse {
+        try await patch(
+            path: "/api/portfolio/erp/purchases/\(purchaseId)/link-holdings",
+            body: PortfolioPurchaseLinkHoldingsRequest(holdingIds: holdingIds),
+            responseType: PortfolioPurchaseLinkHoldingsResponse.self
+        )
+    }
+
+    /// Adds an expense incurred while holding a card (grading, supplies,
+    /// insurance, storage, etc). Backend rolls this into the holding's
+    /// `totalCostBasis` and returns the fresh value — do NOT double-subtract
+    /// on the client.
+    func createHoldingExpense(holdingId: String, request: HoldingHeldExpenseCreateRequest) async throws -> HoldingHeldExpenseCreateResponse {
+        try await post(
+            path: "/api/portfolio/holdings/\(holdingId)/expenses",
+            body: request,
+            responseType: HoldingHeldExpenseCreateResponse.self
+        )
+    }
+
+    func fetchHoldingExpenses(holdingId: String) async throws -> HoldingHeldExpenseListResponse {
+        try await get(
+            path: "/api/portfolio/holdings/\(holdingId)/expenses",
+            responseType: HoldingHeldExpenseListResponse.self
+        )
+    }
+
+    func deleteHoldingExpense(holdingId: String, expenseId: String) async throws -> HoldingHeldExpenseDeleteResponse {
+        try await delete(
+            path: "/api/portfolio/holdings/\(holdingId)/expenses/\(expenseId)",
+            responseType: HoldingHeldExpenseDeleteResponse.self
+        )
+    }
+
+    /// Inventory turnover + aging analytics. `from`/`to` scope the
+    /// turnover window; the aging + oldestHoldings tables are always
+    /// as-of-now (not window-scoped).
+    func fetchInventoryAnalytics(from: String? = nil, to: String? = nil) async throws -> InventoryAnalyticsResponse {
+        var items: [URLQueryItem] = []
+        if let from { items.append(URLQueryItem(name: "from", value: from)) }
+        if let to { items.append(URLQueryItem(name: "to", value: to)) }
+        return try await get(
+            path: "/api/portfolio/erp/inventory-analytics",
+            queryItems: items,
+            responseType: InventoryAnalyticsResponse.self
+        )
+    }
+
+    // MARK: Scope 3.5 — eBay auto-import Review Queue (backend PRs #383-#388)
+    //
+    // Auto-imported eBay holdings land in `status = "pending-review"` and
+    // stay OUT of inventory / P&L / dashboard totals until the user
+    // confirms them. iOS surfaces a "Review needed (N)" queue at the top
+    // of the inventory home; confirm/reject flow drains it.
+
+    /// Returns holdings the user hasn't approved yet. Backend has been
+    /// seen returning either a bare `[InventoryCard]` array OR the
+    /// same envelope shape the main `/holdings` endpoint uses
+    /// (`{ holdings: [...] }` / `{ items: [...] }` / `{ pending: [...] }`).
+    /// The `PendingReviewEnvelope` decoder tries each in order.
+    func fetchPendingReviewHoldings() async throws -> [InventoryCard] {
+        let envelope: PendingReviewEnvelope = try await get(
+            path: "/api/portfolio/holdings/pending-review",
+            responseType: PendingReviewEnvelope.self,
+            timeoutSeconds: 20
+        )
+        return envelope.holdings
+    }
+
+    /// Confirms a pending-review holding. Body carries ONLY the fields the
+    /// user edited during review — unchanged fields must not be resent.
+    /// Server flips `status → active`, records `correctionCount`, and
+    /// makes the holding visible to every downstream reader.
+    ///
+    /// PR #425 aftermath (2026-07-14): backend runs autoPriceHolding +
+    /// Cardsight rescue on the confirm round-trip, which pushes the
+    /// response past the default ~10s URLRequest timeout on cold hits.
+    /// Matches the 30s ceiling `updatePortfolioHolding` already uses
+    /// for the same reason.
+    func confirmPendingHolding(id: String, patch: HoldingConfirmRequest) async throws -> HoldingConfirmResponse {
+        try await post(
+            path: "/api/portfolio/erp/holdings/\(id)/confirm",
+            body: patch,
+            responseType: HoldingConfirmResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    /// 2026-07-15: best-effort moderation — flags a comp as wrong so
+    /// the backend soft-deletes it from the shared pool. Returns
+    /// `true` on success, `false` on 404 (comp already gone / not
+    /// found). Any other error bubbles up to the caller, but the
+    /// UI wires this as a fire-and-forget so callers can safely
+    /// swallow the throw. Reason is capped to 200 chars in the UI.
+    func flagCompAsWrong(cardId: String, compId: String, reason: String?) async throws -> Bool {
+        struct FlagRequest: Encodable {
+            let cardId: String
+            let compId: String
+            let reason: String?
+        }
+        struct FlagResponse: Decodable {
+            let success: Bool?
+            let status: String?
+        }
+        do {
+            let response: FlagResponse = try await post(
+                path: "/api/portfolioiq/comps/flag-wrong",
+                body: FlagRequest(cardId: cardId, compId: compId, reason: reason),
+                responseType: FlagResponse.self,
+                timeoutSeconds: 15
+            )
+            if response.status == "not-found" { return false }
+            return response.success ?? true
+        } catch let APIServiceError.httpError(statusCode, _) where statusCode == 404 {
+            return false
+        }
+    }
+
+    /// 2026-07-15: dedicated Price History screen — long-window
+    /// bucketed sales history for a single cardId. Backend returns
+    /// pre-bucketed rows (weekly / monthly / quarterly) so iOS just
+    /// plots them. Optional `minConfidence` filter isn't exposed on
+    /// the UI yet; wire the param for future filtering surfaces.
+    func fetchPriceHistory(
+        cardId: String,
+        window: String,
+        bucket: String,
+        minConfidence: Double? = nil
+    ) async throws -> PriceHistoryResponse {
+        var query: [URLQueryItem] = [
+            URLQueryItem(name: "window", value: window),
+            URLQueryItem(name: "bucket", value: bucket)
+        ]
+        if let minConfidence {
+            query.append(URLQueryItem(name: "minConfidence", value: String(minConfidence)))
+        }
+        let encoded = cardId
+            .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        return try await get(
+            path: "/api/compiq/cards/\(encoded)/price-history",
+            queryItems: query,
+            responseType: PriceHistoryResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    /// PR #441 (2026-07-14): dry-run suggester used by the Verify Card
+    /// sheet. iOS debounces field edits and re-hits this endpoint to
+    /// get a fresh normalized-fields diff + best catalog match +
+    /// alternatives. Never commits — that's what `confirmPendingHolding`
+    /// does after the user hits Confirm with the picked cardId.
+    func dryRunSuggest(_ request: DryRunSuggestRequest) async throws -> DryRunSuggestResponse {
+        try await post(
+            path: "/api/portfolio/holdings/dry-run-suggest",
+            body: request,
+            responseType: DryRunSuggestResponse.self,
+            timeoutSeconds: 20
+        )
+    }
+
+    /// Rejects a pending-review holding (auto-import misfire). Server
+    /// deletes the holding and unlinks it from its source purchase.
+    func rejectPendingHolding(id: String) async throws -> HoldingRejectResponse {
+        try await post(
+            path: "/api/portfolio/erp/holdings/\(id)/reject",
+            body: EmptyBody(),
+            responseType: HoldingRejectResponse.self
+        )
+    }
+
+    /// CF-CARDID-SUGGEST (backend PR #389) + CF-PROGRESSIVE-BUCKETS
+    /// (PR #393): kick a suggestion pass across pending-review
+    /// holdings. `force=true` recomputes even rows that already have a
+    /// suggestion — used when the user pulls to refresh the queue.
+    /// Default `false` skips already-suggested rows for a fast pass.
+    func generateHoldingSuggestions(force: Bool = false) async throws -> HoldingSuggestionGenerateResponse {
+        try await post(
+            path: "/api/portfolio/erp/holdings/generate-suggestions",
+            body: HoldingSuggestionGenerateRequest(force: force),
+            responseType: HoldingSuggestionGenerateResponse.self,
+            timeoutSeconds: 60
+        )
+    }
+
+    /// CF-RECONCILE-FINALIZE (backend PR #390): unconditional finalize for
+    /// eBay entries stuck without fee data. Body carries a free-text
+    /// `reason` (audit only) and optional `netPayout`. Backend flips
+    /// both axes to finalized, zero-fills only null granular fees, and
+    /// returns `entry.needsReconciliation: false` so the VM drops the
+    /// row from the queue.
+    func finalizeReconcileEntry(entryId: String, reason: String, netPayout: Double?) async throws -> ERPFinalizeResponse {
+        let body = ERPFinalizeRequest(reason: reason, netPayout: netPayout)
+        return try await post(
+            path: "/api/portfolio/erp/unreconciled/\(entryId)/finalize",
+            body: body,
+            responseType: ERPFinalizeResponse.self
+        )
+    }
+
+    // MARK: Scope 3.5 — Sold-Comps for card detail (backend PR #386)
+
+    /// Filter-based sold-comps lookup for the card detail "Recent comps"
+    /// section. Grade accepts either "PSA 10" or "PSA10". Every filter
+    /// is optional; the backend narrows the population based on what's
+    /// supplied, then returns median/count/stats.
+    func fetchSoldComps(
+        year: String? = nil,
+        set: String? = nil,
+        parallel: String? = nil,
+        grade: String? = nil,
+        playerName: String? = nil,
+        cardNumber: String? = nil,
+        isAuto: Bool? = nil,
+        cardId: String? = nil,
+        limit: Int? = nil
+    ) async throws -> SoldCompsResponse {
+        var items: [URLQueryItem] = []
+        if let year { items.append(URLQueryItem(name: "year", value: year)) }
+        if let set { items.append(URLQueryItem(name: "set", value: set)) }
+        if let parallel { items.append(URLQueryItem(name: "parallel", value: parallel)) }
+        if let grade { items.append(URLQueryItem(name: "grade", value: grade)) }
+        if let playerName { items.append(URLQueryItem(name: "playerName", value: playerName)) }
+        if let cardNumber { items.append(URLQueryItem(name: "cardNumber", value: cardNumber)) }
+        if let isAuto { items.append(URLQueryItem(name: "isAuto", value: isAuto ? "true" : "false")) }
+        if let cardId { items.append(URLQueryItem(name: "cardId", value: cardId)) }
+        if let limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
+        return try await get(
+            path: "/api/portfolio/sold-comps",
+            queryItems: items,
+            responseType: SoldCompsResponse.self
         )
     }
 
@@ -1215,7 +1549,13 @@ struct APIService {
         cardId: String,
         salePrice: Double,
         fees: Double,
-        date: Date
+        date: Date,
+        notes: String? = nil,
+        salesChannel: String? = nil,
+        channelNote: String? = nil,
+        paymentMethod: String? = nil,
+        paymentNote: String? = nil,
+        saleLocation: PortfolioIQSaleLocation? = nil
     ) async throws -> PortfolioIQActionResponse {
         return try await post(
             path: "/api/portfolio/holdings/\(cardId)/sell",
@@ -1228,7 +1568,12 @@ struct APIService {
                 shipping: 0,
                 soldAt: ISO8601DateFormatter().string(from: date),
                 source: "manual",
-                notes: nil
+                notes: notes,
+                salesChannel: salesChannel,
+                channelNote: channelNote,
+                paymentMethod: paymentMethod,
+                paymentNote: paymentNote,
+                saleLocation: (saleLocation?.isEmpty ?? true) ? nil : saleLocation
             ),
             responseType: PortfolioIQActionResponse.self
         )
@@ -1243,10 +1588,18 @@ struct APIService {
     }
 
     func updatePortfolioHolding(_ card: InventoryCard) async throws -> PortfolioIQActionResponse {
+        // PR #425 aftermath (2026-07-14): the edit-save PATCH now
+        // threads every backend-owned field back through the body so
+        // the local cache doesn't lose fmv / heldExpenses / ebay*
+        // fields after an edit. Backend can trigger autoPriceHolding
+        // + a Cardsight rescue on the round-trip, which pushes the
+        // response past the default 15s URLRequest timeout. Matches
+        // the 30s ceiling other write endpoints already use.
         try await patch(
             path: "/api/portfolio/holdings/\(card.id.uuidString)",
             body: card,
-            responseType: PortfolioIQActionResponse.self
+            responseType: PortfolioIQActionResponse.self,
+            timeoutSeconds: 30
         )
     }
 
@@ -1514,7 +1867,8 @@ struct APIService {
         queryItems: [URLQueryItem] = [],
         body: Request,
         responseType: Response.Type,
-        sessionId: String? = nil
+        sessionId: String? = nil,
+        timeoutSeconds: TimeInterval? = nil
     ) async throws -> Response {
         let bodyData = try encoder.encode(body)
         #if DEBUG
@@ -1522,7 +1876,7 @@ struct APIService {
             print("Request Body:", bodyText)
         }
         #endif
-        let request = try makeRequest(path: path, queryItems: queryItems, method: "PATCH", bodyData: bodyData, sessionId: sessionId)
+        let request = try makeRequest(path: path, queryItems: queryItems, method: "PATCH", bodyData: bodyData, sessionId: sessionId, timeoutSeconds: timeoutSeconds)
         return try await perform(request, responseType: responseType)
     }
 
@@ -1687,6 +2041,19 @@ struct APIService {
 
         let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         return message.isEmpty ? "Something went wrong." : message
+    }
+
+    /// CF-SELL-TRACKING (2026-07-11): extracts a user-friendly reason
+    /// from a 400 Bad Request without the noisy "The server returned
+    /// status 400." prefix `errorMessage(from:)` produces. Returns nil
+    /// when the error isn't a 400 or the body carries no readable
+    /// message — caller should then fall back to the generic path.
+    static func validationErrorMessage(from error: Error) -> String? {
+        guard case let APIServiceError.httpError(statusCode, body) = error, statusCode == 400 else {
+            return nil
+        }
+        let message = APIService.backendMessage(from: body).trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? nil : message
     }
 
     static func backendMessage(from body: String) -> String {
@@ -2017,10 +2384,23 @@ struct APIService {
         "/api/auth/signout"
     ]
 
+    /// PR #425 (2026-07-13): best-effort discovery/aggregate endpoints.
+    /// These fire on tab appearance and every pull-to-refresh; a 401
+    /// (backend not yet deployed, permission gap, or a transient
+    /// gateway hiccup) MUST NOT log the user out. Callers already
+    /// treat any error as "hide the card" — the notification bypass
+    /// keeps that contract honest.
+    private static let bestEffortPaths: Set<String> = [
+        "/api/portfolio/supply-demand-summary",
+        "/api/portfolio/signal-weighted-totals",
+        "/api/portfolio/watchlist-bull-candidates"
+    ]
+
     private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {
         guard statusCode == 401 else { return }
         let path = url?.path ?? ""
         guard Self.authFlowPaths.contains(path) == false else { return }
+        guard Self.bestEffortPaths.contains(path) == false else { return }
         NotificationCenter.default.post(name: .hobbyIQAuthSessionInvalidated, object: nil)
     }
 }
@@ -2878,7 +3258,17 @@ struct RegradeRequest: Encodable {
 struct RegradeResponse: Decodable {
     let message: String?
     let id: String?
+    /// Legacy field — still on the wire pre-PR #395.
     let updatedHolding: InventoryCard?
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): universal
+    /// `holding` + `entry.holding` cover for new callers. Prefer
+    /// `resolvedHolding` which cascades through all three keys.
+    let holding: InventoryCard?
+    let entry: HoldingMutationEntry?
+
+    var resolvedHolding: InventoryCard? {
+        entry?.holding ?? holding ?? updatedHolding
+    }
 }
 
 // MARK: - Grading Tier Catalog (backend PR #300, 2026-07-06)
@@ -3032,6 +3422,45 @@ struct PortfolioIQHoldingsEnvelope: Decodable {
     }
 }
 
+/// CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388) + CF-PROGRESSIVE-BUCKETS
+/// (PR #393): `GET /api/portfolio/holdings/pending-review` canonical
+/// shape is `{ userId, count, holdings: [] }`. Historically iOS saw
+/// bare arrays and `{items|pending: [...]}` variants too — this
+/// decoder still accepts them defensively so a wire-shape drift
+/// doesn't break the queue.
+struct PendingReviewEnvelope: Decodable {
+    let holdings: [InventoryCard]
+
+    private enum CodingKeys: String, CodingKey {
+        case holdings, items, pending, count, userId
+    }
+
+    init(from decoder: Decoder) throws {
+        // Try raw array first (legacy shape).
+        if let single = try? decoder.singleValueContainer(),
+           let bare = try? single.decode([InventoryCard].self) {
+            self.holdings = bare
+            return
+        }
+        // Preferred envelope keys.
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            if let holdings = try? container.decode([InventoryCard].self, forKey: .holdings) {
+                self.holdings = holdings
+                return
+            }
+            if let items = try? container.decode([InventoryCard].self, forKey: .items) {
+                self.holdings = items
+                return
+            }
+            if let pending = try? container.decode([InventoryCard].self, forKey: .pending) {
+                self.holdings = pending
+                return
+            }
+        }
+        self.holdings = []
+    }
+}
+
 private struct PortfolioIQSellRequest: Codable {
     let quantity: Int
     let salePrice: Double
@@ -3041,6 +3470,28 @@ private struct PortfolioIQSellRequest: Codable {
     let soldAt: String
     let source: String
     let notes: String?
+    /// CF-SELL-TRACKING (2026-07-11): closed-enum sales channel accepted
+    /// by `parseSalesTrackingFields` (portfolioStore.service.ts:693).
+    /// `salesChannel == "other"` REQUIRES a non-empty `channelNote`.
+    let salesChannel: String?
+    let channelNote: String?
+    let paymentMethod: String?
+    let paymentNote: String?
+    let saleLocation: PortfolioIQSaleLocation?
+}
+
+/// CF-SELL-TRACKING (2026-07-11): structured location on a sale.
+/// Backend interface at portfolioStore.service.ts:602 —
+/// `venue` ≤80 chars, `city` ≤60 chars, `state` is US 2-letter uppercase.
+/// Any subset may be present; all-nil means no location tag.
+struct PortfolioIQSaleLocation: Codable, Hashable {
+    let venue: String?
+    let city: String?
+    let state: String?
+
+    var isEmpty: Bool {
+        (venue?.isEmpty ?? true) && (city?.isEmpty ?? true) && (state?.isEmpty ?? true)
+    }
 }
 
 /// CF-EBAY-PUBLISH-400-FIX (2026-06-17): wire shape matches backend's
@@ -3236,6 +3687,20 @@ struct PortfolioIQActionResponse: Decodable {
     let message: String?
     let holding: InventoryCard?
     let id: String?
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): every write
+    /// route (PATCH, /sell, /regrade, /refresh) also stamps the
+    /// persisted holding under `entry.holding`, plus sell-specific
+    /// fields when the row was fully or partially sold.
+    let entry: HoldingMutationEntry?
+    let holdingRemoved: Bool?
+    let remainingQuantity: Int?
+    let sold: PortfolioLedgerEntry?
+
+    /// Freshest holding representation: `entry.holding` beats top-level
+    /// `holding`. Nil when the full quantity was sold (`holdingRemoved`).
+    var updatedHolding: InventoryCard? {
+        entry?.holding ?? holding
+    }
 }
 
 struct EBayConnectionStatusResponse: Decodable {
