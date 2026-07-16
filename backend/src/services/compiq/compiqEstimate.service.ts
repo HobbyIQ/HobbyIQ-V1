@@ -51,6 +51,11 @@ import {
 } from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
 import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
+import {
+  multiplierFromGemRate,
+  shouldUseGemRateMultiplier,
+  type GemRateSignal,
+} from "./gemRateSignal.service.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
 // Issue #25 Phase 3 — tier-anchored predicted-range fallback (default OFF).
 // Activated by env flag COMPIQ_PHASE3_TIER_ANCHORED=true. NEVER replaces the
@@ -1225,6 +1230,7 @@ export function getGraderPremium(
   cardClass?: "autograph" | "base",
   cardYear?: number | null,
   productSet?: string | null,
+  gemRateSignal?: GemRateSignal | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
@@ -1240,6 +1246,23 @@ export function getGraderPremium(
   const isModernForOverride = !cardYear || cardYear >= 1990;
   if (company === "PSA" && (gradeKey === "8" || gradeKey === "8.0") && isModernForOverride) {
     return 1.0;
+  }
+
+  // CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up): when the
+  // caller has enough observed graded sales for this card to derive a
+  // gem-rate signal, and the requested grade is a top grade (PSA 10 /
+  // BGS 10 / BGS 10 Black Label / BGS 9.5 / SGC 10), let the gem-rate
+  // formula override the static table. This is the mechanism that lets
+  // the top-grade multiplier "learn" per card as observations accumulate,
+  // instead of being pinned to a category-wide anchor. condition-sensitive-
+  // set bump still stacks on top (multiplicative), same as every other
+  // path — a chrome-chipping era for a card with a 5% gem rate combines
+  // both effects. Mid-tier grades intentionally skip this branch because
+  // their pop is dominated by non-gem submissions and the formula would
+  // over-claim.
+  if (gemRateSignal && shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)) {
+    const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
+    return multiplierFromGemRate(gemRateSignal.gemRate) * setBump;
   }
 
   // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
