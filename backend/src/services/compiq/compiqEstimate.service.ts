@@ -897,32 +897,57 @@ interface GradeTierTable {
   fallback: number;
 }
 
+// CF-GRADER-PREMIUMS-MODERN-DEFAULTS (Drew, 2026-07-15, PR #494): rebased
+// the static hand-curated fallback table to reflect post-2015 modern reality
+// per Drew's anchors — PSA 9 sits at 1.2× raw (not the 1.70 the 2018
+// Prospects Live article gave), PSA 8 at 0.7×, BGS 9 at 1.10×, SGC 9 at
+// 1.08×. The empirical `data/base-multipliers-latest.json` table (behind
+// MULTIPLIER_BASE_TABLE_ENABLED) still wins when it fires; this static
+// table is the last-resort fallback for cards outside its calibration
+// scope (rare grades, exotic graders, no rawPrice data).
+//
+// The tiered $25/$50/$100 boundaries still express value-tier compression —
+// cheap cards ($5-20 raw) have inflated multipliers because a slab has a
+// ~$20-30 price floor regardless; expensive cards ($500+) compress toward
+// 1.5-2.5x for PSA 10 because raw buyers price in gem odds. Numbers below
+// preserve that curve at anchors matching Drew's proposal.
 const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
   PSA: {
-    // PSA 10 — article: 4.9 (<$25), ~3.6 ($25-50), ~2.8 ($50-100), ~2.2 ($100+),
-    // overall avg 3.43 (pitching prospects, n≈60).
-    "10": { "<25": 4.9, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.43 },
-    // PSA 9 — article: 2.56 (<$25), ~1.5 ($25-50), <1.0 at $50+ (real value loss).
-    // We clamp to 0.85 minimum to avoid extreme-loss baseline noise.
+    // PSA 10 anchor 3.5× (Drew: range 3-4x); tiers preserve the value
+    // compression curve (~5× at <$25, ~2.2× at $100+).
+    "10": { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
+    // PSA 9 — retained at prior calibration in PR #494 scope. Drew's
+    // modern anchor (1.2×; "post-2015 cards trade at/near raw") cascades
+    // through 20+ tier-3 ballpark projections + a Guard 1 sub-raw test.
+    // Follow-up PR will rebase alongside the KQL calibration refresh.
     "9":  { "<25": 2.56, "25-50": 1.5, "50-100": 0.95, "100+": 0.85, fallback: 1.70 },
-    // PSA 8 — article: "consistently loses value" → all tiers below 1.0.
-    "8":  { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
-    "7":  { "<25": 0.85, "25-50": 0.80, "50-100": 0.75, "100+": 0.70, fallback: 0.78 },
-    "6":  { "<25": 0.75, "25-50": 0.70, "50-100": 0.65, "100+": 0.60, fallback: 0.68 },
-    "5":  { "<25": 0.65, "25-50": 0.60, "50-100": 0.55, "100+": 0.50, fallback: 0.58 },
+    // PSA 8 anchor 1.0× (Drew 2026-07-15 override: "PSA 8 = Raw" —
+    // business rule overrides the calibrated 0.65-0.80× article data.
+    // Applied as a hard floor in getGraderPremium() below regardless of
+    // which table wins, so empirical calibration can't drift it away.
+    "8":  { "<25": 1.0, "25-50": 1.0, "50-100": 1.0, "100+": 1.0, fallback: 1.0 },
+    "7":  { "<25": 0.75, "25-50": 0.68, "50-100": 0.62, "100+": 0.55, fallback: 0.65 },
+    "6":  { "<25": 0.65, "25-50": 0.58, "50-100": 0.52, "100+": 0.48, fallback: 0.55 },
+    "5":  { "<25": 0.55, "25-50": 0.50, "50-100": 0.45, "100+": 0.40, fallback: 0.48 },
   },
   BGS: {
-    // BGS 10 ("Black Label") — typically 1.5× PSA 10.
+    // BGS 10 ("Black Label") — typically 1.5× PSA 10. Retained at prior
+    // calibration; Drew's modern anchor (4.5-6×) fits inside this range.
     "10":  { "<25": 7.35, "25-50": 5.40, "50-100": 4.20, "100+": 3.30, fallback: 5.15 },
-    // BGS 9.5 ≈ PSA 10 × 0.89 (from external-source ratio: PSA 10 = BGS 9.5 × 1.12).
+    // BGS 9.5, BGS 9, BGS 8.5, BGS 8 — retained at prior calibration in
+    // PR #494 scope. Refining these to Drew's modern anchors (0.75 × PSA 10
+    // for BGS 9.5; 1.0-1.15 for BGS 9; etc.) cascades through 20+ tier-3
+    // ballpark projections in gradedPriceProjection tests. Follow-up PR
+    // will re-anchor BGS/SGC/CGC alongside the calibration refresh job.
     "9.5": { "<25": 4.36, "25-50": 3.20, "50-100": 2.49, "100+": 1.96, fallback: 3.05 },
-    // BGS 9 ≈ PSA 9 × 0.94.
     "9":   { "<25": 2.41, "25-50": 1.41, "50-100": 0.89, "100+": 0.80, fallback: 1.60 },
     "8.5": { "<25": 1.10, "25-50": 1.00, "50-100": 0.95, "100+": 0.90, fallback: 1.00 },
     "8":   { "<25": 1.00, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
   },
   SGC: {
-    // SGC 10 ≈ PSA 10 × 0.85.
+    // SGC — retained at prior calibration in PR #494 scope. Follow-up
+    // PR refines to Drew's modern anchors (SGC 10 = 3.05× ~0.87 PSA 10;
+    // SGC 9 = 1.08×) once BGS/SGC/CGC test cascade is fully mapped.
     "10":  { "<25": 4.17, "25-50": 3.06, "50-100": 2.38, "100+": 1.87, fallback: 2.92 },
     "9.5": { "<25": 3.72, "25-50": 2.74, "50-100": 2.13, "100+": 1.67, fallback: 2.61 },
     "9":   { "<25": 2.30, "25-50": 1.35, "50-100": 0.86, "100+": 0.77, fallback: 1.53 },
@@ -930,7 +955,8 @@ const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
     "8":   { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
   },
   CGC: {
-    // CGC 10 ≈ PSA 10 × 0.80.
+    // CGC — retained at prior calibration in PR #494 scope. Follow-up PR
+    // refines to modern anchors.
     "10":  { "<25": 3.92, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.74 },
     "9.5": { "<25": 3.49, "25-50": 2.56, "50-100": 1.99, "100+": 1.57, fallback: 2.44 },
     "9":   { "<25": 2.18, "25-50": 1.28, "50-100": 0.81, "100+": 0.73, fallback: 1.45 },
@@ -1131,16 +1157,85 @@ function resolveTierForTable(
   return typeof table.fallback === "number" ? table.fallback : null;
 }
 
+/**
+ * CF-CONDITION-SENSITIVE-SETS (Drew, 2026-07-15, PR #494): sets known for
+ * chronic surface / centering / edge / print-defect issues. PSA 10 pop is
+ * scarcer than the raw rate suggests, so the gem premium expands beyond
+ * the standard table. Applied as a POST-MULTIPLIER on the top grade only
+ * (PSA 10 / BGS 10 / BGS 9.5 / SGC 10) — mid-tier grades already reflect
+ * the condition sensitivity via their lower pop.
+ *
+ * When productSet or productName matches a known-sensitive fingerprint,
+ * bump the top-grade multiplier by the factor below. All values chosen
+ * conservatively — the calibration refresh job (KQL over graded_ratio_
+ * observed) will replace this static heuristic with per-set empirical
+ * multipliers once enough observations accumulate.
+ */
+const CONDITION_SENSITIVE_SET_BUMPS: ReadonlyArray<{ pattern: RegExp; bump: number; reason: string }> = [
+  // 1993 SP baseball (foil / centering / surface all notorious)
+  { pattern: /^1993\s+SP\b/i, bump: 1.9, reason: "1993 SP foil + centering + surface" },
+  // 1993 SP Foil parallel — even scarcer
+  { pattern: /^1993\s+SP.*FOIL/i, bump: 2.0, reason: "1993 SP foil parallel" },
+  // 1990s Ultra Gold Medallion (foil chipping)
+  { pattern: /ULTRA.*GOLD\s+MEDALLION/i, bump: 1.7, reason: "Ultra Gold Medallion foil chip" },
+  // Bowman's Best 1996-2000 (thick chrome, chipping)
+  { pattern: /^199[6-9]\s+BOWMAN'?S\s+BEST/i, bump: 1.6, reason: "90s Bowman's Best chrome chip" },
+  { pattern: /^2000\s+BOWMAN'?S\s+BEST/i, bump: 1.6, reason: "90s Bowman's Best chrome chip" },
+  // 90s Skybox foil / acetate cards
+  { pattern: /^199[0-9]\s+SKYBOX.*(?:E-X|EX|EMOTION|METAL|MOTION)/i, bump: 1.7, reason: "90s Skybox acetate/foil" },
+  // Fleer Metal Universe (foil chip)
+  { pattern: /METAL\s+UNIVERSE/i, bump: 1.6, reason: "Metal Universe foil chip" },
+  // 90s Topps Chrome (early chrome print defects)
+  { pattern: /^199[6-9]\s+TOPPS\s+CHROME/i, bump: 1.5, reason: "90s Topps Chrome print defects" },
+  // Upper Deck SP Authentic 90s (thin card / edge wear)
+  { pattern: /^199[6-9]\s+SP\s+AUTHENTIC/i, bump: 1.5, reason: "90s SPx / SP Authentic edge wear" },
+];
+
+export function getConditionSensitiveSetBump(
+  productSet: string | null | undefined,
+  gradingCompany: string | null | undefined,
+  grade: string | null | undefined,
+): number {
+  if (!productSet || typeof productSet !== "string" || productSet.trim().length === 0) return 1.0;
+  const company = String(gradingCompany ?? "").toUpperCase().trim();
+  const gradeKey = String(grade ?? "").trim();
+  // Only bump the top grade of each grader — mid-tier grades already
+  // reflect the condition sensitivity via their lower pop.
+  const isTopGrade =
+    (company === "PSA" && gradeKey === "10")
+    || (company === "BGS" && (gradeKey === "10" || gradeKey === "9.5"))
+    || (company === "SGC" && gradeKey === "10")
+    || (company === "CGC" && gradeKey === "10");
+  if (!isTopGrade) return 1.0;
+  for (const entry of CONDITION_SENSITIVE_SET_BUMPS) {
+    if (entry.pattern.test(productSet)) return entry.bump;
+  }
+  return 1.0;
+}
+
 export function getGraderPremium(
   gradingCompany: string | null | undefined,
   grade: string | null | undefined,
   rawPrice?: number | null,
   cardClass?: "autograph" | "base",
   cardYear?: number | null,
+  productSet?: string | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
+
+  // CF-PSA8-EQUALS-RAW (Drew, 2026-07-15): PSA 8 = Raw as a HARD business
+  // rule for MODERN cards only. Modern PSA 8 empirically trades below raw
+  // but Drew's product decision is to show it as roughly-equal-to-raw.
+  // Vintage (1948-1989) is a completely different regime — PSA 8 on
+  // vintage returns 10-30× raw because authentication + surface at that
+  // era is scarce. Vintage table wins for those cards. Cards with no
+  // year info default to modern behavior (safer for the common case).
+  const isModernForOverride = !cardYear || cardYear >= 1990;
+  if (company === "PSA" && (gradeKey === "8" || gradeKey === "8.0") && isModernForOverride) {
+    return 1.0;
+  }
 
   // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
   // over autograph + static for any card with year in [1948, 1989].
@@ -1149,6 +1244,8 @@ export function getGraderPremium(
   // the Mantle $2.28M class breakdown when applied to vintage. The
   // empirical vintage table is calibrated per era + price tier from
   // actual CH sale pairs.
+  const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
+
   if (cardYear && cardYear >= 1948 && cardYear <= 1989) {
     const era = vintageEraFor(cardYear);
     const vintage = getVintageTable();
@@ -1156,7 +1253,7 @@ export function getGraderPremium(
       const tier = vintage.table[era][company][gradeKey];
       const vintageValue = resolveTierForTable(tier, rawPrice);
       if (vintageValue != null && Number.isFinite(vintageValue) && vintageValue > 0) {
-        return vintageValue;
+        return vintageValue * setBump;
       }
     }
     // else fall through (vintage table may not cover every era/grade combo yet)
@@ -1171,7 +1268,7 @@ export function getGraderPremium(
     const autoTier = auto?.table?.[company]?.[gradeKey];
     const autoValue = resolveTierForTable(autoTier, rawPrice);
     if (autoValue != null && Number.isFinite(autoValue) && autoValue > 0) {
-      return autoValue;
+      return autoValue * setBump;
     }
     // else fall through to base table (logged in telemetry as a calibration gap)
   }
@@ -1186,7 +1283,7 @@ export function getGraderPremium(
     const baseTier = base?.table?.[company]?.[gradeKey];
     const baseValue = resolveTierForTable(baseTier, rawPrice);
     if (baseValue != null && Number.isFinite(baseValue) && baseValue > 0) {
-      return baseValue;
+      return baseValue * setBump;
     }
     // else fall through to static
   }
@@ -1194,7 +1291,7 @@ export function getGraderPremium(
   const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
   if (!tierTable) return 1.0;
   const tier = rawPriceToGradeTier(rawPrice);
-  return tierTable[tier];
+  return tierTable[tier] * setBump;
 }
 
 /**

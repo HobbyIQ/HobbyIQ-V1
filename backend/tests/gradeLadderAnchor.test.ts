@@ -228,11 +228,19 @@ describe("gradeLadderConfidence", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("deriveGradeLadderAnchor — inverse sanity gate", () => {
-  it("Mantle-class regression: PSA 8 vintage anchor → Raw derived > anchor → REJECTS", async () => {
-    // 1952 Topps Mantle: real CH data was PSA 8 $1,830,000. The static
-    // GRADER_PREMIUMS at "100+" tier has PSA 8 = 0.80, so the inverse
-    // 1/0.80 = 1.25× produces a Raw "estimate" of $2,287,500. Higher than
-    // the PSA 8 anchor — impossible by definition. Gate rejects it.
+  it("Mantle-class regression: PSA 8 anchor without cardYear → PSA 8 = Raw override applies (Raw = anchor, gate does NOT reject)", async () => {
+    // CF-PSA8-EQUALS-RAW (Drew, 2026-07-15, PR #494): PSA 8 = Raw is a
+    // hard business rule for cards with no year context or year >= 1990.
+    // The original CF-LADDER-INVERSE-SANITY-GATE (2026-06-29) test
+    // expected static PSA 8 = 0.80 → inverse 1.25× → Raw > anchor →
+    // REJECT. Post-#494 the override forces PSA 8 → 1.0 → Raw = anchor,
+    // which is NOT > anchor, so the gate does NOT reject.
+    //
+    // Rationale: for a Mantle-class $1.83M PSA 8 with no cardYear
+    // context, deriving Raw = $1.83M is defensible (a Mantle 1952 Raw
+    // could plausibly sell for that). When we DO know cardYear is
+    // vintage, the vintage table takes precedence and this override
+    // is skipped — that path is exercised elsewhere.
     const result = await deriveGradeLadderAnchor({
       cardId: "vintage-mantle-test",
       requestedGrade: "Raw",
@@ -241,7 +249,8 @@ describe("deriveGradeLadderAnchor — inverse sanity gate", () => {
         "PSA 8": [{ date: daysAgoIso(9), price: 1_830_000 }],
       }),
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.derivedFmv).toBeCloseTo(1_830_000, 0);
   });
 
   it("clean downgrade: PSA 9 $30 → Raw via low-tier multiplier → not rejected (Raw < anchor)", async () => {

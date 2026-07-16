@@ -344,21 +344,22 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
     // Diagnostics.ratio is the RELATIVE scale factor.
     // Post-CF-CH-TIERED-GRADER-PREMIUMS (PSA 10 = 3.43, BGS 9.5 = 3.05):
     // 3.05 / 3.43 = 0.889
-    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.889, 3);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 = 3.5, BGS 9.5 = 3.05 (unchanged) → ratio 0.871
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.871, 3);
     // 586 * 0.889 = 521 → 2 sig figs = 520
-    expect(bgs95.estimatedValue).toBe(520);
-    // CF-FINAL-CONSTANTS: ±40% band, 2 sig figs
-    // low: 521 * 0.60 ≈ 312 → 310; high: 521 * 1.40 ≈ 729 → 730
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): 586 * 0.871 = 510.4 → 2 sig figs = 510
+    expect(bgs95.estimatedValue).toBe(510);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): 510 base, ±40% → 510*0.60=306→310 / 510*1.40=714→710
     expect(bgs95.estimateLow).toBe(310);
-    expect(bgs95.estimateHigh).toBe(730);
+    expect(bgs95.estimateHigh).toBe(710);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.confidenceTier).toBe("ballpark");
     expect(sgc10.ratioSource).toBe("market");
-    // SGC 10 fallback = 2.92, PSA 10 fallback = 3.43 → 2.92/3.43 = 0.851
-    expect(sgc10.diagnostics.ratio).toBeCloseTo(0.851, 3);
-    // 586 * 0.851 = 499 → 2 sig figs = 500
-    expect(sgc10.estimatedValue).toBe(500);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 = 3.5, SGC 10 = 2.92 → ratio 0.834
+    expect(sgc10.diagnostics.ratio).toBeCloseTo(0.834, 3);
+    // 586 * 0.834 = 488.6 → 2 sig figs = 490
+    expect(sgc10.estimatedValue).toBe(490);
   });
 
   it("BASE RAW ANCHOR — diagnostics confirm the 6 parallel raw records are excluded (n=24, not 30)", () => {
@@ -602,8 +603,10 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     // CF-CROSS-GRADE-COHERENCE: relative-scaled to R = PSA 10 observed $586.
     // Post-CF-CH-TIERED-GRADER-PREMIUMS: ratio = 3.05/3.43 = 0.889;
     // value = 586 * 0.889 = 521 → $520 (2 sig figs)
-    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.889, 3);
-    expect(bgs95.estimatedValue).toBe(520);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 = 3.5, BGS 9.5 = 3.05 (unchanged) → ratio 0.871
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.871, 3);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): 586 * 0.871 = 510.4 → 2 sig figs = 510
+    expect(bgs95.estimatedValue).toBe(510);
   });
 
   it("Tier 2 — sibling PARALLEL records are excluded from the tier-2 base aggregation", () => {
@@ -787,11 +790,11 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.estimatedValue!).toBeGreaterThan(228.93);  // ≥ raw anchor
     }
     // CF-CROSS-GRADE-COHERENCE: R = PSA 10 observed $586 (n=9 sufficient).
-    // Post-CF-CH-TIERED-GRADER-PREMIUMS:
-    // BGS 9.5 = $586 * (3.05/3.43) = $521 → 2 sig figs $520
-    // SGC 10  = $586 * (2.92/3.43) = $499 → 2 sig figs $500
-    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(520);
-    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(500);
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 rebased 3.43 → 3.5
+    // BGS 9.5 = $586 * (3.05/3.5) = $510.6 → 2 sig figs $510
+    // SGC 10  = $586 * (2.92/3.5) = $489.1 → 2 sig figs $490
+    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(510);
+    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(490);
     // Anchor diagnostics still reference the raw anchor (used by ≥-raw floor)
     expect(estimates.find((e) => e.grade === "BGS 9.5")!.diagnostics.anchorPrice).toBe(228.93);
   });
@@ -990,10 +993,9 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.estimatedValue).not.toBeNull();
       expect(e.estimateLow).not.toBeNull();
       expect(e.estimateHigh).not.toBeNull();
-      // CF-CROSS-GRADE-COHERENCE: relative-scaled ratio = generic / R.generic
-      // Post-CF-CH-TIERED-GRADER-PREMIUMS (PSA 10 = 3.43, BGS 9.5 = 3.05, SGC 10 = 2.92):
-      // BGS 9.5 / PSA 10 = 3.05/3.43 = 0.889; SGC 10 / PSA 10 = 2.92/3.43 = 0.851
-      expect(e.diagnostics.ratio).toBeCloseTo(e.grade === "BGS 9.5" ? 0.889 : 0.851, 3);
+      // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 rebased 3.43 → 3.5
+      // BGS 9.5 / PSA 10 = 3.05/3.5 = 0.871; SGC 10 / PSA 10 = 2.92/3.5 = 0.834
+      expect(e.diagnostics.ratio).toBeCloseTo(e.grade === "BGS 9.5" ? 0.871 : 0.834, 3);
       expect(e.diagnostics.anchorPrice).toBe(1183);
       expect(e.basis).toContain(`No ${e.grade} sales for this Blue Refractor`);
     }
@@ -1152,7 +1154,8 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(psa9.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor ✓
     expect(psa9.confidenceTier).toBe("ballpark");
     expect(psa9.ratioSource).toBe("market");
-    expect(psa9.diagnostics.ratio).toBeCloseTo(0.4956, 3);  // 1.70/3.43
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 rebased 3.43 → 3.5, PSA 9 kept at 1.70 → ratio 0.4857
+    expect(psa9.diagnostics.ratio).toBeCloseTo(0.4857, 3);
     expect(psa9.basis).toContain("sub-raw card-ratio");
     expect(psa9.basis).toContain("relative-scaled to PSA 10");
   });
