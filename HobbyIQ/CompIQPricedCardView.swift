@@ -13,7 +13,6 @@ import os
 enum PricedCardRoute: Hashable, Identifiable {
     case layerBreakdown
     case addToInventory
-    case priceHistory
     var id: Self { self }
 }
 
@@ -238,8 +237,6 @@ struct CompIQPricedCardView: View {
                         }
                     )
                 }
-            case .priceHistory:
-                PriceHistoryView(cardId: hit.cardId)
             }
         }
         // Paywall stays as a sheet — interruptive upgrade prompts read
@@ -926,15 +923,6 @@ struct CompIQPricedCardView: View {
                 }
             }
 
-            // 2026-07-15: dedicated Price History screen (bucketed
-            // weekly/monthly/quarterly over 3M/1Y/3Y/all). Gated on
-            // a non-empty cardId — hit-based hits without a resolved
-            // cardId hide the button. Pushes a full screen via the
-            // existing PricedCardRoute enum-navigator.
-            if hit.cardId.trimmingCharacters(in: .whitespaces).isEmpty == false {
-                viewPriceHistoryButton
-            }
-
             // CF-PER-GRADE-BREAKDOWN (2026-07-02, PR #240): ladder view
             // of live + projected prices across every grade rung for
             // CF-GRADE-PILL-PANEL-IN-HEADER (2026-07-04): the grade
@@ -942,13 +930,26 @@ struct CompIQPricedCardView: View {
             // legacy gradePicker rail). No duplicate mid-page section
             // needed.
 
-            // CF-COMP-ANALYSIS-ABOVE-REFDATA (2026-07-04): moved
-            // Comp Analysis (Buy/Sell zones + confidence) above
-            // Reference Data so users see the actionable read before
-            // the raw comp table.
+            // 2026-07-16: Comp Analysis (Buy/Sell zones + confidence)
+            // sits above Price History so the actionable read lands
+            // first, then the historical chart backs it up. Also above
+            // Reference Data (per CF-COMP-ANALYSIS-ABOVE-REFDATA).
             cardGroup(title: "Comp Analysis", icon: "chart.bar.fill") {
                 zonesCard(response)
                 confidenceContent(response)
+            }
+
+            // 2026-07-16: bucketed Price History chart (weekly/monthly/
+            // quarterly over 3M/1Y/3Y/all) inlined into the priced-card
+            // page. Replaces the prior "View Price History" push button —
+            // users pick window + bucket right on the page instead of
+            // navigating to a dedicated screen. Gated on a non-empty
+            // cardId; hit-based hits without a resolved cardId hide the
+            // chart section entirely.
+            if hit.cardId.trimmingCharacters(in: .whitespaces).isEmpty == false {
+                cardGroup(title: "Price History", icon: "chart.xyaxis.line") {
+                    PriceHistoryChartCard(cardId: hit.cardId)
+                }
             }
 
             // CF-REFDATA-COLLAPSIBLE (2026-07-04): Reference Data now
@@ -3177,32 +3178,6 @@ struct CompIQPricedCardView: View {
     /// overlay, not a third data series.
     private static let priceHistoryNeutralLine =
         HobbyIQTheme.Colors.mutedText.opacity(0.6)
-
-    private var viewPriceHistoryButton: some View {
-        Button {
-            pricedRoute = .priceHistory
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "chart.line.uptrend.xyaxis.circle")
-                    .font(.subheadline.weight(.semibold))
-                Text("View Price History")
-                    .font(.subheadline.weight(.semibold))
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.2)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - PR #425 Market Trend section
 

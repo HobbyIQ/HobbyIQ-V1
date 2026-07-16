@@ -2,11 +2,17 @@
 //  PriceHistoryView.swift
 //  HobbyIQ
 //
-//  2026-07-15: dedicated Price History screen for a single card.
+//  2026-07-15: Price History surface for a single card.
 //  Backed by GET /api/compiq/cards/:cardId/price-history — see the
 //  request/response contract on APIService.fetchPriceHistory. Chart
 //  uses Apple's Swift Charts (iOS 16+, already targeted). Every
 //  network state degrades gracefully to an empty view, never a crash.
+//
+//  2026-07-16: extracted `PriceHistoryChartCard` so the same graph +
+//  window/bucket pickers embed inline inside `CompIQPricedCardView`'s
+//  Market Trend section. `PriceHistoryView` is now the standalone
+//  screen wrapper (ScrollView + nav chrome); the card content lives
+//  in the extracted view for reuse.
 //
 
 import SwiftUI
@@ -45,9 +51,32 @@ struct PriceHistoryBucketPoint: Codable, Hashable, Identifiable {
     }
 }
 
-// MARK: - Screen
+// MARK: - Standalone screen (embeds the reusable card inside nav chrome)
 
 struct PriceHistoryView: View {
+    let cardId: String
+
+    var body: some View {
+        ScrollView {
+            PriceHistoryChartCard(cardId: cardId)
+                .padding(HobbyIQTheme.Spacing.screenPadding)
+        }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Price History")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
+    }
+}
+
+// MARK: - Reusable inline card (pickers + chart + seasonality captions)
+
+/// Bucketed price-history chart with window/bucket pickers, seasonality
+/// captions above the chart, and a stats row underneath. Renders as a
+/// standalone card — no ScrollView, no navigation chrome — so callers
+/// can embed it inline (e.g. inside `CompIQPricedCardView`'s Market
+/// Trend section) or wrap it with `PriceHistoryView` for a dedicated
+/// screen.
+struct PriceHistoryChartCard: View {
     let cardId: String
 
     @State private var window: PriceHistoryWindow = .oneYear
@@ -63,34 +92,27 @@ struct PriceHistoryView: View {
     @State private var weeklyResponse: PriceHistoryResponse?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                windowPicker
-                bucketPicker
+        VStack(alignment: .leading, spacing: 16) {
+            windowPicker
+            bucketPicker
 
-                Group {
-                    if isLoading && response == nil {
-                        loadingState
-                    } else if let errorMessage {
-                        errorState(errorMessage)
-                    } else if let points = response?.points, points.isEmpty == false {
-                        // P1.1: peak/trough/YoY captions above the chart.
-                        // Every caption self-suppresses when its sample-size
-                        // gate isn't met — no low-confidence prose.
-                        seasonalityCaptions(points: points)
-                        chartCard(points: points)
-                        statsRow
-                    } else {
-                        emptyState
-                    }
+            Group {
+                if isLoading && response == nil {
+                    loadingState
+                } else if let errorMessage {
+                    errorState(errorMessage)
+                } else if let points = response?.points, points.isEmpty == false {
+                    // P1.1: peak/trough/YoY captions above the chart.
+                    // Every caption self-suppresses when its sample-size
+                    // gate isn't met — no low-confidence prose.
+                    seasonalityCaptions(points: points)
+                    chartCard(points: points)
+                    statsRow
+                } else {
+                    emptyState
                 }
             }
-            .padding(HobbyIQTheme.Spacing.screenPadding)
         }
-        .background { HobbyIQBackground() }
-        .navigationTitle("Price History")
-        .navigationBarTitleDisplayMode(.inline)
-        .themedNavigationSurface()
         .task(id: reloadKey) {
             await reload()
         }
@@ -102,7 +124,7 @@ struct PriceHistoryView: View {
         }
     }
 
-    private var reloadKey: String { "\(window.rawValue)|\(bucket.rawValue)" }
+    private var reloadKey: String { "\(cardId)|\(window.rawValue)|\(bucket.rawValue)" }
 
     // MARK: - Reload
 
