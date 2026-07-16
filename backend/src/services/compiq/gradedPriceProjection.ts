@@ -31,6 +31,10 @@ import {
   getGraderPremium,
   detectGradeFromTitle,
 } from "./compiqEstimate.service.js";
+import {
+  computeGemRateFromObservations,
+  type GemRateSignal,
+} from "./gemRateSignal.service.js";
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
 import { tokenizeParallel } from "./parallelTokenizer.js";
@@ -981,6 +985,41 @@ export function filterCredibleObserved(
  * estimates it via R-scaling, surfacing a credible value instead of
  * the stale outlier.
  */
+/**
+ * CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up).
+ * Walks pricing.graded ONCE and builds a per-card gem-rate signal from the
+ * observed base-scope graded sales. Base-scope only — gem-rate math on a
+ * parallel-scoped subset would blow up variance (a Blue Refractor /150 has
+ * ~5-15 sales total; a single PSA 10 tilts the rate 20 points). Signal
+ * lives at the card level and applies to every target grade the loop calls
+ * `getGraderPremium` for.
+ */
+export function buildGemRateSignalFromPricing(
+  pricing: CardsightPricingResponse,
+  cardId: string | null,
+): GemRateSignal | null {
+  const observations: { grade: string; price: number }[] = [];
+  for (const co of (pricing.graded ?? [])) {
+    const coName = String(co.company_name ?? "").toUpperCase().trim();
+    if (!coName) continue;
+    for (const g of (co.grades ?? [])) {
+      const gradeVal = g.grade_value;
+      if (gradeVal === null || gradeVal === undefined) continue;
+      const gradeStr = String(gradeVal).trim();
+      if (!gradeStr) continue;
+      const label = `${coName} ${gradeStr}`;
+      for (const rec of (g.records ?? [])) {
+        if (!isBaseRecord(rec)) continue;
+        const price = typeof rec.price === "number" ? rec.price : Number(rec.price);
+        if (!Number.isFinite(price) || price <= 0) continue;
+        observations.push({ grade: label, price });
+      }
+    }
+  }
+  if (observations.length === 0) return null;
+  return computeGemRateFromObservations(observations, { cardId, windowDays: 365 });
+}
+
 function countObservedInScope(
   pricing: CardsightPricingResponse,
   company: string,
@@ -1401,6 +1440,7 @@ function resolveRatio(
   siblingComps: ReadonlyArray<GradedProjectionSiblingComp>,
   releaseRatios: ReleaseGradeCurve | null | undefined,
   releaseLabel: string | null | undefined,
+  gemRateSignal?: GemRateSignal | null,
 ): ResolvedRatio {
   // Tier 1 — card-specific base ratio (dup-bucket merge inherited from
   // selectSalesByGrade — see compiqEstimate.service.ts:1022-1056).
@@ -1466,8 +1506,18 @@ function resolveRatio(
     }
   }
 
-  // Tier 3 — market grade-premium table (read-only).
-  const marketPremium = getGraderPremium(company, grade);
+  // Tier 3 — market grade-premium table (read-only). Gem-rate signal
+  // short-circuits inside getGraderPremium for top grades on cards with
+  // ≥10 base graded observations (CF-GEM-RATE-WIRED, PR #495 follow-up).
+  const marketPremium = getGraderPremium(
+    company,
+    grade,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    gemRateSignal,
+  );
   if (marketPremium > 0 && marketPremium !== 1.0) {
     return {
       ratio: marketPremium,
@@ -1718,6 +1768,18 @@ export function computeGradedProjection(
       ? (trendIQ ? computeForwardProjectionFactor(trendIQ) : 1.0)
       : 1.0;
 
+  // CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up): compute the
+  // card's gem-rate signal ONCE from the graded observations at hand, then
+  // thread it into every getGraderPremium call in this loop. When the card
+  // has ≥10 observed graded sales, top-grade multipliers (PSA 10 / BGS 10 /
+  // BGS 10 Black Label / BGS 9.5 / SGC 10) come from Drew's -3·ln(gemRate)
+  // + 0.5 formula instead of the static table — the pricing engine's per-
+  // card "learning loop" on scarcity. Mid-tier grades keep the table.
+  const gemRateSignal = buildGemRateSignalFromPricing(
+    pricing,
+    pricing.card?.card_id ?? null,
+  );
+
   const results: GradedProjectionResult[] = [];
   for (const tg of targetGrades) {
     // GUARD — observed-first precedence. Skip estimating any grade with
@@ -1747,7 +1809,15 @@ export function computeGradedProjection(
       && anchor.price > 0
       && anchor.observedSource
     ) {
-      const generic = getGraderPremium(tg.company, tg.grade);
+      const generic = getGraderPremium(
+        tg.company,
+        tg.grade,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        gemRateSignal,
+      );
       const observed = anchor.observedSource;
       if (!(generic > 0)) {
         results.push({
@@ -1834,6 +1904,7 @@ export function computeGradedProjection(
       siblingComps,
       releaseRatios,
       releaseLabel,
+      gemRateSignal,
     );
     let bucketRatioApplied = false;
     if (
@@ -2155,7 +2226,19 @@ export function computeGradedProjection(
         // fallback overall-average. <$25 raws now get the higher PSA 10
         // premium (4.9×) they actually trade at; $100+ raws get the lower
         // 2.2× that matches the market instead of the old 4.0× over-claim.
-        const generic = getGraderPremium(company, gradeStr, anchorPrice);
+        // CF-GEM-RATE-WIRED (PR #495): gem-rate signal short-circuits to
+        // the -3·ln(gemRate) formula for top grades when the card carries
+        // ≥10 base graded observations. Mid-tier grades keep the tiered
+        // table on this path.
+        const generic = getGraderPremium(
+          company,
+          gradeStr,
+          anchorPrice,
+          undefined,
+          undefined,
+          undefined,
+          gemRateSignal,
+        );
         if (!Number.isFinite(generic) || generic < 1.0) {
           demoteToNoData(r, reason);
           return;

@@ -314,7 +314,8 @@ describe("Improvement 3 — grader premiums (round-trip)", () => {
     // calibration refresh job.
     expect(getGraderPremium("PSA", "10")).toBe(3.5);
     expect(getGraderPremium("psa", "10")).toBe(3.5);
-    expect(getGraderPremium("BGS", "9.5")).toBe(3.05);
+    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): BGS 9.5 rebased 3.05 → 2.8
+    expect(getGraderPremium("BGS", "9.5")).toBe(2.8);
   });
 
   it("detects graded comps from free-text titles", () => {
