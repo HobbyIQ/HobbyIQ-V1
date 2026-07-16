@@ -39,6 +39,13 @@ final class PortfolioIQViewModel: ObservableObject {
     /// grade. Nil / empty entry → fall back to `card.fairMarketValue`.
     @Published private(set) var livePanelEntries: [String: [CardPanelGradeEntry]] = [:]
 
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): recent (last
+    /// 7 days) verdict flips per player, keyed by the backend-normalized
+    /// (lowercase-hyphenated) name. Populated by `loadRecentFlips()` on
+    /// every portfolio open; `recentFlip(for:)` does the row-level lookup.
+    /// Empty until first fetch; a stale-deploy 401 leaves it untouched.
+    @Published private(set) var recentFlipsByPlayer: [String: VerdictFlip] = [:]
+
     private let service: APIService
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "portfolio")
 
@@ -919,6 +926,70 @@ final class PortfolioIQViewModel: ObservableObject {
         if loadMessages.isEmpty == false {
             errorMessage = loadMessages.joined(separator: " ")
         }
+
+        // P0.7 (2026-07-16): kick off the batch flips fetch after the
+        // inventory list settles. Detached so a slow /flips call doesn't
+        // hold up the rest of the load — the dot appears when the network
+        // returns, matches the spec's 15-min refresh cadence.
+        Task { await self.loadRecentFlips() }
+    }
+
+    /// Look up the most recent 14-day flip for a given holding. Returns
+    /// nil when no fresh flip exists (which suppresses the inventory-row
+    /// dot). Match key is `lowercase + spaces→hyphens` — the closest
+    /// parseable approximation of backend's normalization.
+    func recentFlip(for card: InventoryCard) -> VerdictFlip? {
+        let key = Self.normalizedPlayerKey(card.playerName)
+        guard key.isEmpty == false else { return nil }
+        return recentFlipsByPlayer[key]
+    }
+
+    /// P0.7 (2026-07-16): fetches the 7-day flip window for every unique
+    /// player in the current inventory. Batches by 200 (spec cap). Silently
+    /// swallows failures — the dot is nice-to-have, never blocks the row.
+    func loadRecentFlips() async {
+        let players = Set(inventoryCards.map { $0.playerName })
+            .compactMap { name -> String? in
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+        guard players.isEmpty == false else {
+            recentFlipsByPlayer = [:]
+            return
+        }
+
+        var accumulated: [String: VerdictFlip] = [:]
+        let chunks = stride(from: 0, to: players.count, by: 200).map {
+            Array(players[$0..<min($0 + 200, players.count)])
+        }
+
+        for batch in chunks {
+            do {
+                let response = try await service.fetchPortfolioFlips(players: batch, days: 7)
+                for flip in response.flips ?? [] {
+                    let key = Self.normalizedPlayerKey(flip.player ?? "")
+                    guard key.isEmpty == false else { continue }
+                    // Backend returns newest-first — keep the first, skip
+                    // older flips for the same player.
+                    if accumulated[key] == nil {
+                        accumulated[key] = flip
+                    }
+                }
+            } catch {
+                logger.info("Portfolio flips fetch failed (best-effort): \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        recentFlipsByPlayer = accumulated
+    }
+
+    /// Backend normalizes display names to lowercase-hyphenated per
+    /// verdict-history-flip-surfaces.md. Match that here so per-card
+    /// lookups align with the wire keys.
+    static func normalizedPlayerKey(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines)
+           .lowercased()
+           .replacingOccurrences(of: " ", with: "-")
     }
 
     private func resolvedUserId() -> String {

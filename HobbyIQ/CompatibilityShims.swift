@@ -227,6 +227,14 @@ final class AccountViewModel: ObservableObject {
     @Published var priceAlerts = true
     @Published var portfolioMovementAlerts = true
     @Published var portfolioMovementMinValue: Double = 50.0
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): local-only
+    /// opt-in for the major-flip push. Backend user-doc field
+    /// (`preferences.pushOnMajorFlip`) + fan-out worker ship in a follow-up;
+    /// this default keeps the toggle read/writeable today so the setting
+    /// exists at launch. Seeded from UserDefaults so a relaunch preserves
+    /// the user's choice.
+    @Published var verdictFlipAlerts: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.verdictFlipAlertsKey)
+    fileprivate static let verdictFlipAlertsKey = "hobbyIQ.settings.verdictFlipAlerts"
     private var isLoadingPrefs = false
 
     var appVersionText: String {
@@ -305,6 +313,20 @@ final class AccountViewModel: ObservableObject {
             portfolioMovementMinValue = prefs.portfolioMovementMinValue ?? value
         } catch {
             // Keep optimistic value on failure
+        }
+    }
+
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): flip the
+    /// local preference, persist to UserDefaults, and on toggle-on ask
+    /// the system for notification permission so the first real flip
+    /// isn't blocked by a permission prompt during the daily cron
+    /// fan-out. Backend user-doc sync lands with the fan-out worker
+    /// (out of iOS scope for this PR).
+    func updateVerdictFlipAlerts(_ enabled: Bool) async {
+        verdictFlipAlerts = enabled
+        UserDefaults.standard.set(enabled, forKey: AccountViewModel.verdictFlipAlertsKey)
+        if enabled {
+            await PushNotificationManager.shared.requestPermissionAndRegister()
         }
     }
 

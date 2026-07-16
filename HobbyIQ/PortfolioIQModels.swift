@@ -1081,6 +1081,11 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var gradingCostText: String = "25"
     /// CF-HOLDING-DETAIL-V2 (2026-07-06): Mark-as-Graded sheet gate.
     @State private var showingMarkAsGradedSheet = false
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): last-3 flips
+    /// for this holding's player. Empty until the /verdict-history call
+    /// resolves; strip suppresses entirely when zero flips exist so the
+    /// value block sits at the top for uneventful players.
+    @State private var recentFlips: [VerdictFlip] = []
 
     init(
         viewModel: PortfolioIQViewModel,
@@ -1295,6 +1300,73 @@ struct PortfolioHoldingDetailSheet: View {
         } catch {
             panelEntries = []
         }
+    }
+
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): fetch the
+    /// 90-day verdict history for this holding's player and keep the
+    /// last 3 flips for the detail-sheet strip. Silent failure — an
+    /// unavailable Cosmos read hides the strip; no error banner.
+    private func loadVerdictHistory() async {
+        let name = card.playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.isEmpty == false else {
+            recentFlips = []
+            return
+        }
+        do {
+            let response = try await APIService.shared.fetchVerdictHistory(player: name, days: 90)
+            // Backend returns oldest→newest; iOS wants newest-first, up to 3.
+            let flips = (response.flips ?? []).reversed()
+            recentFlips = Array(flips.prefix(3))
+        } catch {
+            recentFlips = []
+        }
+    }
+
+    /// P0.7: horizontal chip strip rendering the last-3 flips as
+    /// `SELL ← HOLD 3d` style entries, newest-first. Reuses `VerdictStyle`
+    /// labels so terminology matches everywhere else the app says a verdict.
+    private func verdictHistoryStrip(flips: [VerdictFlip]) -> some View {
+        HStack(spacing: 8) {
+            ForEach(Array(flips.enumerated()), id: \.element.id) { index, flip in
+                let toLabel = VerdictStyle.from(flip.to).label
+                let fromLabel = VerdictStyle.from(flip.from).label
+                let age = formatFlipAge(daysSince: flip.daysSince) ?? ""
+                let toColor = VerdictStyle.from(flip.to).color
+
+                HStack(spacing: 4) {
+                    Text(toLabel)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(toColor)
+                    Text("←")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(fromLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    if age.isEmpty == false {
+                        Text(age)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.8))
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+                .overlay(
+                    Capsule()
+                        .stroke(toColor.opacity(0.35), lineWidth: 1)
+                )
+                .clipShape(Capsule())
+
+                if index < flips.count - 1 {
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - PREDICTED block (CF-HOLDING-DETAIL-V2; horizon per entry, see CF-PREDICTION-HORIZON-7D)
@@ -1656,6 +1728,14 @@ struct PortfolioHoldingDetailSheet: View {
             HobbyIQBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        // P0.7 (2026-07-16, verdict-history-flip-surfaces.md):
+                        // last-3 verdict flips as chips, above the value
+                        // block. Suppresses entirely when the player has
+                        // no flips in the 90-day window.
+                        if recentFlips.isEmpty == false {
+                            verdictHistoryStrip(flips: recentFlips)
+                        }
+
                         PortfolioHoldingHeroCard(
                             card: card,
                             // 2026-07-15: only trust the panel's
@@ -1975,6 +2055,7 @@ struct PortfolioHoldingDetailSheet: View {
                 .navigationBarBackButtonHidden(true)
                 .toolbar(.hidden, for: .navigationBar)
                 .task { await fetchPanelIfPossible() }
+                .task { await loadVerdictHistory() }
                 .navigationDestination(isPresented: $showingMarkAsGradedSheet) {
                     MarkAsGradedSheet(card: card) { gradeCompany, gradeValue, certNumber, gradingCost, gradingTierId in
                         Task {
@@ -3499,6 +3580,11 @@ struct PortfolioCardRow: View {
     /// number. When nil (e.g. previews), the row falls back to the
     /// legacy per-field chain inside `inventoryRightColumn`.
     var resolvedValue: Double? = nil
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): most recent
+    /// flip within the last 14 days for this holding's player. Renders
+    /// as a 6pt colored dot in the leading padding. Nil when no fresh
+    /// flip exists; the row looks identical to before.
+    var latestFlip: VerdictFlip? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -3586,6 +3672,36 @@ struct PortfolioCardRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(minHeight: 64)
+        // P0.7 (2026-07-16, verdict-history-flip-surfaces.md): 6pt
+        // freshness dot in the row's leading gutter. Color reflects the
+        // NEW verdict (post-flip); opacity fades over 14 days; hidden past
+        // day 14. Sits in the padding, not over card art.
+        .overlay(alignment: .leading) {
+            if let flip = latestFlip, let opacity = flip.dotOpacity {
+                Circle()
+                    .fill(verdictFlipDotColor(for: flip.to))
+                    .frame(width: 6, height: 6)
+                    .opacity(opacity)
+                    .padding(.leading, 3)
+                    .accessibilityLabel("Recent \(flip.to ?? "verdict") flip")
+            }
+        }
+    }
+}
+
+/// P0.7 (2026-07-16): dot color mapping per verdict-history-flip-surfaces.md.
+/// Green for bull-side, red for bear-side, gray for neutral / unknown.
+/// Kept separate from `VerdictStyle.color` because that helper's palette
+/// uses opacity-modulated hues (bull vs strong_bull tinting) that read
+/// poorly at 6pt.
+private func verdictFlipDotColor(for verdict: String?) -> Color {
+    switch verdict?.lowercased() {
+    case "bull", "strong_bull", "supply_tight":
+        return .green
+    case "bear", "soft", "weak", "oversupply":
+        return .red
+    default:
+        return .gray
     }
 }
 

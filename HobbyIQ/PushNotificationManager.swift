@@ -151,6 +151,17 @@ enum NotificationRouter {
             if let cardId = userInfo["cardId"] as? String {
                 appState.route(to: .card(cardId))
             }
+        case "verdict.flip":
+            // P0.7 (2026-07-16, verdict-history-flip-surfaces.md): major
+            // flip push deep-link. Backend fan-out worker (out of scope for
+            // this PR) emits `{ type: "verdict.flip", cardId, playerName }`
+            // when a portfolio's player crosses the bull/bear boundary.
+            // Prefer cardId (opens holding detail); fall back to playerName.
+            if let cardId = userInfo["cardId"] as? String {
+                appState.route(to: .card(cardId))
+            } else if let playerName = userInfo["playerName"] as? String {
+                appState.route(to: .player(playerName))
+            }
         default:
             // Fall back to legacy "target" key routing
             guard let target = userInfo["target"] as? String else { return }

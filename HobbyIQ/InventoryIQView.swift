@@ -298,7 +298,11 @@ struct InventoryIQView: View {
                         Button {
                             selectedCard = card
                         } label: {
-                            PortfolioCardRow(card: card, resolvedValue: vm.resolvedMarketValue(for: card))
+                            PortfolioCardRow(
+                                card: card,
+                                resolvedValue: vm.resolvedMarketValue(for: card),
+                                latestFlip: vm.recentFlip(for: card)
+                            )
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

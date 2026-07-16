@@ -308,6 +308,30 @@ struct AccountView: View {
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
                 accountDivider
+                // P0.7 (2026-07-16, verdict-history-flip-surfaces.md):
+                // opt-in for the major-flip push. Store locally today;
+                // the backend user-doc preference field lands in a
+                // follow-up along with the fan-out worker. The `set`
+                // handler requests UNUserNotificationCenter auth on
+                // toggle-on so a first-time flip isn't held up by the
+                // system prompt in the middle of a cron fan-out.
+                Toggle(isOn: Binding(
+                    get: { viewModel.verdictFlipAlerts },
+                    set: { newValue in Task { await viewModel.updateVerdictFlipAlerts(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Verdict Flip Alerts")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Get notified when a card in your inventory flips from BUY to SELL or vice versa")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                accountDivider
                 accountToggle("Haptics", isOn: $viewModel.settings.hapticsEnabled)
                 accountDivider
                 VStack(alignment: .leading, spacing: 8) {

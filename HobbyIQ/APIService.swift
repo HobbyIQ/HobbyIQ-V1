@@ -549,6 +549,33 @@ struct APIService {
         try await get(path: "/api/portfolio/watchlist-bull-candidates", responseType: WatchlistBullCandidatesResponse.self)
     }
 
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): batch mirror
+    /// for the inventory-row freshness dot. Backend enforces 1..200
+    /// `players` and 1..30 `days`; iOS batches larger portfolios before
+    /// calling. Returns `flips: []` when the underlying Cosmos read fails
+    /// so callers can treat any error as "no dot".
+    func fetchPortfolioFlips(players: [String], days: Int = 7) async throws -> PortfolioFlipsResponse {
+        let body = PortfolioFlipsRequest(players: players, days: days)
+        return try await post(
+            path: "/api/compiq/portfolio/flips",
+            body: body,
+            responseType: PortfolioFlipsResponse.self
+        )
+    }
+
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): per-player
+    /// verdict snapshot history + detected flips for the holding-detail
+    /// history strip. Backend normalizes the player name server-side, so
+    /// callers pass the raw display string. `days` is 1..180 (default 90).
+    func fetchVerdictHistory(player: String, days: Int = 90) async throws -> VerdictHistoryResponse {
+        let encoded = player.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? player
+        return try await get(
+            path: "/api/compiq/players/\(encoded)/verdict-history",
+            queryItems: [URLQueryItem(name: "days", value: String(days))],
+            responseType: VerdictHistoryResponse.self
+        )
+    }
+
     func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
@@ -2393,7 +2420,17 @@ struct APIService {
     private static let bestEffortPaths: Set<String> = [
         "/api/portfolio/supply-demand-summary",
         "/api/portfolio/signal-weighted-totals",
-        "/api/portfolio/watchlist-bull-candidates"
+        "/api/portfolio/watchlist-bull-candidates",
+        // P0.7 (2026-07-16): verdict-flip inventory dot fires on every
+        // portfolio open — a stale-deploy 401 must not sign the user out.
+        "/api/compiq/portfolio/flips"
+    ]
+
+    /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
+    /// per-player verdict-history route has an inline `:player` slug).
+    /// Matched by `hasPrefix` in `notifySessionInvalidatedIfNeeded`.
+    private static let bestEffortPathPrefixes: [String] = [
+        "/api/compiq/players/"
     ]
 
     private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {
@@ -2401,6 +2438,7 @@ struct APIService {
         let path = url?.path ?? ""
         guard Self.authFlowPaths.contains(path) == false else { return }
         guard Self.bestEffortPaths.contains(path) == false else { return }
+        guard Self.bestEffortPathPrefixes.contains(where: path.hasPrefix) == false else { return }
         NotificationCenter.default.post(name: .hobbyIQAuthSessionInvalidated, object: nil)
     }
 }
