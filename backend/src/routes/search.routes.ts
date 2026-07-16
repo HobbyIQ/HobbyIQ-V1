@@ -17,6 +17,7 @@ import { Request, Response, Router } from "express";
 import { dispatchSearch } from "../services/unifiedSearch/index.js";
 import type { UnifiedSearchMode } from "../types/unifiedSearch.js";
 import { requireSession } from "../middleware/requireSession.js";
+import { patchCardsightImageUrls } from "../utils/cardsightImageUrlPatcher.js";
 
 const router = Router();
 router.use(requireSession);
@@ -44,6 +45,12 @@ router.post("/cards", async (req: Request, res: Response) => {
 
   try {
     const response = await dispatchSearch(body.input, hint);
+    // CF-CARDSIGHT-UUID-IMAGE (Drew, 2026-07-13, PR #414): Cardsight-native
+    // candidates (including PR #413's exploded per-parallel rows) carry
+    // imageUrl: null from the dispatcher. Patch them to route through our
+    // card-image proxy so iOS renders thumbnails. Shared helper covers
+    // both /api/search/cards and /api/compiq/cardsearch.
+    patchCardsightImageUrls(req, (response as any)?.candidates ?? []);
     res.json(response);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unified search failed";

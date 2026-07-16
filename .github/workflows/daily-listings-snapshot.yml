@@ -1,0 +1,71 @@
+name: Daily Listings Snapshot
+
+# CF-DAILY-LISTINGS-CRON (Drew, 2026-07-13, PR #421): daily job that
+# walks the top-N players across all portfolios and snapshots eBay
+# Browse active-listing counts into `listings_snapshots`. Powers the
+# supply side of the supply-demand signal on Card Detail.
+#
+# eBay Browse free tier: 5K calls/day. Default TOP_N=500 leaves ample
+# headroom for manual snapshot use + retries.
+
+on:
+  schedule:
+    # 07:00 UTC = 03:00 EDT / 02:00 EST. Runs BEFORE the 5AM ET refresh
+    # so today's snapshots are baked into whatever DailyIQ picks up.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'Top-N players to snapshot (default 500)'
+        required: false
+        default: '500'
+      concurrency:
+        description: 'Concurrent Browse calls (default 3)'
+        required: false
+        default: '3'
+
+jobs:
+  snapshot:
+    name: Snapshot top players
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Trigger listings snapshot on prod
+        env:
+          PROD_URL: 'https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net'
+          OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
+          TOP_N: ${{ github.event.inputs.top_n || '500' }}
+          CONCURRENCY: ${{ github.event.inputs.concurrency || '3' }}
+        run: |
+          if [ -z "$OPS_TOKEN" ]; then
+            echo "OPS_TOKEN secret is not set — cannot call ops endpoint."
+            exit 1
+          fi
+
+          PAYLOAD=$(printf '{"topN": %s, "concurrency": %s}' "$TOP_N" "$CONCURRENCY")
+          echo "Triggering with payload: $PAYLOAD"
+
+          # 25-minute upper bound on the endpoint call itself (the job
+          # walks up to TOP_N players sequentially-with-cap).
+          RESPONSE=$(curl -sS --fail-with-body --max-time 1500 \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "x-ops-token: $OPS_TOKEN" \
+            -d "$PAYLOAD" \
+            "$PROD_URL/api/ops/listings/cron-tick")
+
+          echo "Response: $RESPONSE"
+
+          # Extract counts for the run summary
+          SEEN=$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin)['summary']['playersSeen'])" 2>/dev/null || echo "?")
+          CREATED=$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin)['summary']['snapshotsCreated'])" 2>/dev/null || echo "?")
+          ERRORS=$(echo "$RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin)['summary']['errors'])" 2>/dev/null || echo "?")
+
+          {
+            echo "## Daily Listings Snapshot"
+            echo ""
+            echo "- Players seen: **$SEEN**"
+            echo "- Snapshots created: **$CREATED**"
+            echo "- Errors: **$ERRORS**"
+          } >> "$GITHUB_STEP_SUMMARY"

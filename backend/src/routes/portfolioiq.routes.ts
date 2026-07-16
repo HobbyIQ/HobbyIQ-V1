@@ -66,6 +66,201 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-SIGNAL-WEIGHTED-TOTALS (Drew, 2026-07-13, PR #430): three portfolio
+// valuations side-by-side (gross MV / trend-adjusted / fees-adjusted) +
+// breakdown by verdict class (bull / static / bear).
+router.get("/signal-weighted-totals", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildSignalWeightedTotals } = await import(
+      "../services/portfolioiq/signalWeightedTotals.service.js"
+    );
+    const result = await buildSignalWeightedTotals(userId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-WATCHLIST-BULL-CANDIDATES (Drew, 2026-07-13, PR #429): surface
+// watchlisted players whose supply signal is bullish so users see a
+// "buy candidates" list right in the app.
+router.get("/watchlist-bull-candidates", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildWatchlistBullCandidates } = await import(
+      "../services/portfolioiq/watchlistBullCandidates.service.js"
+    );
+    const result = await buildWatchlistBullCandidates(userId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-PORTFOLIO-SUPPLY-DEMAND-SUMMARY (Drew, 2026-07-13, PR #426):
+// aggregate the supply/demand signal across every holding for the
+// authed user. Returns portfolio-level bias + breakdown + top movers +
+// full per-holding list. iOS renders as a dashboard on Portfolio Home.
+router.get("/supply-demand-summary", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildPortfolioSupplyDemandSummary } = await import(
+      "../services/portfolioiq/supplyDemandSummary.service.js"
+    );
+    const summary = await buildPortfolioSupplyDemandSummary(userId);
+    res.json({ success: true, ...summary });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): pending eBay auto-created holdings
+// awaiting user confirmation. iOS renders this as the review queue.
+router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
+
+// CF-CARDID-SUGGESTER (2026-07-12, moved off ERP router 2026-07-14):
+// batch-generate cardId suggestions for the caller's pending-review
+// holdings. Session-only — matches dry-run-suggest below. Verify-before-
+// price is fundamental UX, not a Pro-only feature; free/collector/
+// investor tiers all need it. Was on the ERP router (Pro Seller only)
+// which locked out most users from the review-queue workflow.
+router.post("/holdings/generate-suggestions", async (req, res, next) => {
+  try {
+    const userId = (req as any).user?.userId;
+    if (!userId) return res.status(401).json({ success: false, error: "session required" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const force = body.force === true;
+    const { generateCardIdSuggestions } = await import(
+      "../services/portfolioiq/cardIdSuggester.service.js"
+    );
+    const summary = await generateCardIdSuggestions(userId, { force });
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio] /holdings/generate-suggestions failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Suggestion generation failed" });
+  }
+});
+
+// CF-EDIT-SHEET-DRY-RUN-SUGGEST (Drew, 2026-07-14): stateless suggester
+// run for the iOS "verify card" edit sheet. Takes edited holding fields
+// in the request body (NOT from Cosmos), runs the multi-vendor
+// suggester against them, returns { suggestion, normalized }. Persists
+// nothing.
+//
+// iOS fires this on every "Search again" tap as the user edits fields
+// — each call returns a fresh suggestion so pre-fill updates in real
+// time. When the user hits Confirm, the existing
+// /api/portfolio/erp/holdings/:id/confirm endpoint commits the chosen
+// cardId + edits.
+//
+// Session-only (no entitlement gate): verify-before-price is the
+// fundamental purchase-import UX, not a premium feature. Server-side
+// cost matches one batch cell (~600ms end-to-end for both vendors).
+router.post("/holdings/dry-run-suggest", async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const holdingLike = {
+      id: "dry-run",
+      playerName: typeof body.playerName === "string" ? body.playerName : null,
+      cardYear: typeof body.cardYear === "number" ? body.cardYear : null,
+      setName: typeof body.setName === "string" ? body.setName : null,
+      parallel: typeof body.parallel === "string" ? body.parallel : null,
+      cardNumber: typeof body.cardNumber === "string" ? body.cardNumber : null,
+      isAuto: typeof body.isAuto === "boolean" ? body.isAuto : null,
+      isRookie: typeof body.isRookie === "boolean" ? body.isRookie : undefined,
+    } as any;
+
+    if (!holdingLike.playerName || holdingLike.playerName.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "playerName is required for suggestion",
+        suggestion: null,
+      });
+    }
+
+    const { suggestCardIdForHolding } = await import(
+      "../services/portfolioiq/cardIdSuggester.service.js"
+    );
+    const { normalizeHoldingFields } = await import(
+      "../services/portfolioiq/holdingFieldNormalizer.service.js"
+    );
+
+    // Return normalized fields so iOS can show the user WHY a field
+    // was auto-cleaned (year-doubling stripped, subset word removed,
+    // etc.) — transparency for the edit sheet.
+    const normalized = normalizeHoldingFields({
+      playerName: holdingLike.playerName,
+      cardYear: holdingLike.cardYear,
+      setName: holdingLike.setName,
+      parallel: holdingLike.parallel,
+      cardNumber: holdingLike.cardNumber,
+      isAuto: holdingLike.isAuto,
+    });
+
+    const suggestion = await suggestCardIdForHolding(holdingLike);
+    res.json({
+      success: true,
+      suggestion,
+      normalized: {
+        fields: normalized.fields,
+        changes: normalized.changes,
+      },
+    });
+  } catch (err: any) {
+    console.error("[portfolio] /holdings/dry-run-suggest failed:", err?.message ?? err);
+    res.status(500).json({
+      success: false,
+      error: err?.message ?? "Dry-run suggestion failed",
+      suggestion: null,
+    });
+  }
+});
+
+// CF-EBAY-SOLD-COMPS-QUERY (2026-07-12): market intelligence from our own
+// sold pool. Query by year/set/parallel/grade/player/cardNumber/isAuto/
+// cardId; returns matches ranked by aspect density + recency + aggregate
+// stats (min/max/median/mean). iOS renders on card detail as "recent
+// comps."
+router.get("/sold-comps", async (req, res, next) => {
+  try {
+    const { querySoldComps } = await import(
+      "../services/portfolioiq/ebaySoldComps.service.js"
+    );
+    const q = req.query as Record<string, string | undefined>;
+    const parsedYear = q.year ? parseInt(q.year, 10) : undefined;
+    const parsedLimit = q.limit ? parseInt(q.limit, 10) : undefined;
+    const parsedIsAuto =
+      q.isAuto === "true" ? true : q.isAuto === "false" ? false : undefined;
+    const result = await querySoldComps({
+      year: Number.isFinite(parsedYear) ? parsedYear : undefined,
+      set: q.set,
+      parallel: q.parallel,
+      grade: q.grade,
+      playerName: q.playerName,
+      cardNumber: q.cardNumber,
+      isAuto: parsedIsAuto,
+      cardId: q.cardId,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    next(err);
+  }
+});
+
 // CF-EXPORT-BE (2026-06-21): GET /api/portfolio/export?format=xlsx|csv
 //   - format defaults to xlsx; "csv" supported (RFC-4180-ish).
 //   - Reads holdings via the same composePortfolioListResponse wire path
@@ -251,6 +446,70 @@ router.put("/holdings/:id", portfolio.updateHolding);
 router.patch("/holdings/:id", portfolio.updateHolding);
 router.delete("/holdings/:id", portfolio.deleteHolding);
 router.post("/holdings/:id/sell", portfolio.sellHolding);
+
+// CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): flag a comp in the
+// shared sold_comps pool as wrong. Engine skips flagged comps during
+// FMV aggregation but preserves the provenance record for audit.
+// Body: { cardId: string, compId: string, reason?: string }
+// Auth: session-required (already enforced by router.use above). Trust
+// boundary — future enhancement: check that the flagger is either the
+// contributor OR has a reputation score above threshold OR is ops.
+router.post("/comps/flag-wrong", async (req, res, next) => {
+  try {
+    const { cardId, compId, reason } = req.body ?? {};
+    if (typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: "cardId required" });
+    }
+    if (typeof compId !== "string" || !compId.trim()) {
+      return res.status(400).json({ success: false, error: "compId required" });
+    }
+    const flaggedByUserId = (req as any).userId ?? "";
+    if (!flaggedByUserId) {
+      return res.status(401).json({ success: false, error: "session required" });
+    }
+    const { flagCompAsWrong, readCompsByCardId } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    // Look up the contributor BEFORE flagging so we can bump their
+    // reputation counter — the read is partition-hit (cheap).
+    let contributorUserId: string | null = null;
+    try {
+      const rows = await readCompsByCardId({ cardId: cardId.trim() });
+      const target = rows.find((r) => r.id === compId.trim());
+      contributorUserId = target?.contributorUserId ?? null;
+    } catch {
+      // non-fatal — flag can still proceed without contributor lookup
+    }
+    const result = await flagCompAsWrong({
+      cardId: cardId.trim(),
+      compId: compId.trim(),
+      flaggedByUserId,
+      reason: typeof reason === "string" ? reason : undefined,
+    });
+    // CF-USER-REPUTATION (Drew, 2026-07-15): only bump on successful
+    // flags to avoid rewarding failed API calls. Fire-and-forget.
+    if (result.status === "flagged") {
+      void (async () => {
+        try {
+          const { bumpUserStats } = await import(
+            "../services/portfolioiq/userReputation.service.js"
+          );
+          await bumpUserStats({ userId: flaggedByUserId, flagsIssued: 1 });
+          if (contributorUserId && contributorUserId !== flaggedByUserId) {
+            await bumpUserStats({ userId: contributorUserId, flagsAgainst: 1 });
+          }
+        } catch {
+          // swallow — reputation update is auxiliary
+        }
+      })();
+    }
+    const status =
+      result.status === "flagged" ? 200 :
+      result.status === "not-found" ? 404 :
+      result.status === "no-store" ? 503 : 500;
+    return res.status(status).json({ success: result.status === "flagged", ...result });
+  } catch (err) { next(err); }
+});
 // CF-REGRADE-COST-ROLLIN (2026-07-06, iOS ask): atomic grade
 // conversion — updates gradeCompany/gradeValue/certNumber and rolls
 // grading cost into totalCostBasis in one commit. iOS "Mark as
@@ -263,6 +522,14 @@ router.post("/holdings/regrade-batch", portfolio.regradeHoldingsBatch);
 // CF-PAYMENTS-B1: per-holding price refresh is a user-initiated FMV check
 // (consumes 1 priceChecksPerDay slot; free=5/day, paid tiers unlimited).
 router.post("/holdings/:id/refresh", requireRateLimited("priceChecksPerDay"), portfolio.refreshHolding);
+
+// CF-HELD-EXPENSES (2026-07-12): expenses incurred WHILE holding a card
+// (grading, supplies, storage). Each write rolls into totalCostBasis so
+// realized-P&L math on the eventual sale reflects true all-in cost. Same
+// integer-math pattern as the existing regrade flow.
+router.get("/holdings/:id/expenses", portfolio.listHeldExpensesHandler);
+router.post("/holdings/:id/expenses", portfolio.addHeldExpenseHandler);
+router.delete("/holdings/:id/expenses/:expenseId", portfolio.deleteHeldExpenseHandler);
 
 // CF-PAYMENTS-A: per-holding eBay surfaces — investor+ via ebayIntegration.
 router.post(

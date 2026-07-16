@@ -659,7 +659,7 @@ struct AddPortfolioCardView: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .tracking(0.5)
-            Text(value.map { String(format: "$%.0f", $0) } ?? "--")
+            Text(value.map { $0.currencyStringNoCents } ?? "--")
                 .font(.headline.bold())
                 .foregroundStyle(tint)
         }

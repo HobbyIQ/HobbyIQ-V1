@@ -58,6 +58,7 @@ import {
   getCardDetailsById,
   type CardSearchFilters,
 } from "../compiq/cardhedge.client.js";
+import { applyCollectorAlias } from "../compiq/parallelCollectorAliases.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -713,6 +714,132 @@ async function dispatchFreetextMode(
     ),
   );
 
+  // CF-CARDSIGHT-UUID-NATIVE (Drew, 2026-07-13, PR #412): also query
+  // Cardsight's UUID-native /v1 catalog directly. CH's snapshot uses
+  // legacy bubble.io IDs and doesn't include the parallels[] tree,
+  // so a card like Eric Hartman CPA-EHA lands with only its Blue
+  // X-Fractor variant on the wire — the Blue Refractor / Speckle /
+  // Purple / etc. never appear. Merging Cardsight-native hits gives
+  // iOS the full 40-parallel picker so users can pick the exact
+  // variant they own. Cardsight hits are deduped against CH by
+  // (player, setName, cardNumber) — CH-canonical wins when both
+  // vendors have the card, so we don't double-emit.
+  try {
+    const { fetchCardsightUuidNativeCandidates } = await import(
+      "../compiq/cardsightUuidSource.js"
+    );
+    const cardsightNative = await fetchCardsightUuidNativeCandidates(input);
+    // CF-CROSS-VENDOR-DEDUP (Drew, 2026-07-13, PR #416): CH and Cardsight
+    // word the same set differently ("2026 Bowman Baseball" vs "Chrome
+    // Prospects Autographs"), so setName-based dedup lets duplicates
+    // through — every physical parallel emits twice. Key on the SKU
+    // essentials instead: (player, year, cardNumber, normalizedParallel).
+    // Parallel is normalized (lowercase, collapse whitespace, drop
+    // "refractor" suffix noise when it's the only distinguishing word)
+    // so common vendor phrasings collide correctly.
+    const seenKey = (c: CardIdentity) =>
+      [
+        (c.player ?? "").toLowerCase().trim(),
+        String(c.year ?? "").trim(),
+        (c.cardNumber ?? "").toLowerCase().trim(),
+        normalizeParallelForDedup(c.parallel),
+      ].join("::");
+    // Index CH candidates by dedup key so when we skip a duplicate
+    // Cardsight-native row we can still transfer its imageUrl to the
+    // surviving CH row (CH catalog often lacks images for autos).
+    const chByKey = new Map<string, CardIdentity>();
+    for (const c of candidates) chByKey.set(seenKey(c), c);
+    const seen = new Set(chByKey.keys());
+    let dedupedCount = 0;
+    let imageGraftedCount = 0;
+    for (const cs of cardsightNative) {
+      const k = seenKey(cs);
+      if (!seen.has(k)) {
+        candidates.push(cs);
+        seen.add(k);
+        chByKey.set(k, cs);
+      } else {
+        dedupedCount++;
+        // Graft the Cardsight image onto the CH survivor when CH lacks
+        // one. Prevents the "everything shows placeholder" UX Drew hit.
+        const survivor = chByKey.get(k);
+        if (
+          survivor &&
+          (survivor.imageUrl == null || survivor.imageUrl === "") &&
+          typeof cs.imageUrl === "string" &&
+          cs.imageUrl.length > 0
+        ) {
+          survivor.imageUrl = cs.imageUrl;
+          imageGraftedCount++;
+        }
+      }
+    }
+    if (cardsightNative.length > 0) {
+      console.log(JSON.stringify({
+        event: "cardsight_uuid_native_merged",
+        source: "unifiedSearch.dispatcher",
+        input,
+        chCandidateCount: orderedCards.length,
+        cardsightUuidCount: cardsightNative.length,
+        dedupedCount,
+        imageGraftedCount,
+        totalAfterMerge: candidates.length,
+      }));
+    }
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_uuid_native_error",
+      source: "unifiedSearch.dispatcher",
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
+  // CF-UNIFIED-SEARCH-RANK (Drew, 2026-07-14): sort the merged CH + CS
+  // pool by unified intent score so the user's actually-intended variant
+  // ranks at the top regardless of which vendor sourced it. AI-matched
+  // candidates keep their position 0 lock (they're already high-signal
+  // semantic matches; the scoring here is a coarser fallback).
+  //
+  // Confidence gets re-emitted from the sorted index using the same
+  // linear decay routedCardToIdentity uses (see :929). This keeps the
+  // iOS picker's existing "sort by confidence desc" a no-op for the
+  // reordered list.
+  if (candidates.length > 1) {
+    const scored = candidates.map((c, originalIndex) => ({
+      c,
+      originalIndex,
+      // AI-matched candidates are pinned to the top with a synthetic
+      // large score so they stay at index 0 after sorting.
+      score: c.attribution === "ai-matched"
+        ? Number.POSITIVE_INFINITY
+        : scoreIdentityForIntent({
+            candidate: {
+              isAuto: c.isAuto,
+              parallel: c.parallel,
+              title: c.title,
+              year: c.year,
+            },
+            intentTokens,
+            intentWantsAuto,
+            intentYear: parsed.year,
+            intentParallel: parsed.parallel,
+          }),
+    }));
+    // Stable sort: score desc, tiebreak on original index.
+    scored.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+    const total = scored.length;
+    const denom = Math.max(1, total - 1);
+    for (let i = 0; i < scored.length; i++) {
+      const entry = scored[i];
+      // AI-matched keeps confidence 1.0 (already set by routedCardToIdentity).
+      if (entry.c.attribution !== "ai-matched") {
+        entry.c.confidence = Math.max(0.3, 1 - (i / denom) * 0.6);
+      }
+    }
+    // Write the sorted order back.
+    for (let i = 0; i < scored.length; i++) candidates[i] = scored[i].c;
+  }
+
   return {
     input: { raw: input, detectedMode: "freetext" },
     candidates,
@@ -726,10 +853,104 @@ async function dispatchFreetextMode(
  * always carries the year in its set string ("2025 Bowman Chrome Baseball"),
  * so a regex fallback is reliable as a secondary source.
  */
-function extractYearFromSetText(setStr: string | undefined | null): number | null {
+export function extractYearFromSetText(setStr: string | undefined | null): number | null {
   if (!setStr) return null;
   const m = String(setStr).match(/\b(19|20)\d{2}\b/);
   return m ? Number(m[0]) : null;
+}
+
+/**
+ * CF-CROSS-VENDOR-DEDUP (Drew, 2026-07-13, PR #416): normalize a parallel
+ * string for cross-vendor collision. Same physical variant may be:
+ *   - "Blue X-Fractor" (Cardsight)
+ *   - "Blue X-Fractor" (CH bubble.io)
+ *   - "Blue X Fractor" (some CH rows drop the hyphen)
+ * All should collide to the same normalized key.
+ */
+export function normalizeParallelForDedup(parallel: string | null | undefined): string {
+  if (!parallel) return "";
+  return parallel
+    .toLowerCase()
+    .replace(/[-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * CF-UNIFIED-SEARCH-RANK (Drew, 2026-07-14): score a resolved CardIdentity
+ * against parsed query intent so CH candidates and Cardsight-exploded
+ * parallels can be ranked in a single pool. Pre-fix, Cardsight rows were
+ * appended after CH's re-ranked list without ever being scored — so a
+ * user-searched "Eric Hartman 2026 Blue Refractor Auto" landed the correct
+ * SKU at the BOTTOM of the picker (past all 100 CH rows) because CH's
+ * snapshot doesn't carry that parallel and the CS-exploded row got no
+ * relevance signal.
+ *
+ * Score composition, all additive:
+ *   - Base score from scoreCandidateForIntent (isAuto ± 3, parallel-token
+ *     overlap × 2, year match ± 5). Same math CH candidates already use.
+ *   - Title-token overlap × 1: intent tokens present in candidate.title
+ *     that DIDN'T already match the parallel field. Catches "Blue" /
+ *     "Refractor" when a CH candidate lacks a `variant` string but the
+ *     title carries the parallel words. Bounded at +4 to avoid a long
+ *     descriptive title dominating.
+ *   - Exact-parallel bonus +5: normalized(candidate.parallel) === parsed
+ *     parallel (both normalized via normalizeParallelForDedup). This
+ *     pins the intended variant when the user typed the exact parallel
+ *     name, regardless of which vendor the candidate came from.
+ */
+export function scoreIdentityForIntent(opts: {
+  candidate: {
+    isAuto: boolean;
+    parallel: string | null | undefined;
+    title: string | null | undefined;
+    year: number | string | null | undefined;
+  };
+  intentTokens: ReadonlyArray<string>;
+  intentWantsAuto: boolean;
+  intentYear?: number | null;
+  intentParallel?: string | null | undefined;
+}): number {
+  let score = scoreCandidateForIntent({
+    isAuto: opts.candidate.isAuto,
+    parallel: opts.candidate.parallel,
+    intentTokens: opts.intentTokens,
+    intentWantsAuto: opts.intentWantsAuto,
+    intentYear: opts.intentYear,
+    candidateYear: opts.candidate.year,
+  });
+  // Title-token overlap, bounded — only credit tokens the parallel field
+  // didn't already claim, so parallel matches aren't double-counted.
+  const parallelTokenSet = new Set(
+    String(opts.candidate.parallel ?? "")
+      .toLowerCase()
+      .replace(/-/g, " ")
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3),
+  );
+  const titleTokenSet = new Set(
+    String(opts.candidate.title ?? "")
+      .toLowerCase()
+      .replace(/-/g, " ")
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3),
+  );
+  let titleBonus = 0;
+  for (const t of opts.intentTokens) {
+    if (parallelTokenSet.has(t)) continue;   // already counted by parallel branch
+    if (titleTokenSet.has(t)) titleBonus += 1;
+    if (titleBonus >= 4) break;
+  }
+  score += titleBonus;
+  // Exact-parallel bonus.
+  if (opts.intentParallel) {
+    const wantParallel = normalizeParallelForDedup(opts.intentParallel);
+    const haveParallel = normalizeParallelForDedup(opts.candidate.parallel);
+    if (wantParallel && haveParallel && wantParallel === haveParallel) {
+      score += 5;
+    }
+  }
+  return score;
 }
 
 /**
@@ -741,21 +962,81 @@ function extractYearFromSetText(setStr: string | undefined | null): number | nul
  * `cardsight:` candidateId prefix is retained as the stable wire
  * contract the iOS decoder strips before calling /price-by-id.
  */
+// CF-WIRE-SET-YEAR-DEDUPE (Drew, 2026-07-13): CH + Cardsight catalog rows
+// carry the year baked into the set string ("2026 Bowman Baseball",
+// "1998 Leaf Rookies and Stars Baseball"). When iOS' header composer
+// prepends `year` to `setName`, it renders "2026 2026 Bowman…". Strip
+// the leading YYYY (and any surrounding whitespace) from setName when we
+// have a year from either the structured field OR extracted from the
+// same set string. Idempotent — running on "Bowman Baseball" is a no-op.
+export function stripLeadingYear(setStr: string | null | undefined): string | null {
+  if (typeof setStr !== "string") return null;
+  const trimmed = setStr.trim();
+  if (trimmed.length === 0) return null;
+  const stripped = trimmed.replace(/^\s*(19|20)\d{2}(?:\s+|$)/, "").trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
+// CF-WIRE-VARIANT-AUTO-DEDUPE (Drew, 2026-07-13): CH catalog variant
+// strings sometimes carry an "Auto" suffix ("True Blue Refractor Auto",
+// "Blue Refractor Auto /150"). iOS composes `[variant, "Auto"]` when
+// `isAuto` is true, producing "…Auto…Auto". Strip standalone auto
+// tokens from the variant so iOS' single Auto pill wins. Preserves
+// serial suffixes like "/150" and any other non-auto tokens.
+export function stripAutoFromVariant(variant: string | null | undefined): string | null {
+  if (typeof variant !== "string") return null;
+  const trimmed = variant.trim();
+  if (trimmed.length === 0) return null;
+  const stripped = trimmed
+    .replace(/\b(auto(?:graph(?:ed)?)?)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
 function routedCardToIdentity(
   card: RoutedCard,
   index: number,
   total: number,
   attributionOverride?: "ai-matched",
 ): CardIdentity {
-  const yearNum =
+  // CF-WIRE-YEAR-EXTRACT (Drew, 2026-07-13): Cardsight catalog rows have
+  // `card.year = null` with the year embedded in `card.set` ("2026 Bowman
+  // Baseball"). Extract as a fallback so the wire's `year` is populated
+  // AND the set-name year-prefix stripping below has a signal to fire on.
+  const structuredYear =
     card.year != null && Number.isFinite(Number(card.year))
       ? Number(card.year)
       : null;
+  const extractedYear =
+    structuredYear == null ? extractYearFromSetText(card.set) : null;
+  const yearNum = structuredYear ?? extractedYear;
+
+  const dedupedSetName = yearNum != null ? stripLeadingYear(card.set) : (card.set ?? null);
+  const dedupedVariant = stripAutoFromVariant(card.variant);
+  // CF-PARALLEL-COLLECTOR-ALIASES (Drew, 2026-07-13, PR #410): rewrite
+  // Cardsight-canonical parallel labels to the names collectors use
+  // (e.g. "Blue X-Fractor" → "Blue Refractor" for CPA-* /150 autos).
+  // Underlying cardId is unchanged — only the display-facing string
+  // shifts. Aliased hits log so we can track hit rate.
+  const cardNumberStr = card.number != null ? String(card.number) : null;
+  const aliasResult = applyCollectorAlias(dedupedVariant, cardNumberStr);
+  const wireVariant = aliasResult.parallel;
+  if (aliasResult.aliased) {
+    console.log(JSON.stringify({
+      event: "parallel_collector_alias_applied",
+      source: "unifiedSearch.dispatcher",
+      cardId: card.card_id,
+      cardNumber: cardNumberStr,
+      cardsightName: aliasResult.alias?.cardsightName,
+      collectorName: aliasResult.alias?.collectorName,
+    }));
+  }
 
   const composedTitle =
     card.title?.trim() ||
     card.name?.trim() ||
-    [card.year, card.set, card.player, card.number, card.variant]
+    [yearNum, dedupedSetName, card.player, card.number, dedupedVariant]
       .map((p) => (p == null ? "" : String(p).trim()))
       .filter((p) => p.length > 0)
       .join(" ");
@@ -785,9 +1066,9 @@ function routedCardToIdentity(
     player: card.player ?? null,
     year: yearNum,
     brand: null,
-    setName: card.set ?? null,
-    cardNumber: card.number != null ? String(card.number) : null,
-    parallel: card.variant ?? null,
+    setName: dedupedSetName,
+    cardNumber: cardNumberStr,
+    parallel: wireVariant,
     variation: null,
     // CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): derive isAuto from the
     // card_number prefix. CardHedge's API doesn't expose an isAuto field,

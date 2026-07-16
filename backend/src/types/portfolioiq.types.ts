@@ -11,6 +11,30 @@
 // drops (gated on production probes Q1/Q2/Q3), Zod 4xx escalation
 // (gated on 1-week strip-and-warn monitor). `purchasePrice` ->
 // `acquisitionCost` rename is its own CF.
+// CF-HELD-EXPENSES (2026-07-12) — expenses accrued on a card WHILE it's
+// still in inventory. Distinct from purchasePrice (paid at acquisition) and
+// from the sale-side gradingCost/suppliesCost on ledger entries (captured
+// at sale time). Each write appends here + adds to holding.totalCostBasis
+// so realized-P&L math on the eventual sale reflects the full-cost basis.
+export type HeldExpenseKind =
+  | "grading"          // sent to PSA/BGS/SGC/CGC
+  | "supplies"         // sleeves, top loaders, cases
+  | "shipping_to_grader"
+  | "insurance"
+  | "storage"
+  | "other";
+
+export interface HoldingHeldExpense {
+  id: string;
+  kind: HeldExpenseKind;
+  amount: number;             // dollars, positive
+  incurredAt: string;         // ISO — WHEN the expense was paid
+  createdAt: string;          // when we recorded it
+  notes?: string;
+  /** Optional external receipt/invoice ref. */
+  invoiceRef?: string;
+}
+
 export interface PortfolioHolding {
   id: string;
   playerName?: string;
@@ -26,6 +50,21 @@ export interface PortfolioHolding {
   gradingCompany?: string;
   gradeCompany?: string;
   gradeValue?: number;
+  /**
+   * CF-BGS-BLACK-LABEL-INGEST (Drew, 2026-07-16, PR #495 follow-up):
+   * distinguishes a BGS 10 Black Label / Pristine 10 slab from a regular
+   * BGS 10. When true AND gradeCompany === "BGS" AND gradeValue === 10,
+   * autoPriceHolding passes grade "10 Black Label" to getGraderPremium,
+   * which routes to the 9x fallback tier (12/9/7/5.5 tiered) instead of
+   * the regular BGS 10 3.5x tier. Absent / false → treated as regular
+   * BGS 10.
+   *
+   * Only meaningful for BGS 10; the field is ignored for other
+   * (company, grade) tuples. Persisted so the CH taxonomy conflation
+   * of Pristine 10 UUIDs doesn't erase the tier when Drew's own
+   * inventory record already carries it.
+   */
+  isBlackLabel?: boolean;
   quantity?: number;
   purchasePrice?: number;
   totalCostBasis?: number;
@@ -62,9 +101,30 @@ export interface PortfolioHolding {
   graderStatus?: "available" | "at_psa" | "pending_redemption" | "in_route";
   purchaseDate?: string | number;
   purchaseSource?: string;
+  // CF-HELD-EXPENSES (2026-07-12): expenses accrued while holding the card
+  // (grading, supplies, storage). Each write also increments totalCostBasis
+  // so realized-P&L math on the eventual sale reflects true all-in cost.
+  // Managed through POST/DELETE /api/portfolio/holdings/:id/expenses.
+  heldExpenses?: HoldingHeldExpense[];
   listingUrl?: string;
   listingPrice?: number;
   fairMarketValue?: number;
+  // CF-SOURCE-VENDOR (2026-07-13): provenance of the current fairMarketValue.
+  // Foundation for multi-vendor pricing (CH + Cardsight + eBay-direct sold
+  // comps). Every priced holding stamps this so downstream (iOS attribution,
+  // per-vendor accuracy audits, source-preference tuning) knows where the
+  // number came from.
+  //
+  //   "cardhedge"  — CH API (current primary)
+  //   "cardsight"  — Cardsight API (returning for coverage gaps)
+  //   "ebay"       — direct from eBay sold-comps pool (our own sales +
+  //                  Marketplace Insights)
+  //   "manual"     — user-entered override
+  //
+  // Absent → legacy pre-CF holding, treat as unknown provenance.
+  sourceVendor?: "cardhedge" | "cardsight" | "ebay" | "manual";
+  /** ISO timestamp the sourceVendor was last written. */
+  sourceVendorUpdatedAt?: string;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from
@@ -82,6 +142,31 @@ export interface PortfolioHolding {
   // those β-detail values are sourced from the estimate response only.
   movementDirection?: string | null;
   movementUpdatedAt?: string | null;
+  // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (audit PR #483, 2026-07-15):
+  // persist the fields comp responses have always emitted but holdings
+  // used to drop before the PR #482 wire additions. autoPriceHolding
+  // now writes them from the engine's estimate response so the wire
+  // stops emitting null placeholders. Every field is optional +
+  // nullable — legacy holdings load as null, iOS decoders that PR #483
+  // extends bind them defensively.
+  //
+  //   trendIQ                    — full TrendIQResult per estimate call;
+  //                                iOS holding-detail renders the same
+  //                                trendIQ tile as CompIQPricedCardView.
+  //   confidence                 — 0..1 pricingConfidence lifted from
+  //                                the estimate response, so the
+  //                                confidence bar renders identically
+  //                                to the comp panel.
+  //   predictedPriceAttribution  — full attribution object (mechanism +
+  //                                anchor + slope). Wire layer emits it
+  //                                as the nested envelope; the legacy
+  //                                flat `predictedPriceMechanism` stays
+  //                                alongside for backward compat.
+  trendIQ?:
+    | import("../services/compiq/trendIQ.types.js").TrendIQResult
+    | null;
+  confidence?: number | null;
+  predictedPriceAttribution?: Record<string, unknown> | null;
   verdict?: string;
   recommendation?: string;
   lastUpdated?: string | number;

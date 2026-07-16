@@ -43,7 +43,7 @@ final class CardItem {
     // Additive default = [] keeps SwiftData migration safe for existing rows.
     var photoURLs: [String] = []
 
-    // MARK: eBay listing — populated by ListingComposerView after publish.
+    // MARK: eBay listing — populated by the eBay listing publish flow.
     // Additive defaults keep SwiftData migration safe for existing rows.
     var ebayListingId: String = ""
     var ebayListingURL: String = ""

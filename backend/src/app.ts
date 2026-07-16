@@ -31,12 +31,41 @@ import searchRoutes from "./routes/search.routes.js";
 // Cosmos-backed alias store — add/correct/reload aliases without a
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
 import searchAdminRoutes from "./routes/searchAdmin.routes.js";
+// CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
+// surface over the Cosmos reference-catalog container. Used by iOS
+// structured-search form and internal CompIQ code paths.
+import referenceRoutes from "./routes/reference.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
 import subscriptionsRoutes from "./routes/subscriptions.routes.js";
 import rateLimit from "express-rate-limit";
 
 const config = getConfig();
 const app = express();
+
+// CF-CATALOG-RESOLVER (2026-07-13): register vendor sources at startup so
+// resolveCard has plugins available on first call. Order matters —
+// listVendorSources returns in registration order, and reconciliation logs
+// list vendors in the same order. CH stays primary; sold-comps is the
+// coverage-gap plug (see PR #397).
+import { registerVendorSource } from "./services/compiq/catalogResolver.service.js";
+import { cardhedgeVendorSource } from "./services/compiq/cardhedgeVendorSource.js";
+import { soldCompsVendorSource } from "./services/compiq/soldCompsVendorSource.js";
+import { cardsightVendorSource } from "./services/compiq/cardsightVendorSource.js";
+import { isCardsightConfigured } from "./services/compiq/cardsightSlim.client.js";
+registerVendorSource(cardhedgeVendorSource);
+registerVendorSource(soldCompsVendorSource);
+// CF-CARDSIGHT-RESTORE (2026-07-13): Cardsight registers unconditionally;
+// its resolveCard returns null immediately when CARDSIGHT_API_KEY is
+// unset. Once the key lands in App Service settings, the plugin
+// activates on next restart. Log the config state at startup for
+// operational visibility.
+registerVendorSource(cardsightVendorSource);
+console.log(JSON.stringify({
+  event: "catalog_resolver_startup",
+  source: "app",
+  vendors: ["cardhedge", "sold-comps", "cardsight"],
+  cardsightConfigured: isCardsightConfigured(),
+}));
 
 // Rate limiting — 200 req/min per IP
 app.use("/api/", rateLimit({
@@ -94,6 +123,7 @@ app.use("/api/search", searchRoutes);
 // CF-SEARCH-ADMIN (2026-07-08, Drew): mount admin surface after the
 // user-facing /api/search so path resolution can't shadow user routes.
 app.use("/api/admin", searchAdminRoutes);
+app.use("/api/reference", referenceRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
 // CF-ACCOUNT-DELETION (2026-06-04): Apple Guideline 5.1.1(v) compliance.

@@ -80,6 +80,80 @@ describe("Portfolio routes", () => {
     expect(ledgerB.status).toBe(200);
     expect(ledgerB.body.entries.some((e: any) => e.holdingId === "test-holding-1")).toBe(false);
   });
+
+  // CF-MANUAL-SELL-ERP-GAP-DIAGNOSTIC (2026-07-11, Drew — bug report):
+  // "manual mark-sold doesn't materialize into /erp/pnl". The report
+  // turned out to be an iOS-side bug (backend was working; Drew's 6
+  // ledger entries + aggregatePnl proved it). Test locks the full loop
+  // so any REAL regression on this path fails CI loudly.
+  it("manual /sell writes source:manual ledger entry that surfaces in /erp/pnl totals", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "sell-erp-pnl-1",
+        playerName: "Mike Trout",
+        cardYear: 2011,
+        product: "Topps Update",
+        cardTitle: "2011 Topps Update Mike Trout",
+        quantity: 1,
+        purchasePrice: 100,
+        totalCostBasis: 100,
+      });
+
+    const sell = await request(app)
+      .post("/api/portfolio/holdings/sell-erp-pnl-1/sell")
+      .set("x-session-id", session)
+      .send({
+        quantity: 1,
+        salePrice: 315,
+        fees: 0,
+        tax: 0,
+        shipping: 0,
+        soldAt: "2026-07-11T20:00:00Z",
+        source: "manual",
+        salesChannel: "ebay",
+        paymentMethod: "paypal",
+      });
+    expect(sell.status).toBe(200);
+    // Write-side contract: source is emitted explicitly (not left absent).
+    // Prevents future readers from needing to default null → "manual".
+    expect(sell.body.sold.source).toBe("manual");
+    expect(sell.body.sold.reconciledVia).toBe("manual_entry");
+    // needsReconciliation absent = self-reconciled = will land in /pnl totals.
+    expect(sell.body.sold.needsReconciliation).toBeUndefined();
+
+    // /erp/pnl must reflect the sale IMMEDIATELY (no client-side hop needed).
+    // This is the exact deliverable Drew asked for.
+    const pnl = await request(app)
+      .get("/api/portfolio/erp/pnl")
+      .set("x-session-id", session);
+    expect(pnl.status).toBe(200);
+    expect(pnl.body.success).toBe(true);
+    expect(pnl.body.totals.entryCount).toBeGreaterThanOrEqual(1);
+    expect(pnl.body.totals.grossProceeds).toBeGreaterThanOrEqual(315);
+    expect(pnl.body.totals.realizedProfitLoss).toBeGreaterThanOrEqual(215);
+    // The sale must NOT show up as unreconciled — manual sales are
+    // reconciled-by-definition per the design comment at
+    // portfolioStore.service.ts PortfolioLedgerEntry.source docstring.
+    const unrec = await request(app)
+      .get("/api/portfolio/erp/unreconciled")
+      .set("x-session-id", session);
+    expect(unrec.status).toBe(200);
+    expect(unrec.body.entries.some((e: any) => e.holdingId === "sell-erp-pnl-1")).toBe(false);
+
+    // Grouping by source must bucket this into the "manual" group (not
+    // "(unknown)" — that would signal the explicit source stamp broke).
+    const pnlBySource = await request(app)
+      .get("/api/portfolio/erp/pnl?groupBy=source")
+      .set("x-session-id", session);
+    expect(pnlBySource.status).toBe(200);
+    const manualGroup = pnlBySource.body.groups.find((g: any) => g.key === "manual");
+    expect(manualGroup).toBeTruthy();
+    expect(manualGroup.totals.entryCount).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe("CF-PORTFOLIO-OPPORTUNITIES — GET /api/portfolio/opportunities", () => {

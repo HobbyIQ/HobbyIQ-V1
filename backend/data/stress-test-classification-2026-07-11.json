@@ -1,0 +1,1731 @@
+{
+  "baseCount": {
+    "total": 217,
+    "base": 26,
+    "refractorSuffixOnly": 51,
+    "trueGap": 140
+  },
+  "trueMisses": [
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Speckle",
+      "parallelKey": "speckle",
+      "auto": false,
+      "workbookRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Blue Wave",
+      "parallelKey": "blue-wave",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Refractor Auto",
+      "parallelKey": "refractor-auto",
+      "auto": true,
+      "workbookRun": 499,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Purple Auto",
+      "parallelKey": "purple-auto",
+      "auto": true,
+      "workbookRun": 250,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Blue Auto",
+      "parallelKey": "blue-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Blue Wave Auto",
+      "parallelKey": "blue-wave-auto",
+      "auto": true,
+      "workbookRun": 150,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Green Auto",
+      "parallelKey": "green-auto",
+      "auto": true,
+      "workbookRun": 99,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Gold Auto",
+      "parallelKey": "gold-auto",
+      "auto": true,
+      "workbookRun": 50,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Orange Auto",
+      "parallelKey": "orange-auto",
+      "auto": true,
+      "workbookRun": 25,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Red Auto",
+      "parallelKey": "red-auto",
+      "auto": true,
+      "workbookRun": 5,
+      "sampleCount": 40
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Superfractor Auto",
+      "parallelKey": "superfractor-auto",
+      "auto": true,
+      "workbookRun": 1,
+      "sampleCount": 40
+    }
+  ],
+  "namingMismatches": [
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Speckle",
+      "cosmosParallel": "Speckle Refractor",
+      "auto": false,
+      "cosmosPrintRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Speckle",
+      "cosmosParallel": "Speckle Refractor",
+      "auto": false,
+      "cosmosPrintRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Speckle",
+      "cosmosParallel": "Speckle Refractor",
+      "auto": false,
+      "cosmosPrintRun": 299,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Purple",
+      "cosmosParallel": "Purple Refractor",
+      "auto": false,
+      "cosmosPrintRun": 250,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Blue",
+      "cosmosParallel": "Blue Refractor",
+      "auto": false,
+      "cosmosPrintRun": 150,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Green",
+      "cosmosParallel": "Green Refractor",
+      "auto": false,
+      "cosmosPrintRun": 99,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Gold",
+      "cosmosParallel": "Gold Refractor",
+      "auto": false,
+      "cosmosPrintRun": 50,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Orange",
+      "cosmosParallel": "Orange Refractor",
+      "auto": false,
+      "cosmosPrintRun": 25,
+      "sampleCount": 100
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "stressTestParallel": "Red",
+      "cosmosParallel": "Red Refractor",
+      "auto": false,
+      "cosmosPrintRun": 5,
+      "sampleCount": 100
+    }
+  ]
+}

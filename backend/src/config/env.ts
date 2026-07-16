@@ -36,9 +36,11 @@ export function getConfig() {
     STORAGE_ACCOUNT_NAME: process.env.STORAGE_ACCOUNT_NAME,
     KEY_VAULT_NAME: process.env.KEY_VAULT_NAME,
     APPLICATIONINSIGHTS_CONNECTION_STRING: process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
-    ENABLE_DEBUG_PRICING: process.env.ENABLE_DEBUG_PRICING === "true",
-    ENABLE_AI_SEARCH: process.env.ENABLE_AI_SEARCH === "true",
-    ENABLE_NOTIFICATIONS: process.env.ENABLE_NOTIFICATIONS === "true",
+    // CF-DEAD-FLAG-SWEEP (audit PR #488, 2026-07-15): ENABLE_DEBUG_PRICING /
+    // ENABLE_AI_SEARCH / ENABLE_NOTIFICATIONS retired — parsed into config
+    // for months but never referenced. Also removed from infra/main.json
+    // and infra/modules/app-service.bicep so App Service stops deploying
+    // empty env values for them.
     OCR_INTERNAL_ENABLED: process.env.OCR_INTERNAL_ENABLED === "true",
     OCR_INTERNAL_KEY: process.env.OCR_INTERNAL_KEY || ""
   };

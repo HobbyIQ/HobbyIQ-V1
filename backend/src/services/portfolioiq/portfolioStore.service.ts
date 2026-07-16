@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
-import { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { PortfolioHolding, type HoldingHeldExpense, type HeldExpenseKind } from "../../types/portfolioiq.types.js";
 import type { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 // CF-GRADED-RAIL-WIRE-IN (2026-06-14): assemble the same gradedEstimates
@@ -132,6 +132,83 @@ interface UserDoc {
   // CF-ERP-EXPANSION-#7: trade history. Atomic with ledger + holdings
   // mutations on POST /erp/trades.
   trades?: TradeTransaction[];
+  // CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12): buy-side counterpart to
+  // `ledger` (which tracks sales). Each PortfolioPurchaseEntry records
+  // an acquisition event (manual entry, eBay import, break, LCS trip) at
+  // the ORDER level — multiple holdings can share one purchase via the
+  // holdingIds[] back-reference. Optional so existing user docs load
+  // without migration.
+  purchases?: PortfolioPurchaseEntry[];
+}
+
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
+//
+// Buy-side counterpart to PortfolioLedgerEntry. Records acquisition events
+// at the ORDER level (one purchase → N holdings). Populated by:
+//   - Manual entry via POST /api/portfolio/erp/purchases
+//   - eBay import via /erp/purchases/import/ebay (walks /sell/finances/v1/
+//     transaction filtered on ORDER/SHIPPING_LABEL/PURCHASE)
+//   - Add-holding auto-fill (a future extension: if the user records a
+//     purchasePrice on POST /holdings, we can synthesize a stub purchase
+//     entry so the analytics stays complete)
+//
+// Design decisions matching PortfolioLedgerEntry (sale) semantics:
+//   - `source` marks provenance (manual | ebay | future: paypal, stripe)
+//   - Idempotency is on (userId, source, sourceOrderId) so replay is safe
+//   - Per-line costs stay on holdings (holding.purchasePrice); the entry
+//     aggregates for period totals + attribution
+//   - Non-line-item costs (shipping, tax, other) stay at the purchase
+//     level; caller-side allocation is deferred to a follow-up PR (COGS
+//     needs proportional allocation for accurate per-holding basis)
+export type PurchaseSource = "manual" | "ebay";
+
+export interface PortfolioPurchaseEntry {
+  id: string;
+  userId: string;
+  /** ISO. Source date the user actually paid — NOT when we recorded it. */
+  purchaseDate: string;
+  source: PurchaseSource;
+
+  // ─── Cost breakdown (dollars, positive) ─────────────────────────────
+  /** Sum of per-item costs (subtotal before order-level shipping/tax/fees). */
+  subtotal: number;
+  /** Sales tax collected at purchase. */
+  tax: number;
+  /** Shipping paid to receive the order. */
+  shipping: number;
+  /** Non-shipping non-tax non-item fees (buyer protection, currency conv, etc). */
+  otherFees: number;
+  /** subtotal + tax + shipping + otherFees. Reader authoritative field. */
+  totalCost: number;
+
+  // ─── Attribution (which holdings this purchase acquired) ────────────
+  /**
+   * holdingIds populated from this purchase. May be empty at creation
+   * time (e.g. eBay import lands before user catalogs the cards) and is
+   * appended-to as user adds the holdings.
+   */
+  holdingIds: string[];
+
+  // ─── Vendor / source metadata ───────────────────────────────────────
+  /** Free-text vendor name — "eBay seller X", LCS name, break company. */
+  vendor?: string;
+  /** Free-text invoice reference for user-side reconciliation. */
+  invoiceRef?: string;
+  notes?: string;
+
+  // ─── eBay-specific provenance (source==="ebay") ─────────────────────
+  /** eBay's order ID for the purchase. Idempotency key for import.
+   *  Populated from OrderLineItemID, format "itemId-transactionId". */
+  ebayOrderId?: string;
+  /** eBay Finances transactionId (distinct from orderId). */
+  ebayTransactionId?: string;
+  /** CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): the listing's item id.
+   *  Extractable from ebayOrderId (split on "-") but stored explicitly so
+   *  the Browse API lookup + future sold-comps queries don't need to reparse. */
+  ebayItemId?: string;
+
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // CF-D1 (2026-06-20) — case-insensitive holding-key lookup.
@@ -439,7 +516,7 @@ export async function deletePortfolioDocForUser(
   return summary;
 }
 
-interface PortfolioLedgerEntry {
+export interface PortfolioLedgerEntry {
   id: string;
   userId: string;
   holdingId: string;
@@ -459,8 +536,12 @@ interface PortfolioLedgerEntry {
   notes?: string;
 
   // ----- eBay sale provenance (PR D.6, populated only for ITEM_SOLD path) -----
-  // Manual entries OMIT all of these. Readers MUST treat absent `source` as
-  // "manual" and absent `needsReconciliation` as false.
+  // Manual entries emit `source: "manual"` explicitly (CF-MANUAL-SELL-EXPLICIT-
+  // SOURCE, PR #373). All other eBay fields (ebayOrderId, ebayOfferId, etc.)
+  // are still omitted on manual entries. Legacy entries written before
+  // PR #373 may have `source` absent — readers MUST tolerate absent as
+  // synonymous with "manual" and absent `needsReconciliation` as false, so
+  // pre-#373 rows aggregate correctly.
   source?: "manual" | "ebay";
   ebayOrderId?: string;
   ebayOfferId?: string | null;
@@ -531,6 +612,11 @@ interface PortfolioLedgerEntry {
   // reconciledVia identifies HOW the granular fees were established. CPAs
   // need to know which figures are processor-confirmed vs hand-entered.
   reconciledVia?: ReconciledVia;
+  // CF-RECONCILE-FINALIZE (2026-07-12): timestamp of the moment the two
+  // axes were satisfied and needsReconciliation flipped to false. Set by
+  // tryFinalizeReconciliation on the successful path. Present only on
+  // finalized rows — absent on rows still awaiting fees or costs.
+  reconciledAt?: string;
   // Append-only audit trail of manual fee overrides. Never overwritten —
   // each /unreconciled/:id/override push appends a row. Full prior-state
   // history reconstructable from this array.
@@ -567,6 +653,26 @@ interface PortfolioLedgerEntry {
   // ledger entry title.
   regradeFromGrade?: string;
   regradeToGrade?: string;
+
+  // ----- CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12) --------------------------
+  // Enriched snapshot of the eBay listing at the moment of sale — captured
+  // ONCE at ITEM_SOLD time (or on manual reconcile), before the listing
+  // ends and Browse API may 404. This is the foundation for our own sold-
+  // comps pool: every sale we complete gives us a market data point tied
+  // to the same structured aspects downstream matching will key on.
+  //
+  // enrichedFromEbay=true means the fields below were populated from
+  // Browse; absent/false means title-parse only or manual entry with no
+  // listing.
+  enrichedFromEbay?: boolean;
+  // Same shape as the buy-side enrichment fields on PortfolioHolding so
+  // iOS + analytics share decoders.
+  ebayItemAspects?: Record<string, string>;
+  ebayImageUrl?: string | null;
+  ebaySoldImages?: string[] | null;
+  ebayShortDescription?: string | null;
+  ebayCategoryPath?: string | null;
+  ebaySellerUsername?: string | null;
 }
 
 // ── CF-ERP-EXPANSION-#1 enums + structured location ─────────────────────────
@@ -608,9 +714,13 @@ export interface SaleLocation {
 // ── CF-ERP-EXPANSION-#6 ─────────────────────────────────────────────────────
 
 export type ReconciledVia =
-  | "ebay_finances"     // populated by the eBay Finances API enrichment path
-  | "manual_override"   // user supplied via POST /unreconciled/:id/override
-  | "manual_entry";     // user supplied at sale time (sellHolding manual path)
+  | "ebay_finances"        // populated by the eBay Finances API enrichment path
+  | "manual_override"      // user supplied via POST /unreconciled/:id/override
+  | "manual_entry"         // user supplied at sale time (sellHolding manual path)
+  | "manual_user_finalize"; // CF-RECONCILE-FINALIZE (2026-07-12): user chose
+                            // to close the row without waiting for eBay's
+                            // fees feed; distinguishes forced finalizes from
+                            // enrichment-driven ones in P&L audits.
 
 export interface LedgerFeeAdjustment {
   adjustmentId: string;
@@ -1035,6 +1145,7 @@ export function buildEstimateRequestFromHolding(
       String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() ||
       undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+    isBlackLabel: (holding as any).isBlackLabel === true ? true : undefined,
     cardId: pinnedCardId,
     // CF-HOLDING-REFRESH-PARALLELID-THREAD (2026-06-26): thread the
     // holding's stored parallelId into the engine input so the CH
@@ -1293,6 +1404,51 @@ function stripDeprecatedHoldingKeys(
     res.setHeader("X-PortfolioHolding-Deprecated-Keys", deprecated.join(","));
   }
   return clean;
+}
+
+// CF-INVENTORY-RAW-CLEAR (2026-07-12): "user picked Raw" normalizer.
+//
+// iOS can send any of {null, "", "Raw"} to mean "clear the grade."
+// Downstream readers (pricing, comps, iOS decoders) all want a truly
+// absent field on a Raw holding — no dangling gradeCompany: null.
+//
+// TWO steps:
+//   1. normalizeRawGradeClearSignal — before the {...previous, ...body}
+//      spread, convert every clear-signal shape to explicit null AND
+//      cascade to gradeValue + gradingCompany + certGrader + certNumber
+//      so the next holding shape sees a consistent "grade cleared" state.
+//   2. dropClearedGradeFields — after the spread, delete keys whose
+//      merged value is null so the persisted shape matches a native
+//      Raw holding (never sent grade at all).
+//
+// undefined is preserved — that's the "don't touch this field" signal
+// and must NOT trigger the clear.
+
+const GRADE_CLEAR_FIELDS = [
+  "gradeCompany",
+  "gradingCompany",
+  "gradeValue",
+  "certGrader",
+  "certNumber",
+] as const;
+
+function isRawClearSignal(v: unknown): boolean {
+  if (v === null) return true;
+  if (typeof v !== "string") return false;
+  const trimmed = v.trim();
+  return trimmed === "" || trimmed.toLowerCase() === "raw";
+}
+
+function normalizeRawGradeClearSignal(body: Record<string, unknown>): void {
+  if ("gradeCompany" in body && isRawClearSignal(body.gradeCompany)) {
+    for (const k of GRADE_CLEAR_FIELDS) body[k] = null;
+  }
+}
+
+function dropClearedGradeFields(holding: Record<string, unknown>): void {
+  for (const k of GRADE_CLEAR_FIELDS) {
+    if (holding[k] === null) delete holding[k];
+  }
 }
 
 // CF-INVENTORYIQ-R1 — write-side normalizer for `cardId`.
@@ -2017,6 +2173,9 @@ async function autoPriceHolding(
         confidence: preEarlyLadderResult.confidence,
       },
       lastUpdated: new Date().toISOString(),
+      // CF-SOURCE-VENDOR (2026-07-13): ladder result is CH-derived.
+      sourceVendor: "cardhedge",
+      sourceVendorUpdatedAt: new Date().toISOString(),
     };
     doc.holdings[holding.id] = hydrated;
     return hydrated;
@@ -2221,9 +2380,33 @@ async function autoPriceHolding(
     predictedPriceUpdatedAt,
     movementDirection,
     movementUpdatedAt,
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (audit PR #483, 2026-07-15):
+    // persist the full trendIQ + confidence + predictedPriceAttribution
+    // objects from the estimate. composeHoldingWireShape now emits them
+    // instead of the null placeholders PR #482 stamped. Legacy holdings
+    // (written before this PR) load as `undefined` for these fields; the
+    // wire coerces `undefined` → `null` and iOS decoders bind defensively.
+    trendIQ: (estimate as any)?.trendIQ ?? null,
+    confidence:
+      typeof (estimate as any)?.confidence?.pricingConfidence === "number"
+        ? Math.min(1, Math.max(0, (estimate as any).confidence.pricingConfidence))
+        : null,
+    predictedPriceAttribution:
+      (estimate as any)?.predictedPriceAttribution ?? null,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     lastUpdated: now,
+    // CF-CARDSIGHT-VENDOR-PROVENANCE (audit PR #492, 2026-07-15): the
+    // dual-source resolver went live with Drew's CF-CARDSIGHT-FALLBACK-
+    // REVIVAL (2026-07-14) + CF-CS-STRUCTURED-BRIDGE / CF-CS-PRICING-
+    // BACKSTOP (2026-07-15). Read the vendor from the estimate response
+    // (populated from fetched.vendor at compiqEstimate.service.ts:7419)
+    // so CS-served holdings get stamped with the correct provenance.
+    // Falls back to "cardhedge" for legacy estimates that predate the
+    // sourceVendor field — worst case behavior matches the pre-PR
+    // hardcode.
+    sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
+    sourceVendorUpdatedAt: now,
     // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: writer no longer stamps
     // currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
     // premiumValue / suggestedListPrice. The wire computes all 6 at response
@@ -2247,6 +2430,53 @@ async function autoPriceHolding(
       value: resolved.fairMarketValueOverride,
       source,
     });
+  }
+
+  // CF-CATALOG-RESOLVER-FALLBACK (2026-07-13): when CH could not price this
+  // holding (fairMarketValue AND estimatedValue both null → truly nothing),
+  // ask the multi-source resolver. Sold-comps may have priced this exact
+  // SKU via our own users' completed sales even when CH doesn't index it
+  // (the CPA-EHA Blue Refractor Auto case). On a resolver hit, stamp the
+  // winning vendor + write the FMV.
+  //
+  // Kept narrow: only fires on true CH catalog-miss cases. Any successful
+  // CH pricing (observed or estimated) is left as authoritative — the
+  // resolver is a coverage-gap plug, not a price arbiter.
+  // CF-RESOLVER-FALLBACK-EVERYWHERE (2026-07-13): consolidated helper used
+  // by both autoPriceHolding + repriceHoldingsForUser. Only fires when CH
+  // truly had nothing. On non-CH winner: stamp FMV + sourceVendor +
+  // valuationStatus. See resolverFallbackHelper.ts for the shared contract.
+  const { tryResolverFallback, shouldTryFallback } = await import(
+    "../compiq/resolverFallbackHelper.js"
+  );
+  if (shouldTryFallback({ fairMarketValue: updated.fairMarketValue, estimatedValue: updated.estimatedValue })) {
+    const fallback = await tryResolverFallback({
+      playerName: updated.playerName,
+      cardYear: updated.cardYear,
+      setName: updated.setName ?? (updated as any).product,
+      parallel: updated.parallel,
+      cardNumber: updated.cardNumber,
+      gradeCompany: updated.gradeCompany,
+      gradeValue: updated.gradeValue,
+      isAuto: updated.isAuto,
+      cardId: (updated as any).cardId,
+    });
+    if (fallback) {
+      (updated as any).fairMarketValue = fallback.fairMarketValue;
+      (updated as any).valuationStatus = "estimated";
+      (updated as any).isEstimate = true;
+      (updated as any).estimateBasis = fallback.estimateBasis;
+      (updated as any).sourceVendor = fallback.vendor;
+      (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
+      console.log(JSON.stringify({
+        event: "catalog_resolver_fallback_hit",
+        source: "portfolioStore.autoPriceHolding",
+        holdingId: holding.id,
+        vendor: fallback.vendor,
+        fairMarketValue: fallback.fairMarketValue,
+        compCount: fallback.compCount,
+      }));
+    }
   }
 
   evaluateHoldingAlerts(doc, previous, updated);
@@ -2653,9 +2883,33 @@ export async function getHoldings(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
   const doc = await readUserDoc(auth.userId);
-  const items = Object.values(doc.holdings);
-  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
-  // layer; explicit wire-shape per contract_freeze_v1 §1.3.
+  const allItems = Object.values(doc.holdings);
+  // CF-EBAY-REVIEW-QUEUE (2026-07-12): filter pending-review out of the
+  // main /holdings response — those aren't real inventory yet. iOS reads
+  // them separately via GET /erp/holdings/pending-review + user confirms
+  // each one before it lands here. ?includePendingReview=true opts in
+  // for admin/debug tools.
+  const includePending = String(req.query.includePendingReview ?? "").trim() === "true";
+  const items = includePending
+    ? allItems
+    : allItems.filter((h) => (h as any).cardStatus !== "pending-review");
+  const holdings = composePortfolioListResponse(items);
+  res.json({ userId: auth.userId, count: holdings.length, holdings });
+}
+
+/**
+ * CF-EBAY-REVIEW-QUEUE (2026-07-12): return the auto-created holdings
+ * that are waiting for user confirmation. Same wire shape as /holdings —
+ * iOS decodes the same PortfolioHolding shape and renders the review
+ * queue UX with parseConfidence + browseAspects + photos in view.
+ */
+export async function getPendingReviewHoldings(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const doc = await readUserDoc(auth.userId);
+  const items = Object.values(doc.holdings).filter(
+    (h) => (h as any).cardStatus === "pending-review",
+  );
   const holdings = composePortfolioListResponse(items);
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
@@ -2701,12 +2955,18 @@ export interface PortfolioSummary {
   observedGainLossPct: number | null;
 }
 
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): "pending-review" is the eBay-auto
+// commit-gate status. Auto-created holdings start here; the user promotes
+// them to "active" via POST /erp/holdings/:id/confirm after reviewing the
+// parser+Browse extraction. Excluded from all portfolio value / P&L /
+// reprice paths until confirmed.
 const EXCLUDED_STATUS = new Set([
   "sold",
   "archived",
   "watchlist",
   "tradepending",
   "trade pending",
+  "pending-review",
 ]);
 
 function round2(v: number): number {
@@ -3459,6 +3719,14 @@ export async function addHolding(req: Request, res: Response) {
     (req.body ?? {}) as Record<string, unknown>,
     res,
   );
+  // CF-INVENTORY-RAW-CLEAR (2026-07-12): same Raw normalization iOS uses
+  // on PATCH. On ADD, a "Raw" create sends gradeCompany in one of the
+  // clear-signal shapes; normalize the signal but DO NOT drop fields —
+  // the "add-with-explicit-null-cert" contract (W4 wire) uses null to
+  // mean "explicit absence" and must round-trip through GET as null.
+  // Only the PATCH path drops (there we're actively clearing existing
+  // values on the persisted holding).
+  normalizeRawGradeClearSignal(incoming);
   const { id, ...rest } = incoming;
   let holding: PortfolioHolding = {
     ...(rest as Omit<PortfolioHolding, "id">),
@@ -3566,7 +3834,9 @@ export async function updateHolding(req: Request, res: Response) {
     (req.body ?? {}) as Record<string, unknown>,
     res,
   );
+  normalizeRawGradeClearSignal(cleanBody);
   let next = { ...doc.holdings[id], ...(cleanBody as Partial<PortfolioHolding>), id };
+  dropClearedGradeFields(next);
   next = normalizeR1CardsightCardId(
     next,
     id,
@@ -3618,7 +3888,13 @@ export async function updateHolding(req: Request, res: Response) {
     void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
   }
 
-  res.json({ message: "Holding updated", id });
+  // CF-PATCH-HOLDING-RETURN-STATE (2026-07-12): return the fully-persisted
+  // holding via composeHoldingWireShape so iOS can verify the round-trip
+  // matches what it sent. Prevents "I changed to Raw but it still shows
+  // PSA 10" symptoms where iOS was relying on a refetch that raced or
+  // never fired. Legacy {message, id} still present for existing consumers.
+  const holdingWire = composeHoldingWireShape(doc.holdings[id]);
+  res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
 }
 
 /**
@@ -3837,10 +4113,17 @@ export async function regradeHolding(req: Request, res: Response) {
     void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
   }
 
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): standardize response envelope
+  // across all mutation routes. `updatedHolding` preserved for existing
+  // consumers; `holding` + `entry.holding` are the new parity fields
+  // matching PATCH /holdings and confirm/reject flows.
+  const regradedWire = composeHoldingWireShape(doc.holdings[id]);
   return res.json({
     message: "Holding regraded",
     id,
     updatedHolding: doc.holdings[id],
+    holding: regradedWire,
+    entry: { holding: regradedWire },
   });
 }
 
@@ -4474,6 +4757,20 @@ export async function sellHolding(req: Request, res: Response) {
     notes: notes && notes.length ? notes : undefined,
     gradingCost,
     suppliesCost,
+    // CF-MANUAL-SELL-EXPLICIT-SOURCE (2026-07-11, Drew): emit source:"manual"
+    // explicitly instead of relying on absent-means-manual reader defaults.
+    // The interface comment at line 464 states readers MUST treat absent as
+    // manual — that's still true — but explicitly stamping the field makes:
+    //   - Cosmos queries filter/group cleanly without OR-null clauses
+    //   - App Insights ledger telemetry human-readable
+    //   - iOS-side debugging show a positive marker instead of an
+    //     absence (which is impossible to distinguish from "field
+    //     dropped by a schema-narrowing decode")
+    // Behavioral equivalent to absent: isReconciled + accumulate + all
+    // groupKeyFor cases already returned "manual" for absent source, so
+    // existing readers see no change. Backfill on legacy absent-source
+    // entries is NOT done here — pure write-side change.
+    source: "manual",
     // CF-ERP-EXPANSION-#1 + #6: manual entries are reconciled-by-definition.
     // The user IS the authoritative source for their own manual sale.
     reconciledVia: "manual_entry",
@@ -4503,11 +4800,54 @@ export async function sellHolding(req: Request, res: Response) {
   doc.ledger.push(ledgerEntry);
   await writeUserDoc(auth.userId, doc);
 
+  // CF-SOLD-COMPS-FOUNDATION (Drew, 2026-07-14): recorded sale = ground
+  // truth. If the holding carries a canonical cardId (i.e. it was
+  // user-confirmed at some point), emit a sold-comp record so the
+  // sold_comps pool captures REAL sale prices from real users. Same
+  // fire-and-forget pattern as confirm-hook — never blocks the sale
+  // response, never fails the sale on comp write.
+  const soldCardId = String((holding as any).cardId ?? "").trim();
+  if (soldCardId && holding.playerName) {
+    void (async () => {
+      try {
+        const { recordSoldComp } = await import("./soldCompsStore.service.js");
+        await recordSoldComp({
+          cardId: soldCardId,
+          playerName: String(holding.playerName ?? ""),
+          cardYear: holding.cardYear ?? null,
+          setName: holding.setName ?? null,
+          parallel: holding.parallel ?? null,
+          cardNumber: holding.cardNumber ?? null,
+          isAuto: holding.isAuto === true,
+          price: unitSalePrice,
+          soldAt,
+          source: "ebay-user-sale",
+          sourceExternalId: (req.body?.ebayOrderId as string | undefined) ?? null,
+          contributorUserId: auth.userId,
+          title: shimmedCardTitle(holding),
+          imageUrl: (holding as any).ebayImageUrl ?? null,
+          sellerHandle: null,
+          verifiedByUser: true,
+          confidence: 1.0,
+        });
+      } catch {
+        // swallow — comp emission never fails the sale
+      }
+    })();
+  }
+
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the partial-quantity
+  // remaining holding when qty remains so iOS reflects the new state
+  // without a refetch. holdingRemoved=true means the row is gone — no
+  // holding field then.
+  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id]) : null;
   return res.json({
     message: "Holding sale recorded",
     sold: ledgerEntry,
     holdingRemoved: remainingQty <= 0,
     remainingQuantity: Math.max(0, remainingQty),
+    holding: remainingHolding,
+    entry: remainingHolding ? { holding: remainingHolding } : undefined,
   });
 }
 
@@ -4633,11 +4973,36 @@ export async function markHoldingSoldFromEbay(
   const allGranularKnown = Object.values(granularFees).every((v) => v !== null);
 
   // Unknown (null) fees contribute 0 to the sum here, but `needsReconciliation`
-  // is set true so downstream readers know the number is incomplete.
+  // starts true so downstream readers know the number is incomplete until
+  // the axis check completes below (may auto-close via tryFinalizeReconciliation).
   const knownFeeSum = Object.values(granularFees).reduce<number>(
     (acc, v) => acc + (v ?? 0),
     0,
   );
+
+  // CF-AUTO-RECONCILE-LAYER-1 (2026-07-12): detect the "no user costs" case
+  // and auto-stamp the axis-2 marker. The vast majority of eBay sales are
+  // buy-and-flip — no grading events, no supplies expenses recorded — and
+  // making the user click Save with $0/$0 on every one adds silent friction.
+  //
+  // Safe when:
+  //   - the holding has no heldExpenses[] entries (nothing user recorded)
+  //   - AND no prior regrade action exists on the ledger for this holdingId
+  //     (regrade sales cost the user grading fees; unsafe to zero)
+  //
+  // Distinguished from user-set by userCostsProvidedBy="system:auto-zero-costs".
+  const heldExpensesCount = Array.isArray((holding as any).heldExpenses)
+    ? (holding as any).heldExpenses.length
+    : 0;
+  const priorRegradeForHolding = doc.ledger.some(
+    (e) => e.holdingId === canonicalHoldingId && (e as any).action === "regrade",
+  );
+  const autoZeroCostsSafe = heldExpensesCount === 0 && !priorRegradeForHolding;
+
+  const initialGradingCost = data.gradingCost ?? (autoZeroCostsSafe ? 0 : null);
+  const initialSuppliesCost = data.suppliesCost ?? (autoZeroCostsSafe ? 0 : null);
+  const autoUserCostsProvidedAt = autoZeroCostsSafe ? new Date().toISOString() : undefined;
+  const autoUserCostsProvidedBy = autoZeroCostsSafe ? "system:auto-zero-costs" : undefined;
 
   const needsReconciliation = netPayout === null && !allGranularKnown;
 
@@ -4646,13 +5011,16 @@ export async function markHoldingSoldFromEbay(
   // cash-out costs that reduce returned proceeds). eBay-authoritative
   // netPayout is the post-platform-fee baseline; user-side costs (grading,
   // supplies) still subtract on top because eBay doesn't see them.
+  //
+  // CF-AUTO-RECONCILE-LAYER-1: `initialGradingCost` / `initialSuppliesCost`
+  // are $0 when the auto-zero-costs heuristic fired above; null otherwise.
   const financials = computeLedgerFinancials({
     grossProceeds,
     feesTotal: knownFeeSum,
     tax: 0,
     shipping: 0,
-    gradingCost: data.gradingCost ?? null,
-    suppliesCost: data.suppliesCost ?? null,
+    gradingCost: initialGradingCost,
+    suppliesCost: initialSuppliesCost,
     costBasisSold,
     netPayoutOverride: netPayout,
   });
@@ -4689,9 +5057,12 @@ export async function markHoldingSoldFromEbay(
     otherFees: granularFees.otherFees,
     netPayout,
     actualShippingCost: granularFees.actualShippingCost,
-    suppliesCost: data.suppliesCost ?? null,
-    gradingCost: data.gradingCost ?? null,
+    suppliesCost: initialSuppliesCost,
+    gradingCost: initialGradingCost,
     needsReconciliation,
+    // CF-AUTO-RECONCILE-LAYER-1: auto-stamp axis-2 marker when safe.
+    userCostsProvidedAt: autoUserCostsProvidedAt,
+    userCostsProvidedBy: autoUserCostsProvidedBy,
     // CF-ERP-EXPANSION-#1 + #6: eBay webhook auto-populates the
     // sales-tracking axes. reconciledVia is "ebay_finances" only when the
     // Finances API has actually delivered the granular fees (i.e.
@@ -4701,7 +5072,17 @@ export async function markHoldingSoldFromEbay(
     salesChannel: "ebay",
     paymentMethod: "ebay_managed",
     reconciledVia: needsReconciliation ? undefined : "ebay_finances",
+    feeSource: needsReconciliation ? undefined : "ebay_finances",
   };
+
+  // CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): run tryFinalizeReconciliation on
+  // the fresh entry. Closes it now if BOTH axes are met — Finances fees +
+  // auto-stamped user costs are the common path. Recomputed needsReconciliation
+  // flows through to the persist below.
+  const finalizedEntry = tryFinalizeReconciliation(
+    ledgerEntry as unknown as LedgerEntryForErp,
+  ) as unknown as PortfolioLedgerEntry;
+  Object.assign(ledgerEntry, finalizedEntry);
 
   // 6. Mutate holding state (mirrors sellHolding).
   const remainingQty = quantityOwned - quantitySold;
@@ -4968,6 +5349,352 @@ export async function getTradeForUser(userId: string, tradeId: string): Promise<
   return doc.trades?.find((t) => t.id === tradeId) ?? null;
 }
 
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
+
+/** Input shape accepted by recordPurchase — subset of PortfolioPurchaseEntry
+ *  minus derived + server-owned fields (id, userId, createdAt, totalCost). */
+export interface RecordPurchaseInput {
+  purchaseDate: string;
+  source: PurchaseSource;
+  subtotal: number;
+  tax?: number;
+  shipping?: number;
+  otherFees?: number;
+  holdingIds?: string[];
+  vendor?: string;
+  invoiceRef?: string;
+  notes?: string;
+  ebayOrderId?: string;
+  ebayTransactionId?: string;
+  ebayItemId?: string;
+}
+
+/**
+ * Idempotent purchase record. Idempotency key = (source, ebayOrderId) for
+ * source==="ebay"; manual entries are ALWAYS new inserts (users choose to
+ * record; caller-side dedup is out of scope).
+ *
+ * Returns the persisted entry PLUS a `replay` marker so the route can
+ * decide whether to 200-with-existing or 201-new. Never throws.
+ */
+export interface RecordPurchaseResult {
+  entry: PortfolioPurchaseEntry;
+  replay: boolean;
+}
+
+export async function recordPurchase(
+  userId: string,
+  input: RecordPurchaseInput,
+): Promise<RecordPurchaseResult> {
+  const doc = await readUserDoc(userId);
+  const purchases = doc.purchases ?? [];
+
+  // Idempotency on (source, ebayOrderId) for eBay imports.
+  if (input.source === "ebay" && input.ebayOrderId) {
+    const existing = purchases.find(
+      (p) => p.source === "ebay" && p.ebayOrderId === input.ebayOrderId,
+    );
+    if (existing) {
+      return { entry: existing, replay: true };
+    }
+  }
+
+  const now = new Date().toISOString();
+  const subtotal = Number(input.subtotal) || 0;
+  const tax = Number(input.tax ?? 0) || 0;
+  const shipping = Number(input.shipping ?? 0) || 0;
+  const otherFees = Number(input.otherFees ?? 0) || 0;
+  const totalCost = Math.round((subtotal + tax + shipping + otherFees) * 100) / 100;
+
+  const entry: PortfolioPurchaseEntry = {
+    id: randomUUID(),
+    userId,
+    purchaseDate: input.purchaseDate,
+    source: input.source,
+    subtotal: Math.round(subtotal * 100) / 100,
+    tax: Math.round(tax * 100) / 100,
+    shipping: Math.round(shipping * 100) / 100,
+    otherFees: Math.round(otherFees * 100) / 100,
+    totalCost,
+    holdingIds: Array.isArray(input.holdingIds) ? [...input.holdingIds] : [],
+    ...(input.vendor ? { vendor: input.vendor } : {}),
+    ...(input.invoiceRef ? { invoiceRef: input.invoiceRef } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.ebayOrderId ? { ebayOrderId: input.ebayOrderId } : {}),
+    ...(input.ebayTransactionId ? { ebayTransactionId: input.ebayTransactionId } : {}),
+    ...(input.ebayItemId ? { ebayItemId: input.ebayItemId } : {}),
+    createdAt: now,
+  };
+
+  doc.purchases = [...purchases, entry];
+  await writeUserDoc(userId, doc);
+  return { entry, replay: false };
+}
+
+export async function listPurchasesForUser(
+  userId: string,
+  opts: { from?: string; to?: string; source?: PurchaseSource } = {},
+): Promise<PortfolioPurchaseEntry[]> {
+  const doc = await readUserDoc(userId);
+  const all = doc.purchases ?? [];
+  let filtered = all;
+  if (opts.from) {
+    const fromDate = opts.from.slice(0, 10);
+    filtered = filtered.filter((p) => p.purchaseDate.slice(0, 10) >= fromDate);
+  }
+  if (opts.to) {
+    const toDate = opts.to.slice(0, 10);
+    filtered = filtered.filter((p) => p.purchaseDate.slice(0, 10) <= toDate);
+  }
+  if (opts.source) {
+    filtered = filtered.filter((p) => p.source === opts.source);
+  }
+  // Newest first, matches sales ledger convention (listTradesForUser).
+  return [...filtered].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate));
+}
+
+export async function getPurchaseForUser(
+  userId: string,
+  purchaseId: string,
+): Promise<PortfolioPurchaseEntry | null> {
+  const doc = await readUserDoc(userId);
+  return (doc.purchases ?? []).find((p) => p.id === purchaseId) ?? null;
+}
+
+/**
+ * Append holdingIds to an existing purchase's attribution array. Used when
+ * a user records a purchase FIRST (via /erp/purchases) and cataloges the
+ * cards later. Idempotent: existing holdingIds are not duplicated.
+ */
+export async function linkHoldingsToPurchase(
+  userId: string,
+  purchaseId: string,
+  holdingIds: string[],
+): Promise<PortfolioPurchaseEntry | null> {
+  const doc = await readUserDoc(userId);
+  const purchases = doc.purchases ?? [];
+  const idx = purchases.findIndex((p) => p.id === purchaseId);
+  if (idx === -1) return null;
+  const existing = purchases[idx];
+  const merged = new Set([...existing.holdingIds, ...holdingIds.filter(Boolean)]);
+  const updated: PortfolioPurchaseEntry = {
+    ...existing,
+    holdingIds: [...merged],
+    updatedAt: new Date().toISOString(),
+  };
+  purchases[idx] = updated;
+  doc.purchases = purchases;
+  await writeUserDoc(userId, doc);
+  return updated;
+}
+
+// ─── CF-HELD-EXPENSES (2026-07-12) ─────────────────────────────────────────
+
+const VALID_HELD_EXPENSE_KINDS: ReadonlySet<HeldExpenseKind> = new Set([
+  "grading",
+  "supplies",
+  "shipping_to_grader",
+  "insurance",
+  "storage",
+  "other",
+]);
+
+export interface AddHeldExpenseInput {
+  kind: HeldExpenseKind;
+  amount: number;             // positive dollars
+  incurredAt?: string;        // ISO; defaults to now
+  notes?: string;
+  invoiceRef?: string;
+}
+
+export interface AddHeldExpenseResult {
+  status: "added" | "holding-not-found" | "invalid-input";
+  reason?: string;
+  holding?: PortfolioHolding;
+  expense?: HoldingHeldExpense;
+  newTotalCostBasis?: number;
+}
+
+/**
+ * Append an expense to a held card and roll the amount into totalCostBasis
+ * so the eventual sale's realizedProfitLoss reflects true all-in cost.
+ *
+ * Same integer-math pattern as regradeHolding's gradingCost roll-in
+ * (portfolioStore.service.ts:3729-3735):
+ *
+ *   new totalCostBasis = old + expense.amount
+ *   purchasePrice is NOT touched (that's per-unit acquisition price)
+ *
+ * Idempotency: NONE. Same expense recorded twice = two separate entries
+ * (matches the audit-trail intent — a re-grading really did happen twice).
+ * If callers need dedup they can pass an invoiceRef and check against
+ * existing entries client-side before POSTing.
+ */
+export async function addHeldExpense(
+  userId: string,
+  holdingId: string,
+  input: AddHeldExpenseInput,
+): Promise<AddHeldExpenseResult> {
+  if (!VALID_HELD_EXPENSE_KINDS.has(input.kind)) {
+    return { status: "invalid-input", reason: `kind must be one of: ${[...VALID_HELD_EXPENSE_KINDS].join(", ")}` };
+  }
+  const amount = Number(input.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { status: "invalid-input", reason: "amount must be a positive number" };
+  }
+  const doc = await readUserDoc(userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return { status: "holding-not-found" };
+  const holding = doc.holdings[canonicalId];
+
+  const nowIso = new Date().toISOString();
+  const incurredAt = input.incurredAt
+    ? new Date(input.incurredAt).toISOString()
+    : nowIso;
+
+  const expense: HoldingHeldExpense = {
+    id: randomUUID(),
+    kind: input.kind,
+    amount: Math.round(amount * 100) / 100,
+    incurredAt,
+    createdAt: nowIso,
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.invoiceRef ? { invoiceRef: input.invoiceRef } : {}),
+  };
+
+  const priorCostBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * toNumber(holding.quantity, 1));
+  const newCostBasis = Math.round((priorCostBasis + expense.amount) * 100) / 100;
+
+  const updated: PortfolioHolding = {
+    ...holding,
+    heldExpenses: [...(holding.heldExpenses ?? []), expense],
+    totalCostBasis: newCostBasis,
+    lastUpdated: nowIso,
+  };
+  doc.holdings[canonicalId] = updated;
+  await writeUserDoc(userId, doc);
+  return {
+    status: "added",
+    holding: updated,
+    expense,
+    newTotalCostBasis: newCostBasis,
+  };
+}
+
+export interface DeleteHeldExpenseResult {
+  status: "deleted" | "holding-not-found" | "expense-not-found";
+  holding?: PortfolioHolding;
+  newTotalCostBasis?: number;
+}
+
+/**
+ * Remove an expense entry and reverse its cost-basis contribution. Same
+ * integer-math treatment as addHeldExpense in reverse. If the reversal
+ * would push totalCostBasis below the sum of remaining expenses + the
+ * base acquisition cost, we clamp to a floor of zero (defense — this
+ * shouldn't happen with clean writes, but a mismatched delete after
+ * hand-edited data shouldn't corrupt further math).
+ */
+export async function deleteHeldExpense(
+  userId: string,
+  holdingId: string,
+  expenseId: string,
+): Promise<DeleteHeldExpenseResult> {
+  const doc = await readUserDoc(userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return { status: "holding-not-found" };
+  const holding = doc.holdings[canonicalId];
+  const expenses = holding.heldExpenses ?? [];
+  const idx = expenses.findIndex((e) => e.id === expenseId);
+  if (idx === -1) return { status: "expense-not-found" };
+
+  const removed = expenses[idx];
+  const remaining = expenses.filter((_, i) => i !== idx);
+  const priorCostBasis = toNumber(holding.totalCostBasis, 0);
+  const newCostBasis = Math.max(0, Math.round((priorCostBasis - removed.amount) * 100) / 100);
+
+  const updated: PortfolioHolding = {
+    ...holding,
+    heldExpenses: remaining,
+    totalCostBasis: newCostBasis,
+    lastUpdated: new Date().toISOString(),
+  };
+  doc.holdings[canonicalId] = updated;
+  await writeUserDoc(userId, doc);
+  return { status: "deleted", holding: updated, newTotalCostBasis: newCostBasis };
+}
+
+// HTTP handlers wrap the pure service above.
+
+export async function addHeldExpenseHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const kindRaw = typeof body.kind === "string" ? body.kind : "";
+  const amount = typeof body.amount === "number" ? body.amount : Number(body.amount);
+  const incurredAt = typeof body.incurredAt === "string" ? body.incurredAt : undefined;
+  const notes = typeof body.notes === "string" && body.notes.trim() ? body.notes.trim().slice(0, 500) : undefined;
+  const invoiceRef = typeof body.invoiceRef === "string" && body.invoiceRef.trim() ? body.invoiceRef.trim().slice(0, 200) : undefined;
+
+  const result = await addHeldExpense(auth.userId, holdingId, {
+    kind: kindRaw as HeldExpenseKind,
+    amount,
+    incurredAt,
+    notes,
+    invoiceRef,
+  });
+  if (result.status === "holding-not-found") {
+    return res.status(404).json({ success: false, error: "Holding not found" });
+  }
+  if (result.status === "invalid-input") {
+    return res.status(400).json({ success: false, error: result.reason });
+  }
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  res.status(201).json({
+    success: true,
+    expense: result.expense,
+    holding: holdingWire,
+    entry: holdingWire ? { holding: holdingWire } : undefined,
+    newTotalCostBasis: result.newTotalCostBasis,
+  });
+}
+
+export async function deleteHeldExpenseHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const expenseId = String(req.params.expenseId ?? "").trim();
+  const result = await deleteHeldExpense(auth.userId, holdingId, expenseId);
+  if (result.status === "holding-not-found") {
+    return res.status(404).json({ success: false, error: "Holding not found" });
+  }
+  if (result.status === "expense-not-found") {
+    return res.status(404).json({ success: false, error: "Expense not found" });
+  }
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  res.json({
+    success: true,
+    holding: holdingWire,
+    entry: holdingWire ? { holding: holdingWire } : undefined,
+    newTotalCostBasis: result.newTotalCostBasis,
+  });
+}
+
+export async function listHeldExpensesHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const doc = await readUserDoc(auth.userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return res.status(404).json({ success: false, error: "Holding not found" });
+  const expenses = doc.holdings[canonicalId].heldExpenses ?? [];
+  const total = Math.round(expenses.reduce((s, e) => s + e.amount, 0) * 100) / 100;
+  res.json({ success: true, expenses, total });
+}
+
 export async function refreshHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
@@ -4987,7 +5714,15 @@ export async function refreshHolding(req: Request, res: Response) {
     doc.holdings[id].lastUpdated = new Date().toISOString();
   }
   await writeUserDoc(auth.userId, doc);
-  res.json({ message: "Holding refreshed", id });
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the refreshed holding
+  // so iOS shows the new price without a refetch.
+  const refreshedWire = composeHoldingWireShape(doc.holdings[id]);
+  res.json({
+    message: "Holding refreshed",
+    id,
+    holding: refreshedWire,
+    entry: { holding: refreshedWire },
+  });
 }
 
 export interface BatchRepriceResult {
@@ -5030,6 +5765,39 @@ export interface RepriceOptions {
 // per holding, this is just a cheap guard against pull-to-refresh spam from
 // the same client hitting the same instance.
 const _lastRepriceAt = new Map<string, number>();
+
+/**
+ * CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): reprice ONE holding immediately.
+ * Called fire-and-forget after a review-queue confirm with a picked cardId
+ * so the user sees the clean data reflected in inventory pricing without
+ * waiting for the next scheduled batch reprice (6h cadence).
+ *
+ * Fails silently — the scheduled job is the guaranteed catch-all. Returns
+ * boolean for callers that want to log success/failure.
+ */
+export async function repriceOneHolding(userId: string, holdingId: string): Promise<boolean> {
+  if (!userId || !holdingId) return false;
+  const doc = await readUserDoc(userId);
+  const holding = doc.holdings?.[holdingId];
+  if (!holding) return false;
+  try {
+    const priced = await autoPriceHolding(doc, holding, undefined, "refresh", userId);
+    doc.holdings[holdingId] = priced;
+    await writeUserDoc(userId, doc);
+    return true;
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "reprice_one_holding_error",
+        source: "portfolioStore.service",
+        userId,
+        holdingId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+    return false;
+  }
+}
 
 /**
  * Reprice every holding for a single user. Used both by the HTTP batch-reprice
@@ -5093,6 +5861,20 @@ export async function repriceHoldingsForUser(
   const updates: BatchRepriceResult["updates"] = [];
 
   for (const holding of candidates) {
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
+    // aren't real inventory yet — pricing them would fire the CompIQ
+    // engine with polluted / unconfirmed inputs, exactly what the review
+    // gate exists to prevent.
+    if ((holding as any).cardStatus === "pending-review") {
+      skipped += 1;
+      updates.push({
+        id: holding.id,
+        status: "skipped",
+        reason: "pending-review (awaiting user confirmation)",
+        cardId: null,
+      });
+      continue;
+    }
     // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): defense-in-depth
     // safety net. After the validation gate at addHolding/updateHolding, no
     // NEW null-identity rows can be persisted. But legacy/edge rows that
@@ -5213,6 +5995,11 @@ export async function repriceHoldingsForUser(
           verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
           recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
           lastUpdated: t3Now,
+          // CF-CARDSIGHT-VENDOR-PROVENANCE (PR #492): T3 base-auto floor
+          // estimate rides the same engine as the main path — vendor is
+          // whichever the router picked. Read from the estimate response.
+          sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
+          sourceVendorUpdatedAt: t3Now,
         };
         evaluateHoldingAlerts(doc, t3Previous, t3Updated);
         doc.holdings[holding.id] = t3Updated;
@@ -5340,12 +6127,72 @@ export async function repriceHoldingsForUser(
               verdict: "Estimated",
               recommendation: "Hold",
               lastUpdated: now,
+              // CF-SOURCE-VENDOR (2026-07-13): grade-ladder fallback is CH-derived.
+              sourceVendor: "cardhedge",
+              sourceVendorUpdatedAt: now,
             };
             repriced += 1;
             updates.push({ id: holding.id, status: "repriced", reason: "grade-ladder-fallback" });
             continue;
           }
         }
+        // CF-RESOLVER-FALLBACK-EVERYWHERE (2026-07-13): before falling
+        // through to the "low confidence / insufficient" persist, ask the
+        // multi-source resolver. Cardsight often indexes SKUs CH doesn't
+        // (2026 CPA-EHA Blue Refractor Auto is the canonical example).
+        // On resolver hit, stamp FMV + winning vendor + continue as a
+        // successful reprice.
+        try {
+          const { tryResolverFallback } = await import("../compiq/resolverFallbackHelper.js");
+          const fallback = await tryResolverFallback({
+            playerName: holding.playerName,
+            cardYear: shimmedCardYear(holding) ?? undefined,
+            setName: holding.setName ?? (holding as any).product,
+            parallel: holding.parallel,
+            cardNumber: holding.cardNumber,
+            gradeCompany: holding.gradeCompany,
+            gradeValue: holding.gradeValue,
+            isAuto: holding.isAuto,
+            cardId: (holding as any).cardId,
+          });
+          if (fallback) {
+            const now = new Date().toISOString();
+            const rescued: PortfolioHolding = {
+              ...holding,
+              ...repriceIdentityPatch,
+              fairMarketValue: fallback.fairMarketValue,
+              estimatedValue: null,
+              isEstimate: true,
+              valuationStatus: "estimated",
+              estimateBasis: fallback.estimateBasis,
+              verdict: "Estimated",
+              recommendation: "Hold",
+              lastUpdated: now,
+              sourceVendor: fallback.vendor as any,
+              sourceVendorUpdatedAt: now,
+            };
+            doc.holdings[holding.id] = rescued;
+            repriced += 1;
+            updates.push({ id: holding.id, status: "repriced", reason: `resolver-fallback:${fallback.vendor}` });
+            console.log(JSON.stringify({
+              event: "catalog_resolver_fallback_hit",
+              source: "portfolioStore.repriceHoldingsForUser",
+              holdingId: holding.id,
+              vendor: fallback.vendor,
+              fairMarketValue: fallback.fairMarketValue,
+              compCount: fallback.compCount,
+            }));
+            continue;
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "resolver_fallback_error",
+            source: "portfolioStore.repriceHoldingsForUser",
+            holdingId: holding.id,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+
         skipped += 1;
         const failed: string[] = [];
         if (confidence < minPricingConfidence) failed.push(`confidence=${Math.round(confidence)}<${minPricingConfidence}`);
@@ -5457,6 +6304,10 @@ export async function repriceHoldingsForUser(
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         lastUpdated: now,
+        // CF-CARDSIGHT-VENDOR-PROVENANCE (PR #492): batch-reprice success
+        // path — reads whichever vendor served each individual estimate.
+        sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
+        sourceVendorUpdatedAt: now,
         // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: currentValue / P&L
         // (3 fields) and quickSale / premium / suggestedList (3 fields)
         // no longer stamped — wire computes them via composeHoldingWireShape.

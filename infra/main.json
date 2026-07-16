@@ -185,18 +185,6 @@
                       "value": "*"
                     },
                     {
-                      "name": "ENABLE_AI_SEARCH",
-                      "value": "false"
-                    },
-                    {
-                      "name": "ENABLE_NOTIFICATIONS",
-                      "value": "false"
-                    },
-                    {
-                      "name": "ENABLE_DEBUG_PRICING",
-                      "value": "false"
-                    },
-                    {
                       "name": "CACHE_TTL_ESTIMATE_SECONDS",
                       "value": "900"
                     },

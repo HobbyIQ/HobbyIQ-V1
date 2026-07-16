@@ -31,10 +31,14 @@ import { Router, Request, Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import {
+  getPurchaseForUser,
   getTradeForUser,
+  linkHoldingsToPurchase,
+  listPurchasesForUser,
   listTradesForUser,
   parseSalesTrackingFields,
   readUserDoc,
+  recordPurchase,
   recordTradeTransaction,
   writeUserDoc,
   type PaymentMethod,
@@ -43,6 +47,7 @@ import {
 } from "../services/portfolioiq/portfolioStore.service.js";
 import {
   aggregatePnl,
+  buildCogsView,
   buildTaxExport,
   enrichEntryForClient,
   isReconciled,
@@ -59,6 +64,14 @@ import {
   type TimeseriesBucket,
 } from "../services/portfolioiq/erpAnalytics.service.js";
 import { buildValuation } from "../services/portfolioiq/erpValuation.service.js";
+import { buildInventoryAnalytics } from "../services/portfolioiq/inventoryAnalytics.service.js";
+import {
+  importEbayPurchaseHistory,
+  MAX_DURATION_DAYS,
+  runAutoHoldingBatch,
+} from "../services/ebay/ebayBuyerHistory.service.js";
+import { composeErpSummary } from "../services/portfolioiq/erpSummary.service.js";
+import { readValueHistory } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import {
   getTaxFiling,
   upsertTaxFiling,
@@ -82,9 +95,11 @@ import {
 } from "../repositories/portfolioExpenses.repository.js";
 import {
   applyFeeOverride,
+  applyFinalize,
   applySaveCosts,
   buildAging,
   validateFeeOverride,
+  validateFinalize,
   validateSaveCosts,
 } from "../services/portfolioiq/erpAgingOverride.service.js";
 import { computeLedgerFinancials } from "../services/portfolioiq/portfolioStore.service.js";
@@ -134,21 +149,38 @@ router.get("/pnl", async (req: Request, res: Response) => {
     const holdingsById = doc.holdings ?? {};
     const result = aggregatePnl(entries, holdingsById, { from, to, groupBy });
 
+    // CF-PNL-COGS-INTEGRATION (2026-07-12): buy-side + inventory snapshot
+    // metrics always included so iOS finances dashboard renders in one
+    // call. Backward-compatible — old clients ignore the new `cogs` field.
+    const cogs = buildCogsView(
+      result.totals,
+      doc.purchases ?? [],
+      holdingsById,
+      { from, to },
+    );
+
     // CF-ERP-EXPANSION-#5: optional operating-expense roll-up. Default off
     // so existing iOS bindings keep their shape.
     if (includeExpenses) {
       const expenses = await listExpensesForUser(userId, { from, to });
       const { total: operatingExpenses } = totalExpensesInWindow(expenses, { from, to });
-      const trueNet = Math.round((result.totals.realizedProfitLoss - operatingExpenses) * 100) / 100;
+      // CF-PNL-COGS-INTEGRATION: when opting in to expenses, trueNet
+      // subtracts BOTH operating expenses AND (window-scoped) purchase
+      // spend that hasn't yet realized as costBasisSold. This is the
+      // honest "cash net" for the period.
+      const trueNet = Math.round(
+        (result.totals.realizedProfitLoss - operatingExpenses) * 100,
+      ) / 100;
       return res.json({
         success: true,
         ...result,
+        cogs,
         operatingExpenses,
         trueNet,
       });
     }
 
-    res.json({ success: true, ...result });
+    res.json({ success: true, ...result, cogs });
   } catch (err: any) {
     console.error("[portfolio.erp] /pnl failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to aggregate P&L" });
@@ -202,6 +234,30 @@ router.get("/analytics/timeseries", async (req: Request, res: Response) => {
 
 // ─── CF-ERP-EXPANSION-#3 Valuation ─────────────────────────────────────────
 
+// CF-INVENTORY-TURNOVER-AGING (2026-07-12): inventory-side analytics
+// counterpart to /valuation. Returns aging buckets, avg/median days-on-hand,
+// oldest holdings (top 10), and a coarse turnover proxy based on window-
+// scoped costBasisSold vs current inventory cost. Documented as PROXY —
+// true turnover ratio would need per-holding historical timeline we don't
+// track. See inventoryAnalytics.service.ts for full math.
+router.get("/inventory-analytics", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const analytics = buildInventoryAnalytics(
+      doc.holdings ?? {},
+      (doc.ledger ?? []) as unknown as LedgerEntryForErp[],
+      { from, to },
+    );
+    res.json({ success: true, ...analytics });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /inventory-analytics failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compute inventory analytics" });
+  }
+});
+
 router.get("/valuation", async (req: Request, res: Response) => {
   try {
     const userId = userIdFrom(req);
@@ -217,6 +273,31 @@ router.get("/valuation", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /valuation failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to compute valuation" });
+  }
+});
+
+// CF-ERP-SUMMARY (2026-07-11, Drew): one-call dashboard aggregation.
+// Composes valuation + YTD P&L + value history + top movers so iOS
+// home screen doesn't have to fan out 4 separate calls. Pure composition
+// over primitives already used by the individual routes. See
+// erpSummary.service.ts for the shape + tie-break rules.
+router.get("/summary", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const valueHistory = await readValueHistory(userId, {});
+    const result = composeErpSummary(
+      Object.values(doc.holdings ?? {}),
+      entries,
+      doc.holdings ?? {},
+      valueHistory,
+      Date.now(),
+    );
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /summary failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compose summary" });
   }
 });
 
@@ -620,6 +701,101 @@ router.post("/unreconciled/:id/override", async (req: Request, res: Response) =>
   }
 });
 
+// ─── CF-RECONCILE-FINALIZE (2026-07-12) ──────────────────────────────────
+//
+// POST /api/portfolio/erp/unreconciled/:id/finalize
+// Body: { reason: string, netPayout?: number }
+//
+// User-forced finalize. Closes the row without waiting for eBay's fees
+// feed. Zero-fills only null granular fees (preserves any real value
+// Finances already wrote), sets userCostsProvidedAt if unset. Idempotent —
+// second call returns 409 { code: "ALREADY_FINALIZED" }.
+
+router.post("/unreconciled/:id/finalize", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+
+    const validated = validateFinalize(req.body);
+    if ("error" in validated) {
+      return res.status(400).json({
+        success: false,
+        error: validated.error,
+        code: validated.code,
+      });
+    }
+
+    const doc = await readUserDoc(userId);
+    const idx = doc.ledger.findIndex((e) => e.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Entry not found" });
+
+    const before = doc.ledger[idx] as unknown as LedgerEntryForErp;
+    if (before.source !== "ebay") {
+      return res.status(400).json({
+        success: false,
+        error: "finalize applies only to eBay entries; use PATCH /ledger/:id for manual entries",
+        code: "NOT_EBAY_ENTRY",
+      });
+    }
+    if (before.needsReconciliation !== true) {
+      return res.status(409).json({
+        success: false,
+        error: "Entry already finalized",
+        code: "ALREADY_FINALIZED",
+      });
+    }
+
+    const { entry: afterFinalize, adjustment } = applyFinalize(before, validated.ok, userId);
+
+    // Recompute financials. Same shape as /save-costs and /override — the
+    // three paths stay in lockstep. netPayoutOverride uses whatever ended
+    // up on the entry (preserved real value or the zero-filled fallback).
+    const granularSum =
+      (afterFinalize.finalValueFee ?? 0)
+      + (afterFinalize.paymentProcessingFee ?? 0)
+      + (afterFinalize.promotedListingFee ?? 0)
+      + (afterFinalize.adFee ?? 0)
+      + (afterFinalize.otherFees ?? 0)
+      + (afterFinalize.actualShippingCost ?? 0);
+    const financials = computeLedgerFinancials({
+      grossProceeds: afterFinalize.grossProceeds,
+      feesTotal: granularSum,
+      tax: 0,
+      shipping: 0,
+      gradingCost: afterFinalize.gradingCost ?? null,
+      suppliesCost: afterFinalize.suppliesCost ?? null,
+      costBasisSold: afterFinalize.costBasisSold,
+      netPayoutOverride: afterFinalize.netPayout ?? null,
+    });
+    const priorPnl = Number(before.realizedProfitLoss ?? 0);
+
+    const finalEntry = {
+      ...afterFinalize,
+      netProceeds: financials.netProceeds,
+      realizedProfitLoss: financials.realizedProfitLoss,
+      realizedProfitLossPct: financials.realizedProfitLossPct,
+    };
+    doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
+    await writeUserDoc(userId, doc);
+
+    const delta = Math.round((financials.realizedProfitLoss - priorPnl) * 100) / 100;
+    res.json({
+      success: true,
+      entry: enrichEntryForClient(finalEntry as LedgerEntryForErp),
+      adjustment: {
+        reason: validated.ok.reason,
+        delta,
+        adjustmentId: adjustment.adjustmentId,
+        adjustedAt: adjustment.adjustedAt,
+      },
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/:id/finalize failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to finalize entry" });
+  }
+});
+
 // ─── CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): save-costs ──────────────
 //
 // POST /api/portfolio/erp/unreconciled/:id/save-costs
@@ -832,6 +1008,349 @@ router.get("/trades/:id", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /trades/:id failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to load trade" });
+  }
+});
+
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ───────────────────────────
+//
+// Buy-side counterpart to /trades + /pnl. Records acquisition events at
+// the ORDER level (one purchase → N holdings via holdingIds attribution).
+// See portfolioStore.service.ts PortfolioPurchaseEntry docstring for full
+// data-model rationale.
+//
+//   GET  /erp/purchases?from=&to=&source=          list, filtered
+//   GET  /erp/purchases/:id                        fetch one
+//   POST /erp/purchases                            record a purchase
+//   PATCH /erp/purchases/:id/link-holdings         append holdingIds
+
+router.get("/purchases", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const rawSource = typeof req.query.source === "string" ? req.query.source.trim() : undefined;
+    const source =
+      rawSource === "manual" || rawSource === "ebay" ? rawSource : undefined;
+    const purchases = await listPurchasesForUser(userId, { from, to, source });
+    // Aggregate totals for the filtered window — cheap and useful for
+    // any period-scoped iOS view.
+    const totals = {
+      count: purchases.length,
+      subtotal: purchases.reduce((s, p) => s + (p.subtotal ?? 0), 0),
+      tax: purchases.reduce((s, p) => s + (p.tax ?? 0), 0),
+      shipping: purchases.reduce((s, p) => s + (p.shipping ?? 0), 0),
+      otherFees: purchases.reduce((s, p) => s + (p.otherFees ?? 0), 0),
+      totalCost: purchases.reduce((s, p) => s + (p.totalCost ?? 0), 0),
+    };
+    // Round for display cleanliness.
+    totals.subtotal = Math.round(totals.subtotal * 100) / 100;
+    totals.tax = Math.round(totals.tax * 100) / 100;
+    totals.shipping = Math.round(totals.shipping * 100) / 100;
+    totals.otherFees = Math.round(totals.otherFees * 100) / 100;
+    totals.totalCost = Math.round(totals.totalCost * 100) / 100;
+    res.json({
+      success: true,
+      window: { from: from ?? null, to: to ?? null },
+      source: source ?? null,
+      purchases,
+      totals,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases list failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to list purchases" });
+  }
+});
+
+router.get("/purchases/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const purchaseId = String(req.params.id ?? "").trim();
+    if (!purchaseId) return res.status(400).json({ success: false, error: "id is required" });
+    const purchase = await getPurchaseForUser(userId, purchaseId);
+    if (!purchase) return res.status(404).json({ success: false, error: "Purchase not found" });
+    res.json({ success: true, purchase });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/:id failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to load purchase" });
+  }
+});
+
+router.post("/purchases", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    // ─── validation ─────────────────────────────────────────────────
+    const purchaseDateRaw =
+      typeof body.purchaseDate === "string" ? body.purchaseDate.trim() : "";
+    if (!purchaseDateRaw) {
+      return res.status(400).json({ success: false, error: "purchaseDate is required" });
+    }
+    const purchaseDateMs = Date.parse(purchaseDateRaw);
+    if (!Number.isFinite(purchaseDateMs)) {
+      return res.status(400).json({ success: false, error: "purchaseDate is not a valid ISO date" });
+    }
+    const source = body.source === "ebay" ? "ebay" : "manual";
+    const toNum = (v: unknown, label: string): number => {
+      if (v === undefined || v === null || v === "") return 0;
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`${label} must be a non-negative number`);
+      }
+      return n;
+    };
+    let subtotal: number;
+    let tax: number;
+    let shipping: number;
+    let otherFees: number;
+    try {
+      subtotal = toNum(body.subtotal, "subtotal");
+      tax = toNum(body.tax, "tax");
+      shipping = toNum(body.shipping, "shipping");
+      otherFees = toNum(body.otherFees, "otherFees");
+    } catch (e: any) {
+      return res.status(400).json({ success: false, error: e.message });
+    }
+    if (subtotal <= 0) {
+      return res.status(400).json({ success: false, error: "subtotal must be > 0" });
+    }
+    const holdingIdsRaw = Array.isArray(body.holdingIds) ? body.holdingIds : [];
+    const holdingIds = holdingIdsRaw
+      .map((h) => (typeof h === "string" ? h.trim() : ""))
+      .filter((h) => h.length > 0);
+    const vendor =
+      typeof body.vendor === "string" && body.vendor.trim() ? body.vendor.trim().slice(0, 200) : undefined;
+    const invoiceRef =
+      typeof body.invoiceRef === "string" && body.invoiceRef.trim() ? body.invoiceRef.trim().slice(0, 200) : undefined;
+    const notes =
+      typeof body.notes === "string" && body.notes.trim() ? body.notes.trim().slice(0, 500) : undefined;
+    const ebayOrderId =
+      typeof body.ebayOrderId === "string" && body.ebayOrderId.trim()
+        ? body.ebayOrderId.trim()
+        : undefined;
+    const ebayTransactionId =
+      typeof body.ebayTransactionId === "string" && body.ebayTransactionId.trim()
+        ? body.ebayTransactionId.trim()
+        : undefined;
+    const ebayItemId =
+      typeof body.ebayItemId === "string" && body.ebayItemId.trim()
+        ? body.ebayItemId.trim()
+        : undefined;
+
+    const result = await recordPurchase(userId, {
+      purchaseDate: new Date(purchaseDateMs).toISOString(),
+      source,
+      subtotal,
+      tax,
+      shipping,
+      otherFees,
+      holdingIds,
+      vendor,
+      invoiceRef,
+      notes,
+      ebayOrderId,
+      ebayTransactionId,
+      ebayItemId,
+    });
+    // Idempotent replay for eBay imports returns 200 with existing entry;
+    // fresh insert returns 201. Matches the /subscriptions/verify replay
+    // idiom on the payments side.
+    res.status(result.replay ? 200 : 201).json({
+      success: true,
+      purchase: result.entry,
+      replay: result.replay,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases create failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Failed to record purchase" });
+  }
+});
+
+// CF-EBAY-BUYER-HISTORY (2026-07-12): pull purchase history from the legacy
+// Trading API (GetMyeBayBuying) and idempotently import each item as a
+// PortfolioPurchaseEntry. Configurable window; caps at MAX_DURATION_DAYS
+// per eBay's server-side limit.
+router.post("/purchases/import/ebay", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const daysRaw = req.body?.days ?? req.query.days;
+    const days = Number(daysRaw ?? 30);
+    if (!Number.isFinite(days) || days < 1) {
+      return res.status(400).json({ success: false, error: "days must be a positive integer (1-90)" });
+    }
+    if (days > MAX_DURATION_DAYS) {
+      return res.status(400).json({
+        success: false,
+        error: `days must be ≤ ${MAX_DURATION_DAYS} (eBay Trading API cap)`,
+      });
+    }
+    const summary = await importEbayPurchaseHistory(userId, days);
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/import/ebay failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Import failed" });
+  }
+});
+
+// CF-EBAY-AUTO-HOLDING (2026-07-12): user-triggered one-shot to auto-attribute
+// pre-existing eBay purchases whose holdingIds is still empty. Unlocks the 39
+// (or however many) purchases already imported before the parser landed
+// without requiring a re-sync from eBay.
+//
+// Response: { processed, holdingsCreated, holdingsNeedingReview, skipped }
+// Idempotent — safe to re-run; purchases already linked to holdings are
+// silently skipped.
+router.post("/purchases/backfill-holdings", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const summary = await runAutoHoldingBatch(userId);
+    // Route response uses the same field names the import endpoint returns
+    // so iOS can share a decoder shape between the two calls.
+    res.json({
+      success: true,
+      processed: summary.processed,
+      holdingsCreated: summary.created,
+      holdingsNeedingReview: summary.needsReview,
+      holdingsBrowseEnriched: summary.browseEnriched,
+      skipped: summary.skipped,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/backfill-holdings failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Backfill failed" });
+  }
+});
+
+// CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12): sale-side Browse enrichment.
+// Snapshots the eBay listing's item-specifics onto the ledger sale entry
+// so every completed sale becomes a first-class sold-comp for future
+// downstream matching. Foundation for market-comp queries later.
+router.post("/sales/backfill-enrichment", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const { backfillSalesEnrichment } = await import(
+      "../services/portfolioiq/ebaySaleEnrichment.service.js"
+    );
+    const summary = await backfillSalesEnrichment(userId);
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /sales/backfill-enrichment failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Sale enrichment failed" });
+  }
+});
+
+router.post("/sales/:id/enrich-from-ebay", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const ledgerEntryId = String(req.params.id ?? "").trim();
+    if (!ledgerEntryId) {
+      return res.status(400).json({ success: false, error: "id is required" });
+    }
+    const { enrichSaleFromBrowse } = await import(
+      "../services/portfolioiq/ebaySaleEnrichment.service.js"
+    );
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const force = body.force === true;
+    const result = await enrichSaleFromBrowse(userId, ledgerEntryId, { force });
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "no-listing-id" ? 400 :
+      result.status === "error" ? 500 : 200;
+    res.status(statusCode).json({ success: statusCode === 200, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /sales/:id/enrich-from-ebay failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Sale enrichment failed" });
+  }
+});
+
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): confirm-before-commit gate for
+// auto-created holdings. Ships as a first-class review queue on iOS.
+router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const holdingId = String(req.params.id ?? "").trim();
+    if (!holdingId) return res.status(400).json({ success: false, error: "id is required" });
+    const { confirmHoldingReview } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    // CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): use `in` check so explicit
+    // null (clear signal) is preserved; only truly-omitted fields are
+    // dropped. Prior loop dropped both.
+    const edits: Record<string, unknown> = {};
+    for (const field of [
+      "playerName", "cardYear", "setName", "parallel", "cardNumber",
+      "gradeCompany", "gradeValue", "isAuto", "team", "sport", "cardId",
+    ]) {
+      if (field in body) edits[field] = body[field];
+    }
+    const result = await confirmHoldingReview(userId, holdingId, edits as any);
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "not-pending" ? 409 :
+      result.status === "error" ? 500 : 200;
+    // Response envelope: preserve legacy `holding` at top level (existing
+    // consumers) + add nested `entry.holding` for the iOS decoder that
+    // reads response.entry.holding. Both point at the same object.
+    const envelope: Record<string, unknown> = { success: statusCode === 200, ...result };
+    if (result.status === "confirmed") {
+      envelope.entry = { holding: (result as any).holding, correctionCount: (result as any).correctionCount };
+      // CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): fire-and-forget reprice on
+      // confirm — user sees fresh pricing without waiting 6h. Only fires
+      // when a cardId is present (that's what makes CompIQ trust the row).
+      const confirmedHolding = (result as any).holding;
+      if (confirmedHolding?.cardId) {
+        const { repriceOneHolding } = await import(
+          "../services/portfolioiq/portfolioStore.service.js"
+        );
+        void repriceOneHolding(userId, confirmedHolding.id).catch(() => {});
+      }
+    }
+    res.status(statusCode).json(envelope);
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/:id/confirm failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Confirm failed" });
+  }
+});
+
+router.post("/holdings/:id/reject", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const holdingId = String(req.params.id ?? "").trim();
+    if (!holdingId) return res.status(400).json({ success: false, error: "id is required" });
+    const { rejectHoldingReview } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    const result = await rejectHoldingReview(userId, holdingId);
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "not-pending" ? 409 :
+      result.status === "error" ? 500 : 200;
+    res.status(statusCode).json({ success: statusCode === 200, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/:id/reject failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Reject failed" });
+  }
+});
+
+router.patch("/purchases/:id/link-holdings", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const purchaseId = String(req.params.id ?? "").trim();
+    if (!purchaseId) return res.status(400).json({ success: false, error: "id is required" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const holdingIdsRaw = Array.isArray(body.holdingIds) ? body.holdingIds : [];
+    const holdingIds = holdingIdsRaw
+      .map((h) => (typeof h === "string" ? h.trim() : ""))
+      .filter((h) => h.length > 0);
+    if (holdingIds.length === 0) {
+      return res.status(400).json({ success: false, error: "holdingIds must contain at least one non-empty string" });
+    }
+    const updated = await linkHoldingsToPurchase(userId, purchaseId, holdingIds);
+    if (!updated) return res.status(404).json({ success: false, error: "Purchase not found" });
+    res.json({ success: true, purchase: updated });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/:id/link-holdings failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to link holdings" });
   }
 });
 

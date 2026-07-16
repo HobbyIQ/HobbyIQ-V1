@@ -1,0 +1,204 @@
+{
+  "generatedAt": "2026-07-11T01:44:29.467Z",
+  "workbook": "Bowman_2022_2026_Stress_Test_v2.xlsx",
+  "workbookCards": 110000,
+  "uniqueTuples": 220,
+  "exactHits": 209,
+  "softMatches": 4,
+  "resolveMisses": 7,
+  "printRunMismatches": 6,
+  "coveragePct": 95,
+  "gapsByProductYear": [
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "missingParallels": [
+        "Pink"
+      ]
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "missingParallels": [
+        "Lava Refractor",
+        "Purple RayWave Refractor",
+        "Fuchsia Refractor",
+        "Blue Shimmer Refractor",
+        "Aqua Shimmer Refractor",
+        "Rose Gold Refractor"
+      ]
+    }
+  ],
+  "resolveMissesDetail": [
+    {
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Pink",
+      "parallelKey": "pink",
+      "auto": false,
+      "workbookRun": 175,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Lava Refractor",
+      "parallelKey": "lava-refractor",
+      "auto": false,
+      "workbookRun": 399,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Purple RayWave Refractor",
+      "parallelKey": "purple-raywave-refractor",
+      "auto": false,
+      "workbookRun": 250,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Fuchsia Refractor",
+      "parallelKey": "fuchsia-refractor",
+      "auto": false,
+      "workbookRun": 199,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Blue Shimmer Refractor",
+      "parallelKey": "blue-shimmer-refractor",
+      "auto": false,
+      "workbookRun": 150,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Aqua Shimmer Refractor",
+      "parallelKey": "aqua-shimmer-refractor",
+      "auto": false,
+      "workbookRun": 125,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Rose Gold Refractor",
+      "parallelKey": "rose-gold-refractor",
+      "auto": false,
+      "workbookRun": 10,
+      "sampleCount": 500
+    }
+  ],
+  "printRunMismatchesDetail": [
+    {
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Blue Pattern",
+      "auto": false,
+      "workbookRun": 150,
+      "cosmosRun": 125,
+      "delta": -25,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Blue Pattern",
+      "auto": false,
+      "workbookRun": 150,
+      "cosmosRun": 125,
+      "delta": -25,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Blue Pattern",
+      "auto": false,
+      "workbookRun": 150,
+      "cosmosRun": 125,
+      "delta": -25,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Purple Pattern",
+      "auto": false,
+      "workbookRun": 199,
+      "cosmosRun": 250,
+      "delta": 51,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Fuchsia Refractor",
+      "auto": false,
+      "workbookRun": 199,
+      "cosmosRun": 299,
+      "delta": 100,
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Rose Gold Refractor",
+      "auto": false,
+      "workbookRun": 10,
+      "cosmosRun": 15,
+      "delta": 5,
+      "sampleCount": 500
+    }
+  ],
+  "softMatchesDetail": [
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Green Refractor",
+      "workbookAuto": true,
+      "cosmosAutos": [
+        false,
+        false
+      ],
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Yellow Refractor",
+      "workbookAuto": true,
+      "cosmosAutos": [
+        false,
+        false
+      ],
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Red Refractor",
+      "workbookAuto": true,
+      "cosmosAutos": [
+        false,
+        false
+      ],
+      "sampleCount": 500
+    },
+    {
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Purple Refractor",
+      "workbookAuto": true,
+      "cosmosAutos": [
+        false
+      ],
+      "sampleCount": 500
+    }
+  ]
+}

@@ -308,6 +308,41 @@ describe("parseCardQuery — CF-CARDQUERY-PARSER-PARALLEL-EXPANSION", () => {
     expect(p.playerName).toBe("Ethan Conrad");
   });
 
+  // CF-CARDNUMBER-CASE-INSENSITIVE (2026-07-09, Drew — Owen Carey BCP-69):
+  // hyphenated / unhyphenated card-number patterns were case-sensitive, so
+  // lowercase user queries mangled playerName. Pre-fix "owen carey bcp-69"
+  // parsed as { cardNumber: null, playerName: "Owen Carey Bcp-" } — the
+  // "69" got eaten as a print run and "bcp-" leaked into the name.
+  it("captures lowercase 'bcp-69' as cardNumber; player name clean", () => {
+    const p = parseCardQuery("2026 bowman owen carey bcp-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("captures lowercase 'cpa-oc' as cardNumber (auto-prefix); player name clean", () => {
+    const p = parseCardQuery("2026 bowman owen carey cpa-oc auto");
+    expect(p.cardNumber).toBe("CPA-OC");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("captures lowercase unhyphenated 'us175' as cardNumber; player name clean", () => {
+    const p = parseCardQuery("2011 topps update mike trout us175");
+    expect(p.cardNumber).toBe("US175");
+    expect(p.playerName).toBe("Mike Trout");
+  });
+
+  it("captures BCP-69 with parallel and other tokens all in lowercase", () => {
+    const p = parseCardQuery("2026 bowman black owen carey bcp-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("uppercase card numbers still parse (no regression)", () => {
+    const p = parseCardQuery("2026 Bowman Owen Carey BCP-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
   // Regression pins — make sure the new patterns don't cannibalize existing
   // parallel matches. Blue/Red/etc. bare colors must still work when no
   // Raywave/Lava keyword follows.
@@ -365,5 +400,89 @@ describe("parseCardQuery — CF-CARDQUERY-PARSER-COLOR-WORD-BOUNDARY (color subs
     const p = parseCardQuery("2026 Bowman Chrome Blue Auto Josh Hammond");
     expect(p.parallel).toBe("Blue");
     expect(p.playerName).toBe("Josh Hammond");
+  });
+});
+
+// CF-NO-NULL-PRICING FOLLOWUP (2026-07-11) — SET_PATTERN coverage for
+// modern Panini SetDocs the reference-catalog carries. Smoke test on
+// prod showed the parser was swallowing "Origins" into playerName
+// because "Panini Origins" had no SET_PATTERN entry.
+describe("parseCardQuery — modern Panini + historic brand set patterns", () => {
+  const cases: Array<{ query: string; brand: string; set: string; player?: string }> = [
+    { query: "2024 Panini Origins Aidan Miller Base", brand: "Panini", set: "Panini Origins", player: "Aidan Miller" },
+    { query: "2024 Panini Absolute Bobby Witt Jr", brand: "Panini", set: "Panini Absolute", player: "Bobby Witt Jr" },
+    { query: "2023 Panini Three and Two Ronald Acuna", brand: "Panini", set: "Panini Three and Two", player: "Ronald Acuna" },
+    { query: "2022 Panini Prospect Edition Elly De La Cruz", brand: "Panini", set: "Panini Prospect Edition", player: "Elly De La Cruz" },
+    { query: "2021 Panini Immaculate Julio Rodriguez", brand: "Panini", set: "Panini Immaculate", player: "Julio Rodriguez" },
+    { query: "2020 Panini Impeccable Wander Franco", brand: "Panini", set: "Panini Impeccable", player: "Wander Franco" },
+    { query: "2019 Panini Chronicles Fernando Tatis Jr", brand: "Panini", set: "Panini Chronicles", player: "Fernando Tatis Jr" },
+    { query: "2018 Panini Diamond Kings Shohei Ohtani", brand: "Panini", set: "Panini Diamond Kings", player: "Shohei Ohtani" },
+    { query: "2024 Panini Mosaic Aaron Judge", brand: "Panini", set: "Panini Mosaic", player: "Aaron Judge" },
+  ];
+
+  for (const c of cases) {
+    it(`recognizes "${c.query}"`, () => {
+      const p = parseCardQuery(c.query);
+      expect(p.brand).toBe(c.brand);
+      expect(p.set).toBe(c.set);
+      if (c.player) {
+        // Player name must not carry the brand tokens — the whole point of
+        // this fix is that "Origins" no longer leaks into playerName.
+        expect(p.playerName.toLowerCase()).not.toContain("origin");
+        expect(p.playerName.toLowerCase()).not.toContain("absolute");
+        expect(p.playerName.toLowerCase()).not.toContain("mosaic");
+        expect(p.playerName.toLowerCase()).not.toContain("chronicles");
+        expect(p.playerName.toLowerCase()).not.toContain("immaculate");
+        expect(p.playerName.toLowerCase()).not.toContain("impeccable");
+        expect(p.playerName.toLowerCase()).not.toContain("diamond kings");
+      }
+    });
+  }
+
+  it("bare 'Mosaic' still parses to Panini Mosaic", () => {
+    const p = parseCardQuery("2024 Mosaic Ohtani base");
+    expect(p.set).toBe("Panini Mosaic");
+    expect(p.brand).toBe("Panini");
+  });
+
+  it("bare 'Immaculate' still parses to Panini Immaculate", () => {
+    const p = parseCardQuery("2023 Immaculate Judge Auto");
+    expect(p.set).toBe("Panini Immaculate");
+    expect(p.brand).toBe("Panini");
+  });
+
+  it("Panini Prizm Draft Picks specific ordering wins over bare Prizm", () => {
+    const p = parseCardQuery("2024 Panini Prizm Draft Picks Chase DeLauter");
+    expect(p.set).toBe("Panini Prizm Draft Picks");
+  });
+
+  it("Onyx Vintage recognized as separate brand", () => {
+    const p = parseCardQuery("2023 Onyx Vintage Sammy Sosa");
+    expect(p.brand).toBe("Onyx");
+    expect(p.set).toBe("Onyx Vintage");
+  });
+
+  it("Leaf Metal Draft recognized (auto product)", () => {
+    const p = parseCardQuery("2022 Leaf Metal Draft Jackson Chourio");
+    expect(p.brand).toBe("Leaf");
+    expect(p.set).toBe("Leaf Metal Draft");
+  });
+
+  it("Fleer Ultra recognized as sub-brand", () => {
+    const p = parseCardQuery("1996 Fleer Ultra Ken Griffey Jr");
+    expect(p.brand).toBe("Fleer");
+    expect(p.set).toBe("Fleer Ultra");
+  });
+
+  it("Skybox EX recognized as sub-brand", () => {
+    const p = parseCardQuery("1997 Skybox EX Michael Jordan");
+    expect(p.brand).toBe("Skybox");
+    expect(p.set).toBe("Skybox EX");
+  });
+
+  it("Pacific Crown Royale recognized as sub-brand", () => {
+    const p = parseCardQuery("1998 Pacific Crown Royale Ken Griffey Jr");
+    expect(p.brand).toBe("Pacific");
+    expect(p.set).toBe("Pacific Crown Royale");
   });
 });

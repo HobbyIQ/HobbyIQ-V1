@@ -106,6 +106,30 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // X-Fractor" doesn't get swallowed by a generic Black rule.
   { match: (n) => n.includes("black x-fractor") || n.includes("black xfractor"), printRun: 10 },
   { match: (n) => n === "black" || (n.startsWith("black ") && n.includes("refractor")), printRun: 10 },
+
+  // CF-PADPARADSCHA-SHIMMER-FANIMATION (2026-07-09, Drew — Owen Carey
+  // Padparadscha showed parallelMultiplier=1 pre-fix because
+  // "padparadscha sapphire" didn't match any print-run rule and fell
+  // through to no-floor). Print runs per hobby convention:
+  //   Padparadscha Sapphire     /1   (1/1 — Drew correction 2026-07-09)
+  //   Bowman Fanimation         /5   (retail-exclusive; matches Red family)
+  //   Red Shimmer Refractor     /5
+  //   Gold Shimmer Refractor    /50
+  //   Green Shimmer Refractor   /99
+  //   Blue / Aqua / Sky Blue Shimmer Refractor  /75 (mid-tier Bowman
+  //     Chrome shimmer parallels)
+  //
+  // Order: color-specific Shimmer rules FIRST (so "Red Shimmer" hits /5
+  // not the generic /50-ish Shimmer fallback), then bare "Shimmer
+  // Refractor" catch-all at /50 (safe middle ground for uncalibrated
+  // shimmer variants CH may index).
+  { match: (n) => n.includes("padparadscha"), printRun: 1 },
+  { match: (n) => n.includes("fanimation"), printRun: 5 },
+  { match: (n) => n.includes("red shimmer"), printRun: 5 },
+  { match: (n) => n.includes("gold shimmer"), printRun: 50 },
+  { match: (n) => n.includes("green shimmer"), printRun: 99 },
+  { match: (n) => n.includes("blue shimmer") || n.includes("aqua shimmer") || n.includes("sky blue shimmer"), printRun: 75 },
+  { match: (n) => n.includes("shimmer refractor") || n === "shimmer", printRun: 50 },
   // CF-BOWMAN-COLOR-AUTOS-BATCH-3 (2026-07-08, Drew batch 3): Bowman
   // Draft Chrome single-color autograph print runs. These must come
   // BEFORE the generic Bowman color rules below so bare "Green" (auto
@@ -126,10 +150,14 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   { match: (n) => n === "red" || n.startsWith("red "), printRun: 5 },
   { match: (n) => n.includes("red refractor") || n.includes("red x-fractor"), printRun: 5 },
   // ── /10 ────────────────────────────────────────────────────────────
+  // CF-ORANGE-SHIMMER-ORDER (2026-07-09): "orange shimmer" MUST come
+  // BEFORE the generic "orange"/"orange " rule below, otherwise it
+  // gets swallowed as /25 (the pre-existing ordering bug surfaced by
+  // the CF-PADPARADSCHA-SHIMMER-FANIMATION test suite).
+  { match: (n) => n.includes("orange shimmer"), printRun: 10 },
   { match: (n) => n.includes("orange refractor") && !n.includes("shimmer"), printRun: 25 },
   { match: (n) => n === "orange" || n.startsWith("orange "), printRun: 25 },
   { match: (n) => n.includes("orange x-fractor"), printRun: 25 },
-  { match: (n) => n.includes("orange shimmer"), printRun: 10 },
   // ── /50 ────────────────────────────────────────────────────────────
   { match: (n) => n === "gold" || n.startsWith("gold "), printRun: 50 },
   { match: (n) => n.includes("gold refractor") || n.includes("gold x-fractor"), printRun: 50 },
@@ -195,6 +223,39 @@ export function floorForPrintRun(printRun: number): number | null {
     if (printRun <= tier.maxPrintRun) return tier.floor;
   }
   return null;
+}
+
+/**
+ * CF-PARALLEL-FLOOR-NON-AUTO-MULTIPLIER (2026-07-09, Drew — Owen Carey
+ * Black BCP-69): the PRINT_RUN_TO_FLOOR table is calibrated to AUTO
+ * cards, where the base auto ($50-100 range for a fringe prospect) ×
+ * /10 floor 30× → $1,500-3,000 hits hobby-consensus. Applied verbatim
+ * to non-auto base cards ($1-3 range) the same 30× floor yields $30-90
+ * — well below hobby reality for rare non-auto parallels. Empirical
+ * checks: non-auto Black /10, Red /5, Superfractor /1 all price ~1.8×
+ * higher than the auto-calibrated floor implies.
+ *
+ * Applies a class-aware bump (currently a flat 1.8× on the auto floor
+ * for non-auto callers). Tuned to Drew's calibration point that Owen
+ * Carey non-auto Black /10 should project ~$100 vs the $55 the auto
+ * floor produces on his $1.85 base median. Extract to per-tier values
+ * once we accumulate more empirical anchors.
+ *
+ * `cardClass` defaults to "auto" for backward compatibility — every
+ * existing caller of `floorForPrintRun` (mechanism1, sibling rescue)
+ * was implicitly assuming auto anyway.
+ */
+const NON_AUTO_FLOOR_MULTIPLIER = 1.8;
+
+export function floorForPrintRunByClass(
+  printRun: number,
+  cardClass: "auto" | "base",
+): number | null {
+  const base = floorForPrintRun(printRun);
+  if (base === null) return null;
+  return cardClass === "base"
+    ? Math.round(base * NON_AUTO_FLOOR_MULTIPLIER * 100) / 100
+    : base;
 }
 
 /**

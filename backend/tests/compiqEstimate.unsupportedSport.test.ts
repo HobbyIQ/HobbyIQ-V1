@@ -91,7 +91,9 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
     expect(typeof result.unsupportedSportReason).toBe("string");
     expect((result.unsupportedSportReason as string).toLowerCase()).toContain("basketball");
     expect(result.detectedSport).toBe("Basketball");
-    expect(result.fairMarketValue).toBe(0);
+    // CF-UNSUPPORTED-SPORT-NULL-FMV (audit Finding #8, 2026-07-15): FMV
+    // is null for unsupported-sport (was 0). See PR #478.
+    expect(result.fairMarketValue).toBeNull();
     expect(result.compsUsed).toBe(0);
     expect(result.recentComps).toEqual([]);
   });
@@ -192,6 +194,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
     expect(result.source).toBe("unsupported_sport");
     expect(result.detectedSport).toBe("Football");
     expect((result.unsupportedSportReason as string).toLowerCase()).toContain("football");
-    expect(result.fairMarketValue).toBe(0);
+    // CF-UNSUPPORTED-SPORT-NULL-FMV (audit Finding #8, 2026-07-15): null, not 0.
+    expect(result.fairMarketValue).toBeNull();
   });
 });

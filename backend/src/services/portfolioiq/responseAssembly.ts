@@ -72,6 +72,18 @@ import {
 // verdict. Consumes the holding's own FMV + Predicted + confidence +
 // cost basis and emits a shape iOS can render directly.
 import { computeAction } from "../compiq/actionRecommendation.service.js";
+// CF-COMP-HOLDING-WIRE-PARITY (audit PR #482, 2026-07-15): consume the
+// canonical multipliers introduced in PR #481 for the derived tier/zone
+// bands. Ensures the holding wire's derived math tracks any future
+// tuning changes to the pricing engine in exactly ONE place.
+import {
+  QUICK_SALE_MULTIPLIER,
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PREMIUM_MULTIPLIER,
+  SUGGESTED_LIST_MULTIPLIER,
+  BUY_ZONE_LOW_MULTIPLIER,
+  applyHeadlineMultiplier,
+} from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
 
 /**
  * Map the portfolio holding's categorical `estimateConfidence` tier
@@ -167,6 +179,21 @@ export interface PortfolioHoldingWire {
   notes?: string;
   photos?: string[];
   clientId?: string;
+  // CF-SOURCE-VENDOR-WIRE-STRIP (Drew, 2026-07-13): sourceVendor +
+  // sourceVendorUpdatedAt REMOVED from the wire shape per iOS shape lock —
+  // the fields still write to the persisted holding (backend audit + KQL)
+  // but never surface to iOS. Restore this block only when iOS explicitly
+  // opts in to vendor attribution rendering.
+  // CF-HELD-EXPENSES (2026-07-12): explicit on the wire shape so mutation
+  // routes returning composed holdings still surface the array iOS renders.
+  heldExpenses?: Array<{
+    id: string;
+    kind: string;
+    amount: number;
+    incurredAt?: string;
+    notes?: string;
+    invoiceRef?: string;
+  }>;
   // MLB resolution
   playerId?: string;
   playerIdConfidence?: "high" | "medium" | "low" | "ambiguous";
@@ -175,6 +202,94 @@ export interface PortfolioHoldingWire {
   ebayOfferId?: string | null;
   ebayListingId?: string | null;
   ebayListingPublishedAt?: string | null;
+  // CF-EBAY-AUTO-HOLDING (2026-07-12): provenance markers for holdings
+  // created by the auto-import path (POST /erp/purchases/import/ebay or
+  // POST /erp/purchases/backfill-holdings). iOS uses these to render a
+  // "Auto-imported from eBay" badge + a "Confirm details" prompt when
+  // parseConfidence < 0.90.
+  source?: string | null;
+  sourcePurchaseId?: string | null;
+  parseConfidence?: number | null;
+  needsReview?: boolean | null;
+  // setName duplicated on the wire alongside product because the auto-
+  // parser fills both, and iOS existing screens may key off either.
+  setName?: string | null;
+  // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): Browse API item-specifics
+  // populated when the auto-import fetched full item details from eBay.
+  // Foundation for iOS eBay relisting flow + future sold-comp matching.
+  ebayImageUrl?: string | null;
+  ebayShortDescription?: string | null;
+  ebayItemAspects?: Record<string, string> | null;
+  ebayCategoryPath?: string | null;
+  ebaySeller?: { username: string; feedbackScore: number | null } | null;
+  enrichedFromEbay?: boolean | null;
+  // CF-CARDID-SUGGESTER (2026-07-12): pending-review holdings carry a
+  // proposed canonical cardId + confidence + candidate summary. iOS shows
+  // the suggestion prominently on the review sheet — Accept sends
+  // { cardId: suggestedCardId } in the confirm edits body.
+  suggestedCardId?: string | null;
+  suggestionConfidence?: number | null;
+  suggestionCandidate?: {
+    title?: string;
+    set?: string;
+    year?: number | string;
+    number?: string;
+    variant?: string;
+    image?: string;
+  } | null;
+  /** CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): iOS keys on this
+   *  to bucket the review queue into high/medium/low review tiers. Backend
+   *  owns the thresholds; iOS should never depend on the raw confidence
+   *  number for tier decisions. */
+  suggestionConfidenceTier?: "high" | "medium" | "low" | null;
+  /** Transparency layer: which structured fields aligned + which didn't,
+   *  so iOS can render "Matched 5 of 6 (mismatch: parallel)". */
+  suggestionMatchBreakdown?: {
+    fieldsChecked: number;
+    fieldsMatched: number;
+    mismatchedFields: string[];
+  } | null;
+  suggestionUpdatedAt?: string | null;
+  /** CF-CARDID-SUGGESTER-MULTI-VENDOR (PR #438): which vendor sourced
+   *  the primary suggestion. iOS badges the review row accordingly. */
+  suggestionCandidateSource?: "cardhedge" | "cardsight-uuid" | null;
+  /** CF-CARDID-SUGGESTER-TOP-N (PR #438): up to 2 alternative
+   *  candidates surfaced when primary tier != "high". iOS renders as
+   *  one-tap picks in the review sheet. Absent on high-tier picks. */
+  suggestionAlternatives?: Array<{
+    cardId: string;
+    confidence: number;
+    confidenceTier: "high" | "medium" | "low";
+    candidateSource: "cardhedge" | "cardsight-uuid";
+    candidate: {
+      title?: string;
+      set?: string;
+      year?: number | string;
+      number?: string;
+      variant?: string;
+      image?: string;
+    };
+    matchBreakdown?: {
+      fieldsChecked: number;
+      fieldsMatched: number;
+      mismatchedFields: string[];
+    };
+  }> | null;
+  /** CF-CARDID-SUGGESTER-CATALOG-VERIFY (PR — 2026-07-14): reference-
+   *  catalog match on the suggestion's (year, product, parallel).
+   *  Present when a real catalogued SKU exists; iOS badges accordingly. */
+  suggestionCatalogVerified?: {
+    confidence: "Verified" | "High" | "Medium";
+    printRun: number | null;
+    canonicalProduct: string;
+    canonicalCardSet: string;
+    canonicalParallel: string;
+  } | null;
+  // Auxiliary aspect fields we backfilled from Browse (team, sport,
+  // manufacturer) — always optional so old holdings still decode.
+  team?: string | null;
+  sport?: string | null;
+  manufacturer?: string | null;
   // Cert
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
@@ -324,6 +439,58 @@ export interface PortfolioHoldingWire {
     sampleSize: number;
     confidence: number;
   };
+
+  // ── CF-COMP-HOLDING-WIRE-PARITY (audit PR #482, 2026-07-15) ─────────
+  //
+  // The whole-app wire-shape audit surfaced 8 fields present on comp
+  // responses (/search, /price, /price-by-id) but absent — or emitted
+  // under a different name/envelope — on the holding wire. iOS decoders
+  // had to branch on which endpoint produced the row; the holding
+  // detail sheet couldn't render zones/trendIQ/confidence tiles because
+  // the data never left the backend.
+  //
+  // Fix: ADDITIVE aliases that mirror the comp-family envelope. The
+  // legacy flat fields (predictedPriceLow/High, predictedPriceMechanism,
+  // estimateLow/High, fairMarketValue) STAY on the wire for backward
+  // compat while iOS decoders migrate at their own pace. Never break
+  // an existing decoder; always add new keys.
+  //
+  //   marketValue          — alias of fairMarketValue (comp routes name)
+  //   fairMarketValueLive  — alias of fairMarketValue (comp routes name)
+  //   predictedPriceRange  — nested form of predictedPriceLow/High
+  //   predictedPriceAttribution.mechanism
+  //                        — nested form of predictedPriceMechanism
+  //   estimateRange        — nested form of estimateLow/High
+  //   marketTier / buyZone / holdZone / sellZone
+  //                        — derived from FMV via pricing.constants
+  //                          multipliers (PR #481). Zones are TUPLES
+  //                          `[low, high]` matching the comp response's
+  //                          PriceZone decoder.
+  //   trendIQ / confidence — null placeholders in PR #482; will be
+  //                          populated in PR #483 once the holding doc
+  //                          persists trendIQ + a per-holding confidence
+  //                          via autoPriceHolding. iOS decoders can
+  //                          bind the field defensively today so the
+  //                          transition is a null → object change,
+  //                          not a schema break.
+  marketValue: number | null;
+  fairMarketValueLive: number | null;
+  predictedPriceRange: { low: number; high: number } | null;
+  predictedPriceAttribution: { mechanism: string } | null;
+  estimateRange: { low: number; high: number } | null;
+  marketTier: { value: number | null; high: number | null };
+  buyZone: [number | null, number | null];
+  holdZone: [number | null, number | null];
+  sellZone: [number | null, number | null];
+  // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): trendIQ is now the
+  // full result object when the holding was repriced by autoPriceHolding
+  // (with an engine estimate carrying trendIQ), null otherwise. Same
+  // shape iOS decodes on comp responses so a shared PricingPanelView
+  // component can bind either.
+  trendIQ:
+    | import("../compiq/trendIQ.types.js").TrendIQResult
+    | null;
+  confidence: number | null;
 }
 
 export function composeHoldingWireShape(
@@ -385,6 +552,12 @@ export function composeHoldingWireShape(
     notes: holding.notes,
     photos: holding.photos,
     clientId: holding.clientId,
+    // CF-HELD-EXPENSES (2026-07-12): the expense array iOS renders and the
+    // per-expense breakdown users edit. Must live on the wire shape so
+    // mutation routes (POST/DELETE /holdings/:id/expenses) can return it.
+    heldExpenses: (holding as any).heldExpenses,
+    // CF-SOURCE-VENDOR-WIRE-STRIP (2026-07-13): sourceVendor +
+    // sourceVendorUpdatedAt intentionally NOT surfaced to iOS.
     // MLB resolution
     playerId: holding.playerId,
     playerIdConfidence: holding.playerIdConfidence,
@@ -393,6 +566,44 @@ export function composeHoldingWireShape(
     ebayOfferId: holding.ebayOfferId,
     ebayListingId: holding.ebayListingId,
     ebayListingPublishedAt: holding.ebayListingPublishedAt,
+    // CF-EBAY-AUTO-HOLDING (2026-07-12): auto-import provenance. Fields
+    // are stored on the holding doc via `as any` at write time and
+    // surfaced here so iOS gets the "auto-imported" markers.
+    source: (holding as any).source,
+    sourcePurchaseId: (holding as any).sourcePurchaseId,
+    parseConfidence: (holding as any).parseConfidence,
+    needsReview: (holding as any).needsReview,
+    setName: (holding as any).setName,
+    // CF-CARDID-SUGGESTER (2026-07-12)
+    suggestedCardId: (holding as any).suggestedCardId,
+    suggestionConfidence: (holding as any).suggestionConfidence,
+    suggestionCandidate: (holding as any).suggestionCandidate,
+    suggestionConfidenceTier: (holding as any).suggestionConfidenceTier,
+    suggestionMatchBreakdown: (holding as any).suggestionMatchBreakdown,
+    suggestionUpdatedAt: (holding as any).suggestionUpdatedAt,
+    // CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): the two new
+    // fields from PR #438 were stored on the holding but NOT serialized
+    // here, so iOS saw undefined candidateSource + missing alternatives
+    // and rendered the review row as "no suggestion" even though Cosmos
+    // had one. Root cause of Drew's 2026-07-14 report: "in review queue
+    // but no suggestion to pick from" for 14 pending holdings.
+    suggestionCandidateSource: (holding as any).suggestionCandidateSource,
+    suggestionAlternatives: (holding as any).suggestionAlternatives,
+    // CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): reference-
+    // catalog match on the suggestion. iOS badges "catalog verified"
+    // when present. null when catalog lookup found no match OR when
+    // env flag is off.
+    suggestionCatalogVerified: (holding as any).suggestionCatalogVerified,
+    // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
+    ebayImageUrl: (holding as any).ebayImageUrl,
+    ebayShortDescription: (holding as any).ebayShortDescription,
+    ebayItemAspects: (holding as any).ebayItemAspects,
+    ebayCategoryPath: (holding as any).ebayCategoryPath,
+    ebaySeller: (holding as any).ebaySeller,
+    enrichedFromEbay: (holding as any).enrichedFromEbay,
+    team: (holding as any).team,
+    sport: (holding as any).sport,
+    manufacturer: (holding as any).manufacturer,
     // Cert
     certNumber: holding.certNumber,
     certGrader: holding.certGrader,
@@ -436,12 +647,64 @@ export function composeHoldingWireShape(
     currentValue,
     totalProfitLoss,
     totalProfitLossPct,
-    quickSaleValue: applyMultiplierOrNull(fmvPerUnit, 0.85),
-    premiumValue: applyMultiplierOrNull(fmvPerUnit, 1.15),
-    suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, 1.05),
+    quickSaleValue: applyMultiplierOrNull(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+    premiumValue: applyMultiplierOrNull(fmvPerUnit, PREMIUM_MULTIPLIER),
+    suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, SUGGESTED_LIST_MULTIPLIER),
     freshnessStatus: freshnessFromPricingTimestamp(holding),
     displayableValue,
     displayableValueSource: displayable.source,
+    // ── CF-COMP-HOLDING-WIRE-PARITY (PR #482, 2026-07-15) ─────────
+    // Additive comp-family envelope aliases + derived tier/zone bands.
+    // Every field below either mirrors an existing flat key or derives
+    // from fmvPerUnit via the PR #481 multiplier constants.
+    marketValue: fmvPerUnit,
+    fairMarketValueLive: fmvPerUnit,
+    predictedPriceRange:
+      typeof holding.predictedPriceLow === "number"
+        && typeof holding.predictedPriceHigh === "number"
+        ? { low: holding.predictedPriceLow, high: holding.predictedPriceHigh }
+        : null,
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): prefer the persisted
+    // full attribution object; fall through to the flat mechanism string
+    // for legacy holdings written before Slice 2.
+    predictedPriceAttribution:
+      (holding as any).predictedPriceAttribution
+        && typeof (holding as any).predictedPriceAttribution === "object"
+        ? ((holding as any).predictedPriceAttribution as { mechanism: string })
+        : (typeof holding.predictedPriceMechanism === "string" && holding.predictedPriceMechanism.length > 0
+            ? { mechanism: holding.predictedPriceMechanism }
+            : null),
+    estimateRange:
+      typeof holding.estimateLow === "number"
+        && typeof holding.estimateHigh === "number"
+        ? { low: holding.estimateLow, high: holding.estimateHigh }
+        : null,
+    marketTier: {
+      value: fmvPerUnit,
+      high: applyHeadlineMultiplier(fmvPerUnit, PREMIUM_MULTIPLIER),
+    },
+    buyZone: [
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER * BUY_ZONE_LOW_MULTIPLIER),
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+    ],
+    holdZone: [
+      applyHeadlineMultiplier(fmvPerUnit, QUICK_SALE_MULTIPLIER),
+      fmvPerUnit,
+    ],
+    sellZone: [
+      fmvPerUnit,
+      applyHeadlineMultiplier(fmvPerUnit, PREMIUM_MULTIPLIER),
+    ],
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): emit the persisted
+    // trendIQ + confidence values from the holding doc. Legacy holdings
+    // written before Slice 2 have these fields undefined → wire coerces
+    // to null. Fresh reprices via autoPriceHolding populate them per the
+    // engine estimate response.
+    trendIQ: (holding as any).trendIQ ?? null,
+    confidence:
+      typeof (holding as any).confidence === "number"
+        ? (holding as any).confidence
+        : null,
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
     // is OMITTED entirely on every non-CH-last-sale holding (the universal
     // case). Preserves byte-identical wire emission for the existing

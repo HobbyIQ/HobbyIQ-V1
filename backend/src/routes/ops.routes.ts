@@ -18,12 +18,18 @@ const router = Router();
 
 // ---------- auth gate ----------
 function requireOpsToken(req: Request, res: Response, next: NextFunction): void {
-  const expected = process.env.OPS_REPORT_TOKEN;
+  // CF-OPS-TOKEN-TRIM-SYMMETRY (Drew, 2026-07-13, PR #424): Azure App
+  // Service injects \n on env vars, GitHub Actions can add CRLF when
+  // secrets get piped, PowerShell adds line endings when piping to gh
+  // secret set. Same class of bug as the Tier 1 harness 2026-06-30
+  // whitespace injection. Trim BOTH sides so any transport-added
+  // whitespace stops silently 401'ing.
+  const expected = process.env.OPS_REPORT_TOKEN?.trim();
   if (!expected) {
     res.status(503).json({ success: false, error: "OPS_REPORT_TOKEN is not configured on this server." });
     return;
   }
-  const provided = req.header("x-admin-token") ?? req.header("x-ops-token") ?? "";
+  const provided = (req.header("x-admin-token") ?? req.header("x-ops-token") ?? "").trim();
   if (provided !== expected) {
     res.status(401).json({ success: false, error: "Invalid or missing admin token." });
     return;
@@ -351,6 +357,184 @@ const BUILD_MARKER = "ops-v10-2026-05-13T1745Z";
 // Quick liveness ping (no token required) — proves the router is mounted.
 router.get("/ping", (_req: Request, res: Response) => {
   res.json({ ok: true, build: BUILD_MARKER, ts: new Date().toISOString() });
+});
+
+// CF-OPS-EBAY-PURCHASE-SYNC (Drew, 2026-07-14): admin-triggered eBay
+// order-history import for a specific user. Uses their stored refresh
+// token (Cosmos ebay_tokens) to mint a fresh access token, fetches
+// GetMyeBayBuying for the last N days, upserts any new purchases into
+// their portfolio doc. Idempotent — purchases already present skip on
+// (ebayItemId + ebayTransactionId + ebayOrderId) key.
+//
+// Body: { userId: string, days?: number }
+// days defaults to 30, capped at 90 (eBay Trading API MAX_DURATION_DAYS).
+//
+// Response: { success, purchaseCount, imported, skipped, ebayTotal }
+// If autoBackfillHoldings=true, also runs the auto-holding batch to
+// try creating pending-review holdings for the newly-imported purchases.
+// CF-HISTORICAL-BACKFILL (Drew, 2026-07-15): sweep a user's active holdings
+// and pull full-history sales from BOTH CH + CS into sold_comps. Foundation
+// for seasonality signals. Body: { userId }.
+router.post("/historical-backfill/run", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { userId?: string };
+  if (!body.userId || typeof body.userId !== "string") {
+    return res.status(400).json({ success: false, error: "userId required" });
+  }
+  try {
+    const [{ readUserDoc }, { runHistoricalBackfill, buildTargetsFromHoldings }] = await Promise.all([
+      import("../services/portfolioiq/portfolioStore.service.js"),
+      import("../services/portfolioiq/historicalBackfill.service.js"),
+    ]);
+    const doc = await readUserDoc(body.userId);
+    const holdingsObj = (doc as { holdings?: Record<string, unknown> }).holdings ?? {};
+    const active = Object.values(holdingsObj)
+      .filter((h): h is Record<string, unknown> =>
+        !!h && typeof h === "object" &&
+        (h as { cardStatus?: string }).cardStatus !== "sold" &&
+        (h as { cardStatus?: string }).cardStatus !== "rejected",
+      );
+    const targets = buildTargetsFromHoldings(active as any);
+    if (targets.length === 0) {
+      return res.json({ success: true, userId: body.userId, targetCount: 0, note: "no targets with resolved cardIds" });
+    }
+    const result = await runHistoricalBackfill(targets);
+    return res.json({ success: true, userId: body.userId, ...result });
+  } catch (err: any) {
+    console.error("[ops] /historical-backfill/run failed:", err?.message ?? err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "historical backfill failed",
+    });
+  }
+});
+
+router.post("/purchases/ebay-sync", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as {
+    userId?: string;
+    days?: number;
+    autoBackfillHoldings?: boolean;
+  };
+  if (!body.userId || typeof body.userId !== "string") {
+    return res.status(400).json({ success: false, error: "userId required" });
+  }
+  const days = Number(body.days ?? 30);
+  if (!Number.isFinite(days) || days < 1 || days > 90) {
+    return res.status(400).json({ success: false, error: "days must be integer 1-90" });
+  }
+  try {
+    const { importEbayPurchaseHistory } = await import(
+      "../services/ebay/ebayBuyerHistory.service.js"
+    );
+    const summary = await importEbayPurchaseHistory(body.userId, days);
+
+    // Optional: fire the auto-holding backfill so newly imported
+    // purchases get pending-review holdings ready for the Verify Card
+    // sheet without a second admin round-trip.
+    let backfill: unknown = null;
+    if (body.autoBackfillHoldings) {
+      const { runAutoHoldingBatch } = await import(
+        "../services/ebay/ebayBuyerHistory.service.js"
+      );
+      backfill = await runAutoHoldingBatch(body.userId);
+    }
+
+    return res.json({ success: true, userId: body.userId, days, ...summary, backfill });
+  } catch (err: any) {
+    console.error("[ops] /purchases/ebay-sync failed:", err?.message ?? err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "eBay purchase sync failed",
+    });
+  }
+});
+
+// CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): manual snapshot
+// trigger. Takes { userId, player, qualifier? }, hits eBay Browse, and
+// upserts a listings_snapshots doc. Ops-token gated; used to seed data
+// before the daily cron lands (PR #421) and for debug/backfill.
+router.post("/listings/snapshot", requireOpsToken, async (req: Request, res: Response) => {
+  const { userId, player, qualifier } = (req.body ?? {}) as {
+    userId?: string; player?: string; qualifier?: string;
+  };
+  if (!userId || !player) {
+    return res.status(400).json({ success: false, error: "userId + player required" });
+  }
+  const { fetchPlayerListingsSummary } = await import(
+    "../services/ebay/ebayListingSearch.service.js"
+  );
+  const { upsertSnapshot } = await import(
+    "../services/portfolioiq/listingsSnapshotStore.service.js"
+  );
+  const summary = await fetchPlayerListingsSummary(
+    userId, player, qualifier ?? null,
+  );
+  if (!summary) {
+    return res.status(502).json({
+      success: false, error: "eBay Browse returned no data (auth or rate limit?)"
+    });
+  }
+  await upsertSnapshot({
+    playerDisplay: player,
+    totalListings: summary.totalListings,
+    medianAsk: summary.medianAsk,
+    pricedItemCount: summary.pricedItemCount,
+    effectiveQuery: summary.effectiveQuery,
+    snapshottedAt: summary.snapshottedAt,
+  });
+  return res.json({ success: true, summary });
+});
+
+// CF-DAILY-LISTINGS-CRON (Drew, 2026-07-13, PR #421): daily snapshot
+// job endpoint. Called by a GitHub Actions cron; also triggerable
+// manually via the same ops token. Body:
+//   { userId?: string, topN?: number, concurrency?: number }
+// All fields optional — defaults picked to fit the 5K/day free-tier
+// Browse budget with 10x headroom.
+router.post("/listings/cron-tick", requireOpsToken, async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { userId?: string; topN?: number; concurrency?: number };
+  const { runDailyListingsSnapshotJob } = await import(
+    "../services/compiq/dailyListingsSnapshotJob.service.js"
+  );
+  try {
+    const summary = await runDailyListingsSnapshotJob({
+      userId: body.userId,
+      topN: body.topN,
+      concurrency: body.concurrency,
+    });
+    return res.json({ success: true, summary });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message ?? "cron-tick failed",
+    });
+  }
+});
+
+router.get("/listings/trend", requireOpsToken, async (req: Request, res: Response) => {
+  const player = (req.query.player as string | undefined)?.trim();
+  const daysRaw = req.query.days as string | undefined;
+  const days = daysRaw ? Math.max(2, Math.min(90, Number(daysRaw))) : 30;
+  if (!player) {
+    return res.status(400).json({ success: false, error: "player query param required" });
+  }
+  const { computeListingsTrend } = await import(
+    "../services/compiq/supplyDemandSignal.service.js"
+  );
+  const { readSnapshots } = await import(
+    "../services/portfolioiq/listingsSnapshotStore.service.js"
+  );
+  const [trend, snaps] = await Promise.all([
+    computeListingsTrend(player, days),
+    readSnapshots(player, days),
+  ]);
+  return res.json({
+    success: true,
+    player,
+    days,
+    snapshotCount: snaps.length,
+    trend,
+    latestSnapshots: snaps.slice(-5),
+  });
 });
 
 router.get("/report", requireOpsToken, async (req: Request, res: Response) => {

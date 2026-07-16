@@ -2054,9 +2054,22 @@ const AUTO_PREFIX_RE = new RegExp(
 
 function hasAutoSignal(c: CardHedgeCard, text: string): boolean {
   if (/(auto|autograph|signed|signature)/.test(text)) return true;
-  const num = (c.number ?? "").toString().toLowerCase();
-  if (num && AUTO_PREFIX_RE.test(num)) return true;
-  return false;
+  return isAutoCardNumber(c.number);
+}
+
+/**
+ * CF-CARDID-SUGGESTER-AUTO-INFERENCE (Drew, 2026-07-14): exported so the
+ * suggester's field-alignment scorer can recognize CH's autograph SKUs.
+ * CH stores auto-ness in the card_number prefix (CPA-, BCPA-, CRA-, etc.),
+ * NOT in the variant/title text — so a suggester that only checks text
+ * fires a false "isAuto mismatch" on every real autograph pick, degrading
+ * confidence tier. Reuses the same AUTO_NUMBER_PREFIXES vocabulary as
+ * cardMatchesTokens / hasAutoSignal.
+ */
+export function isAutoCardNumber(cardNumber: string | null | undefined): boolean {
+  const num = (cardNumber ?? "").toString().toLowerCase();
+  if (!num) return false;
+  return AUTO_PREFIX_RE.test(num);
 }
 
 /** True when the card's text mentions every required token. */

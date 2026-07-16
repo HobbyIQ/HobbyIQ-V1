@@ -14,6 +14,17 @@ import {
 // PredictionLogDocument. Single boundary, no signature churn at the 9
 // call sites.
 import { cacheStatsContext } from "../shared/cache.service.js";
+// CF-SOLD-COMPS-READ (Drew, 2026-07-14): read from the unified sold_comps
+// pool as a supplemental comp source. See project_sold_comps_unified_pool.md.
+// CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): recordSoldComp for the
+// Cardsight ingest path. CH ingest is handled upstream by tryCardHedge in
+// cardsight.router.ts; we intentionally do NOT re-emit CH-served comps here
+// to avoid double-writes.
+import {
+  readCompsByCardId,
+  recordSoldComp,
+  type SoldCompDoc,
+} from "../portfolioiq/soldCompsStore.service.js";
 import {
   parseCardQuery,
   getCompVariantMismatchReasons,
@@ -22,8 +33,29 @@ import {
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
+// CF-CONSTS-CONSOLIDATION (audit PR #490, 2026-07-15): retire raw
+// multiplier literals scattered across the projection-tier branches.
+// Every value below has a documented semantic (success vs projection
+// vs scarcity vs T7); the named consts make the tier's uncertainty
+// stratum explicit at every emission site.
+import {
+  QUICK_SALE_MULTIPLIER,
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PROJECTION_QUICK_SALE_MULTIPLIER,
+  PROJECTION_PREMIUM_MULTIPLIER,
+  SCARCITY_QUICK_SALE_MULTIPLIER,
+  SCARCITY_PREMIUM_MULTIPLIER,
+  SCARCITY_PREMIUM_ALT_MULTIPLIER,
+  T7_QUICK_SALE_MULTIPLIER,
+} from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
 import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
+import {
+  multiplierFromGemRate,
+  shouldUseGemRateMultiplier,
+  type GemRateSignal,
+} from "./gemRateSignal.service.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
 // Issue #25 Phase 3 — tier-anchored predicted-range fallback (default OFF).
 // Activated by env flag COMPIQ_PHASE3_TIER_ANCHORED=true. NEVER replaces the
@@ -77,7 +109,79 @@ import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 // the equivalent parent product's live comps × hobby-consensus family
 // multiplier × existing parallel floor multipliers.
 import { detectProductFamily } from "./productFamilyProjection.js";
-import { inferPrintRun, floorForPrintRun } from "./parallelPremiumFloors.js";
+import {
+  inferPrintRun,
+  floorForPrintRun,
+  floorForPrintRunByClass,
+} from "./parallelPremiumFloors.js";
+// CF-BOWMAN-PARALLELS-DATASET (2026-07-09, Drew): year-aware print-run
+// lookup against Drew's 1,849-row Bowman reference workbook. The
+// hand-coded parallelPremiumFloors rules assume single-tier values
+// ("Blue Refractor" is always /150) which is wrong pre-2015. This
+// dataset-first, rules-fallback pattern gives us correct floors for
+// old cards without discarding the fallback safety net.
+import { inferPrintRunForYearAndParallel } from "./bowmanParallelsDataset.js";
+// CF-PHASE5-LADDER-TO-COSMOS (2026-07-10, Drew): Cosmos reference-catalog
+// as the highest-priority data source when the flag is on — extends the
+// ladder from Bowman-only to the whole hobby. Falls through to the
+// existing Bowman JSON + hand-coded rules when the flag is off or the
+// container has no match. See referenceCatalogLookup.ts for the ops
+// safety analysis and rollback lever.
+import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
+// CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10, Drew): product-year cross-
+// player median anchor used as the FALLBACK when parallel-floor-projection
+// has zero player-scoped comps (Hartman-class prospects). See
+// productYearAnchor.ts for design + handoff discipline.
+import { fetchProductYearMedianAnchor } from "./productYearAnchor.js";
+// CF-NO-NULL-PRICING (2026-07-11, Drew — Tier 6 fallback): reference-
+// catalog baseline. Fires when both player and cross-player anchors are
+// empty but the ladder has a ParallelDoc. Env flag gated.
+// See docs/design/no-null-pricing-architecture.md
+import { computeReferenceCatalogBaseline } from "./referenceCatalogBaseline.js";
+// CF-NO-NULL-PRICING PR 3 (2026-07-11, Drew — Tier 7 fallback): era-typed
+// SetDoc baseline. Fires at "unavailable" emit sites when we can identify
+// (year, product) but nothing else. Deepest fallback before returning null.
+import { maybeTier7Fallback } from "./tier7SetDocFallback.js";
+
+/**
+ * Small helper — prefer the year-aware dataset when we have a year,
+ * otherwise fall back to the single-tier hand-coded rules. When the
+ * dataset returns null (unnumbered parallel like Camo) also fall
+ * back to the rules — they may still recognize the name.
+ *
+ * CF-PHASE5-LADDER-TO-COSMOS: async so the Cosmos-backed reference-
+ * catalog can be consulted FIRST. Both call sites are inside async
+ * pipeline functions, so the await is free.
+ */
+async function inferPrintRunYearFirst(
+  parallelName: string,
+  year: number | null | undefined,
+  isAuto: boolean | undefined,
+  product: string | null | undefined,
+): Promise<number | null> {
+  // Cosmos reference-catalog first (env-flag gated). When populated (PR C+)
+  // and the flag is on, this covers every product family the workbook
+  // curates, not just Bowman. When empty or flag-off, this is a NO-OP.
+  if (product) {
+    const catalogHit = await inferPrintRunFromReferenceCatalog(
+      product,
+      year,
+      parallelName,
+      { isAuto: isAuto === true },
+    );
+    if (catalogHit && catalogHit.printRun !== null) return catalogHit.printRun;
+  }
+  // Bowman JSON — authoritative for 2011-2026 Bowman-family products.
+  if (year && Number.isFinite(year)) {
+    const hit = inferPrintRunForYearAndParallel(year, parallelName, {
+      isAuto: isAuto === true,
+    });
+    if (hit && hit.printRun !== null) return hit.printRun;
+  }
+  // Hand-coded rules — single-tier fallback covering common well-known
+  // parallels across all products.
+  return inferPrintRun(parallelName);
+}
 import {
   computeCardTrajectory,
   computeSegmentTrajectory,
@@ -186,6 +290,16 @@ interface RawComp {
   // alongside listingType so recentComps[] + excludedComps[] can show
   // a thumbnail. Null when the upstream record lacks it.
   imageUrl?: string | null;
+  // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): per-comp provenance so the
+  // route response can surface "3 collector-verified + 8 vendor comps"
+  // and iOS can render trust badges on individual recentComps rows.
+  // - source: which pool this row came from ("cardhedge", "cardsight",
+  //   "ebay-user-purchase", "ebay-user-sale", "manual-user-entry",
+  //   "cs_pricing_backstop", or undefined for pre-provenance-era rows)
+  // - verifiedByUser: true when the row is a user attestation (1.0
+  //   confidence in sold_comps hierarchy). Vendor pulls are false.
+  source?: string;
+  verifiedByUser?: boolean;
 }
 
 /** CF-RECENTCOMPS-SALETYPE: map Cardsight's wire-shape listing_type to
@@ -431,6 +545,9 @@ function chSalesToRawComps(
       soldDate: s.date ?? "",
       listingType: s.sale_type ?? null,
       imageUrl: null,
+      // CF-PROVENANCE-DISPLAY: pinned CH path — every row is CH.
+      source: "cardhedge",
+      verifiedByUser: false,
     }))
     .filter((c) => c.price > 0);
 }
@@ -785,45 +902,76 @@ interface GradeTierTable {
   fallback: number;
 }
 
+// CF-GRADER-PREMIUMS-MODERN-DEFAULTS (Drew, 2026-07-15, PR #494): rebased
+// the static hand-curated fallback table to reflect post-2015 modern reality
+// per Drew's anchors — PSA 9 sits at 1.2× raw (not the 1.70 the 2018
+// Prospects Live article gave), PSA 8 at 0.7×, BGS 9 at 1.10×, SGC 9 at
+// 1.08×. The empirical `data/base-multipliers-latest.json` table (behind
+// MULTIPLIER_BASE_TABLE_ENABLED) still wins when it fires; this static
+// table is the last-resort fallback for cards outside its calibration
+// scope (rare grades, exotic graders, no rawPrice data).
+//
+// The tiered $25/$50/$100 boundaries still express value-tier compression —
+// cheap cards ($5-20 raw) have inflated multipliers because a slab has a
+// ~$20-30 price floor regardless; expensive cards ($500+) compress toward
+// 1.5-2.5x for PSA 10 because raw buyers price in gem odds. Numbers below
+// preserve that curve at anchors matching Drew's proposal.
+// CF-GRADER-PREMIUMS-FULL-REBASE (Drew, 2026-07-15, PR #495): completed
+// the modern rebase started in PR #494. All grades on all graders now
+// match Drew's modern anchors. Also splits BGS "10" into TWO grade keys:
+//   "10"              — regular BGS 10 (at least one subgrade < 10)
+//   "10 Black Label"  — ALL FOUR subgrades = 10 (rare, "only grade that
+//                        consistently beats PSA 10, 2-4× PSA 10 prices")
+// Grade-detection updates in detectGradeFromTitle emit "10 Black Label"
+// when title contains "Black Label" / "BL" alongside a BGS 10.
 const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
   PSA: {
-    // PSA 10 — article: 4.9 (<$25), ~3.6 ($25-50), ~2.8 ($50-100), ~2.2 ($100+),
-    // overall avg 3.43 (pitching prospects, n≈60).
-    "10": { "<25": 4.9, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.43 },
-    // PSA 9 — article: 2.56 (<$25), ~1.5 ($25-50), <1.0 at $50+ (real value loss).
-    // We clamp to 0.85 minimum to avoid extreme-loss baseline noise.
-    "9":  { "<25": 2.56, "25-50": 1.5, "50-100": 0.95, "100+": 0.85, fallback: 1.70 },
-    // PSA 8 — article: "consistently loses value" → all tiers below 1.0.
-    "8":  { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
-    "7":  { "<25": 0.85, "25-50": 0.80, "50-100": 0.75, "100+": 0.70, fallback: 0.78 },
-    "6":  { "<25": 0.75, "25-50": 0.70, "50-100": 0.65, "100+": 0.60, fallback: 0.68 },
-    "5":  { "<25": 0.65, "25-50": 0.60, "50-100": 0.55, "100+": 0.50, fallback: 0.58 },
+    // PSA 10 anchor 3.5× (Drew: 3-4x); slab-floor bump on <$25 tier.
+    "10": { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
+    // PSA 9 anchor 1.2× (Drew: 1.1-1.3; post-2015 cards trade at/near
+    // raw; named-rookie premium). Sub-$25 tier still slab-floor bumped.
+    "9":  { "<25": 2.0, "25-50": 1.3, "50-100": 1.05, "100+": 0.95, fallback: 1.2 },
+    // PSA 8 = Raw hard business rule (modern) — applied as override in
+    // getGraderPremium regardless of which table wins.
+    "8":  { "<25": 1.0, "25-50": 1.0, "50-100": 1.0, "100+": 1.0, fallback: 1.0 },
+    "7":  { "<25": 0.75, "25-50": 0.68, "50-100": 0.62, "100+": 0.55, fallback: 0.65 },
+    "6":  { "<25": 0.65, "25-50": 0.58, "50-100": 0.52, "100+": 0.48, fallback: 0.55 },
+    "5":  { "<25": 0.55, "25-50": 0.50, "50-100": 0.45, "100+": 0.40, fallback: 0.48 },
   },
   BGS: {
-    // BGS 10 ("Black Label") — typically 1.5× PSA 10.
-    "10":  { "<25": 7.35, "25-50": 5.40, "50-100": 4.20, "100+": 3.30, fallback: 5.15 },
-    // BGS 9.5 ≈ PSA 10 × 0.89 (from external-source ratio: PSA 10 = BGS 9.5 × 1.12).
-    "9.5": { "<25": 4.36, "25-50": 3.20, "50-100": 2.49, "100+": 1.96, fallback: 3.05 },
-    // BGS 9 ≈ PSA 9 × 0.94.
-    "9":   { "<25": 2.41, "25-50": 1.41, "50-100": 0.89, "100+": 0.80, fallback: 1.60 },
-    "8.5": { "<25": 1.10, "25-50": 1.00, "50-100": 0.95, "100+": 0.90, fallback: 1.00 },
-    "8":   { "<25": 1.00, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
+    // BGS 10 Black Label — ALL FOUR subgrades = 10. Drew: "the only
+    // grade that consistently beats PSA 10, 2-4× PSA 10 prices, use
+    // ~9-10× raw." Tiers preserve value-compression curve.
+    "10 Black Label": { "<25": 12.0, "25-50": 9.0, "50-100": 7.0, "100+": 5.5, fallback: 9.0 },
+    // BGS 10 regular — at least one subgrade < 10. Similar to PSA 10.
+    "10":  { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
+    // BGS 9.5 anchor 2.8× (Drew: ~0.75 × PSA 10; recent data pushes
+    // closer to PSA 9 than PSA 10 on liquid cards).
+    "9.5": { "<25": 4.0, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.8 },
+    // BGS 9 anchor 1.10× (Drew: 1.0-1.15; slight discount to PSA 9).
+    "9":   { "<25": 1.8, "25-50": 1.20, "50-100": 0.95, "100+": 0.85, fallback: 1.10 },
+    // BGS 8.5 anchor 0.78× (Drew: 0.7-0.85; below raw).
+    "8.5": { "<25": 0.95, "25-50": 0.82, "50-100": 0.76, "100+": 0.72, fallback: 0.78 },
+    // BGS 8 anchor 0.58× (Drew: 0.5-0.65).
+    "8":   { "<25": 0.70, "25-50": 0.62, "50-100": 0.56, "100+": 0.52, fallback: 0.58 },
   },
   SGC: {
-    // SGC 10 ≈ PSA 10 × 0.85.
-    "10":  { "<25": 4.17, "25-50": 3.06, "50-100": 2.38, "100+": 1.87, fallback: 2.92 },
-    "9.5": { "<25": 3.72, "25-50": 2.74, "50-100": 2.13, "100+": 1.67, fallback: 2.61 },
-    "9":   { "<25": 2.30, "25-50": 1.35, "50-100": 0.86, "100+": 0.77, fallback: 1.53 },
-    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
-    "8":   { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
+    // SGC 10 anchor 3.05× (Drew: ~0.87 × PSA 10; 85-90% of PSA 10 value).
+    "10":  { "<25": 4.35, "25-50": 3.13, "50-100": 2.44, "100+": 1.91, fallback: 3.05 },
+    "9.5": { "<25": 3.60, "25-50": 2.60, "50-100": 2.02, "100+": 1.59, fallback: 2.55 },
+    // SGC 9 anchor 1.08× (Drew: 1.0-1.15; ~90% of PSA 9).
+    "9":   { "<25": 1.75, "25-50": 1.15, "50-100": 0.95, "100+": 0.85, fallback: 1.08 },
+    "8.5": { "<25": 0.85, "25-50": 0.75, "50-100": 0.70, "100+": 0.65, fallback: 0.72 },
+    // SGC 8 anchor 0.62× (Drew: 0.55-0.7).
+    "8":   { "<25": 0.72, "25-50": 0.65, "50-100": 0.60, "100+": 0.55, fallback: 0.62 },
   },
   CGC: {
-    // CGC 10 ≈ PSA 10 × 0.80.
-    "10":  { "<25": 3.92, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.74 },
-    "9.5": { "<25": 3.49, "25-50": 2.56, "50-100": 1.99, "100+": 1.57, fallback: 2.44 },
-    "9":   { "<25": 2.18, "25-50": 1.28, "50-100": 0.81, "100+": 0.73, fallback: 1.45 },
-    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.88, "100+": 0.83, fallback: 0.93 },
-    "8":   { "<25": 0.93, "25-50": 0.88, "50-100": 0.83, "100+": 0.78, fallback: 0.88 },
+    // CGC 10 ≈ PSA 10 × 0.80 → 2.80× anchor (thinner liquidity vs PSA/BGS).
+    "10":  { "<25": 4.00, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.80 },
+    "9.5": { "<25": 3.30, "25-50": 2.40, "50-100": 1.86, "100+": 1.47, fallback: 2.30 },
+    "9":   { "<25": 1.65, "25-50": 1.10, "50-100": 0.90, "100+": 0.82, fallback: 1.02 },
+    "8.5": { "<25": 0.80, "25-50": 0.72, "50-100": 0.68, "100+": 0.64, fallback: 0.70 },
+    "8":   { "<25": 0.68, "25-50": 0.62, "50-100": 0.58, "100+": 0.55, fallback: 0.60 },
   },
 };
 
@@ -971,6 +1119,17 @@ function isBaseTableEnabled(): boolean {
   return String(process.env.MULTIPLIER_BASE_TABLE_ENABLED ?? "").toLowerCase() === "true";
 }
 
+// CF-GEM-RATE-WIRED-KILLSWITCH (Drew, 2026-07-16, PR #495 follow-up):
+// killswitch for the gem-rate short-circuit in getGraderPremium. Default
+// ON — if a bad calibration lands, flip GEM_RATE_MULTIPLIER_ENABLED to
+// "false" in App Service application settings for an instant revert to
+// the static table WITHOUT a redeploy. Read each call so test-time env
+// stub flips take effect immediately.
+function isGemRateMultiplierEnabled(): boolean {
+  const v = String(process.env.GEM_RATE_MULTIPLIER_ENABLED ?? "true").toLowerCase();
+  return v !== "false" && v !== "0" && v !== "off" && v !== "no";
+}
+
 /**
  * Tier resolver supporting both the static-table tiers (<25, 25-50,
  * 50-100, 100+) AND the empirical-table tiers (..., 100-250, 250-500,
@@ -1019,16 +1178,170 @@ function resolveTierForTable(
   return typeof table.fallback === "number" ? table.fallback : null;
 }
 
+/**
+ * CF-BGS-BLACK-LABEL-INGEST (Drew, 2026-07-16, PR #495 follow-up):
+ * canonical helper for composing the "COMPANY GRADE" string that
+ * downstream selectors + getGraderPremium expect, with the Black Label
+ * elevation applied ONLY when the tuple is exactly (BGS, 10) AND the
+ * request-side bit is set. Everywhere the engine reads a request-side
+ * (gradeCompany, gradeValue [, isBlackLabel]) must call this instead
+ * of building the string inline — otherwise the tier gets silently
+ * stripped at some path and the 9x fallback never fires.
+ */
+export function composeGradeKey(
+  gradeCompany: string | null | undefined,
+  gradeValue: number | string | null | undefined,
+  isBlackLabel?: boolean | null,
+): string {
+  const co = String(gradeCompany ?? "").trim();
+  const val = gradeValue == null ? "" : String(gradeValue).trim();
+  if (!co || !val) return "Raw";
+  if (
+    co.toUpperCase() === "BGS"
+    && (val === "10" || Number(val) === 10)
+    && isBlackLabel === true
+  ) {
+    return "BGS 10 Black Label";
+  }
+  return `${co} ${val}`;
+}
+
+/**
+ * CF-CONDITION-SENSITIVE-SETS (Drew, 2026-07-15, PR #494): sets known for
+ * chronic surface / centering / edge / print-defect issues. PSA 10 pop is
+ * scarcer than the raw rate suggests, so the gem premium expands beyond
+ * the standard table. Applied as a POST-MULTIPLIER on the top grade only
+ * (PSA 10 / BGS 10 / BGS 9.5 / SGC 10) — mid-tier grades already reflect
+ * the condition sensitivity via their lower pop.
+ *
+ * When productSet or productName matches a known-sensitive fingerprint,
+ * bump the top-grade multiplier by the factor below. All values chosen
+ * conservatively — the calibration refresh job (KQL over graded_ratio_
+ * observed) will replace this static heuristic with per-set empirical
+ * multipliers once enough observations accumulate.
+ */
+const CONDITION_SENSITIVE_SET_BUMPS: ReadonlyArray<{ pattern: RegExp; bump: number; reason: string }> = [
+  // 1993 SP baseball (foil / centering / surface all notorious)
+  { pattern: /^1993\s+SP\b/i, bump: 1.9, reason: "1993 SP foil + centering + surface" },
+  // 1993 SP Foil parallel — even scarcer
+  { pattern: /^1993\s+SP.*FOIL/i, bump: 2.0, reason: "1993 SP foil parallel" },
+  // 1990s Ultra Gold Medallion (foil chipping)
+  { pattern: /ULTRA.*GOLD\s+MEDALLION/i, bump: 1.7, reason: "Ultra Gold Medallion foil chip" },
+  // Bowman's Best 1996-2000 (thick chrome, chipping)
+  { pattern: /^199[6-9]\s+BOWMAN'?S\s+BEST/i, bump: 1.6, reason: "90s Bowman's Best chrome chip" },
+  { pattern: /^2000\s+BOWMAN'?S\s+BEST/i, bump: 1.6, reason: "90s Bowman's Best chrome chip" },
+  // 90s Skybox foil / acetate cards
+  { pattern: /^199[0-9]\s+SKYBOX.*(?:E-X|EX|EMOTION|METAL|MOTION)/i, bump: 1.7, reason: "90s Skybox acetate/foil" },
+  // Fleer Metal Universe (foil chip)
+  { pattern: /METAL\s+UNIVERSE/i, bump: 1.6, reason: "Metal Universe foil chip" },
+  // 90s Topps Chrome (early chrome print defects)
+  { pattern: /^199[6-9]\s+TOPPS\s+CHROME/i, bump: 1.5, reason: "90s Topps Chrome print defects" },
+  // Upper Deck SP Authentic 90s (thin card / edge wear)
+  { pattern: /^199[6-9]\s+SP\s+AUTHENTIC/i, bump: 1.5, reason: "90s SPx / SP Authentic edge wear" },
+];
+
+export function getConditionSensitiveSetBump(
+  productSet: string | null | undefined,
+  gradingCompany: string | null | undefined,
+  grade: string | null | undefined,
+): number {
+  if (!productSet || typeof productSet !== "string" || productSet.trim().length === 0) return 1.0;
+  const company = String(gradingCompany ?? "").toUpperCase().trim();
+  const gradeKey = String(grade ?? "").trim();
+  // Only bump the top grade of each grader — mid-tier grades already
+  // reflect the condition sensitivity via their lower pop.
+  const isTopGrade =
+    (company === "PSA" && gradeKey === "10")
+    || (company === "BGS" && (gradeKey === "10" || gradeKey === "9.5"))
+    || (company === "SGC" && gradeKey === "10")
+    || (company === "CGC" && gradeKey === "10");
+  if (!isTopGrade) return 1.0;
+  for (const entry of CONDITION_SENSITIVE_SET_BUMPS) {
+    if (entry.pattern.test(productSet)) return entry.bump;
+  }
+  return 1.0;
+}
+
 export function getGraderPremium(
   gradingCompany: string | null | undefined,
   grade: string | null | undefined,
   rawPrice?: number | null,
   cardClass?: "autograph" | "base",
   cardYear?: number | null,
+  productSet?: string | null,
+  gemRateSignal?: GemRateSignal | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
+
+  // CF-PSA8-EQUALS-RAW (Drew, 2026-07-15): PSA 8 = Raw as a HARD business
+  // rule for MODERN cards only. Modern PSA 8 empirically trades below raw
+  // but Drew's product decision is to show it as roughly-equal-to-raw.
+  // Vintage (1948-1989) is a completely different regime — PSA 8 on
+  // vintage returns 10-30× raw because authentication + surface at that
+  // era is scarce. Vintage table wins for those cards. Cards with no
+  // year info default to modern behavior (safer for the common case).
+  const isModernForOverride = !cardYear || cardYear >= 1990;
+  if (company === "PSA" && (gradeKey === "8" || gradeKey === "8.0") && isModernForOverride) {
+    return 1.0;
+  }
+
+  // CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up): when the
+  // caller has enough observed graded sales for this card to derive a
+  // gem-rate signal, and the requested grade is a top grade (PSA 10 /
+  // BGS 10 / BGS 10 Black Label / BGS 9.5 / SGC 10), let the gem-rate
+  // formula override the static table. This is the mechanism that lets
+  // the top-grade multiplier "learn" per card as observations accumulate,
+  // instead of being pinned to a category-wide anchor. condition-sensitive-
+  // set bump still stacks on top (multiplicative), same as every other
+  // path — a chrome-chipping era for a card with a 5% gem rate combines
+  // both effects. Mid-tier grades intentionally skip this branch because
+  // their pop is dominated by non-gem submissions and the formula would
+  // over-claim.
+  if (isGemRateMultiplierEnabled() && gemRateSignal && shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)) {
+    const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
+    const formulaMultiplier = multiplierFromGemRate(gemRateSignal.gemRate);
+    logGemRateMultiplierApplied({
+      source: "getGraderPremium",
+      cardId: gemRateSignal.cardId,
+      gradingCompany: company,
+      grade: gradeKey,
+      gemRate: gemRateSignal.gemRate,
+      gemRateBand: gemRateSignal.gemRateBand,
+      confidence: gemRateSignal.confidence,
+      totalGradedObserved: gemRateSignal.totalGradedObserved,
+      formulaMultiplier,
+      setBump,
+    });
+    return formulaMultiplier * setBump;
+  }
+
+  // CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (Drew, 2026-07-16): when we have
+  // a gem-rate signal AND the requested grade IS a top grade AND the
+  // killswitch is on, but confidence is too low to use it, log the near-
+  // miss. Lets the calibration refresh KQL measure "how many top-grade
+  // emissions were one step away from using the formula" — the answer
+  // tells us whether to lower MIN_OBSERVED_GRADED_FOR_CONFIDENT_SIGNAL
+  // from 10 or leave it. Emits at most once per (card, grade) call.
+  if (
+    isGemRateMultiplierEnabled()
+    && gemRateSignal
+    && !shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)
+    && isTopGradeForTelemetry(company, gradeKey)
+  ) {
+    logGemRateSignalSkipped({
+      source: "getGraderPremium",
+      cardId: gemRateSignal.cardId,
+      gradingCompany: company,
+      grade: gradeKey,
+      gemRate: gemRateSignal.gemRate,
+      gemRateBand: gemRateSignal.gemRateBand,
+      confidence: gemRateSignal.confidence,
+      totalGradedObserved: gemRateSignal.totalGradedObserved,
+      reason: gemRateSignal.confidence === "low" ? "low-confidence" : "other",
+    });
+  }
 
   // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
   // over autograph + static for any card with year in [1948, 1989].
@@ -1037,6 +1350,8 @@ export function getGraderPremium(
   // the Mantle $2.28M class breakdown when applied to vintage. The
   // empirical vintage table is calibrated per era + price tier from
   // actual CH sale pairs.
+  const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
+
   if (cardYear && cardYear >= 1948 && cardYear <= 1989) {
     const era = vintageEraFor(cardYear);
     const vintage = getVintageTable();
@@ -1044,7 +1359,7 @@ export function getGraderPremium(
       const tier = vintage.table[era][company][gradeKey];
       const vintageValue = resolveTierForTable(tier, rawPrice);
       if (vintageValue != null && Number.isFinite(vintageValue) && vintageValue > 0) {
-        return vintageValue;
+        return vintageValue * setBump;
       }
     }
     // else fall through (vintage table may not cover every era/grade combo yet)
@@ -1059,7 +1374,7 @@ export function getGraderPremium(
     const autoTier = auto?.table?.[company]?.[gradeKey];
     const autoValue = resolveTierForTable(autoTier, rawPrice);
     if (autoValue != null && Number.isFinite(autoValue) && autoValue > 0) {
-      return autoValue;
+      return autoValue * setBump;
     }
     // else fall through to base table (logged in telemetry as a calibration gap)
   }
@@ -1074,7 +1389,7 @@ export function getGraderPremium(
     const baseTier = base?.table?.[company]?.[gradeKey];
     const baseValue = resolveTierForTable(baseTier, rawPrice);
     if (baseValue != null && Number.isFinite(baseValue) && baseValue > 0) {
-      return baseValue;
+      return baseValue * setBump;
     }
     // else fall through to static
   }
@@ -1082,7 +1397,7 @@ export function getGraderPremium(
   const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
   if (!tierTable) return 1.0;
   const tier = rawPriceToGradeTier(rawPrice);
-  return tierTable[tier];
+  return tierTable[tier] * setBump;
 }
 
 /**
@@ -1125,6 +1440,113 @@ export function logGraderRatioObserved(opts: {
   } catch {
     // Telemetry failures must never propagate.
   }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-TELEMETRY (2026-07-16, PR #495 follow-up): fires whenever
+ * the gem-rate short-circuit in getGraderPremium activates. Lets the monthly
+ * calibration refresh (see backend/docs/runbooks/grader-premium-calibration-
+ * refresh.md) measure gem-rate ADOPTION separately from raw multiplier drift:
+ *
+ *   KQL: customEvents | where name == "gem_rate_multiplier_applied"
+ *   → count per (gradingCompany, grade, gemRateBand) per day.
+ *
+ * Fire-and-forget; never throws.
+ */
+export function logGemRateMultiplierApplied(opts: {
+  source: string;
+  cardId: string | null;
+  gradingCompany: string;
+  grade: string;
+  gemRate: number;
+  gemRateBand: string;
+  confidence: string;
+  totalGradedObserved: number;
+  formulaMultiplier: number;
+  setBump: number;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "gem_rate_multiplier_applied",
+      source: opts.source,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      gemRate: Math.round(opts.gemRate * 1000) / 1000,
+      gemRateBand: opts.gemRateBand,
+      confidence: opts.confidence,
+      totalGradedObserved: opts.totalGradedObserved,
+      formulaMultiplier: Math.round(opts.formulaMultiplier * 100) / 100,
+      setBump: Math.round(opts.setBump * 100) / 100,
+      finalMultiplier: Math.round(opts.formulaMultiplier * opts.setBump * 100) / 100,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (2026-07-16, PR #495 follow-up):
+ * fires when a top-grade multiplier call has an available gem-rate
+ * signal but shouldUseGemRateMultiplier returned false (typically low
+ * confidence, i.e. fewer than 10 base graded observations). Tells the
+ * refresh KQL:
+ *
+ *   customEvents | where name == "gem_rate_signal_skipped"
+ *   | summarize count(),
+ *       med_obs = percentile(toint(customDimensions.totalGradedObserved), 50)
+ *     by tostring(customDimensions.gradingCompany),
+ *        tostring(customDimensions.grade), bin(timestamp, 7d)
+ *
+ * If med_obs is close to 10, we're right at the threshold — lowering
+ * MIN_OBSERVED_GRADED_FOR_CONFIDENT_SIGNAL unlocks a real population.
+ * If it's under 3, the threshold's fine and we just need more data.
+ */
+export function logGemRateSignalSkipped(opts: {
+  source: string;
+  cardId: string | null;
+  gradingCompany: string;
+  grade: string;
+  gemRate: number;
+  gemRateBand: string;
+  confidence: string;
+  totalGradedObserved: number;
+  reason: string;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "gem_rate_signal_skipped",
+      source: opts.source,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      gemRate: Math.round(opts.gemRate * 1000) / 1000,
+      gemRateBand: opts.gemRateBand,
+      confidence: opts.confidence,
+      totalGradedObserved: opts.totalGradedObserved,
+      reason: opts.reason,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY helper. Mirrors the isTopGrade
+ * check inside gemRateSignal.service.ts so this file doesn't need a
+ * cyclic import back through the service to determine whether a grade
+ * would have been a candidate for the gem-rate override.
+ */
+function isTopGradeForTelemetry(company: string, gradeKey: string): boolean {
+  const c = company.toUpperCase().trim();
+  const g = gradeKey.trim().toUpperCase();
+  return (
+    (c === "PSA" && g === "10")
+    || (c === "BGS" && (g === "10" || g === "10 BLACK LABEL" || g === "9.5"))
+    || (c === "SGC" && g === "10")
+  );
 }
 
 /**
@@ -1569,12 +1991,28 @@ export async function deriveGradeLadderAnchor(opts: {
   };
 }
 
-/** Extracts a (company, grade) tuple from a free-text comp title, or null. */
+/** Extracts a (company, grade) tuple from a free-text comp title, or null.
+ *
+ * CF-BGS-BLACK-LABEL-SPLIT (Drew, 2026-07-15, PR #495): when the title
+ * describes a BGS 10 and also contains "Black Label" (or its "BL"
+ * shorthand), emit `grade: "10 Black Label"` so downstream multiplier
+ * lookup routes to the 9× table entry instead of the regular BGS 10
+ * (~3.5×). Everything else keeps its prior detection behavior. */
 export function detectGradeFromTitle(title: string): { company: string; grade: string } | null {
   if (!title) return null;
   const m = title.match(/\b(PSA|BGS|SGC|CGC)\s*([0-9]+(?:\.5)?)\b/i);
   if (!m) return null;
-  return { company: m[1].toUpperCase(), grade: m[2] };
+  const company = m[1].toUpperCase();
+  const grade = m[2];
+  if (company === "BGS" && grade === "10") {
+    // Case-insensitive match on "Black Label" or bare "BL" adjacent
+    // to the BGS 10 (typical eBay titles: "BGS 10 BL", "BGS 10 Pristine",
+    // "BGS 10 Black Label"). "Pristine" is BGS's other name for Black Label.
+    if (/\b(black\s+label|pristine|bl)\b/i.test(title)) {
+      return { company, grade: "10 Black Label" };
+    }
+  }
+  return { company, grade };
 }
 
 /**
@@ -2514,6 +2952,12 @@ async function fetchComps(
       listingType: (s as { listing_type?: string | null }).listing_type ?? null,
       // CF-RECENTCOMPS-IMAGEURL: same defensive cast — preserve image_url.
       imageUrl: (s as { image_url?: string | null }).image_url ?? null,
+      // CF-PROVENANCE-DISPLAY: routed-search vendor is derived from
+      // sales[0].source above (routedVendor); tag each row so mixed-pool
+      // downstream (user comps merged in via augmentCompsWithUserPool)
+      // can be broken out in the provenanceSummary.
+      source: s.source ?? routedVendor,
+      verifiedByUser: false,
     }))
     .filter((c) => c.price > 0);
 
@@ -2533,6 +2977,244 @@ async function fetchComps(
     parallelMatchFilteredCount,
     parallelMatchUnifiedCount,
   };
+}
+
+/**
+ * CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): capture every Cardsight-
+ * served comp into the unified sold_comps pool. Fire-and-forget — pricing
+ * hot path is authoritative; ingest is auxiliary.
+ *
+ * COVERAGE model:
+ *   - CH comps are already emitted upstream by tryCardHedge in
+ *     cardsight.router.ts at confidence=0.8 with a rich identity hint. Every
+ *     path that receives CH comps (pinned + routed) flows through that
+ *     emit. We DO NOT re-emit CH comps here — that would double-write.
+ *   - CS comps flowing through findCompsRouted or fetchComps have never
+ *     been captured. This helper closes that gap.
+ *
+ * IDEMPOTENCY: RawComp has no per-sale external id from CS. Compose a
+ * deterministic id from (cardId, soldDate, price-cents) so re-fetching the
+ * same physical sale upserts to the same row.
+ *
+ * TRUST: writes at confidence=0.6 (vendor-observed, not user-verified).
+ * verifiedByUser=false. Downstream consumers filter by source/confidence.
+ * Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED=true (default off).
+ */
+export function ingestVendorCompsToPool(fetched: FetchedComps): void {
+  if (process.env.SOLD_COMPS_VENDOR_INGEST_ENABLED !== "true") return;
+  // CH already covered upstream — skip to avoid double-writes.
+  if (fetched.vendor !== "cardsight") return;
+  const card = fetched.card;
+  if (!card?.card_id) return;
+  const playerName = (card.player ?? "").trim();
+  if (!playerName) return;
+  if (fetched.comps.length === 0) return;
+
+  const cardYear =
+    typeof card.year === "number"
+      ? card.year
+      : card.year != null
+        ? parseInt(String(card.year), 10)
+        : null;
+  const isAuto = /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
+    String(card.number ?? ""),
+  );
+
+  void (async () => {
+    let written = 0;
+    for (const c of fetched.comps) {
+      if (typeof c.price !== "number" || c.price <= 0) continue;
+      if (!c.soldDate) continue;
+      const externalId = `${card.card_id}::${c.soldDate}::${Math.round(c.price * 100)}`;
+      try {
+        await recordSoldComp({
+          cardId: card.card_id,
+          playerName,
+          cardYear: Number.isFinite(cardYear as number) ? (cardYear as number) : null,
+          setName: card.set ?? null,
+          parallel: card.variant ?? null,
+          cardNumber: card.number ?? null,
+          isAuto,
+          price: c.price,
+          soldAt: c.soldDate,
+          source: "cardsight",
+          sourceExternalId: externalId,
+          contributorUserId: null,
+          title: c.title ?? null,
+          imageUrl: c.imageUrl ?? null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.6,
+        });
+        written += 1;
+      } catch {
+        // swallow — vendor ingest is auxiliary
+      }
+    }
+    if (written > 0) {
+      console.log(JSON.stringify({
+        event: "compiq.sold_comps.vendor_ingest",
+        source: "compiqEstimate.ingestVendorCompsToPool",
+        cardId: card.card_id,
+        vendor: fetched.vendor,
+        written,
+        total: fetched.comps.length,
+      }));
+    }
+  })();
+}
+
+/**
+ * CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
+ * the unified sold_comps pool into vendor-fetched comps for a resolved cardId.
+ *
+ * Reads USER-CONTRIBUTED sources only (ebay-user-purchase, ebay-user-sale,
+ * manual-user-entry). Vendor pulls (cardhedge / cardsight) are already the
+ * source of truth for fetched.comps; reading them back from the pool would
+ * double-count.
+ *
+ * Dedup: (soldAt-day, rounded price). Vendor and user comps share almost no
+ * external-id namespace so exact-id dedup would be too tight AND too loose;
+ * approximate (day + price) covers duplicates without losing signal.
+ *
+ * Gated on COMPIQ_READ_SOLD_COMPS_ENABLED=true (default off). Silent-fail on
+ * Cosmos absence or read error — pricing must never regress on pool errors.
+ * Trust boundary is upstream (see project_sold_comps_unified_pool.md):
+ * only user-CONFIRMED cardIds have been written to sold_comps, so cross-user
+ * aggregation is safe.
+ */
+/**
+ * CF-USER-COMPS-AGING (Drew, 2026-07-15): user-attested comps older than
+ * this window are dropped from the FMV pool. Real prices move — a
+ * verified comp from a year ago at $200 for a rookie now selling at
+ * $500 misleads the median. The cardId attestation itself is still
+ * valuable identity data; we just don't trust the stale PRICE.
+ *
+ * Threshold chosen to match the raw-comp priceHistory window (60d) plus
+ * a 3x buffer for thin-cohort SKUs where user comps might be the only
+ * source. Configurable via env for future tuning without redeploy.
+ */
+function userCompMaxAgeDays(): number {
+  const raw = process.env.COMPIQ_USER_COMP_MAX_AGE_DAYS;
+  if (!raw) return 180;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 180;
+}
+
+export async function augmentCompsWithUserPool(
+  fetched: FetchedComps,
+  cardId: string | undefined | null,
+): Promise<FetchedComps> {
+  if (process.env.COMPIQ_READ_SOLD_COMPS_ENABLED !== "true") return fetched;
+  const resolvedCardId = (cardId ?? fetched.card?.card_id ?? "").trim();
+  if (!resolvedCardId) return fetched;
+
+  let userComps: SoldCompDoc[];
+  try {
+    userComps = await readCompsByCardId({
+      cardId: resolvedCardId,
+      sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+    });
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "compiq_sold_comps_read_soft_fail",
+      source: "compiqEstimate.augmentCompsWithUserPool",
+      cardId: resolvedCardId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return fetched;
+  }
+  if (userComps.length === 0) return fetched;
+
+  // CF-USER-COMPS-AGING: filter stale comps out of the FMV merge before
+  // the dedup + cap loop. Ages measured from soldAt (the sale date the
+  // user reported), not observedAt (when we wrote it). A holding
+  // imported today for a purchase 2 years ago is still stale-priced.
+  const maxAgeDays = userCompMaxAgeDays();
+  const maxAgeMs = maxAgeDays * 86_400_000;
+  const now = Date.now();
+  const freshUserComps: SoldCompDoc[] = [];
+  let agedOutCount = 0;
+  for (const uc of userComps) {
+    const soldMs = Date.parse(uc.soldAt ?? "");
+    if (!Number.isFinite(soldMs)) {
+      // No parseable date → aged-out (can't trust price without knowing when)
+      agedOutCount += 1;
+      continue;
+    }
+    if (now - soldMs > maxAgeMs) {
+      agedOutCount += 1;
+      continue;
+    }
+    // CF-USER-COMPS-SOFT-DELETE (#6): respect flaggedWrong to exclude
+    // user-corrected comps from the FMV pool without deleting the
+    // provenance record.
+    if ((uc as SoldCompDoc & { flaggedWrong?: boolean }).flaggedWrong === true) {
+      continue;
+    }
+    freshUserComps.push(uc);
+  }
+  if (agedOutCount > 0) {
+    console.log(JSON.stringify({
+      event: "compiq.sold_comps.aged_out",
+      source: "compiqEstimate.augmentCompsWithUserPool",
+      cardId: resolvedCardId,
+      agedOutCount,
+      freshCount: freshUserComps.length,
+      maxAgeDays,
+    }));
+  }
+  if (freshUserComps.length === 0) return fetched;
+
+  const seenKeys = new Set<string>();
+  for (const c of fetched.comps) {
+    const day = (c.soldDate ?? "").slice(0, 10);
+    seenKeys.add(`${day}|${Math.round(c.price)}`);
+  }
+
+  const MAX_INJECT = 20;
+  const additions: RawComp[] = [];
+  for (const uc of freshUserComps) {
+    if (additions.length >= MAX_INJECT) break;
+    if (!Number.isFinite(uc.price) || uc.price <= 0) continue;
+    const day = (uc.soldAt ?? "").slice(0, 10);
+    if (!day) continue;
+    const key = `${day}|${Math.round(uc.price)}`;
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    additions.push({
+      price: uc.price,
+      title: uc.title ?? `[user:${uc.source}] ${uc.playerName}`,
+      soldDate: uc.soldAt,
+      listingType: null,
+      imageUrl: uc.imageUrl,
+      // CF-PROVENANCE-DISPLAY: tag each user-injected comp with its
+      // source (ebay-user-purchase / ebay-user-sale / manual-user-entry)
+      // + verifiedByUser=true so downstream routes can compute the
+      // provenanceSummary and iOS can render "collector-verified" badges.
+      source: uc.source,
+      verifiedByUser: uc.verifiedByUser === true,
+    });
+  }
+
+  if (additions.length === 0) return fetched;
+
+  const mergedComps = [...fetched.comps, ...additions].sort((a, b) => {
+    const ta = new Date(a.soldDate).getTime();
+    const tb = new Date(b.soldDate).getTime();
+    return tb - ta;
+  });
+
+  console.log(JSON.stringify({
+    event: "compiq.sold_comps.merged",
+    source: "compiqEstimate.augmentCompsWithUserPool",
+    cardId: resolvedCardId,
+    vendorCount: fetched.comps.length,
+    userInjectCount: additions.length,
+    totalCount: mergedComps.length,
+  }));
+
+  return { ...fetched, comps: mergedComps };
 }
 
 /**
@@ -2924,10 +3606,10 @@ export function emitPredictionToCorpus(params: {
     cardId?: string;
   };
   fairMarketValue: number | null;
-  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "unavailable";
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
-  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "unavailable";
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   forwardProjectionFactor?: number;
   trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
   compsUsed?: number;
@@ -3577,6 +4259,17 @@ export async function computeEstimate(
     body.parallelId ?? null,
   );
 
+  // CF-SOLD-COMPS-VENDOR-INGEST (Drew, 2026-07-14): capture Cardsight-served
+  // comps into the pool. Fire-and-forget; runs before READ so this-call comps
+  // don't self-augment (avoids feedback loops). CH comps are already emitted
+  // upstream by tryCardHedge. Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED.
+  ingestVendorCompsToPool(fetched);
+
+  // CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
+  // the unified sold_comps pool. Gated on COMPIQ_READ_SOLD_COMPS_ENABLED.
+  // See project_sold_comps_unified_pool.md for the trust model.
+  fetched = await augmentCompsWithUserPool(fetched, body.cardId);
+
   // ── Catalog-miss guard ───────────────────────────────────────────────────
   // CF-LAUNCH-HARDENING (2026-06-02): when the free-text path's Cardsight
   // catalog search yields ZERO candidates (fetched.card === null AND no
@@ -3588,6 +4281,116 @@ export async function computeEstimate(
   //     query OR file as catalog gap
   //   - no-recent-comps: pricing might appear once a sale lands; OK to
   //     refresh later
+  // CF-RARE-PARALLEL-VARIANT-MISMATCH-DEMOTE (2026-07-09, Drew — Owen
+  // Carey Black BCP-69): when the user asked for a rare parallel (print
+  // run ≤ 50) but resolveChCardId returned a card with a different
+  // variant (typically "Base" as the closest catalog hit), the main
+  // pipeline happily prices with base-card comps and returns $2 for a
+  // card the user asked to be priced as Black /10.
+  //
+  // The tier-ladder variant-mismatch guard at ~L4527 catches this in some
+  // configurations but not when the resolved base card has enough loose
+  // comps to pass a lower tier. This guard runs earlier: if the resolved
+  // variant is clearly different from the requested rare parallel, we
+  // null out fetched.card + comps so the catalog-miss branch below fires
+  // and the CF-PARALLEL-FLOOR-PROJECTION path can produce an honest
+  // print-run-anchored estimate.
+  //
+  // Only fires when the requested parallel is on the rare bracket
+  // (inferPrintRun ≤ 50). Common parallels (Refractor, Base) don't
+  // trip this because their whole point is a broader pool.
+  if (
+    !body.cardId &&
+    fetched.card !== null &&
+    typeof queryContext.parallel === "string" &&
+    queryContext.parallel.trim().length > 0
+  ) {
+    const requestedParallelLower = queryContext.parallel.trim().toLowerCase();
+    const resolvedVariantLower =
+      typeof fetched.card.variant === "string"
+        ? fetched.card.variant.trim().toLowerCase()
+        : "";
+    const requestedPrintRun = inferPrintRun(requestedParallelLower);
+    // Threshold tightened to ≤ 10: very rare parallels (Black /10, Red /5,
+    // /1s) are where CH's resolver most aggressively falls back to the base
+    // card. Rarer-than-that (Gold /50, Blue /150) tend to either self-
+    // resolve or trip the existing tier-ladder variant-mismatch guard —
+    // widening the threshold false-positives on the existing tests.
+    const isRareRequested =
+      requestedPrintRun !== null && requestedPrintRun <= 10;
+    // Narrow demote: ONLY when the resolver returned an explicit "Base"
+    // (or empty variant that CH sometimes emits on unindexed SKUs). Any
+    // other non-matching variant (Refractor / X-Fractor / colored parallels
+    // that just happen to differ) is handled by the existing tier-ladder
+    // variant-mismatch guard downstream, which produces a `variant-
+    // mismatch` source with priceSource metadata. We only intercept the
+    // pathological "Black BCP-69 request → resolver returned the plain
+    // Base BCP-69 card" case where the existing guard would over-price
+    // with base-card comps.
+    // CF-VARIANT-ECHO-BUG (2026-07-09): cardsight.router populates
+    // fetched.card.variant from identity.parallel (the REQUESTED parallel,
+    // not the actual CH card's variant). So checking variant==='base'
+    // never fires here — variant is always the requested string. Instead,
+    // check the COMP TITLES: if none of the top comps mention the
+    // requested parallel token, the resolver returned a mismatched pool
+    // (base card comps for a Black request). This is a content-based
+    // detection that doesn't depend on the router's variant-echo bug.
+    const resolvedIsExplicitBase = resolvedVariantLower === "base";
+    const requestedFirstToken = requestedParallelLower.split(/\s+/)[0] ?? "";
+    const commonNoiseTokens = new Set([
+      "refractor",
+      "base",
+      "rc",
+      "auto",
+      "sp",
+    ]);
+    const shouldCheckTitles =
+      isRareRequested &&
+      requestedFirstToken.length >= 3 && // avoid short false-positive tokens
+      !commonNoiseTokens.has(requestedFirstToken) &&
+      fetched.comps.length >= 3;
+    let compTitleMismatch = false;
+    if (shouldCheckTitles) {
+      const topTitles = fetched.comps
+        .slice(0, Math.min(20, fetched.comps.length))
+        .map((c) => (typeof c.title === "string" ? c.title.toLowerCase() : ""))
+        .filter((t) => t.length > 0);
+      const hitCount = topTitles.filter((t) =>
+        new RegExp(`\\b${requestedFirstToken}\\b`).test(t),
+      ).length;
+      // If ZERO of the top-20 comp titles mention the requested rare-
+      // parallel token, the resolver returned the wrong pool.
+      compTitleMismatch = topTitles.length > 0 && hitCount === 0;
+    }
+    if (isRareRequested && (resolvedIsExplicitBase || compTitleMismatch)) {
+      console.log(
+        JSON.stringify({
+          event: "rare_parallel_variant_mismatch_demote",
+          source: "compiq.computeEstimate",
+          query: cardTitle,
+          requestedParallel: queryContext.parallel,
+          resolvedVariant: fetched.card.variant ?? null,
+          resolvedCardId: fetched.card.card_id,
+          requestedPrintRun,
+          compsCount: fetched.comps.length,
+          demoteReason: resolvedIsExplicitBase
+            ? "explicit_base_variant"
+            : "no_title_hits_for_requested_token",
+        }),
+      );
+      // CF-AUDIT-FINDING-9-DEFER (2026-07-15): audit flagged that clearing
+      // fetched.comps here forfeits the "approximate median of base comps"
+      // signal that variant-mismatch would otherwise surface (~$2 for a
+      // Black /10 on a Base BCP-69). Kept as-is: parallel-floor-projection
+      // downstream is designed to produce a print-run-anchored floor that
+      // is STRUCTURALLY MORE HONEST than the base-median for rare parallels
+      // (a $2 base doesn't reflect the /10's actual market — the floor
+      // projection does). Only preserve comps if a future regression
+      // shows floor-projection returning null for the demoted case.
+      fetched = { ...fetched, card: null, comps: [] };
+    }
+  }
+
   // Skip on the pinned cardId path — that path already resolved
   // a catalog entry by id; if no comps, it's definitionally no-recent-comps
   // not a catalog miss.
@@ -3622,18 +4425,57 @@ export async function computeEstimate(
           .map((c) => c.price)
           .filter((p): p is number => Number.isFinite(p) && p > 0)
           .sort((a, b) => a - b);
-        if (parentRawPrices.length > 0) {
-          const parentBaseMedian =
-            parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median anchor
+        // on the parent product pool. Project the next parent-product
+        // sale from its trend, then multiply by family + parallel factors.
+        // Falls back to null when the parent pool can't project (empty
+        // or all-invalid), skipping the projection branch cleanly.
+        // parentBaseMedian retained as the variable name for structural
+        // parity with call-site emission fields (parentBaseMedian appears
+        // in the attribution payload downstream); it now carries the
+        // trend-projected next-sale value, not a median.
+        const parentCompsForProjection = (parentPool.comps ?? [])
+          .filter((c) => Number.isFinite(c.price) && c.price > 0)
+          .map((c) => ({ price: c.price, soldDate: c.date }));
+        const parentNextSale = projectNextSaleFromComps(parentCompsForProjection);
+        if (parentRawPrices.length > 0 && parentNextSale !== null) {
+          const parentBaseMedian = parentNextSale.nextSaleValue;
           // When the family was detected via the parallel field ("Black
           // Sapphire"), use effectiveParallel ("Black") for print-run
           // inference so we get the /10 tier instead of a no-match.
           const parallelName =
             familyGap.effectiveParallel ??
             (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
-          const printRun = parallelName ? inferPrintRun(parallelName) : null;
+          // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware lookup
+          // first, hand-coded rules as fallback. Bowman family only —
+          // the dataset scope is documented in bowmanParallelsDataset.ts.
+          const printRun = parallelName
+            ? await inferPrintRunYearFirst(
+                parallelName,
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+                queryContext.isAuto,
+                typeof queryContext.product === "string"
+                  ? queryContext.product
+                  : null,
+              )
+            : null;
+          // CF-FAMILY-PROJECTION-CLASS-AWARE-FLOOR (2026-07-09, Drew —
+          // Owen Carey Padparadscha Sapphire): mirror the parallel-floor-
+          // projection path (#344). Sapphire is a paper product line, so
+          // non-auto queries should get the base-tier floor (1.8× the
+          // auto floor) not the auto floor. Pre-fix, Padparadscha /1
+          // Sapphire projected at $462.50 (auto floor 100×); post-fix
+          // it projects at $832.50 (base floor 180×) which is closer
+          // to hobby reality for a 1/1 non-auto Sapphire parallel.
+          const cardClass: "auto" | "base" =
+            queryContext.isAuto === true ? "auto" : "base";
           const parallelFloor =
-            printRun !== null ? floorForPrintRun(printRun) : null;
+            printRun !== null
+              ? floorForPrintRunByClass(printRun, cardClass) ??
+                floorForPrintRun(printRun)
+              : null;
           const parallelMultiplier = parallelFloor ?? 1;
           const projectedFmv =
             Math.round(
@@ -3706,8 +4548,8 @@ export async function computeEstimate(
               parentBaseMedian,
               parentComps: parentRawPrices.length,
             },
-            quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
-            premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
+            quickSaleValue: Math.round(projectedFmv * PROJECTION_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * PROJECTION_PREMIUM_MULTIPLIER * 100) / 100,
             // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY (2026-07-09, Drew):
             // route-layer cannotPriceFromEst nulls marketValue when
             // compsUsed<3. The projection IS derived from the parent
@@ -3727,6 +4569,357 @@ export async function computeEstimate(
       } catch (err) {
         console.warn(
           `[compiq.computeEstimate] product-family projection threw: ${(err as Error)?.message ?? err}`,
+        );
+        // Fall through to parallel-floor projection below.
+      }
+    }
+
+    // CF-PARALLEL-FLOOR-PROJECTION (2026-07-09, Drew — Owen Carey Black
+    // BCP-69 /10): when catalog-miss AND queryContext carries a rare
+    // parallel with a known print-run floor, project pricing off the
+    // parent product's base median × parallel floor. Same shape as the
+    // product-family projection but WITHOUT the family multiplier —
+    // fires for cases where the SKU truly doesn't exist in CH BUT the
+    // parallel classification lets us bound the price from below.
+    //
+    // Class-aware floor: non-auto rare parallels (Black /10 paper Chrome
+    // Refractor) price ~1.8× the auto-calibrated floor. Uses
+    // extractCardClass() heuristics; defaults to "base" for the parsed
+    // path (autos usually carry number prefixes like CPA-, which the
+    // heuristic picks up).
+    //
+    // Owen Carey Black BCP-69 (non-auto Black /10) worked example:
+    //   Chrome BCP-69 raw median: $1.85 (138 comps)
+    //   × Black /10 base-tier floor: 55×
+    //   = $101.75
+    // Matches Drew's hobby-consensus target of $100+.
+    //
+    // Skipped for auto targets because mechanism1 (multiplier-anchored)
+    // downstream in the insufficient branch already handles autos with
+    // finer-grained per-subset multipliers.
+    const parallelForFloor =
+      typeof queryContext.parallel === "string"
+        ? queryContext.parallel.trim()
+        : "";
+    // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware first, hand-
+    // coded rules fallback. Same pattern the family-projection path uses.
+    const parallelPrintRun = parallelForFloor
+      ? await inferPrintRunYearFirst(
+          parallelForFloor,
+          typeof queryContext.cardYear === "number"
+            ? queryContext.cardYear
+            : null,
+          queryContext.isAuto,
+          typeof queryContext.product === "string"
+            ? queryContext.product
+            : null,
+        )
+      : null;
+    if (
+      parallelPrintRun !== null &&
+      parallelPrintRun <= 50 && // only meaningful for RARE parallels
+      typeof queryContext.playerName === "string" &&
+      queryContext.playerName.trim().length > 0 &&
+      typeof queryContext.product === "string" &&
+      queryContext.product.trim().length > 0
+    ) {
+      try {
+        const parentPool = await fetchCompsByPlayer({
+          playerName: queryContext.playerName,
+          product: queryContext.product,
+          cardYear:
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : undefined,
+        });
+        const parentRawPrices = (parentPool.comps ?? [])
+          .map((c) => c.price)
+          .filter((p): p is number => Number.isFinite(p) && p > 0)
+          .sort((a, b) => a - b);
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median anchor
+        // on the parent product pool. Project the next parent-product
+        // sale from its trend, then multiply by family + parallel factors.
+        // Falls back to null when the parent pool can't project (empty
+        // or all-invalid), skipping the projection branch cleanly.
+        // parentBaseMedian retained as the variable name for structural
+        // parity with call-site emission fields (parentBaseMedian appears
+        // in the attribution payload downstream); it now carries the
+        // trend-projected next-sale value, not a median.
+        const parentCompsForProjection = (parentPool.comps ?? [])
+          .filter((c) => Number.isFinite(c.price) && c.price > 0)
+          .map((c) => ({ price: c.price, soldDate: c.date }));
+        const parentNextSale = projectNextSaleFromComps(parentCompsForProjection);
+        if (parentRawPrices.length > 0 && parentNextSale !== null) {
+          const parentBaseMedian = parentNextSale.nextSaleValue;
+          const cardClass: "auto" | "base" = queryContext.isAuto === true ? "auto" : "base";
+          const parallelMultiplier =
+            floorForPrintRunByClass(parallelPrintRun, cardClass) ??
+            floorForPrintRun(parallelPrintRun) ??
+            1;
+          const projectedFmv =
+            Math.round(parentBaseMedian * parallelMultiplier * 100) / 100;
+
+          console.log(
+            JSON.stringify({
+              event: "parallel_floor_projection_applied",
+              source: "compiq.computeEstimate",
+              query: cardTitle,
+              player: queryContext.playerName,
+              product: queryContext.product,
+              parallel: parallelForFloor,
+              inferredPrintRun: parallelPrintRun,
+              cardClass,
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+              projectedFmv,
+            }),
+          );
+
+          emitPredictionToCorpus({
+            cardIdentity: null,
+            body,
+            fairMarketValue: projectedFmv,
+            fmvMechanism: "parallel-floor-projection",
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceMechanism: "parallel-floor-projection",
+            callContext,
+          });
+
+          return {
+            source: "parallel-floor-projection",
+            cardIdentity: {
+              card_id: "",
+              title: null,
+              player: queryContext.playerName,
+              set: queryContext.product ?? null,
+              release: queryContext.product ?? null,
+              year:
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+              number: queryContext.cardNumber ?? null,
+              variant: parallelForFloor,
+            },
+            fairMarketValue: projectedFmv,
+            fairMarketValueLow: Math.round(projectedFmv * 0.75 * 100) / 100,
+            fairMarketValueHigh: Math.round(projectedFmv * 1.25 * 100) / 100,
+            marketValue: projectedFmv,
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceAttribution: {
+              mechanism: "parallel-floor-projection",
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+              inferredPrintRun: parallelPrintRun,
+              cardClass,
+            },
+            quickSaleValue: Math.round(projectedFmv * PROJECTION_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * PROJECTION_PREMIUM_MULTIPLIER * 100) / 100,
+            compsUsed: parentRawPrices.length,
+            compsAvailable: parentRawPrices.length,
+            recentComps: [],
+            variantWarning: [],
+            confidence: { pricingConfidence: 55 },
+            verdict: `Estimated — no direct sales on this SKU; projected from ${cardClass === "auto" ? "" : "non-auto "}base card × /${parallelPrintRun} parallel floor`,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
+        // CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10): parent-player pool
+        // is empty (Hartman-class — the specific player has never sold on
+        // CH yet). The ladder floor is still meaningful; fall through to
+        // a broader product-year cross-player anchor. Widened range +
+        // downgraded confidence reflect the coarser anchor. Gated by
+        // COMPIQ_PRODUCT_YEAR_ANCHOR_ENABLED (default false).
+        if (parentRawPrices.length === 0) {
+          const pyAnchor = await fetchProductYearMedianAnchor(
+            queryContext.product,
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : null,
+          );
+          if (pyAnchor) {
+            const cardClass: "auto" | "base" =
+              queryContext.isAuto === true ? "auto" : "base";
+            const parallelMultiplier =
+              floorForPrintRunByClass(parallelPrintRun, cardClass) ??
+              floorForPrintRun(parallelPrintRun) ??
+              1;
+            const projectedFmv =
+              Math.round(pyAnchor.median * parallelMultiplier * 100) / 100;
+            console.log(
+              JSON.stringify({
+                event: "scarcity_prior_floor_applied",
+                source: "compiq.computeEstimate",
+                query: cardTitle,
+                player: queryContext.playerName,
+                product: queryContext.product,
+                parallel: parallelForFloor,
+                inferredPrintRun: parallelPrintRun,
+                cardClass,
+                parallelMultiplier,
+                productYearMedian: pyAnchor.median,
+                anchorComps: pyAnchor.compCount,
+                anchorDistinctCards: pyAnchor.distinctCardIds,
+                projectedFmv,
+              }),
+            );
+            emitPredictionToCorpus({
+              cardIdentity: null,
+              body,
+              fairMarketValue: projectedFmv,
+              fmvMechanism: "parallel-floor-projection",
+              predictedPrice: projectedFmv,
+              predictedPriceRange: {
+                low: Math.round(projectedFmv * 0.6 * 100) / 100,
+                high: Math.round(projectedFmv * 1.4 * 100) / 100,
+              },
+              predictedPriceMechanism: "parallel-floor-projection",
+              callContext,
+            });
+            return {
+              source: "scarcity-prior-floor",
+              cardIdentity: {
+                card_id: "",
+                title: null,
+                player: queryContext.playerName,
+                set: queryContext.product ?? null,
+                release: queryContext.product ?? null,
+                year:
+                  typeof queryContext.cardYear === "number"
+                    ? queryContext.cardYear
+                    : null,
+                number: queryContext.cardNumber ?? null,
+                variant: parallelForFloor,
+              },
+              fairMarketValue: projectedFmv,
+              fairMarketValueLow: Math.round(projectedFmv * 0.6 * 100) / 100,
+              fairMarketValueHigh: Math.round(projectedFmv * 1.4 * 100) / 100,
+              marketValue: projectedFmv,
+              predictedPrice: projectedFmv,
+              predictedPriceRange: {
+                low: Math.round(projectedFmv * 0.6 * 100) / 100,
+                high: Math.round(projectedFmv * 1.4 * 100) / 100,
+              },
+              predictedPriceAttribution: {
+                mechanism: "scarcity-prior-floor",
+                parallelMultiplier,
+                productYearMedian: pyAnchor.median,
+                anchorComps: pyAnchor.compCount,
+                anchorDistinctCards: pyAnchor.distinctCardIds,
+                inferredPrintRun: parallelPrintRun,
+                cardClass,
+              },
+              quickSaleValue: Math.round(projectedFmv * QUICK_SALE_MULTIPLIER * 100) / 100,
+              premiumValue: Math.round(projectedFmv * SCARCITY_PREMIUM_MULTIPLIER * 100) / 100,
+              compsUsed: pyAnchor.compCount,
+              compsAvailable: pyAnchor.compCount,
+              recentComps: [],
+              variantWarning: [],
+              confidence: { pricingConfidence: 40 },
+              verdict: `Structural floor — this player has no direct sales yet; anchored on ${pyAnchor.compCount} product-year comps × /${parallelPrintRun} parallel floor`,
+              gradeUsed: cardHedgeGrade,
+              marketDNA: { trend: "flat", speed: "Normal" },
+            } as Record<string, unknown>;
+          }
+        }
+        // CF-NO-NULL-PRICING (2026-07-11, Drew — Tier 6): both player and
+        // cross-player anchors are empty, but the ladder still has a
+        // ParallelDoc for this parallel. Fall through to the reference-
+        // catalog baseline (era baseline × ladder tier). This is a
+        // structural floor from era knowledge alone — no market signal.
+        // See docs/design/no-null-pricing-architecture.md for the full
+        // tier chain. Env-flag gated (default off).
+        const refCatBaseline = await computeReferenceCatalogBaseline({
+          product: queryContext.product,
+          year:
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : null,
+          parallel: parallelForFloor,
+          cardClass:
+            queryContext.isAuto === true ? "auto" : "base",
+        });
+        if (refCatBaseline) {
+          const projectedFmv = refCatBaseline.floor;
+          console.log(
+            JSON.stringify({
+              event: "reference_catalog_baseline_applied",
+              source: "compiq.computeEstimate",
+              query: cardTitle,
+              player: queryContext.playerName,
+              product: queryContext.product,
+              parallel: parallelForFloor,
+              inferredPrintRun: refCatBaseline.printRun,
+              tierMultiplier: refCatBaseline.tierMultiplier,
+              eraBaseline: refCatBaseline.eraBaseline,
+              baselineSource: refCatBaseline.baselineSource,
+              projectedFmv,
+            }),
+          );
+          emitPredictionToCorpus({
+            cardIdentity: null,
+            body,
+            fairMarketValue: projectedFmv,
+            fmvMechanism: "parallel-floor-projection",
+            predictedPrice: projectedFmv,
+            predictedPriceRange: refCatBaseline.range,
+            predictedPriceMechanism: "parallel-floor-projection",
+            callContext,
+          });
+          return {
+            source: "reference-catalog-baseline",
+            pricingTier: "reference-catalog-baseline",
+            cardIdentity: {
+              card_id: "",
+              title: null,
+              player: queryContext.playerName,
+              set: queryContext.product ?? null,
+              release: queryContext.product ?? null,
+              year:
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+              number: queryContext.cardNumber ?? null,
+              variant: parallelForFloor,
+            },
+            fairMarketValue: projectedFmv,
+            fairMarketValueLow: refCatBaseline.range.low,
+            fairMarketValueHigh: refCatBaseline.range.high,
+            marketValue: projectedFmv,
+            predictedPrice: projectedFmv,
+            predictedPriceRange: refCatBaseline.range,
+            predictedPriceAttribution: {
+              mechanism: "reference-catalog-baseline",
+              eraBaseline: refCatBaseline.eraBaseline,
+              tierMultiplier: refCatBaseline.tierMultiplier,
+              inferredPrintRun: refCatBaseline.printRun,
+              baselineSource: refCatBaseline.baselineSource,
+            },
+            quickSaleValue: Math.round(projectedFmv * SCARCITY_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * SCARCITY_PREMIUM_ALT_MULTIPLIER * 100) / 100,
+            compsUsed: 0,
+            compsAvailable: 0,
+            recentComps: [],
+            variantWarning: [],
+            confidence: { pricingConfidence: 25 },
+            verdict: `Era baseline — no sales data yet for this card; structural minimum from ${refCatBaseline.parallel} tier × era baseline`,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] parallel-floor projection threw: ${(err as Error)?.message ?? err}`,
         );
         // Fall through to sibling rescue below.
       }
@@ -3813,6 +5006,73 @@ export async function computeEstimate(
     // If we still have no card (either canSyntheticRescue was false or the
     // probe returned empty), fall back to the original catalog-miss return.
     if (fetched.card === null) {
+      // CF-NO-NULL-PRICING PR 3 (2026-07-11, Drew — Tier 7 at catalog-miss).
+      // Highest-value wire-up point: this is where "Can't estimate yet"
+      // fires for cards the catalog can't resolve. If we can at least
+      // identify (year, product) from queryContext, emit an era-typed
+      // baseline instead of null. Env-flag gated.
+      const t7 = await maybeTier7Fallback({
+        product: queryContext.product,
+        year:
+          typeof queryContext.cardYear === "number"
+            ? queryContext.cardYear
+            : null,
+      });
+      if (t7) {
+        console.log(
+          JSON.stringify({
+            event: "tier7_setdoc_baseline_applied",
+            source: "compiq.computeEstimate",
+            query: cardTitle,
+            product: queryContext.product,
+            year: queryContext.cardYear,
+            setName: t7.setName,
+            era: t7.era,
+            setTypeKey: t7.setTypeKey,
+            baseline: t7.baseline,
+            floor: t7.floor,
+          }),
+        );
+        emitPredictionToCorpus({
+          cardIdentity: null,
+          body,
+          fairMarketValue: t7.floor,
+          fmvMechanism: "unavailable",
+          predictedPrice: t7.floor,
+          predictedPriceRange: t7.range,
+          predictedPriceMechanism: "unavailable",
+          callContext,
+        });
+        return {
+          source: "setdoc-baseline",
+          pricingTier: "setdoc-baseline",
+          cardIdentity: null,
+          fairMarketValue: t7.floor,
+          fairMarketValueLow: t7.range.low,
+          fairMarketValueHigh: t7.range.high,
+          marketValue: t7.floor,
+          predictedPrice: t7.floor,
+          predictedPriceRange: t7.range,
+          predictedPriceAttribution: {
+            mechanism: "setdoc-baseline",
+            baseline: t7.baseline,
+            era: t7.era,
+            setTypeKey: t7.setTypeKey,
+            setName: t7.setName,
+            manufacturer: t7.manufacturer,
+          },
+          quickSaleValue: Math.round(t7.floor * T7_QUICK_SALE_MULTIPLIER * 100) / 100,
+          premiumValue: Math.round(t7.floor * 1.5 * 100) / 100,
+          compsUsed: 0,
+          compsAvailable: 0,
+          recentComps: [],
+          variantWarning: [],
+          confidence: { pricingConfidence: 15 },
+          verdict: t7.verdict,
+          gradeUsed: cardHedgeGrade,
+          marketDNA: { trend: "flat", speed: "Normal" },
+        } as Record<string, unknown>;
+      }
       emitPredictionToCorpus({
         cardIdentity: null,
         body,
@@ -3907,15 +5167,22 @@ export async function computeEstimate(
             variant: fetched.card.variant ?? null,
           }
         : null,
-      fairMarketValue: 0,
+      // CF-UNSUPPORTED-SPORT-NULL-FMV (audit Finding #8, 2026-07-15):
+      // unsupported-sport is "we don't price this" — emitting 0 for
+      // FMV/quick/premium implies a $0 valuation and downstream deals
+      // (holding writer, band math, telemetry aggregation) may pick up
+      // the literal 0 before the route's `cannotPriceFromEst` gate nulls
+      // it. Emit null throughout so the "we didn't try" signal survives
+      // every consumer, not just the routes that check cannotPriceFromEst.
+      fairMarketValue: null,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
       marketValue: null,
       predictedPrice: null,
       predictedPriceRange: null,
       predictedPriceAttribution: null,
-      quickSaleValue: 0,
-      premiumValue: 0,
+      quickSaleValue: null,
+      premiumValue: null,
       compsUsed: 0,
       compsAvailable: 0,
       recentComps: [],
@@ -4399,16 +5666,44 @@ export async function computeEstimate(
       callContext,
     });
 
+    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (Drew, 2026-07-15): when the
+    // variant-mismatch tier fires with real recentComps in hand, use the
+    // median of those comps as the surfaced value. Drew's principle: if
+    // there are comps, we shouldn't default to a calculated price —
+    // Hartman Aqua showed $19.99 marketValue with $93+ comps in the
+    // recentComps display, breaking user trust in the number.
+    //
+    // Root cause: engine returned null → routes ran overlayResolverRescue
+    // → resolver pooled sibling-based synthesis returned ~$20 → iOS saw
+    // $20 next to real $93+ comps. Populating fairMarketValue here means
+    // overlayResolverRescue's `hasFmv` short-circuit skips the overlay,
+    // and iOS surfaces a price consistent with what it displays.
+    //
+    // Comps are for a DIFFERENT variant so the value is approximate.
+    // The response's `approximate: true` + variantWarning already
+    // convey uncertainty; downstream tier chips + iOS render remain
+    // truthful. Confidence stays at 0.2 (variant-mismatch confidence).
+    //
+    // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the fetched.comps
+    // median that PR #477 shipped. FMV is projected NEXT sale from the
+    // trend across the wrong-variant pool, never the arithmetic middle.
+    // For Hartman Aqua's 2 dated comps ($93 → $260.44), regression fits
+    // the slope and projects forward instead of returning $176.72.
+    const variantMismatchProjection = projectNextSaleFromComps(
+      fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+    );
+    const variantMismatchProjectedFmv = variantMismatchProjection?.nextSaleValue ?? null;
+
     return {
       cardTitle,
       verdict: `No comps found for this exact variant (missing: ${missing}). Card Hedge doesn't have sold data for this card yet.`,
       action: "Hold",
       dealScore: 0,
       quickSaleValue: null,
-      fairMarketValue: null,
+      fairMarketValue: variantMismatchProjectedFmv,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
-      marketValue: null,
+      marketValue: variantMismatchProjectedFmv,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
@@ -4416,7 +5711,9 @@ export async function computeEstimate(
       explanation: [
         `Requested ${effectiveIsAuto ? "autograph " : ""}variant not found in Card Hedge's sold database.`,
         `Closest match on file: ${fetched.card?.variant ?? "unknown"} (missing: ${missing}).`,
-        "Will retry automatically once comps are recorded.",
+        variantMismatchProjectedFmv !== null
+          ? `Approximate value using ${fetched.comps.length} nearby-variant comp${fetched.comps.length > 1 ? "s" : ""}.`
+          : "Will retry automatically once comps are recorded.",
       ],
       marketDNA: {
         demand: "Unknown",
@@ -4438,7 +5735,16 @@ export async function computeEstimate(
         gradeCompanyInput: body.gradeCompany ?? null,
         gradeCompanyCanonical: normalizedGradeCompany ?? null,
       },
-      confidence: { pricingConfidence: 0, liquidityConfidence: 0, timingConfidence: 0 },
+      // CF-VARIANT-MISMATCH-CONFIDENCE-UNIFY (audit Finding #7, 2026-07-15):
+      // marketRegime.confidence emits 0.2 as the canonical variant-mismatch
+      // uncertainty; unify pricingConfidence to the same value so the two
+      // signals agree. When variantMismatchProjectedFmv is null (no comps to
+      // median), collapse to 0 — no number = no confidence.
+      confidence: {
+        pricingConfidence: variantMismatchProjectedFmv !== null ? 0.2 : 0,
+        liquidityConfidence: 0,
+        timingConfidence: 0,
+      },
       exitStrategy: {
         recommendedMethod: "wait",
         expectedDaysToSell: null,
@@ -4867,38 +6173,28 @@ export async function computeEstimate(
           (combinedCount >= 3 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 365));
 
         if (!stillInsufficient) {
-          // CF-FMV-NOWCAST Ship 1: route through the existing exported
-          // velocity-weighted median (getSaleVelocityWeight at L219-229 gives
-          // 48h:5x, 7d:2x, 21d:1x, 30d:0.3x, older:0.1x — same decay law as
-          // the main pipeline). combinedSales carries epoch-ms `ts`; pass as
-          // the `date` field which getSaleVelocityWeight handles natively.
-          // Defensive fallback: if computeWeightedMedian returns null (only
-          // possible when every sample is filtered out — combinedCount===0
-          // guard above already prevented this), reuse the plain median to
-          // preserve the never-emit-NaN contract.
-          const weightedFmv = computeWeightedMedian(
-            combinedSales.map((s) => ({ price: s.price, date: s.ts })),
+          // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the velocity-
+          // weighted median. FMV is projected NEXT sale from the sibling
+          // pool's trend, not the middle of past sales.
+          //
+          // The prior implementation (computeWeightedMedian with a plain-
+          // median fallback) was structurally a median — recent-weighted
+          // is still a median. Regression across the combined sibling pool
+          // captures the trajectory that median throws away. When the pool
+          // is too thin for a fit (n<2 or all-same-timestamp), the helper
+          // falls back to the newest sale rolled forward — never a middle
+          // value. When even that fails (invariant broken: combinedCount>0
+          // with no priced comps), null flows through so downstream sees
+          // the sibling-pool branch as unsatisfied and fall-through fires.
+          const nextSale = projectNextSaleFromComps(
+            combinedSales.map((s) => ({
+              price: s.price,
+              soldDate: new Date(s.ts).toISOString(),
+            })),
           );
-          let fairMarketValue: number;
-          if (weightedFmv !== null) {
-            fairMarketValue = weightedFmv;
-          } else {
-            const sortedPrices = combinedSales.map((s) => s.price).sort((a, b) => a - b);
-            fairMarketValue =
-              sortedPrices.length % 2 === 1
-                ? sortedPrices[(sortedPrices.length - 1) / 2]
-                : (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2;
-          }
-          // CF-FMV-NOWCAST trend-knob insertion point (NOT implemented this
-          // ship — evidence-gated decision per ground-truth trace). When a
-          // bounded trend signal arrives on the sibling-pool path, multiply
-          // here:  fairMarketValue = fairMarketValue * trendCorrection
-          // (factor clamped to e.g. [0.85, 1.15] for the thin-data path).
-          // The downstream quickSale/premium/suggestedList cascade off `fmv`
-          // so the correction propagates without additional plumbing.
           const round2 = (n: number) => Math.round(n * 100) / 100;
-          const fmv = round2(fairMarketValue);
-          const quickSaleValue = round2(fmv * 0.88);
+          const fmv = nextSale !== null ? round2(nextSale.nextSaleValue) : 0;
+          const quickSaleValue = round2(fmv * QUICK_SALE_FALLBACK_MULTIPLIER);
           const premiumValue = round2(fmv * 1.15);
           const suggestedListPrice = round2(fmv * 1.05);
           const siblingFmvBand = computeFmvBand(fmv, {
@@ -5310,7 +6606,17 @@ export async function computeEstimate(
       fairMarketValue: null,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
-      marketValue: null,
+      // CF-SINGLE-COMP-DISPLAY (Drew, 2026-07-14): populate marketValue
+      // (the DISPLAY field iOS reads) from the last-sale price whenever
+      // we have at least one comp in the pool. Prior behavior emitted
+      // marketValue=null and relied on iOS reading estimateSource=
+      // "live-market-last-sale" + lastSale.price separately — but iOS
+      // decodes marketValue directly, so single-comp cards showed a
+      // blank price. Keep fairMarketValue=null (training gate stays
+      // intact); marketValue is display-only. Falls back cleanly to
+      // finalEstimatedValue (trend extrapolation) then null when we
+      // truly have no anchor.
+      marketValue: lastSale?.price ?? finalEstimatedValue ?? null,
       estimatedValue: finalEstimatedValue,
       estimateRange: finalEstimateRange,
       estimateBasis: finalEstimateBasis,
@@ -5593,7 +6899,12 @@ export async function computeEstimate(
     originalPrice: c.originalPrice,
     title: c.title,
     date: c.soldDate,
-    source: "ebay",
+    // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): was hardcoded "ebay" —
+    // now preserves RawComp.source when set (cardhedge / cardsight /
+    // ebay-user-purchase / ebay-user-sale / manual-user-entry). Falls
+    // back to "ebay" for pre-provenance-era rows to preserve wire compat.
+    source: (c as unknown as { source?: string }).source ?? "ebay",
+    verifiedByUser: (c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true,
     id: `${c.price}-${c.soldDate}`,
     // CF-RECENTCOMPS-SALETYPE: thread per-comp listingType through the
     // pipeline-internal comps shape so the route-level recentComps[]
@@ -5700,7 +7011,15 @@ export async function computeEstimate(
   const isRecoveryIsolatedPool =
     fetched.priceSourceInternal === "title-matched-parallel"
     || fetched.priceSourceInternal === "title-match-low-sample";
-  if (!dataSufficiency.sufficient && !isRecoveryIsolatedPool) {
+  // CF-SINGLE-COMP-DISPLAY (Drew, 2026-07-14): only null the price when
+  // we have LITERALLY ZERO usable comps (level="none"). When we have 1
+  // or 2 (level="very_thin"), keep the FMV visible — a single-sale
+  // median IS the market for that sub-market until more comps arrive.
+  // The dataSufficiency object still rides along, so iOS renders the
+  // "approximate / thin data" disclosure; the number itself is honest
+  // display data, and the corpus-emit path (further down) still
+  // excludes it from training via priceSourceInternal gating.
+  if (dataSufficiency.level === "none" && !isRecoveryIsolatedPool) {
     quickSaleValue = null as unknown as number;
     fairMarketValue = null as unknown as number;
     premiumValue = null as unknown as number;
@@ -6272,16 +7591,134 @@ export async function computeEstimate(
     isAnyEstimate ? "rough" : null;
   const responseIsEstimate: boolean = isAnyEstimate;
 
+  // CF-SLOPE-VALUATION-MAIN-ENGINE (Drew, 2026-07-13, PR #419): mirror
+  // the Cardsight UUID router's slope-based valuation on the main CH
+  // engine so iOS sees identical semantics regardless of vendor. When
+  // the comp pool has ≥2 dated records with distinct dates, the linear
+  // regression fit at last-observed-date overrides the median-anchored
+  // responseFmv for Market Value; the projection at now+30d overrides
+  // predictedPrice. Attribution updated to `linear-regression` so the
+  // wire's `predictedPriceAttribution` matches across vendors.
+  //
+  // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median-anchored
+  // `?? responseFmv` fallback. When the regression can't fit (< 2 dated
+  // comps or all-same-date), the trend-adjusted-last-sale branch of
+  // projectNextSaleFromComps anchors on the newest actual sale — never
+  // the pool's arithmetic middle. On isAnyEstimate branches or the
+  // pool-is-empty invariant break, slopeMarketValue falls through to
+  // `__predicted.predictedPrice` (trendIQ-derived) rather than the
+  // legacy median. The trend-adjusted fallback carries mechanism
+  // "trend-adjusted-last-sale" so downstream can distinguish it from a
+  // clean regression.
+  const slopeCompsInput = !isAnyEstimate
+    ? comps.map((c) => ({
+        price: c.originalPrice,
+        date: c.date ?? null,
+      }))
+    : [];
+  const { computeSlopeValuation: slopeFn } = await import(
+    "./slopeValuation.js"
+  );
+  const slopeAdj =
+    slopeCompsInput.length >= 2 ? slopeFn(slopeCompsInput) : null;
+  const nextSaleFallback = !isAnyEstimate && !slopeAdj
+    ? projectNextSaleFromComps(
+        comps.map((c) => ({ price: c.originalPrice, soldDate: c.date ?? null })),
+      )
+    : null;
+  // T3 rebucket paths intentionally emit null FMV — the observed-band contract
+  // requires isAnyEstimate → null; downstream is responsible for the
+  // estimatedValue / estimateBasis fields. Preserve that null.
+  const slopeMarketValue = isAnyEstimate
+    ? responseFmv
+    : (slopeAdj?.marketValue
+        ?? nextSaleFallback?.nextSaleValue
+        ?? __predicted.predictedPrice);
+  const slopePredictedPrice =
+    slopeAdj?.predictedPrice
+    ?? nextSaleFallback?.nextSaleValue
+    ?? __predicted.predictedPrice;
+  const slopePredictedRange =
+    slopeAdj?.predictedPriceRange
+    ?? (nextSaleFallback ? nextSaleFallback.bounds : null)
+    ?? __predicted.predictedPriceRange;
+  const slopePredictedAttribution = slopeAdj
+    ? {
+        method: "linear-regression" as const,
+        direction: slopeAdj.direction,
+        slopePerMonthPct: slopeAdj.slopePerMonthPct,
+        n: slopeAdj.n,
+      }
+    : nextSaleFallback
+      ? {
+          method: "trend-adjusted-last-sale" as const,
+          direction: nextSaleFallback.slopePerMonthPct > 0
+            ? ("up" as const)
+            : nextSaleFallback.slopePerMonthPct < 0
+              ? ("down" as const)
+              : ("static" as const),
+          slopePerMonthPct: nextSaleFallback.slopePerMonthPct,
+          n: nextSaleFallback.n,
+        }
+      : __predicted.predictedPriceAttribution;
+
+  // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in listings
+  // trend for a full supply+demand read. Player name is extracted from
+  // the CH identity; when it's missing (rare — CH usually has player),
+  // the signal falls through to null. iOS should treat
+  // supplyDemand === null OR supplyDemand.verdict === "unavailable"
+  // as "not enough data" and hide the badge.
+  const { buildSupplyDemandSignal, fetchListingsHistoryForWire } = await import(
+    "./supplyDemandSignal.service.js"
+  );
+  const playerNameForSignal =
+    typeof queryContext.playerName === "string" ? queryContext.playerName : null;
+  const [supplyDemand, listingsHistory] = await Promise.all([
+    buildSupplyDemandSignal(playerNameForSignal, slopeAdj).catch(() => null),
+    fetchListingsHistoryForWire(playerNameForSignal, 30).catch(() => []),
+  ]);
+
+  // CF-CARD-VALUATION-HISTORY (Drew, 2026-07-13, PR #431): fire-and-forget
+  // snapshot of TODAY's valuation. Feeds the future backtest engine's
+  // look-ahead-free queries. Only fires when we have a real cardId to
+  // key on (skip the estimate/no-card branches — nothing to backtest).
+  const snapshotCardId =
+    (typeof body.cardId === "string" && body.cardId.length > 0)
+      ? body.cardId
+      : (typeof cardIdentity?.card_id === "string" ? cardIdentity.card_id : null);
+  if (snapshotCardId) {
+    void (async () => {
+      try {
+        const { upsertValuationSnapshot } = await import(
+          "../portfolioiq/cardValuationHistoryStore.service.js"
+        );
+        await upsertValuationSnapshot({
+          cardId: snapshotCardId,
+          playerName: playerNameForSignal,
+          marketValue: slopeMarketValue,
+          predictedPrice: slopePredictedPrice,
+          salesDirection: slopeAdj?.direction ?? null,
+          salesSlopePerMonthPct: slopeAdj?.slopePerMonthPct ?? null,
+          listingsDirection: supplyDemand?.listingsDirection ?? null,
+          listingsSlopePerMonthPct: supplyDemand?.listingsSlopePerMonthPct ?? null,
+          verdict: supplyDemand?.verdict ?? "unavailable",
+          sampleCount: slopeAdj?.n ?? 0,
+          source: "compiq-estimate",
+        });
+      } catch { /* swallow */ }
+    })();
+  }
+
   return {
     cardTitle,
     verdict: verdictText,
     action: result.action ?? "Hold",
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
-    fairMarketValue: responseFmv,
+    fairMarketValue: slopeMarketValue,
     fairMarketValueLow: responseFmvLow,
     fairMarketValueHigh: responseFmvHigh,
-    marketValue: responseFmv,
+    marketValue: slopeMarketValue,
     // CF-A(a): T3 re-bucket fields. populated only when chosenTier==="T3"
     // AND the engine computed a positive fairMarketValue from the base-auto
     // pool. T0/T1/T2 and the variant-mismatch short-circuit emit nulls here.
@@ -6292,9 +7729,27 @@ export async function computeEstimate(
     estimateBasis: responseEstimateBasis,
     isEstimate: responseIsEstimate,
     valuationStatus: responseValuationStatus,
-    predictedPrice: __predicted.predictedPrice,
-    predictedPriceRange: __predicted.predictedPriceRange,
-    predictedPriceAttribution: __predicted.predictedPriceAttribution,
+    predictedPrice: slopePredictedPrice,
+    predictedPriceRange: slopePredictedRange,
+    predictedPriceAttribution: slopePredictedAttribution,
+    // CF-CARDSIGHT-VENDOR-PROVENANCE (audit PR #492, 2026-07-15):
+    // propagate the routed vendor onto the estimate so downstream
+    // (autoPriceHolding + batch reprice) can stamp the holding doc's
+    // sourceVendor field with the vendor that actually served the
+    // pricing pool. Prior code hardcoded "cardhedge" at 5 sites in
+    // portfolioStore.service.ts — CS-served holdings were mis-attributed
+    // as CH provenance for months. `fetched.vendor` reflects the router's
+    // final selection (routedVendor at line 2519, populated from
+    // sales[0].source or empty-pool default).
+    sourceVendor: fetched.vendor,
+    supplyDemand,
+    listingsHistory,
+    listPriceRecommendations: (await import("./listPriceRecommendations.service.js"))
+      .buildListPriceRecommendations({
+        marketValue: slopeMarketValue,
+        predictedPrice: slopePredictedPrice,
+        predictedPriceRange: slopePredictedRange,
+      }),
     signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,
@@ -6432,6 +7887,15 @@ export async function computeEstimate(
             // CF-RECENTCOMPS-IMAGEURL (2026-06-08): pass-through thumbnail
             // URL when present; omit when null so iOS uses a placeholder.
             imageUrl: c.imageUrl ?? undefined,
+            // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): per-comp source
+            // + user-verified badge. iOS renders "collector-verified"
+            // for verifiedByUser=true, "vendor" otherwise. Omitted (not
+            // null) when unknown so pre-provenance-era cache entries
+            // don't show a broken chip.
+            source: (c as unknown as { source?: string }).source ?? undefined,
+            verifiedByUser: (c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true
+              ? true
+              : undefined,
           };
           if (belowMarketThreshold !== null) {
             entry.belowMarket = c.originalPrice < belowMarketThreshold;
@@ -6443,6 +7907,35 @@ export async function computeEstimate(
     // chart. Display-only — never enters the corpus emit at L3912.
     // Built upthread; coexists with recentComps as an independent surface.
     priceHistory,
+    // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of where the
+    // pool's comps came from. iOS renders as "$1,899 — 3 collectors +
+    // 8 vendor comps" trust chip. `collectorCount` counts user
+    // attestations (verifiedByUser=true); `vendorCount` counts
+    // cardhedge + cardsight vendor pulls; `totalCount` is the pool
+    // size after all filters. `topSource` is a display shortcut for
+    // the largest single source (helps single-row UI variants).
+    provenanceSummary: (() => {
+      const bySource: Record<string, number> = {};
+      let collectorCount = 0;
+      let vendorCount = 0;
+      for (const c of comps) {
+        const src = (c as unknown as { source?: string }).source ?? "unknown";
+        bySource[src] = (bySource[src] ?? 0) + 1;
+        if ((c as unknown as { verifiedByUser?: boolean }).verifiedByUser === true) {
+          collectorCount += 1;
+        } else if (src === "cardhedge" || src === "cardsight" || src === "ebay") {
+          vendorCount += 1;
+        }
+      }
+      const topSource = Object.entries(bySource).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      return {
+        totalCount: comps.length,
+        collectorCount,
+        vendorCount,
+        bySource,
+        topSource,
+      };
+    })(),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     // CF-LASTSALE-SCAFFOLD (2026-06-10): mirror the insufficient branch.

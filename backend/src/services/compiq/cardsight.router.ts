@@ -24,6 +24,21 @@ import {
 } from "./cardhedge.client.js";
 import type { ParallelPriceSource, UserFacingPriceSource } from "./parallelTitleMatch.js";
 import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
+// CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): targeted un-decommission
+// for CH-catalog-miss cases. See cardsightFallback.ts for the rationale.
+import { tryCardsightFallback } from "./cardsightFallback.js";
+// CF-CS-STRUCTURED-BRIDGE (Drew, 2026-07-15): structured CS lookup that
+// bypasses the fuzzy candidate-explode path when we have exact fields.
+// Symmetric with cardHedgeStructuredBridge.
+import { tryCardsightStructuredBridge } from "./cardsightStructuredBridge.js";
+// CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): ultimate backstop when
+// neither CH bridge nor CS catalog resolves the SKU. See
+// cardsightPricingBackstop.ts for the rationale.
+import { tryCardsightPricingBackstop } from "./cardsightPricingBackstop.js";
+// CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): structured lookup path
+// for holdings where we have exact fields (cardNumber). Skips CH's AI
+// matcher entirely — cheaper + more precise. See file header.
+import { structuredCardHedgeBridge } from "./cardHedgeStructuredBridge.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -300,6 +315,158 @@ function isMercyEnabled(): boolean {
 }
 
 /**
+ * CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14, PR-B): normalize a parallel
+ * string for cross-variant collision. Mirrors normalizeParallelForDedup in
+ * unifiedSearch/dispatcher — same rules, inlined here to keep this file free
+ * of a cross-service import.
+ */
+export function normalizeParallelForVariantGuard(parallel: string | null | undefined): string {
+  if (!parallel) return "";
+  return parallel
+    .toLowerCase()
+    .replace(/[-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14, PR-B): decide whether a CH
+ * AI-matcher result is a variant-honest match for the requested identity.
+ *
+ * PROBLEM: CH's /cards/card-match returns a card_id even when the closest
+ * catalog SKU differs from the user's intended parallel — e.g. the user asks
+ * for Hartman CPA-EHA Blue Refractor Auto (real card, ~$1800) but CH's
+ * catalog has ZERO "Blue Refractor" under CPA-EHA. CH's AI picks the nearest
+ * variant (CPA-EHA Blue X-Fractor or CPA-EHA Refractor) or the closest card
+ * number (BCP-102 Blue Refractor, a NON-auto base card). Either way, the
+ * bridge pins the wrong card_id and downstream comps come from the wrong
+ * sub-market (Drew saw ~$420 instead of $1800).
+ *
+ * GUARD: when the identity carries both a parallel AND a match includes a
+ * variant, both must normalize to the same string OR one must be a strict
+ * substring of the other (allows CH's "Refractor" to accept when user only
+ * said "Refractor" — but rejects when user said "Blue Refractor" and CH
+ * returned "Refractor"). Same for card_number: if identity.number is set
+ * and match.number differs case-insensitively, reject.
+ *
+ * Returns { ok: true } when the match honors the identity's variant
+ * signals; { ok: false, reason } otherwise. Callers should treat !ok as
+ * "no match" and fall through to structured mercy fallback (which uses
+ * pickBestByParallel — variant-aware — and returns null when nothing fits).
+ */
+export function matchHonorsIdentity(
+  match: {
+    card_id?: string | null;
+    variant?: string | null;
+    number?: string | null;
+    title?: string | null;
+    set?: string | null;
+  } | null,
+  identity: { parallel?: string | null; number?: string | null; isAuto?: boolean },
+  rawQuery?: string,
+): { ok: true } | { ok: false; reason: "card_number_mismatch" | "parallel_mismatch" | "auto_vs_base_mismatch"; wanted: string; got: string } {
+  if (!match) return { ok: true };  // no match to guard against
+
+  // CF-AUTO-VARIANT-GUARD (Drew, 2026-07-15): reject when user asked for
+  // an AUTOGRAPH but CH's match is a base card. Live evidence: Bobby
+  // Witt Jr 2020 Bowman Chrome Auto — CH's AI matcher resolved to the
+  // BASE card (auto is a separate SKU), engine happily priced with the
+  // base's thousands of $10 sales instead of the auto's rare $1000+
+  // sales, and the existing parallel/number guards had nothing to
+  // reject with because identity.parallel was null.
+  //
+  // The check: identity says AUTO, but match's variant + title + set
+  // contain no auto/autograph/RC-auto token → reject as auto_vs_base.
+  if (identity.isAuto === true) {
+    const matchBlob = [
+      match.variant ?? "",
+      match.title ?? "",
+      match.set ?? "",
+      match.number ?? "",
+    ].join(" ").toLowerCase().trim();
+    // Absence of metadata isn't evidence of base — only reject when we
+    // have ACTUAL data on the match AND none of it signals auto. This
+    // protects test fixtures that only stub card_id + confidence from
+    // spurious rejections.
+    if (matchBlob.length > 0) {
+      const hasAuto = /\bauto(graph(ed)?)?\b/.test(matchBlob) || /\brpa\b/.test(matchBlob);
+      // CardHedge's auto SKUs also carry the "Autograph" subset tag or a
+      // CPA-/BCPA-/BDPA-/CPAR- style card number prefix.
+      const hasAutoNumberPrefix = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-)/i.test(
+        String(match.number ?? "").trim(),
+      );
+      if (!hasAuto && !hasAutoNumberPrefix) {
+        return {
+          ok: false,
+          reason: "auto_vs_base_mismatch",
+          wanted: "autograph",
+          got: `base (${match.variant ?? "no-variant"} / ${match.number ?? "no-num"})`,
+        };
+      }
+    }
+  }
+
+  // CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15): query-aware superset
+  // acceptance. When our identity is a proper subset of CH's returned
+  // parallel/number (e.g. identity.parallel="Refractor", match.variant=
+  // "Reptilian Refractor"), the STRICT-equality guard used to reject
+  // as parallel_mismatch. But CH's more-specific match is usually
+  // CORRECT — our parser just under-specified. When the rawQuery text
+  // contains CH's extra tokens ("reptilian" appears in the user's
+  // query), accept the superset match. When it doesn't, the guard's
+  // original wrong-SKU protection still fires.
+  //
+  // Same fix pattern as PR #457 (CS scoreCandidate). Both guard the
+  // same class of parser-under-specification bug.
+  const queryLower = (rawQuery ?? "").toLowerCase();
+
+  // Card number guard — cheap and definitive. Superset acceptance
+  // applies here too: identity.number="X-FRACTOR" (parser bug) vs
+  // match.number="CPA-OC" is a real conflict, BUT if the parser
+  // parsed the parallel as the cardNumber (a real bug we've seen),
+  // and the query has the parallel text, we can also accept when
+  // match.number appears in the query.
+  if (identity.number && match.number) {
+    const wantNum = String(identity.number).toLowerCase().trim();
+    const gotNum = String(match.number).toLowerCase().trim();
+    if (wantNum && gotNum && wantNum !== gotNum) {
+      // Superset guard: match.number appears in the raw query text
+      // (independent evidence CH's number is what the user meant).
+      if (queryLower && queryLower.includes(gotNum)) {
+        // Accept — CH's number is corroborated by the query text.
+      } else {
+        return { ok: false, reason: "card_number_mismatch", wanted: wantNum, got: gotNum };
+      }
+    }
+  }
+  if (identity.parallel && match.variant) {
+    const want = normalizeParallelForVariantGuard(identity.parallel);
+    const got = normalizeParallelForVariantGuard(match.variant);
+    if (want && got && want !== got) {
+      // Superset acceptance: identity's parallel is a substring of CH's
+      // match variant, AND the extra tokens appear in the raw query.
+      // Example: identity="refractor", match="reptilian refractor",
+      // query has "reptilian" — accept (parser under-specified, query
+      // corroborates).
+      if (queryLower && got.includes(want)) {
+        const wantTokens = new Set(want.split(/\s+/).filter((t) => t.length > 0));
+        const extraTokens = got.split(/\s+/).filter((t) => t.length > 0 && !wantTokens.has(t));
+        const allExtrasInQuery = extraTokens.every((t) => queryLower.includes(t));
+        if (allExtrasInQuery) {
+          // Accept the superset match. The parser lost tokens the user
+          // clearly asked for; CH restored them.
+        } else {
+          return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+        }
+      } else {
+        return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Structured-search mercy fallback. Only fires when identity has both
  * playerName and parallel. Returns a card_id + synthetic confidence
  * (0.75 — below the AI matcher's 0.80 threshold but above zero) or null.
@@ -331,11 +498,30 @@ async function structuredMercyFallback(
  * Resolve an identity hint to a CardHedge card_id via /v1/cards/card-match.
  * Cached 24h on the natural-language query. Returns null on no match or
  * confidence below MIN_BRIDGE_CONFIDENCE.
+ *
+ * CF-CH-RAW-QUERY (Drew, 2026-07-15): when `rawQuery` is passed AND the
+ * env flag CH_USE_RAW_QUERY=true, we send the user's ORIGINAL free-text
+ * to CH's AI matcher instead of the buildCardHedgeQuery reconstruction.
+ * Rationale (from feedback_raw_query_to_ai_matcher memory): the whole
+ * point of an AI matcher is to be FUZZY. Users type "hartman blue" or
+ * "trout auto" — the AI is designed for that. Our parser is over-eager
+ * (splits "Reptilian Refractor" into player+parallel, treats "X-Fractor"
+ * as cardNumber, strips "Speckle" from "Speckle Refractor" — 4 real
+ * Drew holdings broken 2026-07-15). When we reconstruct a rigid string
+ * from broken tokens, we're feeding the AI our parser's bugs.
+ *
+ * The identity hint is still passed downstream to the variant guard
+ * (which knows to reject wrong SKUs) and the structured mercy fallback.
  */
 async function resolveChCardId(
   identity: CardIdentityHint,
+  rawQuery?: string,
 ): Promise<{ chCardId: string; confidence: number } | null> {
-  const query = buildCardHedgeQuery(identity);
+  const useRawQuery =
+    process.env.CH_USE_RAW_QUERY === "true" &&
+    typeof rawQuery === "string" &&
+    rawQuery.trim().length >= 3;
+  const query = useRawQuery ? rawQuery!.trim() : buildCardHedgeQuery(identity);
   if (!query) return null;
 
   const raw = await cacheWrap(
@@ -343,6 +529,21 @@ async function resolveChCardId(
     async () => {
       const match = await chIdentifyCard(query);
       if (!match || !match.card_id) {
+        // CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): tier-1.5 rescue
+        // using CH's /card-search endpoint filtered by player + local
+        // cardNumber match. Runs BEFORE structured mercy because it's
+        // more precise (cardNumber-anchored) — env-gated so it can be
+        // rolled out independently.
+        const structuredHit = await structuredCardHedgeBridge(identity);
+        if (structuredHit) {
+          log.info("router.bridge_rescued_via_ch_structured", {
+            chCardId: structuredHit.chCardId,
+            player: identity.playerName,
+            number: identity.number,
+            reason: "ai_matcher_returned_null",
+          });
+          return JSON.stringify(structuredHit);
+        }
         // CF-CH-STRUCTURED-SEARCH-MERCY: try structured search rescue
         // before conceding bridge_no_match.
         const rescued = await structuredMercyFallback(identity);
@@ -359,6 +560,20 @@ async function resolveChCardId(
         return "";
       }
       if (match.confidence < MIN_BRIDGE_CONFIDENCE) {
+        // CF-CH-STRUCTURED-BRIDGE (Drew, 2026-07-15): also try structured
+        // bridge on below-threshold — often it's more confident than a
+        // shaky AI match when we have cardNumber.
+        const structuredHit = await structuredCardHedgeBridge(identity);
+        if (structuredHit) {
+          log.info("router.bridge_rescued_via_ch_structured", {
+            chCardId: structuredHit.chCardId,
+            player: identity.playerName,
+            number: identity.number,
+            reason: "ai_matcher_below_threshold",
+            originalConfidence: match.confidence,
+          });
+          return JSON.stringify(structuredHit);
+        }
         // CF-CH-STRUCTURED-SEARCH-MERCY: try structured rescue on
         // below-threshold matches too.
         const rescued = await structuredMercyFallback(identity);
@@ -373,6 +588,44 @@ async function resolveChCardId(
           return JSON.stringify(rescued);
         }
         log.info("router.bridge_low_confidence", { query, confidence: match.confidence });
+        return "";
+      }
+      // CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14): even at high
+      // confidence CH's AI matcher may return a card whose variant/number
+      // differs from the user's ask when the requested SKU isn't in CH's
+      // catalog. Verify variant + number honesty before accepting. On
+      // mismatch, fall through to structured mercy fallback (which is
+      // variant-aware via pickBestByParallel and returns null on nothing
+      // fits — i.e. no CH bridge, no wrong-variant comps).
+      // CF-VARIANT-GUARD-SUPERSET (Drew, 2026-07-15): pass the raw query
+      // (falling back to the reconstruction) so the guard can accept
+      // CH's more-specific parallel/number matches when the user's
+      // query text corroborates them. Fixes false rejections on
+      // Reptilian / Speckle / X-Fractor and similar parser-under-
+      // specification cases.
+      const guard = matchHonorsIdentity(match, identity, rawQuery ?? query);
+      if (!guard.ok) {
+        log.warn("router.bridge_variant_guard_reject", {
+          player: identity.playerName,
+          parallel: identity.parallel,
+          identityNumber: identity.number,
+          matchCardId: match.card_id,
+          matchVariant: match.variant,
+          matchNumber: match.number,
+          reason: guard.reason,
+          wanted: guard.wanted,
+          got: guard.got,
+        });
+        const rescued = await structuredMercyFallback(identity);
+        if (rescued) {
+          log.info("router.bridge_rescued_via_structured", {
+            chCardId: rescued.chCardId,
+            player: identity.playerName,
+            parallel: identity.parallel,
+            reason: `variant_guard_${guard.reason}`,
+          });
+          return JSON.stringify(rescued);
+        }
         return "";
       }
       return JSON.stringify({ chCardId: match.card_id, confidence: match.confidence });
@@ -395,8 +648,12 @@ async function resolveChCardId(
 async function tryCardHedge(
   identity: CardIdentityHint,
   grade: string,
+  rawQuery?: string,
 ): Promise<{ sales: RoutedSale[]; trustReason: string; chCardId: string } | null> {
-  const bridge = await resolveChCardId(identity);
+  // CF-CH-RAW-QUERY (Drew, 2026-07-15): thread raw user query so
+  // resolveChCardId can send it directly to CH's AI matcher instead
+  // of our reconstruction. Env-gated inside resolveChCardId.
+  const bridge = await resolveChCardId(identity, rawQuery);
   if (!bridge) return null;
 
   const chIdentity: CardHedgeIdentity = {
@@ -416,6 +673,63 @@ async function tryCardHedge(
     });
     return null;
   }
+
+  // CF-VENDOR-EMIT-SOLD-COMPS (Drew, 2026-07-14): every trusted CH sale
+  // gets persisted into the unified sold_comps pool. Fire-and-forget;
+  // never blocks the caller, never fails the response on emit error.
+  // Only fires when trusted (trustReason set) — pool never sees
+  // vendor-blob or otherwise-suspect sales.
+  //
+  // Confidence: 0.8 (higher than CS raw pool because trust-guard has
+  // already validated identity via title-cohesion / player-surname).
+  // Downstream consumers can still prefer verified=true (1.0) user data.
+  void (async () => {
+    try {
+      const { recordSoldComp } = await import(
+        "../portfolioiq/soldCompsStore.service.js"
+      );
+      const playerName = identity.playerName?.trim();
+      if (!playerName) return;
+      const cardYear =
+        typeof identity.cardYear === "number"
+          ? identity.cardYear
+          : identity.cardYear != null
+            ? parseInt(String(identity.cardYear), 10)
+            : null;
+      const isAuto =
+        identity.isAuto === true ||
+        /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
+          String(identity.number ?? ""),
+        );
+      for (const c of trusted.comps) {
+        if (typeof c.price !== "number" || c.price <= 0) continue;
+        if (!c.date) continue;
+        // CH sales don't carry a stable per-sale external id.
+        // Use (chCardId + date + price-cents) as the composite key —
+        // idempotent for the same physical sale re-observed on rewrites.
+        const externalId = `${bridge.chCardId}::${c.date}::${Math.round(c.price * 100)}`;
+        await recordSoldComp({
+          cardId: bridge.chCardId,
+          playerName,
+          cardYear: Number.isFinite(cardYear as any) ? (cardYear as number) : null,
+          setName: identity.product ?? null,
+          parallel: identity.parallel ?? null,
+          cardNumber: identity.number ?? null,
+          isAuto,
+          price: c.price,
+          soldAt: c.date,
+          source: "cardhedge",
+          sourceExternalId: externalId,
+          contributorUserId: null,
+          title: c.title ?? null,
+          imageUrl: null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.8,
+        });
+      }
+    } catch { /* swallow — vendor emit is auxiliary */ }
+  })();
 
   return {
     chCardId: bridge.chCardId,
@@ -474,50 +788,179 @@ export async function findCompsRouted(
     return emptyResult(["no_identity_for_bridge"]);
   }
 
-  try {
-    const ch = await tryCardHedge(identity, opts.grade ?? "Raw");
-    if (!ch) {
-      log.info("comp.findComps.end", { query, outcome: "ch_unavailable", latency_ms: Date.now() - start });
-      return emptyResult(["ch_no_match_or_untrusted"]);
-    }
+  // CF-PARALLEL-VENDOR-MERGE (Drew, 2026-07-15, PR #493): fire CH + all
+  // enabled CS branches concurrently and merge the sales pools. Prior
+  // architecture was serial with CH-miss cascade — CS branches only ran
+  // when CH returned nothing. That meant vendor A's real sold data
+  // never joined vendor B's. New architecture broadens coverage by
+  // querying both vendors in parallel + deduping the merged pool by
+  // marketplace URL (exact-listing join) with a composite-key fallback.
+  //
+  // Vendor labels stay strictly internal (used for sold_comps ingest,
+  // analytics, provenance-tier weighting). Per-comp `source` on the
+  // wire's recentComps[] is already stripped upstream (compiqEstimate.
+  // service.ts:5442-5452 — see also CF-SOURCE-VENDOR-WIRE-STRIP at
+  // responseAssembly.ts:182) so iOS still sees vendor-neutral results.
+  //
+  // Env-gated cascade retained: each CS branch fires only when its
+  // ENABLED flag is on. Turning all 4 off collapses this back to
+  // CH-only serial behavior (identical to pre-PR contract).
+  const branchTimeoutMs = 3000;
+  const grade = opts.grade ?? "Raw";
+  const structuredEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
+  const fallbackEnabled = process.env.CARDSIGHT_FALLBACK_ENABLED === "true";
+  const backstopEnabled = process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true";
 
-    log.info("router.ch_served", {
-      query,
-      chCardId: ch.chCardId,
-      count: ch.sales.length,
-      trustReason: ch.trustReason,
-      via: "findCompsRouted",
-    });
-    log.info("comp.findComps.end", {
-      query,
-      cardId: ch.chCardId,
-      result_count: ch.sales.length,
-      latency_ms: Date.now() - start,
-      outcome: "ok",
-    });
+  const withTimeout = <T>(p: Promise<T>, name: string): Promise<T | null> =>
+    Promise.race([
+      p.catch((err) => {
+        log.warn("branch_error", { branch: name, error: err instanceof Error ? err.message : String(err) });
+        return null as unknown as T;
+      }),
+      new Promise<null>((resolve) => setTimeout(() => {
+        log.warn("branch_timeout", { branch: name, timeout_ms: branchTimeoutMs });
+        resolve(null);
+      }, branchTimeoutMs)),
+    ]);
 
-    const card: RoutedCard = {
-      card_id: ch.chCardId,
-      player: identity.playerName,
-      set: identity.product,
-      year: identity.cardYear,
-      number: identity.number,
-      variant: identity.parallel,
-    };
-    return {
-      card,
-      sales: ch.sales,
-      variantWarning: [],
-      aiCategory: null,
-      chCardId: ch.chCardId,
-      chTrustReason: narrowTrustReason(ch.trustReason),
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    log.warn("ch_error", { query, error: msg });
-    log.info("comp.findComps.end", { query, outcome: "error", latency_ms: Date.now() - start });
-    return emptyResult(["ch_error"]);
+  const [chResult, csStructuredResult, csFallbackResult, csBackstopResult] = await Promise.all([
+    // CH always fires (no env flag — CH is the primary contract)
+    withTimeout(tryCardHedge(identity, grade, query), "ch"),
+    structuredEnabled
+      ? withTimeout(tryCardsightStructuredBridge(identity, grade), "cs_structured")
+      : Promise.resolve(null),
+    fallbackEnabled
+      ? withTimeout(tryCardsightFallback(query, identity, grade), "cs_fallback")
+      : Promise.resolve(null),
+    backstopEnabled
+      ? withTimeout(tryCardsightPricingBackstop(query, opts.queryContext, grade), "cs_backstop")
+      : Promise.resolve(null),
+  ]);
+
+  // Winning cardId hierarchy: CH-bridged > CS-structured > CS-fallback > CS-backstop.
+  // CH-bridged wins because CH's catalog is the more curated of the two. When CH
+  // missed but CS resolved a bridge, we adopt the CS card_id — the pool identity
+  // must be SOMETHING addressable for sold_comps ingest + persistence.
+  const chCard: RoutedCard | null = chResult
+    ? {
+        card_id: chResult.chCardId,
+        player: identity.playerName,
+        set: identity.product,
+        year: identity.cardYear,
+        number: identity.number,
+        variant: identity.parallel,
+      }
+    : null;
+  const winningCard: RoutedCard | null =
+    chCard
+    ?? csStructuredResult?.card
+    ?? csFallbackResult?.card
+    ?? csBackstopResult?.card
+    ?? null;
+
+  // Merge sales into one dedupe'd pool. URL is the natural join between
+  // CH and CS — both scrape marketplace transaction data, so the same
+  // physical eBay listing appears in both pools under the same URL. When
+  // URL is absent (older records / CS-native records that lack it), the
+  // composite key `soldDate|priceCents|titleHash` catches the same sale
+  // by content fingerprint.
+  const mergedSales = mergeAndDedupeSales(chResult?.sales ?? [], [
+    ...(csStructuredResult?.sales ?? []),
+    ...(csFallbackResult?.sales ?? []),
+    ...(csBackstopResult?.sales ?? []),
+  ]);
+
+  // Outcome tag captures which branches actually contributed non-empty results.
+  const outcome = [
+    chResult && chResult.sales.length > 0 ? "ch" : null,
+    csStructuredResult && csStructuredResult.sales.length > 0 ? "cs_structured" : null,
+    csFallbackResult && csFallbackResult.sales.length > 0 ? "cs_fallback" : null,
+    csBackstopResult && csBackstopResult.sales.length > 0 ? "cs_backstop" : null,
+  ].filter((s) => s !== null).join("+") || "none";
+
+  log.info("comp.findComps.end", {
+    query,
+    cardId: winningCard?.card_id ?? null,
+    result_count: mergedSales.length,
+    ch_count: chResult?.sales.length ?? 0,
+    cs_structured_count: csStructuredResult?.sales.length ?? 0,
+    cs_fallback_count: csFallbackResult?.sales.length ?? 0,
+    cs_backstop_count: csBackstopResult?.sales.length ?? 0,
+    duplicates_collapsed:
+      (chResult?.sales.length ?? 0)
+      + (csStructuredResult?.sales.length ?? 0)
+      + (csFallbackResult?.sales.length ?? 0)
+      + (csBackstopResult?.sales.length ?? 0)
+      - mergedSales.length,
+    latency_ms: Date.now() - start,
+    outcome,
+  });
+
+  if (!winningCard && mergedSales.length === 0) {
+    return emptyResult(["all_branches_empty"]);
   }
+
+  return {
+    card: winningCard,
+    sales: mergedSales,
+    variantWarning: [],
+    aiCategory: null,
+    chCardId: chResult?.chCardId,
+    chTrustReason: chResult ? narrowTrustReason(chResult.trustReason) : undefined,
+  };
+}
+
+/**
+ * CF-PARALLEL-VENDOR-MERGE (PR #493): merge CH sales with CS-branch
+ * sales into one dedupe'd pool. CH sales are added first so their
+ * identity + metadata wins on collision (CH catalog is more curated
+ * than CS's title-matched marketplace scrape). Vendor labels on each
+ * RoutedSale stay preserved for downstream analytics / sold_comps
+ * ingest / provenance weighting; the wire layer strips them.
+ *
+ * Dedup priority:
+ *   1. URL exact match (natural join for marketplace listings)
+ *   2. Composite fingerprint: soldDate | priceCents | titleHash(50 chars)
+ *
+ * When a dup is detected, the first-seen row wins (CH gets priority
+ * because it's added first); subsequent duplicates are dropped. This
+ * preserves CH's provenance tier + trust flags on the survivor.
+ */
+function mergeAndDedupeSales(
+  chSales: RoutedSale[],
+  csSales: RoutedSale[],
+): RoutedSale[] {
+  const dedupKey = (s: RoutedSale): string => {
+    const url = (s as unknown as { url?: string; image_url?: string }).url
+      ?? (s as unknown as { url?: string; image_url?: string }).image_url;
+    if (typeof url === "string" && url.length > 0) return `url:${url}`;
+    const date = s.date ?? "";
+    const priceCents = Math.round((s.price ?? 0) * 100);
+    const titleHash = (s.title ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 50);
+    return `comp:${date}|${priceCents}|${titleHash}`;
+  };
+
+  const seen = new Set<string>();
+  const merged: RoutedSale[] = [];
+
+  // CH first — highest provenance tier wins on collision
+  for (const s of chSales) {
+    const k = dedupKey(s);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    merged.push(s);
+  }
+  for (const s of csSales) {
+    const k = dedupKey(s);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    merged.push(s);
+  }
+  return merged;
 }
 
 // ── searchCardsRouted ───────────────────────────────────────────────────────

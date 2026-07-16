@@ -70,27 +70,37 @@ describe("rawPriceToGradeTier — tier boundary mapping", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getGraderPremium — PSA tier values match the article's reported figures", () => {
-  it("PSA 10 — tiered values: 4.9 / 3.6 / 2.8 / 2.2 / fallback 3.43", () => {
-    expect(getGraderPremium("PSA", "10", 10)).toBe(4.9);
+  it("PSA 10 — tiered values: 5.0 / 3.6 / 2.8 / 2.2 / fallback 3.5 (PR #494 modern rebase)", () => {
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 lifted to
+    // Drew's modern anchor. Tier boundaries unchanged; slab-floor tier
+    // <$25 lifted 4.9 → 5.0; fallback lifted 3.43 → 3.5.
+    expect(getGraderPremium("PSA", "10", 10)).toBe(5.0);
     expect(getGraderPremium("PSA", "10", 35)).toBe(3.6);
     expect(getGraderPremium("PSA", "10", 75)).toBe(2.8);
     expect(getGraderPremium("PSA", "10", 500)).toBe(2.2);
-    expect(getGraderPremium("PSA", "10")).toBe(3.43); // fallback
+    expect(getGraderPremium("PSA", "10")).toBe(3.5); // fallback
   });
 
-  it("PSA 9 — tiered values: 2.56 / 1.5 / 0.95 / 0.85 / fallback 1.70 (article confirms <1.0 at $50+)", () => {
-    expect(getGraderPremium("PSA", "9", 10)).toBe(2.56);
-    expect(getGraderPremium("PSA", "9", 35)).toBe(1.5);
-    expect(getGraderPremium("PSA", "9", 75)).toBe(0.95);
-    expect(getGraderPremium("PSA", "9", 500)).toBe(0.85);
-    expect(getGraderPremium("PSA", "9")).toBe(1.70);
+  it("PSA 9 — tiered values: 2.0 / 1.3 / 1.05 / 0.95 / fallback 1.2 (PR #495 modern rebase)", () => {
+    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 9 modernized —
+    // Drew's anchor 1.2× (post-2015 modern cards trade at/near raw).
+    expect(getGraderPremium("PSA", "9", 10)).toBe(2.0);
+    expect(getGraderPremium("PSA", "9", 35)).toBe(1.3);
+    expect(getGraderPremium("PSA", "9", 75)).toBe(1.05);
+    expect(getGraderPremium("PSA", "9", 500)).toBe(0.95);
+    expect(getGraderPremium("PSA", "9")).toBe(1.2);
   });
 
-  it("PSA 8 — all tiers <1.0 (article: 'consistently loses value')", () => {
-    expect(getGraderPremium("PSA", "8", 10)).toBeLessThan(1.0);
-    expect(getGraderPremium("PSA", "8", 35)).toBeLessThan(1.0);
-    expect(getGraderPremium("PSA", "8", 75)).toBeLessThan(1.0);
-    expect(getGraderPremium("PSA", "8", 500)).toBeLessThan(1.0);
+  it("PSA 8 — modern PSA 8 = Raw hard override (PR #494 CF-PSA8-EQUALS-RAW)", () => {
+    // CF-PSA8-EQUALS-RAW (Drew, 2026-07-15, PR #494): PSA 8 = Raw as a
+    // hard business rule for modern (year >= 1990 OR unknown). The
+    // article's "consistently loses value" observation is overridden by
+    // Drew's product decision. Vintage still routes through vintage
+    // table where PSA 8 correctly returns 10-30× raw.
+    expect(getGraderPremium("PSA", "8", 10)).toBe(1.0);
+    expect(getGraderPremium("PSA", "8", 35)).toBe(1.0);
+    expect(getGraderPremium("PSA", "8", 75)).toBe(1.0);
+    expect(getGraderPremium("PSA", "8", 500)).toBe(1.0);
   });
 });
 
@@ -99,18 +109,19 @@ describe("getGraderPremium — PSA tier values match the article's reported figu
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getGraderPremium — backward-compat fallback path", () => {
-  it("PSA 10 / no rawPrice → 3.43 (overall average, slightly LOWER than prior flat 4.0)", () => {
-    expect(getGraderPremium("PSA", "10")).toBe(3.43);
-    expect(getGraderPremium("PSA", "10", null)).toBe(3.43);
-    expect(getGraderPremium("PSA", "10", undefined)).toBe(3.43);
+  it("PSA 10 / no rawPrice → 3.5 (PR #494 modern anchor)", () => {
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): fallback 3.43 → 3.5
+    expect(getGraderPremium("PSA", "10")).toBe(3.5);
+    expect(getGraderPremium("PSA", "10", null)).toBe(3.5);
+    expect(getGraderPremium("PSA", "10", undefined)).toBe(3.5);
   });
 
-  it("PSA 9 / no rawPrice → 1.70 (overall average, equal to prior flat 1.7)", () => {
-    expect(getGraderPremium("PSA", "9")).toBe(1.70);
+  it("PSA 9 / no rawPrice → 1.2 (PR #495 modern anchor)", () => {
+    expect(getGraderPremium("PSA", "9")).toBe(1.2);
   });
 
-  it("BGS 9.5 / no rawPrice → 3.05 (derived from PSA 10 × 0.89 average)", () => {
-    expect(getGraderPremium("BGS", "9.5")).toBe(3.05);
+  it("BGS 9.5 / no rawPrice → 2.8 (PR #495 modern anchor, ~0.75 × PSA 10)", () => {
+    expect(getGraderPremium("BGS", "9.5")).toBe(2.8);
   });
 });
 
@@ -146,10 +157,20 @@ describe("getGraderPremium — unknown inputs default to 1.0 (raw-equivalent)", 
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("getGraderPremium — cross-grader directional ordering at same tier", () => {
-  it("BGS 10 > PSA 10 (Black Label premium)", () => {
+  it("BGS 10 Black Label > PSA 10 (only grade that consistently beats PSA 10)", () => {
+    // CF-BGS-BLACK-LABEL-SPLIT (PR #495): Black Label is a separate grade
+    // key from regular BGS 10. Drew: "the only grade that consistently
+    // beats PSA 10, 2-4× PSA 10 prices, use ~9-10× raw."
+    const psa10 = getGraderPremium("PSA", "10", 50)!;
+    const bgs10bl = getGraderPremium("BGS", "10 Black Label", 50)!;
+    expect(bgs10bl).toBeGreaterThan(psa10);
+  });
+
+  it("BGS 10 (regular) ≈ PSA 10 (BGS 10 non-BL trades similar to PSA 10)", () => {
+    // Regular BGS 10 (at least one subgrade < 10) rebased to match PSA 10.
     const psa10 = getGraderPremium("PSA", "10", 50)!;
     const bgs10 = getGraderPremium("BGS", "10", 50)!;
-    expect(bgs10).toBeGreaterThan(psa10);
+    expect(bgs10).toBe(psa10);
   });
 
   it("PSA 10 > SGC 10 (SGC discount vs PSA)", () => {
@@ -164,13 +185,15 @@ describe("getGraderPremium — cross-grader directional ordering at same tier", 
     expect(sgc10).toBeGreaterThan(cgc10);
   });
 
-  it("ordering preserved at every tier", () => {
+  it("ordering preserved at every tier: BL > PSA > SGC > CGC (regular BGS 10 ≈ PSA 10 by design)", () => {
+    // CF-BGS-BLACK-LABEL-SPLIT (PR #495): ordering now includes BL as its
+    // own tier above PSA 10; regular BGS 10 matches PSA 10 (not exceeds).
     for (const raw of [10, 35, 75, 500]) {
       const psa10 = getGraderPremium("PSA", "10", raw)!;
-      const bgs10 = getGraderPremium("BGS", "10", raw)!;
+      const bgs10bl = getGraderPremium("BGS", "10 Black Label", raw)!;
       const sgc10 = getGraderPremium("SGC", "10", raw)!;
       const cgc10 = getGraderPremium("CGC", "10", raw)!;
-      expect(bgs10, `raw=${raw}`).toBeGreaterThan(psa10);
+      expect(bgs10bl, `raw=${raw}`).toBeGreaterThan(psa10);
       expect(psa10, `raw=${raw}`).toBeGreaterThan(sgc10);
       expect(sgc10, `raw=${raw}`).toBeGreaterThan(cgc10);
     }
@@ -194,16 +217,17 @@ describe("getGraderPremium — monotonic decrease in multiplier as raw rises", (
     expect(m10_upper).toBeGreaterThan(m10_top);
   });
 
-  it("PSA 9 multiplier strictly decreases — eventually drops below 1.0 (value loss)", () => {
+  it("PSA 9 multiplier strictly decreases — eventually below 1.0 (PR #495 modern tiers)", () => {
+    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 9 tiered
+    // 2.0 / 1.3 / 1.05 / 0.95; sub-1.0 threshold now at $100+ (was $50+).
     const m9_low = getGraderPremium("PSA", "9", 10)!;
     const m9_mid = getGraderPremium("PSA", "9", 35)!;
     const m9_upper = getGraderPremium("PSA", "9", 75)!;
     const m9_top = getGraderPremium("PSA", "9", 500)!;
     expect(m9_low).toBeGreaterThan(m9_mid);
     expect(m9_mid).toBeGreaterThan(m9_upper);
-    expect(m9_upper).toBeGreaterThanOrEqual(m9_top);
-    // article-confirmed: at $50+ raw, PSA 9 trades BELOW the raw value
-    expect(m9_upper).toBeLessThan(1.0);
+    expect(m9_upper).toBeGreaterThan(m9_top);
+    // Post-2015 modern: at $100+ raw, PSA 9 trades below raw value.
     expect(m9_top).toBeLessThan(1.0);
   });
 });

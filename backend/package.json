@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "tsc && node scripts/write-build-info.cjs",
+    "build": "tsc && node scripts/copy-static-data-to-dist.cjs && node scripts/write-build-info.cjs",
     "zip": "node ../zip.js",
     "ocr:report": "node scripts/ocr-quality-report.js",
     "ocr:readiness": "node scripts/ocr-release-readiness.js",
@@ -28,6 +28,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "express-rate-limit": "^7.5.1",
+    "fast-xml-parser": "^5.10.0",
     "ioredis": "^5.10.1",
     "openai": "^6.45.0",
     "sharp": "^0.34.5",

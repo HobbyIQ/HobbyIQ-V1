@@ -87,6 +87,7 @@ export interface LedgerEntryForErp {
 
   // CF-ERP-EXPANSION-#6 audit + reconciliation provenance
   reconciledVia?: ReconciledVia;
+  reconciledAt?: string;
   feeAdjustments?: LedgerFeeAdjustment[];
   refetchRequestedAt?: string | null;
 
@@ -157,6 +158,21 @@ export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
 }
 
 /**
+ * CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): fees axis is satisfied for
+ * reconciliation purposes when EITHER the granular breakdown is complete
+ * (audit-grade) OR the eBay Finances API has supplied the authoritative
+ * netPayout + shipping. netPayout IS the P&L number — the granular
+ * breakdown matters for tax audits but not for closing the reconcile.
+ *
+ * Partial-Finances entries (Drew's 4 stuck cases pre-#389) now close
+ * automatically instead of stalling on granular fees that may never come.
+ */
+export function feesAxisSatisfied(e: LedgerEntryForErp): boolean {
+  if (allGranularFeesKnown(e)) return true;
+  return e.netPayout != null && e.actualShippingCost != null;
+}
+
+/**
  * Two-axis finalize. Returns the entry mutated to needsReconciliation=false
  * + reconciledVia derived from feeSource IFF both axes are satisfied.
  *
@@ -168,10 +184,11 @@ export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
  */
 export function tryFinalizeReconciliation(
   entry: LedgerEntryForErp,
+  nowIso: string = new Date().toISOString(),
 ): LedgerEntryForErp {
   if (entry.source !== "ebay") return entry;
   if (entry.needsReconciliation !== true) return entry;
-  if (!allGranularFeesKnown(entry)) return entry;
+  if (!feesAxisSatisfied(entry)) return entry;
   if (!entry.userCostsProvidedAt) return entry;
   // Both axes met. Derive reconciledVia from the fee provenance marker.
   // feeSource is set by applyFeeEnrichment / applyFeeOverride when they
@@ -183,24 +200,36 @@ export function tryFinalizeReconciliation(
     ...entry,
     needsReconciliation: false,
     reconciledVia: via,
+    reconciledAt: nowIso,
   };
 }
 
 /**
  * For unreconciled entries, surface which granular fee fields are NULL so
  * the iOS UX can show the user a precise to-do list per row.
+ *
+ * Loose `== null` catches both null AND undefined — legacy entries may have
+ * the field absent rather than explicitly null; iOS shouldn't need to know
+ * the difference. The reconciled-check gate short-circuits above so the
+ * empty-array return is a stable contract on finalized rows.
+ *
+ * CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): also returns [] when
+ * feesAxisSatisfied succeeds via the netPayout+shipping shortcut — those
+ * entries are ready to close (waiting only on axis 2), so iOS should render
+ * a "ready to save" affordance instead of a "waiting on fees" list.
  */
 export function missingFeeFields(entry: LedgerEntryForErp): string[] {
   if (isReconciled(entry)) return [];
   if (entry.source !== "ebay") return [];
+  if (feesAxisSatisfied(entry)) return [];
   const missing: string[] = [];
-  if (entry.finalValueFee === null) missing.push("finalValueFee");
-  if (entry.paymentProcessingFee === null) missing.push("paymentProcessingFee");
-  if (entry.promotedListingFee === null) missing.push("promotedListingFee");
-  if (entry.adFee === null) missing.push("adFee");
-  if (entry.otherFees === null) missing.push("otherFees");
-  if (entry.netPayout === null) missing.push("netPayout");
-  if (entry.actualShippingCost === null) missing.push("actualShippingCost");
+  if (entry.finalValueFee == null) missing.push("finalValueFee");
+  if (entry.paymentProcessingFee == null) missing.push("paymentProcessingFee");
+  if (entry.promotedListingFee == null) missing.push("promotedListingFee");
+  if (entry.adFee == null) missing.push("adFee");
+  if (entry.otherFees == null) missing.push("otherFees");
+  if (entry.netPayout == null) missing.push("netPayout");
+  if (entry.actualShippingCost == null) missing.push("actualShippingCost");
   return missing;
 }
 
@@ -389,6 +418,128 @@ function accumulate(acc: PnlTotals, e: LedgerEntryForErp): void {
   acc.costBasisSold += e.costBasisSold ?? 0;
   acc.realizedProfitLoss += e.realizedProfitLoss ?? 0;
   acc.entryCount += 1;
+}
+
+// ─── CF-PNL-COGS-INTEGRATION (2026-07-12) ──────────────────────────────────
+//
+// Purchase + inventory metrics that complement the sale-side PnlTotals.
+// Window-scoped fields (purchase*) filter on purchaseDate; snapshot fields
+// (inventory*) reflect the current portfolio at request time and are NOT
+// window-scoped — asking "what was I holding on 2026-05-15" would require
+// point-in-time history we don't track (portfolio_value_history covers
+// total dollars, not per-holding).
+
+export interface PurchaseSpendTotals {
+  purchaseSpend: number;         // sum of totalCost in window
+  purchaseCount: number;
+  purchaseSubtotal: number;      // sum of subtotals (items only, ex tax/ship/fees)
+  purchaseTax: number;
+  purchaseShipping: number;
+  purchaseOtherFees: number;
+}
+
+export interface InventoryOnHand {
+  inventoryOnHandCost: number;   // sum of totalCostBasis across currently-held holdings
+  inventoryOnHandCount: number;
+}
+
+export interface PnlCogs
+  extends PurchaseSpendTotals,
+    InventoryOnHand {
+  cashFlow: number;              // grossProceeds - purchaseSpend (window-scoped)
+  grossMarginPct: number | null; // realizedProfitLoss / netProceeds; null when netProceeds<=0
+}
+
+interface PurchaseEntryLite {
+  purchaseDate: string;
+  totalCost?: number;
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  otherFees?: number;
+}
+
+interface HoldingLite {
+  purchasePrice?: number;
+  totalCostBasis?: number;
+  quantity?: number;
+}
+
+function purchaseInWindow(p: PurchaseEntryLite, fromIso: string | null, toIso: string | null): boolean {
+  const datePart = p.purchaseDate.slice(0, 10);
+  if (fromIso && datePart < fromIso) return false;
+  if (toIso && datePart > toIso) return false;
+  return true;
+}
+
+function costBasisForHolding(h: HoldingLite): number {
+  if (typeof h.totalCostBasis === "number" && Number.isFinite(h.totalCostBasis)) {
+    return h.totalCostBasis;
+  }
+  const price = typeof h.purchasePrice === "number" && Number.isFinite(h.purchasePrice) ? h.purchasePrice : 0;
+  const qty = typeof h.quantity === "number" && h.quantity > 0 ? h.quantity : 1;
+  return price * qty;
+}
+
+/**
+ * Combine purchase-side and inventory-snapshot metrics with the sale-side
+ * PnlTotals into a single CogsView. Windowing rules:
+ *   - Purchases:  purchaseDate in [from, to]
+ *   - Inventory:  ALWAYS current snapshot (holdings still on hand at req time)
+ *   - Cash flow / margin: derived from the same window as pnlTotals
+ */
+export function buildCogsView(
+  pnlTotals: PnlTotals,
+  purchases: ReadonlyArray<PurchaseEntryLite>,
+  holdingsById: Record<string, HoldingLite | undefined>,
+  options: { from?: string; to?: string },
+): PnlCogs {
+  const fromIso = parseDateInput(options.from);
+  const toIso = parseDateInput(options.to);
+
+  let purchaseSpend = 0;
+  let purchaseCount = 0;
+  let purchaseSubtotal = 0;
+  let purchaseTax = 0;
+  let purchaseShipping = 0;
+  let purchaseOtherFees = 0;
+  for (const p of purchases) {
+    if (!purchaseInWindow(p, fromIso, toIso)) continue;
+    purchaseSpend += p.totalCost ?? 0;
+    purchaseSubtotal += p.subtotal ?? 0;
+    purchaseTax += p.tax ?? 0;
+    purchaseShipping += p.shipping ?? 0;
+    purchaseOtherFees += p.otherFees ?? 0;
+    purchaseCount += 1;
+  }
+
+  let inventoryOnHandCost = 0;
+  let inventoryOnHandCount = 0;
+  for (const h of Object.values(holdingsById)) {
+    if (!h) continue;
+    inventoryOnHandCost += costBasisForHolding(h);
+    inventoryOnHandCount += 1;
+  }
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const cashFlow = r2(pnlTotals.grossProceeds - purchaseSpend);
+  const grossMarginPct =
+    pnlTotals.netProceeds > 0
+      ? r2((pnlTotals.realizedProfitLoss / pnlTotals.netProceeds) * 100)
+      : null;
+
+  return {
+    purchaseSpend: r2(purchaseSpend),
+    purchaseCount,
+    purchaseSubtotal: r2(purchaseSubtotal),
+    purchaseTax: r2(purchaseTax),
+    purchaseShipping: r2(purchaseShipping),
+    purchaseOtherFees: r2(purchaseOtherFees),
+    inventoryOnHandCost: r2(inventoryOnHandCost),
+    inventoryOnHandCount,
+    cashFlow,
+    grossMarginPct,
+  };
 }
 
 function roundTotals(t: PnlTotals): PnlTotals {

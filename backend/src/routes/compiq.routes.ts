@@ -7,6 +7,7 @@ import {
   deriveSalesMomentum,
   logSalesMomentumObserved,
   deriveGradeLadderAnchor,
+  composeGradeKey,
   type GradeLadderGrade,
 } from "../services/compiq/compiqEstimate.service.js";
 import {
@@ -79,6 +80,14 @@ import { getCardMetaById } from "../services/compiq/cardsight.router.js";
 // canonical path. Behavior here is unchanged — see helper header.
 import type { GradedProjectionResult } from "../services/compiq/gradedPriceProjection.js";
 import { compileGradedEstimatesForCard } from "../services/compiq/compileGradedEstimatesForCard.js";
+import { projectNextSaleFromComps } from "../services/compiq/nextSaleProjection.service.js";
+// CF-CONSTS-CONSOLIDATION (audit PR #487, 2026-07-15): route every raw
+// FMV multiplier through the canonical constants introduced in PR #481.
+// Whole-app audit flagged 15+ raw literals for the same semantic values.
+import {
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PREMIUM_MULTIPLIER,
+} from "../modules/compiq/services/pricing/utils/pricing.constants.js";
 
 // CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
 // `/api/compiq/card-image/:id` proxy route from the request context.
@@ -435,42 +444,57 @@ async function applyAutoProjectionFallbacks(
         // history. Require ≥2 sales to guard against a single outlier
         // defining the price; single-sale is treated as too-thin and
         // falls through to Layer 4 / Layer 2.
-        const sorted = targetHistory
-          .map((p) => p.price)
-          .filter((p) => Number.isFinite(p) && p > 0)
-          .sort((a, b) => a - b);
-        if (sorted.length >= 2) {
-          const median = sorted[Math.floor(sorted.length / 2)];
-          const projected = median;
-          const low = projected * 0.6;
-          const high = projected * 1.6;
-          console.log(
-            JSON.stringify({
-              event: "price_extended_window_direct_anchor",
-              source: "compiq.routes",
-              originalQuery: query,
-              targetCardId: ciCardId,
-              targetNumber: ciNumber,
-              targetPlayer: ciPlayer,
-              targetMedian: median,
-              targetSampleSize: sorted.length,
-              projected,
-            }),
+        //
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median → projected
+        // assignment. Project the next sale from the trend across the 365d
+        // series. Regression fits when ≥2 distinct dates land in the pool;
+        // the trend-adjusted-last-sale branch fires on flat / single-day
+        // pools. Never the arithmetic middle.
+        const validComps = targetHistory
+          .filter((p) => Number.isFinite(p.price) && p.price > 0);
+        if (validComps.length >= 2) {
+          const nextSale = projectNextSaleFromComps(
+            validComps.map((p) => ({
+              price: p.price,
+              soldDate: p.closing_date || null,
+            })),
           );
-          est.predictedPrice = projected;
-          est.predictedPriceRange = { low, high };
-          est.predictedPriceAttribution = {
-            mechanism: "target_extended_window_direct",
-            anchorCardId: ciCardId,
-            anchorPrice: median,
-            anchorSampleSize: sorted.length,
-            anchorNumber: ciNumber,
-            windowDays: 365,
-            note:
-              "Estimated from the target card's own thin (365d) sales history rather than a base-card projection",
-          };
-          est.source = "projected";
-          return;
+          if (nextSale !== null) {
+            const projected = nextSale.nextSaleValue;
+            const low = nextSale.bounds.low;
+            const high = nextSale.bounds.high;
+            console.log(
+              JSON.stringify({
+                event: "price_extended_window_direct_anchor",
+                source: "compiq.routes",
+                originalQuery: query,
+                targetCardId: ciCardId,
+                targetNumber: ciNumber,
+                targetPlayer: ciPlayer,
+                targetAnchor: projected,
+                targetSampleSize: validComps.length,
+                targetProjectionMethod: nextSale.method,
+                targetSlopePerMonthPct: nextSale.slopePerMonthPct,
+                projected,
+              }),
+            );
+            est.predictedPrice = projected;
+            est.predictedPriceRange = { low, high };
+            est.predictedPriceAttribution = {
+              mechanism: "target_extended_window_direct",
+              projectionMethod: nextSale.method,
+              slopePerMonthPct: nextSale.slopePerMonthPct,
+              anchorCardId: ciCardId,
+              anchorPrice: projected,
+              anchorSampleSize: validComps.length,
+              anchorNumber: ciNumber,
+              windowDays: 365,
+              note:
+                "Estimated from the target card's own 365d sales trend rather than a base-card projection",
+            };
+            est.source = "projected";
+            return;
+          }
         }
       }
     } catch {
@@ -671,6 +695,28 @@ const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
   // structurally APPROXIMATE — no direct sales on the target SKU. iOS
   // should render it with the same "estimated" disclosure as sibling-pool.
   "product-family-projection",
+  // CF-PARALLEL-FLOOR-PROJECTION (2026-07-09, Drew — Owen Carey Black
+  // BCP-69): pure-math projection for rare-parallel non-auto SKUs with
+  // no direct comps. Same "approximate" disclosure semantics as
+  // sibling-pool + family projection.
+  "parallel-floor-projection",
+  // CF-NO-NULL-PRICING (2026-07-11): scarcity-prior-floor +
+  // reference-catalog-baseline + setdoc-baseline are the new lower-
+  // tier fallbacks. All are structural floors (no direct comps on the
+  // SKU), so mark them approximate so iOS renders the "estimated"
+  // disclosure. Each tier ALSO returns its own confidence value
+  // (55/40/25/20 respectively) that iOS can use for finer-grained UI.
+  "scarcity-prior-floor",
+  "reference-catalog-baseline",
+  "setdoc-baseline",
+  // CF-PROJECTED-APPROXIMATE (audit Finding #5, 2026-07-15): the /price-by-id
+  // path upgrades `est.source` to "projected" when a phantom-check
+  // succeeds and estimates from the card's own thin 365d history (line
+  // 472) OR from a base-card projection with predictedPriceAttribution
+  // (lines 571, 638). All three are structurally approximate (not
+  // direct-recent-comp anchored), so iOS should render the "estimated"
+  // disclosure symmetric with sibling-pool / product-family-projection.
+  "projected",
 ]);
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
@@ -720,11 +766,42 @@ function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   const isRecoveryIsolatedPool =
     priceSourceInternal === "title-matched-parallel"
     || priceSourceInternal === "title-match-low-sample";
+  // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY-EXTEND (2026-07-11, Drew —
+  // Padparadscha Sapphire smoke test): projection sources ALREADY anchor
+  // on the parent product's real comps × math floor (not the target
+  // SKU's comps). PR #341 flipped `compsUsed` to the parent count for
+  // honesty, but this gate still nulled the price when the parent had
+  // 1-2 comps (which is normal for niche parent products). Bypass the
+  // <3 gate for projection + no-null-pricing fallback sources — they
+  // carry their own approximate flag (APPROXIMATE_SOURCES) so iOS still
+  // discloses the uncertainty; nulling would drop a defensible number.
+  //
+  // Extended for CF-NO-NULL-PRICING (2026-07-11) Tier 6/7: reference-
+  // catalog-baseline and setdoc-baseline set compsUsed=0 by design —
+  // they're pure structural floors. Same bypass rationale.
+  const source = typeof est.source === "string" ? est.source : null;
+  // CF-VARIANT-MISMATCH-MEDIAN-BYPASS (audit Finding #1, 2026-07-15):
+  // variant-mismatch now emits a median of fetched.comps when any exist
+  // (PR #477). compsUsed stays at 0 by design — the comps aren't strict-
+  // variant matches — but fairMarketValue > 0 IS a defensible number.
+  // Without this bypass the compsUsed<3 gate below nulled the median,
+  // and the route's downstream fallback painted a $19.99 synth over it
+  // (Hartman Aqua: median $176 → $19.99 pre-fix). The null-fmv branch
+  // is caught above (line ~720), so this only lets the priced variant-
+  // mismatch case through — the empty-comps case still returns true.
+  const isProjectionSource =
+    source === "product-family-projection"
+    || source === "parallel-floor-projection"
+    || source === "scarcity-prior-floor"
+    || source === "reference-catalog-baseline"
+    || source === "setdoc-baseline"
+    || source === "variant-mismatch";
   const compsUsed = est.compsUsed;
   if (
     typeof compsUsed === "number"
     && compsUsed < 3
     && !isRecoveryIsolatedPool
+    && !isProjectionSource
   ) {
     return true;
   }
@@ -909,6 +986,61 @@ function recordCHReferenceTelemetry(opts: {
       );
     }
   })();
+}
+
+/**
+ * CF-PRICING-TIER-TELEMETRY (2026-07-11, Drew).
+ *
+ * Emits ONE unified `pricing_tier_hit` App Insights event per priced
+ * response, keyed by `est.source`. Purpose: measure the real distribution
+ * of tier hits in prod BEFORE iOS ships per-tier disclosure.
+ *
+ * Question this answers (KQL):
+ *   traces
+ *   | where message contains "pricing_tier_hit"
+ *   | extend d = parse_json(substring(message, indexof(message, "{")))
+ *   | summarize count() by tostring(d.tier)
+ *
+ * Before this event, we had no direct measurement of how often Tier 4/5/
+ * 6/7 fire in prod. Each existing per-tier event (product_family_
+ * projection_applied etc.) has DIFFERENT fields so they can't be
+ * grouped by a single query. One unified event solves that.
+ *
+ * Fire-and-forget. Never blocks the response. Guarded — a bad payload
+ * console.log doesn't take the request down.
+ */
+function recordPricingTierHit(opts: {
+  route: "search" | "price" | "price-by-id";
+  tier: string | null;
+  mechanism: string | null;
+  fmv: number | null;
+  compsUsed: number | null;
+  player: string | null;
+  product: string | null;
+  year: number | null;
+  cardId: string | null;
+  query: string | null;
+}): void {
+  try {
+    console.log(
+      JSON.stringify({
+        event: "pricing_tier_hit",
+        source: `compiq.${opts.route}`,
+        tier: opts.tier ?? "(unset)",
+        mechanism: opts.mechanism ?? null,
+        fmv: opts.fmv,
+        fmvNull: opts.fmv === null,
+        compsUsed: opts.compsUsed,
+        player: opts.player,
+        product: opts.product,
+        year: opts.year,
+        cardId: opts.cardId,
+        query: opts.query,
+      }),
+    );
+  } catch {
+    // Never throw from telemetry.
+  }
 }
 
 /**
@@ -1325,6 +1457,46 @@ router.post("/what-if", requireSession, requireRateLimited("priceChecksPerDay"),
 //
 // Query params: playerName (req), product (req), cardYear, parallel,
 // gradeCompany, gradeValue.
+// CF-PRICE-TIME-SERIES (Drew, 2026-07-15): time-series aggregation for
+// iOS chart + seasonality signals. Reads sold_comps by cardId, buckets
+// by week/month/quarter, returns median + count + source breakdown per
+// bucket. Feeds off historical backfill data (PR #472) + live emissions.
+router.get("/cards/:cardId/price-history", requireSession, async (req, res, next) => {
+  try {
+    const cardId = String(req.params.cardId ?? "").trim();
+    if (!cardId) return res.status(400).json({ error: "cardId path param required" });
+    const windowRaw = String(req.query.window ?? "1y");
+    const bucketRaw = String(req.query.bucket ?? "monthly");
+    const validWindows = ["3m", "1y", "3y", "all"] as const;
+    const validBuckets = ["weekly", "monthly", "quarterly"] as const;
+    if (!(validWindows as readonly string[]).includes(windowRaw)) {
+      return res.status(400).json({ error: `window must be one of ${validWindows.join("|")}` });
+    }
+    if (!(validBuckets as readonly string[]).includes(bucketRaw)) {
+      return res.status(400).json({ error: `bucket must be one of ${validBuckets.join("|")}` });
+    }
+    const minConfRaw = req.query.minConfidence;
+    let minConfidence: number | undefined;
+    if (minConfRaw != null && minConfRaw !== "") {
+      const n = Number(minConfRaw);
+      if (!Number.isFinite(n) || n < 0 || n > 1) {
+        return res.status(400).json({ error: "minConfidence must be 0-1" });
+      }
+      minConfidence = n;
+    }
+    const { buildPriceHistory } = await import(
+      "../services/portfolioiq/priceTimeSeries.service.js"
+    );
+    const result = await buildPriceHistory({
+      cardId,
+      window: windowRaw as "3m" | "1y" | "3y" | "all",
+      bucket: bucketRaw as "weekly" | "monthly" | "quarterly",
+      minConfidence,
+    });
+    return res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
 router.get("/comps-by-player", async (req, res, next) => {
   try {
     const playerName = typeof req.query.playerName === "string" ? req.query.playerName.trim() : "";
@@ -1499,10 +1671,25 @@ router.post("/cardsearch", async (req, res, next) => {
         );
         continue;
       }
-      // Legacy Cardsight uuid path (returns 404 today; stays for shape
-      // compatibility while iOS migrates off any lingering references).
+      // CF-CARDSIGHT-UUID-IMAGE (Drew, 2026-07-13, PR #414): the /cardsearch
+      // handler already patches Cardsight-native candidates to route their
+      // images through our proxy. Two candidate-id shapes need coverage:
+      //   1. Base UUID: `cardsight:{parentUuid}`
+      //   2. Exploded compound: `cardsight:{parentUuid}::{parallelUuid}`
+      // Per Cardsight's API design, parallels don't have their own images
+      // (parallel IDs return 404 on /images/cards/); every variant renders
+      // the parent card's image. So both shapes proxy the PARENT's cardId.
       const cid: string | undefined =
         typeof c?.candidateId === "string" ? c.candidateId : undefined;
+      // Compound shape first — the `::` separator is unambiguous.
+      const compoundM = cid?.match(
+        /^cardsight:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})::[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+      if (compoundM) {
+        c.imageUrl = absoluteApiUrl(req, `/api/compiq/card-image/${compoundM[1]}`);
+        continue;
+      }
+      // Legacy Cardsight uuid + bubble-io path (proxy for both).
       const m = cid?.match(/^cardsight:([0-9a-f-]+)$/i);
       const csId = m?.[1];
       if (csId && CARDSIGHT_CARD_ID_RE.test(csId)) {
@@ -1825,7 +2012,13 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing "query" field' });
     }
-    const cacheKey = normalizeCacheKey("compiq:search", query);
+    // CF-SEARCH-CACHE-V2 (Drew, 2026-07-15): bump prefix from
+    // "compiq:search" → "compiq:search:v2" to invalidate every stale
+    // entry from before the Cardsight fallback landed (PRs #452 / #454 /
+    // #455). Without this, users hitting the exact same query text as a
+    // pre-fallback probe would see the cached sibling-pool synthesis for
+    // up to 6h even though the engine now returns real CS-sourced comps.
+    const cacheKey = normalizeCacheKey("compiq:search:v2", query);
     const result = await cacheWrap(cacheKey, async () => {
       // Parse free-text â†’ structured fields so downstream filters fire.
       const parsed = parseCardQuery(query);
@@ -1930,8 +2123,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -1971,8 +2164,16 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       // bands derived from the synthetic FMV. Applies both to thin-market
       // (no-recent-comps) and variant-mismatch sources.
       const xpa = (est as any).crossParallelAnchor as any;
-      const isVariantMismatch = source === "variant-mismatch";
-      const noUsableLiveFmv = isThin || isVariantMismatch || !(fmv > 0);
+      // CF-VARIANT-MISMATCH-MEDIAN-KEEP (audit Finding #1, 2026-07-15):
+      // dropped the `isVariantMismatch` gate — when the engine emits a
+      // populated fairMarketValue for variant-mismatch (PR #477's
+      // fetched.comps median), the route should surface it, not null.
+      // isThin (cannotPriceFromEst) now permits variant-mismatch with
+      // fmv>0 through via the projection-sources bypass, so the !(fmv>0)
+      // check below covers the remaining null-fmv variant-mismatch case
+      // (empty fetched.comps), which is still routed to the xpa
+      // synthetic fallback branch below.
+      const noUsableLiveFmv = isThin || !(fmv > 0);
       const hasSyntheticFallback =
         noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
       const syntheticFmv: number = hasSyntheticFallback
@@ -1980,8 +2181,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
             ? ((est as any).effectiveFmv as number)
             : (xpa.fmv as number))
         : 0;
-      const syntheticQuick = syntheticFmv * 0.88;
-      const syntheticPremium = syntheticFmv * 1.15;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so
@@ -2081,6 +2282,10 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
+        // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of comp
+        // origins for the trust-badge UI. iOS renders as "N collector-
+        // verified + M vendor comps." Null on cache-miss / thin paths.
+        provenanceSummary: (est as any).provenanceSummary ?? null,
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,
@@ -2130,7 +2335,27 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         // contract is stable.
         gradedEstimates,
       };
-    }, CACHE_TTL_SECONDS);
+    }, {
+      freshTtlSeconds: CACHE_TTL_SECONDS,
+      // CF-SEARCH-CACHE-SKIP-SYNTHETIC (Drew, 2026-07-15): don't cache
+      // low-confidence engine outputs. The engine returns synthetic /
+      // punt answers when it can't price honestly — those answers should
+      // NOT persist because the next call might succeed (CS fallback
+      // succeeded meanwhile, CH catalog gap filled, user attested a
+      // cardId to sold_comps, etc.). Skip cache when:
+      //   - source = "sibling-pool" (synthesized from base pool)
+      //   - source = "variant-mismatch" (engine punted on variant)
+      //   - marketValue AND fairMarketValueLive both null (no meaningful FMV)
+      // The response still returns to the caller unchanged; only the
+      // cache write is skipped so the next call re-computes.
+      skipCacheWhen: (r: any) => {
+        if (!r || typeof r !== "object") return true;
+        const src = (r.source ?? "").toString();
+        if (src === "sibling-pool" || src === "variant-mismatch") return true;
+        if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+        return false;
+      },
+    });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): fire on EVERY response
     // (cache hit + miss) by reading from `result` instead of nesting
     // inside the producer. The route is cacheWrapped at 6h TTL — a hit
@@ -2162,6 +2387,50 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
     });
+    recordPricingTierHit({
+      route: "search",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      query: query.trim(),
+    });
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): when CH returned no
+    // usable FMV (catalog gap), consult the multi-source resolver +
+    // overlay any non-CH vendor's price onto the response before iOS reads
+    // it. Cardsight rescue is the common case; sold-comps rescues when
+    // our own users' sales pool has the card.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const pq = (result as any).parsedQuery ?? {};
+      await overlayResolverRescue(result, {
+        playerName: pq.playerName ?? undefined,
+        cardYear: typeof pq.year === "number" ? pq.year : undefined,
+        setName: pq.set ?? undefined,
+        parallel: pq.parallel ?? undefined,
+        cardNumber: pq.cardNumber ?? undefined,
+        gradeCompany: pq.gradingCompany ?? undefined,
+        gradeValue: typeof pq.grade === "number" ? pq.grade : undefined,
+        isAuto: pq.isAuto ?? undefined,
+        cardId: (result as any).cardIdentity?.card_id ?? undefined,
+      });
+    }
     res.json(result);
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
@@ -2198,7 +2467,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing "query" field' });
     }
-    const cacheKey = normalizeCacheKey("compiq:price", query);
+    // CF-PRICE-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+    // bump prefix v1→v2 to invalidate every stale entry that still holds
+    // a synthesized ($19.99) or variant-mismatch-nulled response.
+    const cacheKey = normalizeCacheKey("compiq:price:v2", query);
     const result = await cacheWrap(cacheKey, async () => {
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
@@ -2465,8 +2737,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -2489,6 +2761,26 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         ? `No exact match for requested variant (missing: ${variantWarning.join(", ")}). Showing closest available comp. ${baseSummary}`
         : baseSummary;
       const finalConfidence = hasWarn ? Math.min(confidence, 0.45) : confidence;
+
+      // CF-PRICE-XPA-SYNTH-FALLBACK (audit Finding #6, 2026-07-15): mirror
+      // /search — when live FMV can't anchor but computeEstimate produced a
+      // cross-parallel synthetic anchor (sibling-parallel × multiplier),
+      // surface that as the headline instead of null. iOS renders with the
+      // `approximate` disclosure via `approximateFromEst`
+      // (crossParallelAnchor source is inside APPROXIMATE_SOURCES via
+      // sibling-pool). Missing from /price meant /search hit and /price
+      // miss on identical queries produced divergent pricing bands.
+      const xpa = (est as any).crossParallelAnchor as any;
+      const noUsableLiveFmv = isThin || !(fmv > 0);
+      const hasSyntheticFallback =
+        noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
+      const syntheticFmv: number = hasSyntheticFallback
+        ? (typeof (est as any).effectiveFmv === "number" && (est as any).effectiveFmv > 0
+            ? ((est as any).effectiveFmv as number)
+            : (xpa.fmv as number))
+        : 0;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so /price
@@ -2531,17 +2823,35 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         success: true,
         query: query.trim(),
         summary,
-        marketTier: isThin
-          ? { value: null, high: null }
-          : { value: fmv, high: premium },
-        buyZone: isThin ? [null, null] : [quick * 0.9, quick],
-        holdZone: isThin ? [null, null] : [quick, fmv],
-        sellZone: isThin ? [null, null] : [fmv, premium],
+        // CF-PRICE-XPA-SYNTH-FALLBACK (Finding #6): three-way band —
+        // (a) hasSyntheticFallback: synthetic sibling-parallel anchor,
+        // (b) noUsableLiveFmv: engine had nothing, band nulls out,
+        // (c) live path: normal fmv/quick/premium band.
+        marketTier: hasSyntheticFallback
+          ? { value: syntheticFmv, high: syntheticPremium }
+          : noUsableLiveFmv
+            ? { value: null, high: null }
+            : { value: fmv, high: premium },
+        buyZone: hasSyntheticFallback
+          ? [syntheticQuick * 0.9, syntheticQuick]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick * 0.9, quick],
+        holdZone: hasSyntheticFallback
+          ? [syntheticQuick, syntheticFmv]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick, fmv],
+        sellZone: hasSyntheticFallback
+          ? [syntheticFmv, syntheticPremium]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [fmv, premium],
         // Live FMV emitted at top level for engine-emission symmetry with
         // /search (Option X). Mirrors marketTier.value's null-when-thin
         // semantic so both fields agree within a response.
-        fairMarketValueLive: isThin ? null : fmv,
-        marketValue: isThin ? null : fmv,
+        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
+        marketValue: noUsableLiveFmv ? null : fmv,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields for /search-equivalent shape parity.
         predictedPrice: (est as any).predictedPrice ?? null,
@@ -2571,6 +2881,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
+        // CF-PROVENANCE-DISPLAY (Drew, 2026-07-15): breakdown of comp
+        // origins for the trust-badge UI. iOS renders as "N collector-
+        // verified + M vendor comps." Null on cache-miss / thin paths.
+        provenanceSummary: (est as any).provenanceSummary ?? null,
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,
@@ -2620,7 +2934,21 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         // contract is stable.
         gradedEstimates,
       };
-    }, CACHE_TTL_SECONDS);
+    }, {
+      freshTtlSeconds: CACHE_TTL_SECONDS,
+      // CF-PRICE-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+      // mirror /search's skipCacheWhen — don't persist synthetic /
+      // variant-mismatch / null-fmv responses. Next call re-computes so
+      // downstream CS-fallback / CH-catalog-fill / user-cardId-attest
+      // successes are surfaced immediately instead of shadowed for TTL.
+      skipCacheWhen: (r: any) => {
+        if (!r || typeof r !== "object") return true;
+        const src = (r.source ?? "").toString();
+        if (src === "sibling-pool" || src === "variant-mismatch") return true;
+        if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+        return false;
+      },
+    });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
     recordCHReferenceTelemetry({
       source: "compiq.price",
@@ -2640,6 +2968,47 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
     });
+    recordPricingTierHit({
+      route: "price",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      query: query.trim(),
+    });
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
+    // as /search — when CH catalog-misses, try the resolver.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const pq = (result as any).parsedQuery ?? {};
+      await overlayResolverRescue(result, {
+        playerName: pq.playerName ?? undefined,
+        cardYear: typeof pq.year === "number" ? pq.year : undefined,
+        setName: pq.set ?? undefined,
+        parallel: pq.parallel ?? undefined,
+        cardNumber: pq.cardNumber ?? undefined,
+        gradeCompany: pq.gradingCompany ?? undefined,
+        gradeValue: typeof pq.grade === "number" ? pq.grade : undefined,
+        isAuto: pq.isAuto ?? undefined,
+        cardId: (result as any).cardIdentity?.card_id ?? undefined,
+      });
+    }
     res.json(result);
     // Telemetry â€” see /search for rationale.
     writeTelemetryEntries({
@@ -2832,17 +3201,24 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     // safely on null, so callers don't need extra branching.
     const parallelTierKey = extractParallelTierKey(identity);
 
-    // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
-    // FIRST so we can thread them into buildObservedGradeCurve as a
-    // preferred fallback for estimated grades. Adds one sequenced CH
-    // call (~200ms warm-cache) vs the parallel fanout — but it changes
-    // "PSA 10 est. = Raw × 8 = $4000" to "PSA 10 est. = <third-party
-    // reference> = $2500", which is materially closer to real market
-    // for the specific card.
-    const referenceRows = await getAllPricesByCard(id);
-    const referencePriceByGrade = new Map<string, number>(
-      referenceRows.map((r) => [r.grade, r.price]),
-    );
+    // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the wire
+    // used to receive CH's third-party reference-price model as an
+    // "estimated" fallback for thin-observed grades. Per Drew's
+    // "self-reliant engine" direction (their-data-as-fuel, not their-
+    // derived-signals-on-wire), reference prices are removed from the
+    // wire path entirely. Grade projection now falls through:
+    //   1. Our own pooled records (via PR #406's grade rescue)
+    //   2. Raw × class-aware grade multiplier (already in the service)
+    //   3. Sibling-card fallback (already opted in)
+    // Backwards-compat: the referencePrices[] array is still emitted on
+    // the wire as an empty array; iOS decoders that expect the key
+    // continue to work.
+    const referenceRows: Array<{
+      grade: string;
+      grader: string;
+      price: number;
+      display_order: number;
+    }> = [];
     // CF-SAME-PLAYER-SIBLINGS (2026-07-08, Drew): also fetch the same
     // player's other variants in the same set so iOS can render a
     // "similar cards" surface. Runs concurrently with grade curve —
@@ -2851,7 +3227,6 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     const [gradeCurve, samePlayerSiblings] = await Promise.all([
       buildObservedGradeCurve(id, {
         playerName: identityPlayer,
-        referencePriceByGrade,
         parallelTierKey,
         // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
         // in so thin-market cards get an estimate rather than a gray pill.
@@ -2900,21 +3275,14 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
           gradeCurveSampleCount: gradeCurve?.totalSampleCount ?? 0,
           referenceRowCount: referenceRows.length,
         });
-        // Bonus: the /card-panel call already loaded a full gradeCurve
-        // and full referencePrices for this card. Persist BOTH here so a
-        // single hit on the consolidated route builds three corpus rows
-        // in Cosmos instead of one.
-        persistReferencePrices({
-          source: "compiq.card-panel",
-          cardId: id,
-          player: (identity as any)?.player ?? null,
-          grades: referenceRows.map((r) => ({
-            grade: r.grade,
-            grader: r.grader,
-            referencePrice: r.price,
-            displayOrder: r.display_order,
-          })),
-        });
+        // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the
+        // reference-price corpus row is skipped here now that /card-panel
+        // no longer fetches CH reference prices. Other routes that still
+        // persist reference prices (/all-grade-prices, dedicated audit
+        // endpoints) are unchanged. If the corpus needs a per-card
+        // reference-price row for calibration, a separate offline job
+        // can hit CH once per day rather than piggybacking on user
+        // /card-panel hits.
         // CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): persist ratePerWeek
         // + signalSource + per-grade trajectory predictions so the corpus
         // has enough surface area to compute prediction error against
@@ -2949,7 +3317,12 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       }
     })();
 
-    res.json({
+    // CF-CARD-PANEL-GRADE-RESCUE (Drew, 2026-07-13, PR #406): when CH's
+    // grade curve is empty (Cardsight-only SKU, or a CH SKU with a data
+    // gap), pull the resolver's pooled raw + graded records and synthesize
+    // grade-rail entries from them. Preserves the iOS wire shape — same
+    // `gradeCurve.entries[]` array iOS already decodes.
+    const cardPanelResponse: any = {
       success: true,
       cardId: id,
       identity: identity
@@ -2992,7 +3365,42 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       // Empty array when identity was thin or the CH search failed;
       // never null so iOS decoders can rely on the shape.
       samePlayerSiblings,
-    });
+    };
+
+    try {
+      const { overlayGradeRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      await overlayGradeRescue(cardPanelResponse, {
+        cardId: id,
+        playerName: identityPlayer ?? undefined,
+        cardYear:
+          typeof (identity as any)?.year === "number"
+            ? (identity as any).year
+            : Number.parseInt(String((identity as any)?.year ?? ""), 10) || undefined,
+        setName:
+          typeof (identity as any)?.set === "string"
+            ? (identity as any).set
+            : undefined,
+        cardNumber:
+          typeof (identity as any)?.number === "string"
+            ? (identity as any).number
+            : undefined,
+        parallel:
+          typeof (identity as any)?.variant === "string"
+            ? (identity as any).variant
+            : undefined,
+      });
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "card_panel_grade_rescue_failed",
+        source: "compiq.routes.card-panel",
+        cardId: id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
+    res.json(cardPanelResponse);
   } catch (err) {
     return next(err);
   }
@@ -3243,6 +3651,74 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
 // designed to slot in a direct GemRate/PSA/BGS integration later without
 // touching consumers.
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-PARSE-PREVIEW (2026-07-09, Drew): POST /parse-preview
+//
+// Returns the structured breakdown parseCardQuery produces for a query
+// string WITHOUT running the pricing engine. Powers two iOS surfaces:
+//
+//   1. Live parse chip row — as the user types, render "Player:
+//      Owen Carey · Set: Bowman · Parallel: Black · # BCP-69" so
+//      mis-parses surface in-band before the search fires.
+//
+//   2. Structured search form — the parser is the canonical mapping
+//      from free-text to structured fields; the form uses it as the
+//      backing model. When the user edits a field, iOS re-serializes
+//      to a canonical query string and hits /search.
+//
+// No pricing-engine load, no CH calls — this is pure local math on the
+// parser. Sessioned but not rate-limited (per-user throttle already
+// covers /log-selection style abuse; the parse endpoint is orders of
+// magnitude cheaper and safe to hammer during typeahead).
+// ─────────────────────────────────────────────────────────────────────────────
+router.post(
+  "/parse-preview",
+  requireSession,
+  async (req, res, _next) => {
+    try {
+      const q = typeof req.body?.query === "string" ? req.body.query : "";
+      if (!q.trim()) {
+        return res.json({
+          success: true,
+          query: "",
+          parsed: null,
+          confidence: 0,
+        });
+      }
+      const parsed = parseCardQuery(q);
+      return res.json({
+        success: true,
+        query: q,
+        parsed,
+        // Convenience shorthand iOS renders directly as a chip row.
+        // Presentation-ready field pairs — iOS filters out nulls so the
+        // chip row only shows populated fields.
+        chips: [
+          parsed.playerName ? { label: "Player", value: parsed.playerName } : null,
+          parsed.year ? { label: "Year", value: String(parsed.year) } : null,
+          parsed.brand ? { label: "Brand", value: parsed.brand } : null,
+          parsed.set && parsed.set !== parsed.brand
+            ? { label: "Set", value: parsed.set }
+            : null,
+          parsed.parallel ? { label: "Parallel", value: parsed.parallel } : null,
+          parsed.cardNumber ? { label: "#", value: parsed.cardNumber } : null,
+          parsed.isAuto ? { label: "Auto", value: "yes" } : null,
+          parsed.gradingCompany && parsed.grade
+            ? { label: "Grade", value: `${parsed.gradingCompany} ${parsed.grade}` }
+            : null,
+        ].filter((c) => c !== null),
+        confidence: parsed.confidence,
+      });
+    } catch (err) {
+      console.warn(
+        "[compiq.parse-preview] threw:",
+        (err as Error)?.message ?? err,
+      );
+      return res.json({ success: true, query: "", parsed: null, confidence: 0 });
+    }
+  },
+);
+
 // CF-SEARCH-SELECTION-LOG (2026-07-08, Drew): POST /log-selection
 // iOS calls this fire-and-forget after a user selects a card from
 // any search-generated list (suggest-corrections chip, search-results
@@ -3850,8 +4326,72 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         ? parallel
         : undefined;
 
+    // CF-CARDSIGHT-UUID-NATIVE (Drew, 2026-07-13, PR #412): if the cardId
+    // is a UUID that resolves against Cardsight's /v1 catalog, route the
+    // whole request to Cardsight-direct pricing. Downstream CH pipeline
+    // doesn't recognize Cardsight UUIDs (returns garbage sales from
+    // adjacent cards + fabricated FMV — verified 2026-07-13 on
+    // befe9bcc-... where CH echoed Josh Jung, Dan Marino, Ben Rice
+    // sales). This branch fires ahead of the CH path so those cardIds
+    // never reach the CH pipeline.
+    //
+    // CF-EXPLODE-CARDSIGHT-PARALLELS (Drew, 2026-07-13, PR #413): search
+    // now emits per-parallel candidates with a compound candidateId
+    // `cardsight:{parentId}::{parallelId}`. iOS strips the prefix and
+    // sends the rest as the cardId. Parse the `::` separator so the
+    // parent + parallel routing works transparently.
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let uuidRouteCardId = resolvedCardId;
+    let uuidRouteParallelId: string | null = resolvedParallelId ?? null;
+    const compoundMatch = resolvedCardId.match(
+      /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})::([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    );
+    if (compoundMatch) {
+      uuidRouteCardId = compoundMatch[1];
+      // Prefer the body's explicit parallelId when both are present (iOS
+      // may pin a parallel for a base-row tap); otherwise use the id
+      // encoded in the compound cardId.
+      uuidRouteParallelId = uuidRouteParallelId ?? compoundMatch[2];
+    }
+    if (uuidRe.test(uuidRouteCardId)) {
+      try {
+        const { priceByCardsightUuid } = await import(
+          "../services/compiq/cardsightUuidPriceRouter.js"
+        );
+        const csResponse = await priceByCardsightUuid({
+          cardId: uuidRouteCardId,
+          parallelId: uuidRouteParallelId,
+          gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+          gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+        });
+        if (csResponse) {
+          console.log(JSON.stringify({
+            event: "price_by_id_cardsight_uuid_route",
+            source: "compiq.routes.price-by-id",
+            cardId: uuidRouteCardId,
+            parallelId: uuidRouteParallelId,
+            compound: !!compoundMatch,
+            rawSalesCount: csResponse.compsAvailable,
+            fmv: csResponse.fairMarketValueLive,
+          }));
+          return res.json(csResponse);
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "price_by_id_cardsight_uuid_error",
+          source: "compiq.routes.price-by-id",
+          cardId: resolvedCardId,
+          error: (err as Error)?.message ?? String(err),
+        }));
+        // Fall through to CH path — better degraded than empty.
+      }
+    }
+
+    // CF-PRICE-BY-ID-CACHE-BUMP-V5 (audit Finding #3, 2026-07-15):
+    // prefix bump invalidates stale entries carrying variant-mismatch-
+    // nulled / synth-painted FMVs from before the audit-bundle fix.
     const cacheKey = normalizeCacheKey(
-      "compiq:price-by-id:v4",
+      "compiq:price-by-id:v5",
       // parallelId on the cache key so a Gold parallel and a base sit
       // at separate entries. Empty string when absent — matches the
       // "base only" semantics of the filter.
@@ -3865,8 +4405,21 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // result. The direct-call path produces a guaranteed-fresh response
     // and the validator decides whether to re-cache it.
     const producePriceByIdResponse = async () => {
+      // CF-PRICE-BY-ID-CARDID-AS-PLAYER (Drew, 2026-07-13): when iOS pins a
+      // candidate it sends `query: null` on purpose (see APIService.swift
+      // priceByCardId's CF-PRICE-BY-ID-ROUTE guard). The prior fallback to
+      // `resolvedCardId` here stuffed a UUID (or Cardsight bubble id) into
+      // `body.playerName`, which then flowed through queryContext into
+      // `cardIdentity.player` on the response — iOS' headerPrimaryTitle
+      // prefers cardIdentity.player over hit.player and rendered the raw
+      // cardId as the "player name" whenever CH had no metadata for the
+      // pinned card. Fix: pass undefined and let the engine + the CH
+      // card-details enrichment block below populate identity from the
+      // pinned cardId's canonical metadata.
+      const rawQuery = typeof query === "string" ? query.trim() : "";
+      const playerNameForEngine = rawQuery.length > 0 ? rawQuery : undefined;
       const body: CompIQEstimateRequest = {
-        playerName: typeof query === "string" ? query.trim() : resolvedCardId,
+        playerName: playerNameForEngine,
         cardId: resolvedCardId,
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
@@ -4024,8 +4577,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -4041,6 +4594,25 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // unchanged; the predicate is just stricter.
       const isThin = cannotPriceFromEst(est);
       const approximate = approximateFromEst(est);
+
+      // CF-PRICE-BY-ID-XPA-SYNTH-FALLBACK (audit Finding #6, 2026-07-15):
+      // mirror /search + /price. When live FMV can't anchor but the
+      // engine produced a cross-parallel synthetic anchor, surface that
+      // as the headline instead of null. Prior /price-by-id skipped this
+      // branch, so a holding priced via /price-by-id could render null
+      // bands while the same identity via /search returned synthetic
+      // bands.
+      const xpa = (est as any).crossParallelAnchor as any;
+      const noUsableLiveFmv = isThin || !(fmv > 0);
+      const hasSyntheticFallback =
+        noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
+      const syntheticFmv: number = hasSyntheticFallback
+        ? (typeof (est as any).effectiveFmv === "number" && (est as any).effectiveFmv > 0
+            ? ((est as any).effectiveFmv as number)
+            : (xpa.fmv as number))
+        : 0;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
       // the (player, release, year) tuple to the nightly compute
@@ -4126,10 +4698,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       try {
         pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
-          const gradeKey =
-            body.gradeCompany && body.gradeValue !== undefined
-              ? `${body.gradeCompany} ${body.gradeValue}`
-              : "Raw";
+          const gradeKey = composeGradeKey(
+            body.gradeCompany,
+            body.gradeValue,
+            (body as { isBlackLabel?: boolean }).isBlackLabel,
+          );
           // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): pass parallelId
           // so the fact-pack pool derives from the SAME post-filter set
           // (selectSalesByGrade → filterRecordsByParallel) as the value
@@ -4234,14 +4807,31 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         success: true,
         cardId: resolvedCardId,
         summary: est.verdict ?? "Estimate based on available market data.",
-        marketTier: isThin ? { value: null, high: null } : { value: fmv, high: premium },
-        buyZone: isThin ? [null, null] : [quick * 0.9, quick],
-        holdZone: isThin ? [null, null] : [quick, fmv],
-        sellZone: isThin ? [null, null] : [fmv, premium],
+        // CF-PRICE-BY-ID-XPA-SYNTH-FALLBACK (Finding #6): three-way band.
+        marketTier: hasSyntheticFallback
+          ? { value: syntheticFmv, high: syntheticPremium }
+          : noUsableLiveFmv
+            ? { value: null, high: null }
+            : { value: fmv, high: premium },
+        buyZone: hasSyntheticFallback
+          ? [syntheticQuick * 0.9, syntheticQuick]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick * 0.9, quick],
+        holdZone: hasSyntheticFallback
+          ? [syntheticQuick, syntheticFmv]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick, fmv],
+        sellZone: hasSyntheticFallback
+          ? [syntheticFmv, syntheticPremium]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [fmv, premium],
         // Live FMV emitted at top level for engine-emission symmetry
         // with /search and /price (Option X). null when thin market.
-        fairMarketValueLive: isThin ? null : fmv,
-        marketValue: isThin ? null : fmv,
+        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
+        marketValue: noUsableLiveFmv ? null : fmv,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields. /price-by-id is the pinned-card analog of /price; the
         // estimate ⇒ response contract matches.
@@ -4428,7 +5018,20 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     let result: Record<string, unknown> = await cacheWrap(
       cacheKey,
       producePriceByIdResponse,
-      CACHE_TTL_SECONDS,
+      {
+        freshTtlSeconds: CACHE_TTL_SECONDS,
+        // CF-PRICE-BY-ID-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+        // mirror /search + /price — don't persist synthetic /
+        // variant-mismatch / null-fmv responses. Prefix already bumped to
+        // v4; skipCacheWhen is the runtime guard for future writes.
+        skipCacheWhen: (r: any) => {
+          if (!r || typeof r !== "object") return true;
+          const src = (r.source ?? "").toString();
+          if (src === "sibling-pool" || src === "variant-mismatch") return true;
+          if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+          return false;
+        },
+      },
     ) as Record<string, unknown>;
 
     // Validator: pull card_id off cardIdentity. Treat absent identity as
@@ -4506,6 +5109,28 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
     });
+    recordPricingTierHit({
+      route: "price-by-id",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: resolvedCardId,
+      query: null,
+    });
 
     // CF-CH-NEAREST-GRADED-ANCHOR (2026-06-28): surface the best graded
     // anchor we know about on EVERY priced response, regardless of
@@ -4576,6 +5201,33 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       );
     }
 
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
+    // as /search + /price — CH sometimes recognizes the cardId but has
+    // no comps; Cardsight/sold-comps may rescue.
+    //
+    // CF-RECOMMENDATION-AFTER-RESCUE (audit Finding #4, 2026-07-15):
+    // overlayResolverRescue moved BEFORE the computeAction block so a
+    // successful rescue's newly-painted marketValue flows into the seller
+    // recommendation. Prior order (compute→overlay) meant a rescued
+    // response returned recommendation="Insufficient Data" alongside a
+    // populated marketValue — the seller-facing verdict contradicted its
+    // own price band.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const ci = (result as any).cardIdentity ?? {};
+      await overlayResolverRescue(result, {
+        playerName: ci.player ?? undefined,
+        cardYear: typeof ci.year === "number" ? ci.year : undefined,
+        setName: ci.set ?? undefined,
+        parallel: ci.parallel ?? undefined,
+        cardNumber: ci.number ?? undefined,
+        isAuto: ci.isAuto ?? undefined,
+        cardId: ci.card_id ?? undefined,
+      });
+    }
+
     // CF-PRICE-BY-ID-RECOMMENDATION (2026-07-06, Drew): parity with
     // /card-panel. The recommendation surface should render on BOTH
     // paths so search-then-price emits the same seller verdict as
@@ -4610,7 +5262,6 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         `[compiq.price-by-id] recommendation compute failed (non-fatal): ${(err as Error)?.message ?? err}`,
       );
     }
-
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
@@ -4752,6 +5403,16 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
             ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
             compsUsed: 0,
             compsAvailable: 0,
+            // CF-BULK-ENVELOPE-PARITY (PR #482): unsupported_sport row
+            // stays null across the estimate slot — the sport is out of
+            // scope, not thin. Emitting the keys matches the
+            // /price-by-id unsupported-sport branch's shape so iOS
+            // decoders can bind the same optional fields uniformly.
+            estimatedValue: null,
+            estimateRange: null,
+            estimateBasis: null,
+            lastSale: null,
+            estimateSource: null,
           };
           writeTelemetryEntries({
             query,
@@ -4770,7 +5431,7 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
         }
 
         const fmv = (est.fairMarketValue as number) ?? 0;
-        const premium = (est.premiumValue as number) ?? fmv * 1.15;
+        const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
         const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
         const data = {
           ...buildEngineMeta(),
@@ -4806,6 +5467,18 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
           // /price; corpus sampleSize maps from compsUsed.
           compsUsed: (est as any).compsUsed ?? 0,
           compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
+          // CF-BULK-ENVELOPE-PARITY (audit PR #482, 2026-07-15): fill the
+          // estimatedValue / estimateRange / estimateBasis / lastSale gap
+          // that the whole-app wire-shape audit flagged. /search, /price,
+          // and /price-by-id all emit these; /bulk previously omitted them,
+          // so iOS bulk consumers couldn't render the extrapolated slot on
+          // T3-rebucket / product-family-projection / no-recent-comps rows.
+          // Names mirror /search's shape exactly.
+          estimatedValue: (est as any).estimatedValue ?? null,
+          estimateRange: (est as any).estimateRange ?? null,
+          estimateBasis: (est as any).estimateBasis ?? null,
+          lastSale: (est as any).lastSale ?? null,
+          estimateSource: (est as any).estimateSource ?? null,
         };
         // Per-item telemetry â€” fire-and-forget. Each writer rolls its
         // sample-rate gate independently per call, so a 20-item bulk

@@ -1253,7 +1253,7 @@ struct CompIQEstimateResult: Codable, Hashable, Identifiable {
 
     /// Returns "—" when fairValue is zero (i.e. nil from backend)
     var formattedFairValue: String {
-        fairValue > 0 ? fairValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—"
+        fairValue > 0 ? fairValue.currencyStringNoCents : "—"
     }
 
     var id: String { "\(method)|\(summary)|\(fairValue)" }
@@ -1611,6 +1611,14 @@ extension InventoryCard {
         // CF-BACKEND-ID (2026-07-12): raw string id preserved for
         // write endpoints. Same wire key as `id`, but we ignore this
         // during encode since it's a client-side mirror.
+        // CF-COMP-HOLDING-WIRE-PARITY (audit PR #484, 2026-07-15):
+        // holding wire now carries the comp-family aliases + predictedPrice
+        // per PR #482 + PR #483. Decoder captures them so PricingPanelView
+        // (PR #485) can render the same tiles on holding-detail that
+        // CompIQPricedCardView renders on comp-detail.
+        case marketValue, fairMarketValueLive
+        case predictedPrice, predictedPriceLow, predictedPriceHigh
+        case predictedPriceMechanism, predictedPriceUpdatedAt
     }
 
     // snake_case alternatives the backend may return
@@ -1651,6 +1659,14 @@ extension InventoryCard {
         case estimateConfidence = "estimate_confidence"
         case nearestGradedAnchor = "nearest_graded_anchor"
         case cardId = "card_id"
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484): snake_case fallbacks.
+        case marketValue = "market_value"
+        case fairMarketValueLive = "fair_market_value_live"
+        case predictedPrice = "predicted_price"
+        case predictedPriceLow = "predicted_price_low"
+        case predictedPriceHigh = "predicted_price_high"
+        case predictedPriceMechanism = "predicted_price_mechanism"
+        case predictedPriceUpdatedAt = "predicted_price_updated_at"
     }
 
     // Backend autoPriceHolding() uses different field names for pricing/freshness
@@ -1913,6 +1929,25 @@ extension InventoryCard {
         // holding. The struct's `id: UUID` is deterministic-derived
         // and NOT what the backend recognizes.
         self.backendId = rawIdString
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484, 2026-07-15): decode the
+        // holding wire's parity fields. Both camelCase and snake_case
+        // paths tried; defensive try? so absent/malformed wires just
+        // land as nil. Legacy holdings decode with everything nil —
+        // downstream views must be nil-tolerant.
+        self.marketValue = (try? c.decode(Double.self, forKey: .marketValue))
+            ?? (try? s.decode(Double.self, forKey: .marketValue))
+        self.fairMarketValueLive = (try? c.decode(Double.self, forKey: .fairMarketValueLive))
+            ?? (try? s.decode(Double.self, forKey: .fairMarketValueLive))
+        self.predictedPrice = (try? c.decode(Double.self, forKey: .predictedPrice))
+            ?? (try? s.decode(Double.self, forKey: .predictedPrice))
+        self.predictedPriceLow = (try? c.decode(Double.self, forKey: .predictedPriceLow))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceLow))
+        self.predictedPriceHigh = (try? c.decode(Double.self, forKey: .predictedPriceHigh))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceHigh))
+        self.predictedPriceMechanism = (try? c.decode(String.self, forKey: .predictedPriceMechanism))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceMechanism))
+        self.predictedPriceUpdatedAt = (try? c.decode(String.self, forKey: .predictedPriceUpdatedAt))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceUpdatedAt))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -2045,6 +2080,16 @@ extension InventoryCard {
         try container.encodeIfPresent(suggestionConfidenceTier, forKey: .suggestionConfidenceTier)
         try container.encodeIfPresent(suggestionMatchBreakdown, forKey: .suggestionMatchBreakdown)
         try container.encodeIfPresent(heldExpenses, forKey: .heldExpenses)
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484): encode parity fields.
+        // Round-trips through NSCoding-backed persistence (iOS reads and
+        // writes InventoryCard from local state as well as the wire).
+        try container.encodeIfPresent(marketValue, forKey: .marketValue)
+        try container.encodeIfPresent(fairMarketValueLive, forKey: .fairMarketValueLive)
+        try container.encodeIfPresent(predictedPrice, forKey: .predictedPrice)
+        try container.encodeIfPresent(predictedPriceLow, forKey: .predictedPriceLow)
+        try container.encodeIfPresent(predictedPriceHigh, forKey: .predictedPriceHigh)
+        try container.encodeIfPresent(predictedPriceMechanism, forKey: .predictedPriceMechanism)
+        try container.encodeIfPresent(predictedPriceUpdatedAt, forKey: .predictedPriceUpdatedAt)
     }
 }
 
@@ -3834,9 +3879,40 @@ enum PercentFormatters {
     }
 }
 
+// MARK: - Canonical currency + percent formatters
+//
+// CF-CURRENCY-HELPER (audit PR #486, 2026-07-15): the whole-app audit
+// flagged UK-locale users seeing GBP in Portfolio hero and USD in the
+// CompIQ price panel one tap away — because a subset of iOS views
+// call `.formatted(.currency(code: "USD"))` (hardcoded USD) instead
+// of routing through the existing `currencyString` extension (locale-
+// aware). Plus a decimal-drift split: some sites emit "$1234" (no
+// cents via `.precision(.fractionLength(0))`), others "$1,234.00"
+// (two cents). Both live-bearing bugs on the top-of-fold price panel.
+//
+// This block adds the missing "no-cents" companion so every top-of-
+// fold headline can route through one helper. Sites migrate at their
+// own pace; every hardcoded `.currency(code: "USD"…)` is a follow-up
+// candidate for the whole-app cleanup.
 extension Double {
+    /// Locale-aware currency string with cents. Renders "$1,234.56" on
+    /// en-US, "£1.234,56" on UK, etc. Use as the CANONICAL currency
+    /// helper for money values displayed with cents precision.
     var currencyString: String {
         formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
+    }
+
+    /// Locale-aware currency string without cents (whole dollars/pounds).
+    /// Renders "$1,234" on en-US, "£1,234" on UK, etc. Use for headline
+    /// price tiles where cent precision would be noise (comp panel FMV,
+    /// portfolio hero value, etc.). Replaces the mix of
+    /// `.formatted(.currency(code: "USD").precision(.fractionLength(0)))`
+    /// and `String(format: "$%.0f", …)` scattered across the app.
+    var currencyStringNoCents: String {
+        formatted(
+            .currency(code: Locale.current.currency?.identifier ?? "USD")
+                .precision(.fractionLength(0))
+        )
     }
 
     var percentString: String {

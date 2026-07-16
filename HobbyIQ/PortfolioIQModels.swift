@@ -1155,7 +1155,7 @@ struct PortfolioHoldingDetailSheet: View {
                 return "Hold"
             case .list:
                 if let t = rec.targetPrice, t > 0 {
-                    return "List at \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+                    return "List at \(t.currencyStringNoCents)"
                 }
                 return "List"
             case .insufficientData:
@@ -1322,7 +1322,7 @@ struct PortfolioHoldingDetailSheet: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 Spacer()
                 HStack(spacing: 6) {
-                    Text(predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(predicted.currencyStringNoCents)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(primaryColor)
                     if let delta = deltaPct {
@@ -1346,7 +1346,7 @@ struct PortfolioHoldingDetailSheet: View {
                 Spacer()
                 if let low = entry.predictedPriceRangeLow, low > 0,
                    let high = entry.predictedPriceRangeHigh, high > 0 {
-                    Text("\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    Text("\(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
@@ -3894,7 +3894,7 @@ func inventoryActionBadge(rec: CardPanelGradeEntry.ActionRecommendation) -> some
             .font(.system(size: 10, weight: .bold, design: .rounded))
             .tracking(0.5)
         if rec.verdict == .list, let t = rec.targetPrice, t > 0 {
-            Text("· \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+            Text("· \(t.currencyStringNoCents)")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
         }
     }

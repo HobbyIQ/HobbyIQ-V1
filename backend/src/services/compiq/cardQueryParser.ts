@@ -58,15 +58,86 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     [/topps\s+stadium\s+club/i, "Topps", "Topps Stadium Club"],
     [/topps\s+series\s+[12]/i, "Topps", "Topps Series"],
     [/topps/i, "Topps", "Topps"],
-    [/panini\s+prizm/i, "Panini", "Prizm"],
-    [/prizm/i, "Panini", "Prizm"],
+    [/panini\s+prizm\s+draft\s+picks/i, "Panini", "Panini Prizm Draft Picks"],
+    [/panini\s+prizm/i, "Panini", "Panini Prizm"],
+    [/prizm\s+draft\s+picks/i, "Panini", "Panini Prizm Draft Picks"],
+    [/prizm/i, "Panini", "Panini Prizm"],
     [/donruss\s+optic/i, "Panini", "Donruss Optic"],
-    [/donruss/i, "Panini", "Donruss"],
-    [/select/i, "Panini", "Select"],
-    [/contenders/i, "Panini", "Contenders"],
-    [/national\s+treasures/i, "Panini", "National Treasures"],
-    [/flawless/i, "Panini", "Flawless"],
+    [/optic/i, "Panini", "Donruss Optic"],
+    [/panini\s+donruss/i, "Panini", "Panini Donruss"],
+    [/donruss\s+elite\s+extra\s+edition/i, "Panini", "Panini Elite Extra Edition"],
+    [/donruss\s+elite/i, "Panini", "Donruss Elite"],
+    [/donruss/i, "Panini", "Panini Donruss"],
+    [/panini\s+select/i, "Panini", "Panini Select"],
+    [/select/i, "Panini", "Panini Select"],
+    [/panini\s+contenders/i, "Panini", "Panini Contenders"],
+    [/contenders/i, "Panini", "Panini Contenders"],
+    [/panini\s+national\s+treasures/i, "Panini", "Panini National Treasures"],
+    [/national\s+treasures/i, "Panini", "Panini National Treasures"],
+    [/panini\s+flawless/i, "Panini", "Panini Flawless"],
+    [/flawless/i, "Panini", "Panini Flawless"],
+    [/panini\s+immaculate/i, "Panini", "Panini Immaculate"],
+    [/immaculate/i, "Panini", "Panini Immaculate"],
+    [/panini\s+impeccable/i, "Panini", "Panini Impeccable"],
+    [/impeccable/i, "Panini", "Panini Impeccable"],
+    // CF-NO-NULL-PRICING FOLLOWUP (2026-07-11): modern Panini brands
+    // the parser didn't recognize — smoke test at prod confirmed
+    // "2024 Panini Origins ..." was falling into playerName because
+    // "Panini Origins" had no pattern. Adds all products the reference-
+    // catalog SetDoc container carries.
+    [/panini\s+origins/i, "Panini", "Panini Origins"],
+    [/panini\s+absolute/i, "Panini", "Panini Absolute"],
+    [/panini\s+playbook/i, "Panini", "Panini Playbook"],
+    [/panini\s+three\s+and\s+two/i, "Panini", "Panini Three and Two"],
+    [/panini\s+prospect\s+edition/i, "Panini", "Panini Prospect Edition"],
+    [/panini\s+usa\s+baseball|panini\s+stars\s+\&?\s*stripes/i, "Panini", "Panini USA Baseball Stars & Stripes"],
+    [/panini\s+chronicles/i, "Panini", "Panini Chronicles"],
+    [/chronicles/i, "Panini", "Panini Chronicles"],
+    [/panini\s+mosaic/i, "Panini", "Panini Mosaic"],
+    [/mosaic/i, "Panini", "Panini Mosaic"],
+    [/panini\s+diamond\s+kings/i, "Panini", "Panini Diamond Kings"],
+    [/diamond\s+kings/i, "Panini", "Panini Diamond Kings"],
+    // Historic brands / third-party
+    [/onyx\s+vintage/i, "Onyx", "Onyx Vintage"],
+    [/onyx/i, "Onyx", "Onyx"],
+    [/leaf\s+metal\s+draft/i, "Leaf", "Leaf Metal Draft"],
+    [/leaf\s+metal/i, "Leaf", "Leaf Metal"],
+    [/leaf\s+trinity/i, "Leaf", "Leaf Trinity"],
+    [/leaf\s+signature/i, "Leaf", "Leaf Signature Series"],
+    [/tristar/i, "TRISTAR", "TRISTAR"],
+    [/sage\s+hit/i, "SAGE", "SAGE Hit"],
+    [/sage/i, "SAGE", "SAGE"],
+    // Fleer sub-brands
+    [/fleer\s+ultra/i, "Fleer", "Fleer Ultra"],
+    [/fleer\s+ex/i, "Fleer", "Fleer EX"],
+    [/fleer\s+metal\s+universe/i, "Fleer", "Fleer Metal Universe"],
+    [/fleer\s+tradition/i, "Fleer", "Fleer Tradition"],
+    [/fleer\s+genuine/i, "Fleer", "Fleer Genuine"],
+    [/fleer/i, "Fleer", "Fleer"],
+    // Skybox
+    [/skybox\s+e[-\s]?x/i, "Skybox", "Skybox EX"],
+    [/skybox\s+metal/i, "Skybox", "Skybox Metal Universe"],
+    [/skybox/i, "Skybox", "Skybox Premium"],
+    // Upper Deck sub-brands
+    [/upper\s+deck\s+spx/i, "Upper Deck", "Upper Deck SPX"],
+    [/upper\s+deck\s+sp/i, "Upper Deck", "Upper Deck SP"],
+    [/upper\s+deck\s+ultimate/i, "Upper Deck", "Upper Deck Ultimate"],
     [/upper\s+deck/i, "Upper Deck", "Upper Deck"],
+    // Pacific line
+    [/pacific\s+crown\s+royale/i, "Pacific", "Pacific Crown Royale"],
+    [/pacific\s+invincible/i, "Pacific", "Pacific Invincible"],
+    [/pacific\s+omega/i, "Pacific", "Pacific Omega"],
+    [/pacific\s+paramount/i, "Pacific", "Pacific Paramount"],
+    [/pacific/i, "Pacific", "Pacific"],
+    // Score / Pinnacle
+    [/score/i, "Score", "Score"],
+    [/pinnacle/i, "Pinnacle", "Pinnacle"],
+    // Playoff
+    [/playoff\s+absolute/i, "Playoff", "Playoff Absolute"],
+    [/playoff\s+honors/i, "Playoff", "Playoff Honors"],
+    [/playoff/i, "Playoff", "Playoff"],
+    // Studio
+    [/studio/i, "Donruss", "Donruss Studio"],
   ];
   let brand: string | null = null;
   let set: string | null = null;
@@ -217,10 +288,18 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   //   3. Unhyphenated last: "US175", "USC35", "HMT9" — letters followed by
   //      digits, no hyphen. Must run last so it doesn't swallow "BD" from
   //      "BD-31".
+  //
+  // CF-CARDNUMBER-CASE-INSENSITIVE (2026-07-09, Drew — Owen Carey BCP-69):
+  // regexes 2 and 3 must be case-insensitive. User queries commonly come in
+  // as lowercase ("owen carey bcp-69"); without /i the hyphenated pattern
+  // missed "bcp-69", the printRun regex then stripped "69" as if it were a
+  // print run, and "bcp-" leaked into playerName ("Owen Carey Bcp-"). iOS
+  // then rendered the mangled name in the header and downstream lookups
+  // couldn't find a real player.
   const cardNumMatch =
     text.match(/#([A-Z0-9]{1,5}-?[A-Z0-9]+)\b/i) ||
-    text.match(/\b([A-Z][A-Z0-9]{0,3}-[A-Z0-9]+)\b/) ||
-    text.match(/\b([A-Z]{1,4}\d+)\b/);
+    text.match(/\b([A-Z][A-Z0-9]{0,3}-[A-Z0-9]+)\b/i) ||
+    text.match(/\b([A-Z]{1,4}\d+)\b/i);
   const cardNumber = cardNumMatch ? cardNumMatch[1].toUpperCase() : null;
 
   // --- GRADE + GRADING COMPANY ---

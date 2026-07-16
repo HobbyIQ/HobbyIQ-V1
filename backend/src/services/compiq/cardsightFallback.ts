@@ -1,0 +1,335 @@
+// CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): reverse the June 2026
+// Wave 3 decommission for a narrow, targeted case — when CardHedge has NO
+// bridge/identity match for a query (i.e. the CH catalog literally lacks the
+// SKU), fall through to Cardsight for identity + comps.
+//
+// Rationale: CH-primary was chosen because CH's trust-guard rejected many
+// CS results as low-quality (blob signatures, thin data). That rationale
+// still holds when CH HAS a match — we don't want to override CH's
+// authoritative pricing with worse CS data. But when CH returns nothing at
+// all (real cards like Eric Hartman Blue Refractor Auto CPA-EHA that CH's
+// catalog just doesn't include), returning empty is strictly worse than
+// asking CS. The user's alternative — pricing on empty comps — falls back
+// to sibling-pool synthesis and produces wildly wrong numbers ($10 for a
+// $1800 card).
+//
+// TRUST BOUNDARY: sales returned here are stamped source="cardsight" and
+// will be labeled routedVendor="cardsight" in fetchComps' output. Downstream
+// telemetry + the sold_comps ingest helper both key on this label — CS
+// comps land in the pool at confidence=0.6 (vs CH's 0.8), matching the
+// existing confidence hierarchy in project_sold_comps_unified_pool.md.
+
+import type { CardIdentityHint, RoutedResult, RoutedSale, RoutedCard } from "./cardsight.router.js";
+import {
+  fetchCardsightUuidNativeCandidates,
+} from "./cardsightUuidSource.js";
+import {
+  getPricing,
+  isCardsightConfigured,
+  type CardsightPricingResponse,
+  type CardsightSaleRecord,
+} from "./cardsightSlim.client.js";
+
+const log = (event: string, fields: Record<string, unknown> = {}): void => {
+  console.log(JSON.stringify({ event, source: "cardsightFallback", ...fields }));
+};
+
+/**
+ * Parse a compound cardId of the form `cardsight:{parentId}::{parallelId}`
+ * back into its two component UUIDs. Returns null when the shape doesn't
+ * match — defensive against future changes to cardsightUuidSource format.
+ */
+function parseCsCandidateId(candidateId: string): { parentId: string; parallelId: string } | null {
+  const stripped = candidateId.startsWith("cardsight:") ? candidateId.slice("cardsight:".length) : candidateId;
+  const sep = stripped.indexOf("::");
+  if (sep <= 0 || sep >= stripped.length - 2) return null;
+  const parentId = stripped.slice(0, sep);
+  const parallelId = stripped.slice(sep + 2);
+  if (!parentId || !parallelId) return null;
+  return { parentId, parallelId };
+}
+
+/**
+ * Score a CS candidate against the identity hint. Higher = better match.
+ * Requires at least playerName + year to align (returns null otherwise) so
+ * an unrelated CS candidate doesn't get returned when CH had no bridge.
+ */
+function scoreCandidate(
+  candidate: Awaited<ReturnType<typeof fetchCardsightUuidNativeCandidates>>[number],
+  identity: CardIdentityHint,
+  queryLower: string,
+): number | null {
+  const wantPlayer = String(identity.playerName ?? "").trim().toLowerCase();
+  if (wantPlayer.length === 0) return null;
+
+  // Cardsight's per-parallel candidate populates `player` from
+  // `detail.name` which is often the CARD name in various formats
+  // ("Hartman, Eric" / "Eric Hartman RC" / null on set-only rows).
+  // Widen the match to search across player + title + setName so
+  // real Eric Hartman rows aren't rejected on formatting alone.
+  // Also allow a surname-only fallback for the common "Last, First"
+  // formatting quirk. Live evidence (2026-07-14): CS returned 37
+  // candidates for "Eric Hartman 2026 bowman chrome blue Auto" and
+  // ALL were rejected by exact-full-name gate, causing the fallback
+  // to no-op and pricing to fall back to sibling-pool synthesis.
+  const searchable = [
+    candidate.player,
+    candidate.title,
+    candidate.setName,
+  ]
+    .filter(Boolean)
+    .map((s) => String(s).toLowerCase())
+    .join(" | ");
+
+  const wantTokens = wantPlayer.split(/\s+/).filter((t) => t.length > 0);
+  const surname = wantTokens[wantTokens.length - 1] ?? wantPlayer;
+
+  const playerMatch =
+    searchable.includes(wantPlayer) ||
+    (surname.length >= 4 && searchable.includes(surname));  // surname must be substantive
+  if (!playerMatch) return null;
+
+  const wantYear = typeof identity.cardYear === "number"
+    ? identity.cardYear
+    : identity.cardYear != null ? parseInt(String(identity.cardYear), 10) : null;
+  // CS emits `year` as either number or string on the exploded-per-parallel
+  // candidate (evidence 2026-07-14 log: `"year":"2026"` on a top match).
+  // Coerce both sides to numbers before comparing — strict `!==` between
+  // 2026 (number) and "2026" (string) silently rejected every valid match.
+  const gotYear = typeof candidate.year === "number"
+    ? candidate.year
+    : candidate.year != null ? parseInt(String(candidate.year), 10) : null;
+  if (
+    wantYear != null &&
+    gotYear != null &&
+    Number.isFinite(wantYear) &&
+    Number.isFinite(gotYear) &&
+    wantYear !== gotYear
+  ) return null;
+
+  let score = 5;  // baseline for player + year OK
+  let parallelBonusAwarded = false;
+  if (identity.parallel && candidate.parallel) {
+    const wp = identity.parallel.trim().toLowerCase();
+    const gp = candidate.parallel.trim().toLowerCase();
+    if (wp === gp) {
+      score += 5;
+      parallelBonusAwarded = true;
+    } else if (gp.includes(wp)) {
+      // Candidate is more specific than identity ("Green Shimmer" vs "Green").
+      // Live evidence 2026-07-15 (Green Shimmer Auto): parser stripped
+      // "Shimmer" from Drew's parallel string, so identity.parallel="Green"
+      // matched every "Green *" candidate at partial-match score, and the
+      // FIRST green candidate ("Green Grass Refractor") won — priced $92
+      // for a real ~$300 card. Fix: only award partial-match bonus when
+      // the candidate's EXTRA tokens beyond identity.parallel appear in
+      // the original query text. "Green Shimmer Auto" query has "shimmer"
+      // → candidate "Green Shimmer" wins; candidate "Green Grass" loses.
+      const wpTokens = new Set(wp.split(/\s+/).filter((t) => t.length > 0));
+      const extraTokens = gp
+        .split(/\s+/)
+        .filter((t) => t.length > 0 && !wpTokens.has(t));
+      const allExtrasInQuery = extraTokens.every((t) => queryLower.includes(t));
+      if (allExtrasInQuery) {
+        score += 4;
+        parallelBonusAwarded = true;
+      }
+      // else: candidate's extras aren't in the query — this is the WRONG
+      // variant. Don't score it at all so a truly-matching candidate wins.
+    } else if (wp.includes(gp)) {
+      // Identity is more specific ("Green Shimmer" vs candidate "Green" base).
+      // User knows more than CS's parallel row — likely wrong candidate.
+      score += 2;
+      parallelBonusAwarded = true;
+    }
+    // else: no token overlap at all — parallel filter mismatch, skip bonus.
+  }
+
+  // CF-CS-FALLBACK-PARALLEL-STRICT (Drew, 2026-07-15): if the caller
+  // specified a parallel but this candidate earned NO parallel bonus
+  // (either no overlap OR unverified extras), reject the candidate.
+  // Better to fall through to sibling-pool synthesis (which is HONEST
+  // about being an approximation) than confidently ship the price of a
+  // different-colored parallel.
+  if (identity.parallel && identity.parallel.trim() && !parallelBonusAwarded) {
+    return null;
+  }
+  if (identity.number && candidate.cardNumber) {
+    if (identity.number.trim().toLowerCase() === candidate.cardNumber.trim().toLowerCase()) score += 3;
+  }
+  if (identity.product && candidate.setName) {
+    const wp = identity.product.trim().toLowerCase();
+    const gp = candidate.setName.trim().toLowerCase();
+    if (gp.includes(wp) || wp.includes(gp)) score += 2;
+  }
+  return score;
+}
+
+/**
+ * Select graded records matching the requested grade string (e.g. "PSA 10",
+ * "BGS 9.5"). Returns an empty array on no match — caller falls back to
+ * raw records or empty.
+ */
+function selectGradedRecords(pricing: CardsightPricingResponse, grade: string): CardsightSaleRecord[] {
+  const parts = grade.trim().split(/\s+/);
+  if (parts.length < 2) return [];
+  const wantCompany = parts[0].toUpperCase();
+  const wantValue = parts.slice(1).join(" ");
+  for (const co of pricing.graded ?? []) {
+    if ((co.company_name ?? "").toUpperCase() !== wantCompany) continue;
+    for (const g of co.grades ?? []) {
+      if ((g.grade_value ?? "").toString() === wantValue) return g.records ?? [];
+    }
+  }
+  return [];
+}
+
+/**
+ * Cardsight fallback for findCompsRouted. Called ONLY when CardHedge
+ * returns null (no bridge / no match). Returns a RoutedResult with
+ * source="cardsight" sales, or null on any failure — caller returns
+ * empty in the null case.
+ *
+ * Latency budget: ~200-500ms end-to-end (CS search ~200ms + top-5 details
+ * ~150ms each in parallel + pricing ~200ms). Only fires on CH-miss so the
+ * happy CH path is unaffected.
+ */
+export async function tryCardsightFallback(
+  query: string,
+  identity: CardIdentityHint,
+  grade: string,
+): Promise<RoutedResult | null> {
+  if (!isCardsightConfigured()) return null;
+  if (!query || !query.trim()) return null;
+
+  const start = Date.now();
+  let candidates: Awaited<ReturnType<typeof fetchCardsightUuidNativeCandidates>>;
+  try {
+    candidates = await fetchCardsightUuidNativeCandidates(query);
+  } catch (err) {
+    log("cs_fallback.search_error", {
+      query,
+      error: (err as Error)?.message ?? String(err),
+    });
+    return null;
+  }
+  if (candidates.length === 0) {
+    log("cs_fallback.no_candidates", { query, latency_ms: Date.now() - start });
+    return null;
+  }
+
+  // Score + rank. Pass the lowercased query text so the parallel-match
+  // scorer can validate that a "more-specific" candidate's extra tokens
+  // (e.g. "Shimmer" beyond identity.parallel="Green") actually appear
+  // in the user's request. Prevents wrong-variant pricing when the
+  // parser strips salient tokens.
+  const queryLower = query.trim().toLowerCase();
+  let best: { candidate: (typeof candidates)[number]; score: number } | null = null;
+  for (const c of candidates) {
+    const s = scoreCandidate(c, identity, queryLower);
+    if (s == null) continue;
+    if (!best || s > best.score) best = { candidate: c, score: s };
+  }
+  if (!best) {
+    log("cs_fallback.no_matching_candidate", {
+      query,
+      candidateCount: candidates.length,
+      wantPlayer: identity.playerName,
+      wantYear: identity.cardYear,
+      // Top-3 sample so we can see what CS actually returned when the
+      // matcher rejects everything (iterative-tuning aid).
+      topCandidateSample: candidates.slice(0, 3).map((c) => ({
+        player: c.player,
+        year: c.year,
+        title: c.title,
+        parallel: c.parallel,
+      })),
+    });
+    return null;
+  }
+
+  const parsed = parseCsCandidateId(best.candidate.candidateId);
+  if (!parsed) {
+    log("cs_fallback.malformed_candidate_id", {
+      candidateId: best.candidate.candidateId,
+    });
+    return null;
+  }
+
+  let pricing: CardsightPricingResponse;
+  try {
+    pricing = await getPricing(parsed.parentId, { parallelId: parsed.parallelId });
+  } catch (err) {
+    log("cs_fallback.pricing_error", {
+      parentId: parsed.parentId,
+      parallelId: parsed.parallelId,
+      error: (err as Error)?.message ?? String(err),
+    });
+    return null;
+  }
+
+  const gradeUp = grade.trim().toUpperCase();
+  const isRaw = gradeUp === "RAW" || gradeUp === "";
+  const records: CardsightSaleRecord[] = isRaw
+    ? (pricing.raw?.records ?? [])
+    : selectGradedRecords(pricing, grade);
+
+  const sales: RoutedSale[] = records
+    .filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.date)
+    .map((r) => ({
+      price: r.price,
+      date: r.date,
+      grade: isRaw ? "Raw" : grade,
+      source: "cardsight",
+      sale_type: r.listing_type ?? null,
+      title: r.title ?? null,
+      url: r.url ?? null,
+      // Preserve CS-native wire-shape fields so the routed-search RawComp
+      // mapper in compiqEstimate.service.ts (line ~2588) can read them via
+      // its defensive cast to `{listing_type?, image_url?}`. TS structural
+      // typing on RoutedSale allows the extra properties without a widening.
+      listing_type: r.listing_type ?? null,
+      image_url: r.image_url ?? null,
+    }) as RoutedSale);
+
+  if (sales.length === 0) {
+    log("cs_fallback.no_sales_after_filter", {
+      parentId: parsed.parentId,
+      parallelId: parsed.parallelId,
+      grade,
+      rawCount: pricing.raw?.count ?? 0,
+      latency_ms: Date.now() - start,
+    });
+    return null;
+  }
+
+  const card: RoutedCard = {
+    card_id: `cardsight:${parsed.parentId}::${parsed.parallelId}`,
+    player: best.candidate.player ?? identity.playerName,
+    set: best.candidate.setName ?? identity.product,
+    year: best.candidate.year ?? identity.cardYear,
+    number: best.candidate.cardNumber ?? identity.number,
+    variant: best.candidate.parallel ?? identity.parallel,
+    title: best.candidate.title,
+    // CardIdentity.imageUrl is string|null; RoutedCard.imageUrl is
+    // string|undefined. Coerce null → undefined so tsc strict passes.
+    imageUrl: best.candidate.imageUrl ?? undefined,
+  };
+
+  log("cs_fallback.served", {
+    query,
+    parentId: parsed.parentId,
+    parallelId: parsed.parallelId,
+    parallelName: best.candidate.parallel,
+    salesCount: sales.length,
+    score: best.score,
+    latency_ms: Date.now() - start,
+  });
+
+  return {
+    card,
+    sales,
+    variantWarning: [],
+    aiCategory: null,
+  };
+}
