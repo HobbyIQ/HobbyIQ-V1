@@ -10,11 +10,16 @@
 // Reptilian Refractor, /150 parallels) real transaction titles exist on
 // eBay even when no vendor's card table has an entry.
 //
-// TRUST BOUNDARY: comps returned here have NO canonical cardId. Downstream
-// code that needs an aggregation key (predictionCorpus, sold_comps ingest)
-// must handle this defensively. We stamp variantWarning=["cs_pricing_backstop"]
-// so downstream can distinguish "trusted vendor comps" from "raw title
-// matches" and downweight confidence accordingly.
+// TRUST BOUNDARY: comps returned here have no canonical VENDOR cardId
+// but DO have a synthetic `backstop:{player|year|number|parallel}`
+// aggregation key (CF-BACKSTOP-SYNTHETIC-CARDID, PR #493). That key is
+// stable across queries for the same physical card, so sold_comps ingest
+// + user-pool merge now include backstop rows in the corpus. Downstream
+// consumers filter by the `backstop:` prefix or by per-comp
+// `source: "cs_pricing_backstop"` (PR #492) when they need to distinguish
+// backstop transactions from catalog-anchored comps. variantWarning=
+// ["cs_pricing_backstop"] stays on the response so top-level filters can
+// downweight confidence for the whole result.
 //
 // LISTING TYPE: default listingType=auction on the client — completed
 // auction sales only. Fixed/Buy-It-Now prices are ASKS not BIDS and would
@@ -166,12 +171,32 @@ export async function tryCardsightPricingBackstop(
     image_url: r.image_url,
   }) as RoutedSale);
 
-  // Synthetic identity from queryContext — NO card_id (deliberate).
-  // Empty card_id tells downstream this is a bridge-less backstop, so
-  // cardId-keyed aggregation and sold_comps ingest are skipped for these
-  // rows (see augmentCompsWithUserPool / ingestVendorCompsToPool guards).
+  // CF-BACKSTOP-SYNTHETIC-CARDID (PR #493, 2026-07-15): backstop
+  // previously returned `card_id: ""` which suppressed sold_comps ingest
+  // + user-pool merge. Now synthesize a deterministic id from the query
+  // context so those valuable transaction rows enter the corpus. The
+  // `backstop:` prefix keeps them distinguishable from real CH/CS
+  // catalog IDs (which use bare uuids or `cardsight:{uuid}::{parallel}`
+  // format). Downstream queries can filter by prefix or by the per-comp
+  // `source: "cs_pricing_backstop"` label (PR #492).
+  //
+  // Uniqueness: (playerName + cardYear + cardNumber + parallel) is the
+  // finest-grained identity we have on this path. Collisions can happen
+  // when two queries land on the same physical card (which is what we
+  // WANT — same synthetic id aggregates the transaction history).
+  const synthKeyParts = [
+    queryContext?.playerName ?? "",
+    queryContext?.cardYear != null ? String(queryContext.cardYear) : "",
+    queryContext?.cardNumber ?? "",
+    queryContext?.parallel ?? "",
+  ]
+    .map((s) => s.trim().toLowerCase())
+    .join("|");
+  const syntheticCardId = synthKeyParts.length > 0
+    ? `backstop:${synthKeyParts}`
+    : "";
   const card: RoutedCard = {
-    card_id: "",
+    card_id: syntheticCardId,
     player: queryContext?.playerName,
     year: queryContext?.cardYear,
     variant: queryContext?.parallel,
