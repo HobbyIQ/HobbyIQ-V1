@@ -1595,6 +1595,14 @@ extension InventoryCard {
         case cardId
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
         case lastSaleSurface, modelExpectation, modelSignal
+        // CF-COMP-HOLDING-WIRE-PARITY (audit PR #484, 2026-07-15):
+        // holding wire now carries the comp-family aliases + predictedPrice
+        // per PR #482 + PR #483. Decoder captures them so PricingPanelView
+        // (PR #485) can render the same tiles on holding-detail that
+        // CompIQPricedCardView renders on comp-detail.
+        case marketValue, fairMarketValueLive
+        case predictedPrice, predictedPriceLow, predictedPriceHigh
+        case predictedPriceMechanism, predictedPriceUpdatedAt
     }
 
     // snake_case alternatives the backend may return
@@ -1634,6 +1642,14 @@ extension InventoryCard {
         case estimateConfidence = "estimate_confidence"
         case nearestGradedAnchor = "nearest_graded_anchor"
         case cardId = "card_id"
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484): snake_case fallbacks.
+        case marketValue = "market_value"
+        case fairMarketValueLive = "fair_market_value_live"
+        case predictedPrice = "predicted_price"
+        case predictedPriceLow = "predicted_price_low"
+        case predictedPriceHigh = "predicted_price_high"
+        case predictedPriceMechanism = "predicted_price_mechanism"
+        case predictedPriceUpdatedAt = "predicted_price_updated_at"
     }
 
     // Backend autoPriceHolding() uses different field names for pricing/freshness
@@ -1854,6 +1870,26 @@ extension InventoryCard {
         self.lastSaleSurface = try? c.decodeIfPresent(LiveMarketLastSaleSurface.self, forKey: .lastSaleSurface)
         self.modelExpectation = try? c.decodeIfPresent(LiveMarketModelExpectation.self, forKey: .modelExpectation)
         self.modelSignal = try? c.decodeIfPresent(LiveMarketModelSignal.self, forKey: .modelSignal)
+
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484, 2026-07-15): decode the
+        // holding wire's parity fields. Both camelCase and snake_case
+        // paths tried; defensive try? so absent/malformed wires just
+        // land as nil. Legacy holdings decode with everything nil —
+        // downstream views must be nil-tolerant.
+        self.marketValue = (try? c.decode(Double.self, forKey: .marketValue))
+            ?? (try? s.decode(Double.self, forKey: .marketValue))
+        self.fairMarketValueLive = (try? c.decode(Double.self, forKey: .fairMarketValueLive))
+            ?? (try? s.decode(Double.self, forKey: .fairMarketValueLive))
+        self.predictedPrice = (try? c.decode(Double.self, forKey: .predictedPrice))
+            ?? (try? s.decode(Double.self, forKey: .predictedPrice))
+        self.predictedPriceLow = (try? c.decode(Double.self, forKey: .predictedPriceLow))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceLow))
+        self.predictedPriceHigh = (try? c.decode(Double.self, forKey: .predictedPriceHigh))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceHigh))
+        self.predictedPriceMechanism = (try? c.decode(String.self, forKey: .predictedPriceMechanism))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceMechanism))
+        self.predictedPriceUpdatedAt = (try? c.decode(String.self, forKey: .predictedPriceUpdatedAt))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceUpdatedAt))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1901,6 +1937,16 @@ extension InventoryCard {
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
         try container.encodeIfPresent(modelSignal, forKey: .modelSignal)
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484): encode parity fields.
+        // Round-trips through NSCoding-backed persistence (iOS reads and
+        // writes InventoryCard from local state as well as the wire).
+        try container.encodeIfPresent(marketValue, forKey: .marketValue)
+        try container.encodeIfPresent(fairMarketValueLive, forKey: .fairMarketValueLive)
+        try container.encodeIfPresent(predictedPrice, forKey: .predictedPrice)
+        try container.encodeIfPresent(predictedPriceLow, forKey: .predictedPriceLow)
+        try container.encodeIfPresent(predictedPriceHigh, forKey: .predictedPriceHigh)
+        try container.encodeIfPresent(predictedPriceMechanism, forKey: .predictedPriceMechanism)
+        try container.encodeIfPresent(predictedPriceUpdatedAt, forKey: .predictedPriceUpdatedAt)
     }
 }
 
