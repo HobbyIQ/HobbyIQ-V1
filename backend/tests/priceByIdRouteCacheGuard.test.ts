@@ -207,7 +207,7 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
 
     // cacheDel was called on the poisoned routeKey.
     expect(cacheDelCalls.length).toBe(1);
-    expect(cacheDelCalls[0]).toMatch(/compiq:price-by-id:v4/);
+    expect(cacheDelCalls[0]).toMatch(/compiq:price-by-id:v5/);
 
     // computeEstimate was called for the recompute (the cache HIT
     // shortcuts the producer originally; the validator's direct
@@ -217,7 +217,7 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
     // The corrected result was re-cached under the SAME routeKey for
     // the remainder of the 15-min TTL window.
     expect(cacheSetCalls.length).toBe(1);
-    expect(cacheSetCalls[0].key).toMatch(/compiq:price-by-id:v4/);
+    expect(cacheSetCalls[0].key).toMatch(/compiq:price-by-id:v5/);
     const envelope = JSON.parse(cacheSetCalls[0].value);
     expect(envelope._v).toBeDefined();
     expect(envelope._v.cardIdentity.card_id).toBe(TROUT_ID);
