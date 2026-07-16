@@ -34,6 +34,21 @@ import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
+// CF-CONSTS-CONSOLIDATION (audit PR #490, 2026-07-15): retire raw
+// multiplier literals scattered across the projection-tier branches.
+// Every value below has a documented semantic (success vs projection
+// vs scarcity vs T7); the named consts make the tier's uncertainty
+// stratum explicit at every emission site.
+import {
+  QUICK_SALE_MULTIPLIER,
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PROJECTION_QUICK_SALE_MULTIPLIER,
+  PROJECTION_PREMIUM_MULTIPLIER,
+  SCARCITY_QUICK_SALE_MULTIPLIER,
+  SCARCITY_PREMIUM_MULTIPLIER,
+  SCARCITY_PREMIUM_ALT_MULTIPLIER,
+  T7_QUICK_SALE_MULTIPLIER,
+} from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
 import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
@@ -4207,8 +4222,8 @@ export async function computeEstimate(
               parentBaseMedian,
               parentComps: parentRawPrices.length,
             },
-            quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
-            premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
+            quickSaleValue: Math.round(projectedFmv * PROJECTION_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * PROJECTION_PREMIUM_MULTIPLIER * 100) / 100,
             // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY (2026-07-09, Drew):
             // route-layer cannotPriceFromEst nulls marketValue when
             // compsUsed<3. The projection IS derived from the parent
@@ -4381,8 +4396,8 @@ export async function computeEstimate(
               inferredPrintRun: parallelPrintRun,
               cardClass,
             },
-            quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
-            premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
+            quickSaleValue: Math.round(projectedFmv * PROJECTION_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * PROJECTION_PREMIUM_MULTIPLIER * 100) / 100,
             compsUsed: parentRawPrices.length,
             compsAvailable: parentRawPrices.length,
             recentComps: [],
@@ -4478,8 +4493,8 @@ export async function computeEstimate(
                 inferredPrintRun: parallelPrintRun,
                 cardClass,
               },
-              quickSaleValue: Math.round(projectedFmv * 0.85 * 100) / 100,
-              premiumValue: Math.round(projectedFmv * 1.2 * 100) / 100,
+              quickSaleValue: Math.round(projectedFmv * QUICK_SALE_MULTIPLIER * 100) / 100,
+              premiumValue: Math.round(projectedFmv * SCARCITY_PREMIUM_MULTIPLIER * 100) / 100,
               compsUsed: pyAnchor.compCount,
               compsAvailable: pyAnchor.compCount,
               recentComps: [],
@@ -4564,8 +4579,8 @@ export async function computeEstimate(
               inferredPrintRun: refCatBaseline.printRun,
               baselineSource: refCatBaseline.baselineSource,
             },
-            quickSaleValue: Math.round(projectedFmv * 0.75 * 100) / 100,
-            premiumValue: Math.round(projectedFmv * 1.3 * 100) / 100,
+            quickSaleValue: Math.round(projectedFmv * SCARCITY_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(projectedFmv * SCARCITY_PREMIUM_ALT_MULTIPLIER * 100) / 100,
             compsUsed: 0,
             compsAvailable: 0,
             recentComps: [],
@@ -4720,7 +4735,7 @@ export async function computeEstimate(
             setName: t7.setName,
             manufacturer: t7.manufacturer,
           },
-          quickSaleValue: Math.round(t7.floor * 0.6 * 100) / 100,
+          quickSaleValue: Math.round(t7.floor * T7_QUICK_SALE_MULTIPLIER * 100) / 100,
           premiumValue: Math.round(t7.floor * 1.5 * 100) / 100,
           compsUsed: 0,
           compsAvailable: 0,
@@ -5853,7 +5868,7 @@ export async function computeEstimate(
           );
           const round2 = (n: number) => Math.round(n * 100) / 100;
           const fmv = nextSale !== null ? round2(nextSale.nextSaleValue) : 0;
-          const quickSaleValue = round2(fmv * 0.88);
+          const quickSaleValue = round2(fmv * QUICK_SALE_FALLBACK_MULTIPLIER);
           const premiumValue = round2(fmv * 1.15);
           const suggestedListPrice = round2(fmv * 1.05);
           const siblingFmvBand = computeFmvBand(fmv, {
