@@ -33,9 +33,23 @@ enum Labels {
         tier == .young ? "Profit %" : "Margin"
     }
 
-    static var fairValue: String {
-        tier == .young ? "What It's Worth" : "Fair Value"
+    // CF-LABEL-FMV-CANONICAL (audit PR #481, 2026-07-15): canonical
+    // label for the estimated fair market value. The whole-app audit
+    // found SIX competing labels ("Fair Market" / "Market Value" / "FMV"
+    // / "Fair Value" / "Market" / "Fair Price") for the same number,
+    // including a triple-label site on ONE card (CompIQAdvancedViews
+    // :526-532). "Market Value" wins on Drew's own naming + the
+    // dashboard's HIQStatCard treatment. Every raw literal site must
+    // migrate to `Labels.marketValue`.
+    static var marketValue: String {
+        tier == .young ? "What It's Worth" : "Market Value"
     }
+
+    // `fairValue` retained as a deprecated alias so PR-splitting doesn't
+    // stall — existing callers get the same canonical string, and iOS
+    // migrations to `Labels.marketValue` can proceed at their own pace.
+    // Delete this alias once every caller is migrated.
+    static var fairValue: String { marketValue }
 
     static var confidence: String {
         tier == .young ? "Accuracy" : "Confidence"

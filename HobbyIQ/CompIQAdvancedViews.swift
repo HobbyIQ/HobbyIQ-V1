@@ -490,11 +490,13 @@ struct WhatIfView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
-            if let fmv = r.fairMarketValue {
-                advancedDataRow(label: Labels.fairValue, value: fmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
-            }
-            if let market = r.marketValue {
-                advancedDataRow(label: "Market Value", value: market.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            // CF-LABEL-FMV-CANONICAL (audit PR #481, 2026-07-15):
+            // `fairMarketValue` and `marketValue` are wire-shape aliases
+            // of the same engine field (est.fairMarketValue). Rendering
+            // both is a triple-label site the whole-app audit flagged.
+            // Prefer marketValue as canonical; fall through to fairMarketValue.
+            if let displayFmv = r.marketValue ?? r.fairMarketValue {
+                advancedDataRow(label: Labels.marketValue, value: displayFmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let predicted = r.predictedPrice {
                 advancedDataRow(label: "Predicted Price", value: predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
@@ -710,11 +712,11 @@ struct BulkEstimateView: View {
             }
 
             if let data = item.data {
-                if let fmv = data.fairMarketValue {
-                    advancedDataRow(label: "FMV", value: fmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
-                }
-                if let market = data.marketValue {
-                    advancedDataRow(label: "Market", value: market.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                // CF-LABEL-FMV-CANONICAL (audit PR #481): prefer marketValue,
+                // fall through to fairMarketValue. Same aliasing story as the
+                // top-of-file `advancedResult` block; consolidate to one row.
+                if let displayFmv = data.marketValue ?? data.fairMarketValue {
+                    advancedDataRow(label: Labels.marketValue, value: displayFmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 }
                 if let quick = data.quickSaleValue {
                     advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))))
