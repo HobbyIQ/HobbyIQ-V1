@@ -6,7 +6,7 @@
 
 ## Purpose
 
-`/api/compiq/scan` with `hint: "graded"` or `"auto"` runs Cardsight's cert-OCR pipeline, which was calibrated against PSA slabs. Every non-PSA grader is unknown territory. Before iOS lets a user pick "BGS", "SGC", or "CGC" from the scan flow's grader picker, the pipeline must clear a per-grader accuracy bar on real slabs.
+`/api/compiq/scan` with `hint: "auto"` runs Cardsight's cert-OCR pipeline, which was calibrated against PSA slabs. Every non-PSA grader is unknown territory. There is **no pre-scan grader picker** — cert-OCR reads whatever's on the slab label — so what gets gated per grader is the **auto-prefill silent-navigate behavior**: when cert-OCR returns a validated grader, iOS pre-fills and auto-navigates to the price screen; when it returns an unvalidated grader, iOS falls back to a one-tap "Verify grade" confirmation sheet before proceeding.
 
 ## Method
 
@@ -34,7 +34,7 @@ CGC,9,,2026-07-16T14:23:00Z,,,null,null,null,false,false,false,no match; retake 
 
 ## Ship gate — per grader
 
-A grader ships in the scan flow's grader picker when **both** conditions hold on its per-grader aggregate:
+A grader unlocks **PSA-parity silent-navigate behavior** (cert-OCR result pre-fills the add-holding form and auto-navigates to the price screen) when **both** conditions hold on its per-grader aggregate:
 
 1. **Match rate ≥ 85%** of scans return `matchConfidence ≥ 0.7` AND `correctCard === true`.
 2. **Zero false-positives at high confidence** — no scan with `matchConfidence ≥ 0.8` AND `correctCard === false`. A confidently-wrong match is worse than a null; the user trusts it.
@@ -46,9 +46,24 @@ Additional soft rules:
 
 ## Failure paths
 
-- **Fails match rate:** grader is hidden from the scan picker. Manual add-holding grade picker keeps it. Log a follow-up: escalate to CH's OCR training team.
-- **Fails false-positive bar:** same as above, plus a threshold tightener — drop `matchConfidence` acceptance for that grader to 0.85 in iOS (client-side gate; backend still returns).
-- **Small sample (< 10 slabs):** grader ships as **"beta"** with a caption in the picker: "Cert-OCR accuracy is being validated for this grader. Expect misses." Track match rate on the first 30 production scans, re-evaluate.
+- **Fails match rate:** iOS keeps the "Verify grade" confirmation sheet in the scan flow for that grader (no silent-navigate). Manual add-holding grade picker is untouched — all graders are always selectable there. Log a follow-up: escalate to CH's OCR training team.
+- **Fails false-positive bar:** same as above, plus tighten the client-side confidence gate for that grader (drop `matchConfidence` silent-navigate threshold to `≥ 0.85`; backend still returns everything).
+- **Small sample (< 10 slabs):** stay in the "Verify grade" confirmation path for that grader by default. Track match rate on the first 30 production scans, re-evaluate.
+
+## What iOS does before + after a grader clears
+
+**Before any grader clears (initial ship state):**
+
+- PSA: pre-cleared. Cert-OCR PSA result → silent pre-fill + auto-nav.
+- BGS / SGC / CGC: cert-OCR result → "Verify grade" one-tap sheet ("Cert reads BGS 10 — confirm?") → then price screen. Pre-filled fields carry into the next surface if the user taps Confirm; user can also edit before confirming.
+
+**After a grader clears the ship gate:**
+
+- Drop it from the "Verify grade" fallback set. Same behavior as PSA.
+
+**Never — regardless of ship-gate state:**
+
+- Do NOT hide any grader from the manual add-holding grade picker. Users must always be able to add a BGS slab manually even if BGS hasn't cleared the scan-flow gate.
 
 ## Where the data goes
 

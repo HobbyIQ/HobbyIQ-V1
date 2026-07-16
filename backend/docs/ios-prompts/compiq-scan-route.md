@@ -87,8 +87,22 @@ Cert-OCR wins when both would match — a cert number is a stronger ID than any 
 1. User taps "Scan slab" → same camera as Flow 1 → captures photo
 2. `POST /api/compiq/scan` with `{ imageUrl, hint: "auto" }`
 3. Response arrives with `matchPath: "cert-ocr"` + `certInfo` populated
-4. Pre-fill the "add holding" form with `certInfo.grader` + `certInfo.grade` + the card identity
+4. Grader-gated prefill (see next section)
 5. Continue with `/price-by-id` for current pricing
+
+### Grader-gated prefill (cert-OCR results)
+
+There is **no pre-scan grader picker** — cert-OCR reads whatever's on the slab. What gates per grader is the silent-navigate behavior when `certInfo` comes back. Rules:
+
+| `certInfo.grader` | Behavior |
+|---|---|
+| `"PSA"` | **Silent pre-fill + auto-navigate** to the price screen. PSA is the validated baseline. |
+| `"BGS"` / `"SGC"` / `"CGC"` (before validation ships) | **"Verify grade" confirmation sheet.** Copy: `"Cert reads BGS 10 — confirm?"`. Two buttons: "Confirm" (pre-fills + proceeds) / "Edit" (opens the field-editable form). Cert-OCR fields carry into the next surface either way. |
+| Any grader after it clears the ship gate | Same as PSA — silent pre-fill + auto-navigate. |
+
+Per-grader unlock: see `backend/docs/investigations/slab-scan-validation-protocol.md` — a grader unlocks silent-navigate when it clears the ≥85%/zero-false-positive gate on Drew's real slabs.
+
+**The manual add-holding grade picker is always full.** All graders always selectable. Nothing about validation state hides a grader from manual entry.
 
 ### Viewfinder
 
