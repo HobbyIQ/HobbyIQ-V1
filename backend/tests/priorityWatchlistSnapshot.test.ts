@@ -16,6 +16,7 @@ import * as portfolio from "../src/services/portfolioiq/portfolioStore.service.j
 import * as ebay from "../src/services/ebay/ebayListingSearch.service.js";
 import * as store from "../src/services/portfolioiq/listingsSnapshotStore.service.js";
 import * as priority from "../src/services/portfolioiq/priorityWatchlist.service.js";
+import * as topMovers from "../src/services/portfolioiq/chTopMoverPlayers.service.js";
 
 let tmpDir: string;
 beforeEach(async () => {
@@ -93,6 +94,11 @@ function fakeContainer(docs: any[]) {
 
 describe("runDailyListingsSnapshotJob — priority-watchlist union", () => {
   afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    // Isolate this suite from the CH-mover universe — that layer has its
+    // own test file. Pinning priority-only behavior here.
+    vi.spyOn(topMovers, "loadTopMoverPlayers").mockResolvedValue([]);
+  });
 
   it("snapshots priority players even when NO users have holdings", async () => {
     vi.spyOn(portfolio, "getPortfolioContainer").mockResolvedValue(

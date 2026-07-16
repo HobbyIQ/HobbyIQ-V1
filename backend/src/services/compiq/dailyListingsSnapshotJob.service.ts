@@ -17,16 +17,19 @@ import { upsertSnapshot } from "../portfolioiq/listingsSnapshotStore.service.js"
 import { computeListingsTrend } from "./supplyDemandSignal.service.js";
 import { recordVerdictAndDetectFlip, type VerdictFlip } from "./verdictHistoryStore.service.js";
 import { loadPriorityPlayers } from "../portfolioiq/priorityWatchlist.service.js";
+import { loadTopMoverPlayers } from "../portfolioiq/chTopMoverPlayers.service.js";
 
 const DEFAULT_USER_ID = "admin-testing-hobbyiq";
 const DEFAULT_TOP_N = 500;
 const DEFAULT_CONCURRENCY = 3;
-const PRIORITY_HOLDING_COUNT = 10_000; // ranks priority players above all user-derived ones
+const PRIORITY_HOLDING_COUNT = 10_000;    // ranks priority above all others
+const CH_TOP_MOVER_HOLDING_COUNT = 5_000; // ranks CH-movers above user-only, below priority
 
 export interface SnapshotJobSummary {
   playersSeen: number;
   playersFromUsers: number;
   playersFromPriorityList: number;
+  playersFromChTopMovers: number;
   playersProcessed: number;
   snapshotsCreated: number;
   errors: number;
@@ -110,6 +113,24 @@ export async function runDailyListingsSnapshotJob(opts: {
     }
   }
 
+  // CF-CH-TOP-MOVERS-UNIVERSE (PR #433): union in CH's top-movers so
+  // "whatever the market is moving right now" gets covered even when no
+  // user holds it and Drew hasn't hand-listed it. Ranked below the
+  // priority list (Drew's convictions) but above pure user-holding
+  // counts, so both stable curation and ambient discovery survive top-N.
+  const chMoverPlayers = await loadTopMoverPlayers();
+  let playersFromChTopMovers = 0;
+  for (const displayName of chMoverPlayers) {
+    const key = displayName.toLowerCase();
+    const existing = players.get(key);
+    if (existing) {
+      existing.holdingCount += CH_TOP_MOVER_HOLDING_COUNT;
+    } else {
+      players.set(key, { displayName, holdingCount: CH_TOP_MOVER_HOLDING_COUNT });
+      playersFromChTopMovers++;
+    }
+  }
+
   const ranked = Array.from(players.values())
     .sort((a, b) => b.holdingCount - a.holdingCount)
     .slice(0, topN);
@@ -121,6 +142,7 @@ export async function runDailyListingsSnapshotJob(opts: {
     playersSeen: players.size,
     playersFromUsers,
     playersFromPriorityList,
+    playersFromChTopMovers,
     playersToProcess: ranked.length,
     topN,
     concurrency,
@@ -195,6 +217,7 @@ export async function runDailyListingsSnapshotJob(opts: {
     playersSeen: players.size,
     playersFromUsers,
     playersFromPriorityList,
+    playersFromChTopMovers,
     playersProcessed: ranked.length,
     snapshotsCreated,
     errors,
