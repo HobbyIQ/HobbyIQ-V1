@@ -352,7 +352,7 @@ private struct PriceAlertRow: View {
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 if let threshold = alert.threshold {
-                    Text("Target: \(threshold.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    Text("Target: \(threshold.currencyStringNoCents)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.Colors.accent)
                 }

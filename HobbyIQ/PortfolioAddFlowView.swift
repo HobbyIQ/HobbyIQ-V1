@@ -1027,7 +1027,7 @@ private struct PortfolioAddDetailsStepView: View {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(HobbyIQTheme.textSecondary)
-            Text(value.map { String(format: "$%.0f", $0) } ?? "--")
+            Text(value.map { $0.currencyStringNoCents } ?? "--")
                 .font(.headline.bold())
                 .foregroundStyle(accent)
         }

@@ -1179,7 +1179,7 @@ struct CompIQPriceByIdResponse: Codable {
     /// Formatted FMV that returns "—" when nil instead of "$0.00"
     var formattedFMV: String {
         guard let value = marketTier?.value else { return "—" }
-        return value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return value.currencyStringNoCents
     }
 
     init(from decoder: Decoder) throws {

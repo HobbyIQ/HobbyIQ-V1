@@ -76,13 +76,13 @@ struct GradePremiumView: View {
             }
 
             if let raw = r.rawFmv {
-                advancedDataRow(label: "Raw FMV", value: raw.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "Raw FMV", value: raw.currencyStringNoCents)
             }
             if let psa10 = r.psa10Fmv {
-                advancedDataRow(label: "PSA 10 FMV", value: psa10.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "PSA 10 FMV", value: psa10.currencyStringNoCents)
             }
             if let dollars = r.premiumDollars {
-                advancedDataRow(label: "Premium ($)", value: dollars.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "Premium ($)", value: dollars.currencyStringNoCents)
             }
             if let pct = r.premiumPct {
                 advancedDataRow(label: "Premium (%)", value: String(format: "%.1f%%", pct))
@@ -392,7 +392,7 @@ struct CompsByPlayerView: View {
             }
             Spacer(minLength: 8)
             if let price = comp.price {
-                Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(price.currencyStringNoCents)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.successGreen)
             }
@@ -496,16 +496,16 @@ struct WhatIfView: View {
             // both is a triple-label site the whole-app audit flagged.
             // Prefer marketValue as canonical; fall through to fairMarketValue.
             if let displayFmv = r.marketValue ?? r.fairMarketValue {
-                advancedDataRow(label: Labels.marketValue, value: displayFmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: Labels.marketValue, value: displayFmv.currencyStringNoCents)
             }
             if let predicted = r.predictedPrice {
-                advancedDataRow(label: "Predicted Price", value: predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "Predicted Price", value: predicted.currencyStringNoCents)
             }
             if let quick = r.quickSaleValue {
-                advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "Quick Sale", value: quick.currencyStringNoCents)
             }
             if let premium = r.premiumValue {
-                advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                advancedDataRow(label: "Premium", value: premium.currencyStringNoCents)
             }
             if let grade = r.gradeUsed {
                 advancedDataRow(label: "Grade Used", value: grade)
@@ -716,13 +716,13 @@ struct BulkEstimateView: View {
                 // fall through to fairMarketValue. Same aliasing story as the
                 // top-of-file `advancedResult` block; consolidate to one row.
                 if let displayFmv = data.marketValue ?? data.fairMarketValue {
-                    advancedDataRow(label: Labels.marketValue, value: displayFmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    advancedDataRow(label: Labels.marketValue, value: displayFmv.currencyStringNoCents)
                 }
                 if let quick = data.quickSaleValue {
-                    advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    advancedDataRow(label: "Quick Sale", value: quick.currencyStringNoCents)
                 }
                 if let premium = data.premiumValue {
-                    advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    advancedDataRow(label: "Premium", value: premium.currencyStringNoCents)
                 }
                 if let verdict = data.verdict {
                     advancedDataRow(label: "Verdict", value: verdict)

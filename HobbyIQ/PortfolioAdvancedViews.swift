@@ -508,7 +508,7 @@ struct WeeklyBriefView: View {
                                 .foregroundStyle(tint)
                         }
                         if let value = mover.latestValue {
-                            Text(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            Text(value.currencyStringNoCents)
                                 .font(.caption.weight(.medium).monospacedDigit())
                                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         }

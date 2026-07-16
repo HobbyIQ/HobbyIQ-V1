@@ -1810,7 +1810,7 @@ private struct OwnedCardsInCohortSheet: View {
                 .font(.caption2.weight(.bold))
                 .tracking(0.4)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(price.currencyStringNoCents)
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
