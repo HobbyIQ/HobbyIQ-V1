@@ -169,3 +169,105 @@ describe("parseGradeLabel — PSA descriptor + numeric (iOS card-scan labels)", 
     expect(parseGradeLabel("BGS MINT 9")).toEqual({ gradeCompany: "BGS", gradeValue: 9 });
   });
 });
+
+// ── CF-BGS-BLACK-LABEL-INGEST (PR #495 follow-up) ─────────────────────
+// BGS 10 with adjacent "Black Label" / "Pristine" / "BL" tokens elevates
+// to isBlackLabel: true so downstream (composeGradeKey → getGraderPremium)
+// hits the 9x fallback tier instead of the regular BGS 10 3.5x tier.
+
+describe("parseGradeLabel — BGS 10 Black Label detection", () => {
+  it("\"BGS 10 Black Label\" → isBlackLabel: true", () => {
+    expect(parseGradeLabel("BGS 10 Black Label")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 10,
+      isBlackLabel: true,
+    });
+  });
+
+  it("\"BGS 10 Pristine\" → isBlackLabel: true (Beckett's other name)", () => {
+    expect(parseGradeLabel("BGS 10 Pristine")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 10,
+      isBlackLabel: true,
+    });
+  });
+
+  it("case-insensitive: \"bgs 10 black label\" also flips the bit", () => {
+    expect(parseGradeLabel("bgs 10 black label")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 10,
+      isBlackLabel: true,
+    });
+  });
+
+  it("\"BGS 10 BL\" (short form) → isBlackLabel: true", () => {
+    expect(parseGradeLabel("BGS 10 BL")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 10,
+      isBlackLabel: true,
+    });
+  });
+
+  it("regular \"BGS 10\" does NOT set isBlackLabel", () => {
+    expect(parseGradeLabel("BGS 10")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 10,
+    });
+  });
+
+  it("\"BGS 9.5 Black Label\" does NOT set isBlackLabel — 10-only tier", () => {
+    expect(parseGradeLabel("BGS 9.5 Black Label")).toEqual({
+      gradeCompany: "BGS",
+      gradeValue: 9.5,
+    });
+  });
+
+  it("\"PSA 10 Pristine\" does NOT set isBlackLabel — BGS-only tier", () => {
+    // Some Cardsight legacy labels use "Pristine" for PSA gem-mint 10s.
+    // Our tier is BGS-only; the elevation must not leak.
+    expect(parseGradeLabel("PSA 10 Pristine")).toEqual({
+      gradeCompany: "PSA",
+      gradeValue: 10,
+    });
+  });
+});
+
+// ── composeGradeKey ──────────────────────────────────────────────────
+// The canonical grade-key formatter that the routes use to build the
+// "COMPANY GRADE" string that downstream selectors + getGraderPremium
+// expect. Black Label elevation must ONLY apply to (BGS, 10, true).
+
+import { composeGradeKey } from "../src/services/compiq/compiqEstimate.service.js";
+
+describe("composeGradeKey — canonical grade-key formatting", () => {
+  it("(\"BGS\", 10, true) → \"BGS 10 Black Label\"", () => {
+    expect(composeGradeKey("BGS", 10, true)).toBe("BGS 10 Black Label");
+  });
+
+  it("(\"BGS\", 10, false) → \"BGS 10\"", () => {
+    expect(composeGradeKey("BGS", 10, false)).toBe("BGS 10");
+  });
+
+  it("(\"BGS\", 10, undefined) → \"BGS 10\"", () => {
+    expect(composeGradeKey("BGS", 10)).toBe("BGS 10");
+  });
+
+  it("(\"bgs\", \"10\", true) → \"BGS 10 Black Label\" (case + string tolerant)", () => {
+    expect(composeGradeKey("bgs", "10", true)).toBe("BGS 10 Black Label");
+  });
+
+  it("(\"PSA\", 10, true) → \"PSA 10\" (elevation is BGS-only)", () => {
+    expect(composeGradeKey("PSA", 10, true)).toBe("PSA 10");
+  });
+
+  it("(\"BGS\", 9.5, true) → \"BGS 9.5\" (elevation is 10-only)", () => {
+    expect(composeGradeKey("BGS", 9.5, true)).toBe("BGS 9.5");
+  });
+
+  it("missing company or value → \"Raw\"", () => {
+    expect(composeGradeKey(null, 10)).toBe("Raw");
+    expect(composeGradeKey("BGS", null)).toBe("Raw");
+    expect(composeGradeKey(undefined, undefined)).toBe("Raw");
+    expect(composeGradeKey("", "")).toBe("Raw");
+  });
+});
