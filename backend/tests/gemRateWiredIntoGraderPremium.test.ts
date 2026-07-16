@@ -4,7 +4,7 @@
 // the static table. Mid-tier grades keep the table. Absent / low-confidence
 // signal is a no-op.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getGraderPremium } from "../src/services/compiq/compiqEstimate.service.js";
 import {
   computeGemRateFromObservations,
@@ -118,6 +118,47 @@ describe("getGraderPremium — gem-rate signal override", () => {
     expect(plainSet).toBeCloseTo(multiplierFromGemRate(sig!.gemRate), 2);
     // If chromeSet has a bump, it multiplies. Assert monotonic — bumped >= unbumped.
     expect(chromeSet).toBeGreaterThanOrEqual(plainSet);
+  });
+});
+
+describe("logGemRateMultiplierApplied — telemetry emission", () => {
+  it("emits gem_rate_multiplier_applied when the short-circuit fires", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const sig = computeGemRateFromObservations([
+      ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+      ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+    ]);
+    getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+    const emitted = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_multiplier_applied"));
+    expect(emitted.length).toBeGreaterThan(0);
+    const payload = JSON.parse(emitted[0]);
+    expect(payload.event).toBe("gem_rate_multiplier_applied");
+    expect(payload.gradingCompany).toBe("PSA");
+    expect(payload.grade).toBe("10");
+    expect(payload.gemRate).toBeCloseTo(0.1, 2);
+    expect(payload.gemRateBand).toBe("10-25%");
+    expect(payload.confidence).toBe("high");
+    expect(payload.totalGradedObserved).toBe(40);
+    expect(payload.formulaMultiplier).toBeGreaterThan(5);
+    expect(payload.setBump).toBe(1);
+    expect(payload.finalMultiplier).toBe(payload.formulaMultiplier);
+    spy.mockRestore();
+  });
+
+  it("does NOT emit when the short-circuit doesn't fire (mid-tier grade)", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const sig = computeGemRateFromObservations([
+      ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+      ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+    ]);
+    getGraderPremium("PSA", "9", 50, "base", 2024, null, sig);
+    const emitted = spy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes("gem_rate_multiplier_applied"));
+    expect(emitted.length).toBe(0);
+    spy.mockRestore();
   });
 });
 

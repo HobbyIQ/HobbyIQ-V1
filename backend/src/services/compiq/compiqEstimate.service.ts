@@ -1262,7 +1262,20 @@ export function getGraderPremium(
   // over-claim.
   if (gemRateSignal && shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)) {
     const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
-    return multiplierFromGemRate(gemRateSignal.gemRate) * setBump;
+    const formulaMultiplier = multiplierFromGemRate(gemRateSignal.gemRate);
+    logGemRateMultiplierApplied({
+      source: "getGraderPremium",
+      cardId: gemRateSignal.cardId,
+      gradingCompany: company,
+      grade: gradeKey,
+      gemRate: gemRateSignal.gemRate,
+      gemRateBand: gemRateSignal.gemRateBand,
+      confidence: gemRateSignal.confidence,
+      totalGradedObserved: gemRateSignal.totalGradedObserved,
+      formulaMultiplier,
+      setBump,
+    });
+    return formulaMultiplier * setBump;
   }
 
   // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
@@ -1357,6 +1370,50 @@ export function logGraderRatioObserved(opts: {
       gradedValue: Math.round(opts.gradedValue * 100) / 100,
       ratio: Math.round(ratio * 1000) / 1000,
       tier,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
+/**
+ * CF-GEM-RATE-WIRED-TELEMETRY (2026-07-16, PR #495 follow-up): fires whenever
+ * the gem-rate short-circuit in getGraderPremium activates. Lets the monthly
+ * calibration refresh (see backend/docs/runbooks/grader-premium-calibration-
+ * refresh.md) measure gem-rate ADOPTION separately from raw multiplier drift:
+ *
+ *   KQL: customEvents | where name == "gem_rate_multiplier_applied"
+ *   → count per (gradingCompany, grade, gemRateBand) per day.
+ *
+ * Fire-and-forget; never throws.
+ */
+export function logGemRateMultiplierApplied(opts: {
+  source: string;
+  cardId: string | null;
+  gradingCompany: string;
+  grade: string;
+  gemRate: number;
+  gemRateBand: string;
+  confidence: string;
+  totalGradedObserved: number;
+  formulaMultiplier: number;
+  setBump: number;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "gem_rate_multiplier_applied",
+      source: opts.source,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      gemRate: Math.round(opts.gemRate * 1000) / 1000,
+      gemRateBand: opts.gemRateBand,
+      confidence: opts.confidence,
+      totalGradedObserved: opts.totalGradedObserved,
+      formulaMultiplier: Math.round(opts.formulaMultiplier * 100) / 100,
+      setBump: Math.round(opts.setBump * 100) / 100,
+      finalMultiplier: Math.round(opts.formulaMultiplier * opts.setBump * 100) / 100,
       timestamp: new Date().toISOString(),
     }));
   } catch {
