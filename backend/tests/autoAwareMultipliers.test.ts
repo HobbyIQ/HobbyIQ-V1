@@ -62,12 +62,12 @@ describe("getGraderPremium — base cardClass + static fallback", () => {
     expect(r).toBeCloseTo(2.8, 1);
   });
 
-  it("PSA 9 at $200, base → static GRADER_PREMIUMS 100+ tier (the load-bearing breakdown for autos)", () => {
-    // This is the value that caused the Kurtz inverse to break when
-    // applied to autographs. For BASE cards in the prospect-pitching
-    // sample, 0.85 is correct.
+  it("PSA 9 at $200, base → static GRADER_PREMIUMS 100+ tier (0.95 post-PR #494)", () => {
+    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 9 100+ tier
+    // rebased 0.85 → 0.95 per Drew's modern anchor (PSA 9 sits at ~raw
+    // for expensive modern cards).
     const r = getGraderPremium("PSA", "9", 200, "base");
-    expect(r).toBeCloseTo(0.85, 1);
+    expect(r).toBeCloseTo(0.95, 1);
   });
 });
 

@@ -28,14 +28,16 @@ describe("CF-BASE-MULTIPLIER-ENGINE-WIRING — env-gated", () => {
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "");
     });
 
-    it("PSA 10 / $20 raw / cardClass=base → static <25 tier (4.9)", () => {
+    it("PSA 10 / $20 raw / cardClass=base → static <25 tier (5.0 post-PR #494)", () => {
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      expect(r).toBeCloseTo(4.9, 1);
+      // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
+      expect(r).toBeCloseTo(5.0, 1);
     });
 
-    it("PSA 10 / no rawPrice → static fallback (3.43)", () => {
+    it("PSA 10 / no rawPrice → static fallback (3.5 post-PR #494)", () => {
       const r = getGraderPremium("PSA", "10");
-      expect(r).toBeCloseTo(3.43, 2);
+      // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): fallback rebased 3.43 → 3.5 per Drew's modern anchor
+      expect(r).toBeCloseTo(3.5, 2);
     });
   });
 
@@ -85,13 +87,13 @@ describe("CF-BASE-MULTIPLIER-ENGINE-WIRING — env-gated", () => {
     it("'1' → NOT enabled (must be literal 'true')", () => {
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "1");
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      expect(r).toBeCloseTo(4.9, 1);  // static
+      expect(r).toBeCloseTo(5.0, 1);  // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
     });
 
     it("'yes' → NOT enabled", () => {
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "yes");
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      expect(r).toBeCloseTo(4.9, 1);  // static
+      expect(r).toBeCloseTo(5.0, 1);  // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
     });
   });
 });
