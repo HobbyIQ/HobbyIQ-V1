@@ -41,6 +41,7 @@ final class HobbyIQAppDelegate: NSObject, UIApplicationDelegate {
 struct HobbyIQApp: App {
     @UIApplicationDelegateAdaptor(HobbyIQAppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         HobbyIQTheme.applyGlobalAppearance()
@@ -54,6 +55,15 @@ struct HobbyIQApp: App {
             .environmentObject(appState)
             .onAppear {
                 AppState.shared = appState
+            }
+            // P0.7 delta (2026-07-16, backend PR #501): detect an APNs
+            // permission revoke that happened while the app was
+            // backgrounded, and PATCH `apnsDeviceToken: null` so the flip
+            // fan-out worker stops targeting the stale device.
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    Task { await PushNotificationManager.shared.syncAuthorizationStatusOnForeground() }
+                }
             }
         }
         .modelContainer(for: [CardItem.self, CardSaleRecord.self, SyncIntent.self])

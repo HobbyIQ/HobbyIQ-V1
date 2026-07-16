@@ -16,6 +16,14 @@ final class PushNotificationManager: NSObject, ObservableObject {
     @Published private(set) var deviceToken: String?
 
     private let tokenKey = "hobbyiq.push.deviceToken"
+    /// P0.7 delta (2026-07-16, backend PR #501): last hex token successfully
+    /// PATCHed to `/api/portfolio/preferences`. Guards against re-sending
+    /// the same token every launch — spec explicitly says diff before write.
+    private let lastPreferencesTokenKey = "hobbyiq.push.lastPreferencesToken"
+    /// P0.7 delta (2026-07-16): last observed system authorization status.
+    /// Used to detect a revoke transition (authorized → denied) on scene
+    /// activation so we can fire the null PATCH exactly once.
+    private let lastAuthStatusKey = "hobbyiq.push.lastAuthStatus"
 
     override init() {
         super.init()
@@ -45,12 +53,91 @@ final class PushNotificationManager: NSObject, ObservableObject {
         UIApplication.shared.registerForRemoteNotifications()
     }
 
+    /// P1 (2026-07-16, iOS delta): ask for push permission on first
+    /// meaningful use of the app — opening a holding detail sheet, or
+    /// checking DailyIQ. Per Apple HIG, ask when the affordance is
+    /// clearly connected to the value the user is about to receive.
+    ///
+    /// Guards: only fires when the OS status is `.notDetermined` (never
+    /// re-asked once granted or denied — declined users defer to the
+    /// Settings toggle affordance for a second chance). Also gated by a
+    /// UserDefaults flag so a rapid re-open doesn't hit the same code
+    /// path twice before iOS reflects the status change.
+    func askIfFirstMeaningfulUse() async {
+        let firstAskShownKey = "hobbyiq.push.firstAskShown"
+        if UserDefaults.standard.bool(forKey: firstAskShownKey) { return }
+        await refreshStatus()
+        guard authorizationStatus == .notDetermined else {
+            UserDefaults.standard.set(true, forKey: firstAskShownKey)
+            return
+        }
+        UserDefaults.standard.set(true, forKey: firstAskShownKey)
+        await requestPermissionAndRegister()
+    }
+
     /// Called from AppDelegate when APNs returns the device token.
     func didRegisterForRemoteNotifications(deviceToken tokenData: Data) {
         let hex = tokenData.map { String(format: "%02x", $0) }.joined()
         self.deviceToken = hex
         UserDefaults.standard.set(hex, forKey: tokenKey)
-        Task { await registerTokenWithBackend(hex) }
+        Task {
+            await registerTokenWithBackend(hex)
+            // P0.7 delta (2026-07-16, backend PR #501): also write the token
+            // to the portfolio-preferences doc so the flip fan-out worker
+            // can target this device. Diff-gated inside the method.
+            await registerTokenWithPortfolioPreferences(hex)
+        }
+    }
+
+    /// P0.7 delta (2026-07-16, backend PR #501): PATCH the APNs token to
+    /// `/api/portfolio/preferences`. Diff-gated per the spec's "do not
+    /// retry on every launch if the server already has the same token"
+    /// rule — compares against a locally-cached copy of the last
+    /// successfully-registered token.
+    func registerTokenWithPortfolioPreferences(_ token: String) async {
+        let lastRegistered = UserDefaults.standard.string(forKey: lastPreferencesTokenKey)
+        guard token != lastRegistered else { return }
+        do {
+            _ = try await APIService.shared.registerAPNsToken(token)
+            UserDefaults.standard.set(token, forKey: lastPreferencesTokenKey)
+        } catch {
+            #if DEBUG
+            print("[Push] Failed to PATCH APNs token to preferences: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    /// P0.7 delta (2026-07-16, backend PR #501): PATCH `apnsDeviceToken: null`
+    /// so the backend stops targeting a stale device. Called on iOS-side
+    /// permission revoke and on sign-out. Clears the local
+    /// `lastPreferencesTokenKey` so a re-grant re-PATCHes fresh.
+    func unregisterTokenFromPortfolioPreferences() async {
+        do {
+            _ = try await APIService.shared.unregisterAPNsToken()
+            UserDefaults.standard.removeObject(forKey: lastPreferencesTokenKey)
+        } catch {
+            #if DEBUG
+            print("[Push] Failed to null APNs token in preferences: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    /// P0.7 delta (2026-07-16): detect an authorization-status transition
+    /// from `.authorized` → `.denied` and fire the null-token PATCH exactly
+    /// once. Callers hook this into a scene-active lifecycle event so a
+    /// user revoking notifications in iOS Settings pushes the state up
+    /// to the backend on next foreground.
+    func syncAuthorizationStatusOnForeground() async {
+        await refreshStatus()
+        let previousRaw = UserDefaults.standard.integer(forKey: lastAuthStatusKey)
+        let previous = UNAuthorizationStatus(rawValue: previousRaw)
+        UserDefaults.standard.set(authorizationStatus.rawValue, forKey: lastAuthStatusKey)
+
+        // Only fire when we KNOW the user has revoked — first launch has
+        // previous == nil which we treat as "no signal".
+        if previous == .authorized, authorizationStatus == .denied {
+            await unregisterTokenFromPortfolioPreferences()
+        }
     }
 
     /// Called from AppDelegate when APNs registration fails.
@@ -88,6 +175,10 @@ final class PushNotificationManager: NSObject, ObservableObject {
             print("[Push] Failed to unregister device token: \(error.localizedDescription)")
             #endif
         }
+        // P0.7 delta (2026-07-16): also clear the token on the portfolio-
+        // preferences doc so the flip fan-out worker doesn't target this
+        // device after sign-out.
+        await unregisterTokenFromPortfolioPreferences()
     }
 }
 

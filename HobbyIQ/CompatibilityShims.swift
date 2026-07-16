@@ -227,15 +227,19 @@ final class AccountViewModel: ObservableObject {
     @Published var priceAlerts = true
     @Published var portfolioMovementAlerts = true
     @Published var portfolioMovementMinValue: Double = 50.0
-    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): local-only
-    /// opt-in for the major-flip push. Backend user-doc field
-    /// (`preferences.pushOnMajorFlip`) + fan-out worker ship in a follow-up;
-    /// this default keeps the toggle read/writeable today so the setting
-    /// exists at launch. Seeded from UserDefaults so a relaunch preserves
-    /// the user's choice.
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md + backend PR #501):
+    /// major-flip push opt-in, backed by `/api/portfolio/preferences`.
+    /// Seeded from UserDefaults so the toggle renders instantly on launch
+    /// while the GET request is in flight; `loadPortfolioPreferences()`
+    /// overwrites with the authoritative server state on success.
     @Published var verdictFlipAlerts: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.verdictFlipAlertsKey)
+    /// P0.7 delta (2026-07-16): last-known APNs registration status from
+    /// backend. Drives the "Notifications registered · updated 3m ago"
+    /// caption below the toggle. Nil until first fetch.
+    @Published var apnsDeviceStatus: PortfolioPreferencesResponse.APNsDeviceStatus?
     fileprivate static let verdictFlipAlertsKey = "hobbyIQ.settings.verdictFlipAlerts"
     private var isLoadingPrefs = false
+    private var isLoadingPortfolioPrefs = false
 
     var appVersionText: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -316,17 +320,54 @@ final class AccountViewModel: ObservableObject {
         }
     }
 
-    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): flip the
-    /// local preference, persist to UserDefaults, and on toggle-on ask
-    /// the system for notification permission so the first real flip
-    /// isn't blocked by a permission prompt during the daily cron
-    /// fan-out. Backend user-doc sync lands with the fan-out worker
-    /// (out of iOS scope for this PR).
+    /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md + backend PR #501):
+    /// flip the toggle optimistically, mirror to UserDefaults for cold-start,
+    /// then PATCH the server. On toggle-on, additionally request push
+    /// permission + register with APNs so the fan-out worker has a token
+    /// when it lands. On failure, revert local state.
     func updateVerdictFlipAlerts(_ enabled: Bool) async {
+        let previous = verdictFlipAlerts
         verdictFlipAlerts = enabled
         UserDefaults.standard.set(enabled, forKey: AccountViewModel.verdictFlipAlertsKey)
+
+        do {
+            let response = try await APIService.shared.updatePortfolioFlipPreference(pushOnMajorFlip: enabled)
+            if let confirmed = response.preferences?.pushOnMajorFlip {
+                verdictFlipAlerts = confirmed
+                UserDefaults.standard.set(confirmed, forKey: AccountViewModel.verdictFlipAlertsKey)
+            }
+            if let device = response.preferences?.apnsDevice {
+                apnsDeviceStatus = device
+            }
+        } catch {
+            verdictFlipAlerts = previous
+            UserDefaults.standard.set(previous, forKey: AccountViewModel.verdictFlipAlertsKey)
+            statusMessage = "Couldn't update the flip alert setting."
+            return
+        }
+
         if enabled {
             await PushNotificationManager.shared.requestPermissionAndRegister()
+        }
+    }
+
+    /// P0.7 delta (2026-07-16, backend PR #501): initial GET on Settings
+    /// screen mount. Overwrites UserDefaults with the authoritative server
+    /// state; silent failure — the UserDefaults seed keeps the toggle
+    /// interactive even offline.
+    func loadPortfolioPreferences() async {
+        guard !isLoadingPortfolioPrefs else { return }
+        isLoadingPortfolioPrefs = true
+        defer { isLoadingPortfolioPrefs = false }
+        do {
+            let response = try await APIService.shared.fetchPortfolioPreferences()
+            if let flag = response.preferences?.pushOnMajorFlip {
+                verdictFlipAlerts = flag
+                UserDefaults.standard.set(flag, forKey: AccountViewModel.verdictFlipAlertsKey)
+            }
+            apnsDeviceStatus = response.preferences?.apnsDevice
+        } catch {
+            // Keep whatever state UserDefaults seeded — best-effort GET.
         }
     }
 

@@ -2056,6 +2056,12 @@ struct PortfolioHoldingDetailSheet: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .task { await fetchPanelIfPossible() }
                 .task { await loadVerdictHistory() }
+                .task {
+                    // P1 (2026-07-16, iOS delta): first meaningful use —
+                    // opening a holding detail. Ask for push permission
+                    // here (once, guarded by UserDefaults) per Apple HIG.
+                    await PushNotificationManager.shared.askIfFirstMeaningfulUse()
+                }
                 .navigationDestination(isPresented: $showingMarkAsGradedSheet) {
                     MarkAsGradedSheet(card: card) { gradeCompany, gradeValue, certNumber, gradingCost, gradingTierId in
                         Task {

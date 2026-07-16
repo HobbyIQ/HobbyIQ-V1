@@ -1798,6 +1798,55 @@ struct APIService {
         try await put(path: "/api/alerts/preferences", body: prefs, responseType: NotificationPreferencesResponse.self)
     }
 
+    // MARK: - Portfolio Preferences (P0.7 delta, backend PR #500 + #501)
+
+    /// P0.7 delta (2026-07-16, backend PR #501): GET the user's portfolio-
+    /// preferences doc. Feeds the Settings toggle initial state + the APNs
+    /// registration-status caption. Best-effort: 401 during a stale-deploy
+    /// window must NOT sign the user out (path added to bestEffortPaths).
+    func fetchPortfolioPreferences() async throws -> PortfolioPreferencesResponse {
+        try await get(path: "/api/portfolio/preferences", responseType: PortfolioPreferencesResponse.self)
+    }
+
+    /// P0.7 delta (2026-07-16): PATCH just the `pushOnMajorFlip` field.
+    /// Sends only that key so a concurrent APNs-token update doesn't
+    /// stomp on the toggle state.
+    func updatePortfolioFlipPreference(pushOnMajorFlip: Bool) async throws -> PortfolioPreferencesResponse {
+        let body = PortfolioFlipPreferenceUpdate(pushOnMajorFlip: pushOnMajorFlip)
+        return try await patch(
+            path: "/api/portfolio/preferences",
+            body: body,
+            responseType: PortfolioPreferencesResponse.self
+        )
+    }
+
+    /// P0.7 delta (2026-07-16): PATCH the `apnsDeviceToken` field with the
+    /// current hex token. Backend stamps `apnsDevice.registeredAt`.
+    /// Called after APNs registration succeeds AND when the cached token
+    /// diverges from the last-registered one.
+    func registerAPNsToken(_ token: String) async throws -> PortfolioPreferencesResponse {
+        let body = PortfolioAPNsTokenUpdate(token: token)
+        return try await patch(
+            path: "/api/portfolio/preferences",
+            body: body,
+            responseType: PortfolioPreferencesResponse.self
+        )
+    }
+
+    /// P0.7 delta (2026-07-16): PATCH `apnsDeviceToken: null` to un-register.
+    /// Fires on iOS-side permission revoke and on sign-out so the backend
+    /// stops targeting a stale token in the fan-out worker. The explicit
+    /// `encodeNil` (vs. `encodeIfPresent`) is required — omitting the key
+    /// would leave the token untouched.
+    func unregisterAPNsToken() async throws -> PortfolioPreferencesResponse {
+        let body = PortfolioAPNsTokenUpdate.clear
+        return try await patch(
+            path: "/api/portfolio/preferences",
+            body: body,
+            responseType: PortfolioPreferencesResponse.self
+        )
+    }
+
     // MARK: - Auth Session
 
     func signOutSession() async throws -> AuthSignOutResponse {
@@ -2423,7 +2472,11 @@ struct APIService {
         "/api/portfolio/watchlist-bull-candidates",
         // P0.7 (2026-07-16): verdict-flip inventory dot fires on every
         // portfolio open — a stale-deploy 401 must not sign the user out.
-        "/api/compiq/portfolio/flips"
+        "/api/compiq/portfolio/flips",
+        // P0.7 delta (2026-07-16, backend PR #501): preferences GET/PATCH
+        // fires on Settings load + APNs registration. Same reasoning —
+        // transient 401 during a deploy gap must not evict the session.
+        "/api/portfolio/preferences"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
@@ -3998,6 +4051,61 @@ struct NotificationPreferencesRequest: Encodable {
     var priceAlerts: Bool?
     var portfolioMovementAlerts: Bool?
     var portfolioMovementMinValue: Double?
+}
+
+// MARK: - Portfolio Preferences (P0.7 delta, backend PR #500 + #501)
+
+/// GET /api/portfolio/preferences response envelope. The two fields iOS
+/// consumes are `pushOnMajorFlip` (drives the Settings toggle) and
+/// `apnsDevice.{ registered, registeredAt }` (drives the caption below the
+/// toggle). Every field decodes defensively — a shape drift degrades to
+/// "unknown" state rather than a crash.
+struct PortfolioPreferencesResponse: Decodable {
+    let success: Bool?
+    let preferences: Preferences?
+
+    struct Preferences: Decodable {
+        let pushOnMajorFlip: Bool?
+        let apnsDevice: APNsDeviceStatus?
+    }
+
+    struct APNsDeviceStatus: Decodable, Hashable {
+        let registered: Bool?
+        /// ISO timestamp when the current token was last written. Nil when
+        /// no token is on file (fresh account, un-registered, or cleared).
+        let registeredAt: String?
+    }
+}
+
+/// PATCH /api/portfolio/preferences body — flip-preference update.
+/// One field, sent alone so a concurrent APNs-token update on another
+/// device doesn't race with the toggle write.
+struct PortfolioFlipPreferenceUpdate: Encodable {
+    let pushOnMajorFlip: Bool
+}
+
+/// PATCH /api/portfolio/preferences body — APNs token update. When the
+/// token is set (`token` non-nil), we send `apnsDeviceToken: <hex>`.
+/// When clearing on revoke/logout, `.clear` sends explicit `null` via
+/// `encodeNil` — `encodeIfPresent` would silently drop the key and
+/// leave the stale token on the server.
+struct PortfolioAPNsTokenUpdate: Encodable {
+    let token: String?
+
+    static let clear = PortfolioAPNsTokenUpdate(token: nil)
+
+    enum CodingKeys: String, CodingKey {
+        case apnsDeviceToken
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let token {
+            try container.encode(token, forKey: .apnsDeviceToken)
+        } else {
+            try container.encodeNil(forKey: .apnsDeviceToken)
+        }
+    }
 }
 
 // MARK: - Subscription / Entitlement Models

@@ -120,7 +120,10 @@ final class AppSessionViewModel: ObservableObject {
             authStatusMessage = nil
             await subscriptionManager.prepare()
             launchState = activeTier == .none ? .paywall : .ready
-            await PushNotificationManager.shared.requestPermissionAndRegister()
+            // P1 (2026-07-16, iOS delta): do NOT ask for push permission
+            // at sign-in per Apple HIG. Deferred to first meaningful use
+            // (opening a holding detail / DailyIQ) via
+            // `PushNotificationManager.askIfFirstMeaningfulUse()`.
         } catch {
             errorMessage = error.localizedDescription
             currentUser = nil
@@ -141,7 +144,10 @@ final class AppSessionViewModel: ObservableObject {
             authStatusMessage = nil
             await subscriptionManager.prepare()
             launchState = activeTier == .none ? .paywall : .ready
-            await PushNotificationManager.shared.requestPermissionAndRegister()
+            // P1 (2026-07-16, iOS delta): do NOT ask for push permission
+            // at sign-in per Apple HIG. Deferred to first meaningful use
+            // (opening a holding detail / DailyIQ) via
+            // `PushNotificationManager.askIfFirstMeaningfulUse()`.
         } catch {
             errorMessage = error.localizedDescription
             currentUser = nil
@@ -162,7 +168,10 @@ final class AppSessionViewModel: ObservableObject {
             authStatusMessage = nil
             await subscriptionManager.prepare()
             launchState = activeTier == .none ? .paywall : .ready
-            await PushNotificationManager.shared.requestPermissionAndRegister()
+            // P1 (2026-07-16, iOS delta): do NOT ask for push permission
+            // at sign-in per Apple HIG. Deferred to first meaningful use
+            // (opening a holding detail / DailyIQ) via
+            // `PushNotificationManager.askIfFirstMeaningfulUse()`.
         } catch {
             let message: String
             if let apiError = error as? APIServiceError,

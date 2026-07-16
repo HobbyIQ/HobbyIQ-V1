@@ -46,6 +46,7 @@ struct AccountView: View {
             }
             .background(HobbyIQBackground())
             .task { await viewModel.loadNotificationPreferences() }
+            .task { await viewModel.loadPortfolioPreferences() }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Text("Account")
@@ -308,13 +309,13 @@ struct AccountView: View {
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
                 accountDivider
-                // P0.7 (2026-07-16, verdict-history-flip-surfaces.md):
-                // opt-in for the major-flip push. Store locally today;
-                // the backend user-doc preference field lands in a
-                // follow-up along with the fan-out worker. The `set`
-                // handler requests UNUserNotificationCenter auth on
-                // toggle-on so a first-time flip isn't held up by the
-                // system prompt in the middle of a cron fan-out.
+                // P0.7 (2026-07-16, verdict-history-flip-surfaces.md +
+                // backend PR #501): opt-in for the major-flip push. Read
+                // initial state via GET /api/portfolio/preferences on
+                // mount; toggle change fires PATCH with pushOnMajorFlip.
+                // The `set` handler additionally requests push permission +
+                // APNs registration on toggle-on so a first-time flip isn't
+                // blocked by a permission prompt during the fan-out cron.
                 Toggle(isOn: Binding(
                     get: { viewModel.verdictFlipAlerts },
                     set: { newValue in Task { await viewModel.updateVerdictFlipAlerts(newValue) } }
@@ -323,7 +324,7 @@ struct AccountView: View {
                         Text("Verdict Flip Alerts")
                             .font(.subheadline)
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        Text("Get notified when a card in your inventory flips from BUY to SELL or vice versa")
+                        Text("Push when a holding flips from BUY to SELL or vice versa.")
                             .font(.caption2)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -331,6 +332,11 @@ struct AccountView: View {
                 }
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
+                // P1 (2026-07-16, delta): APNs registration status caption.
+                // Registered → shows relative time since the token was
+                // written. Not registered → deep-links into iOS Settings so
+                // the user can enable notifications for HobbyIQ.
+                apnsRegistrationCaption
                 accountDivider
                 accountToggle("Haptics", isOn: $viewModel.settings.hapticsEnabled)
                 accountDivider
@@ -532,6 +538,82 @@ struct AccountView: View {
     private var accountDivider: some View {
         Divider()
             .overlay(HobbyIQTheme.Colors.electricBlue.opacity(0.1))
+    }
+
+    /// P1 (2026-07-16, iOS delta): APNs registration status caption below
+    /// the Verdict Flip Alerts toggle. Three states:
+    ///   - Registered: "Notifications registered · updated 3m ago"
+    ///   - Not registered but iOS permission may be enabled: tappable row
+    ///     that deep-links into iOS Settings → HobbyIQ so the user can
+    ///     turn notifications on.
+    ///   - Unknown (fetch hasn't completed yet): renders nothing.
+    @ViewBuilder
+    private var apnsRegistrationCaption: some View {
+        if let device = viewModel.apnsDeviceStatus {
+            if device.registered == true {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                    Text("Notifications registered")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    if let ago = Self.apnsFreshnessLabel(device.registeredAt) {
+                        Text("· updated \(ago)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 2)
+            } else {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        Text("Enable in iOS Settings → Notifications → HobbyIQ")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// "3m ago" / "2h ago" / "5d ago" style relative time for the APNs
+    /// caption. Returns nil when the wire timestamp is missing or the
+    /// ISO string is malformed.
+    private static func apnsFreshnessLabel(_ iso: String?) -> String? {
+        guard let iso else { return nil }
+        let parsers: [ISO8601DateFormatter] = [
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return f
+            }(),
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime]
+                return f
+            }()
+        ]
+        let date = parsers.compactMap { $0.date(from: iso) }.first
+        guard let date else { return nil }
+        let delta = Date().timeIntervalSince(date)
+        if delta < 60 { return "just now" }
+        if delta < 3_600 { return "\(Int(delta / 60))m ago" }
+        if delta < 86_400 { return "\(Int(delta / 3_600))h ago" }
+        return "\(Int(delta / 86_400))d ago"
     }
 
     private func statusBanner(_ message: String) -> some View {

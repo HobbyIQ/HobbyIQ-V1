@@ -326,6 +326,19 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func handleIncomingURL(_ url: URL) -> Bool {
+        // P0.7 delta (2026-07-16, verdict-history-flip-surfaces.md):
+        // `hobbyiq://holding/<uuid>` opens the holding detail sheet.
+        // Fired by APNs flip pushes, but works for any Universal-Links-
+        // style entry point since the scheme is registered.
+        if url.scheme?.lowercased() == "hobbyiq",
+           url.host?.lowercased() == "holding" {
+            let path = url.pathComponents.filter { $0 != "/" }
+            if let idString = path.first, let uuid = UUID(uuidString: idString) {
+                route(to: .portfolio(uuid))
+                return true
+            }
+        }
+
         guard let callback = OAuthCallback(url: url) else { return false }
 
         pendingOAuthCallback = callback

@@ -11,6 +11,10 @@ struct PortfolioIQView: View {
     let onSwitchToInventory: (PortfolioInventoryFilter) -> Void
 
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
+    /// P0.7 delta (2026-07-16): consumes `appState.pendingRoute` so a
+    /// `hobbyiq://holding/<uuid>` deep-link (e.g. from a verdict-flip
+    /// push notification) pushes the holding detail sheet.
+    @EnvironmentObject private var appState: AppState
     @State private var selectedCard: InventoryCard?
     @State private var showingLedger = false
     @State private var showCalibration = false
@@ -119,6 +123,21 @@ struct PortfolioIQView: View {
             .task {
                 await collectionValueViewModel.load()
                 await loadSupplyDemandAggregates()
+            }
+            // P0.7 delta (2026-07-16, verdict-history-flip-surfaces.md):
+            // consume `appState.pendingRoute` when it names a holding UUID.
+            // Fires on initial deep-link land AND on subsequent pushes
+            // received while the app is running. Awaits `vm.inventoryCards`
+            // being non-empty via `.onChange` so a cold-launch deep-link
+            // opens the sheet after the initial portfolio fetch completes.
+            .onChange(of: appState.pendingRoute) { _, newRoute in
+                consumePendingRoute(newRoute)
+            }
+            .onChange(of: vm.inventoryCards) { _, _ in
+                consumePendingRoute(appState.pendingRoute)
+            }
+            .onAppear {
+                consumePendingRoute(appState.pendingRoute)
             }
             .navigationDestination(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
@@ -427,6 +446,19 @@ struct PortfolioIQView: View {
 
     private var valueTrendSection: some View {
         CollectionValueCard(viewModel: collectionValueViewModel)
+    }
+
+    /// P0.7 delta (2026-07-16): match the pending route against the loaded
+    /// inventory and push the detail sheet. Clears `pendingRoute` on
+    /// consume so a re-appear doesn't re-open the sheet. Only fires when
+    /// the target holding is loaded — a deep-link that arrives before
+    /// the initial fetch is honored once holdings settle (via the
+    /// `.onChange(of: vm.inventoryCards)` observer).
+    private func consumePendingRoute(_ route: AppRoute?) {
+        guard case .portfolio(let uuid) = route else { return }
+        guard let card = vm.inventoryCards.first(where: { $0.id == uuid }) else { return }
+        selectedCard = card
+        appState.pendingRoute = nil
     }
 
     // MARK: - PR #425 Supply/Demand Dashboard
