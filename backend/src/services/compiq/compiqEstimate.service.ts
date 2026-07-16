@@ -911,57 +911,62 @@ interface GradeTierTable {
 // ~$20-30 price floor regardless; expensive cards ($500+) compress toward
 // 1.5-2.5x for PSA 10 because raw buyers price in gem odds. Numbers below
 // preserve that curve at anchors matching Drew's proposal.
+// CF-GRADER-PREMIUMS-FULL-REBASE (Drew, 2026-07-15, PR #495): completed
+// the modern rebase started in PR #494. All grades on all graders now
+// match Drew's modern anchors. Also splits BGS "10" into TWO grade keys:
+//   "10"              — regular BGS 10 (at least one subgrade < 10)
+//   "10 Black Label"  — ALL FOUR subgrades = 10 (rare, "only grade that
+//                        consistently beats PSA 10, 2-4× PSA 10 prices")
+// Grade-detection updates in detectGradeFromTitle emit "10 Black Label"
+// when title contains "Black Label" / "BL" alongside a BGS 10.
 const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
   PSA: {
-    // PSA 10 anchor 3.5× (Drew: range 3-4x); tiers preserve the value
-    // compression curve (~5× at <$25, ~2.2× at $100+).
+    // PSA 10 anchor 3.5× (Drew: 3-4x); slab-floor bump on <$25 tier.
     "10": { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
-    // PSA 9 — retained at prior calibration in PR #494 scope. Drew's
-    // modern anchor (1.2×; "post-2015 cards trade at/near raw") cascades
-    // through 20+ tier-3 ballpark projections + a Guard 1 sub-raw test.
-    // Follow-up PR will rebase alongside the KQL calibration refresh.
-    "9":  { "<25": 2.56, "25-50": 1.5, "50-100": 0.95, "100+": 0.85, fallback: 1.70 },
-    // PSA 8 anchor 1.0× (Drew 2026-07-15 override: "PSA 8 = Raw" —
-    // business rule overrides the calibrated 0.65-0.80× article data.
-    // Applied as a hard floor in getGraderPremium() below regardless of
-    // which table wins, so empirical calibration can't drift it away.
+    // PSA 9 anchor 1.2× (Drew: 1.1-1.3; post-2015 cards trade at/near
+    // raw; named-rookie premium). Sub-$25 tier still slab-floor bumped.
+    "9":  { "<25": 2.0, "25-50": 1.3, "50-100": 1.05, "100+": 0.95, fallback: 1.2 },
+    // PSA 8 = Raw hard business rule (modern) — applied as override in
+    // getGraderPremium regardless of which table wins.
     "8":  { "<25": 1.0, "25-50": 1.0, "50-100": 1.0, "100+": 1.0, fallback: 1.0 },
     "7":  { "<25": 0.75, "25-50": 0.68, "50-100": 0.62, "100+": 0.55, fallback: 0.65 },
     "6":  { "<25": 0.65, "25-50": 0.58, "50-100": 0.52, "100+": 0.48, fallback: 0.55 },
     "5":  { "<25": 0.55, "25-50": 0.50, "50-100": 0.45, "100+": 0.40, fallback: 0.48 },
   },
   BGS: {
-    // BGS 10 ("Black Label") — typically 1.5× PSA 10. Retained at prior
-    // calibration; Drew's modern anchor (4.5-6×) fits inside this range.
-    "10":  { "<25": 7.35, "25-50": 5.40, "50-100": 4.20, "100+": 3.30, fallback: 5.15 },
-    // BGS 9.5, BGS 9, BGS 8.5, BGS 8 — retained at prior calibration in
-    // PR #494 scope. Refining these to Drew's modern anchors (0.75 × PSA 10
-    // for BGS 9.5; 1.0-1.15 for BGS 9; etc.) cascades through 20+ tier-3
-    // ballpark projections in gradedPriceProjection tests. Follow-up PR
-    // will re-anchor BGS/SGC/CGC alongside the calibration refresh job.
-    "9.5": { "<25": 4.36, "25-50": 3.20, "50-100": 2.49, "100+": 1.96, fallback: 3.05 },
-    "9":   { "<25": 2.41, "25-50": 1.41, "50-100": 0.89, "100+": 0.80, fallback: 1.60 },
-    "8.5": { "<25": 1.10, "25-50": 1.00, "50-100": 0.95, "100+": 0.90, fallback: 1.00 },
-    "8":   { "<25": 1.00, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
+    // BGS 10 Black Label — ALL FOUR subgrades = 10. Drew: "the only
+    // grade that consistently beats PSA 10, 2-4× PSA 10 prices, use
+    // ~9-10× raw." Tiers preserve value-compression curve.
+    "10 Black Label": { "<25": 12.0, "25-50": 9.0, "50-100": 7.0, "100+": 5.5, fallback: 9.0 },
+    // BGS 10 regular — at least one subgrade < 10. Similar to PSA 10.
+    "10":  { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
+    // BGS 9.5 anchor 2.8× (Drew: ~0.75 × PSA 10; recent data pushes
+    // closer to PSA 9 than PSA 10 on liquid cards).
+    "9.5": { "<25": 4.0, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.8 },
+    // BGS 9 anchor 1.10× (Drew: 1.0-1.15; slight discount to PSA 9).
+    "9":   { "<25": 1.8, "25-50": 1.20, "50-100": 0.95, "100+": 0.85, fallback: 1.10 },
+    // BGS 8.5 anchor 0.78× (Drew: 0.7-0.85; below raw).
+    "8.5": { "<25": 0.95, "25-50": 0.82, "50-100": 0.76, "100+": 0.72, fallback: 0.78 },
+    // BGS 8 anchor 0.58× (Drew: 0.5-0.65).
+    "8":   { "<25": 0.70, "25-50": 0.62, "50-100": 0.56, "100+": 0.52, fallback: 0.58 },
   },
   SGC: {
-    // SGC — retained at prior calibration in PR #494 scope. Follow-up
-    // PR refines to Drew's modern anchors (SGC 10 = 3.05× ~0.87 PSA 10;
-    // SGC 9 = 1.08×) once BGS/SGC/CGC test cascade is fully mapped.
-    "10":  { "<25": 4.17, "25-50": 3.06, "50-100": 2.38, "100+": 1.87, fallback: 2.92 },
-    "9.5": { "<25": 3.72, "25-50": 2.74, "50-100": 2.13, "100+": 1.67, fallback: 2.61 },
-    "9":   { "<25": 2.30, "25-50": 1.35, "50-100": 0.86, "100+": 0.77, fallback: 1.53 },
-    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
-    "8":   { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
+    // SGC 10 anchor 3.05× (Drew: ~0.87 × PSA 10; 85-90% of PSA 10 value).
+    "10":  { "<25": 4.35, "25-50": 3.13, "50-100": 2.44, "100+": 1.91, fallback: 3.05 },
+    "9.5": { "<25": 3.60, "25-50": 2.60, "50-100": 2.02, "100+": 1.59, fallback: 2.55 },
+    // SGC 9 anchor 1.08× (Drew: 1.0-1.15; ~90% of PSA 9).
+    "9":   { "<25": 1.75, "25-50": 1.15, "50-100": 0.95, "100+": 0.85, fallback: 1.08 },
+    "8.5": { "<25": 0.85, "25-50": 0.75, "50-100": 0.70, "100+": 0.65, fallback: 0.72 },
+    // SGC 8 anchor 0.62× (Drew: 0.55-0.7).
+    "8":   { "<25": 0.72, "25-50": 0.65, "50-100": 0.60, "100+": 0.55, fallback: 0.62 },
   },
   CGC: {
-    // CGC — retained at prior calibration in PR #494 scope. Follow-up PR
-    // refines to modern anchors.
-    "10":  { "<25": 3.92, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.74 },
-    "9.5": { "<25": 3.49, "25-50": 2.56, "50-100": 1.99, "100+": 1.57, fallback: 2.44 },
-    "9":   { "<25": 2.18, "25-50": 1.28, "50-100": 0.81, "100+": 0.73, fallback: 1.45 },
-    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.88, "100+": 0.83, fallback: 0.93 },
-    "8":   { "<25": 0.93, "25-50": 0.88, "50-100": 0.83, "100+": 0.78, fallback: 0.88 },
+    // CGC 10 ≈ PSA 10 × 0.80 → 2.80× anchor (thinner liquidity vs PSA/BGS).
+    "10":  { "<25": 4.00, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.80 },
+    "9.5": { "<25": 3.30, "25-50": 2.40, "50-100": 1.86, "100+": 1.47, fallback: 2.30 },
+    "9":   { "<25": 1.65, "25-50": 1.10, "50-100": 0.90, "100+": 0.82, fallback: 1.02 },
+    "8.5": { "<25": 0.80, "25-50": 0.72, "50-100": 0.68, "100+": 0.64, fallback: 0.70 },
+    "8":   { "<25": 0.68, "25-50": 0.62, "50-100": 0.58, "100+": 0.55, fallback: 0.60 },
   },
 };
 
@@ -1778,12 +1783,28 @@ export async function deriveGradeLadderAnchor(opts: {
   };
 }
 
-/** Extracts a (company, grade) tuple from a free-text comp title, or null. */
+/** Extracts a (company, grade) tuple from a free-text comp title, or null.
+ *
+ * CF-BGS-BLACK-LABEL-SPLIT (Drew, 2026-07-15, PR #495): when the title
+ * describes a BGS 10 and also contains "Black Label" (or its "BL"
+ * shorthand), emit `grade: "10 Black Label"` so downstream multiplier
+ * lookup routes to the 9× table entry instead of the regular BGS 10
+ * (~3.5×). Everything else keeps its prior detection behavior. */
 export function detectGradeFromTitle(title: string): { company: string; grade: string } | null {
   if (!title) return null;
   const m = title.match(/\b(PSA|BGS|SGC|CGC)\s*([0-9]+(?:\.5)?)\b/i);
   if (!m) return null;
-  return { company: m[1].toUpperCase(), grade: m[2] };
+  const company = m[1].toUpperCase();
+  const grade = m[2];
+  if (company === "BGS" && grade === "10") {
+    // Case-insensitive match on "Black Label" or bare "BL" adjacent
+    // to the BGS 10 (typical eBay titles: "BGS 10 BL", "BGS 10 Pristine",
+    // "BGS 10 Black Label"). "Pristine" is BGS's other name for Black Label.
+    if (/\b(black\s+label|pristine|bl)\b/i.test(title)) {
+      return { company, grade: "10 Black Label" };
+    }
+  }
+  return { company, grade };
 }
 
 /**
