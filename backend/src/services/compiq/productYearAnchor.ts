@@ -46,11 +46,17 @@
 // false) — flag off = zero behavior change from Phase 5 v1 today.
 
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 
 export interface ProductYearAnchorResult {
-  /** Median price across the fetched comp pool. */
+  // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): `median` field name is preserved
+  // for downstream call-site parity but now carries the trend-projected
+  // next-sale value across the product-year cross-player pool — NOT an
+  // arithmetic median. Emission call-sites already forward it into a
+  // parallel-multiplier product; the trend-projected anchor is the
+  // structurally honest input Drew's rule demands.
   median: number;
-  /** How many comps went into the median — surfaced for confidence. */
+  /** How many comps went into the projection — surfaced for confidence. */
   compCount: number;
   /** Distinct card-id count in the pool — dispersion signal. */
   distinctCardIds: number;
@@ -86,20 +92,26 @@ export async function fetchProductYearMedianAnchor(
       product: product.trim(),
       cardYear,
     });
-    const prices = (pool.comps ?? [])
-      .map((c) => c.price)
-      .filter((p): p is number => Number.isFinite(p) && p > 0)
-      .sort((a, b) => a - b);
-    if (prices.length === 0) return null;
+    const validComps = (pool.comps ?? [])
+      .filter((c) => Number.isFinite(c.price) && c.price > 0);
+    if (validComps.length === 0) return null;
 
-    const median = prices[Math.floor(prices.length / 2)];
+    // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): projected next-sale replaces
+    // the arithmetic median across the product-year cross-player pool.
+    // Regression fires when ≥2 distinct dates exist; trend-adjusted-last-
+    // sale otherwise. Both project a next sale — never a middle price.
+    const nextSale = projectNextSaleFromComps(
+      validComps.map((c) => ({ price: c.price, soldDate: c.date })),
+    );
+    if (nextSale === null) return null;
+
     const distinctCardIds = new Set(
-      (pool.comps ?? []).map((c) => c.cardId).filter(Boolean),
+      validComps.map((c) => c.cardId).filter(Boolean),
     ).size;
 
     return {
-      median,
-      compCount: prices.length,
+      median: nextSale.nextSaleValue,
+      compCount: validComps.length,
       distinctCardIds,
       source: "product-year-anchor",
     };

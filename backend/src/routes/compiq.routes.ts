@@ -79,6 +79,7 @@ import { getCardMetaById } from "../services/compiq/cardsight.router.js";
 // canonical path. Behavior here is unchanged — see helper header.
 import type { GradedProjectionResult } from "../services/compiq/gradedPriceProjection.js";
 import { compileGradedEstimatesForCard } from "../services/compiq/compileGradedEstimatesForCard.js";
+import { projectNextSaleFromComps } from "../services/compiq/nextSaleProjection.service.js";
 
 // CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
 // `/api/compiq/card-image/:id` proxy route from the request context.
@@ -435,42 +436,57 @@ async function applyAutoProjectionFallbacks(
         // history. Require ≥2 sales to guard against a single outlier
         // defining the price; single-sale is treated as too-thin and
         // falls through to Layer 4 / Layer 2.
-        const sorted = targetHistory
-          .map((p) => p.price)
-          .filter((p) => Number.isFinite(p) && p > 0)
-          .sort((a, b) => a - b);
-        if (sorted.length >= 2) {
-          const median = sorted[Math.floor(sorted.length / 2)];
-          const projected = median;
-          const low = projected * 0.6;
-          const high = projected * 1.6;
-          console.log(
-            JSON.stringify({
-              event: "price_extended_window_direct_anchor",
-              source: "compiq.routes",
-              originalQuery: query,
-              targetCardId: ciCardId,
-              targetNumber: ciNumber,
-              targetPlayer: ciPlayer,
-              targetMedian: median,
-              targetSampleSize: sorted.length,
-              projected,
-            }),
+        //
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median → projected
+        // assignment. Project the next sale from the trend across the 365d
+        // series. Regression fits when ≥2 distinct dates land in the pool;
+        // the trend-adjusted-last-sale branch fires on flat / single-day
+        // pools. Never the arithmetic middle.
+        const validComps = targetHistory
+          .filter((p) => Number.isFinite(p.price) && p.price > 0);
+        if (validComps.length >= 2) {
+          const nextSale = projectNextSaleFromComps(
+            validComps.map((p) => ({
+              price: p.price,
+              soldDate: p.closing_date || null,
+            })),
           );
-          est.predictedPrice = projected;
-          est.predictedPriceRange = { low, high };
-          est.predictedPriceAttribution = {
-            mechanism: "target_extended_window_direct",
-            anchorCardId: ciCardId,
-            anchorPrice: median,
-            anchorSampleSize: sorted.length,
-            anchorNumber: ciNumber,
-            windowDays: 365,
-            note:
-              "Estimated from the target card's own thin (365d) sales history rather than a base-card projection",
-          };
-          est.source = "projected";
-          return;
+          if (nextSale !== null) {
+            const projected = nextSale.nextSaleValue;
+            const low = nextSale.bounds.low;
+            const high = nextSale.bounds.high;
+            console.log(
+              JSON.stringify({
+                event: "price_extended_window_direct_anchor",
+                source: "compiq.routes",
+                originalQuery: query,
+                targetCardId: ciCardId,
+                targetNumber: ciNumber,
+                targetPlayer: ciPlayer,
+                targetAnchor: projected,
+                targetSampleSize: validComps.length,
+                targetProjectionMethod: nextSale.method,
+                targetSlopePerMonthPct: nextSale.slopePerMonthPct,
+                projected,
+              }),
+            );
+            est.predictedPrice = projected;
+            est.predictedPriceRange = { low, high };
+            est.predictedPriceAttribution = {
+              mechanism: "target_extended_window_direct",
+              projectionMethod: nextSale.method,
+              slopePerMonthPct: nextSale.slopePerMonthPct,
+              anchorCardId: ciCardId,
+              anchorPrice: projected,
+              anchorSampleSize: validComps.length,
+              anchorNumber: ciNumber,
+              windowDays: 365,
+              note:
+                "Estimated from the target card's own 365d sales trend rather than a base-card projection",
+            };
+            est.source = "projected";
+            return;
+          }
         }
       }
     } catch {

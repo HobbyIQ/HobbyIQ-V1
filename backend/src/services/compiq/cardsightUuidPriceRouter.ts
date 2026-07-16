@@ -21,6 +21,7 @@ import {
   pooledTrendToTrendIQShape,
 } from "./resolverFallbackHelper.js";
 import { computeSlopeValuation } from "./slopeValuation.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 
 interface PriceByCardsightUuidInput {
   cardId: string;
@@ -173,7 +174,20 @@ export async function priceByCardsightUuid(
     ? bucketRecordsForSlope
     : rawRecords.map((r) => ({ date: r.date ?? null, price: r.price }));
   const slopeVal = computeSlopeValuation(slopeInput);
-  const marketValue = slopeVal != null ? slopeVal.marketValue : roundedFmv;
+  // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median-anchored
+  // `roundedFmv` fallback. When regression can't fit (<2 records or all-
+  // same-date), project from the newest actual sale via the trend-
+  // adjusted-last-sale branch of projectNextSaleFromComps. Only null when
+  // no priced records exist (roundedFmv itself would also be null here).
+  const nextSaleFallback = slopeVal === null
+    ? projectNextSaleFromComps(
+        slopeInput.map((r) => ({ price: r.price, soldDate: r.date })),
+      )
+    : null;
+  const marketValue =
+    slopeVal?.marketValue
+    ?? nextSaleFallback?.nextSaleValue
+    ?? null;
   const prediction = slopeVal;
 
   // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in the

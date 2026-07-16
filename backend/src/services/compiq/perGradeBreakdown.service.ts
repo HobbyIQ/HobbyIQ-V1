@@ -16,6 +16,7 @@ import {
   type CardHedgeSale,
 } from "./cardhedge.client.js";
 import { getGraderPremium } from "./compiqEstimate.service.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 
 /** Standard grades surfaced when the caller doesn't specify. */
 const DEFAULT_GRADES: ReadonlyArray<GradeKey> = [
@@ -87,14 +88,24 @@ export interface GradeBreakdownRow {
 
   /**
    * Source of the price:
-   *   "live"      — 3+ real comps in the 90d window; medianPrice IS FMV
+   *   "live"      — 3+ real comps in the 90d window; fairMarketValue is
+   *                 the trend-projected next sale from those comps
+   *                 (never a median of them, per Drew 2026-07-15).
    *   "projected" — no or thin comps; predicted from Raw × grader premium
    *   "no-data"   — no Raw anchor to project from either
    */
   source: "live" | "projected" | "no-data";
 
   attribution: {
-    mechanism: "live-comps" | "grade-ladder-projection";
+    // CF-NO-MEDIAN-FMV (2026-07-15): mechanism disambiguates the live
+    // path between clean regression fit and single-point trend-adjusted
+    // fallback. "unavailable" flows through on the no-data branch.
+    mechanism:
+      | "live-comps"
+      | "live-comps-regression"
+      | "live-comps-trend-adjusted-last-sale"
+      | "grade-ladder-projection"
+      | "unavailable";
     anchorGrade?: string;
     anchorPrice?: number;
     multiplier?: number;
@@ -202,9 +213,41 @@ export function buildGradeBreakdownRow(
     }));
 
   // ── Live path: 3+ comps in window ─────────────────────────────
+  //
+  // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired median-as-FMV in the
+  // per-grade breakdown's live path. FMV is projected next sale from
+  // this grade tier's trend across the comp pool. `medianPrice` is
+  // still surfaced as a diagnostic column (median of past comps —
+  // observed, not projected) so iOS/backtest can compare projection
+  // vs midpoint, but `fairMarketValue` and `predictedPrice` now derive
+  // from projectNextSaleFromComps.
   if (compCount >= 3 && medianPrice !== null) {
-    const projectedPrice = round(medianPrice);
-    const spread = Math.max(1, medianPrice * 0.1);
+    const gradeCompsForProjection = comps
+      .filter((c) => typeof c.price === "number" && c.price > 0)
+      .map((c) => ({ price: c.price, soldDate: c.date ?? null }));
+    const nextSale = projectNextSaleFromComps(gradeCompsForProjection);
+    if (nextSale === null) {
+      // Invariant break — compCount>=3 with all-invalid prices shouldn't
+      // reach here. Fall through to projection path (no FMV emitted).
+      return {
+        gradeLabel: grade.label,
+        gradingCompany: grade.gradingCompany,
+        gradeValue: grade.gradeValue,
+        isRaw,
+        compCount,
+        medianPrice: round(medianPrice),
+        fairMarketValue: null,
+        latestPrice: latestPrice !== null ? round(latestPrice) : null,
+        latestDate,
+        daysSinceNewestComp,
+        recentComps,
+        predictedPrice: null,
+        predictedPriceRange: null,
+        source: "no-data",
+        attribution: { mechanism: "unavailable" },
+        confidence: 0,
+      };
+    }
     return {
       gradeLabel: grade.label,
       gradingCompany: grade.gradingCompany,
@@ -212,16 +255,20 @@ export function buildGradeBreakdownRow(
       isRaw,
       compCount,
       medianPrice: round(medianPrice),
-      fairMarketValue: round(medianPrice),
+      fairMarketValue: round(nextSale.nextSaleValue),
       latestPrice: latestPrice !== null ? round(latestPrice) : null,
       latestDate,
       daysSinceNewestComp,
       recentComps,
-      predictedPrice: projectedPrice,
-      predictedPriceRange: { low: round(medianPrice - spread), high: round(medianPrice + spread) },
+      predictedPrice: round(nextSale.nextSaleValue),
+      predictedPriceRange: { low: nextSale.bounds.low, high: nextSale.bounds.high },
       source: "live",
-      attribution: { mechanism: "live-comps" },
-      confidence: Math.min(1, 0.5 + compCount * 0.05),
+      attribution: {
+        mechanism: nextSale.method === "linear-regression"
+          ? "live-comps-regression"
+          : "live-comps-trend-adjusted-last-sale",
+      },
+      confidence: Math.min(1, nextSale.confidence + Math.min(0.15, compCount * 0.02)),
     };
   }
 
