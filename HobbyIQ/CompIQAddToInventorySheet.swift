@@ -502,7 +502,7 @@ struct CompIQAddToInventorySheet: View {
             switch viewModel.valuationPreview {
             case .observed(let value):
                 HStack(spacing: 8) {
-                    Text("Will value at \(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    Text("Will value at \(value.currencyStringNoCents)")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Text("Observed")
@@ -515,7 +515,7 @@ struct CompIQAddToInventorySheet: View {
             case .estimated(let value, let tier, let low, let high):
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
-                        Text("Will value at ~\(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                        Text("Will value at ~\(value.currencyStringNoCents)")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         Text(tierPillLabel(tier))
@@ -526,7 +526,7 @@ struct CompIQAddToInventorySheet: View {
                             .clipShape(Capsule())
                     }
                     if let l = low, let h = high {
-                        Text("range \(l.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(h.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                        Text("range \(l.currencyStringNoCents) – \(h.currencyStringNoCents)")
                             .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }

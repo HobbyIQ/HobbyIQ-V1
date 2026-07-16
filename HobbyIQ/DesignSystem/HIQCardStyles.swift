@@ -24,7 +24,7 @@ import SwiftUI
 /// this helper so rounding can never diverge.
 func wholeUSDString(_ value: Double) -> String {
     let rounded = value.rounded(.toNearestOrAwayFromZero)
-    return rounded.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+    return rounded.currencyStringNoCents
 }
 
 // MARK: - Card container modifiers

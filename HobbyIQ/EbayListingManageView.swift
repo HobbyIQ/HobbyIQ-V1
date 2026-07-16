@@ -105,7 +105,7 @@ struct EbayListingManageView: View {
             statusRow("Status", value: status.status?.capitalized ?? "Unknown")
             statusRow("Listing ID", value: status.listingId ?? "—")
             if let price = status.price {
-                statusRow("Price", value: String(format: "$%.2f", price))
+                statusRow("Price", value: price.currencyString)
             }
             if let qty = status.quantity {
                 statusRow("Quantity", value: "\(qty)")

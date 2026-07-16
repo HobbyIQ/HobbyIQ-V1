@@ -257,7 +257,7 @@ struct ProfitIQCardDetailView: View {
                         }
                         Spacer()
                         if let value = point.value {
-                            Text(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            Text(value.currencyStringNoCents)
                                 .font(.subheadline.weight(.bold).monospacedDigit())
                                 .foregroundStyle(AppColors.textPrimary)
                         }

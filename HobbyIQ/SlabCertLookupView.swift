@@ -302,7 +302,7 @@ struct SlabCertLookupView: View {
 
                 HStack(spacing: 8) {
                     if let refPrice = response.referencePrice, refPrice > 0 {
-                        infoPill("Reference: \(refPrice.formatted(.currency(code: "USD").precision(.fractionLength(0))))", tint: HobbyIQTheme.Colors.successGreen)
+                        infoPill("Reference: \(refPrice.currencyStringNoCents)", tint: HobbyIQTheme.Colors.successGreen)
                     }
                     if let conf = response.matchConfidence {
                         infoPill(String(format: "Match %.0f%%", conf * 100), tint: HobbyIQTheme.Colors.mutedText)
@@ -601,7 +601,7 @@ struct SlabCertLookupView: View {
             }
             Spacer(minLength: 8)
             if let price = sample.price {
-                Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(price.currencyStringNoCents)
                     .font(.subheadline.weight(.bold).monospacedDigit())
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             }

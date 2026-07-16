@@ -1114,13 +1114,13 @@ struct CompIQPricedCardView: View {
         let low = zone?.low
         let high = zone?.high
         if let low, let high {
-            return "\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+            return "\(low.currencyStringNoCents) – \(high.currencyStringNoCents)"
         }
         if let low {
-            return low.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            return low.currencyStringNoCents
         }
         if let high {
-            return high.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            return high.currencyStringNoCents
         }
         return "—"
     }
@@ -1205,7 +1205,7 @@ struct CompIQPricedCardView: View {
                     if let quick = response.quickSaleValue {
                         priceTileBlock(
                             label: "QUICK SALE",
-                            value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))),
+                            value: quick.currencyStringNoCents,
                             icon: "bolt.fill",
                             tint: HobbyIQTheme.Colors.successGreen
                         )
@@ -1214,7 +1214,7 @@ struct CompIQPricedCardView: View {
                     if let premium = response.premiumValue {
                         priceTileBlock(
                             label: "PREMIUM",
-                            value: premium.formatted(.currency(code: "USD").precision(.fractionLength(0))),
+                            value: premium.currencyStringNoCents,
                             icon: "arrow.up.circle.fill",
                             tint: HobbyIQTheme.Colors.danger
                         )
@@ -1244,7 +1244,7 @@ struct CompIQPricedCardView: View {
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .tracking(0.8)
-                    Text(predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(predicted.currencyStringNoCents)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     if let indicator {
@@ -1256,7 +1256,7 @@ struct CompIQPricedCardView: View {
                 if let range = response.predictedPriceRange,
                    let low = range.low, low > 0,
                    let high = range.high, high > 0 {
-                    Text("\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    Text("\(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
@@ -1650,8 +1650,8 @@ struct CompIQPricedCardView: View {
         // anchor — `entry.value` — not the weighted median. The
         // trend-adjusted value is the headline; `value` is the
         // canonical last-observed comp price.
-        if let v = entry?.value, v > 0 { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
-        if let v = entry?.observedSaleValue { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        if let v = entry?.value, v > 0 { return v.currencyStringNoCents }
+        if let v = entry?.observedSaleValue { return v.currencyStringNoCents }
         return "—"
     }
 
@@ -1690,7 +1690,7 @@ struct CompIQPricedCardView: View {
     private func statsCellRangePrimary(_ entry: CardPanelGradeEntry?) -> String {
         guard let low = entry?.priceRangeLow, low > 0,
               let high = entry?.priceRangeHigh, high > 0 else { return "—" }
-        return "\(low.formatted(.currency(code: "USD").precision(.fractionLength(0))))–\(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+        return "\(low.currencyStringNoCents)–\(high.currencyStringNoCents)"
     }
 
     private func statsCellSamplePrimary(_ entry: CardPanelGradeEntry?) -> String {
@@ -1738,7 +1738,7 @@ struct CompIQPricedCardView: View {
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     Spacer()
                     HStack(spacing: 6) {
-                        Text(predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        Text(predicted.currencyStringNoCents)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundStyle(primaryColor)
                         if let delta = deltaPct {
@@ -1761,7 +1761,7 @@ struct CompIQPricedCardView: View {
                     }
                     Spacer()
                     if let low = rangeLow, low > 0, let high = rangeHigh, high > 0 {
-                        Text("\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                        Text("\(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                             .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
@@ -1827,7 +1827,7 @@ struct CompIQPricedCardView: View {
             return "Hold"
         case .list:
             if let t = rec.targetPrice, t > 0 {
-                return "List at \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+                return "List at \(t.currencyStringNoCents)"
             }
             return "List"
         case .insufficientData:
@@ -1869,7 +1869,7 @@ struct CompIQPricedCardView: View {
     private func referenceAnomalyChip(entry: CardPanelGradeEntry, reference: Double) -> some View {
         let ourValue = entry.trendAdjustedValue ?? entry.value ?? 0
         let refIsHigher = reference > ourValue
-        let refStr = reference.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let refStr = reference.currencyStringNoCents
         let copy: String = refIsHigher
             ? "External estimate \(refStr) sits above our comp pool — recent activity may be thin."
             : "External estimate \(refStr) sits below our comp pool — recent activity may be hot."
@@ -2058,7 +2058,7 @@ struct CompIQPricedCardView: View {
                     .font(.system(size: 34, weight: .regular, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.7))
                 if let value = estimate.estimatedValue {
-                    Text(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(value.currencyStringNoCents)
                         .font(.system(size: 38, weight: .regular, design: .rounded))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
                 } else {
@@ -2068,7 +2068,7 @@ struct CompIQPricedCardView: View {
                 }
             }
             if let low = estimate.estimateLow, let high = estimate.estimateHigh {
-                Text("range \(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("range \(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                     .font(.subheadline)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
@@ -2236,11 +2236,11 @@ struct CompIQPricedCardView: View {
         let perGrade: Double? = selectedGrade == .raw
             ? observedRawValue()
             : observedMedianFor(selectedGrade)
-        if let v = perGrade { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        if let v = perGrade { return v.currencyStringNoCents }
         // Defensive fallback for the legacy / first-paint path.
-        if let v = response.marketTier?.value { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
-        if let v = response.marketValue       { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
-        if let v = response.estimatedValue    { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        if let v = response.marketTier?.value { return v.currencyStringNoCents }
+        if let v = response.marketValue       { return v.currencyStringNoCents }
+        if let v = response.estimatedValue    { return v.currencyStringNoCents }
         return "—"
     }
 
@@ -2296,15 +2296,15 @@ struct CompIQPricedCardView: View {
     }
 
     private func extrapolatedValueString(_ response: CompIQPriceByIdResponse) -> String {
-        if let v = response.estimatedValue { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
-        if let v = response.marketValue    { return v.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        if let v = response.estimatedValue { return v.currencyStringNoCents }
+        if let v = response.marketValue    { return v.currencyStringNoCents }
         return "—"
     }
 
     private func extrapolatedRangeLine(_ response: CompIQPriceByIdResponse) -> String? {
         guard let range = response.estimateRange,
               let low = range.low, let high = range.high else { return nil }
-        return "range \(low.formatted(.currency(code: "USD").precision(.fractionLength(0))))–\(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+        return "range \(low.currencyStringNoCents)–\(high.currencyStringNoCents)"
     }
 
     /// Basis line — prefers the backend's `estimateBasis` prose; falls
@@ -2320,7 +2320,7 @@ struct CompIQPricedCardView: View {
               let days = sale.daysSinceSold else {
             return nil
         }
-        return "From the last sale (\(price.formatted(.currency(code: "USD").precision(.fractionLength(0)))), \(daysAgoCopy(days))), adjusted for the set's recent trend."
+        return "From the last sale (\(price.currencyStringNoCents), \(daysAgoCopy(days))), adjusted for the set's recent trend."
     }
 
     /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): reshaped to
@@ -2330,7 +2330,7 @@ struct CompIQPricedCardView: View {
     /// as a real value, not a footnote.
     @ViewBuilder
     private func lastSalePriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
-        let priceStr: String? = response.lastSale?.price.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
+        let priceStr: String? = response.lastSale?.price.map { $0.currencyStringNoCents }
         let days: Int? = response.lastSale?.daysSinceSold ?? response.daysSinceNewestComp
         VStack(spacing: 4) {
             Text("Last sale")
@@ -2377,7 +2377,7 @@ struct CompIQPricedCardView: View {
         // was missing) — trend read is carried by the regime label
         // under the FMV headline (`valueBlockFollower`). Last Comp now
         // takes the full width for a cleaner headline.
-        let priceStr = response.lastSale?.price.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) } ?? "—"
+        let priceStr = response.lastSale?.price.map { $0.currencyStringNoCents } ?? "—"
         let daysAgo = response.lastSale?.daysSinceSold
         VStack(spacing: 10) {
             VStack(spacing: 4) {
@@ -2545,18 +2545,18 @@ struct CompIQPricedCardView: View {
             // Price range
             if let low, let high {
                 VStack(spacing: 2) {
-                    Text(low.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(low.currencyStringNoCents)
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(tint)
                     Text("to")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
-                    Text(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(high.currencyStringNoCents)
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(tint)
                 }
             } else if let low {
-                Text(low.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(low.currencyStringNoCents)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(tint)
             } else {
@@ -2920,7 +2920,7 @@ struct CompIQPricedCardView: View {
                         .tracking(0.6)
                     HStack(spacing: 6) {
                         if let price {
-                            Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            Text(price.currencyStringNoCents)
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(AppColors.textPrimary)
                         }
@@ -3202,7 +3202,7 @@ struct CompIQPricedCardView: View {
                 AxisTick()
                 AxisValueLabel {
                     if let n = value.as(Double.self) {
-                        Text(n.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        Text(n.currencyStringNoCents)
                             .font(.caption2)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
@@ -3270,7 +3270,7 @@ struct CompIQPricedCardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 7) {
                     if let price = comp.price {
-                        Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        Text(price.currencyStringNoCents)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     }
@@ -3350,7 +3350,7 @@ struct CompIQPricedCardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 7) {
                     if let price = comp.price {
-                        Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        Text(price.currencyStringNoCents)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             .strikethrough(true, color: HobbyIQTheme.Colors.mutedText)
@@ -3465,7 +3465,7 @@ struct CompIQPricedCardView: View {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.down.to.line.compact")
                     .font(.caption2.weight(.semibold))
-                Text("90-day floor \(floor.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("90-day floor \(floor.currencyStringNoCents)")
                     .font(.caption2.weight(.semibold))
             }
             .foregroundStyle(HobbyIQTheme.Colors.steelGray)
@@ -3649,10 +3649,10 @@ struct CompIQPricedCardView: View {
                             regimeRow(label: "R²", value: String(format: "%.3f", r2))
                         }
                         if let recent = diag.recentMeanLast14d {
-                            regimeRow(label: "Recent mean (14d)", value: recent.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            regimeRow(label: "Recent mean (14d)", value: recent.currencyStringNoCents)
                         }
                         if let older = diag.olderMean14to90d {
-                            regimeRow(label: "Older mean (14–90d)", value: older.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            regimeRow(label: "Older mean (14–90d)", value: older.currencyStringNoCents)
                         }
                         if let pct = diag.pctChangeRecentVsOlder {
                             regimeRow(label: "Δ recent vs older", value: String(format: "%+.2f%%", pct))
@@ -3886,7 +3886,7 @@ struct CompIQPricedCardView: View {
            let current = response.marketTier?.value, current > 0 {
             let delta = predicted - current
             if abs(delta) / current >= 0.02 {
-                let priceStr = predicted.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+                let priceStr = predicted.currencyStringNoCents
                 if delta > 0 {
                     parts.append("The model sees near-term upside toward \(priceStr).")
                 } else {
@@ -4024,14 +4024,14 @@ struct CompIQPricedCardView: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .tracking(0.6)
-            Text(stat.mean.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(stat.mean.currencyStringNoCents)
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             HStack(spacing: 8) {
-                Text("p25: \(stat.p25.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("p25: \(stat.p25.currencyStringNoCents)")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                Text("p75: \(stat.p75.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("p75: \(stat.p75.currencyStringNoCents)")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
@@ -4059,7 +4059,7 @@ struct CompIQPricedCardView: View {
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     Spacer()
-                    Text(sale.price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(sale.price.currencyStringNoCents)
                         .font(.caption.weight(.bold).monospacedDigit())
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 }
@@ -4643,7 +4643,7 @@ struct TrendIQLayerBreakdownView: View {
                 .tracking(0.6)
 
             if let median {
-                Text(median.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(median.currencyStringNoCents)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             }
@@ -4867,7 +4867,7 @@ fileprivate func honestRangeEstimateBlockView<Fallback: View>(
 fileprivate func sufficientEstimateView(_ estimate: CompIQGradedEstimate) -> some View {
     VStack(spacing: 8) {
         if let v = estimate.estimatedValue {
-            Text(v.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(v.currencyStringNoCents)
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
         }
@@ -4880,13 +4880,13 @@ fileprivate func sufficientEstimateView(_ estimate: CompIQGradedEstimate) -> som
 fileprivate func thinEstimateView(_ estimate: CompIQGradedEstimate) -> some View {
     VStack(spacing: 6) {
         if let v = estimate.estimatedValue {
-            Text(v.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(v.currencyStringNoCents)
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
         }
         basedOnSalesView(estimate.n)
         if let low = estimate.rangeLow, let high = estimate.rangeHigh {
-            Text("range \(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+            Text("range \(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                 .font(.caption2)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
         }
@@ -4928,7 +4928,7 @@ fileprivate func noneEstimateView(_ estimate: CompIQGradedEstimate) -> some View
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             if let low = estimate.rangeLow, let high = estimate.rangeHigh {
-                Text("\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("\(low.currencyStringNoCents) – \(high.currencyStringNoCents)")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
                     .padding(.top, 2)
@@ -5107,7 +5107,7 @@ fileprivate struct HonestRangePreviewWrapper: View {
                 .tracking(1.0)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .textCase(.uppercase)
-            Text(Double(1183).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(Double(1183).currencyStringNoCents)
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
@@ -5265,7 +5265,7 @@ fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
                         .tracking(1.0)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .textCase(.uppercase)
-                    Text(Double(450).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(Double(450).currencyStringNoCents)
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(
                             LinearGradient(
@@ -5323,7 +5323,7 @@ fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
                         .tracking(1.0)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .textCase(.uppercase)
-                    Text(Double(450).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    Text(Double(450).currencyStringNoCents)
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(
                             LinearGradient(
@@ -5384,7 +5384,7 @@ fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
                 .tracking(1.0)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .textCase(.uppercase)
-            Text(Double(1183).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(Double(1183).currencyStringNoCents)
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
@@ -5420,11 +5420,11 @@ fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
                 Text("~")
                     .font(.system(size: 34, weight: .regular, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.7))
-                Text(Double(620).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(Double(620).currencyStringNoCents)
                     .font(.system(size: 38, weight: .regular, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
             }
-            Text("range \(Double(540).formatted(.currency(code: "USD").precision(.fractionLength(0))))–\(Double(720).formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+            Text("range \(Double(540).currencyStringNoCents)–\(Double(720).currencyStringNoCents)")
                 .font(.subheadline)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             Text("From the last sale ($580.00, 12 days ago), adjusted for the set's recent trend.")
@@ -5447,7 +5447,7 @@ fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
                 .tracking(1.0)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .textCase(.uppercase)
-            Text(Double(295).formatted(.currency(code: "USD").precision(.fractionLength(0))))
+            Text(Double(295).currencyStringNoCents)
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(

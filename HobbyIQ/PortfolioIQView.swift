@@ -708,7 +708,7 @@ struct PortfolioIQView: View {
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(0.5)
             if rec.verdict == .list, let t = rec.targetPrice, t > 0 {
-                Text("· \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                Text("· \(t.currencyStringNoCents)")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
             }
         }

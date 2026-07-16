@@ -447,8 +447,8 @@ struct CompIQView: View {
             }
 
             HStack(spacing: 12) {
-                statPill(title: "Low", value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.successGreen)
-                statPill(title: "High", value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.danger)
+                statPill(title: "Low", value: result.lowValue > 0 ? result.lowValue.currencyStringNoCents : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: "High", value: result.highValue > 0 ? result.highValue.currencyStringNoCents : "—", tint: HobbyIQTheme.Colors.danger)
             }
 
             Text(result.summary)
@@ -469,9 +469,9 @@ struct CompIQView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(title: "HobbyIQ Zones", subtitle: "Quick buy / hold / sell guide rails.")
             HStack(spacing: 12) {
-                statPill(title: Labels.buyZone, value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: Labels.buyZone, value: result.lowValue > 0 ? result.lowValue.currencyStringNoCents : "—", tint: HobbyIQTheme.Colors.successGreen)
                 statPill(title: "Fair", value: result.formattedFairValue, tint: HobbyIQTheme.Colors.electricBlue)
-                statPill(title: Labels.sellZone, value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.danger)
+                statPill(title: Labels.sellZone, value: result.highValue > 0 ? result.highValue.currencyStringNoCents : "—", tint: HobbyIQTheme.Colors.danger)
             }
         }
         .padding(HobbyIQTheme.Spacing.medium)
@@ -767,14 +767,13 @@ struct CompIQView: View {
         .padding(.vertical, 6)
     }
 
+    // CF-CURRENCY-HELPER (audit PR #486, 2026-07-15): retired hardcoded-USD
+    // NumberFormatter and now routes through the canonical
+    // `Double.currencyString` extension so this view respects the user's
+    // locale (matches every other iOS surface). The fallback string is
+    // preserved for defensive-code parity with the prior implementation.
     private func formatCurrency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        formatter.roundingMode = .halfUp
-        return formatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
+        return value.currencyString
     }
 
     #Preview {

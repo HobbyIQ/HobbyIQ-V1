@@ -1253,7 +1253,7 @@ struct CompIQEstimateResult: Codable, Hashable, Identifiable {
 
     /// Returns "—" when fairValue is zero (i.e. nil from backend)
     var formattedFairValue: String {
-        fairValue > 0 ? fairValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—"
+        fairValue > 0 ? fairValue.currencyStringNoCents : "—"
     }
 
     var id: String { "\(method)|\(summary)|\(fairValue)" }
@@ -3510,9 +3510,40 @@ enum PercentFormatters {
     }
 }
 
+// MARK: - Canonical currency + percent formatters
+//
+// CF-CURRENCY-HELPER (audit PR #486, 2026-07-15): the whole-app audit
+// flagged UK-locale users seeing GBP in Portfolio hero and USD in the
+// CompIQ price panel one tap away — because a subset of iOS views
+// call `.formatted(.currency(code: "USD"))` (hardcoded USD) instead
+// of routing through the existing `currencyString` extension (locale-
+// aware). Plus a decimal-drift split: some sites emit "$1234" (no
+// cents via `.precision(.fractionLength(0))`), others "$1,234.00"
+// (two cents). Both live-bearing bugs on the top-of-fold price panel.
+//
+// This block adds the missing "no-cents" companion so every top-of-
+// fold headline can route through one helper. Sites migrate at their
+// own pace; every hardcoded `.currency(code: "USD"…)` is a follow-up
+// candidate for the whole-app cleanup.
 extension Double {
+    /// Locale-aware currency string with cents. Renders "$1,234.56" on
+    /// en-US, "£1.234,56" on UK, etc. Use as the CANONICAL currency
+    /// helper for money values displayed with cents precision.
     var currencyString: String {
         formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
+    }
+
+    /// Locale-aware currency string without cents (whole dollars/pounds).
+    /// Renders "$1,234" on en-US, "£1,234" on UK, etc. Use for headline
+    /// price tiles where cent precision would be noise (comp panel FMV,
+    /// portfolio hero value, etc.). Replaces the mix of
+    /// `.formatted(.currency(code: "USD").precision(.fractionLength(0)))`
+    /// and `String(format: "$%.0f", …)` scattered across the app.
+    var currencyStringNoCents: String {
+        formatted(
+            .currency(code: Locale.current.currency?.identifier ?? "USD")
+                .precision(.fractionLength(0))
+        )
     }
 
     var percentString: String {

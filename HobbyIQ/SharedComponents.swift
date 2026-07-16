@@ -413,7 +413,7 @@ struct LiveMarketModelSignalView: View {
 
     private func headlineString() -> String? {
         guard let price = lastSalePrice else { return nil }
-        let dollar = price.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let dollar = price.currencyStringNoCents
         if let n = lastSaleCompCount, n > 0 {
             return "Last sold \(dollar) via \(n) comp\(n == 1 ? "" : "s")"
         }
@@ -422,10 +422,10 @@ struct LiveMarketModelSignalView: View {
 
     private func modelLineString() -> String? {
         guard let exp = modelExpectation, let value = exp.value else { return nil }
-        let dollar = value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let dollar = value.currencyStringNoCents
         if let lo = exp.rangeLow, let hi = exp.rangeHigh {
-            let loStr = lo.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-            let hiStr = hi.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            let loStr = lo.currencyStringNoCents
+            let hiStr = hi.currencyStringNoCents
             return "Model expects \(dollar) (range \(loStr)–\(hiStr))"
         }
         return "Model expects \(dollar)"
@@ -478,8 +478,8 @@ struct LiveMarketModelSignalView: View {
     private func forwardProjectionString() -> String? {
         guard let proj = modelExpectation?.forwardProjection,
               let low = proj.low, let high = proj.high else { return nil }
-        let loStr = low.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-        let hiStr = high.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let loStr = low.currencyStringNoCents
+        let hiStr = high.currencyStringNoCents
         return "Next likely \(loStr)–\(hiStr) if trend holds"
     }
 
@@ -495,7 +495,7 @@ struct LiveMarketModelSignalView: View {
         guard let pos = modelExpectation?.positionSignal,
               let gainLoss = pos.gainVsLastSale else { return nil }
         let sign = gainLoss >= 0 ? "+" : "−"
-        let absDollar = abs(gainLoss).formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let absDollar = abs(gainLoss).currencyStringNoCents
         var text = "\(sign)\(absDollar) vs purchase"
         if let pct = pos.gainPct {
             let pctSign = pct >= 0 ? "+" : "−"
