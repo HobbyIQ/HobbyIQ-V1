@@ -59,19 +59,34 @@ struct GradedSlabReading: Identifiable, Equatable {
     /// current downstream routing — reserved for a follow-up CF that
     /// short-circuits directly to `/price-by-id`.
     var cardId: String?
+    /// 0.0–1.0 backend match confidence. Drives the ≥0.7 auto-nav / 0.5–0.7
+    /// verify sheet / <0.5 retry gate per compiq-scan-route.md.
+    var matchConfidence: Double?
+    /// `"cert-ocr"` or `"image-match"` — used to decide whether cert prefill
+    /// applies (only when `cert-ocr` populated `certInfo`).
+    var matchPath: String?
+    /// Best-effort human-readable identity built from backend fields; drives
+    /// the "Detected: X" pill copy and the verify-sheet body.
+    var displayLabel: String?
 
     init(
         certNumber: String? = nil,
         gradeCompany: String? = nil,
         gradeValue: Double? = nil,
         rawLines: [String] = [],
-        cardId: String? = nil
+        cardId: String? = nil,
+        matchConfidence: Double? = nil,
+        matchPath: String? = nil,
+        displayLabel: String? = nil
     ) {
         self.certNumber = certNumber
         self.gradeCompany = gradeCompany
         self.gradeValue = gradeValue
         self.rawLines = rawLines
         self.cardId = cardId
+        self.matchConfidence = matchConfidence
+        self.matchPath = matchPath
+        self.displayLabel = displayLabel
     }
 
     /// Best-effort free-text description built from the recognized lines,
@@ -129,9 +144,14 @@ enum GradedSlabOCR {
         }
         let base64 = jpeg.base64EncodedString()
         do {
+            // P0.2 (2026-07-16, compiq-scan-route.md): always send hint="auto"
+            // per the design call. Cert-OCR is tried first backend-side and
+            // wins when a cert prints legibly; image-match catches raw cards
+            // and slabs where cert-OCR fails cold. iOS does not expose a
+            // raw/graded toggle.
             let response = try await APIService.shared.scanCard(
                 imageBase64: base64,
-                hint: "graded"
+                hint: "auto"
             )
             return reading(from: response)
         } catch {
@@ -151,7 +171,7 @@ enum GradedSlabOCR {
                   raw.isEmpty == false else { return nil }
             return Double(raw)
         }()
-        let identityLines: [String] = [
+        let identityParts: [String] = [
             response.set,
             response.player,
             response.variant,
@@ -160,12 +180,17 @@ enum GradedSlabOCR {
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
 
+        let display = identityParts.isEmpty ? nil : identityParts.joined(separator: " · ")
+
         return GradedSlabReading(
             certNumber: response.certInfo?.certNumber,
             gradeCompany: response.certInfo?.grader,
             gradeValue: gradeValue,
-            rawLines: identityLines,
-            cardId: response.cardId
+            rawLines: identityParts,
+            cardId: response.cardId,
+            matchConfidence: response.matchConfidence,
+            matchPath: response.matchPath,
+            displayLabel: display
         )
     }
 }
@@ -202,14 +227,22 @@ private struct GradedSlabScanFlowModifier: ViewModifier {
                         capturedImage = image
                         phase = .result
                     },
-                    onCancel: { endFlow() }
+                    onCancel: { endFlow() },
+                    showCardOutlineGuide: true
                 )
                 .ignoresSafeArea()
             }
             .sheet(isPresented: resultBinding) {
                 GradedSlabResultView(
                     initialImage: capturedImage,
-                    cameraDenied: cameraDenied
+                    cameraDenied: cameraDenied,
+                    onRetake: {
+                        // P0.2 (2026-07-16): "Try again" from the couldn't-identify
+                        // screen dismisses the result sheet and jumps straight
+                        // back into the camera without exiting the flow.
+                        capturedImage = nil
+                        phase = .camera
+                    }
                 )
                 .environmentObject(sessionViewModel)
             }
@@ -296,12 +329,40 @@ private struct GradedSlabResultView: View {
     @State private var descriptionField = ""
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var navigateToResolve = false
+    /// P0.2/P0.6 (2026-07-16, compiq-scan-route.md + slab-scan-validation-protocol.md):
+    /// drives the confidence + grader gate. Set in `routePostScan` right
+    /// after OCR completes; view branches off this to render the auto-nav
+    /// path, the non-PSA verify sheet, the mid-confidence verify sheet,
+    /// or the couldn't-identify retry screen.
+    @State private var scanPhase: ScanRoutingPhase = .pending
 
     private let cameraDenied: Bool
+    private let onRetake: (() -> Void)?
 
-    init(initialImage: UIImage?, cameraDenied: Bool) {
+    init(initialImage: UIImage?, cameraDenied: Bool, onRetake: (() -> Void)? = nil) {
         self.cameraDenied = cameraDenied
+        self.onRetake = onRetake
         _image = State(initialValue: initialImage)
+    }
+
+    private enum ScanRoutingPhase: Equatable {
+        /// OCR not yet run, or /scan returned a null confidence — fall back
+        /// to the legacy manual detection card + cert entry + find button.
+        case pending
+        /// matchConfidence ≥ 0.7 AND cardId != nil AND grader is PSA (or
+        /// grader unknown, e.g. image-match on a raw card). Auto-navigates
+        /// silently — the view briefly flashes reading-progress then pushes.
+        case autoNavigating
+        /// matchConfidence ≥ 0.7 AND cardId != nil AND grader is
+        /// BGS/SGC/CGC — one-tap "Cert reads {grader} {grade} — confirm?"
+        /// per slab-scan-validation-protocol.md's non-PSA gate.
+        case verifyGrade
+        /// 0.5 ≤ matchConfidence < 0.7 AND cardId != nil — full identity
+        /// confirmation sheet ("We think this is X").
+        case verifyIdentity
+        /// matchConfidence < 0.5 OR cardId == nil — retry screen with
+        /// text-search fallback.
+        case couldntIdentify
     }
 
     var body: some View {
@@ -326,9 +387,23 @@ private struct GradedSlabResultView: View {
                     if isReading {
                         readingProgress
                     } else if reading != nil {
-                        detectionCard
-                        certEntryCard
-                        findButton
+                        // P0.2/P0.6 phase-driven UI. `autoNavigating` renders
+                        // nothing — the view has already fired
+                        // `navigateToResolve = true` from `routePostScan`.
+                        switch scanPhase {
+                        case .autoNavigating:
+                            EmptyView()
+                        case .verifyGrade:
+                            verifyGradeCard
+                        case .verifyIdentity:
+                            verifyIdentityCard
+                        case .couldntIdentify:
+                            couldntIdentifyCard
+                        case .pending:
+                            detectionCard
+                            certEntryCard
+                            findButton
+                        }
                     } else if image == nil {
                         emptyPrompt
                     }
@@ -417,11 +492,60 @@ private struct GradedSlabResultView: View {
 
     private func runOCR(on image: UIImage) async {
         isReading = true
+        scanPhase = .pending
         let result = await GradedSlabOCR.read(from: image)
         reading = result
         certField = result.certNumber ?? ""
         descriptionField = result.fallbackQuery
         isReading = false
+        routePostScan(result)
+    }
+
+    /// P0.2 / P0.6 (compiq-scan-route.md, slab-scan-validation-protocol.md):
+    /// bucket the /scan response into one of four post-capture phases.
+    /// Auto-navigation fires immediately when the confidence and grader
+    /// gates both clear; every other path renders a confirmation surface
+    /// so the user opts in explicitly.
+    private func routePostScan(_ result: GradedSlabReading) {
+        let confidence = result.matchConfidence ?? 0.0
+        let hasCard = (result.cardId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+
+        // No cardId or sub-0.5 confidence → we can't trust the match.
+        guard hasCard, confidence >= 0.5 else {
+            scanPhase = .couldntIdentify
+            return
+        }
+
+        // High confidence: silent auto-nav when it's PSA (or grader
+        // is unknown, which happens on image-match paths for raw cards).
+        // Non-PSA graders route through the verify-grade sheet until
+        // Drew's validation protocol has cleared BGS/SGC/CGC per grader.
+        if confidence >= 0.7 {
+            let grader = result.gradeCompany?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .uppercased()
+            if let g = grader, g.isEmpty == false, g != "PSA" {
+                scanPhase = .verifyGrade
+            } else {
+                scanPhase = .autoNavigating
+                navigateToResolve = true
+            }
+            return
+        }
+
+        // 0.5 ≤ confidence < 0.7 → full identity confirmation
+        scanPhase = .verifyIdentity
+    }
+
+    /// Text-search fallback for the "not this one" / "search instead" paths.
+    /// Uses the OCR'd identity terms when present, falling back to the raw
+    /// cert-number field so the user isn't stranded on an empty picker.
+    private func routeToSearchFallback() {
+        // Force resolveDestination to skip the cardId short-circuit so it
+        // falls through to `CompIQVariantPickerView` seeded with the OCR text.
+        reading?.cardId = nil
+        certField = ""
+        navigateToResolve = true
     }
 
     // MARK: Hero
@@ -640,6 +764,180 @@ private struct GradedSlabResultView: View {
         let cert = certField.trimmingCharacters(in: .whitespacesAndNewlines)
         let desc = descriptionField.trimmingCharacters(in: .whitespacesAndNewlines)
         return cert.isEmpty && desc.isEmpty
+    }
+
+    // MARK: P0.2 / P0.6 phase surfaces
+
+    /// Non-PSA grader at high confidence. One-tap "confirm the grade" step
+    /// per slab-scan-validation-protocol.md — the cert-OCR pipeline was
+    /// calibrated on PSA slabs, so BGS/SGC/CGC prefills need explicit
+    /// user acceptance until Drew's validation protocol has cleared them.
+    private var verifyGradeCard: some View {
+        let grader = reading?.gradeCompany?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let gradeText: String = {
+            guard let value = reading?.gradeValue else { return "" }
+            return value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+        }()
+        let headline = "Cert reads \(grader) \(gradeText)".trimmingCharacters(in: .whitespaces)
+        let subhead = reading?.displayLabel ?? reading?.fallbackQuery ?? ""
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(headline.isEmpty ? "Verify the grade" : headline)
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            if subhead.isEmpty == false {
+                Text(subhead)
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("Cert-OCR is still being validated for this grader. Confirm before we price it.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    navigateToResolve = true
+                } label: {
+                    Text("Confirm & price")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(HobbyIQTheme.Colors.electricBlue)
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    routeToSearchFallback()
+                } label: {
+                    Text("Search instead")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    /// Mid-confidence disambiguation (0.5 ≤ conf < 0.7). Full identity
+    /// confirmation because the backend isn't sure enough to auto-nav.
+    private var verifyIdentityCard: some View {
+        let subject = reading?.displayLabel ?? reading?.fallbackQuery ?? "the detected card"
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("We think this is:")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(subject)
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    navigateToResolve = true
+                } label: {
+                    Text("Yes, price it")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(HobbyIQTheme.Colors.electricBlue)
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    routeToSearchFallback()
+                } label: {
+                    Text("No, search")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    /// Low-confidence / null-cardId retry surface. Primary CTA retakes
+    /// (routed through the modifier's `onRetake`), secondary drops into
+    /// text search seeded with anything the OCR did produce.
+    private var couldntIdentifyCard: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "viewfinder.rectangular")
+                .font(.system(size: 34, weight: .regular))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+            Text("Couldn't identify this card")
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("Retake the photo with the card centered in the guide, or search by name.")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                if let onRetake {
+                    Button {
+                        onRetake()
+                    } label: {
+                        Text("Try again")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(HobbyIQTheme.Colors.electricBlue)
+                            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    routeToSearchFallback()
+                } label: {
+                    Text("Search by name")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(HobbyIQTheme.Spacing.large)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     // MARK: Empty prompt (no image yet)

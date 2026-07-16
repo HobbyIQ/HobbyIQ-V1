@@ -82,7 +82,8 @@ private struct ScanFlowModifier: ViewModifier {
                         // still reachable on the next scan trigger via the
                         // simulator / permission-denied fallback paths.
                         endFlow()
-                    }
+                    },
+                    showCardOutlineGuide: true
                 )
                 .ignoresSafeArea()
             }

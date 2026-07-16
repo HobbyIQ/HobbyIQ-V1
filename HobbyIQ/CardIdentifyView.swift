@@ -147,11 +147,15 @@ struct CardIdentifyView: View {
             }
         }
         .sheet(isPresented: $showCamera) {
-            CardPhotoPicker(sourceType: .camera) { image in
-                showCamera = false
-                capturedImage = image
-                Task { await uploadAndIdentify(image) }
-            }
+            CardPhotoPicker(
+                sourceType: .camera,
+                onImagePicked: { image in
+                    showCamera = false
+                    capturedImage = image
+                    Task { await uploadAndIdentify(image) }
+                },
+                showCardOutlineGuide: true
+            )
             .ignoresSafeArea()
         }
         .sheet(isPresented: $showUpgradePaywall) {
