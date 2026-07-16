@@ -1497,6 +1497,79 @@ router.get("/cards/:cardId/price-history", requireSession, async (req, res, next
   } catch (err) { next(err); }
 });
 
+// CF-VERDICT-FLIP-ALERTS-WIRE (Drew, 2026-07-16, iOS-prep): read routes
+// for the verdict history persisted by the daily snapshot cron
+// (recordVerdictAndDetectFlip). Feeds iOS' three flip surfaces:
+//   - inventory-row dot: /portfolio/flips (recent flips across the
+//     user's holding-players)
+//   - detail-sheet history strip: /players/:player/verdict-history
+//   - push notification host: cron emits verdict_flip_detected events
+//     — a downstream worker fans out to APNs for `significance="major"`
+//     when the user opted in (not implemented in this PR).
+router.get("/players/:player/verdict-history", requireSession, async (req, res, next) => {
+  try {
+    const player = String(req.params.player ?? "").trim();
+    if (!player) return res.status(400).json({ error: "player path param required" });
+    const daysRaw = req.query.days;
+    let days = 90;
+    if (daysRaw != null && daysRaw !== "") {
+      const n = Number(daysRaw);
+      if (!Number.isFinite(n) || n < 1 || n > 180) {
+        return res.status(400).json({ error: "days must be 1-180" });
+      }
+      days = Math.floor(n);
+    }
+    const { readVerdictHistory, readRecentFlips } = await import(
+      "../services/compiq/verdictHistoryStore.service.js"
+    );
+    const [history, flips] = await Promise.all([
+      readVerdictHistory(player, days),
+      readRecentFlips(player, days),
+    ]);
+    return res.json({
+      success: true,
+      player,
+      days,
+      history,
+      flips,
+    });
+  } catch (err) { next(err); }
+});
+
+router.post("/portfolio/flips", requireSession, async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as { players?: unknown; days?: unknown };
+    const rawPlayers = Array.isArray(body.players) ? body.players : [];
+    const players = rawPlayers
+      .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+      .map((p) => p.trim());
+    if (players.length === 0) {
+      return res.status(400).json({ error: "players[] required (non-empty)" });
+    }
+    if (players.length > 200) {
+      return res.status(400).json({ error: "players[] capped at 200 per call" });
+    }
+    let days = 7;
+    if (body.days != null && body.days !== "") {
+      const n = Number(body.days);
+      if (!Number.isFinite(n) || n < 1 || n > 30) {
+        return res.status(400).json({ error: "days must be 1-30" });
+      }
+      days = Math.floor(n);
+    }
+    const { readRecentFlipsForPlayers } = await import(
+      "../services/compiq/verdictHistoryStore.service.js"
+    );
+    const flips = await readRecentFlipsForPlayers(players, days);
+    return res.json({
+      success: true,
+      requestedPlayers: players.length,
+      days,
+      flips,
+    });
+  } catch (err) { next(err); }
+});
+
 router.get("/comps-by-player", async (req, res, next) => {
   try {
     const playerName = typeof req.query.playerName === "string" ? req.query.playerName.trim() : "";
