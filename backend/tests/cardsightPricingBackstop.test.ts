@@ -94,7 +94,7 @@ describe("tryCardsightPricingBackstop — early exits", () => {
 });
 
 describe("tryCardsightPricingBackstop — happy path", () => {
-  it("returns comps with source=cardsight and empty card_id (no canonical bridge)", async () => {
+  it("returns comps with source=cs_pricing_backstop and empty card_id (no canonical bridge)", async () => {
     mockedSearch.mockResolvedValue([
       rec({ price: 1800, date: "2026-07-12T00:00:00Z" }),
       rec({ price: 1750, date: "2026-07-10T00:00:00Z" }),
@@ -102,7 +102,10 @@ describe("tryCardsightPricingBackstop — happy path", () => {
     const r = await tryCardsightPricingBackstop("Eric Hartman 2026 Bowman Blue Refractor Auto", ctx, "Raw");
     expect(r).not.toBeNull();
     expect(r!.sales).toHaveLength(2);
-    expect(r!.sales.every((s) => s.source === "cardsight")).toBe(true);
+    // CF-CARDSIGHT-PROVENANCE-DISTINCT (PR #492, 2026-07-15): backstop
+    // stamps "cs_pricing_backstop" per-comp so provenance chips can
+    // separate marketplace-backstop rows from catalog-anchored CS comps.
+    expect(r!.sales.every((s) => s.source === "cs_pricing_backstop")).toBe(true);
     expect(r!.card?.card_id).toBe("");   // deliberate — no canonical bridge
     expect(r!.variantWarning).toEqual(["cs_pricing_backstop"]);
   });
