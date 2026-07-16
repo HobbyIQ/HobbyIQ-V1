@@ -685,6 +685,14 @@ const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
   "scarcity-prior-floor",
   "reference-catalog-baseline",
   "setdoc-baseline",
+  // CF-PROJECTED-APPROXIMATE (audit Finding #5, 2026-07-15): the /price-by-id
+  // path upgrades `est.source` to "projected" when a phantom-check
+  // succeeds and estimates from the card's own thin 365d history (line
+  // 472) OR from a base-card projection with predictedPriceAttribution
+  // (lines 571, 638). All three are structurally approximate (not
+  // direct-recent-comp anchored), so iOS should render the "estimated"
+  // disclosure symmetric with sibling-pool / product-family-projection.
+  "projected",
 ]);
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
@@ -748,12 +756,22 @@ function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   // catalog-baseline and setdoc-baseline set compsUsed=0 by design —
   // they're pure structural floors. Same bypass rationale.
   const source = typeof est.source === "string" ? est.source : null;
+  // CF-VARIANT-MISMATCH-MEDIAN-BYPASS (audit Finding #1, 2026-07-15):
+  // variant-mismatch now emits a median of fetched.comps when any exist
+  // (PR #477). compsUsed stays at 0 by design — the comps aren't strict-
+  // variant matches — but fairMarketValue > 0 IS a defensible number.
+  // Without this bypass the compsUsed<3 gate below nulled the median,
+  // and the route's downstream fallback painted a $19.99 synth over it
+  // (Hartman Aqua: median $176 → $19.99 pre-fix). The null-fmv branch
+  // is caught above (line ~720), so this only lets the priced variant-
+  // mismatch case through — the empty-comps case still returns true.
   const isProjectionSource =
     source === "product-family-projection"
     || source === "parallel-floor-projection"
     || source === "scarcity-prior-floor"
     || source === "reference-catalog-baseline"
-    || source === "setdoc-baseline";
+    || source === "setdoc-baseline"
+    || source === "variant-mismatch";
   const compsUsed = est.compsUsed;
   if (
     typeof compsUsed === "number"
@@ -2122,8 +2140,16 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       // bands derived from the synthetic FMV. Applies both to thin-market
       // (no-recent-comps) and variant-mismatch sources.
       const xpa = (est as any).crossParallelAnchor as any;
-      const isVariantMismatch = source === "variant-mismatch";
-      const noUsableLiveFmv = isThin || isVariantMismatch || !(fmv > 0);
+      // CF-VARIANT-MISMATCH-MEDIAN-KEEP (audit Finding #1, 2026-07-15):
+      // dropped the `isVariantMismatch` gate — when the engine emits a
+      // populated fairMarketValue for variant-mismatch (PR #477's
+      // fetched.comps median), the route should surface it, not null.
+      // isThin (cannotPriceFromEst) now permits variant-mismatch with
+      // fmv>0 through via the projection-sources bypass, so the !(fmv>0)
+      // check below covers the remaining null-fmv variant-mismatch case
+      // (empty fetched.comps), which is still routed to the xpa
+      // synthetic fallback branch below.
+      const noUsableLiveFmv = isThin || !(fmv > 0);
       const hasSyntheticFallback =
         noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
       const syntheticFmv: number = hasSyntheticFallback
@@ -2417,7 +2443,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing "query" field' });
     }
-    const cacheKey = normalizeCacheKey("compiq:price", query);
+    // CF-PRICE-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+    // bump prefix v1→v2 to invalidate every stale entry that still holds
+    // a synthesized ($19.99) or variant-mismatch-nulled response.
+    const cacheKey = normalizeCacheKey("compiq:price:v2", query);
     const result = await cacheWrap(cacheKey, async () => {
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
@@ -2709,6 +2738,26 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         : baseSummary;
       const finalConfidence = hasWarn ? Math.min(confidence, 0.45) : confidence;
 
+      // CF-PRICE-XPA-SYNTH-FALLBACK (audit Finding #6, 2026-07-15): mirror
+      // /search — when live FMV can't anchor but computeEstimate produced a
+      // cross-parallel synthetic anchor (sibling-parallel × multiplier),
+      // surface that as the headline instead of null. iOS renders with the
+      // `approximate` disclosure via `approximateFromEst`
+      // (crossParallelAnchor source is inside APPROXIMATE_SOURCES via
+      // sibling-pool). Missing from /price meant /search hit and /price
+      // miss on identical queries produced divergent pricing bands.
+      const xpa = (est as any).crossParallelAnchor as any;
+      const noUsableLiveFmv = isThin || !(fmv > 0);
+      const hasSyntheticFallback =
+        noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
+      const syntheticFmv: number = hasSyntheticFallback
+        ? (typeof (est as any).effectiveFmv === "number" && (est as any).effectiveFmv > 0
+            ? ((est as any).effectiveFmv as number)
+            : (xpa.fmv as number))
+        : 0;
+      const syntheticQuick = syntheticFmv * 0.88;
+      const syntheticPremium = syntheticFmv * 1.15;
+
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so /price
       // responses carry the same rail data. parallelId=null because /price
@@ -2750,17 +2799,35 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         success: true,
         query: query.trim(),
         summary,
-        marketTier: isThin
-          ? { value: null, high: null }
-          : { value: fmv, high: premium },
-        buyZone: isThin ? [null, null] : [quick * 0.9, quick],
-        holdZone: isThin ? [null, null] : [quick, fmv],
-        sellZone: isThin ? [null, null] : [fmv, premium],
+        // CF-PRICE-XPA-SYNTH-FALLBACK (Finding #6): three-way band —
+        // (a) hasSyntheticFallback: synthetic sibling-parallel anchor,
+        // (b) noUsableLiveFmv: engine had nothing, band nulls out,
+        // (c) live path: normal fmv/quick/premium band.
+        marketTier: hasSyntheticFallback
+          ? { value: syntheticFmv, high: syntheticPremium }
+          : noUsableLiveFmv
+            ? { value: null, high: null }
+            : { value: fmv, high: premium },
+        buyZone: hasSyntheticFallback
+          ? [syntheticQuick * 0.9, syntheticQuick]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick * 0.9, quick],
+        holdZone: hasSyntheticFallback
+          ? [syntheticQuick, syntheticFmv]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick, fmv],
+        sellZone: hasSyntheticFallback
+          ? [syntheticFmv, syntheticPremium]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [fmv, premium],
         // Live FMV emitted at top level for engine-emission symmetry with
         // /search (Option X). Mirrors marketTier.value's null-when-thin
         // semantic so both fields agree within a response.
-        fairMarketValueLive: isThin ? null : fmv,
-        marketValue: isThin ? null : fmv,
+        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
+        marketValue: noUsableLiveFmv ? null : fmv,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields for /search-equivalent shape parity.
         predictedPrice: (est as any).predictedPrice ?? null,
@@ -2843,7 +2910,21 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         // contract is stable.
         gradedEstimates,
       };
-    }, CACHE_TTL_SECONDS);
+    }, {
+      freshTtlSeconds: CACHE_TTL_SECONDS,
+      // CF-PRICE-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+      // mirror /search's skipCacheWhen — don't persist synthetic /
+      // variant-mismatch / null-fmv responses. Next call re-computes so
+      // downstream CS-fallback / CH-catalog-fill / user-cardId-attest
+      // successes are surfaced immediately instead of shadowed for TTL.
+      skipCacheWhen: (r: any) => {
+        if (!r || typeof r !== "object") return true;
+        const src = (r.source ?? "").toString();
+        if (src === "sibling-pool" || src === "variant-mismatch") return true;
+        if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+        return false;
+      },
+    });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
     recordCHReferenceTelemetry({
       source: "compiq.price",
@@ -4282,8 +4363,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       }
     }
 
+    // CF-PRICE-BY-ID-CACHE-BUMP-V5 (audit Finding #3, 2026-07-15):
+    // prefix bump invalidates stale entries carrying variant-mismatch-
+    // nulled / synth-painted FMVs from before the audit-bundle fix.
     const cacheKey = normalizeCacheKey(
-      "compiq:price-by-id:v4",
+      "compiq:price-by-id:v5",
       // parallelId on the cache key so a Gold parallel and a base sit
       // at separate entries. Empty string when absent — matches the
       // "base only" semantics of the filter.
@@ -4487,6 +4571,25 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       const isThin = cannotPriceFromEst(est);
       const approximate = approximateFromEst(est);
 
+      // CF-PRICE-BY-ID-XPA-SYNTH-FALLBACK (audit Finding #6, 2026-07-15):
+      // mirror /search + /price. When live FMV can't anchor but the
+      // engine produced a cross-parallel synthetic anchor, surface that
+      // as the headline instead of null. Prior /price-by-id skipped this
+      // branch, so a holding priced via /price-by-id could render null
+      // bands while the same identity via /search returned synthetic
+      // bands.
+      const xpa = (est as any).crossParallelAnchor as any;
+      const noUsableLiveFmv = isThin || !(fmv > 0);
+      const hasSyntheticFallback =
+        noUsableLiveFmv && typeof xpa?.fmv === "number" && xpa.fmv > 0;
+      const syntheticFmv: number = hasSyntheticFallback
+        ? (typeof (est as any).effectiveFmv === "number" && (est as any).effectiveFmv > 0
+            ? ((est as any).effectiveFmv as number)
+            : (xpa.fmv as number))
+        : 0;
+      const syntheticQuick = syntheticFmv * 0.88;
+      const syntheticPremium = syntheticFmv * 1.15;
+
       // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
       // the (player, release, year) tuple to the nightly compute
       // queue. The nightly fn-comps-momentum extension walks this
@@ -4679,14 +4782,31 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         success: true,
         cardId: resolvedCardId,
         summary: est.verdict ?? "Estimate based on available market data.",
-        marketTier: isThin ? { value: null, high: null } : { value: fmv, high: premium },
-        buyZone: isThin ? [null, null] : [quick * 0.9, quick],
-        holdZone: isThin ? [null, null] : [quick, fmv],
-        sellZone: isThin ? [null, null] : [fmv, premium],
+        // CF-PRICE-BY-ID-XPA-SYNTH-FALLBACK (Finding #6): three-way band.
+        marketTier: hasSyntheticFallback
+          ? { value: syntheticFmv, high: syntheticPremium }
+          : noUsableLiveFmv
+            ? { value: null, high: null }
+            : { value: fmv, high: premium },
+        buyZone: hasSyntheticFallback
+          ? [syntheticQuick * 0.9, syntheticQuick]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick * 0.9, quick],
+        holdZone: hasSyntheticFallback
+          ? [syntheticQuick, syntheticFmv]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [quick, fmv],
+        sellZone: hasSyntheticFallback
+          ? [syntheticFmv, syntheticPremium]
+          : noUsableLiveFmv
+            ? [null, null]
+            : [fmv, premium],
         // Live FMV emitted at top level for engine-emission symmetry
         // with /search and /price (Option X). null when thin market.
-        fairMarketValueLive: isThin ? null : fmv,
-        marketValue: isThin ? null : fmv,
+        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
+        marketValue: noUsableLiveFmv ? null : fmv,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields. /price-by-id is the pinned-card analog of /price; the
         // estimate ⇒ response contract matches.
@@ -4873,7 +4993,20 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     let result: Record<string, unknown> = await cacheWrap(
       cacheKey,
       producePriceByIdResponse,
-      CACHE_TTL_SECONDS,
+      {
+        freshTtlSeconds: CACHE_TTL_SECONDS,
+        // CF-PRICE-BY-ID-CACHE-SKIP-SYNTHETIC (audit Finding #3, 2026-07-15):
+        // mirror /search + /price — don't persist synthetic /
+        // variant-mismatch / null-fmv responses. Prefix already bumped to
+        // v4; skipCacheWhen is the runtime guard for future writes.
+        skipCacheWhen: (r: any) => {
+          if (!r || typeof r !== "object") return true;
+          const src = (r.source ?? "").toString();
+          if (src === "sibling-pool" || src === "variant-mismatch") return true;
+          if (r.marketValue == null && r.fairMarketValueLive == null) return true;
+          return false;
+        },
+      },
     ) as Record<string, unknown>;
 
     // Validator: pull card_id off cardIdentity. Treat absent identity as
@@ -5043,6 +5176,33 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       );
     }
 
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
+    // as /search + /price — CH sometimes recognizes the cardId but has
+    // no comps; Cardsight/sold-comps may rescue.
+    //
+    // CF-RECOMMENDATION-AFTER-RESCUE (audit Finding #4, 2026-07-15):
+    // overlayResolverRescue moved BEFORE the computeAction block so a
+    // successful rescue's newly-painted marketValue flows into the seller
+    // recommendation. Prior order (compute→overlay) meant a rescued
+    // response returned recommendation="Insufficient Data" alongside a
+    // populated marketValue — the seller-facing verdict contradicted its
+    // own price band.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const ci = (result as any).cardIdentity ?? {};
+      await overlayResolverRescue(result, {
+        playerName: ci.player ?? undefined,
+        cardYear: typeof ci.year === "number" ? ci.year : undefined,
+        setName: ci.set ?? undefined,
+        parallel: ci.parallel ?? undefined,
+        cardNumber: ci.number ?? undefined,
+        isAuto: ci.isAuto ?? undefined,
+        cardId: ci.card_id ?? undefined,
+      });
+    }
+
     // CF-PRICE-BY-ID-RECOMMENDATION (2026-07-06, Drew): parity with
     // /card-panel. The recommendation surface should render on BOTH
     // paths so search-then-price emits the same seller verdict as
@@ -5076,25 +5236,6 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       console.warn(
         `[compiq.price-by-id] recommendation compute failed (non-fatal): ${(err as Error)?.message ?? err}`,
       );
-    }
-
-    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
-    // as /search + /price — CH sometimes recognizes the cardId but has
-    // no comps; Cardsight/sold-comps may rescue.
-    {
-      const { overlayResolverRescue } = await import(
-        "../services/compiq/resolverFallbackHelper.js"
-      );
-      const ci = (result as any).cardIdentity ?? {};
-      await overlayResolverRescue(result, {
-        playerName: ci.player ?? undefined,
-        cardYear: typeof ci.year === "number" ? ci.year : undefined,
-        setName: ci.set ?? undefined,
-        parallel: ci.parallel ?? undefined,
-        cardNumber: ci.number ?? undefined,
-        isAuto: ci.isAuto ?? undefined,
-        cardId: ci.card_id ?? undefined,
-      });
     }
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED

@@ -4036,6 +4036,15 @@ export async function computeEstimate(
             : "no_title_hits_for_requested_token",
         }),
       );
+      // CF-AUDIT-FINDING-9-DEFER (2026-07-15): audit flagged that clearing
+      // fetched.comps here forfeits the "approximate median of base comps"
+      // signal that variant-mismatch would otherwise surface (~$2 for a
+      // Black /10 on a Base BCP-69). Kept as-is: parallel-floor-projection
+      // downstream is designed to produce a print-run-anchored floor that
+      // is STRUCTURALLY MORE HONEST than the base-median for rare parallels
+      // (a $2 base doesn't reflect the /10's actual market — the floor
+      // projection does). Only preserve comps if a future regression
+      // shows floor-projection returning null for the demoted case.
       fetched = { ...fetched, card: null, comps: [] };
     }
   }
@@ -4792,15 +4801,22 @@ export async function computeEstimate(
             variant: fetched.card.variant ?? null,
           }
         : null,
-      fairMarketValue: 0,
+      // CF-UNSUPPORTED-SPORT-NULL-FMV (audit Finding #8, 2026-07-15):
+      // unsupported-sport is "we don't price this" — emitting 0 for
+      // FMV/quick/premium implies a $0 valuation and downstream deals
+      // (holding writer, band math, telemetry aggregation) may pick up
+      // the literal 0 before the route's `cannotPriceFromEst` gate nulls
+      // it. Emit null throughout so the "we didn't try" signal survives
+      // every consumer, not just the routes that check cannotPriceFromEst.
+      fairMarketValue: null,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
       marketValue: null,
       predictedPrice: null,
       predictedPriceRange: null,
       predictedPriceAttribution: null,
-      quickSaleValue: 0,
-      premiumValue: 0,
+      quickSaleValue: null,
+      premiumValue: null,
       compsUsed: 0,
       compsAvailable: 0,
       recentComps: [],
@@ -5354,7 +5370,16 @@ export async function computeEstimate(
         gradeCompanyInput: body.gradeCompany ?? null,
         gradeCompanyCanonical: normalizedGradeCompany ?? null,
       },
-      confidence: { pricingConfidence: 0, liquidityConfidence: 0, timingConfidence: 0 },
+      // CF-VARIANT-MISMATCH-CONFIDENCE-UNIFY (audit Finding #7, 2026-07-15):
+      // marketRegime.confidence emits 0.2 as the canonical variant-mismatch
+      // uncertainty; unify pricingConfidence to the same value so the two
+      // signals agree. When variantMismatchMedianFmv is null (no comps to
+      // median), collapse to 0 — no number = no confidence.
+      confidence: {
+        pricingConfidence: variantMismatchMedianFmv !== null ? 0.2 : 0,
+        liquidityConfidence: 0,
+        timingConfidence: 0,
+      },
       exitStrategy: {
         recommendedMethod: "wait",
         expectedDaysToSell: null,
