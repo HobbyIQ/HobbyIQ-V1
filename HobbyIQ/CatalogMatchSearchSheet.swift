@@ -28,20 +28,29 @@ struct CatalogMatchSearchSheet: View {
         _queryText = State(initialValue: Self.initialQuery(from: holding))
     }
 
-    /// Seed the search field with everything we know from the holding —
-    /// year + player + set + parallel gets us close on first hit for
-    /// most rows.
+    /// Seed the search field with everything we know from the holding.
+    /// Dedupe repeated tokens (setName often already has the year in
+    /// it — e.g. `setName = "2026 Bowman Chrome"` + `year = "2026"`
+    /// → naive concat gives `"2026 … 2026 Bowman Chrome"`, which the
+    /// dispatcher scores poorly). Case-insensitive dedupe on whole
+    /// words keeps the query tight.
     private static func initialQuery(from card: InventoryCard) -> String {
-        let bits = [
-            card.year,
-            card.playerName,
-            card.setName,
-            card.parallel
-        ]
-        return bits
+        let raw = [card.year, card.playerName, card.setName, card.parallel]
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { $0.isEmpty == false }
             .joined(separator: " ")
+        var seen = Set<String>()
+        let deduped = raw
+            .split(separator: " ")
+            .map(String.init)
+            .filter { token in
+                let key = token.lowercased()
+                if seen.contains(key) { return false }
+                seen.insert(key)
+                return true
+            }
+            .joined(separator: " ")
+        return deduped
     }
 
     var body: some View {
@@ -257,13 +266,55 @@ struct CatalogMatchSearchSheet: View {
         errorMessage = nil
         defer { isSearching = false }
         do {
-            results = try await APIService.shared.fetchLiveCardSuggestions(q: q, limit: 24)
+            #if DEBUG
+            print("[CatalogSearch] POST /api/search/cards input=\(q)")
+            #endif
+            // 30s dispatcher — same route as the Find Cards page.
+            let response = try await APIService.shared.searchVariantList(query: q)
+            let hits = response.results ?? []
+            #if DEBUG
+            print("[CatalogSearch] got \(hits.count) result\(hits.count == 1 ? "" : "s")")
+            #endif
+            results = Array(hits.prefix(24))
+
+            // Fallback: if the full query returned nothing, retry with
+            // just player + year — the dispatcher scores better on
+            // tighter queries, and set / parallel often mismatch
+            // between eBay's title and Cardsight's canonical setName.
+            if results.isEmpty {
+                let fallback = fallbackQuery
+                if fallback.isEmpty == false && fallback != q {
+                    #if DEBUG
+                    print("[CatalogSearch] retry with fallback: \(fallback)")
+                    #endif
+                    let retry = try await APIService.shared.searchVariantList(query: fallback)
+                    results = Array((retry.results ?? []).prefix(24))
+                    #if DEBUG
+                    print("[CatalogSearch] fallback got \(results.count) result\(results.count == 1 ? "" : "s")")
+                    #endif
+                }
+            }
         } catch {
+            #if DEBUG
+            print("[CatalogSearch] error: \(APIService.errorMessage(from: error))")
+            #endif
             // Silently degrade on transient errors — search is user-driven
             // and low-stakes. Show the error only when we have nothing else.
             if force || results.isEmpty {
                 errorMessage = APIService.errorMessage(from: error)
             }
         }
+    }
+
+    /// Shorter query used as a second-attempt when the full seed
+    /// returned nothing. Just player + year — always high-signal
+    /// tokens the dispatcher scores reliably.
+    private var fallbackQuery: String {
+        let player = holding.playerName.trimmingCharacters(in: .whitespaces)
+        let year = holding.year.trimmingCharacters(in: .whitespaces)
+        var parts: [String] = []
+        if year.isEmpty == false { parts.append(year) }
+        if player.isEmpty == false { parts.append(player) }
+        return parts.joined(separator: " ")
     }
 }

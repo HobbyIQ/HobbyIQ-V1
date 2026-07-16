@@ -19,6 +19,11 @@ struct AddPortfolioCardView: View {
     @State private var certNumberInput: String = ""
     @State private var psaLookupState: PSALookupState = .idle
 
+    // Catalog match sheet — opens the same `/api/search/cards`
+    // dispatcher used by the pending-review flow so Edit / Add can
+    // save a holding with a validated Cardsight cardId.
+    @State private var showCatalogSearch: Bool = false
+
     private enum PSALookupState: Equatable {
         case idle
         case loading
@@ -174,12 +179,74 @@ struct AddPortfolioCardView: View {
 
             searchField
 
+            catalogMatchButton
+
+            if let label = viewModel.catalogMatchLabel {
+                catalogMatchConfirmedBanner(label: label)
+            }
+
             if let estimate = viewModel.estimateResult {
                 verifiedBanner(estimate)
                 pricingRow(for: estimate)
             }
         }
         .addCardTileCard()
+        .sheet(isPresented: $showCatalogSearch) {
+            CatalogMatchSearchSheet(holding: viewModel.catalogMatchSeed) { hit in
+                viewModel.applyCatalogPick(hit)
+            }
+        }
+    }
+
+    // MARK: - Catalog Match
+
+    private var catalogMatchButton: some View {
+        Button {
+            showCatalogSearch = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checklist.checked")
+                    .font(.subheadline.weight(.bold))
+                Text(viewModel.cardId == nil ? "Match to catalog" : "Change catalog match")
+                    .font(.subheadline.weight(.bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.10))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.4), lineWidth: 1.2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func catalogMatchConfirmedBanner(label: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.seal.fill")
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Catalog match confirmed")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
     }
 
     // MARK: - Photos
@@ -345,6 +412,21 @@ struct AddPortfolioCardView: View {
                 }
             }
 
+            // P0.3 (2026-07-16): Black Label toggle. Only surfaces
+            // when the grader/grade dropdowns compose "BGS 10" —
+            // Black Label is BGS-only and prices at the ~9× tier.
+            // The dropdown pair alone can't carry the "Black Label"
+            // suffix, so this toggle is what iOS uses to persist
+            // isBlackLabel on the wire.
+            if viewModel.isGraded && viewModel.grader == "BGS" && viewModel.grade == "10" {
+                Toggle(isOn: $viewModel.isBlackLabelCard) {
+                    Text("Black Label")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                .tint(Color(hex: 0xE5B64A))
+            }
+
             Toggle(isOn: $viewModel.isAutoCard) {
                 Text("Autograph")
                     .font(.subheadline.weight(.medium))
@@ -362,7 +444,6 @@ struct AddPortfolioCardView: View {
             sectionHeader(title: "Purchase", icon: "dollarsign.circle.fill", tint: HobbyIQTheme.Colors.successGreen)
 
             themedFormField("Purchase Price", text: $viewModel.purchasePrice, keyboard: .decimalPad)
-            themedFormField("Current Value", text: $viewModel.currentValue, keyboard: .decimalPad)
             themedFormField("Purchase Location", text: $viewModel.purchaseLocation)
         }
         .addCardTileCard()
@@ -396,6 +477,10 @@ struct AddPortfolioCardView: View {
                     themedFormField("Parallel", text: $viewModel.parallel)
                     themedFormField("Serial Number", text: $viewModel.serialNumber)
                     themedFormField("Quantity", text: $viewModel.quantity, keyboard: .numberPad)
+                    themedFormField("Cert Number", text: $viewModel.certNumber)
+                    themedFormField("Team", text: $viewModel.team)
+                    themedFormField("Sport", text: $viewModel.sport)
+                    themedFormField("Manufacturer", text: $viewModel.manufacturer)
 
                     Toggle(isOn: $viewModel.includePurchaseDate) {
                         Text("Add Purchase Date")

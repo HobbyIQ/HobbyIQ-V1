@@ -32,11 +32,23 @@ struct PendingReviewDetailSheet: View {
     @State private var sport: String
     @State private var isAuto: Bool
 
+    // CF-CARDID-SUGGEST (backend PR #389): the accepted / user-picked
+    // cardId that flows into the confirm body when set. Seeded from
+    // the holding's existing `cardId` so users who already picked a
+    // match don't lose the reference on re-open.
+    @State private var acceptedCardId: String?
+
     // Async state.
     @State private var isConfirming = false
     @State private var isRejecting = false
+    @State private var isSearchingCatalog = false
     @State private var errorMessage: String?
     @State private var photoIndex: Int = 0
+    @State private var showCatalogSearch = false
+    /// Overrides `holding.suggestionCandidate` when the user picks a
+    /// row from the catalog search sheet — so the review card renders
+    /// the fresh pick instead of the stale server suggestion.
+    @State private var pickedCandidate: (cardId: String, candidate: SuggestionCandidate)?
 
     init(viewModel: PortfolioIQViewModel, holding: InventoryCard, onFinished: @escaping () -> Void) {
         self.viewModel = viewModel
@@ -52,6 +64,7 @@ struct PendingReviewDetailSheet: View {
         _team = State(initialValue: holding.team ?? "")
         _sport = State(initialValue: holding.sport ?? "")
         _isAuto = State(initialValue: holding.isAuto)
+        _acceptedCardId = State(initialValue: holding.cardId)
     }
 
     var body: some View {
@@ -69,6 +82,9 @@ struct PendingReviewDetailSheet: View {
                 if let seller = holding.ebaySeller {
                     sellerFooter(seller)
                 }
+                stepHeader(number: 1, title: "Match card", subtitle: "Pick the correct catalog card so pricing is accurate.")
+                suggestedMatchCard
+                stepHeader(number: 2, title: "Grade & details", subtitle: "Confirm the fields below. Values from your pick auto-fill on the left.")
                 sideBySide
                 if let errorMessage {
                     Text(errorMessage)
@@ -76,6 +92,7 @@ struct PendingReviewDetailSheet: View {
                         .foregroundStyle(HobbyIQTheme.Colors.danger)
                         .padding(.horizontal, HobbyIQTheme.Spacing.medium)
                 }
+                stepHeader(number: 3, title: "Confirm", subtitle: "Sends the clean row to your inventory.")
                 actionRow
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
@@ -85,6 +102,55 @@ struct PendingReviewDetailSheet: View {
         .navigationTitle("Confirm holding")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
+        .sheet(isPresented: $showCatalogSearch) {
+            CatalogMatchSearchSheet(holding: holding) { hit in
+                applyCatalogPick(hit)
+            }
+        }
+    }
+
+    /// Populates the review sheet's editable fields with the canonical
+    /// values from the picked catalog card so the row lands in
+    /// inventory with clean data. Every field the pick populated
+    /// overwrites what the parser extracted; blank fields on the
+    /// pick fall through to whatever was already in the form.
+    private func applyCatalogPick(_ hit: CompIQVariantHit) {
+        pickedCandidate = (
+            cardId: hit.cardId,
+            candidate: SuggestionCandidate(
+                title: hit.title ?? hit.resolvedLabel,
+                set: hit.set,
+                year: hit.year.map(String.init),
+                number: hit.number,
+                variant: hit.variant,
+                image: hit.imageUrl
+            )
+        )
+        acceptedCardId = hit.cardId
+
+        // Overwrite editable fields with the canonical pick so Confirm
+        // sends clean player/year/set/parallel/cardNumber deltas and
+        // the row shows up in inventory with the catalog's names.
+        if let player = hit.player, player.isEmpty == false {
+            playerName = player
+        }
+        if let y = hit.year {
+            cardYearText = String(y)
+        }
+        if let set = hit.set, set.isEmpty == false {
+            setName = set
+        }
+        if let variant = hit.variant, variant.isEmpty == false, variant.lowercased() != "base" {
+            parallel = variant
+        }
+        if let number = hit.number, number.isEmpty == false {
+            cardNumber = number
+        }
+        // Autograph flag isn't user-editable via a picker in the
+        // catalog search results, but the hit tells us whether the
+        // catalog card is autographed — sync so the confirm diff
+        // reflects the pick.
+        isAuto = hit.isAuto
     }
 
     // MARK: Photo gallery
@@ -168,8 +234,8 @@ struct PendingReviewDetailSheet: View {
             editableField(label: "Set", text: $setName)
             editableField(label: "Parallel", text: $parallel)
             editableField(label: "Card #", text: $cardNumber)
-            editableField(label: "Grader", text: $gradeCompany)
-            editableField(label: "Grade", text: $gradeValueText, keyboard: .decimalPad)
+            graderPickerField
+            gradeValuePickerField
             editableField(label: "Team", text: $team)
             editableField(label: "Sport", text: $sport)
             Toggle(isOn: $isAuto) {
@@ -187,6 +253,112 @@ struct PendingReviewDetailSheet: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: Grade dropdowns (CF-CLEAN-DATA-GRADES, 2026-07-12)
+    //
+    // Grade must be canonical for the backend to bucket the holding
+    // into the right grade rail. Freetext lets things like "psa10",
+    // "PSA-10", "10 gem mint" leak in, and the pricing pipeline can't
+    // resolve those. Menu pickers force clean tokens: grader ∈
+    // {Raw, PSA, BGS, SGC, CGC}, value ∈ standard 1.0–10.0 half-steps.
+
+    private static let graderOptions: [String] = ["Raw", "PSA", "BGS", "SGC", "CGC"]
+    /// CF-PROGRESSIVE-BUCKETS (backend PR #393): full half-step set so
+    /// SGC / CGC / BGS half-grades below 8 are pickable without
+    /// forcing free-text entry.
+    private static let gradeValueOptions: [String] = [
+        "10", "9.5", "9", "8.5", "8", "7.5", "7", "6.5", "6",
+        "5.5", "5", "4.5", "4", "3.5", "3", "2.5", "2", "1.5", "1"
+    ]
+
+    private var normalizedGrader: String {
+        gradeCompany.trimmingCharacters(in: .whitespaces).uppercased()
+    }
+
+    /// User-visible grader label; "Raw" for ungraded, otherwise the
+    /// company code.
+    private var graderDisplay: String {
+        if normalizedGrader.isEmpty { return "Raw" }
+        if Self.graderOptions.contains(normalizedGrader) { return normalizedGrader }
+        return normalizedGrader
+    }
+
+    private var graderPickerField: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Grader")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.4)
+            Menu {
+                ForEach(Self.graderOptions, id: \.self) { option in
+                    Button(option) {
+                        if option == "Raw" {
+                            gradeCompany = ""
+                            gradeValueText = ""
+                        } else {
+                            gradeCompany = option
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(graderDisplay)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
+    }
+
+    private var gradeValuePickerField: some View {
+        let isRaw = graderDisplay == "Raw"
+        return VStack(alignment: .leading, spacing: 3) {
+            Text("Grade")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.4)
+            Menu {
+                ForEach(Self.gradeValueOptions, id: \.self) { option in
+                    Button(option) {
+                        gradeValueText = option
+                    }
+                }
+                if gradeValueText.isEmpty == false {
+                    Divider()
+                    Button("Clear") { gradeValueText = "" }
+                }
+            } label: {
+                HStack {
+                    Text(isRaw ? "—" : (gradeValueText.isEmpty ? "Select" : gradeValueText))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isRaw
+                                         ? HobbyIQTheme.Colors.mutedText
+                                         : (gradeValueText.isEmpty
+                                            ? HobbyIQTheme.Colors.mutedText
+                                            : HobbyIQTheme.Colors.pureWhite))
+                    Spacer()
+                    if isRaw == false {
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            .disabled(isRaw)
+        }
     }
 
     private func editableField(label: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
@@ -245,6 +417,354 @@ struct PendingReviewDetailSheet: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
+    }
+
+    // MARK: Step headers
+
+    /// Compact "1. Match card" / "2. Grade & details" / "3. Confirm"
+    /// section label. Ordered numeric prefix so the review flow reads
+    /// linearly on scroll.
+    private func stepHeader(number: Int, title: String, subtitle: String) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text("\(number)")
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(width: 22, height: 22)
+                .background(HobbyIQTheme.Colors.electricBlue)
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+        .padding(.top, 4)
+    }
+
+    // MARK: Suggested match card (CF-CARDID-SUGGEST, backend PR #389)
+
+    @ViewBuilder
+    private var suggestedMatchCard: some View {
+        if let picked = pickedCandidate {
+            // The user picked a specific catalog match — render it as
+            // an already-accepted card so they can see the pick + still
+            // change their mind via "Different card".
+            acceptedMatchCard(
+                cardId: picked.cardId,
+                candidate: picked.candidate,
+                confidence: 1.0,     // treat manual pick as 100%
+                isUserPick: true
+            )
+        } else if holding.suggestedCardId == nil {
+            noSuggestionCard
+        } else if let suggestedId = holding.suggestedCardId,
+                  let candidate = holding.suggestionCandidate {
+            let alreadyAccepted = acceptedCardId == suggestedId
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .font(.caption.weight(.bold))
+                    Text("Suggested match")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(1.0)
+                    Spacer()
+                    if let conf = holding.suggestionConfidence {
+                        Text(String(format: "%.0f%%", conf * 100))
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                            .clipShape(Capsule(style: .continuous))
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 12) {
+                    candidateThumbnail(candidate)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let title = candidate.title, title.isEmpty == false {
+                            Text(title)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        candidateDetailsGrid(candidate)
+                    }
+                    Spacer(minLength: 4)
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        // Accept = pick + confirm in one tap. Previously
+                        // this only staged the cardId and left the user
+                        // to scroll to the Confirm button in step 3;
+                        // when the suggested match is high-confidence
+                        // (which is when Accept fires), the two-step
+                        // dance is friction the user shouldn't see.
+                        acceptedCardId = suggestedId
+                        Task { await confirm() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: alreadyAccepted ? "checkmark.circle.fill" : "checkmark")
+                                .font(.caption.weight(.bold))
+                            Text(alreadyAccepted ? "Accepted" : "Accept")
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(alreadyAccepted ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.electricBlue)
+                        .clipShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showCatalogSearch = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Different card")
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(HobbyIQTheme.Colors.cardNavy)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+                        )
+                        .clipShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                }
+            }
+            .padding(HobbyIQTheme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+        }
+    }
+
+    /// Render used when the user has an active pick (from either the
+    /// backend suggestion or the catalog-search sheet). Shows the
+    /// selected card + a "Different card" affordance to re-open the
+    /// search.
+    private func acceptedMatchCard(
+        cardId: String,
+        candidate: SuggestionCandidate,
+        confidence: Double,
+        isUserPick: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: isUserPick ? "hand.point.up.left.fill" : "sparkles")
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .font(.caption.weight(.bold))
+                Text(isUserPick ? "You picked" : "Suggested match")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(1.0)
+                Spacer()
+                Text(String(format: "%.0f%%", confidence * 100))
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                    .clipShape(Capsule(style: .continuous))
+            }
+            HStack(alignment: .top, spacing: 12) {
+                candidateThumbnail(candidate)
+                VStack(alignment: .leading, spacing: 6) {
+                    if let title = candidate.title, title.isEmpty == false {
+                        Text(title)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    candidateDetailsGrid(candidate)
+                }
+                Spacer(minLength: 4)
+            }
+            HStack(spacing: 8) {
+                Label(acceptedCardId == cardId ? "Accepted" : "Accept", systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(HobbyIQTheme.Colors.successGreen)
+                    .clipShape(Capsule(style: .continuous))
+                    .onTapGesture { acceptedCardId = cardId }
+                Button {
+                    showCatalogSearch = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Different card")
+                            .font(.caption.weight(.semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(HobbyIQTheme.Colors.cardNavy)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+                    )
+                    .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+    }
+
+    /// Rendered when the row has no `suggestedCardId` yet. Gives the
+    /// user a manual affordance to re-fire the backend suggestion
+    /// pass — useful for high-value rows (like a Gold parallel) where
+    /// the initial auto-match failed but the user knows a good match
+    /// exists in the catalog.
+    private var noSuggestionCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .font(.caption.weight(.bold))
+                Text("Suggested match")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(1.0)
+                Spacer()
+            }
+            Text("No catalog match yet — tap to search HobbyIQ's card database for this holding.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                showCatalogSearch = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption.weight(.bold))
+                    Text("Search catalog")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(HobbyIQTheme.Colors.electricBlue)
+                .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+    }
+
+    private func candidateSubtitle(_ c: SuggestionCandidate) -> String? {
+        var parts: [String] = []
+        if let set = c.set, set.isEmpty == false { parts.append(set) }
+        if let year = c.year, year.isEmpty == false { parts.append(year) }
+        if let n = c.number, n.isEmpty == false { parts.append("#\(n)") }
+        if let v = c.variant, v.isEmpty == false, v.lowercased() != "base" { parts.append(v) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Detailed labeled-row list of every catalog field on the
+    /// candidate. Rendered on the suggested-match + user-picked cards
+    /// so the user sees Year / Set / Card # / Variant explicitly
+    /// before hitting Accept — the compact "subtitle" pill hid enough
+    /// detail that wrong matches were slipping through.
+    @ViewBuilder
+    private func candidateDetailsGrid(_ c: SuggestionCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            candidateDetailRow(label: "Year", value: c.year)
+            candidateDetailRow(label: "Set", value: c.set)
+            candidateDetailRow(label: "Card #", value: c.number.map { "#\($0)" })
+            candidateDetailRow(
+                label: "Variant",
+                value: {
+                    guard let v = c.variant, v.isEmpty == false else { return nil }
+                    return v.lowercased() == "base" ? "Base" : v
+                }()
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func candidateDetailRow(label: String, value: String?) -> some View {
+        if let value, value.isEmpty == false {
+            HStack(alignment: .top, spacing: 8) {
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .frame(width: 60, alignment: .leading)
+                Text(value)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func candidateThumbnail(_ c: SuggestionCandidate) -> some View {
+        Group {
+            if let urlString = c.image, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image): image.resizable().scaledToFit()
+                    case .empty, .failure:
+                        Image(systemName: "rectangle.portrait")
+                            .font(.system(size: 20, weight: .light))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                    @unknown default: EmptyView()
+                    }
+                }
+            } else {
+                Image(systemName: "rectangle.portrait")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+            }
+        }
+        .frame(width: 54, height: 72)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     // MARK: Seller footer
@@ -322,8 +842,12 @@ struct PendingReviewDetailSheet: View {
 
     // MARK: Backend I/O
 
+    /// CF-BACKEND-ID (2026-07-12): mutations (/confirm, /reject) need
+    /// the RAW wire id — not the derived UUID from `holding.id`, and
+    /// definitely not the Cardsight catalog `cardId` (that's a
+    /// different entity). Preserved on decode as `backendId`.
     private var identifier: String {
-        holding.cardId ?? holding.id.uuidString
+        holding.backendId ?? holding.id.uuidString
     }
 
     private func confirm() async {
@@ -331,40 +855,64 @@ struct PendingReviewDetailSheet: View {
         isConfirming = true
         defer { isConfirming = false }
 
-        // Diff each field against the seed — only send what changed.
+        // CF-CLEAN-DATA (2026-07-12): when the user has accepted a
+        // catalog cardId (either the auto-suggestion or a manual
+        // pick), send EVERY field that has a value — not just diffs.
+        // Backend then persists the full canonical row rather than
+        // an incremental patch, which guarantees the holding lands
+        // in inventory with the clean matched data even if a field
+        // happens to equal what the parser had already extracted.
+        // When the user hasn't picked a match, fall back to the
+        // diff-only behavior (respects the "send only changed
+        // fields" backend contract for lightweight edits).
+        let sendFullRow = acceptedCardId != nil
+
         var patch = HoldingConfirmRequest.empty
-        if playerName != holding.playerName {
-            patch.playerName = playerName
+
+        if sendFullRow || playerName != holding.playerName {
+            let trimmed = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+            patch.playerName = trimmed.isEmpty ? nil : trimmed
         }
-        if cardYearText != holding.year, let y = Int(cardYearText) {
+        if let y = Int(cardYearText), sendFullRow || y != Int(holding.year) {
             patch.cardYear = y
         }
-        if setName != holding.setName {
-            patch.setName = setName
+        if sendFullRow || setName != holding.setName {
+            let trimmed = setName.trimmingCharacters(in: .whitespacesAndNewlines)
+            patch.setName = trimmed.isEmpty ? nil : trimmed
         }
-        if parallel != holding.parallel {
-            patch.parallel = parallel
+        if sendFullRow || parallel != holding.parallel {
+            let trimmed = parallel.trimmingCharacters(in: .whitespacesAndNewlines)
+            patch.parallel = trimmed.isEmpty ? nil : trimmed
         }
         if cardNumber.isEmpty == false {
             patch.cardNumber = cardNumber
         }
-        if gradeCompany != (holding.gradeCompany ?? "") {
+        if sendFullRow || gradeCompany != (holding.gradeCompany ?? "") {
             patch.gradeCompany = gradeCompany.isEmpty ? nil : gradeCompany
         }
         let originalGradeText = holding.gradeValue.map { formatGrade($0) } ?? ""
-        if gradeValueText != originalGradeText {
+        if sendFullRow || gradeValueText != originalGradeText {
             patch.gradeValue = Double(gradeValueText)
         }
-        if team != (holding.team ?? "") {
+        if sendFullRow || team != (holding.team ?? "") {
             patch.team = team.isEmpty ? nil : team
         }
-        if sport != (holding.sport ?? "") {
+        if sendFullRow || sport != (holding.sport ?? "") {
             patch.sport = sport.isEmpty ? nil : sport
         }
-        if isAuto != holding.isAuto {
+        if sendFullRow || isAuto != holding.isAuto {
             patch.isAuto = isAuto
         }
+        // Always send the accepted cardId — this is the load-bearing
+        // field that ties the holding to the canonical Cardsight
+        // catalog card for pricing downstream.
+        if let accepted = acceptedCardId {
+            patch.cardId = accepted
+        }
 
+        #if DEBUG
+        print("[Confirm] id=\(identifier) patch=\(describe(patch: patch))")
+        #endif
         let didSave = await viewModel.confirmPendingHolding(id: identifier, patch: patch)
         if didSave {
             onFinished()
@@ -372,6 +920,25 @@ struct PendingReviewDetailSheet: View {
         } else {
             errorMessage = viewModel.errorMessage ?? "Couldn't confirm. Try again."
         }
+    }
+
+    /// Human-readable summary of the diff that's about to be POST'd —
+    /// used in DEBUG only so we can eyeball what's being sent when a
+    /// row doesn't seem to propagate to backend.
+    private func describe(patch: HoldingConfirmRequest) -> String {
+        var bits: [String] = []
+        if let v = patch.playerName { bits.append("playerName=\(v)") }
+        if let v = patch.cardYear { bits.append("cardYear=\(v)") }
+        if let v = patch.setName { bits.append("setName=\(v)") }
+        if let v = patch.parallel { bits.append("parallel=\(v)") }
+        if let v = patch.cardNumber { bits.append("cardNumber=\(v)") }
+        if let v = patch.gradeCompany { bits.append("gradeCompany=\(v)") }
+        if let v = patch.gradeValue { bits.append("gradeValue=\(v)") }
+        if let v = patch.isAuto { bits.append("isAuto=\(v)") }
+        if let v = patch.team { bits.append("team=\(v)") }
+        if let v = patch.sport { bits.append("sport=\(v)") }
+        if let v = patch.cardId { bits.append("cardId=\(v)") }
+        return bits.isEmpty ? "(empty)" : bits.joined(separator: ", ")
     }
 
     private func reject() async {

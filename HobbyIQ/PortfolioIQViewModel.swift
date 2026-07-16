@@ -17,6 +17,12 @@ final class PortfolioIQViewModel: ObservableObject {
     @Published private(set) var salesHistory: [Sale] = []
     @Published private(set) var apiLedgerEntries: [PortfolioLedgerEntry]?
     @Published private(set) var ledgerTotals: PortfolioLedgerTotals?
+    /// CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388): auto-imported eBay
+    /// holdings the user hasn't confirmed yet. Never included in
+    /// `inventoryCards` (backend excludes from `/api/portfolio`) — the
+    /// review screen reads exclusively from here. Fetched in parallel
+    /// with the main portfolio load.
+    @Published private(set) var pendingReviewHoldings: [InventoryCard] = []
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
     @Published var pendingInventoryFilter: PortfolioInventoryFilter?
@@ -24,6 +30,14 @@ final class PortfolioIQViewModel: ObservableObject {
     // Cached derived data — recomputed only when inventoryCards changes
     @Published private(set) var cachedPriorityActions: [PortfolioPriorityAction] = []
     @Published private(set) var cachedTopMovers: [PortfolioMover] = []
+
+    /// CF-LIVE-PANEL-CACHE (2026-07-09): per-holding grade curves fetched
+    /// via `POST /api/compiq/observed-grade-curves-bulk`. Keyed by the
+    /// backend cardId (String — not the UUID). Rows + detail sheet
+    /// consult this cache so inventory list, holding detail, and
+    /// comp card all render the same live number for the same holding's
+    /// grade. Nil / empty entry → fall back to `card.fairMarketValue`.
+    @Published private(set) var livePanelEntries: [String: [CardPanelGradeEntry]] = [:]
 
     private let service: APIService
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "portfolio")
@@ -156,7 +170,14 @@ final class PortfolioIQViewModel: ObservableObject {
         // − fairMarketValue) — direction-class. Backtest established
         // direction is at-chance; honest historical P/L sign read
         // replaces it.
-        let activeCards = inventoryCards.filter { $0.status.lowercased() != "sold" }
+        // CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388): pending-review
+        // rows never contribute to totals / movers / actions. Backend
+        // excludes them from `/api/portfolio`; this client-side filter
+        // is a belt for any wire path that still leaks them through.
+        let activeCards = inventoryCards.filter {
+            let s = $0.status.lowercased()
+            return s != "sold" && s != "pending-review"
+        }
 
         let gainers = activeCards
             .sorted { $0.profitLoss > $1.profitLoss }
@@ -212,6 +233,98 @@ final class PortfolioIQViewModel: ObservableObject {
         } catch {
             logger.error("Ledger fetch failed, falling back to local sales: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388): loads the queue of
+    /// auto-imported holdings the user still needs to confirm. Failure
+    /// is non-fatal (empty queue displays same as "no pending").
+    func fetchPendingReview() async {
+        do {
+            pendingReviewHoldings = try await service.fetchPendingReviewHoldings()
+        } catch {
+            logger.error("Pending-review fetch failed: \(error.localizedDescription, privacy: .public)")
+            pendingReviewHoldings = []
+        }
+    }
+
+    /// CF-CARDID-SUGGEST (backend PR #389) + CF-PROGRESSIVE-BUCKETS
+    /// (PR #393): when the queue opens, if any row lacks a
+    /// `suggestedCardId` (or tier), ask the server to compute
+    /// suggestions across the pending queue, then reload. `force=true`
+    /// (pull-to-refresh) re-runs even for rows that already have a
+    /// suggestion — used to promote medium → high after a Cardsight
+    /// catalog update.
+    func generatePendingSuggestionsIfNeeded(force: Bool = false) async {
+        if force == false {
+            let anyMissing = pendingReviewHoldings.contains {
+                $0.suggestedCardId == nil || $0.suggestionConfidenceTier == nil
+            }
+            guard anyMissing else { return }
+        }
+        do {
+            _ = try await service.generateHoldingSuggestions(force: force)
+            await fetchPendingReview()
+        } catch {
+            logger.error("Generate suggestions failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Confirms one pending row. On success, drops it from the queue
+    /// and asks the main portfolio to reload so the new active
+    /// holding shows up in inventory.
+    func confirmPendingHolding(id: String, patch: HoldingConfirmRequest) async -> Bool {
+        do {
+            let response = try await service.confirmPendingHolding(id: id, patch: patch)
+            #if DEBUG
+            let h = response.holding
+            print("[Confirm] response status=\(response.status ?? "-") corrections=\(response.correctionCount ?? -1)")
+            if let h {
+                print("[Confirm] backend holding after: player=\(h.playerName) set=\(h.setName) year=\(h.year) parallel=\(h.parallel) cardId=\(h.cardId ?? "-") backendId=\(h.backendId ?? "-")")
+            } else {
+                print("[Confirm] backend returned no holding in response")
+            }
+            #endif
+            pendingReviewHoldings.removeAll {
+                $0.backendId == id || $0.id.uuidString == id || $0.cardId == id
+            }
+            await fetch(preserveExistingSummaryOnError: true)
+            NotificationCenter.default.post(name: .portfolioSaleRecorded, object: nil)
+            return true
+        } catch {
+            logger.error("Confirm pending holding \(id, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = APIService.errorMessage(from: error)
+            return false
+        }
+    }
+
+    /// Rejects one pending row — auto-import misfire. Backend deletes
+    /// the holding and unlinks it from its source purchase.
+    func rejectPendingHolding(id: String) async -> Bool {
+        do {
+            _ = try await service.rejectPendingHolding(id: id)
+            pendingReviewHoldings.removeAll { $0.id.uuidString == id || $0.cardId == id }
+            return true
+        } catch {
+            logger.error("Reject pending holding \(id, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = APIService.errorMessage(from: error)
+            return false
+        }
+    }
+
+    /// One-tap batch confirmation of every holding in the queue whose
+    /// confidence bucket is `.high`. Sends an empty patch per row —
+    /// the user hasn't edited anything, so we don't spend backend
+    /// diff cycles updating fields.
+    func batchConfirmHighConfidence() async -> Int {
+        let highConf = pendingReviewHoldings.filter { $0.reviewConfidenceBucket == .high }
+        var confirmed = 0
+        for holding in highConf {
+            let identifier = holding.cardId ?? holding.id.uuidString
+            if await confirmPendingHolding(id: identifier, patch: .empty) {
+                confirmed += 1
+            }
+        }
+        return confirmed
     }
 
     func dismissLedgerEntry(id: String, reason: String?) async throws {
@@ -328,8 +441,102 @@ final class PortfolioIQViewModel: ObservableObject {
     }
 
     func load() async {
-        async let _ = fetchLedger()
+        // CF-CANCELLATION-FIX (2026-07-12): `async let _ = …` binds the
+        // child task to the enclosing scope, so when this function
+        // returns (as soon as `fetch` completes) the ledger and
+        // pending-review calls get cancelled mid-flight. Detached
+        // `Task {}` lets them finish independently and populate their
+        // own `@Published` slots without racing the parent.
+        Task { await fetchLedger() }
+        Task { await fetchPendingReview() }
         await fetch(preserveExistingSummaryOnError: false)
+    }
+
+    /// CF-LIVE-PANEL-CACHE (2026-07-09): populates `livePanelEntries`
+    /// by calling the bulk grade-curves endpoint for every holding
+    /// with a non-empty backend cardId. Cheap on the server (12h
+    /// cached) so it's safe to fire whenever the inventory list
+    /// appears. Failures degrade silently — rows just fall back to
+    /// the cached `fairMarketValue` snapshot.
+    func refreshLivePanelValues() async {
+        let cardIds = Array(Set(
+            inventoryCards
+                .compactMap { $0.cardId?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { $0.isEmpty == false }
+        ))
+        guard cardIds.isEmpty == false else {
+            livePanelEntries = [:]
+            return
+        }
+        do {
+            let response = try await service.fetchBulkGradeCurves(cardIds: cardIds)
+            var next: [String: [CardPanelGradeEntry]] = [:]
+            for curve in response.curves ?? [] {
+                guard let id = curve.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      id.isEmpty == false else { continue }
+                next[id] = curve.entries ?? []
+            }
+            livePanelEntries = next
+        } catch {
+            // Silent — the row falls back to `card.fairMarketValue`.
+            logger.error("bulk grade curves failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// 2026-07-15: push freshly-fetched per-card panel entries (e.g.
+    /// from the holding detail sheet's `/card-panel` fetch) into the
+    /// shared cache so the inventory row / grid / sort read the same
+    /// value the detail hero is showing. Trimmed cardId is required —
+    /// callers that don't have one should skip.
+    func writeLivePanelEntries(cardId: String, entries: [CardPanelGradeEntry]) {
+        let trimmed = cardId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        livePanelEntries[trimmed] = entries
+    }
+
+    /// Canonical single-source-of-truth market value for a holding.
+    /// Every surface — inventory row, grid card, detail hero, header
+    /// total, sort — reads this so the same card can never show
+    /// different numbers across the app. Fallback order: live-panel
+    /// cache → observed FMV → cached currentValue → engine estimate →
+    /// best-known fallback (low/high midpoint, at-cost). Always
+    /// scaled by quantity.
+    func resolvedMarketValue(for card: InventoryCard) -> Double {
+        let qty = max(1.0, card.quantity ?? 1.0)
+        if let live = liveMarketValue(for: card), live > 0 { return live * qty }
+        if let v = card.fairMarketValue, v > 0 { return v * qty }
+        if card.currentValue > 0 { return card.currentValue }
+        if let v = card.estimatedValue, v > 0 { return v * qty }
+        if let best = card.bestKnownMarketValue { return best.perUnit * qty }
+        return 0
+    }
+
+    /// CF-LIVE-PANEL-CACHE (2026-07-09): resolves the market value for
+    /// a holding by looking up its grade in the cached bulk-fetched
+    /// entries. Returns nil when the cache hasn't loaded yet, the
+    /// holding has no backend cardId, or no entry matches the grade —
+    /// callers fall back to `card.fairMarketValue`.
+    func liveMarketValue(for card: InventoryCard) -> Double? {
+        guard let rawId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              rawId.isEmpty == false else { return nil }
+        guard let entries = livePanelEntries[rawId], entries.isEmpty == false else { return nil }
+        let key = holdingGradeKey(for: card)
+        let match = entries.first { entry in
+            GradePillPanel.normalizedKey(grade: entry.grade, grader: entry.grader) == key
+        }
+        return match?.resolvedMarketValue
+    }
+
+    private func holdingGradeKey(for card: InventoryCard) -> String {
+        if let company = card.gradeCompany?.trimmingCharacters(in: .whitespaces),
+           let value = card.gradeValue,
+           company.isEmpty == false {
+            let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return GradePillPanel.normalizedKey(grade: valueStr, grader: company)
+        }
+        return "raw"
     }
 
     private func userFacingMessage(for error: Error, fallback: String) -> String {
@@ -342,7 +549,26 @@ final class PortfolioIQViewModel: ObservableObject {
     }
 
     func refresh() async {
+        // CF-CANCELLATION-FIX (2026-07-12): see load() — detached
+        // Task so the pending-review call outlives this coroutine.
+        Task { await fetchPendingReview() }
         await fetch(preserveExistingSummaryOnError: true)
+    }
+
+    /// Reload the holdings list straight from `LocalPortfolioProvider`
+    /// (already patched by the edit path's `save()`). Skips the backend
+    /// re-fetch so an edit is reflected on the list immediately, even
+    /// while backend eventual consistency catches up. The next natural
+    /// `refresh()` (pull-to-refresh, tab reappear) reconciles with
+    /// authoritative data.
+    func applyLocalHoldingsUpdate() async {
+        let cached = await LocalPortfolioProvider.shared.getInventory()
+        inventoryCards = cached
+        summary = Self.composeSummary(
+            backendSummary: nil,
+            holdings: cached,
+            userId: resolvedUserId()
+        )
     }
 
     func removeHolding(_ card: InventoryCard) async -> Bool {
@@ -368,7 +594,18 @@ final class PortfolioIQViewModel: ObservableObject {
         }
     }
 
-    func markHoldingSold(_ card: InventoryCard, salePrice: Double, fees: Double, date: Date) async -> Bool {
+    func markHoldingSold(
+        _ card: InventoryCard,
+        salePrice: Double,
+        fees: Double,
+        date: Date,
+        notes: String? = nil,
+        salesChannel: String? = nil,
+        channelNote: String? = nil,
+        paymentMethod: String? = nil,
+        paymentNote: String? = nil,
+        saleLocation: PortfolioIQSaleLocation? = nil
+    ) async -> Bool {
         let userId = resolvedUserId()
 
         do {
@@ -377,7 +614,13 @@ final class PortfolioIQViewModel: ObservableObject {
                 cardId: card.id.uuidString,
                 salePrice: salePrice,
                 fees: fees,
-                date: date
+                date: date,
+                notes: notes,
+                salesChannel: salesChannel,
+                channelNote: channelNote,
+                paymentMethod: paymentMethod,
+                paymentNote: paymentNote,
+                saleLocation: saleLocation
             )
             await PortfolioService(provider: LocalPortfolioProvider.shared).markCardAsSold(
                 card: card,
@@ -386,8 +629,29 @@ final class PortfolioIQViewModel: ObservableObject {
                 date: date
             )
             await fetch(preserveExistingSummaryOnError: true)
+            #if DEBUG
+            print("[Financials] posting .portfolioSaleRecorded for cardId=\(card.id.uuidString)")
+            #endif
+            NotificationCenter.default.post(name: .portfolioSaleRecorded, object: nil)
             return true
         } catch {
+            // CF-SELL-TRACKING (2026-07-11): backend returns a structured
+            // 400 with an `error` key when validation fails (e.g. an
+            // "other" channel/payment missing its required note, or an
+            // invalid channel enum). Surface that so the sheet can show
+            // a real reason instead of the "updated cache" fallback,
+            // which would silently mask a bad payload.
+            if let message = APIService.validationErrorMessage(from: error) {
+                errorMessage = message
+                logger.error("Mark sold rejected by backend for \(card.id.uuidString, privacy: .public): \(message, privacy: .public)")
+                #if DEBUG
+                print("[Financials] mark-sold VALIDATION error: \(message)")
+                #endif
+                return false
+            }
+            #if DEBUG
+            print("[Financials] mark-sold BACKEND error (falling back to local cache): \(APIService.errorMessage(from: error))")
+            #endif
             await PortfolioService(provider: LocalPortfolioProvider.shared).markCardAsSold(
                 card: card,
                 salePrice: salePrice,
@@ -397,7 +661,7 @@ final class PortfolioIQViewModel: ObservableObject {
             await fetch(preserveExistingSummaryOnError: true)
             errorMessage = "Live sale save failed. Updated cached inventory instead."
             logger.error("Mark sold sync failed for \(card.id.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            return true
+            return false
         }
     }
 

@@ -16,10 +16,32 @@ import SwiftUI
 
 struct HoldingHeldExpensesCard: View {
     let holdingId: String
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): callers pass
+    /// the holding directly so the card can seed `expenses` from
+    /// `holding.heldExpenses[]` (already on every GET / mutation
+    /// response) instead of firing a follow-up `GET /expenses` on
+    /// mount. Optional for backward-compat.
+    let seedHolding: InventoryCard?
     /// Fired every time the backend returns a new totalCostBasis (add
     /// or delete). Detail sheets use this to trigger a refresh so the
     /// row upstream reflects the delta.
     let onCostBasisChanged: (Double) -> Void
+    /// Fires only on a successful add (not delete). Detail sheets use
+    /// this to pop back to the inventory list so the user sees the
+    /// updated cost basis on the row without a manual back-tap.
+    let onExpenseAdded: (() -> Void)?
+
+    init(
+        holdingId: String,
+        seedHolding: InventoryCard? = nil,
+        onCostBasisChanged: @escaping (Double) -> Void,
+        onExpenseAdded: (() -> Void)? = nil
+    ) {
+        self.holdingId = holdingId
+        self.seedHolding = seedHolding
+        self.onCostBasisChanged = onCostBasisChanged
+        self.onExpenseAdded = onExpenseAdded
+    }
 
     @State private var expenses: [HoldingHeldExpense] = []
     @State private var totalSpent: Double = 0
@@ -27,10 +49,19 @@ struct HoldingHeldExpensesCard: View {
     @State private var errorMessage: String?
     @State private var showAdd = false
     @State private var pendingDeleteId: String?
+    /// Latest `newTotalCostBasis` returned by the backend after an
+    /// add/delete. Rendered inline so the user sees the roll-in even
+    /// though the outer detail sheet's `card: InventoryCard` is a
+    /// snapshot and doesn't auto-refresh.
+    @State private var latestCostBasis: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+
+            if let latestCostBasis {
+                costBasisConfirmation(latestCostBasis)
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 if isLoading && expenses.isEmpty {
@@ -62,26 +93,72 @@ struct HoldingHeldExpensesCard: View {
         .task { await load() }
         .sheet(isPresented: $showAdd) {
             HoldingHeldExpenseAddSheet(holdingId: holdingId) { response in
-                if let expense = response.expense {
+                #if DEBUG
+                print("[HeldExpenses] add response: expense=\(String(describing: response.expense?.id)) newTotalCostBasis=\(String(describing: response.newTotalCostBasis)) hasHolding=\(response.updatedHolding != nil)")
+                #endif
+                // CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395):
+                // prefer the freshly-persisted `heldExpenses[]` on the
+                // returned holding — no `GET /expenses` follow-up
+                // needed. Falls back to the per-expense object shape
+                // for legacy compatibility.
+                if let updated = response.updatedHolding,
+                   let refreshed = updated.heldExpenses {
+                    expenses = refreshed
+                    totalSpent = refreshed.reduce(0) { $0 + $1.amount }
+                } else if let expense = response.expense {
                     expenses.append(expense)
                     totalSpent += expense.amount
                 }
                 if let cb = response.newTotalCostBasis {
+                    latestCostBasis = cb
                     onCostBasisChanged(cb)
                 }
+                // Pop the outer detail sheet so the user lands back on
+                // the inventory list with the updated cost basis
+                // reflected on the row.
+                onExpenseAdded?()
             }
         }
+    }
+
+    private func costBasisConfirmation(_ cb: Double) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+            Text("New cost basis: \(cb.portfolioCurrencyText)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer()
+        }
+        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+        .padding(.vertical, 8)
+        .background(HobbyIQTheme.Colors.successGreen.opacity(0.14))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.successGreen.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Costs added while holding")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                HStack(spacing: 6) {
+                    Text("Costs added while holding")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text("Optional")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(HobbyIQTheme.Colors.steelGray.opacity(0.25))
+                        .clipShape(Capsule(style: .continuous))
+                }
                 Text(headerSubtitle)
                     .font(.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             Button {
@@ -101,16 +178,20 @@ struct HoldingHeldExpensesCard: View {
 
     private var headerSubtitle: String {
         if expenses.isEmpty {
-            return "Grading, supplies, insurance — tracked into cost basis."
+            return "Add per-card costs like grading or insurance. Bulk supplies belong in Financials → Expenses."
         }
         return "\(expenses.count) item\(expenses.count == 1 ? "" : "s") · \(totalSpent.portfolioCurrencyText)"
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("No costs added yet.")
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No per-card costs added.")
                 .font(.caption)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Skip this if you track supplies in bulk elsewhere — nothing is required.")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)
     }
@@ -159,6 +240,15 @@ struct HoldingHeldExpensesCard: View {
     // MARK: Data
 
     private func load() async {
+        // CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): if the
+        // seed holding already carries `heldExpenses[]`, use it —
+        // saves a GET on every sheet open. Fall through to the
+        // dedicated fetch when the seed is nil (backward-compat).
+        if let seed = seedHolding, let seeded = seed.heldExpenses {
+            expenses = seeded
+            totalSpent = seeded.reduce(0) { $0 + $1.amount }
+            return
+        }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -176,11 +266,21 @@ struct HoldingHeldExpensesCard: View {
         defer { pendingDeleteId = nil }
         do {
             let response = try await APIService.shared.deleteHoldingExpense(holdingId: holdingId, expenseId: expenseId)
-            if let removed = expenses.first(where: { $0.id == expenseId }) {
-                totalSpent -= removed.amount
+            // CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): prefer
+            // the persisted `heldExpenses[]` on the returned holding
+            // so local state is always server-truth.
+            if let updated = response.updatedHolding,
+               let refreshed = updated.heldExpenses {
+                expenses = refreshed
+                totalSpent = refreshed.reduce(0) { $0 + $1.amount }
+            } else {
+                if let removed = expenses.first(where: { $0.id == expenseId }) {
+                    totalSpent -= removed.amount
+                }
+                expenses.removeAll { $0.id == expenseId }
             }
-            expenses.removeAll { $0.id == expenseId }
             if let cb = response.newTotalCostBasis {
+                latestCostBasis = cb
                 onCostBasisChanged(cb)
             }
         } catch {
@@ -245,6 +345,11 @@ struct HoldingHeldExpenseAddSheet: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .tracking(1.1)
+
+            if selectedKind == .supplies {
+                bulkSuppliesHint
+            }
+
             let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(HoldingHeldExpenseKind.allCases) { kind in
@@ -272,6 +377,27 @@ struct HoldingHeldExpenseAddSheet: View {
                 }
             }
         }
+    }
+
+    private var bulkSuppliesHint: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            Text("Buying supplies in bulk? Log the whole purchase once in Financials → Expenses instead of adding it to each card.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var amountField: some View {
@@ -390,10 +516,19 @@ struct HoldingHeldExpenseAddSheet: View {
         )
 
         do {
+            #if DEBUG
+            print("[HeldExpenses] POST kind=\(selectedKind.rawValue) amount=\(amount) holdingId=\(holdingId)")
+            #endif
             let response = try await APIService.shared.createHoldingExpense(holdingId: holdingId, request: request)
+            #if DEBUG
+            print("[HeldExpenses] POST ok: newTotalCostBasis=\(String(describing: response.newTotalCostBasis)) expenseId=\(String(describing: response.expense?.id))")
+            #endif
             onCreated(response)
             dismiss()
         } catch {
+            #if DEBUG
+            print("[HeldExpenses] POST failed: \(APIService.errorMessage(from: error))")
+            #endif
             errorMessage = APIService.errorMessage(from: error)
         }
     }

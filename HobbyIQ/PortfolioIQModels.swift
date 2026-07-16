@@ -309,6 +309,18 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
     let dismissedAt: String?
     let dismissedReason: String?
 
+    // CF-EBAY-BROWSE-ENRICHMENT (backend PRs #384/#385): sale-side
+    // ledger entries carry the same Browse-enriched fields as
+    // holdings. `ebaySoldImages[]` is the SELL-side listing photo
+    // gallery (a sold-comp preview of what future buyers will see).
+    let enrichedFromEbay: Bool?
+    let ebayItemAspects: [String: String]?
+    let ebayImageUrl: String?
+    let ebaySoldImages: [String]?
+    let ebayShortDescription: String?
+    let ebayCategoryPath: String?
+    let ebaySellerUsername: String?
+
     private let _dateTextOverride: String?
 
     var cardName: String { cardTitle ?? "" }
@@ -370,6 +382,13 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         self.gradingCost = nil
         self.dismissedAt = nil
         self.dismissedReason = nil
+        self.enrichedFromEbay = nil
+        self.ebayItemAspects = nil
+        self.ebayImageUrl = nil
+        self.ebaySoldImages = nil
+        self.ebayShortDescription = nil
+        self.ebayCategoryPath = nil
+        self.ebaySellerUsername = nil
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -381,6 +400,9 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         case adFee, otherFees, netPayout, actualShippingCost
         case suppliesCost, gradingCost
         case dismissedAt, dismissedReason
+        // CF-EBAY-BROWSE-ENRICHMENT (backend PRs #384/#385)
+        case enrichedFromEbay, ebayItemAspects, ebayImageUrl, ebaySoldImages
+        case ebayShortDescription, ebayCategoryPath, ebaySellerUsername
     }
 
     init(from decoder: Decoder) throws {
@@ -414,6 +436,13 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         gradingCost = try? c.decodeIfPresent(Double.self, forKey: .gradingCost)
         dismissedAt = try? c.decodeIfPresent(String.self, forKey: .dismissedAt)
         dismissedReason = try? c.decodeIfPresent(String.self, forKey: .dismissedReason)
+        enrichedFromEbay = try? c.decodeIfPresent(Bool.self, forKey: .enrichedFromEbay)
+        ebayItemAspects = try? c.decodeIfPresent([String: String].self, forKey: .ebayItemAspects)
+        ebayImageUrl = try? c.decodeIfPresent(String.self, forKey: .ebayImageUrl)
+        ebaySoldImages = try? c.decodeIfPresent([String].self, forKey: .ebaySoldImages)
+        ebayShortDescription = try? c.decodeIfPresent(String.self, forKey: .ebayShortDescription)
+        ebayCategoryPath = try? c.decodeIfPresent(String.self, forKey: .ebayCategoryPath)
+        ebaySellerUsername = try? c.decodeIfPresent(String.self, forKey: .ebaySellerUsername)
         _dateTextOverride = nil
     }
 }
@@ -562,6 +591,37 @@ extension InventoryCard {
         guard let fmv = fairMarketValue else { return "—" }
         let qty = max(1.0, quantity ?? 1.0)
         return inventoryWholeDollarString(fmv * qty)
+    }
+
+    /// CF-MARKET-VALUE-EVERYWHERE (2026-07-12): resolves a market value
+    /// for the inventory row using the same fall-through the comp card
+    /// uses, so no row ever renders "—". Priority mirrors the backend's
+    /// no-null-pricing contract: observed FMV → active `currentValue`
+    /// → ladder-fallback `estimatedValue` → low/high midpoint → cost.
+    /// The `source` lets the view render a subtle qualifier ("Estimated",
+    /// "At cost") so the user knows how firm the number is.
+    enum MarketValueSource {
+        case fmv
+        case current
+        case estimated
+        case midpoint
+        case atCost
+    }
+
+    var bestKnownMarketValue: (perUnit: Double, source: MarketValueSource)? {
+        if let v = fairMarketValue, v > 0 { return (v, .fmv) }
+        if currentValue > 0 {
+            let perUnit = currentValue / max(1.0, quantity ?? 1.0)
+            return (perUnit, .current)
+        }
+        if let v = estimatedValue, v > 0 { return (v, .estimated) }
+        if let lo = lowValue, let hi = highValue, lo > 0 || hi > 0 {
+            return ((max(0, lo) + max(0, hi)) / 2, .midpoint)
+        }
+        if cost > 0 {
+            return (cost / max(1.0, quantity ?? 1.0), .atCost)
+        }
+        return nil
     }
 
     var displayValueFormatted: String {
@@ -865,19 +925,15 @@ enum PortfolioInventoryFilter: String, CaseIterable, Identifiable {
 }
 
 enum PortfolioInventorySort: String, CaseIterable, Identifiable {
-    case value = "Value"
-    case profit = "Profit"
-    case roi = "ROI"
-    case recent = "Recent"
-    case name = "Name"
+    case valueHighToLow = "Value: High to Low"
+    case valueLowToHigh = "Value: Low to High"
+    case nameAZ = "Name: A–Z"
+    case nameZA = "Name: Z–A"
+    case profitHighToLow = "Profit: High to Low"
+    case profitLowToHigh = "Profit: Low to High"
 
     var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .roi: return Labels.roi
-        default: return rawValue
-        }
-    }
+    var title: String { rawValue }
 }
 
 // MARK: - Shared View Modifiers
@@ -982,6 +1038,9 @@ struct PortfolioHoldingDetailSheet: View {
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @ObservedObject private var ebayStore = EBayOAuthCoordinator.shared
     @State private var showingEditSheet = false
+    // PR #441 (2026-07-14): manual "Verify Card" sheet trigger. The
+    // auto-open path lands once backend adds `verificationStatus`.
+    @State private var showingVerifyCardSheet = false
     @State private var showingSoldSheet = false
     @State private var showingEbayListingSheet = false
     @State private var showingRemoveModal = false
@@ -1186,9 +1245,37 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
+    /// Value the hero renders. Prefers the panel entry ONLY when it's
+    /// observed with a non-zero sample count — otherwise
+    /// `vm.resolvedMarketValue(for:)` wins so the hero stays aligned
+    /// with the inventory row and doesn't downgrade to a thin
+    /// synthesized estimate. Multiplies by qty to match the row's
+    /// scaling contract.
+    private func heroLivePanelValue() -> Double? {
+        let qty = max(1.0, card.quantity ?? 1.0)
+        if let entry = lockedGradeEntry(),
+           entry.valueSource == .observed,
+           (entry.sampleCount ?? 0) > 0,
+           let value = entry.resolvedMarketValue, value > 0 {
+            return value * qty
+        }
+        let resolved = viewModel.resolvedMarketValue(for: card)
+        return resolved > 0 ? resolved : nil
+    }
+
     /// Fires on `.task { }` and again on holding change. Silent
     /// degradation on failure — no error banner, no spinner. The
     /// PREDICTED block + Grading Scenario section simply don't render.
+    ///
+    /// 2026-07-15: fresh `/card-panel` entries push into
+    /// `viewModel.livePanelEntries` ONLY when they carry observed
+    /// data. Thin `valueSource == .estimated` responses (Cardsight
+    /// synthesized from the multiplier ladder because zero direct
+    /// comps existed) can be strictly worse than the holding's
+    /// stored `fairMarketValue` — writing them into the shared
+    /// cache would silently downgrade the inventory row from the
+    /// backend's authoritative FMV to a thin estimate. Detail hero
+    /// applies the same gate at its fallback site.
     private func fetchPanelIfPossible() async {
         guard let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
               cardId.isEmpty == false else {
@@ -1197,7 +1284,14 @@ struct PortfolioHoldingDetailSheet: View {
         }
         do {
             let response = try await APIService.shared.fetchCardPanel(cardId: cardId)
-            panelEntries = response.gradeCurve?.entries ?? []
+            let entries = response.gradeCurve?.entries ?? []
+            panelEntries = entries
+            let hasObserved = entries.contains { entry in
+                entry.valueSource == .observed && (entry.sampleCount ?? 0) > 0
+            }
+            if hasObserved {
+                viewModel.writeLivePanelEntries(cardId: cardId, entries: entries)
+            }
         } catch {
             panelEntries = []
         }
@@ -1564,20 +1658,20 @@ struct PortfolioHoldingDetailSheet: View {
                     VStack(alignment: .leading, spacing: 16) {
                         PortfolioHoldingHeroCard(
                             card: card,
-                            livePanelValue: lockedGradeEntry()?.resolvedMarketValue
+                            // 2026-07-15: only trust the panel's
+                            // resolved value when it's OBSERVED with
+                            // real comps behind it. Estimated / thin
+                            // entries can be strictly worse than the
+                            // holding's stored FMV (which was priced
+                            // through autoPriceHolding, potentially
+                            // with a better source like CH's proxy or
+                            // Cardsight rescue). Falling through to
+                            // `vm.resolvedMarketValue(for: card)`
+                            // keeps the hero in lock-step with what
+                            // the inventory row is displaying.
+                            livePanelValue: heroLivePanelValue()
                         ) {
                             showingEditSheet = true
-                        }
-
-                        // CF-HOLDING-DETAIL-REFRESH (2026-07-06): surface
-                        // the action badge + reasoning right under the
-                        // hero when the backend has emitted one.
-                        // Reuses the same style used across the comp
-                        // card + inventory row + portfolio movers so
-                        // the verdict reads identically everywhere.
-                        if let rec = card.actionRecommendation,
-                           rec.verdict != .insufficientData {
-                            holdingActionRecommendationCard(rec: rec)
                         }
 
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
@@ -1606,9 +1700,23 @@ struct PortfolioHoldingDetailSheet: View {
                         // subtitle is comp-status (from the null-FMV PR) and
                         // stays.
                         PortfolioContextCard(title: "Pricing Context") {
+                            // Fair Market row now shows the same
+                            // canonical `resolvedMarketValue` the hero /
+                            // row / grid / header total / sort use, so
+                            // detail's "Fair Market" can never disagree
+                            // with the MARKET VALUE hero above it.
+                            let resolved = viewModel.resolvedMarketValue(for: card)
+                            let fairMarketText: String = {
+                                if resolved > 0 {
+                                    let isObserved = (card.fairMarketValue ?? 0) > 0
+                                    let prefix = isObserved ? "" : "~"
+                                    return prefix + portfolioCurrencyString(resolved)
+                                }
+                                return "—"
+                            }()
                             detailRow(
                                 title: "Fair Market",
-                                value: card.fairMarketValueDisplay,
+                                value: fairMarketText,
                                 subtitle: card.isUnpriced ? card.method : nil
                             )
                             // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29):
@@ -1689,33 +1797,6 @@ struct PortfolioHoldingDetailSheet: View {
                             .buttonStyle(.plain)
                         }
 
-                        PortfolioContextCard(title: "Actionability") {
-                            // Trend / Risk read profitLoss sign (historical
-                            // P/L, not direction). Freshness is comp-data
-                            // age. Expected Days was direction-in-days-to-
-                            // sell clothing (gated on status sell_now/hold/
-                            // watch) and was pruned with Verdict.
-                            detailRow(title: "Trend", value: card.trendChipText)
-                            detailRow(title: "Risk", value: card.profitLoss < 0 ? "Review" : "Low")
-                            detailRow(title: "Freshness", value: card.freshnessChipText)
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Explanation")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(Color(hex: 0x9CA3AF))
-
-                                ForEach(card.actionabilityBullets.indices, id: \.self) { index in
-                                    HStack(alignment: .top, spacing: 8) {
-                                        Text("•")
-                                            .foregroundStyle(Color(hex: 0x3B82F6))
-                                        Text(card.actionabilityBullets[index])
-                                            .foregroundStyle(Color(hex: 0xE8EAF0))
-                                    }
-                                    .font(.caption)
-                                }
-                            }
-                        }
-
                         CollapsiblePortfolioContextCard(
                             title: "Reference Data",
                             icon: "doc.text.magnifyingglass",
@@ -1762,6 +1843,44 @@ struct PortfolioHoldingDetailSheet: View {
                         // where a user going into "edit mode" would
                         // naturally look.
                         PortfolioDetailPhotosCard(viewModel: viewModel, card: card, onUpdated: onUpdated)
+
+                        // Scope 3 (2026-07-12): held-expenses (grading,
+                        // supplies, insurance, storage, etc). Backend
+                        // rolls each POST into totalCostBasis and returns
+                        // the fresh value — the card refreshes itself
+                        // on save so the "current cost basis" row
+                        // upstream reflects the delta immediately.
+                        HoldingHeldExpensesCard(
+                            holdingId: card.id.uuidString,
+                            seedHolding: card,
+                            onCostBasisChanged: { _ in
+                                onUpdated()
+                            },
+                            onExpenseAdded: {
+                                // Refresh the inventory upstream, then
+                                // pop this sheet so the user sees the
+                                // updated cost basis on the row.
+                                onUpdated()
+                                if let onBack {
+                                    onBack()
+                                } else {
+                                    dismiss()
+                                }
+                            }
+                        )
+
+                        // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383):
+                        // eBay Item Specifics + seller footer for
+                        // auto-imported holdings. Both self-suppress
+                        // when the underlying wire fields are nil.
+                        HoldingEbayEnrichmentSection(card: card)
+
+                        // CF-SOLD-COMPS (backend PR #386): recent comps
+                        // for this exact grade/set/parallel filter set.
+                        // Self-populates its query from the holding's
+                        // own fields.
+                        SoldCompsSection(card: card)
+                            .padding(.horizontal, 16)
 
                         if let localError {
                             Text(localError)
@@ -1815,6 +1934,25 @@ struct PortfolioHoldingDetailSheet: View {
                                 .buttonStyle(PrimaryButtonStyle())
                             }
 
+                            // PR #441 (2026-07-14): manual verify-card
+                            // trigger. Opens the dry-run suggester sheet
+                            // so the user can re-clean parsed fields
+                            // and pick the right cardId when the
+                            // auto-import misfired. Backend commit path
+                            // reuses the existing pending-review
+                            // confirm endpoint.
+                            Button {
+                                showingVerifyCardSheet = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.badge.questionmark")
+                                    Text("Verify Card")
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(HobbyIQTheme.Colors.electricBlue)
+
                             Button("Mark Sold") {
                                 showingSoldSheet = true
                             }
@@ -1858,13 +1996,31 @@ struct PortfolioHoldingDetailSheet: View {
                 }
                 .navigationDestination(isPresented: $showingEditSheet) {
                     AddPortfolioCardView(viewModel: AddPortfolioCardViewModel(existingCard: card)) {
-                        onUpdated()
+                        // Pull the freshly-saved holding out of
+                        // LocalPortfolioProvider (which `save()` patches
+                        // atomically) into `vm.inventoryCards` so the
+                        // list reflects the edit before we pop back.
+                        // Intentionally does NOT trigger the parent's
+                        // `onUpdated()` refresh — the backend PATCH
+                        // returns before the read replica catches up,
+                        // so an immediate `/portfolio` fetch would
+                        // overwrite the fresh local edit with stale
+                        // data. Next natural refresh reconciles.
+                        Task { await viewModel.applyLocalHoldingsUpdate() }
                         dismiss()
                     }
                 }
                 .navigationDestination(isPresented: $showingEbayListingSheet) {
                     EbayListingDraftView(viewModel: viewModel, card: card) {
                         lastEbayListingResponse = $0
+                        onUpdated()
+                    }
+                }
+                .sheet(isPresented: $showingVerifyCardSheet) {
+                    VerifyCardSheet(holding: card) {
+                        // Confirmed → refresh so the newly-priced
+                        // holding + any cardId change materializes on
+                        // detail + inventory.
                         onUpdated()
                     }
                 }
@@ -1947,12 +2103,6 @@ struct PortfolioHoldingHeroCard: View {
     var livePanelValue: Double? = nil
     let onEdit: () -> Void
 
-    private var plColor: Color {
-        if card.profitLoss > 0 { return HobbyIQTheme.Colors.successGreen }
-        if card.profitLoss < 0 { return .red }
-        return .white
-    }
-
     /// Flat identity line: "{year} {set-no-year-no-category} [variant] [Auto] {number}"
     /// (same rule the comp-card header uses). Strips a leading year
     /// from the set name when it duplicates `card.year` (backend often
@@ -2004,18 +2154,13 @@ struct PortfolioHoldingHeroCard: View {
         return trimmed
     }
 
-    /// Holding hero image priority — user's photo wins over the
-    /// backend catalog image. Inverse of the comp card (which never
-    /// shows a personal photo). Rationale: on a holding, the user's
-    /// own scan is a proof-of-condition asset the seller cares about;
-    /// the catalog image is just a fallback when they haven't
-    /// uploaded one.
+    /// Holding hero image — delegates to `card.preferredThumbnailURL`
+    /// (PR #383 priority: `photos[0] → ebayImageUrl → imageFrontUrl →
+    /// catalogImageUrl`). eBay-auto rows show the Browse photo; manual
+    /// holdings still fall through to the user's uploaded photo since
+    /// `photos[]` and `ebayImageUrl` are nil there.
     private var heroImageUrlString: String? {
-        if let url = card.imageFrontUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
-           url.isEmpty == false { return url }
-        if let url = card.catalogImageUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
-           url.isEmpty == false { return url }
-        return nil
+        card.preferredThumbnailURL?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
@@ -2035,6 +2180,22 @@ struct PortfolioHoldingHeroCard: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+
+                    // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383): the
+                    // seller's short listing description sits under the
+                    // identity line so the user can see what eBay actually
+                    // said about the item.
+                    if let desc = card.ebayShortDescription?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                       desc.isEmpty == false {
+                        Text(desc)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
                 }
                 .padding(.horizontal, 36) // clear the Edit pill overlay
                 .frame(maxWidth: .infinity)
@@ -2052,8 +2213,6 @@ struct PortfolioHoldingHeroCard: View {
                 gradeChip
 
                 marketValueBlock
-
-                pricingChipRow
             }
             .padding(18)
             .frame(maxWidth: .infinity)
@@ -2159,32 +2318,6 @@ struct PortfolioHoldingHeroCard: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
         }
-    }
-
-    /// Compact two-cell chip row for PURCHASE PRICE + P/L (removed
-    /// CURRENT VALUE — the MARKET VALUE headline above carries that
-    /// number already, so the row wouldn't add anything).
-    private var pricingChipRow: some View {
-        HStack(spacing: 10) {
-            chip(label: "PURCHASE", value: card.costFormatted, tint: HobbyIQTheme.Colors.mutedText)
-            chip(label: "P/L", value: portfolioCurrencyString(card.profitLoss), tint: plColor)
-        }
-    }
-
-    private func chip(label: String, value: String, tint: Color) -> some View {
-        VStack(spacing: 3) {
-            Text(label)
-                .font(.system(size: 9, weight: .bold))
-                .tracking(0.5)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text(value)
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(tint)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(HobbyIQTheme.Colors.steelGray.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     /// The holding's locked grade as a display label — "Raw" for
@@ -2785,6 +2918,73 @@ struct GradingTierPickerView: View {
     }
 }
 
+/// CF-SELL-TRACKING (2026-07-11): closed-enum values the backend
+/// validates against (portfolioStore.service.ts:657-664). Order matches
+/// the picker menu order iOS presents to the user.
+enum SellChannelOption: String, CaseIterable, Identifiable, Hashable {
+    case unspecified = ""
+    case ebay
+    case whatnot
+    case comc
+    case myslabs
+    case goldin
+    case pwcc
+    case instagram
+    case facebook
+    case cardShow = "card_show"
+    case inPerson = "in_person"
+    case other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .unspecified: return "Not specified"
+        case .ebay:        return "eBay"
+        case .whatnot:     return "Whatnot"
+        case .comc:        return "COMC"
+        case .myslabs:     return "MySlabs"
+        case .goldin:      return "Goldin"
+        case .pwcc:        return "PWCC"
+        case .instagram:   return "Instagram"
+        case .facebook:    return "Facebook"
+        case .cardShow:    return "Card Show"
+        case .inPerson:    return "In Person"
+        case .other:       return "Other…"
+        }
+    }
+}
+
+enum SellPaymentMethodOption: String, CaseIterable, Identifiable, Hashable {
+    case unspecified = ""
+    case ebayManaged = "ebay_managed"
+    case paypal
+    case venmo
+    case zelle
+    case cash
+    case check
+    case cashapp
+    case trade
+    case other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .unspecified: return "Not specified"
+        case .ebayManaged: return "eBay Managed"
+        case .paypal:      return "PayPal"
+        case .venmo:       return "Venmo"
+        case .zelle:       return "Zelle"
+        case .cash:        return "Cash"
+        case .check:       return "Check"
+        case .cashapp:     return "Cash App"
+        case .trade:       return "Trade"
+        case .other:       return "Other…"
+        }
+    }
+}
+
 struct PortfolioHoldingSoldSheet: View {
     @ObservedObject var viewModel: PortfolioIQViewModel
     let card: InventoryCard
@@ -2794,7 +2994,27 @@ struct PortfolioHoldingSoldSheet: View {
     @State private var salePriceText: String
     @State private var feesText = "0"
     @State private var saleDate = Date()
+    @State private var channel: SellChannelOption = .unspecified
+    @State private var channelNote = ""
+    @State private var paymentMethod: SellPaymentMethodOption = .unspecified
+    @State private var paymentNote = ""
+    @State private var venue = ""
+    @State private var city = ""
+    @State private var state = ""
+    @State private var notes = ""
     @State private var localError: String?
+    @State private var isSaving = false
+    // PR #425 (2026-07-13): trend-anchored recommendations power the
+    // "Sold For" picker so users can accept the engine's suggested /
+    // aggressive / quick-sale price with one tap. Nil / no cardId →
+    // fallback text-only field.
+    @State private var listPriceRecommendations: ListPriceRecommendations?
+    @State private var selectedSoldOption: SoldPriceOption = .custom
+
+    enum SoldPriceOption: String, CaseIterable, Identifiable {
+        case suggested, aggressive, quickSale, custom
+        var id: String { rawValue }
+    }
 
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onSaved: @escaping () -> Void) {
         self.viewModel = viewModel
@@ -2814,7 +3034,12 @@ struct PortfolioHoldingSoldSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(Color(hex: 0x9CA3AF))
 
-                soldField(title: "Sold For", text: $salePriceText, keyboard: .decimalPad)
+                if let recs = listPriceRecommendations,
+                   (recs.suggested ?? 0) > 0 || (recs.aggressive ?? 0) > 0 || (recs.quickSale ?? 0) > 0 {
+                    soldPricePicker(recommendations: recs)
+                } else {
+                    soldField(title: "Sold For", text: $salePriceText, keyboard: .decimalPad)
+                }
                 soldField(title: "Fees", text: $feesText, keyboard: .decimalPad)
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -2830,6 +3055,27 @@ struct PortfolioHoldingSoldSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
 
+                channelSection
+                paymentSection
+                locationSection
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notes")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    TextField("Optional", text: $notes, axis: .vertical)
+                        .lineLimit(2...4)
+                        .textInputAutocapitalization(.sentences)
+                        .padding(14)
+                        .background(Color(hex: 0x1A1D24))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .foregroundStyle(.white)
+                }
+
                 soldPreview
 
                 if let localError {
@@ -2838,24 +3084,11 @@ struct PortfolioHoldingSoldSheet: View {
                         .foregroundStyle(Color.red)
                 }
 
-                Button("Save Sold") {
-                    Task {
-                        guard let salePrice = Double(salePriceText.trimmingCharacters(in: .whitespacesAndNewlines)), salePrice > 0 else {
-                            localError = "Add a sale price."
-                            return
-                        }
-
-                        let fees = Double(feesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-                        let didSave = await viewModel.markHoldingSold(card, salePrice: salePrice, fees: fees, date: saleDate)
-                        if didSave {
-                            onSaved()
-                            dismiss()
-                        } else {
-                            localError = viewModel.errorMessage ?? "Could not save sale. Try again."
-                        }
-                    }
+                Button(isSaving ? "Saving…" : "Save Sold") {
+                    Task { await submitSale() }
                 }
                 .buttonStyle(PrimaryButtonStyle())
+                .disabled(isSaving)
             }
             .padding(16)
         }
@@ -2863,6 +3096,272 @@ struct PortfolioHoldingSoldSheet: View {
         .navigationTitle("Mark Sold")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
+        .task { await loadListPriceRecommendations() }
+    }
+
+    // PR #425 (2026-07-13): fetch trend-anchored recommendations once
+    // on task. Silent fall-through on failure or missing cardId keeps
+    // the legacy text-field UX in place.
+    private func loadListPriceRecommendations() async {
+        guard let cardId = card.cardId?.trimmingCharacters(in: .whitespaces),
+              cardId.isEmpty == false else { return }
+        do {
+            let response = try await APIService.shared.priceByCardId(
+                cardId: cardId,
+                query: nil,
+                gradeCompany: card.gradeCompany,
+                gradeValue: card.gradeValue,
+                parallelId: nil,
+                parallelName: card.parallel.isEmpty ? nil : card.parallel,
+                isBlackLabel: card.isBlackLabel
+            )
+            await MainActor.run {
+                listPriceRecommendations = response.listPriceRecommendations
+            }
+        } catch {
+            // Silent fall-through
+        }
+    }
+
+    @ViewBuilder
+    private func soldPricePicker(recommendations: ListPriceRecommendations) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sold For")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            soldPriceRow(
+                option: .suggested,
+                title: "Suggested",
+                price: recommendations.suggested,
+                rationale: recommendations.rationale?.suggestedBasis ?? "Predicted next 30d"
+            )
+            soldPriceRow(
+                option: .aggressive,
+                title: "Aggressive",
+                price: recommendations.aggressive,
+                rationale: recommendations.rationale?.aggressiveBasis ?? "Top of prediction range"
+            )
+            soldPriceRow(
+                option: .quickSale,
+                title: "Quick Sale",
+                price: recommendations.quickSale,
+                rationale: recommendations.rationale?.quickSaleBasis ?? "10% below market value"
+            )
+
+            Button {
+                selectedSoldOption = .custom
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: selectedSoldOption == .custom ? "largecircle.fill.circle" : "circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(selectedSoldOption == .custom ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                    Text("Custom")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if selectedSoldOption == .custom {
+                TextField("Enter price", text: $salePriceText)
+                    .keyboardType(.decimalPad)
+                    .foregroundStyle(.white)
+                    .padding(14)
+                    .background(Color(hex: 0x1A1D24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+    }
+
+    private func soldPriceRow(option: SoldPriceOption, title: String, price: Double?, rationale: String) -> some View {
+        Button {
+            selectedSoldOption = option
+            if let price, price > 0 {
+                salePriceText = String(format: "%.2f", price)
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: selectedSoldOption == option ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(selectedSoldOption == option ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer(minLength: 6)
+                        Text(price.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) } ?? "—")
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                    Text(rationale)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Sections
+
+    private var channelSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sales Channel")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            Menu {
+                ForEach(SellChannelOption.allCases) { opt in
+                    Button(opt.displayName) { channel = opt }
+                }
+            } label: {
+                pickerLabel(text: channel.displayName)
+            }
+            if channel == .other {
+                TextField("Channel note (required)", text: $channelNote)
+                    .textInputAutocapitalization(.sentences)
+                    .padding(14)
+                    .background(Color(hex: 0x1A1D24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    private var paymentSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Payment Method")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            Menu {
+                ForEach(SellPaymentMethodOption.allCases) { opt in
+                    Button(opt.displayName) { paymentMethod = opt }
+                }
+            } label: {
+                pickerLabel(text: paymentMethod.displayName)
+            }
+            if paymentMethod == .other {
+                TextField("Payment note (required)", text: $paymentNote)
+                    .textInputAutocapitalization(.sentences)
+                    .padding(14)
+                    .background(Color(hex: 0x1A1D24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    private var locationSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sale Location")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            soldField(title: "Venue", text: $venue)
+            HStack(spacing: 10) {
+                soldField(title: "City", text: $city)
+                    .frame(maxWidth: .infinity)
+                soldField(title: "State", text: $state)
+                    .frame(width: 110)
+            }
+        }
+    }
+
+    private func pickerLabel(text: String) -> some View {
+        HStack {
+            Text(text)
+                .foregroundStyle(.white)
+            Spacer()
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+        }
+        .padding(14)
+        .background(Color(hex: 0x1A1D24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: - Submit
+
+    private func submitSale() async {
+        guard let salePrice = Double(salePriceText.trimmingCharacters(in: .whitespacesAndNewlines)), salePrice > 0 else {
+            localError = "Add a sale price."
+            return
+        }
+        // Client-side pre-check for the two `other → note required` invariants
+        // the backend enforces (portfolioStore.service.ts:709, 724). Catching
+        // it here keeps the round-trip and gives a clearer message next to
+        // the specific field.
+        if channel == .other && channelNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            localError = "Add a channel note when Channel is Other."
+            return
+        }
+        if paymentMethod == .other && paymentNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            localError = "Add a payment note when Payment Method is Other."
+            return
+        }
+
+        let trimmedState = state.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if trimmedState.count > 2 {
+            localError = "State must be a 2-letter US code."
+            return
+        }
+
+        let fees = Double(feesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let trimmedVenue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedChannelNote = channelNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPaymentNote = paymentNote.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let location = PortfolioIQSaleLocation(
+            venue: trimmedVenue.isEmpty ? nil : trimmedVenue,
+            city: trimmedCity.isEmpty ? nil : trimmedCity,
+            state: trimmedState.isEmpty ? nil : trimmedState
+        )
+
+        localError = nil
+        isSaving = true
+        defer { isSaving = false }
+
+        let didSave = await viewModel.markHoldingSold(
+            card,
+            salePrice: salePrice,
+            fees: fees,
+            date: saleDate,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            salesChannel: channel == .unspecified ? nil : channel.rawValue,
+            channelNote: trimmedChannelNote.isEmpty ? nil : trimmedChannelNote,
+            paymentMethod: paymentMethod == .unspecified ? nil : paymentMethod.rawValue,
+            paymentNote: trimmedPaymentNote.isEmpty ? nil : trimmedPaymentNote,
+            saleLocation: location.isEmpty ? nil : location
+        )
+        if didSave {
+            onSaved()
+            dismiss()
+        } else {
+            localError = viewModel.errorMessage ?? "Could not save sale. Try again."
+        }
     }
 
     private func soldField(title: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
@@ -2993,12 +3492,19 @@ struct PortfolioDestructiveButtonStyle: ButtonStyle {
 
 struct PortfolioCardRow: View {
     let card: InventoryCard
+    /// Fully-resolved market value for THIS holding (already scaled by
+    /// quantity). Callers compute it via
+    /// `PortfolioIQViewModel.resolvedMarketValue(for:)` so the row,
+    /// grid, detail hero, header total, and sort all read the same
+    /// number. When nil (e.g. previews), the row falls back to the
+    /// legacy per-field chain inside `inventoryRightColumn`.
+    var resolvedValue: Double? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
                 inventoryRowThumbnail(
-                    urlString: card.imageFrontUrl ?? card.catalogImageUrl,
+                    urlString: card.preferredThumbnailURL,
                     playerName: card.playerName
                 )
 
@@ -3040,7 +3546,21 @@ struct PortfolioCardRow: View {
                         }
                     }
 
-                    inventoryGradePill(text: card.gradeChipText)
+                    HStack(spacing: 6) {
+                        inventoryGradePill(text: card.gradeChipText)
+                        if card.isBlackLabel == true {
+                            inventoryBlackLabelChip()
+                        }
+                        if card.showsEbayConfirmedChip {
+                            inventoryEbayChip()
+                        }
+                        if card.showsNeedsReviewPill {
+                            inventoryReviewPill()
+                        }
+                        if card.isListedOnEbay {
+                            inventoryListedChip(price: card.listingPrice)
+                        }
+                    }
 
                     if let rec = card.actionRecommendation,
                        rec.verdict != .insufficientData {
@@ -3050,7 +3570,7 @@ struct PortfolioCardRow: View {
 
                 Spacer(minLength: 8)
 
-                inventoryRightColumn(card: card)
+                inventoryRightColumn(card: card, resolvedValue: resolvedValue)
             }
 
             // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline
@@ -3071,11 +3591,14 @@ struct PortfolioCardRow: View {
 
 struct PortfolioCardGridCard: View {
     let card: InventoryCard
+    /// Same canonical `resolvedMarketValue(for:)` output the list row
+    /// takes; keeps grid and row in sync.
+    var resolvedValue: Double? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             inventoryGridThumbnail(
-                urlString: card.imageFrontUrl ?? card.catalogImageUrl,
+                urlString: card.preferredThumbnailURL,
                 playerName: card.playerName
             )
 
@@ -3111,44 +3634,43 @@ struct PortfolioCardGridCard: View {
                     }
                 }
 
-                inventoryGradePill(text: card.gradeChipText)
+                HStack(spacing: 4) {
+                    inventoryGradePill(text: card.gradeChipText)
+                    if card.showsEbayConfirmedChip {
+                        inventoryEbayChip()
+                    }
+                    if card.showsNeedsReviewPill {
+                        inventoryReviewPill()
+                    }
+                    if card.isListedOnEbay {
+                        inventoryListedChip(price: card.listingPrice)
+                    }
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
 
             Spacer(minLength: 6)
 
-            HStack(alignment: .center, spacing: 4) {
-                if (card.fairMarketValue ?? 0) <= 0,
-                   let estimated = card.estimatedValue, estimated > 0 {
-                    let qty = max(1.0, card.quantity ?? 1.0)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("~" + inventoryWholeDollarString(estimated * qty))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .lineLimit(1)
-                        Text("Estimated")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
-                            .lineLimit(1)
-                        // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30):
-                        // grid variant of the "based on ..." caption.
-                        if let anchor = card.nearestGradedAnchor {
-                            Text("based on \(anchor.grade) · \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)")
-                                .font(.caption2)
-                                .foregroundStyle(anchor.tintColor)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    }
-                } else {
-                    Text(card.displayValueText)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
-                inventoryGridMovement(card: card)
+            let value: Double = {
+                if let resolvedValue, resolvedValue > 0 { return resolvedValue }
+                let qty = max(1.0, card.quantity ?? 1.0)
+                if let v = card.fairMarketValue, v > 0 { return v * qty }
+                if card.currentValue > 0 { return card.currentValue }
+                if let v = card.estimatedValue, v > 0 { return v * qty }
+                if let best = card.bestKnownMarketValue { return best.perUnit * qty }
+                return 0
+            }()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("MARKET VALUE")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Text(value > 0 ? inventoryWholeDollarString(value) : "—")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(value > 0 ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 10)
@@ -3259,6 +3781,105 @@ private func inventoryGradePill(text: String) -> some View {
         .clipShape(Capsule(style: .continuous))
 }
 
+/// P0.3 (2026-07-16): BGS 10 Black Label / Pristine chip. Rendered
+/// next to the grade pill when the holding's `isBlackLabel == true`.
+/// Distinct high-contrast black + gold treatment so the ~9× premium
+/// tier reads at a glance without competing with the grade pill.
+@ViewBuilder
+private func inventoryBlackLabelChip() -> some View {
+    HStack(spacing: 4) {
+        Image(systemName: "star.fill")
+            .font(.system(size: 9, weight: .bold))
+        Text("Black Label")
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.4)
+    }
+    .foregroundStyle(Color(hex: 0xE5B64A))
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(Color.black.opacity(0.55))
+    .overlay(
+        Capsule(style: .continuous)
+            .stroke(Color(hex: 0xE5B64A).opacity(0.55), lineWidth: 1)
+    )
+    .clipShape(Capsule(style: .continuous))
+}
+
+/// CF-EBAY-BROWSE-ENRICHMENT (backend PR #383): compact "via eBay" chip
+/// on rows where the holding was Browse-enriched. Signals structured
+/// data provenance so users don't second-guess the auto-created row.
+@ViewBuilder
+private func inventoryEbayChip() -> some View {
+    HStack(spacing: 4) {
+        Image(systemName: "checkmark.seal.fill")
+            .font(.system(size: 9, weight: .bold))
+        Text("via eBay")
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.4)
+    }
+    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+    .overlay(
+        Capsule(style: .continuous)
+            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+    )
+    .clipShape(Capsule(style: .continuous))
+}
+
+/// CF-EBAY-RELIST (backend PR #388): "Listed on eBay — $X" chip on
+/// rows whose holding was published. Rendered next to the grade pill
+/// so users can eyeball which holdings are live sale-side.
+@ViewBuilder
+private func inventoryListedChip(price: Double?) -> some View {
+    HStack(spacing: 4) {
+        Image(systemName: "tag.fill")
+            .font(.system(size: 9, weight: .bold))
+        Text(priceLabel(price))
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.4)
+    }
+    .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(HobbyIQTheme.Colors.successGreen.opacity(0.14))
+    .overlay(
+        Capsule(style: .continuous)
+            .stroke(HobbyIQTheme.Colors.successGreen.opacity(0.35), lineWidth: 1)
+    )
+    .clipShape(Capsule(style: .continuous))
+}
+
+private func priceLabel(_ price: Double?) -> String {
+    if let p = price, p > 0 { return "Listed \(p.portfolioCurrencyText)" }
+    return "Listed on eBay"
+}
+
+/// CF-EBAY-BROWSE-ENRICHMENT (backend PR #383): "Needs review" nudge on
+/// title-parsed rows (parseConfidence 0.70–0.94) so the user knows to
+/// confirm player/set/grade before trusting the row. Suppressed when
+/// `enrichedFromEbay == true` — those are already confirmed.
+@ViewBuilder
+private func inventoryReviewPill() -> some View {
+    HStack(spacing: 4) {
+        Image(systemName: "exclamationmark.circle.fill")
+            .font(.system(size: 9, weight: .bold))
+        Text("Needs review")
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.4)
+    }
+    .foregroundStyle(HobbyIQTheme.Colors.warning)
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(HobbyIQTheme.Colors.warning.opacity(0.14))
+    .overlay(
+        Capsule(style: .continuous)
+            .stroke(HobbyIQTheme.Colors.warning.opacity(0.35), lineWidth: 1)
+    )
+    .clipShape(Capsule(style: .continuous))
+}
+
 /// CF-ACTION-BADGES (2026-07-06, backend §1): per-holding verdict badge
 /// rendered under the grade pill in the inventory row. Uses the shared
 /// `ActionBadgeStyle` so the color / icon / fill treatment matches the
@@ -3288,102 +3909,69 @@ func inventoryActionBadge(rec: CardPanelGradeEntry.ActionRecommendation) -> some
     .clipShape(Capsule(style: .continuous))
 }
 
-/// Row right column — value (no cents) + single movement indicator, OR the
-/// "Set cost" affordance when the user hasn't entered a cost basis yet.
+/// Row right column — the canonical resolved market value for the
+/// holding under a "MARKET VALUE" caption. Legacy per-field fallbacks
+/// (fmv → estimated → best-known) are handled inside
+/// `resolvedValue`'s producer on the ViewModel, so the row itself is
+/// a single-value display and never disagrees with header/sort/detail.
 @ViewBuilder
-private func inventoryRightColumn(card: InventoryCard) -> some View {
+private func inventoryRightColumn(card: InventoryCard, resolvedValue: Double? = nil) -> some View {
+    let value: Double = {
+        if let resolvedValue, resolvedValue > 0 { return resolvedValue }
+        let qty = max(1.0, card.quantity ?? 1.0)
+        if let v = card.fairMarketValue, v > 0 { return v * qty }
+        if card.currentValue > 0 { return card.currentValue }
+        if let v = card.estimatedValue, v > 0 { return v * qty }
+        if let best = card.bestKnownMarketValue { return best.perUnit * qty }
+        return 0
+    }()
+
     VStack(alignment: .trailing, spacing: 3) {
-        // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): when the engine
-        // couldn't observe a real FMV but the ladder fallback produced an
-        // `estimatedValue`, surface that with a tilde + muted color +
-        // "Estimated" tag so the user sees a number rather than "—".
-        if let fmv = card.fairMarketValue, fmv > 0 {
-            Text(card.displayValueText)
+        Text("MARKET VALUE")
+            .font(.system(size: 9, weight: .bold))
+            .tracking(0.5)
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+        if value > 0 {
+            Text(inventoryWholeDollarString(value))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .monospacedDigit()
-        } else if let estimated = card.estimatedValue, estimated > 0 {
-            let qty = max(1.0, card.quantity ?? 1.0)
-            Text("~" + inventoryWholeDollarString(estimated * qty))
+        } else {
+            Text("—")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .monospacedDigit()
-            Text("Estimated")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
-            // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30): compact
-            // "based on PSA 9 · $1,325 · 8 mo ago" caption when the
-            // ladder fallback surfaced an anchor. Tint follows the
-            // confidence band (muted / amber / red).
-            if let anchor = card.nearestGradedAnchor {
-                Text("based on \(anchor.grade) · \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)")
-                    .font(.caption2)
-                    .foregroundStyle(anchor.tintColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-        } else {
-            Text(card.displayValueText)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .monospacedDigit()
         }
 
-        if let (icon, label, color) = inventoryMovementDescriptor(for: card) {
-            HStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.caption2.weight(.medium))
-                Text(label)
-                    .font(.caption.weight(.medium))
-                    .monospacedDigit()
-            }
-            .foregroundStyle(color)
-        } else if card.cost <= 0 {
-            Text("Set cost")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+        // P0.6 (2026-07-16) per nearest-graded-anchor-rendering.md:
+        // when the backend rescued the estimate via the grade-ladder
+        // fallback, surface a compact "based on PSA 9 · $1,325 · 8 mo
+        // ago" caption tinted by the anchor's confidence band. Wire
+        // field is omitted for healthy-priced holdings so the caption
+        // self-suppresses on the common path.
+        if let anchor = card.nearestGradedAnchor {
+            Text("based on \(anchor.grade) · \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)")
+                .font(.caption2)
+                .foregroundStyle(anchor.tintColor)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 }
 
-/// Grid-card movement: same source-of-truth as the row, just compact.
-@ViewBuilder
-private func inventoryGridMovement(card: InventoryCard) -> some View {
-    if let (icon, label, color) = inventoryMovementDescriptor(for: card) {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.medium))
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .monospacedDigit()
-        }
-        .foregroundStyle(color)
-    } else if card.cost <= 0 {
-        Text("Set cost")
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+/// CF-MARKET-VALUE-EVERYWHERE (2026-07-12): human-readable subtitle for
+/// the fallback value source shown when observed FMV / live cache /
+/// estimated are all absent. Keeps the row honest about how the
+/// number was derived.
+private func bestKnownSourceLabel(_ source: InventoryCard.MarketValueSource) -> String {
+    switch source {
+    case .fmv: return "Market"
+    case .current: return "Estimated"
+    case .estimated: return "Estimated"
+    case .midpoint: return "Range midpoint"
+    case .atCost: return "At cost"
     }
-}
-
-/// Returns the ROI sign chip (`%+.1f%%` from `profitLoss / cost`) for a
-/// holding with a cost basis. Returns nil when cost is unset — caller
-/// renders the "Set cost" affordance instead of fabricating "+$X / +0.0%".
-///
-/// CF-IOS-DIRECTION-CLEANUP (2026-06-18): the prior implementation had a
-/// `movementDirection`-gated direction branch that rendered a forecast
-/// chip when the backend movement signal was present. That branch was
-/// removed — backtest established direction is at-chance and unmeasurable.
-/// The ROI sign read remaining here is historical P/L, not a forecast,
-/// and stays.
-private func inventoryMovementDescriptor(for card: InventoryCard) -> (icon: String, label: String, color: Color)? {
-    guard card.cost > 0 else { return nil }
-    let roi = (card.profitLoss / card.cost) * 100
-    let isUp = roi >= 0
-    return (
-        isUp ? "arrow.up.right" : "arrow.down.right",
-        String(format: "%+.1f%%", roi),
-        isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-    )
 }
 
 /// Whole-dollar currency for inventory rows + header ("$5,903" — no cents).

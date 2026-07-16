@@ -324,14 +324,28 @@ struct ERPRefetchResponse: Codable {
 
 // MARK: - P&L
 
-struct ERPPnlResponse: Codable {
+// CF-ERP-PNL-DECODE-2026-07-11: backend wire keys are `feesTotal`,
+// `costBasisSold`, `realizedProfitLoss`, `entryCount`, and each group is
+// `{key, label, totals: {…}}` with the same nested shape. The prior iOS
+// structs used flat `totalFees` / `costBasis` / `realizedPnL` / `count`
+// keys and expected group totals flat on the group — every optional
+// silently decoded to nil, so the Financials hero rendered "—" and the
+// P&L tile said "No sales yet" even after a successful manual sale.
+struct ERPPnlResponse: Decodable {
     let groupBy: String?
     let totals: ERPPnlTotals?
     let groups: [ERPPnlGroup]?
     let includeExpenses: Bool?
+    // Scope 3 (2026-07-12): backend PR #380 added purchase-side + margin
+    // metrics to the same envelope. `cogs` is nil until the user has any
+    // purchases; `operatingExpenses` / `trueNet` were already on the wire
+    // but silently dropped by the previous iOS decoder.
+    let cogs: PnLCogs?
+    let operatingExpenses: Double?
+    let trueNet: Double?
 }
 
-struct ERPPnlTotals: Codable, Hashable {
+struct ERPPnlTotals: Decodable, Hashable {
     let grossProceeds: Double?
     let totalFees: Double?
     let netProceeds: Double?
@@ -340,11 +354,23 @@ struct ERPPnlTotals: Codable, Hashable {
     let totalExpenses: Double?
     let netPnL: Double?
     let count: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case grossProceeds
+        case totalFees = "feesTotal"
+        case netProceeds
+        case costBasis = "costBasisSold"
+        case realizedPnL = "realizedProfitLoss"
+        case totalExpenses
+        case netPnL
+        case count = "entryCount"
+    }
 }
 
-struct ERPPnlGroup: Codable, Identifiable, Hashable {
+struct ERPPnlGroup: Decodable, Identifiable, Hashable {
     var id: String { key }
     let key: String
+    let label: String?
     let grossProceeds: Double?
     let totalFees: Double?
     let netProceeds: Double?
@@ -353,6 +379,25 @@ struct ERPPnlGroup: Codable, Identifiable, Hashable {
     let totalExpenses: Double?
     let netPnL: Double?
     let count: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case key, label, totals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decode(String.self, forKey: .key)
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+        let t = try container.decodeIfPresent(ERPPnlTotals.self, forKey: .totals)
+        grossProceeds = t?.grossProceeds
+        totalFees = t?.totalFees
+        netProceeds = t?.netProceeds
+        costBasis = t?.costBasis
+        realizedPnL = t?.realizedPnL
+        totalExpenses = t?.totalExpenses
+        netPnL = t?.netPnL
+        count = t?.count
+    }
 }
 
 // MARK: - Analytics
@@ -376,18 +421,37 @@ struct ERPAnalyticsGroup: Codable, Identifiable, Hashable {
 
 // MARK: - Timeseries
 
-struct ERPTimeseriesResponse: Codable {
+// CF-ERP-PNL-DECODE-2026-07-11: wire uses `bucket` (not `granularity`),
+// and each point uses `bucket` / `totalGross` / `totalCost` / `totalRealized`
+// / `entryCount`. Prior struct had a non-optional `period: String` on the
+// wrong key, so the first point decode threw `keyNotFound(.period)` — which
+// took down the whole `try await (p, t, u)` tuple in `loadAll`, silently
+// discarding the (working) P&L data alongside it.
+struct ERPTimeseriesResponse: Decodable {
     let granularity: String?
     let points: [ERPTimeseriesPoint]?
+
+    private enum CodingKeys: String, CodingKey {
+        case granularity = "bucket"
+        case points
+    }
 }
 
-struct ERPTimeseriesPoint: Codable, Identifiable, Hashable {
+struct ERPTimeseriesPoint: Decodable, Identifiable, Hashable {
     var id: String { period }
     let period: String
     let revenue: Double?
     let cost: Double?
     let pnl: Double?
     let count: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case period = "bucket"
+        case revenue = "totalGross"
+        case cost = "totalCost"
+        case pnl = "totalRealized"
+        case count = "entryCount"
+    }
 }
 
 // MARK: - Valuation
@@ -510,12 +574,46 @@ struct ERPExpenseReportGroup: Codable, Identifiable, Hashable {
 
 // MARK: - Trades
 
+/// CF-ERP-TRADE-WIRE (2026-07-11): wire keys must match the backend
+/// handler (`portfolioiq.erp.routes.ts:717 POST /trades`):
+///   - `tradeDate` (backend reads `body.tradeDate`, not `date`)
+///   - `note` (backend reads `body.note`, not `notes`)
+///   - `salesChannel` / `saleLocation` / `cashPaymentMethod` / `counterparty`
+///     go through the shared `parseSalesTrackingFields` validator.
+/// The previous names (`notes`, `date`) silently dropped both fields
+/// server-side on every submitted trade.
 struct ERPTradeRecordRequest: Codable {
     let outgoing: [ERPTradeOutgoingItem]
     let incoming: [ERPTradeIncomingItem]
     let cashToMe: Double
-    let notes: String?
-    let date: String?
+    let note: String?
+    let tradeDate: String?
+    let salesChannel: String?
+    let saleLocation: String?
+    let cashPaymentMethod: String?
+    let counterparty: String?
+
+    init(
+        outgoing: [ERPTradeOutgoingItem],
+        incoming: [ERPTradeIncomingItem] = [],
+        cashToMe: Double,
+        note: String? = nil,
+        tradeDate: String? = nil,
+        salesChannel: String? = nil,
+        saleLocation: String? = nil,
+        cashPaymentMethod: String? = nil,
+        counterparty: String? = nil
+    ) {
+        self.outgoing = outgoing
+        self.incoming = incoming
+        self.cashToMe = cashToMe
+        self.note = note
+        self.tradeDate = tradeDate
+        self.salesChannel = salesChannel
+        self.saleLocation = saleLocation
+        self.cashPaymentMethod = cashPaymentMethod
+        self.counterparty = counterparty
+    }
 }
 
 struct ERPTradeOutgoingItem: Codable, Hashable {
@@ -524,15 +622,20 @@ struct ERPTradeOutgoingItem: Codable, Hashable {
     let fmvSource: String
 }
 
+/// CF-ERP-TRADE-WIRE (2026-07-11): backend expects `cardYear: number` (Int),
+/// not `year: String`. Old shape decoded server-side as undefined.
 struct ERPTradeIncomingItem: Codable, Hashable {
     let cardTitle: String
     let fmvAtTrade: Double
     let fmvSource: String
     let playerName: String?
-    let year: String?
+    let cardYear: Int?
     let setName: String?
     let parallel: String?
     let grade: String?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let cardId: String?
 }
 
 struct ERPTradeTransaction: Codable, Identifiable, Hashable {
@@ -644,4 +747,390 @@ struct ERPTaxExportResponse: Codable {
     let rows: [ERPTaxExportRow]?
     let year: Int?
     let format: String?
+}
+
+// MARK: - Universal mutation envelope (backend PR #395)
+//
+// Every inventory mutation route now returns the fully-persisted
+// holding inline — iOS can drop the "PATCH then GET" refetch pattern.
+// The envelope carries both the top-level `holding` field and an
+// `entry.holding` field; the resolved value is `entry.holding ??
+// holding`. `HoldingMutationEntry` also flows through the existing
+// `LedgerEntryUpdateResponse` shape so backend can double-key it.
+struct HoldingMutationEntry: Codable {
+    let holding: InventoryCard?
+}
+
+// MARK: - Scope 3: Purchases / Held Expenses / COGS / Inventory Analytics
+//
+// Wire shapes shipped by backend PRs #377-#381 (2026-07-12). All money
+// fields are Double; all endpoints hang off `/api/portfolio/erp/*` and
+// `/api/portfolio/holdings/:id/expenses`.
+
+// MARK: Purchases
+
+struct PortfolioPurchaseEntry: Codable, Identifiable, Hashable {
+    let id: String
+    let userId: String?
+    let purchaseDate: String        // ISO
+    let source: String              // "manual" | "ebay"
+    let subtotal: Double
+    let tax: Double
+    let shipping: Double
+    let otherFees: Double
+    let totalCost: Double
+    let holdingIds: [String]
+    let vendor: String?
+    let invoiceRef: String?
+    let notes: String?
+    let ebayOrderId: String?
+    let ebayTransactionId: String?
+    let createdAt: String?
+    let updatedAt: String?
+}
+
+struct PortfolioPurchaseListTotals: Codable, Hashable {
+    let totalCost: Double?
+    let count: Int?
+    let subtotal: Double?
+    let tax: Double?
+    let shipping: Double?
+    let otherFees: Double?
+}
+
+struct PortfolioPurchaseListResponse: Codable {
+    let success: Bool?
+    let source: String?
+    let purchases: [PortfolioPurchaseEntry]?
+    let totals: PortfolioPurchaseListTotals?
+}
+
+struct PortfolioPurchaseCreateRequest: Codable {
+    let purchaseDate: String
+    let source: String          // "manual"
+    let subtotal: Double
+    let tax: Double?
+    let shipping: Double?
+    let otherFees: Double?
+    let holdingIds: [String]?
+    let vendor: String?
+    let invoiceRef: String?
+    let notes: String?
+}
+
+struct PortfolioPurchaseCreateResponse: Codable {
+    let success: Bool?
+    let purchase: PortfolioPurchaseEntry?
+    let replay: Bool?
+}
+
+struct PortfolioPurchaseLinkHoldingsRequest: Codable {
+    let holdingIds: [String]
+}
+
+struct PortfolioPurchaseLinkHoldingsResponse: Codable {
+    let success: Bool?
+    let purchase: PortfolioPurchaseEntry?
+}
+
+// MARK: eBay import summary
+
+struct EbayImportSummary: Codable {
+    let success: Bool?
+    let daysWindow: Int?
+    let fetched: Int?
+    let imported: Int?
+    let replayHits: Int?
+    let skipped: Int?
+    let errors: Int?
+    let totalCost: Double?
+    let ebayTotalReported: Int?
+    let entries: [PortfolioPurchaseEntry]?
+    let error: String?          // populated on 400 (e.g. days > 90)
+}
+
+// MARK: Held expenses (per-holding)
+
+struct HoldingHeldExpense: Codable, Identifiable, Hashable {
+    let id: String
+    let kind: String            // "grading" | "supplies" | "shipping_to_grader" | "insurance" | "storage" | "other"
+    let amount: Double
+    let incurredAt: String?
+    let createdAt: String?
+    let notes: String?
+    let invoiceRef: String?
+}
+
+/// Structured kinds that iOS surfaces in the "add expense" picker.
+/// Backend accepts any of these strings for `kind`; the picker maps
+/// display labels to wire values and back.
+enum HoldingHeldExpenseKind: String, CaseIterable, Identifiable, Codable {
+    case grading
+    case supplies
+    case shippingToGrader = "shipping_to_grader"
+    case insurance
+    case storage
+    case other
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .grading: return "Grading"
+        case .supplies: return "Supplies"
+        case .shippingToGrader: return "Shipping to grader"
+        case .insurance: return "Insurance"
+        case .storage: return "Storage"
+        case .other: return "Other"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .grading: return "checkmark.seal.fill"
+        case .supplies: return "shippingbox.fill"
+        case .shippingToGrader: return "shippingbox.and.arrow.backward.fill"
+        case .insurance: return "shield.lefthalf.filled"
+        case .storage: return "archivebox.fill"
+        case .other: return "square.grid.2x2.fill"
+        }
+    }
+}
+
+struct HoldingHeldExpenseCreateRequest: Codable {
+    let kind: String
+    let amount: Double
+    let incurredAt: String?
+    let notes: String?
+    let invoiceRef: String?
+}
+
+struct HoldingHeldExpenseCreateResponse: Codable {
+    let success: Bool?
+    let expense: HoldingHeldExpense?
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): full persisted
+    /// holding — carries `heldExpenses[]` and the rolled-in cost basis.
+    /// Prefer this over the light-weight `id + totalCostBasis` shape
+    /// backend also emits under the same key (decoder tries both).
+    let holding: InventoryCard?
+    let entry: HoldingMutationEntry?
+    let newTotalCostBasis: Double?
+
+    /// Resolves the freshest holding representation from the response —
+    /// prefers `entry.holding`, then top-level `holding`.
+    var updatedHolding: InventoryCard? {
+        entry?.holding ?? holding
+    }
+}
+
+struct HoldingHeldExpenseListResponse: Codable {
+    let success: Bool?
+    let expenses: [HoldingHeldExpense]?
+    let total: Double?
+}
+
+struct HoldingHeldExpenseDeleteResponse: Codable {
+    let success: Bool?
+    let newTotalCostBasis: Double?
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395).
+    let holding: InventoryCard?
+    let entry: HoldingMutationEntry?
+    var updatedHolding: InventoryCard? { entry?.holding ?? holding }
+}
+
+// MARK: COGS (attached to /erp/pnl responses)
+
+struct PnLCogs: Codable, Hashable {
+    let purchaseSpend: Double?
+    let purchaseCount: Int?
+    let purchaseSubtotal: Double?
+    let purchaseTax: Double?
+    let purchaseShipping: Double?
+    let purchaseOtherFees: Double?
+    let inventoryOnHandCost: Double?
+    let inventoryOnHandCount: Int?
+    let cashFlow: Double?
+    let grossMarginPct: Double?
+}
+
+// MARK: Inventory analytics
+
+struct InventoryAnalyticsResponse: Codable {
+    let asOf: String?
+    let totals: InventoryAnalyticsTotals?
+    let aging: InventoryAnalyticsAging?
+    let oldestHoldings: [InventoryAnalyticsOldestHolding]?
+    let turnover: InventoryAnalyticsTurnover?
+}
+
+struct InventoryAnalyticsTotals: Codable, Hashable {
+    let holdingCount: Int?
+    let totalCostBasis: Double?
+}
+
+struct InventoryAnalyticsAging: Codable {
+    let buckets: [InventoryAnalyticsAgingBucket]?
+    let avgDaysOnHand: Int?
+    let medianDaysOnHand: Int?
+}
+
+struct InventoryAnalyticsAgingBucket: Codable, Identifiable, Hashable {
+    var id: String { label }
+    let label: String
+    let minDays: Int
+    let maxDays: Double?    // wire can send Infinity for the tail bucket; keep Double so unbounded decodes safely
+    let count: Int
+    let costBasis: Double
+}
+
+struct InventoryAnalyticsOldestHolding: Codable, Identifiable, Hashable {
+    var id: String { holdingId }
+    let holdingId: String
+    let playerName: String?
+    let cardTitle: String?
+    let daysInInventory: Int
+    let costBasis: Double
+    let addedAt: String?
+}
+
+struct InventoryAnalyticsTurnover: Codable, Hashable {
+    let windowFrom: String?
+    let windowTo: String?
+    let costBasisSold: Double?
+    let currentInventoryCost: Double?
+    let turnoverProxy: Double?
+}
+
+// MARK: - Scope 3.5: eBay auto-import Review Queue (backend PRs #383-#388)
+//
+// Confirm request MUST omit fields the user didn't touch. Each property
+// is Optional; the caller populates only what it changed. Backend uses
+// this as the diff signal to update `correctionCount`.
+
+struct HoldingConfirmRequest: Codable {
+    var playerName: String?
+    var cardYear: Int?
+    var setName: String?
+    var parallel: String?
+    var cardNumber: String?
+    var gradeCompany: String?
+    var gradeValue: Double?
+    var isAuto: Bool?
+    var team: String?
+    var sport: String?
+    var cardId: String?
+
+    /// Convenience factory — returns nil for every unedited field so the
+    /// wire body only carries the diff. Call sites build one of these
+    /// per confirmation.
+    static let empty = HoldingConfirmRequest()
+}
+
+struct HoldingConfirmResponse: Codable {
+    let status: String?           // "confirmed"
+    let holding: InventoryCard?
+    let correctionCount: Int?
+}
+
+struct HoldingRejectResponse: Codable {
+    let status: String?           // "rejected"
+    let unlinkedPurchaseId: String?
+}
+
+// MARK: - CF-CARDID-SUGGEST (backend PR #389)
+
+/// CF-PROGRESSIVE-BUCKETS (backend PR #393): body accepts an optional
+/// `force` flag to recompute suggestions even for rows that already
+/// have one. Used by pull-to-refresh on the review queue.
+struct HoldingSuggestionGenerateRequest: Codable {
+    let force: Bool
+}
+
+/// Response envelope for `POST /erp/holdings/generate-suggestions`.
+/// Fields are advisory — iOS just re-fetches the queue after the call
+/// completes and reads the freshly-populated `suggestedCardId` on each
+/// row. `noCandidates` (PR #393) tracks rows the classifier couldn't
+/// score.
+struct HoldingSuggestionGenerateResponse: Codable {
+    let success: Bool?
+    let processed: Int?
+    let suggested: Int?
+    let noCandidates: Int?
+    let skipped: Int?
+    let errors: Int?
+}
+
+// MARK: - CF-RECONCILE-FINALIZE (backend PR #390)
+
+/// Body for `POST /erp/unreconciled/:id/finalize`. `reason` is a
+/// free-text audit label; `netPayout` is optional (server falls back
+/// to `grossProceeds` when omitted).
+struct ERPFinalizeRequest: Codable {
+    let reason: String
+    let netPayout: Double?
+}
+
+struct ERPFinalizeAdjustment: Codable, Hashable {
+    let reason: String?
+    let delta: Double?
+    let adjustmentId: String?
+    let adjustedAt: String?
+}
+
+/// Response mirrors `/save-costs` / `/override` — server-enriched
+/// `entry` carries the fresh `costsStatus` / `feesStatus` /
+/// `reconciledVia` / `missingFields`. iOS re-applies via the shared
+/// `applyUpdatedEntry` path.
+struct ERPFinalizeResponse: Codable {
+    let success: Bool?
+    let entry: LedgerEntryForErp?
+    let adjustment: ERPFinalizeAdjustment?
+    /// 409 (`ALREADY_FINALIZED`) and 400 (`NOT_EBAY_ENTRY`) flow through
+    /// `APIServiceError.httpError` on the transport layer, but the
+    /// backend also mirrors the code into the body for defensive
+    /// parsing.
+    let error: String?
+    let code: String?
+}
+
+// MARK: - Scope 3.5: Sold-Comps for card detail (backend PR #386)
+
+struct SoldCompsResponse: Codable {
+    let count: Int?
+    let comps: [SoldComp]?
+    let stats: SoldCompsStats?
+}
+
+struct SoldCompsStats: Codable, Hashable {
+    let minPrice: Double?
+    let maxPrice: Double?
+    let medianPrice: Double?
+    let meanPrice: Double?
+}
+
+struct SoldComp: Codable, Identifiable, Hashable {
+    /// Backend does not guarantee a stable `id` on comp rows. Derive one
+    /// from the sold-at timestamp + price when the row is missing an
+    /// explicit id so `ForEach` diffing behaves.
+    var id: String {
+        if let explicit = explicitId, explicit.isEmpty == false { return explicit }
+        return "\(soldAt ?? "?")|\(unitSalePrice ?? 0)|\(matchScore ?? 0)"
+    }
+    private let explicitId: String?
+    let unitSalePrice: Double?
+    let soldAt: String?
+    let aspects: [String: String]?
+    let matchScore: Double?
+    let daysSinceSold: Int?
+    let ebayImageUrl: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case explicitId = "id"
+        case unitSalePrice
+        case soldAt
+        case aspects
+        case matchScore
+        case daysSinceSold
+        case ebayImageUrl
+    }
 }

@@ -505,9 +505,109 @@ struct VerifyCardSheet: View {
                 onConfirmed()
                 dismiss()
             }
+        } catch let APIServiceError.httpError(statusCode, body) where statusCode == 409 {
+            // 2026-07-15: `/erp/holdings/:id/confirm` rejects with 409
+            // "not-pending" once a holding is already active. The
+            // manual-open path from Card Detail lands here every
+            // time. Fall back to the standard PATCH — same field diff,
+            // just the update endpoint instead of the confirm one.
+            if body.contains("not-pending") {
+                await runUpdateFallback(cardId: cardId)
+            } else {
+                await MainActor.run {
+                    confirmError = "Couldn't confirm. \(body)"
+                }
+            }
         } catch {
             await MainActor.run {
                 confirmError = "Couldn't confirm. \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// PATCH fallback for already-active holdings. Threads every
+    /// backend-owned field on `holding` through so the local cache
+    /// doesn't lose fmv / heldExpenses / ebay* on the re-map — same
+    /// pattern `AddPortfolioCardViewModel.save()` uses.
+    private func runUpdateFallback(cardId: String) async {
+        let base = holding
+        let request = InventoryCard(
+            id: base.id,
+            playerName: nilIfEmpty(playerName) ?? base.playerName,
+            cardName: base.cardName,
+            cost: base.cost,
+            currentValue: base.currentValue,
+            status: base.status,
+            year: cardYearText.trimmingCharacters(in: .whitespaces).isEmpty ? base.year : cardYearText,
+            setName: nilIfEmpty(setName) ?? base.setName,
+            parallel: nilIfEmpty(parallel) ?? base.parallel,
+            grade: base.grade,
+            gradeCompany: base.gradeCompany,
+            gradeValue: base.gradeValue,
+            purchaseDate: base.purchaseDate,
+            purchasePlatform: base.purchasePlatform,
+            quantity: base.quantity,
+            notes: base.notes,
+            imageFrontUrl: base.imageFrontUrl,
+            imageBackUrl: base.imageBackUrl,
+            catalogImageUrl: base.catalogImageUrl,
+            actionRecommendation: base.actionRecommendation,
+            certNumber: base.certNumber,
+            lowValue: base.lowValue,
+            highValue: base.highValue,
+            confidence: base.confidence,
+            method: base.method,
+            summary: base.summary,
+            isAuto: isAuto,
+            graderStatus: base.graderStatus,
+            photos: base.photos,
+            clientId: base.clientId,
+            fairMarketValue: base.fairMarketValue,
+            valuationStatus: base.valuationStatus,
+            estimatedValue: base.estimatedValue,
+            estimateLow: base.estimateLow,
+            estimateHigh: base.estimateHigh,
+            estimateBasis: base.estimateBasis,
+            estimateConfidence: base.estimateConfidence,
+            nearestGradedAnchor: base.nearestGradedAnchor,
+            cardId: cardId,
+            lastSaleSurface: base.lastSaleSurface,
+            modelExpectation: base.modelExpectation,
+            modelSignal: base.modelSignal,
+            source: base.source,
+            sourcePurchaseId: base.sourcePurchaseId,
+            parseConfidence: base.parseConfidence,
+            needsReview: base.needsReview,
+            enrichedFromEbay: base.enrichedFromEbay,
+            team: base.team,
+            sport: base.sport,
+            manufacturer: base.manufacturer,
+            ebayImageUrl: base.ebayImageUrl,
+            ebayShortDescription: base.ebayShortDescription,
+            ebayItemAspects: base.ebayItemAspects,
+            ebayCategoryPath: base.ebayCategoryPath,
+            ebaySeller: base.ebaySeller,
+            ebayOfferId: base.ebayOfferId,
+            ebayListingId: base.ebayListingId,
+            listingPrice: base.listingPrice,
+            suggestedCardId: base.suggestedCardId,
+            suggestionConfidence: base.suggestionConfidence,
+            suggestionCandidate: base.suggestionCandidate,
+            suggestionUpdatedAt: base.suggestionUpdatedAt,
+            suggestionConfidenceTier: base.suggestionConfidenceTier,
+            suggestionMatchBreakdown: base.suggestionMatchBreakdown,
+            heldExpenses: base.heldExpenses,
+            backendId: base.backendId
+        )
+        do {
+            _ = try await APIService.shared.updatePortfolioHolding(request)
+            await MainActor.run {
+                onConfirmed()
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                confirmError = "Couldn't update. \(error.localizedDescription)"
             }
         }
     }

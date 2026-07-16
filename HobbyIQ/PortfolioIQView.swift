@@ -45,6 +45,16 @@ struct PortfolioIQView: View {
     // CF-IOS-IMPORT-BUILD (2026-06-21): holdings import sheet state.
     @State private var showHoldingsImport = false
 
+    // CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388): pending-review queue
+    // pushed from the "Review needed (N)" header entry.
+    @State private var showPendingReview = false
+
+    // PR #425 (2026-07-13): Supply/Demand aggregates for the two new
+    // Portfolio Home cards. Both load on task; nil / empty responses
+    // suppress the card entirely.
+    @State private var supplyDemandSummary: SupplyDemandSummaryResponse?
+    @State private var signalWeightedTotals: SignalWeightedTotalsResponse?
+
     var body: some View {
         // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
         // MainAppView already wraps PortfolioIQView in a NavigationStack, so
@@ -69,6 +79,18 @@ struct PortfolioIQView: View {
                                 warningBanner(message: errorMessage)
                             }
 
+                            if vm.pendingReviewHoldings.isEmpty == false {
+                                PendingReviewEntryButton(count: vm.pendingReviewHoldings.count) {
+                                    showPendingReview = true
+                                }
+                            }
+
+                            // PR #425: portfolio-wide supply/demand read
+                            // + verdict-class-weighted totals. Each card
+                            // self-suppresses on empty / thin data.
+                            supplyDemandDashboardCard
+                            signalWeightedTotalsCard
+
                             portfolioToolsRow
 
                             topMoversSection
@@ -86,6 +108,7 @@ struct PortfolioIQView: View {
                     .refreshable {
                         await vm.refresh()
                         await collectionValueViewModel.refresh()
+                        await loadSupplyDemandAggregates()
                     }
                 }
             }
@@ -95,6 +118,7 @@ struct PortfolioIQView: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 await collectionValueViewModel.load()
+                await loadSupplyDemandAggregates()
             }
             .navigationDestination(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
@@ -170,10 +194,21 @@ struct PortfolioIQView: View {
                 HoldingsImportView()
                     .environmentObject(sessionViewModel)
             }
+            // CF-EBAY-REVIEW-QUEUE (backend PRs #383-#388): review queue.
+            .navigationDestination(isPresented: $showPendingReview) {
+                PendingReviewQueueView(viewModel: vm)
+                    .environmentObject(sessionViewModel)
+            }
             .scanFlow(isPresented: $showCardIdentify, sessionViewModel: sessionViewModel)
             .onAppear {
                 if vm.summary == nil {
                     Task { await vm.load() }
+                } else {
+                    // CF-EBAY-REVIEW-QUEUE: refresh the pending queue
+                    // on every appear so the badge stays honest across
+                    // tab switches even when `summary` is cached and
+                    // full `load()` is skipped.
+                    Task { await vm.fetchPendingReview() }
                 }
             }
     }
@@ -181,17 +216,17 @@ struct PortfolioIQView: View {
     private var portfolioToolsRow: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                portfolioToolButton(title: "Weekly Brief", icon: "newspaper", action: { showWeeklyBrief = true })
-                portfolioToolButton(title: "Calibration", icon: "scope", action: { showCalibration = true })
+                HIQActionPill(title: "Weekly Brief", icon: "newspaper", action: { showWeeklyBrief = true })
+                HIQActionPill(title: "Calibration", icon: "scope", action: { showCalibration = true })
             }
             HStack(spacing: 8) {
-                portfolioToolButton(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
-                portfolioToolButton(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
+                HIQActionPill(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
+                HIQActionPill(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
             }
             // CF-IOS-EXPORT-BUILD (2026-06-21) + CF-IOS-IMPORT-BUILD
             // (2026-06-21): Export + Import row. Completes the 2x3 grid.
             HStack(spacing: 8) {
-                portfolioToolButton(
+                HIQActionPill(
                     title: isExporting ? "Exporting…" : "Export holdings",
                     icon: isExporting ? "hourglass" : "square.and.arrow.up",
                     action: {
@@ -199,7 +234,7 @@ struct PortfolioIQView: View {
                         showExportFormatChooser = true
                     }
                 )
-                portfolioToolButton(
+                HIQActionPill(
                     title: "Import file",
                     icon: "square.and.arrow.down",
                     action: { showHoldingsImport = true }
@@ -245,27 +280,9 @@ struct PortfolioIQView: View {
         return "hobbyiq-holdings-\(datestamp).\(ext)"
     }
 
-    private func portfolioToolButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                Text(title)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                Spacer()
-            }
-            .padding(12)
-            .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
+    // CF-SHARED-CARDS-2026-07-11: `portfolioToolButton` moved to
+    // `HIQActionPill` in `DesignSystem/HIQSharedCards.swift` so Financials
+    // (and any future tab) can render the same pill without forking.
 
     private var background: some View {
         HobbyIQBackground()
@@ -318,25 +335,11 @@ struct PortfolioIQView: View {
         let unpricedSuffix = agg.unpricedSubtitleSuffix
         let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
-        return VStack(spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("PortfolioIQ")
-                        .font(HobbyIQTheme.Typography.title)
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(HobbyIQTheme.Colors.hobbyGreen)
-                            .frame(width: 7, height: 7)
-                        Text(summary.lastRefreshText)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    }
-                }
-
-                Spacer()
-
+        return HIQHeroCard(
+            title: "PortfolioIQ",
+            statusDate: summary.lastRefreshText,
+            heroValue: heroValue.portfolioCurrencyText,
+            trailing: {
                 Button {
                     showingLedger = true
                 } label: {
@@ -353,16 +356,8 @@ struct PortfolioIQView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open ledger")
-            }
-
-            // Hero value — estimated-inclusive so cards without a live comp
-            // still contribute their `estimatedValue` to the top-line FMV.
-            VStack(spacing: 6) {
-                Text(heroValue.portfolioCurrencyText)
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .minimumScaleFactor(0.7)
-
+            },
+            delta: {
                 if hasCostBasis {
                     HStack(spacing: 4) {
                         Image(systemName: heroPL >= 0 ? "arrow.up.right" : "arrow.down.right")
@@ -376,49 +371,40 @@ struct PortfolioIQView: View {
                     }
                     .foregroundStyle(pnlColor)
                 }
-            }
-            .frame(maxWidth: .infinity)
-
-            // Quiet supporting line — when cost basis isn't set, do NOT
-            // render the fabricated +$X / +0.0% ROI line above. Offer a
-            // muted Add cost basis affordance that routes the user to
-            // Inventory so they can edit each card's cost from the row
-            // detail sheet.
-            if hasCostBasis {
-                Text("Cost basis \(portfolioCurrencyString(heroCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            } else {
-                HStack(spacing: 8) {
-                    Text("Cost basis not set · \(agg.totalCards) cards\(unpricedSuffix)")
+            },
+            meta: {
+                // Quiet supporting line — when cost basis isn't set, do
+                // NOT render the fabricated +$X / +0.0% ROI line above.
+                // Offer a muted Add cost basis affordance that routes the
+                // user to Inventory so they can edit each card's cost
+                // from the row detail sheet.
+                if hasCostBasis {
+                    Text("Cost basis \(portfolioCurrencyString(heroCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                } else {
+                    HStack(spacing: 8) {
+                        Text("Cost basis not set · \(agg.totalCards) cards\(unpricedSuffix)")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
-                    Button {
-                        onSwitchToInventory(.all)
-                    } label: {
-                        Text("Add cost basis")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                            .padding(.horizontal, 8)
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
+                        Button {
+                            onSwitchToInventory(.all)
+                        } label: {
+                            Text("Add cost basis")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                .padding(.horizontal, 8)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Open inventory to add cost basis to your cards")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open inventory to add cost basis to your cards")
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
             }
-        }
-        .padding(HobbyIQTheme.Spacing.medium)
-        .padding(.vertical, 4)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
-        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
     }
 
     // CF-IOS-DIRECTION-SWEEP (2026-06-18): movementPulseCard +
@@ -441,6 +427,176 @@ struct PortfolioIQView: View {
 
     private var valueTrendSection: some View {
         CollectionValueCard(viewModel: collectionValueViewModel)
+    }
+
+    // MARK: - PR #425 Supply/Demand Dashboard
+
+    private func loadSupplyDemandAggregates() async {
+        async let summaryTask = try? APIService.shared.fetchSupplyDemandSummary()
+        async let totalsTask = try? APIService.shared.fetchSignalWeightedTotals()
+        let (summary, totals) = await (summaryTask, totalsTask)
+        await MainActor.run {
+            self.supplyDemandSummary = summary
+            self.signalWeightedTotals = totals
+        }
+    }
+
+    @ViewBuilder
+    private var supplyDemandDashboardCard: some View {
+        if let summary = supplyDemandSummary,
+           (summary.totalHoldings ?? 0) > 0,
+           VerdictStyle.isRenderable(summary.portfolioBias) {
+            let style = VerdictStyle.from(summary.portfolioBias)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Portfolio Signal")
+                        .font(.caption.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                HStack(spacing: 8) {
+                    Text(style.emoji)
+                        .font(.system(size: 22))
+                    Text(style.label)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(style.color)
+                    Spacer()
+                }
+                if let breakdown = summary.breakdown {
+                    supplyDemandBreakdownRow(breakdown: breakdown)
+                }
+                if let movers = summary.topMovers, movers.isEmpty == false {
+                    Divider().overlay(Color.white.opacity(0.08))
+                    Text("Top movers")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    VStack(spacing: 8) {
+                        ForEach(movers.prefix(3)) { mover in
+                            supplyDemandMoverRow(mover: mover)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func supplyDemandBreakdownRow(breakdown: SupplyDemandSummaryResponse.Breakdown) -> some View {
+        HStack(spacing: 10) {
+            supplyDemandCountChip(count: breakdown.up ?? 0, label: "up", tint: .green)
+            supplyDemandCountChip(count: breakdown.mixed ?? 0, label: "mixed", tint: .orange)
+            supplyDemandCountChip(count: breakdown.bear ?? 0, label: "bear", tint: .red)
+            supplyDemandCountChip(count: breakdown.unknown ?? 0, label: "unknown", tint: HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func supplyDemandCountChip(count: Int, label: String, tint: Color) -> some View {
+        HStack(spacing: 4) {
+            Text("\(count)")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(tint)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
+    private func supplyDemandMoverRow(mover: SupplyDemandSummaryResponse.TopMover) -> some View {
+        let style = VerdictStyle.from(mover.verdict)
+        let slope = formatSlopePerMonth(mover.listingsSlopePerMonthPct)
+        return HStack(spacing: 10) {
+            Text(style.emoji)
+                .font(.system(size: 16))
+            Text(mover.playerName ?? "—")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer(minLength: 6)
+            if let slope {
+                Text("\(slope) listings")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(style.color)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var signalWeightedTotalsCard: some View {
+        if let response = signalWeightedTotals,
+           let totals = response.totals,
+           (totals.gross ?? 0) > 0 || (totals.trendAdjusted ?? 0) > 0 {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Portfolio Value")
+                    .font(.caption.weight(.bold))
+                    .tracking(0.8)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                HStack(alignment: .top, spacing: 12) {
+                    signalWeightedTotalColumn(title: "Gross", value: totals.gross)
+                    signalWeightedTotalColumn(title: "Trend-Adj", value: totals.trendAdjusted)
+                    signalWeightedTotalColumn(title: "Net", value: totals.feesAdjusted)
+                }
+
+                if let byClass = response.byVerdictClass {
+                    Divider().overlay(Color.white.opacity(0.08))
+                    Text("by verdict class")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    VStack(spacing: 6) {
+                        signalWeightedClassRow(emoji: "🔥", label: "Bull", bucket: byClass.bull)
+                        signalWeightedClassRow(emoji: "→", label: "Static", bucket: byClass.staticBucket)
+                        signalWeightedClassRow(emoji: "🐻", label: "Bear", bucket: byClass.bear)
+                        signalWeightedClassRow(emoji: "?", label: "Unknown", bucket: byClass.unavailable)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func signalWeightedTotalColumn(title: String, value: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(value.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) } ?? "—")
+                .font(.system(size: 18, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func signalWeightedClassRow(emoji: String, label: String, bucket: SignalWeightedTotalsResponse.ByVerdictClass.Bucket?) -> some View {
+        HStack(spacing: 10) {
+            Text(emoji).font(.system(size: 14))
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer(minLength: 6)
+            Text(bucket?.trendAdjusted.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) } ?? "—")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("(\(bucket?.holdings ?? 0))")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
     }
 
     // MARK: - Priority Actions
@@ -1288,6 +1444,11 @@ private struct LedgerEntryDetailSheet: View {
                 }
                 costBasisEditSection
                 profitSection
+                // CF-EBAY-BROWSE-ENRICHMENT (backend PRs #384/#385):
+                // sold-listing photo gallery + seller line for the
+                // sold entry. Self-suppresses when the wire fields
+                // are absent (manual sales, legacy rows).
+                futureCompsSection
                 if entry.dismissedAt != nil {
                     undismissSection
                 }
@@ -1490,6 +1651,74 @@ private struct LedgerEntryDetailSheet: View {
             }
         }
         isSavingCosts = false
+    }
+
+    // MARK: - Future comps section (backend PRs #384/#385)
+
+    private var futureCompsImages: [String] {
+        var urls: [String] = entry.ebaySoldImages ?? []
+        if let primary = entry.ebayImageUrl, primary.isEmpty == false, urls.contains(primary) == false {
+            urls.insert(primary, at: 0)
+        }
+        return urls
+    }
+
+    @ViewBuilder
+    private var futureCompsSection: some View {
+        if futureCompsImages.isEmpty == false || entry.ebaySellerUsername != nil {
+            VStack(alignment: .leading, spacing: 10) {
+                HIQSectionHeader("Future comps")
+                Text("This is one of your future comps.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                if futureCompsImages.isEmpty == false {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(futureCompsImages.enumerated()), id: \.offset) { _, urlString in
+                                if let url = URL(string: urlString) {
+                                    AsyncImage(url: url) { phase in
+                                        switch phase {
+                                        case .success(let image):
+                                            image.resizable().scaledToFit()
+                                        case .empty:
+                                            ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                                        case .failure:
+                                            Image(systemName: "photo.badge.exclamationmark")
+                                                .font(.system(size: 20))
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                                        @unknown default: EmptyView()
+                                        }
+                                    }
+                                    .frame(width: 110, height: 140)
+                                    .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let seller = entry.ebaySellerUsername, seller.isEmpty == false {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Text("Sold as @\(seller)")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Spacer()
+                    }
+                }
+            }
+            .padding(HobbyIQTheme.Spacing.medium)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
     }
 
     private var undismissSection: some View {
@@ -1839,7 +2068,7 @@ struct PriorityActionListView: View {
                 Button {
                     selectedCard = card
                 } label: {
-                    PortfolioCardRow(card: card)
+                    PortfolioCardRow(card: card, resolvedValue: vm.resolvedMarketValue(for: card))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
