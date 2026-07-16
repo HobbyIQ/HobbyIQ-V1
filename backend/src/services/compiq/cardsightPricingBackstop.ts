@@ -150,7 +150,13 @@ export async function tryCardsightPricingBackstop(
     price: r.price,
     date: r.date,
     grade: isRaw ? "Raw" : grade,
-    source: "cardsight",
+    // CF-CARDSIGHT-PROVENANCE-DISTINCT (audit PR #492, 2026-07-15):
+    // stamp "cs_pricing_backstop" per-comp so iOS provenance chips can
+    // render "N marketplace backstop comps" separate from "N Cardsight
+    // catalog comps". Matches the source enum documented at
+    // compiqEstimate.service.ts:293. Fallback + structured branches keep
+    // "cardsight" (catalog-anchored, higher provenance tier).
+    source: "cs_pricing_backstop",
     sale_type: r.listing_type,
     title: r.title,
     url: r.url,

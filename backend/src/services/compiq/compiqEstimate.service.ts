@@ -7406,6 +7406,16 @@ export async function computeEstimate(
     predictedPrice: slopePredictedPrice,
     predictedPriceRange: slopePredictedRange,
     predictedPriceAttribution: slopePredictedAttribution,
+    // CF-CARDSIGHT-VENDOR-PROVENANCE (audit PR #492, 2026-07-15):
+    // propagate the routed vendor onto the estimate so downstream
+    // (autoPriceHolding + batch reprice) can stamp the holding doc's
+    // sourceVendor field with the vendor that actually served the
+    // pricing pool. Prior code hardcoded "cardhedge" at 5 sites in
+    // portfolioStore.service.ts — CS-served holdings were mis-attributed
+    // as CH provenance for months. `fetched.vendor` reflects the router's
+    // final selection (routedVendor at line 2519, populated from
+    // sales[0].source or empty-pool default).
+    sourceVendor: fetched.vendor,
     supplyDemand,
     listingsHistory,
     listPriceRecommendations: (await import("./listPriceRecommendations.service.js"))
