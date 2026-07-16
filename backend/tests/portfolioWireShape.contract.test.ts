@@ -101,8 +101,16 @@ async function addHolding(sessionId: string, fixture: Record<string, unknown>): 
 // Per contract_freeze_v1 §1.3 + Phase B amendment: the β fields are sourced
 // from the estimate response only. They MUST NOT appear on the portfolio
 // list or single-GET wire.
+//
+// CF-COMP-HOLDING-WIRE-PARITY (audit PR #482, 2026-07-15): "confidence"
+// promoted out of the β-forbidden list. The whole-app wire-shape audit
+// flagged its absence on the holding wire as a comp-vs-holding drift —
+// comp responses emit `confidence` per-response, holdings didn't, so
+// the PortfolioHoldingDetailSheet couldn't render a Confidence tile
+// symmetric with CompIQPricedCardView. Post-PR #482 it's a first-class
+// field on the holding wire (null placeholder; PR #483 will populate
+// via autoPriceHolding persistence).
 const BETA_FIELDS_FORBIDDEN_ON_PORTFOLIO_WIRE = [
-  "confidence",
   "expectedDaysToSell",
   "compsUsed",
   "explanationBullets",
