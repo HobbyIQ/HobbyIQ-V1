@@ -311,6 +311,23 @@ app.post("/api/compiq/predict", async (req: Request, res: Response) => {
       // Full MCP result for newer clients
       prediction: result,
       anchorPrice,
+      // CF-MCP-COMPIQ-PARITY (audit PR #489, 2026-07-15): additive
+      // aliases mirroring the REST compiq contract so backtest replay
+      // readers + newer MCP callers can read the same field names as
+      // /api/compiq/*. `compsUsed` / `compsAvailable` map directly
+      // from the underlying comp pool. The horizon-specific predicted
+      // prices stay under their existing names because they're not
+      // semantically equivalent to compiq's `predictedPrice` (which is
+      // a 30d projection); consumers pick the horizon that matches
+      // their query intent.
+      compsUsed: comps.length,
+      compsAvailable: comps.length,
+      // Explicit horizon-labeled aliases so a client can read
+      // `predictedPrice72h` (matches the flat-camelCase compiq naming
+      // convention) without confusion about which horizon they got.
+      predictedPrice72h: result.predicted_price_72h,
+      predictedPrice7d: result.predicted_price_7d,
+      predictedPriceDirection: result.predicted_direction,
       // Comps used to build the prediction — iOS shows these under the
       // price tiles (or instead of them when insufficient).
       recentComps: comps
