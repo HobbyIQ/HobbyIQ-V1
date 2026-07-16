@@ -208,6 +208,79 @@ export async function readVerdictHistory(
   }
 }
 
+/**
+ * CF-VERDICT-FLIP-ALERTS-WIRE (Drew, 2026-07-16, iOS-prep): walk a
+ * player's persisted verdict history and return every day-over-day
+ * flip inside the window. Ordered oldest → newest. Empty when the
+ * player has fewer than 2 days of data or the verdict was stable
+ * across every consecutive-day pair.
+ *
+ * Read-only mirror of the flip-detection logic in
+ * recordVerdictAndDetectFlip — same significance rules, no writes.
+ * Feeds the /players/:player/verdict-history route (detail sheet
+ * flip strip) and the /portfolio/flips route (inventory-row dots).
+ */
+export async function readRecentFlips(
+  playerDisplay: string,
+  days: number = 30,
+): Promise<VerdictFlip[]> {
+  const history = await readVerdictHistory(playerDisplay, days);
+  if (history.length < 2) return [];
+  const player = normalizePlayer(playerDisplay);
+  const flips: VerdictFlip[] = [];
+  for (let i = 1; i < history.length; i++) {
+    const prev = history[i - 1];
+    const cur = history[i];
+    if (prev.verdict === cur.verdict) continue;
+    flips.push({
+      player,
+      date: cur.date,
+      from: prev.verdict,
+      to: cur.verdict,
+      significance: significance(prev.verdict, cur.verdict),
+    });
+  }
+  return flips;
+}
+
+/**
+ * Batch mirror of readRecentFlips over a list of players. Runs the
+ * per-player reads with bounded concurrency so a 50-holding portfolio
+ * doesn't fan out into a Cosmos storm. Concurrency = 8 matches the
+ * pattern used elsewhere in the store layer (see
+ * portfolioStore.repriceHoldingsForUser).
+ */
+export async function readRecentFlipsForPlayers(
+  playersDisplay: ReadonlyArray<string>,
+  days: number = 7,
+): Promise<VerdictFlip[]> {
+  const CONCURRENCY = 8;
+  const out: VerdictFlip[] = [];
+  const dedupe = new Set<string>(); // player -> already added key
+  const seen = new Set<string>();   // dedupe requested players by normalized name
+  const requestQueue: string[] = [];
+  for (const p of playersDisplay) {
+    const norm = normalizePlayer(String(p ?? ""));
+    if (!norm || seen.has(norm)) continue;
+    seen.add(norm);
+    requestQueue.push(p);
+  }
+  for (let i = 0; i < requestQueue.length; i += CONCURRENCY) {
+    const slice = requestQueue.slice(i, i + CONCURRENCY);
+    const chunk = await Promise.all(slice.map((p) => readRecentFlips(p, days)));
+    for (const flips of chunk) {
+      for (const f of flips) {
+        const k = `${f.player}|${f.date}|${f.from}|${f.to}`;
+        if (dedupe.has(k)) continue;
+        dedupe.add(k);
+        out.push(f);
+      }
+    }
+  }
+  out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)); // newest first
+  return out;
+}
+
 export function _setContainerForTests(container: Container | null): void {
   _container = container;
   _initPromise = null;

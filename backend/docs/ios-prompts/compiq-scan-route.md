@@ -68,24 +68,65 @@ x-session-id: <session>
 
 ## Flows iOS implements
 
-### Flow 1 — Raw card scan
+### iOS default: `hint: "auto"` on every scan — no user-facing raw/graded toggle
 
-1. User taps "Scan card" → camera opens → captures photo
+**Design call (Drew, 2026-07-16):** the scan flow does NOT expose a raw-vs-graded toggle. iOS always sends `hint: "auto"`; the backend routes cert-OCR first, image-match second. Exposing the toggle asks the user to categorize their own photo, which defeats the point of a scan flow.
+
+Cert-OCR wins when both would match — a cert number is a stronger ID than any visual match.
+
+### Flow 1 — Raw card scan (auto-routed)
+
+1. User taps "Scan card" → camera opens (shared viewfinder; see below) → captures photo
 2. iOS optionally uploads to photoStorage, gets back a URL (or keeps as base64)
-3. `POST /api/compiq/scan` with `{ imageUrl, hint: "raw" }`
-4. On `cardId !== null`: navigate to result screen, immediately call `POST /api/compiq/price-by-id { cardId }`
-5. On `cardId === null`: show "couldn't match — try a clearer photo / fall back to text search" UI
+3. `POST /api/compiq/scan` with `{ imageUrl, hint: "auto" }`
+4. Response arrives with `matchPath: "image-match"` (cert-OCR was tried, missed, image-match caught it)
+5. Confidence-gated navigation (see below)
 
-### Flow 2 — Graded slab scan
+### Flow 2 — Graded slab scan (auto-routed)
 
-1. User taps "Scan slab" → camera with grading-label framing guide → captures photo
-2. `POST /api/compiq/scan` with `{ imageUrl, hint: "graded" }`
-3. Pre-fill the "add holding" form with `certInfo.grader` + `certInfo.grade` + the card identity
-4. Continue with `/price-by-id` for current pricing
+1. User taps "Scan slab" → same camera as Flow 1 → captures photo
+2. `POST /api/compiq/scan` with `{ imageUrl, hint: "auto" }`
+3. Response arrives with `matchPath: "cert-ocr"` + `certInfo` populated
+4. Grader-gated prefill (see next section)
+5. Continue with `/price-by-id` for current pricing
 
-### Flow 3 — Auto / mixed (default)
+### Grader-gated prefill (cert-OCR results)
 
-Use this when iOS doesn't know if the photo is a slab. Backend tries cert-OCR first (fast no-op when raw card) then falls back to image-match.
+There is **no pre-scan grader picker** — cert-OCR reads whatever's on the slab. What gates per grader is the silent-navigate behavior when `certInfo` comes back. Rules:
+
+| `certInfo.grader` | Behavior |
+|---|---|
+| `"PSA"` | **Silent pre-fill + auto-navigate** to the price screen. PSA is the validated baseline. |
+| `"BGS"` / `"SGC"` / `"CGC"` (before validation ships) | **"Verify grade" confirmation sheet.** Copy: `"Cert reads BGS 10 — confirm?"`. Two buttons: "Confirm" (pre-fills + proceeds) / "Edit" (opens the field-editable form). Cert-OCR fields carry into the next surface either way. |
+| Any grader after it clears the ship gate | Same as PSA — silent pre-fill + auto-navigate. |
+
+Per-grader unlock: see `backend/docs/investigations/slab-scan-validation-protocol.md` — a grader unlocks silent-navigate when it clears the ≥85%/zero-false-positive gate on Drew's real slabs.
+
+**The manual add-holding grade picker is always full.** All graders always selectable. Nothing about validation state hides a grader from manual entry.
+
+### Viewfinder
+
+Shared across both flows. Design:
+
+- Card-outline framing guide: thin white dashed rectangle at ~2.5:3.5 (baseball card ratio). Slabs fit inside; raw cards fit inside; both trigger the same viewfinder.
+- **Do NOT** use a slab-shaped guide — that biases the user to only scan slabs, hides the raw-card capability.
+- No lightbox / no "adjust white balance" prompt. If the pipeline needs controlled conditions to work, we shipped the wrong feature.
+
+### Post-capture confidence gating (both flows)
+
+Immediately after `/api/compiq/scan` returns:
+
+| Response state | iOS behavior |
+|---|---|
+| `matchConfidence ≥ 0.7` | **Skip identity confirmation.** Navigate straight to the price screen. Show a small pill above the price: "Detected: {player} · {year} {set}". Tap the pill → "not this one?" → text search fallback. |
+| `0.5 ≤ matchConfidence < 0.7` | **Full-screen "is this right?" sheet.** Two buttons: "Yes, price it" (proceeds) / "No, search instead" (text search). No color tint — amber reads like an error. Copy: "We think this is X." |
+| `matchConfidence < 0.5` OR `cardId === null` | **"Couldn't identify" screen.** Primary CTA: "Try again" (retake). Secondary: "Search by name" (text search fallback). |
+
+Post-capture spinner: 400-800ms cap, captioned "Identifying…" over a dimmed still of the shot. Longer than 800ms → drop the spinner and show a skeleton state to keep the app feeling responsive.
+
+### Legacy Flow 3 (`hint: "auto"` explicit) — deprecated
+
+Prior versions of this doc suggested exposing a `raw/graded/auto` toggle. That was rejected in the design pass. Do not implement.
 
 ## Error / edge cases
 
