@@ -139,6 +139,28 @@ interface UserDoc {
   // holdingIds[] back-reference. Optional so existing user docs load
   // without migration.
   purchases?: PortfolioPurchaseEntry[];
+  // CF-VERDICT-FLIP-PUSH-PREFS (Drew, 2026-07-16, PR #499 follow-up):
+  // per-user notification opt-ins. Absent → all defaults (all off).
+  // Push worker (backend/scripts/verdict-flip-push-fanout.cjs) only
+  // fans out to users where preferences.pushOnMajorFlip === true.
+  preferences?: {
+    /**
+     * True when the user opted in during onboarding (or in Settings) to
+     * receive an APNs push when a holding-player's verdict flips across
+     * the bull/bear boundary. Only significance="major" flips route to
+     * push regardless of this field — mixed-adjacency flips never fire.
+     */
+    pushOnMajorFlip?: boolean;
+  };
+  // CF-VERDICT-FLIP-PUSH-DEVICE (Drew, 2026-07-16, PR #499 follow-up):
+  // most-recent APNs device token registered by iOS at app launch.
+  // Absent → user hasn't installed the iOS app version that reports
+  // it, or the OS denied permission. Empty string / null are equivalent
+  // to absent for the fan-out worker's gate. A user with multiple
+  // devices only receives on the last-registered one for launch; a
+  // deviceTokens[] extension is a follow-up.
+  apnsDeviceToken?: string | null;
+  apnsDeviceTokenUpdatedAt?: string | null;
 }
 
 // ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
@@ -4671,6 +4693,143 @@ export async function findHoldingByEbayListingIdAcrossUsers(
   }
 
   return matches[0];
+}
+
+/**
+ * CF-VERDICT-FLIP-PUSH-FANOUT-STEP-2 (Drew, 2026-07-16). Cross-partition
+ * scan that returns the union of every `playerName` across every user's
+ * holdings — the input universe the fan-out worker walks to find flips
+ * to notify on. Same cross-partition pattern as
+ * `findHoldingByEbayListingIdAcrossUsers`; returns an empty set when
+ * the store is unavailable.
+ *
+ * Player names are trimmed but NOT normalized here — the caller
+ * (verdictHistoryStore's `readRecentFlipsForPlayers`) normalizes on the
+ * way in (lowercase + hyphenate) so both sides agree on the key.
+ */
+export async function listAllHeldPlayers(): Promise<Set<string>> {
+  const out = new Set<string>();
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const doc of testMemStore.values()) {
+      for (const holding of Object.values(doc.holdings)) {
+        const name = String(holding?.playerName ?? "").trim();
+        if (name) out.add(name);
+      }
+    }
+    return out;
+  }
+  if (!container) return out;
+  try {
+    const { resources } = await container.items
+      .query<{ userId: string; holdings: Record<string, PortfolioHolding> }>({
+        query: "SELECT c.userId, c.holdings FROM c",
+      })
+      .fetchAll();
+    for (const row of resources ?? []) {
+      if (!row?.holdings) continue;
+      for (const holding of Object.values(row.holdings)) {
+        const name = String(holding?.playerName ?? "").trim();
+        if (name) out.add(name);
+      }
+    }
+  } catch (err: any) {
+    console.error(
+      "[portfolio] listAllHeldPlayers query failed:",
+      err?.message ?? String(err),
+    );
+  }
+  return out;
+}
+
+/**
+ * CF-VERDICT-FLIP-PUSH-FANOUT-STEP-3 (Drew, 2026-07-16). Reverse index
+ * for the fan-out worker: given a player display name, return the
+ * subset of users who hold that player AND have opted in to major-flip
+ * push. Only the fields the worker needs (userId + apnsDeviceToken) are
+ * projected — no user PII travels through the fan-out log stream.
+ *
+ * Matches by case-insensitive `playerName` equality after trim. NOT
+ * fuzzy — the caller passes the display name from the flip event which
+ * came from the recorded verdict_history doc which came from the
+ * holding's playerName in the first place, so the shapes agree.
+ *
+ * Returns empty when the store is unavailable OR when no users opted
+ * in AND own the player.
+ */
+export async function listUsersOwningPlayerWithPushOptIn(
+  playerDisplay: string,
+): Promise<Array<{ userId: string; apnsDeviceToken: string | null }>> {
+  const target = String(playerDisplay ?? "").trim().toLowerCase();
+  if (!target) return [];
+
+  const matches: Array<{ userId: string; apnsDeviceToken: string | null }> = [];
+  const scan = (doc: UserDoc) => {
+    if (doc.preferences?.pushOnMajorFlip !== true) return;
+    const token = doc.apnsDeviceToken ?? null;
+    for (const holding of Object.values(doc.holdings)) {
+      const name = String(holding?.playerName ?? "").trim().toLowerCase();
+      if (name === target) {
+        matches.push({ userId: doc.userId, apnsDeviceToken: token });
+        return; // one user matches at most once regardless of holding count
+      }
+    }
+  };
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const doc of testMemStore.values()) scan(doc);
+    return matches;
+  }
+  if (!container) return matches;
+
+  try {
+    const { resources } = await container.items
+      .query<UserDoc>({
+        query:
+          "SELECT c.userId, c.holdings, c.preferences, c.apnsDeviceToken " +
+          "FROM c WHERE c.preferences.pushOnMajorFlip = true",
+      })
+      .fetchAll();
+    for (const row of resources ?? []) {
+      if (!row) continue;
+      scan(row as UserDoc);
+    }
+  } catch (err: any) {
+    console.error(
+      "[portfolio] listUsersOwningPlayerWithPushOptIn query failed:",
+      err?.message ?? String(err),
+    );
+  }
+  return matches;
+}
+
+/**
+ * CF-VERDICT-FLIP-PUSH-FANOUT test hook. Writes the two push-related
+ * fields directly on the user doc without going through a full
+ * settings API (which lands as a follow-up). Kept here alongside the
+ * store so the test helper doesn't drift from the write path.
+ *
+ * Test-only surface — never called from a route. Named with the
+ * `-ForTests` suffix so future audits see it and don't wire it into
+ * a production caller by accident.
+ */
+export async function setUserPushPreferenceForTests(
+  userId: string,
+  input: {
+    pushOnMajorFlip?: boolean;
+    apnsDeviceToken?: string | null;
+  },
+): Promise<void> {
+  const doc = await readUserDoc(userId);
+  const prefs = { ...(doc.preferences ?? {}) };
+  if (input.pushOnMajorFlip !== undefined) prefs.pushOnMajorFlip = input.pushOnMajorFlip;
+  doc.preferences = prefs;
+  if (input.apnsDeviceToken !== undefined) {
+    doc.apnsDeviceToken = input.apnsDeviceToken ?? null;
+    doc.apnsDeviceTokenUpdatedAt = new Date().toISOString();
+  }
+  await writeUserDoc(userId, doc);
 }
 
 export async function sellHolding(req: Request, res: Response) {

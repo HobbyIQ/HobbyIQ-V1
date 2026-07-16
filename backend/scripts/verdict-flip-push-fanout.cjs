@@ -170,31 +170,24 @@ async function pathExists(p) {
 
 /**
  * Enumerate the union of playerName across every user's holdings.
- * Reads via the store's exposed helpers so this script doesn't
- * duplicate Cosmos query wiring. When portfolioStore doesn't expose
- * a global-holdings scan (which it doesn't as of this scaffold), fall
- * back to the direct Cosmos read via a follow-up. Marked TODO below —
- * shipping the scaffold now, wiring in the next PR.
+ * Delegates to portfolioStore.listAllHeldPlayers so this script
+ * doesn't duplicate Cosmos query wiring.
  */
 async function enumerateHeldPlayers(portfolioStore) {
-  // TODO(CF-VERDICT-FLIP-PUSH-FANOUT-STEP-2): expose a portfolioStore
-  // helper `listAllHeldPlayers()` that cross-partitions the users
-  // container reading `holdings[].playerName`. For now, return empty
-  // so the script's log stream is honest — it will emit
-  // `flip_fanout_nothing_to_scan` and exit cleanly.
-  return new Set();
+  const set = await portfolioStore.listAllHeldPlayers();
+  return set instanceof Set ? set : new Set(set ?? []);
 }
 
 /**
- * Given a normalized player name, return an array of
+ * Given a display player name, return an array of
  * { userId, apnsDeviceToken }
  * for users who hold that player AND have opted in to major-flip push.
+ * Case-insensitive by playerName after trim; only returns users where
+ * preferences.pushOnMajorFlip === true.
  */
 async function findUsersOwningPlayerWithPushOptIn(portfolioStore, player) {
-  // TODO(CF-VERDICT-FLIP-PUSH-FANOUT-STEP-3): implement the reverse
-  // index. Same story as enumerateHeldPlayers — needs a
-  // portfolioStore-side helper that we'll ship in the next PR.
-  return [];
+  const rows = await portfolioStore.listUsersOwningPlayerWithPushOptIn(player);
+  return Array.isArray(rows) ? rows : [];
 }
 
 main().catch((err) => {
