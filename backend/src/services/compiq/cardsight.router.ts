@@ -788,117 +788,179 @@ export async function findCompsRouted(
     return emptyResult(["no_identity_for_bridge"]);
   }
 
-  try {
-    // CF-CH-RAW-QUERY: pass the user's raw query as third arg. When
-    // env flag CH_USE_RAW_QUERY=true, resolveChCardId sends it directly
-    // to CH's AI matcher instead of our reconstruction.
-    const ch = await tryCardHedge(identity, opts.grade ?? "Raw", query);
-    if (!ch) {
-      // CF-CS-STRUCTURED-BRIDGE (Drew, 2026-07-15): tier-2a — structured
-      // CS lookup by (player, cardNumber, year) that bypasses the fuzzy
-      // fallback's candidate-explode. Higher precision when we have the
-      // fields; skip otherwise. Fires BEFORE the fuzzy fallback because
-      // when both would succeed, structured is more reliable.
-      // Env-gated (CARDSIGHT_STRUCTURED_BRIDGE_ENABLED=true, default off).
-      if (process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true") {
-        const csStructured = await tryCardsightStructuredBridge(identity, opts.grade ?? "Raw");
-        if (csStructured) {
-          log.info("comp.findComps.end", {
-            query,
-            cardId: csStructured.card?.card_id ?? null,
-            result_count: csStructured.sales.length,
-            latency_ms: Date.now() - start,
-            outcome: "cardsight_structured",
-            vendor: "cardsight",
-          });
-          return csStructured;
-        }
-      }
-      // CF-CARDSIGHT-FALLBACK-REVIVAL (Drew, 2026-07-14): CH-miss fallback.
-      // Env-gated (CARDSIGHT_FALLBACK_ENABLED=true, default off) so we can
-      // stage rollout separately from ingest + read. Only fires when CH has
-      // literally no bridge — CH-thin / CH-untrusted cases keep the empty
-      // return so the trust-guard behavior is preserved. See
-      // cardsightFallback.ts header for the full rationale.
-      if (process.env.CARDSIGHT_FALLBACK_ENABLED === "true") {
-        const cs = await tryCardsightFallback(query, identity, opts.grade ?? "Raw");
-        if (cs) {
-          log.info("comp.findComps.end", {
-            query,
-            cardId: cs.card?.card_id ?? null,
-            result_count: cs.sales.length,
-            latency_ms: Date.now() - start,
-            outcome: "cardsight_fallback",
-            vendor: "cardsight",
-          });
-          return cs;
-        }
-      }
-      // CF-CS-PRICING-BACKSTOP (Drew, 2026-07-15): tier-3 fallback when
-      // neither vendor's canonical catalog has the SKU. Searches raw
-      // marketplace listing titles — surfaces real transaction evidence
-      // for cards like Blue Refractor Autos, /150 parallels, etc. that
-      // are catalog-gaps in both CH and CS. No cardId, but real prices.
-      // Env-gated (CARDSIGHT_PRICING_BACKSTOP_ENABLED=true, default off).
-      if (process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true") {
-        const backstop = await tryCardsightPricingBackstop(
-          query,
-          opts.queryContext,
-          opts.grade ?? "Raw",
-        );
-        if (backstop) {
-          log.info("comp.findComps.end", {
-            query,
-            cardId: "",  // no canonical bridge — backstop is bridge-less
-            result_count: backstop.sales.length,
-            latency_ms: Date.now() - start,
-            outcome: "cardsight_pricing_backstop",
-            vendor: "cardsight",
-          });
-          return backstop;
-        }
-      }
-      log.info("comp.findComps.end", { query, outcome: "ch_unavailable", latency_ms: Date.now() - start });
-      return emptyResult(["ch_no_match_or_untrusted"]);
-    }
+  // CF-PARALLEL-VENDOR-MERGE (Drew, 2026-07-15, PR #493): fire CH + all
+  // enabled CS branches concurrently and merge the sales pools. Prior
+  // architecture was serial with CH-miss cascade — CS branches only ran
+  // when CH returned nothing. That meant vendor A's real sold data
+  // never joined vendor B's. New architecture broadens coverage by
+  // querying both vendors in parallel + deduping the merged pool by
+  // marketplace URL (exact-listing join) with a composite-key fallback.
+  //
+  // Vendor labels stay strictly internal (used for sold_comps ingest,
+  // analytics, provenance-tier weighting). Per-comp `source` on the
+  // wire's recentComps[] is already stripped upstream (compiqEstimate.
+  // service.ts:5442-5452 — see also CF-SOURCE-VENDOR-WIRE-STRIP at
+  // responseAssembly.ts:182) so iOS still sees vendor-neutral results.
+  //
+  // Env-gated cascade retained: each CS branch fires only when its
+  // ENABLED flag is on. Turning all 4 off collapses this back to
+  // CH-only serial behavior (identical to pre-PR contract).
+  const branchTimeoutMs = 3000;
+  const grade = opts.grade ?? "Raw";
+  const structuredEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
+  const fallbackEnabled = process.env.CARDSIGHT_FALLBACK_ENABLED === "true";
+  const backstopEnabled = process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true";
 
-    log.info("router.ch_served", {
-      query,
-      chCardId: ch.chCardId,
-      count: ch.sales.length,
-      trustReason: ch.trustReason,
-      via: "findCompsRouted",
-    });
-    log.info("comp.findComps.end", {
-      query,
-      cardId: ch.chCardId,
-      result_count: ch.sales.length,
-      latency_ms: Date.now() - start,
-      outcome: "ok",
-    });
+  const withTimeout = <T>(p: Promise<T>, name: string): Promise<T | null> =>
+    Promise.race([
+      p.catch((err) => {
+        log.warn("branch_error", { branch: name, error: err instanceof Error ? err.message : String(err) });
+        return null as unknown as T;
+      }),
+      new Promise<null>((resolve) => setTimeout(() => {
+        log.warn("branch_timeout", { branch: name, timeout_ms: branchTimeoutMs });
+        resolve(null);
+      }, branchTimeoutMs)),
+    ]);
 
-    const card: RoutedCard = {
-      card_id: ch.chCardId,
-      player: identity.playerName,
-      set: identity.product,
-      year: identity.cardYear,
-      number: identity.number,
-      variant: identity.parallel,
-    };
-    return {
-      card,
-      sales: ch.sales,
-      variantWarning: [],
-      aiCategory: null,
-      chCardId: ch.chCardId,
-      chTrustReason: narrowTrustReason(ch.trustReason),
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    log.warn("ch_error", { query, error: msg });
-    log.info("comp.findComps.end", { query, outcome: "error", latency_ms: Date.now() - start });
-    return emptyResult(["ch_error"]);
+  const [chResult, csStructuredResult, csFallbackResult, csBackstopResult] = await Promise.all([
+    // CH always fires (no env flag — CH is the primary contract)
+    withTimeout(tryCardHedge(identity, grade, query), "ch"),
+    structuredEnabled
+      ? withTimeout(tryCardsightStructuredBridge(identity, grade), "cs_structured")
+      : Promise.resolve(null),
+    fallbackEnabled
+      ? withTimeout(tryCardsightFallback(query, identity, grade), "cs_fallback")
+      : Promise.resolve(null),
+    backstopEnabled
+      ? withTimeout(tryCardsightPricingBackstop(query, opts.queryContext, grade), "cs_backstop")
+      : Promise.resolve(null),
+  ]);
+
+  // Winning cardId hierarchy: CH-bridged > CS-structured > CS-fallback > CS-backstop.
+  // CH-bridged wins because CH's catalog is the more curated of the two. When CH
+  // missed but CS resolved a bridge, we adopt the CS card_id — the pool identity
+  // must be SOMETHING addressable for sold_comps ingest + persistence.
+  const chCard: RoutedCard | null = chResult
+    ? {
+        card_id: chResult.chCardId,
+        player: identity.playerName,
+        set: identity.product,
+        year: identity.cardYear,
+        number: identity.number,
+        variant: identity.parallel,
+      }
+    : null;
+  const winningCard: RoutedCard | null =
+    chCard
+    ?? csStructuredResult?.card
+    ?? csFallbackResult?.card
+    ?? csBackstopResult?.card
+    ?? null;
+
+  // Merge sales into one dedupe'd pool. URL is the natural join between
+  // CH and CS — both scrape marketplace transaction data, so the same
+  // physical eBay listing appears in both pools under the same URL. When
+  // URL is absent (older records / CS-native records that lack it), the
+  // composite key `soldDate|priceCents|titleHash` catches the same sale
+  // by content fingerprint.
+  const mergedSales = mergeAndDedupeSales(chResult?.sales ?? [], [
+    ...(csStructuredResult?.sales ?? []),
+    ...(csFallbackResult?.sales ?? []),
+    ...(csBackstopResult?.sales ?? []),
+  ]);
+
+  // Outcome tag captures which branches actually contributed non-empty results.
+  const outcome = [
+    chResult && chResult.sales.length > 0 ? "ch" : null,
+    csStructuredResult && csStructuredResult.sales.length > 0 ? "cs_structured" : null,
+    csFallbackResult && csFallbackResult.sales.length > 0 ? "cs_fallback" : null,
+    csBackstopResult && csBackstopResult.sales.length > 0 ? "cs_backstop" : null,
+  ].filter((s) => s !== null).join("+") || "none";
+
+  log.info("comp.findComps.end", {
+    query,
+    cardId: winningCard?.card_id ?? null,
+    result_count: mergedSales.length,
+    ch_count: chResult?.sales.length ?? 0,
+    cs_structured_count: csStructuredResult?.sales.length ?? 0,
+    cs_fallback_count: csFallbackResult?.sales.length ?? 0,
+    cs_backstop_count: csBackstopResult?.sales.length ?? 0,
+    duplicates_collapsed:
+      (chResult?.sales.length ?? 0)
+      + (csStructuredResult?.sales.length ?? 0)
+      + (csFallbackResult?.sales.length ?? 0)
+      + (csBackstopResult?.sales.length ?? 0)
+      - mergedSales.length,
+    latency_ms: Date.now() - start,
+    outcome,
+  });
+
+  if (!winningCard && mergedSales.length === 0) {
+    return emptyResult(["all_branches_empty"]);
   }
+
+  return {
+    card: winningCard,
+    sales: mergedSales,
+    variantWarning: [],
+    aiCategory: null,
+    chCardId: chResult?.chCardId,
+    chTrustReason: chResult ? narrowTrustReason(chResult.trustReason) : undefined,
+  };
+}
+
+/**
+ * CF-PARALLEL-VENDOR-MERGE (PR #493): merge CH sales with CS-branch
+ * sales into one dedupe'd pool. CH sales are added first so their
+ * identity + metadata wins on collision (CH catalog is more curated
+ * than CS's title-matched marketplace scrape). Vendor labels on each
+ * RoutedSale stay preserved for downstream analytics / sold_comps
+ * ingest / provenance weighting; the wire layer strips them.
+ *
+ * Dedup priority:
+ *   1. URL exact match (natural join for marketplace listings)
+ *   2. Composite fingerprint: soldDate | priceCents | titleHash(50 chars)
+ *
+ * When a dup is detected, the first-seen row wins (CH gets priority
+ * because it's added first); subsequent duplicates are dropped. This
+ * preserves CH's provenance tier + trust flags on the survivor.
+ */
+function mergeAndDedupeSales(
+  chSales: RoutedSale[],
+  csSales: RoutedSale[],
+): RoutedSale[] {
+  const dedupKey = (s: RoutedSale): string => {
+    const url = (s as unknown as { url?: string; image_url?: string }).url
+      ?? (s as unknown as { url?: string; image_url?: string }).image_url;
+    if (typeof url === "string" && url.length > 0) return `url:${url}`;
+    const date = s.date ?? "";
+    const priceCents = Math.round((s.price ?? 0) * 100);
+    const titleHash = (s.title ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 50);
+    return `comp:${date}|${priceCents}|${titleHash}`;
+  };
+
+  const seen = new Set<string>();
+  const merged: RoutedSale[] = [];
+
+  // CH first — highest provenance tier wins on collision
+  for (const s of chSales) {
+    const k = dedupKey(s);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    merged.push(s);
+  }
+  for (const s of csSales) {
+    const k = dedupKey(s);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    merged.push(s);
+  }
+  return merged;
 }
 
 // ── searchCardsRouted ───────────────────────────────────────────────────────
