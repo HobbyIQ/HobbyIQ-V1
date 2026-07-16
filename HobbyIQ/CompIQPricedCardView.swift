@@ -13,6 +13,7 @@ import os
 enum PricedCardRoute: Hashable, Identifiable {
     case layerBreakdown
     case addToInventory
+    case priceHistory
     var id: Self { self }
 }
 
@@ -102,6 +103,14 @@ struct CompIQPricedCardView: View {
     /// gets visible confirmation before navigating away.
     // showAddToInventory absorbed into pricedRoute above.
     @State private var addToInventoryToast: String?
+    // 2026-07-15: Report Wrong — moderation flow. `flaggingComp`
+    // drives the reason sheet, `flaggedCompIds` fades already-flagged
+    // rows so the user sees their action took effect (backend
+    // soft-deletes on the next fetch), `flagToast` bubbles a
+    // confirmation banner.
+    @State private var flaggingComp: CompIQPriceRecentComp?
+    @State private var flaggedCompIds: Set<String> = []
+    @State private var flagToast: String?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @Environment(\.dismiss) private var dismiss
     private var skipFetch: Bool = false
@@ -229,6 +238,8 @@ struct CompIQPricedCardView: View {
                         }
                     )
                 }
+            case .priceHistory:
+                PriceHistoryView(cardId: hit.cardId)
             }
         }
         // Paywall stays as a sheet — interruptive upgrade prompts read
@@ -239,6 +250,44 @@ struct CompIQPricedCardView: View {
                 suggestedTier: GatedFeature.minimumTier(for: GatedFeature.trendIQComposite)
             )
         }
+        // 2026-07-15: Report Wrong reason sheet. Presented from the
+        // recent-comps row context menu. Sheet dismisses itself on
+        // Send / Skip; the row fades locally on Send success.
+        .sheet(item: $flaggingComp) { comp in
+            ReportWrongCompSheet(
+                comp: comp,
+                cardId: hit.cardId
+            ) { compId, didFlag in
+                if didFlag {
+                    let key = compId.trimmingCharacters(in: .whitespaces)
+                    if key.isEmpty == false {
+                        flaggedCompIds.insert(key)
+                    }
+                    flagToast = "Reported — this comp will no longer count in pricing"
+                    // Auto-dismiss the toast after ~3s so it doesn't
+                    // linger on the surface.
+                    Task {
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        await MainActor.run { flagToast = nil }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .overlay(alignment: .bottom) {
+            if let flagToast {
+                Text(flagToast)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(HobbyIQTheme.Colors.successGreen.opacity(0.95))
+                    .clipShape(Capsule(style: .continuous))
+                    .padding(.bottom, 24)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: flagToast)
     }
 
     /// CF-ADD-TO-INVENTORY (2026-06-12): seeds the sheet's grade picker
@@ -848,16 +897,42 @@ struct CompIQPricedCardView: View {
             // headline). CompIQ comp surface no longer surfaces
             // forecast/direction reads.
 
-            // CF-PRICEHISTORY-60D (2026-06-10): 60d chart series for
-            // the comp page. Rendered as its own section card so the
-            // chart precedes the "Recent sales" table inside the
-            // Reference Data group (chart-then-table pattern). The
-            // view fn self-suppresses when priceHistory has fewer than
-            // 2 points — never a broken axis.
-            if let history = response.priceHistory, history.count >= 2 {
+            // PR #425 (2026-07-13): Market Trend section — verdict
+            // badge + slope summary + sales chart + listings chart.
+            // Gated on backend-authoritative `supplyDemand.verdict`
+            // AND ≥2 listings-history snapshots (regression needs a
+            // second point to fit). Falls through to the legacy
+            // "Price History" section when the trend section can't
+            // render, so sales-only cards keep the chart they had
+            // yesterday.
+            let listingsHistory = (response.listingsHistory ?? []).filter { $0.parsedDate != nil }
+            let showsMarketTrend = VerdictStyle.isRenderable(response.supplyDemand?.verdict)
+                && listingsHistory.count >= 2
+            if showsMarketTrend, let signal = response.supplyDemand {
+                cardGroup(title: "Market Trend", icon: "chart.line.uptrend.xyaxis") {
+                    marketTrendSection(
+                        response: response,
+                        signal: signal,
+                        listingsHistory: listingsHistory
+                    )
+                }
+            } else if let history = response.priceHistory, history.count >= 2 {
+                // CF-PRICEHISTORY-60D (2026-06-10): 60d chart series for
+                // the comp page. Renders when Market Trend can't (no
+                // verdict / thin supply data) so sales-only surfaces
+                // still get their chart.
                 cardGroup(title: "Price History", icon: "chart.xyaxis.line") {
                     priceHistoryContent(response)
                 }
+            }
+
+            // 2026-07-15: dedicated Price History screen (bucketed
+            // weekly/monthly/quarterly over 3M/1Y/3Y/all). Gated on
+            // a non-empty cardId — hit-based hits without a resolved
+            // cardId hide the button. Pushes a full screen via the
+            // existing PricedCardRoute enum-navigator.
+            if hit.cardId.trimmingCharacters(in: .whitespaces).isEmpty == false {
+                viewPriceHistoryButton
             }
 
             // CF-PER-GRADE-BREAKDOWN (2026-07-02, PR #240): ladder view
@@ -1401,9 +1476,48 @@ struct CompIQPricedCardView: View {
                 if response.hasSiblingFallback {
                     siblingFallbackBadge
                 }
+                // CF-SCARCITY-FLOOR (2026-07-06): "Structural floor"
+                // badge + verdict caption. Fires when the engine priced
+                // this card off a scarcity-prior structural floor (no
+                // direct comps, no sibling lineage). Signal to the user
+                // this is coarser than a comp-driven estimate — backend
+                // already ships a ±40% range so no local range logic.
+                if response.hasScarcityPriorFloor {
+                    structuralFloorBadge
+                    if let verdict = response.verdict, verdict.isEmpty == false {
+                        Text(verdict)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12)
+                    }
+                }
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    /// CF-SCARCITY-FLOOR (2026-07-06): "Structural floor" pill beneath
+    /// the market value headline. Uses the same warning-tint styling as
+    /// the sibling-fallback badge so users read it as a low-confidence
+    /// / coarser signal.
+    private var structuralFloorBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.caption2.weight(.bold))
+            Text("Structural floor")
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(HobbyIQTheme.Colors.warning)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(HobbyIQTheme.Colors.warning.opacity(0.14))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(HobbyIQTheme.Colors.warning.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(Capsule(style: .continuous))
+        .padding(.top, 2)
     }
 
     /// CF-SIBLING-FALLBACK (2026-07-08): "Est. via similar card" pill
@@ -1787,7 +1901,7 @@ struct CompIQPricedCardView: View {
         // CF-STRATEGY-CONSOLIDATE (2026-07-07): center-aligned inside
         // the Strategy card so it visually sits as a headline for that
         // card rather than reading as a leading-aligned bullet.
-        return VStack(alignment: .center, spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             HStack(spacing: 8) {
                 actionBadge(style: style, verdict: rec.verdict, urgency: rec.urgency)
                 Text(actionHeadline(rec, style: style))
@@ -2881,6 +2995,7 @@ struct CompIQPricedCardView: View {
     private func compsContent(_ response: CompIQPriceByIdResponse) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             compsHeader(response)
+            provenanceTrustChip(response.provenanceSummary)
             if let comps = response.recentComps, comps.isEmpty == false {
                 lastSoldBanner(comps: comps)
                 VStack(spacing: 0) {
@@ -2892,6 +3007,61 @@ struct CompIQPricedCardView: View {
                 noRecentCompsLine(response)
             }
         }
+    }
+
+    /// 2026-07-15 provenance additions: subtle "N collectors + M vendor
+    /// comps" pill so the user knows where the pool came from. Nil /
+    /// zero → hide entirely (chip should never headline).
+    @ViewBuilder
+    private func provenanceTrustChip(_ summary: ProvenanceSummary?) -> some View {
+        if let summary,
+           (summary.totalCount ?? 0) > 0,
+           ((summary.collectorCount ?? 0) + (summary.vendorCount ?? 0)) > 0 {
+            let collectors = summary.collectorCount ?? 0
+            let vendors = summary.vendorCount ?? 0
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text(provenanceChipLabel(collectors: collectors, vendors: vendors))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.08))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.25), lineWidth: 1)
+            )
+            .clipShape(Capsule(style: .continuous))
+        }
+    }
+
+    private func provenanceChipLabel(collectors: Int, vendors: Int) -> String {
+        switch (collectors, vendors) {
+        case (0, let v): return "\(v) vendor \(v == 1 ? "comp" : "comps")"
+        case (let c, 0): return "\(c) collector \(c == 1 ? "sale" : "sales")"
+        case (let c, let v):
+            let cLabel = "\(c) \(c == 1 ? "collector" : "collectors")"
+            let vLabel = "\(v) vendor \(v == 1 ? "comp" : "comps")"
+            return "\(cLabel) + \(vLabel)"
+        }
+    }
+
+    private func collectorVerifiedBadge() -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 9))
+            Text("Verified")
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.4)
+        }
+        .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(HobbyIQTheme.Colors.successGreen.opacity(0.15))
+        .clipShape(Capsule(style: .continuous))
     }
 
     /// CF-IOS-COMPS-LAST-SOLD-BANNER (2026-06-27): surfaceElevated banner
@@ -3007,6 +3177,218 @@ struct CompIQPricedCardView: View {
     /// overlay, not a third data series.
     private static let priceHistoryNeutralLine =
         HobbyIQTheme.Colors.mutedText.opacity(0.6)
+
+    private var viewPriceHistoryButton: some View {
+        Button {
+            pricedRoute = .priceHistory
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis.circle")
+                    .font(.subheadline.weight(.semibold))
+                Text("View Price History")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - PR #425 Market Trend section
+
+    /// Verdict badge + slope summary + sales chart + listings chart.
+    /// Caller has already gated on `supplyDemand.verdict != "unavailable"`
+    /// AND `listingsHistory.count >= 2`, so this always renders both
+    /// panels. `priceHistoryContent` handles the sales side (unchanged
+    /// legacy behavior — self-suppresses if the sales pool is thin,
+    /// which is fine since supply data is the primary signal here).
+    @ViewBuilder
+    private func marketTrendSection(
+        response: CompIQPriceByIdResponse,
+        signal: SupplyDemandSignal,
+        listingsHistory: [ListingsHistoryPoint]
+    ) -> some View {
+        let style = VerdictStyle.from(signal.verdict)
+        let salesSlope = formatSlopePerMonth(signal.salesSlopePerMonthPct)
+        let listingsSlope = formatSlopePerMonth(signal.listingsSlopePerMonthPct)
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(style.emoji)
+                    .font(.system(size: 18))
+                Text(style.label)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(style.color)
+                Spacer(minLength: 8)
+            }
+
+            if salesSlope != nil || listingsSlope != nil {
+                Text(marketTrendSlopeSummary(sales: salesSlope, listings: listingsSlope))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+
+            if let priceHistory = response.priceHistory, priceHistory.filter({ $0.parsedDate != nil && ($0.price ?? 0) > 0 }).count >= 2 {
+                Text("SALES ($)")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.6)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                priceHistoryContent(response)
+            }
+
+            Text("LISTINGS (#)")
+                .font(.system(size: 10, weight: .bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            listingsHistoryContent(listingsHistory: listingsHistory)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func marketTrendSlopeSummary(sales: String?, listings: String?) -> String {
+        switch (sales, listings) {
+        case (let s?, let l?):
+            return "Sales \(s) · Listings \(l)"
+        case (let s?, nil):
+            return "Sales \(s)"
+        case (nil, let l?):
+            return "Listings \(l)"
+        default:
+            return ""
+        }
+    }
+
+    /// Listings-side chart. Points from `listingsHistory` (Y = total
+    /// active listings) with a least-squares regression line. Backend
+    /// provides the slope directly in `supplyDemand.listingsSlopePerMonthPct`,
+    /// so the fitted line is purely visual — iOS doesn't derive any
+    /// verdict from it.
+    @ViewBuilder
+    private func listingsHistoryContent(listingsHistory: [ListingsHistoryPoint]) -> some View {
+        let points = listingsHistory.filter { $0.parsedDate != nil }
+        if points.count >= 2 {
+            let counts = points.map { Double($0.totalListings) }
+            let yMinRaw = counts.min() ?? 0
+            let yMaxRaw = counts.max() ?? 0
+            let yPad = max((yMaxRaw - yMinRaw) * 0.15, 1.0)
+            let yMin = max(0, yMinRaw - yPad)
+            let yMax = yMaxRaw + yPad
+            let dates = points.compactMap { $0.parsedDate }
+            let xMin = dates.min() ?? Date()
+            let xMax = dates.max() ?? Date()
+            let regression = listingsLeastSquares(points)
+
+            listingsHistoryChart(
+                points: points,
+                yMin: yMin,
+                yMax: yMax,
+                xMin: xMin,
+                xMax: xMax,
+                regression: regression
+            )
+            .frame(height: 180)
+        }
+    }
+
+    @ViewBuilder
+    private func listingsHistoryChart(
+        points: [ListingsHistoryPoint],
+        yMin: Double,
+        yMax: Double,
+        xMin: Date,
+        xMax: Date,
+        regression: (slope: Double, intercept: Double, xEpoch: Double)?
+    ) -> some View {
+        Chart {
+            ForEach(points) { p in
+                if let date = p.parsedDate {
+                    PointMark(
+                        x: .value("Date", date),
+                        y: .value("Listings", p.totalListings)
+                    )
+                    .symbol(.circle)
+                    .symbolSize(30)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                    LineMark(
+                        x: .value("Date", date),
+                        y: .value("Listings", p.totalListings)
+                    )
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.35))
+                    .interpolationMethod(.monotone)
+                }
+            }
+            if let regression {
+                let startY = regression.intercept + regression.slope * (xMin.timeIntervalSince1970 - regression.xEpoch)
+                let endY = regression.intercept + regression.slope * (xMax.timeIntervalSince1970 - regression.xEpoch)
+                RuleMark(y: .value("Trend", startY))
+                    .lineStyle(StrokeStyle(lineWidth: 0))
+                LineMark(x: .value("Date", xMin), y: .value("Trend", startY), series: .value("series", "trend"))
+                    .foregroundStyle(Self.priceHistoryNeutralLine)
+                LineMark(x: .value("Date", xMax), y: .value("Trend", endY), series: .value("series", "trend"))
+                    .foregroundStyle(Self.priceHistoryNeutralLine)
+            }
+        }
+        .chartYScale(domain: yMin...yMax)
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                AxisGridLine().foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.2))
+                AxisTick().foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.4))
+                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+                AxisGridLine().foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.2))
+                AxisTick().foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.4))
+                AxisValueLabel()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    /// Same least-squares math as `priceHistoryLeastSquares`, adapted
+    /// to the `ListingsHistoryPoint` shape. Backend authoritatively
+    /// owns the slope value used for the verdict; this fit is
+    /// display-only for the visual trend line.
+    private func listingsLeastSquares(
+        _ points: [ListingsHistoryPoint]
+    ) -> (slope: Double, intercept: Double, xEpoch: Double)? {
+        let usable: [(x: Double, y: Double)] = points.compactMap { p in
+            guard let d = p.parsedDate else { return nil }
+            return (d.timeIntervalSince1970, Double(p.totalListings))
+        }
+        let distinctXs = Set(usable.map { $0.x })
+        guard distinctXs.count >= 2 else { return nil }
+        let xEpoch = usable.map { $0.x }.min() ?? 0
+        let xs = usable.map { $0.x - xEpoch }
+        let ys = usable.map { $0.y }
+        let n = Double(usable.count)
+        let xMean = xs.reduce(0, +) / n
+        let yMean = ys.reduce(0, +) / n
+        var cov = 0.0
+        var varX = 0.0
+        for i in 0..<usable.count {
+            let dx = xs[i] - xMean
+            cov += dx * (ys[i] - yMean)
+            varX += dx * dx
+        }
+        guard varX > 0 else { return nil }
+        let slope = cov / varX
+        let intercept = yMean - slope * xMean
+        return (slope: slope, intercept: intercept, xEpoch: xEpoch)
+    }
 
     /// 60-day comp-page price-history chart. Suppressed by caller when the
     /// series has fewer than 2 points. Within ≥2-point series, the trend
@@ -3264,6 +3646,8 @@ struct CompIQPricedCardView: View {
     private func recentCompRow(_ comp: CompIQPriceRecentComp, showsTopDivider: Bool) -> some View {
         let isBelowMarket = comp.belowMarket == true
         let tapURL = ebaySoldSearchURL(for: comp.title)
+        let compIdKey = comp.compId?.trimmingCharacters(in: .whitespaces) ?? ""
+        let isFlagged = compIdKey.isEmpty == false && flaggedCompIds.contains(compIdKey)
         let row = HStack(alignment: .center, spacing: 11) {
             compThumbnail(urlString: comp.imageUrl)
 
@@ -3276,6 +3660,9 @@ struct CompIQPricedCardView: View {
                     }
                     if let saleType = comp.saleType, saleType.isEmpty == false {
                         saleTypeChip(saleType)
+                    }
+                    if comp.verifiedByUser == true {
+                        collectorVerifiedBadge()
                     }
                     if isBelowMarket {
                         Text("· below market")
@@ -3318,6 +3705,19 @@ struct CompIQPricedCardView: View {
         .buttonStyle(.plain)
         .disabled(tapURL == nil)
         .accessibilityHint(tapURL == nil ? "" : "Opens eBay sold listings for this title")
+        // 2026-07-15: moderation entry. Skip the menu entirely when
+        // the wire didn't ship a compId (pre-provenance cached rows)
+        // — flagging without a stable id can't reach the backend.
+        .opacity(isFlagged ? 0.5 : 1.0)
+        .contextMenu {
+            if compIdKey.isEmpty == false {
+                Button {
+                    flaggingComp = comp
+                } label: {
+                    Label("Report as Wrong", systemImage: "flag")
+                }
+            }
+        }
     }
 
     /// CF-B (2026-06-08): "Excluded from value" — comps the engine dropped
@@ -3881,17 +4281,28 @@ struct CompIQPricedCardView: View {
             parts.append("Only \(compsCount) recent sale\(compsCount == 1 ? "" : "s") available — treat any price here as approximate.")
         }
 
-        // Predicted direction sentence: where the model thinks it's going.
-        if let predicted = response.predictedPrice, predicted > 0,
-           let current = response.marketTier?.value, current > 0 {
-            let delta = predicted - current
-            if abs(delta) / current >= 0.02 {
-                let priceStr = predicted.currencyStringNoCents
-                if delta > 0 {
-                    parts.append("The model sees near-term upside toward \(priceStr).")
-                } else {
-                    parts.append("The model sees near-term downside toward \(priceStr).")
-                }
+        // CF-STRATEGY-COPY-PANEL-ONLY-WIRE (2026-07-10): predicted
+        // direction MUST source from the same panel entry that drives
+        // the PREDICTED (7d) headline — never `response.predictedPrice`
+        // + `response.marketTier?.value`, which are the pre-trajectory
+        // legacy fields and can flip sign against the headline (Hartman
+        // showed headline "+30%" with strategy copy "downside"). Same
+        // graceful-suppress rule as the headline: when the panel entry
+        // is nil or missing `predictedPriceAt30d`, drop the sentence
+        // rather than falling back to divergent legacy fields.
+        //
+        // Merge note (PR #485, 2026-07-15): price formatting switched to
+        // `currencyStringNoCents` (locale-neutral) to match the rest of
+        // the locale-drift kill pass.
+        if let entry = panelEntryForSelectedGrade(),
+           let predicted = entry.predictedPriceAt30d, predicted > 0,
+           let pct = entry.predictedPricePct, abs(pct) >= 0.02 {
+            let priceStr = predicted.currencyStringNoCents
+            let horizon = entry.predictedHorizonDays ?? 7
+            if pct > 0 {
+                parts.append("The model sees \(horizon)-day upside toward \(priceStr).")
+            } else {
+                parts.append("The model sees \(horizon)-day downside toward \(priceStr).")
             }
         }
 
@@ -4144,9 +4555,15 @@ struct PortfolioCompIQBridgeView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var searchQuery: String {
-        [holding.playerName, holding.year, holding.setName, holding.parallel]
+        var parts = [holding.playerName, holding.year, holding.setName, holding.parallel]
             .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        // Auto holdings need the "Auto" token in the query — otherwise
+        // the dispatcher ranks the Base non-Auto variant first and
+        // `hits.first` routes the user to the wrong SKU.
+        if holding.isAuto {
+            parts.append("Auto")
+        }
+        return parts.joined(separator: " ")
     }
 
     var body: some View {
@@ -4196,16 +4613,55 @@ struct PortfolioCompIQBridgeView: View {
     private func search() async {
         do {
             let hits = try await CompIQSearchService.shared.searchVariants(query: searchQuery)
-            if let first = hits.first {
-                resolvedHit = first
-            } else {
-                resolvedHit = CompIQVariantHit(from: holding)
-            }
+            resolvedHit = pickBestHit(from: hits) ?? CompIQVariantHit(from: holding)
         } catch {
             searchError = APIService.errorMessage(from: error)
             resolvedHit = CompIQVariantHit(from: holding)
         }
         isSearching = false
+    }
+
+    /// Ranks search hits against the holding's parallel + isAuto to
+    /// route to the correct variant. Trusting `holding.cardId`
+    /// blindly is unsafe — a bad auto-match or a wrong catalog pick
+    /// can leave a "Blue Refractor Auto" holding pointing at a "Blue
+    /// X-Fractor" cardId, and short-circuiting on that id would open
+    /// the wrong variant. Text-match on the parallel string plus the
+    /// Auto flag is the tie-breaker.
+    ///
+    /// Priority:
+    /// 1. Hit whose parallel/variant text substring-matches the
+    ///    holding's parallel AND whose isAuto flag matches.
+    /// 2. Hit whose cardId matches the holding's cardId (if any),
+    ///    used only when no parallel match exists.
+    /// 3. First hit whose isAuto flag matches, when there's no
+    ///    parallel signal to lean on.
+    /// 4. First hit — same behavior as before.
+    private func pickBestHit(from hits: [CompIQVariantHit]) -> CompIQVariantHit? {
+        guard hits.isEmpty == false else { return nil }
+        let wantParallel = holding.parallel.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let wantAuto = holding.isAuto
+
+        if wantParallel.isEmpty == false {
+            if let hit = hits.first(where: { hit in
+                let hitParallel = (hit.variant ?? "").lowercased()
+                return hitParallel.contains(wantParallel) && hit.isAuto == wantAuto
+            }) {
+                return hit
+            }
+        }
+
+        if let cardId = holding.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           cardId.isEmpty == false,
+           let hit = hits.first(where: { $0.cardId == cardId }) {
+            return hit
+        }
+
+        if let hit = hits.first(where: { $0.isAuto == wantAuto }) {
+            return hit
+        }
+
+        return hits.first
     }
 }
 

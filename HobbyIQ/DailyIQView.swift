@@ -33,6 +33,11 @@ struct DailyIQView: View {
     /// key. Non-nil = sheet is up. Populated by section-header info
     /// buttons.
     @State private var explainerPopoverKey: String?
+
+    // PR #425 (2026-07-13): watchlist-derived buy candidates — players
+    // on the user's watchlist whose supply/demand verdict is bullish.
+    // Loaded on task; nil / empty response suppresses the section.
+    @State private var buyCandidates: WatchlistBullCandidatesResponse?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -54,6 +59,11 @@ struct DailyIQView: View {
                         systemImage: "wifi.exclamationmark"
                     )
                 }
+
+                // PR #425 (2026-07-13): Buy Candidates — watchlisted
+                // players trending bullish. Self-suppresses when the
+                // response is nil / no candidates.
+                buyCandidatesSection
 
                 // CF-DAILYIQ-TWO-SEGMENTS (2026-07-01): DailyIQ splits
                 // into two selectable segments — "Your Players" (personal
@@ -96,7 +106,8 @@ struct DailyIQView: View {
             async let brief: Void = loadFullBrief()
             async let signals: Void = loadMarketSignals()
             async let mine: Void = loadMyPlayers()
-            _ = await (refresh, brief, signals, mine)
+            async let candidates: Void = loadBuyCandidates()
+            _ = await (refresh, brief, signals, mine, candidates)
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }
@@ -107,10 +118,12 @@ struct DailyIQView: View {
         .refreshable {
             marketSignals = nil
             myPlayers = nil
+            buyCandidates = nil
             async let refresh: Void = refreshDailyIQ(for: selectedDate)
             async let signals: Void = loadMarketSignals()
             async let mine: Void = loadMyPlayers()
-            _ = await (refresh, signals, mine)
+            async let candidates: Void = loadBuyCandidates()
+            _ = await (refresh, signals, mine, candidates)
         }
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(sessionViewModel: sessionViewModel)
@@ -1094,6 +1107,83 @@ private var watchlistCard: some View {
         } catch {
             fullBrief = nil
         }
+    }
+
+    // PR #425 (2026-07-13): pull watchlisted players trending bull.
+    // Silent fall-through on failure keeps the surface hidden rather
+    // than surfacing a broken card.
+    private func loadBuyCandidates() async {
+        do {
+            let response = try await APIService.shared.fetchWatchlistBullCandidates()
+            await MainActor.run { buyCandidates = response }
+        } catch {
+            // Nil keeps the section hidden.
+        }
+    }
+
+    /// Buy Candidates section — watchlisted players whose supply/demand
+    /// verdict is bullish, ranked by listings slope. Tap → open the
+    /// PlayerIQ full-screen for that player (same navigation the
+    /// suggestions row uses). Hidden when the response is nil or
+    /// carries zero candidates.
+    @ViewBuilder
+    private var buyCandidatesSection: some View {
+        if let candidates = buyCandidates?.candidates, candidates.isEmpty == false {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Buy Candidates")
+                        .font(.caption.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                Text("\(candidates.count) watchlisted \(candidates.count == 1 ? "player" : "players") trending bull:")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                VStack(spacing: 8) {
+                    ForEach(candidates.prefix(6)) { candidate in
+                        buyCandidateRow(candidate: candidate)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func buyCandidateRow(candidate: WatchlistBullCandidatesResponse.Candidate) -> some View {
+        let style = VerdictStyle.from(candidate.verdict)
+        let slope = formatSlopePerMonth(candidate.listingsSlopePerMonthPct)
+        return Button {
+            if let name = candidate.playerName, name.isEmpty == false {
+                playerIQName = name
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Text(style.emoji).font(.system(size: 16))
+                Text(candidate.playerName ?? "—")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Spacer(minLength: 6)
+                if let slope {
+                    Text("Listings \(slope)")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(style.color)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): fetches matched-cohort

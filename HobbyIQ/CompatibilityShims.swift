@@ -132,8 +132,8 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .daily: return "DailyIQ"
         case .comp: return "CompIQ"
         case .player: return "PlayerIQ"
-        case .inventory: return "InventoryIQ"
-        case .portfolio: return "PortfolioIQ"
+        case .inventory: return "Inventory"
+        case .portfolio: return "Portfolio"
         case .erp: return "Financials"
         }
     }
@@ -1585,6 +1585,7 @@ extension InventoryCard {
         case purchaseDate, purchasePlatform, quantity, notes
         case imageFrontUrl, imageBackUrl, catalogImageUrl, actionRecommendation, certNumber
         case lowValue, highValue, confidence, method, summary, isAuto
+        case isBlackLabel
         case graderStatus
         case photos, clientId
         case fairMarketValue
@@ -1595,6 +1596,21 @@ extension InventoryCard {
         case cardId
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
         case lastSaleSurface, modelExpectation, modelSignal
+        // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383, 2026-07-12)
+        case source, sourcePurchaseId, parseConfidence, needsReview, enrichedFromEbay
+        case team, sport, manufacturer
+        case ebayImageUrl, ebayShortDescription, ebayItemAspects, ebayCategoryPath, ebaySeller
+        // CF-EBAY-RELIST (backend PR #388)
+        case ebayOfferId, ebayListingId, listingPrice
+        // CF-CARDID-SUGGEST (backend PR #389)
+        case suggestedCardId, suggestionConfidence, suggestionCandidate, suggestionUpdatedAt
+        // CF-PROGRESSIVE-BUCKETS (backend PR #393)
+        case suggestionConfidenceTier, suggestionMatchBreakdown
+        // CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395)
+        case heldExpenses
+        // CF-BACKEND-ID (2026-07-12): raw string id preserved for
+        // write endpoints. Same wire key as `id`, but we ignore this
+        // during encode since it's a client-side mirror.
         // CF-COMP-HOLDING-WIRE-PARITY (audit PR #484, 2026-07-15):
         // holding wire now carries the comp-family aliases + predictedPrice
         // per PR #482 + PR #483. Decoder captures them so PricingPanelView
@@ -1630,6 +1646,7 @@ extension InventoryCard {
         case highValue = "high_value"
         case confidence, method, summary
         case isAuto = "is_auto"
+        case isBlackLabel = "is_black_label"
         case graderStatus = "grader_status"
         case photos
         case clientId = "client_id"
@@ -1827,6 +1844,10 @@ extension InventoryCard {
             ?? (try? b.decode(String.self, forKey: .freshnessStatus))
         self.isAuto = (try? c.decode(Bool.self, forKey: .isAuto))
             ?? (try? s.decode(Bool.self, forKey: .isAuto)) ?? false
+        // P0.3 (2026-07-16, backend PR #496): BGS 10 Black Label / Pristine.
+        // Optional wire field — absence means "not black label" (nil).
+        self.isBlackLabel = (try? c.decodeIfPresent(Bool.self, forKey: .isBlackLabel))
+            ?? (try? s.decodeIfPresent(Bool.self, forKey: .isBlackLabel))
         // CF-IOS-GRADER-STATUS-UI (2026-06-28): backend stores the raw enum
         // value (e.g. "at_psa"); missing/null/unknown values fall back to
         // .available so legacy holdings pre-PR-#166 render cleanly.
@@ -1871,6 +1892,43 @@ extension InventoryCard {
         self.modelExpectation = try? c.decodeIfPresent(LiveMarketModelExpectation.self, forKey: .modelExpectation)
         self.modelSignal = try? c.decodeIfPresent(LiveMarketModelSignal.self, forKey: .modelSignal)
 
+        // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383, 2026-07-12): all
+        // additive/optional; defensive `try?` so any absent/null entry
+        // collapses to nil without breaking the row.
+        self.source = try? c.decodeIfPresent(String.self, forKey: .source)
+        self.sourcePurchaseId = try? c.decodeIfPresent(String.self, forKey: .sourcePurchaseId)
+        self.parseConfidence = try? c.decodeIfPresent(Double.self, forKey: .parseConfidence)
+        self.needsReview = try? c.decodeIfPresent(Bool.self, forKey: .needsReview)
+        self.enrichedFromEbay = try? c.decodeIfPresent(Bool.self, forKey: .enrichedFromEbay)
+        self.team = try? c.decodeIfPresent(String.self, forKey: .team)
+        self.sport = try? c.decodeIfPresent(String.self, forKey: .sport)
+        self.manufacturer = try? c.decodeIfPresent(String.self, forKey: .manufacturer)
+        self.ebayImageUrl = try? c.decodeIfPresent(String.self, forKey: .ebayImageUrl)
+        self.ebayShortDescription = try? c.decodeIfPresent(String.self, forKey: .ebayShortDescription)
+        self.ebayItemAspects = try? c.decodeIfPresent([String: String].self, forKey: .ebayItemAspects)
+        self.ebayCategoryPath = try? c.decodeIfPresent(String.self, forKey: .ebayCategoryPath)
+        self.ebaySeller = try? c.decodeIfPresent(EbaySeller.self, forKey: .ebaySeller)
+        // CF-EBAY-RELIST (backend PR #388): listing state stored on the
+        // holding after publish so the row can render a "Listed on eBay"
+        // badge without a per-row status roundtrip.
+        self.ebayOfferId = try? c.decodeIfPresent(String.self, forKey: .ebayOfferId)
+        self.ebayListingId = try? c.decodeIfPresent(String.self, forKey: .ebayListingId)
+        self.listingPrice = try? c.decodeIfPresent(Double.self, forKey: .listingPrice)
+        // CF-CARDID-SUGGEST (backend PR #389).
+        self.suggestedCardId = try? c.decodeIfPresent(String.self, forKey: .suggestedCardId)
+        self.suggestionConfidence = try? c.decodeIfPresent(Double.self, forKey: .suggestionConfidence)
+        self.suggestionCandidate = try? c.decodeIfPresent(SuggestionCandidate.self, forKey: .suggestionCandidate)
+        self.suggestionUpdatedAt = try? c.decodeIfPresent(String.self, forKey: .suggestionUpdatedAt)
+        // CF-PROGRESSIVE-BUCKETS (backend PR #393).
+        self.suggestionConfidenceTier = try? c.decodeIfPresent(SuggestionConfidenceTier.self, forKey: .suggestionConfidenceTier)
+        self.suggestionMatchBreakdown = try? c.decodeIfPresent(SuggestionMatchBreakdown.self, forKey: .suggestionMatchBreakdown)
+        // CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395).
+        self.heldExpenses = try? c.decodeIfPresent([HoldingHeldExpense].self, forKey: .heldExpenses)
+        // CF-BACKEND-ID (2026-07-12): preserve the raw wire id string
+        // so mutation endpoints (/confirm, /reject) hit the right
+        // holding. The struct's `id: UUID` is deterministic-derived
+        // and NOT what the backend recognizes.
+        self.backendId = rawIdString
         // CF-COMP-HOLDING-WIRE-PARITY (PR #484, 2026-07-15): decode the
         // holding wire's parity fields. Both camelCase and snake_case
         // paths tried; defensive try? so absent/malformed wires just
@@ -1904,16 +1962,64 @@ extension InventoryCard {
         try container.encode(setName, forKey: .setName)
         try container.encode(parallel, forKey: .parallel)
         try container.encode(grade, forKey: .grade)
-        try container.encodeIfPresent(gradeCompany, forKey: .gradeCompany)
-        try container.encodeIfPresent(gradeValue, forKey: .gradeValue)
-        try container.encodeIfPresent(purchaseDate, forKey: .purchaseDate)
-        try container.encodeIfPresent(purchasePlatform, forKey: .purchasePlatform)
-        try container.encodeIfPresent(quantity, forKey: .quantity)
-        try container.encodeIfPresent(notes, forKey: .notes)
-        try container.encodeIfPresent(imageFrontUrl, forKey: .imageFrontUrl)
-        try container.encodeIfPresent(imageBackUrl, forKey: .imageBackUrl)
+        // Graded → Raw conversion needs backend to CLEAR
+        // gradeCompany/gradeValue. `encodeIfPresent` would omit the
+        // keys, which the PATCH endpoint reads as "no change" and
+        // leaves the prior PSA 10 in place. Emit explicit `null` so
+        // the clear actually lands.
+        if let gradeCompany {
+            try container.encode(gradeCompany, forKey: .gradeCompany)
+        } else {
+            try container.encodeNil(forKey: .gradeCompany)
+        }
+        if let gradeValue {
+            try container.encode(gradeValue, forKey: .gradeValue)
+        } else {
+            try container.encodeNil(forKey: .gradeValue)
+        }
+        // User-editable optionals on the Edit form. Emit explicit
+        // `null` when nil (same rationale as gradeCompany/gradeValue
+        // above): the PATCH endpoint treats an omitted key as "no
+        // change", so clearing a field on the form has to send a real
+        // null for the backend to actually drop the previous value.
+        if let purchaseDate {
+            try container.encode(purchaseDate, forKey: .purchaseDate)
+        } else {
+            try container.encodeNil(forKey: .purchaseDate)
+        }
+        if let purchasePlatform {
+            try container.encode(purchasePlatform, forKey: .purchasePlatform)
+        } else {
+            try container.encodeNil(forKey: .purchasePlatform)
+        }
+        if let quantity {
+            try container.encode(quantity, forKey: .quantity)
+        } else {
+            try container.encodeNil(forKey: .quantity)
+        }
+        if let notes {
+            try container.encode(notes, forKey: .notes)
+        } else {
+            try container.encodeNil(forKey: .notes)
+        }
+        if let imageFrontUrl {
+            try container.encode(imageFrontUrl, forKey: .imageFrontUrl)
+        } else {
+            try container.encodeNil(forKey: .imageFrontUrl)
+        }
+        if let imageBackUrl {
+            try container.encode(imageBackUrl, forKey: .imageBackUrl)
+        } else {
+            try container.encodeNil(forKey: .imageBackUrl)
+        }
         try container.encodeIfPresent(catalogImageUrl, forKey: .catalogImageUrl)
-        try container.encodeIfPresent(certNumber, forKey: .certNumber)
+        // certNumber follows the same clear-on-Raw semantics as the
+        // grade fields above.
+        if let certNumber {
+            try container.encode(certNumber, forKey: .certNumber)
+        } else {
+            try container.encodeNil(forKey: .certNumber)
+        }
         // actionRecommendation is Decodable-only (backend → iOS one-way).
         // Skip encoding — iOS never writes this field back.
         try container.encodeIfPresent(lowValue, forKey: .lowValue)
@@ -1922,6 +2028,7 @@ extension InventoryCard {
         try container.encodeIfPresent(method, forKey: .method)
         try container.encodeIfPresent(summary, forKey: .summary)
         try container.encode(isAuto, forKey: .isAuto)
+        try container.encodeIfPresent(isBlackLabel, forKey: .isBlackLabel)
         try container.encode(graderStatus.rawValue, forKey: .graderStatus)
         try container.encodeIfPresent(photos, forKey: .photos)
         try container.encodeIfPresent(clientId, forKey: .clientId)
@@ -1937,6 +2044,42 @@ extension InventoryCard {
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
         try container.encodeIfPresent(modelSignal, forKey: .modelSignal)
+        // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383, 2026-07-12).
+        try container.encodeIfPresent(source, forKey: .source)
+        try container.encodeIfPresent(sourcePurchaseId, forKey: .sourcePurchaseId)
+        try container.encodeIfPresent(parseConfidence, forKey: .parseConfidence)
+        try container.encodeIfPresent(needsReview, forKey: .needsReview)
+        try container.encodeIfPresent(enrichedFromEbay, forKey: .enrichedFromEbay)
+        if let team {
+            try container.encode(team, forKey: .team)
+        } else {
+            try container.encodeNil(forKey: .team)
+        }
+        if let sport {
+            try container.encode(sport, forKey: .sport)
+        } else {
+            try container.encodeNil(forKey: .sport)
+        }
+        if let manufacturer {
+            try container.encode(manufacturer, forKey: .manufacturer)
+        } else {
+            try container.encodeNil(forKey: .manufacturer)
+        }
+        try container.encodeIfPresent(ebayImageUrl, forKey: .ebayImageUrl)
+        try container.encodeIfPresent(ebayShortDescription, forKey: .ebayShortDescription)
+        try container.encodeIfPresent(ebayItemAspects, forKey: .ebayItemAspects)
+        try container.encodeIfPresent(ebayCategoryPath, forKey: .ebayCategoryPath)
+        try container.encodeIfPresent(ebaySeller, forKey: .ebaySeller)
+        try container.encodeIfPresent(ebayOfferId, forKey: .ebayOfferId)
+        try container.encodeIfPresent(ebayListingId, forKey: .ebayListingId)
+        try container.encodeIfPresent(listingPrice, forKey: .listingPrice)
+        try container.encodeIfPresent(suggestedCardId, forKey: .suggestedCardId)
+        try container.encodeIfPresent(suggestionConfidence, forKey: .suggestionConfidence)
+        try container.encodeIfPresent(suggestionCandidate, forKey: .suggestionCandidate)
+        try container.encodeIfPresent(suggestionUpdatedAt, forKey: .suggestionUpdatedAt)
+        try container.encodeIfPresent(suggestionConfidenceTier, forKey: .suggestionConfidenceTier)
+        try container.encodeIfPresent(suggestionMatchBreakdown, forKey: .suggestionMatchBreakdown)
+        try container.encodeIfPresent(heldExpenses, forKey: .heldExpenses)
         // CF-COMP-HOLDING-WIRE-PARITY (PR #484): encode parity fields.
         // Round-trips through NSCoding-backed persistence (iOS reads and
         // writes InventoryCard from local state as well as the wire).
@@ -2147,6 +2290,13 @@ final class AddPortfolioCardViewModel: ObservableObject {
     }
 
     private let editingCardID: UUID?
+    /// Full snapshot of the holding at the moment the Edit sheet
+    /// opened, so `save()` can build the PATCH request by mutating
+    /// this base — every backend-owned field the form doesn't touch
+    /// (fmv, actionRecommendation, source, ebayImageUrl, heldExpenses,
+    /// catalogImageUrl, backendId, …) survives round-trip instead of
+    /// being nil'd out in the local cache after a save.
+    private let editingBaseCard: InventoryCard?
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "portfolio-add")
 
     @Published var playerName = ""
@@ -2172,6 +2322,14 @@ final class AddPortfolioCardViewModel: ObservableObject {
     @Published var purchaseDate = Date()
     @Published var notes = ""
     @Published var isAutoCard = false
+    /// P0.3 (2026-07-16): user-controlled Black Label flag surfaced
+    /// as a toggle in the Condition card. Only relevant when grader
+    /// == "BGS" && grade == "10"; otherwise ignored on save.
+    @Published var isBlackLabelCard = false
+    @Published var certNumber = ""
+    @Published var team = ""
+    @Published var sport = ""
+    @Published var manufacturer = ""
     @Published var frontPhotoUrl: String?
     @Published var backPhotoUrl: String?
     @Published var photoMessage: String?
@@ -2179,6 +2337,10 @@ final class AddPortfolioCardViewModel: ObservableObject {
     /// seeded from an identify detection or a cert lookup. Persisted on save
     /// so the new holding can be priced without a re-match round-trip.
     @Published var cardId: String?
+    /// Human-readable label of the picked catalog card so the Edit / Add
+    /// flow can render a green "Matched to catalog" confirmation banner
+    /// after `applyCatalogPick` fires.
+    @Published var catalogMatchLabel: String?
     @Published var isUploadingFrontPhoto = false
     @Published var isUploadingBackPhoto = false
     @Published var isSaving = false
@@ -2188,6 +2350,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
     let mode: Mode
 
     init(existingCard: InventoryCard? = nil) {
+        editingBaseCard = existingCard
         if let existingCard {
             mode = .edit
             editingCardID = existingCard.id
@@ -2233,7 +2396,22 @@ final class AddPortfolioCardViewModel: ObservableObject {
             frontPhotoUrl = existingCard.imageFrontUrl
             backPhotoUrl = existingCard.imageBackUrl
             isAutoCard = existingCard.isAuto
+            isBlackLabelCard = existingCard.isBlackLabel == true
             cardId = existingCard.cardId
+            certNumber = existingCard.certNumber ?? ""
+            team = existingCard.team ?? ""
+            sport = existingCard.sport ?? ""
+            manufacturer = existingCard.manufacturer ?? ""
+            if let existingCardId = existingCard.cardId,
+               existingCardId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+                let composed = [existingCard.year, existingCard.setName, existingCard.parallel, existingCard.playerName]
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { $0.isEmpty == false }
+                    .joined(separator: " ")
+                catalogMatchLabel = composed.isEmpty
+                    ? existingCard.cardName
+                    : composed
+            }
             if let purchaseDateString = existingCard.purchaseDate, let parsed = Self.purchaseDateFormatter.date(from: purchaseDateString) {
                 includePurchaseDate = true
                 purchaseDate = parsed
@@ -2382,7 +2560,15 @@ final class AddPortfolioCardViewModel: ObservableObject {
         }
 
         let cost = decimal(from: purchasePrice) ?? 0
-        let resolvedCurrentValue = decimal(from: currentValue) ?? cost
+        // Current value is backend-owned: prefer the fresh estimate FMV
+        // returned by the pricing engine, then fall back to any value
+        // seeded from the existing holding (edit flow), and finally to
+        // cost when we have no market signal at all. The old free-text
+        // "Current Value" field was removed — users were typing profit
+        // amounts into it, causing the P/L chip to invert.
+        let resolvedCurrentValue = estimateResult?.fairMarketValue
+            ?? decimal(from: currentValue)
+            ?? cost
         let trimmedGradeCompany = gradingCompany.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedGradeCompany: String? = (isGraded && !trimmedGradeCompany.isEmpty)
             ? trimmedGradeCompany
@@ -2390,20 +2576,65 @@ final class AddPortfolioCardViewModel: ObservableObject {
         let resolvedGradeValue: Double? = isGraded
             ? Double(gradeValue.trimmingCharacters(in: .whitespacesAndNewlines))
             : nil
+        // Flipping "Graded → Raw" must ALSO clear the legacy `grade`
+        // string; `gradeChipText` reads from it directly, so leaving
+        // the numeric ("10") behind renders the row as "10" even
+        // though gradeCompany/gradeValue got nulled. Same for
+        // certNumber — a raw holding can't own a cert.
+        let resolvedGradeLabel: String = isGraded ? grade : ""
+        // P0.3 (2026-07-16, backend PR #496): detect BGS Black Label
+        // from the free-text grade label. Requires BGS grader + grade
+        // value 10 + a Black Label / Pristine / BL suffix in the
+        // composed label. Regular BGS 10 → nil. iOS does NOT set this
+        // for PSA 10 Pristine — Black Label is a BGS-only tier per
+        // spec. Detection is intentionally forgiving: it looks at
+        // both the composed `grade` label the user typed AND the
+        // structured (company/value) pair, so the flag lands whether
+        // the field was populated by cert lookup, catalog match, or
+        // manual entry.
+        // Toggle wins when the user explicitly flipped it on for a
+        // BGS 10. Otherwise fall through to label-text detection so
+        // seeded holdings (from PSA cert lookup / catalog match /
+        // paste-in grade strings) still pick up "Black Label" /
+        // "Pristine" / "BL" markers automatically.
+        let toggleAsserted = isBlackLabelCard
+            && (resolvedGradeCompany?.uppercased() == "BGS")
+            && (resolvedGradeValue == 10)
+        let resolvedIsBlackLabel: Bool? = toggleAsserted
+            ? true
+            : Self.detectBlackLabel(
+                gradeCompany: resolvedGradeCompany,
+                gradeValue: resolvedGradeValue,
+                gradeLabel: resolvedGradeLabel
+            )
+        let trimmedCertNumber = certNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCertNumber: String? = (isGraded && !trimmedCertNumber.isEmpty)
+            ? trimmedCertNumber
+            : nil
         let trimmedCardsightId = cardId?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let resolvedCardsightId: String? = trimmedCardsightId.isEmpty ? nil : trimmedCardsightId
+        // Edit-mode saves must preserve every backend-owned field
+        // that the form doesn't render — fmv, actionRecommendation,
+        // catalogImageUrl, ebay*, suggestion*, heldExpenses,
+        // backendId, etc. Without this the local cache resets those
+        // to nil after each save, so the row/detail lose their
+        // MARKET VALUE, catalog image, action badge, listing status,
+        // and held-expense list until the next full backend refresh.
+        // In add mode `base` is nil and everything falls through to
+        // the standard defaults.
+        let base = editingBaseCard
         let request = InventoryCard(
             id: editingCardID ?? UUID(),
             playerName: playerName.trimmingCharacters(in: .whitespacesAndNewlines),
             cardName: cardTitle.trimmingCharacters(in: .whitespacesAndNewlines),
             cost: cost,
             currentValue: resolvedCurrentValue,
-            status: "active",
+            status: base?.status ?? "active",
             year: year,
             setName: setName,
             parallel: parallel,
-            grade: grade,
+            grade: resolvedGradeLabel,
             gradeCompany: resolvedGradeCompany,
             gradeValue: resolvedGradeValue,
             purchaseDate: includePurchaseDate ? purchaseDate.formatted(date: .abbreviated, time: .omitted) : nil,
@@ -2412,13 +2643,61 @@ final class AddPortfolioCardViewModel: ObservableObject {
             notes: notes.isEmpty ? nil : notes,
             imageFrontUrl: frontPhotoUrl,
             imageBackUrl: backPhotoUrl,
-            lowValue: estimateResult?.quickSaleValue,
-            highValue: estimateResult?.premiumValue,
-            confidence: estimateResult?.confidenceScore,
-            method: estimateResult?.source,
-            summary: estimateResult?.explanation?.joined(separator: " "),
+            catalogImageUrl: base?.catalogImageUrl,
+            actionRecommendation: base?.actionRecommendation,
+            certNumber: resolvedCertNumber,
+            lowValue: estimateResult?.quickSaleValue ?? base?.lowValue,
+            highValue: estimateResult?.premiumValue ?? base?.highValue,
+            confidence: estimateResult?.confidenceScore ?? base?.confidence,
+            method: estimateResult?.source ?? base?.method,
+            summary: estimateResult?.explanation?.joined(separator: " ") ?? base?.summary,
             isAuto: isAutoCard,
-            cardId: resolvedCardsightId
+            isBlackLabel: resolvedIsBlackLabel,
+            graderStatus: base?.graderStatus ?? .available,
+            photos: base?.photos,
+            clientId: base?.clientId,
+            fairMarketValue: base?.fairMarketValue,
+            valuationStatus: base?.valuationStatus,
+            estimatedValue: base?.estimatedValue,
+            estimateLow: base?.estimateLow,
+            estimateHigh: base?.estimateHigh,
+            estimateBasis: base?.estimateBasis,
+            estimateConfidence: base?.estimateConfidence,
+            nearestGradedAnchor: base?.nearestGradedAnchor,
+            cardId: resolvedCardsightId,
+            lastSaleSurface: base?.lastSaleSurface,
+            modelExpectation: base?.modelExpectation,
+            modelSignal: base?.modelSignal,
+            source: base?.source,
+            sourcePurchaseId: base?.sourcePurchaseId,
+            parseConfidence: base?.parseConfidence,
+            needsReview: base?.needsReview,
+            enrichedFromEbay: base?.enrichedFromEbay,
+            team: team.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : team.trimmingCharacters(in: .whitespacesAndNewlines),
+            sport: sport.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : sport.trimmingCharacters(in: .whitespacesAndNewlines),
+            manufacturer: manufacturer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : manufacturer.trimmingCharacters(in: .whitespacesAndNewlines),
+            ebayImageUrl: base?.ebayImageUrl,
+            ebayShortDescription: base?.ebayShortDescription,
+            ebayItemAspects: base?.ebayItemAspects,
+            ebayCategoryPath: base?.ebayCategoryPath,
+            ebaySeller: base?.ebaySeller,
+            ebayOfferId: base?.ebayOfferId,
+            ebayListingId: base?.ebayListingId,
+            listingPrice: base?.listingPrice,
+            suggestedCardId: base?.suggestedCardId,
+            suggestionConfidence: base?.suggestionConfidence,
+            suggestionCandidate: base?.suggestionCandidate,
+            suggestionUpdatedAt: base?.suggestionUpdatedAt,
+            suggestionConfidenceTier: base?.suggestionConfidenceTier,
+            suggestionMatchBreakdown: base?.suggestionMatchBreakdown,
+            heldExpenses: base?.heldExpenses,
+            backendId: base?.backendId
         )
 
         do {
@@ -2507,6 +2786,71 @@ final class AddPortfolioCardViewModel: ObservableObject {
         // alone so the user can flip it in the detail sheet if needed.
     }
 
+    /// Synthesizes an InventoryCard from the current viewmodel state so
+    /// `CatalogMatchSearchSheet` can seed its query with everything the
+    /// user has typed so far (year / set / parallel / player). The
+    /// synthesized card is throwaway — nothing else in the app reads it.
+    var catalogMatchSeed: InventoryCard {
+        InventoryCard(
+            id: UUID(),
+            playerName: playerName.trimmingCharacters(in: .whitespacesAndNewlines),
+            cardName: cardTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+            cost: 0,
+            currentValue: 0,
+            status: "active",
+            year: year.trimmingCharacters(in: .whitespacesAndNewlines),
+            setName: setName.trimmingCharacters(in: .whitespacesAndNewlines),
+            parallel: parallel.trimmingCharacters(in: .whitespacesAndNewlines),
+            grade: "",
+            isAuto: isAutoCard,
+            cardId: cardId
+        )
+    }
+
+    /// Populates the Edit / Add card form with the canonical values from
+    /// a Cardsight catalog pick so the saved holding lands in the
+    /// backend with a matched `cardId` + clean player / year / set /
+    /// parallel / cardNumber. Mirrors the pattern used in the pending
+    /// review sheet — every field the pick populated overwrites what
+    /// the user typed; blank fields on the pick fall through.
+    func applyCatalogPick(_ hit: CompIQVariantHit) {
+        cardId = hit.cardId
+        if let player = hit.player, player.isEmpty == false {
+            playerName = player
+        }
+        if let y = hit.year {
+            year = String(y)
+        }
+        if let set = hit.set, set.isEmpty == false {
+            setName = set
+        }
+        if let variant = hit.variant, variant.isEmpty == false, variant.lowercased() != "base" {
+            parallel = variant
+        }
+        if let number = hit.number, number.isEmpty == false {
+            serialNumber = number
+        }
+        isAutoCard = hit.isAuto
+
+        // Recompose the description + title from the canonical tokens so
+        // the top-of-form summary reflects the pick.
+        let composedTitle = [year, setName, parallel, playerName]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+            .joined(separator: " ")
+        if composedTitle.isEmpty == false {
+            searchText = composedTitle
+            cardTitle = [year, setName, parallel]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { $0.isEmpty == false }
+                .joined(separator: " ")
+        }
+
+        catalogMatchLabel = hit.title
+            ?? hit.displayLabel
+            ?? composedTitle
+    }
+
     private func portfolioUserFacingMessage(for error: Error, fallback: String) -> String {
         if let apiError = error as? APIServiceError, let description = apiError.errorDescription {
             return description
@@ -2525,6 +2869,31 @@ final class AddPortfolioCardViewModel: ObservableObject {
 
     /// Parse the company prefix out of a composed grade label like "PSA 10"
     /// / "BGS 9.5". Returns "" when no recognised company token leads.
+    /// P0.3 (2026-07-16): detect BGS 10 Black Label / Pristine from
+    /// the composed grade label. Returns true when all three hold:
+    /// - Grader is BGS (case-insensitive; matches "BGS" / "Beckett")
+    /// - Numeric grade is 10
+    /// - Label carries a Black Label / BL / Pristine token
+    /// Regular BGS 10 → nil (not false — additive-only wire).
+    /// PSA 10 Pristine → nil (Black Label is BGS-only per spec).
+    private static func detectBlackLabel(
+        gradeCompany: String?,
+        gradeValue: Double?,
+        gradeLabel: String
+    ) -> Bool? {
+        guard let company = gradeCompany?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+              company.isEmpty == false else { return nil }
+        guard company == "BGS" || company == "BECKETT" else { return nil }
+        guard let value = gradeValue, value == 10 else { return nil }
+
+        let normalized = gradeLabel.uppercased()
+        let markers = ["BLACK LABEL", " BL", "-BL", "PRISTINE"]
+        for marker in markers {
+            if normalized.contains(marker) { return true }
+        }
+        return nil
+    }
+
     private static func parseGradeCompany(from label: String) -> String {
         let token = label.trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespaces)

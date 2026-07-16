@@ -84,6 +84,16 @@ struct PortfolioPricePoint: Codable, Identifiable {
 struct RefreshHoldingResponse: Codable {
     let message: String?
     let id: String?
+    /// CF-UNIVERSAL-MUTATION-ENVELOPE (backend PR #395): backend now
+    /// returns the freshly-repriced holding inline — currentValue,
+    /// fairMarketValue, predictedPrice, trend analysis all live here
+    /// so callers can update local state without a follow-up GET.
+    let holding: InventoryCard?
+    let entry: HoldingMutationEntry?
+
+    var updatedHolding: InventoryCard? {
+        entry?.holding ?? holding
+    }
 }
 
 // MARK: - Batch Reprice

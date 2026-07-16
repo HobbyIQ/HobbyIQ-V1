@@ -12,6 +12,19 @@ extension Notification.Name {
     /// and (a) switches to the Inventory tab, (b) refreshes the portfolio
     /// view model so the new holding appears with its photo thumbnail.
     static let inventoryHoldingSaved = Notification.Name("hobbyiq.inventory.holdingSaved")
+
+    /// Posted when a portfolio holding is successfully marked sold (backend
+    /// confirmed). The Financials tab (ERPHubView) is kept mounted across
+    /// tab switches, so its `.task { loadAll() }` only fires once — this
+    /// notification lets it re-fetch P&L/timeseries after a sale so the
+    /// user isn't stuck on stale numbers until they pull-to-refresh.
+    static let portfolioSaleRecorded = Notification.Name("hobbyiq.portfolio.saleRecorded")
+
+    /// Posted when a purchase is imported (eBay sync) or manually added.
+    /// Same reason as `.portfolioSaleRecorded`: mounted-tab views need a
+    /// nudge to re-fetch cogs / cashFlow / recent purchases without
+    /// waiting for pull-to-refresh.
+    static let portfolioPurchaseRecorded = Notification.Name("hobbyiq.portfolio.purchaseRecorded")
 }
 
 struct CardIdentifyView: View {

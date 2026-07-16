@@ -83,6 +83,45 @@ final class ReconcileViewModel: ObservableObject {
         }
     }
 
+    /// CF-RECONCILE-FINALIZE (backend PR #390): unconditional finalize
+    /// for eBay entries stuck without fee data. Backend flips both
+    /// axes to `finalized`, zero-fills only null granular fees (never
+    /// clobbers real values), and stamps `reconciledVia:
+    /// manual_user_finalize`. iOS re-applies via the shared entry
+    /// path; a finalized entry has `needsReconciliation: false`, so
+    /// the row falls out of the queue automatically.
+    @discardableResult
+    func finalize(entryId: String, reason: String, netPayout: Double?) async -> LedgerEntryForErp? {
+        errorMessage = nil
+        infoMessage = nil
+        do {
+            let response = try await api.finalizeReconcileEntry(
+                entryId: entryId,
+                reason: reason,
+                netPayout: netPayout
+            )
+            guard let entry = response.entry else {
+                errorMessage = response.error ?? "Couldn't finalize. Try again."
+                return nil
+            }
+            applyUpdatedEntry(entry)
+            return entry
+        } catch let APIServiceError.httpError(statusCode, body) where statusCode == 409 {
+            // ALREADY_FINALIZED — treat as info + refresh to server truth.
+            infoMessage = parseServerErrorMessage(body) ?? "This entry is already finalized."
+            await load()
+            return nil
+        } catch let APIServiceError.httpError(statusCode, body) where statusCode == 400 {
+            // NOT_EBAY_ENTRY — surface the reason (manual entries can't
+            // use this finalize path).
+            errorMessage = parseServerErrorMessage(body) ?? "This entry can't be closed without eBay fees."
+            return nil
+        } catch {
+            errorMessage = APIService.errorMessage(from: error)
+            return nil
+        }
+    }
+
     /// Submit a manual fee override for an unreconciled eBay entry. Same
     /// response shape as save-costs (server-enriched entry). Two-axis
     /// finalize runs server-side; this VM just re-applies the response.

@@ -38,7 +38,7 @@ enum FinancialsPeriod: String, CaseIterable, Identifiable {
 }
 
 enum FinancialsDestination: String, Identifiable {
-    case reconcile, pnl, expenses, trades, tax
+    case reconcile, pnl, expenses, trades, tax, sales, purchases, inventoryAnalytics
     var id: String { rawValue }
 }
 
@@ -46,9 +46,17 @@ struct ERPHubView: View {
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @State private var showUpgradePaywall = false
     @State private var selectedPeriod: FinancialsPeriod = .thisMonth
+    @State private var selectedSide: SideBreakdown = .buy
     @State private var pnl: ERPPnlResponse?
     @State private var timeseries: ERPTimeseriesResponse?
     @State private var unreconciledCount: Int = 0
+    @State private var recentSales: [PortfolioLedgerEntry] = []
+
+    private enum SideBreakdown: String, CaseIterable, Identifiable {
+        case buy = "Buy side"
+        case sell = "Sell side"
+        var id: String { rawValue }
+    }
     @State private var isLoading = false
     @State private var loadFailed = false
     @State private var isSyncing = false
@@ -58,10 +66,12 @@ struct ERPHubView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                heroCard
                 periodSelector
-                moneyHero
-                reconcileAttentionCard
-                tilesGrid
+                reconcileFlatBanner
+                cogsMetricsSection
+                actionPillsGrid
+                recentSalesSection
                 quietSyncAction
                 if let syncToast {
                     Text(syncToast)
@@ -75,11 +85,22 @@ struct ERPHubView: View {
         }
         .background { HobbyIQBackground() }
         .refreshable { await loadAll() }
-        .navigationTitle("Financials")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .themedNavigationSurface()
         .task { await loadAll() }
         .onChange(of: selectedPeriod) { _, _ in Task { await loadAll() } }
+        .onReceive(NotificationCenter.default.publisher(for: .portfolioSaleRecorded)) { _ in
+            #if DEBUG
+            print("[Financials] received .portfolioSaleRecorded → reloading hub")
+            #endif
+            Task { await loadAll() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .portfolioPurchaseRecorded)) { _ in
+            #if DEBUG
+            print("[Financials] received .portfolioPurchaseRecorded → reloading hub")
+            #endif
+            Task { await loadAll() }
+        }
         .lockedOverlay(
             feature: GatedFeature.erpReconciliation,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -126,116 +147,87 @@ struct ERPHubView: View {
         )
     }
 
-    // MARK: Money / trend hero
-
-    private var moneyHero: some View {
-        let totals = pnl?.totals
-        let net = totals?.netPnL ?? totals?.realizedPnL
-        let hasSales = (totals?.count ?? 0) > 0 || trendPoints.contains(where: { ($0.pnl ?? 0) != 0 })
-        let netColor: Color = {
-            guard let value = net else { return HobbyIQTheme.Colors.mutedText }
-            if value == 0 { return HobbyIQTheme.Colors.mutedText }
-            return value > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-        }()
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Net profit")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .tracking(1.1)
-                    Text(hasSales ? (net ?? 0).portfolioSignedCurrencyText : "—")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(netColor)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Text(selectedPeriod.title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                    .clipShape(Capsule(style: .continuous))
-            }
-
-            heroTrendArea(hasSales: hasSales)
-
-            if hasSales {
-                heroBreakdownRow
-            } else {
-                Text("Record your first sale to start tracking P&L.")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(HobbyIQTheme.Spacing.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .hiqCardStyle()
-    }
+    // MARK: Hero card (Phase 1 + Phase 2)
 
     private var trendPoints: [ERPTimeseriesPoint] { timeseries?.points ?? [] }
 
+    private var heroCard: some View {
+        let net = pnl?.totals?.realizedPnL ?? 0
+        return HIQHeroCard(
+            title: "Financials",
+            statusDate: Self.shortDate.string(from: Date()),
+            heroValue: net.portfolioCurrencyText,
+            delta: { heroDeltaLine },
+            sparkline: { heroSparkline },
+            meta: { heroMetadata }
+        )
+    }
+
+    private static let shortDate: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+
     @ViewBuilder
-    private func heroTrendArea(hasSales: Bool) -> some View {
-        let nonZero = trendPoints.filter { ($0.pnl ?? 0) != 0 }
-        if hasSales && nonZero.count >= 2 {
-            ERPHubTrendChart(points: trendPoints)
-                .frame(height: 96)
-                .accessibilityLabel("Net profit trend for \(selectedPeriod.title)")
-        } else {
-            VStack(spacing: 6) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
-                Text(hasSales ? "Building trend history" : "No sales yet")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+    private var heroDeltaLine: some View {
+        if let (current, prior) = currentAndPriorPoints(),
+           let cur = current.pnl {
+            let priorNet = prior.pnl ?? 0
+            let deltaValue = cur - priorNet
+            let pct: Double? = abs(priorNet) < 0.01 ? nil : (deltaValue / abs(priorNet)) * 100
+            let isPositive = deltaValue >= 0
+            HStack(spacing: 4) {
+                Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+                    .font(.caption2.weight(.bold))
+                Text(deltaValue.portfolioSignedCurrencyText + " vs last month")
+                    .font(.subheadline.weight(.semibold))
+                if let pct {
+                    Text("·")
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(pct.portfolioSignedPercentText)
+                        .font(.subheadline.weight(.semibold))
+                }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 96)
-            .background(Color.white.opacity(0.03))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .foregroundStyle(isPositive ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
         }
     }
 
-    private var heroBreakdownRow: some View {
+    /// Returns (current, prior) from the timeseries points, sorted by
+    /// period ascending. Nil when we have fewer than 2 points — the
+    /// delta line is omitted in that case per the phase 2 spec.
+    private func currentAndPriorPoints() -> (ERPTimeseriesPoint, ERPTimeseriesPoint)? {
+        let sorted = trendPoints.sorted { $0.period < $1.period }
+        guard sorted.count >= 2 else { return nil }
+        return (sorted[sorted.count - 1], sorted[sorted.count - 2])
+    }
+
+    @ViewBuilder
+    private var heroSparkline: some View {
+        if trendPoints.count >= 2 {
+            ERPHubTrendChart(points: trendPoints)
+                .frame(height: 60)
+                .accessibilityLabel("Net profit trend for \(selectedPeriod.title)")
+        }
+    }
+
+    private var heroMetadata: some View {
         let totals = pnl?.totals
-        return HStack(spacing: 0) {
-            heroBreakdownCell("Sold", value: totals?.grossProceeds)
-            divider
-            heroBreakdownCell("Fees", value: totals?.totalFees)
-            divider
-            heroBreakdownCell("Expenses", value: totals?.totalExpenses)
-        }
+        let count = totals?.count ?? 0
+        let gross = (totals?.grossProceeds ?? 0).portfolioCurrencyText
+        let fees = (totals?.totalFees ?? 0).portfolioCurrencyText
+        let expenses = (totals?.totalExpenses ?? 0).portfolioCurrencyText
+        return Text("\(count) sale\(count == 1 ? "" : "s") · \(gross) sold · \(fees) fees · \(expenses) expenses")
+            .font(.caption)
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
     }
 
-    private func heroBreakdownCell(_ label: String, value: Double?) -> some View {
-        VStack(spacing: 2) {
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text(value?.portfolioCurrencyText ?? "—")
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-    }
+    // MARK: Reconcile flat banner (Phase 4)
 
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.08))
-            .frame(width: 1, height: 28)
-    }
-
-    // MARK: Reconcile attention card
-
-    private var reconcileAttentionCard: some View {
+    private var reconcileFlatBanner: some View {
         Button {
             presentedDestination = .reconcile
         } label: {
@@ -265,9 +257,11 @@ struct ERPHubView: View {
             .padding(HobbyIQTheme.Spacing.medium)
             .frame(maxWidth: .infinity, minHeight: 64)
             .background(HobbyIQTheme.Colors.cardNavy)
+            // Phase 4: no green/warning accent border — the hero card is
+            // the only element on the page with the gradient accent.
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke((unreconciledCount > 0 ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen).opacity(0.4), lineWidth: 1.2)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
@@ -277,63 +271,192 @@ struct ERPHubView: View {
                             : "All sales caught up")
     }
 
-    // MARK: 2x2 nav tiles
+    // MARK: Buy / Sell side metrics toggle (Scope 3, Surface #6 + follow-up)
 
-    private var tilesGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-        return LazyVGrid(columns: columns, spacing: 12) {
-            navTile(title: "P&L", subtitle: pnlTileStatus, icon: "chart.bar.fill", destination: .pnl)
-            navTile(title: "Expenses", subtitle: expensesTileStatus, icon: "creditcard.fill", destination: .expenses)
-            navTile(title: "Trades", subtitle: tradesTileStatus, icon: "arrow.triangle.swap", destination: .trades)
-            navTile(title: "Tax & exports", subtitle: taxTileStatus, icon: "doc.text.fill", destination: .tax)
+    @ViewBuilder
+    private var cogsMetricsSection: some View {
+        if shouldShowSideBreakdown {
+            VStack(alignment: .leading, spacing: 10) {
+                sideBreakdownTabs
+                let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+                LazyVGrid(columns: columns, spacing: 8) {
+                    switch selectedSide {
+                    case .buy: buySideCards
+                    case .sell: sellSideCards
+                    }
+                }
+            }
         }
     }
 
-    private var pnlTileStatus: String {
-        if loadFailed { return "—" }
-        if let count = pnl?.totals?.count, count > 0 { return "\(count) sale\(count == 1 ? "" : "s")" }
-        return "No sales yet"
+    private var sideBreakdownTabs: some View {
+        HStack(spacing: 0) {
+            ForEach(SideBreakdown.allCases) { side in
+                Button {
+                    selectedSide = side
+                } label: {
+                    Text(side.rawValue)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(selectedSide == side ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(selectedSide == side ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
+                        .clipShape(Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show \(side.rawValue) metrics")
+            }
+        }
+        .padding(3)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .clipShape(Capsule(style: .continuous))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
-    private var expensesTileStatus: String { "View & add" }
-    private var tradesTileStatus: String { "Track trades" }
-    private var taxTileStatus: String { "Reports & exports" }
 
-    private func navTile(
-        title: String,
-        subtitle: String,
-        icon: String,
-        destination: FinancialsDestination
+    @ViewBuilder
+    private var buySideCards: some View {
+        let cogs = pnl?.cogs
+        cogsMetricCard(
+            label: "Purchase spend",
+            value: (cogs?.purchaseSpend ?? 0).portfolioCurrencyText,
+            subtitle: cogs?.purchaseCount.map { "\($0) purchase\($0 == 1 ? "" : "s")" }
+        )
+        cogsMetricCard(
+            label: "Cash flow",
+            value: (cogs?.cashFlow ?? 0).portfolioSignedCurrencyText,
+            subtitle: "In minus out",
+            valueColor: (cogs?.cashFlow ?? 0) >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        )
+        cogsMetricCard(
+            label: "Gross margin",
+            value: cogs?.grossMarginPct.map { String(format: "%+.1f%%", $0) } ?? "—",
+            subtitle: cogs?.grossMarginPct == nil ? "No sales yet" : "Realized ÷ gross",
+            valueColor: {
+                guard let pct = cogs?.grossMarginPct else { return HobbyIQTheme.Colors.pureWhite }
+                return pct >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+            }()
+        )
+        cogsMetricCard(
+            label: "Inventory (at cost)",
+            value: (cogs?.inventoryOnHandCost ?? 0).portfolioCurrencyText,
+            subtitle: cogs?.inventoryOnHandCount.map { "\($0) on hand" }
+        )
+    }
+
+    @ViewBuilder
+    private var sellSideCards: some View {
+        let totals = pnl?.totals
+        let net = totals?.netPnL ?? totals?.realizedPnL ?? 0
+        let netColor: Color = {
+            if net > 0 { return HobbyIQTheme.Colors.successGreen }
+            if net < 0 { return HobbyIQTheme.Colors.danger }
+            return HobbyIQTheme.Colors.pureWhite
+        }()
+        cogsMetricCard(
+            label: "Net profit",
+            value: net.portfolioSignedCurrencyText,
+            subtitle: totals?.count.map { "\($0) sale\($0 == 1 ? "" : "s")" } ?? "No sales yet",
+            valueColor: netColor
+        )
+        cogsMetricCard(
+            label: "Sold (gross)",
+            value: (totals?.grossProceeds ?? 0).portfolioCurrencyText,
+            subtitle: "Ticket total"
+        )
+        cogsMetricCard(
+            label: "Fees",
+            value: (totals?.totalFees ?? 0).portfolioCurrencyText,
+            subtitle: "Platform + processing"
+        )
+        cogsMetricCard(
+            label: "Expenses",
+            value: (totals?.totalExpenses ?? 0).portfolioCurrencyText,
+            subtitle: "Operating"
+        )
+    }
+
+    /// Renders the toggle whenever either side has real signal — a fresh
+    /// account with $0 across the board keeps the placeholder grid out
+    /// of the way per the original `shouldShowCogs` gate.
+    private var shouldShowSideBreakdown: Bool {
+        let hasBuy = (pnl?.cogs?.purchaseSpend ?? 0) > 0
+            || (pnl?.cogs?.inventoryOnHandCost ?? 0) > 0
+            || pnl?.cogs?.grossMarginPct != nil
+        let hasSell = (pnl?.totals?.count ?? 0) > 0
+            || (pnl?.totals?.grossProceeds ?? 0) > 0
+            || (pnl?.totals?.realizedPnL ?? 0) != 0
+        return hasBuy || hasSell
+    }
+
+    private func cogsMetricCard(
+        label: String,
+        value: String,
+        subtitle: String? = nil,
+        valueColor: Color = HobbyIQTheme.Colors.pureWhite
     ) -> some View {
-        Button {
-            presentedDestination = destination
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    .frame(width: 34, height: 34)
-                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-
-                Text(title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.4)
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(valueColor)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            if let subtitle {
                 Text(subtitle)
                     .font(.caption2)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-            .padding(HobbyIQTheme.Spacing.medium)
-            .background(HobbyIQTheme.Colors.cardNavy)
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title). \(subtitle).")
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: Action pills grid (Phase 3)
+
+    private var actionPillsGrid: some View {
+        let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+        return LazyVGrid(columns: columns, spacing: 8) {
+            HIQActionPill(title: "P&L", icon: "chart.bar.fill", action: { presentedDestination = .pnl })
+            HIQActionPill(title: "Expenses", icon: "creditcard.fill", action: { presentedDestination = .expenses })
+            HIQActionPill(title: "Reconcile", icon: "checkmark.seal.fill", action: { presentedDestination = .reconcile })
+            HIQActionPill(title: "Trades", icon: "arrow.triangle.swap", action: { presentedDestination = .trades })
+            HIQActionPill(title: "Reports", icon: "doc.text.fill", action: { presentedDestination = .tax })
+            HIQActionPill(title: "Sales", icon: "bag.fill", action: { presentedDestination = .sales })
+            HIQActionPill(title: "Purchases", icon: "cart.fill", action: { presentedDestination = .purchases })
+            HIQActionPill(title: "Inventory", icon: "square.stack.3d.up.fill", action: { presentedDestination = .inventoryAnalytics })
+        }
+    }
+
+    // MARK: Recent sales section (Phase 5)
+
+    @ViewBuilder
+    private var recentSalesSection: some View {
+        if recentSales.isEmpty == false {
+            VStack(alignment: .leading, spacing: 10) {
+                HIQSectionHeader("Recent sales")
+                VStack(spacing: 4) {
+                    ForEach(recentSales.prefix(5)) { entry in
+                        HIQCompactSaleRow(entry: entry)
+                    }
+                }
+                .padding(.vertical, 6)
+                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            }
+        }
     }
 
     // MARK: Quiet sync action
@@ -372,10 +495,21 @@ struct ERPHubView: View {
             async let p = APIService.shared.fetchErpPnl(groupBy: selectedPeriod.pnlGroupBy, includeExpenses: true)
             async let t = APIService.shared.fetchErpTimeseries(bucket: selectedPeriod.trendBucket)
             async let u = APIService.shared.fetchUnreconciled()
-            let (pr, tr, ur) = try await (p, t, u)
+            // Phase 5: reuse the existing ledger endpoint (same one
+            // powering PortfolioIQ's Ledger sheet) for the "Recent sales"
+            // list — no new networking.
+            async let l = APIService.shared.fetchPortfolioLedger()
+            let (pr, tr, ur, lr) = try await (p, t, u, l)
             pnl = pr
             timeseries = tr
             unreconciledCount = ur.count ?? ur.entries.count
+            let ledgerEntries = (lr.entries ?? [])
+                .filter { ($0.soldAt ?? "").isEmpty == false && $0.dismissedAt == nil }
+                .sorted { ($0.soldAt ?? "") > ($1.soldAt ?? "") }
+            recentSales = Array(ledgerEntries.prefix(5))
+            #if DEBUG
+            print("[Financials] hub load ok: entryCount=\(pr.totals?.count ?? 0) realizedPnL=\(pr.totals?.realizedPnL ?? 0) grossProceeds=\(pr.totals?.grossProceeds ?? 0) feesTotal=\(pr.totals?.totalFees ?? 0) groups=\(pr.groups?.count ?? 0) unreconciled=\(unreconciledCount) recentSales=\(recentSales.count)")
+            #endif
         } catch {
             #if DEBUG
             print("[Financials] hub load error: \(APIService.errorMessage(from: error))")
@@ -423,6 +557,9 @@ private struct FinancialsDestinationView: View {
         case .expenses: return "Expenses"
         case .trades: return "Trades"
         case .tax: return "Tax & exports"
+        // Scope 3 screens carry their own hero cards, so the nav bar
+        // suppresses the redundant title (back chevron lives in the tile).
+        case .sales, .purchases, .inventoryAnalytics: return ""
         }
     }
 
@@ -434,6 +571,9 @@ private struct FinancialsDestinationView: View {
         case .expenses: ERPExpensesView()
         case .trades: ERPTradesView()
         case .tax: ERPTaxView()
+        case .sales: ERPSalesListView()
+        case .purchases: ERPPurchasesListView()
+        case .inventoryAnalytics: ERPInventoryAnalyticsView()
         }
     }
 }
@@ -470,6 +610,331 @@ private struct ERPHubTrendChart: View {
         .chartYAxis(.hidden)
         .chartPlotStyle { plot in
             plot.padding(.vertical, 4)
+        }
+    }
+}
+
+// MARK: - Sales List (Financials → Sales)
+
+/// Sort options for the full "All sales" list. `.byMonth` groups by
+/// `soldAt` month with an HIQSectionHeader per group; the others render a
+/// single flat list.
+enum ERPSalesSortMode: String, CaseIterable, Identifiable {
+    case newest = "Newest first"
+    case oldest = "Oldest first"
+    case highest = "Highest sale"
+    case lowest = "Lowest sale"
+    case player = "By player"
+    case byMonth = "By month"
+
+    var id: String { rawValue }
+}
+
+/// Full-list "All sales" screen pushed from the Financials Sales pill.
+/// Same theme + layout language as the hub: HobbyIQBackground, sort
+/// dropdown up top styled like a themed pill, then either a flat
+/// `HIQCompactSaleRow` list or one grouped section per month.
+struct ERPSalesListView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var sales: [PortfolioLedgerEntry] = []
+    @State private var sortMode: ERPSalesSortMode = .newest
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                heroCard
+                sortRow
+                content
+            }
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.vertical, 16)
+        }
+        .background { HobbyIQBackground() }
+        .refreshable { await load() }
+        .toolbar(.hidden, for: .navigationBar)
+        .task { await load() }
+    }
+
+    // MARK: Totals hero
+
+    private var heroCard: some View {
+        let totalGross = sales.reduce(0.0) { $0 + salePrice(of: $1) }
+        let totalNet = sales.reduce(0.0) { $0 + ($1.netProceeds ?? 0) }
+        let totalPL = sales.reduce(0.0) { $0 + ($1.realizedProfitLoss ?? 0) }
+        let avgSale = sales.isEmpty ? 0 : totalGross / Double(sales.count)
+
+        return HIQHeroCard(
+            title: "Sales",
+            statusDate: Self.shortDate.string(from: Date()),
+            heroValue: totalGross.portfolioCurrencyText,
+            titleAlignment: .center,
+            leading: {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(width: 36, height: 36)
+                        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back to Financials")
+            },
+            delta: {
+                if sales.isEmpty == false, abs(totalPL) > 0.005 {
+                    let isPositive = totalPL >= 0
+                    HStack(spacing: 4) {
+                        Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+                            .font(.caption2.weight(.bold))
+                        Text(totalPL.portfolioSignedCurrencyText + " realized")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(isPositive ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                }
+            },
+            meta: {
+                if sales.isEmpty == false {
+                    Text("\(sales.count) sale\(sales.count == 1 ? "" : "s") · avg \(avgSale.portfolioCurrencyText) · net \(totalNet.portfolioCurrencyText)")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+        )
+    }
+
+    private static let shortDate: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
+
+    // MARK: Sort row
+
+    private var sortRow: some View {
+        HStack {
+            Text("\(sales.count) sale\(sales.count == 1 ? "" : "s")")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            Spacer()
+
+            Menu {
+                Picker("Sort by", selection: $sortMode) {
+                    ForEach(ERPSalesSortMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(sortMode.rawValue)
+                        .font(.caption.weight(.semibold))
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1)
+                )
+                .clipShape(Capsule(style: .continuous))
+            }
+            .accessibilityLabel("Sort sales")
+        }
+    }
+
+    // MARK: Content switch
+
+    @ViewBuilder
+    private var content: some View {
+        if isLoading && sales.isEmpty {
+            ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                .frame(maxWidth: .infinity, minHeight: 200)
+        } else if let errorMessage {
+            errorState(errorMessage)
+        } else if sales.isEmpty {
+            emptyState
+        } else if sortMode == .byMonth {
+            monthGroupedList
+        } else {
+            flatList
+        }
+    }
+
+    private var flatList: some View {
+        VStack(spacing: 4) {
+            ForEach(sortedSales) { entry in
+                HIQCompactSaleRow(entry: entry)
+            }
+        }
+        .padding(.vertical, 6)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private var monthGroupedList: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(monthGroups, id: \.key) { group in
+                VStack(alignment: .leading, spacing: 10) {
+                    HIQSectionHeader(group.key)
+                    VStack(spacing: 4) {
+                        ForEach(group.entries) { entry in
+                            HIQCompactSaleRow(entry: entry)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+                }
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bag.badge.questionmark")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+            Text("No sales yet")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("Mark a card sold from Inventory to see it here.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 48)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(HobbyIQTheme.Colors.warning)
+            Text("Couldn't load sales")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity)
+        .background(HobbyIQTheme.Colors.warning.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: Sorting / grouping
+
+    private var sortedSales: [PortfolioLedgerEntry] {
+        switch sortMode {
+        case .newest:
+            return sales.sorted { ($0.soldAt ?? "") > ($1.soldAt ?? "") }
+        case .oldest:
+            return sales.sorted { ($0.soldAt ?? "") < ($1.soldAt ?? "") }
+        case .highest:
+            return sales.sorted { salePrice(of: $0) > salePrice(of: $1) }
+        case .lowest:
+            return sales.sorted { salePrice(of: $0) < salePrice(of: $1) }
+        case .player:
+            return sales.sorted { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedAscending }
+        case .byMonth:
+            return sales
+        }
+    }
+
+    private struct MonthGroup: Identifiable {
+        let key: String     // display label, e.g. "July 2026"
+        let sortKey: String // ISO-ish key for descending sort, e.g. "2026-07"
+        let entries: [PortfolioLedgerEntry]
+        var id: String { sortKey }
+    }
+
+    private var monthGroups: [MonthGroup] {
+        let bucketed = Dictionary(grouping: sales) { monthKey(for: $0.soldAt) }
+        return bucketed
+            .map { pair -> MonthGroup in
+                MonthGroup(
+                    key: monthLabel(sortKey: pair.key),
+                    sortKey: pair.key,
+                    entries: pair.value.sorted { ($0.soldAt ?? "") > ($1.soldAt ?? "") }
+                )
+            }
+            .sorted { $0.sortKey > $1.sortKey }
+    }
+
+    private func monthKey(for iso: String?) -> String {
+        guard let raw = iso, let date = Self.parseISO(raw) else { return "unknown" }
+        return Self.monthSortKeyFormatter.string(from: date)
+    }
+
+    private func monthLabel(sortKey: String) -> String {
+        if sortKey == "unknown" { return "Undated" }
+        if let date = Self.monthSortKeyFormatter.date(from: sortKey) {
+            return Self.monthDisplayFormatter.string(from: date)
+        }
+        return sortKey
+    }
+
+    private func salePrice(of entry: PortfolioLedgerEntry) -> Double {
+        if let gp = entry.grossProceeds, gp > 0 { return gp }
+        return (entry.unitSalePrice ?? 0) * Double(entry.quantitySold ?? 1)
+    }
+
+    private static let isoWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let isoStandard: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static func parseISO(_ raw: String) -> Date? {
+        isoWithFractional.date(from: raw) ?? isoStandard.date(from: raw)
+    }
+
+    private static let monthSortKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM"
+        return f
+    }()
+
+    private static let monthDisplayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM yyyy"
+        return f
+    }()
+
+    // MARK: Data
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let response = try await APIService.shared.fetchPortfolioLedger()
+            sales = (response.entries ?? [])
+                .filter { ($0.soldAt ?? "").isEmpty == false && $0.dismissedAt == nil }
+        } catch {
+            errorMessage = APIService.errorMessage(from: error)
         }
     }
 }
@@ -1627,10 +2092,22 @@ private struct ERPRecordTradeSheet: View {
 
         let request = ERPTradeRecordRequest(
             outgoing: [ERPTradeOutgoingItem(holdingId: holdingId, fmvAtTrade: outFmv, fmvSource: outgoingFmvSource)],
-            incoming: [ERPTradeIncomingItem(cardTitle: inTitle, fmvAtTrade: inFmv, fmvSource: incomingFmvSource, playerName: nil, year: nil, setName: nil, parallel: nil, grade: nil)],
+            incoming: [ERPTradeIncomingItem(
+                cardTitle: inTitle,
+                fmvAtTrade: inFmv,
+                fmvSource: incomingFmvSource,
+                playerName: nil,
+                cardYear: nil,
+                setName: nil,
+                parallel: nil,
+                grade: nil,
+                gradeCompany: nil,
+                gradeValue: nil,
+                cardId: nil
+            )],
             cashToMe: cash,
-            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes,
-            date: ISO8601DateFormatter().string(from: tradeDate)
+            note: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes,
+            tradeDate: ISO8601DateFormatter().string(from: tradeDate)
         )
 
         do {
@@ -2528,6 +3005,7 @@ struct ReconcileDetailView: View {
     @State private var isSaving = false
     @State private var isDismissing = false
     @State private var localError: String?
+    @State private var showCloseWithoutFeesConfirm = false
 
     init(entry: LedgerEntryForErp, viewModel: ReconcileViewModel, onFinalized: @escaping () -> Void) {
         self.entry = entry
@@ -2752,6 +3230,45 @@ struct ReconcileDetailView: View {
             .buttonStyle(.plain)
             .disabled(isSaving || isDismissing)
 
+            // CF-RECONCILE-FINALIZE (backend PR #390): only shows when
+            // the sale is an eBay entry AND has waited >48h AND all
+            // granular fees are still nil. Confirms via a modal
+            // dialog because the finalize is not reversible.
+            if showCloseWithoutFeesButton {
+                Button {
+                    showCloseWithoutFeesConfirm = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption.weight(.bold))
+                        Text("Close without eBay fees")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    .background(HobbyIQTheme.Colors.warning.opacity(0.14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(HobbyIQTheme.Colors.warning.opacity(0.35), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(isSaving || isDismissing)
+                .confirmationDialog(
+                    "Close without eBay fees?",
+                    isPresented: $showCloseWithoutFeesConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Close with $0 fees", role: .destructive) {
+                        Task { await finalizeWithoutFees() }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("This entry will be closed with $0 seller fees. Realized P&L uses netPayout. If eBay's fees arrive later, we'll keep your manual close.")
+                }
+            }
+
             Button {
                 Task { await quietForNow() }
             } label: {
@@ -2797,18 +3314,96 @@ struct ReconcileDetailView: View {
         localError = nil
         defer { isSaving = false }
 
+        // CF-RECONCILE-EMPTY-COSTS (2026-07-12): backend requires the
+        // body to include gradingCost and/or suppliesCost — nil-for-
+        // both returns 400 and the entry silently sticks in the queue.
+        // When the user submits with both blank, treat as "no costs"
+        // and default supplies to $0 so the finalize can proceed.
+        let gradingValue = g.value(label: "Grading cost")
+        var suppliesValue = s.value(label: "Supplies cost")
+        if gradingValue == nil && suppliesValue == nil {
+            suppliesValue = 0
+        }
+
         let updated = await viewModel.saveCosts(
             entryId: entry.id,
-            gradingCost: g.value(label: "Grading cost"),
-            suppliesCost: s.value(label: "Supplies cost")
+            gradingCost: gradingValue,
+            suppliesCost: suppliesValue
         )
-        // Server-authoritative finalize: needsReconciliation == false →
-        // VM removed the row, this detail leaves the stack. Otherwise the
-        // row flipped to saved_pending_fees and the user stays on detail.
-        if updated?.needsReconciliation == false {
+        guard let updated else {
+            // Backend rejected the save (e.g. validation, offline).
+            localError = viewModel.errorMessage ?? "Couldn't save. Try again."
+            return
+        }
+        if updated.needsReconciliation == false {
+            // Both axes are done — cleanly finalized.
             onFinalized()
             dismiss()
+            return
         }
+
+        // Costs axis is closed but fees axis is still waiting on eBay's
+        // finances feed (typically 24–48h). Keep the row on-screen with
+        // an inline hint; the "Close without eBay fees" secondary
+        // button (rendered only after 48h has elapsed) is the escape
+        // hatch that calls the new `/finalize` endpoint (PR #390) and
+        // asserts $0 fees explicitly.
+        localError = "Costs saved. Waiting on eBay fees to arrive (usually 24–48h)."
+    }
+
+    /// CF-RECONCILE-FINALIZE (backend PR #390): unconditional finalize
+    /// path used by the "Close without eBay fees" secondary button. Only
+    /// enabled when the entry has waited >48h and every granular fee
+    /// field is still nil. Modal confirm before firing.
+    private func finalizeWithoutFees() async {
+        isSaving = true
+        localError = nil
+        defer { isSaving = false }
+        let netPayout = entry.grossProceeds
+        let finalized = await viewModel.finalize(
+            entryId: entry.id,
+            reason: "user-marked-no-fees",
+            netPayout: netPayout
+        )
+        if finalized?.needsReconciliation == false {
+            onFinalized()
+            dismiss()
+        } else if finalized == nil {
+            localError = viewModel.errorMessage ?? "Couldn't finalize. Try again."
+        }
+    }
+
+    /// True when the wire entry has no fee data at all — meaning eBay's
+    /// finances feed hasn't landed yet.
+    private var entryHasNoFeeData: Bool {
+        entry.finalValueFee == nil
+            && entry.paymentProcessingFee == nil
+            && entry.promotedListingFee == nil
+            && entry.adFee == nil
+            && (entry.otherFees ?? 0) == 0
+    }
+
+    /// True when it's been more than 48h since the sale — the window
+    /// after which the "Close without eBay fees" affordance becomes
+    /// visible so the user isn't stuck on a permanently-pending row.
+    private var entryOlderThan48Hours: Bool {
+        guard let soldAt = entry.soldAt else { return false }
+        let fmtFrac = ISO8601DateFormatter()
+        fmtFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let fmtStd = ISO8601DateFormatter()
+        fmtStd.formatOptions = [.withInternetDateTime]
+        let date = fmtFrac.date(from: soldAt) ?? fmtStd.date(from: soldAt)
+        guard let sold = date else { return false }
+        return Date().timeIntervalSince(sold) > (48 * 60 * 60)
+    }
+
+    /// Gate for the "Close without eBay fees" secondary CTA — only
+    /// shows when the eBay finances feed is late AND all granular
+    /// fees are still nil (i.e., the user genuinely has nothing to
+    /// wait for). Manual entries never get this affordance (backend
+    /// returns 400 `NOT_EBAY_ENTRY`).
+    var showCloseWithoutFeesButton: Bool {
+        entry.isEbaySource && entryHasNoFeeData && entryOlderThan48Hours
     }
 
     private func quietForNow() async {

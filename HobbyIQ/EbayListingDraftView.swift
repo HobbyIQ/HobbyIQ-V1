@@ -86,6 +86,20 @@ struct EbayListingDraftView: View {
     // already typed over it.
     @State private var listingTitleInitialSeed: String = ""
 
+    // PR #425 (2026-07-13): trend-anchored price picker. On task, hit
+    // /price-by-id for the holding's cardId + grade to grab the
+    // engine's suggested / aggressive / quick sale recommendations.
+    // When present, render a radio picker instead of the raw text
+    // field. Nil / no cardId → fall through to the legacy text-only
+    // field.
+    @State private var listPriceRecommendations: ListPriceRecommendations?
+    @State private var selectedPriceOption: PriceOption = .suggested
+
+    enum PriceOption: String, CaseIterable, Identifiable {
+        case suggested, aggressive, quickSale, custom
+        var id: String { rawValue }
+    }
+
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onCompleted: @escaping (PortfolioEbayListingResponse) -> Void) {
         self.viewModel = viewModel
         self.card = card
@@ -174,6 +188,7 @@ struct EbayListingDraftView: View {
             await ebayStore.refreshConnectionStatus()
             await loadPolicies()
             await hydrateFromCardsightIfNeeded()
+            await loadListPriceRecommendations()
         }
         .onChange(of: ebayStore.lastErrorMessage) { _, newValue in
             if let newValue {
@@ -418,12 +433,20 @@ struct EbayListingDraftView: View {
         VStack(spacing: 14) {
             field(title: "Listing Title", text: $listingTitle)
 
-            // Price label changes based on format
-            field(
-                title: listingFormat == .buyItNow ? "List Price" : "Starting Price",
-                text: $askingPriceText,
-                keyboard: .decimalPad
-            )
+            // PR #425: trend-anchored radio picker when the engine
+            // provided recommendations; otherwise the legacy text
+            // field.
+            let priceLabel = listingFormat == .buyItNow ? "List Price" : "Starting Price"
+            if let recs = listPriceRecommendations,
+               (recs.suggested ?? 0) > 0 || (recs.aggressive ?? 0) > 0 || (recs.quickSale ?? 0) > 0 {
+                listPriceRadioPicker(label: priceLabel, recommendations: recs)
+            } else {
+                field(
+                    title: priceLabel,
+                    text: $askingPriceText,
+                    keyboard: .decimalPad
+                )
+            }
 
             field(title: "Quantity", text: $quantityText, keyboard: .numberPad)
 
@@ -982,6 +1005,126 @@ struct EbayListingDraftView: View {
     //     here). A backend-side hoist into the holding record is the
     //     durable follow-up; this is the same-day mitigation so the
     //     next publish ships a good title.
+    // PR #425 (2026-07-13): fetch trend-anchored recommendations. Fires
+    // once on task; nil result keeps the legacy text-field fallback.
+    private func loadListPriceRecommendations() async {
+        guard let cardId = card.cardId?.trimmingCharacters(in: .whitespaces),
+              cardId.isEmpty == false else { return }
+        do {
+            let response = try await APIService.shared.priceByCardId(
+                cardId: cardId,
+                query: nil,
+                gradeCompany: card.gradeCompany,
+                gradeValue: card.gradeValue,
+                parallelId: nil,
+                parallelName: card.parallel.isEmpty ? nil : card.parallel,
+                isBlackLabel: card.isBlackLabel
+            )
+            await MainActor.run {
+                listPriceRecommendations = response.listPriceRecommendations
+                // Seed the picker + text field with the suggested value
+                // so the initial state matches the default radio pick.
+                if let suggested = response.listPriceRecommendations?.suggested, suggested > 0 {
+                    askingPriceText = String(format: "%.2f", suggested)
+                }
+            }
+        } catch {
+            // Silent fall-through — legacy text field renders in place.
+        }
+    }
+
+    @ViewBuilder
+    private func listPriceRadioPicker(label: String, recommendations: ListPriceRecommendations) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel(label)
+
+            listPriceRadioRow(
+                option: .suggested,
+                title: "Suggested",
+                price: recommendations.suggested,
+                rationale: recommendations.rationale?.suggestedBasis ?? "Predicted next 30d"
+            )
+            listPriceRadioRow(
+                option: .aggressive,
+                title: "Aggressive",
+                price: recommendations.aggressive,
+                rationale: recommendations.rationale?.aggressiveBasis ?? "Top of prediction range"
+            )
+            listPriceRadioRow(
+                option: .quickSale,
+                title: "Quick Sale",
+                price: recommendations.quickSale,
+                rationale: recommendations.rationale?.quickSaleBasis ?? "10% below market value"
+            )
+            listPriceCustomRow()
+        }
+    }
+
+    private func listPriceRadioRow(option: PriceOption, title: String, price: Double?, rationale: String) -> some View {
+        Button {
+            selectedPriceOption = option
+            if let price, price > 0 {
+                askingPriceText = String(format: "%.2f", price)
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: selectedPriceOption == option ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(selectedPriceOption == option ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer(minLength: 6)
+                        Text(price.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) } ?? "—")
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                    Text(rationale)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func listPriceCustomRow() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                selectedPriceOption = .custom
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: selectedPriceOption == .custom ? "largecircle.fill.circle" : "circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(selectedPriceOption == .custom ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                    Text("Custom")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if selectedPriceOption == .custom {
+                TextField("Enter price", text: $askingPriceText)
+                    .keyboardType(.decimalPad)
+                    .foregroundStyle(.white)
+                    .padding(14)
+                    .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.4), lineWidth: 1.2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+        }
+    }
+
     private func hydrateFromCardsightIfNeeded() async {
         guard !hydrationAttempted else { return }
         hydrationAttempted = true

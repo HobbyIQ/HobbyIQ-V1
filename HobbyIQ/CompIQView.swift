@@ -17,6 +17,22 @@ struct CompIQView: View {
     @State private var navigateToCardSearch = false
     @State private var showBulkEstimate = false
 
+    /// CF-LIVE-SUGGEST (2026-07-06): live-suggest state under the Find
+    /// Cards search bar. `liveSuggestions` is the (5–8) list of rich
+    /// suggestion rows (thumbnail + player + year/product + parallel).
+    /// `suggestTask` is the debounced in-flight fetch — cancelled on
+    /// every keystroke so the latest query always wins.
+    /// `suppressNextSuggest` breaks the loop after a suggestion tap sets
+    /// `searchText` programmatically. `selectedLiveHit` drives the
+    /// navigationDestination push to CompIQPricedCardView. `parsePreview`
+    /// backs the optional "We understood: year=…" hint line.
+    @State private var liveSuggestions: [CompIQVariantHit] = []
+    @State private var suggestTask: Task<Void, Never>?
+    @State private var suppressNextSuggest: Bool = false
+    @State private var selectedLiveHit: CompIQVariantHit?
+    @State private var parsePreview: CompIQParsePreviewResponse?
+    @State private var parseTask: Task<Void, Never>?
+
     /// CF-COMPIQ-BACK-ROUTE (2026-07-02): CompIQ is a tab root (not a
     /// pushed/modal view), so `dismiss()` from here has no presenter to
     /// pop and previously crashed / no-op'd on tap. The shell now passes
@@ -87,6 +103,14 @@ struct CompIQView: View {
         .navigationDestination(isPresented: $showBulkEstimate) {
             BulkEstimateView()
                 .environmentObject(sessionViewModel)
+        }
+        .navigationDestination(item: $selectedLiveHit) { hit in
+            CompIQPricedCardView(hit: hit)
+                .environmentObject(sessionViewModel)
+        }
+        .onDisappear {
+            suggestTask?.cancel()
+            parseTask?.cancel()
         }
         .onAppear { applyInitialQueryIfNeeded() }
         .onChange(of: initialQuery) { _, _ in
@@ -168,6 +192,18 @@ struct CompIQView: View {
                 .onSubmit {
                     submitSearch()
                 }
+                .onChange(of: searchText) { _, newValue in
+                    handleSearchTextChange(newValue)
+                }
+
+            if let hint = parsePreview?.displayLine {
+                Text(hint)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            liveSuggestionsDropdown
 
             Text("Search the card, verify the exact variant, and let the backend do the pricing work.")
                 .font(HobbyIQTheme.Typography.body)
@@ -185,6 +221,165 @@ struct CompIQView: View {
                 .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    /// CF-LIVE-SUGGEST (2026-07-06): live-suggest dropdown rendered
+    /// directly under the search field. Each row surfaces a thumbnail,
+    /// player, year+product, and (when present) parallel + print run.
+    /// Tap navigates directly to CompIQPricedCardView for that variant;
+    /// Return (submit) is untouched and still lands on the full picker.
+    @ViewBuilder
+    private var liveSuggestionsDropdown: some View {
+        if liveSuggestions.isEmpty == false {
+            VStack(spacing: 0) {
+                ForEach(Array(liveSuggestions.prefix(8).enumerated()), id: \.offset) { index, hit in
+                    Button {
+                        applyLiveSuggestion(hit)
+                    } label: {
+                        liveSuggestionRow(hit)
+                    }
+                    .buttonStyle(.plain)
+
+                    if index < min(liveSuggestions.count, 8) - 1 {
+                        Rectangle()
+                            .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                            .frame(height: 1)
+                            .padding(.horizontal, 8)
+                    }
+                }
+            }
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func liveSuggestionRow(_ hit: CompIQVariantHit) -> some View {
+        HStack(spacing: 12) {
+            liveSuggestionThumbnail(hit)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(hit.player ?? hit.resolvedLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
+
+                if let meta = liveSuggestionMeta(hit) {
+                    Text(meta)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func liveSuggestionThumbnail(_ hit: CompIQVariantHit) -> some View {
+        if let urlString = hit.imageUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                default:
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                }
+            }
+            .frame(width: 34, height: 46)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                .frame(width: 34, height: 46)
+                .overlay(
+                    Image(systemName: "photo")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                )
+        }
+    }
+
+    private func liveSuggestionMeta(_ hit: CompIQVariantHit) -> String? {
+        var parts: [String] = []
+        if let year = hit.year { parts.append(String(year)) }
+        if let set = hit.set, set.isEmpty == false { parts.append(set) }
+        if let variant = hit.variant, variant.isEmpty == false { parts.append(variant) }
+        if let serial = hit.serialNumber, serial.isEmpty == false { parts.append("/\(serial)") }
+        let joined = parts.joined(separator: " · ")
+        return joined.isEmpty ? nil : joined
+    }
+
+    /// Debounced 200ms fetch of `/api/search/cards` for live suggestions
+    /// PLUS `/api/compiq/parse-preview` for the "We understood" hint.
+    /// Both are advisory — a network error hides the dropdown / line
+    /// silently and never blocks the literal submit path. Empty query
+    /// (or < 3 chars) clears both.
+    private func handleSearchTextChange(_ value: String) {
+        if suppressNextSuggest {
+            suppressNextSuggest = false
+            return
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count < 3 {
+            suggestTask?.cancel()
+            parseTask?.cancel()
+            liveSuggestions = []
+            parsePreview = nil
+            return
+        }
+        suggestTask?.cancel()
+        suggestTask = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled { return }
+            do {
+                let next = try await APIService.shared.fetchLiveCardSuggestions(q: trimmed)
+                if Task.isCancelled { return }
+                liveSuggestions = next
+            } catch {
+                if Task.isCancelled == false {
+                    liveSuggestions = []
+                }
+            }
+        }
+        parseTask?.cancel()
+        parseTask = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled { return }
+            do {
+                let preview = try await APIService.shared.fetchParsePreview(q: trimmed)
+                if Task.isCancelled { return }
+                parsePreview = preview
+            } catch {
+                if Task.isCancelled == false {
+                    parsePreview = nil
+                }
+            }
+        }
+    }
+
+    /// Tapping a live suggestion pushes CompIQPricedCardView directly for
+    /// that variant. Clear the dropdown + parse hint so they don't
+    /// linger under a search that already resolved. `suppressNextSuggest`
+    /// guards the field update from re-triggering the debounce.
+    private func applyLiveSuggestion(_ hit: CompIQVariantHit) {
+        suppressNextSuggest = true
+        suggestTask?.cancel()
+        parseTask?.cancel()
+        liveSuggestions = []
+        parsePreview = nil
+        selectedLiveHit = hit
     }
 
     private func submitSearch() {

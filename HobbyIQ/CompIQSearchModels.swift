@@ -274,7 +274,14 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     init(from holding: InventoryCard) {
-        self.cardId = holding.id.uuidString
+        // Prefer the backend Cardsight cardId — that's the identifier
+        // /price-by-id resolves against. The local `holding.id`
+        // (deterministic UUID derived from `backendId`) is NOT a
+        // catalog id and calling /price-by-id with it fails. Fall
+        // back to the local UUID only when the holding has no
+        // matched cardId (legacy or unmatched rows).
+        let trimmedCardId = holding.cardId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        self.cardId = trimmedCardId.isEmpty ? holding.id.uuidString : trimmedCardId
         self.player = holding.playerName
         self.set = holding.setName.isEmpty ? nil : holding.setName
         self.year = Int(holding.year)
@@ -308,6 +315,51 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
 struct CompIQSuggestResponse: Codable {
     let query: String?
     let suggestions: [String]?
+}
+
+/// CF-LIVE-SUGGEST (2026-07-06): parse-preview response driving the
+/// "We understood: year=… product=…" hint line under the search field.
+/// Every field defensive-optional — the hint is advisory and a
+/// malformed / empty payload must never block the literal search.
+struct CompIQParsePreviewResponse: Codable {
+    let year: Int?
+    let product: String?
+    let player: String?
+    let parallel: String?
+    let printRun: Int?
+    let grade: String?
+    let summary: String?
+
+    /// Human-readable "We understood:" line composed from populated
+    /// fields. Prefer the backend's `summary` string when present so
+    /// wording changes require zero client work.
+    var displayLine: String? {
+        if let summary, summary.isEmpty == false { return summary }
+        var parts: [String] = []
+        if let year { parts.append("year=\(year)") }
+        if let product, product.isEmpty == false { parts.append("product=\(product)") }
+        if let player, player.isEmpty == false { parts.append("player=\(player)") }
+        if let parallel, parallel.isEmpty == false { parts.append("parallel=\(parallel)") }
+        if let printRun { parts.append("printRun=\(printRun)") }
+        if let grade, grade.isEmpty == false { parts.append("grade=\(grade)") }
+        guard parts.isEmpty == false else { return nil }
+        return "We understood: " + parts.joined(separator: ", ")
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        year = try? container.decodeIfPresent(Int.self, forKey: .year)
+        product = try? container.decodeIfPresent(String.self, forKey: .product)
+        player = try? container.decodeIfPresent(String.self, forKey: .player)
+        parallel = try? container.decodeIfPresent(String.self, forKey: .parallel)
+        printRun = try? container.decodeIfPresent(Int.self, forKey: .printRun)
+        grade = try? container.decodeIfPresent(String.self, forKey: .grade)
+        summary = try? container.decodeIfPresent(String.self, forKey: .summary)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case year, product, player, parallel, printRun, grade, summary
+    }
 }
 
 struct CompIQVariantListResponse: Codable {
@@ -349,6 +401,10 @@ struct CompIQPriceByIdRequest: Codable {
     /// `parallelId` so base vs parallel sit at separate entries.
     let parallelId: String?
     let parallelName: String?
+    /// P0.3 (2026-07-16, backend PR #496): BGS 10 Black Label / Pristine
+    /// tier signal. Backend prices at the ~9× multiplier when true.
+    /// Nil / absent → regular grade pricing.
+    let isBlackLabel: Bool?
 }
 
 struct PriceZone: Codable, Hashable {
@@ -552,13 +608,47 @@ struct CompIQPriceRecentComp: Codable, Hashable, Identifiable {
     let saleType: String?
     let belowMarket: Bool?
 
-    var id: String { "\(title ?? "")-\(price ?? 0)-\(soldDate ?? "")" }
+    /// Provenance additions (2026-07-15): backend now emits a stable
+    /// wire `id` (the compId — key used by /comps/flag-wrong), the
+    /// vendor source, and a boolean flag when a user has attested
+    /// the sale. All optional so older cached responses decode.
+    let compId: String?
+    let source: String?
+    let verifiedByUser: Bool?
+
+    /// Prefers the wire compId when present; falls back to the
+    /// synthesized composite key so SwiftUI's ForEach still has a
+    /// stable identity on pre-provenance rows.
+    var id: String {
+        if let raw = compId?.trimmingCharacters(in: .whitespaces),
+           raw.isEmpty == false {
+            return raw
+        }
+        return "\(title ?? "")-\(price ?? 0)-\(soldDate ?? "")"
+    }
 
     var parsedDate: Date? { CompIQCompDateParser.parse(soldDate) }
 
     var relativeDate: String {
         CompIQCompDateParser.relative(soldDate)
     }
+
+    enum CodingKeys: String, CodingKey {
+        case price, title, soldDate, imageUrl, saleType, belowMarket
+        case compId = "id"
+        case source, verifiedByUser
+    }
+}
+
+/// Provenance summary for a priced-card response — how many of the
+/// underlying comps were user attestations vs vendor feeds. Rendered
+/// as a subtle trust chip near the market value.
+struct ProvenanceSummary: Codable, Hashable {
+    let totalCount: Int?
+    let collectorCount: Int?
+    let vendorCount: Int?
+    let bySource: [String: Int]?
+    let topSource: String?
 }
 
 /// CF-B (2026-06-08): comp rows the engine kept out of value computation.
@@ -984,6 +1074,61 @@ struct LiveMarketProvenance: Codable, Hashable {
     let source: String?
 }
 
+// MARK: - Supply / Demand (PR #425 wire additions)
+
+/// One daily snapshot of the ask-side supply. Backend cron
+/// records these into `card_valuation_history`; regression fits on
+/// the .totalListings axis produce the "listings slope" that the
+/// verdict machine reads. `medianAsk` is display-only (not used
+/// for the regression) and may be nil on days where the crawl
+/// couldn't observe active listings.
+struct ListingsHistoryPoint: Codable, Hashable, Identifiable {
+    let date: String
+    let totalListings: Int
+    let medianAsk: Double?
+
+    var id: String { date }
+
+    var parsedDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: "\(date)T12:00:00Z")
+    }
+}
+
+/// The supply/demand verdict computed backend-side from the sales
+/// slope + listings slope over the trailing 30-day window. iOS
+/// renders the badge; never computes the verdict. `verdict` is a
+/// closed enum — unknown strings render as the muted "—" fallback
+/// in `VerdictStyle`.
+struct SupplyDemandSignal: Codable, Hashable {
+    let verdict: String
+    let salesDirection: String
+    let listingsDirection: String?
+    let salesSlopePerMonthPct: Double
+    let listingsSlopePerMonthPct: Double?
+    let salesRecordCount: Int
+    let listingsSnapshotCount: Int
+    let windowDays: Int
+}
+
+/// Trend-anchored list-price recommendations surfaced on the
+/// Sell / List flows. Nil when the comp pool is too thin for the
+/// engine to compute recommendations — the picker falls back to
+/// Custom-only text entry in that case.
+struct ListPriceRecommendations: Codable, Hashable {
+    let suggested: Double?
+    let aggressive: Double?
+    let quickSale: Double?
+    let rationale: Rationale?
+
+    struct Rationale: Codable, Hashable {
+        let suggestedBasis: String?
+        let aggressiveBasis: String?
+        let quickSaleBasis: String?
+    }
+}
+
 struct CompIQPriceByIdResponse: Codable {
     let success: Bool?
     let cardId: String?
@@ -1143,6 +1288,22 @@ struct CompIQPriceByIdResponse: Codable {
     /// `lastSaleSurface.compCount` instead.
     let chCompCount: Int?
 
+    /// PR #425: daily supply snapshots for the Market Trend section's
+    /// listings chart. Ascending by date; regression fits on
+    /// `totalListings`. Nil / empty → hide the entire trend section.
+    let listingsHistory: [ListingsHistoryPoint]?
+    /// PR #425: backend-computed verdict + slope metadata. iOS never
+    /// derives these locally.
+    let supplyDemand: SupplyDemandSignal?
+    /// PR #425: trend-anchored list-price recommendations for the
+    /// Sell / List flow radio picker.
+    let listPriceRecommendations: ListPriceRecommendations?
+
+    /// Provenance breakdown for the underlying comp pool. Nil on
+    /// pre-provenance backends. Rendered as a subtle trust chip
+    /// near the market value.
+    let provenanceSummary: ProvenanceSummary?
+
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
     }
@@ -1157,6 +1318,15 @@ struct CompIQPriceByIdResponse: Codable {
     var hasSiblingFallback: Bool {
         if siblingFallback != nil { return true }
         return estimateSource == "sibling-fallback"
+    }
+
+    /// CF-SCARCITY-FLOOR (2026-07-06): true when the engine priced this
+    /// card off a coarse structural floor (no direct comps and no
+    /// sibling lineage — a scarcity prior with a ±40% range). Drives
+    /// the "Structural floor" badge and is a signal that the estimate
+    /// is coarser than a comp-driven one.
+    var hasScarcityPriorFloor: Bool {
+        predictedPriceAttribution?.mechanism == "scarcity-prior-floor"
     }
 
     var verdictText: String {
@@ -1267,6 +1437,10 @@ struct CompIQPriceByIdResponse: Codable {
         modelExpectation = try? container.decodeIfPresent(LiveMarketModelExpectation.self, forKey: .modelExpectation)
         modelSignal = try? container.decodeIfPresent(LiveMarketModelSignal.self, forKey: .modelSignal)
         chCompCount = try? container.decodeIfPresent(Int.self, forKey: .chCompCount)
+        listingsHistory = try? container.decodeIfPresent([ListingsHistoryPoint].self, forKey: .listingsHistory)
+        supplyDemand = try? container.decodeIfPresent(SupplyDemandSignal.self, forKey: .supplyDemand)
+        listPriceRecommendations = try? container.decodeIfPresent(ListPriceRecommendations.self, forKey: .listPriceRecommendations)
+        provenanceSummary = try? container.decodeIfPresent(ProvenanceSummary.self, forKey: .provenanceSummary)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1286,5 +1460,7 @@ struct CompIQPriceByIdResponse: Codable {
         case gradeBreakdown, gradedEstimates
         case pricesByCard, momentum, chProvenance
         case modelExpectation, modelSignal, chCompCount
+        case listingsHistory, supplyDemand, listPriceRecommendations
+        case provenanceSummary
     }
 }

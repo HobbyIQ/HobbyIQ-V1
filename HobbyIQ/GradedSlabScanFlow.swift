@@ -374,7 +374,18 @@ private struct GradedSlabResultView: View {
     @ViewBuilder
     private var resolveDestination: some View {
         let cert = certField.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cert.isEmpty == false {
+        let resolvedCardId = reading?.cardId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // P0.2 (2026-07-16) — cardId short-circuit per
+        // compiq-scan-route.md Flow 1/2: when /scan resolved a card
+        // identity with high confidence, skip CertResolveView + the
+        // variant picker and land the user directly on the priced
+        // comp page. The synthesized hit carries the resolved fields
+        // so the downstream `priceByCardId` request uses the same
+        // ids the scan-side matcher already validated.
+        if resolvedCardId.isEmpty == false {
+            CompIQPricedCardView(hit: syntheticHitForCardId(resolvedCardId))
+                .environmentObject(sessionViewModel)
+        } else if cert.isEmpty == false {
             CertResolveView(input: cert)
                 .environmentObject(sessionViewModel)
         } else {
@@ -384,6 +395,15 @@ private struct GradedSlabResultView: View {
             )
             .environmentObject(sessionViewModel)
         }
+    }
+
+    private func syntheticHitForCardId(_ cardId: String) -> CompIQVariantHit {
+        CompIQVariantHit(
+            cardId: cardId,
+            gradeCompany: reading?.gradeCompany,
+            gradeValue: reading?.gradeValue,
+            certNumber: reading?.certNumber
+        )
     }
 
     private var detectedGradeOption: CompIQPricedCardView.GradeOption? {

@@ -422,13 +422,57 @@ struct LiveMarketModelSignalView: View {
 
     private func modelLineString() -> String? {
         guard let exp = modelExpectation, let value = exp.value else { return nil }
+        // Merge note (PR #485, 2026-07-15): swapped hardcoded USD
+        // formatters for `currencyStringNoCents` (locale-neutral)
+        // while keeping the P1.2 attribution suffix.
         let dollar = value.currencyStringNoCents
+        let attribution = trendAttributionLabel(for: exp.basis)
+        let attrSuffix = attribution.map { " · via \($0)" } ?? ""
         if let lo = exp.rangeLow, let hi = exp.rangeHigh {
             let loStr = lo.currencyStringNoCents
             let hiStr = hi.currencyStringNoCents
-            return "Model expects \(dollar) (range \(loStr)–\(hiStr))"
+            return "Model expects \(dollar) (range \(loStr)–\(hiStr))\(attrSuffix)"
         }
-        return "Model expects \(dollar)"
+        return "Model expects \(dollar)\(attrSuffix)"
+    }
+
+    /// P1.2 (2026-07-16, backend PR #483): map the wire-internal
+    /// `basis` string to a short human label so users see which
+    /// signal drove the model expectation ("matched-cohort momentum"
+    /// / "raw sales" / etc.). Unknown / nil basis returns nil — the
+    /// model line renders without an attribution suffix rather than
+    /// leaking an engine-internal token.
+    private func trendAttributionLabel(for basis: String?) -> String? {
+        guard let basis = basis?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              basis.isEmpty == false else { return nil }
+        switch basis {
+        case "prices_by_card_honest",
+             "prices_by_card",
+             "matched-cohort",
+             "matched_cohort":
+            return "matched-cohort momentum"
+        case "raw_sales",
+             "raw-sales":
+            return "raw sales"
+        case "base_auto_median",
+             "base-auto-median",
+             "sibling_fallback",
+             "sibling-fallback":
+            return "sibling card"
+        case "cardhedge",
+             "live-market",
+             "live_market":
+            return "live market"
+        case "reference_catalog",
+             "reference-catalog",
+             "product_family_projection",
+             "product-family-projection":
+            return "reference catalog"
+        case "cardsight":
+            return "Cardsight comps"
+        default:
+            return nil
+        }
     }
 
     private func resolvedSignal() -> (label: String, tint: Color)? {

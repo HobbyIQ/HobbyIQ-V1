@@ -12,7 +12,7 @@ struct InventoryIQView: View {
 
     @State private var inventoryQuery = ""
     @State private var inventoryFilter: PortfolioInventoryFilter = .all
-    @State private var inventorySort: PortfolioInventorySort = .value
+    @State private var inventorySort: PortfolioInventorySort = .valueHighToLow
     @State private var inventoryMode: PortfolioInventoryMode = .rows
     @State private var isAddingCard = false
     @State private var selectedCard: InventoryCard?
@@ -108,6 +108,16 @@ struct InventoryIQView: View {
                     Task { await vm.load() }
                 }
             }
+            // CF-LIVE-PANEL-CACHE (2026-07-09): refresh the shared
+            // live-price cache whenever the inventory list arrives so
+            // row values, holding detail MARKET VALUE, and the comp
+            // card all read the same live number for the same grade.
+            // Kicks off asynchronously — rows show cached
+            // `fairMarketValue` until the fetch returns, then jump to
+            // live. Fires again on refresh via .task(id:).
+            .task(id: vm.inventoryCards.count) {
+                await vm.refreshLivePanelValues()
+            }
             .onChange(of: vm.pendingInventoryFilter) { _, newFilter in
                 if let newFilter {
                     inventoryFilter = newFilter
@@ -152,27 +162,19 @@ struct InventoryIQView: View {
     // MARK: - Header
 
     private var header: some View {
-        // Reaggregate at render time on the priced subset so the subtitle's
-        // dollar figure and card count reconcile honestly. Unpriced holdings
-        // are surfaced as a separate count rather than silently contributing
-        // 0 to a displayed total. Producer sums on `vm.heroSummary` are left
-        // untouched for non-hero consumers (P/L derivations stay stable).
-        let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
         let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
-        let valueText = inventoryWholeDollarString(agg.displayValue)
-        // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): subtitle splits unpriced
-        // into "N estimated · M pending" via the aggregate helper so the
-        // hero's exclusion is transparent. Story B invariant unchanged —
-        // displayValue is still observed-only.
-        let subtitleText = "\(agg.totalCards) cards · \(valueText)\(agg.unpricedSubtitleSuffix)"
+        let totalValue: Double = vm.inventoryCards.reduce(0.0) { sum, card in
+            sum + resolvedMarketValue(for: card)
+        }
+        let valueText = inventoryWholeDollarString(totalValue)
 
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("InventoryIQ")
+                Text("Inventory")
                     .font(HobbyIQTheme.Typography.title)
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                Text(subtitleText)
+                Text(valueText)
                     .font(.subheadline)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
@@ -267,7 +269,7 @@ struct InventoryIQView: View {
                     Button {
                         inventoryQuery = ""
                         inventoryFilter = .all
-                        inventorySort = .value
+                        inventorySort = .valueHighToLow
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 14, weight: .semibold))
@@ -296,7 +298,7 @@ struct InventoryIQView: View {
                         Button {
                             selectedCard = card
                         } label: {
-                            PortfolioCardRow(card: card)
+                            PortfolioCardRow(card: card, resolvedValue: vm.resolvedMarketValue(for: card))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -322,7 +324,7 @@ struct InventoryIQView: View {
                         Button {
                             selectedCard = card
                         } label: {
-                            PortfolioCardGridCard(card: card)
+                            PortfolioCardGridCard(card: card, resolvedValue: vm.resolvedMarketValue(for: card))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -413,6 +415,8 @@ struct InventoryIQView: View {
         HStack(spacing: 6) {
             Image(systemName: systemName)
             Text(title)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(Color(hex: 0xE8EAF0))
@@ -424,6 +428,10 @@ struct InventoryIQView: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1.4)
         )
         .clipShape(Capsule(style: .continuous))
+    }
+
+    private func resolvedMarketValue(for card: InventoryCard) -> Double {
+        vm.resolvedMarketValue(for: card)
     }
 
     private var filteredAndSortedCards: [InventoryCard] {
@@ -464,20 +472,18 @@ struct InventoryIQView: View {
         }
 
         switch inventorySort {
-        case .value:
-            cards.sort { $0.currentValue > $1.currentValue }
-        case .profit:
-            cards.sort { $0.profitLoss > $1.profitLoss }
-        case .roi:
-            cards.sort {
-                let left = $0.cost > 0 ? ($0.profitLoss / $0.cost) * 100 : 0
-                let right = $1.cost > 0 ? ($1.profitLoss / $1.cost) * 100 : 0
-                return left > right
-            }
-        case .recent:
-            cards.sort { $0.purchaseDate ?? "" > $1.purchaseDate ?? "" }
-        case .name:
+        case .valueHighToLow:
+            cards.sort { resolvedMarketValue(for: $0) > resolvedMarketValue(for: $1) }
+        case .valueLowToHigh:
+            cards.sort { resolvedMarketValue(for: $0) < resolvedMarketValue(for: $1) }
+        case .nameAZ:
             cards.sort { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedAscending }
+        case .nameZA:
+            cards.sort { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedDescending }
+        case .profitHighToLow:
+            cards.sort { $0.profitLoss > $1.profitLoss }
+        case .profitLowToHigh:
+            cards.sort { $0.profitLoss < $1.profitLoss }
         }
 
         return cards
