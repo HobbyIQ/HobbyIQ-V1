@@ -121,6 +121,60 @@ describe("getGraderPremium — gem-rate signal override", () => {
   });
 });
 
+describe("GEM_RATE_MULTIPLIER_ENABLED killswitch", () => {
+  it("env=\"false\" disables the override, falls back to table", () => {
+    const prev = process.env.GEM_RATE_MULTIPLIER_ENABLED;
+    process.env.GEM_RATE_MULTIPLIER_ENABLED = "false";
+    try {
+      const sig = computeGemRateFromObservations([
+        ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+        ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+      ]);
+      const withSignalDisabled = getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+      const noSignal = getGraderPremium("PSA", "10", 50, "base", 2024, null);
+      expect(withSignalDisabled).toBe(noSignal);
+    } finally {
+      if (prev === undefined) delete process.env.GEM_RATE_MULTIPLIER_ENABLED;
+      else process.env.GEM_RATE_MULTIPLIER_ENABLED = prev;
+    }
+  });
+
+  it("env unset → override is ON (default)", () => {
+    const prev = process.env.GEM_RATE_MULTIPLIER_ENABLED;
+    delete process.env.GEM_RATE_MULTIPLIER_ENABLED;
+    try {
+      const sig = computeGemRateFromObservations([
+        ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+        ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+      ]);
+      const withSignal = getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+      const noSignal = getGraderPremium("PSA", "10", 50, "base", 2024, null);
+      expect(withSignal).not.toBe(noSignal);
+      expect(withSignal).toBeGreaterThan(noSignal);
+    } finally {
+      if (prev === undefined) delete process.env.GEM_RATE_MULTIPLIER_ENABLED;
+      else process.env.GEM_RATE_MULTIPLIER_ENABLED = prev;
+    }
+  });
+
+  it.each(["0", "off", "no", "FALSE"])("env=%s also disables (all falsy variants)", (v) => {
+    const prev = process.env.GEM_RATE_MULTIPLIER_ENABLED;
+    process.env.GEM_RATE_MULTIPLIER_ENABLED = v;
+    try {
+      const sig = computeGemRateFromObservations([
+        ...Array.from({ length: 4 }, () => ({ grade: "PSA 10", price: 200 })),
+        ...Array.from({ length: 36 }, () => ({ grade: "PSA 9", price: 100 })),
+      ]);
+      const withSignal = getGraderPremium("PSA", "10", 50, "base", 2024, null, sig);
+      const noSignal = getGraderPremium("PSA", "10", 50, "base", 2024, null);
+      expect(withSignal).toBe(noSignal);
+    } finally {
+      if (prev === undefined) delete process.env.GEM_RATE_MULTIPLIER_ENABLED;
+      else process.env.GEM_RATE_MULTIPLIER_ENABLED = prev;
+    }
+  });
+});
+
 describe("logGemRateMultiplierApplied — telemetry emission", () => {
   it("emits gem_rate_multiplier_applied when the short-circuit fires", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});

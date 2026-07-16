@@ -1119,6 +1119,17 @@ function isBaseTableEnabled(): boolean {
   return String(process.env.MULTIPLIER_BASE_TABLE_ENABLED ?? "").toLowerCase() === "true";
 }
 
+// CF-GEM-RATE-WIRED-KILLSWITCH (Drew, 2026-07-16, PR #495 follow-up):
+// killswitch for the gem-rate short-circuit in getGraderPremium. Default
+// ON — if a bad calibration lands, flip GEM_RATE_MULTIPLIER_ENABLED to
+// "false" in App Service application settings for an instant revert to
+// the static table WITHOUT a redeploy. Read each call so test-time env
+// stub flips take effect immediately.
+function isGemRateMultiplierEnabled(): boolean {
+  const v = String(process.env.GEM_RATE_MULTIPLIER_ENABLED ?? "true").toLowerCase();
+  return v !== "false" && v !== "0" && v !== "off" && v !== "no";
+}
+
 /**
  * Tier resolver supporting both the static-table tiers (<25, 25-50,
  * 50-100, 100+) AND the empirical-table tiers (..., 100-250, 250-500,
@@ -1260,7 +1271,7 @@ export function getGraderPremium(
   // both effects. Mid-tier grades intentionally skip this branch because
   // their pop is dominated by non-gem submissions and the formula would
   // over-claim.
-  if (gemRateSignal && shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)) {
+  if (isGemRateMultiplierEnabled() && gemRateSignal && shouldUseGemRateMultiplier(gemRateSignal, `${company} ${gradeKey}`)) {
     const setBump = getConditionSensitiveSetBump(productSet, gradingCompany, grade);
     const formulaMultiplier = multiplierFromGemRate(gemRateSignal.gemRate);
     logGemRateMultiplierApplied({
