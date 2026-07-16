@@ -84,18 +84,9 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
           name: 'CORS_ALLOWED_ORIGINS'
           value: '*'
         }
-        {
-          name: 'ENABLE_AI_SEARCH'
-          value: 'false'
-        }
-        {
-          name: 'ENABLE_NOTIFICATIONS'
-          value: 'false'
-        }
-        {
-          name: 'ENABLE_DEBUG_PRICING'
-          value: 'false'
-        }
+        // CF-DEAD-FLAG-SWEEP (audit PR #488, 2026-07-15): retired
+        // ENABLE_AI_SEARCH / ENABLE_NOTIFICATIONS / ENABLE_DEBUG_PRICING
+        // — no code references them and they defaulted to false.
         {
           name: 'CACHE_TTL_ESTIMATE_SECONDS'
           value: '900'
