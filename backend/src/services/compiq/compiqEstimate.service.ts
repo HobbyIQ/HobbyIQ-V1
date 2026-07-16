@@ -33,6 +33,7 @@ import {
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
@@ -4083,9 +4084,21 @@ export async function computeEstimate(
           .map((c) => c.price)
           .filter((p): p is number => Number.isFinite(p) && p > 0)
           .sort((a, b) => a - b);
-        if (parentRawPrices.length > 0) {
-          const parentBaseMedian =
-            parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median anchor
+        // on the parent product pool. Project the next parent-product
+        // sale from its trend, then multiply by family + parallel factors.
+        // Falls back to null when the parent pool can't project (empty
+        // or all-invalid), skipping the projection branch cleanly.
+        // parentBaseMedian retained as the variable name for structural
+        // parity with call-site emission fields (parentBaseMedian appears
+        // in the attribution payload downstream); it now carries the
+        // trend-projected next-sale value, not a median.
+        const parentCompsForProjection = (parentPool.comps ?? [])
+          .filter((c) => Number.isFinite(c.price) && c.price > 0)
+          .map((c) => ({ price: c.price, soldDate: c.date }));
+        const parentNextSale = projectNextSaleFromComps(parentCompsForProjection);
+        if (parentRawPrices.length > 0 && parentNextSale !== null) {
+          const parentBaseMedian = parentNextSale.nextSaleValue;
           // When the family was detected via the parallel field ("Black
           // Sapphire"), use effectiveParallel ("Black") for print-run
           // inference so we get the /10 tier instead of a no-match.
@@ -4282,9 +4295,21 @@ export async function computeEstimate(
           .map((c) => c.price)
           .filter((p): p is number => Number.isFinite(p) && p > 0)
           .sort((a, b) => a - b);
-        if (parentRawPrices.length > 0) {
-          const parentBaseMedian =
-            parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+        // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median anchor
+        // on the parent product pool. Project the next parent-product
+        // sale from its trend, then multiply by family + parallel factors.
+        // Falls back to null when the parent pool can't project (empty
+        // or all-invalid), skipping the projection branch cleanly.
+        // parentBaseMedian retained as the variable name for structural
+        // parity with call-site emission fields (parentBaseMedian appears
+        // in the attribution payload downstream); it now carries the
+        // trend-projected next-sale value, not a median.
+        const parentCompsForProjection = (parentPool.comps ?? [])
+          .filter((c) => Number.isFinite(c.price) && c.price > 0)
+          .map((c) => ({ price: c.price, soldDate: c.date }));
+        const parentNextSale = projectNextSaleFromComps(parentCompsForProjection);
+        if (parentRawPrices.length > 0 && parentNextSale !== null) {
+          const parentBaseMedian = parentNextSale.nextSaleValue;
           const cardClass: "auto" | "base" = queryContext.isAuto === true ? "auto" : "base";
           const parallelMultiplier =
             floorForPrintRunByClass(parallelPrintRun, cardClass) ??
@@ -5317,17 +5342,16 @@ export async function computeEstimate(
     // The response's `approximate: true` + variantWarning already
     // convey uncertainty; downstream tier chips + iOS render remain
     // truthful. Confidence stays at 0.2 (variant-mismatch confidence).
-    const variantMismatchMedianFmv = ((): number | null => {
-      const validPrices = fetched.comps
-        .map((c) => c.price)
-        .filter((p) => Number.isFinite(p) && p > 0)
-        .sort((a, b) => a - b);
-      if (validPrices.length === 0) return null;
-      const mid = validPrices.length / 2;
-      return validPrices.length % 2 === 1
-        ? validPrices[Math.floor(mid)]
-        : (validPrices[mid - 1] + validPrices[mid]) / 2;
-    })();
+    //
+    // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the fetched.comps
+    // median that PR #477 shipped. FMV is projected NEXT sale from the
+    // trend across the wrong-variant pool, never the arithmetic middle.
+    // For Hartman Aqua's 2 dated comps ($93 → $260.44), regression fits
+    // the slope and projects forward instead of returning $176.72.
+    const variantMismatchProjection = projectNextSaleFromComps(
+      fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+    );
+    const variantMismatchProjectedFmv = variantMismatchProjection?.nextSaleValue ?? null;
 
     return {
       cardTitle,
@@ -5335,10 +5359,10 @@ export async function computeEstimate(
       action: "Hold",
       dealScore: 0,
       quickSaleValue: null,
-      fairMarketValue: variantMismatchMedianFmv,
+      fairMarketValue: variantMismatchProjectedFmv,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
-      marketValue: variantMismatchMedianFmv,
+      marketValue: variantMismatchProjectedFmv,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
@@ -5346,7 +5370,7 @@ export async function computeEstimate(
       explanation: [
         `Requested ${effectiveIsAuto ? "autograph " : ""}variant not found in Card Hedge's sold database.`,
         `Closest match on file: ${fetched.card?.variant ?? "unknown"} (missing: ${missing}).`,
-        variantMismatchMedianFmv !== null
+        variantMismatchProjectedFmv !== null
           ? `Approximate value using ${fetched.comps.length} nearby-variant comp${fetched.comps.length > 1 ? "s" : ""}.`
           : "Will retry automatically once comps are recorded.",
       ],
@@ -5373,10 +5397,10 @@ export async function computeEstimate(
       // CF-VARIANT-MISMATCH-CONFIDENCE-UNIFY (audit Finding #7, 2026-07-15):
       // marketRegime.confidence emits 0.2 as the canonical variant-mismatch
       // uncertainty; unify pricingConfidence to the same value so the two
-      // signals agree. When variantMismatchMedianFmv is null (no comps to
+      // signals agree. When variantMismatchProjectedFmv is null (no comps to
       // median), collapse to 0 — no number = no confidence.
       confidence: {
-        pricingConfidence: variantMismatchMedianFmv !== null ? 0.2 : 0,
+        pricingConfidence: variantMismatchProjectedFmv !== null ? 0.2 : 0,
         liquidityConfidence: 0,
         timingConfidence: 0,
       },
@@ -5808,37 +5832,27 @@ export async function computeEstimate(
           (combinedCount >= 3 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 365));
 
         if (!stillInsufficient) {
-          // CF-FMV-NOWCAST Ship 1: route through the existing exported
-          // velocity-weighted median (getSaleVelocityWeight at L219-229 gives
-          // 48h:5x, 7d:2x, 21d:1x, 30d:0.3x, older:0.1x — same decay law as
-          // the main pipeline). combinedSales carries epoch-ms `ts`; pass as
-          // the `date` field which getSaleVelocityWeight handles natively.
-          // Defensive fallback: if computeWeightedMedian returns null (only
-          // possible when every sample is filtered out — combinedCount===0
-          // guard above already prevented this), reuse the plain median to
-          // preserve the never-emit-NaN contract.
-          const weightedFmv = computeWeightedMedian(
-            combinedSales.map((s) => ({ price: s.price, date: s.ts })),
+          // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the velocity-
+          // weighted median. FMV is projected NEXT sale from the sibling
+          // pool's trend, not the middle of past sales.
+          //
+          // The prior implementation (computeWeightedMedian with a plain-
+          // median fallback) was structurally a median — recent-weighted
+          // is still a median. Regression across the combined sibling pool
+          // captures the trajectory that median throws away. When the pool
+          // is too thin for a fit (n<2 or all-same-timestamp), the helper
+          // falls back to the newest sale rolled forward — never a middle
+          // value. When even that fails (invariant broken: combinedCount>0
+          // with no priced comps), null flows through so downstream sees
+          // the sibling-pool branch as unsatisfied and fall-through fires.
+          const nextSale = projectNextSaleFromComps(
+            combinedSales.map((s) => ({
+              price: s.price,
+              soldDate: new Date(s.ts).toISOString(),
+            })),
           );
-          let fairMarketValue: number;
-          if (weightedFmv !== null) {
-            fairMarketValue = weightedFmv;
-          } else {
-            const sortedPrices = combinedSales.map((s) => s.price).sort((a, b) => a - b);
-            fairMarketValue =
-              sortedPrices.length % 2 === 1
-                ? sortedPrices[(sortedPrices.length - 1) / 2]
-                : (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2;
-          }
-          // CF-FMV-NOWCAST trend-knob insertion point (NOT implemented this
-          // ship — evidence-gated decision per ground-truth trace). When a
-          // bounded trend signal arrives on the sibling-pool path, multiply
-          // here:  fairMarketValue = fairMarketValue * trendCorrection
-          // (factor clamped to e.g. [0.85, 1.15] for the thin-data path).
-          // The downstream quickSale/premium/suggestedList cascade off `fmv`
-          // so the correction propagates without additional plumbing.
           const round2 = (n: number) => Math.round(n * 100) / 100;
-          const fmv = round2(fairMarketValue);
+          const fmv = nextSale !== null ? round2(nextSale.nextSaleValue) : 0;
           const quickSaleValue = round2(fmv * 0.88);
           const premiumValue = round2(fmv * 1.15);
           const suggestedListPrice = round2(fmv * 1.05);
@@ -7245,10 +7259,16 @@ export async function computeEstimate(
   // predictedPrice. Attribution updated to `linear-regression` so the
   // wire's `predictedPriceAttribution` matches across vendors.
   //
-  // Falls through cleanly on any of: estimate branches (isAnyEstimate),
-  // thin pools (< 2 records), same-day sales (no time-spread), null
-  // dates. The pre-existing median-anchored numbers stay authoritative
-  // on those paths.
+  // CF-NO-MEDIAN-FMV (Drew, 2026-07-15): retired the median-anchored
+  // `?? responseFmv` fallback. When the regression can't fit (< 2 dated
+  // comps or all-same-date), the trend-adjusted-last-sale branch of
+  // projectNextSaleFromComps anchors on the newest actual sale — never
+  // the pool's arithmetic middle. On isAnyEstimate branches or the
+  // pool-is-empty invariant break, slopeMarketValue falls through to
+  // `__predicted.predictedPrice` (trendIQ-derived) rather than the
+  // legacy median. The trend-adjusted fallback carries mechanism
+  // "trend-adjusted-last-sale" so downstream can distinguish it from a
+  // clean regression.
   const slopeCompsInput = !isAnyEstimate
     ? comps.map((c) => ({
         price: c.originalPrice,
@@ -7260,11 +7280,27 @@ export async function computeEstimate(
   );
   const slopeAdj =
     slopeCompsInput.length >= 2 ? slopeFn(slopeCompsInput) : null;
-  const slopeMarketValue = slopeAdj?.marketValue ?? responseFmv;
+  const nextSaleFallback = !isAnyEstimate && !slopeAdj
+    ? projectNextSaleFromComps(
+        comps.map((c) => ({ price: c.originalPrice, soldDate: c.date ?? null })),
+      )
+    : null;
+  // T3 rebucket paths intentionally emit null FMV — the observed-band contract
+  // requires isAnyEstimate → null; downstream is responsible for the
+  // estimatedValue / estimateBasis fields. Preserve that null.
+  const slopeMarketValue = isAnyEstimate
+    ? responseFmv
+    : (slopeAdj?.marketValue
+        ?? nextSaleFallback?.nextSaleValue
+        ?? __predicted.predictedPrice);
   const slopePredictedPrice =
-    slopeAdj?.predictedPrice ?? __predicted.predictedPrice;
+    slopeAdj?.predictedPrice
+    ?? nextSaleFallback?.nextSaleValue
+    ?? __predicted.predictedPrice;
   const slopePredictedRange =
-    slopeAdj?.predictedPriceRange ?? __predicted.predictedPriceRange;
+    slopeAdj?.predictedPriceRange
+    ?? (nextSaleFallback ? nextSaleFallback.bounds : null)
+    ?? __predicted.predictedPriceRange;
   const slopePredictedAttribution = slopeAdj
     ? {
         method: "linear-regression" as const,
@@ -7272,7 +7308,18 @@ export async function computeEstimate(
         slopePerMonthPct: slopeAdj.slopePerMonthPct,
         n: slopeAdj.n,
       }
-    : __predicted.predictedPriceAttribution;
+    : nextSaleFallback
+      ? {
+          method: "trend-adjusted-last-sale" as const,
+          direction: nextSaleFallback.slopePerMonthPct > 0
+            ? ("up" as const)
+            : nextSaleFallback.slopePerMonthPct < 0
+              ? ("down" as const)
+              : ("static" as const),
+          slopePerMonthPct: nextSaleFallback.slopePerMonthPct,
+          n: nextSaleFallback.n,
+        }
+      : __predicted.predictedPriceAttribution;
 
   // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in listings
   // trend for a full supply+demand read. Player name is extracted from
