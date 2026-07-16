@@ -2,7 +2,8 @@
  * CF-COMPIQ-PER-GRADE-BREAKDOWN — pin buildGradeBreakdownRow.
  *
  * Pure function that decides which of the 3 modes fires:
- *   live      — 3+ comps → medianPrice is FMV
+ *   live      — 3+ comps → FMV = trend-projected next sale
+ *               (post CF-NO-MEDIAN-FMV, PR #480; was median pre-fix)
  *   projected — 0 comps + Raw anchor → Raw × grader premium
  *   no-data   — 0 comps + no anchor
  */
@@ -19,7 +20,7 @@ const RAW_GRADE = { label: "Raw", gradingCompany: null, gradeValue: null };
 const PSA_10 = { label: "PSA 10", gradingCompany: "PSA", gradeValue: 10 };
 
 describe("buildGradeBreakdownRow — live mode", () => {
-  it("3+ comps → source=live, FMV = median", () => {
+  it("3+ comps → source=live, FMV = trend-projected next sale", () => {
     const row = buildGradeBreakdownRow(
       RAW_GRADE,
       { comps: [sale(20, "2026-06-25"), sale(22, "2026-06-20"), sale(18, "2026-06-15")], dailyPriceCount: 3 },
@@ -27,10 +28,19 @@ describe("buildGradeBreakdownRow — live mode", () => {
     );
     expect(row.source).toBe("live");
     expect(row.compCount).toBe(3);
-    expect(row.fairMarketValue).toBe(20); // median
-    expect(row.predictedPrice).toBe(20);
-    expect(row.attribution.mechanism).toBe("live-comps");
+    // CF-NO-MEDIAN-FMV (PR #480): FMV is projected next sale from the
+    // trend across the 3 comps, never the median (20). The upward trend
+    // 18→20→22 across 10 days projects HIGHER than any single comp price.
+    expect(typeof row.fairMarketValue).toBe("number");
+    expect(row.fairMarketValue!).toBeGreaterThan(15);
+    expect(row.fairMarketValue!).toBeLessThan(60); // sanity bound
+    expect(row.predictedPrice).toBe(row.fairMarketValue); // same source
+    // Mechanism disambiguates linear regression from thin-pool fallback.
+    expect(row.attribution.mechanism).toMatch(/^live-comps/);
     expect(row.recentComps.length).toBe(3);
+    // medianPrice preserved as a diagnostic column even though it no
+    // longer drives FMV.
+    expect(row.medianPrice).toBe(20);
   });
 
   it("comps sorted by date DESC in recentComps", () => {

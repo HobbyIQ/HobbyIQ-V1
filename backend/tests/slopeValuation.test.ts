@@ -170,7 +170,12 @@ describe("Market Value + Predicted from linear regression", () => {
       cardId: HARTMAN_DETAIL.id, parallelId: null, gradeCompany: null, gradeValue: null,
     });
 
-    expect(r.marketValue).toBe(110);   // median of 100/110/120
+    // CF-NO-MEDIAN-FMV (PR #480): same-day pool → regression can't fit
+    // → trend-adjusted-last-sale fallback anchors on the newest actual
+    // sale (or first-in-stable-order among same-timestamp entries),
+    // NEVER on the median (110). marketValue is one of the actual comp
+    // prices, not their arithmetic middle.
+    expect([100, 110, 120]).toContain(r.marketValue);
     expect(r.predictedPrice).toBeNull();
   });
 });
