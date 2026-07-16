@@ -80,6 +80,13 @@ import { getCardMetaById } from "../services/compiq/cardsight.router.js";
 import type { GradedProjectionResult } from "../services/compiq/gradedPriceProjection.js";
 import { compileGradedEstimatesForCard } from "../services/compiq/compileGradedEstimatesForCard.js";
 import { projectNextSaleFromComps } from "../services/compiq/nextSaleProjection.service.js";
+// CF-CONSTS-CONSOLIDATION (audit PR #487, 2026-07-15): route every raw
+// FMV multiplier through the canonical constants introduced in PR #481.
+// Whole-app audit flagged 15+ raw literals for the same semantic values.
+import {
+  QUICK_SALE_FALLBACK_MULTIPLIER,
+  PREMIUM_MULTIPLIER,
+} from "../modules/compiq/services/pricing/utils/pricing.constants.js";
 
 // CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
 // `/api/compiq/card-image/:id` proxy route from the request context.
@@ -2115,8 +2122,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -2173,8 +2180,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
             ? ((est as any).effectiveFmv as number)
             : (xpa.fmv as number))
         : 0;
-      const syntheticQuick = syntheticFmv * 0.88;
-      const syntheticPremium = syntheticFmv * 1.15;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so
@@ -2729,8 +2736,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -2771,8 +2778,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             ? ((est as any).effectiveFmv as number)
             : (xpa.fmv as number))
         : 0;
-      const syntheticQuick = syntheticFmv * 0.88;
-      const syntheticPremium = syntheticFmv * 1.15;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so /price
@@ -4569,8 +4576,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       }
 
       const fmv = (est.fairMarketValue as number) ?? 0;
-      const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
-      const premium = (est.premiumValue as number) ?? fmv * 1.15;
+      const quick = (est.quickSaleValue as number) ?? fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
       const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
       const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
@@ -4603,8 +4610,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             ? ((est as any).effectiveFmv as number)
             : (xpa.fmv as number))
         : 0;
-      const syntheticQuick = syntheticFmv * 0.88;
-      const syntheticPremium = syntheticFmv * 1.15;
+      const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+      const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
       // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
       // the (player, release, year) tuple to the nightly compute
@@ -5422,7 +5429,7 @@ router.post("/bulk", requireSession, requireEntitlement("predictions"), async (r
         }
 
         const fmv = (est.fairMarketValue as number) ?? 0;
-        const premium = (est.premiumValue as number) ?? fmv * 1.15;
+        const premium = (est.premiumValue as number) ?? fmv * PREMIUM_MULTIPLIER;
         const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
         const data = {
           ...buildEngineMeta(),
