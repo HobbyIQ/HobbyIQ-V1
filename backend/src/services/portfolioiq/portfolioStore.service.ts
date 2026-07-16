@@ -2379,6 +2379,19 @@ async function autoPriceHolding(
     predictedPriceUpdatedAt,
     movementDirection,
     movementUpdatedAt,
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (audit PR #483, 2026-07-15):
+    // persist the full trendIQ + confidence + predictedPriceAttribution
+    // objects from the estimate. composeHoldingWireShape now emits them
+    // instead of the null placeholders PR #482 stamped. Legacy holdings
+    // (written before this PR) load as `undefined` for these fields; the
+    // wire coerces `undefined` → `null` and iOS decoders bind defensively.
+    trendIQ: (estimate as any)?.trendIQ ?? null,
+    confidence:
+      typeof (estimate as any)?.confidence?.pricingConfidence === "number"
+        ? Math.min(1, Math.max(0, (estimate as any).confidence.pricingConfidence))
+        : null,
+    predictedPriceAttribution:
+      (estimate as any)?.predictedPriceAttribution ?? null,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     lastUpdated: now,
