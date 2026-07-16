@@ -184,14 +184,19 @@ export async function tryCardsightPricingBackstop(
   // finest-grained identity we have on this path. Collisions can happen
   // when two queries land on the same physical card (which is what we
   // WANT — same synthetic id aggregates the transaction history).
-  const synthKeyParts = [
+  const synthKeyPartsArray = [
     queryContext?.playerName ?? "",
     queryContext?.cardYear != null ? String(queryContext.cardYear) : "",
     queryContext?.cardNumber ?? "",
     queryContext?.parallel ?? "",
-  ]
-    .map((s) => s.trim().toLowerCase())
-    .join("|");
+  ].map((s) => s.trim().toLowerCase());
+  // Only emit the synthetic id when at least ONE identity part is
+  // populated. Degenerate `backstop:|||` (all empty) collapses to ""
+  // so downstream ingest guards still skip — matches pre-fix behavior
+  // for the "no identity at all" edge case.
+  const synthKeyParts = synthKeyPartsArray.some((s) => s.length > 0)
+    ? synthKeyPartsArray.join("|")
+    : "";
   const syntheticCardId = synthKeyParts.length > 0
     ? `backstop:${synthKeyParts}`
     : "";

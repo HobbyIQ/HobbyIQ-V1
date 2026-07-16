@@ -94,7 +94,7 @@ describe("tryCardsightPricingBackstop — early exits", () => {
 });
 
 describe("tryCardsightPricingBackstop — happy path", () => {
-  it("returns comps with source=cs_pricing_backstop and empty card_id (no canonical bridge)", async () => {
+  it("returns comps with source=cs_pricing_backstop and synthetic backstop cardId", async () => {
     mockedSearch.mockResolvedValue([
       rec({ price: 1800, date: "2026-07-12T00:00:00Z" }),
       rec({ price: 1750, date: "2026-07-10T00:00:00Z" }),
@@ -106,7 +106,11 @@ describe("tryCardsightPricingBackstop — happy path", () => {
     // stamps "cs_pricing_backstop" per-comp so provenance chips can
     // separate marketplace-backstop rows from catalog-anchored CS comps.
     expect(r!.sales.every((s) => s.source === "cs_pricing_backstop")).toBe(true);
-    expect(r!.card?.card_id).toBe("");   // deliberate — no canonical bridge
+    // CF-BACKSTOP-SYNTHETIC-CARDID (PR #492, 2026-07-15): backstop
+    // now emits `backstop:{player|year|number|parallel}` synthetic id
+    // so sold_comps ingest + user-pool merge include backstop rows.
+    // Empty parts collapse to empty string when queryContext is missing.
+    expect(r!.card?.card_id ?? "").toMatch(/^backstop:/);   // deliberate — no canonical bridge
     expect(r!.variantWarning).toEqual(["cs_pricing_backstop"]);
   });
 
@@ -226,6 +230,10 @@ describe("tryCardsightPricingBackstop — error resilience", () => {
     mockedSearch.mockResolvedValue([rec()]);
     const r = await tryCardsightPricingBackstop("q", undefined, "Raw");
     expect(r).not.toBeNull();
+    // CF-BACKSTOP-SYNTHETIC-CARDID (PR #492, 2026-07-15): with no
+    // queryContext, no identity parts populate → synthetic id collapses
+    // to "" (matches pre-fix behavior). Ingest guards downstream still
+    // skip these rows since no aggregation key is available.
     expect(r!.card?.card_id).toBe("");
     expect(r!.card?.player).toBeUndefined();
   });
