@@ -1,0 +1,98 @@
+name: Era-Baselines Refresh (weekly)
+
+# CF-ERA-BASELINES-WORKFLOW-SPLIT (2026-07-16). The era-baselines
+# refresh used to piggyback on Daily 5AM ET Refresh & Deploy but it
+# consistently hit that workflow's 20-minute cap (1630 buckets × ~1s
+# each on cold CH + Cosmos). Split into its own workflow with a
+# generous timeout and an off-peak weekly schedule so deploys go
+# clean-green.
+#
+# Reads:
+#   - COSMOS_CONNECTION_STRING (HobbyIQ3 App Service settings)
+#   - CARD_HEDGE_API_KEY       (HobbyIQ3 App Service settings)
+# Writes:
+#   - era_baselines Cosmos container (aggregate rows per productKey/year/cardClass)
+#
+# Runbook: same as the inline step used to be — see the Refresh
+# era-baselines comment in the prior git history for context.
+
+on:
+  schedule:
+    # Weekly Sunday 3 AM ET (7 UTC EDT / 8 UTC EST). Sunday chosen so
+    # it never overlaps a Daily 5AM deploy that might be running late.
+    - cron: '0 7 * * 0'
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    name: Refresh era-baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Run only at 3:00 AM America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          # 4-hour window (03-07 ET) absorbs Actions schedule drift.
+          # 10# strips leading zeros so bash treats "03" as decimal.
+          if [ "$((10#$ET_HOUR))" -ge 3 ] && [ "$((10#$ET_HOUR))" -le 7 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR (in 03-07 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR (outside 03-07 window); skipping."
+          fi
+
+      - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Refresh era-baselines
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          CARD_HEDGE_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot refresh"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/refresh-era-baselines.cjs
+          echo "era-baselines refresh finished"

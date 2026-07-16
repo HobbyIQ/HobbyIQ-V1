@@ -1,0 +1,91 @@
+name: Verdict Flip Push Fan-out
+
+# CF-VERDICT-FLIP-PUSH-FANOUT (Drew, 2026-07-16, scaffold).
+#
+# Reads verdict flips from verdict_history (via readRecentFlipsForPlayers),
+# filters to significance="major", and emits per-user push intents. Runs
+# at 5:30 AM ET so it sees the fresh snapshots the Daily 5AM ET deploy
+# just kicked off (dailyListingsSnapshotJob writes today's verdicts + runs
+# recordVerdictAndDetectFlip during that job).
+#
+# SCAFFOLD-ONLY until APNs is wired. See the script header for the three
+# prereqs (APNs auth key, apnsDeviceToken plumbing, user opt-in pref).
+
+on:
+  schedule:
+    # 9:30 UTC maps to 5:30 AM EDT.
+    - cron: '30 9 * * *'
+    # 10:30 UTC maps to 5:30 AM EST.
+    - cron: '30 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  fanout:
+    name: Fan out major verdict flips (dry-run scaffold)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Run only around 5:30 AM America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$((10#$ET_HOUR))" -ge 5 ] && [ "$((10#$ET_HOUR))" -le 9 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR (in 05-09 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR (outside 05-09 window); skipping."
+          fi
+
+      - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend (for dist/ imports)
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fan out major flips
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot fan out"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/verdict-flip-push-fanout.cjs --days=1
