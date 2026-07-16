@@ -16,13 +16,17 @@ import { fetchPlayerListingsSummary } from "../ebay/ebayListingSearch.service.js
 import { upsertSnapshot } from "../portfolioiq/listingsSnapshotStore.service.js";
 import { computeListingsTrend } from "./supplyDemandSignal.service.js";
 import { recordVerdictAndDetectFlip, type VerdictFlip } from "./verdictHistoryStore.service.js";
+import { loadPriorityPlayers } from "../portfolioiq/priorityWatchlist.service.js";
 
 const DEFAULT_USER_ID = "admin-testing-hobbyiq";
 const DEFAULT_TOP_N = 500;
 const DEFAULT_CONCURRENCY = 3;
+const PRIORITY_HOLDING_COUNT = 10_000; // ranks priority players above all user-derived ones
 
 export interface SnapshotJobSummary {
   playersSeen: number;
+  playersFromUsers: number;
+  playersFromPriorityList: number;
   playersProcessed: number;
   snapshotsCreated: number;
   errors: number;
@@ -86,6 +90,26 @@ export async function runDailyListingsSnapshotJob(opts: {
   const concurrency = opts.concurrency ?? DEFAULT_CONCURRENCY;
 
   const players = await enumeratePlayers();
+  const playersFromUsers = players.size;
+
+  // CF-PRIORITY-WATCHLIST (PR #435): union in the hand-curated list.
+  // Priority players get a synthetic holdingCount that outranks any
+  // user-derived count, so they always survive the top-N cut. If a
+  // priority player also has real user holdings, we keep the real
+  // count (still guaranteed a slot via the additive boost).
+  const priorityPlayers = await loadPriorityPlayers();
+  let playersFromPriorityList = 0;
+  for (const displayName of priorityPlayers) {
+    const key = displayName.toLowerCase();
+    const existing = players.get(key);
+    if (existing) {
+      existing.holdingCount += PRIORITY_HOLDING_COUNT;
+    } else {
+      players.set(key, { displayName, holdingCount: PRIORITY_HOLDING_COUNT });
+      playersFromPriorityList++;
+    }
+  }
+
   const ranked = Array.from(players.values())
     .sort((a, b) => b.holdingCount - a.holdingCount)
     .slice(0, topN);
@@ -95,6 +119,8 @@ export async function runDailyListingsSnapshotJob(opts: {
     source: "dailyListingsSnapshotJob.service",
     userId,
     playersSeen: players.size,
+    playersFromUsers,
+    playersFromPriorityList,
     playersToProcess: ranked.length,
     topN,
     concurrency,
@@ -167,6 +193,8 @@ export async function runDailyListingsSnapshotJob(opts: {
   const majorFlips = flips.filter((f) => f.significance === "major");
   const summary: SnapshotJobSummary = {
     playersSeen: players.size,
+    playersFromUsers,
+    playersFromPriorityList,
     playersProcessed: ranked.length,
     snapshotsCreated,
     errors,
