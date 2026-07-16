@@ -69,6 +69,14 @@ export const PROJECTION_PREMIUM_MULTIPLIER = 1.15;
 // as QUICK_SALE_MULTIPLIER) — intentionally aligning scarcity with the
 // success-path quick-sale.
 export const SCARCITY_QUICK_SALE_MULTIPLIER = 0.75;
+// CF-CONSTS-CONSOLIDATION (audit PR #490, 2026-07-15): scarcity-tier
+// premium multipliers named so compiqEstimate.service.ts sites 4482
+// (1.2) and 4568 (1.3) can retire their raw literals. Both are wider
+// than the success-path PREMIUM_MULTIPLIER (1.15) — the cross-player
+// anchor is looser than a direct-comp median, so the premium band
+// widens to reflect the uncertainty.
+export const SCARCITY_PREMIUM_MULTIPLIER = 1.2;
+export const SCARCITY_PREMIUM_ALT_MULTIPLIER = 1.3;
 
 // Tier 7 setdoc baseline — thinnest anchor, widest spread.
 // See compiqEstimate.service.ts:4723-4724.
