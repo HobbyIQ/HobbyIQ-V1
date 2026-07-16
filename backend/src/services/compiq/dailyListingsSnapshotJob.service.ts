@@ -18,18 +18,21 @@ import { computeListingsTrend } from "./supplyDemandSignal.service.js";
 import { recordVerdictAndDetectFlip, type VerdictFlip } from "./verdictHistoryStore.service.js";
 import { loadPriorityPlayers } from "../portfolioiq/priorityWatchlist.service.js";
 import { loadTopMoverPlayers } from "../portfolioiq/chTopMoverPlayers.service.js";
+import { loadMlbTopPlayers } from "../portfolioiq/mlbTopPlayers.service.js";
 
 const DEFAULT_USER_ID = "admin-testing-hobbyiq";
 const DEFAULT_TOP_N = 500;
 const DEFAULT_CONCURRENCY = 3;
 const PRIORITY_HOLDING_COUNT = 10_000;    // ranks priority above all others
-const CH_TOP_MOVER_HOLDING_COUNT = 5_000; // ranks CH-movers above user-only, below priority
+const CH_TOP_MOVER_HOLDING_COUNT = 5_000; // ranks CH-movers above MLB-stable, below priority
+const MLB_TOP_HOLDING_COUNT = 2_500;      // ranks MLB-stable above user-only, below CH-movers
 
 export interface SnapshotJobSummary {
   playersSeen: number;
   playersFromUsers: number;
   playersFromPriorityList: number;
   playersFromChTopMovers: number;
+  playersFromMlbTopPlayers: number;
   playersProcessed: number;
   snapshotsCreated: number;
   errors: number;
@@ -131,6 +134,22 @@ export async function runDailyListingsSnapshotJob(opts: {
     }
   }
 
+  // CF-MLB-TOP-PLAYERS (PR #434): union in the stable MLB stars + top
+  // prospects universe. Baseline coverage of the market's steady
+  // attention — the layer priority/movers can miss on any given day.
+  const mlbTopPlayers = await loadMlbTopPlayers();
+  let playersFromMlbTopPlayers = 0;
+  for (const displayName of mlbTopPlayers) {
+    const key = displayName.toLowerCase();
+    const existing = players.get(key);
+    if (existing) {
+      existing.holdingCount += MLB_TOP_HOLDING_COUNT;
+    } else {
+      players.set(key, { displayName, holdingCount: MLB_TOP_HOLDING_COUNT });
+      playersFromMlbTopPlayers++;
+    }
+  }
+
   const ranked = Array.from(players.values())
     .sort((a, b) => b.holdingCount - a.holdingCount)
     .slice(0, topN);
@@ -143,6 +162,7 @@ export async function runDailyListingsSnapshotJob(opts: {
     playersFromUsers,
     playersFromPriorityList,
     playersFromChTopMovers,
+    playersFromMlbTopPlayers,
     playersToProcess: ranked.length,
     topN,
     concurrency,
@@ -218,6 +238,7 @@ export async function runDailyListingsSnapshotJob(opts: {
     playersFromUsers,
     playersFromPriorityList,
     playersFromChTopMovers,
+    playersFromMlbTopPlayers,
     playersProcessed: ranked.length,
     snapshotsCreated,
     errors,

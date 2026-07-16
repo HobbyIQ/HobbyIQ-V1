@@ -9,6 +9,7 @@ import * as ebay from "../src/services/ebay/ebayListingSearch.service.js";
 import * as store from "../src/services/portfolioiq/listingsSnapshotStore.service.js";
 import * as priority from "../src/services/portfolioiq/priorityWatchlist.service.js";
 import * as topMovers from "../src/services/portfolioiq/chTopMoverPlayers.service.js";
+import * as mlbTop from "../src/services/portfolioiq/mlbTopPlayers.service.js";
 
 // Fake Cosmos container that returns pre-canned user docs
 function fakeContainer(docs: any[]) {
@@ -38,6 +39,7 @@ describe("runDailyListingsSnapshotJob", () => {
     // isolating from both universes.
     vi.spyOn(priority, "loadPriorityPlayers").mockResolvedValue([]);
     vi.spyOn(topMovers, "loadTopMoverPlayers").mockResolvedValue([]);
+    vi.spyOn(mlbTop, "loadMlbTopPlayers").mockResolvedValue([]);
   });
   it("aggregates player counts across all portfolios, ranks by count, snapshots top-N", async () => {
     vi.spyOn(portfolio, "getPortfolioContainer").mockResolvedValue(
