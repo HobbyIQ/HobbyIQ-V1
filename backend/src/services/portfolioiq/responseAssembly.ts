@@ -482,7 +482,14 @@ export interface PortfolioHoldingWire {
   buyZone: [number | null, number | null];
   holdZone: [number | null, number | null];
   sellZone: [number | null, number | null];
-  trendIQ: null; // PR #483 will change this to TrendIQResult | null
+  // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): trendIQ is now the
+  // full result object when the holding was repriced by autoPriceHolding
+  // (with an engine estimate carrying trendIQ), null otherwise. Same
+  // shape iOS decodes on comp responses so a shared PricingPanelView
+  // component can bind either.
+  trendIQ:
+    | import("../compiq/trendIQ.types.js").TrendIQResult
+    | null;
   confidence: number | null;
 }
 
@@ -657,10 +664,16 @@ export function composeHoldingWireShape(
         && typeof holding.predictedPriceHigh === "number"
         ? { low: holding.predictedPriceLow, high: holding.predictedPriceHigh }
         : null,
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): prefer the persisted
+    // full attribution object; fall through to the flat mechanism string
+    // for legacy holdings written before Slice 2.
     predictedPriceAttribution:
-      typeof holding.predictedPriceMechanism === "string" && holding.predictedPriceMechanism.length > 0
-        ? { mechanism: holding.predictedPriceMechanism }
-        : null,
+      (holding as any).predictedPriceAttribution
+        && typeof (holding as any).predictedPriceAttribution === "object"
+        ? ((holding as any).predictedPriceAttribution as { mechanism: string })
+        : (typeof holding.predictedPriceMechanism === "string" && holding.predictedPriceMechanism.length > 0
+            ? { mechanism: holding.predictedPriceMechanism }
+            : null),
     estimateRange:
       typeof holding.estimateLow === "number"
         && typeof holding.estimateHigh === "number"
@@ -682,12 +695,16 @@ export function composeHoldingWireShape(
       fmvPerUnit,
       applyHeadlineMultiplier(fmvPerUnit, PREMIUM_MULTIPLIER),
     ],
-    // trendIQ + confidence: placeholder nulls in PR #482. PR #483 will
-    // wire persistence via autoPriceHolding + emit real values here.
-    // iOS decoders can bind these fields defensively (nullable Codable)
-    // so the future non-null population is a data change, not a schema break.
-    trendIQ: null,
-    confidence: null,
+    // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (PR #483): emit the persisted
+    // trendIQ + confidence values from the holding doc. Legacy holdings
+    // written before Slice 2 have these fields undefined → wire coerces
+    // to null. Fresh reprices via autoPriceHolding populate them per the
+    // engine estimate response.
+    trendIQ: (holding as any).trendIQ ?? null,
+    confidence:
+      typeof (holding as any).confidence === "number"
+        ? (holding as any).confidence
+        : null,
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
     // is OMITTED entirely on every non-CH-last-sale holding (the universal
     // case). Preserves byte-identical wire emission for the existing

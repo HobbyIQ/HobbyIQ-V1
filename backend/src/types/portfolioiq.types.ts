@@ -127,6 +127,31 @@ export interface PortfolioHolding {
   // those β-detail values are sourced from the estimate response only.
   movementDirection?: string | null;
   movementUpdatedAt?: string | null;
+  // CF-COMP-HOLDING-WIRE-PARITY Slice 2 (audit PR #483, 2026-07-15):
+  // persist the fields comp responses have always emitted but holdings
+  // used to drop before the PR #482 wire additions. autoPriceHolding
+  // now writes them from the engine's estimate response so the wire
+  // stops emitting null placeholders. Every field is optional +
+  // nullable — legacy holdings load as null, iOS decoders that PR #483
+  // extends bind them defensively.
+  //
+  //   trendIQ                    — full TrendIQResult per estimate call;
+  //                                iOS holding-detail renders the same
+  //                                trendIQ tile as CompIQPricedCardView.
+  //   confidence                 — 0..1 pricingConfidence lifted from
+  //                                the estimate response, so the
+  //                                confidence bar renders identically
+  //                                to the comp panel.
+  //   predictedPriceAttribution  — full attribution object (mechanism +
+  //                                anchor + slope). Wire layer emits it
+  //                                as the nested envelope; the legacy
+  //                                flat `predictedPriceMechanism` stays
+  //                                alongside for backward compat.
+  trendIQ?:
+    | import("../services/compiq/trendIQ.types.js").TrendIQResult
+    | null;
+  confidence?: number | null;
+  predictedPriceAttribution?: Record<string, unknown> | null;
   verdict?: string;
   recommendation?: string;
   lastUpdated?: string | number;
