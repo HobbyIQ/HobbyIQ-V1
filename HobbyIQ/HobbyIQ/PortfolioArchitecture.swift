@@ -160,25 +160,42 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let photos: [String]?
     let clientId: String?
 
-    // CF-IOS-DIRECTION-SWEEP (2026-06-18): predictedPrice* fields removed
-    // from InventoryCard. Backtest established direction is at-chance;
-    // every render site of these fields was stripped in this same CF
-    // (per-card detail / list / grid chips + Movement modal + portfolio
-    // pulse card + CompIQ Market Analysis group). Wire keys silently
-    // ignored on decode (Codable init uses `try?` for every field).
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18) — HISTORICAL: predictedPrice*
+    // fields were removed here because backtest showed direction was at-
+    // chance. Comment said "Do NOT re-add fields here without a matching
+    // backend wire-shape CF."
     //
-    // TODO(CF-INVENTORY-PREDICTED-PRICE, 2026-07-01): backend re-added
-    // `predictedPrice` + `fairMarketValueLive` on /api/compiq/search
-    // (matched-cohort momentum infrastructure), but the PortfolioHolding
-    // wire shape still doesn't emit these fields on GET /api/portfolio.
-    // CompIQ page renders Predicted Next Price today
-    // (CompIQPricedCardView, CF-IOS-COMPIQ-PREDICTED-PRICE); the
-    // inventory row + detail sheet are DEFERRED until the holding wire
-    // shape carries `predictedPrice` and `fairMarketValueLive`. Do NOT
-    // re-add fields here without a matching backend wire-shape CF.
+    // CF-COMP-HOLDING-WIRE-PARITY (audit PR #482 + PR #484, 2026-07-15):
+    // the matching backend wire-shape CF landed in #482 — the holding
+    // wire now carries `marketValue`, `fairMarketValueLive`,
+    // `predictedPrice`, `predictedPriceRange`, `predictedPriceAttribution`
+    // etc. Drew's whole-app audit explicitly asked for holding views to
+    // render the same fields as comp cards ("Override CF-IOS-DIRECTION-
+    // SWEEP for the parity work" — chosen 2026-07-15). Re-adding the
+    // fields here so the shared PricingPanelView (PR #485) can render
+    // them uniformly across inventory-detail and comp-detail surfaces.
+    //
+    // Every field is optional + nullable — legacy wires that predate
+    // #482 decode as nil (existing behavior). Direction concern is
+    // acknowledged; UX call is Drew's per the override decision.
 
     // Anchor field (already persisted backend-side)
     let fairMarketValue: Double?
+    /// CF-COMP-HOLDING-WIRE-PARITY (PR #482, 2026-07-15): alias of
+    /// fairMarketValue that comp routes emit. Both fields carry the
+    /// same number; PricingPanelView reads whichever is populated.
+    let marketValue: Double?
+    let fairMarketValueLive: Double?
+    /// CF-COMP-HOLDING-WIRE-PARITY (PR #484, 2026-07-15): forward-
+    /// looking predicted next-sale value + range + mechanism +
+    /// timestamp. Populated from the estimate's engine response
+    /// through composeHoldingWireShape's flat pair; iOS renders the
+    /// same Predicted Next Price row CompIQPricedCardView shows.
+    let predictedPrice: Double?
+    let predictedPriceLow: Double?
+    let predictedPriceHigh: Double?
+    let predictedPriceMechanism: String?
+    let predictedPriceUpdatedAt: String?
 
     // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): backend valuation bucket.
     // "observed" → row has comp-anchored FMV (fairMarketValue is set).
@@ -275,7 +292,17 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         cardId: String? = nil,
         lastSaleSurface: LiveMarketLastSaleSurface? = nil,
         modelExpectation: LiveMarketModelExpectation? = nil,
-        modelSignal: LiveMarketModelSignal? = nil
+        modelSignal: LiveMarketModelSignal? = nil,
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484, 2026-07-15): parity fields.
+        // All default to nil so existing callers of this memberwise init
+        // don't break — additive across the entire signature.
+        marketValue: Double? = nil,
+        fairMarketValueLive: Double? = nil,
+        predictedPrice: Double? = nil,
+        predictedPriceLow: Double? = nil,
+        predictedPriceHigh: Double? = nil,
+        predictedPriceMechanism: String? = nil,
+        predictedPriceUpdatedAt: String? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -319,6 +346,14 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.lastSaleSurface = lastSaleSurface
         self.modelExpectation = modelExpectation
         self.modelSignal = modelSignal
+        // CF-COMP-HOLDING-WIRE-PARITY (PR #484): parity fields.
+        self.marketValue = marketValue
+        self.fairMarketValueLive = fairMarketValueLive
+        self.predictedPrice = predictedPrice
+        self.predictedPriceLow = predictedPriceLow
+        self.predictedPriceHigh = predictedPriceHigh
+        self.predictedPriceMechanism = predictedPriceMechanism
+        self.predictedPriceUpdatedAt = predictedPriceUpdatedAt
     }
 
     var profitLoss: Double {
