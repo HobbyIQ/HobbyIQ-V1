@@ -237,6 +237,76 @@ export async function sendCascadeAlertNotification(
   });
 }
 
+/**
+ * CF-WATCHLIST-DIGEST-PUSH (Drew, 2026-07-17). Push taxon for the
+ * daily watchlist digest — a consolidated summary of which watchlist
+ * players moved > 10% today. One push per user per day. `data.type =
+ * "watchlist.digest"` so iOS push-routing can land on the watchlist
+ * screen.
+ */
+export async function sendWatchlistDigestNotification(
+  userId: string,
+  payload: {
+    moverCount: number;
+    topMoverName: string;
+    topMoverPercent: number;
+    topMoverDirection: "up" | "down";
+  },
+): Promise<SendResult> {
+  const records = await getTokensForUser(userId);
+  if (records.length === 0) return { sent: 0, failed: 0, removedTokens: 0 };
+  const sign = payload.topMoverDirection === "down" ? "-" : "+";
+  const pctText = `${sign}${Math.round(Math.abs(payload.topMoverPercent))}%`;
+  const title = `${payload.moverCount} watchlist ${payload.moverCount === 1 ? "player" : "players"} moved today`;
+  const body = `Top mover: ${payload.topMoverName} ${pctText}. Tap to see all.`;
+  return sendToTokens(records, {
+    title,
+    body,
+    data: {
+      type: "watchlist.digest",
+      moverCount: payload.moverCount,
+      topMoverName: payload.topMoverName,
+      topMoverPercent: payload.topMoverPercent,
+      topMoverDirection: payload.topMoverDirection,
+    },
+  });
+}
+
+/**
+ * CF-GRADE-WORTHY-PUSH (Drew, 2026-07-17). Push taxon for a
+ * grade-worthy alert on a specific holding. `data.type =
+ * "grade_worthy.alert"` so iOS push-routing can land on the
+ * grade-worthy analysis screen for the flagged holding.
+ */
+export async function sendGradeWorthyNotification(
+  userId: string,
+  payload: {
+    holdingId: string;
+    player: string;
+    cardTitle: string;
+    expectedGain: number;
+    graderTier: string;
+  },
+): Promise<SendResult> {
+  const records = await getTokensForUser(userId);
+  if (records.length === 0) return { sent: 0, failed: 0, removedTokens: 0 };
+  const gainRounded = Math.round(payload.expectedGain);
+  const title = `Grade-worthy alert: ${payload.player}`;
+  const body = `${payload.cardTitle} expected +$${gainRounded} if graded. Tap for analysis.`;
+  return sendToTokens(records, {
+    title,
+    body,
+    data: {
+      type: "grade_worthy.alert",
+      holdingId: payload.holdingId,
+      player: payload.player,
+      cardTitle: payload.cardTitle,
+      expectedGain: payload.expectedGain,
+      graderTier: payload.graderTier,
+    },
+  });
+}
+
 export async function broadcastToUsers(
   userIds: string[],
   payload: { title: string; body: string; data?: Record<string, unknown> },
