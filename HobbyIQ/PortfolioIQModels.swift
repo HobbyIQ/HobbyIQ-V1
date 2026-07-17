@@ -3128,22 +3128,6 @@ struct PortfolioHoldingHeroCard: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-
-                    // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383): the
-                    // seller's short listing description sits under the
-                    // identity line so the user can see what eBay actually
-                    // said about the item.
-                    if let desc = card.ebayShortDescription?
-                        .trimmingCharacters(in: .whitespacesAndNewlines),
-                       desc.isEmpty == false {
-                        Text(desc)
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 2)
-                    }
                 }
                 .padding(.horizontal, 36) // clear the Edit pill overlay
                 .frame(maxWidth: .infinity)
