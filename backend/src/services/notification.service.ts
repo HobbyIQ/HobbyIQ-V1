@@ -201,6 +201,42 @@ export async function sendAdvancedAlertNotification(
   });
 }
 
+/**
+ * CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). Push taxon for cascade
+ * (graded-market-leading-raw insider signal) events. `data.type =
+ * "cascade.alert"` so iOS push-routing can land on the player-trend
+ * detail screen for the flagged player.
+ *
+ * Payload shape:
+ *   title: "Cascade signal: <player>"
+ *   body:  event.reason (already human-readable — the detector formats it)
+ *   userInfo: { player, severity, momentumRatio, playerSlug }
+ */
+export async function sendCascadeAlertNotification(
+  userId: string,
+  payload: {
+    player: string;
+    playerSlug: string;
+    severity: "insider" | "emerging" | "confirmed";
+    momentumRatio: number;
+    reason: string;
+  },
+): Promise<SendResult> {
+  const records = await getTokensForUser(userId);
+  if (records.length === 0) return { sent: 0, failed: 0, removedTokens: 0 };
+  return sendToTokens(records, {
+    title: `Cascade signal: ${payload.player}`,
+    body: payload.reason,
+    data: {
+      type: "cascade.alert",
+      player: payload.player,
+      playerSlug: payload.playerSlug,
+      severity: payload.severity,
+      momentumRatio: payload.momentumRatio,
+    },
+  });
+}
+
 export async function broadcastToUsers(
   userIds: string[],
   payload: { title: string; body: string; data?: Record<string, unknown> },

@@ -569,6 +569,7 @@ router.get("/preferences", async (req, res, next) => {
       success: true,
       preferences: {
         pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
+        pushOnCascade: doc.preferences?.pushOnCascade === true,
       },
       apnsDevice: {
         registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,
@@ -587,22 +588,28 @@ router.patch("/preferences", async (req, res, next) => {
     }
     const body = (req.body ?? {}) as {
       pushOnMajorFlip?: unknown;
+      pushOnCascade?: unknown;
       apnsDeviceToken?: unknown;
     };
 
     // Nothing to write is a 400 — otherwise a malformed body silently
     // no-ops and iOS thinks the write landed.
     const patchesPush = Object.prototype.hasOwnProperty.call(body, "pushOnMajorFlip");
+    const patchesCascade = Object.prototype.hasOwnProperty.call(body, "pushOnCascade");
     const patchesToken = Object.prototype.hasOwnProperty.call(body, "apnsDeviceToken");
-    if (!patchesPush && !patchesToken) {
+    if (!patchesPush && !patchesCascade && !patchesToken) {
       res.status(400).json({
         success: false,
-        error: "body must include at least one of pushOnMajorFlip, apnsDeviceToken",
+        error: "body must include at least one of pushOnMajorFlip, pushOnCascade, apnsDeviceToken",
       });
       return;
     }
 
-    const input: { pushOnMajorFlip?: boolean; apnsDeviceToken?: string | null } = {};
+    const input: {
+      pushOnMajorFlip?: boolean;
+      pushOnCascade?: boolean;
+      apnsDeviceToken?: string | null;
+    } = {};
 
     if (patchesPush) {
       if (typeof body.pushOnMajorFlip !== "boolean") {
@@ -610,6 +617,14 @@ router.patch("/preferences", async (req, res, next) => {
         return;
       }
       input.pushOnMajorFlip = body.pushOnMajorFlip;
+    }
+
+    if (patchesCascade) {
+      if (typeof body.pushOnCascade !== "boolean") {
+        res.status(400).json({ success: false, error: "pushOnCascade must be boolean" });
+        return;
+      }
+      input.pushOnCascade = body.pushOnCascade;
     }
 
     if (patchesToken) {
@@ -646,6 +661,7 @@ router.patch("/preferences", async (req, res, next) => {
       success: true,
       preferences: {
         pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
+        pushOnCascade: doc.preferences?.pushOnCascade === true,
       },
       apnsDevice: {
         registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,

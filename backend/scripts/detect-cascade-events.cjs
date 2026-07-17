@@ -24,8 +24,16 @@ async function main() {
   const { detectCascades } = require(
     path.join(distRoot, "services", "portfolioiq", "cascadeDetect.service.js"),
   );
-  const { upsertCascadeEvents } = require(
+  const {
+    upsertCascadeEvents,
+    readRecentEventsForPlayers,
+  } = require(
     path.join(distRoot, "services", "portfolioiq", "cascadeEventStore.service.js"),
+  );
+  // CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). Fan-out to APNs for the
+  // subset of newly-detected events that aren't already stored.
+  const { sendCascadeAlertsForNewEvents } = require(
+    path.join(distRoot, "services", "portfolioiq", "cascadeNotify.service.js"),
   );
 
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
@@ -66,13 +74,54 @@ async function main() {
   }
 
   const result = detectCascades(inputs);
+
+  // CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). Dedup pushes against events
+  // already stored in the last 24h so re-running the nightly (or the
+  // detector firing twice for the same player on the same day) doesn't
+  // spam users. `detectedAt` is stamped once per detectCascades run so
+  // id-level uniqueness alone doesn't dedup — we need per-player window
+  // dedup.
+  const uniqSlugs = [...new Set(result.events.map((e) => e.playerSlug))];
+  const lookbackSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  let alreadyFired = new Set();
+  if (uniqSlugs.length > 0) {
+    try {
+      const existing = await readRecentEventsForPlayers(uniqSlugs, lookbackSince);
+      alreadyFired = new Set(existing.map((e) => e.playerSlug));
+    } catch (err) {
+      console.error(JSON.stringify({
+        event: "cascade_detect_dedup_query_failed",
+        error: err && err.message ? err.message : String(err),
+      }));
+      // Fail-closed on dedup: if we can't read prior events, skip pushes
+      // rather than risk spamming.
+      alreadyFired = new Set(uniqSlugs);
+    }
+  }
+  const newEvents = result.events.filter((e) => !alreadyFired.has(e.playerSlug));
+
   const upserted = await upsertCascadeEvents(result.events);
+
+  let notify = { sent: 0, failed: 0 };
+  if (newEvents.length > 0) {
+    try {
+      notify = await sendCascadeAlertsForNewEvents(newEvents);
+    } catch (err) {
+      console.error(JSON.stringify({
+        event: "cascade_detect_notify_failed",
+        error: err && err.message ? err.message : String(err),
+      }));
+    }
+  }
 
   console.log(JSON.stringify({
     event: "cascade_detect_complete",
     scanned: result.scanned,
     detected: result.detected,
     upserted,
+    newEvents: newEvents.length,
+    pushSent: notify.sent,
+    pushFailed: notify.failed,
     elapsedMs: Date.now() - t0,
     topEvents: result.events.slice(0, 10).map((e) => ({
       player: e.player,
