@@ -1205,7 +1205,9 @@ struct EbayListingDraftView: View {
                 }
             }
         } catch {
+            #if DEBUG
             print("[EbayDraft] cardsight hydration failed (non-fatal): \(APIService.errorMessage(from: error))")
+            #endif
         }
     }
 

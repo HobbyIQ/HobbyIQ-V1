@@ -588,7 +588,11 @@ struct HoldingsImportView: View {
         case .failure(let error):
             session.objectWillChange.send()
             // No state change beyond surfacing the picker error.
+            #if DEBUG
             print("[HoldingsImportView] file picker failed: \(error.localizedDescription)")
+            #else
+            _ = error
+            #endif
         }
     }
 

@@ -43,7 +43,9 @@ final class CompIQSearchService {
             "\(idx + 1)=\(hit.cardId)|\(hit.player ?? "-")|\(hit.variant ?? "-")|attr=\(hit.attribution ?? "-")|conf=\(hit.confidence.map { String(format: "%.2f", $0) } ?? "-")"
         }.joined(separator: " ‖ ")
         logger.notice("[picker-order] q=\"\(trimmed, privacy: .public)\" top=\(preview, privacy: .public)")
+        #if DEBUG
         print("[picker-order] q=\"\(trimmed)\" top=\(preview)")
+        #endif
 
         return hits
     }

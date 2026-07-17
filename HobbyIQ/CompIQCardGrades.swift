@@ -517,6 +517,7 @@ struct GradePillPanel: View {
     /// tolerant matcher key is what we expect or whether display value
     /// resolution is dropping data.
     private func logRenderEntries(_ entries: [CardPanelGradeEntry]) {
+        #if DEBUG
         for entry in entries {
             let key = normalizedGradeKey(grade: entry.grade, grader: entry.grader)
             let resolved = resolvedValue(entry)
@@ -524,6 +525,7 @@ struct GradePillPanel: View {
             let display = matched ? displayValue(entry) : "nil"
             print("[panel-render] grade=\(entry.grade) key=\(key) matched=\(matched) displayValue=\(display)")
         }
+        #endif
     }
 
     /// Build a stable key from a grade+grader pair regardless of the
@@ -868,15 +870,19 @@ struct GradePillPanel: View {
             // CF-PANEL-DECODE-DIAG (2026-07-04): per-entry decode log —
             // per Drew's spec so we can see if the entries decoded but
             // one of the price fields didn't map into Swift.
+            #if DEBUG
             for entry in entries {
                 print("[panel-decode] grade=\(entry.grade) grader=\(entry.grader) sampleCount=\(entry.sampleCount) value=\(String(describing: entry.value)) weightedMedian=\(String(describing: entry.weightedMedianPrice)) valueSource=\(entry.valueSource) estMult=\(String(describing: entry.estimatedMultiplier))")
             }
+            #endif
 
             payload = response
             onEntriesLoaded?(entries)
         } catch {
             gradePanelLogger.error("[card-panel] cardId=\(cardId, privacy: .public) fetch failed: \(String(describing: error), privacy: .public)")
+            #if DEBUG
             print("[panel-decode] fetch failed: \(error)")
+            #endif
             errorText = error.localizedDescription
             payload = nil
         }
