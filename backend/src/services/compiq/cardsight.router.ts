@@ -653,41 +653,51 @@ async function resolveChCardId(
 /**
  * CF-LOCAL-COMP-FIRST (Drew, 2026-07-17). Reads ch_daily_sales for the
  * identity via localCompStore. Fires in parallel with CH + CS branches.
- * When a CH-side chCardId can be resolved (cached), the local read is
- * a fast single-partition query; otherwise falls back to structured
- * cross-partition. Returns null on any error so the merge stays healthy.
+ *
+ * v2 fix (fix/local-comps-schema-match): the first cut called
+ * resolveChCardId, which is the SAME slow external CH round-trip that
+ * tryCardHedge is already doing — my branch timed out on the same
+ * 3s cap. Also, when the bridge failed, we fell through to a structured
+ * lookup using `identity.product`/`identity.parallel` which don't equal
+ * ch_daily_sales's `card_set`/`variant` fields — 0 rows matched.
+ *
+ * v2 uses ONLY (playerName + cardYear + number) as the strong SKU
+ * triple. All three round-trip cleanly to ch_daily_sales columns
+ * (player, year, number) and identify a holding uniquely in
+ * practice (e.g. Hartman/2026/CPA-EHA → 226 rows). No external
+ * network calls; pure Cosmos-first-partition read is the goal, and
+ * even the cross-partition query is bounded by the SKU cardinality.
  */
 async function tryLocalComps(
   identity: CardIdentityHint,
   grade: string,
-  rawQuery?: string,
 ): Promise<{ sales: RoutedSale[]; card: RoutedCard | null; source: "local" } | null> {
   try {
-    const bridge = await resolveChCardId(identity, rawQuery);
-    const cardId = bridge?.chCardId;
+    // The strong SKU triple. Any missing field → give up locally so
+    // we don't fire an over-broad cross-partition query.
+    if (!identity.playerName || !identity.number) return null;
+    const year = identity.cardYear !== undefined && identity.cardYear !== null
+      ? Number(identity.cardYear)
+      : undefined;
 
-    // Prefer the fast single-partition query on cardId. Structured
-    // fallback exercises the identity fields so unbridged holdings
-    // still get local coverage.
-    const localResult = cardId
-      ? await lookupLocalComps({ cardId }, { skipPremiums: true })
-      : await lookupLocalComps(
-          {
-            year: identity.cardYear !== undefined && identity.cardYear !== null
-              ? Number(identity.cardYear)
-              : undefined,
-            cardSet: identity.product,
-            variant: identity.parallel,
-            number: identity.number,
-            // grade filter applied only when caller pinned it (Raw is
-            // the default — passing "Raw" would over-filter graded corpus).
-            grade: grade && grade !== "Raw" ? grade : undefined,
-          },
-          { skipPremiums: true },
-        );
+    const localResult = await lookupLocalComps(
+      {
+        player: identity.playerName,
+        year,
+        number: identity.number,
+        // grade filter applied only when caller pinned a graded tier;
+        // "Raw" is the default that would over-filter the mixed pool.
+        grade: grade && grade !== "Raw" ? grade : undefined,
+      },
+      { skipPremiums: true },
+    );
 
     if (localResult.totalSales === 0) return null;
 
+    // Pull card_id from the first hit — it's what ch_daily_sales
+    // stores it under (all matching rows share the same card_id for
+    // the same SKU by construction).
+    const cardId = localResult.recentSales[0]?.cardId ?? null;
     return {
       sales: localResult.recentSales.map(toRoutedSale),
       card: cardId
@@ -921,7 +931,7 @@ export async function findCompsRouted(
       ? withTimeout(tryCardsightPricingBackstop(query, opts.queryContext, grade), "cs_backstop")
       : Promise.resolve(null),
     localCompEnabled
-      ? withTimeout(tryLocalComps(identity, grade, query), "local")
+      ? withTimeout(tryLocalComps(identity, grade), "local")
       : Promise.resolve(null),
   ]);
 

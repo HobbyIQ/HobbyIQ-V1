@@ -76,6 +76,19 @@ describe("buildQuery", () => {
     expect(q.parameters).toHaveLength(3);
   });
 
+  it("includes c.player = @player clause when player is set (strong-triple lookup)", () => {
+    const q = buildQuery({ player: "Eric Hartman", year: 2026, number: "CPA-EHA" });
+    expect(q.partition).toBe("cross");
+    expect(q.query).toContain("c.player = @player");
+    expect(q.query).toContain("c.year = @year");
+    expect(q.query).toContain("c.number = @number");
+    expect(q.parameters).toEqual([
+      { name: "@player", value: "Eric Hartman" },
+      { name: "@year", value: 2026 },
+      { name: "@number", value: "CPA-EHA" },
+    ]);
+  });
+
   it("allGrades drops grader/grade/variant filters but keeps SKU filters", () => {
     const q = buildQuery({
       year: 2025, cardSet: "2025 Topps Baseball", variant: "Base",
