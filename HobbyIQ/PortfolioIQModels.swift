@@ -3012,12 +3012,6 @@ struct PortfolioHoldingDetailSheet: View {
                             }
                         )
 
-                        // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383):
-                        // eBay Item Specifics + seller footer for
-                        // auto-imported holdings. Both self-suppress
-                        // when the underlying wire fields are nil.
-                        HoldingEbayEnrichmentSection(card: card)
-
                         // CF-SOLD-COMPS (backend PR #386): recent comps
                         // for this exact grade/set/parallel filter set.
                         // 2026-07-17: filter loosened to drop the
