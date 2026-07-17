@@ -1,0 +1,103 @@
+name: CH Sale pHashes (Attribution Phase 1)
+
+# CF-ATTRIBUTION-PHASE-1-DHASH (Drew, 2026-07-16). Computes per-sale
+# dHash from eBay thumbnails, clusters per-card, writes ch_sale_phashes
+# + ch_card_attribution_stats containers. Runs 45 min after the
+# ch-daily-sales-ingest cron so freshly-ingested sales get hashed same
+# day.
+#
+# Design doc: backend/docs/design/attribution-quality-phase-1-phash.md
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: 'How many days of ch_daily_sales to read (default 1)'
+        required: false
+        type: string
+        default: '1'
+      sale_limit:
+        description: 'Cap total sales processed (for smoke test)'
+        required: false
+        type: string
+      threshold:
+        description: 'Hamming distance threshold for clustering (default 10)'
+        required: false
+        type: string
+        default: '10'
+      force:
+        description: 'Re-hash sales even if a hash already exists'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  compute:
+    name: Compute + cluster dHashes
+    runs-on: ubuntu-latest
+    # 6h cap accommodates backfill mode (90 days ~ 7M sales at ~30ms
+    # per image download+hash × concurrency 32 → ~2h). Daily incremental
+    # runs finish in ~15 min.
+    timeout-minutes: 360
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Compute pHashes + cluster
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot run"
+            exit 1
+          fi
+          DAYS_FLAG=""
+          if [ -n "${{ inputs.days_back }}" ] && [ "${{ inputs.days_back }}" != "0" ]; then
+            DAYS_FLAG="--days-back=${{ inputs.days_back }}"
+          fi
+          LIMIT_FLAG=""
+          if [ -n "${{ inputs.sale_limit }}" ]; then
+            LIMIT_FLAG="--sale-limit=${{ inputs.sale_limit }}"
+          fi
+          THRESHOLD_FLAG=""
+          if [ -n "${{ inputs.threshold }}" ]; then
+            THRESHOLD_FLAG="--threshold=${{ inputs.threshold }}"
+          fi
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/compute-ch-sale-phashes.cjs \
+            $DAYS_FLAG $LIMIT_FLAG $THRESHOLD_FLAG $FORCE_FLAG
