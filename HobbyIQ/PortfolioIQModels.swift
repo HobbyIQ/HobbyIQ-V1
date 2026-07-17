@@ -1118,6 +1118,13 @@ struct PortfolioHoldingDetailSheet: View {
     /// on cards no one drills into.
     @State private var graderOutcomes: GraderOutcomesResponse?
     @State private var graderOutcomesExpanded: Bool = false
+    /// Batch 2 (2026-07-17, PR #538): observed parallel-tier ladder for
+    /// the holding's (player, year, cardSet) bucket. Hidden when the
+    /// backend suppressed (thin base pool).
+    @State private var parallelLadder: ParallelLadderResponse?
+    /// Batch 2 (2026-07-17, PR #531): parallels the user does NOT own in
+    /// this bucket. Hidden when the bucket has zero missing entries.
+    @State private var missingParallels: MissingParallelsBucketResponse?
 
     init(
         viewModel: PortfolioIQViewModel,
@@ -1420,6 +1427,73 @@ struct PortfolioHoldingDetailSheet: View {
         } catch {
             graderOutcomes = nil
         }
+    }
+
+    /// Batch 2 (2026-07-17, PR #538): fetch observed parallel-ladder for
+    /// the holding's bucket. Silent failure hides the block.
+    private func loadParallelLadder() async {
+        let bucket = parallelLadderBucketKey()
+        guard bucket.isRenderable else { return }
+        do {
+            parallelLadder = try await APIService.shared.fetchParallelLadder(
+                player: bucket.player, year: bucket.year, cardSet: bucket.cardSet
+            )
+        } catch {
+            parallelLadder = nil
+        }
+    }
+
+    /// Batch 2 (2026-07-17, PR #531): fetch missing parallels for the
+    /// holding's bucket. Silent failure hides the block.
+    private func loadMissingParallels() async {
+        let bucket = parallelLadderBucketKey()
+        guard bucket.isRenderable else { return }
+        do {
+            missingParallels = try await APIService.shared.fetchMissingParallels(
+                player: bucket.player, year: bucket.year, cardSet: bucket.cardSet
+            )
+        } catch {
+            missingParallels = nil
+        }
+    }
+
+    /// (player, year, cardSet) tuple used for both parallel-ladder and
+    /// missing-parallels lookups. Backend's setName slug is idempotent so
+    /// we pass whatever the holding carries.
+    private struct BucketKey {
+        let player: String
+        let year: Int
+        let cardSet: String
+        var isRenderable: Bool {
+            player.isEmpty == false && year > 0 && cardSet.isEmpty == false
+        }
+    }
+
+    private func parallelLadderBucketKey() -> BucketKey {
+        let player = card.playerName.trimmingCharacters(in: .whitespaces)
+        let year = Int(card.year.trimmingCharacters(in: .whitespaces)) ?? 0
+        let cardSet = card.setName.trimmingCharacters(in: .whitespaces)
+        return BucketKey(player: player, year: year, cardSet: cardSet)
+    }
+
+    /// Returns the ladder bucket when at least two rungs render usefully
+    /// (Base + at least one non-Base) and the backend didn't suppress.
+    private func renderableParallelLadder() -> ParallelLadderBucket? {
+        guard let bucket = parallelLadder?.bucket else { return nil }
+        if let reason = bucket.suppressedReason?.trimmingCharacters(in: .whitespaces),
+           reason.isEmpty == false {
+            return nil
+        }
+        guard let ladder = bucket.ladder, ladder.count >= 2 else { return nil }
+        return bucket
+    }
+
+    /// Returns the missing-parallels bundle when it has ≥ 1 entry.
+    private func renderableMissingParallels() -> MissingParallelsBundle? {
+        guard let bundle = missingParallels?.bucket,
+              let missing = bundle.missingParallels,
+              missing.isEmpty == false else { return nil }
+        return bundle
     }
 
     /// Phase 1.4 (2026-07-17, PR #524): fetch observed grader multipliers
@@ -1895,6 +1969,182 @@ struct PortfolioHoldingDetailSheet: View {
             .split(separator: "_")
             .map { $0.prefix(1).uppercased() + $0.dropFirst() }
             .joined(separator: " ")
+    }
+
+    // MARK: - Batch 2: Parallel Ladder block (2026-07-17, PR #538)
+
+    /// Observed parallel-tier ladder for the holding's (player, year,
+    /// cardSet) bucket. Renders each rung's multiplier + print run + n.
+    /// Backend suppression (thin base pool) hides the block entirely
+    /// via `renderableParallelLadder()`.
+    @ViewBuilder
+    private func parallelLadderBlock(bucket: ParallelLadderBucket) -> some View {
+        let ladder = bucket.ladder ?? []
+        // Sort ASC by multiplier so Base (1.0) always leads.
+        let sorted = ladder.sorted { ($0.multiplier ?? 0) < ($1.multiplier ?? 0) }
+        let confidence = bucket.confidence?.lowercased() ?? ""
+        let strokeColor: Color = {
+            switch confidence {
+            case "high": return HobbyIQTheme.Colors.successGreen
+            case "medium": return HobbyIQTheme.Colors.electricBlue
+            case "low": return HobbyIQTheme.Colors.warning
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("PARALLEL LADDER")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Observed multipliers vs Base for this set")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+
+            VStack(spacing: 6) {
+                ForEach(sorted) { rung in
+                    parallelLadderRow(rung: rung)
+                }
+            }
+
+            if let base = bucket.baseMedianPrice, base > 0 {
+                Text("Base median: \(portfolioCurrencyString(base))")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(strokeColor.opacity(0.4), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func parallelLadderRow(rung: ParallelLadderRung) -> some View {
+        let isBase = (rung.multiplier ?? 0) <= 1.0
+        HStack(spacing: 8) {
+            Text(rung.variant)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(maxWidth: 140, alignment: .leading)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if let printRun = rung.printRun, printRun > 0 {
+                Text("/\(printRun)")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+            if let mult = rung.multiplier {
+                Text(String(format: "%.1f\u{00D7}", mult))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(isBase ? HobbyIQTheme.Colors.mutedText : HobbyIQTheme.Colors.successGreen)
+            }
+            if let n = rung.n, n > 0 {
+                Text("n=\(n)")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+            }
+        }
+    }
+
+    // MARK: - Batch 2: Missing Parallels block (2026-07-17, PR #531)
+
+    /// Parallels in the holding's bucket that the user doesn't own.
+    /// Section header adapts to entry count per spec: 1-3 = "Complete
+    /// the Set", 4-10 = "Round out your set", 11+ = "N parallels missing".
+    @ViewBuilder
+    private func missingParallelsBlock(bundle: MissingParallelsBundle) -> some View {
+        let entries = (bundle.missingParallels ?? []).sorted {
+            ($0.medianPrice ?? 0) > ($1.medianPrice ?? 0)
+        }
+        let title: String = {
+            let count = entries.count
+            if count >= 11 { return "\(count) parallels missing" }
+            if count >= 4 { return "Round out your set" }
+            return "Complete the Set"
+        }()
+        let bucketLabel: String = {
+            let parts = [
+                bundle.year.map(String.init),
+                bundle.player,
+                bundle.cardSet
+            ]
+                .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
+                .filter { $0.isEmpty == false }
+            return parts.joined(separator: " ")
+        }()
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            if bucketLabel.isEmpty == false {
+                Text(bucketLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+            if let owned = bundle.ownedVariants, owned.isEmpty == false {
+                Text("You own: \(owned.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(2)
+            }
+            Divider().overlay(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+            VStack(spacing: 8) {
+                ForEach(entries.prefix(10)) { entry in
+                    missingParallelRow(entry)
+                }
+            }
+            if entries.count > 10 {
+                Text("+ \(entries.count - 10) more")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func missingParallelRow(_ entry: MissingParallelEntry) -> some View {
+        let hot = (entry.medianPrice ?? 0) > 500
+        HStack(spacing: 8) {
+            Text("\u{00B7}")
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(entry.variant ?? "—")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .lineLimit(1)
+            if let number = entry.number?.trimmingCharacters(in: .whitespaces),
+               number.isEmpty == false {
+                Text(number)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+            if let median = entry.medianPrice, median > 0 {
+                Text(portfolioCurrencyString(median))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+            if hot {
+                Text("\u{1F525}")
+                    .font(.caption)
+            }
+        }
     }
 
     // MARK: - Corpus signals: Grade Analysis block (2026-07-17)
@@ -2611,6 +2861,20 @@ struct PortfolioHoldingDetailSheet: View {
                             graderPremiumCurveBlock(multipliers: multipliers)
                         }
 
+                        // Batch 2 (2026-07-17, PR #538): observed parallel
+                        // premium ladder — "Refractor 2.8×, Gold /50 5.2×".
+                        // Hidden when backend suppressed for thin base pool.
+                        if let bucket = renderableParallelLadder() {
+                            parallelLadderBlock(bucket: bucket)
+                        }
+
+                        // Batch 2 (2026-07-17, PR #531): parallels in this
+                        // bucket the user doesn't own — set-completion nudge.
+                        // Hidden when the bundle has zero entries.
+                        if let bundle = renderableMissingParallels() {
+                            missingParallelsBlock(bundle: bundle)
+                        }
+
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
                         // (30d) block — same visual as comp card,
                         // panel-only source, gated on locked-grade
@@ -2917,6 +3181,8 @@ struct PortfolioHoldingDetailSheet: View {
                 .task { await loadGradeAnalysis() }
                 .task { await loadFamilyMultipliers() }
                 .task { await loadTimingForecast() }
+                .task { await loadParallelLadder() }
+                .task { await loadMissingParallels() }
                 .task {
                     // P1 (2026-07-16, iOS delta): first meaningful use —
                     // opening a holding detail. Ask for push permission

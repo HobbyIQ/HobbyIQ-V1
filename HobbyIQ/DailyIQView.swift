@@ -43,6 +43,14 @@ struct DailyIQView: View {
     @State private var hotRightNow: HotRightNowResponse?
     /// Gate the drill-down push from the "See top 25" button.
     @State private var showHotRightNowFullList = false
+    /// Batch 2 (2026-07-17): sell-now radar candidates + drill-down state.
+    @State private var sellNowRadar: SellNowRadarResponse?
+    @State private var showSellNowRadar = false
+    /// Batch 2 (2026-07-17): notable sales (top-dollar recent) + drill-down.
+    @State private var notableSales: NotableSalesResponse?
+    @State private var showNotableSales = false
+    /// Batch 2 (2026-07-17): sub-raw discovery drill-down gate.
+    @State private var showSubRawDiscovery = false
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -74,6 +82,14 @@ struct DailyIQView: View {
                 // players by momentum × velocity from the corpus.
                 // Self-suppresses when the response is nil / thin.
                 hotRightNowSection
+
+                // Batch 2 (2026-07-17, PR #539): Sell-Now Radar banner.
+                sellNowRadarBanner
+                // Batch 2 (2026-07-17): Value Hunter banner — always
+                // renders when we're showing DailyIQ.
+                valueHunterBanner
+                // Batch 2 (2026-07-17, PR #539): Notable sales banner.
+                notableSalesBanner
 
                 // CF-DAILYIQ-TWO-SEGMENTS (2026-07-01): DailyIQ splits
                 // into two selectable segments — "Your Players" (personal
@@ -118,7 +134,9 @@ struct DailyIQView: View {
             async let mine: Void = loadMyPlayers()
             async let candidates: Void = loadBuyCandidates()
             async let hot: Void = loadHotRightNow()
-            _ = await (refresh, brief, signals, mine, candidates, hot)
+            async let sellNow: Void = loadSellNowRadar()
+            async let notable: Void = loadNotableSales()
+            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable)
             // P1 (2026-07-16, iOS delta): first meaningful use of the
             // app — checking DailyIQ. Ask for push permission here (once)
             // per Apple HIG so the affordance is connected to the value.
@@ -1259,6 +1277,133 @@ private var watchlistCard: some View {
         } catch {
             // Best-effort — tile hides on failure.
         }
+    }
+
+    // MARK: - Batch 2: Sell-Now Radar / Value Hunter / Notable Sales banners
+
+    /// Compact banner surfaced when the sell-now radar returns candidates.
+    /// Tap opens `SellNowRadarListView`. Hidden on zero.
+    @ViewBuilder
+    private var sellNowRadarBanner: some View {
+        if let response = sellNowRadar,
+           let count = response.count, count > 0,
+           let top = response.candidates?.first {
+            NavigationLink {
+                SellNowRadarListView(response: response)
+            } label: {
+                bannerContent(
+                    glyph: "\u{1F6A8}",
+                    title: "\(count) card\(count == 1 ? "" : "s") to sell now",
+                    subtitle: sellRadarBannerSubtitle(top),
+                    accent: HobbyIQTheme.Colors.danger
+                )
+            }
+            .buttonStyle(.plain)
+            .navigationDestination(isPresented: $showSellNowRadar) {
+                SellNowRadarListView(response: response)
+            }
+        }
+    }
+
+    private func sellRadarBannerSubtitle(_ top: SellRadarCandidate) -> String {
+        let player = top.player ?? "your holding"
+        if let mult = top.velocityMultiple {
+            return "Top: \(player) — \(String(format: "%.1f", mult))× baseline velocity"
+        }
+        return "Top: \(player)"
+    }
+
+    /// Value Hunter tile — always visible entry to Sub-Raw Discovery.
+    /// Doesn't gate on a preload since the drill-down does its own fetch.
+    @ViewBuilder
+    private var valueHunterBanner: some View {
+        NavigationLink {
+            SubRawDiscoveryListView()
+        } label: {
+            bannerContent(
+                glyph: "\u{1F50E}",
+                title: "Value Hunter",
+                subtitle: "Raw cards trading below their PSA 10 potential",
+                accent: HobbyIQTheme.Colors.electricBlue
+            )
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $showSubRawDiscovery) {
+            SubRawDiscoveryListView()
+        }
+    }
+
+    /// Notable-sales banner — top-dollar recent sales. Hidden when empty.
+    @ViewBuilder
+    private var notableSalesBanner: some View {
+        if let response = notableSales,
+           let sales = response.sales, sales.isEmpty == false,
+           let top = sales.first {
+            NavigationLink {
+                NotableSalesListView(response: response)
+            } label: {
+                bannerContent(
+                    glyph: "\u{1F3C6}",
+                    title: "Notable sales",
+                    subtitle: notableSaleBannerSubtitle(top),
+                    accent: HobbyIQTheme.Colors.warning
+                )
+            }
+            .buttonStyle(.plain)
+            .navigationDestination(isPresented: $showNotableSales) {
+                NotableSalesListView(response: response)
+            }
+        }
+    }
+
+    private func notableSaleBannerSubtitle(_ sale: NotableSale) -> String {
+        let price = sale.price.map(portfolioCurrencyString) ?? "—"
+        let identity = [sale.year.map(String.init), sale.player]
+            .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.isEmpty == false }
+            .joined(separator: " ")
+        return identity.isEmpty ? "Top: \(price)" : "Top: \(price) — \(identity)"
+    }
+
+    @ViewBuilder
+    private func bannerContent(glyph: String, title: String, subtitle: String, accent: Color) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(glyph).font(.title2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    Text("Open")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                    Image(systemName: "arrow.right")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(accent)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(accent.opacity(0.4), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func loadSellNowRadar() async {
+        do { sellNowRadar = try await APIService.shared.fetchSellNowRadar() } catch { }
+    }
+
+    private func loadNotableSales() async {
+        do { notableSales = try await APIService.shared.fetchNotableSales(limit: 20) } catch { }
     }
 
     @ViewBuilder

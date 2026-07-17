@@ -449,6 +449,203 @@ struct YearbookCounterfactual: Codable, Hashable {
     let note: String?
 }
 
+// MARK: - GET /api/portfolio/parallel-ladder/:playerYearSet (PR #538)
+
+/// Observed parallel-tier multiplier ladder for a (player, year, cardSet)
+/// bucket. Feeds the card-detail Parallel Ladder block. Suppressed
+/// backend-side when Base has < 5 sales — `suppressedReason` explains why.
+struct ParallelLadderResponse: Codable {
+    let bucket: ParallelLadderBucket?
+}
+
+struct ParallelLadderBucket: Codable, Hashable {
+    let player: String?
+    let year: Int?
+    let cardSet: String?
+    let baseMedianPrice: Double?
+    let ladder: [ParallelLadderRung]?
+    /// `"high"` / `"medium"` / `"low"` / `"insufficient"`.
+    let confidence: String?
+    /// `"no_sales"` / `"base_thin"` / nil when populated.
+    let suppressedReason: String?
+}
+
+struct ParallelLadderRung: Codable, Hashable, Identifiable {
+    let variant: String
+    let medianPrice: Double?
+    /// Ratio vs Base median. Base always 1.0, non-Base > 1.0.
+    let multiplier: Double?
+    let n: Int?
+    /// "Gold /50" → 50. Nil when unnumbered.
+    let printRun: Int?
+
+    var id: String { variant }
+}
+
+// MARK: - GET /api/portfolio/attribution-health (PR #538)
+
+struct AttributionHealthResponse: Codable {
+    let scannedHoldings: Int?
+    let suspectCount: Int?
+    let suspects: [AttributionHealthSuspect]?
+}
+
+struct AttributionHealthSuspect: Codable, Hashable, Identifiable {
+    let holdingId: String
+    let player: String?
+    let cardTitle: String?
+    let cardId: String?
+    /// 0..1 — largest_cluster / total. < 0.85 → surface as low_confidence.
+    let attributionScore: Double?
+    let confidence: String?
+    let reason: String?
+    let otherCandidates: [AttributionOtherCandidate]?
+
+    var id: String { holdingId }
+}
+
+struct AttributionOtherCandidate: Codable, Hashable {
+    let cardId: String?
+    let confidence: String?
+}
+
+// MARK: - GET /api/portfolio/sell-now-radar (PR #539)
+
+struct SellNowRadarResponse: Codable {
+    let count: Int?
+    let candidates: [SellRadarCandidate]?
+}
+
+struct SellRadarCandidate: Codable, Hashable, Identifiable {
+    let holdingId: String
+    let player: String?
+    let cardTitle: String?
+    let graderTier: String?
+    let currentMarketValue: Double?
+    let purchasePrice: Double?
+    let unrealizedGainUsd: Double?
+    let velocityPerWeek: Double?
+    let velocityBaseline: Double?
+    let velocityMultiple: Double?
+    let playerMomentum: Double?
+    /// `"up"` / `"flat"` / `"down"`.
+    let playerDirection: String?
+    let reason: String?
+    /// 0..1 diagnostic — used to sort. Not rendered.
+    let urgencyScore: Double?
+
+    var id: String { holdingId }
+
+    var playerMomentumPercentString: String? {
+        guard let m = playerMomentum else { return nil }
+        let pct = (m - 1.0) * 100.0
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(String(format: "%.1f", abs(pct)))%"
+    }
+}
+
+// MARK: - GET /api/portfolio/notable-sales (PR #539)
+
+struct NotableSalesResponse: Codable {
+    let count: Int?
+    let sales: [NotableSale]?
+}
+
+struct NotableSale: Codable, Hashable, Identifiable {
+    let cardId: String?
+    let player: String?
+    let year: Int?
+    let cardSet: String?
+    let variant: String?
+    let number: String?
+    let grade: String?
+    let grader: String?
+    let price: Double?
+    let saleDate: String?
+    let imageUrl: String?
+    let listingUrl: String?
+    /// `"eBay"` / `"Goldin"` / `"Heritage"` / `"Fanatics Collect"` /
+    /// `"Private"` (backend-derived from the listing URL's domain).
+    let sourceLabel: String?
+
+    var id: String {
+        cardId ?? "\(saleDate ?? "?")::\(price ?? 0)"
+    }
+}
+
+// MARK: - GET /api/portfolio/sub-raw-discovery (PR #531/#541/#542)
+
+struct SubRawDiscoveryResponse: Codable {
+    let count: Int?
+    let candidates: [SubRawCandidate]?
+}
+
+struct SubRawCandidate: Codable, Hashable, Identifiable {
+    let cardId: String
+    let player: String?
+    let year: Int?
+    let cardSet: String?
+    let variant: String?
+    let number: String?
+    let medianRawPrice: Double?
+    let familyKey: String?
+    let familyPsa10Multiplier: Double?
+    /// `"high"` / `"medium"` / `"low"`.
+    let familyPsa10Confidence: String?
+    let expectedPsa10Price: Double?
+    let gradingCostAssumed: Double?
+    let expectedGain: Double?
+    /// (expectedPsa10Price − rawPrice − gradingCost) / rawPrice.
+    let expectedGainMultiple: Double?
+    let rawComps: Int?
+    let imageUrl: String?
+
+    var id: String { cardId }
+
+    /// "3.8×" per the spec — never render bare decimal.
+    var multipleString: String? {
+        guard let m = expectedGainMultiple, m > 0 else { return nil }
+        return String(format: "%.1f\u{00D7}", m)
+    }
+}
+
+// MARK: - GET /api/portfolio/missing-parallels (PR #531)
+
+/// Wraps the full-portfolio scan response — `bundles` is one entry per
+/// (player, year, cardSet) the user has ≥1 card in.
+struct MissingParallelsResponse: Codable {
+    let count: Int?
+    let bundles: [MissingParallelsBundle]?
+}
+
+/// Single-bucket read (`GET /missing-parallels/:playerYearSet`).
+struct MissingParallelsBucketResponse: Codable {
+    let bucket: MissingParallelsBundle?
+}
+
+struct MissingParallelsBundle: Codable, Hashable, Identifiable {
+    let player: String?
+    let year: Int?
+    let cardSet: String?
+    let ownedVariants: [String]?
+    let missingParallels: [MissingParallelEntry]?
+
+    var id: String {
+        "\(player ?? "?")::\(year ?? 0)::\(cardSet ?? "?")"
+    }
+}
+
+struct MissingParallelEntry: Codable, Hashable, Identifiable {
+    let cardId: String
+    let variant: String?
+    let number: String?
+    let recentSales: Int?
+    let medianPrice: Double?
+    let imageUrl: String?
+
+    var id: String { cardId }
+}
+
 struct FamilyMultiplierTier: Codable, Hashable, Identifiable {
     let graderTier: String
     let multiplier: Double?

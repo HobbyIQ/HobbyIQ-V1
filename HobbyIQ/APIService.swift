@@ -695,6 +695,87 @@ struct APIService {
         )
     }
 
+    // MARK: - Corpus Signals — Second batch (PR #538/#539/#531, 2026-07-17)
+
+    /// PR #538: observed parallel-tier multipliers for a
+    /// (player, year, cardSet) bucket. Key is `"player::year::cardSet"`,
+    /// URL-encoded once as the path segment. Empty ladder + a
+    /// `suppressedReason` when the base pool is thin.
+    func fetchParallelLadder(player: String, year: Int, cardSet: String) async throws -> ParallelLadderResponse {
+        let composed = "\(player)::\(year)::\(cardSet)"
+        let encoded = composed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? composed
+        return try await get(
+            path: "/api/portfolio/parallel-ladder/\(encoded)",
+            responseType: ParallelLadderResponse.self
+        )
+    }
+
+    /// PR #538: pHash-cluster attribution health across the user's
+    /// portfolio. Suspects have `attributionScore < 0.85`.
+    func fetchAttributionHealth() async throws -> AttributionHealthResponse {
+        try await get(path: "/api/portfolio/attribution-health", responseType: AttributionHealthResponse.self)
+    }
+
+    /// PR #539: sell-now candidates — SKUs trading at ≥ 2× baseline
+    /// velocity AND player momentum up ≥ 10%. Sorted by urgencyScore DESC.
+    func fetchSellNowRadar() async throws -> SellNowRadarResponse {
+        try await get(path: "/api/portfolio/sell-now-radar", responseType: SellNowRadarResponse.self)
+    }
+
+    /// PR #539: top-dollar sales in the requested window. Defaults —
+    /// minPrice $100k, days 30, limit 20. Sorted saleDate DESC.
+    func fetchNotableSales(minPrice: Double? = nil, days: Int? = nil, limit: Int? = nil) async throws -> NotableSalesResponse {
+        var query: [URLQueryItem] = []
+        if let minPrice { query.append(URLQueryItem(name: "minPrice", value: String(minPrice))) }
+        if let days { query.append(URLQueryItem(name: "days", value: String(days))) }
+        if let limit { query.append(URLQueryItem(name: "limit", value: String(limit))) }
+        return try await get(
+            path: "/api/portfolio/notable-sales",
+            queryItems: query,
+            responseType: NotableSalesResponse.self
+        )
+    }
+
+    /// PR #531/#541/#542: raw cards trading well below expected PSA 10
+    /// value. Optional query gates match the backend's
+    /// SubRawDiscoveryOptions type.
+    func fetchSubRawDiscovery(
+        maxRawPrice: Double? = nil,
+        minExpectedGain: Double? = nil,
+        minExpectedGainMultiple: Double? = nil,
+        minFamilyConfidence: String? = nil,
+        topN: Int? = nil
+    ) async throws -> SubRawDiscoveryResponse {
+        var query: [URLQueryItem] = []
+        if let maxRawPrice { query.append(URLQueryItem(name: "maxRawPrice", value: String(maxRawPrice))) }
+        if let minExpectedGain { query.append(URLQueryItem(name: "minGain", value: String(minExpectedGain))) }
+        if let minExpectedGainMultiple { query.append(URLQueryItem(name: "minMultiple", value: String(minExpectedGainMultiple))) }
+        if let minFamilyConfidence { query.append(URLQueryItem(name: "minConfidence", value: minFamilyConfidence)) }
+        if let topN { query.append(URLQueryItem(name: "topN", value: String(topN))) }
+        return try await get(
+            path: "/api/portfolio/sub-raw-discovery",
+            queryItems: query,
+            responseType: SubRawDiscoveryResponse.self
+        )
+    }
+
+    /// PR #531: every (player, year, cardSet) bucket the user has ≥1
+    /// card in, with the parallels they DON'T own.
+    func fetchMissingParallels() async throws -> MissingParallelsResponse {
+        try await get(path: "/api/portfolio/missing-parallels", responseType: MissingParallelsResponse.self)
+    }
+
+    /// PR #531: single-bucket read for the card-detail Missing
+    /// Parallels block. Key is `"player::year::cardSet"`, URL-encoded.
+    func fetchMissingParallels(player: String, year: Int, cardSet: String) async throws -> MissingParallelsBucketResponse {
+        let composed = "\(player)::\(year)::\(cardSet)"
+        let encoded = composed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? composed
+        return try await get(
+            path: "/api/portfolio/missing-parallels/\(encoded)",
+            responseType: MissingParallelsBucketResponse.self
+        )
+    }
+
     func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
@@ -2615,7 +2696,15 @@ struct APIService {
         "/api/portfolio/momentum",
         "/api/portfolio/cascade-alerts",
         "/api/portfolio/i-called-it",
-        "/api/dailyiq/hot-right-now"
+        "/api/dailyiq/hot-right-now",
+        // Corpus signals batch 2 (2026-07-17, PR #538/#539/#531):
+        // attribution health + sell-radar + notable sales + sub-raw +
+        // missing-parallels — all fire on tab-open. Same reasoning.
+        "/api/portfolio/attribution-health",
+        "/api/portfolio/sell-now-radar",
+        "/api/portfolio/notable-sales",
+        "/api/portfolio/sub-raw-discovery",
+        "/api/portfolio/missing-parallels"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
@@ -2631,7 +2720,12 @@ struct APIService {
         // Phase 3-4 (2026-07-17): grader-outcomes per family + yearbook
         // (parameterized by year). Session-safe reads.
         "/api/portfolio/grader-outcomes/",
-        "/api/portfolio/yearbook"
+        "/api/portfolio/yearbook",
+        // Corpus signals batch 2 (2026-07-17, PR #538/#531): parallel-
+        // ladder + missing-parallels-by-bucket have variable
+        // :playerYearSet keys.
+        "/api/portfolio/parallel-ladder/",
+        "/api/portfolio/missing-parallels/"
     ]
 
     /// Corpus signals (2026-07-17): the grade-analysis route sits under

@@ -432,6 +432,13 @@ struct AccountView: View {
                 accountDivider
 
                 yearbookLink
+
+                accountDivider
+
+                // Batch 2 (2026-07-17, PR #538): portfolio attribution
+                // health. Lazy-loads on tap so the account screen doesn't
+                // spend rate-limit budget just being viewed.
+                AttributionHealthRow()
             }
             .accountCard()
         }
@@ -718,6 +725,79 @@ struct AccountView: View {
             Spacer()
         }
         .accountCard()
+    }
+}
+
+// MARK: - Attribution Health row (2026-07-17, PR #538)
+
+/// Row lives at the bottom of the Recap section. Fetches on tap so we
+/// don't preload for every account-screen open. Renders a subhead of the
+/// suspect count (or "all clear") next to the chevron.
+struct AttributionHealthRow: View {
+    @State private var response: AttributionHealthResponse?
+    @State private var isLoading = false
+    @State private var showList = false
+
+    var body: some View {
+        Button {
+            Task { await loadIfNeeded() }
+            showList = true
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Attribution health")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let suspectCount = response?.suspectCount,
+                       let scanned = response?.scannedHoldings, scanned > 0 {
+                        if suspectCount > 0 {
+                            Text("\(suspectCount) of \(scanned) flagged")
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.warning)
+                        } else {
+                            Text("\(scanned) holdings · all clear")
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                    } else {
+                        Text("Check community identity confidence for your holdings")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer()
+                if isLoading {
+                    ProgressView().controlSize(.mini).tint(HobbyIQTheme.Colors.mutedText)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .navigationDestination(isPresented: $showList) {
+            AttributionHealthListView(response: response)
+        }
+        .task {
+            // Prefetch so the row's subhead shows real state on first
+            // render — one call per account-open is well within budget.
+            await loadIfNeeded()
+        }
+    }
+
+    private func loadIfNeeded() async {
+        guard response == nil, isLoading == false else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            response = try await APIService.shared.fetchAttributionHealth()
+        } catch {
+            // Silent — row renders default subhead on failure.
+        }
     }
 }
 
