@@ -32,6 +32,7 @@ struct AccountView: View {
                     membershipCard
                     settingsSection
                     integrationsSection
+                    recapSection
                     appInfoSection
                     signOutSection
                     deleteAccountSection
@@ -403,6 +404,78 @@ struct AccountView: View {
             }
             .accountCard()
         }
+    }
+
+    // MARK: - Phase 4 (2026-07-17): Recap surfaces
+
+    private var recapSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            accountSectionHeader("RECAP")
+            VStack(spacing: 0) {
+                NavigationLink {
+                    ICalledItView()
+                } label: {
+                    HStack {
+                        Text("Recent flexes")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                accountDivider
+
+                yearbookLink
+            }
+            .accountCard()
+        }
+    }
+
+    /// Yearbook is a year-end surface — per spec "Available after Dec 15".
+    /// Before that date, the row still renders but reads as informational
+    /// so users know it's coming. Tapping opens the current year's view
+    /// with whatever partial data the backend has assembled.
+    @ViewBuilder
+    private var yearbookLink: some View {
+        let year = Calendar.current.component(.year, from: Date())
+        let isAvailable = isYearbookAvailable()
+        NavigationLink {
+            YearbookView(year: year)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your \(String(year)) Yearbook")
+                        .font(.subheadline)
+                        .foregroundStyle(isAvailable ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.pureWhite.opacity(0.55))
+                    if isAvailable == false {
+                        Text("Full recap available after Dec 15")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func isYearbookAvailable() -> Bool {
+        let cal = Calendar.current
+        let now = Date()
+        let month = cal.component(.month, from: now)
+        let day = cal.component(.day, from: now)
+        return month > 12 || (month == 12 && day >= 15)
     }
 
     // MARK: - App Info
