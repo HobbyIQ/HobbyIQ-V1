@@ -67,6 +67,14 @@ import { analyzeTimingForecast } from "../services/portfolioiq/timingAwareForeca
 // CF-CASCADE-ALERTS (Drew, 2026-07-17): serve cascade events for
 // players the user owns.
 import { readRecentEventsForPlayers } from "../services/portfolioiq/cascadeEventStore.service.js";
+// CF-SOCIAL-SURFACES (Drew, 2026-07-17): "I Called It" auto-flex moments
+// and Portfolio Yearbook — two shareable-content surfaces backed by the
+// user's existing holdings + ledger.
+import { detectICalledItMoments } from "../services/portfolioiq/iCalledItAnalyze.service.js";
+import {
+  generateUserYearbook,
+  type PeriodQuarter,
+} from "../services/portfolioiq/portfolioYearbook.service.js";
 
 const router = Router();
 
@@ -1108,5 +1116,66 @@ router.post(
 
 // CF-PAYMENTS-A: batch reprice is a prediction-class operation (collector+).
 router.post("/reprice/batch", requireEntitlement("predictions"), portfolio.runBatchReprice);
+
+// CF-SOCIAL-SURFACES (Drew, 2026-07-17): "I Called It" auto-flex.
+// Returns detected flex-worthy moments — purchase_appreciated (bought
+// ≥60d ago and up ≥30%) and alert_hit (user's price alert fired and the
+// market is still on the winning side). iOS renders each moment as an
+// Instagram-story format card using shareablePayload's pre-composed
+// copy. Session-required; rate-limited under priceChecksPerDay so a
+// runaway share button doesn't burn free-tier budget.
+router.get(
+  "/i-called-it",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const result = await detectICalledItMoments(userId);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-SOCIAL-SURFACES (Drew, 2026-07-17): Portfolio Yearbook.
+// Annual or quarterly recap — realized/unrealized P&L, top-3 performers,
+// biggest-3 misses, and the "what if you had held every card" counter-
+// factual using a bounded portfolio-multiplier for the sold-value proxy.
+//   Query: ?year=YYYY[&quarter=Q1|Q2|Q3|Q4]
+router.get(
+  "/yearbook",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+      const yearRaw = typeof req.query.year === "string" ? req.query.year.trim() : "";
+      const year = yearRaw ? parseInt(yearRaw, 10) : new Date().getUTCFullYear();
+      if (!Number.isFinite(year)) {
+        return res.status(400).json({ error: "invalid year" });
+      }
+
+      const qRaw = typeof req.query.quarter === "string" ? req.query.quarter.trim().toUpperCase() : "";
+      let quarter: PeriodQuarter | undefined;
+      if (qRaw) {
+        if (qRaw !== "Q1" && qRaw !== "Q2" && qRaw !== "Q3" && qRaw !== "Q4") {
+          return res.status(400).json({ error: "invalid quarter (Q1..Q4)" });
+        }
+        quarter = qRaw as PeriodQuarter;
+      }
+
+      const result = await generateUserYearbook(userId, { year, quarter });
+      res.json(result);
+    } catch (err: any) {
+      if (typeof err?.message === "string" && /invalid/i.test(err.message)) {
+        return res.status(400).json({ error: err.message });
+      }
+      next(err);
+    }
+  },
+);
 
 export default router;
