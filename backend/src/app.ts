@@ -8,6 +8,11 @@ import healthRoutes from "./routes/health.routes.js";
 import compiqRoutes from "./routes/compiq.routes.js";
 import portfolioiqRoutes from "./routes/portfolioiq.routes.js";
 import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
+// CF-SELL-NOW-RADAR + CF-NOTABLE-SALES-FEED (Drew, 2026-07-17): two
+// seller-intelligence surfaces on the ch_daily_sales corpus. Kept in a
+// separate router file so PR #533 (parallel work on portfolioiq.routes)
+// merges without conflict.
+import sellRadarNotableSalesRoutes from "./routes/sellRadarNotableSales.routes.js";
 import dailyiqRoutes from "./routes/dailyiq.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -99,6 +104,10 @@ app.use("/api/portfolioiq", portfolioiqRoutes);
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
 // mount-order pattern as /api/alerts/advanced.
 app.use("/api/portfolio/erp", portfolioErpRoutes);
+// CF-SELL-NOW-RADAR + CF-NOTABLE-SALES-FEED: mount BEFORE the general
+// /api/portfolio → portfolioiqRoutes so the two dedicated endpoints
+// resolve to their handlers cleanly.
+app.use("/api/portfolio", sellRadarNotableSalesRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/dailyIQ", dailyiqRoutes);
