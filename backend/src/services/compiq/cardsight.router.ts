@@ -39,6 +39,11 @@ import { tryCardsightPricingBackstop } from "./cardsightPricingBackstop.js";
 // for holdings where we have exact fields (cardNumber). Skips CH's AI
 // matcher entirely — cheaper + more precise. See file header.
 import { structuredCardHedgeBridge } from "./cardHedgeStructuredBridge.js";
+// CF-LOCAL-COMP-FIRST (Drew, 2026-07-17): our own-corpus comp branch.
+// Reads ch_daily_sales (886k+ baseball rows) as an additional pool
+// alongside CH+CS. Env-gated, defaults OFF.
+import { lookupLocalComps } from "../portfolioiq/localCompStore.service.js";
+import type { LocalCompSale } from "../../types/localComp.types.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -645,6 +650,78 @@ async function resolveChCardId(
  * Fetch trust-guarded CardHedge comps for an identity hint.
  * Returns null when bridge or trust-guard rejects.
  */
+/**
+ * CF-LOCAL-COMP-FIRST (Drew, 2026-07-17). Reads ch_daily_sales for the
+ * identity via localCompStore. Fires in parallel with CH + CS branches.
+ * When a CH-side chCardId can be resolved (cached), the local read is
+ * a fast single-partition query; otherwise falls back to structured
+ * cross-partition. Returns null on any error so the merge stays healthy.
+ */
+async function tryLocalComps(
+  identity: CardIdentityHint,
+  grade: string,
+  rawQuery?: string,
+): Promise<{ sales: RoutedSale[]; card: RoutedCard | null; source: "local" } | null> {
+  try {
+    const bridge = await resolveChCardId(identity, rawQuery);
+    const cardId = bridge?.chCardId;
+
+    // Prefer the fast single-partition query on cardId. Structured
+    // fallback exercises the identity fields so unbridged holdings
+    // still get local coverage.
+    const localResult = cardId
+      ? await lookupLocalComps({ cardId }, { skipPremiums: true })
+      : await lookupLocalComps(
+          {
+            year: identity.cardYear !== undefined && identity.cardYear !== null
+              ? Number(identity.cardYear)
+              : undefined,
+            cardSet: identity.product,
+            variant: identity.parallel,
+            number: identity.number,
+            // grade filter applied only when caller pinned it (Raw is
+            // the default — passing "Raw" would over-filter graded corpus).
+            grade: grade && grade !== "Raw" ? grade : undefined,
+          },
+          { skipPremiums: true },
+        );
+
+    if (localResult.totalSales === 0) return null;
+
+    return {
+      sales: localResult.recentSales.map(toRoutedSale),
+      card: cardId
+        ? {
+            card_id: cardId,
+            player: identity.playerName,
+            set: identity.product,
+            year: identity.cardYear,
+            number: identity.number,
+            variant: identity.parallel,
+          }
+        : null,
+      source: "local",
+    };
+  } catch (err) {
+    log.warn("router.local_comps_error", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+function toRoutedSale(s: LocalCompSale): RoutedSale {
+  return {
+    price: s.price,
+    date: s.saleDate || null,
+    grade: s.grader === "Raw" ? "Raw" : `${s.grader} ${s.grade}`.trim(),
+    source: "ch_daily_export",
+    sale_type: s.saleType || null,
+    title: s.description || null,
+    url: s.listingUrl || null,
+  };
+}
+
 async function tryCardHedge(
   identity: CardIdentityHint,
   grade: string,
@@ -813,6 +890,11 @@ export async function findCompsRouted(
   const structuredEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
   const fallbackEnabled = process.env.CARDSIGHT_FALLBACK_ENABLED === "true";
   const backstopEnabled = process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true";
+  // CF-LOCAL-COMP-FIRST (Drew, 2026-07-17). Default OFF — turn on in
+  // prod after parity check on Drew's inventory. When enabled, our own
+  // ch_daily_sales corpus contributes its comps to the merged pool
+  // alongside CH+CS. Doesn't displace any branch; adds volume.
+  const localCompEnabled = process.env.LOCAL_COMP_FIRST_ENABLED === "true";
 
   const withTimeout = <T>(p: Promise<T>, name: string): Promise<T | null> =>
     Promise.race([
@@ -826,7 +908,7 @@ export async function findCompsRouted(
       }, branchTimeoutMs)),
     ]);
 
-  const [chResult, csStructuredResult, csFallbackResult, csBackstopResult] = await Promise.all([
+  const [chResult, csStructuredResult, csFallbackResult, csBackstopResult, localResult] = await Promise.all([
     // CH always fires (no env flag — CH is the primary contract)
     withTimeout(tryCardHedge(identity, grade, query), "ch"),
     structuredEnabled
@@ -837,6 +919,9 @@ export async function findCompsRouted(
       : Promise.resolve(null),
     backstopEnabled
       ? withTimeout(tryCardsightPricingBackstop(query, opts.queryContext, grade), "cs_backstop")
+      : Promise.resolve(null),
+    localCompEnabled
+      ? withTimeout(tryLocalComps(identity, grade, query), "local")
       : Promise.resolve(null),
   ]);
 
@@ -859,6 +944,7 @@ export async function findCompsRouted(
     ?? csStructuredResult?.card
     ?? csFallbackResult?.card
     ?? csBackstopResult?.card
+    ?? localResult?.card
     ?? null;
 
   // Merge sales into one dedupe'd pool. URL is the natural join between
@@ -866,11 +952,14 @@ export async function findCompsRouted(
   // physical eBay listing appears in both pools under the same URL. When
   // URL is absent (older records / CS-native records that lack it), the
   // composite key `soldDate|priceCents|titleHash` catches the same sale
-  // by content fingerprint.
+  // by content fingerprint. Local pool is CH-sourced too so URL dedup
+  // works uniformly (a per-query CH sale reappearing in the bulk
+  // ch_daily_sales corpus collapses to one entry).
   const mergedSales = mergeAndDedupeSales(chResult?.sales ?? [], [
     ...(csStructuredResult?.sales ?? []),
     ...(csFallbackResult?.sales ?? []),
     ...(csBackstopResult?.sales ?? []),
+    ...(localResult?.sales ?? []),
   ]);
 
   // Outcome tag captures which branches actually contributed non-empty results.
@@ -879,6 +968,7 @@ export async function findCompsRouted(
     csStructuredResult && csStructuredResult.sales.length > 0 ? "cs_structured" : null,
     csFallbackResult && csFallbackResult.sales.length > 0 ? "cs_fallback" : null,
     csBackstopResult && csBackstopResult.sales.length > 0 ? "cs_backstop" : null,
+    localResult && localResult.sales.length > 0 ? "local" : null,
   ].filter((s) => s !== null).join("+") || "none";
 
   log.info("comp.findComps.end", {
@@ -889,11 +979,13 @@ export async function findCompsRouted(
     cs_structured_count: csStructuredResult?.sales.length ?? 0,
     cs_fallback_count: csFallbackResult?.sales.length ?? 0,
     cs_backstop_count: csBackstopResult?.sales.length ?? 0,
+    local_count: localResult?.sales.length ?? 0,
     duplicates_collapsed:
       (chResult?.sales.length ?? 0)
       + (csStructuredResult?.sales.length ?? 0)
       + (csFallbackResult?.sales.length ?? 0)
       + (csBackstopResult?.sales.length ?? 0)
+      + (localResult?.sales.length ?? 0)
       - mergedSales.length,
     latency_ms: Date.now() - start,
     outcome,
