@@ -1,6 +1,6 @@
 # iOS Slab Scanning — `/api/compiq/scan` Contract
 
-**Status:** Backend shipped (PR #214 wrappers + PR #215 route). iOS implementation TODO.
+**Status:** ✅ CLOSED. Backend shipped (PR #214 wrappers + PR #215 route); iOS shipped in `883cd92` (initial route wiring) + `f0130fc` (auto hint + card-outline viewfinder + confidence gates + grader gates P0.2 + P0.6).
 
 CF-COMPIQ-SCAN-ROUTE (2026-06-30). Replaces the "type in the card details" UX with "take a photo." Two paths in one endpoint: graded slab scanning AND raw card identification.
 

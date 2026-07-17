@@ -1,6 +1,6 @@
 # Seasonality Signals — iOS Derives on Device
 
-**Status:** Backend endpoint shipped in PR #476. iOS derivation formulas below (design call 2026-07-16).
+**Status:** ✅ CLOSED. Backend endpoint shipped in PR #476; iOS shipped in `904e81f` (on-device seasonality signals for price history, P1.1).
 **Surface:** card detail / holding detail price chart + inventory-row momentum sparkline.
 
 ## Design call

@@ -61,3 +61,10 @@ _pe*.txt
 # Local secret scratch — connection strings / triage secret hits; never commit
 .blobconn.txt
 filtered-triage-secret-hits.txt
+
+# Local-dev file-backed store fallbacks (production writes to Cosmos).
+# Runtime-mutated per session; keeping them tracked created chronic
+# git-status noise across every session. If a fresh clone needs seed
+# data, add a *.example.json alongside instead of committing runtime state.
+backend/.data/*.json
+

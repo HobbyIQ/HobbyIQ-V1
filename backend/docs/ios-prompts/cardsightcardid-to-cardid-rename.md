@@ -1,6 +1,6 @@
 # `cardsightCardId` → `cardId` Field Rename — iOS Coordination
 
-**Status:** Backend renamed (PR #216). iOS migration TODO at next release.
+**Status:** ✅ CLOSED. Backend renamed (PR #216); iOS shipped in `d9e21bf` (refactor(ios): rename `cardsightCardId` → `cardId`).
 
 CF-CARDID-RENAME (2026-06-30). Long-overdue rename of a field whose name no longer matches the data source. Cardsight was retired in CF-CARDHEDGE-HARD-CUTOVER (2026-05-30); the field has been a CardHedge catalog id ever since. The new name `cardId` is source-neutral and future-proof (e.g., eBay-direct migration won't require another rename).
 
