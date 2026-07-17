@@ -23,15 +23,19 @@ async function main() {
     process.exit(1);
   }
 
+  // tsconfig rootDir=src, outDir=dist → src/services/foo.ts compiles
+  // to dist/services/foo.js (NOT dist/src/services/foo.js). Corrected
+  // in fix/script-dist-paths (PR #507); mirrored here so PR #506 lands
+  // with the right path from day one.
   const distRoot = path.resolve(__dirname, "..", "dist");
-  const useCompiled = await pathExists(path.join(distRoot, "src", "services"));
+  const useCompiled = await pathExists(path.join(distRoot, "services"));
   if (!useCompiled) {
     console.error("backend/dist not found — run `npm run build` first");
     process.exit(1);
   }
 
   const { runPhashPipeline } = require(
-    path.join(distRoot, "src", "services", "attribution", "phashOrchestrator.service.js"),
+    path.join(distRoot, "services", "attribution", "phashOrchestrator.service.js"),
   );
 
   const result = await runPhashPipeline({
