@@ -17,6 +17,12 @@ import type {
   GradeWorthyAnalysis,
   GraderPremiumInput,
 } from "../../types/gradeWorthy.types.js";
+// CF-GRADE-WORTHY-FAMILY-BLENDING (Drew, 2026-07-17): observed family
+// multipliers as fallback when a specific SKU has no graded comps
+// but its `card_set_type` family has hundreds of them across
+// hundreds of other cards.
+import { readFamilyMultipliers } from "./observedMultipliersStore.service.js";
+import { slugFamily } from "./observedMultipliersCompute.service.js";
 
 /** Derive a { "psa-regular": 79.99, "bgs-regular": 65, ... } Record from
  *  the catalog. Picks the cheapest ACTIVE tier per grader — v1 doesn't
@@ -43,6 +49,69 @@ export function buildGradingCostCatalog(): Record<string, number> {
   return out;
 }
 
+/** CF-GRADE-WORTHY-FAMILY-BLENDING (Drew, 2026-07-17): normalize an
+ *  incoming set-name or product-name into a family key that maps to
+ *  the observed_grader_multipliers container. Handles common iOS-
+ *  supplied shapes:
+ *    "2026 Bowman Baseball"     → "bowman_baseball"
+ *    "2026 Bowman Chrome Baseball" → "bowman_chrome_baseball"
+ *    "Bowman Chrome"             → "bowman_chrome"
+ *  Strips a leading 4-digit year + optional whitespace when present. */
+export function deriveFamilyKey(setOrProduct: string): string {
+  const trimmed = String(setOrProduct ?? "").trim();
+  if (!trimmed) return "";
+  // Strip leading YYYY (or YYYY-YY) if present.
+  const noYear = trimmed.replace(/^\s*\d{4}(?:-\d{2,4})?\s+/, "");
+  return slugFamily(noYear);
+}
+
+/** CF-GRADE-WORTHY-FAMILY-BLENDING: given family-level multipliers
+ *  (observed as median(graded)/median(raw) per tier for a card_set_type)
+ *  and a raw price, synthesize graderPremium entries for tiers we can't
+ *  get from the specific SKU's local comps. Only fills tiers NOT already
+ *  present in localGraderPremiums (SKU-specific data always wins).
+ *
+ *  Confidence gate: only "high" or "medium" family confidence is used —
+ *  "low" would be adding noise, not signal. */
+export function blendFamilyMultipliersIntoGraderPremiums(
+  localGraderPremiums: Record<string, GraderPremiumInput>,
+  rawPrice: number,
+  familyMultipliers: Array<{
+    graderTier: string;
+    multiplier: number;
+    confidence: "high" | "medium" | "low";
+    nGraded: number;
+  }>,
+): {
+  premiums: Record<string, GraderPremiumInput>;
+  familyBlendedTiers: string[];
+} {
+  const merged = { ...localGraderPremiums };
+  const familyBlendedTiers: string[] = [];
+
+  if (!(rawPrice > 0)) {
+    return { premiums: merged, familyBlendedTiers };
+  }
+
+  for (const fm of familyMultipliers) {
+    if (fm.confidence === "low") continue;
+    const existing = merged[fm.graderTier];
+    // SKU-specific data with n >= 3 wins over family blend.
+    if (existing && existing.n >= 3) continue;
+    const meanPrice = rawPrice * fm.multiplier;
+    // We attribute the "n" to the family sample so downstream
+    // gate can distinguish blended (fm.nGraded high-family-n)
+    // from thin-SKU (nGraded local n).
+    merged[fm.graderTier] = {
+      n: fm.nGraded,
+      meanPrice,
+      multiplierVsBaseline: fm.multiplier,
+    };
+    familyBlendedTiers.push(fm.graderTier);
+  }
+  return { premiums: merged, familyBlendedTiers };
+}
+
 /** Analyze a single holding. Bails cleanly (insufficient_data) when
  *  the SKU has no local corpus coverage or when the holding is already
  *  graded. */
@@ -54,6 +123,8 @@ export async function analyzeHoldingGradeWorthy(
     localCorpusRows: number;
     playerMomentum: number | null;
     playerMomentumDirection: "up" | "flat" | "down" | null;
+    familyKey: string | null;
+    familyBlendedTiers: string[];
   };
 }> {
   // Only raw holdings are candidates. Already-graded cards don't get
@@ -72,6 +143,8 @@ export async function analyzeHoldingGradeWorthy(
         localCorpusRows: 0,
         playerMomentum: null,
         playerMomentumDirection: null,
+        familyKey: null,
+        familyBlendedTiers: [],
       },
     };
   }
@@ -93,6 +166,8 @@ export async function analyzeHoldingGradeWorthy(
         localCorpusRows: 0,
         playerMomentum: null,
         playerMomentumDirection: null,
+        familyKey: null,
+        familyBlendedTiers: [],
       },
     };
   }
@@ -130,9 +205,45 @@ export async function analyzeHoldingGradeWorthy(
     // best-effort — don't fail the analysis just because trend store is offline
   }
 
+  // CF-GRADE-WORTHY-FAMILY-BLENDING (Drew, 2026-07-17): if the SKU-
+  // specific graderPremiums are sparse (missing PSA 10 entirely, or n<3),
+  // fall back to observed family multipliers. Family key = normalized
+  // setName (year stripped), else product. Best-effort — an empty
+  // multipliers row just leaves the analysis unchanged.
+  const rawSetOrProduct =
+    (typeof holding.setName === "string" && holding.setName.trim().length > 0
+      ? holding.setName
+      : typeof holding.product === "string" && holding.product.trim().length > 0
+        ? holding.product
+        : "");
+  const familyKey = rawSetOrProduct ? deriveFamilyKey(rawSetOrProduct) : "";
+  let familyBlendedTiers: string[] = [];
+  let mergedPremiums = localResult.graderPremiums;
+  if (familyKey && rawPrice > 0) {
+    try {
+      const familyRows = await readFamilyMultipliers(familyKey);
+      if (familyRows.length > 0) {
+        const blend = blendFamilyMultipliersIntoGraderPremiums(
+          localResult.graderPremiums,
+          rawPrice,
+          familyRows.map((r) => ({
+            graderTier: r.graderTier,
+            multiplier: r.multiplier,
+            confidence: r.confidence,
+            nGraded: r.nGraded,
+          })),
+        );
+        mergedPremiums = blend.premiums;
+        familyBlendedTiers = blend.familyBlendedTiers;
+      }
+    } catch {
+      // best-effort — sparse local pool is not fatal
+    }
+  }
+
   const analysis = analyzeGradeWorthy({
     rawPrice,
-    graderPremiums: localResult.graderPremiums,
+    graderPremiums: mergedPremiums,
     gradingCosts: buildGradingCostCatalog(),
     playerMomentumDirection: playerMomentumDirection ?? undefined,
   });
@@ -143,6 +254,8 @@ export async function analyzeHoldingGradeWorthy(
       localCorpusRows: localResult.totalSales,
       playerMomentum,
       playerMomentumDirection,
+      familyKey: familyKey || null,
+      familyBlendedTiers,
     },
   };
 }
