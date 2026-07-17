@@ -1,0 +1,77 @@
+name: Grader Outcomes Nightly Compute
+
+# CF-GRADER-OUTCOMES (Drew, 2026-07-17). Nightly: compute observed
+# grader-outcome tier distributions per (family, grader). Overwrites
+# grader_outcome_distributions.
+#
+# Schedule: 04:30 UTC. Sits between multipliers (04:15) and the CH
+# daily ingest (05:15).
+
+on:
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+    inputs:
+      window:
+        description: 'Days of history (default 90).'
+        required: false
+        type: string
+        default: '90'
+      min_graded:
+        description: 'Min graded n per (family, grader) (default 20).'
+        required: false
+        type: string
+        default: '20'
+
+jobs:
+  compute:
+    name: Compute grader outcomes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Compute grader outcomes
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty — cannot compute"
+            exit 1
+          fi
+          WINDOW="${{ inputs.window }}"
+          MIN_GRADED="${{ inputs.min_graded }}"
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/compute-grader-outcomes.cjs \
+            --window=${WINDOW:-90} \
+            --min-graded=${MIN_GRADED:-20}
