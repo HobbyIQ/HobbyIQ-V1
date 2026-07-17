@@ -122,6 +122,10 @@ export function buildQuery(key: LocalCompLookupKey): {
     clauses.push("c.card_id = @cardId");
     parameters.push({ name: "@cardId", value: key.cardId });
   }
+  if (key.player) {
+    clauses.push("c.player = @player");
+    parameters.push({ name: "@player", value: key.player });
+  }
   if (key.year !== undefined) {
     clauses.push("c.year = @year");
     parameters.push({ name: "@year", value: key.year });

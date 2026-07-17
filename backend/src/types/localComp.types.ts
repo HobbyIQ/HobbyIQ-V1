@@ -6,9 +6,19 @@
 
 /** Structured key to look up comps by. Either `cardId` OR structured
  *  attrs; when both are provided cardId wins (cheaper single-partition
- *  read). */
+ *  read).
+ *
+ *  Field-mapping note (2026-07-17, fix/local-comps-schema-match): the
+ *  Cardsight-router `identity.product` and `identity.parallel` don't
+ *  string-equal ch_daily_sales's `card_set` / `variant` (identity
+ *  gives "Bowman Chrome"; ch_daily_sales stores "2026 Bowman Baseball"
+ *  in card_set and "Base" in variant). So the strong structured
+ *  identity is (player + year + number), which round-trips cleanly.
+ *  cardSet/variant remain in the key for CLI + test coverage but the
+ *  router-caller should prefer the strong triple. */
 export interface LocalCompLookupKey {
   cardId?: string;
+  player?: string;
   year?: number;
   cardSet?: string;
   variant?: string;
