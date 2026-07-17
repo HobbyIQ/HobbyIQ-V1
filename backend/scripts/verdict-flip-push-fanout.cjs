@@ -48,9 +48,11 @@ async function main() {
 
   // Lazy-import compiled backend modules so the script works from either
   // backend/dist (production) or backend/src via tsx (local dev).
+  // tsconfig has rootDir=src, outDir=dist → dist mirrors the src/**
+  // shape at the top level (dist/services/... not dist/src/services/...).
   const distRoot = path.resolve(__dirname, "..", "dist");
-  const useCompiled = await pathExists(path.join(distRoot, "src", "services"));
-  const modBase = useCompiled ? path.join(distRoot, "src") : path.resolve(__dirname, "..", "src");
+  const useCompiled = await pathExists(path.join(distRoot, "services"));
+  const modBase = useCompiled ? distRoot : path.resolve(__dirname, "..", "src");
 
   const { readRecentFlipsForPlayers } = require(
     path.join(modBase, "services", "compiq", "verdictHistoryStore.service" + (useCompiled ? ".js" : ".ts"))
