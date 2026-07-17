@@ -7717,6 +7717,97 @@ export async function computeEstimate(
     ?? slopeAdj?.predictedPriceRange
     ?? (nextSaleFallback ? nextSaleFallback.bounds : null)
     ?? __predicted.predictedPriceRange;
+
+  // CF-GUESTIMATE-PRICING (Drew, 2026-07-17): last-resort compound-
+  // multiplier estimate for cards that have NO comps AND family blend
+  // couldn't fill. Fires only when every prior fallback yielded
+  // nothing usable (slopeMarketValue null or <=0). Emits as
+  // valuationStatus="estimated" with estimateBasis="guestimate" so
+  // iOS renders it distinctly from an observed FMV. Never blocks —
+  // any failure leaves the response as-is.
+  let guestimateBlock: {
+    marketValue: number;
+    rangeLow: number;
+    rangeHigh: number;
+    confidence: "estimate" | "rough" | "ballpark";
+    attribution: string[];
+  } | null = null;
+  const eligibleForGuestimate =
+    !isAnyEstimate
+    && (typeof slopeMarketValue !== "number" || !(slopeMarketValue > 0))
+    && typeof queryContext.playerName === "string"
+    && queryContext.playerName.trim().length > 0
+    && queryContext.cardYear !== undefined
+    && queryContext.cardYear !== null
+    && typeof queryContext.product === "string"
+    && queryContext.product.trim().length > 0;
+  if (eligibleForGuestimate) {
+    try {
+      const { fetchFamilyBaseRawPrice, classifyPlayerTier } = await import(
+        "./guestimateContext.service.js"
+      );
+      const { computeGuestimate } = await import("./guestimatePricing.js");
+      const year = Number(queryContext.cardYear);
+      const familyLabel = String(queryContext.product).trim();
+      const [baseRaw, tier] = await Promise.all([
+        fetchFamilyBaseRawPrice(year, familyLabel),
+        classifyPlayerTier(String(queryContext.playerName)),
+      ]);
+      if (baseRaw !== null && baseRaw > 0) {
+        const gradeTier =
+          normalizedGradeCompany && queryContext.gradeValue
+            ? `${normalizedGradeCompany} ${queryContext.gradeValue}`
+            : "Raw";
+        const printRun =
+          typeof (body as { printRun?: number }).printRun === "number"
+            ? Number((body as { printRun?: number }).printRun)
+            : null;
+        const isAuto = /auto/i.test(queryContext.parallel ?? "")
+          || /auto/i.test(body.parallel ?? "");
+        // ageYears: from cardYear vs "current" year. Since we can't
+        // use Date.now() cleanly across all envs, approximate from
+        // a session-level clock via new Date() inside try/catch.
+        let ageYears: number | null = null;
+        try {
+          const currentYear = new Date().getUTCFullYear();
+          ageYears = currentYear - year;
+        } catch { /* leave null */ }
+        const g = computeGuestimate({
+          familyBaseRawPrice: baseRaw,
+          familyLabel,
+          playerTier: tier,
+          parallel: queryContext.parallel ?? null,
+          gradeTier,
+          printRun,
+          isAuto,
+          ageYears,
+        });
+        if (g && g.confidence !== "insufficient") {
+          guestimateBlock = {
+            marketValue: g.price,
+            rangeLow: g.rangeLow,
+            rangeHigh: g.rangeHigh,
+            confidence: g.confidence,
+            attribution: g.attribution,
+          };
+          console.log(JSON.stringify({
+            event: "guestimate_computed",
+            source: "compiq.estimate",
+            cardId: body.cardId ?? cardIdentity?.card_id ?? null,
+            player: queryContext.playerName,
+            family: familyLabel,
+            baseRaw,
+            tier,
+            price: g.price,
+            hops: g.hops,
+            confidence: g.confidence,
+          }));
+        }
+      }
+    } catch {
+      // best-effort — no guestimate is not fatal
+    }
+  }
   // CF-PREDICTED-ATTRIBUTION-MECHANISM-KEY (Drew, 2026-07-17): downstream
   // (portfolioStore.service.ts:2277, routes/compiq.routes.ts:2509/3106/5266)
   // reads `.mechanism`. Prior shape used `.method`, which silently landed
@@ -7810,20 +7901,25 @@ export async function computeEstimate(
     action: result.action ?? "Hold",
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
-    fairMarketValue: slopeMarketValue,
-    fairMarketValueLow: responseFmvLow,
-    fairMarketValueHigh: responseFmvHigh,
-    marketValue: slopeMarketValue,
+    // CF-GUESTIMATE-PRICING (Drew, 2026-07-17): when guestimateBlock
+    // fired, override the estimated-tier fields (fairMarketValue stays
+    // null per the observed/estimated invariant — guestimate is a
+    // compound multiplier estimate, not an observed sale).
+    fairMarketValue: guestimateBlock ? null : slopeMarketValue,
+    fairMarketValueLow: guestimateBlock ? null : responseFmvLow,
+    fairMarketValueHigh: guestimateBlock ? null : responseFmvHigh,
+    marketValue: guestimateBlock ? guestimateBlock.marketValue : slopeMarketValue,
     // CF-A(a): T3 re-bucket fields. populated only when chosenTier==="T3"
     // AND the engine computed a positive fairMarketValue from the base-auto
     // pool. T0/T1/T2 and the variant-mismatch short-circuit emit nulls here.
-    estimatedValue: responseEstimatedValue,
-    estimateLow: responseEstimateLow,
-    estimateHigh: responseEstimateHigh,
-    estimateConfidence: responseEstimateConfidence,
-    estimateBasis: responseEstimateBasis,
-    isEstimate: responseIsEstimate,
-    valuationStatus: responseValuationStatus,
+    estimatedValue: guestimateBlock ? guestimateBlock.marketValue : responseEstimatedValue,
+    estimateLow: guestimateBlock ? guestimateBlock.rangeLow : responseEstimateLow,
+    estimateHigh: guestimateBlock ? guestimateBlock.rangeHigh : responseEstimateHigh,
+    estimateConfidence: guestimateBlock ? guestimateBlock.confidence : responseEstimateConfidence,
+    estimateBasis: guestimateBlock ? "guestimate" : responseEstimateBasis,
+    estimateAttribution: guestimateBlock ? guestimateBlock.attribution : undefined,
+    isEstimate: guestimateBlock ? true : responseIsEstimate,
+    valuationStatus: guestimateBlock ? "estimated" as const : responseValuationStatus,
     predictedPrice: slopePredictedPrice,
     predictedPriceRange: slopePredictedRange,
     predictedPriceAttribution: slopePredictedAttribution,
