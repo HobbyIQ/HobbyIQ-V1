@@ -2845,13 +2845,14 @@ struct PortfolioHoldingDetailSheet: View {
                         }
 
                         // Corpus signals (2026-07-17, PR #518): per-holding
-                        // Grade Analysis. Rendered only for raw holdings
-                        // with a grade_now or grade_worthy_but_wait
-                        // recommendation. `not_worth` and `insufficient_data`
-                        // hide the block per spec — never show as a null state.
-                        if let analysis = gradeAnalysisIfActionable() {
-                            gradeAnalysisBlock(analysis: analysis)
-                        }
+                        // Grade Analysis.
+                        // 2026-07-17: pulled from holding detail per Drew.
+                        // Block code + loader kept so we can re-surface on
+                        // a different tab. Grade-worthy still shows on the
+                        // portfolio-home banner + list.
+                        // if let analysis = gradeAnalysisIfActionable() {
+                        //     gradeAnalysisBlock(analysis: analysis)
+                        // }
 
                         // Phase 1.4 (2026-07-17, PR #524): observed grader
                         // premium curve — "PSA 10 pays 5.4× raw" per family.
