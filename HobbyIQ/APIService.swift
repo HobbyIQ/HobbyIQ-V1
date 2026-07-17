@@ -641,36 +641,14 @@ struct APIService {
         )
     }
 
-    /// PR #526: per-holding 30-day timing forecast. Headline number on
-    /// the card detail. Backend responds with `confidence: "insufficient"`
-    /// when it can't build a forecast; iOS hides the block in that case.
-    func fetchTimingForecast(holdingId: String, horizonDays: Int? = nil) async throws -> TimingForecastResponse {
-        var query: [URLQueryItem] = []
-        if let horizonDays {
-            query.append(URLQueryItem(name: "horizonDays", value: String(horizonDays)))
-        }
-        return try await get(
-            path: "/api/portfolio/holdings/\(holdingId)/timing-forecast",
-            queryItems: query,
-            responseType: TimingForecastResponse.self
-        )
-    }
+    // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
+    // 30-day timing forecast was consolidated into PREDICTED (7d) which
+    // now sources the same matched-cohort math after backend PR #543.
 
     /// PR #527: recent cascade events for players in the user's portfolio.
     /// Empty when nothing fires — banner suppresses.
     func fetchCascadeAlerts() async throws -> CascadeAlertsResponse {
         try await get(path: "/api/portfolio/cascade-alerts", responseType: CascadeAlertsResponse.self)
-    }
-
-    /// PR #525: observed tier-share distribution per grader for a family.
-    /// Feeds the "What could actually happen?" expandable on the Grade
-    /// Analysis block. The `caveat` field is REQUIRED verbatim in UI copy.
-    func fetchGraderOutcomes(family: String) async throws -> GraderOutcomesResponse {
-        let encoded = family.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? family
-        return try await get(
-            path: "/api/portfolio/grader-outcomes/\(encoded)",
-            responseType: GraderOutcomesResponse.self
-        )
     }
 
     /// PR #533: shareable "I Called It" flex moments — cards the user
@@ -2742,9 +2720,8 @@ struct APIService {
         // never evict the session.
         "/api/portfolio/player-trend/",
         "/api/portfolio/family-multipliers/",
-        // Phase 3-4 (2026-07-17): grader-outcomes per family + yearbook
-        // (parameterized by year). Session-safe reads.
-        "/api/portfolio/grader-outcomes/",
+        // Phase 3-4 (2026-07-17): yearbook parameterized by year.
+        // Session-safe read.
         "/api/portfolio/yearbook",
         // Corpus signals batch 2 (2026-07-17, PR #538/#531): parallel-
         // ladder + missing-parallels-by-bucket have variable
@@ -2760,7 +2737,6 @@ struct APIService {
     /// the whole /holdings/ namespace.
     private static let bestEffortPathSuffixes: [String] = [
         "/grade-analysis",
-        "/timing-forecast",
         // PR #544 (2026-07-17): eBay active listings fetch on the card
         // detail page. Section hides on any error, and iOS shouldn't
         // sign out during a stale-deploy window.

@@ -272,43 +272,10 @@ struct HotPlayer: Codable, Hashable, Identifiable {
     }
 }
 
-// MARK: - GET /api/portfolio/holdings/:id/timing-forecast (PR #526)
-
-/// 30-day predicted price with contributing-signal breakdown. Feeds the
-/// headline number on the card detail. Hidden entirely when
-/// `confidence == "insufficient"`.
-struct TimingForecastResponse: Codable {
-    let holdingId: String?
-    let player: String?
-    let currentGraderTier: String?
-    let forecast: TimingForecast?
-}
-
-struct TimingForecast: Codable, Hashable {
-    let predictedPrice: Double?
-    let priceRange: TimingForecastRange?
-    /// `"high"` / `"medium"` / `"low"` / `"insufficient"`. Anything but
-    /// the first three should hide the block.
-    let confidence: String?
-    let horizonDays: Int?
-    let contributingSignals: TimingForecastSignals?
-    let reason: String?
-}
-
-struct TimingForecastRange: Codable, Hashable {
-    let low: Double?
-    let high: Double?
-}
-
-struct TimingForecastSignals: Codable, Hashable {
-    let cardTrendSlopePerMonthPct: Double?
-    let playerMomentumUsed: Double?
-    let playerMomentumSource: String?
-    /// `"hot"` / `"warm"` / `"cool"` — velocity qualitative bucket.
-    let velocitySignal: String?
-    let volatility: Double?
-    let windowSales: Int?
-}
+// PR #526's TimingForecastResponse + sub-types removed 2026-07-17 —
+// the standalone timing-forecast surface was consolidated into
+// PREDICTED (7d) via backend PR #543. Backend endpoint stays live for
+// potential future consumers; iOS just doesn't consume it.
 
 // MARK: - GET /api/portfolio/cascade-alerts (PR #527)
 
@@ -348,45 +315,6 @@ struct CascadeDetectionInput: Codable, Hashable {
     let rawQualifyingCards: Int?
     let gradedQualifyingCards: Int?
     let playerTrendComputedAt: String?
-}
-
-// MARK: - GET /api/portfolio/grader-outcomes/:family (PR #525)
-
-/// Observed tier-share distribution per grader — probability-weighted EV.
-/// Feeds the "What could actually happen?" expandable on the Grade
-/// Analysis block. The `caveat` string is REQUIRED verbatim in UI copy.
-struct GraderOutcomesResponse: Codable {
-    let familyKey: String?
-    let graders: [GraderOutcomeDistribution]?
-    let caveat: String?
-}
-
-struct GraderOutcomeDistribution: Codable, Hashable, Identifiable {
-    let grader: String
-    /// Dictionary keys are tier strings ("PSA 10", "PSA 9", ...); values
-    /// are 0..1 probabilities. iOS renders as % via
-    /// `sortedTierShares` for stable ordering.
-    let tierShares: [String: Double]?
-    let tierCounts: [String: Int]?
-    let totalGradedSamples: Int?
-    let confidence: String?
-
-    var id: String { grader }
-
-    /// Tier shares sorted by grade rung descending (10 → 9 → 8 → …).
-    var sortedTierShares: [(tier: String, share: Double)] {
-        (tierShares ?? [:])
-            .map { (tier: $0.key, share: $0.value) }
-            .sorted { lhs, rhs in
-                gradeRung(lhs.tier) > gradeRung(rhs.tier)
-            }
-    }
-
-    /// Best-effort parse of the numeric portion of the tier for sorting.
-    private func gradeRung(_ tier: String) -> Double {
-        let digits = tier.split(separator: " ").last.map(String.init) ?? tier
-        return Double(digits) ?? 0
-    }
 }
 
 // MARK: - GET /api/portfolio/i-called-it (PR #533)

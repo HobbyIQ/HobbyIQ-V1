@@ -1159,31 +1159,19 @@ struct PortfolioHoldingDetailSheet: View {
     /// Corpus signals (2026-07-17, PR #518): per-holding grade-worthy
     /// analysis for the Grade Analysis block. Only fetched for raw
     /// holdings; response's `overallRecommendation` gates rendering.
-    @State private var gradeAnalysis: GradeAnalysisResponse?
-    /// Local in-flight + success state for the "Mark as At Grading" CTA
-    /// on the Grade Analysis block. Prevents double-fire and collapses
-    /// the button to a "Marked" affordance on success.
-    @State private var isMarkingAtGrading: Bool = false
-    @State private var didMarkAtGrading: Bool = false
+    // 2026-07-17 dead-code sweep: gradeAnalysis / isMarkingAtGrading /
+    // didMarkAtGrading / graderOutcomes / graderOutcomesExpanded state
+    // removed. The grade-analysis block + "What could actually happen?"
+    // disclosure were pulled from holding detail earlier — sweeping
+    // state + loaders + view builders now. GradeAnalysisResponse +
+    // fetchGradeAnalysis stay in APIService because GradeWorthyListView
+    // still uses them for the portfolio-home banner drill-down.
+
     /// Phase 1.4 (2026-07-17, PR #524): observed family multipliers for
     /// the "Grader Premium Curve" block. Hidden entirely when tiers < 2
     /// or all rows are low-confidence. Populated on task with the
     /// holding's setName as the family key.
     @State private var familyMultipliers: FamilyMultipliersResponse?
-    // Phase 2.5 timing-forecast state removed (2026-07-17) — dedicated
-    // block killed to consolidate with PREDICTED (7d), which draws from
-    // the same math after backend PR #543.
-    /// Phase 3.10 (2026-07-17, PR #525): observed grader outcome
-    /// distribution for the "What could actually happen?" expandable
-    /// inside the Grade Analysis block. Lazy — fetched only when the
-    /// disclosure is expanded so we don't spend the rate-limit budget
-    /// on cards no one drills into.
-    @State private var graderOutcomes: GraderOutcomesResponse?
-    @State private var graderOutcomesExpanded: Bool = false
-    /// Batch 2 (2026-07-17, PR #538): observed parallel-tier ladder for
-    /// the holding's (player, year, cardSet) bucket. Hidden when the
-    /// backend suppressed (thin base pool).
-    @State private var parallelLadder: ParallelLadderResponse?
     /// Batch 2 (2026-07-17, PR #531): parallels the user does NOT own in
     /// this bucket. Hidden when the bucket has zero missing entries.
     @State private var missingParallels: MissingParallelsBucketResponse?
@@ -1422,70 +1410,17 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    /// PR #518: per-holding grade-worthy analysis. Only fires for raw
-    /// holdings (already-graded cards return `insufficient_data` from
-    /// the backend anyway, but skipping the request saves rate-limit
-    /// budget). Silent failure hides the block.
-    private func loadGradeAnalysis() async {
-        guard isRawHolding else { return }
-        do {
-            gradeAnalysis = try await APIService.shared.fetchGradeAnalysis(holdingId: card.id.uuidString)
-        } catch {
-            gradeAnalysis = nil
-        }
-    }
-
-    /// Returns the loaded analysis when its `overallRecommendation` is
-    /// one of the two rendering states. `not_worth` / `insufficient_data`
-    /// / nil all return nil so the block hides entirely.
-    private func gradeAnalysisIfActionable() -> GradeAnalysisResponse? {
-        guard let analysis = gradeAnalysis else { return nil }
-        let recommendation = analysis.analysis?.overallRecommendation?.lowercased() ?? ""
-        switch recommendation {
-        case "grade_now", "grade_worthy_but_wait":
-            return analysis
-        default:
-            return nil
-        }
-    }
-
-    // Phase 2.5 loadTimingForecast + timingForecastIfRenderable removed
-    // 2026-07-17 — the standalone forecast block is dropped in favor of
-    // the existing PREDICTED (7d) tile which now sources the same
-    // matched-cohort rate (backend PR #543).
-
-    /// Phase 3.10 (2026-07-17, PR #525): lazy fetch of grader outcomes
-    /// on Grade Analysis expandable expand. Deduped so a rapid collapse/
-    /// expand cycle doesn't re-fire.
-    private func loadGraderOutcomesIfNeeded() async {
-        guard graderOutcomes == nil else { return }
-        let key = resolvedFamilyKey()
-        guard key.isEmpty == false else { return }
-        do {
-            graderOutcomes = try await APIService.shared.fetchGraderOutcomes(family: key)
-        } catch {
-            graderOutcomes = nil
-        }
-    }
-
-    /// Batch 2 (2026-07-17, PR #538): fetch observed parallel-ladder for
-    /// the holding's bucket. Silent failure hides the block.
-    private func loadParallelLadder() async {
-        let bucket = parallelLadderBucketKey()
-        guard bucket.isRenderable else { return }
-        do {
-            parallelLadder = try await APIService.shared.fetchParallelLadder(
-                player: bucket.player, year: bucket.year, cardSet: bucket.cardSet
-            )
-        } catch {
-            parallelLadder = nil
-        }
-    }
+    // loadGradeAnalysis / gradeAnalysisIfActionable / loadTimingForecast /
+    // loadGraderOutcomesIfNeeded removed 2026-07-17 dead-code sweep.
+    // Grade-analysis block + timing-forecast block + grader-outcomes
+    // expandable were all pulled from holding detail; their state, loaders,
+    // and view builders are gone with them. API + models kept only where
+    // other surfaces (GradeWorthyListView) still consume them.
 
     /// Batch 2 (2026-07-17, PR #531): fetch missing parallels for the
     /// holding's bucket. Silent failure hides the block.
     private func loadMissingParallels() async {
-        let bucket = parallelLadderBucketKey()
+        let bucket = bucketKey()
         guard bucket.isRenderable else { return }
         do {
             missingParallels = try await APIService.shared.fetchMissingParallels(
@@ -1496,9 +1431,10 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    /// (player, year, cardSet) tuple used for both parallel-ladder and
-    /// missing-parallels lookups. Backend's setName slug is idempotent so
-    /// we pass whatever the holding carries.
+    /// (player, year, cardSet) tuple for missing-parallels lookups.
+    /// (Previously also fed the parallel-ladder loader; that surface was
+    /// removed from the holding detail in the 2026-07-17 dead-code sweep,
+    /// leaving this helper single-purpose.)
     private struct BucketKey {
         let player: String
         let year: Int
@@ -1508,23 +1444,11 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    private func parallelLadderBucketKey() -> BucketKey {
+    private func bucketKey() -> BucketKey {
         let player = card.playerName.trimmingCharacters(in: .whitespaces)
         let year = Int(card.year.trimmingCharacters(in: .whitespaces)) ?? 0
         let cardSet = card.setName.trimmingCharacters(in: .whitespaces)
         return BucketKey(player: player, year: year, cardSet: cardSet)
-    }
-
-    /// Returns the ladder bucket when at least two rungs render usefully
-    /// (Base + at least one non-Base) and the backend didn't suppress.
-    private func renderableParallelLadder() -> ParallelLadderBucket? {
-        guard let bucket = parallelLadder?.bucket else { return nil }
-        if let reason = bucket.suppressedReason?.trimmingCharacters(in: .whitespaces),
-           reason.isEmpty == false {
-            return nil
-        }
-        guard let ladder = bucket.ladder, ladder.count >= 2 else { return nil }
-        return bucket
     }
 
     /// Returns the missing-parallels bundle when it has ≥ 1 entry.
@@ -1550,15 +1474,12 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    /// Prefer backend-computed familyKey from grade-analysis when present;
-    /// fall back to `card.setName`. Backend accepts either shape.
+    /// Family key for the Grader Premium Curve fetch. Uses the holding's
+    /// setName — backend slugs it. (The grade-analysis diagnostics
+    /// fallback was removed 2026-07-17 when the grade-analysis loader
+    /// was swept from the holding detail.)
     private func resolvedFamilyKey() -> String {
-        if let key = gradeAnalysis?.diagnostics?.familyKey?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-           key.isEmpty == false {
-            return key
-        }
-        return card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+        card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Filter to renderable tiers per spec (high or medium confidence
@@ -1794,12 +1715,9 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    // Timing Forecast block removed 2026-07-17. PREDICTED (7d) on the
-    // hero tile now sources the same matched-cohort math via backend
-    // PR #543 — two competing forecasts on the same page was hurting
-    // trust in the number. `TimingForecastResponse` and
-    // `APIService.fetchTimingForecast` are still available for a
-    // future non-holding-detail surface.
+    // Timing Forecast block removed 2026-07-17 — models + API deleted
+    // in the same sweep (cfd9a01+). PREDICTED (7d) is the canonical
+    // forecast surface after backend PR #543.
 
     // MARK: - Phase 1.4: Grader Premium Curve block (2026-07-17)
 
@@ -1893,86 +1811,9 @@ struct PortfolioHoldingDetailSheet: View {
             .joined(separator: " ")
     }
 
-    // MARK: - Batch 2: Parallel Ladder block (2026-07-17, PR #538)
-
-    /// Observed parallel-tier ladder for the holding's (player, year,
-    /// cardSet) bucket. Renders each rung's multiplier + print run + n.
-    /// Backend suppression (thin base pool) hides the block entirely
-    /// via `renderableParallelLadder()`.
-    @ViewBuilder
-    private func parallelLadderBlock(bucket: ParallelLadderBucket) -> some View {
-        let ladder = bucket.ladder ?? []
-        // Sort ASC by multiplier so Base (1.0) always leads.
-        let sorted = ladder.sorted { ($0.multiplier ?? 0) < ($1.multiplier ?? 0) }
-        let confidence = bucket.confidence?.lowercased() ?? ""
-        let strokeColor: Color = {
-            switch confidence {
-            case "high": return HobbyIQTheme.Colors.successGreen
-            case "medium": return HobbyIQTheme.Colors.electricBlue
-            case "low": return HobbyIQTheme.Colors.warning
-            default: return HobbyIQTheme.Colors.mutedText
-            }
-        }()
-
-        VStack(alignment: .leading, spacing: 10) {
-            Text("PARALLEL LADDER")
-                .font(.caption.weight(.bold))
-                .tracking(0.6)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text("Observed multipliers vs Base for this set")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
-
-            VStack(spacing: 6) {
-                ForEach(sorted) { rung in
-                    parallelLadderRow(rung: rung)
-                }
-            }
-
-            if let base = bucket.baseMedianPrice, base > 0 {
-                Text("Base median: \(portfolioCurrencyString(base))")
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(strokeColor.opacity(0.4), lineWidth: 1.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func parallelLadderRow(rung: ParallelLadderRung) -> some View {
-        let isBase = (rung.multiplier ?? 0) <= 1.0
-        HStack(spacing: 8) {
-            Text(rung.variant)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .frame(maxWidth: 140, alignment: .leading)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            if let printRun = rung.printRun, printRun > 0 {
-                Text("/\(printRun)")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            Spacer(minLength: 0)
-            if let mult = rung.multiplier {
-                Text(String(format: "%.1f\u{00D7}", mult))
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(isBase ? HobbyIQTheme.Colors.mutedText : HobbyIQTheme.Colors.successGreen)
-            }
-            if let n = rung.n, n > 0 {
-                Text("n=\(n)")
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
-            }
-        }
-    }
+    // Parallel Ladder view builders removed 2026-07-17 — API + model
+    // (fetchParallelLadder, ParallelLadderResponse) kept for future
+    // re-surface on a dedicated tab.
 
     // MARK: - Batch 2: Missing Parallels block (2026-07-17, PR #531)
 
@@ -2069,302 +1910,10 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    // MARK: - Corpus signals: Grade Analysis block (2026-07-17)
-
-    /// Per-holding grade-worthy read. Two visual states:
-    ///   - `grade_now` — 💎 GRADE NOW headline, forest-green ROI, primary CTA
-    ///   - `grade_worthy_but_wait` — ⚠️ headline, muted treatment, reason
-    ///     copy explains why to wait
-    /// `not_worth` and `insufficient_data` never reach this builder (the
-    /// call site filters them via `gradeAnalysisIfActionable()`).
-    @ViewBuilder
-    private func gradeAnalysisBlock(analysis: GradeAnalysisResponse) -> some View {
-        let recommendation = analysis.analysis?.overallRecommendation?.lowercased() ?? ""
-        let isWait = recommendation == "grade_worthy_but_wait"
-        let bestTier = analysis.analysis?.bestTier
-
-        VStack(alignment: .leading, spacing: 12) {
-            Text("GRADE ANALYSIS")
-                .font(.caption.weight(.bold))
-                .tracking(0.6)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
-            HStack(spacing: 8) {
-                Text(isWait ? "\u{26A0}\u{FE0F}" : "\u{1F48E}")
-                    .font(.title2)
-                Text(isWait ? "Worth grading — but wait" : "GRADE NOW")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(isWait ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen)
-                Spacer(minLength: 0)
-                // Small ? info tap. Uses accessibilityHint so the copy
-                // reads out for VoiceOver; on tap we don't push a full
-                // modal — the same string surfaces as an accessibility
-                // announcement, matching the spec's "info toggle" intent.
-                Image(systemName: "questionmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .accessibilityLabel("About grade analysis")
-                    .accessibilityHint("Assumes best-case grade result. Actual outcome depends on card condition.")
-            }
-
-            if let tier = bestTier {
-                if let median = tier.gradedMedianPrice, median > 0 {
-                    let sample = tier.gradedSampleSize ?? 0
-                    Text("\(tier.graderTier) avg: \(portfolioCurrencyString(median)) (n=\(sample))")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-                if let gain = tier.expectedGain, gain > 0 {
-                    let cost = tier.gradingCostAssumed ?? 0
-                    Text("After \(portfolioCurrencyString(cost)) grading: +\(portfolioCurrencyString(gain)) gain")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.successGreen)
-                }
-                if let roi = tier.expectedRoiPercentString {
-                    Text("\(roi) on cost basis")
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-            }
-
-            // "Also worth: BGS 9.5 (+$310)" — second-best tier when it
-            // exists and is meaningful (>= $50 expected gain per the spec's
-            // grade_now threshold).
-            if let alt = alternateGradeTier(analysis) {
-                let gainString = alt.expectedGain.map { "+\(portfolioCurrencyString($0))" } ?? ""
-                Text("Also worth: \(alt.graderTier) \(gainString)")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-
-            // Phase 3.10 (2026-07-17, PR #525): observed grader outcome
-            // distribution — probability-weighted EV expandable. Lazy
-            // fetch fires on first expand.
-            graderOutcomesDisclosure(analysis: analysis)
-
-            if isWait {
-                Text("Player momentum is down. Waiting could add 25%+ to expected gain.")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                gradeAnalysisMarkButton
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(
-                    (isWait ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen).opacity(0.4),
-                    lineWidth: 1.5
-                )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-    }
-
-    private var gradeAnalysisMarkButton: some View {
-        Button {
-            Task { await markAsAtGradingFromDetail() }
-        } label: {
-            HStack(spacing: 6) {
-                if isMarkingAtGrading {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .tint(HobbyIQTheme.Colors.pureWhite)
-                } else {
-                    Image(systemName: didMarkAtGrading ? "checkmark.seal.fill" : "shippingbox.fill")
-                        .font(.caption.weight(.bold))
-                }
-                Text(didMarkAtGrading ? "Marked At Grading" : "Mark as At Grading")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(
-                didMarkAtGrading
-                    ? HobbyIQTheme.Colors.successGreen.opacity(0.7)
-                    : HobbyIQTheme.Colors.electricBlue
-            )
-            .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(isMarkingAtGrading || didMarkAtGrading)
-    }
-
-    /// Phase 3.10 (2026-07-17, PR #525): "What could actually happen?"
-    /// disclosure inside the Grade Analysis block. Rendered as a
-    /// tri-state ExpandableGroup — collapsed, loading (fetch in flight),
-    /// or expanded with the observed distribution.
-    ///
-    /// The caveat "Based on market OUTCOMES, not a submission guarantee."
-    /// is REQUIRED verbatim per the spec — the endpoint's `caveat` field
-    /// is the source of truth and we render it as-is.
-    @ViewBuilder
-    private func graderOutcomesDisclosure(analysis: GradeAnalysisResponse) -> some View {
-        DisclosureGroup(isExpanded: Binding(
-            get: { graderOutcomesExpanded },
-            set: { newValue in
-                graderOutcomesExpanded = newValue
-                if newValue {
-                    Task { await loadGraderOutcomesIfNeeded() }
-                }
-            }
-        )) {
-            graderOutcomesContent(analysis: analysis)
-                .padding(.top, 8)
-        } label: {
-            Text("What could actually happen?")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-        }
-        .tint(HobbyIQTheme.Colors.electricBlue)
-    }
-
-    @ViewBuilder
-    private func graderOutcomesContent(analysis: GradeAnalysisResponse) -> some View {
-        if let response = graderOutcomes,
-           let graders = response.graders, graders.isEmpty == false {
-            // Pick the grader matching the best tier's grader (e.g. "PSA")
-            // — fallback to the first grader in the response.
-            let bestGraderPrefix = analysis.analysis?.bestTier?.graderTier
-                .split(separator: " ").first.map(String.init) ?? ""
-            let target = graders.first { $0.grader.uppercased() == bestGraderPrefix.uppercased() }
-                ?? graders.first
-            if let grader = target {
-                graderOutcomeDistributionView(grader: grader, response: response, analysis: analysis)
-            }
-        } else if graderOutcomesExpanded {
-            // Fetch in flight or no data.
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.mini).tint(HobbyIQTheme.Colors.electricBlue)
-                Text("Loading distribution…")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
-    @ViewBuilder
-    private func graderOutcomeDistributionView(
-        grader: GraderOutcomeDistribution,
-        response: GraderOutcomesResponse,
-        analysis: GradeAnalysisResponse
-    ) -> some View {
-        let familyLabel = friendlyFamilyLabel(response.familyKey)
-        // Compute probability-weighted expected value client-side:
-        // Σ (tierShare × tierMedianPrice) using the medians from
-        // grade-analysis.allTiers. When a tier's median isn't in the
-        // analysis, skip it — the EV is a directional signal, not a firm
-        // number.
-        let mediansByTier: [String: Double] = {
-            var dict: [String: Double] = [:]
-            for tier in analysis.analysis?.allTiers ?? [] {
-                if let median = tier.gradedMedianPrice, median > 0 {
-                    dict[tier.graderTier] = median
-                }
-            }
-            return dict
-        }()
-        let expected: Double = {
-            var sum = 0.0
-            for (tier, share) in grader.tierShares ?? [:] {
-                if let median = mediansByTier[tier] {
-                    sum += share * median
-                }
-            }
-            return sum
-        }()
-
-        VStack(alignment: .leading, spacing: 8) {
-            Text("For \"\(familyLabel)\" cards submitted to \(grader.grader), past sales show:")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            VStack(spacing: 4) {
-                ForEach(grader.sortedTierShares, id: \.tier) { entry in
-                    graderOutcomeRow(tier: entry.tier, share: entry.share, medians: mediansByTier)
-                }
-            }
-
-            if expected > 0 {
-                Text("Probability-weighted expected: \(portfolioCurrencyString(expected))")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .padding(.top, 2)
-            }
-
-            // REQUIRED verbatim caveat — render the backend's copy when
-            // present, fall back to the spec's default.
-            let caveat = response.caveat?.trimmingCharacters(in: .whitespaces)
-                ?? "Based on market OUTCOMES, not a submission guarantee."
-            HStack(alignment: .top, spacing: 4) {
-                Text("\u{26A0}\u{FE0F}")
-                    .font(.caption2)
-                Text(caveat)
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 4)
-        }
-    }
-
-    @ViewBuilder
-    private func graderOutcomeRow(tier: String, share: Double, medians: [String: Double]) -> some View {
-        HStack(spacing: 6) {
-            Text(tier)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .frame(width: 80, alignment: .leading)
-            Text("=")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text("\(Int((share * 100).rounded()))%")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .frame(width: 44, alignment: .leading)
-            if let median = medians[tier], median > 0 {
-                Text("(\(portfolioCurrencyString(median)) avg)")
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    /// Second-best tier by expectedGain when it clears a meaningful bar
-    /// (>= $50, same threshold backend uses for grade_now).
-    private func alternateGradeTier(_ analysis: GradeAnalysisResponse) -> GradeAnalysisTier? {
-        let bestId = analysis.analysis?.bestTier?.id
-        let alts = (analysis.analysis?.allTiers ?? [])
-            .filter { $0.id != bestId && ($0.expectedGain ?? 0) >= 50 }
-        return alts.first
-    }
-
-    /// Corpus signals (2026-07-17): same graderStatus flip as the
-    /// portfolio-home banner's list view uses. Deviates from the spec's
-    /// literal "call /regrade" instruction — /regrade finalizes the
-    /// achieved grade, whereas "At Grading" is a queue status.
-    private func markAsAtGradingFromDetail() async {
-        isMarkingAtGrading = true
-        defer { isMarkingAtGrading = false }
-        do {
-            _ = try await APIService.shared.updateHoldingGraderStatus(
-                holdingId: card.id,
-                status: .atPsa
-            )
-            didMarkAtGrading = true
-            selectedStatus = .atPsa
-            onUpdated()
-        } catch {
-            localError = "Couldn't mark this holding as At Grading."
-        }
-    }
+    // Grade Analysis block + Mark-as-At-Grading button + grader-outcomes
+    // disclosure all removed 2026-07-17. The grade-worthy surface stays
+    // on the portfolio-home banner + GradeWorthyListView drill-down,
+    // which still uses fetchGradeAnalysis and GradeAnalysisResponse.
 
     // MARK: - PREDICTED block (CF-HOLDING-DETAIL-V2; horizon per entry, see CF-PREDICTION-HORIZON-7D)
 
@@ -2771,16 +2320,6 @@ struct PortfolioHoldingDetailSheet: View {
                             playerMomentumBlock(trend: trend)
                         }
 
-                        // Corpus signals (2026-07-17, PR #518): per-holding
-                        // Grade Analysis.
-                        // 2026-07-17: pulled from holding detail per Drew.
-                        // Block code + loader kept so we can re-surface on
-                        // a different tab. Grade-worthy still shows on the
-                        // portfolio-home banner + list.
-                        // if let analysis = gradeAnalysisIfActionable() {
-                        //     gradeAnalysisBlock(analysis: analysis)
-                        // }
-
                         // Phase 1.4 (2026-07-17, PR #524): observed grader
                         // premium curve — "PSA 10 pays 5.4× raw" per family.
                         // Self-suppresses when tiers.length < 2 or all rows
@@ -2788,16 +2327,6 @@ struct PortfolioHoldingDetailSheet: View {
                         if let multipliers = familyMultipliersIfRenderable() {
                             graderPremiumCurveBlock(multipliers: multipliers)
                         }
-
-                        // Batch 2 (2026-07-17, PR #538): observed parallel
-                        // premium ladder — "Refractor 2.8×, Gold /50 5.2×".
-                        // 2026-07-17: pulled from card detail per Drew.
-                        // Block code + loader kept in place for the follow-up
-                        // when we find the right surface (probably a
-                        // standalone drill-down, not inline on the holding).
-                        // if let bucket = renderableParallelLadder() {
-                        //     parallelLadderBlock(bucket: bucket)
-                        // }
 
                         // Batch 2 (2026-07-17, PR #531): parallels in this
                         // bucket the user doesn't own — set-completion nudge.
@@ -3125,9 +2654,7 @@ struct PortfolioHoldingDetailSheet: View {
                 .task { await fetchPanelIfPossible() }
                 .task { await loadVerdictHistory() }
                 .task { await loadPlayerTrend() }
-                .task { await loadGradeAnalysis() }
                 .task { await loadFamilyMultipliers() }
-                .task { await loadParallelLadder() }
                 .task { await loadMissingParallels() }
                 .task {
                     // P1 (2026-07-16, iOS delta): first meaningful use —
