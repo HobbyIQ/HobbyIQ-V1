@@ -37,26 +37,15 @@ struct HoldingEbayEnrichmentSection: View {
         return orderedKeys.map { ($0, raw[$0] ?? "") }
     }
 
-    private var shouldRender: Bool {
-        aspects.isEmpty == false || card.ebaySeller != nil
-    }
-
     var body: some View {
-        if shouldRender {
-            VStack(alignment: .leading, spacing: 12) {
-                // 2026-07-17: eBay specifics key/value table dropped from
-                // the holding detail — the fields it echoed (Sport /
-                // Manufacturer / Team / etc.) are all already carried in
-                // the identity chip on the hero. If those specifics need
-                // an editor for the listing composer, they belong in
-                // the ListingComposer, not decor on card detail. Seller
-                // footer stays — actual purchase provenance.
-                if let seller = card.ebaySeller {
-                    sellerFooter(seller)
-                }
-            }
-            .padding(.horizontal, 16)
-        }
+        // 2026-07-17: entire section suppressed on the holding detail.
+        // The eBay-specifics table was already dropped; now the
+        // "Bought from @seller" footer is also dropped per Drew. The
+        // section renders nothing — the whole surface self-suppresses.
+        // Fields stay on `InventoryCard.ebaySeller` and `.ebayItemAspects`
+        // so other consumers (listing composer, exports) can still read
+        // them.
+        EmptyView()
     }
 
     // MARK: eBay specifics
