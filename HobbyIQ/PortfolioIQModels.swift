@@ -2863,10 +2863,13 @@ struct PortfolioHoldingDetailSheet: View {
 
                         // Batch 2 (2026-07-17, PR #538): observed parallel
                         // premium ladder — "Refractor 2.8×, Gold /50 5.2×".
-                        // Hidden when backend suppressed for thin base pool.
-                        if let bucket = renderableParallelLadder() {
-                            parallelLadderBlock(bucket: bucket)
-                        }
+                        // 2026-07-17: pulled from card detail per Drew.
+                        // Block code + loader kept in place for the follow-up
+                        // when we find the right surface (probably a
+                        // standalone drill-down, not inline on the holding).
+                        // if let bucket = renderableParallelLadder() {
+                        //     parallelLadderBlock(bucket: bucket)
+                        // }
 
                         // Batch 2 (2026-07-17, PR #531): parallels in this
                         // bucket the user doesn't own — set-completion nudge.
