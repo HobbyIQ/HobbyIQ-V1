@@ -722,7 +722,10 @@ async function tryCardHedge(
           sourceExternalId: externalId,
           contributorUserId: null,
           title: c.title ?? null,
-          imageUrl: null,
+          // CF-COMP-IMAGE-PHASE-0 (Drew, 2026-07-16): CH's /cards/comps
+          // returns eBay thumbnails per sale; thread through to sold_comps
+          // so comp rows can render the actual image.
+          imageUrl: c.image_url ?? null,
           sellerHandle: null,
           verifiedByUser: false,
           confidence: 0.8,

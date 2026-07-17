@@ -142,6 +142,12 @@ export interface CardHedgeSale {
   sale_type: string | null;
   title: string | null;
   url: string | null;
+  /** CF-COMP-IMAGE-PHASE-0 (Drew, 2026-07-16): eBay listing thumbnail from
+   *  CH's /cards/comps response (field name `image` on CH's side). Threads
+   *  through RawComp.imageUrl → recentComps[] on the wire → iOS renders
+   *  the actual card image alongside the price. Null when CH omitted it
+   *  for a sale (e.g. delisted listing). */
+  image_url: string | null;
 }
 
 /**
@@ -1688,6 +1694,11 @@ async function _getCardSales(
         sale_type: s.sale_type ?? null,
         title: s.title ?? null,
         url: s.sale_url ?? null,
+        // CF-COMP-IMAGE-PHASE-0: CH's /cards/comps returns the eBay
+        // thumbnail under `image` (verified 2026-07-16 probe); the
+        // daily-price-export CSV uses `image_url`. Read both defensively
+        // so a future CH rename doesn't silently null the field.
+        image_url: s.image ?? s.image_url ?? null,
       }))
       .filter((s) => s.price > 0);
   } catch (err: any) {
