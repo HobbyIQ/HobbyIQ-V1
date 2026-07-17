@@ -44,9 +44,13 @@ struct HoldingEbayEnrichmentSection: View {
     var body: some View {
         if shouldRender {
             VStack(alignment: .leading, spacing: 12) {
-                if aspects.isEmpty == false {
-                    specificsCard
-                }
+                // 2026-07-17: eBay specifics key/value table dropped from
+                // the holding detail — the fields it echoed (Sport /
+                // Manufacturer / Team / etc.) are all already carried in
+                // the identity chip on the hero. If those specifics need
+                // an editor for the listing composer, they belong in
+                // the ListingComposer, not decor on card detail. Seller
+                // footer stays — actual purchase provenance.
                 if let seller = card.ebaySeller {
                     sellerFooter(seller)
                 }

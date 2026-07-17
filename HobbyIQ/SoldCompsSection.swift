@@ -163,12 +163,17 @@ struct SoldCompsSection: View {
         do {
             let year = card.year.trimmingCharacters(in: .whitespaces)
             let set = card.setName.trimmingCharacters(in: .whitespaces)
-            let parallel = card.parallel.trimmingCharacters(in: .whitespaces)
             let player = card.playerName.trimmingCharacters(in: .whitespaces)
+            // 2026-07-17: loosened from exact-config match — drop
+            // `parallel` from the filter set so a Refractor Auto holding
+            // matches the Base Auto pool + siblings. cardId still
+            // narrows to the correct SKU when present. Variant treatment
+            // can be tightened on the backend when best-effort variant
+            // matching lands.
             response = try await APIService.shared.fetchSoldComps(
                 year: year.isEmpty ? nil : year,
                 set: set.isEmpty ? nil : set,
-                parallel: parallel.isEmpty ? nil : parallel,
+                parallel: nil,
                 grade: gradeQueryValue,
                 playerName: player.isEmpty ? nil : player,
                 cardNumber: nil,
@@ -178,6 +183,41 @@ struct SoldCompsSection: View {
             )
         } catch {
             errorMessage = APIService.errorMessage(from: error)
+        }
+    }
+}
+
+// MARK: - Active eBay Listings placeholder (2026-07-17)
+
+/// Placeholder for a future backend endpoint that returns active eBay
+/// listings for a card. Reserves vertical space in the layout so the
+/// list-on-page pattern doesn't need a second design pass when the
+/// data lands.
+struct ActiveEbayListingsPlaceholder: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HIQSectionHeader("Active Listings on eBay")
+            VStack(spacing: 6) {
+                Image(systemName: "clock.badge")
+                    .font(.title2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                Text("Coming soon — active eBay listings for this card")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.4))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .strokeBorder(
+                        HobbyIQTheme.Colors.steelGray.opacity(0.4),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 4])
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
     }
 }

@@ -6,6 +6,7 @@
 import Combine
 import Foundation
 import SwiftUI
+import Charts
 
 typealias PortfolioPeriodStats = SummaryPeriod
 
@@ -979,6 +980,68 @@ extension View {
 
 // MARK: - Shared Helper Functions
 
+/// 2026-07-17: secondary-action icon-and-caption tile used in the
+/// consolidated CTA strip on the holding detail. Icon-primary treatment
+/// with 11pt caption below so the button reads as secondary vs the
+/// full-width primary List-on-eBay pill above it.
+func holdingSecondaryAction(icon: String, caption: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .frame(width: 40, height: 40)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                .clipShape(Circle())
+            Text(caption)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+}
+
+/// Muted placeholder in the secondary CTA row when Mark-as-Graded
+/// doesn't apply (already-graded holding). Keeps the 3-column layout
+/// so the surrounding buttons don't shift.
+func holdingSecondaryPlaceholder() -> some View {
+    VStack(spacing: 6) {
+        Circle()
+            .fill(HobbyIQTheme.Colors.steelGray.opacity(0.15))
+            .frame(width: 40, height: 40)
+        Text(" ")
+            .font(.system(size: 11, weight: .semibold))
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 4)
+}
+
+/// 2026-07-17: 2-column tile used inside Pricing Context for the
+/// Quick Sale + Suggested List pair (previously stacked detailRows).
+func pricingContextTile(label: String, value: String) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+        Text(label.uppercased())
+            .font(.caption2.weight(.bold))
+            .tracking(0.6)
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        Text(value)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(HobbyIQTheme.Spacing.small)
+    .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+    .overlay(
+        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
+            .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.35), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
+}
+
 func detailRow(title: String, value: String, valueColor: Color = .white, subtitle: String? = nil) -> some View {
     HStack(alignment: .top, spacing: 12) {
         Text(title)
@@ -1107,10 +1170,9 @@ struct PortfolioHoldingDetailSheet: View {
     /// or all rows are low-confidence. Populated on task with the
     /// holding's setName as the family key.
     @State private var familyMultipliers: FamilyMultipliersResponse?
-    /// Phase 2.5 (2026-07-17, PR #526): 30-day timing forecast — the
-    /// headline number of the card detail below the hero. Hidden when
-    /// `confidence == "insufficient"` per spec.
-    @State private var timingForecast: TimingForecastResponse?
+    // Phase 2.5 timing-forecast state removed (2026-07-17) — dedicated
+    // block killed to consolidate with PREDICTED (7d), which draws from
+    // the same math after backend PR #543.
     /// Phase 3.10 (2026-07-17, PR #525): observed grader outcome
     /// distribution for the "What could actually happen?" expandable
     /// inside the Grade Analysis block. Lazy — fetched only when the
@@ -1387,33 +1449,10 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    /// Phase 2.5 (2026-07-17, PR #526): fetch 30-day timing forecast.
-    /// Silent failure hides the block. Backend returns
-    /// `confidence: "insufficient"` when it can't build a forecast; iOS
-    /// filters that out via `timingForecastIfRenderable()`.
-    private func loadTimingForecast() async {
-        do {
-            timingForecast = try await APIService.shared.fetchTimingForecast(
-                holdingId: card.id.uuidString
-            )
-        } catch {
-            timingForecast = nil
-        }
-    }
-
-    /// Returns the forecast when confidence is one of the renderable
-    /// tiers (`high`/`medium`/`low`). `insufficient` and nil hide the
-    /// block per spec — never show a null state.
-    private func timingForecastIfRenderable() -> TimingForecastResponse? {
-        guard let response = timingForecast else { return nil }
-        let conf = response.forecast?.confidence?.lowercased() ?? ""
-        switch conf {
-        case "high", "medium", "low":
-            return response
-        default:
-            return nil
-        }
-    }
+    // Phase 2.5 loadTimingForecast + timingForecastIfRenderable removed
+    // 2026-07-17 — the standalone forecast block is dropped in favor of
+    // the existing PREDICTED (7d) tile which now sources the same
+    // matched-cohort rate (backend PR #543).
 
     /// Phase 3.10 (2026-07-17, PR #525): lazy fetch of grader outcomes
     /// on Grade Analysis expandable expand. Deduped so a rapid collapse/
@@ -1755,129 +1794,12 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    // MARK: - Phase 2.5: Timing Forecast block (2026-07-17)
-
-    /// 30-day predicted-price block. Headline number in cents-omitted
-    /// currency, range beneath, confidence chip in the branded verdict
-    /// palette, then a three-signal breakdown as tappable info chips.
-    @ViewBuilder
-    private func timingForecastBlock(response: TimingForecastResponse) -> some View {
-        let forecast = response.forecast
-        let confidence = forecast?.confidence?.lowercased() ?? ""
-        let confidenceColor: Color = {
-            switch confidence {
-            case "high": return HobbyIQTheme.Colors.successGreen
-            case "medium": return HobbyIQTheme.Colors.warning
-            case "low": return HobbyIQTheme.Colors.danger
-            default: return HobbyIQTheme.Colors.mutedText
-            }
-        }()
-        let horizon = forecast?.horizonDays ?? 30
-
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(horizon)-DAY FORECAST")
-                .font(.caption.weight(.bold))
-                .tracking(0.6)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
-            if let price = forecast?.predictedPrice, price > 0 {
-                Text(portfolioCurrencyString(price))
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            }
-
-            if let low = forecast?.priceRange?.low,
-               let high = forecast?.priceRange?.high, high > low {
-                Text("range \(portfolioCurrencyString(low)) — \(portfolioCurrencyString(high))")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-
-            Text("\(confidence) confidence".lowercased())
-                .font(.caption.weight(.bold))
-                .foregroundStyle(confidenceColor)
-                .textCase(.uppercase)
-                .tracking(0.4)
-
-            Divider().overlay(HobbyIQTheme.Colors.steelGray.opacity(0.35))
-
-            if let signals = forecast?.contributingSignals {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let slope = signals.cardTrendSlopePerMonthPct, slope != 0 {
-                        signalRow(
-                            label: "card slope \(formatSlope(slope))",
-                            hint: "This specific card has been trading \(formatSlope(slope)) per month over the past 90 days (based on \(signals.windowSales ?? 0) recent sales)."
-                        )
-                    }
-                    if let momentum = signals.playerMomentumUsed, momentum > 0 {
-                        let pct = (momentum - 1.0) * 100.0
-                        let source = signals.playerMomentumSource?.lowercased() ?? "all"
-                        signalRow(
-                            label: "player \(source) \(formatSignedPercent(pct))",
-                            hint: "\(card.playerName)'s \(source) card market is \(formatSignedPercent(pct)) overall this month."
-                        )
-                    }
-                    if let velocity = signals.velocitySignal?.lowercased(), velocity.isEmpty == false {
-                        signalRow(
-                            label: "velocity \(velocity)",
-                            hint: velocityHintCopy(velocity: velocity)
-                        )
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(confidenceColor.opacity(0.4), lineWidth: 1.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-    }
-
-    /// Small tappable info chip. Uses accessibilityHint for the long-form
-    /// explanation so VoiceOver reads it; on tap the same string surfaces
-    /// as a simple confirmation alert without pushing a new modal.
-    @ViewBuilder
-    private func signalRow(label: String, hint: String) -> some View {
-        HStack(spacing: 6) {
-            Text("\u{25B8}")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            Spacer(minLength: 0)
-            Image(systemName: "questionmark.circle")
-                .font(.caption2)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-        }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(hint)
-    }
-
-    private func formatSlope(_ pct: Double) -> String {
-        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
-        return "\(sign)\(Int(abs(pct).rounded()))%/mo"
-    }
-
-    private func formatSignedPercent(_ pct: Double) -> String {
-        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
-        return "\(sign)\(Int(abs(pct).rounded()))%"
-    }
-
-    private func velocityHintCopy(velocity: String) -> String {
-        switch velocity {
-        case "hot":
-            return "This card is trading at more than 2× the typical rate for a \(card.playerName) card."
-        case "warm":
-            return "This card is trading at a normal rate for a \(card.playerName) card."
-        default:
-            return "This card is trading slower than the typical rate for a \(card.playerName) card."
-        }
-    }
+    // Timing Forecast block removed 2026-07-17. PREDICTED (7d) on the
+    // hero tile now sources the same matched-cohort math via backend
+    // PR #543 — two competing forecasts on the same page was hurting
+    // trust in the number. `TimingForecastResponse` and
+    // `APIService.fetchTimingForecast` are still available for a
+    // future non-holding-detail surface.
 
     // MARK: - Phase 1.4: Grader Premium Curve block (2026-07-17)
 
@@ -2829,19 +2751,25 @@ struct PortfolioHoldingDetailSheet: View {
                             showingEditSheet = true
                         }
 
+                        // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
+                        // (7d) — panel-only source, gated on locked-
+                        // grade entry existing.
+                        // 2026-07-17 reorder: moved up to sit directly
+                        // under MARKET VALUE per Drew's declutter spec.
+                        // The standalone Timing Forecast block was
+                        // removed at the same time; PREDICTED (7d) is
+                        // now the single forecast surface.
+                        if let entry = lockedGradeEntry(),
+                           let predicted = entry.predictedPriceAt30d, predicted > 0 {
+                            holdingPredictedBlock(entry: entry, predicted: predicted)
+                        }
+
                         // Corpus signals (2026-07-17, PR #517/#519):
                         // matched-cohort Player Momentum block below the
                         // FMV. Self-suppresses when the trend fetch
                         // fails or direction is flat/unknown.
                         if let trend = playerTrend {
                             playerMomentumBlock(trend: trend)
-                        }
-
-                        // Phase 2.5 (2026-07-17, PR #526): 30-day timing
-                        // forecast — the headline signal of the card
-                        // detail. Hidden entirely on insufficient data.
-                        if let forecast = timingForecastIfRenderable() {
-                            timingForecastBlock(response: forecast)
                         }
 
                         // Corpus signals (2026-07-17, PR #518): per-holding
@@ -2879,19 +2807,10 @@ struct PortfolioHoldingDetailSheet: View {
                             missingParallelsBlock(bundle: bundle)
                         }
 
-                        // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
-                        // (30d) block — same visual as comp card,
-                        // panel-only source, gated on locked-grade
-                        // entry existing.
-                        if let entry = lockedGradeEntry(),
-                           let predicted = entry.predictedPriceAt30d, predicted > 0 {
-                            holdingPredictedBlock(entry: entry, predicted: predicted)
-                        }
-
-                        // CF-HOLDING-DETAIL-V2 (2026-07-06): Grading
-                        // Scenario — raw holdings only, collapsed by
-                        // default. Reads projections from the SAME
-                        // panel payload already fetched above.
+                        // PREDICTED (7d) moved up under the hero
+                        // 2026-07-17. Grading Scenario stays here — it's
+                        // a raw-only branch that reads the same panel
+                        // payload but pushes a bigger disclosure UI.
                         if isRawHolding, panelEntries.isEmpty == false {
                             gradingScenarioCard
                         }
@@ -2905,29 +2824,10 @@ struct PortfolioHoldingDetailSheet: View {
                         // subtitle is comp-status (from the null-FMV PR) and
                         // stays.
                         PortfolioContextCard(title: "Pricing Context") {
-                            // Fair Market row now shows the same
-                            // canonical `resolvedMarketValue` the hero /
-                            // row / grid / header total / sort use, so
-                            // detail's "Fair Market" can never disagree
-                            // with the MARKET VALUE hero above it.
-                            let resolved = viewModel.resolvedMarketValue(for: card)
-                            let fairMarketText: String = {
-                                if resolved > 0 {
-                                    let isObserved = (card.fairMarketValue ?? 0) > 0
-                                    let prefix = isObserved ? "" : "~"
-                                    return prefix + portfolioCurrencyString(resolved)
-                                }
-                                return "—"
-                            }()
-                            detailRow(
-                                title: "Fair Market",
-                                value: fairMarketText,
-                                subtitle: card.isUnpriced ? card.method : nil
-                            )
-                            // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29):
-                            // "Estimated" pill when the ladder fallback
-                            // sourced the FMV; informational caption +
-                            // basis disclosure beneath surface provenance.
+                            // 2026-07-17: Fair Market row dropped — the
+                            // hero's MARKET VALUE already carries it.
+                            // Anchor / Estimated / Why-this-estimate stays
+                            // (that's provenance, not a duplicate number).
                             if card.valuationStatus == "estimated" {
                                 HStack {
                                     Spacer(minLength: 0)
@@ -2940,12 +2840,6 @@ struct PortfolioHoldingDetailSheet: View {
                                         .clipShape(Capsule(style: .continuous))
                                 }
                             }
-                            // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30):
-                            // 4-row "Source" subsection replaces the prior
-                            // one-line "Anchor:" caption. Line 1: the sale
-                            // that anchored the estimate. Line 2: freshness
-                            // + comp-count + confidence band. Confidence
-                            // drives the band's tint.
                             if let anchor = card.nearestGradedAnchor {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Source")
@@ -2979,27 +2873,39 @@ struct PortfolioHoldingDetailSheet: View {
                                 .font(.subheadline.weight(.medium))
                                 .tint(HobbyIQTheme.Colors.electricBlue)
                             }
-                            detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
-                            detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
+                            // 2026-07-17: Quick Sale + Suggested List
+                            // side-by-side (was stacked). Reads compact
+                            // and leaves room for the sparkline above.
+                            HStack(alignment: .top, spacing: 12) {
+                                pricingContextTile(
+                                    label: "Quick Sale",
+                                    value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—"
+                                )
+                                pricingContextTile(
+                                    label: "Suggested List",
+                                    value: card.highValue.map { portfolioCurrencyString($0) } ?? "—"
+                                )
+                            }
 
-                            // CF-IOS-DIRECTION-SWEEP (2026-06-18): footer
-                            // entry into the now-comp-only CompIQ bridge.
+                            // 2026-07-17: View CompIQ is now a text link,
+                            // not a full-width pill — de-emphasized so the
+                            // primary CTA at the bottom of the page carries
+                            // more visual weight.
                             Button {
                                 showingCompIQAnalysis = true
                             } label: {
-                                HStack(spacing: 6) {
+                                HStack(spacing: 4) {
                                     Image(systemName: "doc.text.magnifyingglass")
+                                        .font(.caption2.weight(.semibold))
+                                    Text("View CompIQ analysis")
                                         .font(.caption.weight(.semibold))
-                                    Text("View CompIQ")
-                                        .font(.caption.weight(.semibold))
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.bold))
                                 }
                                 .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                                .clipShape(Capsule(style: .continuous))
                             }
                             .buttonStyle(.plain)
+                            .padding(.top, 4)
                         }
 
                         CollapsiblePortfolioContextCard(
@@ -3082,9 +2988,17 @@ struct PortfolioHoldingDetailSheet: View {
 
                         // CF-SOLD-COMPS (backend PR #386): recent comps
                         // for this exact grade/set/parallel filter set.
-                        // Self-populates its query from the holding's
-                        // own fields.
+                        // 2026-07-17: filter loosened to drop the
+                        // exact-parallel gate + feed cardNumber so
+                        // sibling variants surface as comps.
                         SoldCompsSection(card: card)
+                            .padding(.horizontal, 16)
+
+                        // 2026-07-17: reserves layout space for the
+                        // future eBay active-listings-by-card feed.
+                        // Replaces with real data when the backend endpoint
+                        // ships.
+                        ActiveEbayListingsPlaceholder()
                             .padding(.horizontal, 16)
 
                         if let localError {
@@ -3093,6 +3007,13 @@ struct PortfolioHoldingDetailSheet: View {
                                 .foregroundStyle(Color.red)
                         }
 
+                        // 2026-07-17: consolidated action stack —
+                        // primary "List on eBay" pill + a 3-icon
+                        // secondary row (Verify Card / Mark as Graded /
+                        // Mark Sold) so the actionable CTA carries more
+                        // visual weight than the housekeeping actions.
+                        // Remove from Portfolio stays at the bottom as a
+                        // destructive text button.
                         VStack(spacing: 12) {
                             if ebayStore.connectionState != .connected {
                                 Button {
@@ -3109,6 +3030,7 @@ struct PortfolioHoldingDetailSheet: View {
                                 .disabled(ebayStore.isConnecting)
                             }
 
+                            // Primary CTA — the actionable one.
                             Button {
                                 showingEbayListingSheet = true
                             } label: {
@@ -3121,47 +3043,33 @@ struct PortfolioHoldingDetailSheet: View {
                             .buttonStyle(PrimaryButtonStyle())
                             .disabled(ebayStore.isConnecting)
 
-                            // CF-HOLDING-DETAIL-V2 (2026-07-06): Mark as
-                            // Graded — raw holdings only. Backend
-                            // asks: `certNumber` on holdings wire +
-                            // grading-cost roll-in to cost basis
-                            // (see backend prompt for details).
-                            if isRawHolding {
-                                Button {
-                                    showingMarkAsGradedSheet = true
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "checkmark.seal")
-                                        Text("Mark as Graded")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(PrimaryButtonStyle())
-                            }
+                            // Secondary row — 3 icon buttons per spec
+                            // (Verify Card / Mark as Graded / Mark Sold),
+                            // ordered left-to-right. Mark as Graded is
+                            // raw-only; when the holding is already
+                            // graded we still render the row with a
+                            // muted placeholder so the layout doesn't
+                            // reflow.
+                            HStack(alignment: .top, spacing: 8) {
+                                holdingSecondaryAction(
+                                    icon: "checkmark.circle.badge.questionmark",
+                                    caption: "Verify Card"
+                                ) { showingVerifyCardSheet = true }
 
-                            // PR #441 (2026-07-14): manual verify-card
-                            // trigger. Opens the dry-run suggester sheet
-                            // so the user can re-clean parsed fields
-                            // and pick the right cardId when the
-                            // auto-import misfired. Backend commit path
-                            // reuses the existing pending-review
-                            // confirm endpoint.
-                            Button {
-                                showingVerifyCardSheet = true
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.badge.questionmark")
-                                    Text("Verify Card")
+                                if isRawHolding {
+                                    holdingSecondaryAction(
+                                        icon: "checkmark.seal",
+                                        caption: "Mark as Graded"
+                                    ) { showingMarkAsGradedSheet = true }
+                                } else {
+                                    holdingSecondaryPlaceholder()
                                 }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(HobbyIQTheme.Colors.electricBlue)
 
-                            Button("Mark Sold") {
-                                showingSoldSheet = true
+                                holdingSecondaryAction(
+                                    icon: "dollarsign.circle",
+                                    caption: "Mark Sold"
+                                ) { showingSoldSheet = true }
                             }
-                            .buttonStyle(PrimaryButtonStyle())
 
                             Button(role: .destructive) {
                                 showingRemoveModal = true
@@ -3184,7 +3092,6 @@ struct PortfolioHoldingDetailSheet: View {
                 .task { await loadPlayerTrend() }
                 .task { await loadGradeAnalysis() }
                 .task { await loadFamilyMultipliers() }
-                .task { await loadTimingForecast() }
                 .task { await loadParallelLadder() }
                 .task { await loadMissingParallels() }
                 .task {
@@ -3320,6 +3227,10 @@ struct PortfolioHoldingHeroCard: View {
     /// holding's cached `fairMarketValue` chain.
     var livePanelValue: Double? = nil
     let onEdit: () -> Void
+
+    /// 2026-07-17: 3-month weekly price-history for the sparkline under
+    /// MARKET VALUE. Nil until the first fetch; empty on thin data.
+    @State private var sparklinePoints: [PriceHistoryBucketPoint]?
 
     /// Flat identity line: "{year} {set-no-year-no-category} [variant] [Auto] {number}"
     /// (same rule the comp-card header uses). Strips a leading year
@@ -3496,7 +3407,7 @@ struct PortfolioHoldingHeroCard: View {
             if let v = card.estimatedValue, v > 0 { return v }
             return nil
         }()
-        return VStack(spacing: 4) {
+        return VStack(spacing: 8) {
             Text("MARKET VALUE")
                 .font(.caption.weight(.semibold))
                 .tracking(1.0)
@@ -3514,11 +3425,63 @@ struct PortfolioHoldingHeroCard: View {
                     .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                // 2026-07-17: 30-day sparkline directly under the price.
+                // Fetches on task from /price-history (window=3m, bucket=weekly).
+                // Hidden entirely when < 2 usable points arrive.
+                heroSparkline
             } else {
                 Text("Not enough data yet")
                     .font(.subheadline)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
+        }
+        .task(id: card.cardId ?? "") { await loadHeroSparkline() }
+    }
+
+    /// Compact chart-only sparkline — no axes, no grid, 44pt height.
+    /// Self-suppresses on thin data (< 2 points with median > 0).
+    @ViewBuilder
+    private var heroSparkline: some View {
+        let usable = (sparklinePoints ?? []).filter {
+            $0.parsedDate != nil && ($0.medianPrice ?? 0) > 0
+        }
+        if usable.count >= 2 {
+            Chart {
+                ForEach(usable) { point in
+                    if let date = point.parsedDate,
+                       let median = point.medianPrice {
+                        LineMark(
+                            x: .value("Date", date),
+                            y: .value("Price", median)
+                        )
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    }
+                }
+            }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartPlotStyle { plot in
+                plot.background(Color.clear).border(Color.clear, width: 0)
+            }
+            .frame(height: 44)
+            .padding(.horizontal, 4)
+            .padding(.top, 2)
+        }
+    }
+
+    private func loadHeroSparkline() async {
+        let id = card.cardId?.trimmingCharacters(in: .whitespaces) ?? ""
+        guard id.isEmpty == false else { return }
+        do {
+            let response = try await APIService.shared.fetchPriceHistory(
+                cardId: id,
+                window: PriceHistoryWindow.threeMonths.rawValue,
+                bucket: PriceHistoryBucket.weekly.rawValue
+            )
+            sparklinePoints = response.points
+        } catch {
+            sparklinePoints = nil
         }
     }
 
