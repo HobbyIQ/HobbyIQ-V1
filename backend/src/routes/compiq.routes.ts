@@ -1521,6 +1521,64 @@ router.get("/cards/:cardId/price-history", requireSession, async (req, res, next
   } catch (err) { next(err); }
 });
 
+// CF-EBAY-ACTIVE-LISTINGS (Drew, 2026-07-17): card-scoped active-
+// listings from eBay Browse for the Inventory Card Detail page.
+// 12h Cosmos cache keyed by (cardId + gradeTierSlug) — same card =
+// same listings across all users, amortizes the 5000-call/day budget.
+// Optional query params: gradeCompany, gradeValue (Raw when omitted).
+router.get("/cards/:cardId/active-listings", requireSession, async (req, res, next) => {
+  try {
+    const cardId = String(req.params.cardId ?? "").trim();
+    if (!cardId) return res.status(400).json({ success: false, error: "cardId path param required" });
+    const gradeCompany = typeof req.query.gradeCompany === "string" && req.query.gradeCompany.trim().length > 0
+      ? req.query.gradeCompany.trim() : undefined;
+    const gradeValue = typeof req.query.gradeValue === "string" && req.query.gradeValue.trim().length > 0
+      ? req.query.gradeValue.trim() : undefined;
+
+    const { readCachedActiveListings, writeCachedActiveListings } = await import(
+      "../services/ebay/ebayActiveListingsCache.service.js"
+    );
+    const cached = await readCachedActiveListings(cardId, gradeCompany, gradeValue);
+    if (cached) {
+      return res.json({ success: true, ...cached, cached: true });
+    }
+
+    const meta = await getCardMetaById(cardId);
+    if (!meta) {
+      return res.status(404).json({ success: false, error: "card identity not found" });
+    }
+    // CH's card meta returns { player, set, number, variant, year }.
+    // We don't have a taxonomy for "known different parallels" yet —
+    // ranker falls back to no-siblings behavior (still filters by
+    // grade + year + set + cardNumber; wrong-parallel penalty just
+    // doesn't fire). Follow-up can plumb the reference-catalog sibling
+    // list here.
+    const identity = {
+      year: (meta as { year?: number | string }).year,
+      set: (meta as { set?: string }).set,
+      player: String((meta as { player?: string }).player ?? "").trim(),
+      cardNumber: (meta as { number?: string }).number,
+      parallel: (meta as { variant?: string }).variant,
+      gradeCompany,
+      gradeValue,
+    };
+    if (!identity.player) {
+      return res.status(422).json({ success: false, error: "card identity missing player name" });
+    }
+
+    const { fetchCardActiveListings } = await import(
+      "../services/ebay/ebayListingSearch.service.js"
+    );
+    const result = await fetchCardActiveListings(identity);
+    if (!result) {
+      return res.status(502).json({ success: false, error: "eBay Browse unavailable" });
+    }
+
+    await writeCachedActiveListings(cardId, gradeCompany, gradeValue, result);
+    return res.json({ success: true, ...result, cached: false });
+  } catch (err) { next(err); }
+});
+
 // CF-VERDICT-FLIP-ALERTS-WIRE (Drew, 2026-07-16, iOS-prep): read routes
 // for the verdict history persisted by the daily snapshot cron
 // (recordVerdictAndDetectFlip). Feeds iOS' three flip surfaces:
