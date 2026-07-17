@@ -7638,33 +7638,124 @@ export async function computeEstimate(
     : (slopeAdj?.marketValue
         ?? nextSaleFallback?.nextSaleValue
         ?? __predicted.predictedPrice);
+
+  // CF-PREDICTED-MATCHED-COHORT (Drew, 2026-07-17): the slope regression
+  // above produces wild swings on thin comp pools (n=2 or n=3): the same
+  // Orange Shimmer Hartman card produced $243 one day and $5527 the next
+  // because linear regression through 3 noisy points is unstable. The
+  // card-panel path solved this with matched-cohort rate — a player-
+  // level medianRatio computed across a cohort of same-family cards. This
+  // block mirrors that math for the estimate wire so portfolio-reprice
+  // (which stamps holding.predictedPrice) shows the SAME predicted
+  // number iOS renders on the priced-card page. Only applies when a
+  // playerName + cardYear + set are all available; else falls through
+  // to slope. Player-level rate applied to the grade-scoped
+  // slopeMarketValue → per-grade predicted, matching card-panel's
+  // per-grade output.
+  const cohortPlayerName = typeof queryContext.playerName === "string"
+    ? queryContext.playerName.trim() : "";
+  const cohortYear = queryContext.cardYear !== undefined && queryContext.cardYear !== null
+    ? Number(queryContext.cardYear) : NaN;
+  const cohortSet = typeof queryContext.product === "string"
+    ? queryContext.product.trim() : "";
+  const cohortParallel = typeof queryContext.parallel === "string"
+    ? queryContext.parallel.trim() : "";
+  let matchedCohortRate: {
+    cappedRate: number;
+    signalSource: string;
+  } | null = null;
+  if (
+    !isAnyEstimate
+    && cohortPlayerName
+    && Number.isFinite(cohortYear)
+    && cohortSet
+  ) {
+    try {
+      const { deriveWeeklyRate } = await import("./observedGradeCurve.service.js");
+      const parallelTierKey = cohortParallel
+        ? { year: cohortYear, set: cohortSet, variant: cohortParallel }
+        : null;
+      const releaseCardKey = { year: cohortYear, set: cohortSet };
+      // Race against a 1s timeout so a stalled Cosmos / CH call can't
+      // hang the estimate wire. deriveWeeklyRate has an on-demand path
+      // (~30 CH calls) that can be slow in production and blocks
+      // indefinitely in tests where CH is not mocked. When the timeout
+      // wins, matchedCohortRate stays null and the existing slope /
+      // trendiq-projection fallback chain takes over — same behavior
+      // as pre-CF-PREDICTED-MATCHED-COHORT.
+      const rate = await Promise.race([
+        deriveWeeklyRate(
+          cohortPlayerName,
+          parallelTierKey,
+          releaseCardKey,
+          null,
+        ),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
+      ]);
+      if (rate && Number.isFinite(rate.cappedRate)) {
+        matchedCohortRate = { cappedRate: rate.cappedRate, signalSource: rate.signalSource };
+      }
+    } catch {
+      // best-effort — slope path takes over
+    }
+  }
+  const { computeCohortPredicted } = await import("./matchedCohortPredicted.js");
+  const cohortPredicted = computeCohortPredicted(
+    typeof slopeMarketValue === "number" ? slopeMarketValue : null,
+    matchedCohortRate?.cappedRate ?? null,
+  );
+  const cohortPredictedPrice = cohortPredicted?.predictedPrice ?? null;
+  const cohortPredictedRange = cohortPredicted?.predictedPriceRange ?? null;
+
   const slopePredictedPrice =
-    slopeAdj?.predictedPrice
+    cohortPredictedPrice
+    ?? slopeAdj?.predictedPrice
     ?? nextSaleFallback?.nextSaleValue
     ?? __predicted.predictedPrice;
   const slopePredictedRange =
-    slopeAdj?.predictedPriceRange
+    cohortPredictedRange
+    ?? slopeAdj?.predictedPriceRange
     ?? (nextSaleFallback ? nextSaleFallback.bounds : null)
     ?? __predicted.predictedPriceRange;
-  const slopePredictedAttribution = slopeAdj
+  // CF-PREDICTED-ATTRIBUTION-MECHANISM-KEY (Drew, 2026-07-17): downstream
+  // (portfolioStore.service.ts:2277, routes/compiq.routes.ts:2509/3106/5266)
+  // reads `.mechanism`. Prior shape used `.method`, which silently landed
+  // as `null` on the persisted holding. Emit BOTH keys so old readers of
+  // `.method` (perGradeBreakdown.service.ts:267) and `.mechanism` readers
+  // both resolve; new writes converge on `.mechanism`.
+  const slopePredictedAttribution = matchedCohortRate
     ? {
-        method: "linear-regression" as const,
-        direction: slopeAdj.direction,
-        slopePerMonthPct: slopeAdj.slopePerMonthPct,
-        n: slopeAdj.n,
+        mechanism: "matched-cohort" as const,
+        method: "matched-cohort" as const,
+        direction: matchedCohortRate.cappedRate > 0
+          ? ("up" as const)
+          : matchedCohortRate.cappedRate < 0
+            ? ("down" as const)
+            : ("static" as const),
+        ratePerWeek: matchedCohortRate.cappedRate,
+        signalSource: matchedCohortRate.signalSource,
       }
-    : nextSaleFallback
+    : slopeAdj
       ? {
-          method: "trend-adjusted-last-sale" as const,
-          direction: nextSaleFallback.slopePerMonthPct > 0
-            ? ("up" as const)
-            : nextSaleFallback.slopePerMonthPct < 0
-              ? ("down" as const)
-              : ("static" as const),
-          slopePerMonthPct: nextSaleFallback.slopePerMonthPct,
-          n: nextSaleFallback.n,
+          mechanism: "linear-regression" as const,
+          method: "linear-regression" as const,
+          direction: slopeAdj.direction,
+          slopePerMonthPct: slopeAdj.slopePerMonthPct,
+          n: slopeAdj.n,
         }
-      : __predicted.predictedPriceAttribution;
+      : nextSaleFallback
+        ? {
+            mechanism: "trend-adjusted-last-sale" as const,
+            method: "trend-adjusted-last-sale" as const,
+            direction: nextSaleFallback.slopePerMonthPct > 0
+              ? ("up" as const)
+              : nextSaleFallback.slopePerMonthPct < 0
+                ? ("down" as const)
+                : ("static" as const),
+            slopePerMonthPct: nextSaleFallback.slopePerMonthPct,
+            n: nextSaleFallback.n,
+          }
+        : __predicted.predictedPriceAttribution;
 
   // CF-SUPPLY-DEMAND-SIGNAL (Drew, 2026-07-13, PR #420): fold in listings
   // trend for a full supply+demand read. Player name is extracted from
