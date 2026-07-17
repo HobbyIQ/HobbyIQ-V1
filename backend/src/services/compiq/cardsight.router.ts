@@ -679,11 +679,32 @@ async function tryLocalComps(
     // So we can't require the full triple; require `player` plus at
     // LEAST ONE narrowing field (year OR number). Player alone would
     // be too broad for a hot player like Ohtani (55k rows).
-    if (!identity.playerName) return null;
+
+    // CF-LOCAL-COMP-FIRST diagnostic (2026-07-17): the relaxed guard
+    // still shows local_count=0 on Ohtani/2024 (which has thousands of
+    // rows) — need to see what identity actually reaches this branch.
+    // Log every invocation so we can trace what got dropped.
+    log.info("router.local_comps_enter", {
+      playerName: identity.playerName ?? null,
+      cardYear: identity.cardYear ?? null,
+      product: identity.product ?? null,
+      parallel: identity.parallel ?? null,
+      number: identity.number ?? null,
+      isAuto: identity.isAuto ?? null,
+      grade,
+    });
+
+    if (!identity.playerName) {
+      log.info("router.local_comps_bail", { reason: "no_player" });
+      return null;
+    }
     const year = identity.cardYear !== undefined && identity.cardYear !== null
       ? Number(identity.cardYear)
       : undefined;
-    if (year === undefined && !identity.number) return null;
+    if (year === undefined && !identity.number) {
+      log.info("router.local_comps_bail", { reason: "no_year_or_number" });
+      return null;
+    }
 
     const localResult = await lookupLocalComps(
       {
@@ -696,6 +717,12 @@ async function tryLocalComps(
       },
       { skipPremiums: true },
     );
+
+    log.info("router.local_comps_query_done", {
+      totalSales: localResult.totalSales,
+      queryMs: localResult.diagnostics.queryMs,
+      ruCharge: localResult.diagnostics.ruCharge,
+    });
 
     if (localResult.totalSales === 0) return null;
 
