@@ -18,9 +18,14 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'File date YYYY-MM-DD (default: yesterday UTC)'
+        description: 'Single file date YYYY-MM-DD (default: yesterday UTC). Ignored when backfill_days > 0.'
         required: false
         type: string
+      backfill_days:
+        description: 'Backfill: ingest the last N days ending yesterday UTC. 0 = single-day mode.'
+        required: false
+        type: string
+        default: '0'
       force:
         description: 'Force re-ingest even if a checkpoint exists'
         required: false
@@ -31,7 +36,10 @@ jobs:
   ingest:
     name: Ingest daily-price-export
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 6h timeout accommodates the 90-day backfill mode. Single-day
+    # scheduled runs complete in seconds; this cap is only load-bearing
+    # for backfill.
+    timeout-minutes: 360
     permissions:
       id-token: write
       contents: read
@@ -79,8 +87,13 @@ jobs:
             echo "CARD_HEDGE_API_KEY empty from App Service — cannot ingest"
             exit 1
           fi
+          BACKFILL_FLAG=""
+          BACKFILL_DAYS="${{ inputs.backfill_days }}"
+          if [ -n "$BACKFILL_DAYS" ] && [ "$BACKFILL_DAYS" != "0" ] && [ "$BACKFILL_DAYS" != "" ]; then
+            BACKFILL_FLAG="--backfill-days=$BACKFILL_DAYS"
+          fi
           DATE_FLAG=""
-          if [ -n "${{ inputs.date }}" ]; then
+          if [ -z "$BACKFILL_FLAG" ] && [ -n "${{ inputs.date }}" ]; then
             DATE_FLAG="--date=${{ inputs.date }}"
           fi
           FORCE_FLAG=""
@@ -90,4 +103,4 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
           COSMOS_DATABASE=hobbyiq \
-          node scripts/ingest-ch-daily-sales.cjs $DATE_FLAG $FORCE_FLAG
+          node scripts/ingest-ch-daily-sales.cjs $BACKFILL_FLAG $DATE_FLAG $FORCE_FLAG
