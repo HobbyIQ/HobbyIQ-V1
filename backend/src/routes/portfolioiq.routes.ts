@@ -84,6 +84,18 @@ import {
   generateUserYearbook,
   type PeriodQuarter,
 } from "../services/portfolioiq/portfolioYearbook.service.js";
+// CF-PARALLEL-LADDER (Drew, 2026-07-17): observed parallel-tier
+// multipliers (Base 1.0×, Refractor 2.8×, Gold /50 5.2×, …) for a
+// (player, year, cardSet) bucket. Card-detail moat surface —
+// competitors don't expose this ladder directly.
+import {
+  analyzeParallelLadder,
+  parseBucketKey,
+} from "../services/portfolioiq/parallelLadderAnalyze.service.js";
+// CF-ATTRIBUTION-HEALTH (Drew, 2026-07-17): portfolio-level pHash
+// cluster health surface — reads ch_card_attribution_stats and
+// returns holdings where the community disagrees on identity.
+import { analyzeAttributionHealth } from "../services/portfolioiq/attributionHealthAnalyze.service.js";
 
 const router = Router();
 
@@ -1345,6 +1357,54 @@ router.get(
       if (!bundle) return res.status(404).json({ error: "no bucket match" });
       res.json({ bucket: bundle });
     } catch (err) { next(err); }
+  },
+);
+
+// CF-PARALLEL-LADDER (Drew, 2026-07-17): observed parallel-tier
+// multipliers for a (player, year, cardSet) bucket. Card-detail moat
+// surface: exposes Base 1.0× → Refractor 2.8× → Gold /50 5.2× directly
+// from actual sales. `:playerYearSet` is a url-encoded "player::year::
+// cardSet" — decoded + validated in parseBucketKey. Session-required;
+// priceChecksPerDay rate-limited (same budget as other detail lookups).
+router.get(
+  "/parallel-ladder/:playerYearSet",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const raw = String(req.params.playerYearSet ?? "");
+      const key = parseBucketKey(raw);
+      if (!key) {
+        return res.status(400).json({
+          error: "invalid playerYearSet — expected url-encoded 'player::year::cardSet'",
+        });
+      }
+      const result = await analyzeParallelLadder(key);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-ATTRIBUTION-HEALTH (Drew, 2026-07-17): portfolio-level pHash
+// health check. Returns holdings whose card_id shows visual-cluster
+// disagreement in the CH sales corpus — the community photographed
+// multiple physically-different cards under the same SKU. Empty
+// suspect list is the healthy case. Session-required;
+// priceChecksPerDay rate-limited so a runaway UI doesn't hammer the
+// stats container.
+router.get(
+  "/attribution-health",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const result = await analyzeAttributionHealth(userId);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
