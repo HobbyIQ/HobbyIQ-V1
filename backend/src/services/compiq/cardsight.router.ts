@@ -673,12 +673,17 @@ async function tryLocalComps(
   grade: string,
 ): Promise<{ sales: RoutedSale[]; card: RoutedCard | null; source: "local" } | null> {
   try {
-    // The strong SKU triple. Any missing field → give up locally so
-    // we don't fire an over-broad cross-partition query.
-    if (!identity.playerName || !identity.number) return null;
+    // v3 (2026-07-17): the /price freetext identity parser sometimes
+    // drops `number` when the query uses "#CPA-EHA" — the CH tokenizer
+    // treats `#` as a signal boundary ([[suggester-query-no-hash-prefix]]).
+    // So we can't require the full triple; require `player` plus at
+    // LEAST ONE narrowing field (year OR number). Player alone would
+    // be too broad for a hot player like Ohtani (55k rows).
+    if (!identity.playerName) return null;
     const year = identity.cardYear !== undefined && identity.cardYear !== null
       ? Number(identity.cardYear)
       : undefined;
+    if (year === undefined && !identity.number) return null;
 
     const localResult = await lookupLocalComps(
       {
