@@ -2752,17 +2752,16 @@ struct PortfolioHoldingDetailSheet: View {
                         }
 
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
-                        // (7d) — panel-only source, gated on locked-
-                        // grade entry existing.
-                        // 2026-07-17 reorder: moved up to sit directly
-                        // under MARKET VALUE per Drew's declutter spec.
-                        // The standalone Timing Forecast block was
-                        // removed at the same time; PREDICTED (7d) is
-                        // now the single forecast surface.
-                        if let entry = lockedGradeEntry(),
-                           let predicted = entry.predictedPriceAt30d, predicted > 0 {
-                            holdingPredictedBlock(entry: entry, predicted: predicted)
-                        }
+                        // 2026-07-17: PREDICTED (7d/30d) tile pulled from
+                        // the holding detail completely. Backend was
+                        // sending 30d on the horizon which duplicated
+                        // the sparkline under MARKET VALUE. `holdingPredictedBlock`
+                        // + `lockedGradeEntry` are still available for
+                        // future re-surface on a different tab.
+                        // if let entry = lockedGradeEntry(),
+                        //    let predicted = entry.predictedPriceAt30d, predicted > 0 {
+                        //     holdingPredictedBlock(entry: entry, predicted: predicted)
+                        // }
 
                         // Corpus signals (2026-07-17, PR #517/#519):
                         // matched-cohort Player Momentum block below the
