@@ -5150,47 +5150,10 @@ private func inventoryMetadataLine(for card: InventoryCard) -> String? {
     return line.isEmpty ? nil : line
 }
 
-private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
-    // Mirror the detail view's cardSubtitle (PortfolioIQModels.swift:1078-1085)
-    // so the list/grid row also surfaces parallel + Auto. Pre-CF the list
-    // showed only year + setName, which made the CPA-EHA Blue X-Fractor
-    // auto holding indistinguishable from the BCP-102 non-auto with the
-    // same year and set. Each part is trimmed; empty parts are dropped.
-    var parts: [String] = []
-    let year = card.year.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !year.isEmpty { parts.append(year) }
-    // Strip a leading year from setName when it duplicates `card.year`
-    // — backend often ships setName as "2006 Bowman Draft Picks &
-    // Prospects", which combined with the year prefix would render as
-    // "2006 · 2006 Bowman Draft…".
-    let rawSet = card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
-    let setName = PortfolioHoldingHeroCard.stripLeadingYear(from: rawSet, year: year)
-    if !setName.isEmpty { parts.append(setName) }
-    let parallel = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !parallel.isEmpty { parts.append(parallel) }
-    if card.isAuto { parts.append("Auto") }
-
-    if parts.isEmpty {
-        let fallback = card.cardName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return fallback.isEmpty ? nil : fallback
-    }
-    return parts.joined(separator: " · ")
-}
-
-/// CF-IOS-INVENTORY-ROW-SECONDARY (2026-06-27): compact secondary detail
-/// line under the year/set subtitle — grade label first, then parallel /
-/// variant. Each segment trimmed and dropped when empty so a legacy row
-/// missing one or both never renders a dangling " · ". InventoryCard
-/// has no structured serial-number field — the serial is typically baked
-/// into the `parallel` text (e.g. "Refractor /99"), so it surfaces
-/// automatically through the parallel segment.
-private func inventoryCardSecondaryDetailLine(for card: InventoryCard) -> String? {
-    let segments = [card.grade, card.parallel]
-        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        .filter { !$0.isEmpty }
-    guard segments.isEmpty == false else { return nil }
-    return segments.joined(separator: " · ")
-}
+// 2026-07-17: inventoryCardSubtitle + inventoryCardSecondaryDetailLine
+// helpers deleted — replaced by inventoryMetadataLine(for:), which
+// produces a single consolidated identity line for both the list row
+// and grid tile.
 
 /// Single grade pill — sentence-case label, soft surface, neutral by default.
 @ViewBuilder
