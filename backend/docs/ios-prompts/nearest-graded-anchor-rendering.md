@@ -1,8 +1,8 @@
 # iOS Prompt: Render `nearestGradedAnchor` on inventory rows
 
-**Status:** Backend ready (PR #186 deployed 2026-06-29). Wire field is live.
+**Status:** ✅ CLOSED. Backend ready (PR #186 deployed 2026-06-29); iOS shipped in `0b3ef1c` (decode) + `b2b152d` (V2 surface — compact row line + Source subsection).
 **Surface:** Portfolio inventory row + holding detail sheet.
-**Effort:** ~2-3 hours for both surfaces.
+**Effort:** ~2-3 hours for both surfaces (as planned).
 
 ## Context
 

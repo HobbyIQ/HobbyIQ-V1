@@ -1,7 +1,7 @@
 # Verdict History + Flip Surfaces
 
-**Status:** Backend routes shipped alongside this doc (PR follow-up to #428). iOS implementation TODO.
-**Related PR:** #428 shipped the persistence + flip detection; this follow-up wires the read routes iOS consumes.
+**Status:** ✅ CLOSED. Backend routes shipped alongside this doc (PR follow-up to #428); iOS shipped in `eedc3dc` (verdict flip surfaces — inventory dot, detail-sheet history strip, settings toggle, P0.7) + `7ac466b` (portfolio preferences endpoint — flip alerts, APNs registration, deep-link handler, P0.7 delta).
+**Related PR:** #428 shipped the persistence + flip detection; the follow-up wired the read routes iOS consumes.
 
 ## Design call
 
