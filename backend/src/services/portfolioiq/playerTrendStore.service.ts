@@ -110,3 +110,23 @@ export async function countStoredTrends(): Promise<number> {
   const page = await iter.fetchNext();
   return page.resources?.[0] ?? 0;
 }
+
+/** CF-HOT-RIGHT-NOW (Drew, 2026-07-17): read all stored player trends
+ *  for the discover-tab leaderboard. Emits only the "up-direction"
+ *  entries sorted by (momentum × velocityPerWeek) — hot = moving up
+ *  AND liquid. */
+export async function readTopHotPlayers(limit = 25): Promise<StoredPlayerTrend[]> {
+  const container = await getContainer();
+  const iter = container.items.query<StoredPlayerTrend>({
+    query: "SELECT * FROM c WHERE c.direction = 'up'",
+  }, { maxItemCount: 500 });
+  const rows: StoredPlayerTrend[] = [];
+  while (iter.hasMoreResults()) {
+    const page = await iter.fetchNext();
+    if (page.resources) rows.push(...page.resources);
+  }
+  // Sort in-memory by (momentum × velocityPerWeek) DESC.
+  return rows
+    .sort((a, b) => (b.momentum * b.velocityPerWeek) - (a.momentum * a.velocityPerWeek))
+    .slice(0, limit);
+}

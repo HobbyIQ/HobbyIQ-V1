@@ -67,6 +67,15 @@ import { analyzeTimingForecast } from "../services/portfolioiq/timingAwareForeca
 // CF-CASCADE-ALERTS (Drew, 2026-07-17): serve cascade events for
 // players the user owns.
 import { readRecentEventsForPlayers } from "../services/portfolioiq/cascadeEventStore.service.js";
+// CF-PORTFOLIO-MOMENTUM (Drew, 2026-07-17): one-tap "how is YOUR
+// portfolio moving?" aggregation of matched-cohort player momentum
+// weighted by holding value. Feeds the DailyIQ / Portfolio home
+// hero banner.
+import { computePortfolioMomentum } from "../services/portfolioiq/portfolioMomentumCompute.service.js";
+import type {
+  PortfolioMomentumHoldingInput,
+  PortfolioMomentumPlayerTrend,
+} from "../types/portfolioMomentum.types.js";
 
 const router = Router();
 
@@ -479,6 +488,63 @@ router.get(
           detectionInput: e.detectionInput,
         })),
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-PORTFOLIO-MOMENTUM (Drew, 2026-07-17): one-tap portfolio-level
+// momentum aggregation. Joins the user's holdings with the nightly-
+// computed player_trends and returns value-weighted portfolio momentum
+// + up/flat/down counts + top/worst movers + implied dollar delta.
+router.get(
+  "/momentum",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+
+      // Convert holdings → momentum input shape.
+      const momentumHoldings: PortfolioMomentumHoldingInput[] = holdings.map((h) => ({
+        holdingId: h.id ?? "",
+        playerName: h.playerName ?? null,
+        currentValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+        quantity: typeof h.quantity === "number" && h.quantity > 0 ? h.quantity : 1,
+      }));
+
+      // Fetch player_trends for each distinct owned player (concurrent-8).
+      const distinctPlayers = [...new Set(
+        momentumHoldings.map((m) => m.playerName).filter((p): p is string => !!p),
+      )];
+      const trendMap = new Map<string, PortfolioMomentumPlayerTrend>();
+      const CONC = 8;
+      let idx = 0;
+      async function worker() {
+        while (idx < distinctPlayers.length) {
+          const my = idx++;
+          const player = distinctPlayers[my];
+          try {
+            const stored = await readPlayerTrend(player);
+            if (stored) {
+              trendMap.set(player, {
+                playerName: player,
+                momentum: stored.momentum,
+                direction: stored.direction,
+                velocityPerWeek: stored.velocityPerWeek,
+              });
+            }
+          } catch { /* best-effort */ }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(CONC, distinctPlayers.length) }, () => worker()));
+
+      const result = computePortfolioMomentum(momentumHoldings, trendMap);
+      res.json(result);
     } catch (err) {
       next(err);
     }
