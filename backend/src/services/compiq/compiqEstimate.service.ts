@@ -7561,39 +7561,46 @@ export async function computeEstimate(
   const isT3MultEstimate = isT3Eligible && m1Wins;
   const isAnyEstimate = isT3BaseAuto || isT3MultEstimate || isT3BuildB;
 
-  const responseFmv: number | null = isAnyEstimate
+  // CF-GUESTIMATE-PRICING (2026-07-17): these are `let` (not `const`)
+  // so the guestimate fallback further down can override them without
+  // wrapping every downstream reference in a ternary. Source-shape tests
+  // (fmvNowcastShip1) grep for the literal `fairMarketValueLow:
+  // responseFmvLow` return-literal pattern — preserving that anchor is
+  // the reason we mutate here instead of at the return site.
+  let responseFmv: number | null = isAnyEstimate
     ? null
     : (typeof fairMarketValue === "number" ? fairMarketValue : null);
-  const responseFmvLow: number | null = isAnyEstimate ? null : mainFmvBand.low;
-  const responseFmvHigh: number | null = isAnyEstimate ? null : mainFmvBand.high;
-  const responseEstimatedValue: number | null =
+  let responseFmvLow: number | null = isAnyEstimate ? null : mainFmvBand.low;
+  let responseFmvHigh: number | null = isAnyEstimate ? null : mainFmvBand.high;
+  let responseEstimatedValue: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPrice as number) :
     isT3BuildB ? collisionBuildB!.estimatedValue :
     isT3BaseAuto ? (fairMarketValue as number) :
     null;
-  const responseEstimateLow: number | null =
+  let responseEstimateLow: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPriceRange?.low ?? null) :
     isT3BuildB ? collisionBuildB!.estimateLow :
     isT3BaseAuto ? mainFmvBand.low :
     null;
-  const responseEstimateHigh: number | null =
+  let responseEstimateHigh: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPriceRange?.high ?? null) :
     isT3BuildB ? collisionBuildB!.estimateHigh :
     isT3BaseAuto ? mainFmvBand.high :
     null;
-  const responseValuationStatus: "observed" | "estimated" = isAnyEstimate ? "estimated" : "observed";
-  const responseEstimateBasis: string | null =
+  let responseValuationStatus: "observed" | "estimated" = isAnyEstimate ? "estimated" : "observed";
+  let responseEstimateBasis: string | null =
     isT3MultEstimate
       ? (collisionM1!.predictedPriceAttribution.subjectProvenance === "sibling_provisional"
           ? "multiplier_provisional"
           : "multiplier")
       : isT3BuildB ? collisionBuildB!.estimateBasis
       : (isT3BaseAuto ? "base_auto_floor" : null);
-  const responseEstimateConfidence:
+  let responseEstimateConfidence:
     | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
     isT3BuildB ? collisionBuildB!.confidence :
     isAnyEstimate ? "rough" : null;
-  const responseIsEstimate: boolean = isAnyEstimate;
+  let responseIsEstimate: boolean = isAnyEstimate;
+  let responseEstimateAttribution: string[] | undefined = undefined;
 
   // CF-SLOPE-VALUATION-MAIN-ENGINE (Drew, 2026-07-13, PR #419): mirror
   // the Cardsight UUID router's slope-based valuation on the main CH
@@ -7633,7 +7640,9 @@ export async function computeEstimate(
   // T3 rebucket paths intentionally emit null FMV — the observed-band contract
   // requires isAnyEstimate → null; downstream is responsible for the
   // estimatedValue / estimateBasis fields. Preserve that null.
-  const slopeMarketValue = isAnyEstimate
+  // Also `let` (not `const`) so CF-GUESTIMATE-PRICING can override the
+  // final marketValue emission when the guestimate fallback fires.
+  let slopeMarketValue = isAnyEstimate
     ? responseFmv
     : (slopeAdj?.marketValue
         ?? nextSaleFallback?.nextSaleValue
@@ -7717,6 +7726,117 @@ export async function computeEstimate(
     ?? slopeAdj?.predictedPriceRange
     ?? (nextSaleFallback ? nextSaleFallback.bounds : null)
     ?? __predicted.predictedPriceRange;
+
+  // CF-GUESTIMATE-PRICING (Drew, 2026-07-17): last-resort compound-
+  // multiplier estimate for cards that have NO comps AND family blend
+  // couldn't fill. Fires only when every prior fallback yielded
+  // nothing usable (slopeMarketValue null or <=0). Emits as
+  // valuationStatus="estimated" with estimateBasis="guestimate" so
+  // iOS renders it distinctly from an observed FMV. Never blocks —
+  // any failure leaves the response as-is.
+  let guestimateBlock: {
+    marketValue: number;
+    rangeLow: number;
+    rangeHigh: number;
+    confidence: "estimate" | "rough" | "ballpark";
+    attribution: string[];
+  } | null = null;
+  const eligibleForGuestimate =
+    !isAnyEstimate
+    && (typeof slopeMarketValue !== "number" || !(slopeMarketValue > 0))
+    && typeof queryContext.playerName === "string"
+    && queryContext.playerName.trim().length > 0
+    && queryContext.cardYear !== undefined
+    && queryContext.cardYear !== null
+    && typeof queryContext.product === "string"
+    && queryContext.product.trim().length > 0;
+  if (eligibleForGuestimate) {
+    try {
+      const { fetchFamilyBaseRawPrice, classifyPlayerTier } = await import(
+        "./guestimateContext.service.js"
+      );
+      const { computeGuestimate } = await import("./guestimatePricing.js");
+      const year = Number(queryContext.cardYear);
+      const familyLabel = String(queryContext.product).trim();
+      const [baseRaw, tier] = await Promise.all([
+        fetchFamilyBaseRawPrice(year, familyLabel),
+        classifyPlayerTier(String(queryContext.playerName)),
+      ]);
+      if (baseRaw !== null && baseRaw > 0) {
+        const gradeTier =
+          normalizedGradeCompany && queryContext.gradeValue
+            ? `${normalizedGradeCompany} ${queryContext.gradeValue}`
+            : "Raw";
+        const printRun =
+          typeof (body as { printRun?: number }).printRun === "number"
+            ? Number((body as { printRun?: number }).printRun)
+            : null;
+        const isAuto = /auto/i.test(queryContext.parallel ?? "")
+          || /auto/i.test(body.parallel ?? "");
+        // ageYears: from cardYear vs "current" year. Since we can't
+        // use Date.now() cleanly across all envs, approximate from
+        // a session-level clock via new Date() inside try/catch.
+        let ageYears: number | null = null;
+        try {
+          const currentYear = new Date().getUTCFullYear();
+          ageYears = currentYear - year;
+        } catch { /* leave null */ }
+        const g = computeGuestimate({
+          familyBaseRawPrice: baseRaw,
+          familyLabel,
+          playerTier: tier,
+          parallel: queryContext.parallel ?? null,
+          gradeTier,
+          printRun,
+          isAuto,
+          ageYears,
+        });
+        if (g && g.confidence !== "insufficient") {
+          guestimateBlock = {
+            marketValue: g.price,
+            rangeLow: g.rangeLow,
+            rangeHigh: g.rangeHigh,
+            confidence: g.confidence,
+            attribution: g.attribution,
+          };
+          console.log(JSON.stringify({
+            event: "guestimate_computed",
+            source: "compiq.estimate",
+            cardId: body.cardId ?? cardIdentity?.card_id ?? null,
+            player: queryContext.playerName,
+            family: familyLabel,
+            baseRaw,
+            tier,
+            price: g.price,
+            hops: g.hops,
+            confidence: g.confidence,
+          }));
+        }
+      }
+    } catch {
+      // best-effort — no guestimate is not fatal
+    }
+  }
+  // CF-GUESTIMATE-PRICING (2026-07-17): apply the guestimate to the
+  // estimated-tier response fields. FMV stays null (guestimate is a
+  // compound multiplier estimate, not an observed sale). Kept as
+  // late-binding mutations so the return literal below doesn't need
+  // ternaries — preserves source-shape tests (fmvNowcastShip1) and
+  // keeps the diff surgical.
+  if (guestimateBlock) {
+    slopeMarketValue = guestimateBlock.marketValue;
+    responseFmv = null;
+    responseFmvLow = null;
+    responseFmvHigh = null;
+    responseEstimatedValue = guestimateBlock.marketValue;
+    responseEstimateLow = guestimateBlock.rangeLow;
+    responseEstimateHigh = guestimateBlock.rangeHigh;
+    responseEstimateConfidence = guestimateBlock.confidence;
+    responseEstimateBasis = "guestimate";
+    responseEstimateAttribution = guestimateBlock.attribution;
+    responseIsEstimate = true;
+    responseValuationStatus = "estimated";
+  }
   // CF-PREDICTED-ATTRIBUTION-MECHANISM-KEY (Drew, 2026-07-17): downstream
   // (portfolioStore.service.ts:2277, routes/compiq.routes.ts:2509/3106/5266)
   // reads `.mechanism`. Prior shape used `.method`, which silently landed
@@ -7822,6 +7942,7 @@ export async function computeEstimate(
     estimateHigh: responseEstimateHigh,
     estimateConfidence: responseEstimateConfidence,
     estimateBasis: responseEstimateBasis,
+    estimateAttribution: responseEstimateAttribution,
     isEstimate: responseIsEstimate,
     valuationStatus: responseValuationStatus,
     predictedPrice: slopePredictedPrice,
