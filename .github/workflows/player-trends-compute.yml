@@ -1,0 +1,79 @@
+name: Player Trends Nightly Compute
+
+# CF-PLAYER-TREND (Drew, 2026-07-17). Nightly matched-cohort momentum +
+# velocity per player. Reads ch_daily_sales, writes to player_trends.
+#
+# Schedule: 03:45 UTC. Chosen to run BEFORE the CH daily-sales ingest
+# at 05:15 UTC so today's compute uses yesterday's fully-landed corpus.
+# Idempotent — each run overwrites all top-N players.
+
+on:
+  schedule:
+    - cron: '45 3 * * *'
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'Number of top players by 30d volume to compute (default 500).'
+        required: false
+        type: string
+        default: '500'
+      concurrency:
+        description: 'In-flight per-player queries (default 8).'
+        required: false
+        type: string
+        default: '8'
+
+jobs:
+  compute:
+    name: Compute player trends
+    runs-on: ubuntu-latest
+    # 60 min covers ~500 players at ~2s each concurrent-8 (~2 min) with
+    # generous headroom for tail slowness and future top_n growth.
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Compute player trends
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot compute"
+            exit 1
+          fi
+          TOP_N="${{ inputs.top_n }}"
+          CONCURRENCY="${{ inputs.concurrency }}"
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/compute-player-trends.cjs \
+            --top-n=${TOP_N:-500} \
+            --concurrency=${CONCURRENCY:-8}
