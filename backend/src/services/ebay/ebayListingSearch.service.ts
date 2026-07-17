@@ -155,3 +155,180 @@ function median(nums: number[]): number | null {
     ? sorted[Math.floor(mid)]
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
+
+// ─── CF-EBAY-ACTIVE-LISTINGS (Drew, 2026-07-17) ──────────────────────
+// Card-specific active-listings search. Sibling of
+// fetchPlayerListingsSummary but returns per-item shapes (title, price,
+// image, seller, url) so iOS Card Detail can render individual
+// listings under "Active Listings on eBay". Uses the same app-scope
+// OAuth token minted by ebayAppToken.service.
+// ─────────────────────────────────────────────────────────────────────
+
+import { rankAndFilter, type ScoreBreakdown } from "./ebayListingRank.js";
+
+export interface CardListingIdentity {
+  year?: number | string;
+  set?: string;
+  player: string;
+  cardNumber?: string;
+  parallel?: string;
+  gradeCompany?: string;
+  gradeValue?: string;
+  /** Sibling parallels to this one — used for wrong-parallel scoring.
+   *  Caller (route handler) supplies these from the reference catalog. */
+  knownDifferentParallels?: string[];
+}
+
+export interface ActiveListing {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  itemWebUrl: string;
+  seller: {
+    username: string;
+    feedbackScore: number | null;
+    feedbackPercentage: number | null;
+  };
+  endsAt: string | null;
+  matchScore: number;
+  scoreBreakdown: ScoreBreakdown;
+}
+
+export interface CardActiveListingsResult {
+  listings: ActiveListing[];
+  /** Total listings eBay reported for the query — includes filtered-out
+   *  entries. Useful for "showing 3 of 47 matches" iOS renders. */
+  totalReported: number;
+  effectiveQuery: string;
+  snapshottedAt: string;
+}
+
+/** Fetch card-specific active listings, ranked + filtered. Returns
+ *  null on auth/network error (caller can cache a null result and
+ *  retry later). Never throws. */
+export async function fetchCardActiveListings(
+  identity: CardListingIdentity,
+): Promise<CardActiveListingsResult | null> {
+  const player = String(identity.player ?? "").trim();
+  if (!player) return null;
+
+  // Query: "year set player parallel" — full descriptive query so
+  // eBay's fuzzy matcher lands on the specific SKU. Grade is NOT in
+  // the query (Raw + graded compete for user attention on eBay under
+  // the same title stem); the ranker handles grade classification.
+  const parts: string[] = [];
+  if (identity.year !== undefined && identity.year !== null && String(identity.year).length > 0) {
+    parts.push(String(identity.year));
+  }
+  if (identity.set) parts.push(identity.set);
+  parts.push(player);
+  if (identity.parallel) parts.push(identity.parallel);
+  const effectiveQuery = parts.join(" ").trim();
+  if (!effectiveQuery) return null;
+
+  const params = new URLSearchParams({
+    q: effectiveQuery,
+    category_ids: CATEGORY_BASEBALL_SINGLES,
+    limit: "20",   // pull 20, rank+filter to top 5
+  });
+  const url = `${browseApiBase()}/item_summary/search?${params}`;
+
+  const runRequest = async (token: string): Promise<Response> =>
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        Accept: "application/json",
+      },
+    });
+
+  try {
+    let token = await getAppScopeToken();
+    if (!token) return null;
+    let res = await runRequest(token);
+    if (res.status === 401) {
+      invalidateAppScopeTokenCache();
+      const fresh = await getAppScopeToken();
+      if (!fresh) return null;
+      res = await runRequest(fresh);
+    }
+    if (!res.ok) {
+      console.warn(JSON.stringify({
+        event: "ebay_card_listings_http_error",
+        source: "ebayListingSearch.service",
+        status: res.status,
+        q: effectiveQuery,
+      }));
+      return null;
+    }
+    const body = await res.json() as {
+      total?: number;
+      itemSummaries?: Array<{
+        itemId?: string;
+        title?: string;
+        price?: { value?: string; currency?: string };
+        image?: { imageUrl?: string };
+        itemWebUrl?: string;
+        seller?: {
+          username?: string;
+          feedbackScore?: number;
+          feedbackPercentage?: string;
+        };
+        itemEndDate?: string;
+      }>;
+    };
+
+    const rawItems = (body.itemSummaries ?? [])
+      .map((it) => {
+        const priceStr = it.price?.value;
+        const priceNum = typeof priceStr === "string" ? Number(priceStr) : NaN;
+        if (!Number.isFinite(priceNum) || priceNum <= 0) return null;
+        if (!it.itemId || !it.title || !it.itemWebUrl) return null;
+        return {
+          id: it.itemId,
+          title: it.title,
+          price: priceNum,
+          currency: it.price?.currency ?? "USD",
+          imageUrl: it.image?.imageUrl ?? null,
+          itemWebUrl: it.itemWebUrl,
+          seller: {
+            username: it.seller?.username ?? "",
+            feedbackScore: typeof it.seller?.feedbackScore === "number"
+              ? it.seller.feedbackScore : null,
+            feedbackPercentage: it.seller?.feedbackPercentage
+              ? Number(it.seller.feedbackPercentage)
+              : null,
+          },
+          endsAt: it.itemEndDate ?? null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const ranked = rankAndFilter(rawItems, {
+      year: identity.year,
+      set: identity.set,
+      cardNumber: identity.cardNumber,
+      parallel: identity.parallel,
+      gradeCompany: identity.gradeCompany,
+      gradeValue: identity.gradeValue,
+      knownDifferentParallels: identity.knownDifferentParallels,
+    }, 5);
+
+    return {
+      listings: ranked,
+      totalReported: typeof body.total === "number" ? body.total : rawItems.length,
+      effectiveQuery,
+      snapshottedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "ebay_card_listings_error",
+      source: "ebayListingSearch.service",
+      q: effectiveQuery,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return null;
+  }
+}
