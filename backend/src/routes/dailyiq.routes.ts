@@ -1453,4 +1453,38 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// CF-HOT-RIGHT-NOW (Drew, 2026-07-17): DailyIQ discover surface.
+// Returns top-25 players by (matched-cohort momentum × velocity) from
+// the nightly player_trends. Only up-direction players qualify —
+// leaderboard is "hot buys" not "big movers".
+import { readTopHotPlayers } from "../services/portfolioiq/playerTrendStore.service.js";
+router.get(
+  "/hot-right-now",
+  requireSession,
+  requireEntitlement("dailyIQBriefs"),
+  async (req, res, next) => {
+    try {
+      const limitRaw = Number(req.query.limit ?? 25);
+      const limit = Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.min(100, Math.floor(limitRaw))
+        : 25;
+      const rows = await readTopHotPlayers(limit);
+      res.json({
+        computedAt: new Date().toISOString(),
+        count: rows.length,
+        players: rows.map((r) => ({
+          player: r.player,
+          momentum: r.momentum,
+          direction: r.direction,
+          velocityPerWeek: r.velocityPerWeek,
+          qualifyingCards: r.qualifyingCards,
+          cardsInPool: r.cardsInPool,
+          flags: r.flags,
+          hotScore: r.momentum * r.velocityPerWeek,
+        })),
+      });
+    } catch (err) { next(err); }
+  },
+);
+
 export default router;
