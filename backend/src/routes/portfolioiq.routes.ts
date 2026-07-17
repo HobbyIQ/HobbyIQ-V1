@@ -41,6 +41,9 @@ import { readPlayerTrend } from "../services/portfolioiq/playerTrendStore.servic
 import { computePlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
 import type { PlayerSale } from "../types/playerTrend.types.js";
 import { CosmosClient } from "@azure/cosmos";
+// CF-CASCADE-ALERTS (Drew, 2026-07-17): serve cascade events for
+// players the user owns.
+import { readRecentEventsForPlayers } from "../services/portfolioiq/cascadeEventStore.service.js";
 
 const router = Router();
 
@@ -145,6 +148,49 @@ router.get(
 );
 
 router.get("/holdings", portfolio.getHoldings);
+
+// CF-CASCADE-ALERTS (Drew, 2026-07-17): return recent cascade events
+// for players the user OWNS. Cascade = graded market moving ahead of
+// raw market — the insider-signal head-start-window.
+router.get(
+  "/cascade-alerts",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+      // Extract distinct player slugs from user's raw holdings.
+      const doc = await portfolio.readUserDoc(userId);
+      const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+      const playerSlugs = [...new Set(
+        holdings
+          .map((h) => (h.playerName ?? "").trim())
+          .filter(Boolean)
+          .map((p) => p.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")),
+      )];
+      if (playerSlugs.length === 0) {
+        return res.json({ ownedPlayers: 0, events: [] });
+      }
+
+      // Look back 7 days for events.
+      const sinceIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const events = await readRecentEventsForPlayers(playerSlugs, sinceIso);
+      res.json({
+        ownedPlayers: playerSlugs.length,
+        events: events.map((e) => ({
+          player: e.player,
+          detectedAt: e.detectedAt,
+          severity: e.severity,
+          reason: e.reason,
+          detectionInput: e.detectionInput,
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // CF-VERDICT-FLIP-PUSH-PREFS-ROUTE (Drew, 2026-07-16, PR #500 follow-up):
 // per-user notification opt-in + APNs device-token registration surface.
