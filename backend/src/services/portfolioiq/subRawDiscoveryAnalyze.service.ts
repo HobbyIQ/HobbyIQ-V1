@@ -55,10 +55,14 @@ async function readRawAggregates(
     variant: string; number: string;
     price: number; image_url: string | null;
   }>({
+    // NOTE: Cosmos SQL treats double-quoted strings as IDENTIFIER
+    // references, not string literals. Use single quotes for the
+    // 'Raw' comparison — a double-quoted "Raw" was resolving as a
+    // field-not-found and 500-ing at query time.
     query: `SELECT c.card_id, c.player, c.year, c.card_set, c.card_set_type,
                    c.variant, c.number, c.price, c.image_url
             FROM c
-            WHERE c.grader = "Raw"
+            WHERE c.grader = 'Raw'
               AND c.sale_date >= @cutoff
               AND c.price > 0
               AND c.price <= @maxPrice`,
