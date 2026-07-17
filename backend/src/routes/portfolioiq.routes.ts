@@ -590,6 +590,8 @@ router.get("/preferences", async (req, res, next) => {
       preferences: {
         pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
         pushOnCascade: doc.preferences?.pushOnCascade === true,
+        pushOnWatchlistDigest: doc.preferences?.pushOnWatchlistDigest === true,
+        pushOnGradeWorthy: doc.preferences?.pushOnGradeWorthy === true,
       },
       apnsDevice: {
         registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,
@@ -609,6 +611,8 @@ router.patch("/preferences", async (req, res, next) => {
     const body = (req.body ?? {}) as {
       pushOnMajorFlip?: unknown;
       pushOnCascade?: unknown;
+      pushOnWatchlistDigest?: unknown;
+      pushOnGradeWorthy?: unknown;
       apnsDeviceToken?: unknown;
     };
 
@@ -616,11 +620,13 @@ router.patch("/preferences", async (req, res, next) => {
     // no-ops and iOS thinks the write landed.
     const patchesPush = Object.prototype.hasOwnProperty.call(body, "pushOnMajorFlip");
     const patchesCascade = Object.prototype.hasOwnProperty.call(body, "pushOnCascade");
+    const patchesWatchlistDigest = Object.prototype.hasOwnProperty.call(body, "pushOnWatchlistDigest");
+    const patchesGradeWorthy = Object.prototype.hasOwnProperty.call(body, "pushOnGradeWorthy");
     const patchesToken = Object.prototype.hasOwnProperty.call(body, "apnsDeviceToken");
-    if (!patchesPush && !patchesCascade && !patchesToken) {
+    if (!patchesPush && !patchesCascade && !patchesWatchlistDigest && !patchesGradeWorthy && !patchesToken) {
       res.status(400).json({
         success: false,
-        error: "body must include at least one of pushOnMajorFlip, pushOnCascade, apnsDeviceToken",
+        error: "body must include at least one of pushOnMajorFlip, pushOnCascade, pushOnWatchlistDigest, pushOnGradeWorthy, apnsDeviceToken",
       });
       return;
     }
@@ -628,6 +634,8 @@ router.patch("/preferences", async (req, res, next) => {
     const input: {
       pushOnMajorFlip?: boolean;
       pushOnCascade?: boolean;
+      pushOnWatchlistDigest?: boolean;
+      pushOnGradeWorthy?: boolean;
       apnsDeviceToken?: string | null;
     } = {};
 
@@ -645,6 +653,22 @@ router.patch("/preferences", async (req, res, next) => {
         return;
       }
       input.pushOnCascade = body.pushOnCascade;
+    }
+
+    if (patchesWatchlistDigest) {
+      if (typeof body.pushOnWatchlistDigest !== "boolean") {
+        res.status(400).json({ success: false, error: "pushOnWatchlistDigest must be boolean" });
+        return;
+      }
+      input.pushOnWatchlistDigest = body.pushOnWatchlistDigest;
+    }
+
+    if (patchesGradeWorthy) {
+      if (typeof body.pushOnGradeWorthy !== "boolean") {
+        res.status(400).json({ success: false, error: "pushOnGradeWorthy must be boolean" });
+        return;
+      }
+      input.pushOnGradeWorthy = body.pushOnGradeWorthy;
     }
 
     if (patchesToken) {
@@ -682,6 +706,8 @@ router.patch("/preferences", async (req, res, next) => {
       preferences: {
         pushOnMajorFlip: doc.preferences?.pushOnMajorFlip === true,
         pushOnCascade: doc.preferences?.pushOnCascade === true,
+        pushOnWatchlistDigest: doc.preferences?.pushOnWatchlistDigest === true,
+        pushOnGradeWorthy: doc.preferences?.pushOnGradeWorthy === true,
       },
       apnsDevice: {
         registered: typeof doc.apnsDeviceToken === "string" && doc.apnsDeviceToken.length > 0,

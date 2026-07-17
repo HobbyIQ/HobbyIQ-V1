@@ -161,6 +161,25 @@ interface UserDoc {
      * taxon without the other.
      */
     pushOnCascade?: boolean;
+    /**
+     * CF-WATCHLIST-DIGEST-PUSH (Drew, 2026-07-17). True when the user
+     * opted in to receive a daily digest push summarizing which of
+     * their watchlist players moved > 10% (up or down) today. One
+     * consolidated push per user per day, not per-card. Absent →
+     * treated as opted-out (default off). Independent of
+     * pushOnMajorFlip / pushOnCascade — the three taxons compose.
+     */
+    pushOnWatchlistDigest?: boolean;
+    /**
+     * CF-GRADE-WORTHY-PUSH (Drew, 2026-07-17). True when the user
+     * opted in to receive a push when one of their holdings crosses
+     * the grade-worthy threshold (expectedGain >= $200 AND the
+     * per-tier recommendation is "grade_now"). Absent → treated as
+     * opted-out (default off). Nightly job scans every user with
+     * this flag on, per-holding, and dispatches at most one push per
+     * fired holding per night.
+     */
+    pushOnGradeWorthy?: boolean;
   };
   // CF-VERDICT-FLIP-PUSH-DEVICE (Drew, 2026-07-16, PR #499 follow-up):
   // most-recent APNs device token registered by iOS at app launch.
@@ -4874,6 +4893,111 @@ export async function listUsersOwningPlayerWithCascadeOptIn(
 }
 
 /**
+ * CF-WATCHLIST-DIGEST-PUSH (Drew, 2026-07-17). Enumerate the user IDs
+ * (+ latest apnsDeviceToken) for every user with pushOnWatchlistDigest
+ * === true. Unlike the cascade/flip helpers this is NOT keyed on a
+ * player display name — the watchlist digest is a per-user computation
+ * (each user's own watchlist rows) so the fan-out worker enumerates
+ * ALL opted-in users then computes their digest downstream.
+ *
+ * Returns empty when the store is unavailable OR when nobody opted in.
+ */
+export async function listUsersWithWatchlistOptIn(): Promise<Array<{ userId: string; apnsDeviceToken: string | null }>> {
+  const matches: Array<{ userId: string; apnsDeviceToken: string | null }> = [];
+  const scan = (doc: UserDoc) => {
+    if (doc.preferences?.pushOnWatchlistDigest !== true) return;
+    matches.push({
+      userId: doc.userId,
+      apnsDeviceToken: doc.apnsDeviceToken ?? null,
+    });
+  };
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const doc of testMemStore.values()) scan(doc);
+    return matches;
+  }
+  if (!container) return matches;
+
+  try {
+    const { resources } = await container.items
+      .query<UserDoc>({
+        query:
+          "SELECT c.userId, c.preferences, c.apnsDeviceToken " +
+          "FROM c WHERE c.preferences.pushOnWatchlistDigest = true",
+      })
+      .fetchAll();
+    for (const row of resources ?? []) {
+      if (!row) continue;
+      scan(row as UserDoc);
+    }
+  } catch (err: any) {
+    console.error(
+      "[portfolio] listUsersWithWatchlistOptIn query failed:",
+      err?.message ?? String(err),
+    );
+  }
+  return matches;
+}
+
+/**
+ * CF-GRADE-WORTHY-PUSH (Drew, 2026-07-17). Enumerate every user who
+ * opted in to grade-worthy push AND has at least one holding to scan.
+ * Returns userId + apnsDeviceToken + a shallow holdings map so the
+ * fan-out worker doesn't need a second read per user just to iterate.
+ *
+ * Returns empty when the store is unavailable OR when no users match.
+ */
+export async function listUsersWithGradeWorthyOptIn(): Promise<Array<{
+  userId: string;
+  apnsDeviceToken: string | null;
+  holdings: Record<string, PortfolioHolding>;
+}>> {
+  const matches: Array<{
+    userId: string;
+    apnsDeviceToken: string | null;
+    holdings: Record<string, PortfolioHolding>;
+  }> = [];
+  const scan = (doc: UserDoc) => {
+    if (doc.preferences?.pushOnGradeWorthy !== true) return;
+    const holdings = doc.holdings ?? {};
+    if (Object.keys(holdings).length === 0) return;
+    matches.push({
+      userId: doc.userId,
+      apnsDeviceToken: doc.apnsDeviceToken ?? null,
+      holdings,
+    });
+  };
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const doc of testMemStore.values()) scan(doc);
+    return matches;
+  }
+  if (!container) return matches;
+
+  try {
+    const { resources } = await container.items
+      .query<UserDoc>({
+        query:
+          "SELECT c.userId, c.preferences, c.apnsDeviceToken, c.holdings " +
+          "FROM c WHERE c.preferences.pushOnGradeWorthy = true",
+      })
+      .fetchAll();
+    for (const row of resources ?? []) {
+      if (!row) continue;
+      scan(row as UserDoc);
+    }
+  } catch (err: any) {
+    console.error(
+      "[portfolio] listUsersWithGradeWorthyOptIn query failed:",
+      err?.message ?? String(err),
+    );
+  }
+  return matches;
+}
+
+/**
  * CF-VERDICT-FLIP-PUSH-PREFS (Drew, 2026-07-16, PR #500 + follow-up).
  * Writes the two push-related fields on the user doc. Called from the
  * PATCH /api/portfolio/preferences route in production. Named without
@@ -4888,6 +5012,8 @@ export async function setUserPushPreference(
   input: {
     pushOnMajorFlip?: boolean;
     pushOnCascade?: boolean;
+    pushOnWatchlistDigest?: boolean;
+    pushOnGradeWorthy?: boolean;
     apnsDeviceToken?: string | null;
   },
 ): Promise<void> {
@@ -4895,6 +5021,8 @@ export async function setUserPushPreference(
   const prefs = { ...(doc.preferences ?? {}) };
   if (input.pushOnMajorFlip !== undefined) prefs.pushOnMajorFlip = input.pushOnMajorFlip;
   if (input.pushOnCascade !== undefined) prefs.pushOnCascade = input.pushOnCascade;
+  if (input.pushOnWatchlistDigest !== undefined) prefs.pushOnWatchlistDigest = input.pushOnWatchlistDigest;
+  if (input.pushOnGradeWorthy !== undefined) prefs.pushOnGradeWorthy = input.pushOnGradeWorthy;
   doc.preferences = prefs;
   if (input.apnsDeviceToken !== undefined) {
     doc.apnsDeviceToken = input.apnsDeviceToken ?? null;

@@ -1,0 +1,83 @@
+name: Grade-Worthy Push
+
+# CF-GRADE-WORTHY-PUSH (Drew, 2026-07-17). Nightly grade-worthy push
+# fan-out. Iterates every opted-in user's holdings, runs the grade-
+# worthy analyzer per holding, and fires ONE push per qualifying
+# holding (expectedGain >= $200 AND recommendation === "grade_now").
+#
+# Schedule: 05:00 UTC in parallel with watchlist-digest — both consume
+# the same player_trends snapshot from the 03:45 job.
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    name: Send grade-worthy push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Send grade-worthy push
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty — cannot send"
+            exit 1
+          fi
+          APNS_KEY_ID=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='APNS_KEY_ID'].value" -o tsv | tr -d '\r\n')
+          APNS_TEAM_ID=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='APNS_TEAM_ID'].value" -o tsv | tr -d '\r\n')
+          APNS_BUNDLE_ID=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='APNS_BUNDLE_ID'].value" -o tsv | tr -d '\r\n')
+          APNS_KEY_P8=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='APNS_KEY_P8'].value" -o tsv)
+          APNS_PRODUCTION=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='APNS_PRODUCTION'].value" -o tsv | tr -d '\r\n')
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          APNS_KEY_ID="$APNS_KEY_ID" \
+          APNS_TEAM_ID="$APNS_TEAM_ID" \
+          APNS_BUNDLE_ID="$APNS_BUNDLE_ID" \
+          APNS_KEY_P8="$APNS_KEY_P8" \
+          APNS_PRODUCTION="$APNS_PRODUCTION" \
+          node scripts/send-grade-worthy-push.cjs
