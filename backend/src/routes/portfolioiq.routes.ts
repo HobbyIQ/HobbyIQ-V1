@@ -52,6 +52,14 @@ import {
   readMultiplier,
 } from "../services/portfolioiq/observedMultipliersStore.service.js";
 import { slugFamily } from "../services/portfolioiq/observedMultipliersCompute.service.js";
+// CF-GRADER-OUTCOMES (Drew, 2026-07-17): serve observed grade-outcome
+// distributions per (family, grader). Feeds probability-weighted
+// grade-worthy EV.
+import {
+  readFamilyOutcomes,
+  readOutcome,
+} from "../services/portfolioiq/graderOutcomeStore.service.js";
+import { slugFamily as slugOutcomeFamily } from "../services/portfolioiq/graderOutcomeCompute.service.js";
 
 const router = Router();
 
@@ -315,6 +323,56 @@ router.get(
       const row = await readMultiplier(family, tier);
       if (!row) return res.status(404).json({ error: "no observed multiplier for that (family, tier)" });
       res.json(row);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-GRADER-OUTCOMES (Drew, 2026-07-17): observed distribution of
+// PSA/BGS/SGC/CGC tier outcomes for a family. Diagnostic (informs
+// probability-weighted grade-worthy EV) — NOT a P(grade | submit)
+// prediction. Includes an interpretation caveat in the response.
+router.get(
+  "/grader-outcomes/:family",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const familyKey = slugOutcomeFamily(String(req.params.family ?? "").trim());
+      if (!familyKey) return res.status(400).json({ error: "family required" });
+      const rows = await readFamilyOutcomes(familyKey);
+      res.json({
+        familyKey,
+        graders: rows.map((r) => ({
+          grader: r.grader,
+          tierShares: r.tierShares,
+          tierCounts: r.tierCounts,
+          totalGradedSamples: r.totalGradedSamples,
+          confidence: r.confidence,
+          computedAt: r.computedAt,
+        })),
+        caveat: "Distribution reflects OUTCOMES observed on the sales market. Not P(tier | you submit).",
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  "/grader-outcomes/:family/:grader",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const familyKey = slugOutcomeFamily(String(req.params.family ?? "").trim());
+      const grader = String(req.params.grader ?? "").trim();
+      if (!familyKey || !grader) return res.status(400).json({ error: "family + grader required" });
+      const row = await readOutcome(familyKey, grader);
+      if (!row) return res.status(404).json({ error: "no outcome distribution for that (family, grader)" });
+      res.json({
+        ...row,
+        caveat: "Distribution reflects OUTCOMES observed on the sales market. Not P(tier | you submit).",
+      });
     } catch (err) {
       next(err);
     }
