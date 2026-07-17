@@ -54,15 +54,18 @@ async function main() {
     process.exit(1);
   }
 
+  // tsconfig has rootDir=src, outDir=dist → src/services/foo.ts compiles
+  // to dist/services/foo.js (NOT dist/src/services/foo.js). Prior version
+  // of this check assumed the nested layout and failed at runtime.
   const distRoot = path.resolve(__dirname, "..", "dist");
-  const useCompiled = await pathExists(path.join(distRoot, "src", "services"));
+  const useCompiled = await pathExists(path.join(distRoot, "services"));
   if (!useCompiled) {
     console.error("backend/dist not found — run `npm run build` first");
     process.exit(1);
   }
 
   const { runDailySalesIngest } = require(
-    path.join(distRoot, "src", "services", "portfolioiq", "chDailySalesIngest.service.js"),
+    path.join(distRoot, "services", "portfolioiq", "chDailySalesIngest.service.js"),
   );
 
   // Backfill mode: iterate over N calendar days ending yesterday UTC.
