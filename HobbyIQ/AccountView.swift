@@ -310,21 +310,16 @@ struct AccountView: View {
                 .padding(.vertical, 8)
                 accountDivider
                 // P0.7 (2026-07-16, verdict-history-flip-surfaces.md +
-                // backend PR #501): opt-in for the major-flip push. Read
-                // initial state via GET /api/portfolio/preferences on
-                // mount; toggle change fires PATCH with pushOnMajorFlip.
-                // The `set` handler additionally requests push permission +
-                // APNs registration on toggle-on so a first-time flip isn't
-                // blocked by a permission prompt during the fan-out cron.
+                // backend PR #501): opt-in for the major-flip push.
                 Toggle(isOn: Binding(
                     get: { viewModel.verdictFlipAlerts },
                     set: { newValue in Task { await viewModel.updateVerdictFlipAlerts(newValue) } }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Verdict Flip Alerts")
+                        Text("Major flips")
                             .font(.subheadline)
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        Text("Push when a holding flips from BUY to SELL or vice versa.")
+                        Text("Get pinged when a holding you own moves from HOLD to SELL_NOW or similar.")
                             .font(.caption2)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -332,11 +327,35 @@ struct AccountView: View {
                 }
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
-                // P1 (2026-07-16, delta): APNs registration status caption.
-                // Registered → shows relative time since the token was
-                // written. Not registered → deep-links into iOS Settings so
-                // the user can enable notifications for HobbyIQ.
+                accountDivider
+                // Phase 3.9 (2026-07-17, PR #531): cascade signal push.
+                // Default OFF — explicit opt-in per spec because this
+                // is a lower-signal firehose vs. verdict flips.
+                Toggle(isOn: Binding(
+                    get: { viewModel.cascadeAlerts },
+                    set: { newValue in Task { await viewModel.updateCascadeAlerts(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Cascade signals")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Get pinged when a player's graded market is moving ahead of the raw market — insider early-signal, before wider prices catch on.")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                // APNs registration caption sits below both push toggles
+                // since it applies to any push (both use the same token).
                 apnsRegistrationCaption
+                // Phase 3.9 footer: pushes fire during the nightly cron.
+                Text("Notifications delivered nightly at ~1am ET when signals fire on players you own.")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 4)
                 accountDivider
                 accountToggle("Haptics", isOn: $viewModel.settings.hapticsEnabled)
                 accountDivider

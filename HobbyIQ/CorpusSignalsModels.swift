@@ -163,6 +163,14 @@ struct GradeAnalysisDiagnostics: Codable, Hashable {
     let localCorpusRows: Int?
     let playerMomentum: Double?
     let playerMomentumDirection: String?
+    /// PR #530: backend-derived family key (e.g. `"bowman_chrome_baseball"`)
+    /// so iOS can call `/family-multipliers/:family` without re-slugging
+    /// the setName. Nil when the compute couldn't resolve a family.
+    let familyKey: String?
+    /// PR #530: tiers where the backend blended in family-level medians
+    /// because the per-SKU pool was thin. Informational; iOS can caption
+    /// "Estimated from family median" on those tier rows.
+    let familyBlendedTiers: [String]?
 }
 
 // MARK: - GET /api/portfolio/grade-worthy-alerts
@@ -181,6 +189,264 @@ struct GradeWorthyAlertsResponse: Codable {
 struct FamilyMultipliersResponse: Codable {
     let familyKey: String?
     let tiers: [FamilyMultiplierTier]?
+}
+
+// MARK: - GET /api/portfolio/momentum (PR #529)
+
+/// Value-weighted portfolio-level trend. Feeds the Portfolio Momentum
+/// hero on the Portfolio Home tab. `impliedPortfolioDelta` is the dollar
+/// swing implied by the current momentum applied to the portfolio's
+/// value — a scaled version of what an untracked user would see as
+/// "unrealized gain over the last month."
+struct PortfolioMomentumResponse: Codable {
+    let computedAt: String?
+    let scannedHoldings: Int?
+    let holdingsWithTrend: Int?
+    let portfolioMomentum: Double?
+    let direction: String?
+    let cardsUp: Int?
+    let cardsFlat: Int?
+    let cardsDown: Int?
+    let cardsUntracked: Int?
+    let topMovers: [PortfolioMoverEntry]?
+    let worstMovers: [PortfolioMoverEntry]?
+    let impliedPortfolioDelta: Double?
+
+    /// "(momentum - 1) * 100" formatted with one decimal + signed prefix.
+    var momentumPercentString: String? {
+        guard let momentum = portfolioMomentum else { return nil }
+        let pct = (momentum - 1.0) * 100.0
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(String(format: "%.1f", abs(pct)))%"
+    }
+}
+
+struct PortfolioMoverEntry: Codable, Hashable, Identifiable {
+    let holdingId: String?
+    let playerName: String?
+    let momentum: Double?
+    let direction: String?
+    /// Dollar contribution to the portfolio's implied gain/loss.
+    let contributionUsd: Double?
+
+    var id: String { holdingId ?? UUID().uuidString }
+
+    var momentumPercentString: String? {
+        guard let momentum else { return nil }
+        let pct = (momentum - 1.0) * 100.0
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(String(format: "%.1f", abs(pct)))%"
+    }
+}
+
+// MARK: - GET /api/dailyiq/hot-right-now (PR #529)
+
+struct HotRightNowResponse: Codable {
+    let computedAt: String?
+    let count: Int?
+    let players: [HotPlayer]?
+}
+
+struct HotPlayer: Codable, Hashable, Identifiable {
+    let player: String?
+    let momentum: Double?
+    let direction: String?
+    let velocityPerWeek: Double?
+    let qualifyingCards: Int?
+    let cardsInPool: Int?
+    let flags: [String]?
+    /// Diagnostic — never rendered.
+    let hotScore: Double?
+
+    var id: String { player ?? UUID().uuidString }
+
+    var momentumPercentString: String? {
+        guard let momentum else { return nil }
+        let pct = (momentum - 1.0) * 100.0
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(String(format: "%.1f", abs(pct)))%"
+    }
+
+    func hasFlag(_ key: String) -> Bool {
+        (flags ?? []).contains { $0.lowercased() == key.lowercased() }
+    }
+}
+
+// MARK: - GET /api/portfolio/holdings/:id/timing-forecast (PR #526)
+
+/// 30-day predicted price with contributing-signal breakdown. Feeds the
+/// headline number on the card detail. Hidden entirely when
+/// `confidence == "insufficient"`.
+struct TimingForecastResponse: Codable {
+    let holdingId: String?
+    let player: String?
+    let currentGraderTier: String?
+    let forecast: TimingForecast?
+}
+
+struct TimingForecast: Codable, Hashable {
+    let predictedPrice: Double?
+    let priceRange: TimingForecastRange?
+    /// `"high"` / `"medium"` / `"low"` / `"insufficient"`. Anything but
+    /// the first three should hide the block.
+    let confidence: String?
+    let horizonDays: Int?
+    let contributingSignals: TimingForecastSignals?
+    let reason: String?
+}
+
+struct TimingForecastRange: Codable, Hashable {
+    let low: Double?
+    let high: Double?
+}
+
+struct TimingForecastSignals: Codable, Hashable {
+    let cardTrendSlopePerMonthPct: Double?
+    let playerMomentumUsed: Double?
+    let playerMomentumSource: String?
+    /// `"hot"` / `"warm"` / `"cool"` — velocity qualitative bucket.
+    let velocitySignal: String?
+    let volatility: Double?
+    let windowSales: Int?
+}
+
+// MARK: - GET /api/portfolio/cascade-alerts (PR #527)
+
+struct CascadeAlertsResponse: Codable {
+    let ownedPlayers: Int?
+    let events: [CascadeEvent]?
+}
+
+struct CascadeEvent: Codable, Hashable, Identifiable {
+    let player: String?
+    let detectedAt: String?
+    /// `"insider"` / `"emerging"` / `"confirmed"`.
+    let severity: String?
+    let reason: String?
+    let detectionInput: CascadeDetectionInput?
+
+    var id: String {
+        "\(player ?? "?")::\(detectedAt ?? "?")"
+    }
+
+    /// Priority for the banner's "top event" pick: insider > emerging > confirmed.
+    var severityRank: Int {
+        switch severity?.lowercased() {
+        case "insider": return 3
+        case "emerging": return 2
+        case "confirmed": return 1
+        default: return 0
+        }
+    }
+}
+
+struct CascadeDetectionInput: Codable, Hashable {
+    let rawMomentum: Double?
+    let gradedMomentum: Double?
+    let momentumRatio: Double?
+    let gradedDirection: String?
+    let rawQualifyingCards: Int?
+    let gradedQualifyingCards: Int?
+    let playerTrendComputedAt: String?
+}
+
+// MARK: - GET /api/portfolio/grader-outcomes/:family (PR #525)
+
+/// Observed tier-share distribution per grader — probability-weighted EV.
+/// Feeds the "What could actually happen?" expandable on the Grade
+/// Analysis block. The `caveat` string is REQUIRED verbatim in UI copy.
+struct GraderOutcomesResponse: Codable {
+    let familyKey: String?
+    let graders: [GraderOutcomeDistribution]?
+    let caveat: String?
+}
+
+struct GraderOutcomeDistribution: Codable, Hashable, Identifiable {
+    let grader: String
+    /// Dictionary keys are tier strings ("PSA 10", "PSA 9", ...); values
+    /// are 0..1 probabilities. iOS renders as % via
+    /// `sortedTierShares` for stable ordering.
+    let tierShares: [String: Double]?
+    let tierCounts: [String: Int]?
+    let totalGradedSamples: Int?
+    let confidence: String?
+
+    var id: String { grader }
+
+    /// Tier shares sorted by grade rung descending (10 → 9 → 8 → …).
+    var sortedTierShares: [(tier: String, share: Double)] {
+        (tierShares ?? [:])
+            .map { (tier: $0.key, share: $0.value) }
+            .sorted { lhs, rhs in
+                gradeRung(lhs.tier) > gradeRung(rhs.tier)
+            }
+    }
+
+    /// Best-effort parse of the numeric portion of the tier for sorting.
+    private func gradeRung(_ tier: String) -> Double {
+        let digits = tier.split(separator: " ").last.map(String.init) ?? tier
+        return Double(digits) ?? 0
+    }
+}
+
+// MARK: - GET /api/portfolio/i-called-it (PR #533)
+
+struct ICalledItResponse: Codable {
+    let count: Int?
+    let moments: [FlexMoment]?
+}
+
+struct FlexMoment: Codable, Hashable, Identifiable {
+    let holdingId: String?
+    let player: String?
+    let cardTitle: String?
+    let eventType: String?
+    let originalPrice: Double?
+    let currentMarketValue: Double?
+    let gainPct: Double?
+    let gainUsd: Double?
+    let eventDate: String?
+    let shareablePayload: FlexShareablePayload?
+
+    var id: String { holdingId ?? UUID().uuidString }
+}
+
+struct FlexShareablePayload: Codable, Hashable {
+    let headline: String?
+    let subline: String?
+    let cta: String?
+    let cardTitleShort: String?
+}
+
+// MARK: - GET /api/portfolio/yearbook (PR #533)
+
+struct YearbookResponse: Codable {
+    let period: String?
+    let generatedAt: String?
+    let totalRealizedGainUsd: Double?
+    let totalUnrealizedGainUsd: Double?
+    let totalCostBasis: Double?
+    let totalCurrentValue: Double?
+    let cardsBought: Int?
+    let cardsSold: Int?
+    let cardsHeld: Int?
+    let topPerformers: [YearbookPerformer]?
+    let biggestMisses: [YearbookPerformer]?
+    let whatIfHeldAll: YearbookCounterfactual?
+}
+
+struct YearbookPerformer: Codable, Hashable, Identifiable {
+    let player: String?
+    let gainPct: Double?
+    let gainUsd: Double?
+
+    var id: String { player ?? UUID().uuidString }
+}
+
+struct YearbookCounterfactual: Codable, Hashable {
+    let counterfactualCurrentValue: Double?
+    let opportunityCostUsd: Double?
+    let note: String?
 }
 
 struct FamilyMultiplierTier: Codable, Hashable, Identifiable {

@@ -61,6 +61,16 @@ struct PortfolioIQView: View {
     /// Corpus signals (2026-07-17, PR #518): gate the drill-down push
     /// from the grade-worthy banner.
     @State private var showGradeWorthyList = false
+    /// Phase 2.6 (2026-07-17, PR #529): value-weighted portfolio-level
+    /// momentum. Loaded on portfolio open with a 6h TTL; nil / thin
+    /// response hides the hero.
+    @State private var portfolioMomentum: PortfolioMomentumResponse?
+    /// Phase 3.8 (2026-07-17, PR #527): cascade events for players Drew
+    /// owns. Loaded on portfolio open with a 30-min TTL. Empty events
+    /// array hides the banner.
+    @State private var cascadeAlerts: CascadeAlertsResponse?
+    /// Phase 3.8: gate the drill-down push from the cascade banner.
+    @State private var showCascadeList = false
 
     var body: some View {
         // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
@@ -103,6 +113,14 @@ struct PortfolioIQView: View {
                             // Self-suppresses when count is zero or the
                             // backend hasn't returned yet.
                             gradeWorthyBanner
+
+                            // Phase 2.6 (2026-07-17, PR #529): value-
+                            // weighted portfolio momentum hero.
+                            portfolioMomentumHero
+
+                            // Phase 3.8 (2026-07-17, PR #527): cascade
+                            // banner — only shows when there's a fired event.
+                            cascadeBanner
 
                             portfolioToolsRow
 
@@ -186,6 +204,10 @@ struct PortfolioIQView: View {
             }
             .navigationDestination(isPresented: $showGradeWorthyList) {
                 GradeWorthyListView(vm: vm)
+                    .environmentObject(sessionViewModel)
+            }
+            .navigationDestination(isPresented: $showCascadeList) {
+                CascadeAlertsListView(alerts: cascadeAlerts)
                     .environmentObject(sessionViewModel)
             }
             .navigationDestination(isPresented: $showWeeklyBrief) {
@@ -529,6 +551,218 @@ struct PortfolioIQView: View {
         }
     }
 
+    // MARK: - Phase 2.6: Portfolio Momentum hero (2026-07-17, PR #529)
+
+    /// Value-weighted portfolio trend hero. Renders below the grade-worthy
+    /// banner. Self-suppresses when the response is nil, direction is
+    /// flat, or `holdingsWithTrend == 0` (nothing to say).
+    @ViewBuilder
+    private var portfolioMomentumHero: some View {
+        if let response = portfolioMomentum,
+           let withTrend = response.holdingsWithTrend, withTrend > 0,
+           let pct = response.momentumPercentString {
+            let direction = response.direction?.lowercased() ?? ""
+            let color: Color = {
+                switch direction {
+                case "up": return HobbyIQTheme.Colors.successGreen
+                case "down": return HobbyIQTheme.Colors.danger
+                default: return HobbyIQTheme.Colors.warning
+                }
+            }()
+            let glyph: String = {
+                switch direction {
+                case "up": return "\u{25B2}"
+                case "down": return "\u{25BC}"
+                default: return "\u{2500}"
+                }
+            }()
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("PORTFOLIO MOMENTUM")
+                        .font(.caption.weight(.bold))
+                        .tracking(0.6)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(glyph)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(color)
+                    Text(pct)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(color)
+                    Text("this month")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+
+                Text(momentumCountsCaption(response))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                if let top = response.topMovers?.first {
+                    portfolioMoverLine(label: "Top mover", mover: top)
+                }
+                if let worst = response.worstMovers?.first,
+                   worst.holdingId != response.topMovers?.first?.holdingId {
+                    portfolioMoverLine(label: "Worst", mover: worst)
+                }
+
+                if let delta = response.impliedPortfolioDelta, abs(delta) >= 1 {
+                    Divider().overlay(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                    let prefix = delta > 0 ? "+" : "\u{2212}"
+                    Text("Implied gain: \(prefix)\(portfolioCurrencyString(abs(delta)))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(color)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(color.opacity(0.4), lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func momentumCountsCaption(_ response: PortfolioMomentumResponse) -> String {
+        let up = response.cardsUp ?? 0
+        let flat = response.cardsFlat ?? 0
+        let down = response.cardsDown ?? 0
+        return "\(up) up · \(flat) flat · \(down) down"
+    }
+
+    @ViewBuilder
+    private func portfolioMoverLine(label: String, mover: PortfolioMoverEntry) -> some View {
+        let dir = mover.direction?.lowercased() ?? ""
+        let color: Color = {
+            switch dir {
+            case "up": return HobbyIQTheme.Colors.successGreen
+            case "down": return HobbyIQTheme.Colors.danger
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+        let glyph: String = {
+            switch dir {
+            case "up": return "\u{25B2}"
+            case "down": return "\u{25BC}"
+            default: return "\u{2500}"
+            }
+        }()
+        HStack(spacing: 6) {
+            Text("\(label):")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .frame(width: 84, alignment: .leading)
+            Text(mover.playerName ?? "—")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Text(glyph)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
+            if let pct = mover.momentumPercentString {
+                Text(pct)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(color)
+            }
+            if let usd = mover.contributionUsd, abs(usd) >= 1 {
+                let prefix = usd > 0 ? "+" : "\u{2212}"
+                Text("(\(prefix)\(portfolioCurrencyString(abs(usd))))")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Phase 3.8: Cascade Alerts banner (2026-07-17, PR #527)
+
+    /// Compact banner surfaced when Drew has any fired cascade event on a
+    /// player he owns. Tap opens a full drill-down list. Hidden when
+    /// events is empty or the fetch failed.
+    @ViewBuilder
+    private var cascadeBanner: some View {
+        if let alerts = cascadeAlerts,
+           let events = alerts.events, events.isEmpty == false {
+            // Top event = highest severity, then most recent.
+            let sorted = events.sorted { lhs, rhs in
+                if lhs.severityRank != rhs.severityRank {
+                    return lhs.severityRank > rhs.severityRank
+                }
+                return (lhs.detectedAt ?? "") > (rhs.detectedAt ?? "")
+            }
+            if let top = sorted.first {
+                Button {
+                    showCascadeList = true
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(cascadeGlyph(for: top.severity))
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Cascade signal: \(top.player ?? "—")")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .lineLimit(1)
+                            if let reason = top.reason?.trimmingCharacters(in: .whitespaces),
+                               reason.isEmpty == false {
+                                Text(reason)
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            HStack(spacing: 4) {
+                                Text("See details")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                Image(systemName: "arrow.right")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(HobbyIQTheme.Spacing.medium)
+                    .background(HobbyIQTheme.Colors.cardNavy)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                            .stroke(cascadeSeverityColor(for: top.severity).opacity(0.45), lineWidth: 1.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Severity → color mapping per spec (insider red-orange, emerging
+    /// amber, confirmed green).
+    private func cascadeSeverityColor(for severity: String?) -> Color {
+        switch severity?.lowercased() {
+        case "insider": return HobbyIQTheme.Colors.danger
+        case "emerging": return HobbyIQTheme.Colors.warning
+        case "confirmed": return HobbyIQTheme.Colors.successGreen
+        default: return HobbyIQTheme.Colors.mutedText
+        }
+    }
+
+    /// Severity → emoji glyph per spec (🚨 / ⚡ / 📈). Kept as inline
+    /// emoji so it renders identically across iOS versions.
+    private func cascadeGlyph(for severity: String?) -> String {
+        switch severity?.lowercased() {
+        case "insider": return "\u{1F6A8}"
+        case "emerging": return "\u{26A1}"
+        case "confirmed": return "\u{1F4C8}"
+        default: return "\u{1F3AF}"
+        }
+    }
+
     /// Best-effort "Player · CardNumber" caption for the banner's top card.
     /// Falls back to just the player name when the card number is absent.
     private func gradeWorthyTopLabel(_ candidate: GradeAnalysisResponse) -> String {
@@ -545,10 +779,17 @@ struct PortfolioIQView: View {
     private func loadSupplyDemandAggregates() async {
         async let summaryTask = try? APIService.shared.fetchSupplyDemandSummary()
         async let totalsTask = try? APIService.shared.fetchSignalWeightedTotals()
-        let (summary, totals) = await (summaryTask, totalsTask)
+        // Phase 2.6 + 3.8 (2026-07-17): fetch portfolio momentum + cascade
+        // alerts in parallel with the supply/demand aggregates so the
+        // whole dashboard settles in one round trip.
+        async let momentumTask = try? APIService.shared.fetchPortfolioMomentum()
+        async let cascadeTask = try? APIService.shared.fetchCascadeAlerts()
+        let (summary, totals, momentum, cascade) = await (summaryTask, totalsTask, momentumTask, cascadeTask)
         await MainActor.run {
             self.supplyDemandSummary = summary
             self.signalWeightedTotals = totals
+            self.portfolioMomentum = momentum
+            self.cascadeAlerts = cascade
         }
     }
 

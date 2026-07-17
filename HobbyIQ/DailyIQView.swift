@@ -38,6 +38,11 @@ struct DailyIQView: View {
     // on the user's watchlist whose supply/demand verdict is bullish.
     // Loaded on task; nil / empty response suppresses the section.
     @State private var buyCandidates: WatchlistBullCandidatesResponse?
+    /// Phase 3.7 (2026-07-17, PR #529): top players by momentum × velocity.
+    /// Shows top 5 in the tile with a "See top 25 →" tap to expand.
+    @State private var hotRightNow: HotRightNowResponse?
+    /// Gate the drill-down push from the "See top 25" button.
+    @State private var showHotRightNowFullList = false
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -64,6 +69,11 @@ struct DailyIQView: View {
                 // players trending bullish. Self-suppresses when the
                 // response is nil / no candidates.
                 buyCandidatesSection
+
+                // Phase 3.7 (2026-07-17, PR #529): Hot Right Now — top
+                // players by momentum × velocity from the corpus.
+                // Self-suppresses when the response is nil / thin.
+                hotRightNowSection
 
                 // CF-DAILYIQ-TWO-SEGMENTS (2026-07-01): DailyIQ splits
                 // into two selectable segments — "Your Players" (personal
@@ -107,7 +117,8 @@ struct DailyIQView: View {
             async let signals: Void = loadMarketSignals()
             async let mine: Void = loadMyPlayers()
             async let candidates: Void = loadBuyCandidates()
-            _ = await (refresh, brief, signals, mine, candidates)
+            async let hot: Void = loadHotRightNow()
+            _ = await (refresh, brief, signals, mine, candidates, hot)
             // P1 (2026-07-16, iOS delta): first meaningful use of the
             // app — checking DailyIQ. Ask for push permission here (once)
             // per Apple HIG so the affordance is connected to the value.
@@ -1130,6 +1141,126 @@ private var watchlistCard: some View {
     /// PlayerIQ full-screen for that player (same navigation the
     /// suggestions row uses). Hidden when the response is nil or
     /// carries zero candidates.
+    // MARK: - Phase 3.7: Hot Right Now (2026-07-17, PR #529)
+
+    /// Top 5 players by hotScore. Tap "See top 25" pushes a full-list
+    /// view. Self-suppresses when the response is nil or players is empty.
+    @ViewBuilder
+    private var hotRightNowSection: some View {
+        if let response = hotRightNow,
+           let players = response.players, players.isEmpty == false {
+            let top5 = Array(players.prefix(5))
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("\u{1F525}")
+                        .font(.title3)
+                    Text("Hot Right Now")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Spacer()
+                }
+                VStack(spacing: 8) {
+                    ForEach(Array(top5.enumerated()), id: \.element.id) { idx, player in
+                        hotPlayerRow(index: idx + 1, player: player)
+                    }
+                }
+                if players.count > 5 {
+                    Button {
+                        showHotRightNowFullList = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("See top \(min(players.count, 25))")
+                                .font(.caption.weight(.bold))
+                            Image(systemName: "arrow.right")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            .navigationDestination(isPresented: $showHotRightNowFullList) {
+                HotRightNowListView(response: response)
+                    .environmentObject(sessionViewModel)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func hotPlayerRow(index: Int, player: HotPlayer) -> some View {
+        let direction = player.direction?.lowercased() ?? ""
+        let color: Color = {
+            switch direction {
+            case "up": return HobbyIQTheme.Colors.successGreen
+            case "down": return HobbyIQTheme.Colors.danger
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+        let glyph: String = {
+            switch direction {
+            case "up": return "\u{25B2}"
+            case "down": return "\u{25BC}"
+            default: return "\u{2500}"
+            }
+        }()
+        let sparse = player.hasFlag("sparse") || player.hasFlag("wide_ratio_dispersion")
+
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                Text("\(index).")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .frame(width: 24, alignment: .leading)
+                Text(player.player ?? "—")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text(glyph)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+                if let pct = player.momentumPercentString {
+                    Text(pct)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(color)
+                }
+                if let velocity = player.velocityPerWeek {
+                    Text("\(Int(velocity.rounded()))/wk")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            if let qualifying = player.qualifyingCards,
+               let pool = player.cardsInPool, pool > 0 {
+                Text("\(qualifying) of \(pool) cards agree")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                    .padding(.leading, 32)
+            }
+        }
+        .opacity(sparse ? 0.55 : 1.0)
+    }
+
+    private func loadHotRightNow() async {
+        do {
+            hotRightNow = try await APIService.shared.fetchHotRightNow(limit: 25)
+        } catch {
+            // Best-effort — tile hides on failure.
+        }
+    }
+
     @ViewBuilder
     private var buyCandidatesSection: some View {
         if let candidates = buyCandidates?.candidates, candidates.isEmpty == false {

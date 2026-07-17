@@ -1102,6 +1102,22 @@ struct PortfolioHoldingDetailSheet: View {
     /// the button to a "Marked" affordance on success.
     @State private var isMarkingAtGrading: Bool = false
     @State private var didMarkAtGrading: Bool = false
+    /// Phase 1.4 (2026-07-17, PR #524): observed family multipliers for
+    /// the "Grader Premium Curve" block. Hidden entirely when tiers < 2
+    /// or all rows are low-confidence. Populated on task with the
+    /// holding's setName as the family key.
+    @State private var familyMultipliers: FamilyMultipliersResponse?
+    /// Phase 2.5 (2026-07-17, PR #526): 30-day timing forecast — the
+    /// headline number of the card detail below the hero. Hidden when
+    /// `confidence == "insufficient"` per spec.
+    @State private var timingForecast: TimingForecastResponse?
+    /// Phase 3.10 (2026-07-17, PR #525): observed grader outcome
+    /// distribution for the "What could actually happen?" expandable
+    /// inside the Grade Analysis block. Lazy — fetched only when the
+    /// disclosure is expanded so we don't spend the rate-limit budget
+    /// on cards no one drills into.
+    @State private var graderOutcomes: GraderOutcomesResponse?
+    @State private var graderOutcomesExpanded: Bool = false
 
     init(
         viewModel: PortfolioIQViewModel,
@@ -1364,6 +1380,89 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
+    /// Phase 2.5 (2026-07-17, PR #526): fetch 30-day timing forecast.
+    /// Silent failure hides the block. Backend returns
+    /// `confidence: "insufficient"` when it can't build a forecast; iOS
+    /// filters that out via `timingForecastIfRenderable()`.
+    private func loadTimingForecast() async {
+        do {
+            timingForecast = try await APIService.shared.fetchTimingForecast(
+                holdingId: card.id.uuidString
+            )
+        } catch {
+            timingForecast = nil
+        }
+    }
+
+    /// Returns the forecast when confidence is one of the renderable
+    /// tiers (`high`/`medium`/`low`). `insufficient` and nil hide the
+    /// block per spec — never show a null state.
+    private func timingForecastIfRenderable() -> TimingForecastResponse? {
+        guard let response = timingForecast else { return nil }
+        let conf = response.forecast?.confidence?.lowercased() ?? ""
+        switch conf {
+        case "high", "medium", "low":
+            return response
+        default:
+            return nil
+        }
+    }
+
+    /// Phase 3.10 (2026-07-17, PR #525): lazy fetch of grader outcomes
+    /// on Grade Analysis expandable expand. Deduped so a rapid collapse/
+    /// expand cycle doesn't re-fire.
+    private func loadGraderOutcomesIfNeeded() async {
+        guard graderOutcomes == nil else { return }
+        let key = resolvedFamilyKey()
+        guard key.isEmpty == false else { return }
+        do {
+            graderOutcomes = try await APIService.shared.fetchGraderOutcomes(family: key)
+        } catch {
+            graderOutcomes = nil
+        }
+    }
+
+    /// Phase 1.4 (2026-07-17, PR #524): fetch observed grader multipliers
+    /// for this holding's family. Silent failure hides the block. Family
+    /// key is best-effort — grade-analysis diagnostics carries a
+    /// backend-computed one when it's a raw holding; otherwise use
+    /// `card.setName` and let backend slug it.
+    private func loadFamilyMultipliers() async {
+        let key = resolvedFamilyKey()
+        guard key.isEmpty == false else { return }
+        do {
+            familyMultipliers = try await APIService.shared.fetchFamilyMultipliers(family: key)
+        } catch {
+            familyMultipliers = nil
+        }
+    }
+
+    /// Prefer backend-computed familyKey from grade-analysis when present;
+    /// fall back to `card.setName`. Backend accepts either shape.
+    private func resolvedFamilyKey() -> String {
+        if let key = gradeAnalysis?.diagnostics?.familyKey?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           key.isEmpty == false {
+            return key
+        }
+        return card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Filter to renderable tiers per spec (high or medium confidence
+    /// only, multiplier > 1). Returns nil to hide the whole block when
+    /// fewer than 2 rows qualify.
+    private func familyMultipliersIfRenderable() -> FamilyMultipliersResponse? {
+        guard let response = familyMultipliers,
+              let tiers = response.tiers else { return nil }
+        let renderable = tiers.filter { tier in
+            let conf = tier.confidence?.lowercased() ?? ""
+            let mult = tier.multiplier ?? 0
+            return (conf == "high" || conf == "medium") && mult > 1.0
+        }
+        if renderable.count < 2 { return nil }
+        return FamilyMultipliersResponse(familyKey: response.familyKey, tiers: renderable)
+    }
+
     /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): fetch the
     /// 90-day verdict history for this holding's player and keep the
     /// last 3 flips for the detail-sheet strip. Silent failure — an
@@ -1582,6 +1681,222 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
+    // MARK: - Phase 2.5: Timing Forecast block (2026-07-17)
+
+    /// 30-day predicted-price block. Headline number in cents-omitted
+    /// currency, range beneath, confidence chip in the branded verdict
+    /// palette, then a three-signal breakdown as tappable info chips.
+    @ViewBuilder
+    private func timingForecastBlock(response: TimingForecastResponse) -> some View {
+        let forecast = response.forecast
+        let confidence = forecast?.confidence?.lowercased() ?? ""
+        let confidenceColor: Color = {
+            switch confidence {
+            case "high": return HobbyIQTheme.Colors.successGreen
+            case "medium": return HobbyIQTheme.Colors.warning
+            case "low": return HobbyIQTheme.Colors.danger
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+        let horizon = forecast?.horizonDays ?? 30
+
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(horizon)-DAY FORECAST")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            if let price = forecast?.predictedPrice, price > 0 {
+                Text(portfolioCurrencyString(price))
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+
+            if let low = forecast?.priceRange?.low,
+               let high = forecast?.priceRange?.high, high > low {
+                Text("range \(portfolioCurrencyString(low)) — \(portfolioCurrencyString(high))")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+
+            Text("\(confidence) confidence".lowercased())
+                .font(.caption.weight(.bold))
+                .foregroundStyle(confidenceColor)
+                .textCase(.uppercase)
+                .tracking(0.4)
+
+            Divider().overlay(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+
+            if let signals = forecast?.contributingSignals {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let slope = signals.cardTrendSlopePerMonthPct, slope != 0 {
+                        signalRow(
+                            label: "card slope \(formatSlope(slope))",
+                            hint: "This specific card has been trading \(formatSlope(slope)) per month over the past 90 days (based on \(signals.windowSales ?? 0) recent sales)."
+                        )
+                    }
+                    if let momentum = signals.playerMomentumUsed, momentum > 0 {
+                        let pct = (momentum - 1.0) * 100.0
+                        let source = signals.playerMomentumSource?.lowercased() ?? "all"
+                        signalRow(
+                            label: "player \(source) \(formatSignedPercent(pct))",
+                            hint: "\(card.playerName)'s \(source) card market is \(formatSignedPercent(pct)) overall this month."
+                        )
+                    }
+                    if let velocity = signals.velocitySignal?.lowercased(), velocity.isEmpty == false {
+                        signalRow(
+                            label: "velocity \(velocity)",
+                            hint: velocityHintCopy(velocity: velocity)
+                        )
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(confidenceColor.opacity(0.4), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    /// Small tappable info chip. Uses accessibilityHint for the long-form
+    /// explanation so VoiceOver reads it; on tap the same string surfaces
+    /// as a simple confirmation alert without pushing a new modal.
+    @ViewBuilder
+    private func signalRow(label: String, hint: String) -> some View {
+        HStack(spacing: 6) {
+            Text("\u{25B8}")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer(minLength: 0)
+            Image(systemName: "questionmark.circle")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(hint)
+    }
+
+    private func formatSlope(_ pct: Double) -> String {
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(Int(abs(pct).rounded()))%/mo"
+    }
+
+    private func formatSignedPercent(_ pct: Double) -> String {
+        let sign = pct > 0 ? "+" : (pct < 0 ? "\u{2212}" : "")
+        return "\(sign)\(Int(abs(pct).rounded()))%"
+    }
+
+    private func velocityHintCopy(velocity: String) -> String {
+        switch velocity {
+        case "hot":
+            return "This card is trading at more than 2× the typical rate for a \(card.playerName) card."
+        case "warm":
+            return "This card is trading at a normal rate for a \(card.playerName) card."
+        default:
+            return "This card is trading slower than the typical rate for a \(card.playerName) card."
+        }
+    }
+
+    // MARK: - Phase 1.4: Grader Premium Curve block (2026-07-17)
+
+    /// Observed grader-premium curve for the holding's product family.
+    /// Shows the top tiers' multipliers ("PSA 10 pays 5.4× Raw") with a
+    /// caption exposing the sample counts so users can sanity-check the
+    /// signal ("47 PSA 10s / 340 raw comps"). Filters + hides logic lives
+    /// in `familyMultipliersIfRenderable()`.
+    @ViewBuilder
+    private func graderPremiumCurveBlock(multipliers: FamilyMultipliersResponse) -> some View {
+        let tiers = multipliers.tiers ?? []
+        let familyLabel = friendlyFamilyLabel(multipliers.familyKey)
+        // Sum sample counts for the caption. Highest-count tier drives
+        // the "N graded / M raw" phrasing — the biggest signal.
+        let topTier = tiers.max(by: { ($0.nGraded ?? 0) < ($1.nGraded ?? 0) })
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("GRADER PREMIUM CURVE")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            if familyLabel.isEmpty == false {
+                Text(familyLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+
+            VStack(spacing: 8) {
+                ForEach(tiers) { tier in
+                    graderPremiumRow(tier: tier)
+                }
+            }
+
+            if let topTier,
+               let nGraded = topTier.nGraded,
+               let nRaw = topTier.nRaw,
+               (nGraded + nRaw) > 0 {
+                Text("Based on observed sales (\(nGraded) \(topTier.graderTier)s / \(nRaw) raw comps in past 90 days).")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func graderPremiumRow(tier: FamilyMultiplierTier) -> some View {
+        HStack(spacing: 8) {
+            Text("\u{25B2}")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+            Text(tier.graderTier)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(width: 96, alignment: .leading)
+            Text("pays")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            if let mult = tier.multiplier {
+                Text(String(format: "%.1f\u{00D7}", mult))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+            }
+            Text("Raw")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Turn a slug or human string into a display-ready label
+    /// ("bowman_chrome_baseball" → "Bowman Chrome Baseball").
+    private func friendlyFamilyLabel(_ key: String?) -> String {
+        guard let key = key?.trimmingCharacters(in: .whitespacesAndNewlines),
+              key.isEmpty == false else { return "" }
+        // If key is already title-cased (has spaces), pass through.
+        if key.contains(" ") { return key }
+        // Slug: split on underscore, capitalize each word.
+        return key
+            .split(separator: "_")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+
     // MARK: - Corpus signals: Grade Analysis block (2026-07-17)
 
     /// Per-holding grade-worthy read. Two visual states:
@@ -1650,6 +1965,11 @@ struct PortfolioHoldingDetailSheet: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
 
+            // Phase 3.10 (2026-07-17, PR #525): observed grader outcome
+            // distribution — probability-weighted EV expandable. Lazy
+            // fetch fires on first expand.
+            graderOutcomesDisclosure(analysis: analysis)
+
             if isWait {
                 Text("Player momentum is down. Waiting could add 25%+ to expected gain.")
                     .font(.caption)
@@ -1700,6 +2020,149 @@ struct PortfolioHoldingDetailSheet: View {
         }
         .buttonStyle(.plain)
         .disabled(isMarkingAtGrading || didMarkAtGrading)
+    }
+
+    /// Phase 3.10 (2026-07-17, PR #525): "What could actually happen?"
+    /// disclosure inside the Grade Analysis block. Rendered as a
+    /// tri-state ExpandableGroup — collapsed, loading (fetch in flight),
+    /// or expanded with the observed distribution.
+    ///
+    /// The caveat "Based on market OUTCOMES, not a submission guarantee."
+    /// is REQUIRED verbatim per the spec — the endpoint's `caveat` field
+    /// is the source of truth and we render it as-is.
+    @ViewBuilder
+    private func graderOutcomesDisclosure(analysis: GradeAnalysisResponse) -> some View {
+        DisclosureGroup(isExpanded: Binding(
+            get: { graderOutcomesExpanded },
+            set: { newValue in
+                graderOutcomesExpanded = newValue
+                if newValue {
+                    Task { await loadGraderOutcomesIfNeeded() }
+                }
+            }
+        )) {
+            graderOutcomesContent(analysis: analysis)
+                .padding(.top, 8)
+        } label: {
+            Text("What could actually happen?")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+        }
+        .tint(HobbyIQTheme.Colors.electricBlue)
+    }
+
+    @ViewBuilder
+    private func graderOutcomesContent(analysis: GradeAnalysisResponse) -> some View {
+        if let response = graderOutcomes,
+           let graders = response.graders, graders.isEmpty == false {
+            // Pick the grader matching the best tier's grader (e.g. "PSA")
+            // — fallback to the first grader in the response.
+            let bestGraderPrefix = analysis.analysis?.bestTier?.graderTier
+                .split(separator: " ").first.map(String.init) ?? ""
+            let target = graders.first { $0.grader.uppercased() == bestGraderPrefix.uppercased() }
+                ?? graders.first
+            if let grader = target {
+                graderOutcomeDistributionView(grader: grader, response: response, analysis: analysis)
+            }
+        } else if graderOutcomesExpanded {
+            // Fetch in flight or no data.
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini).tint(HobbyIQTheme.Colors.electricBlue)
+                Text("Loading distribution…")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func graderOutcomeDistributionView(
+        grader: GraderOutcomeDistribution,
+        response: GraderOutcomesResponse,
+        analysis: GradeAnalysisResponse
+    ) -> some View {
+        let familyLabel = friendlyFamilyLabel(response.familyKey)
+        // Compute probability-weighted expected value client-side:
+        // Σ (tierShare × tierMedianPrice) using the medians from
+        // grade-analysis.allTiers. When a tier's median isn't in the
+        // analysis, skip it — the EV is a directional signal, not a firm
+        // number.
+        let mediansByTier: [String: Double] = {
+            var dict: [String: Double] = [:]
+            for tier in analysis.analysis?.allTiers ?? [] {
+                if let median = tier.gradedMedianPrice, median > 0 {
+                    dict[tier.graderTier] = median
+                }
+            }
+            return dict
+        }()
+        let expected: Double = {
+            var sum = 0.0
+            for (tier, share) in grader.tierShares ?? [:] {
+                if let median = mediansByTier[tier] {
+                    sum += share * median
+                }
+            }
+            return sum
+        }()
+
+        VStack(alignment: .leading, spacing: 8) {
+            Text("For \"\(familyLabel)\" cards submitted to \(grader.grader), past sales show:")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 4) {
+                ForEach(grader.sortedTierShares, id: \.tier) { entry in
+                    graderOutcomeRow(tier: entry.tier, share: entry.share, medians: mediansByTier)
+                }
+            }
+
+            if expected > 0 {
+                Text("Probability-weighted expected: \(portfolioCurrencyString(expected))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .padding(.top, 2)
+            }
+
+            // REQUIRED verbatim caveat — render the backend's copy when
+            // present, fall back to the spec's default.
+            let caveat = response.caveat?.trimmingCharacters(in: .whitespaces)
+                ?? "Based on market OUTCOMES, not a submission guarantee."
+            HStack(alignment: .top, spacing: 4) {
+                Text("\u{26A0}\u{FE0F}")
+                    .font(.caption2)
+                Text(caveat)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func graderOutcomeRow(tier: String, share: Double, medians: [String: Double]) -> some View {
+        HStack(spacing: 6) {
+            Text(tier)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(width: 80, alignment: .leading)
+            Text("=")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("\(Int((share * 100).rounded()))%")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(width: 44, alignment: .leading)
+            if let median = medians[tier], median > 0 {
+                Text("(\(portfolioCurrencyString(median)) avg)")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+        }
     }
 
     /// Second-best tier by expectedGain when it clears a meaningful bar
@@ -2124,6 +2587,13 @@ struct PortfolioHoldingDetailSheet: View {
                             playerMomentumBlock(trend: trend)
                         }
 
+                        // Phase 2.5 (2026-07-17, PR #526): 30-day timing
+                        // forecast — the headline signal of the card
+                        // detail. Hidden entirely on insufficient data.
+                        if let forecast = timingForecastIfRenderable() {
+                            timingForecastBlock(response: forecast)
+                        }
+
                         // Corpus signals (2026-07-17, PR #518): per-holding
                         // Grade Analysis. Rendered only for raw holdings
                         // with a grade_now or grade_worthy_but_wait
@@ -2131,6 +2601,14 @@ struct PortfolioHoldingDetailSheet: View {
                         // hide the block per spec — never show as a null state.
                         if let analysis = gradeAnalysisIfActionable() {
                             gradeAnalysisBlock(analysis: analysis)
+                        }
+
+                        // Phase 1.4 (2026-07-17, PR #524): observed grader
+                        // premium curve — "PSA 10 pays 5.4× raw" per family.
+                        // Self-suppresses when tiers.length < 2 or all rows
+                        // are low-confidence.
+                        if let multipliers = familyMultipliersIfRenderable() {
+                            graderPremiumCurveBlock(multipliers: multipliers)
                         }
 
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
@@ -2437,6 +2915,8 @@ struct PortfolioHoldingDetailSheet: View {
                 .task { await loadVerdictHistory() }
                 .task { await loadPlayerTrend() }
                 .task { await loadGradeAnalysis() }
+                .task { await loadFamilyMultipliers() }
+                .task { await loadTimingForecast() }
                 .task {
                     // P1 (2026-07-16, iOS delta): first meaningful use —
                     // opening a holding detail. Ask for push permission

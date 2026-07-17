@@ -233,11 +233,16 @@ final class AccountViewModel: ObservableObject {
     /// while the GET request is in flight; `loadPortfolioPreferences()`
     /// overwrites with the authoritative server state on success.
     @Published var verdictFlipAlerts: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.verdictFlipAlertsKey)
+    /// Phase 3.9 (2026-07-17, PR #531): cascade signal push opt-in.
+    /// Default OFF — explicit opt-in per spec. Backed by the same
+    /// `/api/portfolio/preferences` endpoint under `pushOnCascade`.
+    @Published var cascadeAlerts: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.cascadeAlertsKey)
     /// P0.7 delta (2026-07-16): last-known APNs registration status from
     /// backend. Drives the "Notifications registered · updated 3m ago"
     /// caption below the toggle. Nil until first fetch.
     @Published var apnsDeviceStatus: PortfolioPreferencesResponse.APNsDeviceStatus?
     fileprivate static let verdictFlipAlertsKey = "hobbyIQ.settings.verdictFlipAlerts"
+    fileprivate static let cascadeAlertsKey = "hobbyIQ.settings.cascadeAlerts"
     private var isLoadingPrefs = false
     private var isLoadingPortfolioPrefs = false
 
@@ -365,9 +370,43 @@ final class AccountViewModel: ObservableObject {
                 verdictFlipAlerts = flag
                 UserDefaults.standard.set(flag, forKey: AccountViewModel.verdictFlipAlertsKey)
             }
+            if let flag = response.preferences?.pushOnCascade {
+                cascadeAlerts = flag
+                UserDefaults.standard.set(flag, forKey: AccountViewModel.cascadeAlertsKey)
+            }
             apnsDeviceStatus = response.preferences?.apnsDevice
         } catch {
             // Keep whatever state UserDefaults seeded — best-effort GET.
+        }
+    }
+
+    /// Phase 3.9 (2026-07-17, PR #531): PATCH `pushOnCascade`. Same
+    /// optimistic-update-then-revert pattern as the flip toggle. On
+    /// toggle-on, request push permission + APNs registration so the
+    /// fan-out worker has a token.
+    func updateCascadeAlerts(_ enabled: Bool) async {
+        let previous = cascadeAlerts
+        cascadeAlerts = enabled
+        UserDefaults.standard.set(enabled, forKey: AccountViewModel.cascadeAlertsKey)
+
+        do {
+            let response = try await APIService.shared.updatePortfolioCascadePreference(pushOnCascade: enabled)
+            if let confirmed = response.preferences?.pushOnCascade {
+                cascadeAlerts = confirmed
+                UserDefaults.standard.set(confirmed, forKey: AccountViewModel.cascadeAlertsKey)
+            }
+            if let device = response.preferences?.apnsDevice {
+                apnsDeviceStatus = device
+            }
+        } catch {
+            cascadeAlerts = previous
+            UserDefaults.standard.set(previous, forKey: AccountViewModel.cascadeAlertsKey)
+            statusMessage = "Couldn't update the cascade alert setting."
+            return
+        }
+
+        if enabled {
+            await PushNotificationManager.shared.requestPermissionAndRegister()
         }
     }
 

@@ -625,6 +625,76 @@ struct APIService {
         return try await get(path: path, responseType: FamilyMultipliersResponse.self)
     }
 
+    /// PR #529: value-weighted portfolio-level momentum. Feeds the
+    /// Portfolio Momentum hero on the Portfolio Home tab.
+    func fetchPortfolioMomentum() async throws -> PortfolioMomentumResponse {
+        try await get(path: "/api/portfolio/momentum", responseType: PortfolioMomentumResponse.self)
+    }
+
+    /// PR #529: top players by momentum × velocity for the DailyIQ tab's
+    /// "Hot Right Now" surface. `limit` bounded 1..25 backend-side.
+    func fetchHotRightNow(limit: Int = 25) async throws -> HotRightNowResponse {
+        try await get(
+            path: "/api/dailyiq/hot-right-now",
+            queryItems: [URLQueryItem(name: "limit", value: String(limit))],
+            responseType: HotRightNowResponse.self
+        )
+    }
+
+    /// PR #526: per-holding 30-day timing forecast. Headline number on
+    /// the card detail. Backend responds with `confidence: "insufficient"`
+    /// when it can't build a forecast; iOS hides the block in that case.
+    func fetchTimingForecast(holdingId: String, horizonDays: Int? = nil) async throws -> TimingForecastResponse {
+        var query: [URLQueryItem] = []
+        if let horizonDays {
+            query.append(URLQueryItem(name: "horizonDays", value: String(horizonDays)))
+        }
+        return try await get(
+            path: "/api/portfolio/holdings/\(holdingId)/timing-forecast",
+            queryItems: query,
+            responseType: TimingForecastResponse.self
+        )
+    }
+
+    /// PR #527: recent cascade events for players in the user's portfolio.
+    /// Empty when nothing fires — banner suppresses.
+    func fetchCascadeAlerts() async throws -> CascadeAlertsResponse {
+        try await get(path: "/api/portfolio/cascade-alerts", responseType: CascadeAlertsResponse.self)
+    }
+
+    /// PR #525: observed tier-share distribution per grader for a family.
+    /// Feeds the "What could actually happen?" expandable on the Grade
+    /// Analysis block. The `caveat` field is REQUIRED verbatim in UI copy.
+    func fetchGraderOutcomes(family: String) async throws -> GraderOutcomesResponse {
+        let encoded = family.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? family
+        return try await get(
+            path: "/api/portfolio/grader-outcomes/\(encoded)",
+            responseType: GraderOutcomesResponse.self
+        )
+    }
+
+    /// PR #533: shareable "I Called It" flex moments — cards the user
+    /// bought that appreciated meaningfully. Empty when the portfolio has
+    /// no qualifying moments.
+    func fetchICalledIt() async throws -> ICalledItResponse {
+        try await get(path: "/api/portfolio/i-called-it", responseType: ICalledItResponse.self)
+    }
+
+    /// PR #533: annual/quarterly recap. Full-screen retrospective on the
+    /// Profile menu after Dec 15 each year. `year` required; optional
+    /// `quarter` narrows to a quarter (`Q1`..`Q4`).
+    func fetchYearbook(year: Int, quarter: String? = nil) async throws -> YearbookResponse {
+        var query: [URLQueryItem] = [URLQueryItem(name: "year", value: String(year))]
+        if let quarter {
+            query.append(URLQueryItem(name: "quarter", value: quarter))
+        }
+        return try await get(
+            path: "/api/portfolio/yearbook",
+            queryItems: query,
+            responseType: YearbookResponse.self
+        )
+    }
+
     func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
@@ -1869,6 +1939,17 @@ struct APIService {
         )
     }
 
+    /// Phase 3.9 (2026-07-17, PR #531): PATCH the `pushOnCascade` field
+    /// alone. Cascade default is OFF — this is an explicit opt-in.
+    func updatePortfolioCascadePreference(pushOnCascade: Bool) async throws -> PortfolioPreferencesResponse {
+        let body = PortfolioCascadePreferenceUpdate(pushOnCascade: pushOnCascade)
+        return try await patch(
+            path: "/api/portfolio/preferences",
+            body: body,
+            responseType: PortfolioPreferencesResponse.self
+        )
+    }
+
     /// P0.7 delta (2026-07-16): PATCH the `apnsDeviceToken` field with the
     /// current hex token. Backend stamps `apnsDevice.registeredAt`.
     /// Called after APNs registration succeeds AND when the cached token
@@ -2528,7 +2609,13 @@ struct APIService {
         "/api/portfolio/preferences",
         // Corpus signals (2026-07-17, PR #518): grade-worthy scan fires
         // on portfolio open. Same reasoning.
-        "/api/portfolio/grade-worthy-alerts"
+        "/api/portfolio/grade-worthy-alerts",
+        // Phase 2-4 (2026-07-17): portfolio-momentum + cascade + hot +
+        // social all fire on portfolio / dailyiq open. Same reasoning.
+        "/api/portfolio/momentum",
+        "/api/portfolio/cascade-alerts",
+        "/api/portfolio/i-called-it",
+        "/api/dailyiq/hot-right-now"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
@@ -2540,7 +2627,11 @@ struct APIService {
         // multipliers fan out on portfolio open. A transient 401 must
         // never evict the session.
         "/api/portfolio/player-trend/",
-        "/api/portfolio/family-multipliers/"
+        "/api/portfolio/family-multipliers/",
+        // Phase 3-4 (2026-07-17): grader-outcomes per family + yearbook
+        // (parameterized by year). Session-safe reads.
+        "/api/portfolio/grader-outcomes/",
+        "/api/portfolio/yearbook"
     ]
 
     /// Corpus signals (2026-07-17): the grade-analysis route sits under
@@ -2549,7 +2640,8 @@ struct APIService {
     /// suffix-match this variable-`{id}` case instead of prefix-matching
     /// the whole /holdings/ namespace.
     private static let bestEffortPathSuffixes: [String] = [
-        "/grade-analysis"
+        "/grade-analysis",
+        "/timing-forecast"
     ]
 
     private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {
@@ -4133,6 +4225,13 @@ struct PortfolioPreferencesResponse: Decodable {
 
     struct Preferences: Decodable {
         let pushOnMajorFlip: Bool?
+        /// Phase 3.9 (2026-07-17, PR #531): cascade signal push opt-in.
+        /// Defaults false on the backend — user explicitly opts in.
+        let pushOnCascade: Bool?
+        /// Phase 3.9 alt shape: backend PR #531 returns
+        /// `deviceTokenRegistered: bool` alongside the older
+        /// `apnsDevice.registered/registeredAt`. Decode both defensively.
+        let deviceTokenRegistered: Bool?
         let apnsDevice: APNsDeviceStatus?
     }
 
@@ -4149,6 +4248,13 @@ struct PortfolioPreferencesResponse: Decodable {
 /// device doesn't race with the toggle write.
 struct PortfolioFlipPreferenceUpdate: Encodable {
     let pushOnMajorFlip: Bool
+}
+
+/// Phase 3.9 (2026-07-17, PR #531): cascade-preference PATCH body. Same
+/// singularity rule — one field per request keeps concurrent updates
+/// from stomping each other.
+struct PortfolioCascadePreferenceUpdate: Encodable {
+    let pushOnCascade: Bool
 }
 
 /// PATCH /api/portfolio/preferences body — APNs token update. When the
