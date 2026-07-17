@@ -1260,4 +1260,92 @@ router.get(
   },
 );
 
+// CF-SUB-RAW-DISCOVERY (Drew, 2026-07-17). Discover-tab surface: raw
+// cards trading well below their family's typical PSA 10 valuation.
+// Scans ch_daily_sales for raw sales at ≤$30 median, cross-references
+// each SKU's card_set_type against the observed_grader_multipliers
+// container, keeps the ones where the expected PSA 10 gain crosses
+// the profile-configurable gates. Fresh compute per call — no cache
+// — because the pool depends on nightly-updated multipliers + the
+// live ch_daily_sales tail. On thin data (empty multiplier table)
+// returns empty candidates array.
+router.get(
+  "/sub-raw-discovery",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const maxRawPrice = req.query.maxRawPrice ? Number(req.query.maxRawPrice) : undefined;
+      const minExpectedGain = req.query.minGain ? Number(req.query.minGain) : undefined;
+      const minExpectedGainMultiple = req.query.minMultiple ? Number(req.query.minMultiple) : undefined;
+      const topN = req.query.topN ? Number(req.query.topN) : undefined;
+      const minFamilyConfidenceRaw = String(req.query.minConfidence ?? "").trim().toLowerCase();
+      const minFamilyConfidence = ["high", "medium", "any"].includes(minFamilyConfidenceRaw)
+        ? (minFamilyConfidenceRaw as "high" | "medium" | "any")
+        : undefined;
+      const { analyzeSubRawDiscovery } = await import(
+        "../services/portfolioiq/subRawDiscoveryAnalyze.service.js"
+      );
+      const candidates = await analyzeSubRawDiscovery({
+        maxRawPrice, minExpectedGain, minExpectedGainMultiple, topN, minFamilyConfidence,
+      });
+      res.json({ count: candidates.length, candidates });
+    } catch (err) { next(err); }
+  },
+);
+
+// CF-MISSING-PARALLELS (Drew, 2026-07-17). Card-detail surface: for
+// each (player, year, cardSet) the user owns ≥1 card in, list the
+// parallels they DON'T own that exist in the corpus. Two shapes:
+//   /missing-parallels               → every bucket the user has,
+//                                       array of bundles
+//   /missing-parallels/:playerYearSet → single bucket, url-encoded
+//                                       key "player::year::set"
+router.get(
+  "/missing-parallels",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const doc = await portfolio.readUserDoc(userId);
+      const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+      const { analyzeAllMissingParallels } = await import(
+        "../services/portfolioiq/missingParallelsAnalyze.service.js"
+      );
+      const bundles = await analyzeAllMissingParallels(holdings);
+      res.json({ count: bundles.length, bundles });
+    } catch (err) { next(err); }
+  },
+);
+
+router.get(
+  "/missing-parallels/:playerYearSet",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const key = String(req.params.playerYearSet ?? "").trim();
+      const parts = key.split("::");
+      if (parts.length < 3) {
+        return res.status(400).json({ error: "playerYearSet must be 'player::year::cardSet'" });
+      }
+      const player = parts[0];
+      const year = Number(parts[1]);
+      const cardSet = parts.slice(2).join("::");
+      if (!player || !Number.isFinite(year) || !cardSet) {
+        return res.status(400).json({ error: "invalid playerYearSet parts" });
+      }
+      const doc = await portfolio.readUserDoc(userId);
+      const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+      const { analyzeMissingParallelsForBucket } = await import(
+        "../services/portfolioiq/missingParallelsAnalyze.service.js"
+      );
+      const bundle = await analyzeMissingParallelsForBucket(holdings, player, year, cardSet);
+      if (!bundle) return res.status(404).json({ error: "no bucket match" });
+      res.json({ bucket: bundle });
+    } catch (err) { next(err); }
+  },
+);
+
 export default router;
