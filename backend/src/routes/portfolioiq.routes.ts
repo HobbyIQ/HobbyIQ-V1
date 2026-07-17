@@ -34,6 +34,13 @@ import {
 } from "../services/portfolioiq/import/importService.js";
 import type { FileFormat } from "../services/portfolioiq/import/fileParser.js";
 import { effectivePlanFor } from "../config/entitlements.js";
+// CF-PLAYER-TREND (Drew, 2026-07-17): read stored matched-cohort trends;
+// fall through to on-demand compute when the nightly job hasn't run for
+// this player yet.
+import { readPlayerTrend } from "../services/portfolioiq/playerTrendStore.service.js";
+import { computePlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
+import type { PlayerSale } from "../types/playerTrend.types.js";
+import { CosmosClient } from "@azure/cosmos";
 
 const router = Router();
 
@@ -63,6 +70,79 @@ router.get("/opportunities", portfolio.getPortfolioOpportunities);
 // gradingTierId — server resolves cost from the catalog when the
 // caller sends the id instead of the raw dollar amount.
 router.get("/grading-tiers", portfolio.getGradingTiers);
+
+// CF-PLAYER-TREND (Drew, 2026-07-17): serves matched-cohort player
+// momentum + velocity. Read-through: nightly-computed trend from
+// player_trends container wins; if stale (>36h) or absent, computes
+// on-demand from ch_daily_sales.
+//
+// Session required (same rate-limit + user context as other portfolio
+// routes). No entitlement gate — this is a base-tier metric.
+router.get(
+  "/player-trend/:player",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const player = String(req.params.player ?? "").trim();
+      if (!player) {
+        return res.status(400).json({ error: "player path parameter required" });
+      }
+
+      const stored = await readPlayerTrend(player);
+      const STALE_MS = 36 * 60 * 60 * 1000;
+      const isFresh =
+        stored && stored.computedAt &&
+        Date.now() - Date.parse(stored.computedAt) < STALE_MS;
+
+      if (isFresh) {
+        return res.json({ ...stored, servedFrom: "nightly_cache" });
+      }
+
+      // On-demand fallback — query ch_daily_sales for this player's
+      // recent sales and compute the trend.
+      const cs = process.env.COSMOS_CONNECTION_STRING;
+      if (!cs) {
+        return res.status(503).json({
+          error: "player-trend on-demand compute unavailable (no COSMOS_CONNECTION_STRING)",
+        });
+      }
+      const client = new CosmosClient(cs);
+      const container = client
+        .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+        .container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
+
+      // Recent + prior window = 60d. Match the nightly's defaults.
+      const cutoffIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const iter = container.items.query({
+        query: `SELECT c.card_id, c.sale_date, c.price, c.year, c.card_set, c.variant, c.number
+                FROM c WHERE c.player = @p AND c.sale_date >= @cutoff`,
+        parameters: [
+          { name: "@p", value: player },
+          { name: "@cutoff", value: cutoffIso },
+        ],
+      }, { maxItemCount: 1000 });
+
+      const rows: Array<Record<string, unknown>> = [];
+      while (iter.hasMoreResults()) {
+        const page = await iter.fetchNext();
+        if (page.resources) rows.push(...(page.resources as Array<Record<string, unknown>>));
+      }
+      const sales: PlayerSale[] = rows
+        .filter((r) => Number(r.price) > 0)
+        .map((r) => ({
+          cardId: String(r.card_id),
+          saleDate: String(r.sale_date),
+          price: Number(r.price),
+          skuLabel: `${r.year ?? ""} ${r.card_set ?? ""} · ${r.variant ?? ""} · ${r.number ?? ""}`.trim(),
+        }));
+
+      const trend = computePlayerTrend(player, sales);
+      return res.json({ ...trend, servedFrom: "on_demand" });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.get("/holdings", portfolio.getHoldings);
 
