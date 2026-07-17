@@ -2822,89 +2822,122 @@ struct PortfolioHoldingDetailSheet: View {
                         // direction is at-chance. Fair Market row's `method`
                         // subtitle is comp-status (from the null-FMV PR) and
                         // stays.
-                        PortfolioContextCard(title: "Pricing Context") {
-                            // 2026-07-17: Fair Market row dropped — the
-                            // hero's MARKET VALUE already carries it.
-                            // Anchor / Estimated / Why-this-estimate stays
-                            // (that's provenance, not a duplicate number).
-                            if card.valuationStatus == "estimated" {
-                                HStack {
-                                    Spacer(minLength: 0)
-                                    Text("Estimated")
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                                        .clipShape(Capsule(style: .continuous))
+                        // 2026-07-17: Pricing Context hides the whole
+                        // section when it has NOTHING meaningful to say.
+                        // Meaningful = at least one of: an anchor, an
+                        // "estimated" pill, a lowValue, a highValue, or
+                        // a non-empty estimate basis. Empty Quick Sale +
+                        // Suggested List rows never render.
+                        let hasQuickSale = (card.lowValue ?? 0) > 0
+                        let hasSuggested = (card.highValue ?? 0) > 0
+                        let hasAnchor = card.nearestGradedAnchor != nil
+                        let isEstimated = card.valuationStatus == "estimated"
+                        let hasBasis: Bool = {
+                            guard isEstimated else { return false }
+                            return (card.estimateBasis?.trimmingCharacters(in: .whitespaces).isEmpty == false)
+                        }()
+                        let showsPricingContext = hasQuickSale || hasSuggested || hasAnchor || isEstimated
+                        if showsPricingContext {
+                            PortfolioContextCard(title: "Pricing Context") {
+                                if isEstimated {
+                                    HStack {
+                                        Spacer(minLength: 0)
+                                        Text("Estimated")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                                            .clipShape(Capsule(style: .continuous))
+                                    }
                                 }
-                            }
-                            if let anchor = card.nearestGradedAnchor {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Source")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                        .textCase(.uppercase)
-                                        .tracking(0.4)
-                                    Rectangle()
-                                        .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
-                                        .frame(height: 1)
-                                    Text("\(anchor.grade) sold for \(portfolioCurrencyString(anchor.price))")
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                    Text("\(anchor.longAge) · \(anchor.compCountPhrase) · \(anchor.confidenceBand) confidence")
-                                        .font(.caption)
-                                        .foregroundStyle(anchor.tintColor)
+                                // 2026-07-17: "Raw sold for..." anchor summary
+                                // is now folded INTO the Why-this-estimate
+                                // disclosure — no more side-by-side summary +
+                                // caret. The disclosure label carries the
+                                // headline; the expanded body shows the
+                                // longer anchor detail. When there's an
+                                // anchor but no estimate-basis text, we
+                                // still surface the anchor summary as the
+                                // section's provenance line.
+                                if hasBasis, let basis = card.estimateBasis {
+                                    let anchorHeadline = card.nearestGradedAnchor.map { anchor in
+                                        "\(anchor.grade) sold for \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)"
+                                    } ?? "Why this estimate"
+                                    DisclosureGroup(anchorHeadline) {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            if let anchor = card.nearestGradedAnchor {
+                                                Text("\(anchor.longAge) · \(anchor.compCountPhrase) · \(anchor.confidenceBand) confidence")
+                                                    .font(.caption)
+                                                    .foregroundStyle(anchor.tintColor)
+                                            }
+                                            Text(basis)
+                                                .font(.caption)
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .padding(.top, 4)
+                                    }
+                                    .font(.subheadline.weight(.medium))
+                                    .tint(HobbyIQTheme.Colors.electricBlue)
+                                } else if let anchor = card.nearestGradedAnchor {
+                                    // Anchor exists but no basis prose —
+                                    // show the compact provenance line by
+                                    // itself so users still see the source.
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Source")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                            .textCase(.uppercase)
+                                            .tracking(0.4)
+                                        Text("\(anchor.grade) sold for \(portfolioCurrencyString(anchor.price))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                        Text("\(anchor.longAge) · \(anchor.compCountPhrase) · \(anchor.confidenceBand) confidence")
+                                            .font(.caption)
+                                            .foregroundStyle(anchor.tintColor)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 4)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
-                            }
-                            if card.valuationStatus == "estimated",
-                               let basis = card.estimateBasis,
-                               basis.isEmpty == false {
-                                DisclosureGroup("Why this estimate") {
-                                    Text(basis)
-                                        .font(.caption)
-                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                        .multilineTextAlignment(.leading)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .font(.subheadline.weight(.medium))
-                                .tint(HobbyIQTheme.Colors.electricBlue)
-                            }
-                            // 2026-07-17: Quick Sale + Suggested List
-                            // side-by-side (was stacked). Reads compact
-                            // and leaves room for the sparkline above.
-                            HStack(alignment: .top, spacing: 12) {
-                                pricingContextTile(
-                                    label: "Quick Sale",
-                                    value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—"
-                                )
-                                pricingContextTile(
-                                    label: "Suggested List",
-                                    value: card.highValue.map { portfolioCurrencyString($0) } ?? "—"
-                                )
-                            }
 
-                            // 2026-07-17: View CompIQ is now a text link,
-                            // not a full-width pill — de-emphasized so the
-                            // primary CTA at the bottom of the page carries
-                            // more visual weight.
-                            Button {
-                                showingCompIQAnalysis = true
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "doc.text.magnifyingglass")
-                                        .font(.caption2.weight(.semibold))
-                                    Text("View CompIQ analysis")
-                                        .font(.caption.weight(.semibold))
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption2.weight(.bold))
+                                // 2026-07-17: only render the Quick Sale +
+                                // Suggested List row when at least one has
+                                // a value. If both are nil the row hides.
+                                if hasQuickSale || hasSuggested {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        if hasQuickSale, let lo = card.lowValue {
+                                            pricingContextTile(
+                                                label: "Quick Sale",
+                                                value: portfolioCurrencyString(lo)
+                                            )
+                                        }
+                                        if hasSuggested, let hi = card.highValue {
+                                            pricingContextTile(
+                                                label: "Suggested List",
+                                                value: portfolioCurrencyString(hi)
+                                            )
+                                        }
+                                    }
                                 }
-                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                                Button {
+                                    showingCompIQAnalysis = true
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "doc.text.magnifyingglass")
+                                            .font(.caption2.weight(.semibold))
+                                        Text("View CompIQ analysis")
+                                            .font(.caption.weight(.semibold))
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2.weight(.bold))
+                                    }
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 4)
                             }
-                            .buttonStyle(.plain)
-                            .padding(.top, 4)
                         }
 
                         CollapsiblePortfolioContextCard(

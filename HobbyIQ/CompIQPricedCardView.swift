@@ -975,28 +975,40 @@ struct CompIQPricedCardView: View {
             // TrendIQ — only when the backend has signal.
             trendIQSection(response)
 
-            // Segment Trajectory Full (pro_seller gate).
-            segmentTrajectoryFullSection
-
-            // CF-REMOVE-ADVANCED-TOOLS (2026-07-04): advancedToolsSection
-            // dropped.
-
-            // Regime group — only when the backend produced regime
-            // classification output.
-            if response.regime != nil || response.regimeDiagnostics != nil {
-                cardGroup(title: "CompIQ Data", icon: "waveform.path.ecg") {
-                    regimeContent(response)
-                }
+            // 2026-07-17: engine-internal diagnostics gated / removed
+            // from the user-facing render.
+            //
+            // Segment Trajectory Full — was leaking ISO timestamps
+            // ("Effective Anchor: 2026-06-29T02:08:00.000Z"), sibling
+            // card ids, and re-anchor mechanics. Now gated behind a
+            // UserDefaults flag ("HIQ_INTERNAL_DIAGNOSTICS") that only
+            // Drew's dev builds set. DEBUG builds default it on so
+            // engineers still see the block.
+            if isInternalDiagnosticsEnabled {
+                segmentTrajectoryFullSection
             }
 
-            marketTrendSection(response)
-            // CF-REMOVE-DATA-QUALITY (2026-07-04): data-quality box
-            // dropped — the same signal (comp count + freshness) is
-            // already exposed on the Reference Data section header.
-            // CF-REMOVE-PRICE-ZONES (2026-07-04): bottom Price Zones
-            // section removed — it was redundant with the Buy/Sell
-            // zones chips already rendered in Comp Analysis above.
+            // CompIQ Data (regime) — negative-signal "Not enough sales
+            // / LOW CONFIDENCE / Why this trend?" card. Confidence dots
+            // in PREDICTED (7d) already convey this; deleted 2026-07-17.
+
+            // Bottom Market Trend bordered card — duplicated the
+            // matched-cohort rate already surfaced by PREDICTED (7d).
+            // The top "Market Trend" section (verdict + supply/demand)
+            // stays; this trailing card is gone. Deleted 2026-07-17.
         }
+    }
+
+    /// 2026-07-17: engine-internal diagnostics visibility gate.
+    /// `HIQ_INTERNAL_DIAGNOSTICS` UserDefaults flag drives it in
+    /// TestFlight; DEBUG builds default to true so engineers see it
+    /// automatically.
+    private var isInternalDiagnosticsEnabled: Bool {
+        #if DEBUG
+        return true
+        #else
+        return UserDefaults.standard.bool(forKey: "HIQ_INTERNAL_DIAGNOSTICS")
+        #endif
     }
 
     // MARK: - Themed Summary Sections (CF-IOS-COMP-SUMMARY-SECTIONS, 2026-06-21)
