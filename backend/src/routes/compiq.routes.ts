@@ -746,6 +746,30 @@ function isThinFromEst(est: Record<string, unknown>): boolean {
 // null] across marketTier / buyZone / holdZone / sellZone /
 // fairMarketValueLive / marketValue. NEVER emit 0 as a real price.
 // iOS reads any-null as the "no-estimate" state.
+/**
+ * CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): return a positive anchor
+ * from `est.lastSale.price` when it exists, else null. Used by the
+ * response builders to emit narrow zones ± 15% around the last observed
+ * sale when the engine has no usable live FMV and no synthetic fallback.
+ *
+ * Prevents blank zone renders on iOS's Comp Analysis surface for thin-
+ * market cards (compsUsed=3 with runaway extrapolated predictedPrice
+ * that we don't want to expose as FMV). marketValue / fairMarketValueLive
+ * remain null — this ONLY unblocks the buy/hold/sell bands, honestly
+ * anchored on one observed data point.
+ *
+ * Rule check: does NOT violate [[no-medians-project-next-sale]] — a
+ * single observed sale isn't a median/mean of past comps; it's the
+ * literal last sale price. FMV emission is unchanged (still null when
+ * fmv > 0 is false).
+ */
+function lastSaleZoneAnchor(est: Record<string, unknown>): number | null {
+  const ls = est.lastSale as { price?: unknown } | null | undefined;
+  if (!ls || typeof ls !== "object") return null;
+  const p = (ls as { price?: unknown }).price;
+  return typeof p === "number" && Number.isFinite(p) && p > 0 ? p : null;
+}
+
 function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   if (isThinFromEst(est)) return true;
   const fmv = est.fairMarketValue;
@@ -2310,21 +2334,39 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           : noUsableLiveFmv
             ? { value: null, high: null }
             : { value: effectiveFmv, high: effPremium },
-        buyZone: hasSyntheticFallback
-          ? [syntheticQuick * 0.9, syntheticQuick]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [effQuick * 0.9, effQuick],
-        holdZone: hasSyntheticFallback
-          ? [syntheticQuick, syntheticFmv]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [effQuick, effectiveFmv],
-        sellZone: hasSyntheticFallback
-          ? [syntheticFmv, syntheticPremium]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [effectiveFmv, effPremium],
+        // CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): when live FMV is
+        // thin AND no synthetic exists, still emit narrow zones ±15%
+        // around lastSale.price so iOS's Comp Analysis surface isn't
+        // blank. See lastSaleZoneAnchor() at top of file for the rule.
+        // fairMarketValueLive / marketValue stay null in this branch
+        // (single-sale anchor is not FMV).
+        ...((): { buyZone: [number|null, number|null]; holdZone: [number|null, number|null]; sellZone: [number|null, number|null] } => {
+          const lsAnchor = !hasSyntheticFallback && noUsableLiveFmv
+            ? lastSaleZoneAnchor(est as Record<string, unknown>)
+            : null;
+          if (hasSyntheticFallback) {
+            return {
+              buyZone: [syntheticQuick * 0.9, syntheticQuick],
+              holdZone: [syntheticQuick, syntheticFmv],
+              sellZone: [syntheticFmv, syntheticPremium],
+            };
+          }
+          if (noUsableLiveFmv) {
+            if (lsAnchor !== null) {
+              return {
+                buyZone: [lsAnchor * 0.85, lsAnchor * 0.95],
+                holdZone: [lsAnchor * 0.95, lsAnchor * 1.05],
+                sellZone: [lsAnchor * 1.05, lsAnchor * 1.15],
+              };
+            }
+            return { buyZone: [null, null], holdZone: [null, null], sellZone: [null, null] };
+          }
+          return {
+            buyZone: [effQuick * 0.9, effQuick],
+            holdZone: [effQuick, effectiveFmv],
+            sellZone: [effectiveFmv, effPremium],
+          };
+        })(),
         fairMarketValueLive: noUsableLiveFmv ? null : fmv,
         marketValue: noUsableLiveFmv ? null : fmv,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate the new
@@ -2905,21 +2947,37 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           : noUsableLiveFmv
             ? { value: null, high: null }
             : { value: fmv, high: premium },
-        buyZone: hasSyntheticFallback
-          ? [syntheticQuick * 0.9, syntheticQuick]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [quick * 0.9, quick],
-        holdZone: hasSyntheticFallback
-          ? [syntheticQuick, syntheticFmv]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [quick, fmv],
-        sellZone: hasSyntheticFallback
-          ? [syntheticFmv, syntheticPremium]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [fmv, premium],
+        // CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): mirror the fix
+        // shipped on /search — narrow zones ±15% around lastSale.price
+        // when live FMV is thin and no synthetic exists. FMV fields stay
+        // null in this branch.
+        ...((): { buyZone: [number|null, number|null]; holdZone: [number|null, number|null]; sellZone: [number|null, number|null] } => {
+          const lsAnchor = !hasSyntheticFallback && noUsableLiveFmv
+            ? lastSaleZoneAnchor(est as Record<string, unknown>)
+            : null;
+          if (hasSyntheticFallback) {
+            return {
+              buyZone: [syntheticQuick * 0.9, syntheticQuick],
+              holdZone: [syntheticQuick, syntheticFmv],
+              sellZone: [syntheticFmv, syntheticPremium],
+            };
+          }
+          if (noUsableLiveFmv) {
+            if (lsAnchor !== null) {
+              return {
+                buyZone: [lsAnchor * 0.85, lsAnchor * 0.95],
+                holdZone: [lsAnchor * 0.95, lsAnchor * 1.05],
+                sellZone: [lsAnchor * 1.05, lsAnchor * 1.15],
+              };
+            }
+            return { buyZone: [null, null], holdZone: [null, null], sellZone: [null, null] };
+          }
+          return {
+            buyZone: [quick * 0.9, quick],
+            holdZone: [quick, fmv],
+            sellZone: [fmv, premium],
+          };
+        })(),
         // Live FMV emitted at top level for engine-emission symmetry with
         // /search (Option X). Mirrors marketTier.value's null-when-thin
         // semantic so both fields agree within a response.
@@ -4886,21 +4944,40 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           : noUsableLiveFmv
             ? { value: null, high: null }
             : { value: fmv, high: premium },
-        buyZone: hasSyntheticFallback
-          ? [syntheticQuick * 0.9, syntheticQuick]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [quick * 0.9, quick],
-        holdZone: hasSyntheticFallback
-          ? [syntheticQuick, syntheticFmv]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [quick, fmv],
-        sellZone: hasSyntheticFallback
-          ? [syntheticFmv, syntheticPremium]
-          : noUsableLiveFmv
-            ? [null, null]
-            : [fmv, premium],
+        // CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): iOS's Comp
+        // Analysis surface (buyZone/holdZone/sellZone) went blank on
+        // thin-market cards (Hartman LogoFractor /35: compsUsed=3,
+        // lastSale.price=$825, but marketValue=null). Fill zones from
+        // lastSale.price ±15% when no live FMV and no synthetic
+        // fallback. marketValue / fairMarketValueLive stay null (single-
+        // sale anchor isn't FMV); zones become honest narrow bands.
+        ...((): { buyZone: [number|null, number|null]; holdZone: [number|null, number|null]; sellZone: [number|null, number|null] } => {
+          const lsAnchor = !hasSyntheticFallback && noUsableLiveFmv
+            ? lastSaleZoneAnchor(est as Record<string, unknown>)
+            : null;
+          if (hasSyntheticFallback) {
+            return {
+              buyZone: [syntheticQuick * 0.9, syntheticQuick],
+              holdZone: [syntheticQuick, syntheticFmv],
+              sellZone: [syntheticFmv, syntheticPremium],
+            };
+          }
+          if (noUsableLiveFmv) {
+            if (lsAnchor !== null) {
+              return {
+                buyZone: [lsAnchor * 0.85, lsAnchor * 0.95],
+                holdZone: [lsAnchor * 0.95, lsAnchor * 1.05],
+                sellZone: [lsAnchor * 1.05, lsAnchor * 1.15],
+              };
+            }
+            return { buyZone: [null, null], holdZone: [null, null], sellZone: [null, null] };
+          }
+          return {
+            buyZone: [quick * 0.9, quick],
+            holdZone: [quick, fmv],
+            sellZone: [fmv, premium],
+          };
+        })(),
         // Live FMV emitted at top level for engine-emission symmetry
         // with /search and /price (Option X). null when thin market.
         fairMarketValueLive: noUsableLiveFmv ? null : fmv,
