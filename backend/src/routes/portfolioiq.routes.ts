@@ -60,6 +60,10 @@ import {
   readOutcome,
 } from "../services/portfolioiq/graderOutcomeStore.service.js";
 import { slugFamily as slugOutcomeFamily } from "../services/portfolioiq/graderOutcomeCompute.service.js";
+// CF-TIMING-FORECAST (Drew, 2026-07-17): actionable 30-days-out
+// price forecast per card/holding. Combines local-comp trend,
+// stratified player momentum, and velocity.
+import { analyzeTimingForecast } from "../services/portfolioiq/timingAwareForecastAnalyze.service.js";
 
 const router = Router();
 
@@ -74,6 +78,16 @@ router.get("/health", (req, res) => {
 // requireUser() helper (now prefers req.user; falls back to header path
 // for legacy compatibility — see portfolioStore.service.ts).
 router.use(requireSession);
+
+// CF-TIMING-FORECAST (Drew, 2026-07-17): parse the ?horizonDays query
+// string param — defaults 30, clamps [1, 365] to bound extrapolation.
+function parseHorizon(raw: unknown): number {
+  const n = Number(typeof raw === "string" ? raw.trim() : raw);
+  if (!Number.isFinite(n)) return 30;
+  if (n < 1) return 1;
+  if (n > 365) return 365;
+  return Math.round(n);
+}
 
 // GET /api/portfolio — combined holdings + summary for the iOS dashboard.
 router.get("/", portfolio.getPortfolioWithSummary);
@@ -372,6 +386,52 @@ router.get(
       res.json({
         ...row,
         caveat: "Distribution reflects OUTCOMES observed on the sales market. Not P(tier | you submit).",
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-TIMING-FORECAST (Drew, 2026-07-17): 30-day-forward price forecast
+// for an owned holding. Combines card-side regression, stratified
+// player momentum, and velocity into a single actionable number with
+// confidence tiering.
+router.get(
+  "/holdings/:id/timing-forecast",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const holdingId = String(req.params.id ?? "").trim();
+      if (!holdingId) return res.status(400).json({ error: "holding id required" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      const key = Object.keys(doc.holdings ?? {}).find(
+        (k) => k.toLowerCase() === holdingId.toLowerCase(),
+      );
+      const holding = key ? doc.holdings[key] : undefined;
+      if (!holding) return res.status(404).json({ error: "holding not found" });
+
+      const horizon = parseHorizon(req.query.horizonDays);
+      const forecast = await analyzeTimingForecast({
+        player: holding.playerName,
+        cardYear: holding.cardYear,
+        cardNumber: holding.cardNumber,
+        cardSet: holding.setName ?? holding.product,
+        variant: holding.parallel,
+        gradeCompany: holding.gradingCompany ?? holding.gradeCompany,
+        gradeValue: holding.gradeValue !== undefined ? String(holding.gradeValue) : undefined,
+      }, horizon);
+
+      res.json({
+        holdingId: holding.id ?? holdingId,
+        player: holding.playerName ?? null,
+        currentGraderTier: holding.gradingCompany || holding.gradeCompany
+          ? `${holding.gradingCompany ?? holding.gradeCompany} ${holding.gradeValue ?? ""}`.trim()
+          : "Raw",
+        forecast,
       });
     } catch (err) {
       next(err);
