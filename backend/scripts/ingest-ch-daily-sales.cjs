@@ -86,6 +86,7 @@ async function main() {
     }));
 
     let totalUpserted = 0;
+    let totalFiltered = 0;
     let totalFailed = 0;
     let daysSkipped404 = 0;
     let daysSkippedCheckpoint = 0;
@@ -110,6 +111,7 @@ async function main() {
         continue;
       }
       totalUpserted += res.rowsUpserted;
+      totalFiltered += res.rowsFiltered || 0;
       totalFailed += res.rowsFailed;
       if (res.skipped) {
         if (res.skipReason === "checkpoint_exists") daysSkippedCheckpoint++;
@@ -127,6 +129,7 @@ async function main() {
       daysSkippedCheckpoint,
       daysSkipped404,
       totalRowsUpserted: totalUpserted,
+      totalRowsFiltered: totalFiltered,
       totalRowsFailed: totalFailed,
       firstError,
     }));

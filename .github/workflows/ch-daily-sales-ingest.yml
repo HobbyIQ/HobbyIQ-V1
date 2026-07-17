@@ -103,4 +103,5 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
           COSMOS_DATABASE=hobbyiq \
+          CH_INGEST_SPORT_FILTER="Baseball" \
           node scripts/ingest-ch-daily-sales.cjs $BACKFILL_FLAG $DATE_FLAG $FORCE_FLAG
