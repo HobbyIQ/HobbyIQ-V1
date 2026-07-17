@@ -525,11 +525,15 @@ function chComputeMedian(values: number[]): number | null {
 /**
  * Map CardHedge RoutedSale[] (from getCardSalesRouted) to the engine's
  * RawComp[] shape. The fields match the free-text path's mapping at line
- * ~1714. listingType comes from CH's sale_type ("Auction" | "Best Offer");
- * imageUrl is null because CardHedge does not surface card images.
+ * ~1714. listingType comes from CH's sale_type ("Auction" | "Best Offer").
+ *
+ * CF-COMP-IMAGE-PHASE-0 (Drew, 2026-07-16): CardHedge DOES surface a
+ * per-sale eBay thumbnail via the `image` field on /cards/comps (verified
+ * live probe 2026-07-16); prior comment "CardHedge does not surface card
+ * images" was wrong. Thread it through when the sale carries it.
  */
 function chSalesToRawComps(
-  sales: Array<{ price: number; date: string | null; title: string | null; sale_type: string | null }>,
+  sales: Array<{ price: number; date: string | null; title: string | null; sale_type: string | null; image_url?: string | null }>,
   bodyIdentity: { year?: string | number; product?: string; playerName?: string; parallel?: string; cardNumber?: string },
 ): RawComp[] {
   return sales
@@ -544,7 +548,7 @@ function chSalesToRawComps(
       ].filter(Boolean).join(" "),
       soldDate: s.date ?? "",
       listingType: s.sale_type ?? null,
-      imageUrl: null,
+      imageUrl: s.image_url ?? null,
       // CF-PROVENANCE-DISPLAY: pinned CH path — every row is CH.
       source: "cardhedge",
       verifiedByUser: false,
