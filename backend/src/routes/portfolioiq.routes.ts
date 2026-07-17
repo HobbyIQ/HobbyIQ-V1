@@ -41,6 +41,15 @@ import { readPlayerTrend } from "../services/portfolioiq/playerTrendStore.servic
 import { computePlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
 import type { PlayerSale } from "../types/playerTrend.types.js";
 import { CosmosClient } from "@azure/cosmos";
+// CF-OBSERVED-MULTIPLIERS (Drew, 2026-07-17): serves nightly-computed
+// grader multipliers per (card_set_type, tier). Powers the "blended
+// avg by product" fallback for grade-worthy decisions when a specific
+// SKU has no graded comps.
+import {
+  readFamilyMultipliers,
+  readMultiplier,
+} from "../services/portfolioiq/observedMultipliersStore.service.js";
+import { slugFamily } from "../services/portfolioiq/observedMultipliersCompute.service.js";
 
 const router = Router();
 
@@ -145,6 +154,60 @@ router.get(
 );
 
 router.get("/holdings", portfolio.getHoldings);
+
+// CF-OBSERVED-MULTIPLIERS (Drew, 2026-07-17): read observed grader
+// multipliers for a family. Accepts either a card_set_type text
+// (which we slug) or a pre-slugged family key. Returns every graded
+// tier we have data for, sorted by multiplier DESC.
+router.get(
+  "/family-multipliers/:family",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const raw = String(req.params.family ?? "").trim();
+      if (!raw) return res.status(400).json({ error: "family param required" });
+      // Accept "Bowman Chrome Baseball" or "bowman_chrome_baseball" —
+      // slug idempotently.
+      const familyKey = slugFamily(raw);
+      const rows = await readFamilyMultipliers(familyKey);
+      res.json({
+        familyKey,
+        tiers: rows.map((r) => ({
+          graderTier: r.graderTier,
+          multiplier: r.multiplier,
+          confidence: r.confidence,
+          nGraded: r.nGraded,
+          nRaw: r.nRaw,
+          medianGradedPrice: r.medianGradedPrice,
+          medianRawPrice: r.medianRawPrice,
+          computedAt: r.computedAt,
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-OBSERVED-MULTIPLIERS (Drew, 2026-07-17): read a specific tier
+// (family + tier) — used by grade-worthy blending as the fallback
+// signal when a SKU's own graded comps are sparse.
+router.get(
+  "/family-multipliers/:family/:tier",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const family = slugFamily(String(req.params.family ?? "").trim());
+      const tier = String(req.params.tier ?? "").trim();
+      if (!family || !tier) return res.status(400).json({ error: "family + tier required" });
+      const row = await readMultiplier(family, tier);
+      if (!row) return res.status(404).json({ error: "no observed multiplier for that (family, tier)" });
+      res.json(row);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // CF-VERDICT-FLIP-PUSH-PREFS-ROUTE (Drew, 2026-07-16, PR #500 follow-up):
 // per-user notification opt-in + APNs device-token registration surface.
