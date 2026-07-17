@@ -151,6 +151,16 @@ interface UserDoc {
      * push regardless of this field — mixed-adjacency flips never fire.
      */
     pushOnMajorFlip?: boolean;
+    /**
+     * CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). True when the user opted
+     * in (onboarding or Settings) to receive an APNs push when the
+     * cascade detector fires an "insider" or "emerging" signal for a
+     * player they hold. "confirmed"-severity events never route to
+     * push regardless of this field — those are late-stage and would
+     * spam. Separate from pushOnMajorFlip so users can opt into one
+     * taxon without the other.
+     */
+    pushOnCascade?: boolean;
   };
   // CF-VERDICT-FLIP-PUSH-DEVICE (Drew, 2026-07-16, PR #499 follow-up):
   // most-recent APNs device token registered by iOS at app launch.
@@ -4805,6 +4815,65 @@ export async function listUsersOwningPlayerWithPushOptIn(
 }
 
 /**
+ * CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). Reverse index for the
+ * cascade fan-out worker: given a player display name, return the
+ * subset of users who hold that player AND have opted in to cascade
+ * push. Mirrors `listUsersOwningPlayerWithPushOptIn` but keyed on
+ * `preferences.pushOnCascade` instead. Only the fields the fan-out
+ * worker needs (userId + apnsDeviceToken) are projected — no user PII
+ * travels through the push log stream.
+ *
+ * Case-insensitive on playerName after trim. Returns empty when the
+ * store is unavailable OR when no users match.
+ */
+export async function listUsersOwningPlayerWithCascadeOptIn(
+  playerDisplay: string,
+): Promise<Array<{ userId: string; apnsDeviceToken: string | null }>> {
+  const target = String(playerDisplay ?? "").trim().toLowerCase();
+  if (!target) return [];
+
+  const matches: Array<{ userId: string; apnsDeviceToken: string | null }> = [];
+  const scan = (doc: UserDoc) => {
+    if (doc.preferences?.pushOnCascade !== true) return;
+    const token = doc.apnsDeviceToken ?? null;
+    for (const holding of Object.values(doc.holdings)) {
+      const name = String(holding?.playerName ?? "").trim().toLowerCase();
+      if (name === target) {
+        matches.push({ userId: doc.userId, apnsDeviceToken: token });
+        return;
+      }
+    }
+  };
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const doc of testMemStore.values()) scan(doc);
+    return matches;
+  }
+  if (!container) return matches;
+
+  try {
+    const { resources } = await container.items
+      .query<UserDoc>({
+        query:
+          "SELECT c.userId, c.holdings, c.preferences, c.apnsDeviceToken " +
+          "FROM c WHERE c.preferences.pushOnCascade = true",
+      })
+      .fetchAll();
+    for (const row of resources ?? []) {
+      if (!row) continue;
+      scan(row as UserDoc);
+    }
+  } catch (err: any) {
+    console.error(
+      "[portfolio] listUsersOwningPlayerWithCascadeOptIn query failed:",
+      err?.message ?? String(err),
+    );
+  }
+  return matches;
+}
+
+/**
  * CF-VERDICT-FLIP-PUSH-PREFS (Drew, 2026-07-16, PR #500 + follow-up).
  * Writes the two push-related fields on the user doc. Called from the
  * PATCH /api/portfolio/preferences route in production. Named without
@@ -4818,12 +4887,14 @@ export async function setUserPushPreference(
   userId: string,
   input: {
     pushOnMajorFlip?: boolean;
+    pushOnCascade?: boolean;
     apnsDeviceToken?: string | null;
   },
 ): Promise<void> {
   const doc = await readUserDoc(userId);
   const prefs = { ...(doc.preferences ?? {}) };
   if (input.pushOnMajorFlip !== undefined) prefs.pushOnMajorFlip = input.pushOnMajorFlip;
+  if (input.pushOnCascade !== undefined) prefs.pushOnCascade = input.pushOnCascade;
   doc.preferences = prefs;
   if (input.apnsDeviceToken !== undefined) {
     doc.apnsDeviceToken = input.apnsDeviceToken ?? null;
