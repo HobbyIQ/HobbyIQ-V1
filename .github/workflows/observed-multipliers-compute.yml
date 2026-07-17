@@ -1,0 +1,84 @@
+name: Observed Grader Multipliers Nightly Compute
+
+# CF-OBSERVED-MULTIPLIERS (Drew, 2026-07-17). Nightly job computes
+# observed grader multipliers per (card_set_type, grader_tier) from
+# ch_daily_sales. Overwrites observed_grader_multipliers container.
+#
+# Schedule: 04:15 UTC. After player-trends (03:45) so both signals
+# land before the CH daily ingest at 05:15 kicks new data in.
+
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      window:
+        description: 'Days of history (default 90).'
+        required: false
+        type: string
+        default: '90'
+      min_raw:
+        description: 'Min raw n per family to publish (default 20).'
+        required: false
+        type: string
+        default: '20'
+      min_graded:
+        description: 'Min graded n per (family, tier) to publish (default 5).'
+        required: false
+        type: string
+        default: '5'
+
+jobs:
+  compute:
+    name: Compute observed multipliers
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Compute observed multipliers
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty — cannot compute"
+            exit 1
+          fi
+          WINDOW="${{ inputs.window }}"
+          MIN_RAW="${{ inputs.min_raw }}"
+          MIN_GRADED="${{ inputs.min_graded }}"
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/compute-observed-multipliers.cjs \
+            --window=${WINDOW:-90} \
+            --min-raw=${MIN_RAW:-20} \
+            --min-graded=${MIN_GRADED:-5}
