@@ -41,6 +41,8 @@ import { readPlayerTrend } from "../services/portfolioiq/playerTrendStore.servic
 import { computePlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
 import type { PlayerSale } from "../types/playerTrend.types.js";
 import { CosmosClient } from "@azure/cosmos";
+// CF-GRADE-WORTHY (Drew, 2026-07-17): grade-worthy analysis endpoints.
+import { analyzeHoldingGradeWorthy } from "../services/portfolioiq/gradeWorthyAnalyze.service.js";
 
 const router = Router();
 
@@ -145,6 +147,107 @@ router.get(
 );
 
 router.get("/holdings", portfolio.getHoldings);
+
+// CF-GRADE-WORTHY (Drew, 2026-07-17): single-holding grade-worthy
+// analysis. Given a raw holding, computes expected gain per grader
+// tier using the local comp store's observed grader-premium curve.
+// Only raw holdings are analyzed; graded cards return an out-of-scope
+// response. Rate-limited under priceChecksPerDay.
+router.get(
+  "/holdings/:id/grade-analysis",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const holdingId = String(req.params.id ?? "").trim();
+      if (!holdingId) return res.status(400).json({ error: "holding id required" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      // Case-insensitive key match — same pattern as portfolio.getHoldingById.
+      const key = Object.keys(doc.holdings ?? {}).find(
+        (k) => k.toLowerCase() === holdingId.toLowerCase(),
+      );
+      const holding = key ? doc.holdings[key] : undefined;
+      if (!holding) return res.status(404).json({ error: "holding not found" });
+
+      const result = await analyzeHoldingGradeWorthy(holding);
+      res.json({
+        holdingId: holding.id ?? holdingId,
+        player: holding.playerName ?? null,
+        year: holding.cardYear ?? null,
+        cardNumber: holding.cardNumber ?? null,
+        set: holding.setName ?? holding.product ?? null,
+        variant: holding.parallel ?? null,
+        analysis: result.analysis,
+        diagnostics: result.diagnostics,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// CF-GRADE-WORTHY (Drew, 2026-07-17): portfolio-wide grade-worthy scan.
+// Iterates the user's raw holdings and returns those with a
+// grade_now recommendation, sorted by expectedGain DESC.
+router.get(
+  "/grade-worthy-alerts",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+      const rawHoldings = holdings.filter((h) => {
+        const g = h.gradingCompany ?? h.gradeCompany;
+        return !g || String(g).trim().length === 0;
+      });
+
+      // Concurrency 6 — each holding hits Cosmos ~500ms.
+      const results: Array<{ h: PortfolioHolding; analysis: Awaited<ReturnType<typeof analyzeHoldingGradeWorthy>> }> = [];
+      const CONCURRENCY = 6;
+      let idx = 0;
+      async function worker() {
+        while (idx < rawHoldings.length) {
+          const my = idx++;
+          const h = rawHoldings[my];
+          try {
+            const a = await analyzeHoldingGradeWorthy(h);
+            results.push({ h, analysis: a });
+          } catch {
+            /* skip failures — best-effort scan */
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, rawHoldings.length) }, () => worker()));
+
+      const candidates = results
+        .filter(({ analysis }) => analysis.analysis.overallRecommendation === "grade_now")
+        .map(({ h, analysis }) => ({
+          holdingId: h.id ?? "",
+          cardTitle: h.cardTitle ?? "",
+          player: h.playerName ?? "",
+          year: h.cardYear ?? null,
+          set: h.setName ?? h.product ?? "",
+          variant: h.parallel ?? "",
+          number: h.cardNumber ?? "",
+          analysis: analysis.analysis,
+        }))
+        .sort((a, b) => (b.analysis.bestTier?.expectedGain ?? 0) - (a.analysis.bestTier?.expectedGain ?? 0));
+
+      res.json({
+        scannedHoldings: rawHoldings.length,
+        gradeWorthyCount: candidates.length,
+        candidates,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // CF-VERDICT-FLIP-PUSH-PREFS-ROUTE (Drew, 2026-07-16, PR #500 follow-up):
 // per-user notification opt-in + APNs device-token registration surface.
