@@ -3437,35 +3437,106 @@ struct PortfolioHoldingHeroCard: View {
         .task(id: card.cardId ?? "") { await loadHeroSparkline() }
     }
 
-    /// Compact chart-only sparkline — no axes, no grid, 44pt height.
-    /// Self-suppresses on thin data (< 2 points with median > 0).
+    /// Compact sparkline card with a signed delta chip + gradient-filled
+    /// price line. 60pt total (chart 44pt + chip 12pt caption). Trend
+    /// color follows the first-to-last delta: green when the 30-day
+    /// median rose, brick when it dropped, muted when flat.
     @ViewBuilder
     private var heroSparkline: some View {
         let usable = (sparklinePoints ?? []).filter {
             $0.parsedDate != nil && ($0.medianPrice ?? 0) > 0
         }
-        if usable.count >= 2 {
-            Chart {
-                ForEach(usable) { point in
-                    if let date = point.parsedDate,
-                       let median = point.medianPrice {
-                        LineMark(
-                            x: .value("Date", date),
-                            y: .value("Price", median)
+        if usable.count >= 2,
+           let firstMedian = usable.first?.medianPrice, firstMedian > 0,
+           let lastMedian = usable.last?.medianPrice, lastMedian > 0 {
+            let deltaPct = ((lastMedian / firstMedian) - 1.0) * 100.0
+            let direction: SparklineDirection = {
+                if deltaPct >= 2.0 { return .up }
+                if deltaPct <= -2.0 { return .down }
+                return .flat
+            }()
+            let tint = direction.tint
+            let deltaLabel = direction == .flat
+                ? "Flat 30d"
+                : "\(direction.glyph) \(String(format: "%.1f", abs(deltaPct)))% 30d"
+
+            VStack(spacing: 4) {
+                Chart {
+                    ForEach(usable) { point in
+                        if let date = point.parsedDate,
+                           let median = point.medianPrice {
+                            // Gradient area fill under the line so the
+                            // sparkline reads as a wedge, not a thin
+                            // wire — fades to transparent at the axis.
+                            AreaMark(
+                                x: .value("Date", date),
+                                y: .value("Price", median)
+                            )
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [tint.opacity(0.35), tint.opacity(0.02)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            LineMark(
+                                x: .value("Date", date),
+                                y: .value("Price", median)
+                            )
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(tint)
+                            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                        }
+                    }
+                    // End-point emphasis dot so the latest value reads
+                    // as the "current" anchor.
+                    if let lastDate = usable.last?.parsedDate {
+                        PointMark(
+                            x: .value("Date", lastDate),
+                            y: .value("Price", lastMedian)
                         )
-                        .interpolationMethod(.monotone)
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .foregroundStyle(tint)
+                        .symbolSize(60)
                     }
                 }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .chartPlotStyle { plot in
+                    plot.background(Color.clear).border(Color.clear, width: 0)
+                }
+                .frame(height: 44)
+
+                // Signed delta chip — small caption underneath so the
+                // sparkline reads as a scaled signal, not just decoration.
+                HStack {
+                    Spacer()
+                    Text(deltaLabel)
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(0.4)
+                        .foregroundStyle(tint)
+                }
             }
-            .chartXAxis(.hidden)
-            .chartYAxis(.hidden)
-            .chartPlotStyle { plot in
-                plot.background(Color.clear).border(Color.clear, width: 0)
-            }
-            .frame(height: 44)
             .padding(.horizontal, 4)
-            .padding(.top, 2)
+            .padding(.top, 4)
+        }
+    }
+
+    private enum SparklineDirection {
+        case up, down, flat
+        var tint: Color {
+            switch self {
+            case .up: return HobbyIQTheme.Colors.successGreen
+            case .down: return HobbyIQTheme.Colors.danger
+            case .flat: return HobbyIQTheme.Colors.mutedText
+            }
+        }
+        var glyph: String {
+            switch self {
+            case .up: return "\u{25B2}"
+            case .down: return "\u{25BC}"
+            case .flat: return "\u{2500}"
+            }
         }
     }
 
