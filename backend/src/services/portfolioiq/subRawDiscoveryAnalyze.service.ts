@@ -32,11 +32,23 @@ async function getContainers(): Promise<{ ch: Container; mult: Container }> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — subRawDiscovery cannot run");
   const client = new CosmosClient(cs);
-  const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
-  sharedCHContainer = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
-  sharedMultipliersContainer = db.container(
-    process.env.COSMOS_OBSERVED_MULTIPLIERS_CONTAINER ?? "observed_grader_multipliers",
-  );
+  const { database } = await client.databases.createIfNotExists({
+    id: process.env.COSMOS_DATABASE ?? "hobbyiq",
+  });
+  // ch_daily_sales is guaranteed to exist (CH loader populates it); use
+  // proxy handle. observed_grader_multipliers is populated by the
+  // nightly compute — if that hasn't run yet the container is absent
+  // and any query 404s at collection-read. createIfNotExists is
+  // idempotent and mirrors the pattern in observedMultipliersStore's
+  // getContainer(); it lets read-side callers succeed on an empty
+  // container (loadPsa10FamilyMap returns {} → compute treats it as
+  // "no family blend available", which is the correct behavior).
+  sharedCHContainer = database.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
+  const { container: multContainer } = await database.containers.createIfNotExists({
+    id: process.env.COSMOS_OBSERVED_MULTIPLIERS_CONTAINER ?? "observed_grader_multipliers",
+    partitionKey: { paths: ["/familyKey"] },
+  });
+  sharedMultipliersContainer = multContainer;
   return { ch: sharedCHContainer, mult: sharedMultipliersContainer };
 }
 
