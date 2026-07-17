@@ -32,7 +32,18 @@ const DEFAULT_OPTIONS: Required<PlayerTrendOptions> = {
   minSalesPerWindow: 3,
   minTotalSales: 4,
   topCardsInResult: 20,
+  saleFilter: "all",
 };
+
+/** Predicate: does this sale pass the stratification filter?
+ *  Absent/empty grader is treated as "Raw" for filter purposes so
+ *  older data paths don't accidentally get excluded. */
+function passesFilter(grader: string | null | undefined, filter: PlayerTrendOptions["saleFilter"]): boolean {
+  if (!filter || filter === "all") return true;
+  const g = (grader ?? "Raw").trim();
+  const isRaw = g === "" || g.toLowerCase() === "raw";
+  return filter === "raw_only" ? isRaw : !isRaw;
+}
 
 /** Main entry point. Computes matched-cohort momentum + velocity for a
  *  single player over the sales collection. */
@@ -68,6 +79,7 @@ export function computePlayerTrend(
     if (!Number.isFinite(s.price) || s.price <= 0) continue;
     const t = Date.parse(s.saleDate);
     if (!Number.isFinite(t)) continue;
+    if (!passesFilter(s.grader, options.saleFilter)) continue;
 
     let b = buckets.get(s.cardId);
     if (!b) {
@@ -167,6 +179,25 @@ function resolveOptions(opts: PlayerTrendOptions): Required<PlayerTrendOptions> 
     minSalesPerWindow: opts.minSalesPerWindow ?? DEFAULT_OPTIONS.minSalesPerWindow,
     minTotalSales: opts.minTotalSales ?? DEFAULT_OPTIONS.minTotalSales,
     topCardsInResult: opts.topCardsInResult ?? DEFAULT_OPTIONS.topCardsInResult,
+    saleFilter: opts.saleFilter ?? DEFAULT_OPTIONS.saleFilter,
+  };
+}
+
+/** CF-STRATIFIED-TRENDS (Drew, 2026-07-17): compute all three variants
+ *  in one pass over the input sales. Cheap — same math three times but
+ *  the input list is small per player. */
+export function computeStratifiedPlayerTrend(
+  player: string,
+  sales: PlayerSale[],
+  opts: PlayerTrendOptions = {},
+  now: Date = new Date(),
+): import("../../types/playerTrend.types.js").StratifiedPlayerTrendResult {
+  return {
+    player,
+    computedAt: now.toISOString(),
+    all: computePlayerTrend(player, sales, { ...opts, saleFilter: "all" }, now),
+    raw: computePlayerTrend(player, sales, { ...opts, saleFilter: "raw_only" }, now),
+    graded: computePlayerTrend(player, sales, { ...opts, saleFilter: "graded_only" }, now),
   };
 }
 
