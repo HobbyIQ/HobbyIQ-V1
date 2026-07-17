@@ -576,6 +576,55 @@ struct APIService {
         )
     }
 
+    // MARK: - Corpus Signals (PR #517-#520, 2026-07-17)
+
+    /// PR #517: matched-cohort momentum for a single player. Path segment
+    /// is the raw display name; backend slugs internally (lowercase +
+    /// hyphens). `raw` / `graded` sub-objects arrived in PR #519 —
+    /// callers must treat them as optional.
+    func fetchPlayerTrend(player: String) async throws -> PlayerTrendResponse {
+        let encoded = player.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? player
+        return try await get(
+            path: "/api/portfolio/player-trend/\(encoded)",
+            responseType: PlayerTrendResponse.self
+        )
+    }
+
+    /// PR #518: per-holding grade-worthy analysis (best tier + all tiers +
+    /// diagnostics). Raw-only signal — pointless to fetch for holdings
+    /// that are already graded; caller should gate on
+    /// `gradeCompany == nil` before firing.
+    func fetchGradeAnalysis(holdingId: String) async throws -> GradeAnalysisResponse {
+        try await get(
+            path: "/api/portfolio/holdings/\(holdingId)/grade-analysis",
+            responseType: GradeAnalysisResponse.self
+        )
+    }
+
+    /// PR #518: portfolio-wide scan returning only `grade_now`
+    /// candidates, sorted by best-tier `expectedGain` DESC. Feeds the
+    /// portfolio-home banner + list view.
+    func fetchGradeWorthyAlerts() async throws -> GradeWorthyAlertsResponse {
+        try await get(
+            path: "/api/portfolio/grade-worthy-alerts",
+            responseType: GradeWorthyAlertsResponse.self
+        )
+    }
+
+    /// PR #520: observed family multipliers (grader-tier premium curves
+    /// blended by product family). `family` accepts either the human
+    /// string or the slug; backend slugs idempotently. Optional
+    /// `tier` filter narrows to a single graded rung.
+    func fetchFamilyMultipliers(family: String, tier: String? = nil) async throws -> FamilyMultipliersResponse {
+        let encodedFamily = family.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? family
+        var path = "/api/portfolio/family-multipliers/\(encodedFamily)"
+        if let tier {
+            let encodedTier = tier.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tier
+            path += "/\(encodedTier)"
+        }
+        return try await get(path: path, responseType: FamilyMultipliersResponse.self)
+    }
+
     func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
@@ -2476,14 +2525,31 @@ struct APIService {
         // P0.7 delta (2026-07-16, backend PR #501): preferences GET/PATCH
         // fires on Settings load + APNs registration. Same reasoning —
         // transient 401 during a deploy gap must not evict the session.
-        "/api/portfolio/preferences"
+        "/api/portfolio/preferences",
+        // Corpus signals (2026-07-17, PR #518): grade-worthy scan fires
+        // on portfolio open. Same reasoning.
+        "/api/portfolio/grade-worthy-alerts"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
     /// per-player verdict-history route has an inline `:player` slug).
     /// Matched by `hasPrefix` in `notifySessionInvalidatedIfNeeded`.
     private static let bestEffortPathPrefixes: [String] = [
-        "/api/compiq/players/"
+        "/api/compiq/players/",
+        // Corpus signals (2026-07-17): per-player trend + per-family
+        // multipliers fan out on portfolio open. A transient 401 must
+        // never evict the session.
+        "/api/portfolio/player-trend/",
+        "/api/portfolio/family-multipliers/"
+    ]
+
+    /// Corpus signals (2026-07-17): the grade-analysis route sits under
+    /// `/api/portfolio/holdings/{id}/…` but the parent slug is also used
+    /// for user-facing PATCH updates that MUST sign out on 401. So we
+    /// suffix-match this variable-`{id}` case instead of prefix-matching
+    /// the whole /holdings/ namespace.
+    private static let bestEffortPathSuffixes: [String] = [
+        "/grade-analysis"
     ]
 
     private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {
@@ -2492,6 +2558,7 @@ struct APIService {
         guard Self.authFlowPaths.contains(path) == false else { return }
         guard Self.bestEffortPaths.contains(path) == false else { return }
         guard Self.bestEffortPathPrefixes.contains(where: path.hasPrefix) == false else { return }
+        guard Self.bestEffortPathSuffixes.contains(where: path.hasSuffix) == false else { return }
         NotificationCenter.default.post(name: .hobbyIQAuthSessionInvalidated, object: nil)
     }
 }

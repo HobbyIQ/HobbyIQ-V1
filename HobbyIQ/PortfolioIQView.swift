@@ -58,6 +58,9 @@ struct PortfolioIQView: View {
     // suppress the card entirely.
     @State private var supplyDemandSummary: SupplyDemandSummaryResponse?
     @State private var signalWeightedTotals: SignalWeightedTotalsResponse?
+    /// Corpus signals (2026-07-17, PR #518): gate the drill-down push
+    /// from the grade-worthy banner.
+    @State private var showGradeWorthyList = false
 
     var body: some View {
         // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
@@ -94,6 +97,12 @@ struct PortfolioIQView: View {
                             // self-suppresses on empty / thin data.
                             supplyDemandDashboardCard
                             signalWeightedTotalsCard
+
+                            // Corpus signals (2026-07-17, PR #518):
+                            // portfolio-wide grade-worthy scan banner.
+                            // Self-suppresses when count is zero or the
+                            // backend hasn't returned yet.
+                            gradeWorthyBanner
 
                             portfolioToolsRow
 
@@ -173,6 +182,10 @@ struct PortfolioIQView: View {
             }
             .navigationDestination(isPresented: $showCalibration) {
                 CalibrationView()
+                    .environmentObject(sessionViewModel)
+            }
+            .navigationDestination(isPresented: $showGradeWorthyList) {
+                GradeWorthyListView(vm: vm)
                     .environmentObject(sessionViewModel)
             }
             .navigationDestination(isPresented: $showWeeklyBrief) {
@@ -459,6 +472,72 @@ struct PortfolioIQView: View {
         guard let card = vm.inventoryCards.first(where: { $0.id == uuid }) else { return }
         selectedCard = card
         appState.pendingRoute = nil
+    }
+
+    // MARK: - Corpus signals grade-worthy banner (2026-07-17, PR #518)
+
+    /// Compact banner surfaced above the holdings list when the portfolio
+    /// scan returned at least one grade-worthy candidate. Tap pushes
+    /// `GradeWorthyListView` for the full drill-down. Self-suppresses
+    /// entirely when there are zero candidates or the fetch hasn't
+    /// returned yet.
+    @ViewBuilder
+    private var gradeWorthyBanner: some View {
+        if let alerts = vm.gradeWorthyAlerts,
+           let count = alerts.gradeWorthyCount, count > 0,
+           let candidates = alerts.candidates, candidates.isEmpty == false {
+            Button {
+                showGradeWorthyList = true
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Text("\u{1F48E}")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(count) card\(count == 1 ? "" : "s") worth grading")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        if let top = candidates.first,
+                           let topGain = top.analysis?.bestTier?.expectedGain,
+                           topGain > 0 {
+                            let topLabel = gradeWorthyTopLabel(top)
+                            Text("Top: \(topLabel) — expected +\(portfolioCurrencyString(topGain))")
+                                .font(.caption)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                        }
+                        HStack(spacing: 4) {
+                            Text("Review all")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            Image(systemName: "arrow.right")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(HobbyIQTheme.Spacing.medium)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.successGreen.opacity(0.45), lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Best-effort "Player · CardNumber" caption for the banner's top card.
+    /// Falls back to just the player name when the card number is absent.
+    private func gradeWorthyTopLabel(_ candidate: GradeAnalysisResponse) -> String {
+        let player = candidate.player?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let number = candidate.cardNumber?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if player.isEmpty == false, number.isEmpty == false {
+            return "\(player) \(number)"
+        }
+        return player.isEmpty ? "your top card" : player
     }
 
     // MARK: - PR #425 Supply/Demand Dashboard
@@ -2103,7 +2182,8 @@ struct PriorityActionListView: View {
                     PortfolioCardRow(
                         card: card,
                         resolvedValue: vm.resolvedMarketValue(for: card),
-                        latestFlip: vm.recentFlip(for: card)
+                        latestFlip: vm.recentFlip(for: card),
+                        playerTrend: vm.playerTrend(for: card)
                     )
                         .contentShape(Rectangle())
                 }

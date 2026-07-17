@@ -301,7 +301,8 @@ struct InventoryIQView: View {
                             PortfolioCardRow(
                                 card: card,
                                 resolvedValue: vm.resolvedMarketValue(for: card),
-                                latestFlip: vm.recentFlip(for: card)
+                                latestFlip: vm.recentFlip(for: card),
+                                playerTrend: vm.playerTrend(for: card)
                             )
                                 .contentShape(Rectangle())
                         }

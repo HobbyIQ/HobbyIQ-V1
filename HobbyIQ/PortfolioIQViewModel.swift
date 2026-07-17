@@ -46,6 +46,20 @@ final class PortfolioIQViewModel: ObservableObject {
     /// Empty until first fetch; a stale-deploy 401 leaves it untouched.
     @Published private(set) var recentFlipsByPlayer: [String: VerdictFlip] = [:]
 
+    /// Corpus signals (2026-07-17): per-player matched-cohort momentum
+    /// cache. Keyed by normalized (lowercase-hyphenated) name to align
+    /// with the backend slug. `playerTrend(for:)` does the row-level
+    /// lookup; entries older than 12h re-fetch on next access.
+    @Published private(set) var playerTrendsByPlayer: [String: PlayerTrendResponse] = [:]
+    /// Tracks in-flight fetches so a rapid re-appear (list refresh) doesn't
+    /// fire duplicate requests for the same player.
+    private var playerTrendFetchesInFlight: Set<String> = []
+
+    /// Corpus signals (2026-07-17, PR #518): portfolio-wide grade-worthy
+    /// scan. Populated by `loadGradeWorthyAlerts()` on portfolio open;
+    /// feeds the top-of-list banner and the drill-down list view.
+    @Published private(set) var gradeWorthyAlerts: GradeWorthyAlertsResponse?
+
     private let service: APIService
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "portfolio")
 
@@ -932,6 +946,16 @@ final class PortfolioIQViewModel: ObservableObject {
         // hold up the rest of the load — the dot appears when the network
         // returns, matches the spec's 15-min refresh cadence.
         Task { await self.loadRecentFlips() }
+
+        // Corpus signals (2026-07-17): portfolio-wide grade-worthy scan
+        // fires alongside the flips batch. Both are best-effort — hidden
+        // banner on failure, no user-visible error.
+        Task { await self.loadGradeWorthyAlerts() }
+
+        // Corpus signals (2026-07-17, PR #517): pre-warm per-player
+        // trends for every holding's player so inventory rows render
+        // arrows without a per-row fetch delay. Detached, best-effort.
+        Task { await self.preloadPlayerTrends() }
     }
 
     /// Look up the most recent 14-day flip for a given holding. Returns
@@ -990,6 +1014,64 @@ final class PortfolioIQViewModel: ObservableObject {
         raw.trimmingCharacters(in: .whitespacesAndNewlines)
            .lowercased()
            .replacingOccurrences(of: " ", with: "-")
+    }
+
+    // MARK: - Corpus signals (2026-07-17)
+
+    /// Row-level lookup of the cached player trend. Nil when the trend
+    /// hasn't been fetched yet (returned entries populate after
+    /// `preloadPlayerTrends()`) or the entry is stale (>12h).
+    func playerTrend(for card: InventoryCard) -> PlayerTrendResponse? {
+        let key = Self.normalizedPlayerKey(card.playerName)
+        guard let cached = playerTrendsByPlayer[key] else { return nil }
+        // Session cache expires at 12h per the spec — treat older
+        // entries as absent so callers re-fetch on next tap.
+        if let age = cached.ageHours, age > 12 { return nil }
+        return cached
+    }
+
+    /// Fire-and-forget trend fetch for every unique player in the
+    /// current inventory. Dedupes per-name so a 200-holding portfolio
+    /// with 15 distinct players issues only 15 requests. In-flight
+    /// requests are skipped so a repeat call within the same session
+    /// doesn't re-fire. Backend serves from `nightly_cache` (millisecond
+    /// hits) so the fan-out is cheap.
+    func preloadPlayerTrends() async {
+        let uniquePlayers: Set<String> = Set(
+            inventoryCards
+                .map { $0.playerName.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { $0.isEmpty == false }
+        )
+        for player in uniquePlayers {
+            let key = Self.normalizedPlayerKey(player)
+            if playerTrendFetchesInFlight.contains(key) { continue }
+            if let existing = playerTrendsByPlayer[key],
+               let age = existing.ageHours, age <= 12 {
+                continue
+            }
+            playerTrendFetchesInFlight.insert(key)
+            do {
+                let response = try await service.fetchPlayerTrend(player: player)
+                playerTrendsByPlayer[key] = response
+            } catch {
+                // Best-effort — leave the last-known snapshot in place.
+                logger.info("Player trend fetch failed for \(player, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            }
+            playerTrendFetchesInFlight.remove(key)
+        }
+    }
+
+    /// PR #518: portfolio-wide grade-worthy scan. Populates
+    /// `gradeWorthyAlerts` (and hides the banner if the count is zero
+    /// or the fetch fails).
+    func loadGradeWorthyAlerts() async {
+        do {
+            gradeWorthyAlerts = try await service.fetchGradeWorthyAlerts()
+        } catch {
+            logger.info("Grade-worthy alerts fetch failed (best-effort): \(error.localizedDescription, privacy: .public)")
+            // Preserve the last-known good response on failure so a
+            // transient network blip doesn't collapse the banner.
+        }
     }
 
     private func resolvedUserId() -> String {

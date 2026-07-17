@@ -1086,6 +1086,22 @@ struct PortfolioHoldingDetailSheet: View {
     /// resolves; strip suppresses entirely when zero flips exist so the
     /// value block sits at the top for uneventful players.
     @State private var recentFlips: [VerdictFlip] = []
+    /// Corpus signals (2026-07-17, PR #517/#519): matched-cohort trend
+    /// for this holding's player, feeding the Player Momentum block below
+    /// the hero. Loaded on task; nil hides the block cleanly.
+    @State private var playerTrend: PlayerTrendResponse?
+    /// Controls the stratified raw/graded split disclosure inside the
+    /// Player Momentum block. Collapsed by default.
+    @State private var playerTrendExpanded: Bool = false
+    /// Corpus signals (2026-07-17, PR #518): per-holding grade-worthy
+    /// analysis for the Grade Analysis block. Only fetched for raw
+    /// holdings; response's `overallRecommendation` gates rendering.
+    @State private var gradeAnalysis: GradeAnalysisResponse?
+    /// Local in-flight + success state for the "Mark as At Grading" CTA
+    /// on the Grade Analysis block. Prevents double-fire and collapses
+    /// the button to a "Marked" affordance on success.
+    @State private var isMarkingAtGrading: Bool = false
+    @State private var didMarkAtGrading: Bool = false
 
     init(
         viewModel: PortfolioIQViewModel,
@@ -1302,6 +1318,52 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
+    // MARK: - Corpus signals (2026-07-17)
+
+    /// PR #517/#519: fetch matched-cohort momentum for this holding's
+    /// player. Populates the Player Momentum block; silent failure
+    /// hides it.
+    private func loadPlayerTrend() async {
+        // Reuse the portfolio-list cache when it already has a fresh
+        // entry (12h window) — avoids a duplicate fetch on detail-open.
+        if let cached = viewModel.playerTrend(for: card) {
+            playerTrend = cached
+            return
+        }
+        do {
+            playerTrend = try await APIService.shared.fetchPlayerTrend(player: card.playerName)
+        } catch {
+            playerTrend = nil
+        }
+    }
+
+    /// PR #518: per-holding grade-worthy analysis. Only fires for raw
+    /// holdings (already-graded cards return `insufficient_data` from
+    /// the backend anyway, but skipping the request saves rate-limit
+    /// budget). Silent failure hides the block.
+    private func loadGradeAnalysis() async {
+        guard isRawHolding else { return }
+        do {
+            gradeAnalysis = try await APIService.shared.fetchGradeAnalysis(holdingId: card.id.uuidString)
+        } catch {
+            gradeAnalysis = nil
+        }
+    }
+
+    /// Returns the loaded analysis when its `overallRecommendation` is
+    /// one of the two rendering states. `not_worth` / `insufficient_data`
+    /// / nil all return nil so the block hides entirely.
+    private func gradeAnalysisIfActionable() -> GradeAnalysisResponse? {
+        guard let analysis = gradeAnalysis else { return nil }
+        let recommendation = analysis.analysis?.overallRecommendation?.lowercased() ?? ""
+        switch recommendation {
+        case "grade_now", "grade_worthy_but_wait":
+            return analysis
+        default:
+            return nil
+        }
+    }
+
     /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): fetch the
     /// 90-day verdict history for this holding's player and keep the
     /// last 3 flips for the detail-sheet strip. Silent failure — an
@@ -1367,6 +1429,306 @@ struct PortfolioHoldingDetailSheet: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Corpus signals: Player Momentum block (2026-07-17)
+
+    /// Matched-cohort player momentum surface. Top row shows the raw
+    /// direction glyph + % + velocity, subline reports the qualifying
+    /// cards agreement ratio. Tap chevron expands the stratified split
+    /// (raw vs graded) so users can see whether the market is currently
+    /// rewarding grading on this player specifically.
+    ///
+    /// Never surfaces raw `servedFrom` or `flags` — those inform copy
+    /// (sparse subline) but never render literally.
+    @ViewBuilder
+    private func playerMomentumBlock(trend: PlayerTrendResponse) -> some View {
+        let direction = trend.direction?.lowercased() ?? ""
+        let renderable = direction == "up" || direction == "down"
+        if renderable, let pct = trend.momentumPercentString {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("PLAYER MOMENTUM")
+                    .font(.caption.weight(.bold))
+                    .tracking(0.6)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(card.playerName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    PlayerTrendArrow(trend: trend, style: .detail)
+                    if let velocity = trend.velocityPerWeek {
+                        Text("\(Int(velocity.rounded()))/wk")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 2)
+                .padding(.bottom, 2)
+                .padding(.leading, 2)
+                .padding(.trailing, 2)
+
+                if let qualifying = trend.qualifyingCards,
+                   let pool = trend.cardsInPool, pool > 0 {
+                    Text("\(qualifying) of \(pool) cards agree")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                if trend.hasFlag("sparse") {
+                    Text("Limited data — signal may be noisy.")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                } else if trend.hasFlag("one_card_dominant") {
+                    Text("1 card is >50% of volume — check breakdown.")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                } else if trend.hasFlag("wide_ratio_dispersion") {
+                    Text("Cards moving in different directions.")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                }
+
+                // Stratified split disclosure — only shown when the
+                // stratified sub-objects are present (PR #519+ deploys).
+                if trend.raw != nil || trend.graded != nil {
+                    playerMomentumStratifiedRow(trend: trend, ignore: pct)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    /// Collapsible raw vs graded split. When `graded.momentum > raw.momentum`,
+    /// annotate the graded row with "market rewards grading now" — this
+    /// is the actionable insight that drives a "consider grading this raw
+    /// card" nudge.
+    @ViewBuilder
+    private func playerMomentumStratifiedRow(trend: PlayerTrendResponse, ignore: String) -> some View {
+        DisclosureGroup(isExpanded: $playerTrendExpanded) {
+            VStack(alignment: .leading, spacing: 6) {
+                if let raw = trend.raw {
+                    stratumRow(label: "Raw", stratum: raw, annotation: nil)
+                }
+                if let graded = trend.graded {
+                    let rewardsGrading: Bool = {
+                        guard let rawM = trend.raw?.momentum,
+                              let gradedM = graded.momentum else { return false }
+                        return gradedM > rawM
+                    }()
+                    stratumRow(
+                        label: "Graded",
+                        stratum: graded,
+                        annotation: rewardsGrading ? "market rewards grading now" : nil
+                    )
+                }
+            }
+            .padding(.top, 6)
+        } label: {
+            Text("Raw vs graded split")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+        }
+        .tint(HobbyIQTheme.Colors.electricBlue)
+    }
+
+    @ViewBuilder
+    private func stratumRow(label: String, stratum: PlayerTrendStratum, annotation: String?) -> some View {
+        let direction = stratum.direction?.lowercased() ?? ""
+        let glyph: String? = {
+            switch direction {
+            case "up": return "\u{25B2}"
+            case "down": return "\u{25BC}"
+            default: return nil
+            }
+        }()
+        let color: Color = {
+            switch direction {
+            case "up": return HobbyIQTheme.Colors.successGreen
+            case "down": return HobbyIQTheme.Colors.danger
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .frame(width: 60, alignment: .leading)
+            if let glyph {
+                Text(glyph)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+            }
+            if let pct = stratum.momentumPercentString {
+                Text(pct)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(color)
+            }
+            if let annotation {
+                Text("← \(annotation)")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.successGreen.opacity(0.85))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Corpus signals: Grade Analysis block (2026-07-17)
+
+    /// Per-holding grade-worthy read. Two visual states:
+    ///   - `grade_now` — 💎 GRADE NOW headline, forest-green ROI, primary CTA
+    ///   - `grade_worthy_but_wait` — ⚠️ headline, muted treatment, reason
+    ///     copy explains why to wait
+    /// `not_worth` and `insufficient_data` never reach this builder (the
+    /// call site filters them via `gradeAnalysisIfActionable()`).
+    @ViewBuilder
+    private func gradeAnalysisBlock(analysis: GradeAnalysisResponse) -> some View {
+        let recommendation = analysis.analysis?.overallRecommendation?.lowercased() ?? ""
+        let isWait = recommendation == "grade_worthy_but_wait"
+        let bestTier = analysis.analysis?.bestTier
+
+        VStack(alignment: .leading, spacing: 12) {
+            Text("GRADE ANALYSIS")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            HStack(spacing: 8) {
+                Text(isWait ? "\u{26A0}\u{FE0F}" : "\u{1F48E}")
+                    .font(.title2)
+                Text(isWait ? "Worth grading — but wait" : "GRADE NOW")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(isWait ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen)
+                Spacer(minLength: 0)
+                // Small ? info tap. Uses accessibilityHint so the copy
+                // reads out for VoiceOver; on tap we don't push a full
+                // modal — the same string surfaces as an accessibility
+                // announcement, matching the spec's "info toggle" intent.
+                Image(systemName: "questionmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .accessibilityLabel("About grade analysis")
+                    .accessibilityHint("Assumes best-case grade result. Actual outcome depends on card condition.")
+            }
+
+            if let tier = bestTier {
+                if let median = tier.gradedMedianPrice, median > 0 {
+                    let sample = tier.gradedSampleSize ?? 0
+                    Text("\(tier.graderTier) avg: \(portfolioCurrencyString(median)) (n=\(sample))")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                if let gain = tier.expectedGain, gain > 0 {
+                    let cost = tier.gradingCostAssumed ?? 0
+                    Text("After \(portfolioCurrencyString(cost)) grading: +\(portfolioCurrencyString(gain)) gain")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                }
+                if let roi = tier.expectedRoiPercentString {
+                    Text("\(roi) on cost basis")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+
+            // "Also worth: BGS 9.5 (+$310)" — second-best tier when it
+            // exists and is meaningful (>= $50 expected gain per the spec's
+            // grade_now threshold).
+            if let alt = alternateGradeTier(analysis) {
+                let gainString = alt.expectedGain.map { "+\(portfolioCurrencyString($0))" } ?? ""
+                Text("Also worth: \(alt.graderTier) \(gainString)")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+
+            if isWait {
+                Text("Player momentum is down. Waiting could add 25%+ to expected gain.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                gradeAnalysisMarkButton
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(
+                    (isWait ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen).opacity(0.4),
+                    lineWidth: 1.5
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private var gradeAnalysisMarkButton: some View {
+        Button {
+            Task { await markAsAtGradingFromDetail() }
+        } label: {
+            HStack(spacing: 6) {
+                if isMarkingAtGrading {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(HobbyIQTheme.Colors.pureWhite)
+                } else {
+                    Image(systemName: didMarkAtGrading ? "checkmark.seal.fill" : "shippingbox.fill")
+                        .font(.caption.weight(.bold))
+                }
+                Text(didMarkAtGrading ? "Marked At Grading" : "Mark as At Grading")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(
+                didMarkAtGrading
+                    ? HobbyIQTheme.Colors.successGreen.opacity(0.7)
+                    : HobbyIQTheme.Colors.electricBlue
+            )
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(isMarkingAtGrading || didMarkAtGrading)
+    }
+
+    /// Second-best tier by expectedGain when it clears a meaningful bar
+    /// (>= $50, same threshold backend uses for grade_now).
+    private func alternateGradeTier(_ analysis: GradeAnalysisResponse) -> GradeAnalysisTier? {
+        let bestId = analysis.analysis?.bestTier?.id
+        let alts = (analysis.analysis?.allTiers ?? [])
+            .filter { $0.id != bestId && ($0.expectedGain ?? 0) >= 50 }
+        return alts.first
+    }
+
+    /// Corpus signals (2026-07-17): same graderStatus flip as the
+    /// portfolio-home banner's list view uses. Deviates from the spec's
+    /// literal "call /regrade" instruction — /regrade finalizes the
+    /// achieved grade, whereas "At Grading" is a queue status.
+    private func markAsAtGradingFromDetail() async {
+        isMarkingAtGrading = true
+        defer { isMarkingAtGrading = false }
+        do {
+            _ = try await APIService.shared.updateHoldingGraderStatus(
+                holdingId: card.id,
+                status: .atPsa
+            )
+            didMarkAtGrading = true
+            selectedStatus = .atPsa
+            onUpdated()
+        } catch {
+            localError = "Couldn't mark this holding as At Grading."
+        }
     }
 
     // MARK: - PREDICTED block (CF-HOLDING-DETAIL-V2; horizon per entry, see CF-PREDICTION-HORIZON-7D)
@@ -1754,6 +2116,23 @@ struct PortfolioHoldingDetailSheet: View {
                             showingEditSheet = true
                         }
 
+                        // Corpus signals (2026-07-17, PR #517/#519):
+                        // matched-cohort Player Momentum block below the
+                        // FMV. Self-suppresses when the trend fetch
+                        // fails or direction is flat/unknown.
+                        if let trend = playerTrend {
+                            playerMomentumBlock(trend: trend)
+                        }
+
+                        // Corpus signals (2026-07-17, PR #518): per-holding
+                        // Grade Analysis. Rendered only for raw holdings
+                        // with a grade_now or grade_worthy_but_wait
+                        // recommendation. `not_worth` and `insufficient_data`
+                        // hide the block per spec — never show as a null state.
+                        if let analysis = gradeAnalysisIfActionable() {
+                            gradeAnalysisBlock(analysis: analysis)
+                        }
+
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
                         // (30d) block — same visual as comp card,
                         // panel-only source, gated on locked-grade
@@ -2056,6 +2435,8 @@ struct PortfolioHoldingDetailSheet: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .task { await fetchPanelIfPossible() }
                 .task { await loadVerdictHistory() }
+                .task { await loadPlayerTrend() }
+                .task { await loadGradeAnalysis() }
                 .task {
                     // P1 (2026-07-16, iOS delta): first meaningful use —
                     // opening a holding detail. Ask for push permission
@@ -3591,6 +3972,11 @@ struct PortfolioCardRow: View {
     /// as a 6pt colored dot in the leading padding. Nil when no fresh
     /// flip exists; the row looks identical to before.
     var latestFlip: VerdictFlip? = nil
+    /// Corpus signals (2026-07-17): matched-cohort player-level momentum
+    /// for this row. Renders as an ▲/▼/► glyph + `+X%` string next to
+    /// the player name. Flag-aware treatment (sparse = gray, dominant
+    /// or dispersion = subline) applied via `PlayerTrendArrow`.
+    var playerTrend: PlayerTrendResponse? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -3601,11 +3987,19 @@ struct PortfolioCardRow: View {
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(card.playerName)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    HStack(spacing: 6) {
+                        Text(card.playerName)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        // Corpus signals (2026-07-17): matched-cohort
+                        // momentum arrow. Self-suppresses when the trend
+                        // is unloaded / flat / directionless.
+                        if let trend = playerTrend {
+                            PlayerTrendArrow(trend: trend, style: .compact)
+                        }
+                    }
 
                     if let details = inventoryCardSubtitle(for: card) {
                         Text(details)
@@ -3708,6 +4102,63 @@ private func verdictFlipDotColor(for verdict: String?) -> Color {
         return .red
     default:
         return .gray
+    }
+}
+
+/// Corpus signals (2026-07-17): matched-cohort player-level momentum
+/// glyph + optional % text. Renders as ▲ (green) / ▼ (red) / omitted
+/// (flat) per the corpus-signals prompt. Compact style is for inline use
+/// next to the player name on inventory rows; detail style adds a
+/// larger typographic treatment for the card-detail Player Momentum block.
+///
+/// Flags-aware treatment:
+///   - "sparse" → glyph dimmed to 40% opacity with a system-image
+///     info tooltip surface (accessibility hint).
+///   - Any other flag → normal glyph (subline copy handled by caller).
+///
+/// The whole view self-suppresses when direction is `"flat"` / nil /
+/// unknown — the row reads cleaner with no signal than with a "─".
+struct PlayerTrendArrow: View {
+    let trend: PlayerTrendResponse
+    let style: Style
+
+    enum Style {
+        /// Inline chip: 10pt glyph + 11pt caption text next to player name.
+        case compact
+        /// Full-size: 22pt glyph + 15pt semibold caption for card detail.
+        case detail
+    }
+
+    var body: some View {
+        let direction = trend.direction?.lowercased() ?? ""
+        let color: Color = {
+            switch direction {
+            case "up": return HobbyIQTheme.Colors.successGreen
+            case "down": return HobbyIQTheme.Colors.danger
+            default: return HobbyIQTheme.Colors.mutedText
+            }
+        }()
+        let glyph: String? = {
+            switch direction {
+            case "up": return "\u{25B2}"
+            case "down": return "\u{25BC}"
+            default: return nil
+            }
+        }()
+
+        if let glyph, let pct = trend.momentumPercentString {
+            let sparse = trend.hasFlag("sparse")
+            HStack(spacing: 3) {
+                Text(glyph)
+                    .font(style == .detail ? .system(size: 22, weight: .bold) : .caption.weight(.bold))
+                    .foregroundStyle(color)
+                Text(pct)
+                    .font(style == .detail ? .system(size: 15, weight: .semibold) : .caption.weight(.semibold))
+                    .foregroundStyle(color)
+            }
+            .opacity(sparse ? 0.4 : 1.0)
+            .accessibilityLabel(sparse ? "\(pct) player momentum, limited data" : "\(pct) player momentum")
+        }
     }
 }
 
