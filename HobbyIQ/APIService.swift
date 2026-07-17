@@ -680,6 +680,31 @@ struct APIService {
         try await get(path: "/api/portfolio/i-called-it", responseType: ICalledItResponse.self)
     }
 
+    /// PR #544 (2026-07-17): GET /api/compiq/cards/:cardId/active-listings.
+    /// Returns eBay active listings ranked against the card + grade context.
+    /// `gradeCompany` + `gradeValue` are optional — omit them for the
+    /// CompIQ tab's un-owned card path (backend defaults to Raw).
+    func fetchActiveListings(
+        cardId: String,
+        gradeCompany: String? = nil,
+        gradeValue: String? = nil
+    ) async throws -> ActiveListingsResponse {
+        let encoded = cardId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        var query: [URLQueryItem] = []
+        if let gradeCompany, gradeCompany.isEmpty == false {
+            query.append(URLQueryItem(name: "gradeCompany", value: gradeCompany))
+        }
+        if let gradeValue, gradeValue.isEmpty == false {
+            query.append(URLQueryItem(name: "gradeValue", value: gradeValue))
+        }
+        return try await get(
+            path: "/api/compiq/cards/\(encoded)/active-listings",
+            queryItems: query,
+            responseType: ActiveListingsResponse.self,
+            timeoutSeconds: 15
+        )
+    }
+
     /// PR #533: annual/quarterly recap. Full-screen retrospective on the
     /// Profile menu after Dec 15 each year. `year` required; optional
     /// `quarter` narrows to a quarter (`Q1`..`Q4`).
@@ -2735,7 +2760,11 @@ struct APIService {
     /// the whole /holdings/ namespace.
     private static let bestEffortPathSuffixes: [String] = [
         "/grade-analysis",
-        "/timing-forecast"
+        "/timing-forecast",
+        // PR #544 (2026-07-17): eBay active listings fetch on the card
+        // detail page. Section hides on any error, and iOS shouldn't
+        // sign out during a stale-deploy window.
+        "/active-listings"
     ]
 
     private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {

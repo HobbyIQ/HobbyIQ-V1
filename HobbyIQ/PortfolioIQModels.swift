@@ -2993,12 +2993,21 @@ struct PortfolioHoldingDetailSheet: View {
                         SoldCompsSection(card: card)
                             .padding(.horizontal, 16)
 
-                        // 2026-07-17: reserves layout space for the
-                        // future eBay active-listings-by-card feed.
-                        // Replaces with real data when the backend endpoint
-                        // ships.
-                        ActiveEbayListingsPlaceholder()
-                            .padding(.horizontal, 16)
+                        // 2026-07-17 (PR #544 wired): real eBay active
+                        // listings ranked against this holding's grade
+                        // context. Uses the holding's cardId + structured
+                        // gradeCompany/gradeValue so the ranker can flag
+                        // wrong-grade / raw-but-graded mismatches.
+                        ActiveEbayListingsSection(
+                            cardId: card.cardId,
+                            gradeCompany: card.gradeCompany,
+                            gradeValue: card.gradeValue.map { value in
+                                value.truncatingRemainder(dividingBy: 1) == 0
+                                    ? String(format: "%.0f", value)
+                                    : String(format: "%.1f", value)
+                            }
+                        )
+                        .padding(.horizontal, 16)
 
                         if let localError {
                             Text(localError)
