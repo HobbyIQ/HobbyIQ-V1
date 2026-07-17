@@ -38,10 +38,10 @@ async function main() {
     console.error("backend/dist not found — run `npm run build` first");
     process.exit(1);
   }
-  const { computePlayerTrend } = require(
+  const { computeStratifiedPlayerTrend } = require(
     path.join(distRoot, "services", "portfolioiq", "playerTrendCompute.service.js"),
   );
-  const { upsertPlayerTrend } = require(
+  const { upsertStratifiedPlayerTrend } = require(
     path.join(distRoot, "services", "portfolioiq", "playerTrendStore.service.js"),
   );
 
@@ -92,7 +92,7 @@ async function main() {
     const player = row.player;
     try {
       const sales = await queryPaged(c,
-        `SELECT c.card_id, c.sale_date, c.price, c.year, c.card_set, c.variant, c.number
+        `SELECT c.card_id, c.sale_date, c.price, c.year, c.card_set, c.variant, c.number, c.grader
          FROM c WHERE c.player = @p AND c.sale_date >= @cutoff`,
         [
           { name: "@p", value: player },
@@ -105,12 +105,13 @@ async function main() {
           cardId: r.card_id,
           saleDate: r.sale_date,
           price: Number(r.price),
+          grader: r.grader ?? null,
           skuLabel: `${r.year ?? ""} ${r.card_set ?? ""} · ${r.variant ?? ""} · ${r.number ?? ""}`.trim(),
         }));
-      const trend = computePlayerTrend(player, filtered, {
+      const stratified = computeStratifiedPlayerTrend(player, filtered, {
         recentWindowDays, priorWindowDays,
       });
-      await upsertPlayerTrend(trend);
+      await upsertStratifiedPlayerTrend(stratified);
       done++;
       if (done % 25 === 0) {
         console.log(JSON.stringify({
@@ -119,7 +120,7 @@ async function main() {
           elapsedMs: Date.now() - t0,
         }));
       }
-      results.push({ player, momentum: trend.momentum, direction: trend.direction });
+      results.push({ player, momentum: stratified.all.momentum, direction: stratified.all.direction });
     } catch (err) {
       failed++;
       console.log(JSON.stringify({

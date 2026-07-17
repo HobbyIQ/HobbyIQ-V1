@@ -5,10 +5,11 @@ import { describe, it, expect, afterEach } from "vitest";
 import {
   slugPlayer,
   upsertPlayerTrend,
+  upsertStratifiedPlayerTrend,
   readPlayerTrend,
   _setContainerForTesting,
 } from "../src/services/portfolioiq/playerTrendStore.service.js";
-import type { PlayerTrendResult } from "../src/types/playerTrend.types.js";
+import type { PlayerTrendResult, StratifiedPlayerTrendResult } from "../src/types/playerTrend.types.js";
 
 function makeTrend(overrides: Partial<PlayerTrendResult> = {}): PlayerTrendResult {
   return {
@@ -81,7 +82,8 @@ describe("upsertPlayerTrend / readPlayerTrend", () => {
     const t = makeTrend();
     const stored = await upsertPlayerTrend(t);
     expect(stored.id).toBe("eric_hartman");
-    expect(stored.version).toBe(1);
+    // CF-STRATIFIED-TRENDS bumped storage version to 2.
+    expect(stored.version).toBe(2);
     expect(stored.momentum).toBe(1.36);
     const read = await readPlayerTrend("Eric Hartman");
     expect(read).not.toBeNull();
@@ -102,5 +104,29 @@ describe("upsertPlayerTrend / readPlayerTrend", () => {
     await upsertPlayerTrend(makeTrend({ momentum: 1.48 }));
     const read = await readPlayerTrend("Eric Hartman");
     expect(read!.momentum).toBe(1.48);
+  });
+
+  it("upsertStratified persists all + raw + graded sub-trends", async () => {
+    const mock = makeMockContainer();
+    _setContainerForTesting(mock as any);
+    const stratified: StratifiedPlayerTrendResult = {
+      player: "Eric Hartman",
+      computedAt: "2026-07-17T12:00:00Z",
+      all: makeTrend({ momentum: 1.48 }),
+      raw: makeTrend({ momentum: 1.35 }),
+      graded: makeTrend({ momentum: 1.62 }),
+    };
+    const stored = await upsertStratifiedPlayerTrend(stratified);
+    expect(stored.id).toBe("eric_hartman");
+    expect(stored.version).toBe(2);
+    // Top-level mirrors `all` for v1 client back-compat
+    expect(stored.momentum).toBe(1.48);
+    // Sub-trends survived
+    expect(stored.raw?.momentum).toBe(1.35);
+    expect(stored.graded?.momentum).toBe(1.62);
+
+    const read = await readPlayerTrend("Eric Hartman");
+    expect(read!.raw?.momentum).toBe(1.35);
+    expect(read!.graded?.momentum).toBe(1.62);
   });
 });

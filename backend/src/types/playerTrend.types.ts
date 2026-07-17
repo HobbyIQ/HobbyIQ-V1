@@ -15,6 +15,11 @@ export interface PlayerSale {
   /** Optional label — used only for the perCardRatios[] pretty-print in
    *  the final result. Never affects math. */
   skuLabel?: string | null;
+  /** CF-STRATIFIED-TRENDS (Drew, 2026-07-17): grader tier ("Raw", "PSA",
+   *  "BGS", "SGC", "CGC", ...). Used to bucket into raw-only vs
+   *  graded-only variants of the trend. Optional for back-compat with
+   *  older callers; absent → treated as "Raw" for filter purposes. */
+  grader?: string | null;
 }
 
 /** Options controlling window widths + qualification thresholds. */
@@ -31,6 +36,10 @@ export interface PlayerTrendOptions {
   minTotalSales?: number;
   /** Top-N per-card ratios to include in the result. Default 20. */
   topCardsInResult?: number;
+  /** CF-STRATIFIED-TRENDS (Drew, 2026-07-17): restrict to raw-only or
+   *  graded-only sales. "all" (default) uses every sale. Powers the
+   *  raw/graded/all split emitted by the stratified batch. */
+  saleFilter?: "all" | "raw_only" | "graded_only";
 }
 
 /** Per-card ratio contributing to the aggregate. Sorted by |ratio - 1| DESC
@@ -44,6 +53,19 @@ export interface PerCardRatio {
   nPrior: number;
   medianRecent: number;
   medianPrior: number;
+}
+
+/** CF-STRATIFIED-TRENDS (Drew, 2026-07-17): stratified variant emitted
+ *  by the nightly compute. `all` is the aggregate signal; `raw` and
+ *  `graded` split by grader field so "should I grade this NOW?" can
+ *  reason from the direction gap (graded outperforming raw = grade now
+ *  signal strengthens). */
+export interface StratifiedPlayerTrendResult {
+  player: string;
+  computedAt: string;
+  all: PlayerTrendResult;
+  raw: PlayerTrendResult;
+  graded: PlayerTrendResult;
 }
 
 /** Final result of a per-player matched-cohort computation. */

@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computePlayerTrend,
+  computeStratifiedPlayerTrend,
   median,
   _MOMENTUM_UP_THRESHOLD,
   _MOMENTUM_DOWN_THRESHOLD,
@@ -21,6 +22,17 @@ function mk(cardId: string, daysAgo: number, price: number, skuLabel?: string): 
     saleDate: new Date(NOW.getTime() - daysAgo * MS_PER_DAY).toISOString(),
     price,
     skuLabel: skuLabel ?? null,
+  };
+}
+
+/** Same as mk, but with an explicit grader field for stratified-filter tests. */
+function mkGraded(cardId: string, daysAgo: number, price: number, grader: string): PlayerSale {
+  return {
+    cardId,
+    saleDate: new Date(NOW.getTime() - daysAgo * MS_PER_DAY).toISOString(),
+    price,
+    skuLabel: null,
+    grader,
   };
 }
 
@@ -222,6 +234,84 @@ describe("computePlayerTrend", () => {
   it("pins momentum thresholds", () => {
     expect(_MOMENTUM_UP_THRESHOLD).toBe(1.05);
     expect(_MOMENTUM_DOWN_THRESHOLD).toBe(0.95);
+  });
+
+  it("saleFilter: raw_only excludes graded sales", () => {
+    const sales: PlayerSale[] = [
+      // Card A: raw sales flat, graded sales up
+      mkGraded("A", 40, 100, "Raw"), mkGraded("A", 45, 100, "Raw"), mkGraded("A", 50, 100, "Raw"),
+      mkGraded("A", 5, 100, "Raw"),  mkGraded("A", 10, 100, "Raw"), mkGraded("A", 15, 100, "Raw"),
+      mkGraded("A", 40, 500, "PSA"), mkGraded("A", 45, 500, "PSA"), mkGraded("A", 50, 500, "PSA"),
+      mkGraded("A", 5, 1000, "PSA"), mkGraded("A", 10, 1000, "PSA"), mkGraded("A", 15, 1000, "PSA"),
+    ];
+    const rawOnly = computePlayerTrend("P", sales, { saleFilter: "raw_only" }, NOW);
+    expect(rawOnly.momentum).toBeCloseTo(1); // raw is flat
+    expect(rawOnly.direction).toBe("flat");
+  });
+
+  it("saleFilter: graded_only excludes raw sales", () => {
+    const sales: PlayerSale[] = [
+      mkGraded("A", 40, 100, "Raw"), mkGraded("A", 45, 100, "Raw"), mkGraded("A", 50, 100, "Raw"),
+      mkGraded("A", 5, 100, "Raw"),  mkGraded("A", 10, 100, "Raw"), mkGraded("A", 15, 100, "Raw"),
+      mkGraded("A", 40, 500, "PSA"), mkGraded("A", 45, 500, "PSA"), mkGraded("A", 50, 500, "PSA"),
+      mkGraded("A", 5, 1000, "PSA"), mkGraded("A", 10, 1000, "PSA"), mkGraded("A", 15, 1000, "PSA"),
+    ];
+    const gradedOnly = computePlayerTrend("P", sales, { saleFilter: "graded_only" }, NOW);
+    expect(gradedOnly.momentum).toBeCloseTo(2); // graded doubled
+    expect(gradedOnly.direction).toBe("up");
+  });
+
+  it("saleFilter: absent/empty grader treated as Raw", () => {
+    // Sales without grader field should all pass under raw_only
+    const sales: PlayerSale[] = [
+      mk("A", 40, 100), mk("A", 45, 100), mk("A", 50, 100),
+      mk("A", 5, 150), mk("A", 10, 150), mk("A", 15, 150),
+    ];
+    const rawOnly = computePlayerTrend("P", sales, { saleFilter: "raw_only" }, NOW);
+    expect(rawOnly.qualifyingCards).toBe(1);
+    expect(rawOnly.momentum).toBeCloseTo(1.5);
+    const gradedOnly = computePlayerTrend("P", sales, { saleFilter: "graded_only" }, NOW);
+    expect(gradedOnly.qualifyingCards).toBe(0);
+  });
+
+  it("saleFilter: default (all) matches unfiltered behavior", () => {
+    const sales: PlayerSale[] = [
+      mkGraded("A", 40, 100, "Raw"), mkGraded("A", 45, 100, "Raw"), mkGraded("A", 50, 100, "Raw"),
+      mkGraded("A", 5, 150, "PSA"), mkGraded("A", 10, 150, "PSA"), mkGraded("A", 15, 150, "PSA"),
+    ];
+    const all = computePlayerTrend("P", sales, { saleFilter: "all" }, NOW);
+    const defaulted = computePlayerTrend("P", sales, {}, NOW);
+    expect(all.momentum).toBe(defaulted.momentum);
+    expect(all.qualifyingCards).toBe(defaulted.qualifyingCards);
+  });
+});
+
+describe("computeStratifiedPlayerTrend", () => {
+  it("emits all + raw + graded variants in one call", () => {
+    const sales: PlayerSale[] = [
+      // Card A: 3+3 raw sales, flat
+      mkGraded("A", 40, 100, "Raw"), mkGraded("A", 45, 100, "Raw"), mkGraded("A", 50, 100, "Raw"),
+      mkGraded("A", 5, 100, "Raw"),  mkGraded("A", 10, 100, "Raw"), mkGraded("A", 15, 100, "Raw"),
+      // Card A: 3+3 PSA sales, doubling
+      mkGraded("A", 40, 500, "PSA"), mkGraded("A", 45, 500, "PSA"), mkGraded("A", 50, 500, "PSA"),
+      mkGraded("A", 5, 1000, "PSA"), mkGraded("A", 10, 1000, "PSA"), mkGraded("A", 15, 1000, "PSA"),
+    ];
+    const s = computeStratifiedPlayerTrend("Hartman", sales, {}, NOW);
+    expect(s.player).toBe("Hartman");
+    expect(s.raw.momentum).toBeCloseTo(1);
+    expect(s.graded.momentum).toBeCloseTo(2);
+    // `all` blends both — median-of-window aggregates cross-grader
+    expect(s.all.qualifyingCards).toBeGreaterThan(0);
+  });
+
+  it("computedAt is shared across all + raw + graded", () => {
+    const sales: PlayerSale[] = [];
+    for (let i = 0; i < 6; i++) sales.push(mkGraded("A", 5 + i, 100, "Raw"));
+    for (let i = 0; i < 6; i++) sales.push(mkGraded("A", 40 + i, 100, "Raw"));
+    const s = computeStratifiedPlayerTrend("P", sales, {}, NOW);
+    expect(s.computedAt).toBe(s.all.computedAt);
+    expect(s.computedAt).toBe(s.raw.computedAt);
+    expect(s.computedAt).toBe(s.graded.computedAt);
   });
 
   it("Hartman-like case: +36% correct signal even with dominant base card", () => {

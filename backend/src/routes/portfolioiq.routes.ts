@@ -38,7 +38,7 @@ import { effectivePlanFor } from "../config/entitlements.js";
 // fall through to on-demand compute when the nightly job hasn't run for
 // this player yet.
 import { readPlayerTrend } from "../services/portfolioiq/playerTrendStore.service.js";
-import { computePlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
+import { computeStratifiedPlayerTrend } from "../services/portfolioiq/playerTrendCompute.service.js";
 import type { PlayerSale } from "../types/playerTrend.types.js";
 import { CosmosClient } from "@azure/cosmos";
 // CF-GRADE-WORTHY (Drew, 2026-07-17): grade-worthy analysis endpoints.
@@ -116,7 +116,7 @@ router.get(
       // Recent + prior window = 60d. Match the nightly's defaults.
       const cutoffIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
       const iter = container.items.query({
-        query: `SELECT c.card_id, c.sale_date, c.price, c.year, c.card_set, c.variant, c.number
+        query: `SELECT c.card_id, c.sale_date, c.price, c.year, c.card_set, c.variant, c.number, c.grader
                 FROM c WHERE c.player = @p AND c.sale_date >= @cutoff`,
         parameters: [
           { name: "@p", value: player },
@@ -135,11 +135,20 @@ router.get(
           cardId: String(r.card_id),
           saleDate: String(r.sale_date),
           price: Number(r.price),
+          grader: r.grader ? String(r.grader) : null,
           skuLabel: `${r.year ?? ""} ${r.card_set ?? ""} · ${r.variant ?? ""} · ${r.number ?? ""}`.trim(),
         }));
 
-      const trend = computePlayerTrend(player, sales);
-      return res.json({ ...trend, servedFrom: "on_demand" });
+      const stratified = computeStratifiedPlayerTrend(player, sales);
+      // Wire matches the nightly-cached shape: `all` fields spread at
+      // top level, `raw` + `graded` sub-objects.
+      return res.json({
+        ...stratified.all,
+        computedAt: stratified.computedAt,
+        raw: stratified.raw,
+        graded: stratified.graded,
+        servedFrom: "on_demand",
+      });
     } catch (err) {
       next(err);
     }

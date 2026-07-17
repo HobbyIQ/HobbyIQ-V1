@@ -7,7 +7,10 @@
 
 import type { Container } from "@azure/cosmos";
 import { CosmosClient } from "@azure/cosmos";
-import type { PlayerTrendResult } from "../../types/playerTrend.types.js";
+import type {
+  PlayerTrendResult,
+  StratifiedPlayerTrendResult,
+} from "../../types/playerTrend.types.js";
 
 const CONTAINER_ID = process.env.COSMOS_PLAYER_TRENDS_CONTAINER ?? "player_trends";
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -35,13 +38,20 @@ export function _setContainerForTesting(c: Container | null): void {
 
 /** Stored shape — mirrors PlayerTrendResult with a Cosmos `id` field.
  *  The `id` is the player name lowercased with non-alphanum → underscore,
- *  chosen for URL-safety on the read endpoint. */
+ *  chosen for URL-safety on the read endpoint.
+ *
+ *  CF-STRATIFIED-TRENDS (Drew, 2026-07-17): stratified `raw` and
+ *  `graded` sub-trends added at version 2. The top-level momentum /
+ *  direction / velocityPerWeek fields still reflect the `all` variant
+ *  for back-compat with v1 clients. */
 export interface StoredPlayerTrend extends PlayerTrendResult {
   id: string;
   version: number;
+  raw?: PlayerTrendResult;
+  graded?: PlayerTrendResult;
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 /** URL-safe stable id from a player name. `slugPlayer("Ken Griffey Jr.") === "ken_griffey_jr"`. */
 export function slugPlayer(player: string): string {
@@ -57,6 +67,25 @@ export async function upsertPlayerTrend(trend: PlayerTrendResult): Promise<Store
     ...trend,
     id: slugPlayer(trend.player),
     version: CURRENT_VERSION,
+  };
+  const { resource } = await container.items.upsert(doc);
+  return (resource as unknown as StoredPlayerTrend) ?? doc;
+}
+
+/** Persist stratified variant (all / raw / graded). Top-level fields
+ *  mirror `all` for v1-client back-compat; `raw` and `graded` live in
+ *  their sub-fields. */
+export async function upsertStratifiedPlayerTrend(
+  stratified: StratifiedPlayerTrendResult,
+): Promise<StoredPlayerTrend> {
+  const container = await getContainer();
+  const doc: StoredPlayerTrend = {
+    ...stratified.all,
+    computedAt: stratified.computedAt,
+    id: slugPlayer(stratified.player),
+    version: CURRENT_VERSION,
+    raw: stratified.raw,
+    graded: stratified.graded,
   };
   const { resource } = await container.items.upsert(doc);
   return (resource as unknown as StoredPlayerTrend) ?? doc;
