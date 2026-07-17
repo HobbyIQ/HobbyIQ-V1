@@ -1,0 +1,93 @@
+name: CH Daily Sales Ingest
+
+# CF-CH-DAILY-EXPORT-INGEST (Drew, 2026-07-16). Pulls the CardHedge
+# /v1/download/daily-price-export/{yesterday} CSV, streams it into the
+# ch_daily_sales Cosmos container. Idempotent — safe to re-run any
+# date any number of times.
+#
+# Schedule: 05:15 UTC (~ 12:15 AM ET during EST, 1:15 AM ET during
+# EDT). CH publishes the file shortly after midnight UTC, so 5+ hours
+# is generous slack.
+#
+# ~40 MB file, ~78k rows at current scale. Runs cleanly inside the
+# default 60-min timeout.
+
+on:
+  schedule:
+    - cron: '15 5 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'File date YYYY-MM-DD (default: yesterday UTC)'
+        required: false
+        type: string
+      force:
+        description: 'Force re-ingest even if a checkpoint exists'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  ingest:
+    name: Ingest daily-price-export
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Ingest CH daily sales
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          CARD_HEDGE_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot ingest"
+            exit 1
+          fi
+          if [ -z "$CARD_HEDGE_API_KEY" ]; then
+            echo "CARD_HEDGE_API_KEY empty from App Service — cannot ingest"
+            exit 1
+          fi
+          DATE_FLAG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_FLAG="--date=${{ inputs.date }}"
+          fi
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/ingest-ch-daily-sales.cjs $DATE_FLAG $FORCE_FLAG
