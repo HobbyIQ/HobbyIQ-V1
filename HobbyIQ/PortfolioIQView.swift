@@ -22,6 +22,15 @@ struct PortfolioIQView: View {
     @State private var showBatchReprice = false
     @State private var showCardIdentify = false
     @State private var topMoversExpanded = false
+    /// S3.5 (2026-07-17): Going Up vs Going Down toggle on the Biggest
+    /// Changes section. Default = Up.
+    @State private var moversDirection: MoversDirection = .up
+
+    enum MoversDirection: String, CaseIterable, Identifiable {
+        case up, down
+        var id: String { rawValue }
+        var label: String { self == .up ? "Going Up" : "Going Down" }
+    }
     @State private var priorityActionsExpanded = false
     /// CF-PRIORITY-DRILLDOWN (2026-07-06): tapping a priority action
     /// pushes a dedicated `PriorityActionListView` for that action's
@@ -267,34 +276,88 @@ struct PortfolioIQView: View {
             }
     }
 
+    // S3.4 (2026-07-17): consolidated CTAs — primary "Reprice All" pill
+    // + 3 icon secondaries (Scan / Import / Export). Weekly Brief +
+    // Calibration moved to a kebab overflow menu in the top-right of
+    // the tools row so they're one tap from discovery without competing
+    // with the primary flow.
     private var portfolioToolsRow: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             HStack(spacing: 8) {
-                HIQActionPill(title: "Weekly Brief", icon: "newspaper", action: { showWeeklyBrief = true })
-                HIQActionPill(title: "Calibration", icon: "scope", action: { showCalibration = true })
-            }
-            HStack(spacing: 8) {
-                HIQActionPill(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
-                HIQActionPill(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
-            }
-            // CF-IOS-EXPORT-BUILD (2026-06-21) + CF-IOS-IMPORT-BUILD
-            // (2026-06-21): Export + Import row. Completes the 2x3 grid.
-            HStack(spacing: 8) {
+                // Primary — full-width accent pill.
                 HIQActionPill(
-                    title: isExporting ? "Exporting…" : "Export holdings",
-                    icon: isExporting ? "hourglass" : "square.and.arrow.up",
-                    action: {
-                        guard isExporting == false else { return }
-                        showExportFormatChooser = true
+                    title: "Reprice All",
+                    icon: "arrow.triangle.2.circlepath",
+                    action: { showBatchReprice = true }
+                )
+                // Overflow — Weekly Brief + Calibration
+                Menu {
+                    Button {
+                        showWeeklyBrief = true
+                    } label: {
+                        Label("Weekly Brief", systemImage: "newspaper")
                     }
-                )
-                HIQActionPill(
-                    title: "Import file",
-                    icon: "square.and.arrow.down",
-                    action: { showHoldingsImport = true }
-                )
+                    Button {
+                        showCalibration = true
+                    } label: {
+                        Label("Calibration", systemImage: "scope")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .frame(width: 40, height: 44)
+                        .background(HobbyIQTheme.Colors.cardNavy)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
+                                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
+                }
+                .accessibilityLabel("More portfolio actions")
+            }
+
+            // Secondary — 3 evenly-spaced icon + caption tiles.
+            HStack(alignment: .top, spacing: 8) {
+                portfolioSecondaryTile(icon: "camera.viewfinder", caption: "Scan Card") {
+                    showCardIdentify = true
+                }
+                portfolioSecondaryTile(icon: "square.and.arrow.down", caption: "Import file") {
+                    showHoldingsImport = true
+                }
+                portfolioSecondaryTile(
+                    icon: isExporting ? "hourglass" : "square.and.arrow.up",
+                    caption: isExporting ? "Exporting…" : "Export"
+                ) {
+                    guard isExporting == false else { return }
+                    showExportFormatChooser = true
+                }
             }
         }
+    }
+
+    /// S3.4 (2026-07-17): shared icon-and-caption secondary tile for
+    /// the portfolio-home tools row. Icon-primary treatment with 11pt
+    /// caption so the buttons read as secondary vs the Reprice All pill.
+    @ViewBuilder
+    private func portfolioSecondaryTile(icon: String, caption: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .frame(width: 40, height: 40)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                    .clipShape(Circle())
+                Text(caption)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // CF-IOS-EXPORT-BUILD (2026-06-21): run the export request, write
@@ -389,29 +452,44 @@ struct PortfolioIQView: View {
         let unpricedSuffix = agg.unpricedSubtitleSuffix
         let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
+        // S3.6 (2026-07-17): statusDate → relative "Updated 2h ago" style
+        // instead of a "Jul 17" absolute stamp.
+        let statusLabel = relativeUpdatedLabel(from: summary.lastRefreshText)
+
         return HIQHeroCard(
-            title: "PortfolioIQ",
-            statusDate: summary.lastRefreshText,
+            title: "Portfolio", // S3.1 rename — matches the tab
+            statusDate: statusLabel,
             heroValue: heroValue.portfolioCurrencyText,
             trailing: {
-                Button {
-                    showingLedger = true
-                } label: {
-                    Image(systemName: "book.closed")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        .frame(width: 44, height: 44)
-                        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4)
-                        )
+                // S3.7: labelled Learn button around the book icon so
+                // users know what it opens.
+                VStack(spacing: 3) {
+                    Button {
+                        showingLedger = true
+                    } label: {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .frame(width: 40, height: 40)
+                            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    Text("Ledger")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
-                .buttonStyle(.plain)
                 .accessibilityLabel("Open ledger")
             },
             delta: {
+                // S3.2 (2026-07-17): unrealized delta stays here as the
+                // change hero indicator. The full two-column table lives
+                // in `meta` below so we can be explicit about the priced
+                // vs unpriced scope.
                 if hasCostBasis {
                     HStack(spacing: 4) {
                         Image(systemName: heroPL >= 0 ? "arrow.up.right" : "arrow.down.right")
@@ -427,21 +505,44 @@ struct PortfolioIQView: View {
                 }
             },
             meta: {
-                // Quiet supporting line — when cost basis isn't set, do
-                // NOT render the fabricated +$X / +0.0% ROI line above.
-                // Offer a muted Add cost basis affordance that routes the
-                // user to Inventory so they can edit each card's cost
-                // from the row detail sheet.
+                // S3.2 (2026-07-17): explicit two-column breakdown so
+                // users see cost basis + unrealized alongside the
+                // priced/est/pending scope. The old one-line caption
+                // implied the ROI figure covered everything — it doesn't.
                 if hasCostBasis {
-                    Text("Cost basis \(portfolioCurrencyString(heroCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Cost basis")
+                                .font(.caption)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            Spacer()
+                            Text(portfolioCurrencyString(heroCost))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        }
+                        HStack {
+                            Text("Unrealized")
+                                .font(.caption)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Text(heroPL.portfolioSignedCurrencyText)
+                                    .font(.caption.weight(.semibold))
+                                Text("(\(heroROI.portfolioSignedPercentText))")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(pnlColor)
+                        }
+                        Text("Priced \(agg.pricedCount) · Est \(agg.estimatedCount) · Pending \(agg.pendingCount) · Total \(agg.totalCards)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                            .padding(.top, 2)
+                    }
                 } else {
                     HStack(spacing: 8) {
                         Text("Cost basis not set · \(agg.totalCards) cards\(unpricedSuffix)")
                             .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
                         Button {
                             onSwitchToInventory(.all)
                         } label: {
@@ -459,6 +560,33 @@ struct PortfolioIQView: View {
                 }
             }
         )
+    }
+
+    /// S3.6 (2026-07-17): parse the summary's `lastRefreshText` and
+    /// convert to relative time via `RelativeDateTimeFormatter`. Falls
+    /// back to the original string when parsing fails so we never render
+    /// a broken caption.
+    private func relativeUpdatedLabel(from raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        // Try common backend date shapes — ISO-8601 with or without fractional seconds.
+        let parsers: [ISO8601DateFormatter] = [
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return f
+            }(),
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime]
+                return f
+            }()
+        ]
+        guard let parsed = parsers.compactMap({ $0.date(from: trimmed) }).first else {
+            return trimmed
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return "Updated \(formatter.localizedString(for: parsed, relativeTo: Date()))"
     }
 
     // CF-IOS-DIRECTION-SWEEP (2026-06-18): movementPulseCard +
@@ -518,18 +646,13 @@ struct PortfolioIQView: View {
                         Text("\(count) card\(count == 1 ? "" : "s") worth grading")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        if let top = candidates.first,
-                           let topGain = top.analysis?.bestTier?.expectedGain,
-                           topGain > 0 {
-                            let topLabel = gradeWorthyTopLabel(top)
-                            Text("Top: \(topLabel) — expected +\(portfolioCurrencyString(topGain))")
-                                .font(.caption)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
+                        // CF-GRADING-UPLIFT-VERIFY (2026-07-17): dollar
+                        // figure hidden pending backend probability-
+                        // weighting audit. If the summed uplift is
+                        // meaningful in a probability-weighted sense we
+                        // can restore the number.
                         HStack(spacing: 4) {
-                            Text("Review all")
+                            Text("Review each")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                             Image(systemName: "arrow.right")
@@ -1032,73 +1155,74 @@ struct PortfolioIQView: View {
     // MARK: - Top Movers
 
     private var topMoversSection: some View {
-        // CF-IOS-DIRECTION-SWEEP (2026-06-18): always P/L-ranked
-        // (Gainers / Losers). The prior `hasMovementSignals` switch
-        // showed "Trending up/down" labels when the backend movement
-        // signal was present — direction-class framing on the same
-        // section. Drop the switch; honest P/L sign labels always.
+        // S3.5 (2026-07-17): segmented Going Up / Going Down picker
+        // swaps the row list between gainers and losers. Both share the
+        // same data source (vm.topMovers) — direction determined by
+        // profitLoss sign. When one side is empty, the picker still
+        // renders but the empty side shows a "Nothing dropped
+        // significantly" (or up) placeholder.
         let allRising = vm.topMovers.filter { $0.profitLoss >= 0 }
         let allFalling = vm.topMovers.filter { $0.profitLoss < 0 }
-        let collapseLimit = 3
-        let totalCount = allRising.count + allFalling.count
-        let rising = topMoversExpanded ? allRising : Array(allRising.prefix(collapseLimit))
-        let falling = topMoversExpanded ? allFalling : Array(allFalling.prefix(collapseLimit))
-        let canExpand = totalCount > (rising.count + falling.count) || topMoversExpanded
-        let hiddenCount = max(0, totalCount - collapseLimit * 2)
+        let active = (moversDirection == .up) ? allRising : allFalling
+        let collapseLimit = 5
+        let visible = topMoversExpanded ? active : Array(active.prefix(collapseLimit))
+        let hiddenCount = max(0, active.count - collapseLimit)
+        let canExpand = hiddenCount > 0 || (topMoversExpanded && active.count > collapseLimit)
 
         return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(Labels.topMovers)
 
+            Picker("Direction", selection: $moversDirection) {
+                ForEach(MoversDirection.allCases) { d in
+                    Text(d.label).tag(d)
+                }
+            }
+            .pickerStyle(.segmented)
+
             if vm.topMovers.isEmpty {
                 portfolioEmptyState
                     .padding(.vertical, 4)
+            } else if active.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: moversDirection == .up ? "arrow.up.forward" : "arrow.down.forward")
+                        .font(.title3)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+                    Text(moversDirection == .up
+                         ? "Nothing rising significantly."
+                         : "Nothing dropped significantly.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             } else {
                 VStack(spacing: 0) {
-                    if !rising.isEmpty {
-                        moverSubheader(title: Labels.gainers, icon: "arrow.up.right", color: .green)
-
-                        ForEach(Array(rising.enumerated()), id: \.element.id) { index, mover in
-                            Button {
-                                selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
-                            } label: {
-                                moverRow(mover: mover)
-                            }
-                            .buttonStyle(.plain)
-
-                            if index < rising.count - 1 || !falling.isEmpty {
-                                Divider()
-                                    .overlay(Color.white.opacity(0.06))
-                                    .padding(.leading, 12)
-                            }
+                    ForEach(Array(visible.enumerated()), id: \.element.id) { index, mover in
+                        Button {
+                            selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
+                        } label: {
+                            moverRow(mover: mover)
                         }
-                    }
+                        .buttonStyle(.plain)
 
-                    if !falling.isEmpty {
-                        moverSubheader(title: Labels.losers, icon: "arrow.down.right", color: .red)
-
-                        ForEach(Array(falling.enumerated()), id: \.element.id) { index, mover in
-                            Button {
-                                selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
-                            } label: {
-                                moverRow(mover: mover)
-                            }
-                            .buttonStyle(.plain)
-
-                            if index < falling.count - 1 {
-                                Divider()
-                                    .overlay(Color.white.opacity(0.06))
-                                    .padding(.leading, 12)
-                            }
+                        if index < visible.count - 1 {
+                            Divider()
+                                .overlay(Color.white.opacity(0.06))
+                                .padding(.leading, 12)
                         }
                     }
 
                     if canExpand {
-                        Divider()
-                            .overlay(Color.white.opacity(0.06))
+                        Divider().overlay(Color.white.opacity(0.06))
                         seeAllRow(
                             isExpanded: topMoversExpanded,
                             hiddenCount: hiddenCount,
-                            totalCount: totalCount,
+                            totalCount: active.count,
                             noun: "movers"
                         ) {
                             withAnimation(.easeInOut(duration: 0.22)) { topMoversExpanded.toggle() }

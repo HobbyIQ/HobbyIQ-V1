@@ -168,61 +168,64 @@ struct InventoryIQView: View {
         }
         let valueText = inventoryWholeDollarString(totalValue)
 
-        return HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        // 2026-07-17: promoted the dollar total to headline treatment —
+        // title stays as a small chrome row up top, big number below with
+        // a "Total Collection Value" caption. Reads like an actual
+        // dashboard number instead of a subhead.
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 12) {
                 Text("Inventory")
-                    .font(HobbyIQTheme.Typography.title)
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                Text(valueText)
-                    .font(.subheadline)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-
-            Spacer(minLength: 8)
-
-            // CF-INVENTORY-HEADER-REFRESH (2026-07-04): explicit refresh
-            // affordance next to Add so users can pull fresh
-            // valuation/count data without pull-to-refresh.
-            Button {
-                Task { await vm.refresh() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    .frame(width: 40, height: 40)
-                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Refresh inventory")
-
-            Button {
-                if canAdd {
-                    isAddingCard = true
-                } else {
-                    showUpgradePaywall = true
+                Spacer(minLength: 8)
+                Button {
+                    Task { await vm.refresh() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(width: 40, height: 40)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Circle())
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.semibold))
-                    Text("Add")
-                        .font(.subheadline.weight(.medium))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Refresh inventory")
+
+                Button {
+                    if canAdd {
+                        isAddingCard = true
+                    } else {
+                        showUpgradePaywall = true
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.caption.weight(.semibold))
+                        Text("Add")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background((canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText).opacity(0.12))
+                    .clipShape(Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
                 }
-                .foregroundStyle(canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background((canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText).opacity(0.12))
-                .clipShape(Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add a card to your inventory")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add a card to your inventory")
+
+            Text(valueText)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.top, 2)
+            Text("Total Collection Value")
+                .font(.caption2.weight(.semibold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
-        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
-        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
@@ -240,7 +243,12 @@ struct InventoryIQView: View {
             VStack(spacing: 8) {
                 HobbyIQSearchField(text: $inventoryQuery, placeholder: "Search collection")
 
+                // 2026-07-17: filter chips (left group, pill-shaped) and
+                // view-mode icons (right group, plain button treatment)
+                // are visually separated so the row reads as two distinct
+                // concerns instead of one bordered blob.
                 HStack(spacing: 8) {
+                    // Filter chips group
                     Menu {
                         ForEach(PortfolioInventoryFilter.allCases) { option in
                             Button(option.title) { inventoryFilter = option }
@@ -249,23 +257,23 @@ struct InventoryIQView: View {
                         inventoryChipLabel(title: inventoryFilter.title, systemName: "line.3.horizontal.decrease.circle")
                     }
 
+                    // "Value ▼" — shortened sort chip per spec; menu opens
+                    // on tap. Full-sort labels moved into the menu items.
                     Menu {
                         ForEach(PortfolioInventorySort.allCases) { option in
                             Button(option.title) { inventorySort = option }
                         }
                     } label: {
-                        inventoryChipLabel(title: inventorySort.title, systemName: "arrow.up.arrow.down.circle")
+                        inventoryChipLabel(title: shortSortTitle(inventorySort), systemName: "arrow.up.arrow.down.circle")
                     }
 
                     Spacer()
 
-                    // Mode toggle icons
-                    HStack(spacing: 4) {
-                        modeToggleButton(mode: .rows, icon: "list.bullet")
-                        modeToggleButton(mode: .grid, icon: "square.grid.2x2")
-                    }
+                    // View-mode icons — plain buttons, no container.
+                    modeToggleButton(mode: .rows, icon: "list.bullet")
+                    modeToggleButton(mode: .grid, icon: "square.grid.2x2")
 
-                    // Reset icon
+                    // Reset — icon-only tucked to the right.
                     Button {
                         inventoryQuery = ""
                         inventoryFilter = .all
@@ -274,9 +282,7 @@ struct InventoryIQView: View {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .frame(width: 36, height: 36)
-                            .background(Color.white.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .frame(width: 32, height: 32)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -340,6 +346,16 @@ struct InventoryIQView: View {
     }
 
     // MARK: - Helpers
+
+    /// 2026-07-17: sort menu chip shortens the visible label to
+    /// "Value ▼" / "Name ▼" / etc. Full titles land inside the menu items.
+    private func shortSortTitle(_ sort: PortfolioInventorySort) -> String {
+        let raw = sort.title
+        // Backend titles are things like "Value: High to Low" — split on
+        // ":" and keep the left side; append a chevron.
+        let short = raw.split(separator: ":").first.map(String.init) ?? raw
+        return short.trimmingCharacters(in: .whitespaces)
+    }
 
     private func modeToggleButton(mode: PortfolioInventoryMode, icon: String) -> some View {
         let isActive = inventoryMode == mode

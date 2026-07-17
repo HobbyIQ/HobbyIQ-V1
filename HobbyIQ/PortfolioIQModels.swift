@@ -4698,26 +4698,22 @@ struct PortfolioCardRow: View {
                         }
                     }
 
-                    if let details = inventoryCardSubtitle(for: card) {
-                        Text(details)
+                    // 2026-07-17: consolidated metadata line —
+                    // "2026 Bowman · Orange Shimmer Refractor · Raw".
+                    // Set string strips trailing " Baseball" / etc. and
+                    // gets titlecased on wire read; grade tier condensed
+                    // to short form ("Raw" / "PSA 10").
+                    if let meta = inventoryMetadataLine(for: card) {
+                        Text(meta)
                             .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
 
-                    if let secondary = inventoryCardSecondaryDetailLine(for: card) {
-                        Text(secondary)
-                            .font(.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-
-                    // CF-IOS-GRADER-STATUS-UI (2026-06-28): surface the
-                    // grader bucket as a labeled line. .available stays
-                    // implicit (no row) so in-hand holdings don't gain
-                    // visual clutter.
+                    // Grader status kept as its own line — surfaces "At PSA"
+                    // vs "Available", which is different signal from the
+                    // metadata identity above.
                     if card.graderStatus != .available {
                         HStack(spacing: 4) {
                             Text("Status:")
@@ -4729,13 +4725,14 @@ struct PortfolioCardRow: View {
                         }
                     }
 
+                    // 2026-07-17: dropped the standalone grade pill (grade
+                    // is already in the metadata line) and the "via eBay"
+                    // chip (it appeared on all rows, so no signal).
+                    // Black Label / Needs Review / Listed chips stay —
+                    // those ARE conditional signal.
                     HStack(spacing: 6) {
-                        inventoryGradePill(text: card.gradeChipText)
                         if card.isBlackLabel == true {
                             inventoryBlackLabelChip()
-                        }
-                        if card.showsEbayConfirmedChip {
-                            inventoryEbayChip()
                         }
                         if card.showsNeedsReviewPill {
                             inventoryReviewPill()
@@ -4878,17 +4875,12 @@ struct PortfolioCardGridCard: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .lineLimit(1)
 
-                if let details = inventoryCardSubtitle(for: card) {
-                    Text(details)
+                // 2026-07-17: single consolidated metadata line (same as
+                // the row layout). Grade tier is baked in — no separate pill.
+                if let meta = inventoryMetadataLine(for: card) {
+                    Text(meta)
                         .font(.caption2)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .lineLimit(1)
-                }
-
-                if let secondary = inventoryCardSecondaryDetailLine(for: card) {
-                    Text(secondary)
-                        .font(.caption2)
-                        .foregroundStyle(AppColors.textSecondary)
                         .lineLimit(1)
                 }
 
@@ -4904,11 +4896,9 @@ struct PortfolioCardGridCard: View {
                     }
                 }
 
+                // 2026-07-17: dropped the grade pill (in metadata line)
+                // and the via-eBay chip (universal → no signal).
                 HStack(spacing: 4) {
-                    inventoryGradePill(text: card.gradeChipText)
-                    if card.showsEbayConfirmedChip {
-                        inventoryEbayChip()
-                    }
                     if card.showsNeedsReviewPill {
                         inventoryReviewPill()
                     }
@@ -4932,19 +4922,14 @@ struct PortfolioCardGridCard: View {
                 return 0
             }()
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text("MARKET VALUE")
-                    .font(.system(size: 9, weight: .bold))
-                    .tracking(0.5)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                Text(value > 0 ? inventoryWholeDollarString(value) : "—")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(value > 0 ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
-            .padding(.top, 4)
+            // 2026-07-17: dropped MARKET VALUE caption from grid tile.
+            Text(value > 0 ? inventoryWholeDollarString(value) : "—")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(value > 0 ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(HobbyIQTheme.Colors.cardNavy)
@@ -4995,6 +4980,68 @@ struct PortfolioCardGridCard: View {
     .padding()
     .background(HobbyIQTheme.Colors.appBackground)
     .preferredColorScheme(.dark)
+}
+
+/// 2026-07-17: single-line row metadata — "2026 Bowman · Orange Shimmer
+/// Refractor · Raw". Strips trailing " Baseball" / etc. off the set,
+/// titlecases when it's all-lowercase (backend feed hygiene follow-up),
+/// and dedupes when the set already leads with the year.
+private func inventoryMetadataLine(for card: InventoryCard) -> String? {
+    var parts: [String] = []
+    let year = card.year.trimmingCharacters(in: .whitespacesAndNewlines)
+    var setName = PortfolioHoldingHeroCard.stripLeadingYear(
+        from: card.setName.trimmingCharacters(in: .whitespacesAndNewlines),
+        year: year
+    )
+    // Strip trailing category from set name — reads cleaner.
+    for suffix in [" Baseball", " Basketball", " Football", " Pokemon", " Hockey", " Soccer"] {
+        if setName.lowercased().hasSuffix(suffix.lowercased()) {
+            setName = String(setName.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+            break
+        }
+    }
+    // Titlecase when the whole string is lowercase — backend feed
+    // sometimes ships lowercased set strings and it looks like a bug.
+    // TODO(2026-07-17): backend follow-up to canonicalize on the wire.
+    if setName.isEmpty == false, setName == setName.lowercased() {
+        setName = setName.capitalized(with: .current)
+    }
+
+    if year.isEmpty == false, setName.isEmpty == false {
+        parts.append("\(year) \(setName)")
+    } else if year.isEmpty == false {
+        parts.append(year)
+    } else if setName.isEmpty == false {
+        parts.append(setName)
+    }
+
+    var parallel = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
+    if parallel.lowercased() == "base" { parallel = "" }
+    if card.isAuto, parallel.isEmpty == false {
+        parts.append("\(parallel) Auto")
+    } else if card.isAuto {
+        parts.append("Auto")
+    } else if parallel.isEmpty == false {
+        parts.append(parallel)
+    }
+
+    // Grade tier — "Raw" for ungraded, condensed grade string otherwise.
+    let gradeShort: String = {
+        if let company = card.gradeCompany?.trimmingCharacters(in: .whitespaces),
+           company.isEmpty == false,
+           let value = card.gradeValue {
+            let v = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return "\(company) \(v)"
+        }
+        let raw = card.grade.trimmingCharacters(in: .whitespaces)
+        return raw.isEmpty ? "Raw" : raw
+    }()
+    parts.append(gradeShort)
+
+    let line = parts.joined(separator: " · ")
+    return line.isEmpty ? nil : line
 }
 
 private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
@@ -5196,20 +5243,19 @@ private func inventoryRightColumn(card: InventoryCard, resolvedValue: Double? = 
         return 0
     }()
 
+    // 2026-07-17: dropped the "MARKET VALUE" caption per row — the
+    // column position + weight make it read as the price. Bumped the
+    // number to .headline.bold so it carries the visual weight the
+    // label used to add.
     VStack(alignment: .trailing, spacing: 3) {
-        Text("MARKET VALUE")
-            .font(.system(size: 9, weight: .bold))
-            .tracking(0.5)
-            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
         if value > 0 {
             Text(inventoryWholeDollarString(value))
-                .font(.subheadline.weight(.medium))
+                .font(.headline.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .monospacedDigit()
         } else {
             Text("—")
-                .font(.subheadline.weight(.medium))
+                .font(.headline.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .monospacedDigit()
         }
@@ -5332,14 +5378,28 @@ private func inventoryGridThumbnail(urlString: String?, playerName: String) -> s
 /// rectangle with a photo glyph, matching how the CDN-thumbnail placeholder
 /// looks — no more colored initials tiles.
 private func inventoryInitialsTile(playerName: String, fontSize: CGFloat) -> some View {
-    ZStack {
+    // 2026-07-17: monogram fallback — never render a blank / photo-glyph
+    // placeholder. Player initials on an electric-blue-tinted card shape
+    // read as "we know who this is, we just don't have art yet" instead
+    // of "this looks broken".
+    let initials = inventoryInitials(from: playerName)
+    return ZStack {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(HobbyIQTheme.Colors.slateGray.opacity(0.6))
+            .fill(
+                LinearGradient(
+                    colors: [
+                        HobbyIQTheme.Colors.electricBlue.opacity(0.28),
+                        HobbyIQTheme.Colors.electricBlue.opacity(0.12)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
         RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1)
-        Image(systemName: "photo")
-            .font(.system(size: fontSize * 0.6, weight: .regular))
-            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.45), lineWidth: 1)
+        Text(initials)
+            .font(.system(size: fontSize, weight: .bold, design: .rounded))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
     }
 }
 
