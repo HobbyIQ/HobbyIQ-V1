@@ -7869,6 +7869,11 @@ export async function computeEstimate(
       const belowMarketThreshold =
         binMedianLocal !== null && binMedianLocal > 0 ? binMedianLocal * 0.65 : null;
 
+      // CF-RECENTCOMPS-FULL-POOL (Drew, 2026-07-17): remove the top-10
+      // truncation. iOS renders every element it receives (plain ForEach)
+      // and the Comp Analysis surface expects recentComps.length === compsUsed
+      // so users can see the full pool the engine considered. Payload size:
+      // ~200 bytes per comp × typical 20-60 comps = 4-12 KB, negligible.
       return comps
         .slice()
         .sort((a, b) => {
@@ -7876,7 +7881,6 @@ export async function computeEstimate(
           const tb = Date.parse(b.date || "") || 0;
           return tb - ta;
         })
-        .slice(0, 10)
         .map((c) => {
           const entry: Record<string, unknown> = {
             // Display the ORIGINAL Card Hedge sale price (not the post-
