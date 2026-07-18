@@ -6576,6 +6576,98 @@ export async function computeEstimate(
         ? `Sibling anchor via ${backportedSiblingLineage?.siblingIsCrossClass ? "Base card × cross-class × " : "Base Auto × "}${backportedSiblingLineage?.parallelPremium}× ${backportedSiblingLineage?.floorApplied ? "(floor)" : "(empirical)"}`
         : null);
 
+    // CF-GUESTIMATE-THIN-DATA-BRANCH (Drew, 2026-07-18): the thin-data
+    // short-circuit above (comps=0 / no anchor) fell through every prior
+    // rescue path (sibling-pool, trend-extrapolated, ch-single-sale).
+    // Before returning "no-recent-comps" with a null number, try the
+    // compound-multiplier guestimate. Same pure math the main path uses
+    // — see CF-GUESTIMATE-PRICING. iOS renders the attribution chain
+    // so the user sees the derivation instead of $0 or "$11 raw".
+    let thinBranchGuestimate: {
+      marketValue: number;
+      rangeLow: number;
+      rangeHigh: number;
+      confidence: "estimate" | "rough" | "ballpark";
+      attribution: string[];
+    } | null = null;
+    const thinGuestimateEligible =
+      finalEstimatedValue === null
+      && (lastSale?.price === null || lastSale?.price === undefined)
+      && typeof queryContext.playerName === "string"
+      && queryContext.playerName.trim().length > 0
+      && queryContext.cardYear !== undefined
+      && queryContext.cardYear !== null
+      && typeof queryContext.product === "string"
+      && queryContext.product.trim().length > 0;
+    if (thinGuestimateEligible) {
+      try {
+        const { fetchFamilyBaseRawPrice, classifyPlayerTier } = await import(
+          "./guestimateContext.service.js"
+        );
+        const { computeGuestimate } = await import("./guestimatePricing.js");
+        const year = Number(queryContext.cardYear);
+        const familyLabel = String(queryContext.product).trim();
+        const [baseRaw, tier] = await Promise.all([
+          fetchFamilyBaseRawPrice(year, familyLabel),
+          classifyPlayerTier(String(queryContext.playerName)),
+        ]);
+        if (baseRaw !== null && baseRaw > 0) {
+          const gradeTier =
+            normalizedGradeCompany && queryContext.gradeValue
+              ? `${normalizedGradeCompany} ${queryContext.gradeValue}`
+              : "Raw";
+          const printRun =
+            typeof (body as { printRun?: number }).printRun === "number"
+              ? Number((body as { printRun?: number }).printRun)
+              : null;
+          const isAuto = /auto/i.test(queryContext.parallel ?? "")
+            || /auto/i.test(body.parallel ?? "")
+            || /auto/i.test(queryContext.product ?? "")
+            || /cpa-|autograph/i.test(cardIdentity?.number ?? "")
+            || Boolean((body as { isAuto?: boolean }).isAuto);
+          let ageYears: number | null = null;
+          try {
+            const currentYear = new Date().getUTCFullYear();
+            ageYears = currentYear - year;
+          } catch { /* leave null */ }
+          const g = computeGuestimate({
+            familyBaseRawPrice: baseRaw,
+            familyLabel,
+            playerTier: tier,
+            parallel: queryContext.parallel ?? null,
+            gradeTier,
+            printRun,
+            isAuto,
+            ageYears,
+          });
+          if (g && g.confidence !== "insufficient") {
+            thinBranchGuestimate = {
+              marketValue: g.price,
+              rangeLow: g.rangeLow,
+              rangeHigh: g.rangeHigh,
+              confidence: g.confidence,
+              attribution: g.attribution,
+            };
+            console.log(JSON.stringify({
+              event: "guestimate_computed",
+              source: "compiq.estimate.thin-branch",
+              cardId: body.cardId ?? cardIdentity?.card_id ?? null,
+              player: queryContext.playerName,
+              family: familyLabel,
+              baseRaw,
+              tier,
+              price: g.price,
+              hops: g.hops,
+              confidence: g.confidence,
+            }));
+          }
+        }
+      } catch {
+        // best-effort — thin-branch guestimate failure just leaves the
+        // legacy null response in place
+      }
+    }
+
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
       body,
@@ -6620,10 +6712,19 @@ export async function computeEstimate(
       // intact); marketValue is display-only. Falls back cleanly to
       // finalEstimatedValue (trend extrapolation) then null when we
       // truly have no anchor.
-      marketValue: lastSale?.price ?? finalEstimatedValue ?? null,
-      estimatedValue: finalEstimatedValue,
-      estimateRange: finalEstimateRange,
-      estimateBasis: finalEstimateBasis,
+      // CF-GUESTIMATE-THIN-DATA-BRANCH (2026-07-18): guestimate wins over
+      // null but ranks BELOW lastSale + trend-extrapolated. fairMarketValue
+      // stays null (training-exclusion). estimateAttribution renders the
+      // derivation chain on iOS.
+      marketValue: lastSale?.price ?? finalEstimatedValue ?? thinBranchGuestimate?.marketValue ?? null,
+      estimatedValue: finalEstimatedValue ?? thinBranchGuestimate?.marketValue ?? null,
+      estimateRange: finalEstimateRange
+        ?? (thinBranchGuestimate
+          ? { low: thinBranchGuestimate.rangeLow, high: thinBranchGuestimate.rangeHigh }
+          : null),
+      estimateBasis: finalEstimateBasis ?? (thinBranchGuestimate ? "guestimate" : null),
+      estimateAttribution: thinBranchGuestimate?.attribution,
+      estimateConfidence: thinBranchGuestimate?.confidence,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
