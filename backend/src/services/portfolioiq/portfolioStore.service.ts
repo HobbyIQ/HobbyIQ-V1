@@ -5196,6 +5196,39 @@ export async function sellHolding(req: Request, res: Response) {
     })();
   }
 
+  // CF-POST-SALE-ATTRIBUTION (Drew, 2026-07-17): fire-and-forget log
+  // the sale outcome against the most recent action-plan verdict for
+  // this holding. Never blocks the sale response.
+  void (async () => {
+    try {
+      const [{ readRecentSnapshots, upsertOutcome }, { classifySale }] = await Promise.all([
+        import("../dailyiq/actionPlanSnapshotStore.service.js"),
+        import("../dailyiq/postSaleAttribution.service.js"),
+      ]);
+      const snapshots = await readRecentSnapshots(id, 60);
+      const attribution = classifySale({
+        holdingId: id,
+        userId: auth.userId,
+        cardId: holding.cardId ?? null,
+        soldAt,
+        salePrice: unitSalePrice,
+        snapshots,
+      });
+      await upsertOutcome({
+        holdingId: attribution.holdingId,
+        userId: attribution.userId,
+        cardId: attribution.cardId,
+        soldAt: attribution.soldAt,
+        salePrice: attribution.salePrice,
+        verdictAtSaleTime: attribution.verdictAtSaleTime,
+        verdictSnapshotDate: attribution.verdictSnapshotDate,
+        priceTargetAtSnapshot: attribution.priceTargetAtSnapshot,
+        daysSinceVerdict: attribution.daysSinceVerdict,
+        outcomeClass: attribution.outcomeClass,
+      });
+    } catch { /* silent — attribution never blocks the sale */ }
+  })();
+
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the partial-quantity
   // remaining holding when qty remains so iOS reflects the new state
   // without a refetch. holdingRemoved=true means the row is gone — no
