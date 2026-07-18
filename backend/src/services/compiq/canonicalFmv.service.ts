@@ -53,6 +53,7 @@ import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -266,6 +267,86 @@ async function computeCanonicalFmvUncached(
 // through the recordSoldComp side-effect that already fires
 // invalidateCanonicalFmvCache. Fire-and-forget: pool warming failures
 // don't block the FMV compute.
+/** CF-EBAY-BROWSE-ENDED-WARM (Drew, 2026-07-18, Option C). Ingest ONLY
+ *  eBay Browse listings whose end-date has already passed. For
+ *  auctions, that means the winning bid is locked in; for BIN/best-offer
+ *  listings, ended = sold or expired. Skips still-active listings
+ *  entirely — those are ask prices, not confirmed sales, and would
+ *  pollute the pool.
+ *
+ *  Source: "ebay-browse-ended". Confidence 0.75 (below CH's 0.7 aggregate
+ *  trust? — no, above, because these are LISTING-level attributed rather
+ *  than aggregate-level; the individual sale is directly observable
+ *  with itemWebUrl provenance). Actually 0.75 sits between CH 0.7 and
+ *  manual-user-entry 0.9 — reflects "we watched the auction close" vs
+ *  "user attested" vs "CH says trust it."
+ *
+ *  cardId is passed through — Browse doesn't tie to a vendor cardId, so
+ *  each ingested listing goes under the query's target cardId. */
+async function warmPoolFromEbayBrowseEnded(
+  cardId: string,
+  input: CanonicalFmvInput,
+): Promise<number> {
+  if (!input.player) return 0;
+  try {
+    const result = await fetchCardActiveListings({
+      year: input.cardYear ?? undefined,
+      set: input.product ?? undefined,
+      player: input.player,
+      cardNumber: input.cardNumber ?? undefined,
+      parallel: input.parallel ?? undefined,
+      gradeCompany: input.gradeCompany ?? undefined,
+      gradeValue: input.gradeValue !== null && input.gradeValue !== undefined
+        ? String(input.gradeValue)
+        : undefined,
+    });
+    if (!result || result.listings.length === 0) return 0;
+    const nowMs = Date.now();
+    // A tiny buffer past endDate to let the auction settle (avoid
+    // racing the seller/eBay on final-bid confirmation).
+    const SETTLED_BUFFER_MS = 15 * 60 * 1000;   // 15 min
+    let ingested = 0;
+    for (const l of result.listings) {
+      if (!Number.isFinite(l.price) || l.price <= 0) continue;
+      if (!l.endsAt) continue;
+      const endMs = Date.parse(l.endsAt);
+      if (!Number.isFinite(endMs)) continue;
+      // ENDED-ONLY GATE: skip listings still active or ending
+      // imminently (unsettled). Only ingest ones whose endDate is
+      // clearly in the past.
+      if (endMs > nowMs - SETTLED_BUFFER_MS) continue;
+      try {
+        await recordSoldComp({
+          cardId,
+          playerName: input.player,
+          cardYear: input.cardYear ?? null,
+          setName: input.product ?? null,
+          parallel: input.parallel ?? null,
+          cardNumber: input.cardNumber ?? null,
+          isAuto: detectIsAuto(input),
+          gradeCompany: input.gradeCompany ?? null,
+          gradeValue: input.gradeValue ?? null,
+          price: l.price,
+          // Use endsAt as the sale-date proxy — that's when the auction
+          // closed (winning bid locked) or the BIN listing expired /
+          // sold. Matches what the iOS Sales tab already shows.
+          soldAt: l.endsAt,
+          source: "ebay-browse-ended",
+          sourceExternalId: `ebay-browse-ended::${l.id}`,
+          contributorUserId: null,
+          title: l.title,
+          imageUrl: l.imageUrl,
+          sellerHandle: l.seller.username,
+          verifiedByUser: false,
+          confidence: 0.75,
+        });
+        ingested++;
+      } catch { /* per-listing errors swallowed */ }
+    }
+    return ingested;
+  } catch { return 0; }
+}
+
 async function warmPoolFromCh(input: CanonicalFmvInput): Promise<number> {
   if (!input.player || !input.product) return 0;
   try {
@@ -321,7 +402,8 @@ async function tryDirectComp(
     "ebay-user-purchase",
     "ebay-user-sale",
     "manual-user-entry",
-    "cardhedge",   // CF-CH-POOL-WARM: include CH-ingested sales in direct-comp pool
+    "cardhedge",             // CF-CH-POOL-WARM
+    "ebay-browse-ended",     // CF-EBAY-BROWSE-ENDED-WARM (Option C)
   ] as const;
   const readPool = async () => readCompsByCardId({
     cardId,
@@ -342,12 +424,20 @@ async function tryDirectComp(
   });
   let fresh = filterFresh(comps);
 
-  // CF-CH-POOL-WARM: pool is thin — try to warm from CH's aggregate
-  // (recent player-product sales) then re-query. One-shot; the ingested
-  // docs then flow through every subsequent FMV read as normal comps.
-  if (fresh.length < 3 && input.player && input.product) {
-    const added = await warmPoolFromCh(input);
-    if (added > 0) {
+  // CF-POOL-WARM (Drew, 2026-07-18): pool is thin — warm from CH's
+  // aggregate AND eBay Browse ended listings. Runs both in parallel;
+  // each is idempotent and fire-and-forget-safe. Re-query once after
+  // both settle so downstream sees the augmented sample.
+  //
+  // ebay-browse-ended is scoped to listings whose endDate has passed
+  // (auction winning bids + expired BINs), so we don't pollute the
+  // pool with active ask prices.
+  if (fresh.length < 3 && input.player) {
+    const [chAdded, ebayEndedAdded] = await Promise.all([
+      input.product ? warmPoolFromCh(input) : Promise.resolve(0),
+      warmPoolFromEbayBrowseEnded(cardId, input),
+    ]);
+    if (chAdded + ebayEndedAdded > 0) {
       comps = await readPool();
       fresh = filterFresh(comps);
     }
