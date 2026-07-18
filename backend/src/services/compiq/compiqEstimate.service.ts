@@ -3187,25 +3187,6 @@ export async function augmentCompsWithUserPool(
 
   const MAX_INJECT = 20;
   const additions: RawComp[] = [];
-  // CF-USER-POOL-ANCHOR (Drew, 2026-07-18): track how many additions
-  // come from "high-trust" pool comps — verified-by-user (confidence
-  // 1.0 OR verifiedByUser=true) within the last 90 days. When the
-  // caller filtered by parallel (see augmentCompsWithUserPool signature),
-  // these high-trust comps get INSERTED MULTIPLE TIMES into the sample
-  // so the downstream median/mean is anchored to them instead of being
-  // drowned by CH's vendor aggregate (which mixes cross-parallel data
-  // at the source cardId level for many products).
-  //
-  // Weight ratio: each high-trust same-parallel comp is inserted 3×.
-  // Rationale: for a comp sample of ~20 vendor comps, 3 copies of a
-  // single user-verified comp shifts the median meaningfully (~15%
-  // toward the user price). For 2 user comps → 6 copies → dominant
-  // signal. Balances "trust real transactions" against "don't ignore
-  // vendor breadth."
-  const HIGH_TRUST_ANCHOR_WEIGHT = 3;
-  const HIGH_TRUST_MAX_AGE_MS = 90 * 86_400_000;
-  let anchorInsertions = 0;
-
   for (const uc of freshUserComps) {
     if (additions.length >= MAX_INJECT) break;
     if (!Number.isFinite(uc.price) || uc.price <= 0) continue;
@@ -3214,7 +3195,7 @@ export async function augmentCompsWithUserPool(
     const key = `${day}|${Math.round(uc.price)}`;
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
-    const rawComp: RawComp = {
+    additions.push({
       price: uc.price,
       title: uc.title ?? `[user:${uc.source}] ${uc.playerName}`,
       soldDate: uc.soldAt,
@@ -3226,31 +3207,40 @@ export async function augmentCompsWithUserPool(
       // provenanceSummary and iOS can render "collector-verified" badges.
       source: uc.source,
       verifiedByUser: uc.verifiedByUser === true,
-    };
-    additions.push(rawComp);
-
-    // High-trust anchor: only fires when the caller filtered by
-    // parallel (else the boost would over-weight cross-parallel comps).
-    const isHighTrust =
-      typeof parallel === "string" && parallel.trim().length > 0
-      && (uc.verifiedByUser === true || (uc.confidence ?? 0) >= 0.8);
-    const soldMs = Date.parse(uc.soldAt ?? "");
-    const isRecent = Number.isFinite(soldMs) && (now - soldMs) <= HIGH_TRUST_MAX_AGE_MS;
-    if (isHighTrust && isRecent) {
-      for (let i = 1; i < HIGH_TRUST_ANCHOR_WEIGHT && additions.length < MAX_INJECT; i++) {
-        additions.push({ ...rawComp });
-        anchorInsertions++;
-      }
-    }
+    });
   }
 
   if (additions.length === 0) return fetched;
 
-  const mergedComps = [...fetched.comps, ...additions].sort((a, b) => {
-    const ta = new Date(a.soldDate).getTime();
-    const tb = new Date(b.soldDate).getTime();
-    return tb - ta;
+  // CF-USER-POOL-ANCHOR-OVERRIDE (Drew, 2026-07-18). Per the "no median"
+  // principle (see feedback_no_medians_project_next_sale.md): FMV is the
+  // projected NEXT sale from a same-parallel trend, never a median across
+  // parallels. When the caller filtered by parallel AND we have ≥1 recent
+  // high-trust same-parallel user comp, REPLACE fetched.comps with the
+  // user-only additions instead of merging. Downstream projectNextSaleFrom
+  // Comps then regresses on real same-parallel transactions and applies
+  // the broader trend forward — no cross-parallel vendor contamination.
+  //
+  // Guards:
+  //   - Only fires when parallel filter was active (else we'd drop
+  //     legitimate cross-parallel vendor data when the caller doesn't
+  //     know the parallel).
+  //   - Requires at least one addition to be verified OR confidence≥0.8
+  //     AND within the last 90 days (otherwise we'd overwrite a rich
+  //     vendor pool with a single stale user data point).
+  const parallelFilterActive = typeof parallel === "string" && parallel.trim().length > 0;
+  const HIGH_TRUST_MAX_AGE_MS = 90 * 86_400_000;
+  const highTrustRecent = freshUserComps.filter((uc) => {
+    const soldMs = Date.parse(uc.soldAt ?? "");
+    if (!Number.isFinite(soldMs)) return false;
+    if (now - soldMs > HIGH_TRUST_MAX_AGE_MS) return false;
+    return uc.verifiedByUser === true || (uc.confidence ?? 0) >= 0.8;
   });
+  const shouldOverride = parallelFilterActive && highTrustRecent.length >= 1;
+
+  const mergedComps = shouldOverride
+    ? [...additions].sort((a, b) => Date.parse(b.soldDate) - Date.parse(a.soldDate))
+    : [...fetched.comps, ...additions].sort((a, b) => Date.parse(b.soldDate) - Date.parse(a.soldDate));
 
   console.log(JSON.stringify({
     event: "compiq.sold_comps.merged",
@@ -3259,7 +3249,8 @@ export async function augmentCompsWithUserPool(
     parallel: typeof parallel === "string" ? parallel : null,
     vendorCount: fetched.comps.length,
     userInjectCount: additions.length,
-    anchorInsertions,
+    userPoolAnchorOverride: shouldOverride,
+    highTrustRecentCount: highTrustRecent.length,
     totalCount: mergedComps.length,
   }));
 
