@@ -293,6 +293,16 @@ export async function readCompsByCardId(input: {
   fromDate?: string;         // ISO; defaults to 180d ago
   maxDate?: string;          // ISO; defaults to now
   sources?: SoldCompSource[]; // filter to specific sources
+  // CF-USER-COMPS-PARALLEL-FILTER (Drew, 2026-07-18): when set,
+  // returns only comps whose parallel matches (case-insensitive,
+  // trimmed). CH's card-search often returns the same cardId for
+  // all parallels sharing a cardNumber (e.g. every #CPA-EHA variant
+  // shares one Bowman Chrome cardId), so pool queries without this
+  // filter dilute a "True Blue" holding's FMV across Blue X-Fractor,
+  // Green Shimmer, etc. Applied in-code after fetch to avoid brittle
+  // SQL string-normalization; the extra RUs are trivial vs the
+  // correctness win.
+  parallel?: string | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -311,10 +321,23 @@ export async function readCompsByCardId(input: {
   };
   try {
     const { resources } = await c.items.query(q, { partitionKey: input.cardId }).fetchAll();
-    const all = resources as SoldCompDoc[];
+    let all = resources as SoldCompDoc[];
     if (input.sources && input.sources.length > 0) {
       const set = new Set(input.sources);
-      return all.filter((d) => set.has(d.source));
+      all = all.filter((d) => set.has(d.source));
+    }
+    if (typeof input.parallel === "string") {
+      const wanted = normalizeParallelForFilter(input.parallel);
+      // Empty string as filter = "no-parallel / base holdings only" —
+      // match against docs whose parallel is null / "" / "Base" / "[Base]".
+      const BASE_ALIASES = new Set(["", "base", "[base]", "none", "no parallel"]);
+      all = all.filter((d) => {
+        const docP = normalizeParallelForFilter(d.parallel);
+        if (wanted === "" || BASE_ALIASES.has(wanted)) {
+          return BASE_ALIASES.has(docP);
+        }
+        return docP === wanted;
+      });
     }
     return all;
   } catch (err) {
@@ -326,6 +349,14 @@ export async function readCompsByCardId(input: {
     }));
     return [];
   }
+}
+
+/** Lowercase-trim-collapse for parallel string equality. Handles the
+ *  common ways users/vendors format parallels ("Blue Refractor" vs
+ *  "blue  refractor" vs " Blue Refractor "). */
+function normalizeParallelForFilter(p: string | null | undefined): string {
+  if (p === null || p === undefined) return "";
+  return String(p).trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 /**
