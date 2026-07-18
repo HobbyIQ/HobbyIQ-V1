@@ -44,6 +44,9 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var showingCompIQAnalysis = false
     @State private var lastEbayListingResponse: PortfolioEbayListingResponse?
     @State private var localError: String?
+    /// PR #553 (2026-07-17): one-click compose in-flight state. Gates
+    /// the "List on eBay ->" CTA on the action-recommendation card.
+    @State private var isComposingListing = false
     /// CF-IOS-GRADER-STATUS-UI (2026-06-28): mirrors `card.graderStatus`
     /// for the dropdown's optimistic UI. Seeded in init from the holding;
     /// PATCH commits update it (and the row stays correct because the
@@ -216,6 +219,35 @@ struct PortfolioHoldingDetailSheet: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            // PR #553 (2026-07-17): one-click list on eBay -> compose
+            // the draft server-side and hand off to EbayListingDraftView
+            // for review + publish. Rendered for sell_now / list verdicts
+            // only — hold / insufficient_data don't warrant the CTA.
+            if rec.verdict == .sellNow || rec.verdict == .list {
+                Button {
+                    Task { await startOneClickComposeListing() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isComposingListing {
+                            ProgressView().controlSize(.mini).tint(style.tint)
+                        } else {
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.caption.weight(.bold))
+                        }
+                        Text(isComposingListing ? "Composing…" : "List on eBay")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(style.tint)
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 36)
+                    .background(style.tint.opacity(0.14))
+                    .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(isComposingListing)
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -231,6 +263,28 @@ struct PortfolioHoldingDetailSheet: View {
                 .stroke(style.tint.opacity(0.25), lineWidth: 1.2)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    /// PR #553 (2026-07-17): POST /compose-listing gate before opening
+    /// the draft view. On 422 with a hint, surface the hint verbatim so
+    /// the user knows which field to fill. On success, present the
+    /// existing draft view.
+    private func startOneClickComposeListing() async {
+        isComposingListing = true
+        defer { isComposingListing = false }
+        do {
+            _ = try await APIService.shared.composeListing(holdingId: card.id.uuidString)
+            showingEbayListingSheet = true
+        } catch let error as APIServiceError {
+            switch error {
+            case .httpError(_, let body) where body.isEmpty == false:
+                localError = body
+            default:
+                localError = "Couldn't compose the listing: \(APIService.errorMessage(from: error))"
+            }
+        } catch {
+            localError = "Couldn't compose the listing: \(APIService.errorMessage(from: error))"
+        }
     }
 
     /// CF-HOLDING-DETAIL-V2 (2026-07-06): reuses the SAME normalized
