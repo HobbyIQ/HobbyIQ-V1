@@ -683,6 +683,38 @@ struct APIService {
         )
     }
 
+    /// PR #553 (2026-07-17): one-click listing composer. Server-side
+    /// validates the holding is listable + auto-derives title, condition,
+    /// price ladder (predictedPrice > fairMarketValue > estimatedValue >
+    /// targetPrice), bestOfferMinPrice, photos. Returns the same envelope
+    /// as `/ebay/listings/preview` — iOS opens EbayListingDraftView for
+    /// review and publish.
+    ///
+    /// Bail conditions surface as 422 with a hint:
+    ///   - missing playerName / cardYear / setName / product
+    ///   - no derivable target price (no priced holding + no override)
+    func composeListing(
+        holdingId: String,
+        targetPrice: Double? = nil,
+        description: String? = nil,
+        bestOfferMinPrice: Double? = nil,
+        sessionId: String? = nil
+    ) async throws -> PortfolioEbayListingResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        let body = OneClickListingComposeRequest(
+            targetPrice: targetPrice,
+            description: description,
+            bestOfferMinPrice: bestOfferMinPrice
+        )
+        let encoded = holdingId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? holdingId
+        return try await post(
+            path: "/api/portfolio/holdings/\(encoded)/compose-listing",
+            body: body,
+            responseType: PortfolioEbayListingResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
     // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
     // 30-day timing forecast was consolidated into PREDICTED (7d) which
     // now sources the same matched-cohort math after backend PR #543.
@@ -4035,6 +4067,15 @@ struct PortfolioEbayListingRequest: Codable {
         self.returnPolicyId = returnPolicyId
         self.fulfillmentPolicyId = fulfillmentPolicyId
     }
+}
+
+/// PR #553 (2026-07-17): body for POST /portfolio/holdings/:id/compose-listing.
+/// All fields optional — the server derives everything else from the
+/// persisted holding record.
+private struct OneClickListingComposeRequest: Codable {
+    let targetPrice: Double?
+    let description: String?
+    let bestOfferMinPrice: Double?
 }
 
 private struct AuthAppleSignInRequest: Codable {}
