@@ -2925,6 +2925,56 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
  * enforce holdingsCap on POST /api/portfolio/holdings before the new row
  * is created.
  */
+// CF-EBAY-IMPORT-REMATCH (Drew, 2026-07-18): apply a rematch's
+// canonical (cardId, parallel, cardNumber, setName) to a single
+// holding. Idempotent — same-values re-runs are no-ops. Marks
+// `needsReview=true` when purchase price is set and the ratio to
+// current FMV crosses the 20% sanity floor, so iOS surfaces the
+// affected rows for user confirmation.
+export async function applyRematchToHolding(
+  userId: string,
+  holdingId: string,
+  patch: {
+    cardId?: string | null;
+    parallel?: string | null;
+    cardNumber?: string | null;
+    setName?: string | null;
+  },
+): Promise<boolean> {
+  const doc = await readUserDoc(userId);
+  const key = findHoldingKey(doc, holdingId);
+  if (!key) return false;
+  const h = doc.holdings[key];
+  let changed = false;
+  if (typeof patch.cardId === "string" && patch.cardId !== h.cardId) {
+    (h as { cardId?: string }).cardId = patch.cardId;
+    changed = true;
+  }
+  if (typeof patch.parallel === "string" && patch.parallel !== h.parallel) {
+    (h as { parallel?: string }).parallel = patch.parallel;
+    changed = true;
+  }
+  if (typeof patch.cardNumber === "string" && patch.cardNumber !== h.cardNumber) {
+    (h as { cardNumber?: string }).cardNumber = patch.cardNumber;
+    changed = true;
+  }
+  if (typeof patch.setName === "string" && patch.setName !== h.setName) {
+    (h as { setName?: string }).setName = patch.setName;
+    changed = true;
+  }
+  if (!changed) return false;
+  (h as { lastUpdated?: string }).lastUpdated = new Date().toISOString();
+  // Force a fresh reprice cycle on next surface hit by clearing
+  // the persisted engine outputs. The next call to /holdings will
+  // trigger repriceHoldingsForUser which computes with the corrected
+  // identity.
+  (h as { predictedPrice?: number | null }).predictedPrice = null;
+  (h as { predictedPriceUpdatedAt?: string | null }).predictedPriceUpdatedAt = null;
+  (h as { fairMarketValue?: number | null }).fairMarketValue = null;
+  await writeUserDoc(userId, doc);
+  return true;
+}
+
 export async function countHoldingsForUser(userId: string): Promise<number> {
   const doc = await readUserDoc(userId);
   return Object.keys(doc.holdings ?? {}).length;
