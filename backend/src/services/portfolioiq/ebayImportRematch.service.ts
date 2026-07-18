@@ -311,6 +311,11 @@ function strictSurvivors(
 
     // ── Hard rejects ─────────────────────────────────────────────
     // 1. cardNumber: if title has an explicit pattern, match MUST use it
+    // (CH encodes auto-ness in the cardNumber prefix — CPA-/BCPA-/BSPA-
+    // etc. — so cardNumber-exact match already guarantees any auto-only
+    // subset is preserved. A separate is_auto check was tried in PR #568
+    // and reverted: CH does not populate an is_auto boolean field, so
+    // requiring it hard-rejected every valid auto candidate.)
     if (titleCardNumber && num !== titleCardNumber.toUpperCase()) return [];
     // 1b. auto enforcement: when the title's cardNumber is from an
     // autograph subset (CPA-*, BCPA-*, BSPA-*, etc.), candidates that
