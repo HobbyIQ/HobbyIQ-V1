@@ -539,4 +539,74 @@ router.post("/admin/dedup-user-comps", requireAdmin, async (req: Request, res: R
   } catch (err) { next(err); }
 });
 
+// CF-MANUAL-COMP-ADD (Drew, 2026-07-18). Admin endpoint to inject a
+// sold_comp we know about but haven't automated ingestion for yet.
+// Common case: user saw a $1,500 sale on eBay that CH's feed missed;
+// we add it manually so it anchors the FMV pool immediately.
+//
+// Auth: requireAdmin.
+// Body:
+//   {
+//     cardId: string,               // required
+//     playerName: string,           // required
+//     price: number,                // required, > 0
+//     soldAt: string,               // ISO date; required
+//     parallel?: string,
+//     cardNumber?: string,
+//     setName?: string,
+//     cardYear?: number,
+//     isAuto?: boolean,
+//     gradeCompany?: string | null,
+//     gradeValue?: number | null,
+//     title?: string,               // e.g. eBay listing title
+//     sourceExternalId?: string,    // eBay itemId; else auto-generated
+//     verifiedByUser?: boolean,     // default true (manual = attested)
+//     confidence?: number,          // default 0.9
+//     contributorUserId?: string,   // default "admin-manual"
+//   }
+router.post("/admin/comps/add", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { recordSoldComp } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    const b = req.body ?? {};
+    const cardId = String(b.cardId ?? "").trim();
+    const playerName = String(b.playerName ?? "").trim();
+    const price = Number(b.price);
+    const soldAt = String(b.soldAt ?? "").trim();
+    if (!cardId || !playerName || !(price > 0) || !soldAt) {
+      res.status(400).json({
+        success: false,
+        error: "cardId, playerName, price (>0), and soldAt required",
+      });
+      return;
+    }
+    const sourceExternalId = typeof b.sourceExternalId === "string" && b.sourceExternalId.trim().length > 0
+      ? b.sourceExternalId.trim()
+      : `admin-manual::${cardId}::${Date.parse(soldAt) || Date.now()}::${Math.round(price * 100)}`;
+    await recordSoldComp({
+      cardId,
+      playerName,
+      cardYear: typeof b.cardYear === "number" ? b.cardYear : null,
+      setName: typeof b.setName === "string" ? b.setName : null,
+      parallel: typeof b.parallel === "string" ? b.parallel : null,
+      cardNumber: typeof b.cardNumber === "string" ? b.cardNumber : null,
+      isAuto: b.isAuto === true,
+      gradeCompany: typeof b.gradeCompany === "string" ? b.gradeCompany : null,
+      gradeValue: typeof b.gradeValue === "number" ? b.gradeValue : null,
+      price,
+      soldAt,
+      source: "manual-user-entry",
+      sourceExternalId,
+      contributorUserId: typeof b.contributorUserId === "string" ? b.contributorUserId : "admin-manual",
+      title: typeof b.title === "string" ? b.title : null,
+      imageUrl: null,
+      sellerHandle: null,
+      verifiedByUser: b.verifiedByUser !== false,   // default true
+      confidence: typeof b.confidence === "number" ? b.confidence : 0.9,
+    });
+    res.json({ success: true, sourceExternalId, cardId, price, soldAt });
+  } catch (err) { next(err); }
+});
+
 export default router;
