@@ -210,6 +210,48 @@ export async function countCombinedActiveAlerts(userId: string): Promise<number>
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
+// CF-ALERT-PRESETS (Drew, 2026-07-17): curated one-click preset
+// templates. iOS renders these as a "Popular alerts" list so users
+// activate common patterns without navigating a rule builder.
+router.get("/presets", async (_req: Request, res: Response) => {
+  try {
+    const { listAlertPresets } = await import("../services/advancedAlerts/alertPresets.service.js");
+    res.json({ success: true, presets: listAlertPresets() });
+  } catch (err: any) {
+    console.error("[alerts.advanced] list presets failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to load presets" });
+  }
+});
+
+// CF-ALERT-PRESETS (Drew, 2026-07-17): activate a preset for the
+// caller. Materializes the preset into a rule shape and delegates
+// to createRuleForUser. Optional params (priceTarget, customName)
+// override the preset's defaults.
+router.post("/presets/:presetId/activate",
+  requireCapacity("priceAlerts", countCombinedActiveAlerts),
+  async (req: Request, res: Response) => {
+    const userId = userIdFrom(req);
+    const presetId = String(req.params.presetId ?? "").trim();
+    if (!presetId) return res.status(400).json({ success: false, error: "presetId required" });
+    try {
+      const { getAlertPreset, materializePreset } = await import("../services/advancedAlerts/alertPresets.service.js");
+      const preset = getAlertPreset(presetId);
+      if (!preset) return res.status(404).json({ success: false, error: "preset not found" });
+      const priceTarget = typeof req.body?.priceTarget === "number" ? req.body.priceTarget : undefined;
+      const customName = typeof req.body?.customName === "string" ? req.body.customName : undefined;
+      const shape = materializePreset(preset, { priceTarget, customName });
+      const created = await createRule({ userId, ...shape });
+      if (!created) {
+        return res.status(500).json({ success: false, error: "Advanced-rule store unavailable" });
+      }
+      res.status(201).json({ success: true, rule: created });
+    } catch (err: any) {
+      console.error("[alerts.advanced] activate preset failed:", err?.message ?? err);
+      res.status(500).json({ success: false, error: "Failed to activate preset" });
+    }
+  },
+);
+
 router.get("/", async (req: Request, res: Response) => {
   const userId = userIdFrom(req);
   try {
