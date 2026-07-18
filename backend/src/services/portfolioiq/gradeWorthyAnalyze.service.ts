@@ -119,6 +119,7 @@ export async function analyzeHoldingGradeWorthy(
   holding: PortfolioHolding,
 ): Promise<{
   analysis: GradeWorthyAnalysis;
+  failureRate: import("./gradeFailureRatePricing.js").GradeFailureRateResult | null;
   diagnostics: {
     localCorpusRows: number;
     playerMomentum: number | null;
@@ -139,6 +140,7 @@ export async function analyzeHoldingGradeWorthy(
         overallRecommendation: "not_worth",
         reason: "Already graded — regrade analysis out of scope",
       },
+      failureRate: null,
       diagnostics: {
         localCorpusRows: 0,
         playerMomentum: null,
@@ -162,6 +164,7 @@ export async function analyzeHoldingGradeWorthy(
         overallRecommendation: "insufficient_data",
         reason: "Holding is missing player identity — cannot look up corpus",
       },
+      failureRate: null,
       diagnostics: {
         localCorpusRows: 0,
         playerMomentum: null,
@@ -248,8 +251,56 @@ export async function analyzeHoldingGradeWorthy(
     playerMomentumDirection: playerMomentumDirection ?? undefined,
   });
 
+  // CF-GRADE-FAILURE-RATE (Drew, 2026-07-17): compute the failure-rate
+  // block from the family's observed grader-outcome distribution.
+  // Best-effort — silently returns null when the outcome-distribution
+  // container is missing / empty for this family (which is the case
+  // for many long-tail families right now). Sits alongside `analysis`
+  // in the response so iOS renders it as its own block with the
+  // verbatim caveat.
+  let failureRate: import("./gradeFailureRatePricing.js").GradeFailureRateResult | null = null;
+  if (familyKey && rawPrice > 0 && analysis.bestTier) {
+    try {
+      const { readFamilyOutcomes } = await import("./graderOutcomeStore.service.js");
+      const { computeGradeFailureRate } = await import("./gradeFailureRatePricing.js");
+      const outcomes = await readFamilyOutcomes(familyKey);
+      // Choose the grader row matching the analysis's best-tier grader.
+      const bestTierParts = analysis.bestTier.graderTier.split(/\s+/);
+      const graderName = bestTierParts[0] ?? "PSA";
+      const outcomeRow = outcomes.find((o) => o.grader === graderName)
+        ?? outcomes[0]
+        ?? null;
+      if (outcomeRow) {
+        // Pull per-tier prices from the merged grader premiums (observed +
+        // family-blended). Skip Raw — it's the anchor, not an outcome tier.
+        const tierPrices: Record<string, number> = {};
+        for (const [tier, premium] of Object.entries(mergedPremiums)) {
+          if (tier === "Raw") continue;
+          if (premium && typeof premium.meanPrice === "number" && premium.meanPrice > 0) {
+            tierPrices[tier] = premium.meanPrice;
+          }
+        }
+        const gradingCost = buildGradingCostCatalog()[
+          `${graderName.toLowerCase()}-regular`
+        ] ?? buildGradingCostCatalog()[graderName.toLowerCase()]
+          ?? buildGradingCostCatalog().default
+          ?? 60;
+        failureRate = computeGradeFailureRate({
+          rawPrice,
+          gradingCost,
+          tierShares: outcomeRow.tierShares ?? {},
+          tierPrices,
+          totalGradedSamples: outcomeRow.totalGradedSamples ?? 0,
+        });
+      }
+    } catch {
+      // silent — no failure-rate block is not fatal
+    }
+  }
+
   return {
     analysis,
+    failureRate,
     diagnostics: {
       localCorpusRows: localResult.totalSales,
       playerMomentum,

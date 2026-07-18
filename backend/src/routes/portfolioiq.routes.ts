@@ -252,6 +252,9 @@ router.get(
         set: holding.setName ?? holding.product ?? null,
         variant: holding.parallel ?? null,
         analysis: result.analysis,
+        // CF-GRADE-FAILURE-RATE (Drew, 2026-07-17): sibling block. iOS
+        // renders when non-null, with the verbatim caveat under it.
+        failureRate: result.failureRate,
         diagnostics: result.diagnostics,
       });
     } catch (err) {
