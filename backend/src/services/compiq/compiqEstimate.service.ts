@@ -4169,7 +4169,15 @@ export async function computeEstimate(
   // so every `cacheWrap` call inside getPricing / searchCatalog / etc.
   // tallies into a per-prediction bucket. The predictionCorpus emit reads
   // the bucket at write time to populate `cache_hit` on the persisted doc.
-  return cacheStatsContext.run({ hits: 0, misses: 0 }, async () => {
+  //
+  // CF-CANONICAL-FMV-OVERRIDE (Drew, 2026-07-18): after the internal
+  // computation completes, route the final fairMarketValue through
+  // computeCanonicalFmv so every legacy /estimate consumer (iOS, ERP,
+  // alerts, listing composer, sell composer) sees the same number
+  // canonical FMV returns. One source of truth across the whole app.
+  // Gated on env CANONICAL_FMV_OVERRIDE_LEGACY_ENABLED=true so we can
+  // flip it off if a regression shows up.
+  const legacyResult = await cacheStatsContext.run({ hits: 0, misses: 0 }, async () => {
   // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): callContext is the
   // attribution axis for every emitPredictionToCorpus call below. The
   // 5 emit sites (unsupported_sport, variant-mismatch, sibling-pool,
@@ -8437,6 +8445,61 @@ export async function computeEstimate(
     parallelMatchUnifiedCount: fetched.parallelMatchUnifiedCount ?? null,
   };
   });  // close cacheStatsContext.run callback (PHASE-4A-2.2)
+
+  // CF-CANONICAL-FMV-OVERRIDE (Drew, 2026-07-18): route final FMV
+  // through the canonical pipeline. See canonicalFmv.service.ts. When
+  // canonical returns a valid FMV, override the legacy value +
+  // recompute the derived price tiers (quickSaleValue, premiumValue,
+  // suggestedListPrice) from the canonical anchor so every price the
+  // client sees comes from one source.
+  //
+  // Legacy value flows through unchanged when:
+  //   - the override env flag is off, OR
+  //   - canonical returns no-basis (no fmv), OR
+  //   - canonical call fails (silently).
+  if (process.env.CANONICAL_FMV_OVERRIDE_LEGACY_ENABLED === "true") {
+    try {
+      const { computeCanonicalFmv } = await import("./canonicalFmv.service.js");
+      const canonical = await computeCanonicalFmv({
+        cardId: String(body.cardId ?? "").trim(),
+        parallel: (body.parallel as string | null | undefined) ?? null,
+        gradeCompany: (body.gradeCompany as string | null | undefined) ?? null,
+        gradeValue: typeof body.gradeValue === "number" ? body.gradeValue : null,
+        cardYear: typeof body.cardYear === "number" ? body.cardYear : null,
+        product: (body.product as string | null | undefined) ?? null,
+        player: (body.playerName as string | null | undefined) ?? null,
+        cardNumber: (body.cardNumber as string | null | undefined) ?? null,
+      });
+      if (canonical.fmv !== null && canonical.fmv > 0) {
+        const round2 = (n: number) => Math.round(n * 100) / 100;
+        (legacyResult as Record<string, unknown>).fairMarketValue = canonical.fmv;
+        // Recompute derived tiers from canonical anchor. Preserves the
+        // legacy semantic (quickSale = FMV × 0.85, premium = FMV × 1.15,
+        // suggestedList = FMV × 1.05) so downstream consumers keep the
+        // same relative structure.
+        (legacyResult as Record<string, unknown>).quickSaleValue = round2(canonical.fmv * 0.85);
+        (legacyResult as Record<string, unknown>).premiumValue = round2(canonical.fmv * 1.15);
+        (legacyResult as Record<string, unknown>).suggestedListPrice = round2(canonical.fmv * 1.05);
+        // Debug/audit marker — visible in logs and dev tooling but not
+        // in the iOS contract.
+        (legacyResult as Record<string, unknown>).__canonicalFmvOverride = {
+          method: canonical.method,
+          confidence: canonical.confidence,
+          computedAt: canonical.computedAt,
+        };
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "canonical_fmv_override_failed",
+        source: "compiqEstimate.service",
+        error: (err as Error)?.message ?? String(err),
+        cardId: body.cardId,
+      }));
+      // Silent fallback — legacy value flows through unchanged.
+    }
+  }
+
+  return legacyResult;
 }
 
 export async function simulateWhatIf(body: {
