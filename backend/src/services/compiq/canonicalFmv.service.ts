@@ -267,8 +267,30 @@ async function computeCanonicalFmvUncached(
 // through the recordSoldComp side-effect that already fires
 // invalidateCanonicalFmvCache. Fire-and-forget: pool warming failures
 // don't block the FMV compute.
-/** CF-EBAY-BROWSE-ENDED-WARM (Drew, 2026-07-18, Option C). Ingest ONLY
- *  eBay Browse listings whose end-date has already passed. For
+/** CF-EBAY-BROWSE-ENDED-WARM (Drew, 2026-07-18, Option C).
+ *
+ *  ⚠ SCAFFOLDING — currently INERT.
+ *
+ *  Investigation on 2026-07-18 confirmed that eBay Browse's
+ *  `item_summary/search` endpoint returns ONLY active listings; the
+ *  `endsAt` field on responses is always a FUTURE date. This filter
+ *  (endsAt < now) therefore matches zero listings against the
+ *  current Browse endpoint.
+ *
+ *  This function is kept in place as WIRING for when a real confirmed-
+ *  sold data source lands:
+ *    - eBay Marketplace Insights API (approval-required), OR
+ *    - the internal ch_daily_sales feed, OR
+ *    - a future eBay data-license partnership
+ *
+ *  When that source arrives, swap the `fetchCardActiveListings` call
+ *  below for the confirmed-sold endpoint. Everything else — the
+ *  ingest shape, cache invalidation, direct-comp read sources, and
+ *  confidence 0.85 — stays the same. The FMV pipeline activates
+ *  automatically on the first fresh query.
+ *
+ *  Ingest shape when active:
+ *  Only eBay Browse listings whose end-date has already passed. For
  *  auctions, that means the winning bid is locked in; for BIN/best-offer
  *  listings, ended = sold or expired. Skips still-active listings
  *  entirely — those are ask prices, not confirmed sales, and would
