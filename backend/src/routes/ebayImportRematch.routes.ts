@@ -90,9 +90,12 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
     let appliedCount = 0;
     if (applyChanges) {
       // Persist per-holding changes via portfolioStore's update path.
-      const { applyRematchToHolding } = await import(
+      const { applyRematchToHolding, readUserDoc } = await import(
         "../services/portfolioiq/portfolioStore.service.js"
-      ).catch(() => ({ applyRematchToHolding: null })) as { applyRematchToHolding: ((...args: unknown[]) => Promise<boolean>) | null };
+      ).catch(() => ({ applyRematchToHolding: null, readUserDoc: null })) as {
+        applyRematchToHolding: ((...args: unknown[]) => Promise<boolean>) | null;
+        readUserDoc: ((userId: string) => Promise<{ holdings: Record<string, unknown> }>) | null;
+      };
       if (applyRematchToHolding) {
         for (const r of results) {
           if (!r.changed) continue;
@@ -103,7 +106,67 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
               cardNumber: r.after.cardNumber,
               setName: r.after.setName,
             });
-            if (ok) appliedCount++;
+            if (ok) {
+              appliedCount++;
+              // CF-EBAY-PURCHASE-COMP (Drew, 2026-07-18): once we've
+              // validated the identity via strict-mode + price-validator
+              // AND persisted the corrected cardId, emit an
+              // ebay-user-purchase sold_comp so this real transaction
+              // shows up in the pool for downstream pricing (Drew:
+              // "if there are no comps, we should add the ebay pull in
+              // comps since they are real data"). Mirrors the confirm-
+              // flow emit in ebayReviewQueue.service.ts:267-293 —
+              // fire-and-forget, swallow errors, never block the apply.
+              if (r.after.cardId && r.purchasePrice && r.purchasePrice > 0 && readUserDoc) {
+                void (async () => {
+                  try {
+                    const doc = await readUserDoc(userId);
+                    const holding = (doc.holdings as Record<string, unknown>)[r.holdingId]
+                      ?? Object.values(doc.holdings).find((h) =>
+                        (h as { id?: string }).id === r.holdingId,
+                      );
+                    if (!holding) return;
+                    const h = holding as Record<string, unknown>;
+                    const playerName = String(h.playerName ?? "").trim();
+                    if (!playerName) return;
+                    const soldAt = String(
+                      h.purchaseDate
+                      ?? h.addedAt
+                      ?? h.confirmedAt
+                      ?? new Date().toISOString(),
+                    );
+                    const { recordSoldComp } = await import(
+                      "../services/portfolioiq/soldCompsStore.service.js"
+                    );
+                    await recordSoldComp({
+                      cardId: r.after.cardId!,
+                      playerName,
+                      cardYear: (h.cardYear as number | null) ?? null,
+                      setName: r.after.setName ?? null,
+                      parallel: r.after.parallel ?? null,
+                      cardNumber: r.after.cardNumber ?? null,
+                      isAuto: h.isAuto === true,
+                      price: r.purchasePrice!,
+                      soldAt,
+                      source: "ebay-user-purchase",
+                      sourceExternalId: (h.ebayItemId as string | null) ?? `rematch::${r.holdingId}`,
+                      contributorUserId: userId,
+                      title: r.ebayTitle ?? null,
+                      imageUrl: (h.ebayImageUrl as string | null) ?? null,
+                      sellerHandle: null,
+                      // NOT user-verified (Drew hasn't manually confirmed);
+                      // the identity comes from the matcher's strict-mode
+                      // + price-validator survivors, which carry a 0.8
+                      // matchConfidence from CH's search.
+                      verifiedByUser: false,
+                      confidence: r.after.matchConfidence ?? 0.8,
+                    });
+                  } catch {
+                    // swallow — comp emission is auxiliary
+                  }
+                })();
+              }
+            }
           } catch { /* silent — one failure shouldn't kill the batch */ }
         }
       }
