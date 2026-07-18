@@ -11,7 +11,7 @@
 // import with a stronger parser + CH's canonical catalog.
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
-import { searchCards } from "../compiq/cardhedge.client.js";
+import { searchCards, getPriceEstimate } from "../compiq/cardhedge.client.js";
 
 export interface RematchResult {
   holdingId: string;
@@ -104,17 +104,25 @@ export async function rematchOne(
     // ordered; the top hit is the best. When multiple hits at the
     // same score exist and one carries CPA-*/BCPA-* card_number
     // matching a token in the ebay title (like "CPA-EHA"), prefer it.
-    const top = pickBestMatch(cards, title);
+    // CF-EBAY-REMATCH-PRICE-VALIDATE (Drew, 2026-07-18): walk the
+    // scored candidates in order; for each, fetch CH's Raw price
+    // estimate and check whether it's in the ballpark of the user's
+    // purchase price. Reject candidates whose price differs by more
+    // than an order of magnitude (0.10× or 10×) — that's the "you
+    // paid $305 but the match's Raw price is $2" failure mode from
+    // the first dry-run. Falls back to unchanged when no candidate
+    // survives.
+    const candidates = pickRankedMatches(cards, title);
+    let top: CardMatchCandidate | null = candidates[0] ?? null;
+    if (purchasePrice && purchasePrice > 0 && candidates.length > 0) {
+      top = await firstPriceValid(candidates, purchasePrice);
+    }
     if (!top) return emptyAfter("no_match");
 
     // CF-EBAY-REMATCH-STRICT (Drew, 2026-07-18): suppress risky
     // parallel rewrites. Bare "Blue" being confidently upgraded to
     // "Blue X-Fractor" without the title explicitly saying so is the
-    // exact failure the first dry-run surfaced (Owen Carey CPA-OC
-    // Blue → Speckle Refractor, McConkey Purple Ice → Purple in a
-    // baseball set, etc.). Preserve the before-parallel when the
-    // new one crosses the "specific refractor sub-type" boundary
-    // without title support.
+    // exact failure the first dry-run surfaced.
     const proposedParallel = (top.variant ?? before.parallel) as string | null;
     const finalParallel =
       isRiskyParallelChange(before.parallel, proposedParallel)
@@ -201,14 +209,66 @@ function extractSportFromTitle(title: string): "baseball" | "football" | "basket
   return null;
 }
 
-/** STRICT matcher: rejects candidates that don't exact-match the
- *  title's explicit tokens (cardNumber, year, sport). Returns null
- *  when nothing survives — caller falls back to "unchanged." */
-function pickBestMatch(
+/** CF-EBAY-REMATCH-PRICE-VALIDATE (2026-07-18): the price-validator
+ *  wants to walk candidates in ranked order and test each against
+ *  the user's purchase price. `pickRankedMatches` returns the same
+ *  strict-filtered survivors as `pickBestMatch` but as an ordered
+ *  list, not just the top. */
+export function pickRankedMatches(
   cards: CardMatchCandidate[],
   title: string,
-): CardMatchCandidate | null {
-  if (cards.length === 0) return null;
+): CardMatchCandidate[] {
+  const survivors = strictSurvivors(cards, title);
+  return survivors.map((s) => s.c);
+}
+
+/** Test each candidate's CH Raw price estimate against the user's
+ *  purchase price. Return the first candidate whose CH Raw price is
+ *  within [purchasePrice × 0.10, purchasePrice × 10] — i.e. within
+ *  an order of magnitude. Wider bands might over-accept; narrower
+ *  might over-reject. Order-of-magnitude is defensible against the
+ *  100× swings the first dry-run produced (e.g. $305 paid vs $2 raw
+ *  = 150× off).
+ *
+ *  Falls back to the top ranked candidate when we can't fetch any
+ *  price at all (CH down, cardId unknown). Returns null when every
+ *  candidate has a fetched price AND none are in range. */
+async function firstPriceValid(
+  ranked: CardMatchCandidate[],
+  purchasePrice: number,
+): Promise<CardMatchCandidate | null> {
+  if (ranked.length === 0) return null;
+  const lowFloor = purchasePrice * 0.10;
+  const highCeil = purchasePrice * 10;
+  let anyPriceFetched = false;
+
+  for (const c of ranked) {
+    if (!c.card_id) continue;
+    try {
+      // Raw is the shared grade across autos/non-autos/graded holdings.
+      // If the caller's holding is graded, the observed rail derived
+      // downstream will re-price at the right tier — Raw here is the
+      // "does the SKU value make sense at all" gate.
+      const est = await getPriceEstimate(c.card_id, "Raw");
+      const price = est?.price ?? null;
+      if (price === null || !Number.isFinite(price) || price <= 0) continue;
+      anyPriceFetched = true;
+      if (price >= lowFloor && price <= highCeil) return c;
+    } catch { /* ignore, try next candidate */ }
+  }
+  // No survivor: if we NEVER got a price back, fall back to top
+  // ranked. If we did get prices but none passed, it means every
+  // in-range option was rejected → prefer unchanged (null).
+  return anyPriceFetched ? null : ranked[0];
+}
+
+/** Shared strict-filter + score. Returns ranked survivor list.
+ *  Both pickBestMatch and pickRankedMatches use this. */
+function strictSurvivors(
+  cards: CardMatchCandidate[],
+  title: string,
+): Array<{ c: CardMatchCandidate; score: number }> {
+  if (cards.length === 0) return [];
 
   const titleCardNumber = extractCardNumberFromTitle(title);
   const titleYear = extractYearFromTitle(title);
@@ -257,14 +317,23 @@ function pickBestMatch(
     return [{ c, score: (c.confidence ?? 0.5) * 100 + bonus }];
   });
 
-  if (scored.length === 0) return null;
+  if (scored.length === 0) return [];
   scored.sort((a, b) => b.score - a.score);
-  const top = scored[0];
   // Require minimum score — CH's confidence baseline is 50, so anything
   // below 90 (0.5 baseline + 40 for card-number exact) means we didn't
-  // hit even one strong signal. Skip.
-  if (top.score < 90) return null;
-  return top.c;
+  // hit even one strong signal. Drop.
+  return scored.filter((s) => s.score >= 90);
+}
+
+/** STRICT matcher: rejects candidates that don't exact-match the
+ *  title's explicit tokens (cardNumber, year, sport). Returns null
+ *  when nothing survives — caller falls back to "unchanged." */
+function pickBestMatch(
+  cards: CardMatchCandidate[],
+  title: string,
+): CardMatchCandidate | null {
+  const survivors = strictSurvivors(cards, title);
+  return survivors[0]?.c ?? null;
 }
 
 /** True when the eBay title explicitly mentions the specific parallel
