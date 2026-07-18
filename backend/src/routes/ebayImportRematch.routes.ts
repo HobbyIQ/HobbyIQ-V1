@@ -34,8 +34,19 @@ const REMATCH_CONCURRENCY = 4;   // gentle on CH's search-cards rate
 
 router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: Response, next) => {
   try {
-    const userId = await requireUserId(req, res);
-    if (!userId) return;
+    const initialUserId = await requireUserId(req, res);
+    if (!initialUserId) return;
+    // CF-EBAY-REMATCH-IMPERSONATE (Drew, 2026-07-18): when the caller
+    // is the tier1-harness synthetic user, allow impersonation via
+    // body.impersonateUserId so a GH Actions workflow can run the
+    // rematch against a real user's holdings. Any non-harness caller
+    // that supplies impersonateUserId gets a silent no-op — the
+    // harness gate is the authorization surface.
+    let userId: string = initialUserId;
+    if (userId === "tier1-harness" && typeof req.body?.impersonateUserId === "string") {
+      const impersonate = req.body.impersonateUserId.trim();
+      if (impersonate.length > 0) userId = impersonate;
+    }
     const applyChanges = req.body?.applyChanges === true;
     const dryRun = !applyChanges;
     const filterIds: string[] | null = Array.isArray(req.body?.holdingIds)

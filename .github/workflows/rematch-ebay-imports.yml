@@ -1,0 +1,98 @@
+name: Rematch eBay Imports (manual)
+
+# CF-EBAY-IMPORT-REMATCH (Drew, 2026-07-18). Manual workflow to fire
+# POST /api/portfolio/rematch-ebay-imports against a real user's
+# portfolio from GitHub's public IP (Drew's local DNS was blocking
+# the direct call during debugging). Uploads the response as an
+# artifact for offline review.
+#
+# Trigger via: GitHub UI → Actions → Rematch eBay Imports → Run workflow
+# Inputs:
+#   user_id       Cosmos userId whose holdings to rematch (required)
+#   apply_changes When "true", persists the corrected identity to Cosmos.
+#                 Default "false" (dry-run preview).
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'Target userId (Cosmos partition key)'
+        required: true
+        type: string
+      apply_changes:
+        description: 'apply changes (else dry-run)'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  rematch:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 15
+
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch TIER1_HARNESS_TOKEN
+        id: harness-token
+        run: |
+          TOKEN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='TIER1_HARNESS_TOKEN'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$TOKEN" ]; then
+            echo "::error::TIER1_HARNESS_TOKEN empty — aborting"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: POST rematch-ebay-imports
+        env:
+          TOKEN: ${{ steps.harness-token.outputs.token }}
+          USER_ID: ${{ inputs.user_id }}
+          APPLY: ${{ inputs.apply_changes }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" \
+            '{ impersonateUserId: $u, applyChanges: $apply }')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "x-session-id: $TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 300 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/rematch-ebay-imports" \
+            -o rematch-response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::rematch call failed with status $STATUS"
+            cat rematch-response.json || true
+            exit 1
+          fi
+          echo "Summary:"
+          jq '.summary' rematch-response.json
+          echo ""
+          echo "Changed candidates:"
+          jq '[.results[] | select(.changed == true)] | length' rematch-response.json
+          echo ""
+          echo "Needs-review candidates:"
+          jq '[.results[] | select(.needsReview == true)] | length' rematch-response.json
+
+      - name: Upload rematch response as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematch-response-${{ inputs.user_id }}-apply-${{ inputs.apply_changes }}
+          path: rematch-response.json
+          retention-days: 14
