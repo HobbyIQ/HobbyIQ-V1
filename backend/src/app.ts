@@ -111,16 +111,20 @@ app.use("/api/portfolioiq", portfolioiqRoutes);
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
 // mount-order pattern as /api/alerts/advanced.
 app.use("/api/portfolio/erp", portfolioErpRoutes);
+// CF-EBAY-IMPORT-REMATCH-ADMIN-MOUNT (Drew, 2026-07-18): mount the
+// rematch routes FIRST among /api/portfolio routers because every
+// other /api/portfolio mount (sellRadarNotableSalesRoutes,
+// portfolioiqRoutes, bulkSellComposerRoutes, tradeTargetsRoutes) has a
+// blanket router.use(requireSession) that rejects with 401 when there's
+// no x-session-id header — the request never falls through to the next
+// router at the app level once a session middleware rejects. Mounting
+// ebayImportRematchRoutes first lets its own requireAdmin fire on the
+// admin batch backfill path before any session gate intercepts.
+app.use("/api/portfolio", ebayImportRematchRoutes);
 // CF-SELL-NOW-RADAR + CF-NOTABLE-SALES-FEED: mount BEFORE the general
 // /api/portfolio → portfolioiqRoutes so the two dedicated endpoints
 // resolve to their handlers cleanly.
 app.use("/api/portfolio", sellRadarNotableSalesRoutes);
-// CF-EBAY-IMPORT-REMATCH-ADMIN-MOUNT (Drew, 2026-07-18): mount the
-// rematch routes BEFORE portfolioiqRoutes because portfolioiqRoutes has
-// a blanket router.use(requireSession) — Express would apply that gate
-// to /api/portfolio/admin/... before the ebayImportRematchRoutes'
-// requireAdmin ever runs, 401-ing the admin batch backfill workflow.
-app.use("/api/portfolio", ebayImportRematchRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 // CF-DAILYIQ-ACTION-PLAN (2026-07-17): mount action-plan routes first
 // so its clean, minimal-import file resolves before dailyiq.routes'
