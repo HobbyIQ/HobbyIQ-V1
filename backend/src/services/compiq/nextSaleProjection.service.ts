@@ -53,6 +53,14 @@ export interface NextSaleProjectionOptions {
    * Callers projecting further out (30/60/90d windows) can override.
    */
   monthsForward?: number;
+  /**
+   * CF-FORWARD-WINDOW-CONFIGURABLE (Drew, 2026-07-18): forward
+   * projection window in DAYS for the linear-regression branch.
+   * Takes precedence over monthsForward's implicit 30d when set.
+   * Canonical FMV passes 3 for a "next sale today" projection instead
+   * of the legacy 30d extrapolation. Default preserves 30d back-compat.
+   */
+  forwardDays?: number;
 }
 
 export type NextSaleMethod =
@@ -98,9 +106,13 @@ export function projectNextSaleFromComps(
   const monthsForward = opts.monthsForward ?? 1;
 
   // Branch 1: linear-regression when n≥2 with distinct dates.
+  // Forward-window: opts.forwardDays wins; else convert monthsForward
+  // (default 1 month) to days for computeSlopeValuation.
+  const forwardDays = opts.forwardDays ?? Math.round(monthsForward * 30);
   const slopeVal = computeSlopeValuation(
     priced.map((c) => ({ date: c.soldDate ?? null, price: c.price })),
     nowMs,
+    forwardDays,
   );
   // Guard against regression extrapolations that collapse to zero — a
   // sharp downtrend can drive marketValue×(1 + slope×30d) into the negative
@@ -134,7 +146,13 @@ export function projectNextSaleFromComps(
   const daysAgo = Math.max(0, (nowMs - anchor.tMs) / MS_PER_DAY);
   const monthsAgo = daysAgo / 30;
   const trendPct = opts.broaderTrendPctPerMonth ?? 0;
-  const totalMonths = monthsAgo + monthsForward;
+  // CF-FORWARD-WINDOW-CONFIGURABLE (Drew, 2026-07-18): forwardDays
+  // (when set) drives the branch-2 anchor-forward step; else use
+  // monthsForward (default 1 month). Canonical FMV passes 3d.
+  const forwardMonthsUsed = opts.forwardDays !== undefined
+    ? opts.forwardDays / 30
+    : monthsForward;
+  const totalMonths = monthsAgo + forwardMonthsUsed;
   // Cap the extrapolation window at 6 months of broader-trend applied to a
   // single anchor — beyond that the projection is more noise than signal.
   const cappedMonths = Math.min(totalMonths, 6);

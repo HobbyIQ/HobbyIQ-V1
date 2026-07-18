@@ -277,7 +277,13 @@ async function tryDirectComp(
 
   const projection = projectNextSaleFromComps(
     fresh.map((c) => ({ price: c.price, soldDate: c.soldAt })),
-    { broaderTrendPctPerMonth: trendPctPerMonth },
+    {
+      broaderTrendPctPerMonth: trendPctPerMonth,
+      // CF-FORWARD-WINDOW-3D (Drew, 2026-07-18): canonical FMV projects
+      // 3 days forward, not 30. This is "what would this card sell for
+      // today" — near-anchor extrapolation, not month-out speculation.
+      forwardDays: 3,
+    },
   );
   if (!projection || projection.nextSaleValue <= 0) return null;
 
@@ -367,7 +373,7 @@ async function tryCrossParallel(
 
   const projection = projectNextSaleFromComps(
     normalized.map((n) => ({ price: n.price, soldDate: n.soldAt })),
-    { broaderTrendPctPerMonth: trendPctPerMonth },
+    { broaderTrendPctPerMonth: trendPctPerMonth, forwardDays: 3 },
   );
   if (!projection || projection.nextSaleValue <= 0) return null;
 
@@ -530,9 +536,11 @@ async function tryProductTier(
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
-  // Apply broader trend forward by 1 month (matches other rungs' semantics).
+  // CF-FORWARD-WINDOW-3D: canonical FMV projects 3 days forward, not
+  // 30 — "what would this sell for today." Scale the monthly trend to
+  // its 3-day equivalent (× 3/30 = × 0.1).
   const monthlyPct = trendPctPerMonth ?? 0;
-  const projected = raw * (1 + monthlyPct / 100);
+  const projected = raw * (1 + (monthlyPct / 100) * (3 / 30));
 
   if (!Number.isFinite(projected) || projected <= 0) return null;
 
