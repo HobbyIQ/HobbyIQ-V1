@@ -57,10 +57,21 @@ export interface NextSaleProjectionOptions {
    * CF-FORWARD-WINDOW-CONFIGURABLE (Drew, 2026-07-18): forward
    * projection window in DAYS for the linear-regression branch.
    * Takes precedence over monthsForward's implicit 30d when set.
-   * Canonical FMV passes 3 for a "next sale today" projection instead
-   * of the legacy 30d extrapolation. Default preserves 30d back-compat.
+   * Canonical FMV passes 0 for a "worth today" projection (no
+   * extrapolation), instead of the legacy 30d extrapolation.
+   * Default preserves 30d back-compat.
    */
   forwardDays?: number;
+  /**
+   * CF-MIN-N-FOR-REGRESSION (Drew, 2026-07-18): minimum priced-comps
+   * count required to fire the linear-regression branch. Below this,
+   * the branch-2 anchor-plus-broader-trend fires instead. At n=2 the
+   * OLS line extrapolates unbounded, so a +44%/10-day sample projects
+   * a +$520 lift for 13 days back-to-today — mathematically correct,
+   * empirically over-aggressive for thin data. Default 2 preserves
+   * back-compat; canonical FMV passes 3 to require real cohort depth.
+   */
+  minNForRegression?: number;
 }
 
 export type NextSaleMethod =
@@ -105,15 +116,18 @@ export function projectNextSaleFromComps(
   const nowMs = opts.nowMs ?? Date.now();
   const monthsForward = opts.monthsForward ?? 1;
 
-  // Branch 1: linear-regression when n≥2 with distinct dates.
+  // Branch 1: linear-regression when n≥MIN with distinct dates.
   // Forward-window: opts.forwardDays wins; else convert monthsForward
   // (default 1 month) to days for computeSlopeValuation.
   const forwardDays = opts.forwardDays ?? Math.round(monthsForward * 30);
-  const slopeVal = computeSlopeValuation(
-    priced.map((c) => ({ date: c.soldDate ?? null, price: c.price })),
-    nowMs,
-    forwardDays,
-  );
+  const minN = Math.max(2, opts.minNForRegression ?? 2);
+  const slopeVal = priced.length >= minN
+    ? computeSlopeValuation(
+        priced.map((c) => ({ date: c.soldDate ?? null, price: c.price })),
+        nowMs,
+        forwardDays,
+      )
+    : null;
   // Guard against regression extrapolations that collapse to zero — a
   // sharp downtrend can drive marketValue×(1 + slope×30d) into the negative
   // domain, which computeSlopeValuation floors at zero. A zero projection
