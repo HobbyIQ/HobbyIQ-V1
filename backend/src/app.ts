@@ -21,6 +21,7 @@ import tradeTargetsRoutes from "./routes/tradeTargets.routes.js";
 import communityRoutes from "./routes/community.routes.js";
 import catalogAdditionsRoutes from "./routes/catalogAdditions.routes.js";
 import ebayImportRematchRoutes from "./routes/ebayImportRematch.routes.js";
+import canonicalFmvRoutes from "./routes/canonicalFmv.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -106,6 +107,10 @@ app.use("/uploads", express.static(path.join(process.cwd(), ".data", "uploads"))
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/compiq", compiqRoutes);
+// CF-CANONICAL-FMV (Drew, 2026-07-18): single source of truth FMV
+// pipeline. Every consumer should call this. Behind
+// CANONICAL_FMV_ENABLED=true feature flag.
+app.use("/api/compiq", canonicalFmvRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
 // CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same

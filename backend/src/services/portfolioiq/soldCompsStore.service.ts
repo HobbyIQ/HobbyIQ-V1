@@ -233,6 +233,23 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
 
   try {
     await c.items.upsert(doc as any);
+    // CF-CANONICAL-FMV-INVALIDATION (Drew, 2026-07-18): kick the
+    // Redis cache for this (cardId, parallel, grade) so the next FMV
+    // read across any surface picks up the new sale. Fire-and-forget;
+    // failure to invalidate never blocks the write.
+    void (async () => {
+      try {
+        const { invalidateCanonicalFmvCache } = await import(
+          "../compiq/canonicalFmv.service.js"
+        );
+        await invalidateCanonicalFmvCache({
+          cardId: doc.cardId,
+          parallel: doc.parallel,
+          gradeCompany: doc.gradeCompany ?? null,
+          gradeValue: doc.gradeValue ?? null,
+        });
+      } catch { /* swallow */ }
+    })();
   } catch (err) {
     console.warn(JSON.stringify({
       event: "sold_comps_upsert_error",
