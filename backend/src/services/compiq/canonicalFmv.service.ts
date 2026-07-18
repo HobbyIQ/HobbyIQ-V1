@@ -46,12 +46,13 @@
 // See feedback_no_medians_project_next_sale.md for the underlying
 // principle; every rung projects the next sale, none reports a middle.
 
-import { readCompsByCardId } from "../portfolioiq/soldCompsStore.service.js";
+import { readCompsByCardId, recordSoldComp } from "../portfolioiq/soldCompsStore.service.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
+import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -251,28 +252,106 @@ async function computeCanonicalFmvUncached(
   return NULL_RESULT("no rung produced a value");
 }
 
+// ─── CH pool-warming ──────────────────────────────────────────────────
+//
+// CF-CH-POOL-WARM (Drew, 2026-07-18): when the direct-comp pool for a
+// (cardId, parallel, grade) target is thin, silently ingest CH's own
+// player-product aggregate for the same identity. CH has the recent
+// eBay sales (e.g. Eric Hartman Blue #CPA-EHA at $1,500 / $1,225 /
+// $1,525) that our sold_comps pool hasn't seen yet — instead of falling
+// back to sparse-data rungs, warm the pool from CH once + re-query.
+//
+// Idempotent via recordSoldComp's {source::sourceExternalId} dedup:
+// repeat runs upsert the same doc set. Cache-invalidated writes flow
+// through the recordSoldComp side-effect that already fires
+// invalidateCanonicalFmvCache. Fire-and-forget: pool warming failures
+// don't block the FMV compute.
+async function warmPoolFromCh(input: CanonicalFmvInput): Promise<number> {
+  if (!input.player || !input.product) return 0;
+  try {
+    const chResult = await fetchCompsByPlayer({
+      playerName: input.player,
+      product: input.product,
+      cardYear: input.cardYear ?? undefined,
+      parallel: input.parallel ?? undefined,
+      gradeCompany: input.gradeCompany ?? undefined,
+      gradeValue: input.gradeValue ?? undefined,
+    });
+    let ingested = 0;
+    for (const comp of chResult.comps) {
+      if (!comp.cardId || !Number.isFinite(comp.price) || comp.price <= 0) continue;
+      if (!comp.date) continue;
+      try {
+        await recordSoldComp({
+          cardId: comp.cardId,
+          playerName: input.player,
+          cardYear: input.cardYear ?? null,
+          setName: input.product ?? null,
+          parallel: input.parallel ?? null,
+          cardNumber: input.cardNumber ?? null,
+          isAuto: detectIsAuto(input),
+          gradeCompany: input.gradeCompany ?? null,
+          gradeValue: input.gradeValue ?? null,
+          price: comp.price,
+          soldAt: comp.date,
+          source: "cardhedge",
+          // Deterministic externalId → idempotent upsert across re-runs.
+          sourceExternalId: `ch-comp::${comp.cardId}::${comp.date}::${Math.round(comp.price * 100)}`,
+          contributorUserId: null,
+          title: comp.title ?? null,
+          imageUrl: null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.7,
+        });
+        ingested++;
+      } catch { /* per-comp errors swallowed */ }
+    }
+    return ingested;
+  } catch { return 0; }
+}
+
 // ─── Rung 1: direct same-parallel same-grade comps ────────────────────
 async function tryDirectComp(
   cardId: string,
   input: CanonicalFmvInput,
   trendPctPerMonth: number | null,
 ): Promise<CanonicalFmvResult | null> {
-  const comps = await readCompsByCardId({
+  const sources = [
+    "ebay-user-purchase",
+    "ebay-user-sale",
+    "manual-user-entry",
+    "cardhedge",   // CF-CH-POOL-WARM: include CH-ingested sales in direct-comp pool
+  ] as const;
+  const readPool = async () => readCompsByCardId({
     cardId,
-    sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+    sources: [...sources] as never,
     parallel: input.parallel ?? undefined,
     gradeCompany: input.gradeCompany ?? undefined,
     gradeValue: input.gradeValue ?? undefined,
-  }).catch(() => []);
+  }).catch(() => [] as Awaited<ReturnType<typeof readCompsByCardId>>);
+  let comps = await readPool();
 
   const nowMs = Date.now();
-  const fresh = comps.filter((c) => {
+  const filterFresh = (arr: typeof comps) => arr.filter((c) => {
     const soldMs = Date.parse(c.soldAt ?? "");
     if (!Number.isFinite(soldMs)) return false;
     if (nowMs - soldMs > MAX_POOL_AGE_DAYS * MS_PER_DAY) return false;
     if ((c as { flaggedWrong?: boolean }).flaggedWrong === true) return false;
     return true;
   });
+  let fresh = filterFresh(comps);
+
+  // CF-CH-POOL-WARM: pool is thin — try to warm from CH's aggregate
+  // (recent player-product sales) then re-query. One-shot; the ingested
+  // docs then flow through every subsequent FMV read as normal comps.
+  if (fresh.length < 3 && input.player && input.product) {
+    const added = await warmPoolFromCh(input);
+    if (added > 0) {
+      comps = await readPool();
+      fresh = filterFresh(comps);
+    }
+  }
   if (fresh.length === 0) return null;
 
   const projection = projectNextSaleFromComps(
