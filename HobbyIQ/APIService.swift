@@ -670,6 +670,19 @@ struct APIService {
         )
     }
 
+    /// PR #549: bulk sell composer — compares list-individually vs
+    /// add-to-bundle net proceeds across the caller-supplied batch of
+    /// holdings. Requires >= 2 holdingIds; upper bound enforced backend-
+    /// side. Used by the Inventory multi-select composer sheet.
+    func postBulkSellComposer(holdingIds: [String]) async throws -> BulkSellResponse {
+        let body = BulkSellRequest(holdingIds: holdingIds)
+        return try await post(
+            path: "/api/portfolio/bulk-sell-composer",
+            body: body,
+            responseType: BulkSellResponse.self
+        )
+    }
+
     // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
     // 30-day timing forecast was consolidated into PREDICTED (7d) which
     // now sources the same matched-cohort math after backend PR #543.

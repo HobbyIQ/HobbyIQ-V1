@@ -19,6 +19,13 @@ struct InventoryIQView: View {
     /// PR #551 (2026-07-17): "Find Deals" sheet gate — surfaces
     /// underpriced eBay listings from cards the user owns.
     @State private var showTradeTargetsSheet = false
+    /// PR #549 (2026-07-17): multi-select mode gates the bulk sell
+    /// composer. Toggled by the header pencil; selected holding ids
+    /// tracked in `selectedBulkHoldingIds`; sheet presented via
+    /// `showBulkComposerSheet` once >= 2 are picked.
+    @State private var isMultiSelecting: Bool = false
+    @State private var selectedBulkHoldingIds: Set<String> = []
+    @State private var showBulkComposerSheet: Bool = false
 
     // CF-BACK-NAV-FIX (2026-07-06): filter/sort is derived inline from
     // `vm.inventoryCards` on each render. Previously the result was
@@ -108,6 +115,47 @@ struct InventoryIQView: View {
             }
             .sheet(isPresented: $showTradeTargetsSheet) {
                 TradeTargetsSheet()
+            }
+            .sheet(isPresented: $showBulkComposerSheet) {
+                let ids = Array(selectedBulkHoldingIds)
+                let lookup: [String: InventoryCard] = Dictionary(uniqueKeysWithValues: vm.inventoryCards.map { ($0.id.uuidString, $0) })
+                BulkSellComposerSheet(holdingIds: ids, cardLookup: lookup)
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isMultiSelecting, selectedBulkHoldingIds.count >= 2 {
+                    HStack(spacing: 12) {
+                        Text("\(selectedBulkHoldingIds.count) selected")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Spacer()
+                        Button {
+                            showBulkComposerSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.left.arrow.right")
+                                    .font(.subheadline.weight(.bold))
+                                Text("Compare \(selectedBulkHoldingIds.count) cards")
+                                    .font(.subheadline.weight(.bold))
+                            }
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 44)
+                            .background(HobbyIQTheme.Colors.electricBlue)
+                            .clipShape(Capsule(style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+                    .padding(.vertical, 10)
+                    .background(HobbyIQTheme.Colors.cardNavy)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                            .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.4)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+                    .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+                    .padding(.bottom, 8)
+                }
             }
             .onAppear {
                 if vm.summary == nil {
@@ -209,6 +257,24 @@ struct InventoryIQView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Find deals")
+
+                Button {
+                    if isMultiSelecting {
+                        isMultiSelecting = false
+                        selectedBulkHoldingIds.removeAll()
+                    } else {
+                        isMultiSelecting = true
+                    }
+                } label: {
+                    Image(systemName: isMultiSelecting ? "xmark" : "checkmark.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isMultiSelecting ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.electricBlue)
+                        .frame(width: 40, height: 40)
+                        .background((isMultiSelecting ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.electricBlue).opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isMultiSelecting ? "Exit selection" : "Select multiple")
 
                 Button {
                     if canAdd {
@@ -321,15 +387,27 @@ struct InventoryIQView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(visibleCards.enumerated()), id: \.element.id) { index, card in
                         Button {
-                            selectedCard = card
+                            if isMultiSelecting {
+                                toggleBulkSelection(for: card)
+                            } else {
+                                selectedCard = card
+                            }
                         } label: {
-                            PortfolioCardRow(
-                                card: card,
-                                resolvedValue: vm.resolvedMarketValue(for: card),
-                                latestFlip: vm.recentFlip(for: card),
-                                playerTrend: vm.playerTrend(for: card)
-                            )
-                                .contentShape(Rectangle())
+                            HStack(spacing: 10) {
+                                if isMultiSelecting {
+                                    Image(systemName: selectedBulkHoldingIds.contains(card.id.uuidString) ? "checkmark.circle.fill" : "circle")
+                                        .font(.title3)
+                                        .foregroundStyle(selectedBulkHoldingIds.contains(card.id.uuidString) ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                                        .padding(.leading, 8)
+                                }
+                                PortfolioCardRow(
+                                    card: card,
+                                    resolvedValue: vm.resolvedMarketValue(for: card),
+                                    latestFlip: vm.recentFlip(for: card),
+                                    playerTrend: vm.playerTrend(for: card)
+                                )
+                            }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
 
@@ -472,6 +550,17 @@ struct InventoryIQView: View {
 
     private func resolvedMarketValue(for card: InventoryCard) -> Double {
         vm.resolvedMarketValue(for: card)
+    }
+
+    /// PR #549 (2026-07-17): toggle a holding into/out of the bulk-sell
+    /// selection set. Called from row taps while `isMultiSelecting`.
+    private func toggleBulkSelection(for card: InventoryCard) {
+        let key = card.id.uuidString
+        if selectedBulkHoldingIds.contains(key) {
+            selectedBulkHoldingIds.remove(key)
+        } else {
+            selectedBulkHoldingIds.insert(key)
+        }
     }
 
     private var filteredAndSortedCards: [InventoryCard] {
