@@ -57,7 +57,8 @@ export type SoldCompSource =
   | "ebay-user-sale"        // user sold this card on eBay (recorded via sale flow)
   | "manual-user-entry"     // user added holding manually with purchase price
   | "cardhedge"             // pulled from CH sold-comps API (aggregated vendor data)
-  | "cardsight";            // pulled from CS pricing API
+  | "cardsight"             // pulled from CS pricing API
+  | "ebay-browse";          // pulled from eBay Browse API directly (active listings; asking prices, not confirmed sales)
 
 export interface SoldCompDoc {
   /** Composite id: `{source}::{sourceExternalId}` — collision-safe. */

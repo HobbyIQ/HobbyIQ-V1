@@ -53,6 +53,7 @@ import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -266,6 +267,70 @@ async function computeCanonicalFmvUncached(
 // through the recordSoldComp side-effect that already fires
 // invalidateCanonicalFmvCache. Fire-and-forget: pool warming failures
 // don't block the FMV compute.
+/** CF-EBAY-BROWSE-POOL-WARM (Drew, 2026-07-18): sibling of warmPoolFromCh,
+ *  same idea but pulls from eBay's Browse API directly (the same source
+ *  the iOS Sales tab renders from). Ingests each active listing at
+ *  confidence 0.5 — these are ASK prices, not confirmed sales, so they
+ *  should carry less weight than CH's trusted-comps aggregate (0.7) or
+ *  user-verified purchases (0.9-1.0). But they're still real market
+ *  signal, and they land in canonical FMV's pool immediately.
+ *
+ *  cardId must be passed through — Browse's search doesn't return a
+ *  vendor cardId, so we attribute each listing to the target cardId. */
+async function warmPoolFromEbayBrowse(
+  cardId: string,
+  input: CanonicalFmvInput,
+): Promise<number> {
+  if (!input.player) return 0;
+  try {
+    const result = await fetchCardActiveListings({
+      year: input.cardYear ?? undefined,
+      set: input.product ?? undefined,
+      player: input.player,
+      cardNumber: input.cardNumber ?? undefined,
+      parallel: input.parallel ?? undefined,
+      gradeCompany: input.gradeCompany ?? undefined,
+      gradeValue: input.gradeValue !== null && input.gradeValue !== undefined
+        ? String(input.gradeValue)
+        : undefined,
+    });
+    if (!result || result.listings.length === 0) return 0;
+    let ingested = 0;
+    for (const l of result.listings) {
+      if (!Number.isFinite(l.price) || l.price <= 0) continue;
+      // Use endsAt when available (the auction/BIN end time is the
+      // proxy for "when this listing goes off the market"); else use
+      // now as the observation date so downstream aging works.
+      const soldAt = l.endsAt ?? new Date().toISOString();
+      try {
+        await recordSoldComp({
+          cardId,
+          playerName: input.player,
+          cardYear: input.cardYear ?? null,
+          setName: input.product ?? null,
+          parallel: input.parallel ?? null,
+          cardNumber: input.cardNumber ?? null,
+          isAuto: detectIsAuto(input),
+          gradeCompany: input.gradeCompany ?? null,
+          gradeValue: input.gradeValue ?? null,
+          price: l.price,
+          soldAt,
+          source: "ebay-browse",
+          sourceExternalId: `ebay-browse::${l.id}`,
+          contributorUserId: null,
+          title: l.title,
+          imageUrl: l.imageUrl,
+          sellerHandle: l.seller.username,
+          verifiedByUser: false,
+          confidence: 0.5,
+        });
+        ingested++;
+      } catch { /* per-listing errors swallowed */ }
+    }
+    return ingested;
+  } catch { return 0; }
+}
+
 async function warmPoolFromCh(input: CanonicalFmvInput): Promise<number> {
   if (!input.player || !input.product) return 0;
   try {
@@ -321,7 +386,8 @@ async function tryDirectComp(
     "ebay-user-purchase",
     "ebay-user-sale",
     "manual-user-entry",
-    "cardhedge",   // CF-CH-POOL-WARM: include CH-ingested sales in direct-comp pool
+    "cardhedge",     // CF-CH-POOL-WARM
+    "ebay-browse",   // CF-EBAY-BROWSE-POOL-WARM: iOS Sales tab's own source
   ] as const;
   const readPool = async () => readCompsByCardId({
     cardId,
@@ -342,12 +408,16 @@ async function tryDirectComp(
   });
   let fresh = filterFresh(comps);
 
-  // CF-CH-POOL-WARM: pool is thin — try to warm from CH's aggregate
-  // (recent player-product sales) then re-query. One-shot; the ingested
-  // docs then flow through every subsequent FMV read as normal comps.
-  if (fresh.length < 3 && input.player && input.product) {
-    const added = await warmPoolFromCh(input);
-    if (added > 0) {
+  // CF-POOL-WARM: pool is thin — warm from CH aggregate AND eBay
+  // Browse (iOS Sales tab source). Runs both in parallel; each
+  // ingest is idempotent + fire-and-forget-safe. Re-query once after
+  // both settle so downstream sees the augmented sample.
+  if (fresh.length < 3 && input.player) {
+    const [chAdded, ebayAdded] = await Promise.all([
+      input.product ? warmPoolFromCh(input) : Promise.resolve(0),
+      warmPoolFromEbayBrowse(cardId, input),
+    ]);
+    if (chAdded + ebayAdded > 0) {
       comps = await readPool();
       fresh = filterFresh(comps);
     }
