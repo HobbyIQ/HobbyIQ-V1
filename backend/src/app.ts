@@ -22,6 +22,7 @@ import communityRoutes from "./routes/community.routes.js";
 import catalogAdditionsRoutes from "./routes/catalogAdditions.routes.js";
 import ebayImportRematchRoutes from "./routes/ebayImportRematch.routes.js";
 import canonicalFmvRoutes from "./routes/canonicalFmv.routes.js";
+import listingRangeRoutes from "./routes/listingRange.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -111,6 +112,10 @@ app.use("/api/compiq", compiqRoutes);
 // pipeline. Every consumer should call this. Behind
 // CANONICAL_FMV_ENABLED=true feature flag.
 app.use("/api/compiq", canonicalFmvRoutes);
+// CF-LISTING-RANGE (Drew, 2026-07-18): "currently listing on eBay"
+// IQR range for a specific (cardId, parallel, grade). Card Detail
+// renders this under the FMV headline.
+app.use("/api/compiq", listingRangeRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
 // CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
