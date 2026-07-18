@@ -340,7 +340,15 @@ const BARE_COLORS = ["blue", "orange", "red", "green", "gold", "purple", "black"
 // Distinctive parallel sub-types. NOTE: "aqua" is treated as a
 // distinctive sub (not a bare color) because in the Bowman/Topps
 // vocabulary Aqua Refractor is a specific SKU, not a generic color.
-const DISTINCTIVE_SUBS = ["x-fractor", "xfractor", "shimmer", "speckle", "wave", "reptilian", "lazer", "sapphire", "aqua", "ice", "mojo", "sepia", "true"];
+const DISTINCTIVE_SUBS = [
+  "x-fractor", "xfractor", "shimmer", "speckle", "wave",
+  "reptilian", "lazer", "sapphire", "aqua", "ice", "mojo",
+  "sepia", "true",
+  // Bowman/Topps parallel keywords added 2026-07-18 after v4 leaked
+  // "Blue" → "Sky Blue Border" (title said just "Blue").
+  "border", "sky", "pattern", "geometric", "logofractor", "logo",
+  "prizm", "hyper", "silver", "cracked",
+];
 
 function hasWord(s: string, word: string): boolean {
   return new RegExp(`\\b${word.replace("-", "\\-")}\\b`).test(s);

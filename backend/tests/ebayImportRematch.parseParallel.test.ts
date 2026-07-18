@@ -83,6 +83,22 @@ describe("v3 dry-run failure modes — must PRESERVE before", () => {
       "Blue X-Fractor",
     )).toBe("Blue");
   });
+
+  it("v4 leak: Blue → Sky Blue Border (title says just 'Blue', not 'Border')", () => {
+    expect(guardedParallel(
+      "2026 Bowman Blue Eric Hartman #BP-102",
+      "Blue",
+      "Sky Blue Border",
+    )).toBe("Blue");
+  });
+
+  it("v4 leak: Blue → Silver Pattern (parallel keywords in taxonomy)", () => {
+    expect(guardedParallel(
+      "2026 Bowman Chrome Blue Player #CPA-XX",
+      "Blue",
+      "Silver Pattern",
+    )).toBe("Blue");
+  });
 });
 
 describe("v3 dry-run good upgrades — must APPLY proposed", () => {
