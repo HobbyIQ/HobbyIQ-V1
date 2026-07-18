@@ -659,6 +659,17 @@ struct APIService {
         )
     }
 
+    /// PR #551: underpriced eBay listings surfaced from cards the user
+    /// cares about. MVP backend returns `targets: []` until engine-value
+    /// plumbing is complete — UI shows the empty state.
+    func fetchTradeTargets(source: TradeTargetSource) async throws -> TradeTargetsResponse {
+        try await get(
+            path: "/api/portfolio/trade-targets",
+            queryItems: [URLQueryItem(name: "source", value: source.rawValue)],
+            responseType: TradeTargetsResponse.self
+        )
+    }
+
     // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
     // 30-day timing forecast was consolidated into PREDICTED (7d) which
     // now sources the same matched-cohort math after backend PR #543.
@@ -2731,7 +2742,10 @@ struct APIService {
         "/api/dailyiq/action-plan",
         // PR #548 (2026-07-17): engine-accuracy trust badge on
         // Portfolio landing. Same reasoning.
-        "/api/backtest/predicted-price-accuracy"
+        "/api/backtest/predicted-price-accuracy",
+        // PR #551 (2026-07-17): trade-target discovery sheet on
+        // Inventory. Same reasoning.
+        "/api/portfolio/trade-targets"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the

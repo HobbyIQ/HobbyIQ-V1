@@ -16,6 +16,9 @@ struct InventoryIQView: View {
     @State private var inventoryMode: PortfolioInventoryMode = .rows
     @State private var isAddingCard = false
     @State private var selectedCard: InventoryCard?
+    /// PR #551 (2026-07-17): "Find Deals" sheet gate — surfaces
+    /// underpriced eBay listings from cards the user owns.
+    @State private var showTradeTargetsSheet = false
 
     // CF-BACK-NAV-FIX (2026-07-06): filter/sort is derived inline from
     // `vm.inventoryCards` on each render. Previously the result was
@@ -102,6 +105,9 @@ struct InventoryIQView: View {
                     sessionViewModel: sessionViewModel,
                     suggestedTier: GatedCap.holdingsCap.upgradeTier(from: sessionViewModel.subscriptionManager.currentTier)
                 )
+            }
+            .sheet(isPresented: $showTradeTargetsSheet) {
+                TradeTargetsSheet()
             }
             .onAppear {
                 if vm.summary == nil {
@@ -190,6 +196,19 @@ struct InventoryIQView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Refresh inventory")
+
+                Button {
+                    showTradeTargetsSheet = true
+                } label: {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(width: 40, height: 40)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Find deals")
 
                 Button {
                     if canAdd {
