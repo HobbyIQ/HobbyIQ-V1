@@ -27,6 +27,11 @@ on:
         options:
           - 'false'
           - 'true'
+      holding_ids:
+        description: 'Optional comma-separated holdingIds to limit the batch (empty = all rematch candidates)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   rematch:
@@ -62,10 +67,17 @@ jobs:
           TOKEN: ${{ steps.harness-token.outputs.token }}
           USER_ID: ${{ inputs.user_id }}
           APPLY: ${{ inputs.apply_changes }}
+          HOLDING_IDS: ${{ inputs.holding_ids }}
         run: |
           set -euo pipefail
-          BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" \
-            '{ impersonateUserId: $u, applyChanges: $apply }')
+          IDS_JSON=$(echo "$HOLDING_IDS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')
+          if [ "$IDS_JSON" = "[]" ]; then
+            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" \
+              '{ impersonateUserId: $u, applyChanges: $apply }')
+          else
+            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" --argjson ids "$IDS_JSON" \
+              '{ impersonateUserId: $u, applyChanges: $apply, holdingIds: $ids }')
+          fi
           HTTP=$(curl -sS -w '\n%{http_code}' \
             -X POST \
             -H "x-session-id: $TOKEN" \
