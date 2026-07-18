@@ -94,6 +94,7 @@ export function valueAt(reg: Regression, tMs: number): number {
 export function computeSlopeValuation(
   rawRecords: ReadonlyArray<{ date: string | null; price: number }>,
   nowMs?: number,
+  forwardDaysOpt?: number,
 ): SlopeValuation | null {
   const points = rawRecords
     .filter((r) => typeof r.date === "string" && r.date.length > 0 && r.price > 0)
@@ -107,7 +108,12 @@ export function computeSlopeValuation(
 
   const lastT = points[points.length - 1].tMs;
   const nowT = nowMs ?? Date.now();
-  const futureT = nowT + 30 * MS_PER_DAY;
+  // CF-FORWARD-WINDOW-CONFIGURABLE (Drew, 2026-07-18): projection window
+  // is now caller-provided. Legacy default 30d preserves back-compat for
+  // every existing site; canonical FMV passes 3d for a genuine
+  // "next sale today" projection instead of extrapolating 30 days out.
+  const forwardDays = forwardDaysOpt ?? 30;
+  const futureT = nowT + forwardDays * MS_PER_DAY;
 
   const marketAtLast = valueAt(reg, lastT);
   const predictedAt30d = valueAt(reg, futureT);
