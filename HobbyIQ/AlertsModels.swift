@@ -145,3 +145,44 @@ struct AdvancedAlertResponse: Codable {
 struct AdvancedAlertDeleteResponse: Codable {
     let message: String?
 }
+
+// MARK: - PR #550: Popular Alert Presets
+
+struct AlertPresetScope: Codable, Hashable {
+    let type: String?
+    let value: String?
+}
+
+struct AlertPreset: Codable, Identifiable, Hashable {
+    let presetId: String
+    let name: String?
+    let category: String?
+    let description: String?
+    let whyItMatters: String?
+    let scope: AlertPresetScope?
+    let combinator: String?
+    let conditions: [AdvancedAlertCondition]?
+    let cooldownMin: Int?
+    /// True when at least one of the preset's conditions is a
+    /// `price_crosses` predicate that needs a user-supplied number
+    /// before activation.
+    let requiresPriceTarget: Bool?
+
+    var id: String { presetId }
+}
+
+struct AlertPresetsResponse: Codable {
+    let success: Bool?
+    let presets: [AlertPreset]?
+}
+
+struct AlertPresetActivateRequest: Codable {
+    let priceTarget: Double?
+    let customName: String?
+}
+
+struct AlertPresetActivateResponse: Codable {
+    let success: Bool?
+    let rule: AdvancedAlertRule?
+    let message: String?
+}

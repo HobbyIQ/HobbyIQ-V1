@@ -495,12 +495,22 @@ struct AdvancedRulesView: View {
     @State private var errorMessage: String?
     @State private var showCreateSheet = false
     @State private var showUpgradePaywall = false
+    /// PR #550 (2026-07-17): curated presets rendered above the custom
+    /// rules list. Silent-fail on load; toast after successful activate.
+    @State private var presets: [AlertPreset] = []
+    @State private var activatingPresetId: String?
+    @State private var successToast: String?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.medium) {
+                // PR #550: Popular Alerts (one-tap curated presets).
+                if presets.isEmpty == false {
+                    presetsSection
+                }
+
                 HStack {
-                    Text("Advanced Rules")
+                    Text(presets.isEmpty ? "Advanced Rules" : "Custom Alerts")
                         .font(.headline)
                         .foregroundStyle(Theme.Colors.textPrimary)
                     Spacer()
@@ -554,10 +564,78 @@ struct AdvancedRulesView: View {
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(sessionViewModel: sessionViewModel)
         }
-        .task { await loadRules() }
+        .task {
+            await loadRules()
+            await loadPresets()
+        }
         // CF-PAGES-NOT-SHEETS (2026-07-04): create-rule now pushes.
         .navigationDestination(isPresented: $showCreateSheet) {
             CreateAdvancedRuleSheet { await loadRules() }
+        }
+        .overlay(alignment: .bottom) {
+            if let toast = successToast {
+                Text(toast)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.Colors.accent.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: successToast)
+    }
+
+    // MARK: - PR #550: Popular Alert Presets
+
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+            Text("Popular Alerts")
+                .font(.headline)
+                .foregroundStyle(Theme.Colors.textPrimary)
+            LazyVStack(spacing: Theme.Spacing.small) {
+                ForEach(presets) { preset in
+                    AlertPresetCard(
+                        preset: preset,
+                        isActivating: activatingPresetId == preset.presetId,
+                        onActivate: { priceTarget in
+                            Task { await activate(preset: preset, priceTarget: priceTarget) }
+                        }
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.medium)
+    }
+
+    private func loadPresets() async {
+        do {
+            let response = try await APIService.shared.fetchAlertPresets()
+            presets = response.presets ?? []
+        } catch {
+            presets = []
+        }
+    }
+
+    private func activate(preset: AlertPreset, priceTarget: Double?) async {
+        activatingPresetId = preset.presetId
+        defer { activatingPresetId = nil }
+        do {
+            _ = try await APIService.shared.activateAlertPreset(
+                presetId: preset.presetId,
+                priceTarget: priceTarget,
+                customName: nil
+            )
+            successToast = "Alert active \u{2014} you'll get pushed when the pattern fires"
+            await loadRules()
+            Task {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                await MainActor.run { successToast = nil }
+            }
+        } catch {
+            errorMessage = APIService.errorMessage(from: error)
         }
     }
 
@@ -670,6 +748,119 @@ private struct AdvancedRuleRow: View {
             .padding(.vertical, 3)
             .background(AppColors.surfaceElevated)
             .clipShape(Capsule())
+    }
+}
+
+// MARK: - PR #550 Alert Preset Card
+
+private struct AlertPresetCard: View {
+    let preset: AlertPreset
+    let isActivating: Bool
+    let onActivate: (Double?) -> Void
+
+    @State private var priceTargetText: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                Text(categoryGlyph)
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let category = preset.category, category.isEmpty == false {
+                        Text(categoryLabel(category))
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.4)
+                            .foregroundStyle(Theme.Colors.accent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.Colors.accent.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
+                    Text(preset.name ?? "Alert preset")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if let description = preset.description, description.isEmpty == false {
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let why = preset.whyItMatters, why.isEmpty == false {
+                Text("Why it matters: \(why)")
+                    .font(.caption2)
+                    .italic()
+                    .foregroundStyle(Theme.Colors.textSecondary.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if preset.requiresPriceTarget == true {
+                HStack(spacing: 8) {
+                    Text("$")
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                    TextField("Price target", text: $priceTargetText)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 140)
+                    Spacer(minLength: 0)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button {
+                    let target = Double(priceTargetText.trimmingCharacters(in: .whitespaces))
+                    onActivate(target)
+                } label: {
+                    HStack(spacing: 6) {
+                        if isActivating {
+                            ProgressView().controlSize(.mini).tint(Theme.Colors.textPrimary)
+                        } else {
+                            Image(systemName: "bell.badge")
+                                .font(.caption.weight(.bold))
+                        }
+                        Text(isActivating ? "Activating…" : "Activate")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 36)
+                    .background(Theme.Colors.accent)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isActivating || (preset.requiresPriceTarget == true && Double(priceTargetText.trimmingCharacters(in: .whitespaces)) == nil))
+            }
+        }
+        .padding(Theme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.Colors.accent.opacity(0.25), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var categoryGlyph: String {
+        switch preset.category {
+        case "portfolio_sell_signal": return "\u{1F4C8}"  // 📈
+        case "watchlist_move":        return "\u{1F440}"  // 👀
+        case "grade_opportunity":     return "\u{1F3C6}"  // 🏆
+        case "market_dip":            return "\u{1F4C9}"  // 📉
+        default:                      return "\u{1F514}"  // 🔔
+        }
+    }
+
+    private func categoryLabel(_ raw: String) -> String {
+        raw
+            .split(separator: "_")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
     }
 }
 

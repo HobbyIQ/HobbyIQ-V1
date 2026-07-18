@@ -2006,6 +2006,30 @@ struct APIService {
         try await delete(path: "/api/alerts/advanced/\(ruleId)", responseType: AdvancedAlertDeleteResponse.self)
     }
 
+    /// PR #550 (2026-07-17): curated alert presets. Fires on Alerts tab
+    /// open. Best-effort — a transient 401 must not evict the session.
+    func fetchAlertPresets() async throws -> AlertPresetsResponse {
+        try await get(path: "/api/alerts/advanced/presets", responseType: AlertPresetsResponse.self)
+    }
+
+    /// PR #550 (2026-07-17): activate a preset. Returns the created rule
+    /// in the same shape as POST /rules. `priceTarget` overrides the
+    /// preset's `price_crosses` condition; `customName` renames the
+    /// resulting rule. Both are optional.
+    func activateAlertPreset(
+        presetId: String,
+        priceTarget: Double? = nil,
+        customName: String? = nil
+    ) async throws -> AlertPresetActivateResponse {
+        let encoded = presetId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? presetId
+        let body = AlertPresetActivateRequest(priceTarget: priceTarget, customName: customName)
+        return try await post(
+            path: "/api/alerts/advanced/presets/\(encoded)/activate",
+            body: body,
+            responseType: AlertPresetActivateResponse.self
+        )
+    }
+
     // MARK: - Device Token
 
     func registerDeviceToken(_ token: String) async throws -> DeviceTokenResponse {
@@ -2745,7 +2769,9 @@ struct APIService {
         "/api/backtest/predicted-price-accuracy",
         // PR #551 (2026-07-17): trade-target discovery sheet on
         // Inventory. Same reasoning.
-        "/api/portfolio/trade-targets"
+        "/api/portfolio/trade-targets",
+        // PR #550 (2026-07-17): alert presets fire on Alerts tab open.
+        "/api/alerts/advanced/presets"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
