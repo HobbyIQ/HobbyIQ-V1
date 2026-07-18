@@ -118,8 +118,28 @@ struct GradeAnalysisResponse: Codable, Hashable, Identifiable {
     let cardNumber: String?
     let analysis: GradeAnalysis?
     let diagnostics: GradeAnalysisDiagnostics?
+    /// PR #547 (2026-07-17): observed failure/success distribution for
+    /// the family, expressed as probability-weighted expected value.
+    /// Nullable — nil hides the failure-rate block entirely.
+    let failureRate: GradeFailureRate?
 
     var id: String { holdingId }
+}
+
+/// PR #547 (2026-07-17): family-observed failure/success distribution
+/// with a verbatim caveat string. Feeds the FAILURE RATE block on the
+/// Grade-Worthy surface.
+struct GradeFailureRate: Codable, Hashable {
+    let expectedNetValue: Double?
+    let probabilityTopGrade: Double?
+    let probabilityGainVsHold: Double?
+    let probabilityLoss: Double?
+    /// "worth_the_gamble" | "risky" | "loss_probable" | "insufficient_data"
+    let verdict: String?
+    let bestTier: String?
+    let worstOutcomeTier: String?
+    /// REQUIRED verbatim in UI copy — never paraphrase.
+    let caveat: String?
 }
 
 struct GradeAnalysis: Codable, Hashable {

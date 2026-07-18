@@ -120,6 +120,12 @@ struct GradeWorthyListView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // PR #547 (2026-07-17): observed failure-rate block.
+                // Self-suppresses when the wire field is nil.
+                if let failure = candidate.failureRate {
+                    failureRateBlock(failure)
+                }
+
                 Button {
                     guard let card else { return }
                     Task { await markAsAtGrading(card: card, holdingId: holdingId) }
@@ -158,6 +164,109 @@ struct GradeWorthyListView: View {
                 .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: - PR #547 Failure-Rate block
+
+    /// FAILURE RATE block — verdict badge top-right, four-row grid, and
+    /// verbatim caveat text at the bottom. `insufficient_data` verdict
+    /// suppresses the numbers grid and shows only the verdict + caveat.
+    @ViewBuilder
+    private func failureRateBlock(_ failure: GradeFailureRate) -> some View {
+        let verdict = failure.verdict ?? "insufficient_data"
+        let showNumbers = verdict != "insufficient_data"
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("FAILURE RATE")
+                    .font(.caption.weight(.bold))
+                    .tracking(0.6)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                failureRateVerdictBadge(verdict: verdict)
+            }
+
+            if showNumbers {
+                VStack(spacing: 4) {
+                    failureRateStatRow(
+                        label: "Expected net after cost",
+                        value: failure.expectedNetValue.map(portfolioCurrencyString) ?? "—"
+                    )
+                    failureRateStatRow(
+                        label: "Chance of top grade",
+                        value: pctString(failure.probabilityTopGrade)
+                    )
+                    failureRateStatRow(
+                        label: "Chance of gain vs hold",
+                        value: pctString(failure.probabilityGainVsHold)
+                    )
+                    failureRateStatRow(
+                        label: "Chance of loss",
+                        value: pctString(failure.probabilityLoss)
+                    )
+                }
+            }
+
+            if let caveat = failure.caveat, caveat.isEmpty == false {
+                Text(caveat)
+                    .font(.caption2.italic())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.slateGray.opacity(0.35))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
+                .stroke(failureRateVerdictColor(verdict).opacity(0.3), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
+    }
+
+    private func failureRateVerdictBadge(verdict: String) -> some View {
+        let (label, color) = failureRateVerdictDisplay(verdict)
+        return Text(label)
+            .font(.caption2.weight(.bold))
+            .tracking(0.4)
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.16))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(color.opacity(0.55), lineWidth: 1)
+            )
+            .clipShape(Capsule(style: .continuous))
+    }
+
+    private func failureRateVerdictDisplay(_ verdict: String) -> (String, Color) {
+        switch verdict {
+        case "worth_the_gamble":  return ("Worth the gamble", HobbyIQTheme.Colors.successGreen)
+        case "risky":             return ("Risky", HobbyIQTheme.Colors.warning)
+        case "loss_probable":     return ("Loss probable", HobbyIQTheme.Colors.danger)
+        default:                  return ("Need more data", HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
+    private func failureRateVerdictColor(_ verdict: String) -> Color {
+        failureRateVerdictDisplay(verdict).1
+    }
+
+    private func failureRateStatRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+    }
+
+    private func pctString(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return String(format: "%.0f%%", value * 100)
     }
 
     private func gradeWorthyRowTitle(_ candidate: GradeAnalysisResponse) -> String {
