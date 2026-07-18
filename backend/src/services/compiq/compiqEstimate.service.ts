@@ -3208,11 +3208,16 @@ export async function augmentCompsWithUserPool(
           gradeCompany: gradeCompany ?? undefined,
           gradeValue: gradeValue ?? undefined,
         });
-        const targetKeyNorm = parallel.trim().toLowerCase().replace(/\s+/g, " ");
+        // CF-PARALLEL-REFRACTOR-ALIAS (Drew, 2026-07-18): match the
+        // soldCompsStore normalization so "Blue" and "Blue Refractor"
+        // are treated as the same target, and same-parallel comps
+        // aren't misclassified as siblings.
+        const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
+        const targetKeyNorm = stripRefr(parallel);
         const MAX_SYNTHETIC = 5;
         for (const c of allParallelComps) {
           if (crossParallelSynthetics.length >= MAX_SYNTHETIC) break;
-          const cPar = (c.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+          const cPar = stripRefr(c.parallel ?? "");
           if (cPar === targetKeyNorm) continue;   // skip same-parallel (already handled)
           const sibMult = lookupParallelMultiplier(c.parallel ?? "");
           if (sibMult === null || sibMult <= 0) continue;

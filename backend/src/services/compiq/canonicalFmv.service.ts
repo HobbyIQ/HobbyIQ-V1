@@ -322,7 +322,12 @@ async function tryCrossParallel(
   }).catch(() => []);
 
   const nowMs = Date.now();
-  const targetKey = targetParallel.toLowerCase().replace(/\s+/g, " ");
+  // CF-PARALLEL-REFRACTOR-ALIAS (Drew, 2026-07-18): match the
+  // soldCompsStore normalization so same-parallel comps under
+  // alias variants ("Blue" vs "Blue Refractor") aren't classified
+  // as siblings in this rung.
+  const stripRefr = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
+  const targetKey = stripRefr(targetParallel);
   const normalized: Array<{
     price: number;
     soldAt: string;
@@ -338,7 +343,7 @@ async function tryCrossParallel(
     if (!Number.isFinite(soldMs)) continue;
     if (nowMs - soldMs > MAX_POOL_AGE_DAYS * MS_PER_DAY) continue;
     if ((c as { flaggedWrong?: boolean }).flaggedWrong === true) continue;
-    const cParallel = (c.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    const cParallel = stripRefr((c.parallel ?? "").trim());
     if (cParallel === targetKey) continue;   // handled by rung 1 already
     const sibMult = lookupParallelMultiplier(c.parallel ?? "");
     if (sibMult === null || sibMult <= 0) continue;
@@ -424,13 +429,127 @@ async function tryFamilyBaseline(
 }
 
 // ─── Rung 5: product-tier cold-start ──────────────────────────────────
+//
+// Last-resort fallback. Every input with at least (cardId, product) gets
+// a defensible ballpark so iOS never renders a hard null. Confidence
+// stays low (0.15-0.2) and iOS should render a "estimate only" chip.
+//
+// Formula:
+//   fmv = productTierBase(product) × autoMultiplier × parallelMultiplier
+//         × gradeMultiplier × eraDecay
+//
+// Where:
+//   productTierBase: hardcoded per family (Bowman Chrome $8 base, Prizm
+//     $5, Panini Select $6, etc.). Base is Raw base non-auto median.
+//   autoMultiplier: 6× when isAuto/cardNumber-implies-auto, else 1×.
+//   parallelMultiplier: lookupParallelMultiplier fallback.
+//   gradeMultiplier: 4× PSA 10, 1.6× PSA 9, 1× raw, etc.
+//   eraDecay: shared with guestimate; deprecates older cards.
 async function tryProductTier(
   _cardId: string,
-  _input: CanonicalFmvInput,
-  _trendPctPerMonth: number | null,
+  input: CanonicalFmvInput,
+  trendPctPerMonth: number | null,
 ): Promise<CanonicalFmvResult | null> {
-  // TODO(follow-on): last-resort category × era × grade tier × trend.
-  // Confidence floor 0.15-0.2. Emits an explicit "cold-start" method
-  // so iOS can render a "estimate only" chip.
+  const productBase = productTierBaseFor(input.product ?? null);
+  if (productBase === null) return null;
+
+  const isAuto = detectIsAuto(input);
+  const autoMultiplier = isAuto ? 6 : 1;
+  const parallelMult = input.parallel
+    ? (lookupParallelMultiplier(input.parallel) ?? 1)
+    : 1;
+  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null);
+  const era = eraDecayForYear(input.cardYear ?? null);
+
+  const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
+  // Apply broader trend forward by 1 month (matches other rungs' semantics).
+  const monthlyPct = trendPctPerMonth ?? 0;
+  const projected = raw * (1 + monthlyPct / 100);
+
+  if (!Number.isFinite(projected) || projected <= 0) return null;
+
+  return {
+    fmv: Math.round(projected * 100) / 100,
+    method: "product-tier",
+    confidence: 0.18,
+    provenance: {
+      summary: `product-tier fallback: ${input.product ?? "generic"} × auto${isAuto ? "" : "-not"} × parallel × grade × era + ${monthlyPct.toFixed(1)}%/mo trend`,
+      comps: [],
+      trendPctPerMonth,
+      multipliers: {
+        productBase,
+        auto: autoMultiplier,
+        parallel: parallelMult,
+        grade: gradeMult,
+        era,
+      },
+    },
+    computedAt: new Date().toISOString(),
+  };
+}
+
+/** Product-family base price ($) for a Raw non-auto base card. Hardcoded
+ *  medians from recent aggregate data; refresh periodically. Unknown
+ *  families return null so rung 5 becomes no-basis for unrecognized
+ *  products. */
+function productTierBaseFor(product: string | null): number | null {
+  if (!product) return null;
+  const p = product.toLowerCase();
+  if (/bowman.*chrome.*draft/i.test(p)) return 12;
+  if (/bowman.*chrome/i.test(p)) return 8;
+  if (/bowman.*sterling/i.test(p)) return 20;
+  if (/bowman(?!.*chrome|.*sterling)/i.test(p)) return 4;
+  if (/topps.*chrome.*update/i.test(p)) return 6;
+  if (/topps.*chrome/i.test(p)) return 5;
+  if (/topps.*update/i.test(p)) return 3;
+  if (/topps(?!.*chrome|.*update)/i.test(p)) return 2;
+  if (/panini.*prizm/i.test(p)) return 5;
+  if (/panini.*select/i.test(p)) return 6;
+  if (/panini.*mosaic/i.test(p)) return 3;
+  if (/panini.*donruss/i.test(p)) return 2;
+  if (/panini.*optic/i.test(p)) return 4;
+  if (/upper deck/i.test(p)) return 4;
   return null;
+}
+
+function detectIsAuto(input: CanonicalFmvInput): boolean {
+  const cn = (input.cardNumber ?? "").toUpperCase();
+  return /^(CPA-|BCPA-|BSPA-|CDA-|BCDA-|BDCA-|PA-)/i.test(cn);
+}
+
+/** Grade-tier multiplier ballparks. Matches common (PSA 10 ≈ 4× Raw)
+ *  patterns; refined per SKU by the observed-comp rungs 1-4. */
+function gradeTierMultiplier(company: string | null, value: number | null): number {
+  if (!company || value === null) return 1;   // raw
+  const c = company.toUpperCase();
+  if (c === "PSA") {
+    if (value >= 10) return 4;
+    if (value >= 9) return 1.6;
+    if (value >= 8) return 1.2;
+    return 1;
+  }
+  if (c === "BGS") {
+    if (value >= 10) return 5;    // BGS 10 is rarer than PSA 10
+    if (value >= 9.5) return 3;
+    if (value >= 9) return 1.5;
+    return 1;
+  }
+  if (c === "SGC") {
+    if (value >= 10) return 3;
+    if (value >= 9.5) return 2;
+    return 1;
+  }
+  return 1;
+}
+
+/** Shared era decay: <1y = 1.2× (hot), <2y = 1.0×, <4y = 0.85×, else 0.7×. */
+function eraDecayForYear(cardYear: number | null): number {
+  if (cardYear === null) return 1;
+  const nowYear = new Date().getUTCFullYear();
+  const age = nowYear - cardYear;
+  if (age < 0) return 1;
+  if (age < 1) return 1.2;
+  if (age < 2) return 1;
+  if (age < 4) return 0.85;
+  return 0.7;
 }

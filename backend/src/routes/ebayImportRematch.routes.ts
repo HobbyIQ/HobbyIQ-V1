@@ -435,4 +435,108 @@ router.post("/admin/list-user-comps", requireAdmin, async (req: Request, res: Re
   } catch (err) { next(err); }
 });
 
+// CF-COMP-DEDUP-CLEANUP (Drew, 2026-07-18). One-time admin endpoint
+// that finds duplicate sold_comp docs and collapses them. Duplicates
+// exist because pre-PR #579 emit paths (rematch, suggester, batch-
+// backfill) used different sourceExternalId prefixes for the same
+// holding, producing 3-5 docs per real transaction.
+//
+// Dedup key: (cardId, source, contributorUserId, price rounded to
+// cents, soldAt truncated to day). Keeps the doc with the highest
+// confidence (or newest observedAt as tiebreak); soft-flags the
+// others with flaggedWrong=true so the engine skips them but
+// provenance is preserved.
+//
+// Auth: requireAdmin.
+// Body: { userId?: string, dryRun?: boolean }
+router.post("/admin/dedup-user-comps", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const targetUserId = typeof req.body?.userId === "string" ? req.body.userId.trim() : null;
+    const dryRun = req.body?.dryRun !== false;
+
+    const { readUserDoc, listAllPortfolioUserIds } = await import(
+      "../services/portfolioiq/portfolioStore.service.js"
+    );
+    const { readCompsByCardId, flagCompAsWrong } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+
+    const userIds = targetUserId ? [targetUserId] : await listAllPortfolioUserIds();
+
+    let cardIdsScanned = 0;
+    let duplicateGroupsFound = 0;
+    let compsFlagged = 0;
+    const examples: Array<{ cardId: string; kept: string; flagged: string[] }> = [];
+
+    for (const userId of userIds) {
+      let doc;
+      try { doc = await readUserDoc(userId); } catch { continue; }
+      const holdings = Object.values(doc.holdings ?? {}) as unknown as Array<Record<string, unknown>>;
+      const cardIdSet = new Set<string>();
+      for (const h of holdings) {
+        const cid = String(h.cardId ?? "").trim();
+        if (cid) cardIdSet.add(cid);
+      }
+
+      for (const cardId of cardIdSet) {
+        cardIdsScanned++;
+        const comps = await readCompsByCardId({ cardId }).catch(() => [] as Awaited<ReturnType<typeof readCompsByCardId>>);
+        // Group by dedup key
+        const groups = new Map<string, typeof comps>();
+        for (const c of comps) {
+          const day = (c.soldAt ?? "").slice(0, 10);
+          const priceCents = Math.round(c.price * 100);
+          const key = `${c.source}|${c.contributorUserId ?? "_"}|${priceCents}|${day}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(c);
+        }
+        for (const [, group] of groups) {
+          if (group.length < 2) continue;
+          duplicateGroupsFound++;
+          // Sort: highest confidence first, then newest observedAt.
+          group.sort((a, b) => {
+            const dc = (b.confidence ?? 0) - (a.confidence ?? 0);
+            if (dc !== 0) return dc;
+            return Date.parse(b.observedAt ?? "") - Date.parse(a.observedAt ?? "");
+          });
+          const kept = group[0];
+          const flaggedIds: string[] = [];
+          for (let i = 1; i < group.length; i++) {
+            const dupe = group[i];
+            if (!dryRun) {
+              try {
+                await flagCompAsWrong({
+                  compId: dupe.id,
+                  cardId,
+                  flaggedByUserId: "system-dedup",
+                  reason: `duplicate of ${kept.id} (auto-collapsed)`,
+                });
+                compsFlagged++;
+              } catch { /* silent */ }
+            } else {
+              compsFlagged++;
+            }
+            flaggedIds.push(dupe.id);
+          }
+          if (examples.length < 10) {
+            examples.push({ cardId, kept: kept.id, flagged: flaggedIds });
+          }
+        }
+      }
+    }
+
+    res.json({
+      computedAt: new Date().toISOString(),
+      dryRun,
+      summary: {
+        usersScanned: userIds.length,
+        cardIdsScanned,
+        duplicateGroupsFound,
+        compsFlagged,
+      },
+      examples,
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;
