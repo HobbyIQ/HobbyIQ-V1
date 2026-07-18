@@ -51,6 +51,7 @@ import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
+import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -414,18 +415,85 @@ async function tryNeighborParallel(
 }
 
 // ─── Rung 4: family-baseline compound-multiplier ──────────────────────
+//
+// Wraps computeGuestimate (services/compiq/guestimatePricing.ts) — the
+// existing family-baseline × player-tier × parallel × auto × grade ×
+// era engine. Rung 4 is stronger than rung 5 because guestimate
+// consumes richer input signals (player tier, print run, real family
+// medians) even though both are ultimately model outputs, not direct
+// transactions.
+//
+// Guestimate itself requires a familyBaseRawPrice input — we derive
+// it from productTierBaseFor (same table as rung 5). When product is
+// unknown, rung 4 returns null and the ladder falls through to rung 5.
 async function tryFamilyBaseline(
   _cardId: string,
-  _input: CanonicalFmvInput,
-  _trendPctPerMonth: number | null,
+  input: CanonicalFmvInput,
+  trendPctPerMonth: number | null,
 ): Promise<CanonicalFmvResult | null> {
-  // TODO(follow-on): wrap the existing guestimate compound-multiplier
-  // (family baseline × player tier × parallel × auto premium × print
-  // run × grade × era decay). Existing helper lives in
-  // compiqEstimate.service.ts (`buildGuestimatePricing` or similar).
-  // Restating it here consolidates the fallback so every consumer
-  // gets the same guestimate output.
-  return null;
+  const productBase = productTierBaseFor(input.product ?? null);
+  if (productBase === null) return null;
+  const familyLabel = String(input.product ?? "unknown");
+  const gradeTier = gradeTierLabel(input.gradeCompany ?? null, input.gradeValue ?? null);
+  const nowYear = new Date().getUTCFullYear();
+  const ageYears = typeof input.cardYear === "number" ? Math.max(0, nowYear - input.cardYear) : null;
+  const isAuto = detectIsAuto(input);
+  const playerTier = derivePlayerTier(input.player ?? null);
+
+  const g = computeGuestimate({
+    familyBaseRawPrice: productBase,
+    familyLabel,
+    playerTier,
+    parallel: input.parallel ?? null,
+    gradeTier,
+    printRun: null,   // caller doesn't know print-run here; guestimate
+                     //  will skip that multiplier
+    isAuto,
+    ageYears,
+  });
+  if (!g || !Number.isFinite(g.price) || g.price <= 0) return null;
+
+  // Apply broader trend forward by 1 month (matches other rungs).
+  const monthlyPct = trendPctPerMonth ?? 0;
+  const projected = g.price * (1 + monthlyPct / 100);
+
+  // Guestimate's own confidence tier → numeric; rung 4 caps below rung 3.
+  const confidenceMap: Record<string, number> = {
+    estimate: 0.35,
+    rough: 0.28,
+    ballpark: 0.22,
+    insufficient: 0.15,
+  };
+  const confidence = confidenceMap[g.confidence] ?? 0.22;
+
+  return {
+    fmv: Math.round(projected * 100) / 100,
+    method: "family-baseline",
+    confidence,
+    provenance: {
+      summary: `guestimate: ${familyLabel} baseline × player-${playerTier} × parallel × ${isAuto ? "auto" : "no-auto"} × ${gradeTier} × era + ${monthlyPct.toFixed(1)}%/mo trend (${g.confidence} tier, ${g.hops} hops)`,
+      comps: [],
+      trendPctPerMonth,
+      multipliers: {
+        familyBase: productBase,
+        guestimatePrice: g.price,
+      },
+    },
+    computedAt: new Date().toISOString(),
+  };
+}
+
+function gradeTierLabel(company: string | null, value: number | null): string {
+  if (!company || value === null) return "Raw";
+  return `${company.toUpperCase()} ${value}`;
+}
+
+/** Heuristic player tier from player name. Real production uses a
+ *  player-tier registry (portfolioiq.playerTierRegistry) — we default
+ *  to "prospect" here so most cards get a reasonable multiplier. Once
+ *  the registry is wired, replace this with a lookup. */
+function derivePlayerTier(_playerName: string | null): PlayerTier {
+  return "prospect";
 }
 
 // ─── Rung 5: product-tier cold-start ──────────────────────────────────
