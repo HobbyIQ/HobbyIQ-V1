@@ -31,6 +31,7 @@ struct AccountView: View {
                     usernameRow
                     membershipCard
                     settingsSection
+                    CommunitySettingsSection()
                     integrationsSection
                     recapSection
                     appInfoSection

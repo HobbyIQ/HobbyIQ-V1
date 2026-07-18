@@ -1532,6 +1532,12 @@ struct PortfolioHoldingDetailSheet: View {
                         SoldCompsSection(card: card)
                             .padding(.horizontal, 16)
 
+                        // PR #555 (2026-07-17): community-intelligence pill
+                        // below RECENT COMPS. Self-suppresses when the
+                        // holding has no cardId.
+                        CommunitySignalPill(cardId: card.cardId)
+                            .padding(.horizontal, 16)
+
                         // 2026-07-17 (PR #544 wired): real eBay active
                         // listings ranked against this holding's grade
                         // context. Uses the holding's cardId + structured

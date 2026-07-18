@@ -683,6 +683,45 @@ struct APIService {
         )
     }
 
+    /// PR #555 (2026-07-17): k-anonymity-gated community aggregates for
+    /// a catalog card. Never returns individual portfolios — signals
+    /// suppress below k=5 with a reason string.
+    func fetchCommunityCard(cardId: String) async throws -> CommunityCardResponse {
+        let encoded = cardId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        return try await get(
+            path: "/api/community/card/\(encoded)",
+            responseType: CommunityCardResponse.self
+        )
+    }
+
+    /// PR #555 (2026-07-17): current caller's community consent flags.
+    /// Best-effort read — a transient 401 must not evict the session.
+    func fetchCommunityConsent() async throws -> CommunityConsentEnvelope {
+        try await get(path: "/api/community/consent", responseType: CommunityConsentEnvelope.self)
+    }
+
+    /// PR #555 (2026-07-17): update caller's community consent flags.
+    /// PATCH body is a partial consent object; unset fields remain.
+    func patchCommunityConsent(
+        contributeSignal: Bool? = nil,
+        shareHoldings: Bool? = nil,
+        shareSales: Bool? = nil,
+        shareEngineEstimates: Bool? = nil
+    ) async throws -> CommunityConsentEnvelope {
+        let body = CommunityConsent(
+            contributeSignal: contributeSignal,
+            shareHoldings: shareHoldings,
+            shareSales: shareSales,
+            shareEngineEstimates: shareEngineEstimates,
+            consentedAt: nil
+        )
+        return try await patch(
+            path: "/api/community/consent",
+            body: body,
+            responseType: CommunityConsentEnvelope.self
+        )
+    }
+
     /// PR #556 (2026-07-17): recent CH catalog additions grouped by
     /// (added_date, category, set, subset). Powers the DailyIQ "New
     /// Drops" feed. `since` bounded at 30d backend-side; `category` and
@@ -2841,7 +2880,10 @@ struct APIService {
         // PR #550 (2026-07-17): alert presets fire on Alerts tab open.
         "/api/alerts/advanced/presets",
         // PR #556 (2026-07-17): New Drops feed on DailyIQ.
-        "/api/catalog/additions"
+        "/api/catalog/additions",
+        // PR #555 (2026-07-17): community consent GET fires on Account
+        // load + Card Detail community pill.
+        "/api/community/consent"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
@@ -2854,6 +2896,9 @@ struct APIService {
         // never evict the session.
         "/api/portfolio/player-trend/",
         "/api/portfolio/family-multipliers/",
+        // PR #555 (2026-07-17): per-card community aggregates. Fires on
+        // Card Detail open. Same reasoning.
+        "/api/community/card/",
         // Phase 3-4 (2026-07-17): yearbook parameterized by year.
         // Session-safe read.
         "/api/portfolio/yearbook",
