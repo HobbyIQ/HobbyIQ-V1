@@ -209,6 +209,78 @@ async function upsertOrWarn(doc: BaseCorpusDoc): Promise<void> {
 
 const REF_VENDOR = "cardhedge";
 
+// ─── Read helpers ───────────────────────────────────────────────────
+// CF-CORPUS-READ (Drew, 2026-07-17): consumers of the corpus (Trade
+// Targets, backtest analytics, etc.) need a per-cardId read helper.
+// Kept small and unopinionated — returns the latest observed_grade_curve
+// doc for a cardId or null.
+
+export interface LatestGradeCurveEntry {
+  grade: string;
+  grader: string;
+  trendAdjustedValue: number | null;
+  predictedPriceAt30d: number | null;
+  valueSource?: "observed" | "estimated" | "unavailable" | null;
+}
+
+export interface LatestGradeCurve {
+  cardId: string;
+  computedAt: string;
+  entries: LatestGradeCurveEntry[];
+  /** Convenience — the Raw grade's trendAdjustedValue (market value today). */
+  rawMarketValue: number | null;
+  /** Convenience — the Raw grade's predictedPriceAt30d. */
+  rawPredictedPrice: number | null;
+}
+
+/** Read the most recent persisted grade-curve doc for a cardId.
+ *  Returns null when the container is unavailable or the card has
+ *  never been panel-visited. */
+export async function readLatestGradeCurve(cardId: string): Promise<LatestGradeCurve | null> {
+  const container = await getContainer();
+  if (!container) return null;
+  try {
+    const iter = container.items.query<{
+      cardId: string;
+      ts_iso: string;
+      grades?: Array<{
+        grade: string;
+        grader: string;
+        trendAdjustedValue: number | null;
+        predictedPriceAt30d: number | null;
+        valueSource?: "observed" | "estimated" | "unavailable" | null;
+      }>;
+    }>({
+      query: `SELECT TOP 1 c.cardId, c.ts_iso, c.grades FROM c
+              WHERE c.cardId = @cardId AND c.eventType = 'observed_grade_curve'
+              ORDER BY c.ts DESC`,
+      parameters: [{ name: "@cardId", value: cardId }],
+    }, { partitionKey: cardId });
+    const page = await iter.fetchNext();
+    const doc = page.resources?.[0];
+    if (!doc || !Array.isArray(doc.grades) || doc.grades.length === 0) return null;
+    const entries = doc.grades.map((g) => ({
+      grade: g.grade,
+      grader: g.grader,
+      trendAdjustedValue: typeof g.trendAdjustedValue === "number" ? g.trendAdjustedValue : null,
+      predictedPriceAt30d: typeof g.predictedPriceAt30d === "number" ? g.predictedPriceAt30d : null,
+      valueSource: g.valueSource ?? null,
+    }));
+    const raw = entries.find((e) => e.grader === "Raw" || e.grade === "Raw");
+    return {
+      cardId: doc.cardId,
+      computedAt: doc.ts_iso,
+      entries,
+      rawMarketValue: raw?.trendAdjustedValue ?? null,
+      rawPredictedPrice: raw?.predictedPriceAt30d ?? null,
+    };
+  } catch (err) {
+    console.warn(`[cardhedgeLearnCorpus] read latest grade-curve failed (${cardId}):`,
+      (err as Error)?.message ?? err);
+    return null;
+  }
+}
+
 export function persistReferencePrices(input: {
   source: string;
   cardId: string;

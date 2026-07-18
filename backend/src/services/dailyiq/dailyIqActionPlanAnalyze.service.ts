@@ -107,12 +107,48 @@ export async function buildActionPlan(
 
   // 2. Cascade fires by player
   //
-  // TODO(CF-DAILYIQ-CASCADE-WIRE): the cascadeAlertsPush service (PR
-  // #531) emits fires but there's no read-by-player store surface yet.
-  // When it lands, populate cascadeByPlayer here. For now this map
-  // stays empty and computeActionPlan handles null cascade cleanly
-  // (no urgency boost, no reason-string suffix).
+  // CF-DAILYIQ-CASCADE-WIRE (Drew, 2026-07-17): read cascade events
+  // from the cascade_events store (PR #531 nightly detection) for
+  // players in this portfolio. Latest fire per player wins so the
+  // action-plan compute gets the freshest daysSinceFire.
   const cascadeByPlayer = new Map<string, { firedAt: string; daysSinceFire: number; audienceTier: "insider" | "beat_writer" | "engaged_fan" | "buyer" }>();
+  try {
+    const players = [
+      ...new Set(holdings.map((h) => (h.playerName ?? "").trim()).filter(Boolean)),
+    ];
+    if (players.length > 0) {
+      const [{ readRecentEventsForPlayers }, { slugPlayer }] = await Promise.all([
+        import("../portfolioiq/cascadeEventStore.service.js"),
+        import("../portfolioiq/playerTrendStore.service.js"),
+      ]);
+      const slugToPlayer = new Map<string, string>();
+      const slugs = players.map((p) => {
+        const s = slugPlayer(p);
+        slugToPlayer.set(s, p);
+        return s;
+      });
+      const sinceIso = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      const events = await readRecentEventsForPlayers(slugs, sinceIso);
+      const now = Date.now();
+      for (const ev of events) {
+        const player = slugToPlayer.get(ev.playerSlug) ?? ev.player;
+        const firedMs = new Date(ev.detectedAt).getTime();
+        const daysSinceFire = Math.max(0, Math.round((now - firedMs) / (24 * 3600 * 1000)));
+        // Severity → audienceTier mapping (compute doesn't use it in
+        // the gate, but iOS renders the label; kept as a stable
+        // "how loud is this" hint):
+        //   insider → insider, emerging → engaged_fan, confirmed → buyer
+        const audienceTier: "insider" | "beat_writer" | "engaged_fan" | "buyer" =
+          ev.severity === "insider" ? "insider" :
+          ev.severity === "emerging" ? "engaged_fan" :
+          "buyer";
+        const existing = cascadeByPlayer.get(player);
+        if (!existing || daysSinceFire < existing.daysSinceFire) {
+          cascadeByPlayer.set(player, { firedAt: ev.detectedAt, daysSinceFire, audienceTier });
+        }
+      }
+    }
+  } catch { /* silent — no cascade data is not fatal */ }
 
   // 3. Per-holding: matched-cohort rate + grade-worthy analysis, bounded concurrency
   const perHoldingSignals = await mapWithConcurrency(holdings, DEFAULT_CONCURRENCY, async (h) => {

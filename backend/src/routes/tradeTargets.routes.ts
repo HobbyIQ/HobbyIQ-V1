@@ -28,9 +28,10 @@ async function requireUserId(req: Request, res: Response): Promise<string | null
 /** Scan a list of cardIds. Fetch active listings + engine estimate for
  *  each, feed into the discovery filter. */
 async function scanCardIds(cardIds: string[]): Promise<TradeTargetListing[]> {
-  const [{ readCachedActiveListings }, { getCardMetaById }] = await Promise.all([
+  const [{ readCachedActiveListings }, { getCardMetaById }, { readLatestGradeCurve }] = await Promise.all([
     import("../services/ebay/ebayActiveListingsCache.service.js"),
     import("../services/compiq/cardsight.router.js"),
+    import("../services/compiq/cardhedgeLearnCorpus.service.js"),
   ]);
 
   const bag: TradeTargetListing[] = [];
@@ -47,18 +48,25 @@ async function scanCardIds(cardIds: string[]): Promise<TradeTargetListing[]> {
         const cachedRaw = await readCachedActiveListings(cardId);
         if (!cachedRaw || cachedRaw.listings.length === 0) continue;
 
-        // Engine estimate: use card-panel corpus row if available
-        // (persisted per estimate, PR #543). Falls back to null when
-        // we don't have coverage.
-        const meta = await getCardMetaById(cardId).catch(() => null);
+        // CF-CORPUS-READ (Drew, 2026-07-17): pull the latest persisted
+        // grade curve for this cardId to compare active-listing asks
+        // against the engine's Raw market value + predicted. Panel-
+        // visited cards have this populated; long-tail cards do not,
+        // in which case engineMV/enginePred stay null and the ranker
+        // filters them out from trade-target results.
+        const [meta, curve] = await Promise.all([
+          getCardMetaById(cardId).catch(() => null),
+          readLatestGradeCurve(cardId).catch(() => null),
+        ]);
         const metaAny = meta as { player?: string; year?: number | string } | null;
-        // Simple engine value lookup: use the most recent card-panel
-        // predictedPriceAt30d for Raw grade. For MVP the actual number
-        // ships zeroed and iOS shows "engine value unavailable" until we
-        // wire the full lookup; a follow-up plumbs the corpus read.
-        const engineMV: number | null = null;
-        const enginePred: number | null = null;
-        const isGuestimate = false;
+        const engineMV = curve?.rawMarketValue ?? null;
+        const enginePred = curve?.rawPredictedPrice ?? null;
+        // Guestimate detection: when the Raw entry's valueSource is
+        // "estimated" (family blend / sibling fallback / guestimate),
+        // the ranker's confidence tier drops. We conservatively treat
+        // any non-"observed" Raw as guestimate for trade-target purposes.
+        const rawEntry = curve?.entries.find((e) => e.grader === "Raw" || e.grade === "Raw");
+        const isGuestimate = rawEntry ? rawEntry.valueSource !== "observed" : false;
 
         for (const l of cachedRaw.listings) {
           bag.push({
@@ -106,11 +114,53 @@ router.get("/trade-targets", requireSession, async (req: Request, res: Response,
       cardIds = items
         .map((h) => String(h.cardId ?? "").trim())
         .filter((id) => id.length > 0);
-    } else {
-      // watchlist — the watchlist store is playerId-keyed, not cardId,
-      // so we can't scan it directly. Return an informative empty set
-      // for now; a follow-up should plumb watchlist→cardIds resolution.
-      cardIds = [];
+    } else if (source === "watchlist") {
+      // CF-WATCHLIST-CARDID-RESOLVE (Drew, 2026-07-17): watchlist is
+      // playerId-keyed. Resolve each watched player to their top N
+      // most-recently-traded cardIds so Trade Targets scans those.
+      // Top N per player kept small (default 3) so a 20-player
+      // watchlist doesn't blow the eBay-listings-cache read budget.
+      const perPlayerCap = Math.max(1, Math.min(10, Number(req.query.perPlayer) || 3));
+      const [{ getWatchlistEntries }, { readCompsByPlayer }] = await Promise.all([
+        import("../services/dailyiq/watchlistStore.service.js"),
+        import("../services/portfolioiq/soldCompsStore.service.js"),
+      ]);
+      const entries = await getWatchlistEntries(userId);
+      const playerNames = entries
+        .map((e) => (e.playerName ?? "").trim())
+        .filter((n) => n.length > 0);
+      // Bounded concurrency across players
+      const bag: string[] = [];
+      const CONCURRENCY = 5;
+      let cursor = 0;
+      async function worker() {
+        while (cursor < playerNames.length) {
+          const i = cursor++;
+          const player = playerNames[i];
+          try {
+            const comps = await readCompsByPlayer({ playerName: player, limit: 50 });
+            // Rank cardIds by number of recent trades then latest sale price
+            const byCardId = new Map<string, { count: number; latestPrice: number }>();
+            for (const c of comps) {
+              const cid = String(c.cardId ?? "").trim();
+              if (!cid) continue;
+              const cur = byCardId.get(cid) ?? { count: 0, latestPrice: 0 };
+              cur.count += 1;
+              if (typeof c.price === "number" && c.price > cur.latestPrice) cur.latestPrice = c.price;
+              byCardId.set(cid, cur);
+            }
+            const sorted = [...byCardId.entries()]
+              .sort((a, b) => b[1].count - a[1].count || b[1].latestPrice - a[1].latestPrice)
+              .slice(0, perPlayerCap)
+              .map(([cid]) => cid);
+            bag.push(...sorted);
+          } catch { /* silent — one player failing shouldn't kill the scan */ }
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, playerNames.length) }, () => worker()),
+      );
+      cardIds = bag;
     }
 
     // Dedup
