@@ -167,35 +167,6 @@ interface CardMatchCandidate {
   year?: number | string | null;
   category?: string | null;
   confidence?: number;
-  // CF-EBAY-REMATCH-AUTO-ENFORCE (Drew, 2026-07-18): CH's card-search
-  // may return both base + auto variants sharing the same
-  // #CPA-*/#BCPA-* cardNumber (autograph subsets). Strict-mode must
-  // check is_auto to keep from landing a $180 auto on a $2 base cardId.
-  is_auto?: boolean;
-  autograph?: boolean;
-}
-
-/** Autograph-subset cardNumber prefixes. When a title has any of
- *  these, the card is guaranteed to be an autograph — candidates
- *  without is_auto=true should be rejected outright. */
-const AUTO_SUBSET_PREFIXES = ["CPA-", "BCPA-", "BSPA-", "CDA-", "BCDA-", "BDCA-", "PA-"];
-
-function titleCardNumberImpliesAuto(cardNumber: string | null): boolean {
-  if (!cardNumber) return false;
-  const upper = cardNumber.toUpperCase();
-  return AUTO_SUBSET_PREFIXES.some((p) => upper.startsWith(p));
-}
-
-function candidateIsAuto(c: CardMatchCandidate): boolean {
-  if (c.is_auto === true) return true;
-  if (c.autograph === true) return true;
-  const cat = String(c.category ?? "").toLowerCase();
-  if (cat.includes("autograph") || cat.includes(" auto")) return true;
-  const set = String(c.set ?? "").toLowerCase();
-  if (set.includes("autograph")) return true;
-  const variant = String(c.variant ?? "").toLowerCase();
-  if (variant.includes("auto")) return true;
-  return false;
 }
 
 /** Extract a canonical card-number pattern (CPA-XX, BCPA-XX, BCP-##,
@@ -317,11 +288,6 @@ function strictSurvivors(
     // and reverted: CH does not populate an is_auto boolean field, so
     // requiring it hard-rejected every valid auto candidate.)
     if (titleCardNumber && num !== titleCardNumber.toUpperCase()) return [];
-    // 1b. auto enforcement: when the title's cardNumber is from an
-    // autograph subset (CPA-*, BCPA-*, BSPA-*, etc.), candidates that
-    // aren't autos are rejected. This is the fix for the $180-auto-
-    // landing-on-$2-base failure mode after PR #563.
-    if (titleCardNumber && titleCardNumberImpliesAuto(titleCardNumber) && !candidateIsAuto(c)) return [];
     // 2. year: if title has a year and candidate has a year, they must match
     if (titleYear !== null && year !== null && Number.isFinite(year) && year !== titleYear) return [];
     // Also check the set string (CH sometimes carries year only in set_name)

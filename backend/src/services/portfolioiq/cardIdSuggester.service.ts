@@ -841,6 +841,66 @@ export async function generateCardIdSuggestions(
 
   if (summary.suggested > 0) {
     await writeUserDoc(userId, doc);
+
+    // CF-EBAY-PURCHASE-COMP-AUTO (Drew, 2026-07-18): emit
+    // ebay-user-purchase sold_comps for the suggestions we just
+    // persisted, gated on high/verified confidence tier so the pool
+    // isn't polluted with speculative matches. Every user's eBay
+    // purchases with a strong SKU signal now flow into the shared
+    // pool automatically — no manual review required to seed data.
+    // Mirrors the emit shape from ebayReviewQueue.service.ts:267-293
+    // and ebayImportRematch.routes.ts. Fire-and-forget.
+    void (async () => {
+      try {
+        const { recordSoldComp } = await import("./soldCompsStore.service.js");
+        for (const h of targets) {
+          const suggestedCardId = String((h as any).suggestedCardId ?? "").trim();
+          const tier = String((h as any).suggestionConfidenceTier ?? "").toLowerCase();
+          // Only emit for verified + high suggestions. Medium and lower
+          // are too speculative to seed the shared pool.
+          if (!suggestedCardId) continue;
+          if (tier !== "verified" && tier !== "high") continue;
+          const price = Number((h as any).purchasePrice ?? (h as any).totalCostBasis ?? 0);
+          if (!(price > 0)) continue;
+          const playerName = String((h as any).playerName ?? "").trim();
+          if (!playerName) continue;
+          const soldAt = String(
+            (h as any).purchaseDate
+            ?? (h as any).addedAt
+            ?? new Date().toISOString(),
+          );
+          const confidence = Number((h as any).suggestionConfidence ?? 0.7);
+          try {
+            await recordSoldComp({
+              cardId: suggestedCardId,
+              playerName,
+              cardYear: (h as any).cardYear ?? null,
+              setName: (h as any).setName ?? null,
+              parallel: (h as any).parallel ?? null,
+              cardNumber: (h as any).cardNumber ?? null,
+              isAuto: (h as any).isAuto === true,
+              price,
+              soldAt,
+              source: "ebay-user-purchase",
+              sourceExternalId: ((h as any).ebayItemId as string | null) ?? `suggester::${(h as any).id}`,
+              contributorUserId: userId,
+              title: ((h as any).cardTitle as string | null) ?? null,
+              imageUrl: ((h as any).ebayImageUrl as string | null) ?? null,
+              sellerHandle: null,
+              // NOT user-verified — the suggester is the identity source,
+              // not the user. Confidence tier gates emission (verified +
+              // high only) so pool quality stays high.
+              verifiedByUser: false,
+              confidence,
+            });
+          } catch {
+            // per-holding failure never blocks the batch
+          }
+        }
+      } catch {
+        // swallow — comp emission is auxiliary
+      }
+    })();
   }
   return summary;
 }
