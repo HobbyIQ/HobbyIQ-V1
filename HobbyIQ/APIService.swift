@@ -683,6 +683,29 @@ struct APIService {
         )
     }
 
+    /// PR #556 (2026-07-17): recent CH catalog additions grouped by
+    /// (added_date, category, set, subset). Powers the DailyIQ "New
+    /// Drops" feed. `since` bounded at 30d backend-side; `category` and
+    /// `limit` optional filters.
+    func fetchCatalogAdditions(
+        since: String,
+        category: String? = nil,
+        limit: Int? = nil
+    ) async throws -> CatalogAdditionsResponse {
+        var queryItems: [URLQueryItem] = [URLQueryItem(name: "since", value: since)]
+        if let category, category.isEmpty == false {
+            queryItems.append(URLQueryItem(name: "category", value: category))
+        }
+        if let limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+        return try await get(
+            path: "/api/catalog/additions",
+            queryItems: queryItems,
+            responseType: CatalogAdditionsResponse.self
+        )
+    }
+
     /// PR #553 (2026-07-17): one-click listing composer. Server-side
     /// validates the holding is listable + auto-derives title, condition,
     /// price ladder (predictedPrice > fairMarketValue > estimatedValue >
@@ -2816,7 +2839,9 @@ struct APIService {
         // Inventory. Same reasoning.
         "/api/portfolio/trade-targets",
         // PR #550 (2026-07-17): alert presets fire on Alerts tab open.
-        "/api/alerts/advanced/presets"
+        "/api/alerts/advanced/presets",
+        // PR #556 (2026-07-17): New Drops feed on DailyIQ.
+        "/api/catalog/additions"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the

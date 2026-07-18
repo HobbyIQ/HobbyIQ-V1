@@ -57,6 +57,9 @@ struct DailyIQView: View {
     @State private var actionPlan: ActionPlanResponse?
     /// Active verdict chip; nil = show all verdicts.
     @State private var actionPlanFilter: ActionVerdict?
+    /// PR #556 (2026-07-17): New Drops sheet gate. Presented from the
+    /// hero card via a small "New Drops" banner button.
+    @State private var showNewDropsSheet: Bool = false
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -83,6 +86,10 @@ struct DailyIQView: View {
                 // holding verdict feed. Self-suppresses when the response
                 // is nil / has no actions.
                 actionPlanSection
+
+                // PR #556 (2026-07-17): New Drops banner opens a sheet
+                // with recent CH catalog additions.
+                newDropsBanner
 
                 // PR #425 (2026-07-13): Buy Candidates — watchlisted
                 // players trending bullish. Self-suppresses when the
@@ -174,6 +181,9 @@ struct DailyIQView: View {
         }
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(sessionViewModel: sessionViewModel)
+        }
+        .sheet(isPresented: $showNewDropsSheet) {
+            NewDropsView()
         }
         // CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): explainer sheet
         // shows the copy previously repeated inline under every
@@ -1376,6 +1386,24 @@ private var watchlistCard: some View {
                     .stroke(verdict.color.opacity(isActive ? 0.8 : 0.35), lineWidth: isActive ? 1.4 : 1)
             )
             .clipShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - PR #556: New Drops banner
+
+    /// Always-visible entry to the New Drops sheet. Reuses `bannerContent`
+    /// for visual consistency with the sell-radar / notable-sales banners.
+    private var newDropsBanner: some View {
+        Button {
+            showNewDropsSheet = true
+        } label: {
+            bannerContent(
+                glyph: "\u{1F195}",
+                title: "See what's dropping",
+                subtitle: "Recent CH catalog additions — grouped by day.",
+                accent: HobbyIQTheme.Colors.electricBlue
+            )
         }
         .buttonStyle(.plain)
     }
