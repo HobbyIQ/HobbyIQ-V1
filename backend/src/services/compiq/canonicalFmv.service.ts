@@ -338,7 +338,15 @@ async function warmPoolFromEbayBrowseEnded(
           imageUrl: l.imageUrl,
           sellerHandle: l.seller.username,
           verifiedByUser: false,
-          confidence: 0.75,
+          // CF-EBAY-ENDED-CONFIDENCE (Drew, 2026-07-18): 0.85 —
+          // direct listing provenance (itemWebUrl, seller, endsAt),
+          // legally-binding winning-bid semantic. Slightly below
+          // manual-user-entry 0.9 (we didn't personally verify) but
+          // above CH's 0.7 aggregate (no aggregation/interpolation).
+          // Follow-on: when we can add bidCount to ActiveListing from
+          // Browse, gate on bidCount > 0 for auctions and raise this
+          // to 0.90 for confirmed-sold rows.
+          confidence: 0.85,
         });
         ingested++;
       } catch { /* per-listing errors swallowed */ }
