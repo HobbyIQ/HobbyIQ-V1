@@ -32,6 +32,14 @@ on:
         required: false
         type: string
         default: ''
+      emit_backfill:
+        description: 'Emit ebay-user-purchase sold_comps for ALL candidates (used to seed the pool for already-corrected holdings)'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   rematch:
@@ -68,15 +76,16 @@ jobs:
           USER_ID: ${{ inputs.user_id }}
           APPLY: ${{ inputs.apply_changes }}
           HOLDING_IDS: ${{ inputs.holding_ids }}
+          EMIT_BACKFILL: ${{ inputs.emit_backfill }}
         run: |
           set -euo pipefail
           IDS_JSON=$(echo "$HOLDING_IDS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')
           if [ "$IDS_JSON" = "[]" ]; then
-            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" \
-              '{ impersonateUserId: $u, applyChanges: $apply }')
+            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" --argjson backfill "$EMIT_BACKFILL" \
+              '{ impersonateUserId: $u, applyChanges: $apply, emitBackfill: $backfill }')
           else
-            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" --argjson ids "$IDS_JSON" \
-              '{ impersonateUserId: $u, applyChanges: $apply, holdingIds: $ids }')
+            BODY=$(jq -nc --arg u "$USER_ID" --argjson apply "$APPLY" --argjson ids "$IDS_JSON" --argjson backfill "$EMIT_BACKFILL" \
+              '{ impersonateUserId: $u, applyChanges: $apply, holdingIds: $ids, emitBackfill: $backfill }')
           fi
           HTTP=$(curl -sS -w '\n%{http_code}' \
             -X POST \
