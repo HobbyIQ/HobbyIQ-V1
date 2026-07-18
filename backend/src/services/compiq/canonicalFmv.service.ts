@@ -54,6 +54,7 @@ import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
+import { CosmosClient, type Container } from "@azure/cosmos";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -377,6 +378,117 @@ async function warmPoolFromEbayBrowseEnded(
   } catch { return 0; }
 }
 
+/** CF-CH-DAILY-SALES-WARM (Drew, 2026-07-18). Query ch_daily_sales
+ *  directly by cardId + grader for scoped, high-precision sold data.
+ *  This is the LOCALLY-CACHED CH nightly ingest — same underlying
+ *  source as fetchCompsByPlayer but queried by cardId directly, so
+ *  no player/product fuzzy match issues and no cross-cardId noise.
+ *
+ *  When Marketplace Insights lands, this remains useful as a fast
+ *  local read; the two sources complement each other.
+ *
+ *  Confidence 0.8 — direct listing-level provenance in our own
+ *  container, sitting between manual-user-entry 0.9 and CH aggregate
+ *  0.7. Higher than the aggregate because we see the individual sale
+ *  row, not a bucket median.
+ */
+let sharedChDailyContainer: Container | null = null;
+async function getChDailyContainer(): Promise<Container | null> {
+  if (sharedChDailyContainer) return sharedChDailyContainer;
+  try {
+    const cs = process.env.COSMOS_CONNECTION_STRING;
+    if (!cs) return null;
+    const client = new CosmosClient(cs);
+    const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+    sharedChDailyContainer = db.container(
+      process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales",
+    );
+    return sharedChDailyContainer;
+  } catch { return null; }
+}
+
+async function warmPoolFromChDailySales(
+  cardId: string,
+  input: CanonicalFmvInput,
+): Promise<number> {
+  const container = await getChDailyContainer();
+  if (!container) return 0;
+  try {
+    // Grader filter: "Raw" for null-graded holdings; else "PSA 10" /
+    // "BGS 9.5" / etc. matches ch_daily_sales's grader field format.
+    const graderQuery = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
+      ? `${input.gradeCompany.toUpperCase()} ${input.gradeValue}`
+      : "Raw";
+    const cutoff = new Date(Date.now() - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString();
+    // Query ch_daily_sales for the target cardId + grader.
+    // Filter by parallel in memory (variant field format varies).
+    const iter = container.items.query<{
+      card_id: string;
+      player: string;
+      year: number;
+      card_set: string;
+      variant: string;
+      number: string;
+      price: number;
+      grader: string;
+      sale_date: string;
+      image_url: string | null;
+    }>({
+      query: `SELECT TOP 50 c.card_id, c.player, c.year, c.card_set, c.variant,
+                            c.number, c.price, c.grader, c.sale_date, c.image_url
+              FROM c
+              WHERE c.card_id = @cardId
+                AND c.grader = @grader
+                AND c.sale_date >= @cutoff
+                AND c.price > 0
+              ORDER BY c.sale_date DESC`,
+      parameters: [
+        { name: "@cardId", value: cardId },
+        { name: "@grader", value: graderQuery },
+        { name: "@cutoff", value: cutoff },
+      ],
+    });
+    const { resources } = await iter.fetchAll();
+    if (resources.length === 0) return 0;
+
+    // Optional in-memory parallel filter — normalize to handle
+    // "Blue" vs "Blue Refractor" the same way soldCompsStore does.
+    const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
+    const wantParallel = input.parallel ? stripRefr(input.parallel) : null;
+
+    let ingested = 0;
+    for (const row of resources) {
+      if (!Number.isFinite(row.price) || row.price <= 0) continue;
+      if (wantParallel && stripRefr(row.variant ?? "") !== wantParallel) continue;
+      try {
+        await recordSoldComp({
+          cardId: row.card_id,
+          playerName: row.player,
+          cardYear: row.year ?? null,
+          setName: row.card_set ?? null,
+          parallel: row.variant ?? null,
+          cardNumber: row.number ?? null,
+          isAuto: detectIsAuto(input),
+          gradeCompany: input.gradeCompany ?? null,
+          gradeValue: input.gradeValue ?? null,
+          price: row.price,
+          soldAt: row.sale_date,
+          source: "cardhedge",
+          sourceExternalId: `ch-daily::${row.card_id}::${row.sale_date}::${Math.round(row.price * 100)}`,
+          contributorUserId: null,
+          title: `${row.year} ${row.card_set} #${row.number} ${row.variant}`.trim(),
+          imageUrl: row.image_url ?? null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: 0.8,
+        });
+        ingested++;
+      } catch { /* swallow per-row errors */ }
+    }
+    return ingested;
+  } catch { return 0; }
+}
+
 async function warmPoolFromCh(input: CanonicalFmvInput): Promise<number> {
   if (!input.player || !input.product) return 0;
   try {
@@ -463,11 +575,16 @@ async function tryDirectComp(
   // (auction winning bids + expired BINs), so we don't pollute the
   // pool with active ask prices.
   if (fresh.length < 3 && input.player) {
-    const [chAdded, ebayEndedAdded] = await Promise.all([
+    const [chAdded, chDailyAdded, ebayEndedAdded] = await Promise.all([
       input.product ? warmPoolFromCh(input) : Promise.resolve(0),
+      // CF-CH-DAILY-SALES-WARM: query our local ch_daily_sales container
+      // directly by cardId — same data source as fetchCompsByPlayer but
+      // scoped to the exact SKU. Fires in parallel with the aggregate-
+      // level CH warm; both are idempotent.
+      warmPoolFromChDailySales(cardId, input),
       warmPoolFromEbayBrowseEnded(cardId, input),
     ]);
-    if (chAdded + ebayEndedAdded > 0) {
+    if (chAdded + chDailyAdded + ebayEndedAdded > 0) {
       comps = await readPool();
       fresh = filterFresh(comps);
     }
