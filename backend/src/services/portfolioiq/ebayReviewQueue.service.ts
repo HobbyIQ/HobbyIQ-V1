@@ -280,7 +280,10 @@ export async function confirmHoldingReview(
             price,
             soldAt,
             source: "ebay-user-purchase",
-            sourceExternalId: extractEbayItemIdFromHolding(doc, holdingId) ?? null,
+            // CF-COMP-DEDUP-CANONICAL (Drew, 2026-07-18): fall back to
+            // holding-scoped id so rematch/suggester/backfill re-emissions
+            // upsert this same doc instead of creating duplicates.
+            sourceExternalId: extractEbayItemIdFromHolding(doc, holdingId) ?? `holding::${holdingId}`,
             contributorUserId: userId,
             title: (holding as any).cardTitle ?? extractEbayTitleFromHolding(doc, holdingId) ?? null,
             imageUrl: (holding as any).ebayImageUrl ?? null,
