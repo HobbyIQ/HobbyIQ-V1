@@ -102,6 +102,29 @@ function perCardRatio(
   };
 }
 
+/**
+ * CF-USER-POOL-TREND (Drew, 2026-07-18): convert the window-normalized
+ * momentum multiplier to a %/month rate for
+ * `projectNextSaleFromComps({ broaderTrendPctPerMonth })`. The engine
+ * treats the multiplier as a full-window scaling factor over
+ * TREND_WINDOW_DAYS (14 days by default), so a multiplier of 1.08
+ * (recentMedian/priorMedian) reads as +8% over 14 days, ≈ +17%/month.
+ *
+ * Returns null when the multiplier isn't a positive finite number
+ * (upstream fetch failed / thin data). Null passes through to
+ * projectNextSaleFromComps's branch-2 default (anchor unchanged),
+ * which is the honest thin-signal projection.
+ */
+export function momentumMultiplierToPctPerMonth(
+  multiplier: number | null | undefined,
+  windowDays = 14,
+): number | null {
+  if (typeof multiplier !== "number" || !Number.isFinite(multiplier) || multiplier <= 0) return null;
+  if (windowDays <= 0) return null;
+  const perWindowPct = (multiplier - 1) * 100;
+  return perWindowPct * (30 / windowDays);
+}
+
 export async function fetchPlayerInSetMomentum(
   input: FetchPlayerInSetMomentumInput,
 ): Promise<PlayerMomentumComponent | null> {

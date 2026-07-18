@@ -98,7 +98,7 @@ type ModelSignal = null;
 // fetchPlayerSignals + the nightly blob job remain running but are no
 // longer the source of truth here. CF-C re-homes the blob job to
 // per-(player, set) tuples; this CF stops READING it.
-import { fetchPlayerInSetMomentum } from "./playerInSetMomentum.service.js";
+import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 // CF-CARDSIGHT-SIBLING-DISCOVERY (2026-05-25 investigation, Approach A) —
 // fetchSiblingSales wraps fetchCompsByPlayer + exact-card-id exclusion.
 // See docs/phase0/cardsight_sibling_discovery_investigation.md.
@@ -3116,6 +3116,13 @@ export async function augmentCompsWithUserPool(
   // X-Fractor / Green Shimmer / etc. comps in the pool. Legacy callers
   // that don't pass parallel keep the un-filtered behavior.
   parallel?: string | null,
+  // CF-USER-COMPS-GRADE-FILTER (Drew, 2026-07-18): grade tier filter.
+  // Raw ($ x) and PSA 10 ($10x) shouldn't mix in the pool. When the
+  // caller knows the holding's grade, pass company + value here.
+  // Null/undefined = raw (matches raw docs). Legacy callers keep
+  // un-filtered behavior.
+  gradeCompany?: string | null,
+  gradeValue?: number | null,
 ): Promise<FetchedComps> {
   if (process.env.COMPIQ_READ_SOLD_COMPS_ENABLED !== "true") return fetched;
   const resolvedCardId = (cardId ?? fetched.card?.card_id ?? "").trim();
@@ -3127,6 +3134,8 @@ export async function augmentCompsWithUserPool(
       cardId: resolvedCardId,
       sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
       parallel: parallel ?? undefined,
+      gradeCompany: gradeCompany ?? undefined,
+      gradeValue: gradeValue ?? undefined,
     });
   } catch (err) {
     console.warn(JSON.stringify({
@@ -4310,10 +4319,17 @@ export async function computeEstimate(
   // See project_sold_comps_unified_pool.md for the trust model.
   //
   // CF-USER-COMPS-PARALLEL-FILTER (Drew, 2026-07-18): pass body.parallel
-  // so the pool query filters to same-parallel comps. Prevents cross-
-  // parallel dilution when CH's search returns one cardId for every
-  // variant (e.g. all #CPA-EHA parallels share one Bowman Chrome cardId).
-  fetched = await augmentCompsWithUserPool(fetched, body.cardId, body.parallel ?? null);
+  // + grade so the pool query filters to same-parallel + same-grade
+  // comps. Prevents cross-parallel dilution when CH's search returns
+  // one cardId for every variant, and cross-grade dilution when Raw +
+  // PSA 10 comps mix in the sample.
+  fetched = await augmentCompsWithUserPool(
+    fetched,
+    body.cardId,
+    body.parallel ?? null,
+    body.gradeCompany ?? null,
+    typeof body.gradeValue === "number" ? body.gradeValue : null,
+  );
 
   // ── Catalog-miss guard ───────────────────────────────────────────────────
   // CF-LAUNCH-HARDENING (2026-06-02): when the free-text path's Cardsight
@@ -6236,6 +6252,15 @@ export async function computeEstimate(
               price: s.price,
               soldDate: new Date(s.ts).toISOString(),
             })),
+            // CF-USER-POOL-TREND (Drew, 2026-07-18): pass playerMomentum
+            // as broaderTrendPctPerMonth so single-anchor projections
+            // roll forward with the player's aggregate direction instead
+            // of returning the anchor unchanged.
+            {
+              broaderTrendPctPerMonth: momentumMultiplierToPctPerMonth(
+                playerMomentum?.multiplier ?? null,
+              ),
+            },
           );
           const round2 = (n: number) => Math.round(n * 100) / 100;
           const fmv = nextSale !== null ? round2(nextSale.nextSaleValue) : 0;

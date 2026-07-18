@@ -879,6 +879,8 @@ export async function generateCardIdSuggestions(
               parallel: (h as any).parallel ?? null,
               cardNumber: (h as any).cardNumber ?? null,
               isAuto: (h as any).isAuto === true,
+              gradeCompany: (h as any).gradeCompany ?? null,
+              gradeValue: (h as any).gradeValue ?? null,
               price,
               soldAt,
               source: "ebay-user-purchase",
