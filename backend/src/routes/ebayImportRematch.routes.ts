@@ -332,4 +332,100 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
   } catch (err) { next(err); }
 });
 
+// CF-EBAY-PURCHASE-COMP-LIST (Drew, 2026-07-18). Admin endpoint that
+// lists the sold_comps we've emitted for a user's inventory. Walks
+// the user's holdings, groups by cardId, and pulls all sold_comps per
+// cardId (default 180d window). Useful for sanity-checking that the
+// suggester/rematch/backfill paths actually landed comps in the pool.
+//
+// Auth: requireAdmin.
+// body: { userId: string, sources?: string[] }
+router.post("/admin/list-user-comps", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const userId = String(req.body?.userId ?? "").trim();
+    if (!userId) {
+      res.status(400).json({ error: "Missing userId in body" });
+      return;
+    }
+    const sources = Array.isArray(req.body?.sources)
+      ? req.body.sources.filter((s: unknown): s is string => typeof s === "string")
+      : ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"];
+
+    const { readUserDoc } = await import("../services/portfolioiq/portfolioStore.service.js");
+    const { readCompsByCardId } = await import("../services/portfolioiq/soldCompsStore.service.js");
+    const doc = await readUserDoc(userId);
+    const holdings = Object.values(doc.holdings ?? {}) as unknown as Array<Record<string, unknown>>;
+
+    // Unique cardIds across the inventory.
+    const cardIdSet = new Set<string>();
+    for (const h of holdings) {
+      const cid = String(h.cardId ?? "").trim();
+      if (cid.length > 0) cardIdSet.add(cid);
+    }
+
+    // Pull comps for each cardId in parallel (bounded).
+    const cardIds = Array.from(cardIdSet);
+    const results: Array<{
+      cardId: string;
+      holdingsRefCount: number;
+      compCount: number;
+      comps: Array<{
+        source: string;
+        price: number;
+        soldAt: string;
+        contributorUserId: string | null;
+        title: string | null;
+        parallel: string | null;
+        cardNumber: string | null;
+        verifiedByUser: boolean;
+        confidence: number | null;
+      }>;
+    }> = new Array(cardIds.length);
+    let cursor = 0;
+    async function worker() {
+      while (cursor < cardIds.length) {
+        const i = cursor++;
+        const cid = cardIds[i];
+        try {
+          const comps = await readCompsByCardId({ cardId: cid, sources: sources as never });
+          results[i] = {
+            cardId: cid,
+            holdingsRefCount: holdings.filter((h) => String(h.cardId ?? "") === cid).length,
+            compCount: comps.length,
+            comps: comps.map((c) => ({
+              source: c.source,
+              price: c.price,
+              soldAt: c.soldAt,
+              contributorUserId: c.contributorUserId ?? null,
+              title: (c as { title?: string | null }).title ?? null,
+              parallel: (c as { parallel?: string | null }).parallel ?? null,
+              cardNumber: (c as { cardNumber?: string | null }).cardNumber ?? null,
+              verifiedByUser: (c as { verifiedByUser?: boolean }).verifiedByUser === true,
+              confidence: (c as { confidence?: number | null }).confidence ?? null,
+            })),
+          };
+        } catch {
+          results[i] = { cardId: cid, holdingsRefCount: 0, compCount: 0, comps: [] };
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(6, cardIds.length) }, () => worker()));
+
+    const summary = {
+      inventoryHoldingCount: holdings.length,
+      uniqueCardIds: cardIds.length,
+      cardIdsWithAtLeastOneComp: results.filter((r) => r.compCount > 0).length,
+      totalCompsAcrossInventory: results.reduce((sum, r) => sum + r.compCount, 0),
+    };
+
+    res.json({
+      computedAt: new Date().toISOString(),
+      userId,
+      sources,
+      summary,
+      results: results.sort((a, b) => b.compCount - a.compCount),
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;
