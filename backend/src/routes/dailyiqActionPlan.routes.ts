@@ -46,7 +46,7 @@ router.get("/action-plan", requireSession, async (req: Request, res: Response, n
     const holdings = allItems.filter((h) => (h as { cardStatus?: string }).cardStatus !== "pending-review");
 
     const { buildActionPlan } = await import("../services/dailyiq/dailyIqActionPlanAnalyze.service.js");
-    const plan = await buildActionPlan(holdings);
+    const plan = await buildActionPlan(holdings, userId);
     res.json(plan);
   } catch (err) { next(err); }
 });

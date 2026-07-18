@@ -80,6 +80,7 @@ function isEbayLike(_h: PortfolioHolding): boolean {
 
 export async function buildActionPlan(
   holdings: PortfolioHolding[],
+  userId = "",
 ): Promise<ActionPlanResponse> {
   // 1. Sell-radar batch
   let sellRadarByHoldingId = new Map<string, {
@@ -263,6 +264,31 @@ export async function buildActionPlan(
     SELL_NOW: 0, GRADE_UP: 0, LIST_HIGHER: 0, WAIT_TO_LIST: 0, HOLD: 0,
   };
   for (const a of actions) counts[a.verdict]++;
+
+  // CF-POST-SALE-ATTRIBUTION (Drew, 2026-07-17): fire-and-forget
+  // per-holding verdict snapshot so we can attribute post-sale
+  // outcomes back to the verdict shown at snapshot time. Idempotent
+  // per (holdingId, YYYY-MM-DD) — same-day recomputes overwrite.
+  // userId is passed in explicitly — snapshots are keyed by holdingId
+  const today = new Date().toISOString().slice(0, 10);
+  void (async () => {
+    try {
+      const { upsertSnapshot } = await import("./actionPlanSnapshotStore.service.js");
+      await Promise.all(actions.map((a) =>
+        upsertSnapshot({
+          holdingId: a.holdingId,
+          userId,
+          cardId: a.cardId,
+          date: today,
+          verdict: a.verdict,
+          urgency: a.urgency,
+          priceTarget: a.priceTarget,
+          marketValueAtSnapshot: a.marketValue,
+          predictedPriceAtSnapshot: a.predictedPrice,
+        }),
+      ));
+    } catch { /* silent — no snapshot is not fatal */ }
+  })();
 
   return {
     generatedAt: new Date().toISOString(),
