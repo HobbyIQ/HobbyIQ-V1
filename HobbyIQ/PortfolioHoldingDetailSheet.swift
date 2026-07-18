@@ -324,10 +324,13 @@ struct PortfolioHoldingDetailSheet: View {
 
     /// Value the hero renders. Prefers the panel entry ONLY when it's
     /// observed with a non-zero sample count — otherwise
-    /// `vm.resolvedMarketValue(for:)` wins so the hero stays aligned
-    /// with the inventory row and doesn't downgrade to a thin
-    /// synthesized estimate. Multiplies by qty to match the row's
-    /// scaling contract.
+    /// `vm.marketValue(for:)` wins so the hero stays aligned with the
+    /// inventory row and reads from the canonical FMV cache when
+    /// available. Multiplies by qty to match the row's scaling contract.
+    ///
+    /// (2026-07-18) The hero's dedicated `canonicalFmv` state override
+    /// takes precedence over both branches here — this helper is the
+    /// synchronous fallback that keeps rendering during the round-trip.
     private func heroLivePanelValue() -> Double? {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let entry = lockedGradeEntry(),
@@ -336,7 +339,7 @@ struct PortfolioHoldingDetailSheet: View {
            let value = entry.resolvedMarketValue, value > 0 {
             return value * qty
         }
-        let resolved = viewModel.resolvedMarketValue(for: card)
+        let resolved = viewModel.marketValue(for: card)
         return resolved > 0 ? resolved : nil
     }
 
@@ -1275,10 +1278,16 @@ struct PortfolioHoldingDetailSheet: View {
                             // through autoPriceHolding, potentially
                             // with a better source like CH's proxy or
                             // Cardsight rescue). Falling through to
-                            // `vm.resolvedMarketValue(for: card)`
-                            // keeps the hero in lock-step with what
-                            // the inventory row is displaying.
-                            livePanelValue: heroLivePanelValue()
+                            // `vm.marketValue(for: card)` keeps the
+                            // hero in lock-step with what the
+                            // inventory row is displaying.
+                            livePanelValue: heroLivePanelValue(),
+                            // 2026-07-18: pass the shared VM-level
+                            // canonical FMV cache so the hero, row,
+                            // and dashboard total all read from one
+                            // source. Nil = hero falls back to its
+                            // own per-view fetch.
+                            sharedCanonicalFmv: viewModel.canonicalFmv(for: card)
                         ) {
                             showingEditSheet = true
                         }

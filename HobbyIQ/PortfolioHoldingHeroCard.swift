@@ -35,7 +35,19 @@ struct PortfolioHoldingHeroCard: View {
     /// for the MARKET VALUE headline. Nil until the fetch completes;
     /// while nil, we fall back to the legacy chain so the hero never
     /// blanks during the round-trip.
-    @State private var canonicalFmv: CanonicalFmvResponse?
+    @State private var localCanonicalFmv: CanonicalFmvResponse?
+
+    /// Optional override supplied by the parent when a shared VM-level
+    /// cache is available (`PortfolioIQViewModel.canonicalFmv(for:)`).
+    /// Prefer this over the local per-hero fetch so all inventory-tab
+    /// surfaces read from one cache.
+    var sharedCanonicalFmv: CanonicalFmvResponse? = nil
+
+    /// Effective canonical FMV — shared cache wins over the local
+    /// per-hero fetch.
+    private var canonicalFmv: CanonicalFmvResponse? {
+        sharedCanonicalFmv ?? localCanonicalFmv
+    }
 
     /// Flat identity line: "{year} {set-no-year-no-category} [variant] [Auto] {number}"
     /// (same rule the comp-card header uses). Strips a leading year
@@ -345,11 +357,13 @@ struct PortfolioHoldingHeroCard: View {
 
     /// Fetches canonical FMV from POST /api/compiq/canonical-fmv.
     /// Silent-failure — we keep the legacy fallback chain on error so
-    /// the hero never blanks.
+    /// the hero never blanks. Skipped entirely when the parent has
+    /// already supplied a shared cache entry.
     private func loadCanonicalFmv() async {
+        if sharedCanonicalFmv != nil { return }
         guard let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
               cardId.isEmpty == false else {
-            canonicalFmv = nil
+            localCanonicalFmv = nil
             return
         }
         let cardYear = Int(card.year.trimmingCharacters(in: .whitespaces))
@@ -367,9 +381,9 @@ struct PortfolioHoldingHeroCard: View {
             freshCompute: false
         )
         do {
-            canonicalFmv = try await APIService.shared.fetchCanonicalFmv(request)
+            localCanonicalFmv = try await APIService.shared.fetchCanonicalFmv(request)
         } catch {
-            canonicalFmv = nil
+            localCanonicalFmv = nil
         }
     }
 

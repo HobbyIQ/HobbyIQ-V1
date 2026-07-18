@@ -60,6 +60,64 @@ final class PortfolioIQViewModel: ObservableObject {
     /// feeds the top-of-list banner and the drill-down list view.
     @Published private(set) var gradeWorthyAlerts: GradeWorthyAlertsResponse?
 
+    /// 2026-07-18 canonical-FMV migration: server is the single source
+    /// of truth for market value. Populated in a background batch after
+    /// `load()` returns; rows consult this cache via `marketValue(for:)`
+    /// which falls back to the legacy `resolvedMarketValue(for:)` chain
+    /// when the entry is missing (cold cache, in-flight fetch, or
+    /// backend `no-basis`).
+    @Published private(set) var fmvCache: [FmvKey: CanonicalFmvResponse] = [:]
+    /// True while the batch loader is populating `fmvCache`. Used by
+    /// row skeletons + the "updated Xs ago" caption on the dashboard.
+    @Published private(set) var isRefreshingFmvCache: Bool = false
+    /// Wall-clock timestamp of the last successful batch completion.
+    /// Feeds staleness copy on the dashboard total.
+    @Published private(set) var fmvCacheLastUpdated: Date?
+    /// Increments each time a batch starts so an in-flight run can be
+    /// abandoned by a newer trigger without racing state.
+    private var fmvBatchGeneration: Int = 0
+
+    struct FmvKey: Hashable {
+        let cardId: String
+        let parallel: String?
+        let gradeCompany: String?
+        let gradeValue: Double?
+
+        /// Normalized key derived from an InventoryCard — matches the
+        /// wire body iOS sends to /canonical-fmv. Nil parallel = base
+        /// holding, nil gradeCompany = raw.
+        init(card: InventoryCard) {
+            self.cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let trimmedParallel = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedParallel.isEmpty || trimmedParallel.lowercased() == "base" {
+                self.parallel = nil
+            } else {
+                self.parallel = trimmedParallel
+            }
+            if let company = card.gradeCompany?.trimmingCharacters(in: .whitespacesAndNewlines),
+               company.isEmpty == false {
+                self.gradeCompany = company.uppercased()
+            } else {
+                self.gradeCompany = nil
+            }
+            self.gradeValue = card.gradeValue
+        }
+    }
+
+    /// Cached-first-paint portfolio total. Read on cold start for the
+    /// dashboard hero so users see a real number instantly; overwritten
+    /// after the fresh batch resolves.
+    private static let cachedPortfolioTotalKey = "hobbyiq.portfolio.total.cached"
+    var cachedPortfolioTotal: Double? {
+        get {
+            let raw = UserDefaults.standard.double(forKey: Self.cachedPortfolioTotalKey)
+            return raw > 0 ? raw : nil
+        }
+    }
+    private func writeCachedPortfolioTotal(_ value: Double) {
+        UserDefaults.standard.set(value, forKey: Self.cachedPortfolioTotalKey)
+    }
+
     private let service: APIService
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "portfolio")
 
@@ -471,6 +529,9 @@ final class PortfolioIQViewModel: ObservableObject {
         Task { await fetchLedger() }
         Task { await fetchPendingReview() }
         await fetch(preserveExistingSummaryOnError: false)
+        // 2026-07-18: warm the canonical-FMV cache in the background so
+        // rows / dashboard total start reading canonical values.
+        Task { await refreshCanonicalFmvCache(forceRefresh: false) }
     }
 
     /// CF-LIVE-PANEL-CACHE (2026-07-09): populates `livePanelEntries`
@@ -515,6 +576,146 @@ final class PortfolioIQViewModel: ObservableObject {
         livePanelEntries[trimmed] = entries
     }
 
+    // MARK: - Canonical FMV cache (2026-07-18 migration)
+
+    /// Layered market-value read. Prefers the canonical cache; falls
+    /// back to the legacy sync chain when the entry is missing
+    /// (cold cache, in-flight fetch, or backend `no-basis`).
+    ///
+    /// Returned value is already qty-scaled to match the legacy helper.
+    func marketValue(for card: InventoryCard) -> Double {
+        let qty = max(1.0, card.quantity ?? 1.0)
+        let key = FmvKey(card: card)
+        if key.cardId.isEmpty == false,
+           let cached = fmvCache[key],
+           cached.isRenderable,
+           let fmv = cached.fmv, fmv > 0 {
+            return fmv * qty
+        }
+        return resolvedMarketValue(for: card)
+    }
+
+    /// Canonical FMV envelope for a holding, if resolved. Nil when the
+    /// cache is cold OR the pipeline returned `no-basis`. Callers that
+    /// need method / provenance / confidence read this directly.
+    func canonicalFmv(for card: InventoryCard) -> CanonicalFmvResponse? {
+        let key = FmvKey(card: card)
+        guard key.cardId.isEmpty == false else { return nil }
+        return fmvCache[key]
+    }
+
+    /// Batches canonical-FMV fetches at concurrency 8. Called after
+    /// `load()` returns and on pull-to-refresh (`forceRefresh: true`
+    /// bypasses server Redis via `freshCompute`). Publishing to
+    /// `fmvCache` per-entry lets rows re-render as data flows in.
+    func refreshCanonicalFmvCache(forceRefresh: Bool = false) async {
+        fmvBatchGeneration &+= 1
+        let generation = fmvBatchGeneration
+        // Dedupe by FmvKey so a 100-quantity holding fires one request.
+        var seen: Set<FmvKey> = []
+        var requests: [(FmvKey, CanonicalFmvRequest)] = []
+        for card in inventoryCards {
+            let key = FmvKey(card: card)
+            guard key.cardId.isEmpty == false else { continue }
+            guard seen.insert(key).inserted else { continue }
+            let request = canonicalFmvRequest(for: card, key: key, freshCompute: forceRefresh)
+            requests.append((key, request))
+        }
+        guard requests.isEmpty == false else {
+            if forceRefresh { fmvCache = [:] }
+            fmvCacheLastUpdated = Date()
+            return
+        }
+        if forceRefresh {
+            fmvCache = [:]
+        }
+        isRefreshingFmvCache = true
+        defer {
+            // Only clear the loading flag when we're still the current
+            // generation — an interleaved refresh keeps ownership.
+            if generation == fmvBatchGeneration {
+                isRefreshingFmvCache = false
+            }
+        }
+        await withTaskGroup(of: (FmvKey, CanonicalFmvResponse?).self) { group in
+            var iterator = requests.makeIterator()
+            let concurrency = min(8, requests.count)
+            for _ in 0..<concurrency {
+                guard let next = iterator.next() else { break }
+                group.addTask { [service] in
+                    do {
+                        let response = try await service.fetchCanonicalFmv(next.1)
+                        return (next.0, response)
+                    } catch {
+                        return (next.0, nil)
+                    }
+                }
+            }
+            while let result = await group.next() {
+                // Abandon results from a superseded batch.
+                guard generation == fmvBatchGeneration else { continue }
+                if let response = result.1 {
+                    fmvCache[result.0] = response
+                }
+                if let next = iterator.next() {
+                    group.addTask { [service] in
+                        do {
+                            let response = try await service.fetchCanonicalFmv(next.1)
+                            return (next.0, response)
+                        } catch {
+                            return (next.0, nil)
+                        }
+                    }
+                }
+            }
+        }
+        guard generation == fmvBatchGeneration else { return }
+        fmvCacheLastUpdated = Date()
+        let total = inventoryCards.reduce(0.0) { sum, card in
+            sum + marketValue(for: card)
+        }
+        if total > 0 {
+            writeCachedPortfolioTotal(total)
+        }
+    }
+
+    /// Invalidate a single key and refetch — used after a user commits a
+    /// comp (confirm holding, add manual sale) so the affected holding
+    /// snaps to fresh math without waiting for the batch TTL.
+    func invalidateCanonicalFmv(for card: InventoryCard, freshCompute: Bool = true) async {
+        let key = FmvKey(card: card)
+        guard key.cardId.isEmpty == false else { return }
+        fmvCache.removeValue(forKey: key)
+        let request = canonicalFmvRequest(for: card, key: key, freshCompute: freshCompute)
+        do {
+            let response = try await service.fetchCanonicalFmv(request)
+            fmvCache[key] = response
+        } catch {
+            // Silent — row falls back to the legacy chain until next batch.
+        }
+    }
+
+    private func canonicalFmvRequest(
+        for card: InventoryCard,
+        key: FmvKey,
+        freshCompute: Bool
+    ) -> CanonicalFmvRequest {
+        let cardYear = Int(card.year.trimmingCharacters(in: .whitespaces))
+        let productTrimmed = card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let playerTrimmed = card.playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return CanonicalFmvRequest(
+            cardId: key.cardId,
+            parallel: key.parallel,
+            gradeCompany: key.gradeCompany,
+            gradeValue: key.gradeValue,
+            cardYear: cardYear,
+            product: productTrimmed.isEmpty ? nil : productTrimmed,
+            player: playerTrimmed.isEmpty ? nil : playerTrimmed,
+            cardNumber: nil,
+            freshCompute: freshCompute
+        )
+    }
+
     /// Canonical single-source-of-truth market value for a holding.
     /// Every surface — inventory row, grid card, detail hero, header
     /// total, sort — reads this so the same card can never show
@@ -522,6 +723,7 @@ final class PortfolioIQViewModel: ObservableObject {
     /// cache → observed FMV → cached currentValue → engine estimate →
     /// best-known fallback (low/high midpoint, at-cost). Always
     /// scaled by quantity.
+    @available(*, deprecated, message: "Prefer vm.marketValue(for:) which layers the canonical FMV cache on top of this sync fallback.")
     func resolvedMarketValue(for card: InventoryCard) -> Double {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let live = liveMarketValue(for: card), live > 0 { return live * qty }
@@ -574,6 +776,9 @@ final class PortfolioIQViewModel: ObservableObject {
         // Task so the pending-review call outlives this coroutine.
         Task { await fetchPendingReview() }
         await fetch(preserveExistingSummaryOnError: true)
+        // 2026-07-18: pull-to-refresh bypasses the server Redis via
+        // freshCompute so the user sees fresh canonical FMV.
+        Task { await refreshCanonicalFmvCache(forceRefresh: true) }
     }
 
     /// Reload the holdings list straight from `LocalPortfolioProvider`

@@ -402,7 +402,7 @@ struct InventoryIQView: View {
                                 }
                                 PortfolioCardRow(
                                     card: card,
-                                    resolvedValue: vm.resolvedMarketValue(for: card),
+                                    resolvedValue: vm.marketValue(for: card),
                                     latestFlip: vm.recentFlip(for: card),
                                     playerTrend: vm.playerTrend(for: card)
                                 )
@@ -432,7 +432,7 @@ struct InventoryIQView: View {
                         Button {
                             selectedCard = card
                         } label: {
-                            PortfolioCardGridCard(card: card, resolvedValue: vm.resolvedMarketValue(for: card))
+                            PortfolioCardGridCard(card: card, resolvedValue: vm.marketValue(for: card))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -548,8 +548,11 @@ struct InventoryIQView: View {
         .clipShape(Capsule(style: .continuous))
     }
 
+    /// 2026-07-18 canonical-FMV migration: routes through
+    /// `vm.marketValue(for:)` which prefers the canonical cache and
+    /// falls back to the legacy sync chain on miss.
     private func resolvedMarketValue(for card: InventoryCard) -> Double {
-        vm.resolvedMarketValue(for: card)
+        vm.marketValue(for: card)
     }
 
     /// PR #549 (2026-07-17): toggle a holding into/out of the bulk-sell

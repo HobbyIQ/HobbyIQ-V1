@@ -465,10 +465,24 @@ struct PortfolioIQView: View {
         // on `summary` are left untouched for non-hero consumers (P/L logic
         // stays stable across the seven sum sites — this is display-only).
         let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
-        let heroValue = agg.displayValueIncludingEstimated
+        // 2026-07-18 canonical-FMV migration: sum via `vm.marketValue(for:)`
+        // so the hero total tracks the canonical cache as it fills.
+        // Falls back to `displayValueIncludingEstimated` (legacy priced +
+        // estimated bucket) when inventory hasn't loaded yet AND the
+        // cached-first-paint total is stale.
+        let canonicalTotal = vm.inventoryCards.reduce(0.0) { sum, card in
+            sum + vm.marketValue(for: card)
+        }
+        let heroValue: Double = {
+            if canonicalTotal > 0 { return canonicalTotal }
+            if let cached = vm.cachedPortfolioTotal, cached > 0 { return cached }
+            return agg.displayValueIncludingEstimated
+        }()
         let heroCost = agg.displayCostIncludingEstimated
-        let heroPL = agg.displayPLIncludingEstimated
-        let heroROI = agg.displayROIIncludingEstimated
+        // Recompute P/L against the actual displayed heroValue so the
+        // delta chip stays consistent with the headline number.
+        let heroPL = heroValue - heroCost
+        let heroROI = heroCost > 0 ? ((heroValue - heroCost) / heroCost) * 100 : 0
         let pnlColor: Color = heroPL >= 0 ? .green : .red
         let hasCostBasis = heroCost > 0
         // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split unpriced into
@@ -2642,7 +2656,7 @@ struct PriorityActionListView: View {
                 } label: {
                     PortfolioCardRow(
                         card: card,
-                        resolvedValue: vm.resolvedMarketValue(for: card),
+                        resolvedValue: vm.marketValue(for: card),
                         latestFlip: vm.recentFlip(for: card),
                         playerTrend: vm.playerTrend(for: card)
                     )
