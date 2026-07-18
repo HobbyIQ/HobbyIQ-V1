@@ -697,6 +697,47 @@ struct APIService {
         )
     }
 
+    /// PR #592 (2026-07-18): p25-p75 range + median of ACTIVE eBay
+    /// listings for a card. Powers the "Currently listing on eBay"
+    /// section under the FMV headline on Card Detail. `player` is
+    /// required; other identifiers narrow the pool.
+    func fetchListingRange(
+        cardId: String,
+        parallel: String? = nil,
+        gradeCompany: String? = nil,
+        gradeValue: Double? = nil,
+        cardYear: Int? = nil,
+        product: String? = nil,
+        player: String,
+        cardNumber: String? = nil
+    ) async throws -> ListingRangeResponse {
+        var items: [URLQueryItem] = [URLQueryItem(name: "player", value: player)]
+        if let parallel, parallel.isEmpty == false {
+            items.append(URLQueryItem(name: "parallel", value: parallel))
+        }
+        if let gradeCompany, gradeCompany.isEmpty == false {
+            items.append(URLQueryItem(name: "gradeCompany", value: gradeCompany))
+        }
+        if let gradeValue {
+            items.append(URLQueryItem(name: "gradeValue", value: String(gradeValue)))
+        }
+        if let cardYear {
+            items.append(URLQueryItem(name: "cardYear", value: String(cardYear)))
+        }
+        if let product, product.isEmpty == false {
+            items.append(URLQueryItem(name: "product", value: product))
+        }
+        if let cardNumber, cardNumber.isEmpty == false {
+            items.append(URLQueryItem(name: "cardNumber", value: cardNumber))
+        }
+        let encoded = cardId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        return try await get(
+            path: "/api/compiq/cards/\(encoded)/listing-range",
+            queryItems: items,
+            responseType: ListingRangeResponse.self
+        )
+    }
+
     /// PR #554 (2026-07-17): post-sale attribution outcome for a single
     /// sold ledger entry. Route lands as a backend follow-up; the store
     /// (action_plan_outcomes) is already populated on every sale.
@@ -2946,6 +2987,9 @@ struct APIService {
         // Details open. Same reasoning; 404 while the read route lands
         // means the badge just stays hidden.
         "/api/portfolio/sales/",
+        // PR #592 (2026-07-18): listing-range fires on Card Detail
+        // open. Same reasoning — a transient 401 must not evict.
+        "/api/compiq/cards/",
         // Phase 3-4 (2026-07-17): yearbook parameterized by year.
         // Session-safe read.
         "/api/portfolio/yearbook",

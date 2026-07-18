@@ -226,13 +226,39 @@ struct CanonicalFmvSheet: View {
 
     @ViewBuilder
     private var methodChip: some View {
-        if let method = response.methodEnum, let label = methodLabel(method) {
-            HStack(spacing: 4) {
+        HStack(alignment: .firstTextBaseline) {
+            if let method = response.methodEnum, let label = methodLabel(method) {
                 Text("Basis: \(label)")
                     .font(.caption2)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
+            Spacer(minLength: 0)
+            if let stalenessLabel {
+                Text(stalenessLabel)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+            }
         }
+    }
+
+    /// "updated Xs/min/h ago" caption when the response is older than a
+    /// minute, otherwise nil. Backend caches for 15 min so a >15 min
+    /// staleness is a hint that pull-to-refresh would kick a fresh
+    /// compute. Never rendered when the timestamp doesn't parse.
+    private var stalenessLabel: String? {
+        guard let iso = response.computedAt else { return nil }
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = isoFormatter.date(from: iso)
+        if date == nil {
+            let fallback = ISO8601DateFormatter()
+            fallback.formatOptions = [.withInternetDateTime]
+            date = fallback.date(from: iso)
+        }
+        guard let date, Date().timeIntervalSince(date) >= 60 else { return nil }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return "updated " + formatter.localizedString(for: date, relativeTo: Date())
     }
 
     /// User-facing labels for the method enum — never surface the raw

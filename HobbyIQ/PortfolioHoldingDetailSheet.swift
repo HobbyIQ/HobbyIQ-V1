@@ -1296,6 +1296,21 @@ struct PortfolioHoldingDetailSheet: View {
                             showingEditSheet = true
                         }
 
+                        // PR #592 (2026-07-18): p25-p75 range + median of
+                        // ACTIVE eBay listings for this card. Self-
+                        // suppresses when the endpoint returns count=0.
+                        CurrentlyListingSection(
+                            cardId: card.cardId,
+                            parallel: card.parallel.isEmpty ? nil : card.parallel,
+                            gradeCompany: card.gradeCompany,
+                            gradeValue: card.gradeValue,
+                            cardYear: Int(card.year.trimmingCharacters(in: .whitespaces)),
+                            product: card.setName.isEmpty ? nil : card.setName,
+                            player: card.playerName,
+                            cardNumber: nil
+                        )
+                        .padding(.horizontal, 16)
+
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
                         // 2026-07-17: PREDICTED (7d/30d) tile pulled from
                         // the holding detail completely. Backend was
