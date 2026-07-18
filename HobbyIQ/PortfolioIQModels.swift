@@ -1718,7 +1718,17 @@ struct PortfolioHoldingSoldSheet: View {
         self.viewModel = viewModel
         self.card = card
         self.onSaved = onSaved
-        _salePriceText = State(initialValue: String(format: "%.2f", card.currentValue))
+        // 2026-07-18 canonical-FMV migration: seed "Sold For" with the
+        // canonical value directly (no multiplier — sale is a realized
+        // event, not a listing anchor). Falls back to the legacy
+        // currentValue chain when the cache is cold.
+        let seed: Double = {
+            if let canonical = viewModel.canonicalFmv(for: card)?.fmv, canonical > 0 {
+                return canonical
+            }
+            return card.currentValue
+        }()
+        _salePriceText = State(initialValue: String(format: "%.2f", seed))
     }
 
     var body: some View {

@@ -110,7 +110,20 @@ struct EbayListingDraftView: View {
         _listingTitle = State(initialValue: seedTitle)
         _listingTitleInitialSeed = State(initialValue: seedTitle)
         _listingDescription = State(initialValue: Self.defaultDescription(for: card))
-        _askingPriceText = State(initialValue: String(format: "%.2f", max(card.currentValue, card.highValue ?? card.currentValue)))
+        // 2026-07-18 canonical-FMV migration: anchor the initial list
+        // price on the canonical cache when warm (FMV x 1.075 = midpoint
+        // of the suggested 1.05x-1.10x range). Falls back to the legacy
+        // max(currentValue, highValue) seed if the cache is cold. The
+        // richer suggested/aggressive/quickSale endpoint still overrides
+        // when its response lands.
+        let canonicalFmv = viewModel.canonicalFmv(for: card)?.fmv
+        let anchorPrice: Double = {
+            if let canonical = canonicalFmv, canonical > 0 {
+                return canonical * 1.075
+            }
+            return max(card.currentValue, card.highValue ?? card.currentValue)
+        }()
+        _askingPriceText = State(initialValue: String(format: "%.2f", anchorPrice))
         _quantityText = State(initialValue: String(format: "%.0f", max(card.quantity ?? 1, 1)))
         _selectedCondition = State(initialValue: Self.mapCondition(for: card))
         _brandText = State(initialValue: Self.defaultBrand(for: card))

@@ -1132,7 +1132,11 @@ struct PortfolioHoldingDetailSheet: View {
         let entry = entryForKey(scenarioGradeKey)
         let projected: Double? = entry?.resolvedMarketValue
         let gradingCost = scenarioCostValue
+        // 2026-07-18 canonical-FMV migration: the "vs raw today" delta
+        // row anchors on the canonical value (per-unit) when the VM
+        // cache is warm, falling back to the legacy chain when cold.
         let marketValueToday: Double? = {
+            if let canonical = viewModel.canonicalFmv(for: card)?.fmv, canonical > 0 { return canonical }
             if let v = card.fairMarketValue, v > 0 { return v }
             if card.currentValue > 0 { return card.currentValue }
             return nil
