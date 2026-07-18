@@ -279,10 +279,17 @@ async function tryDirectComp(
     fresh.map((c) => ({ price: c.price, soldDate: c.soldAt })),
     {
       broaderTrendPctPerMonth: trendPctPerMonth,
-      // CF-FORWARD-WINDOW-3D (Drew, 2026-07-18): canonical FMV projects
-      // 3 days forward, not 30. This is "what would this card sell for
-      // today" — near-anchor extrapolation, not month-out speculation.
-      forwardDays: 3,
+      // CF-FORWARD-WINDOW-0D (Drew, 2026-07-18): canonical FMV projects
+      // AT now, not into the future — "what is this worth today," not
+      // "what will it sell for in 30 days." When we do have a proper
+      // regression (n≥3), the OLS fits and evaluates at now; when we
+      // don't (n<3), branch 2 anchors on the newest sale and applies
+      // the broader-trend backfill from soldAt→now only.
+      forwardDays: 0,
+      // Require ≥3 comps for regression — at n=2 the OLS extrapolates
+      // an unbounded straight line even at t=now, which over-projects
+      // steep slopes.
+      minNForRegression: 3,
     },
   );
   if (!projection || projection.nextSaleValue <= 0) return null;
@@ -373,7 +380,7 @@ async function tryCrossParallel(
 
   const projection = projectNextSaleFromComps(
     normalized.map((n) => ({ price: n.price, soldDate: n.soldAt })),
-    { broaderTrendPctPerMonth: trendPctPerMonth, forwardDays: 3 },
+    { broaderTrendPctPerMonth: trendPctPerMonth, forwardDays: 0, minNForRegression: 3 },
   );
   if (!projection || projection.nextSaleValue <= 0) return null;
 
@@ -536,11 +543,13 @@ async function tryProductTier(
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
-  // CF-FORWARD-WINDOW-3D: canonical FMV projects 3 days forward, not
-  // 30 — "what would this sell for today." Scale the monthly trend to
-  // its 3-day equivalent (× 3/30 = × 0.1).
+  // CF-FORWARD-WINDOW-0D: canonical FMV is "worth today," no forward
+  // extrapolation. Rungs 4-5 are model-based rather than transaction-
+  // anchored, so there's no anchor-date to backfill from — return the
+  // raw model output as-is.
+  const projected = raw;
   const monthlyPct = trendPctPerMonth ?? 0;
-  const projected = raw * (1 + (monthlyPct / 100) * (3 / 30));
+  void monthlyPct;   // recorded in provenance below
 
   if (!Number.isFinite(projected) || projected <= 0) return null;
 
