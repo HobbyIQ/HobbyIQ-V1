@@ -49,6 +49,14 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
     }
     const applyChanges = req.body?.applyChanges === true;
     const dryRun = !applyChanges;
+    // CF-EBAY-PURCHASE-COMP-BACKFILL (Drew, 2026-07-18): when
+    // emitBackfill=true, emit ebay-user-purchase comps for every
+    // candidate holding with a valid cardId + purchase price, even
+    // when the matcher says nothing changed. Used to backfill the
+    // pool for holdings applied under earlier PRs (#558, this
+    // session's v4 apply) that predate the emit gate. Idempotent
+    // via recordSoldComp's {source}::{sourceExternalId} dedup.
+    const emitBackfill = req.body?.emitBackfill === true;
     const filterIds: string[] | null = Array.isArray(req.body?.holdingIds)
       ? req.body.holdingIds.filter((s: unknown): s is string => typeof s === "string" && s.length > 0)
       : null;
@@ -98,15 +106,20 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
       };
       if (applyRematchToHolding) {
         for (const r of results) {
-          if (!r.changed) continue;
+          // Normal apply flow only runs against changed proposals;
+          // emitBackfill mode iterates all candidates to seed comps
+          // for holdings that were corrected under earlier PRs.
+          if (!r.changed && !emitBackfill) continue;
           try {
-            const ok = await applyRematchToHolding(userId, r.holdingId, {
-              cardId: r.after.cardId,
-              parallel: r.after.parallel,
-              cardNumber: r.after.cardNumber,
-              setName: r.after.setName,
-            });
-            if (ok) appliedCount++;
+            if (r.changed) {
+              const ok = await applyRematchToHolding(userId, r.holdingId, {
+                cardId: r.after.cardId,
+                parallel: r.after.parallel,
+                cardNumber: r.after.cardNumber,
+                setName: r.after.setName,
+              });
+              if (ok) appliedCount++;
+            }
             // CF-EBAY-PURCHASE-COMP (Drew, 2026-07-18): emit an
             // ebay-user-purchase sold_comp whenever the matcher proposed
             // a change (r.changed=true), regardless of whether apply
