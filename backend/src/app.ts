@@ -14,6 +14,7 @@ import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
 // merges without conflict.
 import sellRadarNotableSalesRoutes from "./routes/sellRadarNotableSales.routes.js";
 import dailyiqRoutes from "./routes/dailyiq.routes.js";
+import dailyiqActionPlanRoutes from "./routes/dailyiqActionPlan.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -109,6 +110,13 @@ app.use("/api/portfolio/erp", portfolioErpRoutes);
 // resolve to their handlers cleanly.
 app.use("/api/portfolio", sellRadarNotableSalesRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
+// CF-DAILYIQ-ACTION-PLAN (2026-07-17): mount action-plan routes first
+// so its clean, minimal-import file resolves before dailyiq.routes'
+// legacy broken imports would be walked. Same three prefixes for
+// iOS casing tolerance.
+app.use("/api/dailyiq", dailyiqActionPlanRoutes);
+app.use("/api/dailyIQ", dailyiqActionPlanRoutes);
+app.use("/api/daily", dailyiqActionPlanRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/dailyIQ", dailyiqRoutes);
 app.use("/api/daily", dailyiqRoutes);
