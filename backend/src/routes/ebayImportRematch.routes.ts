@@ -166,7 +166,12 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       price: r.purchasePrice!,
                       soldAt,
                       source: "ebay-user-purchase",
-                      sourceExternalId: (h.ebayItemId as string | null) ?? `rematch::${r.holdingId}`,
+                      // CF-COMP-DEDUP-CANONICAL (Drew, 2026-07-18): use a
+                      // holding-scoped fallback so re-emissions from any path
+                      // (confirm/rematch/suggester/backfill) upsert to the
+                      // same doc when ebayItemId is absent. Prevents the
+                      // 3-5×-per-holding duplicates seen in Drew's pool.
+                      sourceExternalId: (h.ebayItemId as string | null) ?? `holding::${r.holdingId}`,
                       contributorUserId: userId,
                       title: r.ebayTitle ?? null,
                       imageUrl: (h.ebayImageUrl as string | null) ?? null,
@@ -310,7 +315,7 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
                 price: r.purchasePrice!,
                 soldAt,
                 source: "ebay-user-purchase",
-                sourceExternalId: (h.ebayItemId as string | null) ?? `batch-backfill::${r.holdingId}`,
+                sourceExternalId: (h.ebayItemId as string | null) ?? `holding::${r.holdingId}`,
                 contributorUserId: userId,
                 title: r.ebayTitle ?? null,
                 imageUrl: (h.ebayImageUrl as string | null) ?? null,

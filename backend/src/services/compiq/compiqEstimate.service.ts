@@ -3186,7 +3186,68 @@ export async function augmentCompsWithUserPool(
       maxAgeDays,
     }));
   }
-  if (freshUserComps.length === 0) return fetched;
+  // CF-CROSS-PARALLEL-FALLBACK (Drew, 2026-07-18): when the same-parallel
+  // pool is thin (< 2 comps), pull sibling-parallel comps from the same
+  // cardId and normalize them via lookupParallelMultiplier. Fills the
+  // cold-start FMV gap for parallels with no direct comps yet. Never
+  // fires when parallel filter isn't active (else we'd normalize the
+  // full un-filtered pool against a random target).
+  let crossParallelSynthetics: SoldCompDoc[] = [];
+  if (
+    typeof parallel === "string" && parallel.trim().length > 0
+    && freshUserComps.length < 2
+  ) {
+    try {
+      const { lookupParallelMultiplier } = await import("./neighborMultipliers.js");
+      const targetMult = lookupParallelMultiplier(parallel);
+      if (targetMult !== null && targetMult > 0) {
+        // Pull all-parallel comps (no filter) then normalize non-target ones.
+        const allParallelComps = await readCompsByCardId({
+          cardId: resolvedCardId,
+          sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+          gradeCompany: gradeCompany ?? undefined,
+          gradeValue: gradeValue ?? undefined,
+        });
+        const targetKeyNorm = parallel.trim().toLowerCase().replace(/\s+/g, " ");
+        const MAX_SYNTHETIC = 5;
+        for (const c of allParallelComps) {
+          if (crossParallelSynthetics.length >= MAX_SYNTHETIC) break;
+          const cPar = (c.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+          if (cPar === targetKeyNorm) continue;   // skip same-parallel (already handled)
+          const sibMult = lookupParallelMultiplier(c.parallel ?? "");
+          if (sibMult === null || sibMult <= 0) continue;
+          const ratio = targetMult / sibMult;
+          const normalizedPrice = c.price * ratio;
+          if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) continue;
+          // Ratio-normalized comps are much noisier than real same-parallel
+          // ones. Only include when the ratio is in [0.25, 4.0] — outside
+          // that band the multiplier table is a poor predictor.
+          if (ratio < 0.25 || ratio > 4.0) continue;
+          crossParallelSynthetics.push({
+            ...c,
+            price: normalizedPrice,
+            confidence: (c.confidence ?? 0.5) * 0.6,   // 40% haircut on trust
+            title: `[cross-parallel-normalized] ${c.title ?? ""} × ${(ratio).toFixed(2)}`,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "compiq_cross_parallel_fallback_error",
+        source: "compiqEstimate.augmentCompsWithUserPool",
+        cardId: resolvedCardId,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
+  const combinedFreshUserComps = [...freshUserComps, ...crossParallelSynthetics];
+  if (combinedFreshUserComps.length === 0) return fetched;
+
+  // Re-alias so the injection loop below iterates the combined set.
+  const iterationSource = combinedFreshUserComps;
+
+  if (freshUserComps.length === 0 && crossParallelSynthetics.length === 0) return fetched;
 
   const seenKeys = new Set<string>();
   for (const c of fetched.comps) {
@@ -3196,7 +3257,7 @@ export async function augmentCompsWithUserPool(
 
   const MAX_INJECT = 20;
   const additions: RawComp[] = [];
-  for (const uc of freshUserComps) {
+  for (const uc of iterationSource) {
     if (additions.length >= MAX_INJECT) break;
     if (!Number.isFinite(uc.price) || uc.price <= 0) continue;
     const day = (uc.soldAt ?? "").slice(0, 10);

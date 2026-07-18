@@ -884,7 +884,7 @@ export async function generateCardIdSuggestions(
               price,
               soldAt,
               source: "ebay-user-purchase",
-              sourceExternalId: ((h as any).ebayItemId as string | null) ?? `suggester::${(h as any).id}`,
+              sourceExternalId: ((h as any).ebayItemId as string | null) ?? `holding::${(h as any).id}`,
               contributorUserId: userId,
               title: ((h as any).cardTitle as string | null) ?? null,
               imageUrl: ((h as any).ebayImageUrl as string | null) ?? null,
