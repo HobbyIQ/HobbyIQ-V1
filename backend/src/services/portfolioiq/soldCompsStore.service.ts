@@ -411,10 +411,21 @@ export async function readCompsByCardId(input: {
 
 /** Lowercase-trim-collapse for parallel string equality. Handles the
  *  common ways users/vendors format parallels ("Blue Refractor" vs
- *  "blue  refractor" vs " Blue Refractor "). */
+ *  "blue  refractor" vs " Blue Refractor ").
+ *
+ *  CF-PARALLEL-REFRACTOR-ALIAS (Drew, 2026-07-18): also strips a
+ *  trailing " refractor" / " refractors" so "Blue" and "Blue Refractor"
+ *  normalize to the same key. Rationale: CH's catalog and sellers omit
+ *  or include the "Refractor" suffix inconsistently for Bowman Chrome
+ *  autos (which are on refractor stock by design). This alias produces
+ *  correct matches for the common case AND doesn't collapse specific
+ *  sub-parallels (Blue X-Fractor, Green Shimmer Refractor, Speckle
+ *  Refractor) because each has its own distinctive token that survives
+ *  the strip. */
 function normalizeParallelForFilter(p: string | null | undefined): string {
   if (p === null || p === undefined) return "";
-  return String(p).trim().toLowerCase().replace(/\s+/g, " ");
+  const norm = String(p).trim().toLowerCase().replace(/\s+/g, " ");
+  return norm.replace(/ refractors?$/, "");
 }
 
 /**
