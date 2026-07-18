@@ -106,17 +106,18 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
               cardNumber: r.after.cardNumber,
               setName: r.after.setName,
             });
-            if (ok) {
-              appliedCount++;
-              // CF-EBAY-PURCHASE-COMP (Drew, 2026-07-18): once we've
-              // validated the identity via strict-mode + price-validator
-              // AND persisted the corrected cardId, emit an
-              // ebay-user-purchase sold_comp so this real transaction
-              // shows up in the pool for downstream pricing (Drew:
-              // "if there are no comps, we should add the ebay pull in
-              // comps since they are real data"). Mirrors the confirm-
-              // flow emit in ebayReviewQueue.service.ts:267-293 —
-              // fire-and-forget, swallow errors, never block the apply.
+            if (ok) appliedCount++;
+            // CF-EBAY-PURCHASE-COMP (Drew, 2026-07-18): emit an
+            // ebay-user-purchase sold_comp whenever the matcher proposed
+            // a change (r.changed=true), regardless of whether apply
+            // actually persisted a delta this call. Re-runs against
+            // already-corrected holdings still want their comp in the
+            // pool; recordSoldComp is idempotent on
+            // {source}::{sourceExternalId}, so double-emits are safe.
+            // Mirrors the confirm-flow emit in
+            // ebayReviewQueue.service.ts:267-293 — fire-and-forget,
+            // swallow errors, never block the apply.
+            {
               if (r.after.cardId && r.purchasePrice && r.purchasePrice > 0 && readUserDoc) {
                 void (async () => {
                   try {
@@ -168,6 +169,7 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
               }
             }
           } catch { /* silent — one failure shouldn't kill the batch */ }
+
         }
       }
     }
