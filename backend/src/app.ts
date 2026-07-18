@@ -16,6 +16,7 @@ import sellRadarNotableSalesRoutes from "./routes/sellRadarNotableSales.routes.j
 import dailyiqRoutes from "./routes/dailyiq.routes.js";
 import dailyiqActionPlanRoutes from "./routes/dailyiqActionPlan.routes.js";
 import backtestRoutes from "./routes/backtest.routes.js";
+import bulkSellComposerRoutes from "./routes/bulkSellComposer.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -119,6 +120,7 @@ app.use("/api/dailyiq", dailyiqActionPlanRoutes);
 app.use("/api/dailyIQ", dailyiqActionPlanRoutes);
 app.use("/api/daily", dailyiqActionPlanRoutes);
 app.use("/api/backtest", backtestRoutes);
+app.use("/api/portfolio", bulkSellComposerRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/dailyIQ", dailyiqRoutes);
 app.use("/api/daily", dailyiqRoutes);
