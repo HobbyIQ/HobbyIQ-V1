@@ -11,6 +11,7 @@
 import { Router, type Request, type Response } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 import { isRematchCandidate, rematchOne, type RematchResult } from "../services/portfolioiq/ebayImportRematch.service.js";
 
 const router = Router();
@@ -198,6 +199,135 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
       computedAt: new Date().toISOString(),
       summary,
       results,
+    });
+  } catch (err) { next(err); }
+});
+
+// CF-EBAY-PURCHASE-COMP-BATCH-ADMIN (Drew, 2026-07-18). Batch admin
+// backfill that sweeps EVERY user's ebay-imported holdings through the
+// rematch service and fires ebay-user-purchase comp emits for each
+// holding with a valid cardId + purchase price. This seeds the shared
+// sold_comps pool from every existing user's historical purchases in
+// one pass — the "fill our backend to be self sufficient" motion.
+//
+// Auth: requireAdmin (Bearer <ADMIN_API_TOKEN>).
+//
+// body:
+//   {
+//     dryRun?: boolean,      // default true; when false, emits comps
+//     maxUsers?: number,     // default 500; caps the sweep for safety
+//     concurrency?: number,  // default 2; per-user parallelism
+//   }
+//
+// Response summary shape:
+//   {
+//     usersProcessed, usersWithCandidates, totalCandidates,
+//     totalCompsEmittedApprox, errors, dryRun
+//   }
+//
+// The emit itself is fire-and-forget via recordSoldComp; idempotent on
+// {source}::{sourceExternalId} so re-running is safe. totalComps is an
+// approximation because the emits are async and we return immediately
+// after firing them.
+router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const dryRun = req.body?.dryRun !== false;
+    const maxUsers = Math.max(1, Math.min(2000, Number(req.body?.maxUsers ?? 500)));
+    const perUserConcurrency = Math.max(1, Math.min(4, Number(req.body?.concurrency ?? 2)));
+
+    const { readUserDoc, listAllPortfolioUserIds } = await import(
+      "../services/portfolioiq/portfolioStore.service.js"
+    );
+    const allUserIds = (await listAllPortfolioUserIds()).slice(0, maxUsers);
+
+    const summary = {
+      usersProcessed: 0,
+      usersWithCandidates: 0,
+      totalCandidates: 0,
+      totalCompsEmittedApprox: 0,
+      errors: 0,
+      dryRun,
+    };
+
+    for (const userId of allUserIds) {
+      summary.usersProcessed++;
+      try {
+        const doc = await readUserDoc(userId);
+        const holdings = Object.values(doc.holdings ?? {}).filter(isRematchCandidate);
+        if (holdings.length === 0) continue;
+        summary.usersWithCandidates++;
+        summary.totalCandidates += holdings.length;
+
+        const results: RematchResult[] = new Array(holdings.length);
+        let cursor = 0;
+        async function worker() {
+          while (cursor < holdings.length) {
+            const i = cursor++;
+            try { results[i] = await rematchOne(holdings[i]); } catch { /* silent */ }
+          }
+        }
+        await Promise.all(
+          Array.from({ length: Math.min(perUserConcurrency, holdings.length) }, () => worker()),
+        );
+
+        if (dryRun) continue;
+
+        // Emit comps for every holding with a valid post-match cardId
+        // + purchase price. This is intentionally NOT gated on r.changed
+        // — the backfill is FOR already-corrected holdings that need
+        // their comp seeded.
+        const { recordSoldComp } = await import(
+          "../services/portfolioiq/soldCompsStore.service.js"
+        );
+        for (const r of results) {
+          if (!r) continue;
+          if (!r.after?.cardId || !r.purchasePrice || r.purchasePrice <= 0) continue;
+          const holdingsMap = doc.holdings as Record<string, unknown>;
+          const holding = holdingsMap[r.holdingId]
+            ?? Object.values(holdingsMap).find((h) => (h as { id?: string }).id === r.holdingId);
+          if (!holding) continue;
+          const h = holding as Record<string, unknown>;
+          const playerName = String(h.playerName ?? "").trim();
+          if (!playerName) continue;
+          const soldAt = String(
+            h.purchaseDate
+            ?? h.addedAt
+            ?? h.confirmedAt
+            ?? new Date().toISOString(),
+          );
+          void (async () => {
+            try {
+              await recordSoldComp({
+                cardId: r.after.cardId!,
+                playerName,
+                cardYear: (h.cardYear as number | null) ?? null,
+                setName: r.after.setName ?? null,
+                parallel: r.after.parallel ?? null,
+                cardNumber: r.after.cardNumber ?? null,
+                isAuto: h.isAuto === true,
+                price: r.purchasePrice!,
+                soldAt,
+                source: "ebay-user-purchase",
+                sourceExternalId: (h.ebayItemId as string | null) ?? `batch-backfill::${r.holdingId}`,
+                contributorUserId: userId,
+                title: r.ebayTitle ?? null,
+                imageUrl: (h.ebayImageUrl as string | null) ?? null,
+                sellerHandle: null,
+                verifiedByUser: false,
+                confidence: r.after.matchConfidence ?? 0.8,
+              });
+            } catch { /* per-holding failures never block the sweep */ }
+          })();
+          summary.totalCompsEmittedApprox++;
+        }
+      } catch {
+        summary.errors++;
+      }
+    }
+
+    res.json({
+      computedAt: new Date().toISOString(),
+      summary,
     });
   } catch (err) { next(err); }
 });
