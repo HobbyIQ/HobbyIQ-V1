@@ -1,0 +1,100 @@
+name: Batch Backfill eBay Comps (admin)
+
+# CF-EBAY-PURCHASE-COMP-BATCH-ADMIN (Drew, 2026-07-18). Manual workflow
+# to fire POST /api/portfolio/admin/rematch-ebay-imports/batch-backfill
+# against every user's ebay-imported holdings. Seeds the shared
+# sold_comps pool from historical purchases in one pass.
+#
+# One-time setup (before this workflow will succeed):
+#   1. Set ADMIN_API_TOKEN as an App Service application setting on
+#      HobbyIQ3 (any strong random string). This gates the endpoint.
+#      az webapp config appsettings set --name HobbyIQ3 \
+#        --resource-group rg-hobbyiq-dev \
+#        --settings ADMIN_API_TOKEN=<random>
+#   2. Add ADMIN_API_TOKEN as a GitHub Actions secret at the repo level
+#      (Settings → Secrets and variables → Actions).
+#
+# Trigger: GitHub UI → Actions → Batch Backfill eBay Comps → Run workflow
+# Inputs:
+#   dry_run         When "true" (default), previews without emitting
+#                   any comps. Flip to "false" to actually seed.
+#   max_users       Cap the sweep for safety. Default 500.
+#   concurrency     Per-user candidate parallelism. Default 2.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'dry-run preview (no comps emitted)'
+        required: false
+        type: choice
+        default: 'true'
+        options:
+          - 'true'
+          - 'false'
+      max_users:
+        description: 'max users to sweep (default 500)'
+        required: false
+        type: string
+        default: '500'
+      concurrency:
+        description: 'per-user concurrency (default 2)'
+        required: false
+        type: string
+        default: '2'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+
+    steps:
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret is not configured. See workflow header for one-time setup."
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: POST batch-backfill
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MAX_USERS: ${{ inputs.max_users }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson maxUsers "$MAX_USERS" \
+            --argjson concurrency "$CONCURRENCY" \
+            '{ dryRun: $dryRun, maxUsers: $maxUsers, concurrency: $concurrency }')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 1500 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/rematch-ebay-imports/batch-backfill" \
+            -o batch-backfill-response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::batch-backfill call failed with status $STATUS"
+            cat batch-backfill-response.json || true
+            exit 1
+          fi
+          echo "Summary:"
+          jq '.summary' batch-backfill-response.json
+
+      - name: Upload response as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch-backfill-response-dry-${{ inputs.dry_run }}
+          path: batch-backfill-response.json
+          retention-days: 14
