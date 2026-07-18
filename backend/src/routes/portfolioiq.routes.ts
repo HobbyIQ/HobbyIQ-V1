@@ -225,6 +225,61 @@ router.get("/holdings", portfolio.getHoldings);
 // tier using the local comp store's observed grader-premium curve.
 // Only raw holdings are analyzed; graded cards return an out-of-scope
 // response. Rate-limited under priceChecksPerDay.
+// CF-ONE-CLICK-LISTING (Drew, 2026-07-17): compose a fully pre-filled
+// eBay listing draft from a holdingId, without the caller having to
+// hand-marshal every field of HoldingListingInput. Delegates to the
+// existing buildListingPreview under the hood — this route just does
+// the "hydrate from persisted holding" step first.
+//
+// Body (all optional):
+//   { targetPrice?, description?, bestOfferEnabled?, bestOfferAutoDeclinePct?, quantity? }
+//
+// Returns the same shape as POST /api/ebay/listings/preview so iOS
+// can share decoders. When the holding is missing required identity
+// fields OR no target price can be derived, returns 422 with a
+// reason so iOS shows "add these fields first".
+router.post(
+  "/holdings/:id/compose-listing",
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const holdingId = String(req.params.id ?? "").trim();
+      if (!holdingId) return res.status(400).json({ error: "holding id required" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      const key = Object.keys(doc.holdings ?? {}).find(
+        (k) => k.toLowerCase() === holdingId.toLowerCase(),
+      );
+      const holding = key ? doc.holdings[key] : undefined;
+      if (!holding) return res.status(404).json({ error: "holding not found" });
+
+      const { composeListingInput } = await import(
+        "../services/portfolioiq/oneClickListingComposer.service.js"
+      );
+      const overrides = {
+        targetPrice: typeof req.body?.targetPrice === "number" ? req.body.targetPrice : undefined,
+        description: typeof req.body?.description === "string" ? req.body.description : undefined,
+        bestOfferEnabled: typeof req.body?.bestOfferEnabled === "boolean" ? req.body.bestOfferEnabled : undefined,
+        bestOfferAutoDeclinePct: typeof req.body?.bestOfferAutoDeclinePct === "number" ? req.body.bestOfferAutoDeclinePct : undefined,
+        quantity: typeof req.body?.quantity === "number" ? req.body.quantity : undefined,
+      };
+      const input = composeListingInput(holding, overrides);
+      if (!input) {
+        return res.status(422).json({
+          success: false,
+          error: "cannot compose listing — holding missing required identity or price",
+          hint: "Ensure playerName, cardYear, setName, and one of (predictedPrice, fairMarketValue, estimatedValue) are populated.",
+        });
+      }
+      const preview = await buildListingPreview(userId, input);
+      res.json({ success: true, preview });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.get(
   "/holdings/:id/grade-analysis",
   requireRateLimited("priceChecksPerDay"),
