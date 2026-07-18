@@ -275,6 +275,8 @@ export async function confirmHoldingReview(
             parallel: holding.parallel ?? null,
             cardNumber: holding.cardNumber ?? null,
             isAuto: holding.isAuto === true,
+            gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
+            gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
             price,
             soldAt,
             source: "ebay-user-purchase",

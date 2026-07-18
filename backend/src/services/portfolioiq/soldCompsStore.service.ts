@@ -73,6 +73,13 @@ export interface SoldCompDoc {
   parallel: string | null;
   cardNumber: string | null;
   isAuto: boolean;
+  // CF-USER-COMPS-GRADE (Drew, 2026-07-18): grade tier fields for
+  // pool-side filtering. gradeCompany null = raw. Present-but-null on
+  // legacy docs written before this migration; readers must treat
+  // null as raw. Populated by the confirm/rematch/suggester/backfill
+  // emit paths from PortfolioHolding.gradeCompany / gradeValue.
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
 
   // The sale itself
   price: number;
@@ -120,6 +127,8 @@ export interface RecordSoldCompInput {
   parallel?: string | null;
   cardNumber?: string | null;
   isAuto?: boolean;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
   price: number;
   soldAt: string;
   source: SoldCompSource;
@@ -206,6 +215,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     parallel: input.parallel ?? null,
     cardNumber: input.cardNumber ?? null,
     isAuto: input.isAuto ?? false,
+    gradeCompany: input.gradeCompany ?? null,
+    gradeValue: input.gradeValue ?? null,
     price: input.price,
     soldAt: input.soldAt,
     observedAt: new Date().toISOString(),
@@ -303,6 +314,15 @@ export async function readCompsByCardId(input: {
   // SQL string-normalization; the extra RUs are trivial vs the
   // correctness win.
   parallel?: string | null;
+  // CF-USER-COMPS-GRADE-FILTER (Drew, 2026-07-18): when set, returns
+  // only comps whose grade tier matches. A Raw comp and a PSA 10
+  // comp trade at very different prices for the same cardId; mixing
+  // them in the FMV pool dilutes each grade's anchor. gradeCompany
+  // format matches SoldCompDoc.gradeCompany ("PSA", "BGS", "SGC",
+  // null = raw); gradeValue is the numeric grade (10, 9.5, etc; null
+  // for raw). Case-insensitive on company.
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -337,6 +357,27 @@ export async function readCompsByCardId(input: {
           return BASE_ALIASES.has(docP);
         }
         return docP === wanted;
+      });
+    }
+    // CF-USER-COMPS-GRADE-FILTER (Drew, 2026-07-18): filter to the
+    // requested grade tier. Raw request (gradeCompany null/undefined
+    // AND gradeValue null/undefined) matches docs with null grade
+    // fields. Otherwise both company + value must match exactly
+    // (company case-insensitive, value strict-equal).
+    if (input.gradeCompany !== undefined || input.gradeValue !== undefined) {
+      const wantedCompany = typeof input.gradeCompany === "string"
+        ? input.gradeCompany.trim().toUpperCase()
+        : "";
+      const wantedValue = typeof input.gradeValue === "number" && Number.isFinite(input.gradeValue)
+        ? input.gradeValue
+        : null;
+      const wantRaw = wantedCompany === "" && wantedValue === null;
+      all = all.filter((d) => {
+        const docCompany = typeof d.gradeCompany === "string" ? d.gradeCompany.trim().toUpperCase() : "";
+        const docValue = typeof d.gradeValue === "number" ? d.gradeValue : null;
+        const docIsRaw = docCompany === "" && docValue === null;
+        if (wantRaw) return docIsRaw;
+        return docCompany === wantedCompany && docValue === wantedValue;
       });
     }
     return all;

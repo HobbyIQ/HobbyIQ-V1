@@ -161,6 +161,8 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       parallel: r.after.parallel ?? null,
                       cardNumber: r.after.cardNumber ?? null,
                       isAuto: h.isAuto === true,
+                      gradeCompany: (h.gradeCompany as string | null) ?? null,
+                      gradeValue: (h.gradeValue as number | null) ?? null,
                       price: r.purchasePrice!,
                       soldAt,
                       source: "ebay-user-purchase",
