@@ -115,6 +115,12 @@ app.use("/api/portfolio/erp", portfolioErpRoutes);
 // /api/portfolio → portfolioiqRoutes so the two dedicated endpoints
 // resolve to their handlers cleanly.
 app.use("/api/portfolio", sellRadarNotableSalesRoutes);
+// CF-EBAY-IMPORT-REMATCH-ADMIN-MOUNT (Drew, 2026-07-18): mount the
+// rematch routes BEFORE portfolioiqRoutes because portfolioiqRoutes has
+// a blanket router.use(requireSession) — Express would apply that gate
+// to /api/portfolio/admin/... before the ebayImportRematchRoutes'
+// requireAdmin ever runs, 401-ing the admin batch backfill workflow.
+app.use("/api/portfolio", ebayImportRematchRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 // CF-DAILYIQ-ACTION-PLAN (2026-07-17): mount action-plan routes first
 // so its clean, minimal-import file resolves before dailyiq.routes'
@@ -128,7 +134,6 @@ app.use("/api/portfolio", bulkSellComposerRoutes);
 app.use("/api/portfolio", tradeTargetsRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/catalog", catalogAdditionsRoutes);
-app.use("/api/portfolio", ebayImportRematchRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/dailyIQ", dailyiqRoutes);
 app.use("/api/daily", dailyiqRoutes);
