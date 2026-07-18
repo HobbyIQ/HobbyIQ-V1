@@ -43,6 +43,11 @@ struct PortfolioHoldingHeroCard: View {
     /// surfaces read from one cache.
     var sharedCanonicalFmv: CanonicalFmvResponse? = nil
 
+    /// 2026-07-18: gates the "Why this price?" transparency sheet
+    /// presented when the user taps the MARKET VALUE headline. Only
+    /// enabled when the canonical response carries provenance data.
+    @State private var showingWhyThisPriceSheet: Bool = false
+
     /// Effective canonical FMV — shared cache wins over the local
     /// per-hero fetch.
     private var canonicalFmv: CanonicalFmvResponse? {
@@ -257,6 +262,15 @@ struct PortfolioHoldingHeroCard: View {
                     .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                    // 2026-07-18: tap the headline to open the "Why
+                    // this price?" transparency sheet. Only enabled
+                    // when we have canonical provenance to show.
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if canWhyThisPriceOpen {
+                            showingWhyThisPriceSheet = true
+                        }
+                    }
 
                 // 2026-07-18: canonical-FMV caveats + provenance caption.
                 // Renders only when we're using the canonical value.
@@ -280,6 +294,25 @@ struct PortfolioHoldingHeroCard: View {
         .task(id: canonicalFmvTaskKey) {
             await loadCanonicalFmv()
         }
+        .sheet(isPresented: $showingWhyThisPriceSheet) {
+            if let response = canonicalFmv {
+                CanonicalFmvSheet(response: response, cardTitle: flatIdentityLine)
+                    .presentationDetents([.medium, .large])
+            }
+        }
+    }
+
+    /// True when there's enough canonical provenance to make the
+    /// "Why this price?" sheet worth opening — either a summary line
+    /// or at least one anchor comp.
+    private var canWhyThisPriceOpen: Bool {
+        guard let response = canonicalFmv else { return false }
+        if let comps = response.provenance?.comps, comps.isEmpty == false { return true }
+        if let summary = response.provenance?.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+           summary.isEmpty == false {
+            return true
+        }
+        return false
     }
 
     /// Small caveat chip + one-line provenance summary. Hidden entirely
