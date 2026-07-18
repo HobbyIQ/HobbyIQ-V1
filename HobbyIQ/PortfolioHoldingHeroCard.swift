@@ -31,6 +31,12 @@ struct PortfolioHoldingHeroCard: View {
     /// MARKET VALUE. Nil until the first fetch; empty on thin data.
     @State private var sparklinePoints: [PriceHistoryBucketPoint]?
 
+    /// 2026-07-18: canonical FMV — replaces the resolved-market chain
+    /// for the MARKET VALUE headline. Nil until the fetch completes;
+    /// while nil, we fall back to the legacy chain so the hero never
+    /// blanks during the round-trip.
+    @State private var canonicalFmv: CanonicalFmvResponse?
+
     /// Flat identity line: "{year} {set-no-year-no-category} [variant] [Auto] {number}"
     /// (same rule the comp-card header uses). Strips a leading year
     /// from the set name when it duplicates `card.year` (backend often
@@ -199,12 +205,27 @@ struct PortfolioHoldingHeroCard: View {
     /// grade) do we degrade to the holding's cached
     /// `fairMarketValue` → `currentValue` → `estimatedValue`.
     private var marketValueBlock: some View {
-        let value: Double? = {
+        // 2026-07-18: canonical FMV is the source of truth when the
+        // pipeline returns a renderable number. `no-basis` / nil / non-
+        // positive fall through to the legacy chain (livePanelValue ->
+        // fairMarketValue -> currentValue -> estimatedValue) so the
+        // hero stays honest during the round-trip.
+        let canonicalValue: Double? = canonicalFmv?.isRenderable == true
+            ? canonicalFmv?.fmv
+            : nil
+        let fallbackValue: Double? = {
             if let live = livePanelValue, live > 0 { return live }
             if let v = card.fairMarketValue, v > 0 { return v }
             if card.currentValue > 0 { return card.currentValue }
             if let v = card.estimatedValue, v > 0 { return v }
             return nil
+        }()
+        // If canonical FMV explicitly declared no-basis, honor it —
+        // don't fabricate from the legacy chain. Otherwise use the
+        // best available number.
+        let value: Double? = {
+            if canonicalFmv?.methodEnum == .noBasis { return nil }
+            return canonicalValue ?? fallbackValue
         }()
         return VStack(spacing: 8) {
             Text("MARKET VALUE")
@@ -224,6 +245,13 @@ struct PortfolioHoldingHeroCard: View {
                     .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+
+                // 2026-07-18: canonical-FMV caveats + provenance caption.
+                // Renders only when we're using the canonical value.
+                if canonicalValue != nil {
+                    canonicalFmvCaptionBlock
+                }
+
                 // 2026-07-17: 30-day sparkline directly under the price.
                 // Fetches on task from /price-history (window=3m, bucket=weekly).
                 // Hidden entirely when < 2 usable points arrive.
@@ -234,7 +262,136 @@ struct PortfolioHoldingHeroCard: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
         }
-        .task(id: card.cardId ?? "") { await loadHeroSparkline() }
+        .task(id: card.cardId ?? "") {
+            await loadHeroSparkline()
+        }
+        .task(id: canonicalFmvTaskKey) {
+            await loadCanonicalFmv()
+        }
+    }
+
+    /// Small caveat chip + one-line provenance summary. Hidden entirely
+    /// when the pipeline returned a high-confidence direct-comp with no
+    /// summary — no need to caveat a solid number.
+    @ViewBuilder
+    private var canonicalFmvCaptionBlock: some View {
+        if let response = canonicalFmv {
+            let chip = canonicalFmvChip(for: response)
+            let summary = response.provenance?.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if chip != nil || summary.isEmpty == false {
+                HStack(spacing: 6) {
+                    if let chip {
+                        Text(chip.label)
+                            .font(.caption2.weight(.bold))
+                            .tracking(0.4)
+                            .foregroundStyle(chip.color)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(chip.color.opacity(0.14))
+                            .clipShape(Capsule(style: .continuous))
+                    }
+                    if summary.isEmpty == false {
+                        Text(summary)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    private struct CanonicalFmvChip {
+        let label: String
+        let color: Color
+    }
+
+    /// Chip treatment tiers per the migration spec:
+    ///   - direct-comp with confidence >= 0.6: no chip
+    ///   - product-tier: red "estimate only"
+    ///   - confidence < 0.4: warning "estimate"
+    ///   - otherwise: no chip
+    private func canonicalFmvChip(for response: CanonicalFmvResponse) -> CanonicalFmvChip? {
+        if response.methodEnum == .productTier {
+            return CanonicalFmvChip(
+                label: "ESTIMATE ONLY",
+                color: HobbyIQTheme.Colors.warning
+            )
+        }
+        let confidence = response.confidence ?? 1.0
+        if confidence < 0.4 {
+            return CanonicalFmvChip(
+                label: "ESTIMATE",
+                color: HobbyIQTheme.Colors.warning
+            )
+        }
+        return nil
+    }
+
+    /// Stable task key so the canonical-FMV fetch fires once per
+    /// (cardId, parallel, grade) triple. Avoids refetch on innocuous
+    /// re-renders while still reacting to holding edits.
+    private var canonicalFmvTaskKey: String {
+        [
+            card.cardId ?? "",
+            card.parallel,
+            card.gradeCompany ?? "",
+            card.gradeValue.map { String($0) } ?? ""
+        ]
+        .joined(separator: "|")
+    }
+
+    /// Fetches canonical FMV from POST /api/compiq/canonical-fmv.
+    /// Silent-failure — we keep the legacy fallback chain on error so
+    /// the hero never blanks.
+    private func loadCanonicalFmv() async {
+        guard let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              cardId.isEmpty == false else {
+            canonicalFmv = nil
+            return
+        }
+        let cardYear = Int(card.year.trimmingCharacters(in: .whitespaces))
+        // InventoryCard doesn't carry cardNumber directly — backend
+        // resolves it from cardId when we send nil.
+        let request = CanonicalFmvRequest(
+            cardId: cardId,
+            parallel: canonicalParallel,
+            gradeCompany: canonicalGradeCompany,
+            gradeValue: card.gradeValue,
+            cardYear: cardYear,
+            product: emptyToNil(card.setName),
+            player: emptyToNil(card.playerName),
+            cardNumber: nil,
+            freshCompute: false
+        )
+        do {
+            canonicalFmv = try await APIService.shared.fetchCanonicalFmv(request)
+        } catch {
+            canonicalFmv = nil
+        }
+    }
+
+    /// Wire spec: nil parallel = base holding. iOS holds parallel as
+    /// non-optional String, so empty / "base" strings map to nil.
+    private var canonicalParallel: String? {
+        let trimmed = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return nil }
+        if trimmed.lowercased() == "base" { return nil }
+        return trimmed
+    }
+
+    /// Wire spec: nil gradeCompany = raw holding.
+    private var canonicalGradeCompany: String? {
+        guard let raw = card.gradeCompany else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed.uppercased()
+    }
+
+    private func emptyToNil(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     /// Compact sparkline card with a signed delta chip + gradient-filled

@@ -683,6 +683,20 @@ struct APIService {
         )
     }
 
+    /// 2026-07-18: canonical FMV — the single deterministic function
+    /// every "market value" display in the app should route through so
+    /// Card Detail, Inventory rows, Portfolio dashboard, Sell composer,
+    /// Alerts, and ERP all agree on the same number. Backend caches for
+    /// 15min; pass `freshCompute: true` only on explicit user pull-to-
+    /// refresh (never on tab-open) to bypass the cache.
+    func fetchCanonicalFmv(_ request: CanonicalFmvRequest) async throws -> CanonicalFmvResponse {
+        try await post(
+            path: "/api/compiq/canonical-fmv",
+            body: request,
+            responseType: CanonicalFmvResponse.self
+        )
+    }
+
     /// PR #554 (2026-07-17): post-sale attribution outcome for a single
     /// sold ledger entry. Route lands as a backend follow-up; the store
     /// (action_plan_outcomes) is already populated on every sale.
@@ -2907,7 +2921,12 @@ struct APIService {
         "/api/community/consent",
         // PR #554 (2026-07-17): outcomes-summary counter on Portfolio
         // landing. Best-effort — hidden until the read route lands.
-        "/api/backtest/outcomes-summary"
+        "/api/backtest/outcomes-summary",
+        // 2026-07-18: canonical FMV fires on every Card Detail /
+        // Inventory row / Portfolio dashboard render. A transient 401
+        // MUST NOT evict the session — the value silently falls back
+        // to the last resolved-market cache instead.
+        "/api/compiq/canonical-fmv"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
