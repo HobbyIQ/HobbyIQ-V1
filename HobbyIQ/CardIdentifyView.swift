@@ -25,6 +25,12 @@ extension Notification.Name {
     /// nudge to re-fetch cogs / cashFlow / recent purchases without
     /// waiting for pull-to-refresh.
     static let portfolioPurchaseRecorded = Notification.Name("hobbyiq.portfolio.purchaseRecorded")
+
+    /// PR #546 (2026-07-17): posted by the DailyIQ Action Plan hero when
+    /// the user taps an action row. MainAppView switches to the Inventory
+    /// tab so the user can drill in from familiar navigation. Deep-link
+    /// to the specific holding sheet is a follow-up.
+    static let actionPlanRowTapped = Notification.Name("hobbyiq.dailyiq.actionPlanRowTapped")
 }
 
 struct CardIdentifyView: View {

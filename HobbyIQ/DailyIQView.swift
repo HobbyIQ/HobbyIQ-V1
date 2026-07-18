@@ -51,6 +51,12 @@ struct DailyIQView: View {
     @State private var showNotableSales = false
     /// Batch 2 (2026-07-17): sub-raw discovery drill-down gate.
     @State private var showSubRawDiscovery = false
+    /// PR #546 (2026-07-17): sorted per-holding verdict feed. Populates
+    /// the Action Plan hero surface just below the header. Silent
+    /// suppression when nil / actions empty.
+    @State private var actionPlan: ActionPlanResponse?
+    /// Active verdict chip; nil = show all verdicts.
+    @State private var actionPlanFilter: ActionVerdict?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -72,6 +78,11 @@ struct DailyIQView: View {
                         systemImage: "wifi.exclamationmark"
                     )
                 }
+
+                // PR #546 (2026-07-17): Action Plan hero — sorted per-
+                // holding verdict feed. Self-suppresses when the response
+                // is nil / has no actions.
+                actionPlanSection
 
                 // PR #425 (2026-07-13): Buy Candidates — watchlisted
                 // players trending bullish. Self-suppresses when the
@@ -136,7 +147,8 @@ struct DailyIQView: View {
             async let hot: Void = loadHotRightNow()
             async let sellNow: Void = loadSellNowRadar()
             async let notable: Void = loadNotableSales()
-            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable)
+            async let plan: Void = loadActionPlan()
+            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan)
             // P1 (2026-07-16, iOS delta): first meaningful use of the
             // app — checking DailyIQ. Ask for push permission here (once)
             // per Apple HIG so the affordance is connected to the value.
@@ -152,11 +164,13 @@ struct DailyIQView: View {
             marketSignals = nil
             myPlayers = nil
             buyCandidates = nil
+            actionPlan = nil
             async let refresh: Void = refreshDailyIQ(for: selectedDate)
             async let signals: Void = loadMarketSignals()
             async let mine: Void = loadMyPlayers()
             async let candidates: Void = loadBuyCandidates()
-            _ = await (refresh, signals, mine, candidates)
+            async let plan: Void = loadActionPlan()
+            _ = await (refresh, signals, mine, candidates, plan)
         }
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(sessionViewModel: sessionViewModel)
@@ -1277,6 +1291,93 @@ private var watchlistCard: some View {
         } catch {
             // Best-effort — tile hides on failure.
         }
+    }
+
+    // MARK: - PR #546: Action Plan hero
+
+    /// Loads the sorted per-holding verdict feed for the Action Plan
+    /// hero. Silent failure — nil response hides the section entirely.
+    private func loadActionPlan() async {
+        do {
+            actionPlan = try await APIService.shared.fetchActionPlan()
+        } catch {
+            actionPlan = nil
+        }
+    }
+
+    /// Two-part hero: summary chip strip (verdict counts) + LazyVStack
+    /// of ActionCardRow. Chip tap filters the row list. Full-suppress
+    /// when the response has zero actions.
+    @ViewBuilder
+    private var actionPlanSection: some View {
+        if let plan = actionPlan,
+           let all = plan.actions, all.isEmpty == false {
+            VStack(alignment: .leading, spacing: 12) {
+                HIQSectionHeader(
+                    "Today's Action Plan",
+                    subtitle: "What to do with each card you own — sorted by urgency."
+                )
+                actionPlanCountsStrip(plan: plan)
+                LazyVStack(spacing: 10) {
+                    ForEach(plan.actions(filteredBy: actionPlanFilter)) { card in
+                        ActionCardRow(card: card) {
+                            NotificationCenter.default.post(
+                                name: .actionPlanRowTapped,
+                                object: nil,
+                                userInfo: ["holdingId": card.holdingId]
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Verdict counts chip strip. Tapping a chip filters the list;
+    /// tapping the active chip clears the filter.
+    @ViewBuilder
+    private func actionPlanCountsStrip(plan: ActionPlanResponse) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ActionVerdict.allCases) { verdict in
+                    let count = plan.count(for: verdict)
+                    if count > 0 {
+                        actionPlanCountsChip(
+                            verdict: verdict,
+                            count: count,
+                            isActive: actionPlanFilter == verdict
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    @ViewBuilder
+    private func actionPlanCountsChip(verdict: ActionVerdict, count: Int, isActive: Bool) -> some View {
+        Button {
+            actionPlanFilter = isActive ? nil : verdict
+        } label: {
+            HStack(spacing: 6) {
+                Text("\(count)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(verdict.color)
+                Text(verdict.chipLabel)
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.4)
+                    .foregroundStyle(isActive ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isActive ? verdict.color.opacity(0.18) : HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(verdict.color.opacity(isActive ? 0.8 : 0.35), lineWidth: isActive ? 1.4 : 1)
+            )
+            .clipShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Batch 2: Sell-Now Radar / Value Hunter / Notable Sales banners

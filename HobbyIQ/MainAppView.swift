@@ -153,6 +153,12 @@ private struct AppTabShellView: View {
             selectedTab = .inventory
             Task { await portfolioVM.refresh() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .actionPlanRowTapped)) { _ in
+            // PR #546 (2026-07-17): DailyIQ Action Plan row was tapped.
+            // Switch to Inventory so the user can drill into the holding.
+            visitedTabs.insert(.inventory)
+            selectedTab = .inventory
+        }
         .onChange(of: scenePhase) { _, newPhase in
             // Foreground recovery for entitlements. Resets the retry counter
             // and re-fetches, so a load that earlier exhausted its 1-2-4s

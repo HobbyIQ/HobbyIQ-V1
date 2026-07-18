@@ -641,6 +641,13 @@ struct APIService {
         )
     }
 
+    /// PR #546: sorted per-holding verdict feed for the DailyIQ tab's
+    /// Action Plan hero. Empty `actions` when the portfolio has none
+    /// (freshly onboarded users) — UI suppresses the block.
+    func fetchActionPlan() async throws -> ActionPlanResponse {
+        try await get(path: "/api/dailyiq/action-plan", responseType: ActionPlanResponse.self)
+    }
+
     // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
     // 30-day timing forecast was consolidated into PREDICTED (7d) which
     // now sources the same matched-cohort math after backend PR #543.
@@ -2707,7 +2714,10 @@ struct APIService {
         "/api/portfolio/sell-now-radar",
         "/api/portfolio/notable-sales",
         "/api/portfolio/sub-raw-discovery",
-        "/api/portfolio/missing-parallels"
+        "/api/portfolio/missing-parallels",
+        // PR #546 (2026-07-17): action-plan feed for DailyIQ hero.
+        // Same reasoning — transient 401 must not evict the session.
+        "/api/dailyiq/action-plan"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
