@@ -80,6 +80,13 @@ struct PortfolioIQView: View {
     @State private var cascadeAlerts: CascadeAlertsResponse?
     /// Phase 3.8: gate the drill-down push from the cascade banner.
     @State private var showCascadeList = false
+    /// PR #548 (2026-07-17): engine-accuracy trust badge under the total
+    /// portfolio value. 6h in-memory TTL — only re-fetches when the
+    /// timestamp is nil or older than the window.
+    @State private var backtestAccuracy: PredictedPriceAccuracyResponse?
+    @State private var backtestAccuracyLoadedAt: Date?
+    @State private var showBacktestSheet = false
+    private static let backtestAccuracyTTL: TimeInterval = 6 * 60 * 60
 
     var body: some View {
         // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
@@ -100,6 +107,12 @@ struct PortfolioIQView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 16) {
                             header
+
+                            // PR #548 (2026-07-17): engine-accuracy trust
+                            // badge sits directly under the total portfolio
+                            // value. Self-suppresses on insufficient sample
+                            // or nil response.
+                            backtestAccuracyBadge
 
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
@@ -159,6 +172,12 @@ struct PortfolioIQView: View {
             .task {
                 await collectionValueViewModel.load()
                 await loadSupplyDemandAggregates()
+                await loadBacktestAccuracyIfStale()
+            }
+            .sheet(isPresented: $showBacktestSheet) {
+                if let response = backtestAccuracy {
+                    BacktestAccuracySheet(response: response)
+                }
             }
             // P0.7 delta (2026-07-16, verdict-history-flip-surfaces.md):
             // consume `appState.pendingRoute` when it names a holding UUID.
@@ -895,6 +914,74 @@ struct PortfolioIQView: View {
             return "\(player) \(number)"
         }
         return player.isEmpty ? "your top card" : player
+    }
+
+    // MARK: - PR #548 Engine-Accuracy Trust Badge
+
+    /// Loads the backtest response when the cache is nil or older than
+    /// `backtestAccuracyTTL`. Silent failure — badge suppresses on nil.
+    private func loadBacktestAccuracyIfStale() async {
+        if let loadedAt = backtestAccuracyLoadedAt,
+           Date().timeIntervalSince(loadedAt) < Self.backtestAccuracyTTL,
+           backtestAccuracy != nil {
+            return
+        }
+        do {
+            backtestAccuracy = try await APIService.shared.fetchBacktestPredictedPriceAccuracy(windowDays: 90)
+            backtestAccuracyLoadedAt = Date()
+        } catch {
+            backtestAccuracy = nil
+        }
+    }
+
+    /// Renders the trust badge. Three states:
+    ///   - `.trustworthy`: green dot + hit-rate copy
+    ///   - `.developing`: yellow dot + "still calibrating (N matched sales)"
+    ///   - `.insufficientSample` / nil verdict / nil accuracy: hidden
+    @ViewBuilder
+    private var backtestAccuracyBadge: some View {
+        if let accuracy = backtestAccuracy?.accuracy,
+           let verdict = accuracy.verdict,
+           verdict != .insufficientSample {
+            Button {
+                showBacktestSheet = true
+            } label: {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(verdict == .trustworthy ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.warning)
+                        .frame(width: 8, height: 8)
+                    Text(backtestBadgeCopy(verdict: verdict, accuracy: accuracy))
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func backtestBadgeCopy(verdict: BacktestVerdict, accuracy: PredictedPriceAccuracy) -> String {
+        switch verdict {
+        case .trustworthy:
+            let pct = accuracy.hitRateWithin20Pct.map { Int(($0 * 100).rounded()) } ?? 0
+            return "Engine accuracy: \(pct)% within \u{00B1}20% over last 90d"
+        case .developing:
+            let pairs = accuracy.matchedPairs ?? 0
+            return "Engine accuracy: still calibrating (\(pairs) matched sales)"
+        case .insufficientSample:
+            return ""
+        }
     }
 
     // MARK: - PR #425 Supply/Demand Dashboard

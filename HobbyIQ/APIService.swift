@@ -648,6 +648,17 @@ struct APIService {
         try await get(path: "/api/dailyiq/action-plan", responseType: ActionPlanResponse.self)
     }
 
+    /// PR #548: engine accuracy over a rolling window. Powers the small
+    /// trust badge under the total portfolio value on Portfolio landing.
+    /// `windowDays` bounded 30..365 backend-side; default 90.
+    func fetchBacktestPredictedPriceAccuracy(windowDays: Int = 90) async throws -> PredictedPriceAccuracyResponse {
+        try await get(
+            path: "/api/backtest/predicted-price-accuracy",
+            queryItems: [URLQueryItem(name: "windowDays", value: String(windowDays))],
+            responseType: PredictedPriceAccuracyResponse.self
+        )
+    }
+
     // PR #526's fetchTimingForecast removed 2026-07-17 — the standalone
     // 30-day timing forecast was consolidated into PREDICTED (7d) which
     // now sources the same matched-cohort math after backend PR #543.
@@ -2717,7 +2728,10 @@ struct APIService {
         "/api/portfolio/missing-parallels",
         // PR #546 (2026-07-17): action-plan feed for DailyIQ hero.
         // Same reasoning — transient 401 must not evict the session.
-        "/api/dailyiq/action-plan"
+        "/api/dailyiq/action-plan",
+        // PR #548 (2026-07-17): engine-accuracy trust badge on
+        // Portfolio landing. Same reasoning.
+        "/api/backtest/predicted-price-accuracy"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
