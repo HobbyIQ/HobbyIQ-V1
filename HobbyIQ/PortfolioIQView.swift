@@ -114,6 +114,11 @@ struct PortfolioIQView: View {
                             // or nil response.
                             backtestAccuracyBadge
 
+                            // PR #554 (2026-07-17): per-verdict hit-rate
+                            // pill. Self-suppresses until 5+ verdicts have
+                            // been logged and the read route is live.
+                            EngineHitRatePill()
+
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
                             }
@@ -2001,6 +2006,10 @@ private struct LedgerEntryDetailSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerSection
+                // PR #554 (2026-07-17): post-sale attribution outcome
+                // badge. Self-suppresses for no_verdict + before the
+                // read route lands (returns 404 -> hidden).
+                SaleOutcomeBadge(soldEntryId: entry.id)
                 transactionSection
                 if entry.isEbaySource {
                     ebayFeeBreakdownSection

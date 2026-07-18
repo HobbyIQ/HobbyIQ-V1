@@ -683,6 +683,27 @@ struct APIService {
         )
     }
 
+    /// PR #554 (2026-07-17): post-sale attribution outcome for a single
+    /// sold ledger entry. Route lands as a backend follow-up; the store
+    /// (action_plan_outcomes) is already populated on every sale.
+    func fetchSaleOutcome(soldEntryId: String) async throws -> SaleOutcomeResponse {
+        let encoded = soldEntryId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? soldEntryId
+        return try await get(
+            path: "/api/portfolio/sales/\(encoded)/outcome",
+            responseType: SaleOutcomeResponse.self
+        )
+    }
+
+    /// PR #554 (2026-07-17): per-verdict rollup for the "engine hit rate"
+    /// counter on Portfolio landing. Hidden entirely when totalVerdicts
+    /// falls below the 5-verdict floor.
+    func fetchOutcomesSummary() async throws -> OutcomesSummaryResponse {
+        try await get(
+            path: "/api/backtest/outcomes-summary",
+            responseType: OutcomesSummaryResponse.self
+        )
+    }
+
     /// PR #555 (2026-07-17): k-anonymity-gated community aggregates for
     /// a catalog card. Never returns individual portfolios — signals
     /// suppress below k=5 with a reason string.
@@ -2883,7 +2904,10 @@ struct APIService {
         "/api/catalog/additions",
         // PR #555 (2026-07-17): community consent GET fires on Account
         // load + Card Detail community pill.
-        "/api/community/consent"
+        "/api/community/consent",
+        // PR #554 (2026-07-17): outcomes-summary counter on Portfolio
+        // landing. Best-effort — hidden until the read route lands.
+        "/api/backtest/outcomes-summary"
     ]
 
     /// P0.7 (2026-07-16): variable-segment best-effort paths (e.g. the
@@ -2899,6 +2923,10 @@ struct APIService {
         // PR #555 (2026-07-17): per-card community aggregates. Fires on
         // Card Detail open. Same reasoning.
         "/api/community/card/",
+        // PR #554 (2026-07-17): per-sale outcome fetch fires on Sale
+        // Details open. Same reasoning; 404 while the read route lands
+        // means the badge just stays hidden.
+        "/api/portfolio/sales/",
         // Phase 3-4 (2026-07-17): yearbook parameterized by year.
         // Session-safe read.
         "/api/portfolio/yearbook",
