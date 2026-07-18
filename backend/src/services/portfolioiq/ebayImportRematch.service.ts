@@ -119,16 +119,15 @@ export async function rematchOne(
     }
     if (!top) return emptyAfter("no_match");
 
-    // CF-EBAY-REMATCH-STRICT (Drew, 2026-07-18): suppress risky
-    // parallel rewrites. Bare "Blue" being confidently upgraded to
-    // "Blue X-Fractor" without the title explicitly saying so is the
-    // exact failure the first dry-run surfaced.
+    // CF-EBAY-REMATCH-TITLE-GUARD (Drew, 2026-07-18): "the name says
+    // what it is." Single decision function classifies each parallel
+    // change into (accept / preserve-before) based on info-loss vs
+    // info-swap vs info-add, with title-support as the escape hatch
+    // for swaps/adds only. Losses are never authorized by title.
     const proposedParallel = (top.variant ?? before.parallel) as string | null;
-    const finalParallel =
-      isRiskyParallelChange(before.parallel, proposedParallel)
-      && !titleMentionsSpecificParallel(title, proposedParallel)
-        ? before.parallel
-        : proposedParallel;
+    const finalParallel = shouldSuppressParallelChange(title, before.parallel, proposedParallel)
+      ? before.parallel
+      : proposedParallel;
     const after = {
       parallel: finalParallel,
       cardNumber: (top.number ?? before.cardNumber) as string | null,
@@ -336,39 +335,121 @@ function pickBestMatch(
   return survivors[0]?.c ?? null;
 }
 
+/** Word-list constants shared between title-guard functions. */
+const BARE_COLORS = ["blue", "orange", "red", "green", "gold", "purple", "black", "pink", "yellow", "sepia"];
+// Distinctive parallel sub-types. NOTE: "aqua" is treated as a
+// distinctive sub (not a bare color) because in the Bowman/Topps
+// vocabulary Aqua Refractor is a specific SKU, not a generic color.
+const DISTINCTIVE_SUBS = ["x-fractor", "xfractor", "shimmer", "speckle", "wave", "reptilian", "lazer", "sapphire", "aqua", "ice", "mojo", "sepia", "true"];
+
+function hasWord(s: string, word: string): boolean {
+  return new RegExp(`\\b${word.replace("-", "\\-")}\\b`).test(s);
+}
+
 /** True when the eBay title explicitly mentions the specific parallel
  *  the matcher wants to upgrade to (e.g. actually says "X-Fractor"). */
-function titleMentionsSpecificParallel(title: string, proposedParallel: string | null): boolean {
+export function titleMentionsSpecificParallel(title: string, proposedParallel: string | null): boolean {
   if (!proposedParallel) return false;
   const t = title.toLowerCase();
   const p = proposedParallel.toLowerCase().trim();
-  // Split on space and require any distinguishing token (not "refractor"
-  // itself, since bare "refractor" is ambiguous). X-Fractor, Shimmer,
-  // Speckle, Wave, Mojo, Border, etc. are distinctive.
-  const distinctiveTokens = p.split(/\s+/).filter((w) =>
-    ["x-fractor", "xfractor", "shimmer", "speckle", "wave", "mojo", "border", "geometric", "logofractor", "logo"].includes(w),
-  );
+  const distinctiveTokens = DISTINCTIVE_SUBS.filter((w) => p.includes(w));
   if (distinctiveTokens.length === 0) return true;   // no distinctive token to check
-  return distinctiveTokens.every((tok) => t.includes(tok.replace("-", "")));
+  // Title match: check the exact token AND its dash-stripped form
+  // (e.g. "x-fractor" and "xfractor" are interchangeable in the wild).
+  return distinctiveTokens.every((tok) => {
+    const stripped = tok.replace("-", "");
+    return t.includes(tok) || t.includes(stripped);
+  });
 }
 
-/** Compare "before" and "after" parallel to detect risky rewrites.
- *  Returns true when the change should be SUPPRESSED because it
- *  looks like the matcher upgraded ambiguously. */
-function isRiskyParallelChange(before: string | null, after: string | null): boolean {
+/** CF-EBAY-REMATCH-TITLE-GUARD (Drew, 2026-07-18). Classifies a
+ *  proposed parallel change against the eBay title. Returns true when
+ *  the change should be SUPPRESSED (preserve before-parallel).
+ *
+ *  Categories:
+ *   - LOSS (color or sub-parallel dropped) → always suppress. Title
+ *     cannot authorize losing existing info; a proposal that's
+ *     strictly less specific than before is worse.
+ *   - SWAP (color or sub-parallel replaced with different one) →
+ *     suppress unless title literally names the new value.
+ *   - ADD (adding color/sub to a vaguer before) → suppress unless
+ *     title literally names the new value.
+ *   - CANONICAL EXTENSION (same color + same sub, adding "Refractor"
+ *     suffix) → allow.
+ *
+ *  Failure modes this catches (from Drew's v3 dry-run):
+ *   1. Bare "Blue" → "Blue X-Fractor" (title doesn't say X-Fractor)
+ *   2. Refractor ↔ X-Fractor swap
+ *   3. Color LOSS: "Gold" → "Base", "Blue Refractor" → "Refractor"
+ *   4. Color SWAP: "Green X" → "Blue X" (unless title says Blue)
+ *   5. Sub-parallel LOSS: "Gold Wave Refractor" → "Gold"
+ *   6. Sub-parallel SWAP: "Orange Shimmer" → "Orange Wave Refractor",
+ *      "Reptilian Refractor" → "Lazer Refractor" (unless title says
+ *      the new sub — e.g. "Speckle Refractors" in title allows the
+ *      Aqua → Speckle upgrade).
+ *   7. Adding sub-parallel: "Refractor" → "Reptilian Refractor". */
+export function shouldSuppressParallelChange(
+  title: string,
+  before: string | null,
+  proposed: string | null,
+): boolean {
+  if (!before || !proposed) return false;
+  const b = before.toLowerCase().trim();
+  const a = proposed.toLowerCase().trim();
+  if (b === a) return false;
+
+  const t = title.toLowerCase();
+  const bColor = BARE_COLORS.find((c) => hasWord(b, c));
+  const aColor = BARE_COLORS.find((c) => hasWord(a, c));
+  const bSub = DISTINCTIVE_SUBS.find((w) => hasWord(b, w));
+  const aSub = DISTINCTIVE_SUBS.find((w) => hasWord(a, w));
+
+  // LOSS — never authorized by title. Color loss covers "Gold" → "Base"
+  // and "Blue Refractor" → "Refractor" (drops color). Sub loss covers
+  // "Gold Wave Refractor" → "Gold" (drops Wave).
+  if (bColor && !aColor) return true;
+  if (bSub && !aSub) return true;
+
+  // SWAP — color swap suppressed unless title has the new color;
+  // sub-parallel swap suppressed unless title mentions the new sub.
+  if (bColor && aColor && bColor !== aColor && !hasWord(t, aColor)) return true;
+  if (bSub && aSub && bSub !== aSub && !titleMentionsSpecificParallel(title, proposed)) return true;
+
+  // Refractor ↔ X-Fractor swap (character-level, not word-boundary).
+  if (b.includes("refractor") && a.includes("x-fractor") && !b.includes("x-fractor")
+      && !titleMentionsSpecificParallel(title, proposed)) return true;
+  if (b.includes("x-fractor") && a.includes("refractor") && !a.includes("x-fractor")
+      && !titleMentionsSpecificParallel(title, proposed)) return true;
+
+  // ADD — bare-color before to specific-sub after; suppress unless
+  // title actually mentions the new sub.
+  const isBareColor = (s: string) => BARE_COLORS.includes(s);
+  if (isBareColor(b) && !isBareColor(a) && !titleMentionsSpecificParallel(title, proposed)) return true;
+  if (!bSub && aSub && !titleMentionsSpecificParallel(title, proposed)) return true;
+
+  return false;
+}
+
+/** LEGACY: kept exported for the pinning tests. Classifies category
+ *  only — the caller must combine with `titleMentionsSpecificParallel`
+ *  to make the final decision. Prefer `shouldSuppressParallelChange`. */
+export function isRiskyParallelChange(before: string | null, after: string | null): boolean {
   if (!before || !after) return false;
   const b = before.toLowerCase().trim();
   const a = after.toLowerCase().trim();
   if (b === a) return false;
-  // Bare color word being "upgraded" to a specific refractor type is
-  // exactly the failure mode Drew flagged ("Blue" → "Blue X-Fractor"
-  // when title didn't say X-Fractor). Preserve the vaguer form.
-  const bareColors = ["blue", "orange", "red", "green", "gold", "purple", "black", "pink", "yellow", "aqua", "sepia"];
-  const isBareColor = (s: string) => bareColors.includes(s);
+  const isBareColor = (s: string) => BARE_COLORS.includes(s);
   if (isBareColor(b) && !isBareColor(a)) return true;
-  // Similarly if before has "Refractor" and after swaps to X-Fractor,
-  // that's a specific-refractor-type change — risky.
   if (b.includes("refractor") && a.includes("x-fractor") && !b.includes("x-fractor")) return true;
   if (b.includes("x-fractor") && a.includes("refractor") && !a.includes("x-fractor")) return true;
+  const bColor = BARE_COLORS.find((c) => hasWord(b, c));
+  const aColor = BARE_COLORS.find((c) => hasWord(a, c));
+  if (bColor && !aColor) return true;
+  if (bColor && aColor && bColor !== aColor) return true;
+  const bSub = DISTINCTIVE_SUBS.find((w) => hasWord(b, w));
+  const aSub = DISTINCTIVE_SUBS.find((w) => hasWord(a, w));
+  if (bSub && !aSub) return true;
+  if (bSub && aSub && bSub !== aSub) return true;
+  if (!bSub && aSub) return true;
   return false;
 }
