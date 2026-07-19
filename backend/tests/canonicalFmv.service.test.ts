@@ -57,6 +57,7 @@ describe("computeCanonicalFmv contract", () => {
       "direct-comp",
       "cross-parallel",
       "neighbor-parallel",
+      "sibling-parallel",
       "family-baseline",
       "product-tier",
       "no-basis",
@@ -96,7 +97,10 @@ describe("CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19)", () => {
   // guaranteed not to hit rungs 1-3 in prod-connected tests.
   const UNKNOWN_CARDID = "nonexistent-cardid-nobasis-gate-test";
 
-  it("specific parallel + zero comps → no-basis, fmv null", async () => {
+  it("specific parallel + zero comps + nonexistent cardNumber → no-basis, fmv null", async () => {
+    // Uses a fake cardNumber (CPA-ZZNONE) so the sibling-parallel rung
+    // can't rescue us — the goal here is to verify the no-basis gate
+    // fires when NO rung finds anything, not to test sibling.
     const result = await computeCanonicalFmv({
       cardId: UNKNOWN_CARDID,
       parallel: "Blue Refractor",
@@ -105,7 +109,7 @@ describe("CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19)", () => {
       cardYear: 2026,
       product: "2026 Bowman Chrome",
       player: "No Such Player",
-      cardNumber: "CPA-XX",
+      cardNumber: "CPA-ZZNONE",
       freshCompute: true,
     });
     expect(result.method).toBe("no-basis");
