@@ -124,7 +124,21 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
       return;
     }
 
-    const prices = listingsResult.listings
+    // CF-LISTING-RANGE-TITLE-VERIFY (Drew, 2026-07-18). eBay Browse's
+    // fuzzy search bleeds base cards into "Blue Refractor" queries.
+    // Post-fetch title verification enforces:
+    //   1. cardNumber (CPA-EHA etc.) must appear in the listing title
+    //   2. distinctive parallel tokens in the target (Shimmer / Speckle
+    //      / X-Fractor / Wave / etc.) must appear in the title
+    //   3. dominant color word (Blue / Gold / etc.) must appear in the
+    //      title when the target has one
+    //   4. distinctive tokens NOT in the target must NOT appear
+    //      (a Blue Refractor query rejects Blue X-Fractor listings)
+    const verifiedListings = listingsResult.listings.filter((l) =>
+      titleMatchesParallel(l.title ?? "", parallel ?? null, cardNumber ?? null),
+    );
+
+    const prices = verifiedListings
       .map((l) => l.price)
       .filter((p) => Number.isFinite(p) && p > 0)
       .sort((a, b) => a - b);
@@ -166,7 +180,7 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
     // Top 12 listings (by price ascending) for the tap-through sheet.
     // iOS renders these as individual rows the user can click into for
     // deeper eBay research.
-    const topListings = listingsResult.listings
+    const topListings = verifiedListings
       .slice()
       .sort((a, b) => a.price - b.price)
       .slice(0, 12)
@@ -183,12 +197,74 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
       count: prices.length,
       range,
       median: p50 !== null ? Math.round(p50 * 100) / 100 : null,
-      min: Math.round(prices[0] * 100) / 100,
-      max: Math.round(prices[prices.length - 1] * 100) / 100,
+      min: prices.length > 0 ? Math.round(prices[0] * 100) / 100 : null,
+      max: prices.length > 0 ? Math.round(prices[prices.length - 1] * 100) / 100 : null,
       delta,
       listings: topListings,
+      // Debug field for ops — shows how many raw Browse hits were
+      // filtered out by title verification. Not part of the iOS
+      // contract; safe to strip if noisy.
+      __filteredRaw: listingsResult.listings.length,
+      __filteredVerified: verifiedListings.length,
     });
   } catch (err) { next(err); }
 });
+
+/** Distinctive parallel keywords that must appear in the listing
+ *  title if they appear in the target parallel. Mirrors the list in
+ *  ebayImportRematch.service.ts DISTINCTIVE_SUBS so search matching
+ *  and pool-side matching agree. */
+const DISTINCTIVE_TOKENS = [
+  "x-fractor", "xfractor", "shimmer", "speckle", "wave", "reptilian",
+  "lazer", "sapphire", "aqua", "ice", "mojo", "sepia", "true",
+  "border", "sky", "pattern", "geometric", "logofractor", "logo",
+  "prizm", "hyper", "silver", "cracked",
+];
+
+const BARE_COLORS = ["blue", "orange", "red", "green", "gold", "purple", "black", "pink", "yellow", "sepia"];
+
+/** Post-fetch title verification. Enforces cardNumber presence,
+ *  parallel keyword presence, color presence, and exclusion of
+ *  competing distinctive tokens. Returns true when the listing's
+ *  title is plausibly for the target parallel. */
+function titleMatchesParallel(
+  title: string,
+  targetParallel: string | null,
+  targetCardNumber: string | null,
+): boolean {
+  const t = title.toLowerCase();
+  const parallel = (targetParallel ?? "").toLowerCase().trim();
+
+  // 1. cardNumber (if specified) MUST appear in the title
+  if (targetCardNumber && targetCardNumber.trim().length > 0) {
+    const cn = targetCardNumber.trim().toLowerCase();
+    // Match with optional # prefix and word boundary
+    const cnRe = new RegExp(`#?\\b${cn.replace(/[-.]/g, "\\$&")}\\b`);
+    if (!cnRe.test(t)) return false;
+  }
+
+  // No parallel specified → passes (base cards etc.)
+  if (!parallel) return true;
+
+  // 2. Every distinctive token in the target parallel MUST appear in the title.
+  const targetDistinctive = DISTINCTIVE_TOKENS.filter((tok) => parallel.includes(tok));
+  for (const tok of targetDistinctive) {
+    const stripped = tok.replace("-", "");
+    if (!t.includes(tok) && !t.includes(stripped)) return false;
+  }
+
+  // 3. Dominant color in the target MUST appear in the title.
+  const targetColor = BARE_COLORS.find((c) => new RegExp(`\\b${c}\\b`).test(parallel));
+  if (targetColor && !new RegExp(`\\b${targetColor}\\b`).test(t)) return false;
+
+  // 4. Distinctive tokens NOT in the target MUST NOT appear in the title.
+  // Prevents a "Blue Refractor" query from matching "Blue X-Fractor" listings.
+  const targetNoDistinctive = DISTINCTIVE_TOKENS.filter((tok) => !parallel.includes(tok));
+  for (const tok of targetNoDistinctive) {
+    if (t.includes(tok)) return false;
+  }
+
+  return true;
+}
 
 export default router;
