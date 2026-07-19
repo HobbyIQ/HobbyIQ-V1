@@ -349,7 +349,10 @@ struct HIQSearchBar: View {
                 } label: {
                     Image(systemName: isListening ? "mic.fill" : "mic")
                         .font(.body.weight(.bold))
-                        .foregroundStyle(isListening ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.electricBlue)
+                        // 2026-07-19: mic accent-green when idle (per spec §1) —
+                        // reads as an inviting action instead of matching the
+                        // ambient blue chrome.
+                        .foregroundStyle(isListening ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.hobbyGreen)
                         .symbolEffect(.pulse, isActive: isListening)
                 }
                 .buttonStyle(.plain)
