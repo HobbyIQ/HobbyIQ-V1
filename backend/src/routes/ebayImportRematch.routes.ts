@@ -709,6 +709,47 @@ router.post("/admin/sell-side-notify/run", requireAdmin, async (req: Request, re
   } catch (err) { next(err); }
 });
 
+// CF-SUB-RAW-INVERSION-SCAN (Drew, 2026-07-19). Admin trigger for the
+// nightly sub-raw inversion scanner. Emits sub_raw_inversion_observed
+// telemetry per SKU where a Raw sale exceeds the graded median.
+router.post("/admin/sub-raw-inversion/scan", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { runSubRawInversionScan } = await import(
+      "../services/signals/subRawInversionScan.service.js"
+    );
+    const sport = typeof req.body?.sport === "string" ? req.body.sport : "baseball";
+    const summary = await runSubRawInversionScan({
+      sport,
+      windowDays: typeof req.body?.windowDays === "number" ? req.body.windowDays : undefined,
+      minRawSales: typeof req.body?.minRawSales === "number" ? req.body.minRawSales : undefined,
+      minGradedSales: typeof req.body?.minGradedSales === "number" ? req.body.minGradedSales : undefined,
+      minMarginPct: typeof req.body?.minMarginPct === "number" ? req.body.minMarginPct : undefined,
+      dryRun: req.body?.dryRun === true,
+    });
+    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
+// CF-GRADE-ARBITRAGE (Drew, 2026-07-19). Admin trigger for the nightly
+// grade-arbitrage push job. Fires via GH Actions.
+router.post("/admin/grade-arbitrage-notify/run", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { runGradeArbitrageNotifyJob } = await import(
+      "../services/portfolioiq/gradeArbitrageNotifyJob.service.js"
+    );
+    const summary = await runGradeArbitrageNotifyJob({
+      dryRun: req.body?.dryRun === true,
+      minUpliftX: typeof req.body?.minUpliftX === "number" ? req.body.minUpliftX : undefined,
+      minRawFmvUSD: typeof req.body?.minRawFmvUSD === "number" ? req.body.minRawFmvUSD : undefined,
+      perUserDailyCap: typeof req.body?.perUserDailyCap === "number" ? req.body.perUserDailyCap : undefined,
+      perHoldingCooldownDays: typeof req.body?.perHoldingCooldownDays === "number" ? req.body.perHoldingCooldownDays : undefined,
+      dismissCooldownDays: typeof req.body?.dismissCooldownDays === "number" ? req.body.dismissCooldownDays : undefined,
+      sport: typeof req.body?.sport === "string" ? req.body.sport : undefined,
+    });
+    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
 // CF-EBAY-IMPORT-ADMIN (Drew, 2026-07-18). Admin-impersonation of
 // importEbayPurchaseHistory so ops can trigger a user's eBay purchase
 // history sync without their session. Uses the user's stored eBay

@@ -1,0 +1,101 @@
+name: Sub-Raw Inversion Scan (nightly)
+
+# CF-SUB-RAW-INVERSION-SCAN (Drew, 2026-07-19). Nightly batch scan at
+# 5:00AM ET across sold_comps that emits sub_raw_inversion_observed
+# telemetry per SKU where a Raw sale exceeds the graded median (>5%
+# margin, at least 2 raw sales + 3 graded in the window). Feeds the S1
+# KQL that powers DailyIQ hot-prospects.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 5:00AM ET = 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      sport:
+        description: 'Sport scope (default baseball)'
+        required: false
+        type: string
+        default: 'baseball'
+      window_days:
+        description: 'Lookback window in days (default 30)'
+        required: false
+        type: string
+        default: '30'
+      min_margin_pct:
+        description: 'Min inversion margin % (default 5)'
+        required: false
+        type: string
+        default: '5'
+      dry_run:
+        description: 'Dry-run (compute only, no telemetry emitted)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 15
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret missing"
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: POST sub-raw-inversion/scan
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          SPORT: ${{ inputs.sport || 'baseball' }}
+          WINDOW: ${{ inputs.window_days || '30' }}
+          MARGIN: ${{ inputs.min_margin_pct || '5' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc \
+            --arg sport "$SPORT" \
+            --argjson window "$WINDOW" \
+            --argjson margin "$MARGIN" \
+            --argjson dryRun "$DRY_RUN" \
+            '{ sport: $sport, windowDays: $window, minMarginPct: $margin, dryRun: $dryRun }')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 900 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/sub-raw-inversion/scan" \
+            -o response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::sub-raw-inversion scan failed: $STATUS"
+            cat response.json || true
+            exit 1
+          fi
+          echo "Summary:"
+          jq '.summary' response.json
+
+      - name: Upload response as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sub-raw-inversion-scan-response-${{ github.run_id }}
+          path: response.json
+          retention-days: 14
