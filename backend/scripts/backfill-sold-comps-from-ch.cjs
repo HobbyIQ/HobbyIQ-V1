@@ -34,7 +34,7 @@
 const { CosmosClient } = require("@azure/cosmos");
 
 function parseArgs(argv) {
-  const args = { concurrency: 4, apply: false, limit: Infinity, cardSetContains: null };
+  const args = { concurrency: 4, apply: false, limit: Infinity, cardSetContains: null, sport: null };
   for (const a of argv) {
     if (a.startsWith("--from=")) args.from = a.slice(7);
     else if (a.startsWith("--to=")) args.to = a.slice(5);
@@ -43,8 +43,24 @@ function parseArgs(argv) {
     else if (a.startsWith("--concurrency=")) args.concurrency = Math.min(32, Math.max(1, parseInt(a.slice(14), 10)));
     else if (a.startsWith("--limit=")) args.limit = parseInt(a.slice(8), 10);
     else if (a.startsWith("--card-set-contains=")) args.cardSetContains = a.slice(20).toLowerCase();
+    else if (a.startsWith("--sport=")) args.sport = a.slice(8).toLowerCase();
   }
   return args;
+}
+
+/** Same sport-inference logic as soldCompsStore.inferSportFromContext,
+ *  duplicated here so the backfill script has no TS import dependency. */
+function inferSport(setName, title) {
+  const text = `${setName ?? ""} ${title ?? ""}`.toLowerCase();
+  if (!text.trim()) return null;
+  if (text.includes("baseball")) return "baseball";
+  if (text.includes("football") || text.includes("nfl")) return "football";
+  if (text.includes("basketball") || text.includes("nba")) return "basketball";
+  if (text.includes("hockey") || text.includes("nhl")) return "hockey";
+  if (text.includes("soccer") || text.includes("mls") || text.includes("premier league")) return "soccer";
+  if (/\bbowman\b/.test(text)) return "baseball";
+  if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
+  return null;
 }
 
 function parseGrader(grader) {
@@ -133,6 +149,8 @@ async function main() {
         if (!r.card_id || !(Number(r.price) > 0) || !r.sale_date) { daySkipped++; return; }
         const { gradeCompany, gradeValue } = parseGrader(r.grader);
         const sourceExternalId = `ch-daily::${r.card_id}::${r.sale_date}::${Math.round(Number(r.price) * 100)}`;
+        const title = `${r.year} ${r.card_set} #${r.number} ${r.variant}`.trim();
+        const sport = args.sport ?? inferSport(r.card_set, title);
         const doc = {
           id: `cardhedge::${sourceExternalId}`,
           cardId: r.card_id,
@@ -142,6 +160,7 @@ async function main() {
           parallel: r.variant ?? null,       // NATIVE parallel — the fix vs warmPoolFromCh pollution
           cardNumber: r.number ?? null,       // NATIVE cardNumber
           isAuto: /auto/i.test(r.variant ?? "") || /auto/i.test(r.card_set ?? ""),
+          sport,                              // sport tag for cross-sport filtering
           gradeCompany,
           gradeValue,
           price: Number(r.price),
@@ -150,7 +169,7 @@ async function main() {
           source: "cardhedge",
           sourceExternalId,
           contributorUserId: null,
-          title: `${r.year} ${r.card_set} #${r.number} ${r.variant}`.trim(),
+          title,
           imageUrl: r.image_url ?? null,
           sellerHandle: null,
           verifiedByUser: false,

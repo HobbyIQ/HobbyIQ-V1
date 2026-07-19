@@ -74,6 +74,12 @@ export interface SoldCompDoc {
   parallel: string | null;
   cardNumber: string | null;
   isAuto: boolean;
+  // CF-SOLD-COMPS-SPORT (Drew, 2026-07-19): sport tag for cross-sport
+  // filtering + sport-scoped analytics. Baseball / football / basketball /
+  // hockey / soccer / other. Null on legacy docs; readers should treat
+  // null as sport-unknown (fall back to card_set text matching).
+  // Populated by inferSportFromContext() at every write site.
+  sport?: string | null;
   // CF-USER-COMPS-GRADE (Drew, 2026-07-18): grade tier fields for
   // pool-side filtering. gradeCompany null = raw. Present-but-null on
   // legacy docs written before this migration; readers must treat
@@ -128,6 +134,10 @@ export interface RecordSoldCompInput {
   parallel?: string | null;
   cardNumber?: string | null;
   isAuto?: boolean;
+  /** Sport tag ("baseball" / "football" / "basketball" / "hockey" /
+   *  "soccer" / null). When absent, inferSportFromContext() derives from
+   *  setName + title. */
+  sport?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
   price: number;
@@ -183,6 +193,31 @@ async function getContainer(): Promise<Container | null> {
   return _initPromise;
 }
 
+/** CF-SOLD-COMPS-SPORT-INFER (Drew, 2026-07-19). Best-effort sport
+ *  detection from setName + title. Explicit "baseball"/"football"/etc.
+ *  substrings win. Product-family heuristics (Bowman → baseball, Prizm
+ *  is ambiguous) are a fallback. Returns null when unknown so the row
+ *  is queryable but excluded from sport-filtered analytics rather than
+ *  wrongly bucketed. */
+export function inferSportFromContext(
+  setName: string | null | undefined,
+  title: string | null | undefined,
+): string | null {
+  const text = `${setName ?? ""} ${title ?? ""}`.toLowerCase();
+  if (!text.trim()) return null;
+  // Explicit sport substring wins
+  if (text.includes("baseball")) return "baseball";
+  if (text.includes("football") || text.includes("nfl")) return "football";
+  if (text.includes("basketball") || text.includes("nba")) return "basketball";
+  if (text.includes("hockey") || text.includes("nhl")) return "hockey";
+  if (text.includes("soccer") || text.includes("mls") || text.includes("premier league")) return "soccer";
+  // Product-family heuristics (unambiguous single-sport lines)
+  if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
+  if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
+  if (/\bdonruss\s+optic\b/.test(text)) return null;   // ambiguous — could be any sport
+  return null;
+}
+
 function makeId(source: SoldCompSource, externalId: string | null, cardId: string, soldAt: string): string {
   // Prefer external id when the source provides one; fall back to a
   // deterministic hash of (cardId, source, soldAt) so manual entries
@@ -216,6 +251,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     parallel: input.parallel ?? null,
     cardNumber: input.cardNumber ?? null,
     isAuto: input.isAuto ?? false,
+    sport: input.sport ?? inferSportFromContext(input.setName, input.title),
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
     price: input.price,
