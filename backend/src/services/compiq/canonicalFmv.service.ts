@@ -210,8 +210,13 @@ export async function computeCanonicalFmv(
 async function computeCanonicalFmvUncached(
   input: CanonicalFmvInput,
 ): Promise<CanonicalFmvResult> {
+  const t0 = Date.now();
   const cardId = (input.cardId ?? "").trim();
-  if (!cardId) return NULL_RESULT("missing cardId");
+  if (!cardId) {
+    const nb = NULL_RESULT("missing cardId");
+    logCompute(nb, input, t0);
+    return nb;
+  }
 
   // Fetch the broader trend signal once — every rung that needs it
   // (single-anchor projection) reads from this.
@@ -224,34 +229,42 @@ async function computeCanonicalFmvUncached(
     : null;
   const trendPctPerMonth = momentumMultiplierToPctPerMonth(momentum?.multiplier ?? null);
 
-  // ── Rung 1: direct-comp ────────────────────────────────────────────
   const directResult = await tryDirectComp(cardId, input, trendPctPerMonth);
-  if (directResult) return directResult;
-
-  // ── Rung 2: cross-parallel ─────────────────────────────────────────
+  if (directResult) { logCompute(directResult, input, t0); return directResult; }
   const crossResult = await tryCrossParallel(cardId, input, trendPctPerMonth);
-  if (crossResult) return crossResult;
-
-  // ── Rung 3: neighbor-parallel ──────────────────────────────────────
-  // Same product family, same parallel, different cardId. NOT WIRED YET
-  // in this initial cut — requires reference-catalog / family-lookup
-  // integration. See tryNeighborParallel below (returns null placeholder).
+  if (crossResult) { logCompute(crossResult, input, t0); return crossResult; }
   const neighborResult = await tryNeighborParallel(cardId, input, trendPctPerMonth);
-  if (neighborResult) return neighborResult;
-
-  // ── Rung 4: family-baseline ────────────────────────────────────────
-  // Guestimate compound-multiplier restated. NOT WIRED YET — will
-  // wrap the existing guestimate helper. Returns null for now.
+  if (neighborResult) { logCompute(neighborResult, input, t0); return neighborResult; }
   const familyResult = await tryFamilyBaseline(cardId, input, trendPctPerMonth);
-  if (familyResult) return familyResult;
-
-  // ── Rung 5: product-tier ────────────────────────────────────────────
-  // Cold-start last resort. NOT WIRED YET.
+  if (familyResult) { logCompute(familyResult, input, t0); return familyResult; }
   const tierResult = await tryProductTier(cardId, input, trendPctPerMonth);
-  if (tierResult) return tierResult;
+  if (tierResult) { logCompute(tierResult, input, t0); return tierResult; }
 
-  // Every rung fell through — honest no-basis.
-  return NULL_RESULT("no rung produced a value");
+  const nb = NULL_RESULT("no rung produced a value");
+  logCompute(nb, input, t0);
+  return nb;
+}
+
+/** CF-CANONICAL-FMV-TELEMETRY (Drew, 2026-07-18). Single JSON log line
+ *  per compute so App Insights can chart method distribution, latency
+ *  percentiles, confidence buckets, no-basis rate. Powers the KQL
+ *  dashboards documented in
+ *  scratchpad/canonical-fmv-app-insights-queries-*.md. */
+function logCompute(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: number): void {
+  try {
+    console.log(JSON.stringify({
+      event: "compiq.canonical_fmv.computed",
+      source: "canonicalFmv.service",
+      cardId: input.cardId,
+      parallel: input.parallel ?? null,
+      gradeCompany: input.gradeCompany ?? null,
+      gradeValue: input.gradeValue ?? null,
+      method: result.method,
+      confidence: result.confidence,
+      fmv: result.fmv,
+      elapsedMs: Date.now() - t0,
+    }));
+  } catch { /* logging never breaks compute */ }
 }
 
 // ─── CH pool-warming ──────────────────────────────────────────────────
