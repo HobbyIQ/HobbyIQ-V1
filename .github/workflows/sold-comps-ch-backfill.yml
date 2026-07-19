@@ -1,0 +1,115 @@
+name: Sold Comps CH Backfill
+
+# CF-SOLD-COMPS-CH-BACKFILL (Drew, 2026-07-19). Bulk populates
+# sold_comps from ch_daily_sales. Manual dispatch only — the initial
+# backfill is a one-time large operation; incremental daily writes
+# happen via canonical FMV warm on demand.
+#
+# Idempotent: uses source::sourceExternalId dedup, safe to re-dispatch
+# with overlapping windows. Kill + restart at any point resumes from
+# the last written day.
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: 'Start date (YYYY-MM-DD, inclusive)'
+        required: true
+        type: string
+        default: '2019-01-01'
+      to_date:
+        description: 'End date (YYYY-MM-DD, inclusive)'
+        required: true
+        type: string
+        default: '2026-12-31'
+      sport:
+        description: 'Sport tag to write on rows (baseball/football/basketball/hockey)'
+        required: true
+        type: string
+        default: 'baseball'
+      card_set_contains:
+        description: 'Filter ch_daily_sales card_set by substring (case-insensitive)'
+        required: false
+        type: string
+        default: 'baseball'
+      concurrency:
+        description: 'Concurrent writers (default 6, max 16)'
+        required: false
+        type: string
+        default: '6'
+      dry_run:
+        description: 'Dry-run (read only, no writes)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 350   # GH's max — long enough for a full year at peak season
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps (only @azure/cosmos needed)
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 app settings
+        id: cosmos
+        run: |
+          set -euo pipefail
+          CONN=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" \
+            -o tsv)
+          if [ -z "$CONN" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING not resolvable via az webapp config"
+            exit 1
+          fi
+          echo "::add-mask::$CONN"
+          # Register for downstream steps via GITHUB_ENV — value stays masked
+          # in logs because we called ::add-mask::.
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+
+      - name: Run backfill
+        working-directory: backend
+        env:
+          DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '--dry-run' || '--apply' }}
+        run: |
+          node scripts/backfill-sold-comps-from-ch.cjs \
+            --from=${{ inputs.from_date }} \
+            --to=${{ inputs.to_date }} \
+            --sport=${{ inputs.sport }} \
+            --card-set-contains=${{ inputs.card_set_contains }} \
+            --concurrency=${{ inputs.concurrency }} \
+            $DRY_RUN_ARG \
+            | tee backfill-out.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backfill-log-${{ github.run_id }}
+          path: backend/backfill-out.log
+          retention-days: 30
