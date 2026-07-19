@@ -1,0 +1,34 @@
+{
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [
+    { "path": "/*" }
+  ],
+  "excludedPaths": [
+    { "path": "/photos/*" },
+    { "path": "/ebayItemAspects/*" },
+    { "path": "/_etag/?" }
+  ],
+  "compositeIndexes": [
+    [
+      { "path": "/playerName", "order": "ascending" },
+      { "path": "/soldAt", "order": "descending" }
+    ],
+    [
+      { "path": "/product", "order": "ascending" },
+      { "path": "/soldAt", "order": "descending" }
+    ],
+    [
+      { "path": "/sport", "order": "ascending" },
+      { "path": "/soldAt", "order": "descending" }
+    ],
+    [
+      { "path": "/sport", "order": "ascending" },
+      { "path": "/playerName", "order": "ascending" }
+    ],
+    [
+      { "path": "/cardYear", "order": "ascending" },
+      { "path": "/playerName", "order": "ascending" }
+    ]
+  ]
+}
