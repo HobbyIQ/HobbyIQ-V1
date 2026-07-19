@@ -1,0 +1,99 @@
+name: Sell-Side Notify (nightly)
+
+# CF-SELL-SIDE-NOTIFY (Drew, 2026-07-18). Fires the sell-side notify
+# job every night at 5:30AM ET. The job walks every user's holdings,
+# compares current canonical FMV vs the last-notify snapshot, and emits
+# an APNS push when a holding lifts materially (default 5% threshold).
+#
+# Per-user daily cap: 3 pushes. Per-holding cooldown: 48h. Dismiss
+# cooldown: 7d. Idempotent — persisting lastNotify state prevents
+# re-firing.
+#
+# Manual dispatch supported for testing with dryRun + custom threshold.
+
+on:
+  schedule:
+    - cron: "30 9 * * *"   # 5:30AM ET = 09:30 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (compute + report, no pushes sent)'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+      lift_threshold_pct:
+        description: 'Minimum lift % to fire a push (default 5)'
+        required: false
+        type: string
+        default: '5'
+      per_user_daily_cap:
+        description: 'Max pushes per user per day (default 3)'
+        required: false
+        type: string
+        default: '3'
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 15
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret missing"
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: POST sell-side-notify/run
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          LIFT_THRESHOLD: ${{ inputs.lift_threshold_pct || '5' }}
+          USER_CAP: ${{ inputs.per_user_daily_cap || '3' }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson lift "$LIFT_THRESHOLD" \
+            --argjson cap "$USER_CAP" \
+            '{ dryRun: $dryRun, liftThresholdPct: $lift, perUserDailyCap: $cap }')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 900 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/sell-side-notify/run" \
+            -o response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::sell-side-notify failed: $STATUS"
+            cat response.json || true
+            exit 1
+          fi
+          echo "Summary:"
+          jq '.summary' response.json
+
+      - name: Upload response as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sell-side-notify-response-${{ github.run_id }}
+          path: response.json
+          retention-days: 14

@@ -609,4 +609,26 @@ router.post("/admin/comps/add", requireAdmin, async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
+// CF-SELL-SIDE-NOTIFY (Drew, 2026-07-18). Admin trigger for the
+// sell-side notify job. Fires via GH Actions nightly cron; also
+// manually dispatchable for testing.
+//
+// Auth: requireAdmin.
+// Body: { dryRun?: boolean, liftThresholdPct?: number, perUserDailyCap?: number }
+router.post("/admin/sell-side-notify/run", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { runSellSideNotifyJob } = await import(
+      "../services/portfolioiq/sellSideNotifyJob.service.js"
+    );
+    const summary = await runSellSideNotifyJob({
+      dryRun: req.body?.dryRun === true,
+      liftThresholdPct: typeof req.body?.liftThresholdPct === "number" ? req.body.liftThresholdPct : undefined,
+      perUserDailyCap: typeof req.body?.perUserDailyCap === "number" ? req.body.perUserDailyCap : undefined,
+      perHoldingCooldownHours: typeof req.body?.perHoldingCooldownHours === "number" ? req.body.perHoldingCooldownHours : undefined,
+      dismissCooldownDays: typeof req.body?.dismissCooldownDays === "number" ? req.body.dismissCooldownDays : undefined,
+    });
+    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
 export default router;
