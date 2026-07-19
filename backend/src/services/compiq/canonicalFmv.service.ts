@@ -61,6 +61,7 @@ export type CanonicalFmvMethod =
   | "direct-comp"
   | "cross-parallel"
   | "neighbor-parallel"
+  | "sibling-parallel"
   | "family-baseline"
   | "product-tier"
   | "no-basis";
@@ -255,6 +256,24 @@ async function computeCanonicalFmvUncached(
   const neighborResult = await tryNeighborParallel(cardId, input, trendPctPerMonth);
   if (neighborResult) return finalize(neighborResult, input, t0);
 
+  // CF-SIBLING-PARALLEL-RUNG (Drew, 2026-07-19). When the specific
+  // parallel has zero direct/cross/neighbor comps, look at OTHER
+  // parallels of the same (year, cardNumber, product family) as
+  // pricing signal. For a scarce numbered parallel like Blue Refractor
+  // /150 that hasn't traded recently, sibling parallels (Purple $46,
+  // Green Shimmer $69, Yellow $110) form a plausible ladder.
+  //
+  // Estimate = median across sibling per-variant medians. Excludes
+  // Base (typically a much larger print run that would drag the
+  // estimate way down). Confidence is deliberately low (0.35) because
+  // this is a bridge estimate, not a direct comp; iOS should render
+  // it with an "estimate" chip.
+  //
+  // Only fires when input specifies a non-base parallel; a base
+  // request should keep falling through to family-baseline as before.
+  const siblingResult = await trySiblingParallel(input, trendPctPerMonth);
+  if (siblingResult) return finalize(siblingResult, input, t0);
+
   // CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19). Real regressions
   // observed at 2026-07-19 card-show prep: Jared Jones 2026 Bowman
   // Chrome Prospect Auto Blue Refractor /150 returned $3, Bobby Witt
@@ -336,7 +355,7 @@ function buildGradeLadder(
   // reads as "same card in PSA 10 = $X" but is nowhere near real. Only
   // render the ladder when the anchor is trustworthy (direct-comp /
   // cross-parallel / neighbor-parallel).
-  const trustworthyMethods = new Set<CanonicalFmvMethod>(["direct-comp", "cross-parallel", "neighbor-parallel"]);
+  const trustworthyMethods = new Set<CanonicalFmvMethod>(["direct-comp", "cross-parallel", "neighbor-parallel", "sibling-parallel"]);
   if (!trustworthyMethods.has(result.method)) return null;
   const family = classifyFamily(input.product);
   if (family === "other") return null;
@@ -1037,6 +1056,138 @@ async function tryNeighborParallel(
 // Guestimate itself requires a familyBaseRawPrice input — we derive
 // it from productTierBaseFor (same table as rung 5). When product is
 // unknown, rung 4 returns null and the ladder falls through to rung 5.
+/** CF-SIBLING-PARALLEL-RUNG (Drew, 2026-07-19). Bridge rung between
+ *  neighbor-parallel and the no-basis gate. Uses OTHER parallels of
+ *  the same (year, cardNumber, product) as a pricing signal for
+ *  scarce numbered parallels that haven't traded recently.
+ *
+ *  Anchor = median across per-variant medians. Excludes Base (huge
+ *  print run drags estimate too low) and excludes the target parallel
+ *  itself. Confidence 0.35 — bridge estimate, not a direct comp.
+ *
+ *  Guard: min 3 distinct sibling parallels with at least 1 sale each.
+ *  Fewer than that produces an unstable anchor.
+ *
+ *  Grader match: if input is graded, filter siblings to that grader
+ *  (mixing raw and PSA 10 sibling data would poison the anchor). Raw
+ *  request → only raw siblings.
+ */
+async function trySiblingParallel(
+  input: CanonicalFmvInput,
+  trendPctPerMonth: number | null,
+): Promise<CanonicalFmvResult | null> {
+  if (!input.cardNumber || !input.cardYear || !input.product) return null;
+  const parallel = (input.parallel ?? "").trim();
+  if (parallel === "" || parallel.toLowerCase() === "base") return null;
+
+  const container = await getChDailyContainer();
+  if (!container) return null;
+
+  const graderQuery = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
+    ? `${input.gradeCompany.toUpperCase()} ${input.gradeValue}`
+    : "Raw";
+  const cutoff = new Date(Date.now() - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString();
+  const productToken = extractProductFamilyToken(input.product);
+
+  try {
+    const { resources } = await container.items.query<{
+      variant: string;
+      price: number;
+      sale_date: string;
+    }>({
+      query: `SELECT c.variant, c.price, c.sale_date
+              FROM c
+              WHERE c.number = @cn
+                AND c.year = @yr
+                AND c.grader = @grader
+                AND CONTAINS(LOWER(c.card_set), @productToken)
+                AND c.sale_date >= @cutoff
+                AND c.price > 0`,
+      parameters: [
+        { name: "@cn", value: input.cardNumber },
+        { name: "@yr", value: input.cardYear },
+        { name: "@grader", value: graderQuery },
+        { name: "@productToken", value: productToken },
+        { name: "@cutoff", value: cutoff },
+      ],
+    }).fetchAll();
+
+    if (resources.length === 0) return null;
+
+    // Group by variant, excluding Base and the target parallel itself.
+    const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
+    const target = stripRefr(parallel);
+    const byVariant = new Map<string, number[]>();
+    for (const r of resources) {
+      const v = (r.variant ?? "").trim();
+      const vNorm = stripRefr(v);
+      if (vNorm === "" || vNorm === "base" || vNorm === target) continue;
+      if (!Number.isFinite(r.price) || r.price <= 0) continue;
+      const arr = byVariant.get(v) ?? [];
+      arr.push(r.price);
+      byVariant.set(v, arr);
+    }
+    if (byVariant.size < 3) return null;
+
+    // Per-variant median → median across the per-variant medians.
+    const variantMedians: Array<{ variant: string; median: number; n: number }> = [];
+    for (const [variant, prices] of byVariant) {
+      const sorted = prices.slice().sort((a, b) => a - b);
+      variantMedians.push({
+        variant,
+        median: sorted[Math.floor(sorted.length / 2)],
+        n: sorted.length,
+      });
+    }
+    const medians = variantMedians.map((v) => v.median).sort((a, b) => a - b);
+    const anchor = medians[Math.floor(medians.length / 2)];
+    if (!Number.isFinite(anchor) || anchor <= 0) return null;
+
+    // Apply trend if present. Sibling anchor is a "current-price"
+    // snapshot; we project ~0 days forward to keep the estimate as
+    // "worth today" rather than an aggressive forward projection.
+    const fmv = Math.round(anchor * 100) / 100;
+
+    return {
+      fmv,
+      method: "sibling-parallel",
+      confidence: 0.35,
+      provenance: {
+        summary: `sibling-parallel estimate from ${variantMedians.length} sibling variants of #${input.cardNumber} in ${input.cardYear} ${productToken}`,
+        comps: variantMedians.slice(0, 10).map((v) => ({
+          price: v.median,
+          soldAt: new Date().toISOString(),
+          source: "cardhedge",
+          parallel: v.variant,
+          verifiedByUser: false,
+        })),
+        trendPctPerMonth,
+        multipliers: {
+          siblingVariantCount: variantMedians.length,
+          siblingMedianOfMedians: anchor,
+        },
+      },
+      computedAt: new Date().toISOString(),
+    };
+  } catch { return null; }
+}
+
+/** Extract a family token for LOWER-CONTAINS matching against
+ *  ch_daily_sales.card_set. e.g. "2026 Bowman Chrome Prospects" →
+ *  "bowman chrome" (the most distinctive multi-word token). Falls
+ *  back to the first two words of the product. */
+function extractProductFamilyToken(product: string): string {
+  const lower = product.toLowerCase();
+  if (lower.includes("bowman chrome")) return "bowman chrome";
+  if (lower.includes("bowman draft")) return "bowman draft";
+  if (lower.includes("bowman")) return "bowman";
+  if (lower.includes("topps chrome")) return "topps chrome";
+  if (lower.includes("panini prizm")) return "panini prizm";
+  if (lower.includes("panini donruss") || lower.includes("donruss")) return "donruss";
+  if (lower.includes("topps")) return "topps";
+  return lower.split(/\s+/).slice(0, 2).join(" ");
+}
+
 async function tryFamilyBaseline(
   _cardId: string,
   input: CanonicalFmvInput,
