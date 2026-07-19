@@ -697,6 +697,52 @@ struct APIService {
         )
     }
 
+    /// PR #598-#600 series (2026-07-19): recent-sales feed for a card.
+    /// Returns the raw comps that fed the canonical FMV pipeline —
+    /// used to render the "N recent sales" collapsed section on Card
+    /// Detail below the FMV headline. Narrow by grade/parallel when
+    /// the caller is scoped to a single tier.
+    func fetchRecentSales(
+        cardId: String,
+        parallel: String? = nil,
+        gradeCompany: String? = nil,
+        gradeValue: Double? = nil,
+        days: Int = 180,
+        limit: Int = 25
+    ) async throws -> RecentSalesResponse {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "days", value: String(days)),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let parallel, parallel.isEmpty == false {
+            items.append(URLQueryItem(name: "parallel", value: parallel))
+        }
+        if let gradeCompany, gradeCompany.isEmpty == false {
+            items.append(URLQueryItem(name: "gradeCompany", value: gradeCompany))
+        }
+        if let gradeValue {
+            items.append(URLQueryItem(name: "gradeValue", value: String(gradeValue)))
+        }
+        let encoded = cardId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        return try await get(
+            path: "/api/compiq/cards/\(encoded)/recent-sales",
+            queryItems: items,
+            responseType: RecentSalesResponse.self
+        )
+    }
+
+    /// PR #601 (2026-07-19): user attests they saw a sale. Backend
+    /// stores as source `manual-user-entry`; feeds the canonical
+    /// pipeline on next compute. Errors are HTTP 400 with a body of
+    /// `{ error: string }`; callers surface the message inline.
+    func addManualComp(_ request: ManualCompAddRequest) async throws -> ManualCompAddResponse {
+        try await post(
+            path: "/api/portfolio/manual-comps/add",
+            body: request,
+            responseType: ManualCompAddResponse.self
+        )
+    }
+
     /// PR #592 (2026-07-18): p25-p75 range + median of ACTIVE eBay
     /// listings for a card. Powers the "Currently listing on eBay"
     /// section under the FMV headline on Card Detail. `player` is

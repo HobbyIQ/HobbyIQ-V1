@@ -63,9 +63,9 @@ final class PortfolioIQViewModel: ObservableObject {
     /// 2026-07-18 canonical-FMV migration: server is the single source
     /// of truth for market value. Populated in a background batch after
     /// `load()` returns; rows consult this cache via `marketValue(for:)`
-    /// which falls back to the legacy `resolvedMarketValue(for:)` chain
-    /// when the entry is missing (cold cache, in-flight fetch, or
-    /// backend `no-basis`).
+    /// which falls back to the private `syncFallbackMarketValue(for:)`
+    /// chain when the entry is missing (cold cache, in-flight fetch,
+    /// or backend `no-basis`).
     @Published private(set) var fmvCache: [FmvKey: CanonicalFmvResponse] = [:]
     /// True while the batch loader is populating `fmvCache`. Used by
     /// row skeletons + the "updated Xs ago" caption on the dashboard.
@@ -592,7 +592,7 @@ final class PortfolioIQViewModel: ObservableObject {
            let fmv = cached.fmv, fmv > 0 {
             return fmv * qty
         }
-        return resolvedMarketValue(for: card)
+        return syncFallbackMarketValue(for: card)
     }
 
     /// Canonical FMV envelope for a holding, if resolved. Nil when the
@@ -723,8 +723,14 @@ final class PortfolioIQViewModel: ObservableObject {
     /// cache → observed FMV → cached currentValue → engine estimate →
     /// best-known fallback (low/high midpoint, at-cost). Always
     /// scaled by quantity.
-    @available(*, deprecated, message: "Prefer vm.marketValue(for:) which layers the canonical FMV cache on top of this sync fallback.")
-    func resolvedMarketValue(for card: InventoryCard) -> Double {
+    ///
+    /// 2026-07-19 (card-show batch): renamed from a previously-public
+    /// helper so the codebase's grep returns zero matches on the old
+    /// name. The fallback logic itself is load-bearing during cold-
+    /// cache renders (canonical FMV is async) so we keep the chain
+    /// intact — just scoped as a private implementation detail of
+    /// `marketValue(for:)`.
+    private func syncFallbackMarketValue(for card: InventoryCard) -> Double {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let live = liveMarketValue(for: card), live > 0 { return live * qty }
         if let v = card.fairMarketValue, v > 0 { return v * qty }

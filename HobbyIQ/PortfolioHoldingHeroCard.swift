@@ -48,6 +48,16 @@ struct PortfolioHoldingHeroCard: View {
     /// enabled when the canonical response carries provenance data.
     @State private var showingWhyThisPriceSheet: Bool = false
 
+    /// 2026-07-19 (card-show batch): temporary headline override from
+    /// the parent's grade-ladder tap. When set, the MARKET VALUE
+    /// headline shows this value with a small "×" revert affordance.
+    /// The underlying canonical response stays authoritative for
+    /// method / confidence chips + provenance.
+    var headlineFmvOverride: Double? = nil
+    /// Fires when the user taps the "×" to revert the override.
+    /// Parent clears its swap state.
+    var onClearHeadlineOverride: (() -> Void)? = nil
+
     /// Effective canonical FMV — shared cache wins over the local
     /// per-hero fetch.
     private var canonicalFmv: CanonicalFmvResponse? {
@@ -214,7 +224,7 @@ struct PortfolioHoldingHeroCard: View {
     /// gradient text + electric-blue glow.
     /// CF-INVENTORY-COMPCARD-MATCH (2026-07-08): source order aligns
     /// with the comp card. First try the live panel entry for this
-    /// holding's grade — `resolvedMarketValue` is the exact same
+    /// holding's grade — same `CardPanelGradeEntry.resolvedMarketValue`
     /// fallback chain the comp card uses (`trendAdjustedValue →
     /// value → weightedMedianPrice → plainMedianPrice`), so the
     /// inventory detail and the comp card render the same number.
@@ -237,10 +247,11 @@ struct PortfolioHoldingHeroCard: View {
             if let v = card.estimatedValue, v > 0 { return v }
             return nil
         }()
-        // If canonical FMV explicitly declared no-basis, honor it —
-        // don't fabricate from the legacy chain. Otherwise use the
-        // best available number.
+        // 2026-07-19 (card-show batch): grade-ladder tap override
+        // wins over both canonical + legacy so the hero swaps to the
+        // sibling tier's value. Otherwise: canonical -> legacy.
         let value: Double? = {
+            if let override = headlineFmvOverride, override > 0 { return override }
             if canonicalFmv?.methodEnum == .noBasis { return nil }
             return canonicalValue ?? fallbackValue
         }()
@@ -250,27 +261,43 @@ struct PortfolioHoldingHeroCard: View {
                 .tracking(1.0)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             if let value {
-                Text(wholeUSDString(value))
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                HStack(spacing: 8) {
+                    Text(wholeUSDString(value))
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    // 2026-07-18: tap the headline to open the "Why
-                    // this price?" transparency sheet. Only enabled
-                    // when we have canonical provenance to show.
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if canWhyThisPriceOpen {
-                            showingWhyThisPriceSheet = true
+                        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        // 2026-07-18: tap the headline to open the "Why
+                        // this price?" transparency sheet. Only enabled
+                        // when we have canonical provenance to show.
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if canWhyThisPriceOpen {
+                                showingWhyThisPriceSheet = true
+                            }
                         }
+                    // 2026-07-19 (card-show batch): revert affordance
+                    // when the parent has swapped in a sibling grade
+                    // via the grade-ladder tap.
+                    if headlineFmvOverride != nil {
+                        Button {
+                            onClearHeadlineOverride?()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Revert grade swap")
                     }
+                }
 
                 // 2026-07-18: canonical-FMV caveats + provenance caption.
                 // Renders only when we're using the canonical value.

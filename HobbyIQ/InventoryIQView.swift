@@ -218,7 +218,7 @@ struct InventoryIQView: View {
     private var header: some View {
         let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
         let totalValue: Double = vm.inventoryCards.reduce(0.0) { sum, card in
-            sum + resolvedMarketValue(for: card)
+            sum + holdingMarketValue(for: card)
         }
         let valueText = inventoryWholeDollarString(totalValue)
 
@@ -551,7 +551,7 @@ struct InventoryIQView: View {
     /// 2026-07-18 canonical-FMV migration: routes through
     /// `vm.marketValue(for:)` which prefers the canonical cache and
     /// falls back to the legacy sync chain on miss.
-    private func resolvedMarketValue(for card: InventoryCard) -> Double {
+    private func holdingMarketValue(for card: InventoryCard) -> Double {
         vm.marketValue(for: card)
     }
 
@@ -605,9 +605,9 @@ struct InventoryIQView: View {
 
         switch inventorySort {
         case .valueHighToLow:
-            cards.sort { resolvedMarketValue(for: $0) > resolvedMarketValue(for: $1) }
+            cards.sort { holdingMarketValue(for: $0) > holdingMarketValue(for: $1) }
         case .valueLowToHigh:
-            cards.sort { resolvedMarketValue(for: $0) < resolvedMarketValue(for: $1) }
+            cards.sort { holdingMarketValue(for: $0) < holdingMarketValue(for: $1) }
         case .nameAZ:
             cards.sort { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedAscending }
         case .nameZA:

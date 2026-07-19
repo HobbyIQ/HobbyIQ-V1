@@ -178,6 +178,11 @@ struct PortfolioIQView: View {
                 await collectionValueViewModel.load()
                 await loadSupplyDemandAggregates()
                 await loadBacktestAccuracyIfStale()
+                // 2026-07-19 (card-show batch): push permission ask
+                // moved here from DailyIQ per spec — Portfolio is the
+                // first paint that carries clear value for sell-side
+                // alerts, so it's the honest moment to ask.
+                await PushNotificationManager.shared.askIfFirstMeaningfulUse()
             }
             .sheet(isPresented: $showBacktestSheet) {
                 if let response = backtestAccuracy {

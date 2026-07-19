@@ -17,10 +17,12 @@ struct PortfolioCardRow: View {
     let card: InventoryCard
     /// Fully-resolved market value for THIS holding (already scaled by
     /// quantity). Callers compute it via
-    /// `PortfolioIQViewModel.resolvedMarketValue(for:)` so the row,
-    /// grid, detail hero, header total, and sort all read the same
-    /// number. When nil (e.g. previews), the row falls back to the
-    /// legacy per-field chain inside `inventoryRightColumn`.
+    /// `PortfolioIQViewModel.marketValue(for:)` (which routes through
+    /// the canonical FMV cache, falling back to the sync helper on
+    /// cache miss) so the row, grid, detail hero, header total, and
+    /// sort all read the same number. When nil (e.g. previews), the
+    /// row falls back to the legacy per-field chain inside
+    /// `inventoryRightColumn`.
     var resolvedValue: Double? = nil
     /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): most recent
     /// flip within the last 14 days for this holding's player. Renders
@@ -216,8 +218,8 @@ struct PlayerTrendArrow: View {
 
 struct PortfolioCardGridCard: View {
     let card: InventoryCard
-    /// Same canonical `resolvedMarketValue(for:)` output the list row
-    /// takes; keeps grid and row in sync.
+    /// Same canonical `PortfolioIQViewModel.marketValue(for:)` output
+    /// the list row takes; keeps grid and row in sync.
     var resolvedValue: Double? = nil
 
     var body: some View {
