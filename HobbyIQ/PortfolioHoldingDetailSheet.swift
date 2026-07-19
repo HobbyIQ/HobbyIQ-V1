@@ -336,7 +336,7 @@ struct PortfolioHoldingDetailSheet: View {
         if let entry = lockedGradeEntry(),
            entry.valueSource == .observed,
            (entry.sampleCount ?? 0) > 0,
-           let value = entry.resolvedMarketValue, value > 0 {
+           let value = entry.resolvedGradeValue, value > 0 {
             return value * qty
         }
         let resolved = viewModel.marketValue(for: card)
@@ -1090,7 +1090,7 @@ struct PortfolioHoldingDetailSheet: View {
     @ViewBuilder
     private func scenarioPill(label: String, key: String) -> some View {
         let entry = entryForKey(key)
-        let hasData = entry?.resolvedMarketValue != nil
+        let hasData = entry?.resolvedGradeValue != nil
         let isSelected = scenarioGradeKey == key
         Button {
             scenarioGradeKey = key
@@ -1130,7 +1130,7 @@ struct PortfolioHoldingDetailSheet: View {
     @ViewBuilder
     private var scenarioResultRows: some View {
         let entry = entryForKey(scenarioGradeKey)
-        let projected: Double? = entry?.resolvedMarketValue
+        let projected: Double? = entry?.resolvedGradeValue
         let gradingCost = scenarioCostValue
         // 2026-07-18 canonical-FMV migration: the "vs raw today" delta
         // row anchors on the canonical value (per-unit) when the VM

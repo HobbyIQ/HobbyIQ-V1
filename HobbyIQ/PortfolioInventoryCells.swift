@@ -15,12 +15,12 @@ import SwiftUI
 
 struct PortfolioCardRow: View {
     let card: InventoryCard
-    /// Fully-resolved market value for THIS holding (already scaled by
-    /// quantity). Callers compute it via
-    /// `PortfolioIQViewModel.resolvedMarketValue(for:)` so the row,
-    /// grid, detail hero, header total, and sort all read the same
-    /// number. When nil (e.g. previews), the row falls back to the
-    /// legacy per-field chain inside `inventoryRightColumn`.
+    /// Canonical-FMV market value for THIS holding (already scaled by
+    /// quantity). Callers compute it via `PortfolioIQViewModel.marketValue(for:)`
+    /// so the row, grid, detail hero, header total, and sort all read
+    /// the same number. Zero when the canonical cache is cold or
+    /// returned no-basis — the row displays "\u{2014}" in that state
+    /// (see 2026-07-19 legacy fallback removal).
     var resolvedValue: Double? = nil
     /// P0.7 (2026-07-16, verdict-history-flip-surfaces.md): most recent
     /// flip within the last 14 days for this holding's player. Renders
@@ -216,8 +216,8 @@ struct PlayerTrendArrow: View {
 
 struct PortfolioCardGridCard: View {
     let card: InventoryCard
-    /// Same canonical `resolvedMarketValue(for:)` output the list row
-    /// takes; keeps grid and row in sync.
+    /// Same canonical `marketValue(for:)` output the list row takes;
+    /// keeps grid and row in sync.
     var resolvedValue: Double? = nil
 
     var body: some View {

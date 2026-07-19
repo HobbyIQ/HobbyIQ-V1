@@ -214,7 +214,7 @@ struct PortfolioHoldingHeroCard: View {
     /// gradient text + electric-blue glow.
     /// CF-INVENTORY-COMPCARD-MATCH (2026-07-08): source order aligns
     /// with the comp card. First try the live panel entry for this
-    /// holding's grade — `resolvedMarketValue` is the exact same
+    /// holding's grade — `resolvedGradeValue` is the exact same
     /// fallback chain the comp card uses (`trendAdjustedValue →
     /// value → weightedMedianPrice → plainMedianPrice`), so the
     /// inventory detail and the comp card render the same number.
