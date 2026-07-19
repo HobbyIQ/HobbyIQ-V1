@@ -409,7 +409,7 @@ struct PortfolioHoldingDetailSheet: View {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let entry = lockedGradeEntry(),
            entry.valueSource == .observed,
-           (entry.sampleCount ?? 0) > 0,
+           entry.sampleCount > 0,
            let value = entry.resolvedMarketValue, value > 0 {
             return value * qty
         }
@@ -441,7 +441,7 @@ struct PortfolioHoldingDetailSheet: View {
             let entries = response.gradeCurve?.entries ?? []
             panelEntries = entries
             let hasObserved = entries.contains { entry in
-                entry.valueSource == .observed && (entry.sampleCount ?? 0) > 0
+                entry.valueSource == .observed && entry.sampleCount > 0
             }
             if hasObserved {
                 viewModel.writeLivePanelEntries(cardId: cardId, entries: entries)

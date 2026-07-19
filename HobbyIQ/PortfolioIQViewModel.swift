@@ -528,6 +528,11 @@ final class PortfolioIQViewModel: ObservableObject {
         // own `@Published` slots without racing the parent.
         Task { await fetchLedger() }
         Task { await fetchPendingReview() }
+        // 2026-07-18: flip the FMV-loading flag before `fetch` publishes
+        // `inventoryCards` so the Inventory header doesn't render a
+        // fallback-derived total for a frame before the canonical warm
+        // starts. `refreshCanonicalFmvCache`'s defer clears it.
+        isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: false)
         // 2026-07-18: warm the canonical-FMV cache in the background so
         // rows / dashboard total start reading canonical values.
@@ -611,6 +616,17 @@ final class PortfolioIQViewModel: ObservableObject {
     func refreshCanonicalFmvCache(forceRefresh: Bool = false) async {
         fmvBatchGeneration &+= 1
         let generation = fmvBatchGeneration
+        // Flip loading true up-front so all exit paths (including the
+        // empty-requests early return and any callers who set the flag
+        // synchronously before launching this task) clear cleanly.
+        isRefreshingFmvCache = true
+        defer {
+            // Only clear the loading flag when we're still the current
+            // generation — an interleaved refresh keeps ownership.
+            if generation == fmvBatchGeneration {
+                isRefreshingFmvCache = false
+            }
+        }
         // Dedupe by FmvKey so a 100-quantity holding fires one request.
         var seen: Set<FmvKey> = []
         var requests: [(FmvKey, CanonicalFmvRequest)] = []
@@ -628,14 +644,6 @@ final class PortfolioIQViewModel: ObservableObject {
         }
         if forceRefresh {
             fmvCache = [:]
-        }
-        isRefreshingFmvCache = true
-        defer {
-            // Only clear the loading flag when we're still the current
-            // generation — an interleaved refresh keeps ownership.
-            if generation == fmvBatchGeneration {
-                isRefreshingFmvCache = false
-            }
         }
         await withTaskGroup(of: (FmvKey, CanonicalFmvResponse?).self) { group in
             var iterator = requests.makeIterator()
@@ -781,6 +789,8 @@ final class PortfolioIQViewModel: ObservableObject {
         // CF-CANCELLATION-FIX (2026-07-12): see load() — detached
         // Task so the pending-review call outlives this coroutine.
         Task { await fetchPendingReview() }
+        // 2026-07-18: flip loading true up-front — see load() for why.
+        isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: true)
         // 2026-07-18: pull-to-refresh bypasses the server Redis via
         // freshCompute so the user sees fresh canonical FMV.

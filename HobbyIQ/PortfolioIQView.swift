@@ -493,7 +493,6 @@ struct PortfolioIQView: View {
         // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split unpriced into
         // "N estimated · M pending" via the aggregate helper.
         let unpricedSuffix = agg.unpricedSubtitleSuffix
-        let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
         // S3.6 (2026-07-17): statusDate → relative "Updated 2h ago" style
         // instead of a "Jul 17" absolute stamp.

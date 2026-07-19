@@ -300,10 +300,24 @@ struct InventoryIQView: View {
                 .accessibilityLabel("Add a card to your inventory")
             }
 
-            Text(valueText)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .padding(.top, 2)
+            // 2026-07-18: while the canonical-FMV cache warms, the live
+            // `totalValue` reduce would jump as each per-entry cache
+            // write triggers a re-render. Show a stable placeholder
+            // until the batch completes, then reveal the settled number.
+            Group {
+                if vm.isRefreshingFmvCache {
+                    Text("—")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .redacted(reason: .placeholder)
+                        .accessibilityLabel("Total collection value loading")
+                } else {
+                    Text(valueText)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+            }
+            .padding(.top, 2)
             Text("Total Collection Value")
                 .font(.caption2.weight(.semibold))
                 .tracking(0.6)
