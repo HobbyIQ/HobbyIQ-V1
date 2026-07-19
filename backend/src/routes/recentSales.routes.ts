@@ -110,7 +110,60 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
         confidence: typeof c.confidence === "number" ? c.confidence : null,
       }));
 
-    res.json({ count: comps.length, sales });
+    // CF-RECENT-SALES-BY-GRADE (Drew, 2026-07-19). Comp Sheet UX groups
+    // sales by grade tier so iOS can render tabs (RAW | PSA 10 | PSA 9
+    // | BGS 9.5 | ...) each showing only that tier's sales. Also
+    // returns per-tier summary stats for the "PSA 9: 6 sales @
+    // $875-$1,300 median $1,026 (30d)" shareable format.
+    //
+    // Tabs are only rendered for tiers with ≥1 sale. Order: Raw first,
+    // then descending by grade value.
+    const graderBuckets = new Map<string, typeof sales>();
+    for (const s of sales) {
+      const key = s.gradeCompany && String(s.gradeCompany).trim().length > 0
+        ? `${String(s.gradeCompany).toUpperCase()} ${s.gradeValue ?? ""}`.trim()
+        : "Raw";
+      const arr = graderBuckets.get(key) ?? [];
+      arr.push(s);
+      graderBuckets.set(key, arr);
+    }
+
+    function summarize(rows: typeof sales) {
+      const prices = rows.map((r) => r.price).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+      if (prices.length === 0) return { count: 0, min: null, max: null, median: null };
+      const median = prices[Math.floor(prices.length / 2)];
+      return {
+        count: prices.length,
+        min: Math.round(prices[0] * 100) / 100,
+        max: Math.round(prices[prices.length - 1] * 100) / 100,
+        median: Math.round(median * 100) / 100,
+      };
+    }
+
+    // Deterministic order: Raw first, then graded tiers desc by value.
+    const graderOrder = [...graderBuckets.keys()].sort((a, b) => {
+      if (a === "Raw") return -1;
+      if (b === "Raw") return 1;
+      const av = Number(a.split(" ")[1] ?? 0);
+      const bv = Number(b.split(" ")[1] ?? 0);
+      return bv - av;
+    });
+
+    const byGrade = graderOrder.map((grader) => {
+      const rows = graderBuckets.get(grader) ?? [];
+      return {
+        grader,
+        ...summarize(rows),
+        sales: rows,
+      };
+    });
+
+    res.json({
+      count: comps.length,
+      windowDays: days,
+      sales,           // backwards-compat: flat list preserved
+      byGrade,         // new: grouped by grade tier for the Comp Sheet UI
+    });
   } catch (err) { next(err); }
 });
 
