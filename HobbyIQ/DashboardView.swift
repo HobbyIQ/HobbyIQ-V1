@@ -16,6 +16,7 @@ struct DashboardView: View {
     @State private var searchQuery = ""
     @State private var navigateToCompIQSearch = false
     @State private var navigateToCertResolve = false
+    @State private var navigateToCertLookup = false
     @State private var navigateToMovers = false
     @State private var certResolveInput = ""
     @State private var showCardScanner = false
@@ -48,7 +49,7 @@ struct DashboardView: View {
 
                     searchBar
 
-                    scanAffordance
+                    scanAndCertRow
 
                     gradedScanAffordance
 
@@ -107,6 +108,10 @@ struct DashboardView: View {
         }
         .scanFlow(isPresented: $showCardScanner, sessionViewModel: sessionViewModel)
         .gradedSlabScanFlow(isPresented: $showGradedScanner, sessionViewModel: sessionViewModel)
+        .navigationDestination(isPresented: $navigateToCertLookup) {
+            SlabCertLookupView()
+                .environmentObject(sessionViewModel)
+        }
         .navigationDestination(isPresented: $navigateToMovers) {
             // 2026-07-19: hand the response the at-a-glance viewmodel
             // already fetched into `HotRightNowListView`, which today
@@ -168,32 +173,63 @@ struct DashboardView: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Scan affordance
+    // MARK: - Scan + cert entry row (spec §1)
 
-    private var scanAffordance: some View {
-        Button {
-            showCardScanner = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "camera.viewfinder")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                Text("Scan a card to price it")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+    /// 2026-07-19: split the single scan-raw button into a two-button
+    /// row that pairs scan-raw (left, primary) with a "# Cert #" chip
+    /// (right) that opens `SlabCertLookupView`. Cert lookup was
+    /// previously only reachable via the search bar's 4–10-digit
+    /// shortcut or from inside the graded slab scan flow.
+    private var scanAndCertRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                showCardScanner = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "camera.viewfinder")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Scan raw")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
+                )
+                .clipShape(Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
             }
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
-            )
-            .clipShape(Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            .buttonStyle(.plain)
+            .accessibilityLabel("Scan a raw card to price it")
+
+            Button {
+                navigateToCertLookup = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "number")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Cert #")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
+                )
+                .clipShape(Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Look up a graded card by cert number")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Scan a card to price it")
     }
 
     // MARK: - Graded slab scan affordance
