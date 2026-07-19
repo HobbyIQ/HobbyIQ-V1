@@ -55,6 +55,7 @@ import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { classifyFamily, lookupGradeRatio } from "./gradeCalibrationConfig.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -997,7 +998,8 @@ async function tryProductTier(
   const parallelMult = input.parallel
     ? (lookupParallelMultiplier(input.parallel) ?? 1)
     : 1;
-  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null);
+  const productFamily = classifyFamily(input.product);
+  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily);
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
@@ -1060,11 +1062,49 @@ function detectIsAuto(input: CanonicalFmvInput): boolean {
   return /^(CPA-|BCPA-|BSPA-|CDA-|BCDA-|BDCA-|PA-)/i.test(cn);
 }
 
-/** Grade-tier multiplier ballparks. Matches common (PSA 10 ≈ 4× Raw)
- *  patterns; refined per SKU by the observed-comp rungs 1-4. */
-function gradeTierMultiplier(company: string | null, value: number | null): number {
+/** CF-GRADE-CALIBRATION-INTEGRATION (Drew, 2026-07-18). Grade-tier
+ *  multiplier now sources from empirical per-family per-grader ratios
+ *  in gradeCalibrationConfig.ts (computed from 365d of ch_daily_sales).
+ *
+ *  Lookup order:
+ *   1. product-family + grader → empirical median ratio (best signal)
+ *   2. product-family missing / uncovered → hardcoded fallback per grader
+ *   3. company unknown → 1× (safe raw-equivalent)
+ *
+ *  Sub-tier scaling: the calibration lumps all PSA/BGS/SGC grades of a
+ *  company together (ch_daily_sales.grader is company-level). To
+ *  approximate per-grade-value, apply a downstream scaling factor:
+ *   - Top grade (10.0):     × 1.00  (full empirical ratio)
+ *   - Near-top (9.5):       × 0.65
+ *   - Below (9.0):          × 0.35
+ *   - Way below (< 9):      × 0.20
+ *
+ *  Once ch_daily_sales sold-data includes explicit grade values, refine
+ *  the calibration script to per-tier granularity and drop this scaler.
+ */
+function gradeTierMultiplier(
+  company: string | null,
+  value: number | null,
+  productFamily: string | null,
+): number {
   if (!company || value === null) return 1;   // raw
   const c = company.toUpperCase();
+
+  // Sub-tier scaling — top grade gets the full empirical ratio.
+  const subTierScale = value >= 10 ? 1.0
+    : value >= 9.5 ? 0.65
+    : value >= 9 ? 0.35
+    : 0.20;
+
+  // Empirical lookup: prefer per-family calibration when we have it.
+  if (productFamily) {
+    const empiricalRatio = lookupGradeRatio(productFamily, c);
+    if (empiricalRatio !== null && Number.isFinite(empiricalRatio) && empiricalRatio > 0) {
+      return empiricalRatio * subTierScale;
+    }
+  }
+
+  // Fallback: hardcoded per-company/per-tier defaults.
   if (c === "PSA") {
     if (value >= 10) return 4;
     if (value >= 9) return 1.6;
@@ -1072,13 +1112,18 @@ function gradeTierMultiplier(company: string | null, value: number | null): numb
     return 1;
   }
   if (c === "BGS") {
-    if (value >= 10) return 5;    // BGS 10 is rarer than PSA 10
+    if (value >= 10) return 5;
     if (value >= 9.5) return 3;
     if (value >= 9) return 1.5;
     return 1;
   }
   if (c === "SGC") {
     if (value >= 10) return 3;
+    if (value >= 9.5) return 2;
+    return 1;
+  }
+  if (c === "CGC") {
+    if (value >= 10) return 3.5;
     if (value >= 9.5) return 2;
     return 1;
   }
