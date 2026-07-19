@@ -254,6 +254,34 @@ async function computeCanonicalFmvUncached(
   if (crossResult) return finalize(crossResult, input, t0);
   const neighborResult = await tryNeighborParallel(cardId, input, trendPctPerMonth);
   if (neighborResult) return finalize(neighborResult, input, t0);
+
+  // CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19). Real regressions
+  // observed at 2026-07-19 card-show prep: Jared Jones 2026 Bowman
+  // Chrome Prospect Auto Blue Refractor /150 returned $3, Bobby Witt
+  // Jr. 2020 Bowman Chrome BGS 9 returned $5. Both are cases where the
+  // caller specified a scarce, specific parallel/grade with zero direct
+  // comps, and rungs 4 (family-baseline) + 5 (product-tier) fired with
+  // family MEDIANS instead. A family median is not a projected next
+  // sale for a specific numbered parallel — it's a lie dressed as an
+  // answer. When the request is specific (has a non-base parallel OR a
+  // graded tier), refuse to fall through to family/product rungs and
+  // return no-basis so iOS shows "—" with a "not enough data" chip.
+  //
+  // Base cards without a grade still fall through to rungs 4-5 because
+  // family-baseline is legitimately what "typical 2020 Topps Chrome
+  // base card" means — no scarcity to violate. The gate specifically
+  // protects specific SKUs from being answered with family averages.
+  //
+  // Flag: CANONICAL_FMV_STRICT_NO_BASIS (default "true"). Set "false"
+  // to restore the pre-2026-07-19 fall-through behavior.
+  const strictNoBasis = process.env.CANONICAL_FMV_STRICT_NO_BASIS !== "false";
+  const requestIsSpecific = isSpecificRequest(input);
+  if (strictNoBasis && requestIsSpecific) {
+    const nb = NULL_RESULT("no direct/cross/neighbor comps for specific parallel or grade");
+    logCompute(nb, input, t0);
+    return nb;
+  }
+
   const familyResult = await tryFamilyBaseline(cardId, input, trendPctPerMonth);
   if (familyResult) return finalize(familyResult, input, t0);
   const tierResult = await tryProductTier(cardId, input, trendPctPerMonth);
@@ -262,6 +290,19 @@ async function computeCanonicalFmvUncached(
   const nb = NULL_RESULT("no rung produced a value");
   logCompute(nb, input, t0);
   return nb;
+}
+
+/** A request is "specific" when the caller pinned down a scarce SKU
+ *  attribute — either a non-base parallel string or a graded tier. In
+ *  those cases the family/product-tier rungs are misleading and the
+ *  no-basis gate refuses to fall through. Base-card lookups without a
+ *  grade stay permissive because "typical 2020 Bowman Chrome base
+ *  card" is a legitimate concept a family baseline can express. */
+function isSpecificRequest(input: CanonicalFmvInput): boolean {
+  const parallel = (input.parallel ?? "").trim().toLowerCase();
+  const isNonBase = parallel !== "" && parallel !== "base" && parallel !== "[base]" && parallel !== "none";
+  const isGraded = input.gradeCompany !== null && input.gradeCompany !== undefined && input.gradeCompany.trim().length > 0;
+  return isNonBase || isGraded;
 }
 
 /** Finalize a canonical result: attach the grade ladder (when the
@@ -287,6 +328,16 @@ function buildGradeLadder(
   input: CanonicalFmvInput,
 ): CanonicalFmvGradeLadder | null {
   if (!result.fmv || result.fmv <= 0 || !input.product) return null;
+  // CF-CANONICAL-FMV-LADDER-SUPPRESSION (Drew, 2026-07-19). When the
+  // FMV came from a family-baseline / product-tier / no-basis rung the
+  // raw anchor is a family median, not a projected next sale for this
+  // specific SKU. Multiplying that anchor by a PSA 10 ratio (e.g. 3.46×
+  // for bowman-chrome) amplifies noise into an inflated ladder that
+  // reads as "same card in PSA 10 = $X" but is nowhere near real. Only
+  // render the ladder when the anchor is trustworthy (direct-comp /
+  // cross-parallel / neighbor-parallel).
+  const trustworthyMethods = new Set<CanonicalFmvMethod>(["direct-comp", "cross-parallel", "neighbor-parallel"]);
+  if (!trustworthyMethods.has(result.method)) return null;
   const family = classifyFamily(input.product);
   if (family === "other") return null;
 

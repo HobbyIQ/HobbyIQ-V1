@@ -87,3 +87,100 @@ describe("Deterministic given inputs — same-input calls return same shape", ()
     expect(a.method).toBe(b.method);
   });
 });
+
+describe("CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19)", () => {
+  // The gate refuses to fall through to family-baseline/product-tier
+  // when the request specifies a non-base parallel or a graded tier,
+  // and rungs 1-3 all returned nothing. iOS shows "—" rather than a
+  // family median dressed up as an FMV. Test SKUs use nonsense cardIds
+  // guaranteed not to hit rungs 1-3 in prod-connected tests.
+  const UNKNOWN_CARDID = "nonexistent-cardid-nobasis-gate-test";
+
+  it("specific parallel + zero comps → no-basis, fmv null", async () => {
+    const result = await computeCanonicalFmv({
+      cardId: UNKNOWN_CARDID,
+      parallel: "Blue Refractor",
+      gradeCompany: null,
+      gradeValue: null,
+      cardYear: 2026,
+      product: "2026 Bowman Chrome",
+      player: "No Such Player",
+      cardNumber: "CPA-XX",
+      freshCompute: true,
+    });
+    expect(result.method).toBe("no-basis");
+    expect(result.fmv).toBeNull();
+    expect(result.gradeLadder ?? null).toBeNull();
+  });
+
+  it("graded tier + zero comps → no-basis, fmv null", async () => {
+    const result = await computeCanonicalFmv({
+      cardId: UNKNOWN_CARDID,
+      parallel: null,
+      gradeCompany: "PSA",
+      gradeValue: 10,
+      cardYear: 2020,
+      product: "2020 Bowman Chrome",
+      player: "No Such Player",
+      cardNumber: null,
+      freshCompute: true,
+    });
+    expect(result.method).toBe("no-basis");
+    expect(result.fmv).toBeNull();
+    expect(result.gradeLadder ?? null).toBeNull();
+  });
+
+  it("base card + no grade + zero comps → still can fall to family/product rungs (not gated)", async () => {
+    const result = await computeCanonicalFmv({
+      cardId: UNKNOWN_CARDID,
+      parallel: "Base",
+      gradeCompany: null,
+      gradeValue: null,
+      cardYear: 2020,
+      product: "2020 Bowman Chrome",
+      player: "No Such Player",
+      cardNumber: null,
+      freshCompute: true,
+    });
+    // Base + raw is permissive — family-baseline is a legitimate concept
+    // for "typical 2020 Bowman Chrome base card." Don't lock the method
+    // to a specific rung (family/product/no-basis all valid); do assert
+    // the gate DIDN'T short-circuit to no-basis with the "specific"
+    // reason from the strict path.
+    expect([
+      "family-baseline",
+      "product-tier",
+      "no-basis",
+    ]).toContain(result.method);
+    if (result.method === "no-basis") {
+      expect(result.provenance.summary).not.toContain("specific parallel");
+    }
+  });
+
+  it("CANONICAL_FMV_STRICT_NO_BASIS=false disables the gate", async () => {
+    const prev = process.env.CANONICAL_FMV_STRICT_NO_BASIS;
+    process.env.CANONICAL_FMV_STRICT_NO_BASIS = "false";
+    try {
+      const result = await computeCanonicalFmv({
+        cardId: UNKNOWN_CARDID,
+        parallel: "Blue Refractor",
+        gradeCompany: null,
+        gradeValue: null,
+        cardYear: 2026,
+        product: "2026 Bowman Chrome",
+        player: "No Such Player",
+        cardNumber: "CPA-XX",
+        freshCompute: true,
+      });
+      // Without the gate, fall-through to rungs 4-5 is allowed. Either
+      // they fire and return a value, or they don't and it stays no-basis.
+      // What must NOT happen is the strict-gate summary text.
+      if (result.method === "no-basis") {
+        expect(result.provenance.summary).not.toContain("specific parallel");
+      }
+    } finally {
+      if (prev === undefined) delete process.env.CANONICAL_FMV_STRICT_NO_BASIS;
+      else process.env.CANONICAL_FMV_STRICT_NO_BASIS = prev;
+    }
+  });
+});
