@@ -109,6 +109,21 @@ export interface CanonicalFmvProvenance {
   multipliers: Record<string, number>;
 }
 
+/** CF-GRADE-LADDER (Drew, 2026-07-18). Per-grade FMV projection based
+ *  on the empirical grade-calibration table. iOS Card Detail renders
+ *  the ladder under the FMV headline so users see "raw $1,823 · PSA 10
+ *  $7,292" at a glance. Null when the product family isn't covered by
+ *  the calibration table (family = "other"). */
+export interface CanonicalFmvGradeLadder {
+  family: string;
+  sampleSize: number;
+  tiers: Array<{
+    grader: string;         // "Raw" | "PSA 10" | "PSA 9" | "BGS 10" | ...
+    medianRatio: number;    // ratio applied to raw fmv anchor
+    fmv: number;            // ratio × raw anchor, rounded
+  }>;
+}
+
 export interface CanonicalFmvResult {
   /** The projected next sale price. Null when no rung produced a value. */
   fmv: number | null;
@@ -120,6 +135,9 @@ export interface CanonicalFmvResult {
   provenance: CanonicalFmvProvenance;
   /** ISO timestamp of the compute. Cache readers compare against staleness. */
   computedAt: string;
+  /** Per-grade FMV ladder (Raw / PSA 10 / BGS 10 / etc.) computed from
+   *  empirical grade-ratio calibration. Null when family uncovered. */
+  gradeLadder?: CanonicalFmvGradeLadder | null;
 }
 
 const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
@@ -231,19 +249,89 @@ async function computeCanonicalFmvUncached(
   const trendPctPerMonth = momentumMultiplierToPctPerMonth(momentum?.multiplier ?? null);
 
   const directResult = await tryDirectComp(cardId, input, trendPctPerMonth);
-  if (directResult) { logCompute(directResult, input, t0); return directResult; }
+  if (directResult) return finalize(directResult, input, t0);
   const crossResult = await tryCrossParallel(cardId, input, trendPctPerMonth);
-  if (crossResult) { logCompute(crossResult, input, t0); return crossResult; }
+  if (crossResult) return finalize(crossResult, input, t0);
   const neighborResult = await tryNeighborParallel(cardId, input, trendPctPerMonth);
-  if (neighborResult) { logCompute(neighborResult, input, t0); return neighborResult; }
+  if (neighborResult) return finalize(neighborResult, input, t0);
   const familyResult = await tryFamilyBaseline(cardId, input, trendPctPerMonth);
-  if (familyResult) { logCompute(familyResult, input, t0); return familyResult; }
+  if (familyResult) return finalize(familyResult, input, t0);
   const tierResult = await tryProductTier(cardId, input, trendPctPerMonth);
-  if (tierResult) { logCompute(tierResult, input, t0); return tierResult; }
+  if (tierResult) return finalize(tierResult, input, t0);
 
   const nb = NULL_RESULT("no rung produced a value");
   logCompute(nb, input, t0);
   return nb;
+}
+
+/** Finalize a canonical result: attach the grade ladder (when the
+ *  product family is covered by empirical calibration) and log
+ *  telemetry. Called at every successful-rung return point.
+ */
+function finalize(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: number): CanonicalFmvResult {
+  result.gradeLadder = buildGradeLadder(result, input);
+  logCompute(result, input, t0);
+  return result;
+}
+
+/** Build the grade ladder for a canonical FMV result.
+ *
+ *  Anchor derivation:
+ *   - If the caller asked for Raw (gradeCompany null): raw anchor = fmv
+ *   - If the caller asked for a graded tier: raw anchor = fmv / gradeMultiplier
+ *     (reverse the multiplier so the ladder cascades correctly)
+ *
+ *  Then compute each covered tier's fmv = rawAnchor × empirical ratio × sub-tier scaling. */
+function buildGradeLadder(
+  result: CanonicalFmvResult,
+  input: CanonicalFmvInput,
+): CanonicalFmvGradeLadder | null {
+  if (!result.fmv || result.fmv <= 0 || !input.product) return null;
+  const family = classifyFamily(input.product);
+  if (family === "other") return null;
+
+  // Derive a raw anchor from the current FMV. If the input's grade is
+  // null → the FMV IS raw. Otherwise reverse the grade multiplier to
+  // recover an implied raw base.
+  let rawAnchor = result.fmv;
+  const inputGradeMult = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
+    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family)
+    : 1;
+  if (inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
+
+  // For each grader we have calibration for, project the top tier value.
+  // Sub-tier scaling handled by gradeTierMultiplier.
+  const graders = ["PSA", "BGS", "SGC", "CGC"];
+  const gradeValues: Record<string, number[]> = {
+    PSA: [10, 9, 8],
+    BGS: [10, 9.5, 9],
+    SGC: [10, 9.5],
+    CGC: [10, 9.5],
+  };
+  const totalSample = { n: 0 };
+  const tiers: CanonicalFmvGradeLadder["tiers"] = [
+    { grader: "Raw", medianRatio: 1.0, fmv: Math.round(rawAnchor * 100) / 100 },
+  ];
+  for (const grader of graders) {
+    for (const value of gradeValues[grader]) {
+      const mult = gradeTierMultiplier(grader, value, family);
+      if (mult <= 1) continue;   // no empirical uplift → skip
+      const fmv = rawAnchor * mult;
+      if (!Number.isFinite(fmv) || fmv <= 0) continue;
+      tiers.push({
+        grader: `${grader} ${value}`,
+        medianRatio: Math.round(mult * 100) / 100,
+        fmv: Math.round(fmv * 100) / 100,
+      });
+      totalSample.n = Math.max(totalSample.n, 5);   // approximate — the config lookup already ensured n≥5
+    }
+  }
+  if (tiers.length < 2) return null;   // only Raw known → nothing worth showing
+  return {
+    family,
+    sampleSize: totalSample.n,
+    tiers,
+  };
 }
 
 /** CF-CANONICAL-FMV-TELEMETRY (Drew, 2026-07-18). Single JSON log line

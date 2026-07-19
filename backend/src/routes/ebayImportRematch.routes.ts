@@ -236,6 +236,84 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
 // {source}::{sourceExternalId} so re-running is safe. totalComps is an
 // approximation because the emits are async and we return immediately
 // after firing them.
+
+// CF-USER-MANUAL-COMP-ADD (Drew, 2026-07-18). User-facing "I saw this
+// sell for $X on YYYY-MM-DD" entry point. Session-authed mirror of
+// /admin/comps/add. Same recordSoldComp writer, same idempotency, but
+// contributorUserId is forced to req.user.userId so we can attribute
+// (and rate-limit / trust-score) per-user contributions. Confidence
+// default lowered to 0.75 (vs admin 0.9) because we don't validate
+// user-supplied listings the way admin does — the pool still boosts
+// direct comps regardless.
+//
+// Route: POST /api/portfolio/manual-comps/add
+// Auth:  requireSession
+// Body:
+//   {
+//     cardId: string,
+//     playerName: string,
+//     price: number,
+//     soldAt: ISO string,
+//     cardYear?, setName?, parallel?, cardNumber?, isAuto?, gradeCompany?, gradeValue?,
+//     sourceExternalId?, title?
+//   }
+router.post("/manual-comps/add", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const userId = await requireUserId(req, res);
+    if (!userId) return;
+    const { recordSoldComp } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    const b = req.body ?? {};
+    const cardId = String(b.cardId ?? "").trim();
+    const playerName = String(b.playerName ?? "").trim();
+    const price = Number(b.price);
+    const soldAt = String(b.soldAt ?? "").trim();
+    if (!cardId || !playerName || !(price > 0) || !soldAt) {
+      res.status(400).json({
+        success: false,
+        error: "cardId, playerName, price (>0), and soldAt required",
+      });
+      return;
+    }
+    // Sanity: reject sales dated in the future (>1d clock skew guard).
+    const soldAtMs = Date.parse(soldAt);
+    if (!Number.isFinite(soldAtMs)) {
+      res.status(400).json({ success: false, error: "soldAt must be a parseable date" });
+      return;
+    }
+    if (soldAtMs > Date.now() + 24 * 60 * 60 * 1000) {
+      res.status(400).json({ success: false, error: "soldAt cannot be in the future" });
+      return;
+    }
+    const sourceExternalId = typeof b.sourceExternalId === "string" && b.sourceExternalId.trim().length > 0
+      ? b.sourceExternalId.trim()
+      : `manual-user-${userId}::${cardId}::${soldAtMs}::${Math.round(price * 100)}`;
+    await recordSoldComp({
+      cardId,
+      playerName,
+      cardYear: typeof b.cardYear === "number" ? b.cardYear : null,
+      setName: typeof b.setName === "string" ? b.setName : null,
+      parallel: typeof b.parallel === "string" ? b.parallel : null,
+      cardNumber: typeof b.cardNumber === "string" ? b.cardNumber : null,
+      isAuto: b.isAuto === true,
+      gradeCompany: typeof b.gradeCompany === "string" ? b.gradeCompany : null,
+      gradeValue: typeof b.gradeValue === "number" ? b.gradeValue : null,
+      price,
+      soldAt,
+      source: "manual-user-entry",
+      sourceExternalId,
+      contributorUserId: userId,
+      title: typeof b.title === "string" ? b.title : null,
+      imageUrl: null,
+      sellerHandle: null,
+      verifiedByUser: true,        // user attested via manual add
+      confidence: 0.75,            // lower than admin 0.9 (unverified provenance)
+    });
+    res.json({ success: true, sourceExternalId, cardId, price, soldAt });
+  } catch (err) { next(err); }
+});
+
 router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (req: Request, res: Response, next) => {
   try {
     const dryRun = req.body?.dryRun !== false;
