@@ -727,20 +727,149 @@ async function tryCrossParallel(
 }
 
 // ─── Rung 3: different cardId, same product + parallel, year-adjusted ─
+//
+// CF-RUNG-3-NEIGHBOR-PARALLEL (Drew, 2026-07-18). When rungs 1 and 2
+// both fail (no same-parallel comps for this specific cardId, no
+// sibling-parallel comps for this cardId either), pull sales for the
+// SAME product-family and SAME parallel from a DIFFERENT year's
+// cardIds. Adjust the resulting price by yearDeltaMultiplier — a card
+// from an older year typically trades at 70-90% of the current-year
+// equivalent, older still at 50-70%.
+//
+// Data source: ch_daily_sales queried directly. Rung 3 does NOT
+// ingest to sold_comps (would attribute to wrong cardId + would
+// contaminate the pool over time); it produces a one-shot projection
+// with lower confidence.
+//
+// Requirements to fire:
+//   - input.product (needed to filter ch_daily_sales by card_set)
+//   - input.parallel (needed to match variant)
+//   - input.cardYear (needed for year-delta calculation)
 async function tryNeighborParallel(
-  _cardId: string,
-  _input: CanonicalFmvInput,
-  _trendPctPerMonth: number | null,
+  cardId: string,
+  input: CanonicalFmvInput,
+  trendPctPerMonth: number | null,
 ): Promise<CanonicalFmvResult | null> {
-  // TODO(follow-on): reference-catalog lookup to resolve the sibling
-  // cardId for (product, year - N, cardNumber-ish, parallel). Uses
-  // yearDeltaMultiplier + projectNextSaleFromComps on that neighbor's
-  // pool. Requires either a per-family neighbor index or a cross-
-  // partition query over sold_comps by (product + parallel + grade).
-  //
-  // Deferred: needs a design pass on the neighbor-index shape before
-  // shipping so we don't lock in an inefficient query pattern.
-  return null;
+  if (!input.product || !input.parallel || typeof input.cardYear !== "number") return null;
+  const container = await getChDailyContainer();
+  if (!container) return null;
+
+  try {
+    const graderQuery = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
+      ? `${input.gradeCompany.toUpperCase()} ${input.gradeValue}`
+      : "Raw";
+    const cutoff = new Date(Date.now() - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString();
+    // Product-family LIKE match — "2026 Bowman Chrome" matches "2026
+    // Bowman Chrome Prospects", "2026 Bowman Chrome Baseball", etc.
+    // Strip the year for the LIKE token so we match sibling years.
+    const productToken = input.product
+      .replace(/^\s*(?:19|20)\d{2}\s*/, "")   // strip leading year
+      .trim();
+    if (!productToken) return null;
+    const productLike = `%${productToken}%`;
+
+    // Case-insensitive variant equality is done in-code (Cosmos SQL
+    // string ops are less forgiving than string.toLowerCase compare).
+    const iter = container.items.query<{
+      card_id: string;
+      year: number;
+      card_set: string;
+      variant: string;
+      number: string;
+      price: number;
+      sale_date: string;
+      image_url: string | null;
+    }>({
+      query: `SELECT TOP 100 c.card_id, c.year, c.card_set, c.variant, c.number,
+                              c.price, c.sale_date, c.image_url
+              FROM c
+              WHERE CONTAINS(LOWER(c.card_set), LOWER(@productLike))
+                AND c.year != @targetYear
+                AND c.grader = @grader
+                AND c.sale_date >= @cutoff
+                AND c.price > 0
+              ORDER BY c.sale_date DESC`,
+      parameters: [
+        { name: "@productLike", value: productToken.toLowerCase() },
+        { name: "@targetYear", value: input.cardYear },
+        { name: "@grader", value: graderQuery },
+        { name: "@cutoff", value: cutoff },
+      ],
+    });
+    const { resources } = await iter.fetchAll();
+
+    // Filter to same-parallel rows in memory (variant string).
+    const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
+    const targetParallelNorm = stripRefr(input.parallel);
+    const matches = resources.filter((r) => stripRefr(r.variant ?? "") === targetParallelNorm);
+    if (matches.length === 0) return null;
+
+    // For each neighbor sale, apply year-delta multiplier.
+    // yearDeltaMultiplier(neighborYear, targetYear) returns the ratio
+    // to normalize a neighbor-year price to a target-year price.
+    const { yearDeltaMultiplier } = await import("./neighborMultipliers.js");
+    const normalized: Array<{ price: number; soldDate: string; sourceYear: number; ratio: number }> = [];
+    for (const r of matches) {
+      const ratio = yearDeltaMultiplier(r.year, input.cardYear);
+      if (!Number.isFinite(ratio) || ratio <= 0) continue;
+      const price = r.price * ratio;
+      if (!Number.isFinite(price) || price <= 0) continue;
+      // Guard against wild ratios — same as rung 2's band.
+      if (ratio < 0.2 || ratio > 5.0) continue;
+      normalized.push({
+        price,
+        soldDate: r.sale_date,
+        sourceYear: r.year,
+        ratio,
+      });
+    }
+    if (normalized.length === 0) return null;
+
+    const projection = projectNextSaleFromComps(
+      normalized.map((n) => ({ price: n.price, soldDate: n.soldDate })),
+      {
+        broaderTrendPctPerMonth: trendPctPerMonth,
+        forwardDays: 0,
+        minNForRegression: 3,
+      },
+    );
+    if (!projection || projection.nextSaleValue <= 0) return null;
+
+    // Rung 3 confidence: cap at 0.55 — neighbor-year data is
+    // informative but two-hops-noisy (variant match may drift, year
+    // ratio may not fully absorb the market cycle).
+    const confidence = Math.min(0.55, projection.confidence * 0.7);
+
+    return {
+      fmv: projection.nextSaleValue,
+      method: "neighbor-parallel",
+      confidence,
+      provenance: {
+        summary: `${normalized.length} neighbor-year comp${normalized.length === 1 ? "" : "s"} for ${input.parallel} × year-delta + ${
+          trendPctPerMonth === null ? "no trend" : `${trendPctPerMonth.toFixed(1)}%/mo trend`
+        }`,
+        comps: normalized.slice(0, 8).map((n) => ({
+          price: n.price,
+          soldAt: n.soldDate,
+          source: "cardhedge",
+          parallel: input.parallel ?? null,
+          verifiedByUser: false,
+          normalizedFromParallel: `${n.sourceYear} ${input.product ?? ""}`,
+          normalizationRatio: n.ratio,
+        })),
+        trendPctPerMonth,
+        multipliers: {
+          // Median year-delta ratio applied across the neighbor pool;
+          // per-row ratios are in provenance.comps[].normalizationRatio.
+          yearDeltaMedian: normalized.length > 0
+            ? Math.round(normalized.map((n) => n.ratio).sort((a, b) => a - b)[Math.floor(normalized.length / 2)] * 1000) / 1000
+            : 1,
+        },
+      },
+      computedAt: new Date().toISOString(),
+    };
+  } catch { return null; }
+  void cardId;
 }
 
 // ─── Rung 4: family-baseline compound-multiplier ──────────────────────
