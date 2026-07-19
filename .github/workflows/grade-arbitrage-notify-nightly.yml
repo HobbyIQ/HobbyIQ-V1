@@ -1,0 +1,97 @@
+name: Grade Arbitrage Notify (nightly)
+
+# CF-GRADE-ARBITRAGE (Drew, 2026-07-19). Fires the grade-arbitrage
+# push job every night at 6:00AM ET. Scans every user's raw holdings,
+# computes uplift potential from the canonical FMV gradeLadder, pushes
+# when top-tier fmv > minUpliftX × raw fmv (default 3×).
+#
+# Per-user daily cap: 2 pushes. Per-holding cooldown: 30 days.
+# Dismiss cooldown: 60 days. Idempotent — persisting lastNotify state
+# prevents re-firing.
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # 6:00AM ET = 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (compute + report, no pushes sent)'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+      min_uplift_x:
+        description: 'Min uplift multiple (default 3)'
+        required: false
+        type: string
+        default: '3'
+      sport:
+        description: 'Sport scope (default baseball)'
+        required: false
+        type: string
+        default: 'baseball'
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 20
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret missing"
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: POST grade-arbitrage-notify/run
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          MIN_UPLIFT_X: ${{ inputs.min_uplift_x || '3' }}
+          SPORT: ${{ inputs.sport || 'baseball' }}
+        run: |
+          set -euo pipefail
+          BODY=$(jq -nc \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson uplift "$MIN_UPLIFT_X" \
+            --arg sport "$SPORT" \
+            '{ dryRun: $dryRun, minUpliftX: $uplift, sport: $sport }')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 900 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/grade-arbitrage-notify/run" \
+            -o response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::grade-arbitrage-notify failed: $STATUS"
+            cat response.json || true
+            exit 1
+          fi
+          echo "Summary:"
+          jq '.summary' response.json
+
+      - name: Upload response as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grade-arbitrage-notify-response-${{ github.run_id }}
+          path: response.json
+          retention-days: 14
