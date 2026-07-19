@@ -4251,6 +4251,81 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
           .map((p) => String(p).trim())
           .join(" ") || null;
 
+    // CF-CERT-CANONICAL-FMV-INTEGRATION (Drew, 2026-07-19). Route the
+    // resolved (cardId, grader, grade) through the canonical FMV pipeline
+    // so the number iOS displays here matches every other surface. Also
+    // returns gradeLadder + provenance without a second round-trip.
+    const gradeValueNum = certInfo.grade ? Number(certInfo.grade) : null;
+    const yearNum = typeof cardYear === "number" ? cardYear
+      : typeof cardYear === "string" && Number.isFinite(Number(cardYear)) ? Number(cardYear)
+      : null;
+    let canonicalFmvBlock: unknown = null;
+    try {
+      const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+      const result = await computeCanonicalFmv({
+        cardId: card.card_id,
+        parallel: card.variant ?? null,
+        gradeCompany: graderUC,
+        gradeValue: gradeValueNum,
+        cardYear: yearNum,
+        product: card.set ?? null,
+        player: playerName ?? undefined,
+        cardNumber: card.number ?? null,
+      });
+      canonicalFmvBlock = {
+        fmv: result.fmv,
+        method: result.method,
+        confidence: result.confidence,
+        computedAt: result.computedAt,
+        gradeLadder: result.gradeLadder ?? null,
+        provenance: result.provenance,
+      };
+    } catch { /* canonical FMV failure never blocks cert lookup */ }
+
+    // CF-CERT-COMPS-EMIT (Drew, 2026-07-19). Emit CH's cert-linked
+    // sales to sold_comps as high-confidence cardhedge rows. Cert-
+    // linked sales are the best comps we can get — exact slab, exact
+    // grade, exact history. confidence=0.9 (higher than default CH
+    // ingest 0.8 because cert-attested). Fire-and-forget.
+    void (async () => {
+      try {
+        const { recordSoldComp, inferSportFromContext } = await import(
+          "../services/portfolioiq/soldCompsStore.service.js"
+        );
+        const sport = inferSportFromContext(card.set ?? null, safeDescription);
+        for (const p of pricesResult?.prices ?? []) {
+          const rawPrice = (p as { price?: string | number }).price;
+          const priceNum = typeof rawPrice === "number" ? rawPrice
+            : typeof rawPrice === "string" && Number.isFinite(parseFloat(rawPrice)) ? parseFloat(rawPrice)
+            : null;
+          const saleDate = (p as { date?: string | null }).date;
+          if (!priceNum || priceNum <= 0 || !saleDate) continue;
+          await recordSoldComp({
+            cardId: card.card_id,
+            playerName: playerName ?? "Unknown",
+            cardYear: yearNum,
+            setName: card.set ?? null,
+            parallel: card.variant ?? null,
+            cardNumber: card.number ?? null,
+            isAuto: /auto/i.test(card.variant ?? "") || /auto/i.test(card.set ?? ""),
+            sport,
+            gradeCompany: graderUC,
+            gradeValue: gradeValueNum,
+            price: priceNum,
+            soldAt: saleDate,
+            source: "cardhedge",
+            sourceExternalId: `ch-cert::${graderUC}::${certInfo.cert}::${saleDate}::${Math.round(priceNum * 100)}`,
+            contributorUserId: null,
+            title: (p as { title?: string | null }).title ?? null,
+            imageUrl: card.image ?? null,
+            sellerHandle: null,
+            verifiedByUser: false,
+            confidence: 0.9,   // cert-attested provenance
+          });
+        }
+      } catch { /* silent */ }
+    })();
+
     res.json({
       success: true,
       cert: certInfo.cert,
@@ -4267,6 +4342,31 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
         // Explicit flag surfaces the sanitize path so iOS + ops can
         // detect stripped CH descriptions in telemetry.
         descriptionRebuilt: !descriptionMentionsPlayer,
+      },
+      // Canonical FMV — our source-of-truth number, matches every
+      // other surface. Fall back to CH's referencePrice if canonical
+      // was unavailable.
+      canonicalFmv: canonicalFmvBlock,
+      // CF-CERT-READY-TO-ADD (Drew, 2026-07-19). Pre-shaped holding
+      // preview so iOS can offer a one-tap "Add to Portfolio" flow.
+      // POST this block to /api/portfolio/holdings after user confirms.
+      // Purchase price/date/quantity default to unset — iOS overlays
+      // user's own values before POST.
+      readyToAdd: {
+        cardId: card.card_id,
+        playerName,
+        cardYear: yearNum,
+        product: card.set ?? null,
+        setName: card.set ?? null,
+        parallel: card.variant ?? null,
+        cardNumber: card.number ?? null,
+        isAuto: /auto/i.test(card.variant ?? "") || /auto/i.test(card.set ?? ""),
+        gradeCompany: graderUC,
+        gradeValue: gradeValueNum,
+        certNumber: certInfo.cert,
+        cardTitle: safeDescription,
+        photos: card.image ? [card.image] : [],
+        source: "cert-lookup",
       },
       referencePrice: fmvResult?.fmv?.price ?? null,
       prices: (pricesResult?.prices ?? []).map((p) => {
