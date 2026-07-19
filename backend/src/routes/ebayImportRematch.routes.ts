@@ -631,4 +631,46 @@ router.post("/admin/sell-side-notify/run", requireAdmin, async (req: Request, re
   } catch (err) { next(err); }
 });
 
+// CF-EBAY-IMPORT-ADMIN (Drew, 2026-07-18). Admin-impersonation of
+// importEbayPurchaseHistory so ops can trigger a user's eBay purchase
+// history sync without their session. Uses the user's stored eBay
+// OAuth tokens (attached to their user doc). Same body/summary shape as
+// /api/portfolio/erp/purchases/import/ebay.
+//
+// Auth: requireAdmin.
+// Body: { userId: string, days?: number (default 30, max 90) }
+router.post("/admin/purchases/import/ebay", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const userId = String(req.body?.userId ?? "").trim();
+    if (!userId) {
+      res.status(400).json({ error: "userId required" });
+      return;
+    }
+    const days = Number(req.body?.days ?? 30);
+    if (!Number.isFinite(days) || days < 1 || days > 90) {
+      res.status(400).json({ error: "days must be 1-90" });
+      return;
+    }
+    const { importEbayPurchaseHistory, runAutoHoldingBatch } = await import(
+      "../services/ebay/ebayBuyerHistory.service.js"
+    );
+    const importSummary = await importEbayPurchaseHistory(userId, days);
+    // Chain the auto-holding attribution — same as the sequence iOS
+    // triggers via the two ERP endpoints, but atomic from the admin
+    // caller's perspective.
+    const holdingSummary = await runAutoHoldingBatch(userId);
+    res.json({
+      success: true,
+      import: importSummary,
+      holdings: {
+        processed: holdingSummary.processed,
+        created: holdingSummary.created,
+        needsReview: holdingSummary.needsReview,
+        browseEnriched: holdingSummary.browseEnriched,
+        skipped: holdingSummary.skipped,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;
