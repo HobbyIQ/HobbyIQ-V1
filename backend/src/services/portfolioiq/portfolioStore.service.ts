@@ -5229,6 +5229,12 @@ export async function sellHolding(req: Request, res: Response) {
           parallel: holding.parallel ?? null,
           cardNumber: holding.cardNumber ?? null,
           isAuto: holding.isAuto === true,
+          // CF-USER-COMPS-GRADE-EMIT (Drew, 2026-07-18): include grade
+          // fields so downstream readers (canonical FMV rung 1's
+          // per-grade pool filter) match this row correctly against a
+          // graded holding query. Absent grade defaults to raw.
+          gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
+          gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
           price: unitSalePrice,
           soldAt,
           source: "ebay-user-sale",
@@ -5547,6 +5553,41 @@ export async function markHoldingSoldFromEbay(
 
   doc.ledger.push(ledgerEntry);
   await writeUserDoc(userId, doc);
+
+  // CF-EBAY-SALE-COMP-EMIT (Drew, 2026-07-18): mirror sellHolding's
+  // sold-comp emit so eBay-webhook-triggered sales ALSO feed the pool.
+  // Previously only the manual /sell path emitted; this closes the
+  // flywheel gap. Idempotent via {source}::{sourceExternalId} — replay
+  // safe if the webhook fires twice.
+  const ebaySoldCardId = String((holding as { cardId?: string }).cardId ?? "").trim();
+  if (ebaySoldCardId && holding.playerName) {
+    void (async () => {
+      try {
+        const { recordSoldComp } = await import("./soldCompsStore.service.js");
+        await recordSoldComp({
+          cardId: ebaySoldCardId,
+          playerName: String(holding.playerName ?? ""),
+          cardYear: holding.cardYear ?? null,
+          setName: holding.setName ?? null,
+          parallel: holding.parallel ?? null,
+          cardNumber: holding.cardNumber ?? null,
+          isAuto: holding.isAuto === true,
+          gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
+          gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
+          price: unitSalePrice,
+          soldAt: data.saleConfirmedAt,
+          source: "ebay-user-sale",
+          sourceExternalId: trimmedOrderId,
+          contributorUserId: userId,
+          title: shimmedCardTitle(holding),
+          imageUrl: (holding as { ebayImageUrl?: string | null }).ebayImageUrl ?? null,
+          sellerHandle: null,
+          verifiedByUser: true,
+          confidence: 1.0,
+        });
+      } catch { /* comp emission never fails the sale */ }
+    })();
+  }
 
   return {
     status: "marked-sold",
