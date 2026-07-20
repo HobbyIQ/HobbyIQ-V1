@@ -1,0 +1,98 @@
+name: Sold Comps Dedup (nightly)
+
+# CF-SOLD-COMPS-DEDUP-NIGHTLY (Drew, 2026-07-20). Defense-in-depth
+# backstop for the recordSoldComp pre-write dedup (PR #641). Runs the
+# detect+apply scripts against the whole pool nightly to catch:
+#   - Legacy duplicates written before the pre-write hash existed
+#   - Rows that slipped through the pre-write check (query race,
+#     transient Cosmos failure)
+#   - New sources / emit paths added after the fact
+#
+# Cadence: 04:15 UTC (~12:15 AM ET) — after CH ingest but before the
+# 5AM refresh so the pool is clean when the daily deploy warms cache.
+#
+# Rate-limited (env DEDUP_RATE_MS=50 per delete) so it stays under
+# Cosmos serverless RU pressure. If duplicates spike (large counts in
+# summary), open an ops ticket — pre-write is failing.
+
+on:
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (no deletes)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+      card_id:
+        description: 'Restrict to a single cardId (optional; blank = pool-wide)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  dedup:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING
+        id: cosmos
+        run: |
+          set -euo pipefail
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty"
+            exit 1
+          fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Run detect + apply
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          DEDUP_RATE_MS: '50'
+          DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '' || '--apply' }}
+          CARD_ID_ARG: ${{ inputs.card_id != '' && format('--cardId={0}', inputs.card_id) || '' }}
+        run: |
+          set -euo pipefail
+          node scripts/detect-sold-comps-duplicates.cjs $CARD_ID_ARG \
+            | node scripts/apply-sold-comps-dedup.cjs $DRY_RUN_ARG \
+            2>&1 | tee dedup-out.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sold-comps-dedup-${{ github.run_id }}
+          path: backend/dedup-out.log
+          retention-days: 30
