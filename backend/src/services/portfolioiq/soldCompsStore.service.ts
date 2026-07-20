@@ -497,6 +497,35 @@ function normalizeParallelForFilter(p: string | null | undefined): string {
 }
 
 /**
+ * CF-COMPS-EXPORT (Drew, 2026-07-20). Read every comp a user
+ * contributed. Cross-partition scan — Cosmos-expensive at scale but
+ * fine at today's per-user volumes (typically <500 rows per user).
+ * Powers GET /api/portfolio/comps/export.
+ */
+export async function readCompsByContributor(input: {
+  contributorUserId: string;
+}): Promise<SoldCompDoc[]> {
+  const c = await getContainer();
+  if (!c) return [];
+  const q = {
+    query: "SELECT * FROM c WHERE c.contributorUserId = @uid ORDER BY c.soldAt DESC",
+    parameters: [{ name: "@uid", value: input.contributorUserId }],
+  };
+  try {
+    const { resources } = await c.items.query(q).fetchAll();
+    return resources as SoldCompDoc[];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "sold_comps_read_by_contributor_error",
+      source: "soldCompsStore.service",
+      contributorUserId: input.contributorUserId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
+  }
+}
+
+/**
  * Cross-partition query by player. iOS Verify Card sheet uses this to
  * show "our user base has purchased this player's cards N times" as a
  * relevance signal. Cross-partition — expensive at scale, but fine at

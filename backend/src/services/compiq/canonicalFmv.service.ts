@@ -596,8 +596,13 @@ async function warmPoolFromChDailySales(
   const container = await getChDailyContainer();
   if (!container) return 0;
   try {
-    // Grader filter: "Raw" for null-graded holdings; else "PSA 10" /
-    // "BGS 9.5" / etc. matches ch_daily_sales's grader field format.
+    // CF-CH-GRADE-FIELD-FIX (Drew, 2026-07-20). ch_daily_sales has TWO
+    // grade fields: c.grader is company-only ("BGS", "PSA"), c.grade
+    // is the full tier string ("BGS 9.5", "PSA 10", "Raw"). Earlier
+    // code filtered c.grader = "PSA 10" — no rows matched because
+    // grader stores just "PSA". Filter c.grade for exact-tier match,
+    // "Raw" for raw. This fixes the graded-tier ch_daily_sales lookup
+    // that was silently returning 0 hits for every graded query.
     const graderQuery = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
       ? `${input.gradeCompany.toUpperCase()} ${input.gradeValue}`
       : "Raw";
@@ -620,7 +625,7 @@ async function warmPoolFromChDailySales(
                             c.number, c.price, c.grader, c.sale_date, c.image_url
               FROM c
               WHERE c.card_id = @cardId
-                AND c.grader = @grader
+                AND c.grade = @grader
                 AND c.sale_date >= @cutoff
                 AND c.price > 0
               ORDER BY c.sale_date DESC`,
@@ -934,7 +939,7 @@ async function tryNeighborParallel(
               FROM c
               WHERE CONTAINS(LOWER(c.card_set), LOWER(@productLike))
                 AND c.year != @targetYear
-                AND c.grader = @grader
+                AND c.grade = @grader
                 AND c.sale_date >= @cutoff
                 AND c.price > 0
               ORDER BY c.sale_date DESC`,
@@ -1076,7 +1081,7 @@ async function trySiblingParallel(
               FROM c
               WHERE c.number = @cn
                 AND c.year = @yr
-                AND c.grader = @grader
+                AND c.grade = @grader
                 AND CONTAINS(LOWER(c.card_set), @productToken)
                 AND c.sale_date >= @cutoff
                 AND c.price > 0`,
