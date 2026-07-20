@@ -1263,68 +1263,29 @@ async function applyTrajectory(
  * BACKSTOP; the empirical per-(year, set, class) numbers become the
  * primary source when available.
  */
+// CF-EMPIRICAL-ONLY-MULTIPLIER (Drew, 2026-07-20). The hand-tuned
+// GRADE_MULTIPLIER_MATRIX (Base PSA 10 = 8×, Auto PSA 10 = 2.75×,
+// BGS 10 = 20×, etc.) is REMOVED. The empirical (family, grader)
+// medianRatios in gradeCalibrationConfig.ts are the sole source of
+// truth for estimatedMultiplier.
+//
+// Rationale: the hand-tuned matrix was defined years before the
+// empirical corpus reached the size where its ratios could be
+// trusted. Keeping both meant every uncalibrated family silently
+// fell back to numbers that couldn't be defended against the pool
+// data. Removing it forces every uncalibrated (family, grader)
+// combo to surface as valueSource: "unavailable" on the iOS pill
+// and log a `grade_multiplier_uncovered` event — we then either
+// (a) add a calibration entry for that family or (b) accept the
+// gap. Real accuracy > false completeness.
 type CardClass = "auto" | "base";
-const GRADE_MULTIPLIER_MATRIX: Record<CardClass, Record<string, number>> = {
-  auto: {
-    "Raw": 1,
-    // CF-AUTO-MULTIPLIER-EMPIRICAL-RECAL (2026-07-08, Drew): recalibrated
-    // against 83 live 2024-2026 Bowman prospect auto PSA 10 / Raw pairs
-    // probed via CH on 2026-07-08. Empirical distribution:
-    //   p25 = 3.03×  p50 = 4.41×  p75 = 5.87×
-    // Prior 7× sat between p75 and p90 — Hartman $550 Raw × 7 = $3,850
-    // but real market ~$2,000-2,400. Drew's spec: PSA 10 ~2-3.25×,
-    // PSA 9 ~1.25-1.75×, PSA 8 = Raw. Middle of Drew's PSA 10 range
-    // (2.75) sits at empirical p20, which correctly reflects that this
-    // matrix is a LAST-RESORT fallback and should skew conservative;
-    // hot-prospect autos where PSA 10 > 4× rely on real observed comps.
-    "PSA 10": 2.75,
-    "BGS 10": 4.5,    // Pristine — rare, still a premium over PSA 10
-    "BGS 9.5": 2.5,   // ≈ PSA 10 with a small non-PSA slab discount
-    "SGC 10": 2.0,    // ≈ PSA 10 with a bigger non-PSA discount
-    "CGC 10": 2.0,
-    // 9-tier: PSA 9 auto ≈ 1.5× Raw (middle of Drew's 1.25-1.75 range)
-    "PSA 9": 1.5,
-    "BGS 9": 1.4,
-    "SGC 9": 1.3,
-    "CGC 9": 1.3,
-    // 8-tier: Drew's spec — PSA 8 auto ≈ Raw (grading doesn't add value
-    // at this tier for autos; can even lose money after fees)
-    "PSA 8": 1.0,
-    "BGS 8": 1.0,
-    "SGC 8": 1.0,
-    "CGC 8": 1.0,
-  },
-  base: {
-    "Raw": 1,
-    // 10-tier: base cards have wider distributions; PSA 10 super scarce
-    "PSA 10": 8,
-    "BGS 10": 20,   // Pristine — rare, big premium over PSA 10
-    "BGS 9.5": 5,
-    "SGC 10": 5,
-    "CGC 10": 5,
-    // 9-tier: all four graders similar; PSA 9 is the reference
-    "PSA 9": 3,
-    "BGS 9": 3,
-    "SGC 9": 3,
-    "CGC 9": 3,
-    // 8-tier: base card PSA 8 ≈ 1.5-2× Raw
-    "PSA 8": 1.75,
-    "BGS 8": 1.75,
-    "SGC 8": 1.75,
-    "CGC 8": 1.75,
-  },
-};
 
-/** Legacy alias — code that hasn't been updated to pass cardClass
- *  reads from the "base" column. New callers should use
- *  `gradeMultiplierFor(cardClass, gradeLabel)`. */
-const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = GRADE_MULTIPLIER_MATRIX.base;
-
-/** Preferred lookup — reads the matrix by (cardClass, gradeLabel).
- *  Returns undefined when the grade isn't in the matrix (unknown
- *  variant grader). */
-function gradeMultiplierFor(cardClass: CardClass, gradeLabel: string): number | undefined {
-  return GRADE_MULTIPLIER_MATRIX[cardClass][gradeLabel];
+/** No-op preserved so downstream callers that still expect a
+ *  fallback don't crash. Always returns undefined — the caller's
+ *  entry stays valueSource: "unavailable" if empirical is also
+ *  missing. */
+function gradeMultiplierFor(_cardClass: CardClass, _gradeLabel: string): number | undefined {
+  return undefined;
 }
 
 /**
@@ -1380,8 +1341,9 @@ function resolveMultiplier(args: {
   family: string | null;
   sport: string | null;
   cardClass: CardClass;
+  cardId?: string | null;
 }): number | undefined {
-  const { entry, family, sport, cardClass } = args;
+  const { entry, family, sport, cardClass, cardId } = args;
   if (family) {
     const empiricalRatio = lookupGradeRatio(family, entry.grader, sport);
     const gradeValue = parseGradeValue(entry.grade);
@@ -1390,6 +1352,18 @@ function resolveMultiplier(args: {
       if (scaled > 0) return scaled;
     }
   }
+  // Empirical missing — log so we can spot uncalibrated families and
+  // decide whether to add a calibration entry.
+  console.log(JSON.stringify({
+    event: "grade_multiplier_uncovered",
+    source: "observedGradeCurve.resolveMultiplier",
+    family: family ?? "(no-setName)",
+    grader: entry.grader,
+    grade: entry.grade,
+    sport,
+    cardClass,
+    cardId: cardId ?? null,
+  }));
   return gradeMultiplierFor(cardClass, entry.grade);
 }
 
@@ -1410,6 +1384,9 @@ function fillEstimatedFallback(
   setName: string | null = null,
   /** Optional sport override for sport-conditioned calibration. */
   sport: string | null = null,
+  /** Optional cardId — surfaces in the `grade_multiplier_uncovered`
+   *  log so we can find which cards are uncalibrated. */
+  cardId: string | null = null,
 ): void {
   const raw = entries.find((e) => e.grade === "Raw");
   const rawObserved =
@@ -1437,6 +1414,7 @@ function fillEstimatedFallback(
           family,
           sport,
           cardClass,
+          cardId,
         });
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
@@ -1540,6 +1518,7 @@ export async function buildObservedGradeCurve(
     opts.cardClass ?? "base",
     opts.setName ?? null,
     opts.sport ?? null,
+    cardId,
   );
 
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
