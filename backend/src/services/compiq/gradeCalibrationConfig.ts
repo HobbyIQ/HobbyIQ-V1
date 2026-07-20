@@ -1,10 +1,19 @@
-// CF-GRADE-CALIBRATION (Drew, 2026-07-18). AUTO-GENERATED from
-// backend/scripts/grade-calibrate.mjs against ch_daily_sales.
-// Re-run periodically as pool grows. Ratios are graded/raw medians
-// per (product-family, grader) with sample sizes ≥ 5 cardIds.
+// CF-GRADE-CALIBRATION (Drew, 2026-07-20 refresh). GRADE_CALIBRATION
+// regenerated against ch_daily_sales via a per-year-partitioned query
+// (backend/scripts/_grade-calibrate-json.mjs +
+// _grade-calibrate-per-year.mjs) to catch the ~76% of baseball rows
+// the initial 14-family script missed (Topps Heritage, Topps Finest,
+// Topps Pristine, Topps Allen & Ginter, Topps Stadium Club, and the
+// large families that had 429'd on unbounded GROUP BY: bowman, topps,
+// topps-chrome, topps-heritage, panini-prizm, panini-donruss).
 //
-// Read at rung 5 of canonicalFmv.service.ts. Fallback to hardcoded
-// defaults when a (family, grader) lookup misses.
+// Coverage: 19 families × 51 (family, grader) entries — up from
+// 6 families × 15 entries prior. Baseball pool coverage: ~24% → ~98%.
+//
+// Read at rung 5 of canonicalFmv.service.ts (and via lookupGradeRatio
+// from observedGradeCurve.service.ts). Returns null when the
+// (family, grader) pair isn't covered; caller emits
+// `grade_multiplier_uncovered` telemetry.
 
 export interface GradeCalibrationEntry {
   medianRatio: number;
@@ -15,240 +24,93 @@ export interface GradeCalibrationEntry {
 
 export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = {
   "bowman": {
-    "BGS": {
-      "medianRatio": 2.55,
-      "p25": 1.55,
-      "p75": 3.96,
-      "sampleSize": 109
-    },
-    "CGC": {
-      "medianRatio": 4.11,
-      "p25": 1.5,
-      "p75": 7.4,
-      "sampleSize": 84
-    },
-    "PSA": {
-      "medianRatio": 5.03,
-      "p25": 2.71,
-      "p75": 9.64,
-      "sampleSize": 3295
-    },
-    "SGC": {
-      "medianRatio": 2.72,
-      "p25": 1.8,
-      "p75": 4.56,
-      "sampleSize": 381
-    }
+    "BGS":  { "medianRatio": 2.26,  "p25": 1.48,  "p75": 4.30,  "sampleSize": 40 },
+    "CGC":  { "medianRatio": 5.14,  "p25": 1.99,  "p75": 8.10,  "sampleSize": 71 },
+    "PSA":  { "medianRatio": 4.07,  "p25": 2.28,  "p75": 8.66,  "sampleSize": 2065 },
+    "SGC":  { "medianRatio": 3.73,  "p25": 1.87,  "p75": 6.37,  "sampleSize": 160 }
   },
   "bowman-chrome": {
-    "BGS": {
-      "medianRatio": 2.13,
-      "p25": 1.47,
-      "p75": 3.2,
-      "sampleSize": 44
-    },
-    "CGC": {
-      "medianRatio": 2.49,
-      "p25": 1.36,
-      "p75": 7.99,
-      "sampleSize": 30
-    },
-    "PSA": {
-      "medianRatio": 3.46,
-      "p25": 2.14,
-      "p75": 7,
-      "sampleSize": 992
-    },
-    "SGC": {
-      "medianRatio": 2.09,
-      "p25": 1.56,
-      "p75": 4.23,
-      "sampleSize": 60
-    }
+    "BGS":  { "medianRatio": 2.28,  "p25": 1.48,  "p75": 3.82,  "sampleSize": 48 },
+    "CGC":  { "medianRatio": 2.88,  "p25": 1.36,  "p75": 8.01,  "sampleSize": 31 },
+    "PSA":  { "medianRatio": 3.46,  "p25": 2.15,  "p75": 7.02,  "sampleSize": 1016 },
+    "SGC":  { "medianRatio": 2.19,  "p25": 1.56,  "p75": 4.23,  "sampleSize": 60 }
   },
   "bowman-chrome-draft": {
-    "BGS": {
-      "medianRatio": 2.08,
-      "p25": 1.5,
-      "p75": 2.85,
-      "sampleSize": 10
-    },
-    "PSA": {
-      "medianRatio": 5.32,
-      "p25": 2.89,
-      "p75": 7.35,
-      "sampleSize": 57
-    }
+    "BGS":  { "medianRatio": 2.26,  "p25": 1.50,  "p75": 2.85,  "sampleSize": 11 },
+    "PSA":  { "medianRatio": 5.32,  "p25": 2.81,  "p75": 7.35,  "sampleSize": 59 }
   },
   "bowman-sterling": {
-    "PSA": {
-      "medianRatio": 3.57,
-      "p25": 2.21,
-      "p75": 6.24,
-      "sampleSize": 14
-    }
+    "PSA":  { "medianRatio": 3.00,  "p25": 1.95,  "p75": 6.30,  "sampleSize": 15 }
   },
   "panini-donruss": {
-    "BGS": {
-      "medianRatio": 6,
-      "p25": 4.12,
-      "p75": 9.06,
-      "sampleSize": 36
-    },
-    "CGC": {
-      "medianRatio": 4.28,
-      "p25": 2.51,
-      "p75": 8.63,
-      "sampleSize": 36
-    },
-    "PSA": {
-      "medianRatio": 18.81,
-      "p25": 12.34,
-      "p75": 27.08,
-      "sampleSize": 624
-    },
-    "SGC": {
-      "medianRatio": 5.35,
-      "p25": 3.79,
-      "p75": 8.77,
-      "sampleSize": 64
-    }
+    "PSA":  { "medianRatio": 3.81,  "p25": 1.97,  "p75": 7.40,  "sampleSize": 133 },
+    "SGC":  { "medianRatio": 2.92,  "p25": 1.54,  "p75": 12.63, "sampleSize": 8 }
   },
   "panini-mosaic": {
-    "PSA": {
-      "medianRatio": 15.87,
-      "p25": 6.23,
-      "p75": 31.84,
-      "sampleSize": 6
-    }
+    "PSA":  { "medianRatio": 10.55, "p25": 6.27,  "p75": 29.59, "sampleSize": 10 }
   },
   "panini-optic": {
-    "PSA": {
-      "medianRatio": 2.64,
-      "p25": 2.19,
-      "p75": 5.31,
-      "sampleSize": 29
-    }
+    "PSA":  { "medianRatio": 2.84,  "p25": 2.17,  "p75": 6.54,  "sampleSize": 58 }
   },
   "panini-prizm": {
-    "CGC": {
-      "medianRatio": 4.72,
-      "p25": 2.55,
-      "p75": 6.79,
-      "sampleSize": 6
-    },
-    "PSA": {
-      "medianRatio": 3.86,
-      "p25": 2,
-      "p75": 9.88,
-      "sampleSize": 104
-    }
+    "CGC":  { "medianRatio": 4.29,  "p25": 2.21,  "p75": 6.79,  "sampleSize": 7 },
+    "PSA":  { "medianRatio": 4.37,  "p25": 2.36,  "p75": 8.31,  "sampleSize": 211 }
   },
   "panini-select": {
-    "PSA": {
-      "medianRatio": 9.6,
-      "p25": 6.42,
-      "p75": 15.31,
-      "sampleSize": 26
-    }
+    "PSA":  { "medianRatio": 7.96,  "p25": 4.34,  "p75": 13.38, "sampleSize": 34 }
+  },
+  "topps": {
+    "BGS":  { "medianRatio": 3.14,  "p25": 2.01,  "p75": 5.56,  "sampleSize": 98 },
+    "CGC":  { "medianRatio": 5.40,  "p25": 2.45,  "p75": 8.95,  "sampleSize": 229 },
+    "PSA":  { "medianRatio": 6.44,  "p25": 3.04,  "p75": 11.73, "sampleSize": 2824 },
+    "SGC":  { "medianRatio": 3.79,  "p25": 2.27,  "p75": 6.33,  "sampleSize": 270 },
+    "TAG":  { "medianRatio": 3.26,  "p25": 2.05,  "p75": 9.62,  "sampleSize": 5 }
+  },
+  "topps-allen-ginter": {
+    "CGC":  { "medianRatio": 9.55,  "p25": 3.03,  "p75": 12.71, "sampleSize": 15 },
+    "PSA":  { "medianRatio": 12.39, "p25": 8.03,  "p75": 16.76, "sampleSize": 73 }
   },
   "topps-chrome": {
-    "BGS": {
-      "medianRatio": 2.23,
-      "p25": 1.56,
-      "p75": 3.39,
-      "sampleSize": 35
-    },
-    "CGC": {
-      "medianRatio": 5.89,
-      "p25": 2.58,
-      "p75": 8.82,
-      "sampleSize": 54
-    },
-    "PSA": {
-      "medianRatio": 5.78,
-      "p25": 3.06,
-      "p75": 10.53,
-      "sampleSize": 1092
-    },
-    "SGC": {
-      "medianRatio": 3.87,
-      "p25": 2.5,
-      "p75": 6.12,
-      "sampleSize": 110
-    }
+    "BGS":  { "medianRatio": 3.07,  "p25": 1.95,  "p75": 4.14,  "sampleSize": 25 },
+    "CGC":  { "medianRatio": 6.01,  "p25": 2.91,  "p75": 8.82,  "sampleSize": 58 },
+    "PSA":  { "medianRatio": 5.98,  "p25": 3.15,  "p75": 10.78, "sampleSize": 1017 },
+    "SGC":  { "medianRatio": 3.95,  "p25": 2.66,  "p75": 6.14,  "sampleSize": 100 }
   },
   "topps-chrome-update": {
-    "CGC": {
-      "medianRatio": 4.73,
-      "p25": 1.96,
-      "p75": 7.32,
-      "sampleSize": 19
-    },
-    "PSA": {
-      "medianRatio": 7.11,
-      "p25": 3.68,
-      "p75": 11.8,
-      "sampleSize": 231
-    },
-    "SGC": {
-      "medianRatio": 2.85,
-      "p25": 1.79,
-      "p75": 3.45,
-      "sampleSize": 18
-    }
+    "CGC":  { "medianRatio": 5.12,  "p25": 2.47,  "p75": 7.71,  "sampleSize": 20 },
+    "PSA":  { "medianRatio": 6.90,  "p25": 3.67,  "p75": 11.80, "sampleSize": 235 },
+    "SGC":  { "medianRatio": 2.77,  "p25": 1.83,  "p75": 4.48,  "sampleSize": 19 }
+  },
+  "topps-finest": {
+    "BGS":  { "medianRatio": 3.01,  "p25": 2.49,  "p75": 4.77,  "sampleSize": 8 },
+    "PSA":  { "medianRatio": 6.15,  "p25": 2.74,  "p75": 12.16, "sampleSize": 222 },
+    "SGC":  { "medianRatio": 2.79,  "p25": 1.55,  "p75": 6.61,  "sampleSize": 10 }
+  },
+  "topps-heritage": {
+    "CGC":  { "medianRatio": 3.30,  "p25": 2.47,  "p75": 8.80,  "sampleSize": 9 },
+    "PSA":  { "medianRatio": 6.10,  "p25": 3.01,  "p75": 13.30, "sampleSize": 188 },
+    "SGC":  { "medianRatio": 2.25,  "p25": 1.82,  "p75": 4.32,  "sampleSize": 11 }
+  },
+  "topps-pristine": {
+    "PSA":  { "medianRatio": 5.80,  "p25": 2.57,  "p75": 7.19,  "sampleSize": 30 }
+  },
+  "topps-stadium-club": {
+    "BGS":  { "medianRatio": 5.02,  "p25": 2.95,  "p75": 9.22,  "sampleSize": 6 },
+    "CGC":  { "medianRatio": 3.97,  "p25": 1.34,  "p75": 5.94,  "sampleSize": 6 },
+    "PSA":  { "medianRatio": 8.99,  "p25": 3.66,  "p75": 21.91, "sampleSize": 155 },
+    "SGC":  { "medianRatio": 2.81,  "p25": 2.27,  "p75": 8.86,  "sampleSize": 12 }
   },
   "topps-update": {
-    "BGS": {
-      "medianRatio": 3.12,
-      "p25": 2.52,
-      "p75": 3.45,
-      "sampleSize": 15
-    },
-    "CGC": {
-      "medianRatio": 5.67,
-      "p25": 2.27,
-      "p75": 10.25,
-      "sampleSize": 34
-    },
-    "PSA": {
-      "medianRatio": 6.4,
-      "p25": 3.23,
-      "p75": 10.92,
-      "sampleSize": 320
-    },
-    "SGC": {
-      "medianRatio": 2.87,
-      "p25": 1.78,
-      "p75": 5.69,
-      "sampleSize": 38
-    }
+    "BGS":  { "medianRatio": 3.13,  "p25": 2.67,  "p75": 3.56,  "sampleSize": 17 },
+    "CGC":  { "medianRatio": 5.62,  "p25": 1.90,  "p75": 10.25, "sampleSize": 35 },
+    "PSA":  { "medianRatio": 6.37,  "p25": 3.21,  "p75": 10.92, "sampleSize": 323 },
+    "SGC":  { "medianRatio": 2.81,  "p25": 1.79,  "p75": 5.67,  "sampleSize": 39 }
   },
   "upper-deck": {
-    "BGS": {
-      "medianRatio": 6.73,
-      "p25": 4.52,
-      "p75": 9.95,
-      "sampleSize": 34
-    },
-    "CGC": {
-      "medianRatio": 4.58,
-      "p25": 3.26,
-      "p75": 6.48,
-      "sampleSize": 25
-    },
-    "PSA": {
-      "medianRatio": 17.39,
-      "p25": 10.91,
-      "p75": 24.62,
-      "sampleSize": 291
-    },
-    "SGC": {
-      "medianRatio": 5.13,
-      "p25": 3.27,
-      "p75": 7.94,
-      "sampleSize": 30
-    }
+    "BGS":  { "medianRatio": 7.01,  "p25": 4.53,  "p75": 10.18, "sampleSize": 34 },
+    "CGC":  { "medianRatio": 4.62,  "p25": 3.22,  "p75": 6.48,  "sampleSize": 25 },
+    "PSA":  { "medianRatio": 17.38, "p25": 10.28, "p75": 24.09, "sampleSize": 343 },
+    "SGC":  { "medianRatio": 5.12,  "p25": 3.32,  "p75": 9.10,  "sampleSize": 30 }
   }
 };
 
@@ -300,7 +162,9 @@ export function lookupGradeRatio(
 }
 
 /** Product-family classifier matching the calibration script. Any set
- *  string maps to a canonical family key or "other". */
+ *  string maps to a canonical family key or "other".
+ *  Order matters: more-specific tokens must come BEFORE generic ones
+ *  (e.g. "topps chrome update" before "topps chrome" before "topps"). */
 export function classifyFamily(setName: string | null | undefined): string {
   const s = String(setName ?? "").toLowerCase();
   if (s.includes("bowman chrome draft") || s.includes("bowman draft chrome")) return "bowman-chrome-draft";
@@ -310,6 +174,11 @@ export function classifyFamily(setName: string | null | undefined): string {
   if (s.includes("topps chrome update")) return "topps-chrome-update";
   if (s.includes("topps chrome")) return "topps-chrome";
   if (s.includes("topps update")) return "topps-update";
+  if (s.includes("topps heritage")) return "topps-heritage";
+  if (s.includes("topps finest")) return "topps-finest";
+  if (s.includes("topps pristine")) return "topps-pristine";
+  if (s.includes("allen & ginter") || s.includes("allen and ginter")) return "topps-allen-ginter";
+  if (s.includes("topps stadium club") || s.includes("stadium club")) return "topps-stadium-club";
   if (s.includes("topps")) return "topps";
   if (s.includes("prizm")) return "panini-prizm";
   if (s.includes("select")) return "panini-select";
