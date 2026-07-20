@@ -17,6 +17,10 @@ enum PricedCardRoute: Hashable, Identifiable {
     /// the Comp Sheet header — opens the pricing-focused Player Detail
     /// surface (`PlayerDetailView`).
     case playerDetail(String)
+    /// 2026-07-20 (spec §14): pushed from a "See all in this set" chip
+    /// in the Comp Sheet header. Payload is the URL-slugified set
+    /// name; the destination view fetches the ranked card list.
+    case setDetail(String)
     var id: Self { self }
 }
 
@@ -242,6 +246,8 @@ struct CompIQPricedCardView: View {
                 }
             case .playerDetail(let name):
                 PlayerDetailView(playerName: name)
+            case .setDetail(let slug):
+                SetDetailView(setSlug: slug)
             case .addToInventory:
                 if let response = priceResponse {
                     CompIQAddToInventorySheet(
@@ -435,6 +441,31 @@ struct CompIQPricedCardView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // 2026-07-20 (spec §14): "See all in this set" chip
+                // pushes SetDetailView with the URL-slugified set name.
+                // Only rendered when we have enough identity to make a
+                // sensible slug (set + year — otherwise the slug is
+                // ambiguous across print years).
+                if let slug = setSlugForNavigation {
+                    Button {
+                        pricedRoute = .setDetail(slug)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.stack.3d.up")
+                                .font(.caption2.weight(.semibold))
+                            Text("See all in this set")
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
                 // CF-FLAT-HEADER (2026-07-04): variant/serial/auto pills
                 // rolled into `headerCardDetails` — the two-pill row is
                 // gone.
@@ -547,6 +578,25 @@ struct CompIQPricedCardView: View {
 
     private func compactUSD(_ value: Double) -> String {
         "$\(Int(value.rounded()).formatted(.number.grouping(.automatic)))"
+    }
+
+    /// 2026-07-20 (spec §14): URL-slugified set name for the "See all
+    /// in this set" chip. Prefers server-canonical `release` fields
+    /// (already normalized), falls back to the variant hit's `set`.
+    /// Nil when we don't have enough identity to form a stable slug —
+    /// the chip hides in that case.
+    private var setSlugForNavigation: String? {
+        let serverRelease = priceResponse?.cardIdentity?.release?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hitSet = hit.set?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawSet: String? = {
+            if let r = serverRelease, r.isEmpty == false { return r }
+            if let s = hitSet, s.isEmpty == false { return s }
+            return nil
+        }()
+        guard let rawSet else { return nil }
+        let year = priceResponse?.cardIdentity?.year ?? hit.year
+        return SetSlug.from(setName: rawSet, year: year)
     }
 
     /// 2026-07-20 (spec §5): the player name the header-tap hands to

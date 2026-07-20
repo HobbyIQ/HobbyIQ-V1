@@ -145,6 +145,30 @@ struct APIService {
         )
     }
 
+    /// PR #623 (2026-07-20): Set Detail. Given a URL-slugified set
+    /// name, returns every indexed card in that set with ranked
+    /// median FMV over the window. Sort by median-desc / -asc /
+    /// sales-desc / -asc.
+    func fetchSetDetail(
+        setSlug: String,
+        sport: String = "baseball",
+        days: Int = 90,
+        limit: Int = 50,
+        sortBy: String = "median-desc"
+    ) async throws -> SetDetailResponse {
+        let encoded = setSlug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? setSlug
+        return try await get(
+            path: "/api/compiq/sets/\(encoded)",
+            queryItems: [
+                URLQueryItem(name: "sport", value: sport),
+                URLQueryItem(name: "days", value: String(days)),
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "sortBy", value: sortBy)
+            ],
+            responseType: SetDetailResponse.self
+        )
+    }
+
     /// PR #620 (2026-07-20): Cohort Backtest. "How's the {year}
     /// rookie class done" narrative — median growth % across the
     /// cohort plus top-gainers / top-decliners lists.
