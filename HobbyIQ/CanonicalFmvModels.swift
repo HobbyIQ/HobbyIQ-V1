@@ -70,6 +70,11 @@ struct CanonicalFmvResponse: Decodable, Hashable {
     let provenance: CanonicalFmvProvenance?
     /// ISO string — never surfaced to the user directly.
     let computedAt: String?
+    /// 2026-07-19 (card-show batch): empirical PSA/BGS/SGC/CGC ratios
+    /// derived from the last 365d of CardHedge sales for the family.
+    /// Nullable — hide the "Same card in other grades" section
+    /// entirely when the backend can't produce it.
+    let gradeLadder: GradeLadder?
 
     var methodEnum: CanonicalFmvMethod? {
         method.flatMap(CanonicalFmvMethod.init(rawValue:))
@@ -84,10 +89,38 @@ struct CanonicalFmvResponse: Decodable, Hashable {
     }
 }
 
+/// Provenance shape widened 2026-07-19 to accept both the older
+/// (summary + comps) fields and the new (sampleSize / compsUsed /
+/// windowDays / notes) fields side-by-side. All optional — whichever
+/// the backend sends is what we render. Comps array is deprecated in
+/// favor of the dedicated `/recent-sales` endpoint (see
+/// RecentSalesModels.swift).
 struct CanonicalFmvProvenance: Decodable, Hashable {
     let summary: String?
     let comps: [CanonicalFmvComp]?
     let trendPctPerMonth: Double?
+    let sampleSize: Int?
+    let compsUsed: Int?
+    let windowDays: Int?
+    let notes: String?
+}
+
+// MARK: - Grade Ladder
+
+struct GradeLadder: Decodable, Hashable {
+    /// Product family (e.g. "bowman-chrome") that produced the ratios.
+    /// Never surfaced verbatim to end users.
+    let family: String?
+    let sampleSize: Int?
+    let tiers: [GradeLadderTier]?
+}
+
+struct GradeLadderTier: Decodable, Hashable, Identifiable {
+    let grader: String
+    let medianRatio: Double?
+    let fmv: Double?
+
+    var id: String { grader }
 }
 
 struct CanonicalFmvComp: Decodable, Hashable, Identifiable {

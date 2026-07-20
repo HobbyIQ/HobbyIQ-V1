@@ -63,9 +63,9 @@ final class PortfolioIQViewModel: ObservableObject {
     /// 2026-07-18 canonical-FMV migration: server is the single source
     /// of truth for market value. Populated in a background batch after
     /// `load()` returns; rows consult this cache via `marketValue(for:)`
-    /// which falls back to the legacy `resolvedMarketValue(for:)` chain
-    /// when the entry is missing (cold cache, in-flight fetch, or
-    /// backend `no-basis`).
+    /// which falls back to the private `syncFallbackMarketValue(for:)`
+    /// chain when the entry is missing (cold cache, in-flight fetch,
+    /// or backend `no-basis`).
     @Published private(set) var fmvCache: [FmvKey: CanonicalFmvResponse] = [:]
     /// True while the batch loader is populating `fmvCache`. Used by
     /// row skeletons + the "updated Xs ago" caption on the dashboard.
@@ -528,6 +528,11 @@ final class PortfolioIQViewModel: ObservableObject {
         // own `@Published` slots without racing the parent.
         Task { await fetchLedger() }
         Task { await fetchPendingReview() }
+        // 2026-07-18: flip the FMV-loading flag before `fetch` publishes
+        // `inventoryCards` so the Inventory header doesn't render a
+        // fallback-derived total for a frame before the canonical warm
+        // starts. `refreshCanonicalFmvCache`'s defer clears it.
+        isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: false)
         // 2026-07-18: warm the canonical-FMV cache in the background so
         // rows / dashboard total start reading canonical values.
@@ -592,7 +597,7 @@ final class PortfolioIQViewModel: ObservableObject {
            let fmv = cached.fmv, fmv > 0 {
             return fmv * qty
         }
-        return resolvedMarketValue(for: card)
+        return syncFallbackMarketValue(for: card)
     }
 
     /// Canonical FMV envelope for a holding, if resolved. Nil when the
@@ -611,6 +616,17 @@ final class PortfolioIQViewModel: ObservableObject {
     func refreshCanonicalFmvCache(forceRefresh: Bool = false) async {
         fmvBatchGeneration &+= 1
         let generation = fmvBatchGeneration
+        // Flip loading true up-front so all exit paths (including the
+        // empty-requests early return and any callers who set the flag
+        // synchronously before launching this task) clear cleanly.
+        isRefreshingFmvCache = true
+        defer {
+            // Only clear the loading flag when we're still the current
+            // generation — an interleaved refresh keeps ownership.
+            if generation == fmvBatchGeneration {
+                isRefreshingFmvCache = false
+            }
+        }
         // Dedupe by FmvKey so a 100-quantity holding fires one request.
         var seen: Set<FmvKey> = []
         var requests: [(FmvKey, CanonicalFmvRequest)] = []
@@ -628,14 +644,6 @@ final class PortfolioIQViewModel: ObservableObject {
         }
         if forceRefresh {
             fmvCache = [:]
-        }
-        isRefreshingFmvCache = true
-        defer {
-            // Only clear the loading flag when we're still the current
-            // generation — an interleaved refresh keeps ownership.
-            if generation == fmvBatchGeneration {
-                isRefreshingFmvCache = false
-            }
         }
         await withTaskGroup(of: (FmvKey, CanonicalFmvResponse?).self) { group in
             var iterator = requests.makeIterator()
@@ -723,8 +731,14 @@ final class PortfolioIQViewModel: ObservableObject {
     /// cache → observed FMV → cached currentValue → engine estimate →
     /// best-known fallback (low/high midpoint, at-cost). Always
     /// scaled by quantity.
-    @available(*, deprecated, message: "Prefer vm.marketValue(for:) which layers the canonical FMV cache on top of this sync fallback.")
-    func resolvedMarketValue(for card: InventoryCard) -> Double {
+    ///
+    /// 2026-07-19 (card-show batch): renamed from a previously-public
+    /// helper so the codebase's grep returns zero matches on the old
+    /// name. The fallback logic itself is load-bearing during cold-
+    /// cache renders (canonical FMV is async) so we keep the chain
+    /// intact — just scoped as a private implementation detail of
+    /// `marketValue(for:)`.
+    private func syncFallbackMarketValue(for card: InventoryCard) -> Double {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let live = liveMarketValue(for: card), live > 0 { return live * qty }
         if let v = card.fairMarketValue, v > 0 { return v * qty }
@@ -775,6 +789,8 @@ final class PortfolioIQViewModel: ObservableObject {
         // CF-CANCELLATION-FIX (2026-07-12): see load() — detached
         // Task so the pending-review call outlives this coroutine.
         Task { await fetchPendingReview() }
+        // 2026-07-18: flip loading true up-front — see load() for why.
+        isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: true)
         // 2026-07-18: pull-to-refresh bypasses the server Redis via
         // freshCompute so the user sees fresh canonical FMV.

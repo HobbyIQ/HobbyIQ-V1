@@ -51,6 +51,18 @@ struct PriceHistoryBucketPoint: Codable, Hashable, Identifiable {
     }
 }
 
+fileprivate func priceHistoryFriendlyDate(_ raw: String) -> String? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let parsed = formatter.date(from: raw) ?? {
+        let alt = ISO8601DateFormatter()
+        alt.formatOptions = [.withInternetDateTime]
+        return alt.date(from: raw)
+    }()
+    guard let date = parsed else { return nil }
+    return date.formatted(.dateTime.month(.abbreviated).day().year())
+}
+
 // MARK: - Standalone screen (embeds the reusable card inside nav chrome)
 
 struct PriceHistoryView: View {
@@ -332,8 +344,8 @@ struct PriceHistoryChartCard: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             }
-            if let earliest = response?.earliestSoldAt.flatMap(Self.friendlyDate),
-               let latest = response?.latestSoldAt.flatMap(Self.friendlyDate) {
+            if let earliest = response?.earliestSoldAt.flatMap(priceHistoryFriendlyDate),
+               let latest = response?.latestSoldAt.flatMap(priceHistoryFriendlyDate) {
                 Text(" · From \(earliest) to \(latest)")
                     .font(.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
@@ -342,18 +354,6 @@ struct PriceHistoryChartCard: View {
             }
             Spacer(minLength: 0)
         }
-    }
-
-    private static func friendlyDate(_ raw: String) -> String? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let parsed = formatter.date(from: raw) ?? {
-            let alt = ISO8601DateFormatter()
-            alt.formatOptions = [.withInternetDateTime]
-            return alt.date(from: raw)
-        }()
-        guard let date = parsed else { return nil }
-        return date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     private var loadingState: some View {
