@@ -96,6 +96,27 @@ struct APIService {
         return try await get(path: "/api/playeriq/\(encoded)/stats", responseType: PlayerStatsResponse.self)
     }
 
+    /// PR #612: pricing-focused player detail (sold-comps summary,
+    /// top cards, by-year rollups). Distinct from `analyzePlayer`
+    /// which hits /api/playeriq/:name and returns a scoring/analysis
+    /// payload. Powers `PlayerDetailView` and any future "tap a
+    /// player name" navigation.
+    func fetchPlayerDetail(
+        playerName: String,
+        sport: String = "baseball",
+        days: Int = 30
+    ) async throws -> PlayerDetailResponse {
+        let encoded = playerName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? playerName
+        return try await get(
+            path: "/api/players/\(encoded)",
+            queryItems: [
+                URLQueryItem(name: "sport", value: sport),
+                URLQueryItem(name: "days", value: String(days))
+            ],
+            responseType: PlayerDetailResponse.self
+        )
+    }
+
     func estimateCardDirect(request: CardEstimateRequest) async throws -> CardEstimateResponse {
         try await post(path: "/api/compiq/estimate", body: request, responseType: CardEstimateResponse.self)
     }
