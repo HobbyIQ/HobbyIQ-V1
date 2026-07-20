@@ -113,17 +113,12 @@ struct DashboardView: View {
                 .environmentObject(sessionViewModel)
         }
         .navigationDestination(isPresented: $navigateToMovers) {
-            // 2026-07-19: hand the response the at-a-glance viewmodel
-            // already fetched into `HotRightNowListView`, which today
-            // takes its data via init param. Follow-up commit (spec §4)
-            // will refactor the list to load its own data and this
-            // wrapper collapses.
-            if let response = atAGlance.hotRightNowResponse {
-                HotRightNowListView(response: response)
-                    .environmentObject(sessionViewModel)
-            } else {
-                MoversLoaderView(sessionViewModel: sessionViewModel)
-            }
+            // 2026-07-19 (spec §4): route to card-level Market Movers.
+            // Seed with the at-a-glance viewmodel's cached response so
+            // the initial paint is instant; the list re-fetches from
+            // the network when the user changes any filter.
+            MarketMoversListView(seededResponse: atAGlance.marketMoversResponse)
+                .environmentObject(sessionViewModel)
         }
         // 2026-07-19: at-a-glance previews poll only on foreground reveal
         // (per spec §1) — no timers, no `.onReceive` continuous updates.
@@ -316,53 +311,6 @@ struct DashboardView: View {
 
 }
 
-// MARK: - Movers loader (temporary scaffolding)
-
-/// Bridges the Dashboard → `HotRightNowListView` push when the
-/// at-a-glance cache is empty (rare: user taps Movers before the
-/// dashboard's `.task` resolves, or the fetch failed). Fires the same
-/// `fetchHotRightNow` call, then renders the list. Will be removed
-/// once `HotRightNowListView` loads its own data (spec §4, follow-up).
-private struct MoversLoaderView: View {
-    let sessionViewModel: AppSessionViewModel
-    @State private var response: HotRightNowResponse?
-    @State private var errorMessage: String?
-
-    var body: some View {
-        Group {
-            if let response {
-                HotRightNowListView(response: response)
-                    .environmentObject(sessionViewModel)
-            } else if let errorMessage {
-                VStack(spacing: 12) {
-                    Text("Couldn't load movers.")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(24)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(HobbyIQBackground())
-            } else {
-                ProgressView()
-                    .tint(HobbyIQTheme.Colors.electricBlue)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(HobbyIQBackground())
-            }
-        }
-        .task {
-            do {
-                response = try await APIService.shared.fetchHotRightNow(limit: 25)
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-}
-
 // MARK: - At-a-glance card (spec §1)
 
 /// Preview tile for the Dashboard at-a-glance section. Icon + title +
@@ -432,11 +380,11 @@ final class DashboardAtAGlanceViewModel: ObservableObject {
     @Published private(set) var moversUp: Int?
     @Published private(set) var moversDown: Int?
     @Published private(set) var portfolioTotal: Double?
-    /// Held so the Movers tap-through can hand the same response into
-    /// `HotRightNowListView` without an extra round-trip. Will be
-    /// obsolete once the Market Movers surface loads its own data
-    /// (spec §4, follow-up commit).
-    @Published private(set) var hotRightNowResponse: HotRightNowResponse?
+    /// Held so the Movers tap-through can seed `MarketMoversListView`
+    /// with the same response the glance card already fetched — no
+    /// double round-trip on first paint. The list re-fetches from the
+    /// backend when the user changes any filter.
+    @Published private(set) var marketMoversResponse: MarketMoversResponse?
 
     private var lastLoad: Date?
     private static let staleWindow: TimeInterval = 30
@@ -470,17 +418,23 @@ final class DashboardAtAGlanceViewModel: ObservableObject {
         }
 
         do {
-            let response = try await APIService.shared.fetchHotRightNow(limit: 25)
-            hotRightNowResponse = response
-            let players = response.players ?? []
+            // 2026-07-19 (spec §4): card-level Market Movers is the
+            // authoritative source for the "Movers today" preview
+            // (priorMedian → currentMedian deltas). Hot Right Now is
+            // player-level momentum, semantically distinct.
+            let response = try await APIService.shared.fetchMarketMovers(
+                sport: "baseball",
+                window: "7d",
+                direction: "both",
+                limit: 50
+            )
+            marketMoversResponse = response
+            let movers = response.movers ?? []
             var up = 0
             var down = 0
-            for player in players {
-                switch player.direction?.lowercased() {
-                case "up": up += 1
-                case "down": down += 1
-                default: break
-                }
+            for mover in movers {
+                if mover.isUp { up += 1 }
+                else if mover.isDown { down += 1 }
             }
             moversUp = up
             moversDown = down

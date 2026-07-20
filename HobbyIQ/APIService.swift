@@ -641,6 +641,30 @@ struct APIService {
         )
     }
 
+    /// PR #608: card-level Market Movers surface. Distinct from
+    /// `fetchHotRightNow` (player-level momentum) — this endpoint
+    /// returns per-card `priorMedian` → `currentMedian` deltas over a
+    /// window, filtered by `sport`, `window`, `direction` ("up",
+    /// "down", "both"). Powers `MarketMoversListView` + the Dashboard
+    /// at-a-glance "Movers today" card.
+    func fetchMarketMovers(
+        sport: String = "baseball",
+        window: String = "7d",
+        direction: String = "both",
+        limit: Int = 50
+    ) async throws -> MarketMoversResponse {
+        try await get(
+            path: "/api/compiq/market-movers",
+            queryItems: [
+                URLQueryItem(name: "sport", value: sport),
+                URLQueryItem(name: "window", value: window),
+                URLQueryItem(name: "direction", value: direction),
+                URLQueryItem(name: "limit", value: String(limit))
+            ],
+            responseType: MarketMoversResponse.self
+        )
+    }
+
     /// PR #546: sorted per-holding verdict feed for the DailyIQ tab's
     /// Action Plan hero. Empty `actions` when the portfolio has none
     /// (freshly onboarded users) — UI suppresses the block.
