@@ -29,6 +29,8 @@ import playerDetailRoutes from "./routes/playerDetail.routes.js";
 import prospectsBreakingOutRoutes from "./routes/prospectsBreakingOut.routes.js";
 import cohortBacktestRoutes from "./routes/cohortBacktest.routes.js";
 import weeklyHobbyIndexRoutes from "./routes/weeklyHobbyIndex.routes.js";
+import setDetailRoutes from "./routes/setDetail.routes.js";
+import priceSeriesRoutes from "./routes/priceSeries.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -128,6 +130,8 @@ app.use("/api", playerDetailRoutes);
 app.use("/api/dailyiq", prospectsBreakingOutRoutes);
 app.use("/api/compiq", cohortBacktestRoutes);
 app.use("/api/insights", weeklyHobbyIndexRoutes);
+app.use("/api/compiq", setDetailRoutes);
+app.use("/api/compiq", priceSeriesRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
 // CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
