@@ -5282,7 +5282,22 @@ export async function sellHolding(req: Request, res: Response) {
         daysSinceVerdict: attribution.daysSinceVerdict,
         outcomeClass: attribution.outcomeClass,
       });
-    } catch { /* silent — attribution never blocks the sale */ }
+    } catch (err) {
+      // CF-ATTRIBUTION-TELEMETRY (Drew, 2026-07-19). Was silent-swallow.
+      // Sale attribution runs async after every sell — a broken
+      // classify/upsert path silently breaks all downstream outcome
+      // reporting. 5% sample warn so App Insights catches the failure
+      // rate without spamming for common transient errors.
+      if (Math.random() < 0.05) {
+        console.warn(JSON.stringify({
+          event: "sale_attribution_failed",
+          source: "portfolioStore.sellHolding",
+          holdingId: id,
+          error: (err as Error)?.message ?? String(err),
+          sampled: true,
+        }));
+      }
+    }
   })();
 
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the partial-quantity
