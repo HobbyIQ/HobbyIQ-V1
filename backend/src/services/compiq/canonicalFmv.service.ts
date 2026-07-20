@@ -1124,14 +1124,25 @@ async function trySiblingParallel(
     : "Raw";
   const cutoff = new Date(Date.now() - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString();
   const productToken = extractProductFamilyToken(input.product);
+  // CF-SIBLING-PARALLEL-AUTO-BOUNDARY (Drew, 2026-07-20). Without this
+  // gate a Gold Shimmer AUTO card pulls in NON-AUTO scarce siblings
+  // (Red Refractor 1/1 at $2,500, Red X-Fractor at $750) as pricing
+  // anchors, projecting FMV into the $1000+ range vs. the real auto
+  // sibling pool ($150-300). Symmetrically, a non-auto card would pull
+  // in auto siblings that command large auto premiums. wantAuto captures
+  // the target's auto/non-auto tier from the cardNumber prefix; each
+  // returned row is classified via its own card_set/variant text and
+  // dropped when it crosses the boundary.
+  const wantAuto = detectIsAuto(input);
 
   try {
     const { resources } = await container.items.query<{
       variant: string;
       price: number;
       sale_date: string;
+      card_set: string;
     }>({
-      query: `SELECT c.variant, c.price, c.sale_date
+      query: `SELECT c.variant, c.price, c.sale_date, c.card_set
               FROM c
               WHERE c.number = @cn
                 AND c.year = @yr
@@ -1150,11 +1161,17 @@ async function trySiblingParallel(
 
     if (resources.length === 0) return null;
 
-    // Group by variant, excluding Base and the target parallel itself.
+    // Group by variant, excluding Base, the target parallel itself, and
+    // rows on the wrong side of the auto/non-auto boundary.
     const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
     const target = stripRefr(parallel);
+    const isAutoRow = (r: { variant: string; card_set: string }): boolean => {
+      return /auto|autograph/i.test(r.card_set ?? "") || /auto|autograph/i.test(r.variant ?? "");
+    };
     const byVariant = new Map<string, number[]>();
+    let droppedCrossAuto = 0;
     for (const r of resources) {
+      if (isAutoRow(r) !== wantAuto) { droppedCrossAuto++; continue; }
       const v = (r.variant ?? "").trim();
       const vNorm = stripRefr(v);
       if (vNorm === "" || vNorm === "base" || vNorm === target) continue;
@@ -1162,6 +1179,16 @@ async function trySiblingParallel(
       const arr = byVariant.get(v) ?? [];
       arr.push(r.price);
       byVariant.set(v, arr);
+    }
+    if (droppedCrossAuto > 0) {
+      console.log(JSON.stringify({
+        event: "sibling_parallel_cross_auto_filtered",
+        source: "canonicalFmv.trySiblingParallel",
+        cardNumber: input.cardNumber,
+        wantAuto,
+        droppedCrossAuto,
+        keptVariants: byVariant.size,
+      }));
     }
     if (byVariant.size < 3) return null;
 
