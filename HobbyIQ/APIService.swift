@@ -145,6 +145,33 @@ struct APIService {
         )
     }
 
+    /// PR #623 (2026-07-20): historical price series for a single
+    /// card + parallel + grade. Powers the Pro-tier price-history
+    /// chart. Bucket is `day` or `week`; window is any of `30d`,
+    /// `90d`, `180d`, `365d`.
+    func fetchPriceSeries(
+        cardId: String,
+        parallel: String? = nil,
+        gradeCompany: String? = nil,
+        gradeValue: Double? = nil,
+        window: String = "90d",
+        bucket: String = "day"
+    ) async throws -> PriceSeriesResponse {
+        let encoded = cardId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? cardId
+        var query: [URLQueryItem] = [
+            URLQueryItem(name: "window", value: window),
+            URLQueryItem(name: "bucket", value: bucket)
+        ]
+        if let parallel { query.append(URLQueryItem(name: "parallel", value: parallel)) }
+        if let gradeCompany { query.append(URLQueryItem(name: "gradeCompany", value: gradeCompany)) }
+        if let gradeValue { query.append(URLQueryItem(name: "gradeValue", value: String(gradeValue))) }
+        return try await get(
+            path: "/api/compiq/cards/\(encoded)/price-series",
+            queryItems: query,
+            responseType: PriceSeriesResponse.self
+        )
+    }
+
     /// PR #623 (2026-07-20): Set Detail. Given a URL-slugified set
     /// name, returns every indexed card in that set with ranked
     /// median FMV over the window. Sort by median-desc / -asc /

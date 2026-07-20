@@ -21,6 +21,10 @@ enum PricedCardRoute: Hashable, Identifiable {
     /// in the Comp Sheet header. Payload is the URL-slugified set
     /// name; the destination view fetches the ranked card list.
     case setDetail(String)
+    /// 2026-07-20 (spec §15): pushed from a "Price history" affordance
+    /// on the Comp Sheet. Pro Seller / Investor tier only; Free /
+    /// Collector see the paywall CTA inside the destination view.
+    case priceSeries
     var id: Self { self }
 }
 
@@ -248,6 +252,14 @@ struct CompIQPricedCardView: View {
                 PlayerDetailView(playerName: name)
             case .setDetail(let slug):
                 SetDetailView(setSlug: slug)
+            case .priceSeries:
+                PriceSeriesView(
+                    cardId: hit.cardId,
+                    parallel: hit.variant,
+                    gradeCompany: selectedGrade.gradeCompany,
+                    gradeValue: selectedGrade.gradeValue
+                )
+                .environmentObject(sessionViewModel)
             case .addToInventory:
                 if let response = priceResponse {
                     CompIQAddToInventorySheet(
@@ -441,30 +453,20 @@ struct CompIQPricedCardView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // 2026-07-20 (spec §14): "See all in this set" chip
-                // pushes SetDetailView with the URL-slugified set name.
-                // Only rendered when we have enough identity to make a
-                // sensible slug (set + year — otherwise the slug is
-                // ambiguous across print years).
-                if let slug = setSlugForNavigation {
-                    Button {
-                        pricedRoute = .setDetail(slug)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.stack.3d.up")
-                                .font(.caption2.weight(.semibold))
-                            Text("See all in this set")
-                                .font(.caption.weight(.semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.bold))
+                // 2026-07-20 (spec §14 + §15): navigation chip row.
+                // Set Detail chip is always visible when we have a
+                // slug; Price History chip is always visible (the
+                // destination view handles the paywall CTA for
+                // non-Investor tiers rather than hiding here).
+                HStack(spacing: 6) {
+                    if let slug = setSlugForNavigation {
+                        headerChip(icon: "square.stack.3d.up", label: "See all in this set") {
+                            pricedRoute = .setDetail(slug)
                         }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                        .clipShape(Capsule(style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    headerChip(icon: "chart.xyaxis.line", label: "Price history") {
+                        pricedRoute = .priceSeries
+                    }
                 }
                 // CF-FLAT-HEADER (2026-07-04): variant/serial/auto pills
                 // rolled into `headerCardDetails` — the two-pill row is
@@ -578,6 +580,29 @@ struct CompIQPricedCardView: View {
 
     private func compactUSD(_ value: Double) -> String {
         "$\(Int(value.rounded()).formatted(.number.grouping(.automatic)))"
+    }
+
+    /// 2026-07-20 (spec §14 + §15): shared chip style for the
+    /// navigation affordances beneath the header identity row.
+    /// Small pill w/ icon + label + chevron; taps drive the caller-
+    /// provided action.
+    private func headerChip(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2.weight(.semibold))
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+            .clipShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     /// 2026-07-20 (spec §14): URL-slugified set name for the "See all
