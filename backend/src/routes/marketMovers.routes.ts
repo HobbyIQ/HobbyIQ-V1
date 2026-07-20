@@ -62,9 +62,112 @@ async function getContainer(): Promise<Container | null> {
   } catch { return null; }
 }
 
+let sharedDailyContainer: Container | null = null;
+async function getDailyContainer(): Promise<Container | null> {
+  if (sharedDailyContainer) return sharedDailyContainer;
+  const cs = process.env.COSMOS_CONNECTION_STRING;
+  if (!cs) return null;
+  try {
+    const client = new CosmosClient(cs);
+    sharedDailyContainer = client
+      .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+      .container("sold_comps_daily");
+    return sharedDailyContainer;
+  } catch { return null; }
+}
+
+interface DailyRow {
+  cardId: string;
+  sport: string | null;
+  playerName: string | null;
+  product: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  cardNumber: string | null;
+  cardYear: number | null;
+  day: string;
+  count: number;
+  median: number;
+  min: number;
+  max: number;
+}
+
 function median(sortedAsc: number[]): number {
   if (sortedAsc.length === 0) return 0;
   return sortedAsc[Math.floor(sortedAsc.length / 2)];
+}
+
+interface Mover {
+  cardId: string;
+  playerName: string | null;
+  product: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  cardYear: number | null;
+  cardNumber: string | null;
+  priorMedian: number;
+  currentMedian: number;
+  deltaPct: number;
+  deltaUSD: number;
+  salesInWindow: number;
+  sampleImageUrl: string | null;
+}
+
+function buildMoversFromDaily(
+  groups: Map<string, { rows: DailyRow[]; sku: DailyRow }>,
+  midpointDay: string,
+  minSales: number,
+): Mover[] {
+  const movers: Mover[] = [];
+  for (const [, g] of groups) {
+    const totalSales = g.rows.reduce((s, r) => s + r.count, 0);
+    if (totalSales < minSales) continue;
+    const prior = g.rows.filter((r) => r.day < midpointDay);
+    const current = g.rows.filter((r) => r.day >= midpointDay);
+    if (prior.length === 0 || current.length === 0) continue;
+    // Weighted median-of-medians by day count. For thin buckets this
+    // is equivalent to the raw median; for thick buckets it's a fair
+    // approximation without paying the raw-scan cost.
+    const priorSorted = prior.slice().sort((a, b) => a.median - b.median).map((r) => r.median);
+    const currentSorted = current.slice().sort((a, b) => a.median - b.median).map((r) => r.median);
+    const priorMedian = median(priorSorted);
+    const currentMedian = median(currentSorted);
+    if (priorMedian <= 0) continue;
+    const deltaPct = Math.round(((currentMedian - priorMedian) / priorMedian) * 1000) / 10;
+    const deltaUSD = Math.round((currentMedian - priorMedian) * 100) / 100;
+    if (Math.abs(deltaUSD) < 1) continue;
+    movers.push({
+      cardId: g.sku.cardId,
+      playerName: g.sku.playerName,
+      product: g.sku.product,
+      parallel: g.sku.parallel,
+      gradeCompany: g.sku.gradeCompany,
+      gradeValue: g.sku.gradeValue,
+      cardYear: g.sku.cardYear,
+      cardNumber: g.sku.cardNumber,
+      priorMedian: Math.round(priorMedian * 100) / 100,
+      currentMedian: Math.round(currentMedian * 100) / 100,
+      deltaPct,
+      deltaUSD,
+      salesInWindow: totalSales,
+      sampleImageUrl: null, // rollup path doesn't have image; iOS falls to catalog art
+    });
+  }
+  return movers;
+}
+
+function rankMovers(movers: Mover[], direction: string, limit: number): Mover[] {
+  if (direction === "up") {
+    return movers.filter((m) => m.deltaPct > 0).sort((a, b) => b.deltaPct - a.deltaPct).slice(0, limit);
+  }
+  if (direction === "down") {
+    return movers.filter((m) => m.deltaPct < 0).sort((a, b) => a.deltaPct - b.deltaPct).slice(0, limit);
+  }
+  const up = movers.filter((m) => m.deltaPct > 0).sort((a, b) => b.deltaPct - a.deltaPct).slice(0, Math.ceil(limit / 2));
+  const down = movers.filter((m) => m.deltaPct < 0).sort((a, b) => a.deltaPct - b.deltaPct).slice(0, Math.floor(limit / 2));
+  return [...up, ...down];
 }
 
 router.get("/market-movers", requireSession, async (req: Request, res: Response, next) => {
@@ -90,6 +193,75 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
     const nowMs = Date.now();
     const windowStart = new Date(nowMs - windowDays * 86_400_000).toISOString();
     const midpoint = new Date(nowMs - (windowDays / 2) * 86_400_000).toISOString();
+    const windowStartDay = windowStart.slice(0, 10);
+    const midpointDay = midpoint.slice(0, 10);
+
+    // CF-MARKET-MOVERS-ROLLUPS (Drew, 2026-07-20). Rollup-first path
+    // consumes sold_comps_daily to eliminate the ~100K-row raw scan.
+    // Flag-gated + defensive: if the rollup returns fewer SKUs than a
+    // sanity threshold (rollup script hasn't been dispatched for this
+    // sport, or the day range isn't populated), fall back to the raw
+    // scan below. Populate ROLLUP_SUFFICIENCY_MIN so a sparsely-covered
+    // long-tail sport doesn't silently return an empty list.
+    const useRollups = String(process.env.MARKET_MOVERS_USE_ROLLUPS ?? "").toLowerCase() === "true";
+    const rollupMinSkus = Number(process.env.MARKET_MOVERS_ROLLUP_SUFFICIENCY_MIN ?? "50");
+    let usedPath: "rollups" | "raw" = "raw";
+
+    if (useRollups) {
+      const daily = await getDailyContainer();
+      if (daily) {
+        const dailyIter = daily.items.query<DailyRow>({
+          query: `SELECT c.cardId, c.sport, c.playerName, c.product, c.parallel,
+                         c.gradeCompany, c.gradeValue, c.cardNumber, c.cardYear,
+                         c.day, c.count, c.median, c.min, c.max
+                  FROM c
+                  WHERE c.sport = @sport
+                    AND c.day >= @fromDay
+                    AND c.median > 0`,
+          parameters: [
+            { name: "@sport", value: sport },
+            { name: "@fromDay", value: windowStartDay },
+          ],
+        });
+        const dailyRows: DailyRow[] = [];
+        while (dailyIter.hasMoreResults()) {
+          const { resources } = await dailyIter.fetchNext();
+          dailyRows.push(...resources);
+        }
+
+        // Group by (cardId, parallel, gradeCompany, gradeValue). For
+        // each group compute prior-half median-of-medians + current-half
+        // median-of-medians (weighted by daily count).
+        const groups = new Map<string, { rows: DailyRow[]; sku: DailyRow }>();
+        for (const r of dailyRows) {
+          const key = `${r.cardId}::${r.parallel ?? ""}::${r.gradeCompany ?? ""}::${r.gradeValue ?? ""}`;
+          const g = groups.get(key);
+          if (g) g.rows.push(r);
+          else groups.set(key, { rows: [r], sku: r });
+        }
+
+        if (groups.size >= rollupMinSkus) {
+          usedPath = "rollups";
+          const movers = buildMoversFromDaily(groups, midpointDay, minSales);
+          const result = rankMovers(movers, direction, limit);
+          res.json({
+            sport, windowDays,
+            totalSkusInWindow: groups.size,
+            qualifyingMovers: movers.length,
+            returned: result.length,
+            computedAt: new Date().toISOString(),
+            source: usedPath,
+            movers: result,
+          });
+          return;
+        }
+        console.log(JSON.stringify({
+          event: "market_movers.rollup_insufficient",
+          sport, skus: groups.size, threshold: rollupMinSkus,
+          action: "fall_back_to_raw",
+        }));
+      }
+    }
 
     // Uses the (sport, soldAt) composite index. Returns every comp in
     // the window across the sport — bounded by window * daily volume;
@@ -126,22 +298,7 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
       else groups.set(key, { rows: [r], sku: r });
     }
 
-    const movers: Array<{
-      cardId: string;
-      playerName: string | null;
-      product: string | null;
-      parallel: string | null;
-      gradeCompany: string | null;
-      gradeValue: number | null;
-      cardYear: number | null;
-      cardNumber: string | null;
-      priorMedian: number;
-      currentMedian: number;
-      deltaPct: number;
-      deltaUSD: number;
-      salesInWindow: number;
-      sampleImageUrl: string | null;
-    }> = [];
+    const movers: Mover[] = [];
 
     for (const [, g] of groups) {
       if (g.rows.length < minSales) continue;
@@ -179,17 +336,7 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
       });
     }
 
-    // Sort + slice by direction. "both" returns top gainers + top losers.
-    let result;
-    if (direction === "up") {
-      result = movers.filter((m) => m.deltaPct > 0).sort((a, b) => b.deltaPct - a.deltaPct).slice(0, limit);
-    } else if (direction === "down") {
-      result = movers.filter((m) => m.deltaPct < 0).sort((a, b) => a.deltaPct - b.deltaPct).slice(0, limit);
-    } else {
-      const up = movers.filter((m) => m.deltaPct > 0).sort((a, b) => b.deltaPct - a.deltaPct).slice(0, Math.ceil(limit / 2));
-      const down = movers.filter((m) => m.deltaPct < 0).sort((a, b) => a.deltaPct - b.deltaPct).slice(0, Math.floor(limit / 2));
-      result = [...up, ...down];
-    }
+    const result = rankMovers(movers, direction, limit);
 
     res.json({
       sport,
@@ -198,6 +345,7 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
       qualifyingMovers: movers.length,
       returned: result.length,
       computedAt: new Date().toISOString(),
+      source: "raw",
       movers: result,
     });
   } catch (err) { next(err); }

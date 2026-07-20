@@ -40,6 +40,14 @@ jobs:
       id-token: write
       contents: read
     timeout-minutes: 15
+    # CF-SPORT-MATRIX (Drew, 2026-07-20). Fan out across sports so the
+    # nightly cron populates prospects for all pool-covered sports
+    # without duplicating the workflow YAML. Manual dispatch's `sport`
+    # input overrides the matrix (single-sport ad-hoc run).
+    strategy:
+      fail-fast: false
+      matrix:
+        sport: ${{ github.event_name == 'workflow_dispatch' && fromJson(format('["{0}"]', inputs.sport)) || fromJson('["baseball", "football", "basketball"]') }}
 
     steps:
       - name: Login to Azure
@@ -62,7 +70,7 @@ jobs:
       - name: POST sub-raw-inversion/scan
         env:
           ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          SPORT: ${{ inputs.sport || 'baseball' }}
+          SPORT: ${{ matrix.sport }}
           WINDOW: ${{ inputs.window_days || '30' }}
           MARGIN: ${{ inputs.min_margin_pct || '5' }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
