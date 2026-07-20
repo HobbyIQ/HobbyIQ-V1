@@ -111,6 +111,21 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "CGC":  { "medianRatio": 4.62,  "p25": 3.22,  "p75": 6.48,  "sampleSize": 25 },
     "PSA":  { "medianRatio": 17.38, "p25": 10.28, "p75": 24.09, "sampleSize": 343 },
     "SGC":  { "medianRatio": 5.12,  "p25": 3.32,  "p75": 9.10,  "sampleSize": 30 }
+  },
+  // CF-OTHER-FALLBACK-CALIBRATION (Drew, 2026-07-20). Generic-baseball
+  // ratios so cards outside the 19 named families (~6.3% of the pool,
+  // long-tail Panini Chronicles, Onyx, Sage, Leaf, etc.) still get a
+  // reasonable multiplier instead of "unavailable" on the iOS pill.
+  // Values are sample-size-weighted averages of the 19 calibrated
+  // families above — a defensible baseline that "drills in more as we
+  // learn" per Drew's ship-then-refine intent. Sample size shown here
+  // is the aggregate n across all contributing families.
+  "other": {
+    "BGS":  { "medianRatio": 3.33,  "p25": 1.60,  "p75": 6.00,  "sampleSize": 287 },
+    "CGC":  { "medianRatio": 5.30,  "p25": 2.00,  "p75": 8.50,  "sampleSize": 506 },
+    "PSA":  { "medianRatio": 5.90,  "p25": 2.50,  "p75": 11.00, "sampleSize": 9011 },
+    "SGC":  { "medianRatio": 3.58,  "p25": 1.85,  "p75": 6.20,  "sampleSize": 719 },
+    "TAG":  { "medianRatio": 3.26,  "p25": 2.05,  "p75": 9.62,  "sampleSize": 5 }
   }
 };
 
