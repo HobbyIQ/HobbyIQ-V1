@@ -146,13 +146,57 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
 // fallback to the baseline otherwise.
 
 export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<string, GradeCalibrationEntry>>> = {
-  // Populated by scripts/calibrate-grade-multipliers.mjs --sport=X
-  // when re-run per-sport. Empty until football + basketball
-  // backfills finish + the calibration script gets a --sport flag.
-  baseball: {},   // reserved; baseline GRADE_CALIBRATION is the
-                  // baseball-implicit source of truth today
-  football: {},
-  basketball: {},
+  // Baseline GRADE_CALIBRATION is baseball-implicit — no per-sport
+  // override needed for baseball.
+  baseball: {},
+
+  // CF-PER-SPORT-CALIBRATION (Drew, 2026-07-20). Generated from the
+  // ~65K FB/BB rows in ch_daily_sales after the multi-sport ingest
+  // filter lift (PR #627). Small samples in some cells (n<10) mean
+  // wide confidence bands — retag as `sampleSize` grows via nightly
+  // ingest. Cells with n<3 are omitted; caller falls back to the
+  // baseball baseline via lookupGradeRatio's sport-then-baseline
+  // resolution order.
+  football: {
+    "bowman-chrome":  { "PSA": { "medianRatio": 5.05,  "p25": 4.13, "p75": 20.03, "sampleSize": 4 } },
+    "panini-absolute":{ "PSA": { "medianRatio": 1.89,  "p25": 1.24, "p75": 11.67, "sampleSize": 14 } },
+    "panini-chronicles":{ "PSA": { "medianRatio": 8.19, "p25": 4.63, "p75": 14.33, "sampleSize": 6 } },
+    "panini-donruss": { "PSA": { "medianRatio": 3.02,  "p25": 1.59, "p75": 7.22,  "sampleSize": 177 } },
+    "panini-mosaic":  { "PSA": { "medianRatio": 5.77,  "p25": 2.55, "p75": 12.05, "sampleSize": 38 } },
+    "panini-optic":   { "PSA": { "medianRatio": 2.70,  "p25": 1.58, "p75": 6.36,  "sampleSize": 98 } },
+    "panini-phoenix": { "PSA": { "medianRatio": 3.09,  "p25": 1.59, "p75": 8.65,  "sampleSize": 15 } },
+    "panini-prizm":   {
+      "PSA": { "medianRatio": 5.62, "p25": 3.56, "p75": 9.50,  "sampleSize": 124 },
+      "SGC": { "medianRatio": 1.89, "p25": 1.73, "p75": 3.98,  "sampleSize": 4 }
+    },
+    "panini-score":   { "PSA": { "medianRatio": 7.56,  "p25": 3.36, "p75": 17.41, "sampleSize": 5 } },
+    "panini-select":  { "PSA": { "medianRatio": 8.35,  "p25": 5.41, "p75": 21.52, "sampleSize": 20 } },
+    "topps-chrome":   { "PSA": { "medianRatio": 4.48,  "p25": 1.86, "p75": 7.05,  "sampleSize": 14 } }
+  },
+  basketball: {
+    "bowman-chrome":       { "PSA": { "medianRatio": 7.32,  "p25": 6.45, "p75": 20.17, "sampleSize": 4 } },
+    "panini-chronicles":   { "PSA": { "medianRatio": 11.70, "p25": 6.66, "p75": 24.00, "sampleSize": 6 } },
+    "panini-contenders":   { "PSA": { "medianRatio": 13.51, "p25": 2.40, "p75": 26.31, "sampleSize": 3 } },
+    "panini-donruss":      {
+      "PSA": { "medianRatio": 6.99, "p25": 4.41, "p75": 9.72,  "sampleSize": 38 },
+      "SGC": { "medianRatio": 4.93, "p25": 2.20, "p75": 9.89,  "sampleSize": 3 }
+    },
+    "panini-hoops":        { "PSA": { "medianRatio": 9.34,  "p25": 4.74, "p75": 12.82, "sampleSize": 19 } },
+    "panini-mosaic":       { "PSA": { "medianRatio": 6.00,  "p25": 3.51, "p75": 12.13, "sampleSize": 12 } },
+    "panini-optic":        { "PSA": { "medianRatio": 6.44,  "p25": 3.64, "p75": 9.72,  "sampleSize": 24 } },
+    "panini-phoenix":      { "PSA": { "medianRatio": 5.29,  "p25": 2.81, "p75": 8.03,  "sampleSize": 3 } },
+    "panini-prizm":        {
+      "BGS": { "medianRatio": 2.49, "p25": 2.10, "p75": 14.85, "sampleSize": 4 },
+      "CGC": { "medianRatio": 2.18, "p25": 0.73, "p75": 3.00,  "sampleSize": 3 },
+      "PSA": { "medianRatio": 5.00, "p25": 2.76, "p75": 8.83,  "sampleSize": 166 }
+    },
+    "panini-revolution":   { "PSA": { "medianRatio": 9.85,  "p25": 2.26, "p75": 39.78, "sampleSize": 4 } },
+    "panini-select":       { "PSA": { "medianRatio": 4.71,  "p25": 2.63, "p75": 8.31,  "sampleSize": 23 } },
+    "topps-chrome":        {
+      "BGS": { "medianRatio": 2.56, "p25": 0.96, "p75": 11.67, "sampleSize": 3 },
+      "PSA": { "medianRatio": 5.28, "p25": 2.71, "p75": 9.79,  "sampleSize": 88 }
+    }
+  },
   hockey: {},
 };
 
@@ -200,6 +244,23 @@ export function classifyFamily(setName: string | null | undefined): string {
   if (s.includes("mosaic")) return "panini-mosaic";
   if (s.includes("donruss")) return "panini-donruss";
   if (s.includes("optic")) return "panini-optic";
+  // CF-FB-BB-BRANDS (Drew, 2026-07-20). Extended for FB/BB-specific
+  // product lines uncovered by baseball-only classifier.
+  if (s.includes("hoops")) return "panini-hoops";
+  if (s.includes("contenders")) return "panini-contenders";
+  if (s.includes("national treasures")) return "panini-national-treasures";
+  if (s.includes("immaculate")) return "panini-immaculate";
+  if (s.includes("flawless")) return "panini-flawless";
+  if (s.includes("chronicles")) return "panini-chronicles";
+  if (s.includes("obsidian")) return "panini-obsidian";
+  if (s.includes("phoenix")) return "panini-phoenix";
+  if (s.includes("spectra")) return "panini-spectra";
+  if (s.includes("absolute")) return "panini-absolute";
+  if (s.includes("score")) return "panini-score";
+  if (s.includes("prestige")) return "panini-prestige";
+  if (s.includes("certified")) return "panini-certified";
+  if (s.includes("playoff")) return "panini-playoff";
+  if (s.includes("revolution")) return "panini-revolution";
   if (s.includes("upper deck")) return "upper-deck";
   return "other";
 }
