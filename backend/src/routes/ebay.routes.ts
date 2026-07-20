@@ -196,6 +196,175 @@ router.get("/policies", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// CF-LISTING-REVIEW-PREPARE (Drew, 2026-07-20).
+// GET the shaped payload iOS renders on the Listing Review screen —
+// pre-filled from the holding, auto-defaults where sensible, flagged
+// for what's still missing before eBay accepts a publish. Never
+// touches eBay; just structures data.
+// ---------------------------------------------------------------------------
+
+const SPORT_TO_LEAGUE: Record<string, string> = {
+  baseball: "Major League Baseball (MLB)",
+  football: "National Football League (NFL)",
+  basketball: "National Basketball Association (NBA)",
+  hockey: "National Hockey League (NHL)",
+  soccer: "Major League Soccer (MLS)",
+};
+
+router.post("/listings/prepare", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { holdingId } = (req.body ?? {}) as { holdingId?: string };
+  if (!holdingId || typeof holdingId !== "string" || !holdingId.trim()) {
+    res.status(400).json({ success: false, error: "holdingId is required" });
+    return;
+  }
+  try {
+    const doc = await readUserDoc(userId);
+    const h = doc.holdings?.[holdingId.trim()] as unknown as Record<string, unknown> | undefined;
+    if (!h) {
+      res.status(404).json({ success: false, error: "Holding not found" });
+      return;
+    }
+
+    const sport = (typeof h.sport === "string" && h.sport.trim())
+      ? String(h.sport).trim().toLowerCase()
+      : "baseball";
+    const cardYear = typeof h.cardYear === "number" ? h.cardYear : null;
+    const gradeCompany = typeof h.gradeCompany === "string" ? h.gradeCompany : null;
+    const gradeValue = typeof h.gradeValue === "number"
+      ? String(h.gradeValue)
+      : (typeof h.grade === "string" ? h.grade : null);
+    const isGraded = !!gradeCompany && gradeCompany.toLowerCase() !== "raw" && !!gradeValue;
+
+    const photosRaw = Array.isArray(h.photos) ? (h.photos as string[]) : [];
+    const photos = photosRaw
+      .filter((u) => typeof u === "string" && /^https:\/\//i.test(u))
+      .slice(0, 12);
+
+    // Existing captured aspects — used ONLY for the category-meta fields.
+    // Card-identity aspects come from the holding's authoritative fields.
+    const captured = (h.ebayItemAspects && typeof h.ebayItemAspects === "object")
+      ? (h.ebayItemAspects as Record<string, string>)
+      : {};
+
+    const priceCents = (() => {
+      const guess = (h.predictedPrice ?? h.fairMarketValue ?? h.estimatedValue) as number | undefined;
+      if (typeof guess === "number" && guess > 0) return Math.round(guess * 100);
+      return 0;
+    })();
+
+    const titleSuggested = (() => {
+      const parts: string[] = [];
+      if (cardYear) parts.push(String(cardYear));
+      if (h.setName ?? h.product) parts.push(String(h.setName ?? h.product));
+      if (h.parallel) parts.push(String(h.parallel));
+      if (h.playerName) parts.push(String(h.playerName));
+      if (h.cardNumber) parts.push(`#${String(h.cardNumber).replace(/^#+/, "")}`);
+      return parts.join(" ").trim().slice(0, 80);
+    })();
+
+    const identity = {
+      playerName: (typeof h.playerName === "string" ? h.playerName : null) as string | null,
+      cardYear,
+      setName: (typeof h.setName === "string" ? h.setName : null) as string | null,
+      parallel: (typeof h.parallel === "string" ? h.parallel : null) as string | null,
+      cardNumber: (typeof h.cardNumber === "string" ? h.cardNumber : null) as string | null,
+      isAuto: h.isAuto === true,
+      isRookie: (h as { isRookie?: boolean }).isRookie === true,
+      team: (typeof h.team === "string" ? h.team : null) as string | null,
+      sport: sport.charAt(0).toUpperCase() + sport.slice(1),
+    };
+
+    const condition = {
+      isGraded,
+      gradingCompany: isGraded ? gradeCompany : null,
+      grade: isGraded ? gradeValue : null,
+      certNumber: (typeof h.certNumber === "string" ? h.certNumber : null) as string | null,
+      conditionEstimate: (typeof h.conditionEstimate === "string" ? h.conditionEstimate : null) as string | null,
+      conditionNotes: (typeof h.conditionNotes === "string" ? h.conditionNotes : null) as string | null,
+    };
+
+    const categoryAspects = {
+      league: captured["League"] ?? (SPORT_TO_LEAGUE[sport] ?? null),
+      type: captured["Type"] ?? "Sports Trading Card",
+      countryOfManufacture: captured["Country/Region of Manufacture"]
+        ?? captured["Country of Origin"]
+        ?? captured["Country/Region of Origin"]
+        ?? "United States",
+      yearManufactured: (() => {
+        const raw = captured["Year Manufactured"];
+        if (raw) { const n = parseInt(raw, 10); if (Number.isFinite(n)) return n; }
+        return cardYear;
+      })(),
+      season: (() => {
+        const raw = captured["Season"];
+        if (raw) { const n = parseInt(raw, 10); if (Number.isFinite(n)) return n; }
+        return cardYear;
+      })(),
+      language: captured["Language"] ?? "English",
+    };
+
+    const listing = {
+      quantity: 1,
+      priceCents,
+      bestOfferEnabled: false,
+      bestOfferMinPriceCents: null as number | null,
+      description: (typeof h.ebayShortDescription === "string" ? h.ebayShortDescription : titleSuggested),
+      titleSuggested,
+    };
+
+    // Validation — what's still needed before eBay will accept the payload
+    const requiredMissing: string[] = [];
+    const warnings: string[] = [];
+
+    if (photos.length === 0) requiredMissing.push("photos");
+    if (!identity.playerName) requiredMissing.push("identity.playerName");
+    if (!identity.cardYear) requiredMissing.push("identity.cardYear");
+    if (!identity.setName) requiredMissing.push("identity.setName");
+    if (!categoryAspects.league) requiredMissing.push("categoryAspects.league");
+    if (!categoryAspects.type) requiredMissing.push("categoryAspects.type");
+    if (!categoryAspects.countryOfManufacture) requiredMissing.push("categoryAspects.countryOfManufacture");
+    if (!categoryAspects.yearManufactured) requiredMissing.push("categoryAspects.yearManufactured");
+    if (!listing.priceCents || listing.priceCents <= 0) requiredMissing.push("listing.priceCents");
+    if (!listing.titleSuggested) requiredMissing.push("listing.title");
+    else if (listing.titleSuggested.length > 80) warnings.push("Title exceeds eBay's 80-char cap and will be truncated");
+
+    if (isGraded && !gradeValue) requiredMissing.push("condition.grade");
+    if (!isGraded && !condition.conditionEstimate) warnings.push("Raw condition not set; will default to 'Near Mint'");
+
+    // Contradiction warnings (from the Judge-style dirty-capture pattern)
+    if (!identity.isAuto) {
+      for (const k of ["Autograph Format", "Autograph Authentication", "Signed By"]) {
+        if (captured[k]) warnings.push(`Captured "${k}" ignored — holding is not marked auto`);
+      }
+    }
+    if (!isGraded && captured["Grade"]) {
+      warnings.push(`Captured "Grade: ${captured["Grade"]}" ignored — holding is raw`);
+    }
+
+    res.json({
+      success: true,
+      holdingId: holdingId.trim(),
+      identity,
+      condition,
+      categoryAspects,
+      photos,
+      listing,
+      validation: {
+        requiredMissing,
+        warnings,
+        readyToPublish: requiredMissing.length === 0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : "prepare failed",
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Draft preview (no eBay calls)
 // ---------------------------------------------------------------------------
 
