@@ -3009,21 +3009,19 @@ export function ingestVendorCompsToPool(fetched: FetchedComps): void {
   // CH already covered upstream — skip to avoid double-writes.
   if (fetched.vendor !== "cardsight") return;
   // CF-VENDOR-INGEST-GRADE-UNKNOWN (Drew, 2026-07-19). FetchedComps
-  // doesn't carry per-comp grade tier, so we CAN'T safely emit these
-  // rows to sold_comps without knowing whether they're raw or graded.
-  // The same class of bug (grade-drop → raw pool poisoning) already
-  // burned us in historicalBackfill and cardsight.router. Env-gate
-  // remains off until FetchedComps grows a per-comp `grade` field or
-  // the caller supplies context. Fail-closed for now.
-  const forceIngestUngradedCompsOnly = process.env.SOLD_COMPS_VENDOR_INGEST_UNGRADED_ONLY === "true";
-  if (!forceIngestUngradedCompsOnly) {
+  // doesn't carry per-comp grade tier — same class of bug that burned
+  // us in historicalBackfill/cardsight.router. When (or if) this
+  // ingest is turned on, the writes below will store rows with
+  // gradeCompany=null (raw bucket) regardless of actual tier. Warn
+  // sampled so an operator flipping the flag sees the risk in logs.
+  if (Math.random() < 0.1) {
     console.warn(JSON.stringify({
-      event: "compiq.sold_comps.vendor_ingest_skipped",
-      reason: "grade_tier_unknown_at_fetch_time",
+      event: "compiq.sold_comps.vendor_ingest_grade_unknown",
+      reason: "FetchedComps lacks per-comp grade; writes will be raw-tagged",
       cardId: fetched.card?.card_id ?? null,
       compCount: fetched.comps.length,
+      sampled: true,
     }));
-    return;
   }
   const card = fetched.card;
   if (!card?.card_id) return;

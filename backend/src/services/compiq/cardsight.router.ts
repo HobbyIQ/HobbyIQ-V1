@@ -863,7 +863,20 @@ async function tryCardHedge(
           confidence: 0.8,
         });
       }
-    } catch { /* swallow — vendor emit is auxiliary */ }
+    } catch (err) {
+      // CF-VENDOR-EMIT-TELEMETRY (Drew, 2026-07-19). Was silent-swallow.
+      // 1% sample so a broken emit path surfaces in App Insights
+      // without spamming when the module is globally unhealthy.
+      if (Math.random() < 0.01) {
+        console.warn(JSON.stringify({
+          event: "cardhedge_vendor_emit_failed",
+          source: "cardsight.router.tryCardHedge",
+          chCardId: bridge.chCardId,
+          error: (err as Error)?.message ?? String(err),
+          sampled: true,
+        }));
+      }
+    }
   })();
 
   return {
