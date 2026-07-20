@@ -1344,7 +1344,7 @@ struct APIService {
         }
         do {
             let response: FlagResponse = try await post(
-                path: "/api/portfolioiq/comps/flag-wrong",
+                path: "/api/portfolio/comps/flag-wrong",
                 body: FlagRequest(cardId: cardId, compId: compId, reason: reason),
                 responseType: FlagResponse.self,
                 timeoutSeconds: 15
@@ -1783,15 +1783,17 @@ struct APIService {
         return envelope.holdings
     }
 
-    /// CF-ADD-TO-INVENTORY (2026-06-12): POST /api/portfolioiq/holdings.
-    /// Identity-gated server-side; auto-prices the holding (the response is
-    /// already comped, so the inventory view can render the new row at its
-    /// estimated value without a refetch). `parallelId` is the load-bearing
-    /// field for graded-scope valuation — without it the rail estimates
-    /// fall back to base scope and the holding values at the wrong number.
+    /// CF-ADD-TO-INVENTORY (2026-06-12): POST /api/portfolio/holdings
+    /// (migrated from the legacy `portfolioiq` mount 2026-07-19 alongside
+    /// backend mount consolidation). Identity-gated server-side; auto-
+    /// prices the holding (the response is already comped, so the
+    /// inventory view can render the new row at its estimated value
+    /// without a refetch). `parallelId` is the load-bearing field for
+    /// graded-scope valuation — without it the rail estimates fall
+    /// back to base scope and the holding values at the wrong number.
     func addPortfolioHolding(_ body: AddHoldingRequest) async throws -> AddHoldingResponse {
         try await post(
-            path: "/api/portfolioiq/holdings",
+            path: "/api/portfolio/holdings",
             body: body,
             responseType: AddHoldingResponse.self
         )
@@ -3802,7 +3804,7 @@ struct PortfolioIQBackendSummaryResponse: Decodable {
 }
 
 /// CF-ADD-TO-INVENTORY (2026-06-12): wire body for POST
-/// /api/portfolioiq/holdings. parallelId is required for parallels so the
+/// /api/portfolio/holdings. parallelId is required for parallels so the
 /// server-side auto-price runs in graded scope (matching the rail
 /// estimate the user just saw on the comp page). purchasePrice is
 /// optional; nil means "I haven't entered a cost basis yet" — backend

@@ -5,7 +5,8 @@
 //  CF-ADD-TO-INVENTORY (2026-06-12): sheet that pins the comp card's
 //  identity, lets the user pick a grade, previews the live graded-rail
 //  valuation, optionally captures cost basis, and POSTs to
-//  /api/portfolioiq/holdings. The preview reads from the SAME
+//  /api/portfolio/holdings (migrated from /api/portfolioiq 2026-07-19).
+//  The preview reads from the SAME
 //  `gradedEstimates` the rail uses, so the holding lands in inventory at
 //  the number the user saw on the comp page.
 //
