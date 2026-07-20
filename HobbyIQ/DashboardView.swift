@@ -16,7 +16,7 @@ struct DashboardView: View {
     @State private var searchQuery = ""
     @State private var navigateToCompIQSearch = false
     @State private var navigateToCertResolve = false
-    @State private var navigateToCertLookup = false
+    @State private var showCertNumberSheet = false
     @State private var navigateToMovers = false
     @State private var certResolveInput = ""
     @State private var showCardScanner = false
@@ -108,9 +108,12 @@ struct DashboardView: View {
         }
         .scanFlow(isPresented: $showCardScanner, sessionViewModel: sessionViewModel)
         .gradedSlabScanFlow(isPresented: $showGradedScanner, sessionViewModel: sessionViewModel)
-        .navigationDestination(isPresented: $navigateToCertLookup) {
-            SlabCertLookupView()
-                .environmentObject(sessionViewModel)
+        // 2026-07-19 (spec §2): Dashboard cert chip now opens the
+        // unified modal. `SlabCertLookupView` stays reachable from
+        // the graded scan flow's "Have a cert # instead?" affordance
+        // for backwards compatibility.
+        .sheet(isPresented: $showCertNumberSheet) {
+            CertNumberInputSheet()
         }
         .navigationDestination(isPresented: $navigateToMovers) {
             // 2026-07-19 (spec §4): route to card-level Market Movers.
@@ -202,7 +205,7 @@ struct DashboardView: View {
             .accessibilityLabel("Scan a raw card to price it")
 
             Button {
-                navigateToCertLookup = true
+                showCertNumberSheet = true
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "number")

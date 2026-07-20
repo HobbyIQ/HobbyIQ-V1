@@ -27,11 +27,61 @@ struct LookupByCertResponse: Decodable {
     let grader: String?
     let grade: String?
     let card: LookupByCertCard?
+    /// 2026-07-19 (PR #609): canonical FMV envelope + grade ladder
+    /// piggy-backed on the cert-lookup response. Nil when the pipeline
+    /// returns `no-basis` for the resolved card.
+    let canonicalFmv: LookupByCertCanonicalFmv?
+    /// 2026-07-19 (PR #609): pre-composed body for
+    /// POST /api/portfolio/holdings, so `CertLookupResultView`'s
+    /// "Add to Portfolio" button can prefill the Add Holding sheet
+    /// without a second identity round-trip.
+    let readyToAdd: LookupByCertReadyToAdd?
     let referencePrice: Double?
     let prices: [LookupByCertPriceSample]?
     let matchConfidence: Double?
     let windowDays: Int?
     let error: String?
+}
+
+/// Compact canonical-FMV envelope embedded in `LookupByCertResponse`.
+/// Fields mirror the top-level `/api/compiq/canonical-fmv` shape plus
+/// a grade ladder for the resolved card. Kept flexible (`AnyCodable`
+/// via nested `Decodable`) for the provenance / ladder blobs, which
+/// aren't rendered directly by the cert result view — they're passed
+/// through to the transparency sheet on demand.
+struct LookupByCertCanonicalFmv: Decodable, Hashable {
+    let fmv: Double?
+    let method: String?
+    let confidence: Double?
+    let gradeLadder: [LookupByCertGradeLadderEntry]?
+}
+
+struct LookupByCertGradeLadderEntry: Decodable, Hashable, Identifiable {
+    let grade: String?
+    let value: Double?
+    let source: String?
+
+    var id: String { grade ?? UUID().uuidString }
+}
+
+/// Prefill body for POST /api/portfolio/holdings. Every non-empty
+/// field on the wire is optional here — the "Add to Portfolio" flow
+/// composes the actual request from these + the user's cost basis.
+struct LookupByCertReadyToAdd: Decodable, Hashable {
+    let cardId: String?
+    let playerName: String?
+    let cardYear: Int?
+    let product: String?
+    let setName: String?
+    let parallel: String?
+    let cardNumber: String?
+    let isAuto: Bool?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let certNumber: String?
+    let cardTitle: String?
+    let photos: [String]?
+    let source: String?
 }
 
 struct LookupByCertCard: Decodable, Hashable {
