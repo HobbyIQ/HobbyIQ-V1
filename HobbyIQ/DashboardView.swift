@@ -49,9 +49,7 @@ struct DashboardView: View {
 
                     searchBar
 
-                    scanAndCertRow
-
-                    gradedScanAffordance
+                    scanActionsRow
 
                     atAGlanceSection
                 }
@@ -171,91 +169,69 @@ struct DashboardView: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Scan + cert entry row (spec §1)
+    // MARK: - Scan actions row (spec §1)
 
-    /// 2026-07-19: split the single scan-raw button into a two-button
-    /// row that pairs scan-raw (left, primary) with a "# Cert #" chip
-    /// (right) that opens `SlabCertLookupView`. Cert lookup was
-    /// previously only reachable via the search bar's 4–10-digit
-    /// shortcut or from inside the graded slab scan flow.
-    private var scanAndCertRow: some View {
+    /// 2026-07-19: three equal-width tiles on one line — Scan raw,
+    /// Scan cert (graded slab image scan), and # Cert (manual cert
+    /// number entry). Previously scan-raw + cert-# lived on one row
+    /// and the graded slab scan was a wide row below; consolidating
+    /// gives the user the full identify-a-card decision surface in a
+    /// single glance.
+    private var scanActionsRow: some View {
         HStack(spacing: 10) {
-            Button {
+            scanTile(
+                icon: "camera.viewfinder",
+                label: "Scan raw",
+                accessibility: "Scan a raw card to price it"
+            ) {
                 showCardScanner = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "camera.viewfinder")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Text("Scan raw")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
-                )
-                .clipShape(Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Scan a raw card to price it")
-
-            Button {
+            scanTile(
+                icon: "rectangle.badge.checkmark",
+                label: "Scan cert",
+                accessibility: "Scan a graded slab to find the card"
+            ) {
+                showGradedScanner = true
+            }
+            scanTile(
+                icon: "number",
+                label: "# Cert",
+                accessibility: "Look up a graded card by cert number"
+            ) {
                 showCertNumberSheet = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "number")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Text("Cert #")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-                .padding(.horizontal, 16)
-                .frame(minHeight: 44)
-                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
-                )
-                .clipShape(Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Look up a graded card by cert number")
         }
     }
 
-    // MARK: - Graded slab scan affordance
-
-    private var gradedScanAffordance: some View {
-        Button {
-            showGradedScanner = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.badge.checkmark")
-                    .font(.subheadline.weight(.semibold))
+    private func scanTile(
+        icon: String,
+        label: String,
+        accessibility: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                Text("Scan a graded slab to find it")
-                    .font(.subheadline.weight(.semibold))
+                Text(label)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .padding(.horizontal, 8)
             .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
             .overlay(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
                     .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
             )
-            .clipShape(Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Scan a graded slab to find the card")
+        .accessibilityLabel(accessibility)
     }
 
     // MARK: - Search Bar
