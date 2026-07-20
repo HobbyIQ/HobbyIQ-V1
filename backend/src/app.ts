@@ -144,19 +144,18 @@ app.use("/api/portfolio", sellRadarNotableSalesRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 // CF-DAILYIQ-ACTION-PLAN (2026-07-17): mount action-plan routes first
 // so its clean, minimal-import file resolves before dailyiq.routes'
-// legacy broken imports would be walked. Same three prefixes for
-// iOS casing tolerance.
+// legacy broken imports would be walked.
+// CF-DAILYIQ-CASE-CLEANUP (Drew, 2026-07-19): dropped the /api/dailyIQ
+// and /api/daily case-variant mounts. iOS/backend audit confirmed
+// iOS only calls /api/dailyiq — those extra mounts were noise +
+// attack surface (anyone could enumerate them).
 app.use("/api/dailyiq", dailyiqActionPlanRoutes);
-app.use("/api/dailyIQ", dailyiqActionPlanRoutes);
-app.use("/api/daily", dailyiqActionPlanRoutes);
 app.use("/api/backtest", backtestRoutes);
 app.use("/api/portfolio", bulkSellComposerRoutes);
 app.use("/api/portfolio", tradeTargetsRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/catalog", catalogAdditionsRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
-app.use("/api/dailyIQ", dailyiqRoutes);
-app.use("/api/daily", dailyiqRoutes);
 app.use("/api/playeriq", playeriqRoutes);
 app.use("/api/ebay/webhook", ebayWebhookRoutes);
 app.use("/api/ebay", ebayRoutes);
