@@ -65,32 +65,42 @@ function median(sortedAsc: number[]): number {
   return sortedAsc[Math.floor(sortedAsc.length / 2)];
 }
 
-export async function runSubRawInversionScan(
+/** CF-PROSPECTS-BREAKING-OUT (Drew, 2026-07-20). Returned by
+ *  computeSubRawInversions() so both the nightly scan (telemetry
+ *  side-effect) AND the user-facing prospects feed (endpoint that
+ *  needs the actual data) can share one detection implementation. */
+export interface SubRawInversion {
+  cardId: string;
+  playerName: string | null;
+  parallel: string | null;
+  cardNumber: string | null;
+  cardYear: number | null;
+  grader: string;         // "PSA 10" | "BGS 9.5" | ...
+  gradedMedian: number;
+  gradedCount: number;
+  rawMedian: number;
+  rawMax: number;
+  rawCount: number;
+  marginPct: number;
+  marginUSD: number;
+}
+
+/** Pure detection — no telemetry, no side-effects. Returns the list
+ *  of SKU × grader-tier inversions observed in the window. */
+export async function computeSubRawInversions(
   opts: SubRawInversionScanOptions,
-): Promise<SubRawInversionScanSummary> {
+): Promise<SubRawInversion[]> {
   const windowDays = opts.windowDays ?? 30;
   const minRawSales = opts.minRawSales ?? 2;
   const minGradedSales = opts.minGradedSales ?? 3;
   const minMarginPct = opts.minMarginPct ?? 5;
-  const dryRun = opts.dryRun === true;
-
-  const summary: SubRawInversionScanSummary = {
-    sport: opts.sport,
-    windowDays,
-    skusScanned: 0,
-    skusWithBothRawAndGraded: 0,
-    inversionsDetected: 0,
-    telemetryEmitted: 0,
-    dryRun,
-  };
 
   const container = await getContainer();
-  if (!container) return summary;
+  if (!container) return [];
 
   const windowStart = new Date(Date.now() - windowDays * 86_400_000).toISOString();
 
-  // Uses the (sport, soldAt) composite index for cheap read.
-  const iter = container.items.query<CompRow>({
+  const iter = container.items.query<CompRow & { cardNumber?: string | null; cardYear?: number | null }>({
     query: `SELECT c.cardId, c.playerName, c.parallel, c.cardNumber, c.cardYear,
                    c.gradeCompany, c.gradeValue, c.price, c.soldAt
             FROM c
@@ -104,19 +114,18 @@ export async function runSubRawInversionScan(
     ],
   });
 
-  const rows: CompRow[] = [];
+  const rows: Array<CompRow & { cardNumber?: string | null; cardYear?: number | null }> = [];
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
     rows.push(...resources);
   }
 
-  // Group by (cardId, parallel) — inversion is a SKU-level property.
-  // Base + parallels for the same cardId are meaningfully different
-  // markets, so we don't fold them together.
   const groups = new Map<string, {
     cardId: string;
     playerName: string | null;
     parallel: string | null;
+    cardNumber: string | null;
+    cardYear: number | null;
     rawPrices: number[];
     gradedByGrader: Map<string, number[]>;
   }>();
@@ -128,6 +137,8 @@ export async function runSubRawInversionScan(
         cardId: r.cardId,
         playerName: r.playerName ?? null,
         parallel: r.parallel ?? null,
+        cardNumber: (r.cardNumber ?? null) as string | null,
+        cardYear: (r.cardYear ?? null) as number | null,
         rawPrices: [],
         gradedByGrader: new Map(),
       };
@@ -143,49 +154,80 @@ export async function runSubRawInversionScan(
     }
   }
 
-  summary.skusScanned = groups.size;
-
+  const inversions: SubRawInversion[] = [];
   for (const [, g] of groups) {
     if (g.rawPrices.length < minRawSales) continue;
     if (g.gradedByGrader.size === 0) continue;
-    summary.skusWithBothRawAndGraded++;
-
     const rawSorted = g.rawPrices.slice().sort((a, b) => a - b);
     const rawMedian = median(rawSorted);
     const rawMax = rawSorted[rawSorted.length - 1];
-
     for (const [grader, prices] of g.gradedByGrader) {
       if (prices.length < minGradedSales) continue;
       const gradedSorted = prices.slice().sort((a, b) => a - b);
       const gradedMedian = median(gradedSorted);
-      // Inversion condition: raw MAX exceeds graded MEDIAN — the strong
-      // form of the signal. Raw median exceeding graded median is
-      // interesting too but noisier; we require the peak-signal form
-      // here to keep telemetry noise low.
       const marginUSD = rawMax - gradedMedian;
       const marginPct = gradedMedian > 0 ? (marginUSD / gradedMedian) * 100 : 0;
       if (marginPct < minMarginPct) continue;
+      inversions.push({
+        cardId: g.cardId,
+        playerName: g.playerName,
+        parallel: g.parallel,
+        cardNumber: g.cardNumber,
+        cardYear: g.cardYear,
+        grader,
+        gradedMedian: Math.round(gradedMedian * 100) / 100,
+        gradedCount: prices.length,
+        rawMedian: Math.round(rawMedian * 100) / 100,
+        rawMax: Math.round(rawMax * 100) / 100,
+        rawCount: g.rawPrices.length,
+        marginPct: Math.round(marginPct * 10) / 10,
+        marginUSD: Math.round(marginUSD * 100) / 100,
+      });
+    }
+  }
+  return inversions;
+}
 
-      summary.inversionsDetected++;
+export async function runSubRawInversionScan(
+  opts: SubRawInversionScanOptions,
+): Promise<SubRawInversionScanSummary> {
+  const dryRun = opts.dryRun === true;
+  const summary: SubRawInversionScanSummary = {
+    sport: opts.sport,
+    windowDays: opts.windowDays ?? 30,
+    skusScanned: 0,
+    skusWithBothRawAndGraded: 0,
+    inversionsDetected: 0,
+    telemetryEmitted: 0,
+    dryRun,
+  };
 
-      if (!dryRun) {
-        const [company, valueStr] = grader.split(" ");
-        logSubRawInversionObserved({
-          source: "subRawInversionScan",
-          player: g.playerName,
-          cardId: g.cardId,
-          event: {
-            grader: company,
-            grade: valueStr ?? "",
-            gradeMedian: Math.round(gradedMedian * 100) / 100,
-            gradeCount: prices.length,
-            rawMedian: Math.round(rawMedian * 100) / 100,
-            marginPct: Math.round(marginPct * 10) / 10,
-            marginUSD: Math.round(marginUSD * 100) / 100,
-          },
-        });
-        summary.telemetryEmitted++;
-      }
+  const inversions = await computeSubRawInversions(opts);
+  summary.inversionsDetected = inversions.length;
+  // Approximation: distinct cardId+parallel groups scanned.
+  const skus = new Set<string>();
+  for (const inv of inversions) skus.add(`${inv.cardId}::${inv.parallel ?? ""}`);
+  summary.skusWithBothRawAndGraded = skus.size;
+  summary.skusScanned = skus.size;
+
+  if (!dryRun) {
+    for (const inv of inversions) {
+      const [company, valueStr] = inv.grader.split(" ");
+      logSubRawInversionObserved({
+        source: "subRawInversionScan",
+        player: inv.playerName,
+        cardId: inv.cardId,
+        event: {
+          grader: company,
+          grade: valueStr ?? "",
+          gradeMedian: inv.gradedMedian,
+          gradeCount: inv.gradedCount,
+          rawMedian: inv.rawMedian,
+          marginPct: inv.marginPct,
+          marginUSD: inv.marginUSD,
+        },
+      });
+      summary.telemetryEmitted++;
     }
   }
 
