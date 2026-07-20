@@ -866,6 +866,12 @@ async function tryCrossParallel(
   // as siblings in this rung.
   const stripRefr = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
   const targetKey = stripRefr(targetParallel);
+  // CF-CROSS-PARALLEL-AUTO-BOUNDARY (Drew, 2026-07-20). Same as
+  // sibling-parallel: filter out siblings whose isAuto is opposite
+  // of the target. When cardIds are properly-scoped per SKU this
+  // filter is a no-op; when a cardId conflates auto + non-auto it
+  // prevents the wrong-boundary sibling from poisoning the anchor.
+  const wantAuto = detectIsAuto(input);
   const normalized: Array<{
     price: number;
     soldAt: string;
@@ -875,12 +881,18 @@ async function tryCrossParallel(
     normalizedFromParallel: string | null;
     normalizationRatio: number;
   }> = [];
+  let droppedCrossAuto = 0;
 
   for (const c of allComps) {
     const soldMs = Date.parse(c.soldAt ?? "");
     if (!Number.isFinite(soldMs)) continue;
     if (nowMs - soldMs > MAX_POOL_AGE_DAYS * MS_PER_DAY) continue;
     if ((c as { flaggedWrong?: boolean }).flaggedWrong === true) continue;
+    // sold_comps has isAuto as a proper boolean field — trust it.
+    if ((c as { isAuto?: boolean }).isAuto === true !== wantAuto) {
+      droppedCrossAuto++;
+      continue;
+    }
     const cParallel = stripRefr((c.parallel ?? "").trim());
     if (cParallel === targetKey) continue;   // handled by rung 1 already
     const sibMult = lookupParallelMultiplier(c.parallel ?? "");
@@ -899,6 +911,16 @@ async function tryCrossParallel(
       normalizedFromParallel: c.parallel,
       normalizationRatio: ratio,
     });
+  }
+  if (droppedCrossAuto > 0) {
+    console.log(JSON.stringify({
+      event: "cross_parallel_cross_auto_filtered",
+      source: "canonicalFmv.tryCrossParallel",
+      cardId,
+      wantAuto,
+      droppedCrossAuto,
+      keptNormalized: normalized.length,
+    }));
   }
   if (normalized.length === 0) return null;
 
@@ -1006,10 +1028,33 @@ async function tryNeighborParallel(
     });
     const { resources } = await iter.fetchAll();
 
-    // Filter to same-parallel rows in memory (variant string).
+    // Filter to same-parallel rows in memory (variant string), then
+    // apply auto/non-auto boundary. Neighbor-year data can span both
+    // Chrome Prospects Autographs and base Bowman product lines
+    // sharing similar variant names — same bug pattern as sibling-
+    // parallel needs the same defensive filter.
     const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
     const targetParallelNorm = stripRefr(input.parallel);
-    const matches = resources.filter((r) => stripRefr(r.variant ?? "") === targetParallelNorm);
+    const wantAuto = detectIsAuto(input);
+    const isAutoRow = (r: { variant: string; card_set: string }): boolean => {
+      return /auto|autograph/i.test(r.card_set ?? "") || /auto|autograph/i.test(r.variant ?? "");
+    };
+    let droppedCrossAuto = 0;
+    const matches = resources.filter((r) => {
+      if (stripRefr(r.variant ?? "") !== targetParallelNorm) return false;
+      if (isAutoRow(r) !== wantAuto) { droppedCrossAuto++; return false; }
+      return true;
+    });
+    if (droppedCrossAuto > 0) {
+      console.log(JSON.stringify({
+        event: "neighbor_parallel_cross_auto_filtered",
+        source: "canonicalFmv.tryNeighborParallel",
+        cardId,
+        wantAuto,
+        droppedCrossAuto,
+        keptMatches: matches.length,
+      }));
+    }
     if (matches.length === 0) return null;
 
     // For each neighbor sale, apply year-delta multiplier.
