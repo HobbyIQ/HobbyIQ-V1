@@ -79,6 +79,7 @@ import {
 // "is this a rare parallel?" without duplicating the parallel-name
 // mapping.
 import { inferPrintRun as inferPrintRunForParallel } from "./parallelPremiumFloors.js";
+import { lookupGradeRatio, classifyFamily } from "./gradeCalibrationConfig.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -164,7 +165,7 @@ export interface ObservedGradeEntry {
    *                          (last-resort fallback when reference
    *                           price is also unavailable)
    *  Null for observed / unavailable entries. */
-  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | null;
+  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | null;
   /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
    *  Value, and Predicted on ONE trend line — the SAME per-week rate
    *  derives all three. Prevents the "$100 Market Value but $205
@@ -1353,6 +1354,45 @@ function gradeMultiplierFor(cardClass: CardClass, gradeLabel: string): number | 
  *  divergence so the seller knows to look closer. */
 const REFERENCE_ANOMALY_THRESHOLD_PCT = 25;
 
+/** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20). Sub-tier scaling
+ *  applied on top of the company-level empirical medianRatio. Empirical
+ *  calibration lumps all PSA (or BGS, etc.) grades of a company into a
+ *  single ratio; this discounts down to the specific grade value so a
+ *  "PSA 9" doesn't inherit the "PSA 10"-heavy company ratio verbatim. */
+function subTierScaling(gradeValue: number | null): number {
+  if (gradeValue === null || !Number.isFinite(gradeValue)) return 0;
+  if (gradeValue >= 10) return 1.00;
+  if (gradeValue >= 9.5) return 0.65;
+  if (gradeValue >= 9)   return 0.35;
+  return 0.20;
+}
+
+function parseGradeValue(gradeLabel: string): number | null {
+  const m = String(gradeLabel ?? "").match(/([0-9]+(?:\.[0-9]+)?)/);
+  return m ? Number(m[1]) : null;
+}
+
+/** Prefer empirical (family, grader) medianRatio × sub-tier scaling.
+ *  Fall back to hardcoded class-aware matrix when family isn't
+ *  calibrated OR when the entry's grader/label isn't parseable. */
+function resolveMultiplier(args: {
+  entry: ObservedGradeEntry;
+  family: string | null;
+  sport: string | null;
+  cardClass: CardClass;
+}): number | undefined {
+  const { entry, family, sport, cardClass } = args;
+  if (family) {
+    const empiricalRatio = lookupGradeRatio(family, entry.grader, sport);
+    const gradeValue = parseGradeValue(entry.grade);
+    if (empiricalRatio !== null && empiricalRatio > 0 && gradeValue !== null) {
+      const scaled = empiricalRatio * subTierScaling(gradeValue);
+      if (scaled > 0) return scaled;
+    }
+  }
+  return gradeMultiplierFor(cardClass, entry.grade);
+}
+
 function fillEstimatedFallback(
   entries: ObservedGradeEntry[],
   referencePriceByGrade?: ReadonlyMap<string, number>,
@@ -1363,12 +1403,21 @@ function fillEstimatedFallback(
    *  with card meta on hand (routes fetching getCardMetaById) should
    *  pass the resolved class. */
   cardClass: CardClass = "base",
+  /** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): setName used to
+   *  classify the product family for lookupGradeRatio. When provided
+   *  and the (family, grader) pair has calibration data, empirical
+   *  medianRatio × sub-tier scaling wins over the hardcoded matrix. */
+  setName: string | null = null,
+  /** Optional sport override for sport-conditioned calibration. */
+  sport: string | null = null,
 ): void {
   const raw = entries.find((e) => e.grade === "Raw");
   const rawObserved =
     raw && raw.valueSource === "observed" && raw.weightedMedianPrice !== null
       ? raw.weightedMedianPrice
       : null;
+
+  const family = setName ? classifyFamily(setName) : null;
 
   for (const entry of entries) {
     if (entry.grade !== "Raw" && entry.valueSource !== "observed") {
@@ -1380,12 +1429,21 @@ function fillEstimatedFallback(
         entry.estimatedFrom = "reference-price";
         entry.estimatedMultiplier = null; // no multiplier used
       } else if (rawObserved !== null) {
-        // Priority 2: Raw observed × class-aware tier multiplier.
-        const multiplier = gradeMultiplierFor(cardClass, entry.grade);
+        // Priority 2a (preferred): empirical medianRatio for
+        // (family, grader) × sub-tier scaling by grade value.
+        // Priority 2b (fallback): hardcoded class-aware matrix.
+        const multiplier = resolveMultiplier({
+          entry,
+          family,
+          sport,
+          cardClass,
+        });
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
           entry.valueSource = "estimated";
-          entry.estimatedFrom = "raw-multiplier";
+          entry.estimatedFrom = family && lookupGradeRatio(family, entry.grader, sport) !== null
+            ? "empirical-ratio"
+            : "raw-multiplier";
           entry.estimatedMultiplier = multiplier;
         }
       }
@@ -1461,6 +1519,14 @@ export async function buildObservedGradeCurve(
      *  card meta should resolve from identity.subset (contains
      *  "auto"/"signature" → "auto"). */
     cardClass?: CardClass;
+    /** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): setName drives
+     *  product-family classification for empirical medianRatio lookup.
+     *  Prefer over the hardcoded class matrix when calibration data
+     *  exists for the family. Optional; hardcoded matrix used when
+     *  absent. */
+    setName?: string | null;
+    /** Optional sport override for sport-specific calibration overlays. */
+    sport?: string | null;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
@@ -1468,7 +1534,13 @@ export async function buildObservedGradeCurve(
   );
   // Second pass — fills value/valueSource on non-observed grades,
   // preferring reference-price over Raw × multiplier when provided.
-  fillEstimatedFallback(entries, opts.referencePriceByGrade, opts.cardClass ?? "base");
+  fillEstimatedFallback(
+    entries,
+    opts.referencePriceByGrade,
+    opts.cardClass ?? "base",
+    opts.setName ?? null,
+    opts.sport ?? null,
+  );
 
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
   // player weekly buckets, then compute Market Value (today) + Predicted
