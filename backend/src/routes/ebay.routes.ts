@@ -383,6 +383,123 @@ router.post("/listings/preview", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// CF-LISTING-PREPARED-PAYLOAD (Drew, 2026-07-20). Normalize an incoming
+// /publish body: accepts EITHER the legacy flat HoldingListingInput
+// shape OR the "prepared" nested shape from /listings/prepare (with
+// identity / condition / categoryAspects / photos / listing sub-
+// objects). iOS's Listing Review screen sends prepared payloads
+// verbatim; older callers still use the flat shape.
+// ---------------------------------------------------------------------------
+interface PreparedListingBody {
+  holdingId: string;
+  identity?: {
+    playerName?: string | null;
+    cardYear?: number | null;
+    setName?: string | null;
+    parallel?: string | null;
+    cardNumber?: string | null;
+    isAuto?: boolean;
+    isRookie?: boolean;
+    team?: string | null;
+    sport?: string | null;
+  };
+  condition?: {
+    isGraded?: boolean;
+    gradingCompany?: string | null;
+    grade?: string | null;
+    certNumber?: string | null;
+    conditionEstimate?: string | null;
+    conditionNotes?: string | null;
+  };
+  categoryAspects?: {
+    league?: string | null;
+    type?: string | null;
+    countryOfManufacture?: string | null;
+    yearManufactured?: number | null;
+    season?: number | null;
+    language?: string | null;
+  };
+  photos?: string[];
+  listing?: {
+    quantity?: number;
+    priceCents?: number;
+    bestOfferEnabled?: boolean;
+    bestOfferMinPriceCents?: number | null;
+    description?: string;
+    titleSuggested?: string;
+  };
+  // Also allow legacy overrides via top-level fields
+  categoryId?: string;
+  paymentPolicyId?: string;
+  returnPolicyId?: string;
+  fulfillmentPolicyId?: string;
+}
+
+function isPreparedShape(body: unknown): body is PreparedListingBody {
+  if (!body || typeof body !== "object") return false;
+  const b = body as Record<string, unknown>;
+  return typeof b.holdingId === "string" && (
+    typeof b.identity === "object" ||
+    typeof b.condition === "object" ||
+    typeof b.categoryAspects === "object" ||
+    typeof b.listing === "object"
+  );
+}
+
+function preparedToHoldingListingInput(body: PreparedListingBody): Partial<HoldingListingInput> {
+  const cardYear = body.identity?.cardYear ?? undefined;
+  const priceCents = body.listing?.priceCents ?? 0;
+  const listingPrice = priceCents > 0 ? Math.round(priceCents) / 100 : 0;
+
+  // Category aspects that eBay requires — passed through as
+  // ebayItemAspects so buildItemAspects's whitelist (PR #643) merges
+  // them into the payload.
+  const aspects: Record<string, string> = {};
+  const ca = body.categoryAspects ?? {};
+  if (ca.league) aspects["League"] = ca.league;
+  if (ca.type) aspects["Type"] = ca.type;
+  if (ca.countryOfManufacture) aspects["Country/Region of Manufacture"] = ca.countryOfManufacture;
+  if (ca.yearManufactured) aspects["Year Manufactured"] = String(ca.yearManufactured);
+  if (ca.season) aspects["Season"] = String(ca.season);
+  if (ca.language) aspects["Language"] = ca.language;
+
+  return {
+    holdingId: body.holdingId,
+    playerName: body.identity?.playerName ?? "",
+    cardTitle: body.listing?.titleSuggested ?? "",
+    cardYear: typeof cardYear === "number" ? cardYear : 0,
+    brand: "",   // hydration falls to holding.manufacturer
+    setName: body.identity?.setName ?? "",
+    product: body.identity?.setName ?? "",
+    sport: body.identity?.sport ?? undefined,
+    cardNumber: body.identity?.cardNumber ?? undefined,
+    parallel: body.identity?.parallel ?? undefined,
+    isAuto: body.identity?.isAuto === true,
+    isPatch: false,
+    isRookie: body.identity?.isRookie === true,
+    team: body.identity?.team ?? undefined,
+    grade: body.condition?.grade ?? undefined,
+    gradingCompany: body.condition?.gradingCompany ?? undefined,
+    certNumber: body.condition?.certNumber ?? undefined,
+    conditionEstimate: body.condition?.conditionEstimate ?? undefined,
+    conditionNotes: body.condition?.conditionNotes ?? undefined,
+    quantity: body.listing?.quantity ?? 1,
+    listingPrice,
+    bestOfferEnabled: body.listing?.bestOfferEnabled === true,
+    bestOfferMinPrice: body.listing?.bestOfferMinPriceCents
+      ? Math.round(body.listing.bestOfferMinPriceCents) / 100
+      : undefined,
+    photos: Array.isArray(body.photos) && body.photos.length > 0 ? body.photos : undefined,
+    description: body.listing?.description ?? undefined,
+    ebayItemAspects: Object.keys(aspects).length > 0 ? aspects : undefined,
+    categoryId: body.categoryId,
+    paymentPolicyId: body.paymentPolicyId,
+    returnPolicyId: body.returnPolicyId,
+    fulfillmentPolicyId: body.fulfillmentPolicyId,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Publish
 // ---------------------------------------------------------------------------
 
@@ -395,7 +512,10 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
     return;
   }
 
-  const raw = req.body as Partial<HoldingListingInput>;
+  const raw: Partial<HoldingListingInput> = isPreparedShape(req.body)
+    ? preparedToHoldingListingInput(req.body as PreparedListingBody)
+    : (req.body as Partial<HoldingListingInput>);
+
   if (!raw.holdingId || !raw.playerName || !raw.listingPrice) {
     res.status(400).json({ success: false, error: "holdingId, playerName, and listingPrice are required" });
     return;
@@ -420,6 +540,67 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
       console.error("[ebay.publish] linkEbayListing failed:", err);
     }
   }
+  // CF-PUBLISH-PERSIST-EDITS (Drew, 2026-07-20). When the user's
+  // Listing Review edits included a category-aspect fill-in (League,
+  // Type, Country/Region of Manufacture, Year Manufactured, Season,
+  // Language) or a condition tweak that wasn't on the holding, write
+  // it back so next publish is pre-filled instead of asking again.
+  // Fire-and-forget — never blocks the success response, since publish
+  // already succeeded on eBay.
+  void (async () => {
+    try {
+      const holdingId = String(input.holdingId);
+      if (!holdingId) return;
+      const doc = await readUserDoc(userId);
+      const h = doc.holdings?.[holdingId] as unknown as Record<string, unknown> | undefined;
+      if (!h) return;
+      let mutated = false;
+
+      // Merge user-provided category-meta aspects into holding
+      const inAspects = (input as HoldingListingInput).ebayItemAspects;
+      if (inAspects && typeof inAspects === "object") {
+        const cur = (h.ebayItemAspects && typeof h.ebayItemAspects === "object")
+          ? { ...(h.ebayItemAspects as Record<string, string>) }
+          : {} as Record<string, string>;
+        for (const [k, v] of Object.entries(inAspects)) {
+          if (typeof v === "string" && v.trim() && cur[k] !== v.trim()) {
+            cur[k] = v.trim();
+            mutated = true;
+          }
+        }
+        if (mutated) (h as { ebayItemAspects?: Record<string, string> }).ebayItemAspects = cur;
+      }
+
+      // Persist condition edits when set
+      if (typeof (input as HoldingListingInput).conditionEstimate === "string"
+          && (input as HoldingListingInput).conditionEstimate !== h.conditionEstimate) {
+        (h as { conditionEstimate?: string }).conditionEstimate = (input as HoldingListingInput).conditionEstimate;
+        mutated = true;
+      }
+      if (typeof (input as HoldingListingInput).conditionNotes === "string"
+          && (input as HoldingListingInput).conditionNotes !== h.conditionNotes) {
+        (h as { conditionNotes?: string }).conditionNotes = (input as HoldingListingInput).conditionNotes;
+        mutated = true;
+      }
+
+      if (mutated) {
+        (h as { lastUpdated?: string }).lastUpdated = new Date().toISOString();
+        const { writeUserDoc } = await import("../services/portfolioiq/portfolioStore.service.js");
+        await writeUserDoc(userId, doc);
+        console.log(JSON.stringify({
+          event: "ebay_publish_edits_persisted",
+          source: "ebay.publish",
+          userId, holdingId,
+        }));
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "ebay_publish_persist_edits_failed",
+        source: "ebay.publish",
+        error: err instanceof Error ? err.message : String(err),
+      }));
+    }
+  })();
   res.json(result);
 });
 
