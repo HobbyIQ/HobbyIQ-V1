@@ -46,7 +46,7 @@
 // See feedback_no_medians_project_next_sale.md for the underlying
 // principle; every rung projects the next sale, none reports a middle.
 
-import { readCompsByCardId, recordSoldComp } from "../portfolioiq/soldCompsStore.service.js";
+import { readCompsByCardId, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
@@ -420,8 +420,9 @@ function buildGradeLadder(
   // null → the FMV IS raw. Otherwise reverse the grade multiplier to
   // recover an implied raw base.
   let rawAnchor = result.fmv;
+  const sport = inferSportFromContext(input.product ?? null, null);
   const inputGradeMult = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
-    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family)
+    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family, sport)
     : 1;
   if (inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
 
@@ -440,7 +441,7 @@ function buildGradeLadder(
   ];
   for (const grader of graders) {
     for (const value of gradeValues[grader]) {
-      const mult = gradeTierMultiplier(grader, value, family);
+      const mult = gradeTierMultiplier(grader, value, family, sport);
       if (mult <= 1) continue;   // no empirical uplift → skip
       const fmv = rawAnchor * mult;
       if (!Number.isFinite(fmv) || fmv <= 0) continue;
@@ -1324,7 +1325,7 @@ async function tryProductTier(
     ? (lookupParallelMultiplier(input.parallel) ?? 1)
     : 1;
   const productFamily = classifyFamily(input.product);
-  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily);
+  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily, inferSportFromContext(input.product ?? null, null));
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
@@ -1411,6 +1412,7 @@ function gradeTierMultiplier(
   company: string | null,
   value: number | null,
   productFamily: string | null,
+  sport?: string | null,
 ): number {
   if (!company || value === null) return 1;   // raw
   const c = company.toUpperCase();
@@ -1421,9 +1423,13 @@ function gradeTierMultiplier(
     : value >= 9 ? 0.35
     : 0.20;
 
-  // Empirical lookup: prefer per-family calibration when we have it.
+  // CF-GRADE-CALIBRATION-SPORT (Drew, 2026-07-20). Sport-aware
+  // empirical lookup: passes sport to prefer per-sport calibration
+  // (basketball/football rookies have very different PSA 10 uplifts
+  // than baseball). Falls back to baseline table when sport-specific
+  // isn't populated yet.
   if (productFamily) {
-    const empiricalRatio = lookupGradeRatio(productFamily, c);
+    const empiricalRatio = lookupGradeRatio(productFamily, c, sport ?? null);
     if (empiricalRatio !== null && Number.isFinite(empiricalRatio) && empiricalRatio > 0) {
       return empiricalRatio * subTierScale;
     }
