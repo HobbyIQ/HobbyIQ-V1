@@ -214,7 +214,8 @@ export function inferSportFromContext(
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
-  if (/\bdonruss\s+optic\b/.test(text)) return null;   // ambiguous — could be any sport
+  // Any other product line → sport-unknown (return null so downstream
+  // sport-filtered analytics skip it rather than mis-bucket).
   return null;
 }
 
