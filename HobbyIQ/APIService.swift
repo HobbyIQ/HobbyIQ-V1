@@ -96,6 +96,42 @@ struct APIService {
         return try await get(path: "/api/playeriq/\(encoded)/stats", responseType: PlayerStatsResponse.self)
     }
 
+    /// 2026-07-19 (spec §6, endpoint TBD): snoozes the grade-arbitrage
+    /// alert for a specific holding for 60 days. Silently swallows a
+    /// 404 during the pre-launch window so the UI can wire the action
+    /// today; when backend ships the endpoint the same call path
+    /// starts persisting. Callers should treat any thrown error as a
+    /// silent no-op — the notification action itself already
+    /// dismissed the banner locally.
+    func dismissGradeArb(holdingId: String) async throws {
+        let trimmed = holdingId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmed
+        struct EmptyBody: Encodable {}
+        struct EmptyResponse: Decodable {}
+        _ = try await post(
+            path: "/api/portfolio/holdings/\(encoded)/dismiss-grade-arb",
+            body: EmptyBody(),
+            responseType: EmptyResponse.self
+        )
+    }
+
+    /// 2026-07-19 (spec §7, endpoint TBD): snoozes the sell-side alert
+    /// for a specific holding. Same pre-launch semantics as
+    /// `dismissGradeArb`.
+    func dismissSellSide(holdingId: String) async throws {
+        let trimmed = holdingId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmed
+        struct EmptyBody: Encodable {}
+        struct EmptyResponse: Decodable {}
+        _ = try await post(
+            path: "/api/portfolio/holdings/\(encoded)/dismiss-sell-side",
+            body: EmptyBody(),
+            responseType: EmptyResponse.self
+        )
+    }
+
     /// PR #612: pricing-focused player detail (sold-comps summary,
     /// top cards, by-year rollups). Distinct from `analyzePlayer`
     /// which hits /api/playeriq/:name and returns a scoring/analysis

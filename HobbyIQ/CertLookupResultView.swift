@@ -24,6 +24,7 @@ struct CertLookupResultView: View {
     @State private var addIsSubmitting = false
     @State private var addErrorMessage: String?
     @State private var addSuccessToast: String?
+    @State private var navigatePlayerName: String?
 
     var body: some View {
         ScrollView {
@@ -42,6 +43,9 @@ struct CertLookupResultView: View {
         .sheet(isPresented: $showAddSheet) {
             addToPortfolioSheet
                 .presentationDetents([.medium])
+        }
+        .navigationDestination(item: $navigatePlayerName) { name in
+            PlayerDetailView(playerName: name)
         }
         .overlay(alignment: .top) {
             if let addSuccessToast {
@@ -69,9 +73,22 @@ struct CertLookupResultView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 if let player = response.card?.player {
-                    Text(player)
-                        .font(.headline)
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    // 2026-07-19 (spec §5): player name is a tap-target
+                    // that pushes `PlayerDetailView` for pricing summary
+                    // + top cards + by-year rollups.
+                    Button {
+                        navigatePlayerName = player
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(player)
+                                .font(.headline)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let description = response.card?.description {
                     Text(description)
