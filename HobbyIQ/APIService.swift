@@ -132,6 +132,38 @@ struct APIService {
         )
     }
 
+    /// PR #622 (2026-07-20): Weekly Hobby Index. Sport-conditioned
+    /// week-over-week aggregate for activity (sales count) and index
+    /// (median transaction value), plus 5-row top-gainers /
+    /// top-decliners lists. Powers the "Hobby Weather" section at the
+    /// top of DailyIQ + a compact preview card on the Dashboard.
+    func fetchWeeklyHobbyIndex(sport: String = "baseball") async throws -> WeeklyHobbyIndexResponse {
+        try await get(
+            path: "/api/insights/weekly-hobby-index",
+            queryItems: [URLQueryItem(name: "sport", value: sport)],
+            responseType: WeeklyHobbyIndexResponse.self
+        )
+    }
+
+    /// PR #620 (2026-07-20): Prospects Breaking Out. Raw-inversion
+    /// signals — cards where the raw MAX exceeds the graded MEDIAN
+    /// by >= 5%. Powers a new DailyIQ section + drill-down list.
+    func fetchProspectsBreakingOut(
+        sport: String = "baseball",
+        windowDays: Int = 30,
+        limit: Int = 20
+    ) async throws -> ProspectsBreakingOutResponse {
+        try await get(
+            path: "/api/dailyiq/prospects/breaking-out",
+            queryItems: [
+                URLQueryItem(name: "sport", value: sport),
+                URLQueryItem(name: "window", value: String(windowDays)),
+                URLQueryItem(name: "limit", value: String(limit))
+            ],
+            responseType: ProspectsBreakingOutResponse.self
+        )
+    }
+
     /// PR #612: pricing-focused player detail (sold-comps summary,
     /// top cards, by-year rollups). Distinct from `analyzePlayer`
     /// which hits /api/playeriq/:name and returns a scoring/analysis

@@ -57,6 +57,13 @@ struct DailyIQView: View {
     @State private var actionPlan: ActionPlanResponse?
     /// Active verdict chip; nil = show all verdicts.
     @State private var actionPlanFilter: ActionVerdict?
+    /// PR #622 (2026-07-20): Weekly Hobby Index. Populates the
+    /// "Hobby Weather" section at the top of DailyIQ. Silent
+    /// suppression when nil.
+    @State private var weeklyHobbyIndex: WeeklyHobbyIndexResponse?
+    /// PR #620 (2026-07-20): Prospects breaking out. Compact banner
+    /// on DailyIQ home + drill-down list.
+    @State private var prospectsBreakingOut: ProspectsBreakingOutResponse?
     /// PR #556 (2026-07-17): New Drops sheet gate. Presented from the
     /// hero card via a small "New Drops" banner button.
     @State private var showNewDropsSheet: Bool = false
@@ -81,6 +88,16 @@ struct DailyIQView: View {
                         systemImage: "wifi.exclamationmark"
                     )
                 }
+
+                // 2026-07-20 (PR #622): Hobby Weather — hobby-wide
+                // WoW index + top movers. Rendered above the Action
+                // Plan so users read the market mood before their
+                // holdings. Self-suppresses when the response is nil.
+                HobbyWeatherSection(response: weeklyHobbyIndex)
+
+                // 2026-07-20 (PR #620): Prospects Breaking Out —
+                // raw-inversion signals compact banner with drill-down.
+                ProspectsBreakingOutBanner(response: prospectsBreakingOut)
 
                 // PR #546 (2026-07-17): Action Plan hero — sorted per-
                 // holding verdict feed. Self-suppresses when the response
@@ -155,7 +172,9 @@ struct DailyIQView: View {
             async let sellNow: Void = loadSellNowRadar()
             async let notable: Void = loadNotableSales()
             async let plan: Void = loadActionPlan()
-            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan)
+            async let hobby: Void = loadWeeklyHobbyIndex()
+            async let prospects: Void = loadProspectsBreakingOut()
+            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan, hobby, prospects)
             // 2026-07-19 (card-show batch): push permission ask moved
             // from here to PortfolioIQView per updated spec — sell-side
             // alerts land in the Portfolio surface, so it's the more
@@ -1312,6 +1331,26 @@ private var watchlistCard: some View {
             actionPlan = try await APIService.shared.fetchActionPlan()
         } catch {
             actionPlan = nil
+        }
+    }
+
+    /// PR #622 (2026-07-20): Hobby Weather WoW index. Silent failure
+    /// hides the section.
+    private func loadWeeklyHobbyIndex() async {
+        do {
+            weeklyHobbyIndex = try await APIService.shared.fetchWeeklyHobbyIndex()
+        } catch {
+            weeklyHobbyIndex = nil
+        }
+    }
+
+    /// PR #620 (2026-07-20): raw-inversion prospect signals. Silent
+    /// failure hides the banner.
+    private func loadProspectsBreakingOut() async {
+        do {
+            prospectsBreakingOut = try await APIService.shared.fetchProspectsBreakingOut()
+        } catch {
+            prospectsBreakingOut = nil
         }
     }
 
