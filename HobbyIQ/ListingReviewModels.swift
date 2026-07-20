@@ -32,7 +32,10 @@ struct PreparedListing: Codable, Hashable {
     var categoryAspects: ListingCategoryAspects
     var photos: [String]
     var listing: ListingDetails
-    let validation: ListingValidation?
+    /// Mutable so `recomputeValidation()` can refresh it after
+    /// every debounced user edit — server-side validation only
+    /// runs at prepare-time; iOS keeps it live thereafter.
+    var validation: ListingValidation?
 }
 
 // MARK: - Identity
@@ -141,4 +144,78 @@ struct ListingValidation: Codable, Hashable {
     let requiredMissing: [String]
     let warnings: [String]
     let readyToPublish: Bool
+}
+
+// MARK: - Publish response (backend PR #645)
+
+/// `/api/ebay/listings/publish` returns this shape — not the
+/// full `PreparedListing`. On success we get eBay identifiers so
+/// iOS can push the user to the live listing; on failure we get
+/// a human-readable error and (when applicable) a `missingPolicy`
+/// block that tells the user which seller policy needs setup
+/// before publish can succeed.
+struct PublishResult: Codable, Hashable {
+    let success: Bool
+    let offerId: String?
+    let listingId: String?
+    let listingUrl: String?
+    let inventoryItemKey: String?
+    let error: String?
+    let missingPolicy: MissingPolicy?
+}
+
+struct MissingPolicy: Codable, Hashable {
+    /// "payment" / "return" / "fulfillment"
+    let policyType: String
+    let reason: String
+}
+
+// MARK: - Client-side validation
+
+extension PreparedListing {
+    /// Recomputes `validation` in-place from the current field state.
+    /// Runs on every debounced edit so the Publish gate reflects
+    /// the user's edits immediately instead of waiting for the next
+    /// server round-trip. Mirrors the backend rules — if they drift,
+    /// the server's rejection wins at publish time, but the local
+    /// gate keeps the user from tapping Publish on a form we know
+    /// won't succeed.
+    mutating func recomputeValidation() {
+        var missing: [String] = []
+        if photos.isEmpty { missing.append("photos") }
+        if (identity.playerName ?? "").isEmpty { missing.append("identity.playerName") }
+        if identity.cardYear == nil { missing.append("identity.cardYear") }
+        if (identity.setName ?? "").isEmpty { missing.append("identity.setName") }
+        if (categoryAspects.league ?? "").isEmpty { missing.append("categoryAspects.league") }
+        if (categoryAspects.type ?? "").isEmpty { missing.append("categoryAspects.type") }
+        if (categoryAspects.countryOfManufacture ?? "").isEmpty {
+            missing.append("categoryAspects.countryOfManufacture")
+        }
+        if categoryAspects.yearManufactured == nil {
+            missing.append("categoryAspects.yearManufactured")
+        }
+        if listing.priceCents <= 0 { missing.append("listing.priceCents") }
+        if listing.titleSuggested.isEmpty { missing.append("listing.title") }
+        if condition.isGraded, (condition.grade ?? "").isEmpty {
+            missing.append("condition.grade")
+        }
+
+        var warnings: [String] = []
+        if listing.titleSuggested.count > 80 {
+            warnings.append("Title exceeds eBay's 80-char cap and will be truncated")
+        }
+        if condition.isGraded == false, (condition.conditionEstimate ?? "").isEmpty {
+            warnings.append("Raw condition not set — will default to 'Near Mint'")
+        }
+        if identity.isAuto == false,
+           (identity.parallel?.lowercased() ?? "").contains("auto") {
+            warnings.append("Parallel mentions 'auto' but Autograph is off")
+        }
+
+        validation = ListingValidation(
+            requiredMissing: missing,
+            warnings: warnings,
+            readyToPublish: missing.isEmpty
+        )
+    }
 }

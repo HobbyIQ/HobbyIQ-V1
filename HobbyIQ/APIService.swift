@@ -162,15 +162,18 @@ struct APIService {
         )
     }
 
-    /// 2026-07-20: submits the user-reviewed / edited listing to
-    /// eBay via the existing publish endpoint. Extended to accept
-    /// the full `PreparedListing` shape so the user's edits ship
-    /// exactly as they typed them — no server-side round-tripping.
-    func publishPreparedListing(_ listing: PreparedListing) async throws -> PreparedListing {
+    /// 2026-07-20 (backend PR #645): submits the user-reviewed
+    /// listing to eBay. Accepts the full `PreparedListing` shape
+    /// verbatim (server persists any user edits back to the holding
+    /// so next publish is faster). Returns a `PublishResult` with
+    /// eBay identifiers on success or a human-readable error +
+    /// optional `missingPolicy` on failure — NOT the round-tripped
+    /// listing shape.
+    func publishPreparedListing(_ listing: PreparedListing) async throws -> PublishResult {
         try await post(
             path: "/api/ebay/listings/publish",
             body: listing,
-            responseType: PreparedListing.self,
+            responseType: PublishResult.self,
             timeoutSeconds: 60
         )
     }

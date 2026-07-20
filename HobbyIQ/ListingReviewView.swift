@@ -32,15 +32,27 @@ struct ListingReviewView: View {
     @State private var loadError: String?
     @State private var isPublishing = false
     @State private var publishError: String?
-    @State private var publishedToast: String?
+    @State private var missingPolicy: MissingPolicy?
+    @State private var publishSuccess: PublishResult?
     @State private var showPreviewPayload = false
     @State private var categoryAspectsExpanded: Bool = false
     @State private var advancedExpanded: Bool = false
+    /// 2026-07-20: FMV snapshot captured at load time. Used as the
+    /// suggestion pill above the Price field so the user can snap
+    /// back to backend's recommended value after tweaking.
+    @State private var fmvSuggestionCents: Int?
+    /// 2026-07-20: debounce ticket for `recomputeValidation()`. A
+    /// rapid keystroke run bumps this repeatedly; the sleep task
+    /// only proceeds when its captured value still matches — same
+    /// pattern as a classic setTimeout+clearTimeout debounce.
+    @State private var debounceToken: Int = 0
 
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading, listing == nil {
+                if let publishSuccess {
+                    successView(publishSuccess)
+                } else if isLoading, listing == nil {
                     loadingState
                 } else if let listing {
                     form(for: listing)
@@ -48,11 +60,13 @@ struct ListingReviewView: View {
                     errorState(loadError)
                 }
             }
-            .navigationTitle("Review listing")
+            .navigationTitle(publishSuccess == nil ? "Review listing" : "Listed on eBay")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                if publishSuccess == nil {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
                 }
             }
             .task {
@@ -62,15 +76,47 @@ struct ListingReviewView: View {
                 previewPayloadSheet
             }
             .overlay(alignment: .top) {
-                if let publishedToast {
-                    toastBanner(publishedToast, tint: HobbyIQTheme.Colors.hobbyGreen)
-                        .padding(.top, 8)
-                } else if let publishError {
+                if let publishError {
                     toastBanner(publishError, tint: HobbyIQTheme.Colors.danger)
                         .padding(.top, 8)
                 }
             }
         }
+    }
+
+    // MARK: - Success screen (spec §3 published state)
+
+    private func successView(_ result: PublishResult) -> some View {
+        VStack(spacing: 18) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+            Text("Listed on eBay")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            if let id = result.listingId {
+                Text("Item # \(id)")
+                    .font(.footnote.monospaced())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .textSelection(.enabled)
+            }
+            VStack(spacing: 10) {
+                if let urlString = result.listingUrl, let url = URL(string: urlString) {
+                    Link(destination: url) {
+                        Label("View on eBay", systemImage: "arrow.up.forward.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.appPrimary)
+                }
+                Button("Done") { dismiss() }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.top, 8)
+            Spacer()
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: - Form
@@ -82,9 +128,17 @@ struct ListingReviewView: View {
                 self.listing = newValue
                 // Persist edits so leaving the screen doesn't lose work.
                 ListingDraftStore.save(holdingId: holdingId, listing: newValue)
+                // 2026-07-20 (spec §4): debounced client-side
+                // revalidation so the Publish gate reflects the
+                // user's edits without waiting for the next server
+                // round-trip. 200ms window per spec.
+                scheduleRevalidation()
             }
         )
         return Form {
+            if let missingPolicy {
+                missingPolicyBanner(missingPolicy)
+            }
             if let validation = listing.validation {
                 validationBanner(validation)
             }
@@ -99,6 +153,26 @@ struct ListingReviewView: View {
             bottomActionBar(listing)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    // MARK: - Missing-policy banner (spec §Publish failure)
+
+    private func missingPolicyBanner(_ policy: MissingPolicy) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("eBay \(policy.policyType.capitalized) policy needed", systemImage: "exclamationmark.octagon.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.danger)
+                Text(policy.reason)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Set this up in your eBay Seller Hub, then retry.")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+            }
+            .padding(.vertical, 4)
+        }
     }
 
     // MARK: - Validation banner
@@ -371,7 +445,34 @@ struct ListingReviewView: View {
     }
 
     private func priceField(_ listing: Binding<PreparedListing>) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
+            // 2026-07-20: FMV suggestion chip above the price field.
+            // Snaps the price back to backend's recommended value.
+            // Only shows when the current price differs meaningfully
+            // from the FMV — no point suggesting what's already set.
+            if let fmvCents = fmvSuggestionCents,
+               fmvCents > 0,
+               abs(fmvCents - listing.wrappedValue.listing.priceCents) > 100 {
+                Button {
+                    listing.wrappedValue.listing.priceCents = fmvCents
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.caption2)
+                        Text("FMV: $\(Int(Double(fmvCents) / 100))")
+                            .font(.caption.weight(.semibold))
+                        Text("· tap to use")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                    .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
             HStack {
                 Text("$")
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
@@ -384,6 +485,25 @@ struct ListingReviewView: View {
                     }
                 ))
                 .keyboardType(.decimalPad)
+            }
+        }
+    }
+
+    /// 2026-07-20 (spec §4): 200ms debouncer for client-side
+    /// revalidation. Each edit bumps `debounceToken`; the task's
+    /// captured value only matches after the sleep completes, which
+    /// means rapid keystrokes coalesce into a single recompute.
+    private func scheduleRevalidation() {
+        debounceToken &+= 1
+        let expected = debounceToken
+        Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard expected == debounceToken else { return }
+            await MainActor.run {
+                if var current = listing {
+                    current.recomputeValidation()
+                    listing = current
+                }
             }
         }
     }
@@ -552,6 +672,12 @@ struct ListingReviewView: View {
             // Prefer the just-fetched payload's validation block —
             // even when we restore a draft, the freshest validation
             // signal is what the backend just computed.
+            // 2026-07-20: capture the server's original price as the
+            // FMV suggestion so the price chip can snap back to it
+            // after the user tweaks.
+            if fmvSuggestionCents == nil, fetched.listing.priceCents > 0 {
+                fmvSuggestionCents = fetched.listing.priceCents
+            }
             if let current = listing {
                 // Replace only the validation block on the draft so
                 // in-flight user edits aren't clobbered.
@@ -617,15 +743,27 @@ struct ListingReviewView: View {
     private func publish(_ listing: PreparedListing) async {
         isPublishing = true
         publishError = nil
+        missingPolicy = nil
         defer { isPublishing = false }
         do {
-            _ = try await APIService.shared.publishPreparedListing(listing)
-            ListingDraftStore.clear(holdingId: holdingId)
-            publishedToast = "Listing sent to eBay."
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            await MainActor.run { dismiss() }
+            let result = try await APIService.shared.publishPreparedListing(listing)
+            if result.success {
+                // Successful publish — clear draft, swap the whole
+                // view over to the success state (View on eBay +
+                // Done). No auto-dismiss; user gets to tap through
+                // to their live listing.
+                ListingDraftStore.clear(holdingId: holdingId)
+                publishSuccess = result
+            } else {
+                // Backend rejected the payload without a thrown
+                // error. Surface the reason + any missingPolicy
+                // block so the user knows exactly what to fix.
+                publishError = result.error ?? "Publish failed — see eBay for details."
+                missingPolicy = result.missingPolicy
+                scheduleErrorClear()
+            }
         } catch {
-            publishError = "Publish failed. Fix any flagged fields and try again."
+            publishError = diagnosticErrorMessage(from: error)
             scheduleErrorClear()
         }
     }
