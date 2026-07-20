@@ -776,6 +776,25 @@ router.post("/admin/sub-raw-inversion/scan", requireAdmin, async (req: Request, 
   } catch (err) { next(err); }
 });
 
+// CF-PERSONAL-PROSPECT-BREAKOUT (Drew, 2026-07-20). Admin trigger for
+// the nightly personal-breakout push job. Fires via GH Actions.
+router.post("/admin/personal-prospect-breakout/run", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { runPersonalProspectBreakoutJob } = await import(
+      "../services/portfolioiq/personalProspectBreakoutJob.service.js"
+    );
+    const summary = await runPersonalProspectBreakoutJob({
+      sport: typeof req.body?.sport === "string" ? req.body.sport : undefined,
+      windowDays: typeof req.body?.windowDays === "number" ? req.body.windowDays : undefined,
+      minMarginPct: typeof req.body?.minMarginPct === "number" ? req.body.minMarginPct : undefined,
+      perUserDailyCap: typeof req.body?.perUserDailyCap === "number" ? req.body.perUserDailyCap : undefined,
+      perHoldingCooldownDays: typeof req.body?.perHoldingCooldownDays === "number" ? req.body.perHoldingCooldownDays : undefined,
+      dryRun: req.body?.dryRun === true,
+    });
+    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
 // CF-GRADE-ARBITRAGE (Drew, 2026-07-19). Admin trigger for the nightly
 // grade-arbitrage push job. Fires via GH Actions.
 router.post("/admin/grade-arbitrage-notify/run", requireAdmin, async (req: Request, res: Response, next) => {
