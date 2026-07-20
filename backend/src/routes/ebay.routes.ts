@@ -74,7 +74,8 @@ async function hydratePhotosFromHolding(
     typeof input.imageFrontUrl === "string" ||
     typeof input.imageBackUrl === "string";
   const needsTeamHydration = typeof input.team !== "string" || !input.team.trim();
-  const needsAnyHydration = !hasExplicitPhotos || needsTeamHydration;
+  const needsAspectsHydration = !input.ebayItemAspects || Object.keys(input.ebayItemAspects).length === 0;
+  const needsAnyHydration = !hasExplicitPhotos || needsTeamHydration || needsAspectsHydration;
   if (!needsAnyHydration) return input;
   if (typeof input.holdingId !== "string" || !input.holdingId.trim()) return input;
 
@@ -88,6 +89,16 @@ async function hydratePhotosFromHolding(
     }
     if (needsTeamHydration && typeof holding.team === "string" && holding.team.trim()) {
       patch.team = (holding.team as string).trim();
+    }
+    // CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Hydrate ebayItemAspects
+    // from the holding when iOS didn't pass them explicitly. Required
+    // for the Sports Trading Cards category to pass eBay's Sell
+    // Inventory validation (League, Type, Country/Region of
+    // Manufacture, Year Manufactured are enforced).
+    if (needsAspectsHydration
+        && holding.ebayItemAspects
+        && typeof holding.ebayItemAspects === "object") {
+      patch.ebayItemAspects = holding.ebayItemAspects as Record<string, string>;
     }
     return patch;
   } catch (err) {
