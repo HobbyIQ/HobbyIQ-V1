@@ -493,24 +493,35 @@ struct ListingReviewView: View {
     }
 
     private func errorState(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.title2)
-                .foregroundStyle(HobbyIQTheme.Colors.danger.opacity(0.8))
-            Text("Couldn't prepare this listing.")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .multilineTextAlignment(.center)
-            Button("Retry") {
-                Task { await load() }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.title2)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger.opacity(0.8))
+                    Text("Couldn't prepare this listing.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                Text(message)
+                    .font(.footnote.monospaced())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button("Retry") {
+                        Task { await load() }
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Copy error") {
+                        UIPasteboard.general.string = message
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
-            .buttonStyle(.bordered)
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func toastBanner(_ message: String, tint: Color) -> some View {
@@ -566,11 +577,41 @@ struct ListingReviewView: View {
             }
         } catch {
             if listing == nil {
-                loadError = "The server didn't respond in time."
+                loadError = diagnosticErrorMessage(from: error)
             }
             // If a draft loaded, keep it — the user can still work
             // offline. Just don't overwrite with a fetch failure.
         }
+    }
+
+    /// Build a copy-pasteable error string that tells you which side
+    /// of the wire is broken. Backend not deployed yet → 404. Auth
+    /// missing → 401. Server crashed → 5xx w/ body. Anything else
+    /// → the raw error localizedDescription. Users can screenshot
+    /// this to send back for triage.
+    private func diagnosticErrorMessage(from error: Error) -> String {
+        if let apiError = error as? APIServiceError {
+            switch apiError {
+            case .httpError(let statusCode, let body):
+                let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+                let bodyPreview = trimmed.isEmpty
+                    ? ""
+                    : "\n\n" + String(trimmed.prefix(300))
+                switch statusCode {
+                case 404:
+                    return "POST /api/ebay/listings/prepare returned 404 \u{2014} the endpoint isn't deployed yet.\(bodyPreview)"
+                case 401, 403:
+                    return "POST /api/ebay/listings/prepare returned \(statusCode) \u{2014} auth issue.\(bodyPreview)"
+                default:
+                    return "POST /api/ebay/listings/prepare returned \(statusCode).\(bodyPreview)"
+                }
+            case .invalidURL:
+                return "APIConfig.baseURL isn't set. Fix in APIConfig.swift."
+            default:
+                return apiError.errorDescription ?? String(describing: apiError)
+            }
+        }
+        return error.localizedDescription
     }
 
     private func publish(_ listing: PreparedListing) async {
