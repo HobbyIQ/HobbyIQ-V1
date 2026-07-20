@@ -331,6 +331,60 @@ struct AccountView: View {
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
                 accountDivider
+                // 2026-07-20 (spec §8): three new notification toggles
+                // from the "full alignment" prompt. Local-only until
+                // backend preferences endpoint learns matching fields.
+                Toggle(isOn: Binding(
+                    get: { viewModel.gradeOpportunityAlerts },
+                    set: { newValue in Task { await viewModel.updateGradeOpportunityAlerts(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Grade opportunities")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("PSA 10 pays 3\u{00D7} vs raw")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                accountDivider
+                Toggle(isOn: Binding(
+                    get: { viewModel.sellSideAlerts },
+                    set: { newValue in Task { await viewModel.updateSellSideAlerts(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sell alerts")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Your card just lifted 8%")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                accountDivider
+                Toggle(isOn: Binding(
+                    get: { viewModel.marketMoversDigest },
+                    set: { newValue in Task { await viewModel.updateMarketMoversDigest(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Market movers digest")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Top 10 gainers this week (weekly)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                accountDivider
                 // Phase 3.9 (2026-07-17, PR #531): cascade signal push.
                 // Default OFF — explicit opt-in per spec because this
                 // is a lower-signal firehose vs. verdict flips.

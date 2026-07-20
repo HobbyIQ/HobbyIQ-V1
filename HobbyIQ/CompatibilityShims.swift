@@ -237,12 +237,38 @@ final class AccountViewModel: ObservableObject {
     /// Default OFF — explicit opt-in per spec. Backed by the same
     /// `/api/portfolio/preferences` endpoint under `pushOnCascade`.
     @Published var cascadeAlerts: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.cascadeAlertsKey)
+    /// 2026-07-20 (spec §8): three new notification toggles. Seeded
+    /// from UserDefaults with sensible defaults on first launch
+    /// (opportunity + sell-side default ON; movers digest OFF).
+    @Published var gradeOpportunityAlerts: Bool = {
+        if UserDefaults.standard.object(forKey: AccountViewModel.gradeOpportunityAlertsKey) == nil {
+            UserDefaults.standard.set(true, forKey: AccountViewModel.gradeOpportunityAlertsKey)
+        }
+        return UserDefaults.standard.bool(forKey: AccountViewModel.gradeOpportunityAlertsKey)
+    }()
+    @Published var sellSideAlerts: Bool = {
+        if UserDefaults.standard.object(forKey: AccountViewModel.sellSideAlertsKey) == nil {
+            UserDefaults.standard.set(true, forKey: AccountViewModel.sellSideAlertsKey)
+        }
+        return UserDefaults.standard.bool(forKey: AccountViewModel.sellSideAlertsKey)
+    }()
+    @Published var marketMoversDigest: Bool = UserDefaults.standard.bool(forKey: AccountViewModel.marketMoversDigestKey)
     /// P0.7 delta (2026-07-16): last-known APNs registration status from
     /// backend. Drives the "Notifications registered · updated 3m ago"
     /// caption below the toggle. Nil until first fetch.
     @Published var apnsDeviceStatus: PortfolioPreferencesResponse.APNsDeviceStatus?
     fileprivate static let verdictFlipAlertsKey = "hobbyIQ.settings.verdictFlipAlerts"
     fileprivate static let cascadeAlertsKey = "hobbyIQ.settings.cascadeAlerts"
+    /// 2026-07-20 (spec §8): three new notification toggles from
+    /// the "full alignment" prompt. Local-only persistence until the
+    /// backend preferences endpoint learns the matching fields —
+    /// `pushOnGradeArbitrage`, `pushOnSellSide`, `weeklyMoversDigest`.
+    /// When those land, `update*` methods below can wire a
+    /// `/api/portfolio/settings` PATCH the same way
+    /// `updateVerdictFlipAlerts` does today.
+    fileprivate static let gradeOpportunityAlertsKey = "hobbyIQ.settings.gradeOpportunityAlerts"
+    fileprivate static let sellSideAlertsKey = "hobbyIQ.settings.sellSideAlerts"
+    fileprivate static let marketMoversDigestKey = "hobbyIQ.settings.marketMoversDigest"
     private var isLoadingPrefs = false
     private var isLoadingPortfolioPrefs = false
 
@@ -351,6 +377,38 @@ final class AccountViewModel: ObservableObject {
             return
         }
 
+        if enabled {
+            await PushNotificationManager.shared.requestPermissionAndRegister()
+        }
+    }
+
+    /// 2026-07-20 (spec §8): grade-arbitrage push opt-in. Local-only
+    /// persistence — when the backend preferences endpoint learns the
+    /// matching field, replace the UserDefaults-only body with a
+    /// PATCH call like `updateVerdictFlipAlerts`.
+    func updateGradeOpportunityAlerts(_ enabled: Bool) async {
+        gradeOpportunityAlerts = enabled
+        UserDefaults.standard.set(enabled, forKey: AccountViewModel.gradeOpportunityAlertsKey)
+        if enabled {
+            await PushNotificationManager.shared.requestPermissionAndRegister()
+        }
+    }
+
+    /// 2026-07-20 (spec §8): sell-side push opt-in.
+    func updateSellSideAlerts(_ enabled: Bool) async {
+        sellSideAlerts = enabled
+        UserDefaults.standard.set(enabled, forKey: AccountViewModel.sellSideAlertsKey)
+        if enabled {
+            await PushNotificationManager.shared.requestPermissionAndRegister()
+        }
+    }
+
+    /// 2026-07-20 (spec §8): weekly market-movers digest opt-in.
+    /// Default OFF — this is a low-frequency Sunday-morning digest,
+    /// not a real-time push, so require explicit opt-in.
+    func updateMarketMoversDigest(_ enabled: Bool) async {
+        marketMoversDigest = enabled
+        UserDefaults.standard.set(enabled, forKey: AccountViewModel.marketMoversDigestKey)
         if enabled {
             await PushNotificationManager.shared.requestPermissionAndRegister()
         }

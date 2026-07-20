@@ -23,6 +23,12 @@ struct RecentSalesSection: View {
     @State private var response: RecentSalesResponse?
     @State private var isExpanded: Bool = false
     @State private var loaded = false
+    /// 2026-07-20 (spec §3): copy-to-clipboard toast state. Fades
+    /// after a short delay.
+    @State private var copyToast: String?
+    /// 2026-07-20 (spec §3): UIActivityViewController item for
+    /// "Share as text". Bound to `.sheet(item:)`.
+    @State private var shareItem: RecentSalesShareItem?
 
     var body: some View {
         Group {
@@ -74,6 +80,10 @@ struct RecentSalesSection: View {
                     }
                 }
                 .transition(.opacity)
+                // 2026-07-20 (spec §3): Copy + Share action row.
+                // Renders below the expanded sales list. Formatter
+                // emits the top 5 sales as bulleted text lines.
+                actionRow(sales: sales)
             }
         }
         .padding(HobbyIQTheme.Spacing.medium)
@@ -84,6 +94,122 @@ struct RecentSalesSection: View {
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .sheet(item: $shareItem) { item in
+            RecentSalesShareSheet(activityItems: [item.text])
+        }
+        .overlay(alignment: .top) {
+            if let copyToast {
+                Text(copyToast)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(HobbyIQTheme.Colors.cardNavy.opacity(0.95))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.4), lineWidth: 1)
+                    )
+                    .clipShape(Capsule(style: .continuous))
+                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .padding(.top, 4)
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    /// 2026-07-20 (spec §3): Copy N + Share row. Renders below the
+    /// expanded sales list; both actions operate on the top 5 sales
+    /// (or fewer if the response is thin).
+    private func actionRow(sales: [RecentSale]) -> some View {
+        let topN = Array(sales.prefix(5))
+        return HStack(spacing: 8) {
+            Button {
+                let text = formatSalesForClipboard(topN)
+                UIPasteboard.general.string = text
+                copyToast = "Copied \(topN.count) sale\(topN.count == 1 ? "" : "s")"
+                scheduleToastClear()
+            } label: {
+                actionChip(icon: "doc.on.clipboard", label: "Copy \(topN.count)")
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                shareItem = RecentSalesShareItem(text: formatSalesForClipboard(topN))
+            } label: {
+                actionChip(icon: "square.and.arrow.up", label: "Share")
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 4)
+    }
+
+    private func actionChip(icon: String, label: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text(label)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+        .clipShape(Capsule(style: .continuous))
+    }
+
+    /// Formats the top N sales as bulleted text lines. Matches the
+    /// spec's per-sale "$price · date · source" structure. Also
+    /// includes a header line and a footer with count + median from
+    /// the response envelope so the paste is self-explanatory.
+    private func formatSalesForClipboard(_ sales: [RecentSale]) -> String {
+        var lines: [String] = []
+        if let count = response?.count, count > 0 {
+            lines.append("HobbyIQ · \(count) recent sale\(count == 1 ? "" : "s")")
+        }
+        for sale in sales {
+            var parts: [String] = []
+            if let price = sale.price {
+                parts.append("$\(Int(price.rounded()).formatted(.number.grouping(.automatic)))")
+            }
+            if let soldAt = sale.soldAt, let rel = Self.relativeDate(from: soldAt) {
+                parts.append(rel)
+            }
+            if let source = sale.source?.chipLabel {
+                parts.append(source)
+            }
+            if parts.isEmpty == false {
+                lines.append("\u{2022} " + parts.joined(separator: " \u{00B7} "))
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Compact "3d" / "2w" / "1mo" style from an ISO8601 sold-at.
+    private static func relativeDate(from iso: String) -> String? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let parsed = formatter.date(from: iso) ?? {
+            let alt = ISO8601DateFormatter()
+            alt.formatOptions = [.withInternetDateTime]
+            return alt.date(from: iso)
+        }()
+        guard let date = parsed else { return nil }
+        let seconds = Date().timeIntervalSince(date)
+        let days = Int(seconds / 86_400)
+        if days < 1 { return "today" }
+        if days < 7 { return "\(days)d ago" }
+        if days < 30 { return "\(days / 7)w ago" }
+        if days < 365 { return "\(days / 30)mo ago" }
+        return "\(days / 365)y ago"
+    }
+
+    private func scheduleToastClear() {
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run { copyToast = nil }
+        }
     }
 
     private func load() async {
@@ -103,6 +229,25 @@ struct RecentSalesSection: View {
             response = nil
         }
     }
+}
+
+// MARK: - Share sheet bridge (2026-07-20 spec §3)
+
+/// Wraps the formatted-comps string in an Identifiable so
+/// `.sheet(item:)` can present the activity view controller.
+private struct RecentSalesShareItem: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+private struct RecentSalesShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Row
