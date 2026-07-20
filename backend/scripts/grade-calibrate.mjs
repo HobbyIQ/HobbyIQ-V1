@@ -1,5 +1,28 @@
-// Grade tier calibration — partitioned by product family to avoid
-// the Cosmos SDK stack overflow on unbounded GROUP BY result sets.
+// CF-GRADE-CALIBRATE (Drew, 2026-07-20 rewrite). Generates
+// gradeCalibrationData.ts (baseline baseball + per-sport overlays for
+// football & basketball) from 365d of ch_daily_sales.
+//
+// Design:
+//   - Per-family per-year partitioned queries (each ~100-500 rows) to
+//     stay under Cosmos serverless RU. Unbounded GROUP BY on big
+//     families (topps, bowman, panini-prizm) 429s.
+//   - Baseline calibration = baseball-implicit (queried without
+//     sport filter, since ch_daily_sales is 99.7% baseball).
+//   - Per-sport overlays query WHERE c["group"] = @sport, populate
+//     GRADE_CALIBRATION_BY_SPORT.football + .basketball.
+//   - Baseline threshold: n>=5 per (family, grader). Sport threshold:
+//     n>=3 (smaller pools).
+//   - Generic "other" family = sample-size-weighted average of the 19
+//     named baseline families. Ensures ~100% pool coverage — every
+//     card gets a real multiplier, not "unavailable".
+//
+// Output: rewrites backend/src/services/compiq/gradeCalibrationData.ts.
+// Human-maintained code (lookupGradeRatio, classifyFamily) lives in
+// gradeCalibrationConfig.ts and is UNTOUCHED by this script.
+//
+// Workflow: run manually via `node backend/scripts/grade-calibrate.mjs`
+// OR via the "Grade Calibration Refresh (weekly)" GH Actions workflow
+// (Sundays 10 UTC).
 import { CosmosClient } from "@azure/cosmos";
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -11,12 +34,11 @@ if (!connStr) { console.error("COSMOS_CONNECTION_STRING missing"); process.exit(
 const client = new CosmosClient(connStr);
 const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
 const container = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
-
 const cutoff = new Date(Date.now() - 365 * 86400000).toISOString();
 
-// Query in family-scoped chunks. Each chunk should return manageable
-// aggregate rows.
-const FAMILY_TOKENS = [
+// Baseline (baseball-implicit) family tokens — includes the full
+// baseball catalog + long-tail brands worth calibrating.
+const BASELINE_FAMILIES = [
   { family: "bowman-chrome-draft", token: "Bowman Chrome Draft" },
   { family: "bowman-chrome", token: "Bowman Chrome" },
   { family: "bowman-sterling", token: "Bowman Sterling" },
@@ -24,116 +46,202 @@ const FAMILY_TOKENS = [
   { family: "topps-chrome-update", token: "Topps Chrome Update" },
   { family: "topps-chrome", token: "Topps Chrome" },
   { family: "topps-update", token: "Topps Update" },
+  { family: "topps-heritage", token: "Topps Heritage" },
+  { family: "topps-finest", token: "Topps Finest" },
+  { family: "topps-pristine", token: "Topps Pristine" },
+  { family: "topps-allen-ginter", token: "Allen & Ginter" },
+  { family: "topps-stadium-club", token: "Topps Stadium Club" },
   { family: "topps", token: "Topps" },
   { family: "panini-prizm", token: "Prizm" },
   { family: "panini-select", token: "Select" },
   { family: "panini-mosaic", token: "Mosaic" },
   { family: "panini-donruss", token: "Donruss" },
   { family: "panini-optic", token: "Optic" },
+  { family: "panini-contenders", token: "Contenders" },
+  { family: "panini-immaculate", token: "Immaculate" },
+  { family: "panini-flawless", token: "Flawless" },
+  { family: "panini-national-treasures", token: "National Treasures" },
   { family: "upper-deck", token: "Upper Deck" },
 ];
 
-function median(a) {
-  const s = a.slice().sort((x, y) => x - y);
+// Per-sport overlays — FB/BB product lines. Runs against
+// c["group"] = @sport rather than blanket query.
+const SPORT_FAMILIES = [
+  { family: "panini-prizm", token: "Prizm" },
+  { family: "panini-select", token: "Select" },
+  { family: "panini-mosaic", token: "Mosaic" },
+  { family: "panini-donruss", token: "Donruss" },
+  { family: "panini-optic", token: "Optic" },
+  { family: "panini-contenders", token: "Contenders" },
+  { family: "panini-national-treasures", token: "National Treasures" },
+  { family: "panini-immaculate", token: "Immaculate" },
+  { family: "panini-flawless", token: "Flawless" },
+  { family: "panini-chronicles", token: "Chronicles" },
+  { family: "panini-obsidian", token: "Obsidian" },
+  { family: "panini-phoenix", token: "Phoenix" },
+  { family: "panini-spectra", token: "Spectra" },
+  { family: "panini-absolute", token: "Absolute" },
+  { family: "panini-score", token: "Score" },
+  { family: "panini-hoops", token: "Hoops" },
+  { family: "panini-prestige", token: "Prestige" },
+  { family: "panini-certified", token: "Certified" },
+  { family: "panini-playoff", token: "Playoff" },
+  { family: "panini-revolution", token: "Revolution" },
+  { family: "topps-chrome", token: "Topps Chrome" },
+  { family: "bowman-chrome", token: "Bowman Chrome" },
+];
+
+const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+const SPORTS = ["Football", "Basketball"];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const median = (arr) => {
+  const s = arr.slice().sort((a, b) => a - b);
   return s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-}
+};
 
-// Accumulate (family, grader) → [ratio per cardId]
-const ratiosByFamilyGrader = new Map();
-
-for (const { family, token } of FAMILY_TOKENS) {
-  console.error(`\nFetching ${family} (token="${token}")...`);
+async function fetchYearWithRetry(token, year, sport, attempt = 1) {
+  const params = [
+    { name: "@cutoff", value: cutoff },
+    { name: "@year", value: year },
+    { name: "@token", value: token },
+  ];
+  let sportClause = "";
+  if (sport) {
+    params.push({ name: "@sport", value: sport });
+    sportClause = " AND c[\"group\"] = @sport";
+  }
   const iter = container.items.query({
-    query: `SELECT c.card_id, c.grader,
-                    AVG(c.price) AS avgPrice,
-                    COUNT(1) AS n
+    query: `SELECT c.card_id, c.grader, AVG(c.price) AS avgPrice, COUNT(1) AS n
              FROM c
              WHERE c.sale_date >= @cutoff
                AND c.price > 0
-               AND CONTAINS(LOWER(c.card_set), LOWER(@token))
+               AND c.year = @year
+               AND CONTAINS(LOWER(c.card_set), LOWER(@token))${sportClause}
              GROUP BY c.card_id, c.grader`,
-    parameters: [
-      { name: "@cutoff", value: cutoff },
-      { name: "@token", value: token },
-    ],
-  }, { maxItemCount: 200 });
-
-  const familyResources = [];
+    parameters: params,
+  }, { maxItemCount: 100 });
+  const rows = [];
   try {
     for await (const batch of iter.getAsyncIterator()) {
-      for (const r of batch.resources) familyResources.push(r);
+      for (const r of batch.resources) rows.push(r);
     }
+    return rows;
   } catch (err) {
-    console.error(`  ⚠ query failed for ${family}: ${err.message}`);
-    continue;
+    const isRateLimit = /request rate is too large|429/i.test(err.message ?? "");
+    if (!isRateLimit || attempt > 4) return [];
+    const delayMs = 3000 * Math.pow(2, attempt - 1);
+    console.error(`  429 ${sport ?? "baseline"}/${year} attempt ${attempt}, ${delayMs}ms`);
+    await sleep(delayMs);
+    return fetchYearWithRetry(token, year, sport, attempt + 1);
   }
-  console.error(`  got ${familyResources.length} (cardId, grader) rows`);
+}
 
-  // Bucket by cardId
-  const byCard = new Map();
-  for (const r of familyResources) {
-    if (r.n < 3) continue;   // ≥3 sales per bucket
-    if (!byCard.has(r.card_id)) byCard.set(r.card_id, {});
-    byCard.get(r.card_id)[r.grader] = { avgPrice: r.avgPrice, n: r.n };
+async function calibrateFamilySet(families, sport, minSampleSize) {
+  const ratios = new Map();
+  const sportLabel = sport ?? "baseline";
+  console.error(`\n═══ ${sportLabel} ═══`);
+  for (const { family, token } of families) {
+    const familyRows = [];
+    for (const year of YEARS) {
+      const yearRows = await fetchYearWithRetry(token, year, sport);
+      familyRows.push(...yearRows);
+      await sleep(800);
+    }
+    if (familyRows.length === 0) {
+      console.error(`  ${family.padEnd(28)} skipped (0 rows)`);
+      continue;
+    }
+    const byCard = new Map();
+    for (const r of familyRows) {
+      if (r.n < 2) continue;
+      if (!byCard.has(r.card_id)) byCard.set(r.card_id, {});
+      byCard.get(r.card_id)[r.grader] = { avgPrice: r.avgPrice, n: r.n };
+    }
+    let cardsWithRatio = 0;
+    for (const [, gradersByCard] of byCard) {
+      const raw = gradersByCard["Raw"];
+      if (!raw || raw.avgPrice <= 0) continue;
+      cardsWithRatio++;
+      for (const [grader, stats] of Object.entries(gradersByCard)) {
+        if (grader === "Raw") continue;
+        const ratio = stats.avgPrice / raw.avgPrice;
+        if (!Number.isFinite(ratio) || ratio < 0.5 || ratio > 300) continue;
+        const key = `${family}::${grader}`;
+        if (!ratios.has(key)) ratios.set(key, []);
+        ratios.get(key).push(ratio);
+      }
+    }
+    console.error(`  ${family.padEnd(28)} ${familyRows.length.toString().padStart(6)} rows  ${cardsWithRatio.toString().padStart(4)} pairs`);
   }
+  const grouped = {};
+  for (const [key, arr] of ratios) {
+    if (arr.length < minSampleSize) continue;
+    const [family, grader] = key.split("::");
+    const med = median(arr);
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const p25 = sorted[Math.floor(sorted.length * 0.25)];
+    const p75 = sorted[Math.floor(sorted.length * 0.75)];
+    if (!grouped[family]) grouped[family] = {};
+    grouped[family][grader] = {
+      medianRatio: Math.round(med * 100) / 100,
+      p25: Math.round(p25 * 100) / 100,
+      p75: Math.round(p75 * 100) / 100,
+      sampleSize: arr.length,
+    };
+  }
+  return grouped;
+}
 
-  // Compute per-cardId ratios
-  let cardsWithRatio = 0;
-  for (const [, gradersByCard] of byCard) {
-    const raw = gradersByCard["Raw"];
-    if (!raw || raw.avgPrice <= 0) continue;
-    cardsWithRatio++;
-    for (const [grader, stats] of Object.entries(gradersByCard)) {
-      if (grader === "Raw") continue;
-      const ratio = stats.avgPrice / raw.avgPrice;
-      if (!Number.isFinite(ratio) || ratio < 0.5 || ratio > 300) continue;
-      const key = `${family}::${grader}`;
-      if (!ratiosByFamilyGrader.has(key)) ratiosByFamilyGrader.set(key, []);
-      ratiosByFamilyGrader.get(key).push(ratio);
+// Weighted-average "other" fallback across the baseline families.
+function computeOtherFallback(baseline) {
+  const perGrader = new Map();   // grader → { sumRatioN, sumN, sumP25N, sumP75N }
+  for (const graders of Object.values(baseline)) {
+    for (const [grader, entry] of Object.entries(graders)) {
+      const cur = perGrader.get(grader) ?? { sumRatioN: 0, sumN: 0, sumP25N: 0, sumP75N: 0 };
+      cur.sumRatioN += entry.medianRatio * entry.sampleSize;
+      cur.sumP25N += entry.p25 * entry.sampleSize;
+      cur.sumP75N += entry.p75 * entry.sampleSize;
+      cur.sumN += entry.sampleSize;
+      perGrader.set(grader, cur);
     }
   }
-  console.error(`  cards with Raw+graded pair: ${cardsWithRatio}`);
+  const out = {};
+  for (const [grader, s] of perGrader) {
+    if (s.sumN === 0) continue;
+    out[grader] = {
+      medianRatio: Math.round((s.sumRatioN / s.sumN) * 100) / 100,
+      p25: Math.round((s.sumP25N / s.sumN) * 100) / 100,
+      p75: Math.round((s.sumP75N / s.sumN) * 100) / 100,
+      sampleSize: s.sumN,
+    };
+  }
+  return out;
 }
 
-// Emit
-const results = [];
-for (const [key, arr] of ratiosByFamilyGrader) {
-  if (arr.length < 5) continue;
-  const [family, grader] = key.split("::");
-  const med = median(arr);
-  const sorted = arr.slice().sort((a, b) => a - b);
-  const p25 = sorted[Math.floor(sorted.length * 0.25)];
-  const p75 = sorted[Math.floor(sorted.length * 0.75)];
-  results.push({
-    family,
-    grader,
-    n: arr.length,
-    medianRatio: Math.round(med * 100) / 100,
-    p25: Math.round(p25 * 100) / 100,
-    p75: Math.round(p75 * 100) / 100,
-  });
-}
-results.sort((a, b) => a.family.localeCompare(b.family) || a.grader.localeCompare(b.grader));
+const baseline = await calibrateFamilySet(BASELINE_FAMILIES, null, 5);
+baseline["other"] = computeOtherFallback(baseline);
 
-console.error("\n─── Empirical Grade Ratios (medianRatio = Graded / Raw) ───");
-console.error("family                    grader        n      ratio (p25 - p75)");
-for (const r of results) {
-  console.error(`${r.family.padEnd(24)} ${r.grader.padEnd(12)} ${String(r.n).padStart(4)}   ${r.medianRatio.toFixed(2).padStart(6)}× (${r.p25.toFixed(2)}× - ${r.p75.toFixed(2)}×)`);
+const bySport = { baseball: {}, hockey: {} };
+for (const sport of SPORTS) {
+  bySport[sport.toLowerCase()] = await calibrateFamilySet(SPORT_FAMILIES, sport, 3);
 }
 
-const grouped = results.reduce((acc, r) => {
-  acc[r.family] = acc[r.family] || {};
-  acc[r.family][r.grader] = { medianRatio: r.medianRatio, p25: r.p25, p75: r.p75, sampleSize: r.n };
-  return acc;
-}, {});
+// Sort output for stable diffs
+function sortObj(o) {
+  return Object.keys(o).sort().reduce((acc, k) => {
+    acc[k] = typeof o[k] === "object" && o[k] !== null && !Array.isArray(o[k]) ? sortObj(o[k]) : o[k];
+    return acc;
+  }, {});
+}
+const baselineSorted = sortObj(baseline);
+const bySportSorted = { baseball: {}, football: {}, basketball: {}, hockey: {} };
+for (const s of Object.keys(bySport)) bySportSorted[s] = sortObj(bySport[s]);
 
-const ts = `// CF-GRADE-CALIBRATION (Drew, 2026-07-18). AUTO-GENERATED from
-// backend/scripts/grade-calibrate.mjs against ch_daily_sales.
-// Re-run periodically as pool grows. Ratios are graded/raw medians
-// per (product-family, grader) with sample sizes ≥ 5 cardIds.
-//
-// Read at rung 5 of canonicalFmv.service.ts. Fallback to hardcoded
-// defaults when a (family, grader) lookup misses.
+const ts = `// AUTO-GENERATED by backend/scripts/grade-calibrate.mjs
+// Do not hand-edit; overwritten by the Grade Calibration Refresh workflow.
+// Human-maintained code (lookupGradeRatio, classifyFamily) lives in
+// gradeCalibrationConfig.ts and imports the constants exported here.
 
 export interface GradeCalibrationEntry {
   medianRatio: number;
@@ -142,39 +250,16 @@ export interface GradeCalibrationEntry {
   sampleSize: number;
 }
 
-export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = ${JSON.stringify(grouped, null, 2)};
+export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = ${JSON.stringify(baselineSorted, null, 2)};
 
-/** Lookup helper. Returns null when the (family, grader) is uncovered. */
-export function lookupGradeRatio(family: string, grader: string): number | null {
-  const entry = GRADE_CALIBRATION[family]?.[grader];
-  return entry ? entry.medianRatio : null;
-}
-
-/** Product-family classifier matching the calibration script. Any set
- *  string maps to a canonical family key or "other". */
-export function classifyFamily(setName: string | null | undefined): string {
-  const s = String(setName ?? "").toLowerCase();
-  if (s.includes("bowman chrome draft") || s.includes("bowman draft chrome")) return "bowman-chrome-draft";
-  if (s.includes("bowman chrome")) return "bowman-chrome";
-  if (s.includes("bowman sterling")) return "bowman-sterling";
-  if (s.includes("bowman")) return "bowman";
-  if (s.includes("topps chrome update")) return "topps-chrome-update";
-  if (s.includes("topps chrome")) return "topps-chrome";
-  if (s.includes("topps update")) return "topps-update";
-  if (s.includes("topps")) return "topps";
-  if (s.includes("prizm")) return "panini-prizm";
-  if (s.includes("select")) return "panini-select";
-  if (s.includes("mosaic")) return "panini-mosaic";
-  if (s.includes("donruss")) return "panini-donruss";
-  if (s.includes("optic")) return "panini-optic";
-  if (s.includes("upper deck")) return "upper-deck";
-  return "other";
-}
+export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<string, GradeCalibrationEntry>>> = ${JSON.stringify(bySportSorted, null, 2)};
 `;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const outPath = join(__dirname, "src/services/compiq/gradeCalibrationConfig.ts");
+const outPath = join(__dirname, "..", "src", "services", "compiq", "gradeCalibrationData.ts");
 writeFileSync(outPath, ts, "utf-8");
 console.error(`\n✓ Wrote ${outPath}`);
-console.error(`  ${results.length} (family, grader) entries with n≥5`);
+console.error(`  baseline: ${Object.keys(baselineSorted).length} families`);
+console.error(`  football: ${Object.keys(bySportSorted.football ?? {}).length} families`);
+console.error(`  basketball: ${Object.keys(bySportSorted.basketball ?? {}).length} families`);
