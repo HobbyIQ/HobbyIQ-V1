@@ -176,6 +176,11 @@ struct CertLookupResultView: View {
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
                 }
+                if let rangeCaption {
+                    Text(rangeCaption)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
                 if response.canonicalFmv?.fmv == nil, response.referencePrice != nil {
                     Text("Reference price (canonical FMV unavailable)")
                         .font(.caption2)
@@ -204,6 +209,21 @@ struct CertLookupResultView: View {
             return dollars(ref)
         }
         return "\u{2014}"
+    }
+
+    /// 2026-07-20: "sells around $X (recent range $Y–$Z)" honest-range
+    /// subtitle. Hidden when the pipeline returned no observed range
+    /// (rung 5+ family-baseline fallback) or when the sample is too
+    /// thin to be worth showing (n < 3).
+    private var rangeCaption: String? {
+        guard let range = response.canonicalFmv?.recentRange,
+              (range.n ?? 0) >= 3,
+              let median = range.median, median > 0,
+              let p25 = range.p25, p25 > 0,
+              let p75 = range.p75, p75 > 0 else {
+            return nil
+        }
+        return "Sells around \(dollars(median)) (recent range \(dollars(p25))\u{2013}\(dollars(p75)))"
     }
 
     // MARK: - Grade ladder

@@ -54,6 +54,10 @@ struct LookupByCertCanonicalFmv: Decodable, Hashable {
     let method: String?
     let confidence: Double?
     let gradeLadder: [LookupByCertGradeLadderEntry]?
+    /// 2026-07-20: same shape as `CanonicalFmvResponse.recentRange`.
+    /// Populated by the top rungs (direct-comp / cross-parallel);
+    /// nil for family-baseline fallback.
+    let recentRange: CanonicalFmvRecentRange?
 }
 
 struct LookupByCertGradeLadderEntry: Decodable, Hashable, Identifiable {

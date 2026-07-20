@@ -70,6 +70,12 @@ struct CanonicalFmvResponse: Decodable, Hashable {
     let provenance: CanonicalFmvProvenance?
     /// ISO string — never surfaced to the user directly.
     let computedAt: String?
+    /// 2026-07-20: honest observed-comp range from the top rungs
+    /// (direct-comp / cross-parallel). Nil for rung 5+ (family-
+    /// baseline fallback) where there's no direct sample; UI hides
+    /// the "sells around $X (range $Y–$Z)" subtitle in that case
+    /// rather than fabricate one.
+    let recentRange: CanonicalFmvRecentRange?
 
     var methodEnum: CanonicalFmvMethod? {
         method.flatMap(CanonicalFmvMethod.init(rawValue:))
@@ -88,6 +94,20 @@ struct CanonicalFmvProvenance: Decodable, Hashable {
     let summary: String?
     let comps: [CanonicalFmvComp]?
     let trendPctPerMonth: Double?
+}
+
+/// 2026-07-20: observed-comp range from the canonical FMV compute.
+/// `median` is the point estimate the headline shows; `p25`/`p75`
+/// bound the typical spread; `min`/`max` show the outer bookends.
+/// `n` is the sample count — UIs should suppress the range display
+/// when n is low (< 3) even if the field is present.
+struct CanonicalFmvRecentRange: Decodable, Hashable {
+    let n: Int?
+    let min: Double?
+    let p25: Double?
+    let median: Double?
+    let p75: Double?
+    let max: Double?
 }
 
 struct CanonicalFmvComp: Decodable, Hashable, Identifiable {
