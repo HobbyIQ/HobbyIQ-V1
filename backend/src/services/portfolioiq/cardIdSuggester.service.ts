@@ -635,9 +635,35 @@ export async function suggestCardIdForHolding(
     cardNumber: cleanFields.cardNumber as any,
     isAuto: cleanFields.isAuto as any,
   };
-  const scored = merged
+  // CF-SUGGESTER-YEAR-GUARD (Drew, 2026-07-20). Reject candidates whose
+  // year is more than 3 off from the holding's year. Real bug: a 1991
+  // Andy Van Slyke card in Drew's holdings matched a 2026 Topps
+  // candidate because cardNumber overlapped ("91A-AVS"). Year is
+  // authoritative when BOTH sides have it — a 35-year gap is never a
+  // signal to trust. When either side lacks year, don't reject
+  // (compat with older cards where year is missing in one source).
+  const holdingYear = typeof holdingForScoring.cardYear === "number" && holdingForScoring.cardYear >= 1900
+    ? holdingForScoring.cardYear
+    : null;
+  const filteredByYear = holdingYear
+    ? merged.filter((c) => {
+        const cYear = (() => {
+          if (c.year != null && c.year !== "") {
+            const n = Number(c.year);
+            if (Number.isFinite(n) && n >= 1900) return n;
+          }
+          const m = String(c.set ?? c.title ?? "").match(/\b(19|20)\d{2}\b/);
+          return m ? Number(m[0]) : null;
+        })();
+        if (cYear === null) return true;   // candidate lacks year signal → keep
+        return Math.abs(cYear - holdingYear) <= 3;
+      })
+    : merged;
+
+  const scored = filteredByYear
     .map((c) => ({ candidate: c, match: scoreCandidate(c, holdingForScoring) }))
     .sort((a, b) => b.match.score - a.match.score);
+  if (scored.length === 0) return null;    // year guard eliminated all candidates
 
   const top = scored[0];
   const confidence = Math.round(top.match.score * 100) / 100;
@@ -729,7 +755,17 @@ export async function suggestCardIdForHolding(
     }
   }
   const boostedConfidence = applyCatalogBoost(confidence, catalogConfidenceBoost(primaryCatalog));
-  const boostedTier = tierForConfidence(boostedConfidence);
+  // CF-SUGGESTER-PARALLEL-PENALTY (Drew, 2026-07-20). When the top
+  // candidate has PARALLEL as a mismatched field, it means the picked
+  // SKU is not the same parallel the user's title said — a very
+  // strong wrong-attribution signal. Drop the tier down by one level
+  // so iOS surfaces it as a review candidate instead of auto-applying.
+  // Applies to the top pick only; alternatives keep their scored tier.
+  const parallelMismatched = top.match.mismatched.includes("parallel");
+  const rawTier = tierForConfidence(boostedConfidence);
+  const boostedTier: SuggestionConfidenceTier = parallelMismatched
+    ? (rawTier === "high" ? "medium" : rawTier === "medium" ? "low" : "low")
+    : rawTier;
 
   return {
     cardId: top.candidate.cardId,
