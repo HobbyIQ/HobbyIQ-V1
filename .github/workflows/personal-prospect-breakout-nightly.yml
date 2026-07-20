@@ -1,35 +1,29 @@
-name: Grade Arbitrage Notify (nightly)
+name: Personal Prospect Breakout (nightly)
 
-# CF-GRADE-ARBITRAGE (Drew, 2026-07-19). Fires the grade-arbitrage
-# push job every night at 6:00AM ET. Scans every user's raw holdings,
-# computes uplift potential from the canonical FMV gradeLadder, pushes
-# when top-tier fmv > minUpliftX × raw fmv (default 3×).
+# CF-PERSONAL-PROSPECT-BREAKOUT (Drew, 2026-07-20). Fires an APNS push
+# to any user whose HOLDING matches a sub-raw inversion in the pool.
+# Uses computeSubRawInversions for detection; intersects with user
+# holdings before sending. Rate limits: 1 push per holding per 7d,
+# 2 pushes per user per day.
 #
-# Per-user daily cap: 2 pushes. Per-holding cooldown: 30 days.
-# Dismiss cooldown: 60 days. Idempotent — persisting lastNotify state
-# prevents re-firing.
+# Sport matrix so all 3 sports fire on the nightly cron.
 
 on:
   schedule:
-    - cron: "0 10 * * *"   # 6:00AM ET = 10:00 UTC
+    - cron: "0 12 * * *"   # 8:00AM ET = 12:00 UTC (after grade-arb + sub-raw-scan settle)
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Dry-run only (compute + report, no pushes sent)'
-        required: false
-        type: choice
-        default: 'true'
-        options: ['true', 'false']
-      min_uplift_x:
-        description: 'Min uplift multiple (default 3)'
-        required: false
-        type: string
-        default: '3'
       sport:
         description: 'Sport scope (default baseball)'
         required: false
         type: string
         default: 'baseball'
+      dry_run:
+        description: 'Dry-run (compute + report, no pushes sent)'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
 
 jobs:
   fire:
@@ -37,9 +31,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    timeout-minutes: 20
-    # CF-SPORT-MATRIX (Drew, 2026-07-20). Fan across sports so grade-arb
-    # pushes fire for all pool-covered sports on the nightly cron.
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -63,41 +55,39 @@ jobs:
           fi
           echo "::add-mask::$ADMIN_API_TOKEN"
 
-      - name: POST grade-arbitrage-notify/run
+      - name: POST personal-prospect-breakout/run
         env:
           ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
-          MIN_UPLIFT_X: ${{ inputs.min_uplift_x || '3' }}
           SPORT: ${{ matrix.sport }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: |
           set -euo pipefail
           BODY=$(jq -nc \
-            --argjson dryRun "$DRY_RUN" \
-            --argjson uplift "$MIN_UPLIFT_X" \
             --arg sport "$SPORT" \
-            '{ dryRun: $dryRun, minUpliftX: $uplift, sport: $sport }')
+            --argjson dryRun "$DRY_RUN" \
+            '{ sport: $sport, dryRun: $dryRun }')
           HTTP=$(curl -sS -w '\n%{http_code}' \
             -X POST \
             -H "Authorization: Bearer $ADMIN_API_TOKEN" \
             -H "Content-Type: application/json" \
             --data "$BODY" \
             --max-time 900 \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/grade-arbitrage-notify/run" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/personal-prospect-breakout/run" \
             -o response.json) || true
           STATUS=$(echo "$HTTP" | tail -n1)
           echo "HTTP status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "::error::grade-arbitrage-notify failed: $STATUS"
+            echo "::error::personal-prospect-breakout failed: $STATUS"
             cat response.json || true
             exit 1
           fi
           echo "Summary:"
           jq '.summary' response.json
 
-      - name: Upload response as artifact
+      - name: Upload response
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: grade-arbitrage-notify-response-${{ github.run_id }}
+          name: personal-prospect-breakout-${{ matrix.sport }}-${{ github.run_id }}
           path: response.json
           retention-days: 14
