@@ -1777,6 +1777,83 @@ struct APIService {
         return try await post(path: "/api/dailyiq/watchlist/search", body: body, responseType: WatchlistSearchResponse.self)
     }
 
+    // MARK: - Portfolio data import / export (spec 2026-07-20 Data section)
+
+    /// GET /api/portfolio/export?format=xlsx|csv — returns the raw
+    /// file bytes for hand-off to the iOS share sheet. `format` is
+    /// either "xlsx" (default, opens cleanly in Excel/Sheets) or "csv".
+    func exportPortfolio(format: String = "xlsx") async throws -> Data {
+        try await fetchData(
+            path: "/api/portfolio/export",
+            queryItems: [URLQueryItem(name: "format", value: format)]
+        )
+    }
+
+    /// GET /api/portfolio/comps/export?format=csv — every sold-comp
+    /// the user contributed (manual-user-entry + ebay-user-purchase +
+    /// ebay-user-sale). Ships in backend PR #617.
+    func exportComps(format: String = "csv") async throws -> Data {
+        try await fetchData(
+            path: "/api/portfolio/comps/export",
+            queryItems: [URLQueryItem(name: "format", value: format)]
+        )
+    }
+
+    /// POST /api/portfolio/import/preview — accepts the spreadsheet
+    /// as a base64-encoded string in the JSON body. For files >40
+    /// rows the response carries `jobId` and callers should poll
+    /// `pollImportJob(jobId:)` until `status == "ready"`.
+    func previewImport(
+        fileData: Data,
+        format: String
+    ) async throws -> PortfolioImportPreviewResponse {
+        let body = PortfolioImportPreviewRequest(
+            file: fileData.base64EncodedString(),
+            format: format
+        )
+        return try await post(
+            path: "/api/portfolio/import/preview",
+            body: body,
+            responseType: PortfolioImportPreviewResponse.self,
+            timeoutSeconds: 60
+        )
+    }
+
+    /// GET /api/portfolio/import/jobs/:jobId — poll target for async
+    /// preview jobs. Same response envelope as `previewImport`; when
+    /// `status` becomes `"ready"` the envelopes are populated.
+    func pollImportJob(jobId: String) async throws -> PortfolioImportPreviewResponse {
+        let encoded = jobId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? jobId
+        return try await get(
+            path: "/api/portfolio/import/jobs/\(encoded)",
+            responseType: PortfolioImportPreviewResponse.self
+        )
+    }
+
+    /// POST /api/portfolio/import/commit — writes the previewed
+    /// envelopes. `idempotencyToken` is the UUIDv4 generated at
+    /// preview time; the same token MUST be used on retry so a
+    /// duplicate tap can't double-write. Backend returns
+    /// `idempotency_expired` if the preview is older than 15
+    /// minutes; UI should handle by returning to Step A.
+    func commitImport(
+        idempotencyToken: String,
+        envelopes: [PortfolioImportEnvelope],
+        actions: [String: String]
+    ) async throws -> PortfolioImportCommitResponse {
+        let body = PortfolioImportCommitRequest(
+            idempotencyToken: idempotencyToken,
+            envelopes: envelopes,
+            actions: actions
+        )
+        return try await post(
+            path: "/api/portfolio/import/commit",
+            body: body,
+            responseType: PortfolioImportCommitResponse.self,
+            timeoutSeconds: 60
+        )
+    }
+
     func watchlistTop() async throws -> WatchlistTopResponse {
         try await get(path: "/api/dailyiq/watchlist/top", responseType: WatchlistTopResponse.self)
     }

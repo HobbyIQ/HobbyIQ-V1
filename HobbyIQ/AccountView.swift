@@ -33,6 +33,7 @@ struct AccountView: View {
                     settingsSection
                     CommunitySettingsSection()
                     integrationsSection
+                    dataSection
                     recapSection
                     appInfoSection
                     signOutSection
@@ -402,6 +403,41 @@ struct AccountView: View {
 
             VStack(spacing: 0) {
                 EbayConnectView()
+            }
+            .accountCard()
+        }
+    }
+
+    // MARK: - Data (2026-07-20 spec)
+
+    /// Portfolio data-portability entry point: download holdings +
+    /// comp contributions, bulk-import from a spreadsheet.
+    /// Full flow lives in `PortfolioDataView`.
+    private var dataSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            accountSectionHeader("DATA")
+            VStack(spacing: 0) {
+                NavigationLink {
+                    PortfolioDataView()
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Portfolio import / export")
+                                .font(.subheadline)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            Text("Download holdings, edit in Excel, re-upload changes")
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             .accountCard()
         }
