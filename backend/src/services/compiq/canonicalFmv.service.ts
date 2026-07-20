@@ -52,7 +52,9 @@ import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./pla
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
-import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+// fetchCompsByPlayer no longer used here — warmPoolFromCh retired
+// (see CF-RETIRE-WARM-POOL-FROM-CH). Kept the comment references so
+// git-blame trail stays intact.
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { classifyFamily, lookupGradeRatio } from "./gradeCalibrationConfig.js";
