@@ -223,6 +223,35 @@ export async function confirmHoldingReview(
     (h) => { delete (h as any).cardId; },
   );
 
+  // CF-SUGGESTER-AUTO-APPLY-ON-CONFIRM (Drew, 2026-07-20).
+  // Pattern 4 from suggester-quality-audit-2026-07-20.md: user confirms
+  // a holding but iOS didn't include cardId in `edits`, leaving the
+  // holding active-with-null-cardId while a viable suggestion sat right
+  // there. Safety net — if cardId wasn't explicitly touched AND the
+  // holding has a suggestedCardId with confidence >= 0.55 (medium tier
+  // or better), auto-apply the suggestion. Never overrides an explicit
+  // edits.cardId — including null (user explicitly rejected the SKU).
+  if (!("cardId" in edits) && !(holding as any).cardId) {
+    const suggested = String((holding as any).suggestedCardId ?? "").trim();
+    const suggestedConfidence = Number((holding as any).suggestionConfidence ?? 0);
+    if (suggested && suggestedConfidence >= 0.55) {
+      (holding as any).cardId = suggested;
+      (holding as any).cardIdAutoAppliedFromSuggestion = true;
+      corrections.push({
+        field: "cardId",
+        before: null,
+        after: suggested,
+      });
+      console.log(JSON.stringify({
+        event: "suggester_auto_apply_on_confirm",
+        source: "ebayReviewQueue.service",
+        userId, holdingId,
+        cardId: suggested,
+        confidence: suggestedConfidence,
+      }));
+    }
+  }
+
   // Promote to active + clear needsReview.
   (holding as any).cardStatus = "active";
   (holding as any).needsReview = false;
