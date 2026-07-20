@@ -818,14 +818,19 @@ async function tryDirectComp(
   );
   if (!projection || projection.nextSaleValue <= 0) return null;
 
+  // CF-PROVENANCE-USE-ACTUAL-SLOPE (Drew, 2026-07-20). Summary now
+  // reports the slope actually applied by the projection (regression's
+  // own OLS slope, or the broader trend when the anchor-fallback fired).
+  // The prior "trendPctPerMonth" formatting was the CALLER's broader
+  // trend which disagreed with regression-derived FMV on same-day
+  // clusters (Antunez OW auto: summary said −32%/mo, FMV +18×).
+  const actualSlopePct = projection.slopePerMonthPct;
   return {
     fmv: projection.nextSaleValue,
     method: "direct-comp",
     confidence: Math.min(0.95, projection.confidence + 0.05),
     provenance: {
-      summary: `${fresh.length} same-parallel user comp${fresh.length === 1 ? "" : "s"} + ${
-        trendPctPerMonth === null ? "no trend" : `${trendPctPerMonth.toFixed(1)}%/mo trend`
-      }`,
+      summary: `${fresh.length} same-parallel user comp${fresh.length === 1 ? "" : "s"} · ${projection.method === "linear-regression" ? "regression" : "anchor"} ${actualSlopePct >= 0 ? "+" : ""}${actualSlopePct.toFixed(1)}%/mo`,
       comps: fresh.slice(0, 8).map((c) => ({
         price: c.price,
         soldAt: c.soldAt,
