@@ -56,6 +56,7 @@ import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { classifyFamily, lookupGradeRatio } from "./gradeCalibrationConfig.js";
+import { titleMatchesParallel } from "./titleParallelMatch.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -510,6 +511,13 @@ async function warmPoolFromEbayBrowseEnded(
       // imminently (unsettled). Only ingest ones whose endDate is
       // clearly in the past.
       if (endMs > nowMs - SETTLED_BUFFER_MS) continue;
+      // CF-EBAY-BROWSE-ENDED-TITLE-VERIFY (Drew, 2026-07-19). eBay
+      // Browse fuzzy-matches parallel — a "Blue Refractor" query
+      // returns "Blue X-Fractor" listings and worse. Without this
+      // gate we'd write the wrong-parallel listing into sold_comps
+      // tagged with input.parallel, permanently corrupting FMV
+      // downstream. Same class of bug as retired warmPoolFromCh.
+      if (!titleMatchesParallel(l.title ?? "", input.parallel ?? null, input.cardNumber ?? null)) continue;
       try {
         await recordSoldComp({
           cardId,
