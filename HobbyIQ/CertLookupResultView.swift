@@ -25,6 +25,7 @@ struct CertLookupResultView: View {
     @State private var addErrorMessage: String?
     @State private var addSuccessToast: String?
     @State private var navigatePlayerName: String?
+    @State private var navigateToCompSheet = false
 
     var body: some View {
         ScrollView {
@@ -36,7 +37,10 @@ struct CertLookupResultView: View {
             }
             .padding(HobbyIQTheme.Spacing.screenPadding)
         }
-        .background { HobbyIQBackground() }
+        // 2026-07-19: single-color background — themedNavigationSurface
+        // already paints appBackground on both content + toolbar, so
+        // the previous HobbyIQBackground() gradient overlay is what
+        // was causing the nav bar to read darker than the scroll area.
         .navigationTitle("Cert result")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
@@ -46,6 +50,11 @@ struct CertLookupResultView: View {
         }
         .navigationDestination(item: $navigatePlayerName) { name in
             PlayerDetailView(playerName: name)
+        }
+        .navigationDestination(isPresented: $navigateToCompSheet) {
+            if let cardId = response.card?.cardId {
+                CompIQPricedCardView(hit: CompIQVariantHit(cardId: cardId))
+            }
         }
         .overlay(alignment: .top) {
             if let addSuccessToast {
@@ -132,35 +141,59 @@ struct CertLookupResultView: View {
     // MARK: - FMV headline
 
     private var fmvHeadline: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Fair market value")
-                .font(.caption.weight(.bold))
-                .tracking(0.6)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(headlineFmvString)
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                if let confidence = response.canonicalFmv?.confidence {
-                    Text("\(Int((confidence * 100).rounded()))% confidence")
-                        .font(.caption)
+        // 2026-07-19: whole card is tappable — routes to Comp Sheet
+        // for the resolved cardId. Disabled when we don't have a
+        // cardId to hand off (rare — success paths always ship one).
+        Button {
+            if response.card?.cardId != nil {
+                navigateToCompSheet = true
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text("MARKET VALUE")
+                        .font(.caption.weight(.bold))
+                        .tracking(0.6)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer(minLength: 0)
+                    if response.card?.cardId != nil {
+                        HStack(spacing: 3) {
+                            Text("Open Comp Sheet")
+                                .font(.caption2.weight(.semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    }
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(headlineFmvString)
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let confidence = response.canonicalFmv?.confidence {
+                        Text("\(Int((confidence * 100).rounded()))% confidence")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                if response.canonicalFmv?.fmv == nil, response.referencePrice != nil {
+                    Text("Reference price (canonical FMV unavailable)")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
                 }
             }
-            if response.canonicalFmv?.fmv == nil, response.referencePrice != nil {
-                Text("Reference price (canonical FMV unavailable)")
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.25), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.25), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .buttonStyle(.plain)
+        .disabled(response.card?.cardId == nil)
     }
 
     private var headlineFmvString: String {
@@ -206,6 +239,10 @@ struct CertLookupResultView: View {
     // MARK: - Add button
 
     private var addButton: some View {
+        // 2026-07-19: use the app-wide primary button style so the
+        // CTA reads consistently with other primary actions (rounded
+        // accent fill, dark text, subtle shadow) instead of a
+        // one-off hobbyGreen slab.
         Button {
             addErrorMessage = nil
             showAddSheet = true
@@ -213,14 +250,9 @@ struct CertLookupResultView: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                 Text("Add to Portfolio")
-                    .font(.subheadline.weight(.bold))
             }
-            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .background(HobbyIQTheme.Colors.hobbyGreen.opacity(0.9))
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.appPrimary)
         .disabled(response.readyToAdd?.cardId == nil)
         .opacity(response.readyToAdd?.cardId == nil ? 0.5 : 1)
     }
