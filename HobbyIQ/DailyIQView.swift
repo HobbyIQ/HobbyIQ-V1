@@ -64,6 +64,8 @@ struct DailyIQView: View {
     /// PR #620 (2026-07-20): Prospects breaking out. Compact banner
     /// on DailyIQ home + drill-down list.
     @State private var prospectsBreakingOut: ProspectsBreakingOutResponse?
+    /// PR #620 (2026-07-20): Cohort backtest narrative card.
+    @State private var cohortBacktest: CohortBacktestResponse?
     /// PR #556 (2026-07-17): New Drops sheet gate. Presented from the
     /// hero card via a small "New Drops" banner button.
     @State private var showNewDropsSheet: Bool = false
@@ -98,6 +100,15 @@ struct DailyIQView: View {
                 // 2026-07-20 (PR #620): Prospects Breaking Out —
                 // raw-inversion signals compact banner with drill-down.
                 ProspectsBreakingOutBanner(response: prospectsBreakingOut)
+
+                // 2026-07-20 (PR #620): Cohort Backtest narrative card
+                // — "How has the 2020 rookie class done?" style. User
+                // picks cohort year in a header menu; row tap forwards
+                // the player name up to the DailyIQ view for its
+                // shared PlayerIQ push destination.
+                CohortBacktestCard(seededResponse: cohortBacktest) { name in
+                    playerIQName = name
+                }
 
                 // PR #546 (2026-07-17): Action Plan hero — sorted per-
                 // holding verdict feed. Self-suppresses when the response
@@ -174,7 +185,8 @@ struct DailyIQView: View {
             async let plan: Void = loadActionPlan()
             async let hobby: Void = loadWeeklyHobbyIndex()
             async let prospects: Void = loadProspectsBreakingOut()
-            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan, hobby, prospects)
+            async let cohort: Void = loadCohortBacktest()
+            _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan, hobby, prospects, cohort)
             // 2026-07-19 (card-show batch): push permission ask moved
             // from here to PortfolioIQView per updated spec — sell-side
             // alerts land in the Portfolio surface, so it's the more
@@ -1351,6 +1363,16 @@ private var watchlistCard: some View {
             prospectsBreakingOut = try await APIService.shared.fetchProspectsBreakingOut()
         } catch {
             prospectsBreakingOut = nil
+        }
+    }
+
+    /// PR #620 (2026-07-20): default-cohort backtest seed. The card
+    /// itself re-fetches when the user changes the cohort year.
+    private func loadCohortBacktest() async {
+        do {
+            cohortBacktest = try await APIService.shared.fetchCohortBacktest(cohortYear: 2020)
+        } catch {
+            cohortBacktest = nil
         }
     }
 

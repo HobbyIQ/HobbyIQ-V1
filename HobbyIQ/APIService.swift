@@ -145,6 +145,27 @@ struct APIService {
         )
     }
 
+    /// PR #620 (2026-07-20): Cohort Backtest. "How's the {year}
+    /// rookie class done" narrative — median growth % across the
+    /// cohort plus top-gainers / top-decliners lists.
+    func fetchCohortBacktest(
+        sport: String = "baseball",
+        cohortYear: Int,
+        windowDays: Int = 90,
+        limit: Int = 30
+    ) async throws -> CohortBacktestResponse {
+        try await get(
+            path: "/api/compiq/cohort-backtest",
+            queryItems: [
+                URLQueryItem(name: "sport", value: sport),
+                URLQueryItem(name: "cohortYear", value: String(cohortYear)),
+                URLQueryItem(name: "window", value: String(windowDays)),
+                URLQueryItem(name: "limit", value: String(limit))
+            ],
+            responseType: CohortBacktestResponse.self
+        )
+    }
+
     /// PR #620 (2026-07-20): Prospects Breaking Out. Raw-inversion
     /// signals — cards where the raw MAX exceeds the graded MEDIAN
     /// by >= 5%. Powers a new DailyIQ section + drill-down list.
