@@ -165,6 +165,31 @@ struct DashboardView: View {
             ) {
                 navigateToMovers = true
             }
+
+            // 2026-07-20 (spec §13 preview): Hobby Weather compact
+            // card — WoW index delta from `weekly-hobby-index`.
+            // Taps land on the DailyIQ tab where the full section
+            // lives.
+            DashboardAtAGlanceCard(
+                icon: "chart.line.uptrend.xyaxis",
+                iconTint: HobbyIQTheme.Colors.electricBlue,
+                title: "Hobby Weather",
+                subtitle: atAGlance.hobbyWeatherSubtitle
+            ) {
+                selectedTab = .daily
+            }
+
+            // 2026-07-20 (spec §11 preview): Prospects Breaking Out
+            // compact card — count of raw-inversion signals from
+            // `prospects/breaking-out`. Taps land on the DailyIQ tab.
+            DashboardAtAGlanceCard(
+                icon: "arrow.up.right.circle.fill",
+                iconTint: HobbyIQTheme.Colors.hobbyGreen,
+                title: "Prospects breaking out",
+                subtitle: atAGlance.prospectsSubtitle
+            ) {
+                selectedTab = .daily
+            }
         }
         .padding(.top, 4)
     }
@@ -364,6 +389,10 @@ final class DashboardAtAGlanceViewModel: ObservableObject {
     /// double round-trip on first paint. The list re-fetches from the
     /// backend when the user changes any filter.
     @Published private(set) var marketMoversResponse: MarketMoversResponse?
+    /// 2026-07-20: WoW hobby index for the compact preview card.
+    @Published private(set) var weeklyHobbyIndex: WeeklyHobbyIndexResponse?
+    /// 2026-07-20: raw-inversion prospect count for the compact preview.
+    @Published private(set) var prospectsBreakingOut: ProspectsBreakingOutResponse?
 
     private var lastLoad: Date?
     private static let staleWindow: TimeInterval = 30
@@ -383,6 +412,21 @@ final class DashboardAtAGlanceViewModel: ObservableObject {
             return "See what's moving"
         }
         return "\(up) up · \(down) down"
+    }
+
+    var hobbyWeatherSubtitle: String {
+        guard let pct = weeklyHobbyIndex?.index?.indexDeltaPct else {
+            return "This week's hobby"
+        }
+        let arrow = pct > 0 ? "\u{2191}" : (pct < 0 ? "\u{2193}" : "\u{2500}")
+        return "Index \(arrow) \(String(format: "%.1f", abs(pct)))% wk"
+    }
+
+    var prospectsSubtitle: String {
+        guard let total = prospectsBreakingOut?.totalDetected, total > 0 else {
+            return "Raw inversions to watch"
+        }
+        return "\(total) breaking out"
     }
 
     func loadIfStale() async {
@@ -419,6 +463,29 @@ final class DashboardAtAGlanceViewModel: ObservableObject {
             moversDown = down
         } catch {
             // Silent — card falls back to the generic "See what's moving" CTA.
+        }
+        // 2026-07-20: fetch the two DailyIQ preview stats in parallel
+        // so the Dashboard at-a-glance section renders both without
+        // sequentially waiting on each. Silent failures — cards fall
+        // back to generic CTAs.
+        async let hobby: Void = loadHobbyIndex()
+        async let prospects: Void = loadProspectsPreview()
+        _ = await (hobby, prospects)
+    }
+
+    private func loadHobbyIndex() async {
+        do {
+            weeklyHobbyIndex = try await APIService.shared.fetchWeeklyHobbyIndex()
+        } catch {
+            // Silent.
+        }
+    }
+
+    private func loadProspectsPreview() async {
+        do {
+            prospectsBreakingOut = try await APIService.shared.fetchProspectsBreakingOut(limit: 3)
+        } catch {
+            // Silent.
         }
     }
 }

@@ -25,9 +25,54 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// activation so we can fire the null PATCH exactly once.
     private let lastAuthStatusKey = "hobbyiq.push.lastAuthStatus"
 
+    /// 2026-07-20 (spec §6-§7): APNS category identifiers the
+    /// backend sends on grade-arbitrage and sell-side pushes. The
+    /// snooze buttons attached to each category call
+    /// `POST /api/portfolio/holdings/:holdingId/dismiss-{grade-arb,sell-side}`
+    /// via the `dismiss*` APIService wrappers.
+    static let gradeArbCategoryId = "grade.arbitrage"
+    static let sellSideCategoryId = "sell.side"
+    static let snoozeGradeArbActionId = "snooze.grade.arb"
+    static let snoozeSellSideActionId = "snooze.sell.side"
+
     override init() {
         super.init()
         deviceToken = UserDefaults.standard.string(forKey: tokenKey)
+        // Register categories immediately so if a push arrives before
+        // the user first opens Settings, the snooze buttons still show.
+        registerNotificationCategories()
+    }
+
+    /// Registers the two notification categories the backend targets:
+    /// grade-arbitrage (Snooze 60d) and sell-side (Snooze this card).
+    /// Both include `.customDismissAction` so we can log a dismiss
+    /// event server-side later without changing category IDs.
+    private func registerNotificationCategories() {
+        let snoozeGradeArb = UNNotificationAction(
+            identifier: Self.snoozeGradeArbActionId,
+            title: "Snooze 60 days",
+            options: []
+        )
+        let gradeArbCategory = UNNotificationCategory(
+            identifier: Self.gradeArbCategoryId,
+            actions: [snoozeGradeArb],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        let snoozeSellSide = UNNotificationAction(
+            identifier: Self.snoozeSellSideActionId,
+            title: "Snooze this card",
+            options: []
+        )
+        let sellSideCategory = UNNotificationCategory(
+            identifier: Self.sellSideCategoryId,
+            actions: [snoozeSellSide],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([
+            gradeArbCategory, sellSideCategory
+        ])
     }
 
     func refreshStatus() async {
@@ -195,6 +240,28 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo: [AnyHashable: Any] = response.notification.request.content.userInfo
+        let actionId = response.actionIdentifier
+        let holdingId = userInfo["holdingId"] as? String
+
+        // 2026-07-20 (spec §6-§7): snooze actions call the backend
+        // and short-circuit routing — the user tapped Snooze, not
+        // the banner body, so deep-linking to Comp Sheet would
+        // undo the "get this out of my face" intent.
+        switch actionId {
+        case PushNotificationManager.snoozeGradeArbActionId:
+            if let id = holdingId {
+                _ = try? await APIService.shared.dismissGradeArb(holdingId: id)
+            }
+            return
+        case PushNotificationManager.snoozeSellSideActionId:
+            if let id = holdingId {
+                _ = try? await APIService.shared.dismissSellSide(holdingId: id)
+            }
+            return
+        default:
+            break  // Default tap → route as before.
+        }
+
         nonisolated(unsafe) let sendableInfo = userInfo
         await MainActor.run {
             guard let appState = AppState.shared else { return }
@@ -252,6 +319,23 @@ enum NotificationRouter {
                 appState.route(to: .card(cardId))
             } else if let playerName = userInfo["playerName"] as? String {
                 appState.route(to: .player(playerName))
+            }
+        case "grade.arbitrage":
+            // 2026-07-20 (spec §6): backend fires at 6AM ET when a raw
+            // holding's PSA 10 uplift >= 3×. Payload includes cardId
+            // (for the deep-link) + holdingId (for the snooze button
+            // handled in PushNotificationManager). The category
+            // identifier attached to this push is `grade.arbitrage`
+            // so the snooze action button surfaces natively.
+            if let cardId = userInfo["cardId"] as? String {
+                appState.route(to: .card(cardId))
+            }
+        case "sell.side":
+            // 2026-07-20 (spec §7): sell-side alert push — a holding
+            // just lifted past its sell threshold. Same payload
+            // shape as grade.arbitrage.
+            if let cardId = userInfo["cardId"] as? String {
+                appState.route(to: .card(cardId))
             }
         default:
             // Fall back to legacy "target" key routing
