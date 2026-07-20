@@ -20,7 +20,16 @@
 //  error shapes to key against.
 //
 
+import PhotosUI
 import SwiftUI
+import UIKit
+
+/// 2026-07-20 (spec §Retry-from-error): symbolic tag naming the
+/// section that eBay's most recent error was about. Drives the
+/// red left-border + inline error message treatment.
+enum ListingReviewSection: String, Hashable {
+    case photos, identity, condition, categoryAspects, listing
+}
 
 struct ListingReviewView: View {
     let holdingId: String
@@ -37,6 +46,20 @@ struct ListingReviewView: View {
     @State private var showPreviewPayload = false
     @State private var categoryAspectsExpanded: Bool = false
     @State private var advancedExpanded: Bool = false
+    /// 2026-07-20 (spec §Retry-from-error): section that eBay
+    /// flagged; drives the red left-border treatment. Cleared when
+    /// the user edits the flagged section.
+    @State private var highlightedSection: ListingReviewSection?
+    @State private var highlightedSectionMessage: String?
+    /// 2026-07-20 (photo picker): PhotosPicker selection + camera
+    /// sheet gate + upload state.
+    @State private var pickerItem: PhotosPickerItem?
+    @State private var showCamera: Bool = false
+    @State private var presentPhotosPicker: Bool = false
+    @State private var isUploadingPhoto: Bool = false
+    /// Analytics: track which fields the user actually touched so
+    /// `listing_review_published` can report edited-field count.
+    @State private var editedFieldNames: Set<String> = []
     /// 2026-07-20: FMV snapshot captured at load time. Used as the
     /// suggestion pill above the Price field so the user can snap
     /// back to backend's recommended value after tweaking.
@@ -74,6 +97,33 @@ struct ListingReviewView: View {
             }
             .sheet(isPresented: $showPreviewPayload) {
                 previewPayloadSheet
+            }
+            // 2026-07-20 (spec §Photos): PhotosPicker for library,
+            // UIKit-bridged UIImagePickerController for camera.
+            // Both funnel into `uploadPickedImage(_:)` which does
+            // the SAS handshake then appends `blobUrl` to photos[].
+            .photosPicker(
+                isPresented: $presentPhotosPicker,
+                selection: $pickerItem,
+                matching: .images
+            )
+            .onChange(of: pickerItem) { _, newItem in
+                guard let item = newItem else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        await uploadPickedImage(image)
+                    }
+                    pickerItem = nil
+                }
+            }
+            .sheet(isPresented: $showCamera) {
+                CameraCapturePicker { image in
+                    showCamera = false
+                    if let image {
+                        Task { await uploadPickedImage(image) }
+                    }
+                }
             }
             .overlay(alignment: .top) {
                 if let publishError {
@@ -203,10 +253,48 @@ struct ListingReviewView: View {
         }
     }
 
+    // MARK: - Section highlight helper (spec §Retry-from-error)
+
+    /// Inline red banner rendered as the first row of a section
+    /// when `highlightedSection` matches. Tapping any field in the
+    /// section clears the highlight (see `clearHighlightIfNeeded`).
+    @ViewBuilder
+    private func highlightBanner(for section: ListingReviewSection) -> some View {
+        if highlightedSection == section, let msg = highlightedSectionMessage {
+            HStack(alignment: .top, spacing: 8) {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.danger)
+                    .frame(width: 3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("eBay flagged this section")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                    Text(msg)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// Called from a section's edit binding — clears the flag once
+    /// the user starts fixing it. Fires the field-edit analytic
+    /// event alongside.
+    private func markEdited(section: ListingReviewSection, field: String) {
+        if highlightedSection == section {
+            highlightedSection = nil
+            highlightedSectionMessage = nil
+        }
+        editedFieldNames.insert(field)
+        ListingReviewAnalytics.fieldEdited(holdingId: holdingId, field: field)
+    }
+
     // MARK: - Section 1: Photos
 
     private func photosSection(_ listing: Binding<PreparedListing>) -> some View {
         Section("Photos") {
+            highlightBanner(for: .photos)
             if listing.wrappedValue.photos.isEmpty {
                 Label("eBay requires at least one photo.", systemImage: "photo.badge.plus")
                     .font(.caption)
@@ -251,29 +339,55 @@ struct ListingReviewView: View {
     }
 
     private func addPhotoTile() -> some View {
-        // MVP: renders the affordance but hooks a full picker in a
-        // follow-up commit (PhotosPicker + ImageUploadService).
-        // Tapping today is a no-op — surfaced as disabled visually.
-        VStack(spacing: 4) {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-            Text("Add")
-                .font(.caption2.weight(.semibold))
+        // 2026-07-20: two-affordance add tile — Photos library
+        // (PhotosPicker) + Camera (UIImagePickerController bridge).
+        // Both flow through the same SAS upload path so the
+        // resulting `blobUrl` gets pushed into `review.photos[]`
+        // once the upload completes.
+        Menu {
+            Button {
+                showCamera = true
+            } label: {
+                Label("Take photo", systemImage: "camera")
+            }
+            // PhotosPicker doesn't nest inside a Menu directly —
+            // work around by driving `pickerItem` through a
+            // separate always-mounted `PhotosPicker` below and
+            // just flip a sentinel from the menu.
+            Button {
+                Task { presentPhotosPicker = true }
+            } label: {
+                Label("Choose from library", systemImage: "photo.on.rectangle.angled")
+            }
+        } label: {
+            VStack(spacing: 4) {
+                if isUploadingPhoto {
+                    ProgressView()
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.semibold))
+                }
+                Text(isUploadingPhoto ? "Uploading" : "Add")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .frame(width: 84, height: 108)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.4))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(HobbyIQTheme.Colors.electricBlue.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4]))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-        .frame(width: 84, height: 108)
-        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.4))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(HobbyIQTheme.Colors.mutedText.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .disabled(isUploadingPhoto)
     }
 
     // MARK: - Section 2: Card Identity
 
     private func identitySection(_ listing: Binding<PreparedListing>) -> some View {
         Section("Card identity") {
+            highlightBanner(for: .identity)
             TextField("Player", text: Binding(
                 get: { listing.wrappedValue.identity.playerName ?? "" },
                 set: { listing.wrappedValue.identity.playerName = $0.isEmpty ? nil : $0 }
@@ -316,6 +430,7 @@ struct ListingReviewView: View {
 
     private func conditionSection(_ listing: Binding<PreparedListing>) -> some View {
         Section("Condition") {
+            highlightBanner(for: .condition)
             Picker("Grading", selection: listing.condition.isGraded) {
                 Text("Raw").tag(false)
                 Text("Graded").tag(true)
@@ -362,6 +477,7 @@ struct ListingReviewView: View {
 
     private func categoryAspectsSection(_ listing: Binding<PreparedListing>) -> some View {
         Section(isExpanded: $categoryAspectsExpanded) {
+            highlightBanner(for: .categoryAspects)
             TextField("League", text: Binding(
                 get: { listing.wrappedValue.categoryAspects.league ?? "" },
                 set: { listing.wrappedValue.categoryAspects.league = $0.isEmpty ? nil : $0 }
@@ -403,6 +519,7 @@ struct ListingReviewView: View {
 
     private func listingSection(_ listing: Binding<PreparedListing>) -> some View {
         Section("Listing") {
+            highlightBanner(for: .listing)
             titleField(listing)
             TextField("Description", text: listing.listing.description, axis: .vertical)
                 .lineLimit(4 ... 12)
@@ -541,6 +658,17 @@ struct ListingReviewView: View {
                 Spacer()
 
                 Button {
+                    // Fire the analytics event when the user tries
+                    // to publish while blocked — surfaces which
+                    // required fields keep users stuck.
+                    if publishBlocked(listing),
+                       let missing = listing.validation?.requiredMissing,
+                       missing.isEmpty == false {
+                        ListingReviewAnalytics.validationBlocked(
+                            holdingId: holdingId,
+                            missingFields: missing
+                        )
+                    }
                     Task { await publish(listing) }
                 } label: {
                     HStack(spacing: 6) {
@@ -662,6 +790,9 @@ struct ListingReviewView: View {
         isLoading = true
         loadError = nil
         defer { isLoading = false }
+        // Fire once per screen open — subsequent loads from a retry
+        // still count as the same session.
+        ListingReviewAnalytics.opened(holdingId: holdingId)
         // Prefer a fresh local draft (< 24h) so partial edits survive
         // an app relaunch. Fall back to a fresh /prepare fetch.
         if let draft = ListingDraftStore.load(holdingId: holdingId) {
@@ -754,24 +885,146 @@ struct ListingReviewView: View {
                 // to their live listing.
                 ListingDraftStore.clear(holdingId: holdingId)
                 publishSuccess = result
+                ListingReviewAnalytics.published(
+                    holdingId: holdingId,
+                    editedFieldsCount: editedFieldNames.count
+                )
             } else {
                 // Backend rejected the payload without a thrown
                 // error. Surface the reason + any missingPolicy
                 // block so the user knows exactly what to fix.
-                publishError = result.error ?? "Publish failed — see eBay for details."
+                let errMsg = result.error ?? "Publish failed — see eBay for details."
+                publishError = errMsg
                 missingPolicy = result.missingPolicy
+                // 2026-07-20 (spec §Retry-from-error): best-effort
+                // parse of the eBay error message → identify the
+                // offending section → drive a red left-border on
+                // that section. Server error strings aren't
+                // machine-readable but tend to mention field names
+                // verbatim ("League", "photos", "Year"…).
+                highlightedSection = sectionFromErrorMessage(errMsg)
+                highlightedSectionMessage = highlightedSection == nil ? nil : errMsg
+                ListingReviewAnalytics.publishFailed(holdingId: holdingId, ebayError: errMsg)
                 scheduleErrorClear()
             }
         } catch {
-            publishError = diagnosticErrorMessage(from: error)
+            let diag = diagnosticErrorMessage(from: error)
+            publishError = diag
+            ListingReviewAnalytics.publishFailed(holdingId: holdingId, ebayError: diag)
             scheduleErrorClear()
         }
+    }
+
+    /// Heuristic map from an eBay error string to the review
+    /// section that owns the flagged field. Not exhaustive — kept
+    /// to the fields eBay reliably names in Sports Trading Cards
+    /// category validation failures.
+    private func sectionFromErrorMessage(_ msg: String) -> ListingReviewSection? {
+        let lower = msg.lowercased()
+        if lower.contains("photo") || lower.contains("image") { return .photos }
+        if lower.contains("league") || lower.contains("country") ||
+           lower.contains("manufactured") || lower.contains("season") ||
+           lower.contains("language") || lower.contains("type") {
+            return .categoryAspects
+        }
+        if lower.contains("grade") || lower.contains("cert") ||
+           lower.contains("condition") {
+            return .condition
+        }
+        if lower.contains("title") || lower.contains("price") ||
+           lower.contains("description") {
+            return .listing
+        }
+        if lower.contains("player") || lower.contains("year") ||
+           lower.contains("set") {
+            return .identity
+        }
+        return nil
     }
 
     private func scheduleErrorClear() {
         Task {
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             await MainActor.run { publishError = nil }
+        }
+    }
+
+    // MARK: - Photo upload (2026-07-20 spec §Photos)
+
+    /// SAS-upload handshake: request a writable URL from
+    /// `/api/uploads/card-photo`, PUT the JPEG-compressed bytes,
+    /// then append the returned `blobUrl` to `review.photos[]` so
+    /// the next publish payload carries it. Silent on any failure —
+    /// user just doesn't see a new tile.
+    private func uploadPickedImage(_ image: UIImage) async {
+        guard var current = listing else { return }
+        guard current.photos.count < 12 else {
+            publishError = "eBay caps listings at 12 photos."
+            scheduleErrorClear()
+            return
+        }
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+        do {
+            let compressed = image.jpegData(compressionQuality: 0.85) ?? Data()
+            guard compressed.isEmpty == false else { return }
+            let sas = try await APIService.shared.requestCardPhotoSAS(fileExtension: "jpg")
+            guard let uploadUrl = sas.uploadUrl, let blobUrl = sas.blobUrl else { return }
+            try await APIService.shared.uploadImageToSAS(
+                uploadUrl: uploadUrl,
+                imageData: compressed,
+                contentType: sas.contentType ?? "image/jpeg"
+            )
+            current.photos.append(blobUrl)
+            current.recomputeValidation()
+            listing = current
+            ListingDraftStore.save(holdingId: holdingId, listing: current)
+            ListingReviewAnalytics.fieldEdited(holdingId: holdingId, field: "photos")
+            editedFieldNames.insert("photos")
+        } catch {
+            publishError = "Couldn't upload the photo. Try again."
+            scheduleErrorClear()
+        }
+    }
+}
+
+// MARK: - Camera bridge (2026-07-20)
+
+/// UIKit `UIImagePickerController` wrapped for SwiftUI. Used by
+/// `ListingReviewView` when the user picks "Take photo" — SwiftUI
+/// doesn't have a first-class camera equivalent to `PhotosPicker`
+/// yet on iOS 17.
+private struct CameraCapturePicker: UIViewControllerRepresentable {
+    let onFinish: (UIImage?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onFinish: onFinish)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let controller = UIImagePickerController()
+        controller.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        controller.allowsEditing = false
+        controller.delegate = context.coordinator
+        return controller
+    }
+
+    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onFinish: (UIImage?) -> Void
+        init(onFinish: @escaping (UIImage?) -> Void) { self.onFinish = onFinish }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            let image = info[.originalImage] as? UIImage
+            onFinish(image)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onFinish(nil)
         }
     }
 }

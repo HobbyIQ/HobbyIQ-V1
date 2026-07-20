@@ -135,7 +135,16 @@ struct BulkSellComposerSheet: View {
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             LazyVStack(spacing: 10) {
                 ForEach(candidates) { candidate in
-                    BulkSellCandidateRow(candidate: candidate, card: cardLookup[candidate.holdingId])
+                    // 2026-07-20 (spec §Trigger points): each row
+                    // is a NavigationLink into ListingReviewView
+                    // for that specific holding. Replaces the
+                    // one-tap sell from earlier iterations.
+                    NavigationLink {
+                        ListingReviewView(holdingId: candidate.holdingId)
+                    } label: {
+                        BulkSellCandidateRow(candidate: candidate, card: cardLookup[candidate.holdingId])
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
