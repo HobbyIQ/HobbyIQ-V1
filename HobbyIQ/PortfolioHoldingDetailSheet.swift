@@ -1825,11 +1825,16 @@ struct PortfolioHoldingDetailSheet: View {
                         dismiss()
                     }
                 }
+                // 2026-07-20 (Listing Review & Edit spec): the
+                // "List on eBay" button now presents the new
+                // review-and-edit surface backed by
+                // `/api/ebay/listings/prepare`. Users see every
+                // eBay-required field pre-filled + editable before
+                // publish. `EbayListingDraftView` retained under
+                // the old code path for anywhere it's still needed;
+                // remove once the review flow is proven in prod.
                 .navigationDestination(isPresented: $showingEbayListingSheet) {
-                    EbayListingDraftView(viewModel: viewModel, card: card) {
-                        lastEbayListingResponse = $0
-                        onUpdated()
-                    }
+                    ListingReviewView(holdingId: card.id.uuidString)
                 }
                 .sheet(isPresented: $showingVerifyCardSheet) {
                     VerifyCardSheet(holding: card) {

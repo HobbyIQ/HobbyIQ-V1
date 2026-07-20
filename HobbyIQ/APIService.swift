@@ -145,6 +145,36 @@ struct APIService {
         )
     }
 
+    /// 2026-07-20 (backend PR TBD): pre-fills the eBay listing form
+    /// with everything we know about a holding — identity,
+    /// condition, category aspects, photos, suggested title / price
+    /// / description — plus a `validation` block that flags which
+    /// required fields are still missing. iOS surfaces the result
+    /// as an editable review screen so users can correct anything
+    /// before publish.
+    func fetchPreparedListing(holdingId: String) async throws -> PreparedListing {
+        let body = ListingPrepareRequest(holdingId: holdingId)
+        return try await post(
+            path: "/api/ebay/listings/prepare",
+            body: body,
+            responseType: PreparedListing.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    /// 2026-07-20: submits the user-reviewed / edited listing to
+    /// eBay via the existing publish endpoint. Extended to accept
+    /// the full `PreparedListing` shape so the user's edits ship
+    /// exactly as they typed them — no server-side round-tripping.
+    func publishPreparedListing(_ listing: PreparedListing) async throws -> PreparedListing {
+        try await post(
+            path: "/api/ebay/listings/publish",
+            body: listing,
+            responseType: PreparedListing.self,
+            timeoutSeconds: 60
+        )
+    }
+
     /// PR #623 (2026-07-20): historical price series for a single
     /// card + parallel + grade. Powers the Pro-tier price-history
     /// chart. Bucket is `day` or `week`; window is any of `30d`,
