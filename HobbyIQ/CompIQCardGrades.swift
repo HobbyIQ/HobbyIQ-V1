@@ -464,6 +464,13 @@ struct GradePillPanel: View {
     @State private var payload: CardPanelResponse?
     @State private var isLoading = false
     @State private var errorText: String?
+    /// 2026-07-20 (debug utility): long-press on any pill dumps the
+    /// raw wire fields into `PillDebugInspector`. DEBUG-only so no
+    /// user-facing surface ships in RELEASE. See the trailing
+    /// `#if DEBUG` view at the bottom of this file.
+    #if DEBUG
+    @State private var debugInspectedEntry: CardPanelGradeEntry?
+    #endif
 
     /// CF-CANONICAL-10-GRADES (2026-07-04): always render these 10 pills
     /// in this order, even when the server returns fewer entries. Missing
@@ -600,6 +607,11 @@ struct GradePillPanel: View {
         .task(id: cardId) {
             await fetch()
         }
+        #if DEBUG
+        .sheet(item: $debugInspectedEntry) { entry in
+            PillDebugInspector(entry: entry, cardId: cardId)
+        }
+        #endif
     }
 
     /// Text shown just below the pills whenever they're empty for a
@@ -718,6 +730,14 @@ struct GradePillPanel: View {
         // section for that grade (e.g. "No PSA 9 comps yet"), which
         // is more useful than a dead tap.
         .accessibilityLabel("\(entry.grade) \(accessibilityValue(entry))")
+        // 2026-07-20 (debug utility): long-press opens the wire-
+        // fields inspector. Additive to the existing tap; DEBUG-only
+        // so no RELEASE surface.
+        #if DEBUG
+        .onLongPressGesture(minimumDuration: 0.6) {
+            debugInspectedEntry = entry
+        }
+        #endif
     }
 
     private func pillBackground(active: Bool, isSelected: Bool) -> Color {
@@ -910,3 +930,132 @@ private struct GradePanelGroupCard: ViewModifier {
             .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
     }
 }
+
+
+// MARK: - PillDebugInspector (2026-07-20, DEBUG-only)
+
+#if DEBUG
+import UIKit
+
+/// Diagnostic sheet presented on long-press of a grade pill. Renders
+/// every field on `CardPanelGradeEntry` in a monospaced two-column
+/// table so a screenshot pinpoints which wire field carried the
+/// displayed number. Never shipped in RELEASE — the whole file
+/// section is `#if DEBUG` gated.
+struct PillDebugInspector: View {
+    let entry: CardPanelGradeEntry
+    let cardId: String
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    field("cardId", cardId)
+                    field("grade", entry.grade)
+                    field("grader", entry.grader)
+                    field("sampleCount", "\(entry.sampleCount)")
+                    field("valueSource", "\(entry.valueSource)")
+                    Divider()
+                    field("value (server)", entry.value.map { "$\($0)" } ?? "nil")
+                    field("weightedMedianPrice", entry.weightedMedianPrice.map { "$\($0)" } ?? "nil")
+                    field("plainMedianPrice", entry.plainMedianPrice.map { "$\($0)" } ?? "nil")
+                    field("estimatedMultiplier", entry.estimatedMultiplier.map { "\($0)×" } ?? "nil")
+                    field("priceRangeLow", entry.priceRangeLow.map { "$\($0)" } ?? "nil")
+                    field("priceRangeHigh", entry.priceRangeHigh.map { "$\($0)" } ?? "nil")
+                    Divider()
+                    field("trendAdjustedValue", entry.trendAdjustedValue.map { "$\($0)" } ?? "nil")
+                    field("trendAdjustmentPct", entry.trendAdjustmentPct.map { "\($0)%" } ?? "nil")
+                    field("predictedPriceAt30d", entry.predictedPriceAt30d.map { "$\($0)" } ?? "nil")
+                    field("predictedPricePct", entry.predictedPricePct.map { "\($0)%" } ?? "nil")
+                    field("predictedHorizonDays", entry.predictedHorizonDays.map { "\($0)d" } ?? "nil")
+                    Divider()
+                    field("signalSource", entry.signalSource ?? "nil")
+                    field("ratePerWeek", entry.ratePerWeek.map { "\($0)" } ?? "nil")
+                    field("referencePrice", entry.referencePrice.map { "$\($0)" } ?? "nil")
+                    field("referenceDivergencePct", entry.referenceDivergencePct.map { "\($0)%" } ?? "nil")
+                    field("siblingFallback", entry.siblingFallback != nil ? "PRESENT (see console)" : "nil")
+                    Divider()
+                    Text("displayed pill value:")
+                        .font(.caption).bold()
+                    Text(displayedPillValue())
+                        .font(.system(.title2, design: .monospaced))
+                        .textSelection(.enabled)
+                }
+                .padding()
+            }
+            .navigationTitle("Pill Debug — \(entry.grade)")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Copy JSON") { copyToClipboard() }
+                }
+            }
+        }
+    }
+
+    private func field(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.system(.footnote, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 180, alignment: .leading)
+            Text(value)
+                .font(.system(.footnote, design: .monospaced))
+                .textSelection(.enabled)
+        }
+    }
+
+    /// Mirror of `GradePillPanel.resolvedValue` so the sheet surfaces
+    /// which field actually produced the number displayed on the pill.
+    /// If this trace ever disagrees with the visible pill number, the
+    /// bug is in the panel's rendering, not the wire payload.
+    private func displayedPillValue() -> String {
+        if let v = entry.trendAdjustedValue, v > 0 { return "$\(v) (trendAdjustedValue)" }
+        if let v = entry.value, v > 0 { return "$\(v) (value)" }
+        if let v = entry.weightedMedianPrice, v > 0 { return "$\(v) (weightedMedianPrice)" }
+        if let v = entry.plainMedianPrice, v > 0 { return "$\(v) (plainMedianPrice)" }
+        return "nil"
+    }
+
+    /// `CardPanelGradeEntry` is Decodable only, so we can't
+    /// `JSONEncoder().encode(entry)` directly. Build a dict of the
+    /// fields we surface in the inspector and encode that — same
+    /// information density, JSON-parseable on Drew's side.
+    private func copyToClipboard() {
+        let dict: [String: Any] = [
+            "cardId": cardId,
+            "grade": entry.grade,
+            "grader": entry.grader,
+            "sampleCount": entry.sampleCount,
+            "valueSource": "\(entry.valueSource)",
+            "value": entry.value as Any,
+            "weightedMedianPrice": entry.weightedMedianPrice as Any,
+            "plainMedianPrice": entry.plainMedianPrice as Any,
+            "estimatedMultiplier": entry.estimatedMultiplier as Any,
+            "priceRangeLow": entry.priceRangeLow as Any,
+            "priceRangeHigh": entry.priceRangeHigh as Any,
+            "trendAdjustedValue": entry.trendAdjustedValue as Any,
+            "trendAdjustmentPct": entry.trendAdjustmentPct as Any,
+            "predictedPriceAt30d": entry.predictedPriceAt30d as Any,
+            "predictedPricePct": entry.predictedPricePct as Any,
+            "predictedHorizonDays": entry.predictedHorizonDays as Any,
+            "signalSource": entry.signalSource as Any,
+            "ratePerWeek": entry.ratePerWeek as Any,
+            "referencePrice": entry.referencePrice as Any,
+            "referenceDivergencePct": entry.referenceDivergencePct as Any,
+            "siblingFallback": entry.siblingFallback != nil ? "present" : NSNull()
+        ]
+        // `JSONSerialization` doesn't handle `Optional.none` cleanly —
+        // strip nils before encoding so the paste is compact.
+        let cleaned: [String: Any] = dict.compactMapValues { value in
+            if value is NSNull { return nil }
+            let mirror = Mirror(reflecting: value)
+            if mirror.displayStyle == .optional, mirror.children.isEmpty { return nil }
+            return value
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: cleaned, options: [.prettyPrinted, .sortedKeys]),
+           let json = String(data: data, encoding: .utf8) {
+            UIPasteboard.general.string = json
+        }
+    }
+}
+#endif
