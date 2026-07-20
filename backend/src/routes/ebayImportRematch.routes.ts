@@ -257,6 +257,45 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
 //     cardYear?, setName?, parallel?, cardNumber?, isAuto?, gradeCompany?, gradeValue?,
 //     sourceExternalId?, title?
 //   }
+// CF-COMPS-EXPORT (Drew, 2026-07-20). Downloads every comp the caller
+// contributed to sold_comps as CSV. Sources included: manual-user-entry,
+// ebay-user-purchase, ebay-user-sale. Useful for tax/audit + power-user
+// data portability.
+//
+// Route: GET /api/portfolio/comps/export
+// Auth:  requireSession
+// Query: format=csv (default, only supported format for now)
+router.get("/comps/export", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const userId = await requireUserId(req, res);
+    if (!userId) return;
+    const { readCompsByContributor } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    const rows = await readCompsByContributor({ contributorUserId: userId }).catch(() => [] as unknown[]);
+    const header = [
+      "soldAt", "source", "price", "cardId", "playerName", "cardYear",
+      "product", "parallel", "cardNumber", "isAuto",
+      "gradeCompany", "gradeValue", "title", "confidence",
+    ];
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return "";
+      const s = String(v);
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines: string[] = [header.join(",")];
+    for (const r of rows as Array<Record<string, unknown>>) {
+      lines.push(header.map((h) => escape(r[h])).join(","));
+    }
+    const filename = `hobbyiq-comps-${userId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("X-Comps-Count", String(rows.length));
+    res.send(lines.join("\n"));
+  } catch (err) { next(err); }
+});
+
 router.post("/manual-comps/add", requireSession, async (req: Request, res: Response, next) => {
   try {
     const userId = await requireUserId(req, res);
