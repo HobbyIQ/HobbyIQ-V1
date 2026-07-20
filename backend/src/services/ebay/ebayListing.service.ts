@@ -348,18 +348,46 @@ function capTitleAt80(title: string): string {
 // Item specifics builder
 // ---------------------------------------------------------------------------
 
+// CF-EBAY-ASPECTS-CATEGORY-META-ONLY (Drew, 2026-07-20). Whitelist of
+// aspect keys we accept from holding.ebayItemAspects. These are the
+// category-required META aspects (League, Type, Country/Region of
+// Manufacture, Year Manufactured, Season, Language, etc.) that we
+// can't compute from base holding fields — eBay's Sports Trading
+// Cards category rejects listings without them.
+//
+// EXCLUDED: card-identity + condition + grade + autograph aspects.
+// Those we compute authoritatively from the holding's own fields
+// (playerName, gradeCompany, isAuto, etc.). If we pulled those from
+// captured aspects, dirty enrichment data (e.g. Judge coin: Grade:10
+// / Autograph Format: Hard Signed / Autographed: No — three-way
+// contradiction from a mis-scraped different-card capture) would
+// blow up eBay validation. The 2026-07-20 Judge listing bug was
+// this exact pattern.
+const CATEGORY_META_ASPECT_KEYS = new Set([
+  "League",
+  "Type",
+  "Country/Region of Manufacture",
+  "Country of Origin",
+  "Country/Region of Origin",
+  "Year Manufactured",
+  "Season",
+  "Language",
+  "Card Size",
+  "Vintage",
+  "Original/Licensed Reprint",
+  "Event/Tournament",
+]);
+
 function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
   const aspects: Record<string, string[]> = {};
 
-  // CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Base layer: aspects
-  // captured from the original eBay Browse enrichment when the holding
-  // was imported. These carry required-by-category fields (League,
-  // Type, Country/Region of Manufacture, Year Manufactured, Season,
-  // Autograph Authentication, etc.) that eBay's Sell Inventory API
-  // rejects the item without. Our computed fields below override where
-  // they overlap.
+  // CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Base layer: only the
+  // category-required META aspects from ebayItemAspects. Card-identity
+  // and condition/grade/auto aspects are discarded so dirty enrichment
+  // captures don't conflict with our computed authoritative fields.
   if (i.ebayItemAspects && typeof i.ebayItemAspects === "object") {
     for (const [k, v] of Object.entries(i.ebayItemAspects)) {
+      if (!CATEGORY_META_ASPECT_KEYS.has(k)) continue;
       if (typeof v === "string" && v.trim().length > 0) {
         aspects[k] = [v.trim()];
       }
