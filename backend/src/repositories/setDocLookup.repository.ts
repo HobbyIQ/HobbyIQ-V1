@@ -104,8 +104,25 @@ export async function getSetDocForProductYear(
   if (!product || typeof product !== "string" || !product.trim()) return null;
   if (!year || !Number.isFinite(year)) return null;
 
-  const productKey = slug(product);
-  if (!productKey) return null;
+  const rawKey = slug(product);
+  if (!rawKey) return null;
+
+  // CF-SETDOC-YEAR-PREFIX-STRIP (Drew, 2026-07-20). Callers pass
+  // `product` strings that sometimes include the year ("2024 Panini
+  // Origins") and sometimes don't ("Panini Origins"). The reference-
+  // catalog stores productKey WITHOUT a year prefix, with the year
+  // held on the `sortYear` field. Historically the year was prefixed
+  // and the ingest was reset — since then, year-included inputs like
+  // "2024-panini-origins" have missed the lookup, silently failing
+  // Tier 7 setdoc-baseline for the majority of catalog-miss cases.
+  //
+  // We know the year explicitly (passed as @y). Strip a leading
+  // <year>- OR <year>-<yy>- (year-range) prefix if present, then
+  // query. Falls back to the raw key on the rare cases where the
+  // stripped key doesn't match either.
+  const yearPrefixOnly = new RegExp(`^${year}(-\\d+)?-`);
+  const strippedKey = rawKey.replace(yearPrefixOnly, "");
+  const productKey = strippedKey || rawKey;
 
   const key = cacheKey(productKey, year);
   const cached = _cache.get(key);
