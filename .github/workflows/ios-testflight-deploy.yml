@@ -1,0 +1,280 @@
+name: iOS — Archive + upload to TestFlight
+
+# Runs `xcodebuild archive` + `xcodebuild -exportArchive` + `xcrun altool
+# --upload-app` and ships the HobbyIQ iOS app to App Store Connect /
+# TestFlight. Currently gated to `workflow_dispatch` only — flip
+# `push: [main]` when the first manual run succeeds and you're happy to
+# auto-deploy on every merge.
+#
+# Required secrets (set at Repository → Settings → Secrets and variables
+# → Actions):
+#
+#   IOS_DIST_CERT_P12_BASE64
+#     Base64 of your Apple Distribution certificate exported from
+#     Keychain as .p12. Generate locally with:
+#       base64 -i AppleDistribution.p12 | pbcopy
+#
+#   IOS_DIST_CERT_P12_PASSWORD
+#     Plaintext password you set when exporting the .p12.
+#
+#   IOS_PROVISIONING_PROFILE_BASE64
+#     Base64 of the App Store distribution provisioning profile
+#     (.mobileprovision) for Justtheboysandcard.HobbyIQ. Generate with:
+#       base64 -i HobbyIQ_App_Store.mobileprovision | pbcopy
+#
+#   KEYCHAIN_PASSWORD
+#     Any strong random string — used only to unlock the temporary
+#     keychain the runner creates.
+#
+#   APP_STORE_CONNECT_API_KEY_ID
+#     10-char Key ID from App Store Connect → Users and Access → Keys.
+#
+#   APP_STORE_CONNECT_API_ISSUER_ID
+#     UUID Issuer ID shown at the top of the Keys tab.
+#
+#   APP_STORE_CONNECT_API_KEY_BASE64
+#     Base64 of the AuthKey_XXXXXXXXXX.p8 file downloaded when you
+#     created the key. Generate with:
+#       base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy
+
+on:
+  workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: "Marketing version (CFBundleShortVersionString)"
+        required: false
+        default: "1.0"
+      release_notes:
+        description: "TestFlight what-to-test notes (optional)"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  XCODE_PROJECT: HobbyIQ.xcodeproj
+  XCODE_SCHEME: HobbyIQ
+  BUNDLE_IDENTIFIER: Justtheboysandcard.HobbyIQ
+  TEAM_ID: YCQFYBXYP3
+  # Runner uses the newest Xcode on macos-14 by default; pin explicitly
+  # when Apple changes defaults out from under us.
+  XCODE_VERSION: "15.4"
+
+jobs:
+  archive-and-upload:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+
+      - name: Show tool versions (diagnostic)
+        run: |
+          xcodebuild -version
+          swift --version
+          xcrun --show-sdk-version --sdk iphoneos
+
+      # -- Signing setup ------------------------------------------------
+      #
+      # Create a fresh keychain per run so leftover state from a prior
+      # job never leaks the cert into the next one. The keychain is
+      # discarded when the runner terminates.
+      - name: Create temporary keychain
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/hobbyiq-ios.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          # Prepend the ephemeral keychain so codesign can find our
+          # imported cert; the login keychain stays as fallback.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Import distribution certificate
+        env:
+          CERT_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/dist.p12"
+          echo "$CERT_BASE64" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          # Allow codesign to use the imported private key without a UI
+          # prompt during the archive step.
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          rm "$CERT_PATH"
+
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          PROFILE_PATH="$PROFILE_DIR/hobbyiq-app-store.mobileprovision"
+          echo "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          # Extract the UUID + name from the profile for the export
+          # options plist (see next step).
+          security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$RUNNER_TEMP/profile.plist")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$RUNNER_TEMP/profile.plist")
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      # -- Version + build number --------------------------------------
+      #
+      # Marketing version comes from the workflow input; build number
+      # is the monotonically-increasing GITHUB_RUN_NUMBER so every run
+      # gets a unique CFBundleVersion (App Store Connect requires this).
+      - name: Stamp version + build number
+        env:
+          MARKETING_VERSION: ${{ inputs.marketing_version }}
+        run: |
+          set -euo pipefail
+          # xcodebuild flags below pass these directly; no in-place
+          # pbxproj edits needed. Just log what we're shipping.
+          echo "Marketing version: $MARKETING_VERSION"
+          echo "Build number:      $GITHUB_RUN_NUMBER"
+
+      # -- Archive ------------------------------------------------------
+      - name: Archive
+        env:
+          MARKETING_VERSION: ${{ inputs.marketing_version }}
+        run: |
+          set -euo pipefail
+          ARCHIVE_PATH="$RUNNER_TEMP/HobbyIQ.xcarchive"
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
+          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
+
+      # -- Export IPA ---------------------------------------------------
+      #
+      # ExportOptions is written inline so this workflow stays
+      # self-contained. `app-store-connect` is the modern method name
+      # for TestFlight / App Store distribution.
+      - name: Write ExportOptions.plist
+        run: |
+          set -euo pipefail
+          EXPORT_OPTIONS="$RUNNER_TEMP/ExportOptions.plist"
+          cat > "$EXPORT_OPTIONS" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>method</key>
+              <string>app-store-connect</string>
+              <key>teamID</key>
+              <string>$TEAM_ID</string>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                <key>$BUNDLE_IDENTIFIER</key>
+                <string>$PROFILE_NAME</string>
+              </dict>
+              <key>destination</key>
+              <string>export</string>
+            </dict>
+          </plist>
+          PLIST
+          echo "EXPORT_OPTIONS=$EXPORT_OPTIONS" >> "$GITHUB_ENV"
+
+      - name: Export IPA
+        run: |
+          set -euo pipefail
+          EXPORT_PATH="$RUNNER_TEMP/export"
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$EXPORT_OPTIONS"
+          IPA_PATH=$(find "$EXPORT_PATH" -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "No .ipa produced by exportArchive" >&2
+            exit 1
+          fi
+          echo "IPA_PATH=$IPA_PATH" >> "$GITHUB_ENV"
+
+      # -- Upload to App Store Connect (TestFlight lands here) ---------
+      - name: Write App Store Connect API key
+        env:
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          set -euo pipefail
+          # altool auto-discovers keys under ~/.appstoreconnect/private_keys/
+          # or ~/private_keys/. Standardize on ~/private_keys for
+          # portability.
+          KEY_DIR="$HOME/private_keys"
+          mkdir -p "$KEY_DIR"
+          KEY_PATH="$KEY_DIR/AuthKey_${API_KEY_ID}.p8"
+          echo "$API_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+      - name: Upload to TestFlight
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER_ID"
+
+      - name: Publish release notes as workflow summary
+        if: always()
+        env:
+          MARKETING_VERSION: ${{ inputs.marketing_version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          {
+            echo "## iOS TestFlight deploy"
+            echo ""
+            echo "- **Version**: $MARKETING_VERSION ($GITHUB_RUN_NUMBER)"
+            echo "- **Bundle ID**: $BUNDLE_IDENTIFIER"
+            echo "- **Commit**: $GITHUB_SHA"
+            if [ -n "$RELEASE_NOTES" ]; then
+              echo ""
+              echo "### What to test"
+              echo "$RELEASE_NOTES"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # -- Cleanup ------------------------------------------------------
+      - name: Delete temporary keychain
+        if: always()
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -n "${KEYCHAIN_PATH:-}" ] && [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
