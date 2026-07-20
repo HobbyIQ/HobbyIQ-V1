@@ -136,7 +136,7 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
     //   4. distinctive tokens NOT in the target must NOT appear
     //      (a Blue Refractor query rejects Blue X-Fractor listings)
     const verifiedListings = listingsResult.listings.filter((l) =>
-      titleMatchesParallel(l.title ?? "", parallel ?? null, cardNumber ?? null),
+      titleMatchesParallel(l.title ?? "", parallel ?? null, cardNumber ?? null, player ?? null),
     );
 
     const prices = verifiedListings

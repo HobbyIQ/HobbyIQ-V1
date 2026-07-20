@@ -3008,6 +3008,23 @@ export function ingestVendorCompsToPool(fetched: FetchedComps): void {
   if (process.env.SOLD_COMPS_VENDOR_INGEST_ENABLED !== "true") return;
   // CH already covered upstream — skip to avoid double-writes.
   if (fetched.vendor !== "cardsight") return;
+  // CF-VENDOR-INGEST-GRADE-UNKNOWN (Drew, 2026-07-19). FetchedComps
+  // doesn't carry per-comp grade tier, so we CAN'T safely emit these
+  // rows to sold_comps without knowing whether they're raw or graded.
+  // The same class of bug (grade-drop → raw pool poisoning) already
+  // burned us in historicalBackfill and cardsight.router. Env-gate
+  // remains off until FetchedComps grows a per-comp `grade` field or
+  // the caller supplies context. Fail-closed for now.
+  const forceIngestUngradedCompsOnly = process.env.SOLD_COMPS_VENDOR_INGEST_UNGRADED_ONLY === "true";
+  if (!forceIngestUngradedCompsOnly) {
+    console.warn(JSON.stringify({
+      event: "compiq.sold_comps.vendor_ingest_skipped",
+      reason: "grade_tier_unknown_at_fetch_time",
+      cardId: fetched.card?.card_id ?? null,
+      compCount: fetched.comps.length,
+    }));
+    return;
+  }
   const card = fetched.card;
   if (!card?.card_id) return;
   const playerName = (card.player ?? "").trim();

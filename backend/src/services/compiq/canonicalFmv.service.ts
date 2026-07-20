@@ -519,7 +519,7 @@ async function warmPoolFromEbayBrowseEnded(
       // gate we'd write the wrong-parallel listing into sold_comps
       // tagged with input.parallel, permanently corrupting FMV
       // downstream. Same class of bug as retired warmPoolFromCh.
-      if (!titleMatchesParallel(l.title ?? "", input.parallel ?? null, input.cardNumber ?? null)) continue;
+      if (!titleMatchesParallel(l.title ?? "", input.parallel ?? null, input.cardNumber ?? null, input.player ?? null)) continue;
       try {
         await recordSoldComp({
           cardId,

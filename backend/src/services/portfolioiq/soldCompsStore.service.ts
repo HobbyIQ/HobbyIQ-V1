@@ -285,18 +285,48 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
           gradeCompany: doc.gradeCompany ?? null,
           gradeValue: doc.gradeValue ?? null,
         });
-      } catch { /* swallow */ }
+      } catch (err) {
+        // CF-FMV-CACHE-INVALIDATE-TELEMETRY (Drew, 2026-07-19).
+        // Silent swallow lets a broken dynamic import go undetected
+        // for weeks — every write leaves stale FMV cached. Log at
+        // warn so App Insights can chart the event; rate-limited via
+        // downsampling to avoid spamming when the cache module is
+        // globally unhealthy.
+        if (Math.random() < 0.01) {
+          console.warn(JSON.stringify({
+            event: "sold_comps_fmv_invalidate_failed",
+            source: "soldCompsStore.service",
+            cardId: doc.cardId,
+            error: (err as Error)?.message ?? String(err),
+            sampled: true,
+          }));
+        }
+      }
     })();
   } catch (err) {
+    // CF-EMIT-FAILURE-COUNTER (Drew, 2026-07-19). Every caller of
+    // recordSoldComp wraps in try/catch that swallows silently —
+    // meaning a broken emit path (Cosmos throttle, schema drift,
+    // container missing) is invisible unless you already know to
+    // look here. Increment a monotonic counter so App Insights can
+    // chart sold_comps_emit_failure rate and alert on spikes. Also
+    // keep the per-event warn for triage.
+    _emitFailureCounter++;
     console.warn(JSON.stringify({
       event: "sold_comps_upsert_error",
       source: "soldCompsStore.service",
       cardId: input.cardId,
       compSource: input.source,
       error: (err as Error)?.message ?? String(err),
+      cumulativeEmitFailures: _emitFailureCounter,
     }));
   }
 }
+
+/** Monotonic counter of upsert failures across the process lifetime.
+ *  Exposed via getEmitFailureCount() for health-check endpoints. */
+let _emitFailureCounter = 0;
+export function getEmitFailureCount(): number { return _emitFailureCounter; }
 
 /**
  * CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): flag a specific comp
