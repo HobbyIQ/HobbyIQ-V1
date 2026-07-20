@@ -1028,33 +1028,17 @@ async function tryNeighborParallel(
     });
     const { resources } = await iter.fetchAll();
 
-    // Filter to same-parallel rows in memory (variant string), then
-    // apply auto/non-auto boundary. Neighbor-year data can span both
-    // Chrome Prospects Autographs and base Bowman product lines
-    // sharing similar variant names — same bug pattern as sibling-
-    // parallel needs the same defensive filter.
+    // Filter to same-parallel rows in memory (variant string).
+    // CF-NEIGHBOR-PARALLEL-AUTO-BOUNDARY-REVERT (Drew, 2026-07-20):
+    // dropped the isAutoRow text filter — CH's card_set for auto rows
+    // is generic "Bowman Baseball" (no "auto" token), so classifying
+    // by /auto|autograph/i incorrectly filtered legitimate siblings.
+    // The neighbor-year data still filters on strict variant match
+    // and productToken family — cross-boundary pollution across
+    // years is bounded to variant text mismatches, not card_set.
     const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
     const targetParallelNorm = stripRefr(input.parallel);
-    const wantAuto = detectIsAuto(input);
-    const isAutoRow = (r: { variant: string; card_set: string }): boolean => {
-      return /auto|autograph/i.test(r.card_set ?? "") || /auto|autograph/i.test(r.variant ?? "");
-    };
-    let droppedCrossAuto = 0;
-    const matches = resources.filter((r) => {
-      if (stripRefr(r.variant ?? "") !== targetParallelNorm) return false;
-      if (isAutoRow(r) !== wantAuto) { droppedCrossAuto++; return false; }
-      return true;
-    });
-    if (droppedCrossAuto > 0) {
-      console.log(JSON.stringify({
-        event: "neighbor_parallel_cross_auto_filtered",
-        source: "canonicalFmv.tryNeighborParallel",
-        cardId,
-        wantAuto,
-        droppedCrossAuto,
-        keptMatches: matches.length,
-      }));
-    }
+    const matches = resources.filter((r) => stripRefr(r.variant ?? "") === targetParallelNorm);
     if (matches.length === 0) return null;
 
     // For each neighbor sale, apply year-delta multiplier.
@@ -1169,25 +1153,24 @@ async function trySiblingParallel(
     : "Raw";
   const cutoff = new Date(Date.now() - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString();
   const productToken = extractProductFamilyToken(input.product);
-  // CF-SIBLING-PARALLEL-AUTO-BOUNDARY (Drew, 2026-07-20). Without this
-  // gate a Gold Shimmer AUTO card pulls in NON-AUTO scarce siblings
-  // (Red Refractor 1/1 at $2,500, Red X-Fractor at $750) as pricing
-  // anchors, projecting FMV into the $1000+ range vs. the real auto
-  // sibling pool ($150-300). Symmetrically, a non-auto card would pull
-  // in auto siblings that command large auto premiums. wantAuto captures
-  // the target's auto/non-auto tier from the cardNumber prefix; each
-  // returned row is classified via its own card_set/variant text and
-  // dropped when it crosses the boundary.
-  const wantAuto = detectIsAuto(input);
+  // CF-SIBLING-PARALLEL-AUTO-BOUNDARY-REVERT (Drew, 2026-07-20). The
+  // prior isAutoRow text-based filter over-dropped legitimate siblings.
+  // CH tags auto cards' card_set as generic "2026 Bowman Baseball"
+  // (no "auto" token in card_set OR variant text), so classifying rows
+  // by /auto|autograph/i incorrectly dropped 100% of siblings for
+  // auto-prefix cardNumbers like CPA-BA (Antunez auto). Since this
+  // query filters by strict cardNumber match AND CH's card numbering
+  // conventions (CPA-/BCPA-/BSPA-/CDA-/BCDA-/BDCA-/PA- prefixes ARE
+  // the auto/non-auto boundary), all returned rows share the same
+  // auto tier as the target by construction. No filter needed.
 
   try {
     const { resources } = await container.items.query<{
       variant: string;
       price: number;
       sale_date: string;
-      card_set: string;
     }>({
-      query: `SELECT c.variant, c.price, c.sale_date, c.card_set
+      query: `SELECT c.variant, c.price, c.sale_date
               FROM c
               WHERE c.number = @cn
                 AND c.year = @yr
@@ -1206,17 +1189,11 @@ async function trySiblingParallel(
 
     if (resources.length === 0) return null;
 
-    // Group by variant, excluding Base, the target parallel itself, and
-    // rows on the wrong side of the auto/non-auto boundary.
+    // Group by variant, excluding Base and the target parallel itself.
     const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
     const target = stripRefr(parallel);
-    const isAutoRow = (r: { variant: string; card_set: string }): boolean => {
-      return /auto|autograph/i.test(r.card_set ?? "") || /auto|autograph/i.test(r.variant ?? "");
-    };
     const byVariant = new Map<string, number[]>();
-    let droppedCrossAuto = 0;
     for (const r of resources) {
-      if (isAutoRow(r) !== wantAuto) { droppedCrossAuto++; continue; }
       const v = (r.variant ?? "").trim();
       const vNorm = stripRefr(v);
       if (vNorm === "" || vNorm === "base" || vNorm === target) continue;
@@ -1224,16 +1201,6 @@ async function trySiblingParallel(
       const arr = byVariant.get(v) ?? [];
       arr.push(r.price);
       byVariant.set(v, arr);
-    }
-    if (droppedCrossAuto > 0) {
-      console.log(JSON.stringify({
-        event: "sibling_parallel_cross_auto_filtered",
-        source: "canonicalFmv.trySiblingParallel",
-        cardNumber: input.cardNumber,
-        wantAuto,
-        droppedCrossAuto,
-        keptVariants: byVariant.size,
-      }));
     }
     if (byVariant.size < 3) return null;
 
