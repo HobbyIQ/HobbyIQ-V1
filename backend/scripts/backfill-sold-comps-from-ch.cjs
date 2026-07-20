@@ -34,7 +34,13 @@
 const { CosmosClient } = require("@azure/cosmos");
 
 function parseArgs(argv) {
-  const args = { concurrency: 4, apply: false, limit: Infinity, cardSetContains: null, sport: null };
+  // CF-BACKFILL-CH-GROUP (Drew, 2026-07-20). Added --ch-group so BB/FB
+  // promotions can filter by CH's authoritative sport field
+  // (c["group"] = 'Football' | 'Basketball') instead of the
+  // card_set_contains substring filter — modern FB/BB sets like
+  // "Panini Prizm" don't contain the sport word in card_set, so
+  // card_set_contains missed them entirely on the first pass.
+  const args = { concurrency: 4, apply: false, limit: Infinity, cardSetContains: null, sport: null, chGroup: null };
   for (const a of argv) {
     if (a.startsWith("--from=")) args.from = a.slice(7);
     else if (a.startsWith("--to=")) args.to = a.slice(5);
@@ -44,6 +50,7 @@ function parseArgs(argv) {
     else if (a.startsWith("--limit=")) args.limit = parseInt(a.slice(8), 10);
     else if (a.startsWith("--card-set-contains=")) args.cardSetContains = a.slice(20).toLowerCase();
     else if (a.startsWith("--sport=")) args.sport = a.slice(8).toLowerCase();
+    else if (a.startsWith("--ch-group=")) args.chGroup = a.slice(11);
   }
   return args;
 }
@@ -86,7 +93,7 @@ async function main() {
   const ch = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
   const sc = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
 
-  console.log(`Backfill window: ${args.from} → ${args.to}  apply=${args.apply}  concurrency=${args.concurrency}  limit=${args.limit}  cardSetContains=${args.cardSetContains ?? "(none)"}`);
+  console.log(`Backfill window: ${args.from} → ${args.to}  apply=${args.apply}  concurrency=${args.concurrency}  limit=${args.limit}  cardSetContains=${args.cardSetContains ?? "(none)"}  chGroup=${args.chGroup ?? "(none)"}`);
 
   // Walk ch_daily_sales day-by-day so we get bounded result sets per
   // query. Cross-partition GROUP BY on 2M rows would stack-overflow
@@ -110,8 +117,12 @@ async function main() {
       ];
       let whereExtra = "";
       if (args.cardSetContains) {
-        whereExtra = " AND CONTAINS(LOWER(c.card_set), @setToken)";
+        whereExtra += " AND CONTAINS(LOWER(c.card_set), @setToken)";
         parameters.push({ name: "@setToken", value: args.cardSetContains });
+      }
+      if (args.chGroup) {
+        whereExtra += " AND c[\"group\"] = @chGroup";
+        parameters.push({ name: "@chGroup", value: args.chGroup });
       }
       const iter = ch.items.query({
         query: `SELECT c.card_id, c.player, c.year, c.card_set, c.variant, c.number,
