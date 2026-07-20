@@ -57,6 +57,15 @@ export function fitLinearRegression(
 ): Regression | null {
   if (records.length < 2) return null;
   const firstT = records[0].tMs;
+  // CF-DISTINCT-DAYS-GATE (Drew, 2026-07-20). Was: distinct timestamps
+  // ≥ 2, so 5 same-day comps at hour-granularity 00:01 vs 14:00 produced
+  // a wild OLS slope that extrapolated to $5,347 for Antunez Orange
+  // Wave Auto Raw (real median $295). Same-day clusters with
+  // sub-day timestamp variation are noise, not signal. Require ≥ 3
+  // distinct CALENDAR DAYS so the regression has room to see a real
+  // trend before firing.
+  const distinctDays = new Set(records.map((r) => Math.floor(r.tMs / MS_PER_DAY))).size;
+  if (distinctDays < 3) return null;
   const distinctTimes = new Set(records.map((r) => r.tMs)).size;
   if (distinctTimes < 2) return null;
 
@@ -122,6 +131,16 @@ export function computeSlopeValuation(
   const slopePerMonthPct = marketAtLast > 0
     ? (monthlyDelta / marketAtLast) * 100
     : 0;
+
+  // CF-SLOPE-SANITY-CAP (Drew, 2026-07-20). A regression that implies
+  // >100%/mo change on a raw prospect card is almost always noise from
+  // clustered timestamps or a tiny outlier cluster. Return null so the
+  // caller falls through to the trend-adjusted-last-sale branch, which
+  // uses the newest observed price + the broader-trend signal —
+  // grounded in real data instead of a runaway extrapolation.
+  if (Math.abs(slopePerMonthPct) > 100) {
+    return null;
+  }
 
   const direction: "up" | "down" | "static" =
     Math.abs(slopePerMonthPct) < STATIC_DEADBAND_PCT
