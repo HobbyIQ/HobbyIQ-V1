@@ -13,6 +13,10 @@ import os
 enum PricedCardRoute: Hashable, Identifiable {
     case layerBreakdown
     case addToInventory
+    /// 2026-07-20 (spec §5): pushed from a tap on the player name in
+    /// the Comp Sheet header — opens the pricing-focused Player Detail
+    /// surface (`PlayerDetailView`).
+    case playerDetail(String)
     var id: Self { self }
 }
 
@@ -220,6 +224,8 @@ struct CompIQPricedCardView: View {
                 if let trendIQ = priceResponse?.trendIQ {
                     TrendIQLayerBreakdownView(trendIQ: trendIQ)
                 }
+            case .playerDetail(let name):
+                PlayerDetailView(playerName: name)
             case .addToInventory:
                 if let response = priceResponse {
                     CompIQAddToInventorySheet(
@@ -376,11 +382,35 @@ struct CompIQPricedCardView: View {
         // top-left inside the tile so it doesn't occupy its own row.
         VStack(alignment: .center, spacing: 12) {
             VStack(alignment: .center, spacing: 4) {
-                Text(headerPrimaryTitle)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                // 2026-07-20 (spec §5): tap on the player name pushes
+                // `PlayerDetailView` for the pricing-focused summary
+                // (top cards, by-year rollups). Only tappable when we
+                // have a real player string to hand off — otherwise
+                // falls back to a plain Text so `resolvedLabel`-style
+                // placeholders don't get treated as player names.
+                if let playerNameForTap {
+                    Button {
+                        pricedRoute = .playerDetail(playerNameForTap)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(headerPrimaryTitle)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(headerPrimaryTitle)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 if let details = headerCardDetails {
                     Text(details)
@@ -443,6 +473,24 @@ struct CompIQPricedCardView: View {
             return player
         }
         return hit.resolvedLabel
+    }
+
+    /// 2026-07-20 (spec §5): the player name the header-tap hands to
+    /// `PlayerDetailView`. Same source priority as `headerPrimaryTitle`
+    /// but stops before the `resolvedLabel` fallback — that surface
+    /// isn't a real player name, so we don't want to navigate to a
+    /// Player Detail page for `"Card #abc12345"`.
+    private var playerNameForTap: String? {
+        if let player = priceResponse?.cardIdentity?.player?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           player.isEmpty == false {
+            return player
+        }
+        if let player = hit.player?.trimmingCharacters(in: .whitespacesAndNewlines),
+           player.isEmpty == false {
+            return player
+        }
+        return nil
     }
 
     /// "{year} {release} · #{number}" composed from the response's

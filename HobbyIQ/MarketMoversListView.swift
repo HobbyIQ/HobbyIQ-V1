@@ -118,6 +118,7 @@ struct MarketMoversListView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var navigateCardId: String?
+    @State private var navigatePlayerName: String?
 
     init(seededResponse: MarketMoversResponse? = nil) {
         self.seededResponse = seededResponse
@@ -155,6 +156,9 @@ struct MarketMoversListView: View {
             // just the cardId — the view fetches identity + comps on
             // appear via /api/compiq/price-by-id.
             CompIQPricedCardView(hit: CompIQVariantHit(cardId: cardId))
+        }
+        .navigationDestination(item: $navigatePlayerName) { name in
+            PlayerDetailView(playerName: name)
         }
         .onAppear {
             if response == nil, let seed = seededResponse {
@@ -235,59 +239,78 @@ struct MarketMoversListView: View {
     // MARK: - Row
 
     private func moverRow(_ mover: MarketMoversEntry) -> some View {
-        Button {
-            navigateCardId = mover.cardId
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(mover.directionGlyph)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(directionColor(mover))
-                        .frame(width: 20, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(mover.playerName ?? "\u{2014}")
+        // 2026-07-20 (spec §5): row body has two tap zones — the
+        // player-name button routes to `PlayerDetailView`, the rest
+        // of the row routes to Comp Sheet. Using `onTapGesture` on
+        // the row container instead of an outer Button avoids
+        // nested-button hit-testing ambiguity.
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(mover.directionGlyph)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(directionColor(mover))
+                    .frame(width: 20, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    if let name = mover.playerName {
+                        Button {
+                            navigatePlayerName = name
+                        } label: {
+                            HStack(spacing: 3) {
+                                Text(name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Text("\u{2014}")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        Text(mover.displayTitle)
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .lineLimit(1)
                     }
-                    Spacer(minLength: 0)
-                    if let pct = mover.deltaPct {
-                        Text(pctString(pct))
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(directionColor(mover))
-                    }
+                    Text(mover.displayTitle)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
                 }
-
-                HStack(spacing: 6) {
-                    if let prior = mover.priorMedian, let current = mover.currentMedian {
-                        Text("\(dollars(prior)) \u{2192} \(dollars(current))")
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                    Spacer(minLength: 0)
-                    if let n = mover.salesInWindow {
-                        Text("\(n) sales")
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
-                    }
+                Spacer(minLength: 0)
+                if let pct = mover.deltaPct {
+                    Text(pctString(pct))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(directionColor(mover))
                 }
-                .padding(.leading, 28)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, HobbyIQTheme.Spacing.small)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.35), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+
+            HStack(spacing: 6) {
+                if let prior = mover.priorMedian, let current = mover.currentMedian {
+                    Text("\(dollars(prior)) \u{2192} \(dollars(current))")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                Spacer(minLength: 0)
+                if let n = mover.salesInWindow {
+                    Text("\(n) sales")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                }
+            }
+            .padding(.leading, 28)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 10)
+        .padding(.horizontal, HobbyIQTheme.Spacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        .onTapGesture {
+            navigateCardId = mover.cardId
+        }
     }
 
     private func directionColor(_ mover: MarketMoversEntry) -> Color {
