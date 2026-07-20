@@ -3629,8 +3629,27 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
     const { buildObservedGradeCurvesBulk } = await import(
       "../services/compiq/observedGradeCurve.service.js"
     );
+    // CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): fetch per-card
+    // meta up-front so the empirical (family, grader) multiplier
+    // resolves for each card in the batch. getCardMetaById is a hot-
+    // cache read so N metadata lookups add ~5-20ms total for 500
+    // cards. Without this, every entry logs uncovered and the pill
+    // returns unavailable.
+    const perCardMeta = new Map<string, { setName?: string | null; sport?: string | null; cardClass?: "auto" | "base" }>();
+    await Promise.all(cardIds.map(async (id: string) => {
+      try {
+        const meta = await getCardMetaById(id.trim());
+        if (meta) {
+          perCardMeta.set(id.trim(), {
+            setName: (meta as { set?: string | null })?.set ?? null,
+            sport: (meta as { sport?: string | null })?.sport ?? null,
+            cardClass: extractCardClass(meta),
+          });
+        }
+      } catch { /* per-card meta failures are non-fatal */ }
+    }));
     const start = Date.now();
-    const map = await buildObservedGradeCurvesBulk(cardIds);
+    const map = await buildObservedGradeCurvesBulk(cardIds, perCardMeta);
     const durationMs = Date.now() - start;
 
     void (async () => {
@@ -3756,6 +3775,12 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       enableSiblingFallback: true,
       // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06)
       cardClass: extractCardClass(meta),
+      // CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): route setName
+      // + sport so the empirical (family, grader) medianRatio path
+      // fires. Without this the entries log grade_multiplier_uncovered
+      // and return unavailable.
+      setName: (meta as { set?: string | null })?.set ?? null,
+      sport: (meta as { sport?: string | null })?.sport ?? null,
     });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally

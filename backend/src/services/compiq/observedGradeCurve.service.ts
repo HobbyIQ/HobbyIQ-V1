@@ -1696,8 +1696,21 @@ export async function buildObservedGradeCurve(
  */
 const BULK_CONCURRENCY = 8;
 
+/** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20). Per-card meta the
+ *  bulk helper can pipe to buildObservedGradeCurve so each card's
+ *  empirical (family, grader) multiplier resolves correctly. Callers
+ *  without meta can omit — those cards will log
+ *  grade_multiplier_uncovered and return valueSource: "unavailable"
+ *  on non-observed entries (by design). */
+export interface BulkPerCardMeta {
+  setName?: string | null;
+  sport?: string | null;
+  cardClass?: "auto" | "base";
+}
+
 export async function buildObservedGradeCurvesBulk(
   cardIds: readonly string[],
+  perCardMeta?: ReadonlyMap<string, BulkPerCardMeta>,
 ): Promise<Map<string, ObservedGradeCurve>> {
   const uniqueIds = Array.from(new Set(
     cardIds.filter((id) => typeof id === "string" && id.trim().length > 0)
@@ -1711,7 +1724,12 @@ export async function buildObservedGradeCurvesBulk(
       const idx = cursor++;
       const id = uniqueIds[idx];
       try {
-        const curve = await buildObservedGradeCurve(id);
+        const meta = perCardMeta?.get(id) ?? {};
+        const curve = await buildObservedGradeCurve(id, {
+          setName: meta.setName ?? null,
+          sport: meta.sport ?? null,
+          cardClass: meta.cardClass ?? "base",
+        });
         results.set(id, curve);
       } catch (err) {
         console.warn(
