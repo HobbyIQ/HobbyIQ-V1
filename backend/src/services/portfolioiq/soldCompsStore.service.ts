@@ -42,6 +42,7 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { createHash } from "crypto";
 
 function computeTtlSec(): number {
   const raw = process.env.SOLD_COMPS_TTL_YEARS;
@@ -122,6 +123,14 @@ export interface SoldCompDoc {
   /** Free-text reason from the flagger (optional). Kept short for storage
    *  hygiene; iOS UI enforces max length. */
   flaggedReason?: string | null;
+
+  // CF-CONTENT-HASH (Drew, 2026-07-20). Cross-source dedup key.
+  // sha1 of (cardId, normalizedParallel, isAuto, gradeCompany,
+  // gradeValue, priceCents, soldDay). Same underlying sale from
+  // different sources (eBay user + CH tracking the same transaction)
+  // gets the same hash → recordSoldComp dedups at write time before
+  // both rows land. Null on legacy docs written before this migration.
+  contentHash?: string | null;
 
   ttl: number;
 }
@@ -229,6 +238,56 @@ function makeId(source: SoldCompSource, externalId: string | null, cardId: strin
   return `${source}::${cardId}::${soldAt}`;
 }
 
+/** CF-CONTENT-HASH (Drew, 2026-07-20). Canonical hash of the SALE
+ *  content — cross-source dedup key. Same underlying sale from any
+ *  source (eBay user + CH + eBay browse) produces the same hash. */
+function computeContentHash(input: {
+  cardId: string;
+  parallel?: string | null;
+  isAuto?: boolean;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  price: number;
+  soldAt: string;
+}): string {
+  const normalizeParallel = (s: string | null | undefined): string => {
+    return (s ?? "").trim().toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/ refractors?$/, "");    // match stripRefr in canonicalFmv
+  };
+  const parts = [
+    input.cardId.trim(),
+    normalizeParallel(input.parallel),
+    input.isAuto === true ? "1" : "0",
+    (input.gradeCompany ?? "raw").toUpperCase(),
+    String(input.gradeValue ?? 0),
+    String(Math.round(input.price * 100)),         // priceCents
+    (input.soldAt ?? "").slice(0, 10),             // soldDay only — ignore hour/minute noise
+  ];
+  return createHash("sha1").update(parts.join("|")).digest("hex");
+}
+
+/** Score a doc for pickCanonical — higher = keep. Mirror the scoring
+ *  in scripts/apply-sold-comps-dedup.cjs so pre-write dedup + nightly
+ *  cleanup agree on which row wins. */
+function scoreForCanonical(row: {
+  verifiedByUser?: boolean;
+  sourceExternalId?: string | null;
+  parallel?: string | null;
+  observedAt?: string;
+}): number {
+  const prefix = row.sourceExternalId ?? "";
+  const prefixScore = prefix.startsWith("holding::") ? 50
+    : prefix.startsWith("ch-daily::") ? 50
+    : 0;
+  return (
+    (row.verifiedByUser === true ? 100 : 0) +
+    prefixScore +
+    (row.parallel ? String(row.parallel).length : 0) +
+    (row.observedAt ? new Date(row.observedAt).getTime() / 1e11 : 0)
+  );
+}
+
 /**
  * Idempotent upsert of a sold comp. Caller is responsible for the
  * trust decision — this store never fabricates the cardId.
@@ -242,6 +301,16 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
 
   const c = await getContainer();
   if (!c) return;
+
+  const contentHash = computeContentHash({
+    cardId: input.cardId,
+    parallel: input.parallel,
+    isAuto: input.isAuto,
+    gradeCompany: input.gradeCompany,
+    gradeValue: input.gradeValue,
+    price: input.price,
+    soldAt: input.soldAt,
+  });
 
   const doc: SoldCompDoc = {
     id: makeId(input.source, input.sourceExternalId ?? null, input.cardId, input.soldAt),
@@ -266,8 +335,70 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     sellerHandle: input.sellerHandle ?? null,
     verifiedByUser: input.verifiedByUser ?? false,
     confidence: input.confidence ?? (input.verifiedByUser ? 1.0 : 0.5),
+    contentHash,
     ttl: TTL_SEC,
   };
+
+  // CF-CONTENT-HASH-PREWRITE-DEDUP (Drew, 2026-07-20). Cross-source
+  // dedup at the write boundary. Query for any existing row in this
+  // cardId partition with the same contentHash. If one exists, apply
+  // pickCanonical scoring — the incoming write only lands if it beats
+  // every existing dup; otherwise skip. Prevents future duplicates
+  // regardless of which emit path fires (eBay user + CH tracking same
+  // sale + browse-ended finding same listing all collapse to one row).
+  try {
+    const { resources: existing } = await c.items.query<SoldCompDoc>({
+      query: "SELECT * FROM c WHERE c.contentHash = @h",
+      parameters: [{ name: "@h", value: contentHash }],
+    }, { partitionKey: doc.cardId }).fetchAll();
+
+    if (existing.length > 0) {
+      const incomingScore = scoreForCanonical(doc);
+      const bestExistingScore = Math.max(...existing.map(scoreForCanonical));
+      if (incomingScore <= bestExistingScore) {
+        // Existing row is canonical → skip. Log at 1% sample so we can
+        // measure the dedup hit rate in App Insights.
+        if (Math.random() < 0.01) {
+          console.log(JSON.stringify({
+            event: "sold_comps_prewrite_dedup_skipped",
+            source: "soldCompsStore.recordSoldComp",
+            cardId: doc.cardId,
+            contentHash,
+            incomingSource: doc.source,
+            existingCount: existing.length,
+            sampled: true,
+          }));
+        }
+        return;
+      }
+      // Incoming wins → delete existing rows before writing so we don't
+      // leave stale-canonical rows behind.
+      for (const e of existing) {
+        try { await c.item(e.id, doc.cardId).delete(); } catch { /* best effort */ }
+      }
+      console.log(JSON.stringify({
+        event: "sold_comps_prewrite_dedup_replaced",
+        source: "soldCompsStore.recordSoldComp",
+        cardId: doc.cardId,
+        contentHash,
+        replacedCount: existing.length,
+        incomingSource: doc.source,
+      }));
+    }
+  } catch (err) {
+    // Dedup-query failure is non-fatal; fall through to the upsert.
+    // Idempotent upsert on the (source, sourceExternalId) id still
+    // prevents same-path dups.
+    if (Math.random() < 0.01) {
+      console.warn(JSON.stringify({
+        event: "sold_comps_prewrite_dedup_query_failed",
+        source: "soldCompsStore.recordSoldComp",
+        cardId: doc.cardId,
+        error: (err as Error)?.message ?? String(err),
+        sampled: true,
+      }));
+    }
+  }
 
   try {
     await c.items.upsert(doc as any);
