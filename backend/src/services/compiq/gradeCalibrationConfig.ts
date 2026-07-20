@@ -252,8 +252,49 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   }
 };
 
-/** Lookup helper. Returns null when the (family, grader) is uncovered. */
-export function lookupGradeRatio(family: string, grader: string): number | null {
+// CF-GRADE-CALIBRATION-SPORT (Drew, 2026-07-20). Per-sport grade
+// calibration overlays. The default GRADE_CALIBRATION table above is
+// implicitly baseball (generated from ch_daily_sales when the corpus
+// was baseball-only). Football + basketball generally have DIFFERENT
+// grade-uplift ratios — PSA 10 basketball rookies fetch 5-10× raw
+// while baseball prospects sit at 3-4×. When per-sport calibration
+// tables are populated (via a per-sport calibrate-grade-multipliers.mjs
+// re-run once the football + basketball backfills finish),
+// lookupGradeRatio prefers the sport-specific table and falls back to
+// the baseline (baseball) table when a specific tier isn't covered.
+//
+// Right now GRADE_CALIBRATION_BY_SPORT is stubbed empty — the shape
+// is ready for the per-sport regeneration output. Callers that pass
+// sport get sport-correct answers when data is available and safe
+// fallback to the baseline otherwise.
+
+export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<string, GradeCalibrationEntry>>> = {
+  // Populated by scripts/calibrate-grade-multipliers.mjs --sport=X
+  // when re-run per-sport. Empty until football + basketball
+  // backfills finish + the calibration script gets a --sport flag.
+  baseball: {},   // reserved; baseline GRADE_CALIBRATION is the
+                  // baseball-implicit source of truth today
+  football: {},
+  basketball: {},
+  hockey: {},
+};
+
+/** Lookup helper. Returns null when the (family, grader) is uncovered.
+ *  When `sport` is provided, prefers sport-specific calibration; falls
+ *  back to the baseline table (currently baseball-derived). */
+export function lookupGradeRatio(
+  family: string,
+  grader: string,
+  sport?: string | null,
+): number | null {
+  if (sport) {
+    const sportEntry = GRADE_CALIBRATION_BY_SPORT[sport]?.[family]?.[grader];
+    if (sportEntry) return sportEntry.medianRatio;
+    // No sport-specific entry — for non-baseball sports we intentionally
+    // FALL THROUGH to the baseline table so the app still returns a
+    // number. Downstream telemetry can track "sport uncovered" as a
+    // signal to prioritize regenerating per-sport calibration.
+  }
   const entry = GRADE_CALIBRATION[family]?.[grader];
   return entry ? entry.medianRatio : null;
 }
