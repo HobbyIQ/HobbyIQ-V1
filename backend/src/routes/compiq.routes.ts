@@ -3423,6 +3423,13 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): route the auto
         // vs base classification so raw × multiplier picks the right column.
         cardClass: extractCardClass(identity),
+        // CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): pipe setName +
+        // sport so fillEstimatedFallback can prefer the empirical
+        // (family, grader) medianRatio × sub-tier scaling over the
+        // hardcoded class-aware matrix. Falls back to matrix when
+        // family/grader combo isn't calibrated.
+        setName: (identity as { set?: string | null })?.set ?? null,
+        sport: (identity as { sport?: string | null })?.sport ?? null,
       }),
       (async () => {
         const identYear =
