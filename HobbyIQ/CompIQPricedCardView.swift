@@ -87,6 +87,12 @@ struct CompIQPricedCardView: View {
     /// otherwise route the value slot to a hedged estimate or last-
     /// sale fallback. Populated by GradePillPanel via `onEntriesLoaded`.
     @State private var panelEntries: [CardPanelGradeEntry] = []
+    /// 2026-07-20 (spec update): canonical FMV envelope fetched on
+    /// view-appear / grade-change. Powers the "sells around $X (recent
+    /// range $Y–$Z)" subtitle under the MARKET VALUE headline. Nil
+    /// until first fetch; failure leaves it nil so the subtitle
+    /// stays hidden rather than showing stale numbers.
+    @State private var canonicalFmv: CanonicalFmvResponse?
     // CF-PAGES-NOT-SHEETS (2026-07-04): TrendIQ Layer Breakdown +
     // Add-to-Inventory now push as pages, not sheets. Single enum-
     // routed navigationDestination avoids the multi-isPresented iOS
@@ -199,6 +205,16 @@ struct CompIQPricedCardView: View {
             if sessionViewModel.subscriptionManager.has(GatedFeature.trendIQLayer3Full) {
                 await fetchTrendIQFull()
             }
+        }
+        // 2026-07-20 (spec update): fire the canonical-FMV fetch on
+        // both first appear and every grade change so the "sells
+        // around $X (range $Y–$Z)" subtitle is always in sync with
+        // the currently-selected grade. Silent failure keeps the
+        // subtitle hidden — the primary MARKET VALUE headline still
+        // renders from price-by-id.
+        .task(id: canonicalFmvKey) {
+            guard !skipFetch else { return }
+            await loadCanonicalFmv()
         }
         .onChange(of: selectedGrade) { _, _ in
             guard !skipFetch else { return }
@@ -473,6 +489,64 @@ struct CompIQPricedCardView: View {
             return player
         }
         return hit.resolvedLabel
+    }
+
+    /// Stable identity for the canonical-FMV `.task(id:)` so a
+    /// grade change re-triggers the fetch. Skips when we don't have
+    /// a cardId to send (defensive; the price fetch is also guarded).
+    private var canonicalFmvKey: String {
+        let card = hit.cardId
+        let grade = selectedGrade.gradeCompany ?? "raw"
+        let value = selectedGrade.gradeValue.map { String($0) } ?? "0"
+        return "\(card)|\(grade)|\(value)"
+    }
+
+    /// Fires POST /api/compiq/canonical-fmv for the currently-viewed
+    /// card + grade. Silent failure — the recentRange subtitle just
+    /// stays hidden.
+    private func loadCanonicalFmv() async {
+        let trimmed = hit.cardId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        let parallel: String? = {
+            guard let v = hit.variant?.trimmingCharacters(in: .whitespaces),
+                  v.isEmpty == false, v.lowercased() != "base" else { return nil }
+            return v
+        }()
+        let request = CanonicalFmvRequest(
+            cardId: trimmed,
+            parallel: parallel,
+            gradeCompany: selectedGrade.gradeCompany,
+            gradeValue: selectedGrade.gradeValue,
+            cardYear: hit.year,
+            product: hit.set,
+            player: playerNameForTap,
+            cardNumber: hit.number,
+            freshCompute: false
+        )
+        do {
+            canonicalFmv = try await APIService.shared.fetchCanonicalFmv(request)
+        } catch {
+            // Silent — subtitle stays hidden, headline still renders.
+        }
+    }
+
+    /// 2026-07-20 (spec update): honest-range subtitle built from the
+    /// canonical FMV response. "Sells around $X (recent range $Y–$Z)".
+    /// Hidden when the pipeline returned no observed range (rung 5+
+    /// family-baseline fallback) or when the sample is too thin (n<3).
+    private var recentRangeSubtitle: String? {
+        guard let range = canonicalFmv?.recentRange,
+              (range.n ?? 0) >= 3,
+              let median = range.median, median > 0,
+              let p25 = range.p25, p25 > 0,
+              let p75 = range.p75, p75 > 0 else {
+            return nil
+        }
+        return "Sells around \(compactUSD(median)) (recent range \(compactUSD(p25))\u{2013}\(compactUSD(p75)))"
+    }
+
+    private func compactUSD(_ value: Double) -> String {
+        "$\(Int(value.rounded()).formatted(.number.grouping(.automatic)))"
     }
 
     /// 2026-07-20 (spec §5): the player name the header-tap hands to
@@ -1521,6 +1595,17 @@ struct CompIQPricedCardView: View {
                     .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                // 2026-07-20 (spec update): honest-range subtitle from
+                // canonical FMV — "Sells around $X (recent range $Y–$Z)".
+                // Rendered when we have a non-null recentRange + n>=3.
+                // Sits alongside the existing `source.subtitle` line;
+                // both can render together when the pipeline supplies
+                // both signals.
+                if let rangeSubtitle = recentRangeSubtitle {
+                    Text(rangeSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
                 if let note = source.subtitle {
                     Text(note)
                         .font(.caption)
