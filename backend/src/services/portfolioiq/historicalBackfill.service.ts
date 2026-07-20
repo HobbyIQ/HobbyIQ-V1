@@ -76,10 +76,26 @@ export interface BackfillRunResult {
   durationMs: number;
 }
 
+/** CF-BACKFILL-GRADE-DROP-FIX (Drew, 2026-07-19). Parses "PSA 10" /
+ *  "BGS 9.5" / "Raw" into (gradeCompany, gradeValue) so backfill can
+ *  thread the grade tier all the way to recordSoldComp — the previous
+ *  code queried CH by grade but stored the result without grade fields,
+ *  silently poisoning the RAW pool with graded prices. Same helper as
+ *  backfill-sold-comps-from-ch.cjs parseGrader(). */
+function parseGraderString(grader: string | null | undefined): { gradeCompany: string | null; gradeValue: number | null } {
+  const g = String(grader ?? "").trim();
+  if (!g || g.toLowerCase() === "raw") return { gradeCompany: null, gradeValue: null };
+  const m = g.match(/^([A-Z]+)\s+([0-9.]+)$/i);
+  if (!m) return { gradeCompany: null, gradeValue: null };
+  const value = Number(m[2]);
+  return { gradeCompany: m[1].toUpperCase(), gradeValue: Number.isFinite(value) ? value : null };
+}
+
 async function backfillOneCH(target: BackfillTarget): Promise<{ written: number; error?: string }> {
   const chCardId = target.chCardId?.trim();
   if (!chCardId) return { written: 0 };
   const grade = target.grade ?? "Raw";
+  const { gradeCompany, gradeValue } = parseGraderString(grade);
   let sales: CardHedgeSale[];
   try {
     sales = await getCardSales(chCardId, grade, CH_MAX_SALES);
@@ -93,10 +109,10 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
   for (const s of sales) {
     if (!Number.isFinite(s.price) || s.price <= 0) continue;
     if (!s.date) continue;
-    // Composite external id from (chCardId, date, price-cents). Matches
-    // the pattern used in cardsight.router tryCardHedge emit so re-writes
-    // dedupe cleanly against records already in the pool.
-    const externalId = `${chCardId}::${s.date}::${Math.round(s.price * 100)}`;
+    // Composite external id from (chCardId, date, price-cents, grade).
+    // Grade included so a Raw pass and a PSA 10 pass for the same date/
+    // price don't collide on the same doc id.
+    const externalId = `${chCardId}::${s.date}::${Math.round(s.price * 100)}::${grade}`;
     try {
       await recordSoldComp({
         cardId: chCardId,
@@ -106,6 +122,8 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
         parallel: target.identity.parallel ?? null,
         cardNumber: target.identity.cardNumber ?? null,
         isAuto: target.identity.isAuto ?? false,
+        gradeCompany,
+        gradeValue,
         price: s.price,
         soldAt: s.date,
         source: "cardhedge",
@@ -154,7 +172,16 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
   for (const r of allRecords) {
     if (!Number.isFinite(r.price) || r.price <= 0) continue;
     if (!r.date) continue;
-    const externalId = `${csCardId}::${r.date}::${Math.round(r.price * 100)}`;
+    // CF-BACKFILL-GRADE-DROP-FIX (Drew, 2026-07-19). Each allRecords
+    // entry carries its own tier tag (r.grade) — "Raw" for the raw
+    // records array, "PSA 10" / "BGS 9.5" / etc. for graded companies.
+    // Parse it into (gradeCompany, gradeValue) so the pool row lands
+    // in the right tier bucket. Previous code stored every graded
+    // record as raw, poisoning the raw FMV pool with graded prices.
+    const { gradeCompany, gradeValue } = parseGraderString(r.grade);
+    // Include grade in externalId so parallel raw/graded records at
+    // the same date+price don't collide on the same doc id.
+    const externalId = `${csCardId}::${r.date}::${Math.round(r.price * 100)}::${r.grade ?? "Raw"}`;
     try {
       await recordSoldComp({
         cardId: csCardId,
@@ -164,6 +191,8 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
         parallel: target.identity.parallel ?? null,
         cardNumber: target.identity.cardNumber ?? null,
         isAuto: target.identity.isAuto ?? false,
+        gradeCompany,
+        gradeValue,
         price: r.price,
         soldAt: r.date,
         source: "cardsight",

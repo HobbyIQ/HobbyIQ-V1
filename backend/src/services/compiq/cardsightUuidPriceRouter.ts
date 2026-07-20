@@ -282,7 +282,19 @@ export async function priceByCardsightUuid(
           confidence: 0.6,
         });
       }
-    } catch { /* swallow — vendor emit is auxiliary */ }
+    } catch (err) {
+      // CF-VENDOR-EMIT-TELEMETRY (Drew, 2026-07-19). Was silent-swallow.
+      // Sampled to avoid spamming when CS is globally unhealthy.
+      if (Math.random() < 0.01) {
+        console.warn(JSON.stringify({
+          event: "cardsight_vendor_emit_failed",
+          source: "cardsightUuidPriceRouter.emit",
+          cardId: input.cardId,
+          error: (err as Error)?.message ?? String(err),
+          sampled: true,
+        }));
+      }
+    }
   })();
 
   // Build the wire response — same field shape iOS decodes from the CH

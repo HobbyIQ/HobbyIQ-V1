@@ -52,10 +52,13 @@ import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./pla
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
 import { cacheDel, cacheWrap } from "../shared/cache.service.js";
 import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
-import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+// fetchCompsByPlayer no longer used here — warmPoolFromCh retired
+// (see CF-RETIRE-WARM-POOL-FROM-CH). Kept the comment references so
+// git-blame trail stays intact.
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { classifyFamily, lookupGradeRatio } from "./gradeCalibrationConfig.js";
+import { titleMatchesParallel } from "./titleParallelMatch.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -510,6 +513,13 @@ async function warmPoolFromEbayBrowseEnded(
       // imminently (unsettled). Only ingest ones whose endDate is
       // clearly in the past.
       if (endMs > nowMs - SETTLED_BUFFER_MS) continue;
+      // CF-EBAY-BROWSE-ENDED-TITLE-VERIFY (Drew, 2026-07-19). eBay
+      // Browse fuzzy-matches parallel — a "Blue Refractor" query
+      // returns "Blue X-Fractor" listings and worse. Without this
+      // gate we'd write the wrong-parallel listing into sold_comps
+      // tagged with input.parallel, permanently corrupting FMV
+      // downstream. Same class of bug as retired warmPoolFromCh.
+      if (!titleMatchesParallel(l.title ?? "", input.parallel ?? null, input.cardNumber ?? null, input.player ?? null)) continue;
       try {
         await recordSoldComp({
           cardId,
@@ -661,50 +671,13 @@ async function warmPoolFromChDailySales(
   } catch { return 0; }
 }
 
-async function warmPoolFromCh(input: CanonicalFmvInput): Promise<number> {
-  if (!input.player || !input.product) return 0;
-  try {
-    const chResult = await fetchCompsByPlayer({
-      playerName: input.player,
-      product: input.product,
-      cardYear: input.cardYear ?? undefined,
-      parallel: input.parallel ?? undefined,
-      gradeCompany: input.gradeCompany ?? undefined,
-      gradeValue: input.gradeValue ?? undefined,
-    });
-    let ingested = 0;
-    for (const comp of chResult.comps) {
-      if (!comp.cardId || !Number.isFinite(comp.price) || comp.price <= 0) continue;
-      if (!comp.date) continue;
-      try {
-        await recordSoldComp({
-          cardId: comp.cardId,
-          playerName: input.player,
-          cardYear: input.cardYear ?? null,
-          setName: input.product ?? null,
-          parallel: input.parallel ?? null,
-          cardNumber: input.cardNumber ?? null,
-          isAuto: detectIsAuto(input),
-          gradeCompany: input.gradeCompany ?? null,
-          gradeValue: input.gradeValue ?? null,
-          price: comp.price,
-          soldAt: comp.date,
-          source: "cardhedge",
-          // Deterministic externalId → idempotent upsert across re-runs.
-          sourceExternalId: `ch-comp::${comp.cardId}::${comp.date}::${Math.round(comp.price * 100)}`,
-          contributorUserId: null,
-          title: comp.title ?? null,
-          imageUrl: null,
-          sellerHandle: null,
-          verifiedByUser: false,
-          confidence: 0.7,
-        });
-        ingested++;
-      } catch { /* per-comp errors swallowed */ }
-    }
-    return ingested;
-  } catch { return 0; }
-}
+// CF-RETIRE-WARM-POOL-FROM-CH (Drew, 2026-07-19). warmPoolFromCh was
+// removed here — see the note at the call site in
+// computeCanonicalFmvUncached. Cross-parallel pollution was leaking
+// input.parallel into the stored row's parallel field because
+// fetchCompsByPlayer doesn't return per-row parallel. Kept
+// warmPoolFromChDailySales instead (correct per-row variant from CH's
+// daily dump).
 
 // ─── Rung 1: direct same-parallel same-grade comps ────────────────────
 async function tryDirectComp(
@@ -747,16 +720,20 @@ async function tryDirectComp(
   // (auction winning bids + expired BINs), so we don't pollute the
   // pool with active ask prices.
   if (fresh.length < 3 && input.player) {
-    const [chAdded, chDailyAdded, ebayEndedAdded] = await Promise.all([
-      input.product ? warmPoolFromCh(input) : Promise.resolve(0),
-      // CF-CH-DAILY-SALES-WARM: query our local ch_daily_sales container
-      // directly by cardId — same data source as fetchCompsByPlayer but
-      // scoped to the exact SKU. Fires in parallel with the aggregate-
-      // level CH warm; both are idempotent.
+    // CF-RETIRE-WARM-POOL-FROM-CH (Drew, 2026-07-19). Dropped
+    // warmPoolFromCh — it wrote CH-search-API comps tagged with
+    // input.parallel instead of per-comp parallel, causing cross-
+    // parallel pollution in sold_comps (e.g. Blue X-Fractor $550 sale
+    // was written with parallel="Refractor" AND parallel="Blue
+    // X-Fractor" from separate queries). warmPoolFromChDailySales
+    // reads the same underlying CH data from local ch_daily_sales but
+    // uses the correct per-row variant field. Freshness gap is at
+    // most ~24hr (CH nightly ingest cadence) which is acceptable.
+    const [chDailyAdded, ebayEndedAdded] = await Promise.all([
       warmPoolFromChDailySales(cardId, input),
       warmPoolFromEbayBrowseEnded(cardId, input),
     ]);
-    if (chAdded + chDailyAdded + ebayEndedAdded > 0) {
+    if (chDailyAdded + ebayEndedAdded > 0) {
       comps = await readPool();
       fresh = filterFresh(comps);
     }

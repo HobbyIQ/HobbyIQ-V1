@@ -390,6 +390,13 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
                 parallel: r.after.parallel ?? null,
                 cardNumber: r.after.cardNumber ?? null,
                 isAuto: h.isAuto === true,
+                // CF-BACKFILL-GRADE-DROP-FIX (Drew, 2026-07-19). Thread
+                // grade fields through so the batch admin backfill for
+                // graded eBay holdings writes into the right grade
+                // tier — earlier code dropped both, storing every graded
+                // sale as raw.
+                gradeCompany: (h.gradeCompany as string | null) ?? null,
+                gradeValue: (h.gradeValue as number | null) ?? null,
                 price: r.purchasePrice!,
                 soldAt,
                 source: "ebay-user-purchase",

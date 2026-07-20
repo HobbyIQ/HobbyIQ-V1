@@ -870,14 +870,39 @@ export async function generateCardIdSuggestions(
             ?? new Date().toISOString(),
           );
           const confidence = Number((h as any).suggestionConfidence ?? 0.7);
+          // CF-SUGGESTER-IDENTITY-COHERENCE (Drew, 2026-07-19). When
+          // the suggester replaces the holding's cardId, its
+          // parallel/cardNumber/setName are ALSO the new authority —
+          // the whole point of a rematch is that the holding's original
+          // fields were wrong (that's why cardId got swapped). Storing
+          // the new cardId with the old parallel/cardNumber gives a
+          // mismatched comp doc that poisons downstream FMV. Prefer
+          // suggestionCandidate.{variant,number,set,year} when present;
+          // fall back to holding fields only if the candidate is silent
+          // on that dimension.
+          const cand = ((h as any).suggestionCandidate ?? {}) as {
+            variant?: string | null;
+            number?: string | null;
+            set?: string | null;
+            year?: string | number | null;
+          };
+          const parallelToWrite = cand.variant ?? (h as any).parallel ?? null;
+          const cardNumberToWrite = cand.number ?? (h as any).cardNumber ?? null;
+          const setNameToWrite = cand.set ?? (h as any).setName ?? null;
+          const candYear = typeof cand.year === "number"
+            ? cand.year
+            : typeof cand.year === "string" && Number.isFinite(Number(cand.year))
+              ? Number(cand.year)
+              : null;
+          const cardYearToWrite = candYear ?? (h as any).cardYear ?? null;
           try {
             await recordSoldComp({
               cardId: suggestedCardId,
               playerName,
-              cardYear: (h as any).cardYear ?? null,
-              setName: (h as any).setName ?? null,
-              parallel: (h as any).parallel ?? null,
-              cardNumber: (h as any).cardNumber ?? null,
+              cardYear: cardYearToWrite,
+              setName: setNameToWrite,
+              parallel: parallelToWrite,
+              cardNumber: cardNumberToWrite,
               isAuto: (h as any).isAuto === true,
               gradeCompany: (h as any).gradeCompany ?? null,
               gradeValue: (h as any).gradeValue ?? null,
