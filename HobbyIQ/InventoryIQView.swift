@@ -218,7 +218,7 @@ struct InventoryIQView: View {
     private var header: some View {
         let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
         let totalValue: Double = vm.inventoryCards.reduce(0.0) { sum, card in
-            sum + vm.marketValue(for: card)
+            sum + holdingMarketValue(for: card)
         }
         let valueText = inventoryWholeDollarString(totalValue)
 
@@ -300,13 +300,13 @@ struct InventoryIQView: View {
                 .accessibilityLabel("Add a card to your inventory")
             }
 
-            // 2026-07-19: canonical-FMV cache warms per-entry and the
-            // legacy fallback chain is gone — cold cache returns $0.
-            // Guard the display on `isRefreshingFmvCache` and show a
-            // placeholder "\u{2014}" instead of a flickering $0 total.
+            // 2026-07-18: while the canonical-FMV cache warms, the live
+            // `totalValue` reduce would jump as each per-entry cache
+            // write triggers a re-render. Show a stable placeholder
+            // until the batch completes, then reveal the settled number.
             Group {
                 if vm.isRefreshingFmvCache {
-                    Text("\u{2014}")
+                    Text("—")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .redacted(reason: .placeholder)
@@ -562,6 +562,13 @@ struct InventoryIQView: View {
         .clipShape(Capsule(style: .continuous))
     }
 
+    /// 2026-07-18 canonical-FMV migration: routes through
+    /// `vm.marketValue(for:)` which prefers the canonical cache and
+    /// falls back to the legacy sync chain on miss.
+    private func holdingMarketValue(for card: InventoryCard) -> Double {
+        vm.marketValue(for: card)
+    }
+
     /// PR #549 (2026-07-17): toggle a holding into/out of the bulk-sell
     /// selection set. Called from row taps while `isMultiSelecting`.
     private func toggleBulkSelection(for card: InventoryCard) {
@@ -612,9 +619,9 @@ struct InventoryIQView: View {
 
         switch inventorySort {
         case .valueHighToLow:
-            cards.sort { vm.marketValue(for: $0) > vm.marketValue(for: $1) }
+            cards.sort { holdingMarketValue(for: $0) > holdingMarketValue(for: $1) }
         case .valueLowToHigh:
-            cards.sort { vm.marketValue(for: $0) < vm.marketValue(for: $1) }
+            cards.sort { holdingMarketValue(for: $0) < holdingMarketValue(for: $1) }
         case .nameAZ:
             cards.sort { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedAscending }
         case .nameZA:

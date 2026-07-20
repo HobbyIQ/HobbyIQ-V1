@@ -820,13 +820,24 @@ async function tryCardHedge(
         /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
           String(identity.number ?? ""),
         );
+      // CF-CH-ROUTER-GRADE-FIX (Drew, 2026-07-19). Thread the queried
+      // grade tier through to sold_comps — getTrustedComps was called
+      // with `grade` (line 785), but the emit dropped gradeCompany/
+      // gradeValue, storing every PSA/BGS sale as raw. Same class as
+      // the historicalBackfill grade-drop bug.
+      const gradeStr = String(grade ?? "").trim();
+      const gradeMatch = gradeStr && gradeStr.toLowerCase() !== "raw"
+        ? gradeStr.match(/^([A-Z]+)\s+([0-9.]+)$/i)
+        : null;
+      const rowGradeCompany = gradeMatch ? gradeMatch[1].toUpperCase() : null;
+      const rowGradeValue = gradeMatch && Number.isFinite(Number(gradeMatch[2])) ? Number(gradeMatch[2]) : null;
       for (const c of trusted.comps) {
         if (typeof c.price !== "number" || c.price <= 0) continue;
         if (!c.date) continue;
         // CH sales don't carry a stable per-sale external id.
-        // Use (chCardId + date + price-cents) as the composite key —
-        // idempotent for the same physical sale re-observed on rewrites.
-        const externalId = `${bridge.chCardId}::${c.date}::${Math.round(c.price * 100)}`;
+        // Use (chCardId + date + price-cents + grade) — grade included so
+        // a Raw call and a PSA 10 call don't collide on the same doc id.
+        const externalId = `${bridge.chCardId}::${c.date}::${Math.round(c.price * 100)}::${gradeStr || "Raw"}`;
         await recordSoldComp({
           cardId: bridge.chCardId,
           playerName,
@@ -835,6 +846,8 @@ async function tryCardHedge(
           parallel: identity.parallel ?? null,
           cardNumber: identity.number ?? null,
           isAuto,
+          gradeCompany: rowGradeCompany,
+          gradeValue: rowGradeValue,
           price: c.price,
           soldAt: c.date,
           source: "cardhedge",
@@ -850,7 +863,20 @@ async function tryCardHedge(
           confidence: 0.8,
         });
       }
-    } catch { /* swallow — vendor emit is auxiliary */ }
+    } catch (err) {
+      // CF-VENDOR-EMIT-TELEMETRY (Drew, 2026-07-19). Was silent-swallow.
+      // 1% sample so a broken emit path surfaces in App Insights
+      // without spamming when the module is globally unhealthy.
+      if (Math.random() < 0.01) {
+        console.warn(JSON.stringify({
+          event: "cardhedge_vendor_emit_failed",
+          source: "cardsight.router.tryCardHedge",
+          chCardId: bridge.chCardId,
+          error: (err as Error)?.message ?? String(err),
+          sampled: true,
+        }));
+      }
+    }
   })();
 
   return {

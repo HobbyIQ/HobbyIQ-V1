@@ -40,6 +40,7 @@ import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { fetchCardActiveListings } from "../services/ebay/ebayListingSearch.service.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
+import { titleMatchesParallel } from "../services/compiq/titleParallelMatch.js";
 
 const router = Router();
 
@@ -135,7 +136,7 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
     //   4. distinctive tokens NOT in the target must NOT appear
     //      (a Blue Refractor query rejects Blue X-Fractor listings)
     const verifiedListings = listingsResult.listings.filter((l) =>
-      titleMatchesParallel(l.title ?? "", parallel ?? null, cardNumber ?? null),
+      titleMatchesParallel(l.title ?? "", parallel ?? null, cardNumber ?? null, player ?? null),
     );
 
     const prices = verifiedListings
@@ -210,61 +211,8 @@ router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, 
   } catch (err) { next(err); }
 });
 
-/** Distinctive parallel keywords that must appear in the listing
- *  title if they appear in the target parallel. Mirrors the list in
- *  ebayImportRematch.service.ts DISTINCTIVE_SUBS so search matching
- *  and pool-side matching agree. */
-const DISTINCTIVE_TOKENS = [
-  "x-fractor", "xfractor", "shimmer", "speckle", "wave", "reptilian",
-  "lazer", "sapphire", "aqua", "ice", "mojo", "sepia", "true",
-  "border", "sky", "pattern", "geometric", "logofractor", "logo",
-  "prizm", "hyper", "silver", "cracked",
-];
-
-const BARE_COLORS = ["blue", "orange", "red", "green", "gold", "purple", "black", "pink", "yellow", "sepia"];
-
-/** Post-fetch title verification. Enforces cardNumber presence,
- *  parallel keyword presence, color presence, and exclusion of
- *  competing distinctive tokens. Returns true when the listing's
- *  title is plausibly for the target parallel. */
-function titleMatchesParallel(
-  title: string,
-  targetParallel: string | null,
-  targetCardNumber: string | null,
-): boolean {
-  const t = title.toLowerCase();
-  const parallel = (targetParallel ?? "").toLowerCase().trim();
-
-  // 1. cardNumber (if specified) MUST appear in the title
-  if (targetCardNumber && targetCardNumber.trim().length > 0) {
-    const cn = targetCardNumber.trim().toLowerCase();
-    // Match with optional # prefix and word boundary
-    const cnRe = new RegExp(`#?\\b${cn.replace(/[-.]/g, "\\$&")}\\b`);
-    if (!cnRe.test(t)) return false;
-  }
-
-  // No parallel specified → passes (base cards etc.)
-  if (!parallel) return true;
-
-  // 2. Every distinctive token in the target parallel MUST appear in the title.
-  const targetDistinctive = DISTINCTIVE_TOKENS.filter((tok) => parallel.includes(tok));
-  for (const tok of targetDistinctive) {
-    const stripped = tok.replace("-", "");
-    if (!t.includes(tok) && !t.includes(stripped)) return false;
-  }
-
-  // 3. Dominant color in the target MUST appear in the title.
-  const targetColor = BARE_COLORS.find((c) => new RegExp(`\\b${c}\\b`).test(parallel));
-  if (targetColor && !new RegExp(`\\b${targetColor}\\b`).test(t)) return false;
-
-  // 4. Distinctive tokens NOT in the target MUST NOT appear in the title.
-  // Prevents a "Blue Refractor" query from matching "Blue X-Fractor" listings.
-  const targetNoDistinctive = DISTINCTIVE_TOKENS.filter((tok) => !parallel.includes(tok));
-  for (const tok of targetNoDistinctive) {
-    if (t.includes(tok)) return false;
-  }
-
-  return true;
-}
+// titleMatchesParallel moved to services/compiq/titleParallelMatch.ts
+// so canonicalFmv's ebay-browse-ended warm can reuse the same
+// verification and stop cross-parallel pollution at the same gate.
 
 export default router;

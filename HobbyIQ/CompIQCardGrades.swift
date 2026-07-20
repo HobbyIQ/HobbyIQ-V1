@@ -183,11 +183,11 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
     /// market-value header on `CompIQPricedCardView` so the pill and
     /// the hero always show the same headline.
     ///
-    /// Distinct from the (removed 2026-07-19) top-level portfolio
-    /// helper — this one is grade-curve-scoped math, not a canonical-
-    /// FMV fallback chain. Renamed in the 2026-07-19 cleanup so no
-    /// symbol shares a name with the deleted helper.
-    var resolvedGradeValue: Double? {
+    /// Distinct from the (deprecated) top-level portfolio helper — this
+    /// one is grade-curve-scoped math, not a canonical-FMV fallback
+    /// chain. Kept under the same short name for backwards
+    /// compatibility with the rest of the panel-driven surfaces.
+    var resolvedMarketValue: Double? {
         if let v = trendAdjustedValue, v > 0 { return v }
         if let v = value, v > 0 { return v }
         if let v = weightedMedianPrice, v > 0 { return v }
@@ -793,7 +793,7 @@ struct GradePillPanel: View {
     /// $573. Order: `trendAdjustedValue` (stale-sale forward-adjusted)
     /// → `value` (fresh weighted median) → `weightedMedianPrice` →
     /// `plainMedianPrice`. Matches the doc comment on
-    /// `CardPanelGradeEntry.resolvedGradeValue`.
+    /// `CardPanelGradeEntry.resolvedMarketValue`.
     private func resolvedValue(_ entry: CardPanelGradeEntry) -> Double? {
         if let v = entry.trendAdjustedValue, v > 0 { return v }
         if let v = entry.value, v > 0 { return v }

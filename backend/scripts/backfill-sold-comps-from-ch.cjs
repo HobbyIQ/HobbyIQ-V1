@@ -115,7 +115,7 @@ async function main() {
       }
       const iter = ch.items.query({
         query: `SELECT c.card_id, c.player, c.year, c.card_set, c.variant, c.number,
-                       c.price, c.grader, c.sale_date, c.image_url
+                       c.price, c.grader, c.grade, c.sale_date, c.image_url
                 FROM c
                 WHERE c.sale_date >= @from AND c.sale_date <= @to AND c.price > 0${whereExtra}`,
         parameters,
@@ -147,7 +147,12 @@ async function main() {
     for (const chunk of chunks) {
       await Promise.all(chunk.map(async (r) => {
         if (!r.card_id || !(Number(r.price) > 0) || !r.sale_date) { daySkipped++; return; }
-        const { gradeCompany, gradeValue } = parseGrader(r.grader);
+        // CF-BACKFILL-GRADE-FIELD-FIX (Drew, 2026-07-20). ch_daily_sales
+        // stores grader as company-only ("BGS", "PSA") and the numeric
+        // tier lives on c.grade ("BGS 9.5", "PSA 10", "BGS AUTH", "Raw").
+        // Earlier code parsed r.grader → always returned null gradeValue
+        // → every graded sale stored as raw. Read r.grade instead.
+        const { gradeCompany, gradeValue } = parseGrader(r.grade ?? r.grader);
         const sourceExternalId = `ch-daily::${r.card_id}::${r.sale_date}::${Math.round(Number(r.price) * 100)}`;
         const title = `${r.year} ${r.card_set} #${r.number} ${r.variant}`.trim();
         const sport = args.sport ?? inferSport(r.card_set, title);

@@ -178,6 +178,11 @@ struct PortfolioIQView: View {
                 await collectionValueViewModel.load()
                 await loadSupplyDemandAggregates()
                 await loadBacktestAccuracyIfStale()
+                // 2026-07-19 (card-show batch): push permission ask
+                // moved here from DailyIQ per spec — Portfolio is the
+                // first paint that carries clear value for sell-side
+                // alerts, so it's the honest moment to ask.
+                await PushNotificationManager.shared.askIfFirstMeaningfulUse()
             }
             .sheet(isPresented: $showBacktestSheet) {
                 if let response = backtestAccuracy {
@@ -488,7 +493,6 @@ struct PortfolioIQView: View {
         // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split unpriced into
         // "N estimated · M pending" via the aggregate helper.
         let unpricedSuffix = agg.unpricedSubtitleSuffix
-        let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
         // S3.6 (2026-07-17): statusDate → relative "Updated 2h ago" style
         // instead of a "Jul 17" absolute stamp.

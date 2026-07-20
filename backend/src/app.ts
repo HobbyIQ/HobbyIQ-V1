@@ -25,6 +25,7 @@ import canonicalFmvRoutes from "./routes/canonicalFmv.routes.js";
 import listingRangeRoutes from "./routes/listingRange.routes.js";
 import recentSalesRoutes from "./routes/recentSales.routes.js";
 import marketMoversRoutes from "./routes/marketMovers.routes.js";
+import playerDetailRoutes from "./routes/playerDetail.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
@@ -120,6 +121,7 @@ app.use("/api/compiq", canonicalFmvRoutes);
 app.use("/api/compiq", listingRangeRoutes);
 app.use("/api/compiq", recentSalesRoutes);
 app.use("/api/compiq", marketMoversRoutes);
+app.use("/api", playerDetailRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
 // CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
@@ -142,19 +144,18 @@ app.use("/api/portfolio", sellRadarNotableSalesRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 // CF-DAILYIQ-ACTION-PLAN (2026-07-17): mount action-plan routes first
 // so its clean, minimal-import file resolves before dailyiq.routes'
-// legacy broken imports would be walked. Same three prefixes for
-// iOS casing tolerance.
+// legacy broken imports would be walked.
+// CF-DAILYIQ-CASE-CLEANUP (Drew, 2026-07-19): dropped the /api/dailyIQ
+// and /api/daily case-variant mounts. iOS/backend audit confirmed
+// iOS only calls /api/dailyiq — those extra mounts were noise +
+// attack surface (anyone could enumerate them).
 app.use("/api/dailyiq", dailyiqActionPlanRoutes);
-app.use("/api/dailyIQ", dailyiqActionPlanRoutes);
-app.use("/api/daily", dailyiqActionPlanRoutes);
 app.use("/api/backtest", backtestRoutes);
 app.use("/api/portfolio", bulkSellComposerRoutes);
 app.use("/api/portfolio", tradeTargetsRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/catalog", catalogAdditionsRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
-app.use("/api/dailyIQ", dailyiqRoutes);
-app.use("/api/daily", dailyiqRoutes);
 app.use("/api/playeriq", playeriqRoutes);
 app.use("/api/ebay/webhook", ebayWebhookRoutes);
 app.use("/api/ebay", ebayRoutes);

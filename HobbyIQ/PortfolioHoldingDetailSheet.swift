@@ -47,6 +47,14 @@ struct PortfolioHoldingDetailSheet: View {
     /// PR #553 (2026-07-17): one-click compose in-flight state. Gates
     /// the "List on eBay ->" CTA on the action-recommendation card.
     @State private var isComposingListing = false
+    /// 2026-07-19 (card-show batch): grade-ladder tap that temporarily
+    /// swaps the FMV headline to a sibling tier's value. Nil = no
+    /// active swap (headline reads the holding's own grade).
+    @State private var swappedLadderTier: GradeLadderTier?
+    /// Manual-comp add sheet gate + recent-sales feed refresh token so
+    /// a new comp bumps the feed reload.
+    @State private var showingReportSaleSheet: Bool = false
+    @State private var recentSalesRefreshToken: String = UUID().uuidString
     /// CF-IOS-GRADER-STATUS-UI (2026-06-28): mirrors `card.graderStatus`
     /// for the dropdown's optimistic UI. Seeded in init from the holding;
     /// PATCH commits update it (and the row stays correct because the
@@ -265,6 +273,72 @@ struct PortfolioHoldingDetailSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
     }
 
+    /// 2026-07-19 (card-show batch, PR #601): discoverable
+    /// "Report a sale" affordance. Gated on the holding having a
+    /// resolved cardId — a comp with no cardId can't feed the
+    /// canonical pipeline.
+    @ViewBuilder
+    private var reportSaleActionRow: some View {
+        if let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           cardId.isEmpty == false {
+            Button {
+                showingReportSaleSheet = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.rectangle.on.folder")
+                        .font(.subheadline.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Report a sale you saw")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Attest a comp to sharpen FMV for everyone.")
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(HobbyIQTheme.Spacing.medium)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// 2026-07-19 (card-show batch): grader label for the holding's
+    /// currently-viewed grade, used to draw the accent ring on the
+    /// grade ladder's "you hold this" cell and match against sibling
+    /// tiers when the user taps for a what-if swap. Raw holdings map
+    /// to "Raw" (backend surfaces the raw tier under that exact label).
+    private var currentGraderLabel: String {
+        guard let company = card.gradeCompany?.trimmingCharacters(in: .whitespacesAndNewlines),
+              company.isEmpty == false,
+              let value = card.gradeValue else {
+            return "Raw"
+        }
+        let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", value)
+            : String(format: "%.1f", value)
+        return "\(company.uppercased()) \(valueStr)"
+    }
+
+    /// Hero canonical FMV feed. Prefers the shared VM cache; the
+    /// swapped ladder tier is a display-only override — the underlying
+    /// canonical response the hero holds stays authoritative for
+    /// method / confidence / provenance chips.
+    private var effectiveHeroCanonicalFmv: CanonicalFmvResponse? {
+        viewModel.canonicalFmv(for: card)
+    }
+
     /// PR #553 (2026-07-17): POST /compose-listing gate before opening
     /// the draft view. On 422 with a hint, surface the hint verbatim so
     /// the user knows which field to fill. On success, present the
@@ -335,8 +409,8 @@ struct PortfolioHoldingDetailSheet: View {
         let qty = max(1.0, card.quantity ?? 1.0)
         if let entry = lockedGradeEntry(),
            entry.valueSource == .observed,
-           (entry.sampleCount ?? 0) > 0,
-           let value = entry.resolvedGradeValue, value > 0 {
+           entry.sampleCount > 0,
+           let value = entry.resolvedMarketValue, value > 0 {
             return value * qty
         }
         let resolved = viewModel.marketValue(for: card)
@@ -367,7 +441,7 @@ struct PortfolioHoldingDetailSheet: View {
             let entries = response.gradeCurve?.entries ?? []
             panelEntries = entries
             let hasObserved = entries.contains { entry in
-                entry.valueSource == .observed && (entry.sampleCount ?? 0) > 0
+                entry.valueSource == .observed && entry.sampleCount > 0
             }
             if hasObserved {
                 viewModel.writeLivePanelEntries(cardId: cardId, entries: entries)
@@ -1090,7 +1164,7 @@ struct PortfolioHoldingDetailSheet: View {
     @ViewBuilder
     private func scenarioPill(label: String, key: String) -> some View {
         let entry = entryForKey(key)
-        let hasData = entry?.resolvedGradeValue != nil
+        let hasData = entry?.resolvedMarketValue != nil
         let isSelected = scenarioGradeKey == key
         Button {
             scenarioGradeKey = key
@@ -1130,7 +1204,7 @@ struct PortfolioHoldingDetailSheet: View {
     @ViewBuilder
     private var scenarioResultRows: some View {
         let entry = entryForKey(scenarioGradeKey)
-        let projected: Double? = entry?.resolvedGradeValue
+        let projected: Double? = entry?.resolvedMarketValue
         let gradingCost = scenarioCostValue
         // 2026-07-18 canonical-FMV migration: the "vs raw today" delta
         // row anchors on the canonical value (per-unit) when the VM
@@ -1286,15 +1360,16 @@ struct PortfolioHoldingDetailSheet: View {
                             // hero in lock-step with what the
                             // inventory row is displaying.
                             livePanelValue: heroLivePanelValue(),
+                            onEdit: { showingEditSheet = true },
                             // 2026-07-18: pass the shared VM-level
                             // canonical FMV cache so the hero, row,
                             // and dashboard total all read from one
                             // source. Nil = hero falls back to its
                             // own per-view fetch.
-                            sharedCanonicalFmv: viewModel.canonicalFmv(for: card)
-                        ) {
-                            showingEditSheet = true
-                        }
+                            sharedCanonicalFmv: effectiveHeroCanonicalFmv,
+                            headlineFmvOverride: swappedLadderTier?.fmv,
+                            onClearHeadlineOverride: { swappedLadderTier = nil }
+                        )
 
                         // PR #592 (2026-07-18): p25-p75 range + median of
                         // ACTIVE eBay listings for this card. Self-
@@ -1310,6 +1385,42 @@ struct PortfolioHoldingDetailSheet: View {
                             cardNumber: nil
                         )
                         .padding(.horizontal, 16)
+
+                        // 2026-07-19 (card-show batch, PR #598-#600):
+                        // Recent Sales feed. Collapsed by default;
+                        // hides entirely when count=0.
+                        RecentSalesSection(
+                            cardId: card.cardId,
+                            parallel: card.parallel.isEmpty ? nil : card.parallel,
+                            gradeCompany: card.gradeCompany,
+                            gradeValue: card.gradeValue,
+                            refreshToken: recentSalesRefreshToken
+                        )
+                        .padding(.horizontal, 16)
+
+                        // 2026-07-19 (card-show batch, PR #601):
+                        // "Report a sale" discoverable action — always
+                        // rendered so users can attest a comp even when
+                        // the recent-sales feed is empty.
+                        reportSaleActionRow
+                            .padding(.horizontal, 16)
+
+                        // 2026-07-19 (card-show batch): Grade Ladder.
+                        // Tap a tier to temporarily swap the headline
+                        // FMV; tap it again (or a different one) to
+                        // toggle. Self-suppresses when the backend
+                        // doesn't return `gradeLadder`.
+                        if let ladder = viewModel.canonicalFmv(for: card)?.gradeLadder {
+                            GradeLadderSection(
+                                ladder: ladder,
+                                currentGraderLabel: currentGraderLabel,
+                                selectedGraderLabel: swappedLadderTier?.grader,
+                                onSelectTier: { tier in
+                                    swappedLadderTier = tier
+                                }
+                            )
+                            .padding(.horizontal, 16)
+                        }
 
                         // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
                         // 2026-07-17: PREDICTED (7d/30d) tile pulled from
@@ -1726,6 +1837,18 @@ struct PortfolioHoldingDetailSheet: View {
                         // holding + any cardId change materializes on
                         // detail + inventory.
                         onUpdated()
+                    }
+                }
+                .sheet(isPresented: $showingReportSaleSheet) {
+                    ReportSaleSheet(card: card) { _ in
+                        // 2026-07-19 (card-show batch): on successful
+                        // manual comp add, invalidate the canonical
+                        // cache entry so the FMV re-fetches with the
+                        // fresh comp on the next render, and bump the
+                        // recent-sales feed's refresh token so it
+                        // reloads immediately.
+                        recentSalesRefreshToken = UUID().uuidString
+                        Task { await viewModel.invalidateCanonicalFmv(for: card) }
                     }
                 }
                 .navigationDestination(isPresented: $showingCompIQAnalysis) {

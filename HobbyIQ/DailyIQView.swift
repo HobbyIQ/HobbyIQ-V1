@@ -156,10 +156,10 @@ struct DailyIQView: View {
             async let notable: Void = loadNotableSales()
             async let plan: Void = loadActionPlan()
             _ = await (refresh, brief, signals, mine, candidates, hot, sellNow, notable, plan)
-            // P1 (2026-07-16, iOS delta): first meaningful use of the
-            // app — checking DailyIQ. Ask for push permission here (once)
-            // per Apple HIG so the affordance is connected to the value.
-            await PushNotificationManager.shared.askIfFirstMeaningfulUse()
+            // 2026-07-19 (card-show batch): push permission ask moved
+            // from here to PortfolioIQView per updated spec — sell-side
+            // alerts land in the Portfolio surface, so it's the more
+            // honest moment to request the affordance.
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }

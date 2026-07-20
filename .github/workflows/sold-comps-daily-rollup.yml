@@ -1,0 +1,104 @@
+name: Sold Comps Daily Rollup
+
+# CF-SOLD-COMPS-DAILY-ROLLUP (Drew, 2026-07-19). Materializes per-
+# (cardId, parallel, grade) daily aggregates into sold_comps_daily so
+# matched-cohort, market-movers, and player-trend queries don't
+# hammer the raw pool. Runs nightly against yesterday's writes;
+# manual dispatch for backfilling historical windows.
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 7:00AM ET = 11:00 UTC (after CH daily ingest completes)
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: 'Start date (YYYY-MM-DD, inclusive). Default: yesterday.'
+        required: false
+        type: string
+      to_date:
+        description: 'End date (YYYY-MM-DD, inclusive). Default: today.'
+        required: false
+        type: string
+      sport:
+        description: 'Sport scope (baseball/football/…/all)'
+        required: false
+        type: string
+        default: 'baseball'
+      dry_run:
+        description: 'Dry-run (compute + report, no writes)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  rollup:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING
+        run: |
+          set -euo pipefail
+          CONN=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" \
+            -o tsv)
+          echo "::add-mask::$CONN"
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+
+      - name: Compute default window (yesterday → today) if inputs empty
+        id: window
+        run: |
+          FROM="${{ inputs.from_date }}"
+          TO="${{ inputs.to_date }}"
+          if [ -z "$FROM" ]; then FROM=$(date -u -d 'yesterday' +%Y-%m-%d); fi
+          if [ -z "$TO" ]; then TO=$(date -u +%Y-%m-%d); fi
+          echo "from_date=$FROM" >> "$GITHUB_OUTPUT"
+          echo "to_date=$TO" >> "$GITHUB_OUTPUT"
+
+      - name: Run rollup
+        working-directory: backend
+        env:
+          DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '--dry-run' || '--apply' }}
+          SPORT: ${{ inputs.sport || 'baseball' }}
+        run: |
+          node scripts/rollup-sold-comps-daily.cjs \
+            --from=${{ steps.window.outputs.from_date }} \
+            --to=${{ steps.window.outputs.to_date }} \
+            --sport=$SPORT \
+            $DRY_RUN_ARG \
+            | tee rollup-out.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rollup-log-${{ github.run_id }}
+          path: backend/rollup-out.log
+          retention-days: 14

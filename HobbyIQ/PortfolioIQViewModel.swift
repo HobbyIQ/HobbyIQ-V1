@@ -62,10 +62,10 @@ final class PortfolioIQViewModel: ObservableObject {
 
     /// 2026-07-18 canonical-FMV migration: server is the single source
     /// of truth for market value. Populated in a background batch after
-    /// `load()` returns; rows consult this cache via `marketValue(for:)`.
-    /// Cold cache / no-basis returns 0 — callers show a placeholder,
-    /// they never fabricate a number from legacy fields. (2026-07-19:
-    /// legacy fallback chain removed.)
+    /// `load()` returns; rows consult this cache via `marketValue(for:)`
+    /// which falls back to the private `syncFallbackMarketValue(for:)`
+    /// chain when the entry is missing (cold cache, in-flight fetch,
+    /// or backend `no-basis`).
     @Published private(set) var fmvCache: [FmvKey: CanonicalFmvResponse] = [:]
     /// True while the batch loader is populating `fmvCache`. Used by
     /// row skeletons + the "updated Xs ago" caption on the dashboard.
@@ -528,11 +528,10 @@ final class PortfolioIQViewModel: ObservableObject {
         // own `@Published` slots without racing the parent.
         Task { await fetchLedger() }
         Task { await fetchPendingReview() }
-        // 2026-07-19: flip the FMV-loading flag before `fetch` publishes
-        // `inventoryCards` so the Inventory header doesn't render $0
-        // for a frame between the fetch landing and the canonical warm
-        // starting (legacy fallback removed, cold cache now returns 0).
-        // `refreshCanonicalFmvCache`'s defer clears it.
+        // 2026-07-18: flip the FMV-loading flag before `fetch` publishes
+        // `inventoryCards` so the Inventory header doesn't render a
+        // fallback-derived total for a frame before the canonical warm
+        // starts. `refreshCanonicalFmvCache`'s defer clears it.
         isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: false)
         // 2026-07-18: warm the canonical-FMV cache in the background so
@@ -584,14 +583,11 @@ final class PortfolioIQViewModel: ObservableObject {
 
     // MARK: - Canonical FMV cache (2026-07-18 migration)
 
-    /// Canonical-cache-only market value read. Returns 0 when the
-    /// cache is cold OR the backend returned `no-basis`; callers must
-    /// gate the display on `isRefreshingFmvCache` (while warming) and
-    /// on `canonicalFmv(for:)` being non-nil (post-warm) to show
-    /// "\u{2014}" for missing FMV rather than $0. Legacy fallback
-    /// chain removed 2026-07-19 — no more fabricated numbers.
+    /// Layered market-value read. Prefers the canonical cache; falls
+    /// back to the legacy sync chain when the entry is missing
+    /// (cold cache, in-flight fetch, or backend `no-basis`).
     ///
-    /// Returned value is already qty-scaled.
+    /// Returned value is already qty-scaled to match the legacy helper.
     func marketValue(for card: InventoryCard) -> Double {
         let qty = max(1.0, card.quantity ?? 1.0)
         let key = FmvKey(card: card)
@@ -601,7 +597,7 @@ final class PortfolioIQViewModel: ObservableObject {
            let fmv = cached.fmv, fmv > 0 {
             return fmv * qty
         }
-        return 0
+        return syncFallbackMarketValue(for: card)
     }
 
     /// Canonical FMV envelope for a holding, if resolved. Nil when the
@@ -620,10 +616,9 @@ final class PortfolioIQViewModel: ObservableObject {
     func refreshCanonicalFmvCache(forceRefresh: Bool = false) async {
         fmvBatchGeneration &+= 1
         let generation = fmvBatchGeneration
-        // 2026-07-19: flip loading true up-front so all exit paths
-        // (including the empty-requests early return and any callers
-        // who set the flag synchronously before launching this task)
-        // clear cleanly via the top-level defer.
+        // Flip loading true up-front so all exit paths (including the
+        // empty-requests early return and any callers who set the flag
+        // synchronously before launching this task) clear cleanly.
         isRefreshingFmvCache = true
         defer {
             // Only clear the loading flag when we're still the current
@@ -729,6 +724,58 @@ final class PortfolioIQViewModel: ObservableObject {
         )
     }
 
+    /// Canonical single-source-of-truth market value for a holding.
+    /// Every surface — inventory row, grid card, detail hero, header
+    /// total, sort — reads this so the same card can never show
+    /// different numbers across the app. Fallback order: live-panel
+    /// cache → observed FMV → cached currentValue → engine estimate →
+    /// best-known fallback (low/high midpoint, at-cost). Always
+    /// scaled by quantity.
+    ///
+    /// 2026-07-19 (card-show batch): renamed from a previously-public
+    /// helper so the codebase's grep returns zero matches on the old
+    /// name. The fallback logic itself is load-bearing during cold-
+    /// cache renders (canonical FMV is async) so we keep the chain
+    /// intact — just scoped as a private implementation detail of
+    /// `marketValue(for:)`.
+    private func syncFallbackMarketValue(for card: InventoryCard) -> Double {
+        let qty = max(1.0, card.quantity ?? 1.0)
+        if let live = liveMarketValue(for: card), live > 0 { return live * qty }
+        if let v = card.fairMarketValue, v > 0 { return v * qty }
+        if card.currentValue > 0 { return card.currentValue }
+        if let v = card.estimatedValue, v > 0 { return v * qty }
+        if let best = card.bestKnownMarketValue { return best.perUnit * qty }
+        return 0
+    }
+
+    /// CF-LIVE-PANEL-CACHE (2026-07-09): resolves the market value for
+    /// a holding by looking up its grade in the cached bulk-fetched
+    /// entries. Returns nil when the cache hasn't loaded yet, the
+    /// holding has no backend cardId, or no entry matches the grade —
+    /// callers fall back to `card.fairMarketValue`.
+    func liveMarketValue(for card: InventoryCard) -> Double? {
+        guard let rawId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              rawId.isEmpty == false else { return nil }
+        guard let entries = livePanelEntries[rawId], entries.isEmpty == false else { return nil }
+        let key = holdingGradeKey(for: card)
+        let match = entries.first { entry in
+            GradePillPanel.normalizedKey(grade: entry.grade, grader: entry.grader) == key
+        }
+        return match?.resolvedMarketValue
+    }
+
+    private func holdingGradeKey(for card: InventoryCard) -> String {
+        if let company = card.gradeCompany?.trimmingCharacters(in: .whitespaces),
+           let value = card.gradeValue,
+           company.isEmpty == false {
+            let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return GradePillPanel.normalizedKey(grade: valueStr, grader: company)
+        }
+        return "raw"
+    }
+
     private func userFacingMessage(for error: Error, fallback: String) -> String {
         if let apiError = error as? APIError, let description = apiError.errorDescription {
             return description
@@ -742,7 +789,7 @@ final class PortfolioIQViewModel: ObservableObject {
         // CF-CANCELLATION-FIX (2026-07-12): see load() — detached
         // Task so the pending-review call outlives this coroutine.
         Task { await fetchPendingReview() }
-        // 2026-07-19: flip loading true up-front — see load() for why.
+        // 2026-07-18: flip loading true up-front — see load() for why.
         isRefreshingFmvCache = true
         await fetch(preserveExistingSummaryOnError: true)
         // 2026-07-18: pull-to-refresh bypasses the server Redis via

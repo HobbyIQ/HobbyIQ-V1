@@ -70,7 +70,7 @@ struct CascadeAlertsListView: View {
                     .tracking(0.5)
                     .foregroundStyle(color)
                 Spacer(minLength: 0)
-                if let detectedAt = event.detectedAt.flatMap(Self.friendlyDate) {
+                if let detectedAt = event.detectedAt.flatMap({ Self.friendlyDate($0) }) {
                     Text(detectedAt)
                         .font(.caption2)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
@@ -190,7 +190,7 @@ struct CascadeAlertsListView: View {
         return "\(sign)\(String(format: "%.1f", abs(pct)))%"
     }
 
-    private static func friendlyDate(_ raw: String) -> String? {
+    nonisolated private static func friendlyDate(_ raw: String) -> String? {
         let parsers: [ISO8601DateFormatter] = [
             {
                 let f = ISO8601DateFormatter()
