@@ -46,7 +46,7 @@
 // See feedback_no_medians_project_next_sale.md for the underlying
 // principle; every rung projects the next sale, none reports a middle.
 
-import { readCompsByCardId, recordSoldComp } from "../portfolioiq/soldCompsStore.service.js";
+import { readCompsByCardId, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
@@ -142,6 +142,31 @@ export interface CanonicalFmvResult {
   /** Per-grade FMV ladder (Raw / PSA 10 / BGS 10 / etc.) computed from
    *  empirical grade-ratio calibration. Null when family uncovered. */
   gradeLadder?: CanonicalFmvGradeLadder | null;
+  /** CF-CONFIDENCE-BAND (Drew, 2026-07-20). Actual observed price
+   *  distribution of the comps that fed the projection. iOS renders
+   *  this as "sells around $X (range $Y–$Z)" so users see the range
+   *  behind the point projection — the Hartman auction on 2026-07-19
+   *  taught us single-point overshoots by ~18% when trend accelerates
+   *  then decelerates. Providing the range prevents overpaying on
+   *  the projection at negotiation time.
+   *
+   *  Populated for trustworthy methods (direct-comp / cross-parallel /
+   *  neighbor-parallel / sibling-parallel). Null when the anchor is
+   *  a family median (rungs 4-5) — the "range" would be meaningless. */
+  recentRange?: {
+    /** How many comps fed the range. */
+    n: number;
+    /** Minimum observed sale price. */
+    min: number;
+    /** 25th percentile. */
+    p25: number;
+    /** Median of observed sales. */
+    median: number;
+    /** 75th percentile. */
+    p75: number;
+    /** Maximum observed sale price. */
+    max: number;
+  } | null;
 }
 
 const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
@@ -328,13 +353,41 @@ function isSpecificRequest(input: CanonicalFmvInput): boolean {
 }
 
 /** Finalize a canonical result: attach the grade ladder (when the
- *  product family is covered by empirical calibration) and log
+ *  product family is covered by empirical calibration), attach the
+ *  recent-range distribution (from the comps in provenance), and log
  *  telemetry. Called at every successful-rung return point.
  */
 function finalize(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: number): CanonicalFmvResult {
   result.gradeLadder = buildGradeLadder(result, input);
+  result.recentRange = buildRecentRange(result);
   logCompute(result, input, t0);
   return result;
+}
+
+/** CF-CONFIDENCE-BAND (Drew, 2026-07-20). Compute the price
+ *  distribution of the comps that fed the projection. Only for
+ *  trustworthy methods (rungs 1-4). Rungs 5+ derive from a family
+ *  median where the "range" concept doesn't hold. */
+function buildRecentRange(result: CanonicalFmvResult): CanonicalFmvResult["recentRange"] {
+  const trustworthy = new Set<CanonicalFmvMethod>(["direct-comp", "cross-parallel", "neighbor-parallel", "sibling-parallel"]);
+  if (!trustworthy.has(result.method)) return null;
+  const comps = result.provenance?.comps ?? [];
+  const prices = comps.map((c) => Number(c.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+  if (prices.length === 0) return null;
+  const percentile = (p: number): number => {
+    if (prices.length === 1) return prices[0];
+    const idx = Math.floor((prices.length - 1) * p);
+    return prices[idx];
+  };
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return {
+    n: prices.length,
+    min: round2(prices[0]),
+    p25: round2(percentile(0.25)),
+    median: round2(percentile(0.5)),
+    p75: round2(percentile(0.75)),
+    max: round2(prices[prices.length - 1]),
+  };
 }
 
 /** Build the grade ladder for a canonical FMV result.
@@ -367,8 +420,9 @@ function buildGradeLadder(
   // null → the FMV IS raw. Otherwise reverse the grade multiplier to
   // recover an implied raw base.
   let rawAnchor = result.fmv;
+  const sport = inferSportFromContext(input.product ?? null, null);
   const inputGradeMult = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
-    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family)
+    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family, sport)
     : 1;
   if (inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
 
@@ -387,7 +441,7 @@ function buildGradeLadder(
   ];
   for (const grader of graders) {
     for (const value of gradeValues[grader]) {
-      const mult = gradeTierMultiplier(grader, value, family);
+      const mult = gradeTierMultiplier(grader, value, family, sport);
       if (mult <= 1) continue;   // no empirical uplift → skip
       const fmv = rawAnchor * mult;
       if (!Number.isFinite(fmv) || fmv <= 0) continue;
@@ -1271,7 +1325,7 @@ async function tryProductTier(
     ? (lookupParallelMultiplier(input.parallel) ?? 1)
     : 1;
   const productFamily = classifyFamily(input.product);
-  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily);
+  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily, inferSportFromContext(input.product ?? null, null));
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
@@ -1358,6 +1412,7 @@ function gradeTierMultiplier(
   company: string | null,
   value: number | null,
   productFamily: string | null,
+  sport?: string | null,
 ): number {
   if (!company || value === null) return 1;   // raw
   const c = company.toUpperCase();
@@ -1368,9 +1423,13 @@ function gradeTierMultiplier(
     : value >= 9 ? 0.35
     : 0.20;
 
-  // Empirical lookup: prefer per-family calibration when we have it.
+  // CF-GRADE-CALIBRATION-SPORT (Drew, 2026-07-20). Sport-aware
+  // empirical lookup: passes sport to prefer per-sport calibration
+  // (basketball/football rookies have very different PSA 10 uplifts
+  // than baseball). Falls back to baseline table when sport-specific
+  // isn't populated yet.
   if (productFamily) {
-    const empiricalRatio = lookupGradeRatio(productFamily, c);
+    const empiricalRatio = lookupGradeRatio(productFamily, c, sport ?? null);
     if (empiricalRatio !== null && Number.isFinite(empiricalRatio) && empiricalRatio > 0) {
       return empiricalRatio * subTierScale;
     }

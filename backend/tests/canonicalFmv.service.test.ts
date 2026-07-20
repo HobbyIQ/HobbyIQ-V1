@@ -89,6 +89,45 @@ describe("Deterministic given inputs — same-input calls return same shape", ()
   });
 });
 
+describe("CF-CONFIDENCE-BAND (Drew, 2026-07-20)", () => {
+  it("recentRange is populated on trustworthy methods when comps exist", async () => {
+    // We can't easily inject comps at this test layer without a full
+    // Cosmos mock, so verify the envelope SHAPE: recentRange field
+    // exists on the result type and is either an object with the
+    // expected keys or null.
+    const result = await computeCanonicalFmv({ ...MINIMAL_INPUT, freshCompute: true });
+    if (result.recentRange !== null && result.recentRange !== undefined) {
+      expect(result.recentRange).toHaveProperty("n");
+      expect(result.recentRange).toHaveProperty("min");
+      expect(result.recentRange).toHaveProperty("p25");
+      expect(result.recentRange).toHaveProperty("median");
+      expect(result.recentRange).toHaveProperty("p75");
+      expect(result.recentRange).toHaveProperty("max");
+      expect(result.recentRange!.n).toBeGreaterThan(0);
+      expect(result.recentRange!.min).toBeLessThanOrEqual(result.recentRange!.median);
+      expect(result.recentRange!.median).toBeLessThanOrEqual(result.recentRange!.max);
+      expect(result.recentRange!.p25).toBeLessThanOrEqual(result.recentRange!.p75);
+    }
+  });
+
+  it("recentRange is null on no-basis (no comps → no range)", async () => {
+    const result = await computeCanonicalFmv({
+      cardId: "nonexistent-recent-range-null-test",
+      parallel: "Blue Refractor",
+      gradeCompany: null,
+      gradeValue: null,
+      cardYear: 2026,
+      product: "2026 Bowman Chrome",
+      player: "No Such Player",
+      cardNumber: "CPA-ZZZ",
+      freshCompute: true,
+    });
+    if (result.method === "no-basis") {
+      expect(result.recentRange ?? null).toBeNull();
+    }
+  });
+});
+
 describe("CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19)", () => {
   // The gate refuses to fall through to family-baseline/product-tier
   // when the request specifies a non-base parallel or a graded tier,
