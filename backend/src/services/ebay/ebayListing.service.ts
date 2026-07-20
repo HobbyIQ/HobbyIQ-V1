@@ -67,6 +67,14 @@ export interface HoldingListingInput {
    *  Optional — the two-URL wire shape stays fully backward-compatible. */
   photos?: string[];
   description?: string;
+  /** CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Pre-captured item aspects
+   *  from the eBay Browse enrichment when the holding was first imported.
+   *  Carries the required-by-eBay-category aspects (League, Type,
+   *  Country/Region of Manufacture, Year Manufactured, etc.) that the
+   *  base holding fields don't have. buildItemAspects merges these as
+   *  the base and lets our computed fields (Player, Team, Set, Card
+   *  Number, Parallel/Variety, Autographed) override where they overlap. */
+  ebayItemAspects?: Record<string, string>;
   // Seller-side overrides (optional; if any one is provided, all three
   // must be provided — partial overrides are rejected by
   // resolveSellerPolicies. When none are provided, the user's eBay
@@ -342,6 +350,21 @@ function capTitleAt80(title: string): string {
 
 function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
   const aspects: Record<string, string[]> = {};
+
+  // CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Base layer: aspects
+  // captured from the original eBay Browse enrichment when the holding
+  // was imported. These carry required-by-category fields (League,
+  // Type, Country/Region of Manufacture, Year Manufactured, Season,
+  // Autograph Authentication, etc.) that eBay's Sell Inventory API
+  // rejects the item without. Our computed fields below override where
+  // they overlap.
+  if (i.ebayItemAspects && typeof i.ebayItemAspects === "object") {
+    for (const [k, v] of Object.entries(i.ebayItemAspects)) {
+      if (typeof v === "string" && v.trim().length > 0) {
+        aspects[k] = [v.trim()];
+      }
+    }
+  }
 
   aspects["Sport"] = [i.sport ?? "Baseball"];
   if (i.playerName)   aspects["Player"] = [i.playerName];

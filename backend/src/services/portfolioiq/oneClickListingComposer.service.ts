@@ -90,6 +90,12 @@ export function composeListingInput(
     imageBackUrl: photos[1],
     photos: photos.length > 2 ? photos : undefined,
     description: overrides.description,
+    // CF-EBAY-ASPECTS-MERGE (Drew, 2026-07-20). Pass the rich aspects
+    // captured from the original eBay import through so buildItemAspects
+    // can merge required-by-category fields (League, Type, Country/
+    // Region of Manufacture, Year Manufactured, etc.) that eBay rejects
+    // the inventory_item PUT without.
+    ebayItemAspects: (holding as { ebayItemAspects?: Record<string, string> }).ebayItemAspects,
   };
 }
 
