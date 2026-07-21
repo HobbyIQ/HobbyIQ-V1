@@ -57,15 +57,16 @@ export function fitLinearRegression(
 ): Regression | null {
   if (records.length < 2) return null;
   const firstT = records[0].tMs;
-  // CF-DISTINCT-DAYS-GATE (Drew, 2026-07-20). Was: distinct timestamps
-  // ≥ 2, so 5 same-day comps at hour-granularity 00:01 vs 14:00 produced
-  // a wild OLS slope that extrapolated to $5,347 for Antunez Orange
-  // Wave Auto Raw (real median $295). Same-day clusters with
-  // sub-day timestamp variation are noise, not signal. Require ≥ 3
-  // distinct CALENDAR DAYS so the regression has room to see a real
-  // trend before firing.
+  // CF-DISTINCT-DAYS-GATE (Drew, 2026-07-20, tuned 2026-07-21). Was:
+  // distinct timestamps ≥ 2, so 5 same-day comps at hour-granularity
+  // (00:01 vs 14:00) produced a wild OLS slope that extrapolated to
+  // $5,347 for Antunez Orange Wave Auto Raw (real median $295). Same-
+  // day clusters with sub-day timestamp variation are noise, not
+  // signal. Require ≥ 2 distinct CALENDAR DAYS — that blocks the
+  // pathological case (distinctDays=1) while still admitting the
+  // legit 2-point-two-day regression (Hartman Aqua fixture).
   const distinctDays = new Set(records.map((r) => Math.floor(r.tMs / MS_PER_DAY))).size;
-  if (distinctDays < 3) return null;
+  if (distinctDays < 2) return null;
   const distinctTimes = new Set(records.map((r) => r.tMs)).size;
   if (distinctTimes < 2) return null;
 
@@ -132,13 +133,16 @@ export function computeSlopeValuation(
     ? (monthlyDelta / marketAtLast) * 100
     : 0;
 
-  // CF-SLOPE-SANITY-CAP (Drew, 2026-07-20). A regression that implies
-  // >100%/mo change on a raw prospect card is almost always noise from
-  // clustered timestamps or a tiny outlier cluster. Return null so the
-  // caller falls through to the trend-adjusted-last-sale branch, which
-  // uses the newest observed price + the broader-trend signal —
-  // grounded in real data instead of a runaway extrapolation.
-  if (Math.abs(slopePerMonthPct) > 100) {
+  // CF-SLOPE-SANITY-CAP (Drew, 2026-07-20, retuned 2026-07-21). A
+  // regression implying >300%/mo change is almost certainly noise from
+  // clustered timestamps or a tiny outlier cluster. Original cap was
+  // 100%/mo but that fired on legitimate cases: a hot-player-listings
+  // trend halving over a month is -150%/mo, and iOS supply-demand
+  // signals need that trend to resolve to 'strong_bull' not 'unavailable'.
+  // The pathological case that motivated the cap (Antunez Orange Wave
+  // Raw extrapolating to $5,347 from clustered same-day comps) had a
+  // slope > 1800%/mo, so 300 is still well below noise but above real.
+  if (Math.abs(slopePerMonthPct) > 300) {
     return null;
   }
 

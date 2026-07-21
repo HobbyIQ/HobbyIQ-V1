@@ -50,6 +50,7 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             const cid = params.get("@cid");
             let rows = Array.from(store.values());
             if (cid) rows = rows.filter((d) => d.cardId === cid);
+            const h = params.get("@h"); if (h) rows = rows.filter((d) => d.contentHash === h);
             rows.sort((a, b) => (a.soldAt < b.soldAt ? 1 : -1));
             return { resources: rows };
           },
