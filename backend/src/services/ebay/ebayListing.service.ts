@@ -877,7 +877,13 @@ function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string
     const gradeKey = GRADE_VALUE_ID[String(i.grade).trim()];
     descriptors.push({ name: DESC_PROFESSIONAL_GRADER, values: [graderKey] });
     if (gradeKey) descriptors.push({ name: DESC_GRADE, values: [gradeKey] });
-    if (i.certNumber) descriptors.push({ name: DESC_CERT_NUMBER, values: [i.certNumber.slice(0, 30)] });
+    // CF-CERT-DESCRIPTOR-DEFERRED (Drew, 2026-07-21). Descriptor 27503
+    // (Certification Number) is only valid when the base condition is
+    // already GRADED (2750). No Sell API string enum maps directly to
+    // 2750, and sending 27503 alongside condition="USED_VERY_GOOD"
+    // rejects with errorId 25060. Omit for now until eBay exposes a
+    // string enum for graded. Cert# is still captured on the holding
+    // and appears in the listing description via conditionDescription.
   } else {
     const est = (i.conditionEstimate ?? "").trim().toUpperCase();
     const cardCondKey = CARD_CONDITION_VALUE_ID[est]
