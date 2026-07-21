@@ -614,6 +614,11 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
         : /poor|damaged/i.test(est) ? "Poor"
         : "Near mint or better");
     aspects["Card Condition"] = [matched];
+    // CF-EBAY-GRADER-NONE-FOR-RAW (Drew, 2026-07-20). eBay's category
+    // 261328 still requires Professional Grader (27501) even for raw
+    // — verified via publish retry after Card Condition satisfied the
+    // Grade slot. Raw enum value is "None".
+    aspects["Professional Grader"] = ["None"];
   }
 
   return aspects;
