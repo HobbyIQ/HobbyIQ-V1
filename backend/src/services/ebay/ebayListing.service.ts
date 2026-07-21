@@ -355,6 +355,22 @@ export async function createInventoryLocation(
   return { merchantLocationKey: key };
 }
 
+/** Diagnostic — fetch eBay's authoritative aspect metadata for a given
+ *  category id. Used to discover the exact accepted enum values for
+ *  aspects like Grade / Professional Grader when publish rejects with
+ *  errorId 25064. Returns the raw eBay Taxonomy API response. */
+export async function fetchCategoryAspects(userId: string, categoryId: string): Promise<unknown> {
+  // First get the default category_tree_id for the marketplace
+  const tree = await ebayRequest<{ categoryTreeId: string }>(
+    userId, "GET",
+    `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${encodeURIComponent(MARKETPLACE_ID)}`,
+  );
+  return await ebayRequest(
+    userId, "GET",
+    `/commerce/taxonomy/v1/category_tree/${tree.categoryTreeId}/get_item_aspects_for_category?category_id=${encodeURIComponent(categoryId)}`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Title builder
 // ---------------------------------------------------------------------------
