@@ -39,6 +39,8 @@ import {
   endListing,
   getOfferStatus,
   getSellerPolicies,
+  listInventoryLocations,
+  createInventoryLocation,
   HoldingListingInput,
 } from "../services/ebay/ebayListing.service.js";
 import {
@@ -197,6 +199,61 @@ router.get("/policies", async (req: Request, res: Response) => {
   try {
     const policies = await getSellerPolicies(userId);
     res.json({ success: true, ...policies });
+  } catch (err) {
+    res.status(502).json({ success: false, error: err instanceof Error ? err.message : "eBay API error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// CF-EBAY-LOCATIONS (Drew, 2026-07-20). List + create the user's eBay
+// inventory locations. Required before /listings/publish will succeed —
+// eBay's offer/publish rejects with errorId 25002 "No <Item.Country>
+// exists" when the account has no ship-from location. iOS flows: on
+// listing publish, if we get missingLocation, prompt user with an
+// address form, POST here, retry publish.
+// ---------------------------------------------------------------------------
+
+router.get("/locations", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  try {
+    const locations = await listInventoryLocations(userId);
+    res.json({ success: true, locations });
+  } catch (err) {
+    res.status(502).json({ success: false, error: err instanceof Error ? err.message : "eBay API error" });
+  }
+});
+
+router.post("/locations", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const b = req.body as Partial<{
+    name: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    stateOrProvince: string;
+    postalCode: string;
+    country: string;
+  }>;
+  const missing: string[] = [];
+  if (!b.addressLine1?.trim())    missing.push("addressLine1");
+  if (!b.city?.trim())            missing.push("city");
+  if (!b.stateOrProvince?.trim()) missing.push("stateOrProvince");
+  if (!b.postalCode?.trim())      missing.push("postalCode");
+  if (missing.length > 0) {
+    res.status(400).json({ success: false, error: "Address fields missing", requiredMissing: missing });
+    return;
+  }
+  try {
+    const result = await createInventoryLocation(userId, {
+      name:            b.name?.trim() || undefined,
+      addressLine1:    b.addressLine1!.trim(),
+      addressLine2:    b.addressLine2?.trim() || undefined,
+      city:            b.city!.trim(),
+      stateOrProvince: b.stateOrProvince!.trim(),
+      postalCode:      b.postalCode!.trim(),
+      country:         (b.country ?? "US").trim(),
+    });
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(502).json({ success: false, error: err instanceof Error ? err.message : "eBay API error" });
   }
