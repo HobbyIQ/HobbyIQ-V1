@@ -371,6 +371,30 @@ export async function fetchCategoryAspects(userId: string, categoryId: string): 
   );
 }
 
+/** Diagnostic — fetch subtree of a category to find leaf categories. */
+export async function fetchCategorySubtree(userId: string, categoryId: string): Promise<unknown> {
+  const tree = await ebayRequest<{ categoryTreeId: string }>(
+    userId, "GET",
+    `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${encodeURIComponent(MARKETPLACE_ID)}`,
+  );
+  return await ebayRequest(
+    userId, "GET",
+    `/commerce/taxonomy/v1/category_tree/${tree.categoryTreeId}/get_category_subtree?category_id=${encodeURIComponent(categoryId)}`,
+  );
+}
+
+/** Diagnostic — ask eBay to suggest a category for a listing title. */
+export async function fetchCategorySuggestion(userId: string, q: string): Promise<unknown> {
+  const tree = await ebayRequest<{ categoryTreeId: string }>(
+    userId, "GET",
+    `/commerce/taxonomy/v1/get_default_category_tree_id?marketplace_id=${encodeURIComponent(MARKETPLACE_ID)}`,
+  );
+  return await ebayRequest(
+    userId, "GET",
+    `/commerce/taxonomy/v1/category_tree/${tree.categoryTreeId}/get_category_suggestions?q=${encodeURIComponent(q)}`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Title builder
 // ---------------------------------------------------------------------------
@@ -571,20 +595,25 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
     if (i.certNumber) aspects["Certification Number"] = [i.certNumber];
   } else {
     aspects["Graded"] = ["No"];
-    // CF-EBAY-GRADE-REQUIRED-RAW (Drew, 2026-07-20). eBay category 261328
-    // (Sports Trading Cards) requires the Grade aspect (id 27502) AND
-    // Professional Grader (id 27501) on EVERY listing including raw
-    // ones — errorId 25064 "Grade/Professional Grader is a required
-    // field" otherwise. Raw values: "Not Graded" and "None" respectively.
-    // ("Ungraded" gets rejected as an invalid enum value; eBay's
-    // validator conflates invalid + missing under the same 25064.)
-    aspects["Grade"] = ["Not Graded"];
-    aspects["Professional Grader"] = ["None"];
-    // Card Condition ALWAYS emitted for raw — eBay requires this
-    // aspect for Sports Trading Cards. Defaults to "Near Mint or
-    // Better" (matching what most eBay-imported holdings capture)
-    // when the user hasn't set a specific conditionEstimate.
-    aspects["Card Condition"] = [i.conditionEstimate ?? "Near Mint or Better"];
+    // CF-EBAY-RAW-CARD-CONDITION (Drew, 2026-07-20). eBay's Trading API
+    // item specific ID 27502 has TWO display names — "Grade" when the
+    // card is graded, "Card Condition" when raw. The publish validator's
+    // error message says "Grade (27502) is a required field" even for
+    // raw, but the RIGHT key to satisfy it is Card Condition with one of
+    // eBay's exact enum strings (case-sensitive):
+    //   "Near mint or better" | "Excellent" | "Very good" | "Poor"
+    // Similarly Professional Grader (27501) is only required when
+    // Graded=Yes; setting Graded=No + Card Condition satisfies both.
+    const CARD_CONDITION_ENUM = ["Near mint or better", "Excellent", "Very good", "Poor"];
+    const est = (i.conditionEstimate ?? "").trim();
+    // Map common variants (case-insensitive) to eBay's exact strings.
+    const matched = CARD_CONDITION_ENUM.find(v => v.toLowerCase() === est.toLowerCase())
+      ?? (/near ?mint|mint|nm/i.test(est) ? "Near mint or better"
+        : /excellent|ex/i.test(est) ? "Excellent"
+        : /very ?good|vg/i.test(est) ? "Very good"
+        : /poor|damaged/i.test(est) ? "Poor"
+        : "Near mint or better");
+    aspects["Card Condition"] = [matched];
   }
 
   return aspects;
