@@ -877,13 +877,11 @@ function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string
     const gradeKey = GRADE_VALUE_ID[String(i.grade).trim()];
     descriptors.push({ name: DESC_PROFESSIONAL_GRADER, values: [graderKey] });
     if (gradeKey) descriptors.push({ name: DESC_GRADE, values: [gradeKey] });
-    // CF-CERT-DESCRIPTOR-DEFERRED (Drew, 2026-07-21). Descriptor 27503
-    // (Certification Number) is only valid when the base condition is
-    // already GRADED (2750). No Sell API string enum maps directly to
-    // 2750, and sending 27503 alongside condition="USED_VERY_GOOD"
-    // rejects with errorId 25060. Omit for now until eBay exposes a
-    // string enum for graded. Cert# is still captured on the holding
-    // and appears in the listing description via conditionDescription.
+    // Cert# restored — with `condition` field omitted (see
+    // upsertInventoryItem CF-EBAY-GRADED-OMIT-CONDITION), eBay derives
+    // conditionId 2750 from the descriptors and the Cert Number
+    // descriptor 27503 becomes valid.
+    if (i.certNumber) descriptors.push({ name: DESC_CERT_NUMBER, values: [i.certNumber.slice(0, 30)] });
   } else {
     const est = (i.conditionEstimate ?? "").trim().toUpperCase();
     const cardCondKey = CARD_CONDITION_VALUE_ID[est]
@@ -900,18 +898,24 @@ function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string
 /** Step 1 — Create or replace an inventory item (the physical card). */
 async function upsertInventoryItem(userId: string, key: string, i: HoldingListingInput): Promise<void> {
   const condition = ebayConditionId(i);
+  const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
 
-  const payload = {
+  // CF-EBAY-GRADED-OMIT-CONDITION (Drew, 2026-07-21). Trading Cards
+  // category 261328 has `itemConditionRequired: false` per its metadata
+  // policy. For graded, no Sell API string enum maps to conditionId
+  // 2750 — every enum (LIKE_NEW/USED_EXCELLENT/USED_VERY_GOOD) rejects
+  // with "descriptor N is not valid for condition NAME" because eBay
+  // strictly requires condition to match descriptors. Omitting the
+  // `condition` field entirely lets eBay derive it from the graded
+  // descriptors (27501 Grader + 27502 Grade). For raw, condition is
+  // required — Card Condition descriptor 40001 alone doesn't imply a
+  // conditionId, and USED_VERY_GOOD → 4000 is category-valid.
+  const payload: Record<string, unknown> = {
     availability: {
       shipToLocationAvailability: { quantity: i.quantity },
     },
-    condition: condition.condition,
-    conditionDescription: condition.conditionDescription,
-    // CF-EBAY-CONDITION-DESCRIPTORS (Drew, 2026-07-20). Trading Cards
-    // category 261328 requires descriptors here (NOT in product.aspects)
-    // for Grade / Grader / Card Condition. Publish otherwise rejects
-    // with errorId 25064 "Grade/Grader is a required field" no matter
-    // what aspect values are sent.
+    ...(isGraded ? {} : { condition: condition.condition }),
+    ...(condition.conditionDescription ? { conditionDescription: condition.conditionDescription } : {}),
     conditionDescriptors: buildConditionDescriptors(i),
     product: {
       title:       buildTitle(i),
