@@ -557,10 +557,11 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
     aspects["Graded"] = ["No"];
     // CF-EBAY-GRADE-REQUIRED-RAW (Drew, 2026-07-20). eBay category 261328
     // (Sports Trading Cards) requires the Grade aspect (id 27502) on
-    // EVERY listing including raw — the enum accepts "Ungraded" as the
-    // raw-card value. Missing it rejects publish with errorId 25064
-    // "Grade (27502) is a required field."
-    aspects["Grade"] = ["Ungraded"];
+    // EVERY listing including raw ones (errorId 25064 "Grade is a
+    // required field" otherwise). eBay's enum for raw uses "Not Graded"
+    // — "Ungraded" gets rejected as an invalid enum value (eBay's
+    // validator conflates invalid + missing under the same 25064).
+    aspects["Grade"] = ["Not Graded"];
     // Card Condition ALWAYS emitted for raw — eBay requires this
     // aspect for Sports Trading Cards. Defaults to "Near Mint or
     // Better" (matching what most eBay-imported holdings capture)
