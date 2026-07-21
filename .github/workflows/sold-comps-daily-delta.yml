@@ -1,0 +1,111 @@
+name: Sold Comps Daily Delta
+
+# CF-SOLD-COMPS-DAILY-DELTA (Drew, 2026-07-21). CH ingest lands ~20K
+# new sales/day but the promotion path from ch_daily_sales to sold_comps
+# is lazy (only fires on FMV queries touching a card). That leaves the
+# unified pool stale for pattern-detection (movers, similar-card
+# analytics). This nightly job promotes yesterday+today's CH deltas
+# across all three sport groups so the pool stays fresh.
+#
+# Idempotent — the underlying script dedups by source::sourceExternalId
+# and (post PR #641) by contentHash on the write path. Safe to re-run
+# with overlapping windows.
+#
+# Timing: runs 7:00 AM ET (11:00 UTC), 30 min after the daily CH ingest
+# completes at 06:10 UTC, so it always sees fresh data.
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 7:00 AM ET = 11:00 UTC
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: 'How many days back to promote (default 2 = yesterday+today for timezone safety)'
+        required: false
+        type: string
+        default: '2'
+      dry_run:
+        description: 'Dry-run (read only, no writes)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        sport_group:
+          - { sport: 'baseball',   ch_group: 'Baseball'   }
+          - { sport: 'football',   ch_group: 'Football'   }
+          - { sport: 'basketball', ch_group: 'Basketball' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING
+        run: |
+          set -euo pipefail
+          CONN=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)
+          if [ -z "$CONN" ]; then echo "::error::COSMOS_CONNECTION_STRING not set"; exit 1; fi
+          echo "::add-mask::$CONN"
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+
+      - name: Compute window
+        id: window
+        run: |
+          set -euo pipefail
+          LOOKBACK="${{ inputs.lookback_days || '2' }}"
+          FROM=$(date -u -d "$LOOKBACK days ago" +%Y-%m-%d)
+          TO=$(date -u +%Y-%m-%d)
+          echo "from=$FROM" >> "$GITHUB_OUTPUT"
+          echo "to=$TO"     >> "$GITHUB_OUTPUT"
+          echo "Window: $FROM → $TO (lookback $LOOKBACK d) for ${{ matrix.sport_group.sport }}"
+
+      - name: Promote delta
+        working-directory: backend
+        env:
+          DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '--dry-run' || '--apply' }}
+        run: |
+          set -euo pipefail
+          node scripts/backfill-sold-comps-from-ch.cjs \
+            --from=${{ steps.window.outputs.from }} \
+            --to=${{ steps.window.outputs.to }} \
+            --sport=${{ matrix.sport_group.sport }} \
+            --ch-group=${{ matrix.sport_group.ch_group }} \
+            --concurrency=6 \
+            $DRY_RUN_ARG \
+            | tee delta-out-${{ matrix.sport_group.sport }}.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sold-comps-delta-${{ matrix.sport_group.sport }}-${{ github.run_id }}
+          path: backend/delta-out-${{ matrix.sport_group.sport }}.log
+          retention-days: 14

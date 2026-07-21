@@ -163,9 +163,24 @@ function emptyResult(warnings: string[] = []): RoutedResult {
  *  `player` is preferred, falls back to `name`. */
 export function csCatalogHitToRoutedCard(c: CardsightCatalogHit): RoutedCard {
   const year = typeof c.year === "number" ? c.year : Number(c.year) || undefined;
-  const composedSet = c.releaseName && c.setName && !c.setName.toLowerCase().includes(c.releaseName.toLowerCase())
-    ? `${c.releaseName} ${c.setName}`.trim()
-    : (c.setName || c.releaseName || undefined);
+  // CF-CS-COMPOSE-SET-DEDUP (Drew, 2026-07-21). Bidirectional substring
+  // check so "Bowman Sapphire" + "Sapphire Selections" doesn't compose
+  // to "Bowman Sapphire Sapphire Selections". Also strip if any token
+  // in releaseName appears in setName (case-insensitive whole-word).
+  const composedSet = (() => {
+    const release = (c.releaseName ?? "").trim();
+    const set = (c.setName ?? "").trim();
+    if (!release && !set) return undefined;
+    if (!release) return set;
+    if (!set) return release;
+    const releaseLc = release.toLowerCase();
+    const setLc = set.toLowerCase();
+    if (setLc.includes(releaseLc) || releaseLc.includes(setLc)) return set || release;
+    // Drop from release any word that already appears in set.
+    const setWords = new Set(setLc.split(/\s+/).filter(Boolean));
+    const releaseTrimmed = release.split(/\s+/).filter(w => !setWords.has(w.toLowerCase())).join(" ").trim();
+    return releaseTrimmed ? `${releaseTrimmed} ${set}` : set;
+  })();
   const player = c.player ?? c.name ?? undefined;
   return {
     card_id: `cs:${c.id}`,
