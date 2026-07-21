@@ -81,7 +81,14 @@ async function hydratePhotosFromHolding(
 
   try {
     const doc = await readUserDoc(userId);
-    const holding = doc.holdings[input.holdingId] as unknown as Record<string, unknown> | undefined;
+    // CF-HOLDING-LOOKUP-CASE-INSENSITIVE (Drew, 2026-07-20). Swift's
+    // UUID.uuidString is UPPERCASE, Cosmos stores lowercase. Every
+    // other holding-scoped route in portfolioiq.routes uses this
+    // pattern; mirror it here so hydratePhotosFromHolding actually
+    // finds the record for iOS-originating publish calls.
+    const target = input.holdingId!.trim().toLowerCase();
+    const key = Object.keys(doc.holdings ?? {}).find((k) => k.toLowerCase() === target);
+    const holding = key ? (doc.holdings[key] as unknown as Record<string, unknown>) : undefined;
     if (!holding) return input;
     const patch: Partial<HoldingListingInput> = { ...input };
     if (!hasExplicitPhotos && Array.isArray(holding.photos) && holding.photos.length > 0) {
@@ -220,7 +227,14 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
   }
   try {
     const doc = await readUserDoc(userId);
-    const h = doc.holdings?.[holdingId.trim()] as unknown as Record<string, unknown> | undefined;
+    // CF-HOLDING-LOOKUP-CASE-INSENSITIVE (Drew, 2026-07-20). Match the
+    // pattern every other holding-scoped route uses (portfolioiq.routes
+    // /:id/dismiss-grade-arb etc.). Swift's UUID.uuidString returns
+    // UPPERCASE while Cosmos stores lowercase — direct-index lookup
+    // returned undefined → 404. Find the key regardless of case.
+    const target = holdingId.trim().toLowerCase();
+    const key = Object.keys(doc.holdings ?? {}).find((k) => k.toLowerCase() === target);
+    const h = key ? (doc.holdings[key] as unknown as Record<string, unknown>) : undefined;
     if (!h) {
       res.status(404).json({ success: false, error: "Holding not found" });
       return;
@@ -552,7 +566,11 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
       const holdingId = String(input.holdingId);
       if (!holdingId) return;
       const doc = await readUserDoc(userId);
-      const h = doc.holdings?.[holdingId] as unknown as Record<string, unknown> | undefined;
+      // Case-insensitive holdings lookup — matches the pattern used
+      // everywhere else. Swift UUIDs come in uppercase.
+      const target = holdingId.trim().toLowerCase();
+      const key = Object.keys(doc.holdings ?? {}).find((k) => k.toLowerCase() === target);
+      const h = key ? (doc.holdings[key] as unknown as Record<string, unknown>) : undefined;
       if (!h) return;
       let mutated = false;
 
