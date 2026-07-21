@@ -847,27 +847,31 @@ struct ListingReviewView: View {
     /// that shape is what our backends return when they want to
     /// tell the caller something specific (e.g. "Holding not found"
     /// on a 404 means the endpoint IS deployed, the holdingId just
-    /// isn't in the DB — very different signal from "endpoint not
-    /// deployed"). Users can screenshot the result for triage.
-    private func diagnosticErrorMessage(from error: Error) -> String {
+    /// isn't in the DB). `endpoint` names which HobbyIQ endpoint
+    /// hit the failure so screenshots are unambiguous when the
+    /// review flow chains prepare → publish.
+    private func diagnosticErrorMessage(
+        from error: Error,
+        endpoint: String = "/api/ebay/listings/prepare"
+    ) -> String {
         if let apiError = error as? APIServiceError {
             switch apiError {
             case .httpError(let statusCode, let body):
                 let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
                 // Try to parse a structured error body first.
                 if let parsed = parsedBackendError(from: trimmed) {
-                    return "POST /api/ebay/listings/prepare returned \(statusCode): \(parsed)"
+                    return "POST \(endpoint) returned \(statusCode): \(parsed)"
                 }
                 let bodyPreview = trimmed.isEmpty
                     ? ""
                     : "\n\n" + String(trimmed.prefix(300))
                 switch statusCode {
                 case 404:
-                    return "POST /api/ebay/listings/prepare returned 404 with no parseable body \u{2014} likely the endpoint isn't deployed yet.\(bodyPreview)"
+                    return "POST \(endpoint) returned 404 with no parseable body \u{2014} likely the endpoint isn't deployed yet.\(bodyPreview)"
                 case 401, 403:
-                    return "POST /api/ebay/listings/prepare returned \(statusCode) \u{2014} auth issue.\(bodyPreview)"
+                    return "POST \(endpoint) returned \(statusCode) \u{2014} auth issue.\(bodyPreview)"
                 default:
-                    return "POST /api/ebay/listings/prepare returned \(statusCode).\(bodyPreview)"
+                    return "POST \(endpoint) returned \(statusCode).\(bodyPreview)"
                 }
             case .invalidURL:
                 return "APIConfig.baseURL isn't set. Fix in APIConfig.swift."
@@ -932,7 +936,7 @@ struct ListingReviewView: View {
                 scheduleErrorClear()
             }
         } catch {
-            let diag = diagnosticErrorMessage(from: error)
+            let diag = diagnosticErrorMessage(from: error, endpoint: "/api/ebay/listings/publish")
             publishError = diag
             ListingReviewAnalytics.publishFailed(holdingId: holdingId, ebayError: diag)
             scheduleErrorClear()
