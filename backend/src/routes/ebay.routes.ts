@@ -343,7 +343,16 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
     if (!listing.titleSuggested) requiredMissing.push("listing.title");
     else if (listing.titleSuggested.length > 80) warnings.push("Title exceeds eBay's 80-char cap and will be truncated");
 
-    if (isGraded && !gradeValue) requiredMissing.push("condition.grade");
+    // CF-GRADED-CERT-REQUIRED (Drew, 2026-07-20). Graded cards MUST carry
+    // gradingCompany + grade + certNumber before publish. eBay's graded
+    // categories reject inventory_item PUT without Grader/Grade Rating/
+    // Certification Number aspects. Blocking here surfaces "fill this in"
+    // on iOS Listing Review BEFORE Publish so users don't hit a 400.
+    if (isGraded) {
+      if (!condition.gradingCompany) requiredMissing.push("condition.gradingCompany");
+      if (!gradeValue) requiredMissing.push("condition.grade");
+      if (!condition.certNumber) requiredMissing.push("condition.certNumber");
+    }
     if (!isGraded && !condition.conditionEstimate) warnings.push("Raw condition not set; will default to 'Near Mint'");
 
     // Contradiction warnings (from the Judge-style dirty-capture pattern)
@@ -449,6 +458,27 @@ interface PreparedListingBody {
   fulfillmentPolicyId?: string;
 }
 
+/** Returns the list of missing grading fields for a graded card, or []
+ *  if the card is raw or fully populated. Called at /publish to
+ *  hard-reject before we round-trip to eBay's Inventory API. Considers
+ *  a card "graded" if either the flat `gradingCompany` or the prepared
+ *  `condition.gradingCompany` is present. */
+function validateGradedFields(raw: Partial<HoldingListingInput>): string[] {
+  const prepared = raw as unknown as PreparedListingBody;
+  const gradingCompany = raw.gradingCompany ?? prepared.condition?.gradingCompany ?? undefined;
+  const grade = raw.grade ?? (prepared.condition?.grade != null ? String(prepared.condition.grade) : undefined);
+  const certNumber = raw.certNumber ?? prepared.condition?.certNumber ?? undefined;
+
+  const looksGraded = Boolean(gradingCompany) || Boolean(grade) || Boolean(certNumber);
+  if (!looksGraded) return [];
+
+  const missing: string[] = [];
+  if (!gradingCompany || String(gradingCompany).trim().length === 0) missing.push("gradingCompany");
+  if (!grade || String(grade).trim().length === 0) missing.push("grade");
+  if (!certNumber || String(certNumber).trim().length === 0) missing.push("certNumber");
+  return missing;
+}
+
 function isPreparedShape(body: unknown): body is PreparedListingBody {
   if (!body || typeof body !== "object") return false;
   const b = body as Record<string, unknown>;
@@ -532,6 +562,23 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
 
   if (!raw.holdingId || !raw.playerName || !raw.listingPrice) {
     res.status(400).json({ success: false, error: "holdingId, playerName, and listingPrice are required" });
+    return;
+  }
+
+  // CF-GRADED-CERT-REQUIRED (Drew, 2026-07-20). Server-side gate: never
+  // let a graded card reach eBay's inventory_item PUT without the three
+  // grade fields eBay's category-meta requires. iOS Listing Review UI
+  // enforces the same rule from /prepare's requiredMissing, but this is
+  // belt-and-suspenders: a stale iOS build or a direct API caller still
+  // gets rejected here with a specific field list instead of a 502 from
+  // eBay upstream.
+  const gradedGate = validateGradedFields(raw);
+  if (gradedGate.length > 0) {
+    res.status(400).json({
+      success: false,
+      error: "Missing required grading fields for a graded card",
+      requiredMissing: gradedGate,
+    });
     return;
   }
   const input = await hydratePhotosFromHolding(userId, raw);
