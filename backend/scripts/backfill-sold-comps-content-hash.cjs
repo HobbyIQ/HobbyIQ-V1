@@ -76,13 +76,18 @@ async function main() {
     whereExtra = " AND c.cardId = @cid";
     params.push({ name: "@cid", value: args.cardId });
   }
+  // CF-BACKFILL-STREAM (Drew, 2026-07-21). Drop the 500K LIMIT so the
+  // query streams the entire result set via the SDK's paged iterator.
+  // Idempotent — the WHERE clause excludes already-stamped rows on any
+  // restart, so this is safe to run to completion in a single pass.
+  const limitClause = args.limit !== Infinity ? `OFFSET 0 LIMIT ${args.limit}` : "";
   const iter = sc.items.query({
     query: `SELECT c.id, c.cardId, c.parallel, c.isAuto, c.gradeCompany,
                    c.gradeValue, c.price, c.soldAt, c.contentHash
             FROM c
             WHERE c.contentHash = null OR (NOT IS_DEFINED(c.contentHash))
             ${whereExtra}
-            OFFSET 0 LIMIT ${Math.min(args.limit, 500000)}`,
+            ${limitClause}`,
     parameters: params,
   }, args.cardId ? { partitionKey: args.cardId } : {});
 

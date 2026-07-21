@@ -44,6 +44,11 @@ import { structuredCardHedgeBridge } from "./cardHedgeStructuredBridge.js";
 // alongside CH+CS. Env-gated, defaults OFF.
 import { lookupLocalComps } from "../portfolioiq/localCompStore.service.js";
 import type { LocalCompSale } from "../../types/localComp.types.js";
+// CF-CS-CATALOG-AUGMENT (Drew, 2026-07-21): supplement CH freetext
+// search with CS catalog hits. CS carries product-lines that CH lags
+// on (e.g. 2026 Bowman Sapphire not yet in CH). Merge + dedup at the
+// router so all downstream callers get the wider result set.
+import { searchCatalog as csSearchCatalog, type CardsightCatalogHit } from "./cardsightSlim.client.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
@@ -149,6 +154,42 @@ function emptyResult(warnings: string[] = []): RoutedResult {
     variantWarning: warnings,
     aiCategory: null,
   };
+}
+
+/** CF-CS-CATALOG-AUGMENT (Drew, 2026-07-21). Map a Cardsight catalog
+ *  hit onto the shared RoutedCard shape. CS carries product-line
+ *  info in `releaseName` (e.g. "Bowman Sapphire") + `setName` (e.g.
+ *  "Chrome Prospects Sapphire"); compose them for the display set.
+ *  `player` is preferred, falls back to `name`. */
+export function csCatalogHitToRoutedCard(c: CardsightCatalogHit): RoutedCard {
+  const year = typeof c.year === "number" ? c.year : Number(c.year) || undefined;
+  const composedSet = c.releaseName && c.setName && !c.setName.toLowerCase().includes(c.releaseName.toLowerCase())
+    ? `${c.releaseName} ${c.setName}`.trim()
+    : (c.setName || c.releaseName || undefined);
+  const player = c.player ?? c.name ?? undefined;
+  return {
+    card_id: `cs:${c.id}`,
+    player,
+    set: composedSet,
+    year,
+    number: c.number || undefined,
+    title: composedSet && player ? `${year ?? ""} ${composedSet} ${player}${c.number ? ` #${c.number}` : ""}`.trim() : c.name,
+    name: c.name,
+  };
+}
+
+/** Dedup key: canonicalize year+set+player+number+parallel so a CH row
+ *  and a CS row for the same physical card collapse to one entry. */
+function canonicalCardKey(c: RoutedCard): string {
+  const norm = (s: string | undefined | number) =>
+    String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return [
+    norm(c.year),
+    norm(c.set),
+    norm(c.player),
+    norm(c.number),
+    norm(c.variant),
+  ].join("|");
 }
 
 export function chCardToRoutedCard(c: CardHedgeCard): RoutedCard {
@@ -1137,8 +1178,30 @@ export async function searchCardsRouted(
   // set/rookie filters through to CardHedge. Omitting them preserves the
   // pre-CF call shape exactly — every existing caller without filters is
   // unaffected.
-  const hits = await chSearchCards(query, limit, filters);
-  const routed = hits.map(chCardToRoutedCard);
+  //
+  // CF-CS-CATALOG-AUGMENT (Drew, 2026-07-21): CH lags CS on new product
+  // lines (e.g. 2026 Bowman Sapphire). Fire CH and CS in parallel; merge
+  // CS-only cards onto the tail of the CH result set so users searching
+  // for recent products get catalog hits. Env-gated on the existing
+  // CARDSIGHT_STRUCTURED_BRIDGE_ENABLED flag (true in prod).
+  const csEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
+  const [chHits, csHitsRaw] = await Promise.all([
+    chSearchCards(query, limit, filters),
+    csEnabled ? csSearchCatalog(query, { take: Math.min(10, limit) }).catch(() => []) : Promise.resolve([]),
+  ]);
+
+  const routedFromCh = chHits.map(chCardToRoutedCard);
+  const seen = new Set(routedFromCh.map(canonicalCardKey));
+  const csAugment: RoutedCard[] = [];
+  for (const hit of csHitsRaw) {
+    const mapped = csCatalogHitToRoutedCard(hit);
+    const key = canonicalCardKey(mapped);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    csAugment.push(mapped);
+  }
+
+  const routed = [...routedFromCh, ...csAugment];
   // CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27): stash each card's metadata by
   // card_id so the pinned /price-by-id path can later recover player/set/etc.
   // Fire-and-forget — a cache write failure must never break search.
