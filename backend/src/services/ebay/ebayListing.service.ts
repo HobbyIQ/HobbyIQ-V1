@@ -900,21 +900,20 @@ async function upsertInventoryItem(userId: string, key: string, i: HoldingListin
   const condition = ebayConditionId(i);
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
 
-  // CF-EBAY-GRADED-OMIT-CONDITION (Drew, 2026-07-21). Trading Cards
-  // category 261328 has `itemConditionRequired: false` per its metadata
-  // policy. For graded, no Sell API string enum maps to conditionId
-  // 2750 — every enum (LIKE_NEW/USED_EXCELLENT/USED_VERY_GOOD) rejects
-  // with "descriptor N is not valid for condition NAME" because eBay
-  // strictly requires condition to match descriptors. Omitting the
-  // `condition` field entirely lets eBay derive it from the graded
-  // descriptors (27501 Grader + 27502 Grade). For raw, condition is
-  // required — Card Condition descriptor 40001 alone doesn't imply a
-  // conditionId, and USED_VERY_GOOD → 4000 is category-valid.
+  // CF-EBAY-GRADED-CONDITIONID (Drew, 2026-07-21). Trading Cards
+  // category 261328 requires condition data at publish. No Sell API
+  // string enum maps to conditionId 2750 (Graded), so we set the
+  // `condition` field to LIKE_NEW as the closest semantic anchor for
+  // a slabbed card, and additionally pass `conditionId: 2750` — some
+  // eBay Sell API endpoints accept this numeric field as an authoritative
+  // override, and for graded cards it may be the only way to satisfy
+  // the descriptor-to-condition consistency check.
   const payload: Record<string, unknown> = {
     availability: {
       shipToLocationAvailability: { quantity: i.quantity },
     },
-    ...(isGraded ? {} : { condition: condition.condition }),
+    condition: isGraded ? "LIKE_NEW" : condition.condition,
+    ...(isGraded ? { conditionId: 2750 } : {}),
     ...(condition.conditionDescription ? { conditionDescription: condition.conditionDescription } : {}),
     conditionDescriptors: buildConditionDescriptors(i),
     product: {
