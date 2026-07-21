@@ -269,8 +269,14 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
 
     const titleSuggested = (() => {
       const parts: string[] = [];
+      // CF-TITLE-YEAR-DEDUP (Drew, 2026-07-20). Strip a leading year from
+      // setName before prepending cardYear — imported holdings often carry
+      // setName="2017 Topps Archives Baseball" (year embedded), which
+      // otherwise concatenates to "2017 2017 Topps Archives Baseball".
+      const rawSet = String(h.setName ?? h.product ?? "").trim();
+      const setWithoutLeadingYear = rawSet.replace(/^\d{4}\s+/, "");
       if (cardYear) parts.push(String(cardYear));
-      if (h.setName ?? h.product) parts.push(String(h.setName ?? h.product));
+      if (setWithoutLeadingYear) parts.push(setWithoutLeadingYear);
       if (h.parallel) parts.push(String(h.parallel));
       if (h.playerName) parts.push(String(h.playerName));
       if (h.cardNumber) parts.push(`#${String(h.cardNumber).replace(/^#+/, "")}`);

@@ -281,7 +281,13 @@ function composeTitle(i: HoldingListingInput): string {
 
   if (i.cardYear && i.cardYear > 0) tokens.push(String(i.cardYear));
 
-  const set = formatSetWithBrandDedup(i.brand, i.product || i.setName);
+  // CF-TITLE-YEAR-DEDUP (Drew, 2026-07-20). Strip a leading year token
+  // from set/product before formatting — imported holdings often carry
+  // setName="2017 Topps Archives Baseball" and cardYear=2017, which
+  // otherwise concatenates to "2017 2017 Topps Archives Baseball".
+  const stripYear = (s: string | undefined): string | undefined =>
+    s?.replace(/^\d{4}\s+/, "");
+  const set = formatSetWithBrandDedup(i.brand, stripYear(i.product) || stripYear(i.setName));
   if (set) tokens.push(set);
 
   if (i.playerName && i.playerName.trim().length > 0) tokens.push(i.playerName.trim());
@@ -446,20 +452,33 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 // Condition mapping
 // ---------------------------------------------------------------------------
 
-function ebayConditionId(i: HoldingListingInput): { conditionId: string; conditionDescription?: string } {
+// CF-EBAY-CONDITION-ENUM (Drew, 2026-07-20). eBay's Inventory API v1
+// takes a STRING ENUM in the `condition` field (LIKE_NEW, USED_EXCELLENT,
+// etc.), NOT the legacy Trading API numeric conditionIds (3000/4000/etc.).
+// Sending "4000" gets rejected upstream with `Could not serialize field
+// [condition]` (errorId 2004). This mapping stays close to how sellers
+// describe trading-card condition on eBay:
+//   NM/Mint          → LIKE_NEW
+//   Excellent/VG     → USED_EXCELLENT
+//   Good             → USED_GOOD
+//   Slabs (graded)   → USED_EXCELLENT + conditionDescription carrying grade
+// The old function name is kept for call-site stability but the return
+// field is now `condition` (enum), not `conditionId` (numeric).
+function ebayConditionId(i: HoldingListingInput): { condition: string; conditionDescription?: string } {
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
-    // eBay condition "Graded" = 2750
-    return { conditionId: "2750", conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}` };
+    return {
+      condition: "USED_EXCELLENT",
+      conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}`,
+    };
   }
-  // Map raw condition
   const est = (i.conditionEstimate ?? "").toUpperCase();
-  if      (est.includes("MT") || est.includes("MINT"))          return { conditionId: "3000" }; // Near Mint
-  else if (est.includes("NM"))                                   return { conditionId: "3000" };
-  else if (est.includes("EX"))                                   return { conditionId: "4000" }; // Very Good
-  else if (est.includes("VG"))                                   return { conditionId: "4000" };
-  else if (est.includes("GOOD") || est.includes("GD"))           return { conditionId: "5000" }; // Good
-  else                                                           return { conditionId: "3000", conditionDescription: i.conditionNotes };
+  if      (est.includes("MT") || est.includes("MINT"))          return { condition: "LIKE_NEW" };
+  else if (est.includes("NM"))                                   return { condition: "LIKE_NEW" };
+  else if (est.includes("EX"))                                   return { condition: "USED_EXCELLENT" };
+  else if (est.includes("VG"))                                   return { condition: "USED_EXCELLENT" };
+  else if (est.includes("GOOD") || est.includes("GD"))           return { condition: "USED_GOOD" };
+  else                                                           return { condition: "LIKE_NEW", conditionDescription: i.conditionNotes };
 }
 
 // ---------------------------------------------------------------------------
@@ -659,7 +678,7 @@ async function upsertInventoryItem(userId: string, key: string, i: HoldingListin
     availability: {
       shipToLocationAvailability: { quantity: i.quantity },
     },
-    condition: condition.conditionId,
+    condition: condition.condition,
     conditionDescription: condition.conditionDescription,
     product: {
       title:       buildTitle(i),
