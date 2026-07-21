@@ -842,21 +842,28 @@ struct ListingReviewView: View {
     }
 
     /// Build a copy-pasteable error string that tells you which side
-    /// of the wire is broken. Backend not deployed yet → 404. Auth
-    /// missing → 401. Server crashed → 5xx w/ body. Anything else
-    /// → the raw error localizedDescription. Users can screenshot
-    /// this to send back for triage.
+    /// of the wire is broken. Prefers a parsed `{ success:false,
+    /// error:"..." }` body over the generic status-code framing —
+    /// that shape is what our backends return when they want to
+    /// tell the caller something specific (e.g. "Holding not found"
+    /// on a 404 means the endpoint IS deployed, the holdingId just
+    /// isn't in the DB — very different signal from "endpoint not
+    /// deployed"). Users can screenshot the result for triage.
     private func diagnosticErrorMessage(from error: Error) -> String {
         if let apiError = error as? APIServiceError {
             switch apiError {
             case .httpError(let statusCode, let body):
                 let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Try to parse a structured error body first.
+                if let parsed = parsedBackendError(from: trimmed) {
+                    return "POST /api/ebay/listings/prepare returned \(statusCode): \(parsed)"
+                }
                 let bodyPreview = trimmed.isEmpty
                     ? ""
                     : "\n\n" + String(trimmed.prefix(300))
                 switch statusCode {
                 case 404:
-                    return "POST /api/ebay/listings/prepare returned 404 \u{2014} the endpoint isn't deployed yet.\(bodyPreview)"
+                    return "POST /api/ebay/listings/prepare returned 404 with no parseable body \u{2014} likely the endpoint isn't deployed yet.\(bodyPreview)"
                 case 401, 403:
                     return "POST /api/ebay/listings/prepare returned \(statusCode) \u{2014} auth issue.\(bodyPreview)"
                 default:
@@ -869,6 +876,23 @@ struct ListingReviewView: View {
             }
         }
         return error.localizedDescription
+    }
+
+    /// Best-effort `{ success:false, error:"..." }` body parser.
+    /// Returns just the `error` string when present, nil otherwise
+    /// so the caller can fall back to the raw-body preview path.
+    private func parsedBackendError(from body: String) -> String? {
+        guard let data = body.data(using: .utf8) else { return nil }
+        guard let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let message = dict["error"] as? String, message.isEmpty == false {
+            return message
+        }
+        if let message = dict["message"] as? String, message.isEmpty == false {
+            return message
+        }
+        return nil
     }
 
     private func publish(_ listing: PreparedListing) async {
