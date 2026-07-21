@@ -28,10 +28,10 @@ on:
         type: string
         default: 'baseball'
       card_set_contains:
-        description: 'Filter ch_daily_sales card_set by substring (case-insensitive). Leave empty when using ch_group instead.'
+        description: 'Filter ch_daily_sales card_set by substring (case-insensitive). Leave EMPTY when using ch_group. WARNING: GH workflow_dispatch treats empty -f input as "use default", so this default MUST stay empty — dispatchers who want the baseball filter should set it explicitly.'
         required: false
         type: string
-        default: 'baseball'
+        default: ''
       ch_group:
         description: 'Filter CH source by c["group"] field (Baseball | Football | Basketball). Preferred over card_set_contains for FB/BB since modern sets omit the sport word.'
         required: false
