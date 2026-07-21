@@ -621,9 +621,17 @@ async function ebayRequest<T = unknown>(
   const res = await fetch(`${EBAY_BASE_API}${path}`, {
     method,
     headers: {
-      Authorization:   `Bearer ${token}`,
-      "Content-Type":  "application/json",
-      "Content-Language": "en-US",
+      Authorization:              `Bearer ${token}`,
+      "Content-Type":             "application/json",
+      "Content-Language":         "en-US",
+      // CF-EBAY-ACCEPT-LANGUAGE (Drew, 2026-07-20). Inventory API's PUT
+      // /inventory_item rejects with errorId 25709 "Invalid value for
+      // header Accept-Language" when it sees no explicit value —
+      // Node's fetch was letting eBay infer one it didn't like. Send it
+      // explicitly. Marketplace ID also required by several Inventory
+      // endpoints; harmless on the others.
+      "Accept-Language":          "en-US",
+      "X-EBAY-C-MARKETPLACE-ID":  MARKETPLACE_ID,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
