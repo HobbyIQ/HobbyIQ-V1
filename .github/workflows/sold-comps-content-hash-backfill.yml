@@ -1,0 +1,85 @@
+name: Sold Comps Content Hash Backfill
+
+# CF-CONTENT-HASH-BACKFILL (Drew, 2026-07-21). One-shot job that
+# streams every unstamped sold_comps row and stamps contentHash on it.
+# Idempotent — the WHERE clause skips rows that already have the hash,
+# so this workflow is safe to re-dispatch if it dies mid-run.
+#
+# Why we need it: PR #641 shipped pre-write dedup that uses contentHash
+# as the cross-source-duplicate key. New writes stamp themselves; legacy
+# rows (before PR #641 shipped 2026-07-20) don't have hashes yet, so
+# the nightly dedup cron can't match against them. This backfill catches
+# them up in one pass.
+#
+# Runs as a manual dispatch only — no schedule (one-time job; if a new
+# import lands a wave of unstamped rows, re-dispatch).
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: 'Parallel patches (5 is Cosmos-safe; 20 hits 429 throttles)'
+        required: false
+        type: string
+        default: '5'
+      limit:
+        description: 'Max rows to stamp (blank = all). Set to something like 100000 for a bounded test.'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 350   # GH max — well beyond the ~6 hr real duration at concurrency=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 app settings
+        run: |
+          set -euo pipefail
+          CONN=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)
+          if [ -z "$CONN" ]; then echo "::error::COSMOS_CONNECTION_STRING not resolvable"; exit 1; fi
+          echo "::add-mask::$CONN"
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+
+      - name: Run backfill
+        working-directory: backend
+        env:
+          BACKFILL_RATE_MS: '0'
+          BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
+          LIMIT_ARG: ${{ inputs.limit != '' && format('--limit={0}', inputs.limit) || '' }}
+        run: |
+          set -euo pipefail
+          node scripts/backfill-sold-comps-content-hash.cjs --apply $LIMIT_ARG | tee content-hash-backfill.log
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: content-hash-backfill-${{ github.run_id }}
+          path: backend/content-hash-backfill.log
+          retention-days: 14
