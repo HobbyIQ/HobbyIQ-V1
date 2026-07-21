@@ -111,6 +111,20 @@ export class MissingSellerPolicyError extends Error {
   }
 }
 
+/**
+ * CF-EBAY-LOCATION (Drew, 2026-07-20). Thrown when the user has no
+ * inventory location set up on their eBay seller account. Without one,
+ * offer/publish fails with errorId 25002 "No <Item.Country> exists"
+ * because the offer has no ship-from address to draw a country from.
+ * iOS surfaces this as "add a shipping location in eBay Seller Hub".
+ */
+export class MissingSellerLocationError extends Error {
+  constructor() {
+    super("User has no inventory location configured in their eBay seller account.");
+    this.name = "MissingSellerLocationError";
+  }
+}
+
 export interface EbayListingResult {
   success: boolean;
   offerId?: string;
@@ -120,6 +134,8 @@ export interface EbayListingResult {
   error?: string;
   /** When publish fails because of a missing seller policy, names which one and why. */
   missingPolicy?: { policyType: SellerPolicyType; reason: MissingSellerPolicyReason };
+  /** When publish fails because the user has no eBay inventory location configured. */
+  missingLocation?: { reason: "none_configured" };
   /** CF-EBAY-ERROR-STRUCTURED (Drew, 2026-07-20). When eBay rejects the
    *  payload with a 400 validation error, this carries the specific
    *  field/aspect name eBay flagged, plus the errorId and the full
@@ -240,6 +256,29 @@ export async function resolveSellerPolicies(
     returnPolicyId:      input.returnPolicyId      ?? selectPolicyId("return", raw.return),
     fulfillmentPolicyId: input.fulfillmentPolicyId ?? selectPolicyId("fulfillment", raw.fulfillment),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Inventory location resolution
+// ---------------------------------------------------------------------------
+
+/** Fetch the user's eBay inventory locations and return the first one's
+ *  key. Publish requires this on the offer — without it, eBay's publish
+ *  step throws errorId 25002 "No <Item.Country> exists" because the
+ *  offer has no ship-from address to derive a country from.
+ *
+ *  If the user has more than one location we just pick the first for now;
+ *  a future revision can honor a per-listing location override. Throws
+ *  MissingSellerLocationError when the account has zero locations.
+ */
+async function resolveMerchantLocationKey(userId: string): Promise<string> {
+  const resp = await ebayRequest<{
+    locations?: Array<{ merchantLocationKey: string; name?: string }>;
+    total?: number;
+  }>(userId, "GET", "/sell/inventory/v1/location?limit=25");
+  const locs = resp.locations ?? [];
+  if (locs.length === 0) throw new MissingSellerLocationError();
+  return locs[0].merchantLocationKey;
 }
 
 // ---------------------------------------------------------------------------
@@ -702,6 +741,7 @@ async function upsertInventoryItem(userId: string, key: string, i: HoldingListin
 /** Step 2 — Create or update an offer for the item. Returns the offerId. */
 async function upsertOffer(userId: string, inventoryItemKey: string, i: HoldingListingInput, existingOfferId?: string): Promise<string> {
   const policies = await resolveSellerPolicies(userId, i);
+  const merchantLocationKey = await resolveMerchantLocationKey(userId);
   const categoryId = i.categoryId ?? DEFAULT_CATEGORY;
 
   const offerPayload: Record<string, unknown> = {
@@ -710,6 +750,7 @@ async function upsertOffer(userId: string, inventoryItemKey: string, i: HoldingL
     format:        "FIXED_PRICE",
     availableQuantity: i.quantity,
     categoryId,
+    merchantLocationKey,
     listingDescription: buildDescription(i),
     listingPolicies: {
       paymentPolicyId:     policies.paymentPolicyId,
@@ -775,6 +816,13 @@ export async function createListing(userId: string, input: HoldingListingInput):
         success: false,
         error: err.message,
         missingPolicy: { policyType: err.policyType, reason: err.reason },
+      };
+    }
+    if (err instanceof MissingSellerLocationError) {
+      return {
+        success: false,
+        error: err.message,
+        missingLocation: { reason: "none_configured" },
       };
     }
     if (err instanceof EbayApiError) {
