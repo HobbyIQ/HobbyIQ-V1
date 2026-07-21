@@ -545,12 +545,22 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
-    aspects["Grade"] = [`${i.gradingCompany} ${i.grade}`];
+    // CF-EBAY-GRADE-ASPECT-NUMERIC (Drew, 2026-07-20). eBay's Grade aspect
+    // (id 27502) expects the NUMERIC grade value alone (e.g. "10", "9.5"),
+    // not "PSA 10" — the grader identity lives on Professional Grader.
+    // Emitting "PSA 10" gets rejected as invalid in Grade's enum.
+    aspects["Grade"] = [String(i.grade)];
     aspects["Graded"] = ["Yes"];
     aspects["Professional Grader"] = [i.gradingCompany!];
     if (i.certNumber) aspects["Certification Number"] = [i.certNumber];
   } else {
     aspects["Graded"] = ["No"];
+    // CF-EBAY-GRADE-REQUIRED-RAW (Drew, 2026-07-20). eBay category 261328
+    // (Sports Trading Cards) requires the Grade aspect (id 27502) on
+    // EVERY listing including raw — the enum accepts "Ungraded" as the
+    // raw-card value. Missing it rejects publish with errorId 25064
+    // "Grade (27502) is a required field."
+    aspects["Grade"] = ["Ungraded"];
     // Card Condition ALWAYS emitted for raw — eBay requires this
     // aspect for Sports Trading Cards. Defaults to "Near Mint or
     // Better" (matching what most eBay-imported holdings capture)
