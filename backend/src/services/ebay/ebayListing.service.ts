@@ -620,21 +620,26 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 //   Slabs (graded)   → USED_EXCELLENT + conditionDescription carrying grade
 // The old function name is kept for call-site stability but the return
 // field is now `condition` (enum), not `conditionId` (numeric).
-// CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-20). eBay's Metadata
-// API says Trading Cards category 261328 accepts ONLY three condition
-// IDs: 2750 (Graded), 3000 (Used), 4000 (Ungraded). No enum-string like
-// LIKE_NEW is valid for this category. The Sell Inventory API takes the
-// numeric ID AS A STRING in the `condition` field (empirically verified
-// via GET /sell/metadata/v1/marketplace/EBAY_US/get_item_condition_policies).
+// CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-20). eBay's Sell API
+// `condition` field is a strict string enum — numeric IDs ("4000",
+// "2750") and category labels ("GRADED", "UNGRADED") both fail to
+// serialize. Fall back to the standard string enum. eBay's publish
+// validator resolves this to a category-specific conditionId using
+// the conditionDescriptors we pass alongside:
+//   USED_EXCELLENT + descriptors[Card Condition 40001] → 4000 (Ungraded)
+//   USED_VERY_GOOD                                       → 3000 (Used)
+//   LIKE_NEW       + descriptors[Grade + Grader]         → 2750 (Graded)
+// Metadata API (GET /api/ebay/condition-policies) confirms only
+// 2750/3000/4000 are valid for category 261328.
 function ebayConditionId(i: HoldingListingInput): { condition: string; conditionDescription?: string } {
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
     return {
-      condition: "2750",
+      condition: "LIKE_NEW",
       conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}`,
     };
   }
-  return { condition: "4000", conditionDescription: i.conditionNotes };
+  return { condition: "USED_EXCELLENT", conditionDescription: i.conditionNotes };
 }
 
 // ---------------------------------------------------------------------------
