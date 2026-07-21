@@ -367,7 +367,16 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
     const identity = {
       playerName: (typeof h.playerName === "string" ? h.playerName : null) as string | null,
       cardYear,
-      setName: (typeof h.setName === "string" ? h.setName : null) as string | null,
+      // CF-PREPARE-SETNAME-PRODUCT-FALLBACK (Drew, 2026-07-21). Some
+      // holdings (esp. API-added ones) only carry `product`; the two
+      // fields are semantically the same on our schema. Fall back so
+      // identity.setName reflects the value that titleSuggested is
+      // already composed from.
+      setName: (typeof h.setName === "string" && h.setName
+        ? h.setName
+        : typeof h.product === "string" && h.product
+          ? h.product
+          : null) as string | null,
       parallel: (typeof h.parallel === "string" ? h.parallel : null) as string | null,
       cardNumber: (typeof h.cardNumber === "string" ? h.cardNumber : null) as string | null,
       isAuto: h.isAuto === true,
