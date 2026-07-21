@@ -1,0 +1,76 @@
+name: eBay Taxonomy Drift (nightly)
+
+# CF-EBAY-TAXONOMY-DRIFT (Drew, 2026-07-21). Nightly check for eBay
+# category 261328 schema changes. Fetches getItemAspectsForCategory
+# + getItemConditionPolicies and diffs against a committed baseline.
+# Fails the run visibly on drift so the descriptor ID map + condition
+# enum can be updated before it breaks a real publish.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # 4:00AM ET = 8:00 UTC (before daily 5AM ET refresh)
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: 'Update the baseline snapshot (opens artifact for PR review)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch EBAY_CLIENT_ID / EBAY_CLIENT_SECRET from HobbyIQ3
+        id: ebay
+        run: |
+          set -euo pipefail
+          CID=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='EBAY_CLIENT_ID'].value" -o tsv)
+          CSEC=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='EBAY_CLIENT_SECRET'].value" -o tsv)
+          if [ -z "$CID" ] || [ -z "$CSEC" ]; then
+            echo "::error::EBAY_CLIENT_ID or EBAY_CLIENT_SECRET missing from HobbyIQ3 app settings"
+            exit 1
+          fi
+          echo "::add-mask::$CID"
+          echo "::add-mask::$CSEC"
+          echo "EBAY_CLIENT_ID=$CID" >> "$GITHUB_ENV"
+          echo "EBAY_CLIENT_SECRET=$CSEC" >> "$GITHUB_ENV"
+
+      - name: Run drift check
+        working-directory: backend
+        env:
+          UPDATE_BASELINE: ${{ inputs.update_baseline || 'false' }}
+        run: |
+          set +e
+          if [ "$UPDATE_BASELINE" = "true" ]; then
+            node scripts/ebay-taxonomy-drift-check.cjs --update-baseline
+          else
+            node scripts/ebay-taxonomy-drift-check.cjs
+          fi
+          EXIT=$?
+          echo "drift-check exit: $EXIT"
+          exit $EXIT
+
+      - name: Upload updated baseline (dispatch-only)
+        if: inputs.update_baseline == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebay-taxonomy-baseline-updated
+          path: backend/data/ebay-taxonomy-baseline-261328.json
+          retention-days: 30
