@@ -25,6 +25,7 @@ const { CosmosClient } = require("@azure/cosmos");
 const { createHash } = require("crypto");
 
 const RATE_MS = Number(process.env.BACKFILL_RATE_MS ?? "30");
+const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY ?? "1");
 
 function parseArgs(argv) {
   const args = { apply: false, cardId: null, limit: Infinity };
@@ -88,6 +89,28 @@ async function main() {
   let scanned = 0, stamped = 0, alreadyOk = 0, errors = 0;
   const t0 = Date.now();
 
+  const flushBatch = async (batch) => {
+    if (batch.length === 0) return;
+    const results = await Promise.allSettled(batch.map(({ row, hash }) =>
+      sc.item(row.id, row.cardId).patch([{ op: "set", path: "/contentHash", value: hash }])
+    ));
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r.status === "fulfilled") {
+        stamped++;
+      } else {
+        errors++;
+        if (errors <= 5) console.error(`  patch failed ${batch[i].row.id}: ${r.reason?.message ?? r.reason}`);
+      }
+    }
+    if (Math.floor(stamped / 500) !== Math.floor((stamped - batch.length) / 500)) {
+      const rate = stamped / ((Date.now() - t0) / 1000);
+      console.error(`  ${scanned.toLocaleString()} scanned, ${stamped} stamped, ${errors} err @ ${rate.toFixed(1)}/s`);
+    }
+  };
+
+  let batch = [];
+
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
     for (const row of resources) {
@@ -98,22 +121,16 @@ async function main() {
         stamped++;
         continue;
       }
-      try {
-        await sc.item(row.id, row.cardId).patch([
-          { op: "set", path: "/contentHash", value: hash },
-        ]);
-        stamped++;
-        await sleep(RATE_MS);
-      } catch (err) {
-        errors++;
-        if (errors <= 5) console.error(`  patch failed ${row.id}: ${err.message}`);
-      }
-      if (stamped % 500 === 0) {
-        const rate = stamped / ((Date.now() - t0) / 1000);
-        console.error(`  ${scanned.toLocaleString()} scanned, ${stamped} stamped, ${errors} err @ ${rate.toFixed(1)}/s`);
+      batch.push({ row, hash });
+      if (batch.length >= CONCURRENCY) {
+        await flushBatch(batch);
+        batch = [];
+        if (RATE_MS > 0) await sleep(RATE_MS);
       }
     }
   }
+  // Flush remainder
+  await flushBatch(batch);
 
   const elapsed = (Date.now() - t0) / 1000;
   console.error(`\nDONE. scanned=${scanned.toLocaleString()}  ${args.apply ? "stamped" : "would-stamp"}=${stamped.toLocaleString()}  alreadyOk=${alreadyOk.toLocaleString()}  errors=${errors}  time=${elapsed.toFixed(0)}s`);

@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "marketplace": "EBAY_US",
+    "categoryId": "261328",
+    "treeId": "0",
+    "checkedAt": "2026-07-21T13:57:08.978Z"
+  },
+  "schema": {
+    "conditionIds": [
+      {
+        "id": "2750",
+        "name": "Graded"
+      },
+      {
+        "id": "3000",
+        "name": "Used"
+      },
+      {
+        "id": "4000",
+        "name": "Ungraded"
+      }
+    ],
+    "requiredAspects": [
+      "Sport"
+    ],
+    "aspectNames": [
+      "Autograph Authentication",
+      "Autograph Authentication Number",
+      "Autograph Format",
+      "Autographed",
+      "California Prop 65 Warning",
+      "Card Name",
+      "Card Number",
+      "Card Size",
+      "Card Thickness",
+      "Country of Origin",
+      "Customized",
+      "Event/Tournament",
+      "Features",
+      "Insert Set",
+      "Language",
+      "League",
+      "Manufacturer",
+      "Material",
+      "Original/Licensed Reprint",
+      "Parallel/Variety",
+      "Player/Athlete",
+      "Print Run",
+      "Season",
+      "Set",
+      "Signed By",
+      "Sport",
+      "Team",
+      "Type",
+      "Vintage",
+      "Year Manufactured"
+    ]
+  }
+}
