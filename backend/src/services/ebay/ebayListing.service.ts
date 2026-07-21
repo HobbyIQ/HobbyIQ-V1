@@ -583,43 +583,13 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
   if (i.isPatch) aspects["Features"] = ["Patch"];
   if (!aspects["Vintage"]) aspects["Vintage"] = ["No"];   // set to "Yes" by capture when applicable
 
+  // CF-EBAY-CONDITION-DESCRIPTORS (Drew, 2026-07-20). Grade / Professional
+  // Grader / Card Condition / Certification Number all live in
+  // inventory_item.conditionDescriptors — NOT product.aspects — per eBay
+  // category 261328 spec. Keep the Graded aspect for consumer-facing
+  // display but don't emit the others here.
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
-  if (isGraded) {
-    // CF-EBAY-GRADE-ASPECT-NUMERIC (Drew, 2026-07-20). eBay's Grade aspect
-    // (id 27502) expects the NUMERIC grade value alone (e.g. "10", "9.5"),
-    // not "PSA 10" — the grader identity lives on Professional Grader.
-    // Emitting "PSA 10" gets rejected as invalid in Grade's enum.
-    aspects["Grade"] = [String(i.grade)];
-    aspects["Graded"] = ["Yes"];
-    aspects["Professional Grader"] = [i.gradingCompany!];
-    if (i.certNumber) aspects["Certification Number"] = [i.certNumber];
-  } else {
-    aspects["Graded"] = ["No"];
-    // CF-EBAY-RAW-CARD-CONDITION (Drew, 2026-07-20). eBay's Trading API
-    // item specific ID 27502 has TWO display names — "Grade" when the
-    // card is graded, "Card Condition" when raw. The publish validator's
-    // error message says "Grade (27502) is a required field" even for
-    // raw, but the RIGHT key to satisfy it is Card Condition with one of
-    // eBay's exact enum strings (case-sensitive):
-    //   "Near mint or better" | "Excellent" | "Very good" | "Poor"
-    // Similarly Professional Grader (27501) is only required when
-    // Graded=Yes; setting Graded=No + Card Condition satisfies both.
-    const CARD_CONDITION_ENUM = ["Near mint or better", "Excellent", "Very good", "Poor"];
-    const est = (i.conditionEstimate ?? "").trim();
-    // Map common variants (case-insensitive) to eBay's exact strings.
-    const matched = CARD_CONDITION_ENUM.find(v => v.toLowerCase() === est.toLowerCase())
-      ?? (/near ?mint|mint|nm/i.test(est) ? "Near mint or better"
-        : /excellent|ex/i.test(est) ? "Excellent"
-        : /very ?good|vg/i.test(est) ? "Very good"
-        : /poor|damaged/i.test(est) ? "Poor"
-        : "Near mint or better");
-    aspects["Card Condition"] = [matched];
-    // CF-EBAY-GRADER-UNGRADED (Drew, 2026-07-20). eBay category 261328
-    // requires Professional Grader (27501) even for raw. "None" was
-    // rejected in enum-validation; eBay's seller UI top-level label
-    // for raw is "Ungraded" so try that as the enum value.
-    aspects["Professional Grader"] = ["Ungraded"];
-  }
+  aspects["Graded"] = [isGraded ? "Yes" : "No"];
 
   return aspects;
 }
@@ -854,6 +824,59 @@ async function ebayRequest<T = unknown>(
 // Listing workflow
 // ---------------------------------------------------------------------------
 
+// CF-EBAY-CONDITION-DESCRIPTORS (Drew, 2026-07-20). eBay Trading Cards
+// category 261328 requires condition-descriptors (NOT product.aspects)
+// for Grade / Professional Grader / Card Condition. Descriptor IDs +
+// value IDs are stable eBay enums per category-261328 spec.
+const DESC_PROFESSIONAL_GRADER = "27501";
+const DESC_GRADE               = "27502";
+const DESC_CERT_NUMBER         = "27503";
+const DESC_CARD_CONDITION      = "40001";
+
+const GRADER_VALUE_ID: Record<string, string> = {
+  "PSA":  "275010", "BCCG": "275011", "BVG": "275012", "BGS": "275013",
+  "CSG":  "275014", "CGC":  "275015", "SGC": "275016", "KSA": "275017",
+  "GMA":  "275018", "HGA":  "275019", "ISA": "2750110", "GSG": "2750112",
+  "PGS":  "2750113", "MNT": "2750114", "TAG": "2750115", "RARE": "2750116",
+  "RCG":  "2750117", "CGA": "2750120", "OTHER": "2750123",
+};
+const GRADE_VALUE_ID: Record<string, string> = {
+  "10":  "275020", "9.5": "275021", "9":   "275022", "8.5": "275023",
+  "8":   "275024", "7.5": "275025", "7":   "275026", "6.5": "275027",
+  "6":   "275028", "5.5": "275029", "5":   "2750210", "4.5": "2750211",
+  "4":   "2750212", "3.5": "2750213", "3":  "2750214", "2.5": "2750215",
+  "2":   "2750216", "1.5": "2750217", "1":  "2750218",
+};
+const CARD_CONDITION_VALUE_ID: Record<string, string> = {
+  "NEAR MINT OR BETTER": "400010",
+  "EXCELLENT":           "400011",
+  "VERY GOOD":           "400012",
+  "POOR":                "400013",
+};
+
+function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string; values: string[] }> {
+  const descriptors: Array<{ name: string; values: string[] }> = [];
+  const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
+  if (isGraded) {
+    const graderKey = GRADER_VALUE_ID[String(i.gradingCompany).toUpperCase()]
+      ?? GRADER_VALUE_ID["OTHER"];
+    const gradeKey = GRADE_VALUE_ID[String(i.grade).trim()];
+    descriptors.push({ name: DESC_PROFESSIONAL_GRADER, values: [graderKey] });
+    if (gradeKey) descriptors.push({ name: DESC_GRADE, values: [gradeKey] });
+    if (i.certNumber) descriptors.push({ name: DESC_CERT_NUMBER, values: [i.certNumber.slice(0, 30)] });
+  } else {
+    const est = (i.conditionEstimate ?? "").trim().toUpperCase();
+    const cardCondKey = CARD_CONDITION_VALUE_ID[est]
+      ?? (/NEAR ?MINT|MINT|NM/.test(est) ? "400010"
+        : /EXCELLENT|EX/.test(est) ? "400011"
+        : /VERY ?GOOD|VG/.test(est) ? "400012"
+        : /POOR|DAMAGED/.test(est) ? "400013"
+        : "400010");
+    descriptors.push({ name: DESC_CARD_CONDITION, values: [cardCondKey] });
+  }
+  return descriptors;
+}
+
 /** Step 1 — Create or replace an inventory item (the physical card). */
 async function upsertInventoryItem(userId: string, key: string, i: HoldingListingInput): Promise<void> {
   const condition = ebayConditionId(i);
@@ -864,6 +887,12 @@ async function upsertInventoryItem(userId: string, key: string, i: HoldingListin
     },
     condition: condition.condition,
     conditionDescription: condition.conditionDescription,
+    // CF-EBAY-CONDITION-DESCRIPTORS (Drew, 2026-07-20). Trading Cards
+    // category 261328 requires descriptors here (NOT in product.aspects)
+    // for Grade / Grader / Card Condition. Publish otherwise rejects
+    // with errorId 25064 "Grade/Grader is a required field" no matter
+    // what aspect values are sent.
+    conditionDescriptors: buildConditionDescriptors(i),
     product: {
       title:       buildTitle(i),
       description: buildDescription(i),
