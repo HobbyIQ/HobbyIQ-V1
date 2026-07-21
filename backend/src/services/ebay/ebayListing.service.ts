@@ -383,6 +383,16 @@ export async function fetchCategorySubtree(userId: string, categoryId: string): 
   );
 }
 
+/** Diagnostic — fetch valid condition IDs + names + descriptor rules
+ *  for a category. Authoritative source for what `condition` strings
+ *  the Sell API will accept for this category. */
+export async function fetchItemConditionPolicies(userId: string, categoryId: string): Promise<unknown> {
+  return await ebayRequest(
+    userId, "GET",
+    `/sell/metadata/v1/marketplace/${encodeURIComponent(MARKETPLACE_ID)}/get_item_condition_policies?filter=categoryIds:{${encodeURIComponent(categoryId)}}`,
+  );
+}
+
 /** Diagnostic — ask eBay to suggest a category for a listing title. */
 export async function fetchCategorySuggestion(userId: string, q: string): Promise<unknown> {
   const tree = await ebayRequest<{ categoryTreeId: string }>(

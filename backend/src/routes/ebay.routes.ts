@@ -42,6 +42,7 @@ import {
   listInventoryLocations,
   createInventoryLocation,
   fetchCategoryAspects,
+  fetchItemConditionPolicies,
   HoldingListingInput,
 } from "../services/ebay/ebayListing.service.js";
 import {
@@ -232,6 +233,17 @@ router.get("/category-aspects", async (req: Request, res: Response) => {
     res.json({ success: true, categoryId, data });
   } catch (err) {
     res.status(502).json({ success: false, error: err instanceof Error ? err.message : "eBay Taxonomy error" });
+  }
+});
+
+router.get("/condition-policies", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const categoryId = String(req.query.categoryId ?? "261328");
+  try {
+    const data = await fetchItemConditionPolicies(userId, categoryId);
+    res.json({ success: true, categoryId, data });
+  } catch (err) {
+    res.status(502).json({ success: false, error: err instanceof Error ? err.message : "eBay Metadata error" });
   }
 });
 
