@@ -610,21 +610,22 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 //   Slabs (graded)   → USED_EXCELLENT + conditionDescription carrying grade
 // The old function name is kept for call-site stability but the return
 // field is now `condition` (enum), not `conditionId` (numeric).
+// CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-20). eBay Trading Cards
+// category 261328 accepts ONLY two condition values on the Sell Inventory
+// API (per spec Drew shared): "GRADED" (maps to conditionId 2750) or
+// "UNGRADED" (maps to conditionId 4000). Generic Sell API strings like
+// LIKE_NEW / USED_EXCELLENT are rejected with errorId 25060 "The Condition
+// descriptor N is not valid for condition INVALID_CONDITION" — meaning
+// eBay accepts the descriptors but can't reconcile the top-level condition.
 function ebayConditionId(i: HoldingListingInput): { condition: string; conditionDescription?: string } {
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
     return {
-      condition: "USED_EXCELLENT",
+      condition: "GRADED",
       conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}`,
     };
   }
-  const est = (i.conditionEstimate ?? "").toUpperCase();
-  if      (est.includes("MT") || est.includes("MINT"))          return { condition: "LIKE_NEW" };
-  else if (est.includes("NM"))                                   return { condition: "LIKE_NEW" };
-  else if (est.includes("EX"))                                   return { condition: "USED_EXCELLENT" };
-  else if (est.includes("VG"))                                   return { condition: "USED_EXCELLENT" };
-  else if (est.includes("GOOD") || est.includes("GD"))           return { condition: "USED_GOOD" };
-  else                                                           return { condition: "LIKE_NEW", conditionDescription: i.conditionNotes };
+  return { condition: "UNGRADED", conditionDescription: i.conditionNotes };
 }
 
 // ---------------------------------------------------------------------------
