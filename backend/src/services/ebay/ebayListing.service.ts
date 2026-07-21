@@ -622,17 +622,19 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 // field is now `condition` (enum), not `conditionId` (numeric).
 // CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-21). eBay's Sell API
 // condition enum → conditionId mapping (confirmed via publish errors):
-//   USED_EXCELLENT   → 3000 (rejected: not valid for cat 261328)
-//   USED_VERY_GOOD   → 4000 ← Ungraded ✅
-//   LIKE_NEW         → 1500 (rejected: not valid)
-//   NEW_OTHER        → 2750 ← Graded (typical mapping)
-// Category 261328 accepts only 2750/4000. We pass conditionDescriptors[]
-// alongside to specify the Grade/Grader/Card Condition detail.
+//   USED_EXCELLENT   → 3000  (rejected for cat 261328 without descriptors)
+//   USED_VERY_GOOD   → 4000  ← Ungraded ✅
+//   LIKE_NEW         → 1500  (rejected: not valid for 261328)
+//   NEW_OTHER        → 1750  (rejected: not valid)
+// For Graded (2750), no direct Sell API enum maps to it in standard
+// mapping. Empirically USED_EXCELLENT + descriptors[Grade+Grader] gets
+// eBay to promote to 2750 during publish (descriptor-driven condition
+// resolution). Category 261328 accepts only 2750/3000/4000.
 function ebayConditionId(i: HoldingListingInput): { condition: string; conditionDescription?: string } {
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
     return {
-      condition: "NEW_OTHER",
+      condition: "USED_EXCELLENT",
       conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}`,
     };
   }
