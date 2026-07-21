@@ -34,6 +34,7 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             const to = params.get("@to");
             let rows = Array.from(store.values()) as SoldCompDoc[];
             if (cid) rows = rows.filter((d) => d.cardId === cid);
+            const h = params.get("@h"); if (h) rows = rows.filter((d) => d.contentHash === h);
             if (from) rows = rows.filter((d) => d.soldAt >= from);
             if (to) rows = rows.filter((d) => d.soldAt <= to);
             rows.sort((a, b) => (a.soldAt < b.soldAt ? 1 : a.soldAt > b.soldAt ? -1 : 0));

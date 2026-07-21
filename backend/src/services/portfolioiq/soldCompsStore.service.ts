@@ -346,15 +346,24 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // every existing dup; otherwise skip. Prevents future duplicates
   // regardless of which emit path fires (eBay user + CH tracking same
   // sale + browse-ended finding same listing all collapse to one row).
+  //
+  // CF-CONTENT-HASH-CROSS-SOURCE-ONLY (Drew, 2026-07-21). Only apply
+  // dedup when at least one existing row is from a DIFFERENT source
+  // than the incoming. Same-source-different-externalId is genuinely
+  // two distinct sales (two sellers with same asking price on same
+  // day) — the source's own external id is the authority, not our
+  // content hash.
   try {
     const { resources: existing } = await c.items.query<SoldCompDoc>({
       query: "SELECT * FROM c WHERE c.contentHash = @h",
       parameters: [{ name: "@h", value: contentHash }],
     }, { partitionKey: doc.cardId }).fetchAll();
 
-    if (existing.length > 0) {
+    const crossSourceExisting = existing.filter(e => e.source !== doc.source);
+
+    if (crossSourceExisting.length > 0) {
       const incomingScore = scoreForCanonical(doc);
-      const bestExistingScore = Math.max(...existing.map(scoreForCanonical));
+      const bestExistingScore = Math.max(...crossSourceExisting.map(scoreForCanonical));
       if (incomingScore <= bestExistingScore) {
         // Existing row is canonical → skip. Log at 1% sample so we can
         // measure the dedup hit rate in App Insights.
@@ -371,9 +380,10 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         }
         return;
       }
-      // Incoming wins → delete existing rows before writing so we don't
-      // leave stale-canonical rows behind.
-      for (const e of existing) {
+      // Incoming wins → delete cross-source existing rows before
+      // writing so we don't leave stale-canonical rows behind. Same-
+      // source rows are left in place (they're independent sales).
+      for (const e of crossSourceExisting) {
         try { await c.item(e.id, doc.cardId).delete(); } catch { /* best effort */ }
       }
       console.log(JSON.stringify({
@@ -381,7 +391,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         source: "soldCompsStore.recordSoldComp",
         cardId: doc.cardId,
         contentHash,
-        replacedCount: existing.length,
+        replacedCount: crossSourceExisting.length,
         incomingSource: doc.source,
       }));
     }

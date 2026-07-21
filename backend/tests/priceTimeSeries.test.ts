@@ -26,10 +26,14 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             const cid = params.get("@cid");
             const from = params.get("@from");
             const to = params.get("@to");
+            const h = params.get("@h");
             let rows = Array.from(store.values());
             if (cid) rows = rows.filter((d) => d.cardId === cid);
             if (from) rows = rows.filter((d) => d.soldAt >= from);
             if (to) rows = rows.filter((d) => d.soldAt <= to);
+            // CF-CONTENT-HASH-PREWRITE-DEDUP mock support: filter by
+            // contentHash when the query parameterizes it.
+            if (h) rows = rows.filter((d) => d.contentHash === h);
             rows.sort((a, b) => (a.soldAt < b.soldAt ? 1 : -1));
             return { resources: rows };
           },

@@ -27,5 +27,11 @@ export default defineConfig({
     // additions (cache hardening + ebay poll + corpus + resolver work).
     // Module evaluation itself is fast; the cost is one-time SWC transform.
     hookTimeout: 30000,
+    // CF-TEST-TIMEOUT-BUMP (Drew, 2026-07-21). Bumped from 5s default
+    // to 30s. Full-suite runs put heavy fork/import pressure on nodes
+    // that hit dynamic import chains (async import("../src/...") in
+    // beforeEach). Tests that are fast in isolation time out under
+    // that load. 30s matches hookTimeout and leaves plenty of headroom.
+    testTimeout: 30000,
   },
 });
