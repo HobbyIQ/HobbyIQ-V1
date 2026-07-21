@@ -854,9 +854,27 @@ async function upsertOffer(userId: string, inventoryItemKey: string, i: HoldingL
     return existingOfferId;
   }
 
-  // Create new offer
-  const result = await ebayRequest<{ offerId: string }>(userId, "POST", `/sell/inventory/v1/offer`, offerPayload);
-  return result.offerId;
+  // Create new offer. CF-OFFER-ALREADY-EXISTS (Drew, 2026-07-20). eBay
+  // rejects POST /offer with errorId 25002 "Offer entity already exists"
+  // when a previous partial attempt (e.g. died at publish) left an
+  // orphaned offer for this SKU. The error carries the existing offerId
+  // in parameters — recover by PUT-updating the orphan instead of
+  // failing the whole listing on a retry.
+  try {
+    const result = await ebayRequest<{ offerId: string }>(userId, "POST", `/sell/inventory/v1/offer`, offerPayload);
+    return result.offerId;
+  } catch (err) {
+    if (err instanceof EbayApiError && err.ebayErrorId === 25002) {
+      const params = (err.ebayResponse as { errors?: Array<{ parameters?: Array<{ name?: string; value?: string }> }> })
+        ?.errors?.[0]?.parameters ?? [];
+      const orphanOfferId = params.find(p => p.name === "offerId")?.value;
+      if (orphanOfferId && /Offer entity already exists/i.test(err.message)) {
+        await ebayRequest(userId, "PUT", `/sell/inventory/v1/offer/${orphanOfferId}`, offerPayload);
+        return orphanOfferId;
+      }
+    }
+    throw err;
+  }
 }
 
 /** Step 3 — Publish the offer to make the listing live. Returns listingId. */
