@@ -877,11 +877,13 @@ function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string
     const gradeKey = GRADE_VALUE_ID[String(i.grade).trim()];
     descriptors.push({ name: DESC_PROFESSIONAL_GRADER, values: [graderKey] });
     if (gradeKey) descriptors.push({ name: DESC_GRADE, values: [gradeKey] });
-    // Cert# restored — with `condition` field omitted (see
-    // upsertInventoryItem CF-EBAY-GRADED-OMIT-CONDITION), eBay derives
-    // conditionId 2750 from the descriptors and the Cert Number
-    // descriptor 27503 becomes valid.
-    if (i.certNumber) descriptors.push({ name: DESC_CERT_NUMBER, values: [i.certNumber.slice(0, 30)] });
+    // CF-CERT-DESCRIPTOR-DEFERRED (Drew, 2026-07-21). Descriptor 27503
+    // (Certification Number) is optional per eBay's cat 261328 spec.
+    // The `{name, values: [str]}` shape gets rejected as "sent as NULL"
+    // even with a valid cert string — free-text descriptors may need a
+    // different envelope (`{name, text: str}`?). Deferred as follow-up
+    // since cert# is optional; still captured on the holding and
+    // rendered into the listing description via conditionDescription.
   } else {
     const est = (i.conditionEstimate ?? "").trim().toUpperCase();
     const cardCondKey = CARD_CONDITION_VALUE_ID[est]
