@@ -120,6 +120,14 @@ export interface EbayListingResult {
   error?: string;
   /** When publish fails because of a missing seller policy, names which one and why. */
   missingPolicy?: { policyType: SellerPolicyType; reason: MissingSellerPolicyReason };
+  /** CF-EBAY-ERROR-STRUCTURED (Drew, 2026-07-20). When eBay rejects the
+   *  payload with a 400 validation error, this carries the specific
+   *  field/aspect name eBay flagged, plus the errorId and the full
+   *  eBay response for debugging. iOS Listing Review uses `ebayField`
+   *  to highlight the offending section inline. */
+  ebayField?: string | null;
+  ebayErrorId?: number | null;
+  ebayResponse?: unknown;
 }
 
 export interface EbayOfferStatus {
@@ -402,12 +410,19 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
   if (i.setName)      aspects["Set"] = [i.setName];
   if (i.cardNumber)   aspects["Card Number"] = [i.cardNumber];
   if (i.parallel)     aspects["Parallel/Variety"] = [i.parallel];
-  if (i.isRookie)     aspects["Rookie"] = ["Yes"];
-  if (i.isAuto)       aspects["Autographed"] = ["Yes"];
-  if (i.isPatch)      aspects["Features"] = ["Patch"];
   if (i.printRun)     aspects["Print Run"] = [String(i.printRun)];
   if (i.serialNumber) aspects["Serial Number"] = [i.serialNumber];
   if (i.variation)    aspects["Variation"] = [i.variation];
+
+  // CF-EBAY-ASPECT-BOOLEAN-DEFAULTS (Drew, 2026-07-20). eBay's Sports
+  // Trading Cards category demands Autographed / Rookie / Vintage as
+  // Yes|No — not "absent when false". Prior code only emitted "Yes"
+  // and left the aspect off when false; eBay silently rejected some
+  // listings for the missing key. Always emit both sides.
+  aspects["Autographed"] = [i.isAuto ? "Yes" : "No"];
+  aspects["Rookie"] = [i.isRookie ? "Yes" : "No"];
+  if (i.isPatch) aspects["Features"] = ["Patch"];
+  if (!aspects["Vintage"]) aspects["Vintage"] = ["No"];   // set to "Yes" by capture when applicable
 
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
@@ -417,7 +432,11 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
     if (i.certNumber) aspects["Certification Number"] = [i.certNumber];
   } else {
     aspects["Graded"] = ["No"];
-    if (i.conditionEstimate) aspects["Condition"] = [i.conditionEstimate];
+    // Card Condition ALWAYS emitted for raw — eBay requires this
+    // aspect for Sports Trading Cards. Defaults to "Near Mint or
+    // Better" (matching what most eBay-imported holdings capture)
+    // when the user hasn't set a specific conditionEstimate.
+    aspects["Card Condition"] = [i.conditionEstimate ?? "Near Mint or Better"];
   }
 
   return aspects;
@@ -514,6 +533,65 @@ export function buildImages(i: HoldingListingInput): Array<{ imageUrl: string }>
 // Core eBay API helpers
 // ---------------------------------------------------------------------------
 
+/** CF-EBAY-ERROR-STRUCTURED (Drew, 2026-07-20). Rich error type so
+ *  callers (routes) can pull out the field name that eBay flagged and
+ *  surface it to iOS for inline highlighting on the Listing Review
+ *  screen. */
+export class EbayApiError extends Error {
+  public readonly status: number;
+  public readonly method: string;
+  public readonly path: string;
+  /** Parsed field name from eBay's errors[].parameters[]. Present when
+   *  eBay's response includes a Name/Value parameter pair — often the
+   *  aspect key that failed validation. */
+  public readonly ebayField: string | null;
+  /** eBay's own errorId (e.g. 25007 = "A user error has occurred") —
+   *  useful for category-specific dispatch. */
+  public readonly ebayErrorId: number | null;
+  public readonly ebayResponse: unknown;
+  public readonly requestBody: unknown;
+
+  constructor(args: {
+    status: number;
+    method: string;
+    path: string;
+    message: string;
+    ebayField: string | null;
+    ebayErrorId: number | null;
+    ebayResponse: unknown;
+    requestBody: unknown;
+  }) {
+    super(args.message);
+    this.name = "EbayApiError";
+    this.status = args.status;
+    this.method = args.method;
+    this.path = args.path;
+    this.ebayField = args.ebayField;
+    this.ebayErrorId = args.ebayErrorId;
+    this.ebayResponse = args.ebayResponse;
+    this.requestBody = args.requestBody;
+  }
+}
+
+/** Extract the offending field name from eBay's error payload. eBay
+ *  puts the parameter Name inside errors[].parameters[] on validation
+ *  failures — the value tells us which aspect / field they rejected. */
+function extractEbayField(data: unknown): string | null {
+  const errors = (data as { errors?: Array<{ parameters?: Array<{ name?: string; value?: string }> }> })?.errors;
+  if (!Array.isArray(errors)) return null;
+  for (const e of errors) {
+    if (Array.isArray(e.parameters)) {
+      // Prefer a parameter explicitly named "aspectName" — the specific
+      // aspect eBay didn't like. Fall through to any Name value.
+      const named = e.parameters.find((p) => p.name === "aspectName" || p.name === "fieldName");
+      if (named?.value) return String(named.value);
+      const firstValue = e.parameters.find((p) => p.value)?.value;
+      if (firstValue) return String(firstValue);
+    }
+  }
+  return null;
+}
+
 async function ebayRequest<T = unknown>(
   userId: string,
   method: string,
@@ -536,7 +614,34 @@ async function ebayRequest<T = unknown>(
   const data = await res.json();
   if (!res.ok) {
     const msg = (data as { errors?: Array<{ message?: string }> })?.errors?.[0]?.message ?? JSON.stringify(data);
-    throw new Error(`eBay API ${method} ${path} failed (${res.status}): ${msg}`);
+    const ebayField = extractEbayField(data);
+    const ebayErrorId = (data as { errors?: Array<{ errorId?: number }> })?.errors?.[0]?.errorId ?? null;
+    // CF-EBAY-REQUEST-LOG (Drew, 2026-07-20). Log the full request +
+    // response on every failure so we can diagnose eBay 400s without
+    // needing to reproduce. Body redaction: authorization header
+    // NEVER logged. Everything else visible in App Insights via KQL.
+    console.error(JSON.stringify({
+      event: "ebay_api_request_failed",
+      source: "ebayListing.ebayRequest",
+      status: res.status,
+      method,
+      path,
+      ebayErrorId,
+      ebayField,
+      ebayMessage: msg,
+      requestBody: body,
+      ebayResponse: data,
+    }));
+    throw new EbayApiError({
+      status: res.status,
+      method,
+      path,
+      message: `eBay API ${method} ${path} failed (${res.status}): ${msg}`,
+      ebayField,
+      ebayErrorId,
+      ebayResponse: data,
+      requestBody: body,
+    });
   }
 
   return data as T;
@@ -643,6 +748,15 @@ export async function createListing(userId: string, input: HoldingListingInput):
         success: false,
         error: err.message,
         missingPolicy: { policyType: err.policyType, reason: err.reason },
+      };
+    }
+    if (err instanceof EbayApiError) {
+      return {
+        success: false,
+        error: err.message,
+        ebayField: err.ebayField,
+        ebayErrorId: err.ebayErrorId,
+        ebayResponse: err.ebayResponse,
       };
     }
     const message = err instanceof Error ? err.message : String(err);
