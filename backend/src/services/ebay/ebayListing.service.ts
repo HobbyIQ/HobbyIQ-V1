@@ -620,26 +620,23 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 //   Slabs (graded)   → USED_EXCELLENT + conditionDescription carrying grade
 // The old function name is kept for call-site stability but the return
 // field is now `condition` (enum), not `conditionId` (numeric).
-// CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-20). eBay's Sell API
-// `condition` field is a strict string enum — numeric IDs ("4000",
-// "2750") and category labels ("GRADED", "UNGRADED") both fail to
-// serialize. Fall back to the standard string enum. eBay's publish
-// validator resolves this to a category-specific conditionId using
-// the conditionDescriptors we pass alongside:
-//   USED_EXCELLENT + descriptors[Card Condition 40001] → 4000 (Ungraded)
-//   USED_VERY_GOOD                                       → 3000 (Used)
-//   LIKE_NEW       + descriptors[Grade + Grader]         → 2750 (Graded)
-// Metadata API (GET /api/ebay/condition-policies) confirms only
-// 2750/3000/4000 are valid for category 261328.
+// CF-EBAY-TRADING-CARDS-CONDITION (Drew, 2026-07-21). eBay's Sell API
+// condition enum → conditionId mapping (confirmed via publish errors):
+//   USED_EXCELLENT   → 3000 (rejected: not valid for cat 261328)
+//   USED_VERY_GOOD   → 4000 ← Ungraded ✅
+//   LIKE_NEW         → 1500 (rejected: not valid)
+//   NEW_OTHER        → 2750 ← Graded (typical mapping)
+// Category 261328 accepts only 2750/4000. We pass conditionDescriptors[]
+// alongside to specify the Grade/Grader/Card Condition detail.
 function ebayConditionId(i: HoldingListingInput): { condition: string; conditionDescription?: string } {
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
     return {
-      condition: "LIKE_NEW",
+      condition: "NEW_OTHER",
       conditionDescription: `${i.gradingCompany} ${i.grade}${i.certNumber ? ` — Cert #${i.certNumber}` : ""}`,
     };
   }
-  return { condition: "USED_EXCELLENT", conditionDescription: i.conditionNotes };
+  return { condition: "USED_VERY_GOOD", conditionDescription: i.conditionNotes };
 }
 
 // ---------------------------------------------------------------------------
