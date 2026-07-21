@@ -241,6 +241,22 @@ export function applyBrowseEnrichment(
   if (gradeVal !== undefined) {
     holding.gradeValue = gradeVal;
   }
+  // CF-CERT-CAPTURE (Drew, 2026-07-20). Promote the seller-typed
+  // certification number into a structured holding field so re-listing
+  // that same graded card doesn't force the user to type it in again.
+  // eBay uses several field names for this depending on category —
+  // check the common ones.
+  const certRaw =
+    aspects["Certification Number"] ??
+    aspects["Cert Number"] ??
+    aspects["Certification"] ??
+    null;
+  if (certRaw && typeof certRaw === "string") {
+    const cert = certRaw.trim();
+    if (cert.length > 0 && cert.length <= 32) {
+      (holding as Record<string, unknown>).certNumber = cert;
+    }
+  }
   // If Browse says Ungraded explicitly, clear a title-parsed grade so we
   // don't lie about it. Title regex sometimes picks up spurious "PSA 10"
   // in seller marketing copy that isn't a real slab.
@@ -248,6 +264,7 @@ export function applyBrowseEnrichment(
     holding.gradeCompany = undefined;
     holding.gradingCompany = undefined;
     holding.gradeValue = undefined;
+    (holding as Record<string, unknown>).certNumber = undefined;
   }
 
   // ── Autograph: Browse aspect authoritative ────────────────────────
