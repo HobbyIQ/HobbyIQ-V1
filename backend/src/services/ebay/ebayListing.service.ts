@@ -281,6 +281,80 @@ async function resolveMerchantLocationKey(userId: string): Promise<string> {
   return locs[0].merchantLocationKey;
 }
 
+export interface InventoryLocationSummary {
+  merchantLocationKey: string;
+  name?: string;
+  addressLine1?: string;
+  city?: string;
+  stateOrProvince?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+export interface CreateInventoryLocationInput {
+  name?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  stateOrProvince: string;
+  postalCode: string;
+  country?: string;
+}
+
+/** Public — list the user's eBay inventory locations. iOS renders these
+ *  in the ship-from picker; returns an empty array when the user has
+ *  none configured (rather than throwing) so the UI can show "add one". */
+export async function listInventoryLocations(userId: string): Promise<InventoryLocationSummary[]> {
+  const resp = await ebayRequest<{
+    locations?: Array<{
+      merchantLocationKey: string;
+      name?: string;
+      location?: { address?: {
+        addressLine1?: string; city?: string; stateOrProvince?: string;
+        postalCode?: string; country?: string;
+      } };
+    }>;
+  }>(userId, "GET", "/sell/inventory/v1/location?limit=25");
+  return (resp.locations ?? []).map(l => ({
+    merchantLocationKey: l.merchantLocationKey,
+    name: l.name,
+    addressLine1: l.location?.address?.addressLine1,
+    city: l.location?.address?.city,
+    stateOrProvince: l.location?.address?.stateOrProvince,
+    postalCode: l.location?.address?.postalCode,
+    country: l.location?.address?.country,
+  }));
+}
+
+/** Public — create (or upsert) an eBay inventory location under a
+ *  stable per-user key. Idempotent by design: repeated calls with the
+ *  same key update the same location instead of creating dupes. */
+export async function createInventoryLocation(
+  userId: string,
+  input: CreateInventoryLocationInput,
+): Promise<{ merchantLocationKey: string }> {
+  // Stable key per user — eBay PUT to same key is an upsert. Sanitized
+  // slug so the URL segment is safe.
+  const key = `hobbyiq-primary-${userId}`.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 36);
+  const payload = {
+    location: {
+      address: {
+        addressLine1:  input.addressLine1,
+        ...(input.addressLine2 ? { addressLine2: input.addressLine2 } : {}),
+        city:            input.city,
+        stateOrProvince: input.stateOrProvince,
+        postalCode:      input.postalCode,
+        country:         input.country ?? "US",
+      },
+    },
+    name: input.name ?? "HobbyIQ Ship-From",
+    merchantLocationStatus: "ENABLED",
+    locationTypes: ["WAREHOUSE"],
+  };
+  await ebayRequest(userId, "POST", `/sell/inventory/v1/location/${encodeURIComponent(key)}`, payload);
+  return { merchantLocationKey: key };
+}
+
 // ---------------------------------------------------------------------------
 // Title builder
 // ---------------------------------------------------------------------------
