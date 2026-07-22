@@ -868,13 +868,13 @@ const CARD_CONDITION_VALUE_ID: Record<string, string> = {
   "POOR":                "400013",
 };
 
-interface ConditionDescriptor {
+export interface ConditionDescriptor {
   name: string;
   values?: string[];
   additionalInfo?: string;
 }
 
-function buildConditionDescriptors(i: HoldingListingInput): ConditionDescriptor[] {
+export function buildConditionDescriptors(i: HoldingListingInput): ConditionDescriptor[] {
   const descriptors: ConditionDescriptor[] = [];
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
