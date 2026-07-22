@@ -234,8 +234,10 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       //     (Tier 6 fallback, era baseline × ladder tier) → 11
       //   CF-NO-NULL-PRICING PR 3 (2026-07-11): setdoc-baseline (Tier 7
       //     fallback at catalog-miss, era-typed SetDoc baseline) → 12
+      //   PR #682 (2026-07-21): no-recent-comps → Tier 7 setdoc-baseline
+      //     fall-through added its own emit before returning setdoc → 13
       const matches = text.match(/emitPredictionToCorpus\s*[({]/g);
-      expect(matches?.length ?? 0).toBe(13);
+      expect(matches?.length ?? 0).toBe(14);
     });
 
     it("each fallback path tags fmvMechanism appropriately", async () => {
@@ -277,6 +279,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       //   product-family-projection: emit -> return (function exit) [#348-#350, 2026-07-09]
       //   parallel-floor-projection: emit -> return (function exit) [#344, 2026-07-09]
       //   scarcity-prior-floor:      emit -> return (function exit) [#357, 2026-07-10]
+      //   no-recent-comps → Tier 7:  emit -> return (function exit) [#682, 2026-07-21]
       // Source-level documentation test — guards against a future refactor
       // accidentally inserting an emit inside a loop or a non-returning
       // branch.
@@ -288,8 +291,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         "utf8",
       );
       const emitCalls = (text.match(/emitPredictionToCorpus\({/g) ?? []).length;
-      // 12 call sites (see enumeration above); declaration uses parens, not brace.
-      expect(emitCalls).toBe(12);
+      // 13 call sites (see enumeration above); declaration uses parens, not brace.
+      expect(emitCalls).toBe(13);
     });
   });
 
