@@ -2,10 +2,6 @@
 // Do not hand-edit; overwritten by the Grade Calibration Refresh workflow.
 // Human-maintained code (lookupGradeRatio, classifyFamily) lives in
 // gradeCalibrationConfig.ts and imports the constants exported here.
-//
-// Generation source: 365d rolling window of ch_daily_sales,
-// per-family per-year partitioned queries to fit Cosmos serverless
-// RU budget on the big families (topps, topps-chrome, bowman, etc.).
 
 export interface GradeCalibrationTierEntry {
   medianRatio: number;
@@ -18,162 +14,1361 @@ export interface GradeCalibrationEntry {
   p75: number;
   sampleSize: number;
   // Empirical per-grade-tier ratios keyed by numeric grade as string
-  // (e.g. "10", "9.5", "9"). Optional; present only when >=20 paired-
-  // sale samples exist at that specific tier. Absent until the next
-  // Grade Calibration Refresh workflow run rebuilds the data.
+  // (e.g. "10", "9.5", "9"). Optional; present only when we have >=20
+  // paired-sale samples at that specific tier. When absent, consumers
+  // fall back to the company-level medianRatio × subTierScaling.
   // See CF-GRADE-CALIBRATE-PER-TIER.
   byTier?: Record<string, GradeCalibrationTierEntry>;
 }
 
-// Baseline (baseball-implicit). Callers passing sport get sport-
-// specific ratios via GRADE_CALIBRATION_BY_SPORT below; if the
-// sport-specific cell is empty, lookupGradeRatio falls through to
-// this table.
 export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = {
   "bowman": {
-    "BGS":  { "medianRatio": 2.26,  "p25": 1.48,  "p75": 4.30,  "sampleSize": 40 },
-    "CGC":  { "medianRatio": 5.14,  "p25": 1.99,  "p75": 8.10,  "sampleSize": 71 },
-    "PSA":  { "medianRatio": 4.07,  "p25": 2.28,  "p75": 8.66,  "sampleSize": 2065 },
-    "SGC":  { "medianRatio": 3.73,  "p25": 1.87,  "p75": 6.37,  "sampleSize": 160 }
+    "BGS": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.26,
+          "sampleSize": 21
+        },
+        "9.5": {
+          "medianRatio": 2.46,
+          "sampleSize": 49
+        }
+      },
+      "medianRatio": 2.08,
+      "p25": 1.25,
+      "p75": 3.42,
+      "sampleSize": 79
+    },
+    "CGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 4.47,
+          "sampleSize": 56
+        }
+      },
+      "medianRatio": 3.51,
+      "p25": 1.89,
+      "p75": 6.93,
+      "sampleSize": 167
+    },
+    "PSA": {
+      "byTier": {
+        "7": {
+          "medianRatio": 1.09,
+          "sampleSize": 22
+        },
+        "8": {
+          "medianRatio": 1.58,
+          "sampleSize": 234
+        },
+        "9": {
+          "medianRatio": 1.82,
+          "sampleSize": 1561
+        },
+        "10": {
+          "medianRatio": 5.3,
+          "sampleSize": 2415
+        }
+      },
+      "medianRatio": 3.53,
+      "p25": 1.8,
+      "p75": 7.22,
+      "sampleSize": 4259
+    },
+    "SGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.65,
+          "sampleSize": 21
+        },
+        "10": {
+          "medianRatio": 4.51,
+          "sampleSize": 229
+        },
+        "9.5": {
+          "medianRatio": 2.6,
+          "sampleSize": 92
+        }
+      },
+      "medianRatio": 3.35,
+      "p25": 1.71,
+      "p75": 5.97,
+      "sampleSize": 349
+    },
+    "TAG": {
+      "medianRatio": 1.04,
+      "p25": 0.97,
+      "p75": 2.97,
+      "sampleSize": 7
+    }
   },
   "bowman-chrome": {
-    "BGS":  { "medianRatio": 2.28,  "p25": 1.48,  "p75": 3.82,  "sampleSize": 48 },
-    "CGC":  { "medianRatio": 2.88,  "p25": 1.36,  "p75": 8.01,  "sampleSize": 31 },
-    "PSA":  { "medianRatio": 3.46,  "p25": 2.15,  "p75": 7.02,  "sampleSize": 1016 },
-    "SGC":  { "medianRatio": 2.19,  "p25": 1.56,  "p75": 4.23,  "sampleSize": 60 }
+    "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 2.12,
+          "sampleSize": 20
+        }
+      },
+      "medianRatio": 1.97,
+      "p25": 1.25,
+      "p75": 2.98,
+      "sampleSize": 32
+    },
+    "CGC": {
+      "medianRatio": 3.4,
+      "p25": 1.35,
+      "p75": 7.62,
+      "sampleSize": 57
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.86,
+          "sampleSize": 93
+        },
+        "9": {
+          "medianRatio": 1.69,
+          "sampleSize": 703
+        },
+        "10": {
+          "medianRatio": 4.49,
+          "sampleSize": 1077
+        }
+      },
+      "medianRatio": 3.2,
+      "p25": 1.74,
+      "p75": 5.87,
+      "sampleSize": 1896
+    },
+    "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 2.97,
+          "sampleSize": 76
+        },
+        "9.5": {
+          "medianRatio": 1.68,
+          "sampleSize": 32
+        }
+      },
+      "medianRatio": 2.55,
+      "p25": 1.52,
+      "p75": 4.57,
+      "sampleSize": 115
+    }
   },
   "bowman-chrome-draft": {
-    "BGS":  { "medianRatio": 2.26,  "p25": 1.50,  "p75": 2.85,  "sampleSize": 11 },
-    "PSA":  { "medianRatio": 5.32,  "p25": 2.81,  "p75": 7.35,  "sampleSize": 59 }
+    "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.67,
+          "sampleSize": 27
+        },
+        "10": {
+          "medianRatio": 4.59,
+          "sampleSize": 44
+        }
+      },
+      "medianRatio": 3.93,
+      "p25": 2.42,
+      "p75": 6.7,
+      "sampleSize": 73
+    },
+    "SGC": {
+      "medianRatio": 2.29,
+      "p25": 1.33,
+      "p75": 2.72,
+      "sampleSize": 5
+    }
   },
   "bowman-sterling": {
-    "PSA":  { "medianRatio": 3.00,  "p25": 1.95,  "p75": 6.30,  "sampleSize": 15 }
-  },
-  "panini-donruss": {
-    "PSA":  { "medianRatio": 3.81,  "p25": 1.97,  "p75": 7.40,  "sampleSize": 133 },
-    "SGC":  { "medianRatio": 2.92,  "p25": 1.54,  "p75": 12.63, "sampleSize": 8 }
-  },
-  "panini-mosaic": {
-    "PSA":  { "medianRatio": 10.55, "p25": 6.27,  "p75": 29.59, "sampleSize": 10 }
-  },
-  "panini-optic": {
-    "PSA":  { "medianRatio": 2.84,  "p25": 2.17,  "p75": 6.54,  "sampleSize": 58 }
-  },
-  "panini-prizm": {
-    "CGC":  { "medianRatio": 4.29,  "p25": 2.21,  "p75": 6.79,  "sampleSize": 7 },
-    "PSA":  { "medianRatio": 4.37,  "p25": 2.36,  "p75": 8.31,  "sampleSize": 211 }
-  },
-  "panini-select": {
-    "PSA":  { "medianRatio": 7.96,  "p25": 4.34,  "p75": 13.38, "sampleSize": 34 }
-  },
-  "topps": {
-    "BGS":  { "medianRatio": 3.14,  "p25": 2.01,  "p75": 5.56,  "sampleSize": 98 },
-    "CGC":  { "medianRatio": 5.40,  "p25": 2.45,  "p75": 8.95,  "sampleSize": 229 },
-    "PSA":  { "medianRatio": 6.44,  "p25": 3.04,  "p75": 11.73, "sampleSize": 2824 },
-    "SGC":  { "medianRatio": 3.79,  "p25": 2.27,  "p75": 6.33,  "sampleSize": 270 },
-    "TAG":  { "medianRatio": 3.26,  "p25": 2.05,  "p75": 9.62,  "sampleSize": 5 }
-  },
-  "topps-allen-ginter": {
-    "CGC":  { "medianRatio": 9.55,  "p25": 3.03,  "p75": 12.71, "sampleSize": 15 },
-    "PSA":  { "medianRatio": 12.39, "p25": 8.03,  "p75": 16.76, "sampleSize": 73 }
-  },
-  "topps-chrome": {
-    "BGS":  { "medianRatio": 3.07,  "p25": 1.95,  "p75": 4.14,  "sampleSize": 25 },
-    "CGC":  { "medianRatio": 6.01,  "p25": 2.91,  "p75": 8.82,  "sampleSize": 58 },
-    "PSA":  { "medianRatio": 5.98,  "p25": 3.15,  "p75": 10.78, "sampleSize": 1017 },
-    "SGC":  { "medianRatio": 3.95,  "p25": 2.66,  "p75": 6.14,  "sampleSize": 100 }
-  },
-  "topps-chrome-update": {
-    "CGC":  { "medianRatio": 5.12,  "p25": 2.47,  "p75": 7.71,  "sampleSize": 20 },
-    "PSA":  { "medianRatio": 6.90,  "p25": 3.67,  "p75": 11.80, "sampleSize": 235 },
-    "SGC":  { "medianRatio": 2.77,  "p25": 1.83,  "p75": 4.48,  "sampleSize": 19 }
-  },
-  "topps-finest": {
-    "BGS":  { "medianRatio": 3.01,  "p25": 2.49,  "p75": 4.77,  "sampleSize": 8 },
-    "PSA":  { "medianRatio": 6.15,  "p25": 2.74,  "p75": 12.16, "sampleSize": 222 },
-    "SGC":  { "medianRatio": 2.79,  "p25": 1.55,  "p75": 6.61,  "sampleSize": 10 }
-  },
-  "topps-heritage": {
-    "CGC":  { "medianRatio": 3.30,  "p25": 2.47,  "p75": 8.80,  "sampleSize": 9 },
-    "PSA":  { "medianRatio": 6.10,  "p25": 3.01,  "p75": 13.30, "sampleSize": 188 },
-    "SGC":  { "medianRatio": 2.25,  "p25": 1.82,  "p75": 4.32,  "sampleSize": 11 }
-  },
-  "topps-pristine": {
-    "PSA":  { "medianRatio": 5.80,  "p25": 2.57,  "p75": 7.19,  "sampleSize": 30 }
-  },
-  "topps-stadium-club": {
-    "BGS":  { "medianRatio": 5.02,  "p25": 2.95,  "p75": 9.22,  "sampleSize": 6 },
-    "CGC":  { "medianRatio": 3.97,  "p25": 1.34,  "p75": 5.94,  "sampleSize": 6 },
-    "PSA":  { "medianRatio": 8.99,  "p25": 3.66,  "p75": 21.91, "sampleSize": 155 },
-    "SGC":  { "medianRatio": 2.81,  "p25": 2.27,  "p75": 8.86,  "sampleSize": 12 }
-  },
-  "topps-update": {
-    "BGS":  { "medianRatio": 3.13,  "p25": 2.67,  "p75": 3.56,  "sampleSize": 17 },
-    "CGC":  { "medianRatio": 5.62,  "p25": 1.90,  "p75": 10.25, "sampleSize": 35 },
-    "PSA":  { "medianRatio": 6.37,  "p25": 3.21,  "p75": 10.92, "sampleSize": 323 },
-    "SGC":  { "medianRatio": 2.81,  "p25": 1.79,  "p75": 5.67,  "sampleSize": 39 }
-  },
-  "upper-deck": {
-    "BGS":  { "medianRatio": 7.01,  "p25": 4.53,  "p75": 10.18, "sampleSize": 34 },
-    "CGC":  { "medianRatio": 4.62,  "p25": 3.22,  "p75": 6.48,  "sampleSize": 25 },
-    "PSA":  { "medianRatio": 17.38, "p25": 10.28, "p75": 24.09, "sampleSize": 343 },
-    "SGC":  { "medianRatio": 5.12,  "p25": 3.32,  "p75": 9.10,  "sampleSize": 30 }
+    "PSA": {
+      "medianRatio": 3.65,
+      "p25": 2.26,
+      "p75": 8.68,
+      "sampleSize": 26
+    }
   },
   "other": {
-    "BGS":  { "medianRatio": 3.33,  "p25": 1.60,  "p75": 6.00,  "sampleSize": 287 },
-    "CGC":  { "medianRatio": 5.30,  "p25": 2.00,  "p75": 8.50,  "sampleSize": 506 },
-    "PSA":  { "medianRatio": 5.90,  "p25": 2.50,  "p75": 11.00, "sampleSize": 9011 },
-    "SGC":  { "medianRatio": 3.58,  "p25": 1.85,  "p75": 6.20,  "sampleSize": 719 },
-    "TAG":  { "medianRatio": 3.26,  "p25": 2.05,  "p75": 9.62,  "sampleSize": 5 }
+    "BGS": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.36,
+          "sampleSize": 64
+        },
+        "10": {
+          "medianRatio": 5.57,
+          "sampleSize": 53
+        },
+        "9.5": {
+          "medianRatio": 2.47,
+          "sampleSize": 231
+        }
+      },
+      "medianRatio": 2.54,
+      "p25": 1.54,
+      "p75": 4.69,
+      "sampleSize": 487
+    },
+    "CGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.31,
+          "sampleSize": 68
+        },
+        "10": {
+          "medianRatio": 5.88,
+          "sampleSize": 303
+        }
+      },
+      "medianRatio": 4.53,
+      "p25": 1.9,
+      "p75": 8.34,
+      "sampleSize": 1080
+    },
+    "CSG": {
+      "medianRatio": 2.78,
+      "p25": 2.19,
+      "p75": 4.79,
+      "sampleSize": 7
+    },
+    "HGA": {
+      "medianRatio": 1.33,
+      "p25": 0.99,
+      "p75": 2.3,
+      "sampleSize": 7
+    },
+    "PSA": {
+      "byTier": {
+        "7": {
+          "medianRatio": 1.38,
+          "sampleSize": 122
+        },
+        "8": {
+          "medianRatio": 1.71,
+          "sampleSize": 1433
+        },
+        "9": {
+          "medianRatio": 2.5,
+          "sampleSize": 7165
+        },
+        "10": {
+          "medianRatio": 7.27,
+          "sampleSize": 10373
+        }
+      },
+      "medianRatio": 4.33,
+      "p25": 2.08,
+      "p75": 9.05,
+      "sampleSize": 19353
+    },
+    "SGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.83,
+          "sampleSize": 108
+        },
+        "10": {
+          "medianRatio": 4.62,
+          "sampleSize": 824
+        },
+        "9.5": {
+          "medianRatio": 2.57,
+          "sampleSize": 349
+        }
+      },
+      "medianRatio": 3.32,
+      "p25": 1.87,
+      "p75": 5.9,
+      "sampleSize": 1491
+    },
+    "TAG": {
+      "medianRatio": 2.36,
+      "p25": 1.77,
+      "p75": 6.54,
+      "sampleSize": 29
+    }
+  },
+  "panini-contenders": {
+    "PSA": {
+      "medianRatio": 15.68,
+      "p25": 4.23,
+      "p75": 32.69,
+      "sampleSize": 12
+    }
+  },
+  "panini-donruss": {
+    "CGC": {
+      "medianRatio": 3.68,
+      "p25": 1.96,
+      "p75": 10.17,
+      "sampleSize": 25
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.2,
+          "sampleSize": 64
+        },
+        "9": {
+          "medianRatio": 1.88,
+          "sampleSize": 335
+        },
+        "10": {
+          "medianRatio": 7.28,
+          "sampleSize": 417
+        }
+      },
+      "medianRatio": 3.41,
+      "p25": 1.62,
+      "p75": 8.17,
+      "sampleSize": 825
+    },
+    "SGC": {
+      "medianRatio": 1.68,
+      "p25": 1.27,
+      "p75": 4.77,
+      "sampleSize": 26
+    }
+  },
+  "panini-mosaic": {
+    "CGC": {
+      "medianRatio": 7.62,
+      "p25": 6.67,
+      "p75": 11.85,
+      "sampleSize": 6
+    },
+    "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.88,
+          "sampleSize": 50
+        },
+        "10": {
+          "medianRatio": 9.02,
+          "sampleSize": 121
+        }
+      },
+      "medianRatio": 6.58,
+      "p25": 2.65,
+      "p75": 10.68,
+      "sampleSize": 176
+    }
+  },
+  "panini-optic": {
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.1,
+          "sampleSize": 24
+        },
+        "9": {
+          "medianRatio": 1.6,
+          "sampleSize": 169
+        },
+        "10": {
+          "medianRatio": 6.69,
+          "sampleSize": 224
+        }
+      },
+      "medianRatio": 3.02,
+      "p25": 1.53,
+      "p75": 7.91,
+      "sampleSize": 424
+    },
+    "SGC": {
+      "medianRatio": 1.68,
+      "p25": 1.23,
+      "p75": 2.93,
+      "sampleSize": 10
+    }
+  },
+  "panini-prizm": {
+    "BGS": {
+      "medianRatio": 2.61,
+      "p25": 2.24,
+      "p75": 3.82,
+      "sampleSize": 12
+    },
+    "CGC": {
+      "medianRatio": 4.29,
+      "p25": 2.04,
+      "p75": 6.49,
+      "sampleSize": 17
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.35,
+          "sampleSize": 77
+        },
+        "9": {
+          "medianRatio": 2.26,
+          "sampleSize": 433
+        },
+        "10": {
+          "medianRatio": 8.87,
+          "sampleSize": 513
+        }
+      },
+      "medianRatio": 4.67,
+      "p25": 1.89,
+      "p75": 9.39,
+      "sampleSize": 1031
+    },
+    "SGC": {
+      "medianRatio": 3.11,
+      "p25": 1.65,
+      "p75": 4.91,
+      "sampleSize": 24
+    }
+  },
+  "panini-select": {
+    "BGS": {
+      "medianRatio": 1.86,
+      "p25": 1.84,
+      "p75": 2.8,
+      "sampleSize": 5
+    },
+    "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.5,
+          "sampleSize": 65
+        },
+        "10": {
+          "medianRatio": 8.29,
+          "sampleSize": 113
+        }
+      },
+      "medianRatio": 5.73,
+      "p25": 2.79,
+      "p75": 10.41,
+      "sampleSize": 185
+    },
+    "SGC": {
+      "medianRatio": 3.77,
+      "p25": 2.19,
+      "p75": 5.83,
+      "sampleSize": 6
+    }
+  },
+  "topps": {
+    "BGS": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.41,
+          "sampleSize": 43
+        },
+        "10": {
+          "medianRatio": 5.57,
+          "sampleSize": 53
+        },
+        "9.5": {
+          "medianRatio": 2.58,
+          "sampleSize": 122
+        }
+      },
+      "medianRatio": 2.8,
+      "p25": 1.61,
+      "p75": 5.29,
+      "sampleSize": 230
+    },
+    "CGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.31,
+          "sampleSize": 68
+        },
+        "10": {
+          "medianRatio": 6.36,
+          "sampleSize": 194
+        },
+        "9.5": {
+          "medianRatio": 1.96,
+          "sampleSize": 29
+        }
+      },
+      "medianRatio": 4.62,
+      "p25": 1.92,
+      "p75": 8.64,
+      "sampleSize": 520
+    },
+    "CSG": {
+      "medianRatio": 2.78,
+      "p25": 2.19,
+      "p75": 4.79,
+      "sampleSize": 7
+    },
+    "HGA": {
+      "medianRatio": 1.33,
+      "p25": 0.99,
+      "p75": 2.3,
+      "sampleSize": 7
+    },
+    "PSA": {
+      "byTier": {
+        "6": {
+          "medianRatio": 1.03,
+          "sampleSize": 32
+        },
+        "7": {
+          "medianRatio": 1.52,
+          "sampleSize": 77
+        },
+        "8": {
+          "medianRatio": 1.77,
+          "sampleSize": 592
+        },
+        "9": {
+          "medianRatio": 3.04,
+          "sampleSize": 2269
+        },
+        "10": {
+          "medianRatio": 8.61,
+          "sampleSize": 3137
+        }
+      },
+      "medianRatio": 4.88,
+      "p25": 2.28,
+      "p75": 10.44,
+      "sampleSize": 6131
+    },
+    "SGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 1.64,
+          "sampleSize": 66
+        },
+        "10": {
+          "medianRatio": 4.91,
+          "sampleSize": 332
+        },
+        "9.5": {
+          "medianRatio": 2.69,
+          "sampleSize": 166
+        }
+      },
+      "medianRatio": 3.53,
+      "p25": 1.93,
+      "p75": 6.12,
+      "sampleSize": 579
+    },
+    "TAG": {
+      "medianRatio": 3.07,
+      "p25": 2.11,
+      "p75": 9.62,
+      "sampleSize": 16
+    }
+  },
+  "topps-allen-ginter": {
+    "BGS": {
+      "medianRatio": 8.43,
+      "p25": 3.5,
+      "p75": 20.97,
+      "sampleSize": 7
+    },
+    "CGC": {
+      "medianRatio": 9.55,
+      "p25": 2.17,
+      "p75": 12.35,
+      "sampleSize": 29
+    },
+    "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 4.48,
+          "sampleSize": 37
+        },
+        "10": {
+          "medianRatio": 14.01,
+          "sampleSize": 87
+        }
+      },
+      "medianRatio": 9.74,
+      "p25": 4.48,
+      "p75": 16.53,
+      "sampleSize": 131
+    },
+    "SGC": {
+      "medianRatio": 3.12,
+      "p25": 2.17,
+      "p75": 10.06,
+      "sampleSize": 8
+    }
+  },
+  "topps-chrome": {
+    "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 2.3,
+          "sampleSize": 40
+        }
+      },
+      "medianRatio": 2.08,
+      "p25": 1.42,
+      "p75": 4,
+      "sampleSize": 66
+    },
+    "CGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 5.62,
+          "sampleSize": 53
+        }
+      },
+      "medianRatio": 5.13,
+      "p25": 1.94,
+      "p75": 8.98,
+      "sampleSize": 134
+    },
+    "PSA": {
+      "byTier": {
+        "7": {
+          "medianRatio": 1.18,
+          "sampleSize": 23
+        },
+        "8": {
+          "medianRatio": 1.79,
+          "sampleSize": 182
+        },
+        "9": {
+          "medianRatio": 2.62,
+          "sampleSize": 854
+        },
+        "10": {
+          "medianRatio": 7.64,
+          "sampleSize": 1302
+        }
+      },
+      "medianRatio": 4.55,
+      "p25": 2.14,
+      "p75": 9.67,
+      "sampleSize": 2375
+    },
+    "SGC": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.59,
+          "sampleSize": 21
+        },
+        "10": {
+          "medianRatio": 4.98,
+          "sampleSize": 131
+        },
+        "9.5": {
+          "medianRatio": 2.65,
+          "sampleSize": 59
+        }
+      },
+      "medianRatio": 3.64,
+      "p25": 2.35,
+      "p75": 6.23,
+      "sampleSize": 213
+    },
+    "TAG": {
+      "medianRatio": 2.02,
+      "p25": 1.81,
+      "p75": 2.47,
+      "sampleSize": 6
+    }
+  },
+  "topps-chrome-update": {
+    "BGS": {
+      "medianRatio": 1.8,
+      "p25": 1.42,
+      "p75": 3.55,
+      "sampleSize": 16
+    },
+    "CGC": {
+      "medianRatio": 5.06,
+      "p25": 1.56,
+      "p75": 8.52,
+      "sampleSize": 39
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.92,
+          "sampleSize": 41
+        },
+        "9": {
+          "medianRatio": 3.63,
+          "sampleSize": 185
+        },
+        "10": {
+          "medianRatio": 8.88,
+          "sampleSize": 277
+        }
+      },
+      "medianRatio": 4.94,
+      "p25": 2.46,
+      "p75": 11.1,
+      "sampleSize": 510
+    },
+    "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 3.35,
+          "sampleSize": 24
+        }
+      },
+      "medianRatio": 2.92,
+      "p25": 1.6,
+      "p75": 4.98,
+      "sampleSize": 38
+    }
+  },
+  "topps-finest": {
+    "BGS": {
+      "medianRatio": 3.31,
+      "p25": 2.33,
+      "p75": 6.33,
+      "sampleSize": 7
+    },
+    "CGC": {
+      "medianRatio": 2.23,
+      "p25": 1.4,
+      "p75": 4.57,
+      "sampleSize": 11
+    },
+    "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 2.9,
+          "sampleSize": 59
+        },
+        "10": {
+          "medianRatio": 8.55,
+          "sampleSize": 138
+        }
+      },
+      "medianRatio": 5.37,
+      "p25": 2.93,
+      "p75": 10.83,
+      "sampleSize": 208
+    },
+    "SGC": {
+      "medianRatio": 3.97,
+      "p25": 1.79,
+      "p75": 6.94,
+      "sampleSize": 19
+    }
+  },
+  "topps-heritage": {
+    "BGS": {
+      "medianRatio": 2.3,
+      "p25": 1.38,
+      "p75": 2.65,
+      "sampleSize": 11
+    },
+    "CGC": {
+      "medianRatio": 1.92,
+      "p25": 1.4,
+      "p75": 4.43,
+      "sampleSize": 18
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 2.84,
+          "sampleSize": 31
+        },
+        "9": {
+          "medianRatio": 3.58,
+          "sampleSize": 160
+        },
+        "10": {
+          "medianRatio": 8.45,
+          "sampleSize": 190
+        }
+      },
+      "medianRatio": 4.92,
+      "p25": 2.58,
+      "p75": 11.32,
+      "sampleSize": 388
+    },
+    "SGC": {
+      "medianRatio": 2.46,
+      "p25": 1.82,
+      "p75": 5.57,
+      "sampleSize": 28
+    }
+  },
+  "topps-pristine": {
+    "CGC": {
+      "medianRatio": 0.93,
+      "p25": 0.75,
+      "p75": 7.12,
+      "sampleSize": 7
+    },
+    "PSA": {
+      "byTier": {
+        "10": {
+          "medianRatio": 5.78,
+          "sampleSize": 46
+        }
+      },
+      "medianRatio": 4.81,
+      "p25": 2.53,
+      "p75": 7.67,
+      "sampleSize": 54
+    }
+  },
+  "topps-stadium-club": {
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 2.07,
+          "sampleSize": 20
+        },
+        "9": {
+          "medianRatio": 2.84,
+          "sampleSize": 37
+        },
+        "10": {
+          "medianRatio": 7.64,
+          "sampleSize": 44
+        }
+      },
+      "medianRatio": 3.96,
+      "p25": 1.9,
+      "p75": 7.77,
+      "sampleSize": 105
+    },
+    "SGC": {
+      "medianRatio": 2.95,
+      "p25": 2.01,
+      "p75": 3.48,
+      "sampleSize": 9
+    }
+  },
+  "topps-update": {
+    "BGS": {
+      "medianRatio": 2.35,
+      "p25": 1.57,
+      "p75": 4.56,
+      "sampleSize": 22
+    },
+    "CGC": {
+      "medianRatio": 5.34,
+      "p25": 2.15,
+      "p75": 8.33,
+      "sampleSize": 50
+    },
+    "PSA": {
+      "byTier": {
+        "8": {
+          "medianRatio": 1.63,
+          "sampleSize": 75
+        },
+        "9": {
+          "medianRatio": 3.75,
+          "sampleSize": 221
+        },
+        "10": {
+          "medianRatio": 10.65,
+          "sampleSize": 228
+        }
+      },
+      "medianRatio": 5.07,
+      "p25": 2.31,
+      "p75": 10.78,
+      "sampleSize": 544
+    },
+    "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 5.88,
+          "sampleSize": 32
+        }
+      },
+      "medianRatio": 3.01,
+      "p25": 1.87,
+      "p75": 6.49,
+      "sampleSize": 62
+    }
   }
 };
 
-// Sport-specific overlays. When lookupGradeRatio receives a sport
-// argument, it prefers the entry in this table over the baseline
-// above. Empty cells fall through to baseline. Regenerated by the
-// per-sport calibrate script from ch_daily_sales rows filtered by
-// c["group"] = sport.
 export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<string, GradeCalibrationEntry>>> = {
-  baseball: {},
-  football: {
-    "bowman-chrome":  { "PSA": { "medianRatio": 5.05,  "p25": 4.13, "p75": 20.03, "sampleSize": 4 } },
-    "panini-absolute":{ "PSA": { "medianRatio": 1.89,  "p25": 1.24, "p75": 11.67, "sampleSize": 14 } },
-    "panini-chronicles":{ "PSA": { "medianRatio": 8.19, "p25": 4.63, "p75": 14.33, "sampleSize": 6 } },
-    "panini-donruss": { "PSA": { "medianRatio": 3.02,  "p25": 1.59, "p75": 7.22,  "sampleSize": 177 } },
-    "panini-mosaic":  { "PSA": { "medianRatio": 5.77,  "p25": 2.55, "p75": 12.05, "sampleSize": 38 } },
-    "panini-optic":   { "PSA": { "medianRatio": 2.70,  "p25": 1.58, "p75": 6.36,  "sampleSize": 98 } },
-    "panini-phoenix": { "PSA": { "medianRatio": 3.09,  "p25": 1.59, "p75": 8.65,  "sampleSize": 15 } },
-    "panini-prizm":   {
-      "PSA": { "medianRatio": 5.62, "p25": 3.56, "p75": 9.50,  "sampleSize": 124 },
-      "SGC": { "medianRatio": 1.89, "p25": 1.73, "p75": 3.98,  "sampleSize": 4 }
+  "baseball": {},
+  "football": {
+    "bowman-chrome": {
+      "PSA": {
+        "medianRatio": 7.53,
+        "p25": 5.98,
+        "p75": 22.59,
+        "sampleSize": 8
+      }
     },
-    "panini-score":   { "PSA": { "medianRatio": 7.56,  "p25": 3.36, "p75": 17.41, "sampleSize": 5 } },
-    "panini-select":  { "PSA": { "medianRatio": 8.35,  "p25": 5.41, "p75": 21.52, "sampleSize": 20 } },
-    "topps-chrome":   { "PSA": { "medianRatio": 4.48,  "p25": 1.86, "p75": 7.05,  "sampleSize": 14 } }
-  },
-  basketball: {
-    "bowman-chrome":       { "PSA": { "medianRatio": 7.32,  "p25": 6.45, "p75": 20.17, "sampleSize": 4 } },
-    "panini-chronicles":   { "PSA": { "medianRatio": 11.70, "p25": 6.66, "p75": 24.00, "sampleSize": 6 } },
-    "panini-contenders":   { "PSA": { "medianRatio": 13.51, "p25": 2.40, "p75": 26.31, "sampleSize": 3 } },
-    "panini-donruss":      {
-      "PSA": { "medianRatio": 6.99, "p25": 4.41, "p75": 9.72,  "sampleSize": 38 },
-      "SGC": { "medianRatio": 4.93, "p25": 2.20, "p75": 9.89,  "sampleSize": 3 }
+    "panini-absolute": {
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.2,
+            "sampleSize": 30
+          },
+          "10": {
+            "medianRatio": 2.55,
+            "sampleSize": 20
+          }
+        },
+        "medianRatio": 1.93,
+        "p25": 1.1,
+        "p75": 7.54,
+        "sampleSize": 53
+      }
     },
-    "panini-hoops":        { "PSA": { "medianRatio": 9.34,  "p25": 4.74, "p75": 12.82, "sampleSize": 19 } },
-    "panini-mosaic":       { "PSA": { "medianRatio": 6.00,  "p25": 3.51, "p75": 12.13, "sampleSize": 12 } },
-    "panini-optic":        { "PSA": { "medianRatio": 6.44,  "p25": 3.64, "p75": 9.72,  "sampleSize": 24 } },
-    "panini-phoenix":      { "PSA": { "medianRatio": 5.29,  "p25": 2.81, "p75": 8.03,  "sampleSize": 3 } },
-    "panini-prizm":        {
-      "BGS": { "medianRatio": 2.49, "p25": 2.10, "p75": 14.85, "sampleSize": 4 },
-      "CGC": { "medianRatio": 2.18, "p25": 0.73, "p75": 3.00,  "sampleSize": 3 },
-      "PSA": { "medianRatio": 5.00, "p25": 2.76, "p75": 8.83,  "sampleSize": 166 }
+    "panini-certified": {
+      "CGC": {
+        "medianRatio": 7.06,
+        "p25": 6.49,
+        "p75": 9.01,
+        "sampleSize": 5
+      }
     },
-    "panini-revolution":   { "PSA": { "medianRatio": 9.85,  "p25": 2.26, "p75": 39.78, "sampleSize": 4 } },
-    "panini-select":       { "PSA": { "medianRatio": 4.71,  "p25": 2.63, "p75": 8.31,  "sampleSize": 23 } },
-    "topps-chrome":        {
-      "BGS": { "medianRatio": 2.56, "p25": 0.96, "p75": 11.67, "sampleSize": 3 },
-      "PSA": { "medianRatio": 5.28, "p25": 2.71, "p75": 9.79,  "sampleSize": 88 }
+    "panini-chronicles": {
+      "PSA": {
+        "medianRatio": 8.78,
+        "p25": 4.53,
+        "p75": 17.79,
+        "sampleSize": 31
+      }
+    },
+    "panini-contenders": {
+      "PSA": {
+        "medianRatio": 9.68,
+        "p25": 4.23,
+        "p75": 32.69,
+        "sampleSize": 4
+      }
+    },
+    "panini-donruss": {
+      "CGC": {
+        "medianRatio": 3.56,
+        "p25": 2.21,
+        "p75": 11.97,
+        "sampleSize": 16
+      },
+      "PSA": {
+        "byTier": {
+          "8": {
+            "medianRatio": 1.15,
+            "sampleSize": 44
+          },
+          "9": {
+            "medianRatio": 1.82,
+            "sampleSize": 254
+          },
+          "10": {
+            "medianRatio": 6.39,
+            "sampleSize": 288
+          }
+        },
+        "medianRatio": 2.56,
+        "p25": 1.48,
+        "p75": 7.35,
+        "sampleSize": 593
+      },
+      "SGC": {
+        "medianRatio": 1.23,
+        "p25": 1.19,
+        "p75": 2.11,
+        "sampleSize": 8
+      }
+    },
+    "panini-mosaic": {
+      "BGS": {
+        "medianRatio": 3.74,
+        "p25": 1.03,
+        "p75": 6.73,
+        "sampleSize": 3
+      },
+      "CGC": {
+        "medianRatio": 10.08,
+        "p25": 8.31,
+        "p75": 16.69,
+        "sampleSize": 4
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.35,
+            "sampleSize": 35
+          },
+          "10": {
+            "medianRatio": 9.02,
+            "sampleSize": 79
+          }
+        },
+        "medianRatio": 5.94,
+        "p25": 2.33,
+        "p75": 10.63,
+        "sampleSize": 115
+      }
+    },
+    "panini-optic": {
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.55,
+            "sampleSize": 122
+          },
+          "10": {
+            "medianRatio": 5.39,
+            "sampleSize": 146
+          }
+        },
+        "medianRatio": 2.37,
+        "p25": 1.43,
+        "p75": 6.39,
+        "sampleSize": 292
+      }
+    },
+    "panini-phoenix": {
+      "PSA": {
+        "medianRatio": 3.91,
+        "p25": 1.8,
+        "p75": 9.44,
+        "sampleSize": 39
+      }
+    },
+    "panini-playoff": {
+      "PSA": {
+        "medianRatio": 12.43,
+        "p25": 2.05,
+        "p75": 21,
+        "sampleSize": 3
+      }
+    },
+    "panini-prestige": {
+      "PSA": {
+        "medianRatio": 14.83,
+        "p25": 3.07,
+        "p75": 23.04,
+        "sampleSize": 5
+      }
+    },
+    "panini-prizm": {
+      "BGS": {
+        "medianRatio": 2.55,
+        "p25": 1.61,
+        "p75": 3.82,
+        "sampleSize": 3
+      },
+      "CGC": {
+        "medianRatio": 4,
+        "p25": 1.51,
+        "p75": 8.98,
+        "sampleSize": 4
+      },
+      "PSA": {
+        "byTier": {
+          "8": {
+            "medianRatio": 1.5,
+            "sampleSize": 28
+          },
+          "9": {
+            "medianRatio": 2.31,
+            "sampleSize": 161
+          },
+          "10": {
+            "medianRatio": 10.14,
+            "sampleSize": 188
+          }
+        },
+        "medianRatio": 5.17,
+        "p25": 2.01,
+        "p75": 10.26,
+        "sampleSize": 382
+      },
+      "SGC": {
+        "medianRatio": 4.61,
+        "p25": 4.27,
+        "p75": 5.72,
+        "sampleSize": 6
+      }
+    },
+    "panini-score": {
+      "PSA": {
+        "medianRatio": 12.73,
+        "p25": 6.02,
+        "p75": 24.19,
+        "sampleSize": 12
+      }
+    },
+    "panini-select": {
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.56,
+            "sampleSize": 31
+          },
+          "10": {
+            "medianRatio": 10.81,
+            "sampleSize": 51
+          }
+        },
+        "medianRatio": 7.42,
+        "p25": 3.06,
+        "p75": 13.72,
+        "sampleSize": 88
+      },
+      "SGC": {
+        "medianRatio": 3.77,
+        "p25": 2.41,
+        "p75": 9.18,
+        "sampleSize": 4
+      }
+    },
+    "topps-chrome": {
+      "CGC": {
+        "medianRatio": 1.56,
+        "p25": 1.18,
+        "p75": 2.72,
+        "sampleSize": 7
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 3.14,
+            "sampleSize": 24
+          },
+          "10": {
+            "medianRatio": 10,
+            "sampleSize": 27
+          }
+        },
+        "medianRatio": 3.88,
+        "p25": 2.09,
+        "p75": 9.92,
+        "sampleSize": 62
+      }
     }
   },
-  hockey: {},
+  "basketball": {
+    "bowman-chrome": {
+      "PSA": {
+        "medianRatio": 6.78,
+        "p25": 3.5,
+        "p75": 11.89,
+        "sampleSize": 16
+      }
+    },
+    "panini-chronicles": {
+      "PSA": {
+        "medianRatio": 6.9,
+        "p25": 6.01,
+        "p75": 16.46,
+        "sampleSize": 12
+      }
+    },
+    "panini-contenders": {
+      "PSA": {
+        "medianRatio": 13.72,
+        "p25": 2.23,
+        "p75": 18.12,
+        "sampleSize": 6
+      }
+    },
+    "panini-donruss": {
+      "CGC": {
+        "medianRatio": 7.45,
+        "p25": 5.6,
+        "p75": 10.33,
+        "sampleSize": 5
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 3.32,
+            "sampleSize": 40
+          },
+          "10": {
+            "medianRatio": 11.04,
+            "sampleSize": 68
+          }
+        },
+        "medianRatio": 7.37,
+        "p25": 3.1,
+        "p75": 13.03,
+        "sampleSize": 119
+      },
+      "SGC": {
+        "medianRatio": 4.77,
+        "p25": 2.14,
+        "p75": 9.29,
+        "sampleSize": 3
+      }
+    },
+    "panini-hoops": {
+      "CGC": {
+        "medianRatio": 6.38,
+        "p25": 3.07,
+        "p75": 6.59,
+        "sampleSize": 3
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 4.72,
+            "sampleSize": 20
+          },
+          "10": {
+            "medianRatio": 9.9,
+            "sampleSize": 24
+          }
+        },
+        "medianRatio": 6.7,
+        "p25": 3.26,
+        "p75": 13.73,
+        "sampleSize": 46
+      }
+    },
+    "panini-mosaic": {
+      "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 8.3,
+            "sampleSize": 34
+          }
+        },
+        "medianRatio": 7.05,
+        "p25": 2.96,
+        "p75": 10.68,
+        "sampleSize": 47
+      }
+    },
+    "panini-optic": {
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.32,
+            "sampleSize": 29
+          },
+          "10": {
+            "medianRatio": 10.17,
+            "sampleSize": 51
+          }
+        },
+        "medianRatio": 6.98,
+        "p25": 2.34,
+        "p75": 11.24,
+        "sampleSize": 82
+      }
+    },
+    "panini-phoenix": {
+      "PSA": {
+        "medianRatio": 4.55,
+        "p25": 2.75,
+        "p75": 6.49,
+        "sampleSize": 8
+      }
+    },
+    "panini-prizm": {
+      "BGS": {
+        "medianRatio": 2.96,
+        "p25": 2.49,
+        "p75": 4.8,
+        "sampleSize": 8
+      },
+      "CGC": {
+        "medianRatio": 2.63,
+        "p25": 0.73,
+        "p75": 3,
+        "sampleSize": 3
+      },
+      "PSA": {
+        "byTier": {
+          "8": {
+            "medianRatio": 1.29,
+            "sampleSize": 37
+          },
+          "9": {
+            "medianRatio": 2.22,
+            "sampleSize": 191
+          },
+          "10": {
+            "medianRatio": 9.24,
+            "sampleSize": 221
+          }
+        },
+        "medianRatio": 4.75,
+        "p25": 1.95,
+        "p75": 9.75,
+        "sampleSize": 452
+      },
+      "SGC": {
+        "medianRatio": 2.27,
+        "p25": 1.65,
+        "p75": 3.28,
+        "sampleSize": 9
+      }
+    },
+    "panini-revolution": {
+      "PSA": {
+        "medianRatio": 6.49,
+        "p25": 2.48,
+        "p75": 12.92,
+        "sampleSize": 10
+      }
+    },
+    "panini-select": {
+      "BGS": {
+        "medianRatio": 2.8,
+        "p25": 1.84,
+        "p75": 3.29,
+        "sampleSize": 3
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.39,
+            "sampleSize": 31
+          },
+          "10": {
+            "medianRatio": 6.53,
+            "sampleSize": 59
+          }
+        },
+        "medianRatio": 4.63,
+        "p25": 2.56,
+        "p75": 8.16,
+        "sampleSize": 91
+      }
+    },
+    "topps-chrome": {
+      "BGS": {
+        "medianRatio": 1.41,
+        "p25": 0.98,
+        "p75": 2.78,
+        "sampleSize": 7
+      },
+      "CGC": {
+        "medianRatio": 1.54,
+        "p25": 0.81,
+        "p75": 4.43,
+        "sampleSize": 13
+      },
+      "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.08,
+            "sampleSize": 98
+          },
+          "10": {
+            "medianRatio": 7.96,
+            "sampleSize": 131
+          }
+        },
+        "medianRatio": 4,
+        "p25": 1.74,
+        "p75": 9.62,
+        "sampleSize": 252
+      }
+    }
+  },
+  "hockey": {}
 };
