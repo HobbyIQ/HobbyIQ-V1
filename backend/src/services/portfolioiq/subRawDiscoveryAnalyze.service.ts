@@ -71,13 +71,21 @@ async function readRawAggregates(
     // references, not string literals. Use single quotes for the
     // 'Raw' comparison — a double-quoted "Raw" was resolving as a
     // field-not-found and 500-ing at query time.
+    //
+    // CF-POKEMON-INGEST-DEFENSIVE (Drew, 2026-07-22). Explicit sports
+    // whitelist so Pokemon Raw sales don't flow into the sub-raw
+    // discovery signal — this signal feeds the DailyIQ hot-prospects
+    // pipe (memory `sub_raw_telemetry_is_dailyiq_pipe`) and Pokemon
+    // Raw pricing lacks the grade calibration needed to interpret
+    // inversions correctly. Widen when Pokemon calibration lands.
     query: `SELECT c.card_id, c.player, c.year, c.card_set, c.card_set_type,
                    c.variant, c.number, c.price, c.image_url
             FROM c
             WHERE c.grader = 'Raw'
               AND c.sale_date >= @cutoff
               AND c.price > 0
-              AND c.price <= @maxPrice`,
+              AND c.price <= @maxPrice
+              AND c["group"] IN ('Baseball', 'Football', 'Basketball')`,
     parameters: [
       { name: "@cutoff", value: cutoff },
       { name: "@maxPrice", value: maxRawPrice },
