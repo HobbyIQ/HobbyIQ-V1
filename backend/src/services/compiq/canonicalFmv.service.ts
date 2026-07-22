@@ -57,7 +57,7 @@ import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 // git-blame trail stays intact.
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier } from "./gradeCalibrationConfig.js";
+import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier, lookupValueBandMultiplier } from "./gradeCalibrationConfig.js";
 import { titleMatchesParallel } from "./titleParallelMatch.js";
 
 export type CanonicalFmvMethod =
@@ -1533,8 +1533,19 @@ async function tryHotRawSameCardAnchor(
   const rawTrendCap = newestRaw * HOT_RAW_TREND_CAP_FACTOR;
   const rawAnchorCapped = Math.min(rawProjection.nextSaleValue, rawTrendCap);
 
-  const multiplierCap = valueTieredMultiplierCap(rawAnchorCapped, gradeValue);
+  // CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Prefer
+  // the empirical bucket × grade-tier ratio from the value-band
+  // calibration table when the (bucket, tier) cell has data. Falls back
+  // to the interim hardcoded value-tier cap from CF-HOT-RAW-CONSERVATIVE-
+  // PROJECTION when the cell is thin or absent.
+  const empiricalBandRatio = lookupValueBandMultiplier(rawAnchorCapped, gradeCompany, gradeValue);
+  const hardcodedCap = valueTieredMultiplierCap(rawAnchorCapped, gradeValue);
+  // When empirical is present, use it as the ceiling (still cap against
+  // gradeMultiplier since the byTier value may be lower for niche cells).
+  // When empirical is absent, use the hardcoded cap as the ceiling.
+  const multiplierCap = empiricalBandRatio !== null ? empiricalBandRatio : hardcodedCap;
   const effectiveMultiplier = Math.min(gradeMultiplier, multiplierCap);
+  const calibrationBand = empiricalBandRatio !== null ? "empirical-value-band" : "hardcoded-cap";
 
   const projected = rawAnchorCapped * effectiveMultiplier;
   if (!Number.isFinite(projected) || projected <= 0) return null;
@@ -1572,6 +1583,9 @@ async function tryHotRawSameCardAnchor(
         rawProjectedUncapped: Math.round(rawProjection.nextSaleValue * 100) / 100,
         gradeMultiplier: Math.round(effectiveMultiplier * 100) / 100,
         gradeMultiplierUncapped: Math.round(gradeMultiplier * 100) / 100,
+        // CF-VALUE-BAND-CALIBRATION: track which calibration source
+        // provided the ceiling for post-hoc accuracy analysis.
+        calibrationBand: calibrationBand === "empirical-value-band" ? 1 : 0,
         multiplierCap: Math.round(multiplierCap * 100) / 100,
         covRaw: Math.round(cov * 100) / 100,
         trendCapFired: trendCapFired ? 1 : 0,

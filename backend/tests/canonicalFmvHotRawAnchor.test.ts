@@ -47,12 +47,19 @@ vi.mock("@azure/cosmos", () => ({
   },
 }));
 
-// Calibration data — will be swapped per-test via vi.doMock.
-function loadCanonicalFmv(calibration: unknown, bySport: unknown = {}) {
+// Calibration data — will be swapped per-test via vi.doMock. Default
+// value-band baseline is empty so tests fall through to the hardcoded
+// value-tier cap. Override the third arg to test empirical band behavior.
+function loadCanonicalFmv(
+  calibration: unknown,
+  bySport: unknown = {},
+  valueBandBaseline: unknown = {},
+) {
   vi.resetModules();
   vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
     GRADE_CALIBRATION: calibration,
     GRADE_CALIBRATION_BY_SPORT: bySport,
+    GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: valueBandBaseline },
   }));
   return import("../src/services/compiq/canonicalFmv.service.js");
 }
@@ -210,6 +217,32 @@ describe("hot-Raw same-card anchor — conservative-projection caps", () => {
     const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
     expect(result.provenance.multipliers.gradeMultiplier).toBe(8.0);
     expect(result.provenance.multipliers.multiplierCapFired).toBe(0);
+  });
+
+  it("empirical value-band takes precedence over hardcoded value-tier cap when populated", async () => {
+    // Real prod fixture shape + populated value-band for the $1,000-2,499 bucket.
+    // The empirical PSA 10 = 2.4× should be preferred over the hardcoded 2.5× cap.
+    const realBowman = {
+      "bowman-chrome-draft": {
+        PSA: { medianRatio: 4.07, p25: 2.28, p75: 8.66, sampleSize: 2065,
+               byTier: { "10": { medianRatio: 5.30, sampleSize: 800 } } },
+      },
+    };
+    const empiricalBand = {
+      "$1,000-2,499": {
+        "PSA 10": { medianRatio: 2.4, p25: 1.9, p75: 3.1, sampleSize: 187, rawMedian: 1450, gradedMedian: 3500 },
+      },
+    };
+    const { computeCanonicalFmv } = await loadCanonicalFmv(realBowman, {}, empiricalBand);
+    await installReadCompsMock([
+      rawComp(1185, 28), rawComp(1250, 20), rawComp(1400, 12),
+      rawComp(1450, 6),  rawComp(1531, 3),
+    ]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.method).toBe("hot-raw-same-card-anchor");
+    // Empirical 2.4× (band) preferred over hardcoded 2.5× cap.
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(2.4);
+    expect(result.provenance.multipliers.calibrationBand).toBe(1);   // empirical fired
   });
 
   it("Hartman-shape parity: 5 Raw $1,185-1,531 hot trend + 5.30× byTier → $3,500-$5,000", async () => {
