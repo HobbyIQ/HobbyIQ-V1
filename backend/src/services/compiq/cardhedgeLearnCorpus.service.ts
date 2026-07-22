@@ -146,7 +146,7 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
      *  produced the value when valueSource === "estimated". Enables
      *  corpus queries like "does reference-price beat raw-multiplier
      *  for prediction accuracy?" */
-    estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | null;
+    estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
     confidenceScore: number;
     newestSaleDate: string | null;
     daysSinceNewestSale: number | null;
@@ -331,7 +331,7 @@ export function persistObservedGradeCurve(input: {
     observedMedian: number | null;
     valueSource: "observed" | "estimated" | "unavailable";
     estimatedMultiplier: number | null;
-    estimatedFrom?: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | null;
+    estimatedFrom?: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
     confidenceScore: number;
     newestSaleDate: string | null;
     daysSinceNewestSale?: number | null;

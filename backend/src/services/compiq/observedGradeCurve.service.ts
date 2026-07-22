@@ -79,7 +79,7 @@ import {
 // "is this a rare parallel?" without duplicating the parallel-name
 // mapping.
 import { inferPrintRun as inferPrintRunForParallel } from "./parallelPremiumFloors.js";
-import { lookupGradeRatio, classifyFamily } from "./gradeCalibrationConfig.js";
+import { lookupGradeRatio, lookupGradeRatioByTier, classifyFamily } from "./gradeCalibrationConfig.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -165,7 +165,7 @@ export interface ObservedGradeEntry {
    *                          (last-resort fallback when reference
    *                           price is also unavailable)
    *  Null for observed / unavailable entries. */
-  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | null;
+  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
   /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
    *  Value, and Predicted on ONE trend line — the SAME per-week rate
    *  derives all three. Prevents the "$100 Market Value but $205
@@ -608,10 +608,12 @@ function pickBandWidthPct(entry: ObservedGradeEntry): number {
   }
   if (entry.valueSource === "estimated") {
     switch (entry.estimatedFrom) {
-      case "reference-price": return 0.15;   // third-party model, decent trust
-      case "raw-multiplier":  return 0.20;
-      case "sibling-card":    return 0.25;   // hobby-consensus floor territory
-      default:                return ESTIMATED_PREDICTED_RANGE_PCT;
+      case "reference-price":       return 0.15;   // third-party model, decent trust
+      case "empirical-ratio-tier":  return 0.15;   // per-grade calibration from ch_daily_sales
+      case "empirical-ratio":       return 0.18;   // company-level calibration × subtier
+      case "raw-multiplier":        return 0.20;
+      case "sibling-card":          return 0.25;   // hobby-consensus floor territory
+      default:                      return ESTIMATED_PREDICTED_RANGE_PCT;
     }
   }
   return PREDICTED_RANGE_PCT;
@@ -1316,10 +1318,16 @@ function gradeMultiplierFor(_cardClass: CardClass, _gradeLabel: string): number 
 const REFERENCE_ANOMALY_THRESHOLD_PCT = 25;
 
 /** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20). Sub-tier scaling
- *  applied on top of the company-level empirical medianRatio. Empirical
- *  calibration lumps all PSA (or BGS, etc.) grades of a company into a
- *  single ratio; this discounts down to the specific grade value so a
- *  "PSA 9" doesn't inherit the "PSA 10"-heavy company ratio verbatim. */
+ *  applied on top of the company-level empirical medianRatio ONLY when
+ *  we don't have an empirical per-tier ratio yet. Empirical calibration
+ *  lumps all PSA (or BGS, etc.) grades of a company into a single
+ *  ratio; this discounts down to the specific grade value so a
+ *  "PSA 9" doesn't inherit the "PSA 10"-heavy company ratio verbatim.
+ *
+ *  CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22): now a strict fallback
+ *  — resolveMultiplier prefers the empirical per-tier ratio from
+ *  lookupGradeRatioByTier when data is thick. Tune values here are only
+ *  seen when a specific (family, grader, tier) cell has <20 samples. */
 function subTierScaling(gradeValue: number | null): number {
   if (gradeValue === null || !Number.isFinite(gradeValue)) return 0;
   if (gradeValue >= 10) return 1.00;
@@ -1333,9 +1341,10 @@ function parseGradeValue(gradeLabel: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** Prefer empirical (family, grader) medianRatio × sub-tier scaling.
- *  Fall back to hardcoded class-aware matrix when family isn't
- *  calibrated OR when the entry's grader/label isn't parseable. */
+/** Prefer empirical per-tier ratio (family, grader, tier). Fall back to
+ *  empirical company-level ratio × sub-tier scaling when the tier cell
+ *  is thin. Fall back further to hardcoded class-aware matrix when the
+ *  family isn't calibrated at all. */
 function resolveMultiplier(args: {
   entry: ObservedGradeEntry;
   family: string | null;
@@ -1344,10 +1353,14 @@ function resolveMultiplier(args: {
   cardId?: string | null;
 }): number | undefined {
   const { entry, family, sport, cardClass, cardId } = args;
-  if (family) {
+  const gradeValue = parseGradeValue(entry.grade);
+  if (family && gradeValue !== null) {
+    // Tier 1 (preferred): empirical per-grade-tier ratio.
+    const tierRatio = lookupGradeRatioByTier(family, entry.grader, gradeValue, sport);
+    if (tierRatio !== null && tierRatio > 0) return tierRatio;
+    // Tier 2: empirical company-level ratio × sub-tier scaling.
     const empiricalRatio = lookupGradeRatio(family, entry.grader, sport);
-    const gradeValue = parseGradeValue(entry.grade);
-    if (empiricalRatio !== null && empiricalRatio > 0 && gradeValue !== null) {
+    if (empiricalRatio !== null && empiricalRatio > 0) {
       const scaled = empiricalRatio * subTierScaling(gradeValue);
       if (scaled > 0) return scaled;
     }
@@ -1419,9 +1432,14 @@ function fillEstimatedFallback(
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
           entry.valueSource = "estimated";
-          entry.estimatedFrom = family && lookupGradeRatio(family, entry.grader, sport) !== null
-            ? "empirical-ratio"
-            : "raw-multiplier";
+          const gv = parseGradeValue(entry.grade);
+          if (family && gv !== null && lookupGradeRatioByTier(family, entry.grader, gv, sport) !== null) {
+            entry.estimatedFrom = "empirical-ratio-tier";
+          } else if (family && lookupGradeRatio(family, entry.grader, sport) !== null) {
+            entry.estimatedFrom = "empirical-ratio";
+          } else {
+            entry.estimatedFrom = "raw-multiplier";
+          }
           entry.estimatedMultiplier = multiplier;
         }
       }

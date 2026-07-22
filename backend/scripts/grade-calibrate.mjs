@@ -111,14 +111,20 @@ async function fetchYearWithRetry(token, year, sport, attempt = 1) {
     params.push({ name: "@sport", value: sport });
     sportClause = " AND c[\"group\"] = @sport";
   }
+  // CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22). Group by full `grade`
+  // string ("PSA 10", "PSA 9", "BGS 9.5") instead of just company. The
+  // consumer computes both a company-level (aggregated) medianRatio AND
+  // a per-tier byTier map, letting observedGradeCurve use empirical per-
+  // grade ratios when data is thick (~2M sold_comps rows available) and
+  // fall back to company × subTierScaling when a specific tier is thin.
   const iter = container.items.query({
-    query: `SELECT c.card_id, c.grader, AVG(c.price) AS avgPrice, COUNT(1) AS n
+    query: `SELECT c.card_id, c.grader, c.grade, AVG(c.price) AS avgPrice, COUNT(1) AS n
              FROM c
              WHERE c.sale_date >= @cutoff
                AND c.price > 0
                AND c.year = @year
                AND CONTAINS(LOWER(c.card_set), LOWER(@token))${sportClause}
-             GROUP BY c.card_id, c.grader`,
+             GROUP BY c.card_id, c.grader, c.grade`,
     parameters: params,
   }, { maxItemCount: 100 });
   const rows = [];
@@ -137,8 +143,19 @@ async function fetchYearWithRetry(token, year, sport, attempt = 1) {
   }
 }
 
+// Parse full grade string like "PSA 10" or "BGS 9.5" into a numeric tier.
+// Returns null for "Raw" or unparseable strings.
+function parseTier(gradeStr) {
+  const m = String(gradeStr ?? "").match(/([0-9]+(?:\.[0-9]+)?)/);
+  return m ? Number(m[1]) : null;
+}
+
 async function calibrateFamilySet(families, sport, minSampleSize) {
+  // Two-level accumulator:
+  //   ratios[family::grader]           = [ratio, ...] (company-level, for medianRatio)
+  //   perTierRatios[family::grader][t] = [ratio, ...] (per-tier, for byTier)
   const ratios = new Map();
+  const perTierRatios = new Map();
   const sportLabel = sport ?? "baseline";
   console.error(`\n═══ ${sportLabel} ═══`);
   for (const { family, token } of families) {
@@ -152,24 +169,40 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
       console.error(`  ${family.padEnd(28)} skipped (0 rows)`);
       continue;
     }
+    // Group per card: card_id → { "Raw": {avgPrice, n}, "PSA 10": {...}, "PSA 9": {...}, ... }
     const byCard = new Map();
     for (const r of familyRows) {
       if (r.n < 2) continue;
+      // Use the full `grade` string as the bucket key; Raw doesn't have a
+      // grade string in ch_daily_sales but we get grader="Raw" alongside.
+      const gradeKey = r.grader === "Raw" ? "Raw" : (r.grade ?? r.grader);
       if (!byCard.has(r.card_id)) byCard.set(r.card_id, {});
-      byCard.get(r.card_id)[r.grader] = { avgPrice: r.avgPrice, n: r.n };
+      byCard.get(r.card_id)[gradeKey] = { avgPrice: r.avgPrice, n: r.n, grader: r.grader };
     }
     let cardsWithRatio = 0;
-    for (const [, gradersByCard] of byCard) {
-      const raw = gradersByCard["Raw"];
+    for (const [, gradesByCard] of byCard) {
+      const raw = gradesByCard["Raw"];
       if (!raw || raw.avgPrice <= 0) continue;
       cardsWithRatio++;
-      for (const [grader, stats] of Object.entries(gradersByCard)) {
-        if (grader === "Raw") continue;
+      for (const [gradeKey, stats] of Object.entries(gradesByCard)) {
+        if (gradeKey === "Raw") continue;
         const ratio = stats.avgPrice / raw.avgPrice;
         if (!Number.isFinite(ratio) || ratio < 0.5 || ratio > 300) continue;
-        const key = `${family}::${grader}`;
-        if (!ratios.has(key)) ratios.set(key, []);
-        ratios.get(key).push(ratio);
+        const grader = stats.grader;
+        // Company-level accumulator (unchanged behavior)
+        const cKey = `${family}::${grader}`;
+        if (!ratios.has(cKey)) ratios.set(cKey, []);
+        ratios.get(cKey).push(ratio);
+        // Per-tier accumulator (NEW)
+        const tier = parseTier(gradeKey);
+        if (tier !== null) {
+          const tKey = `${family}::${grader}`;
+          if (!perTierRatios.has(tKey)) perTierRatios.set(tKey, {});
+          const tierMap = perTierRatios.get(tKey);
+          const tierStr = String(tier);
+          if (!tierMap[tierStr]) tierMap[tierStr] = [];
+          tierMap[tierStr].push(ratio);
+        }
       }
     }
     console.error(`  ${family.padEnd(28)} ${familyRows.length.toString().padStart(6)} rows  ${cardsWithRatio.toString().padStart(4)} pairs`);
@@ -189,13 +222,33 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
       p75: Math.round(p75 * 100) / 100,
       sampleSize: arr.length,
     };
+    // Attach byTier when we have at least 20 samples at a specific tier
+    // (smaller pools have unreliable medians for a specific grade tier).
+    const tierMap = perTierRatios.get(key);
+    if (tierMap) {
+      const byTier = {};
+      for (const [tierStr, tierArr] of Object.entries(tierMap)) {
+        if (tierArr.length < 20) continue;
+        byTier[tierStr] = {
+          medianRatio: Math.round(median(tierArr) * 100) / 100,
+          sampleSize: tierArr.length,
+        };
+      }
+      if (Object.keys(byTier).length > 0) {
+        grouped[family][grader].byTier = byTier;
+      }
+    }
   }
   return grouped;
 }
 
 // Weighted-average "other" fallback across the baseline families.
+// Also computes a per-tier "other" fallback (byTier map) so that
+// observedGradeCurve can pull an empirical multiplier for a specific
+// grade tier when the resolved family lacks direct byTier data.
 function computeOtherFallback(baseline) {
   const perGrader = new Map();   // grader → { sumRatioN, sumN, sumP25N, sumP75N }
+  const perGraderTier = new Map(); // grader → tier → { sumRatioN, sumN }
   for (const graders of Object.values(baseline)) {
     for (const [grader, entry] of Object.entries(graders)) {
       const cur = perGrader.get(grader) ?? { sumRatioN: 0, sumN: 0, sumP25N: 0, sumP75N: 0 };
@@ -204,6 +257,16 @@ function computeOtherFallback(baseline) {
       cur.sumP75N += entry.p75 * entry.sampleSize;
       cur.sumN += entry.sampleSize;
       perGrader.set(grader, cur);
+      if (entry.byTier) {
+        const tierMap = perGraderTier.get(grader) ?? new Map();
+        for (const [tierStr, tierEntry] of Object.entries(entry.byTier)) {
+          const t = tierMap.get(tierStr) ?? { sumRatioN: 0, sumN: 0 };
+          t.sumRatioN += tierEntry.medianRatio * tierEntry.sampleSize;
+          t.sumN += tierEntry.sampleSize;
+          tierMap.set(tierStr, t);
+        }
+        perGraderTier.set(grader, tierMap);
+      }
     }
   }
   const out = {};
@@ -215,6 +278,18 @@ function computeOtherFallback(baseline) {
       p75: Math.round((s.sumP75N / s.sumN) * 100) / 100,
       sampleSize: s.sumN,
     };
+    const tierMap = perGraderTier.get(grader);
+    if (tierMap && tierMap.size > 0) {
+      const byTier = {};
+      for (const [tierStr, t] of tierMap) {
+        if (t.sumN < 50) continue; // "other" is coarse; require broader support
+        byTier[tierStr] = {
+          medianRatio: Math.round((t.sumRatioN / t.sumN) * 100) / 100,
+          sampleSize: t.sumN,
+        };
+      }
+      if (Object.keys(byTier).length > 0) out[grader].byTier = byTier;
+    }
   }
   return out;
 }
@@ -243,11 +318,22 @@ const ts = `// AUTO-GENERATED by backend/scripts/grade-calibrate.mjs
 // Human-maintained code (lookupGradeRatio, classifyFamily) lives in
 // gradeCalibrationConfig.ts and imports the constants exported here.
 
+export interface GradeCalibrationTierEntry {
+  medianRatio: number;
+  sampleSize: number;
+}
+
 export interface GradeCalibrationEntry {
   medianRatio: number;
   p25: number;
   p75: number;
   sampleSize: number;
+  // Empirical per-grade-tier ratios keyed by numeric grade as string
+  // (e.g. "10", "9.5", "9"). Optional; present only when we have >=20
+  // paired-sale samples at that specific tier. When absent, consumers
+  // fall back to the company-level medianRatio × subTierScaling.
+  // See CF-GRADE-CALIBRATE-PER-TIER.
+  byTier?: Record<string, GradeCalibrationTierEntry>;
 }
 
 export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = ${JSON.stringify(baselineSorted, null, 2)};

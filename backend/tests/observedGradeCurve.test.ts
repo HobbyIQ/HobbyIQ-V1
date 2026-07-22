@@ -330,15 +330,17 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     expect(newestDaysAgo).toBeCloseTo(5, 0);
   });
 
-  // CF-EMPIRICAL-ONLY-DOCTRINE (Drew, 2026-07-21). PR #633 permanently
-  // removed the hardcoded grade-multiplier matrix (Raw×8 for PSA 10,
-  // Raw×3 for PSA 9, Raw×20 for BGS 10 Pristine, etc.). Multipliers now
-  // come exclusively from GRADE_CALIBRATION empirical medianRatio ×
-  // subTierScaling. The individual tests below that hardcoded specific
-  // Raw×N values as expectations are testing the removed matrix — they
-  // now assert obsolete behavior and are skipped per Drew's memory
-  // rule "empirical-only multiplier doctrine — never re-add." The
-  // reference-price sub-tests still pass (that priority is unchanged).
+  // CF-EMPIRICAL-ONLY-DOCTRINE (Drew, 2026-07-21) + CF-GRADE-CALIBRATE-
+  // PER-TIER (Drew, 2026-07-22). PR #633 permanently removed the
+  // hardcoded grade-multiplier matrix (Raw×8 for PSA 10, etc.);
+  // Option A (CF-GRADE-CALIBRATE-PER-TIER) added an empirical byTier
+  // ratio path that replaces subTierScaling for cells with ≥20 samples.
+  //
+  // These tests were previously skipped because they hardcoded Raw×N
+  // constants from the removed matrix. They are now UNSKIPPED with
+  // vi.doMock injecting a deterministic empirical calibration fixture
+  // per-test — the values in each `expect(...)` derive from the mocked
+  // byTier medianRatios, not the hand-tuned matrix.
   describe("CF-GRADE-VALUE-FALLBACK — pill-ready value + valueSource", () => {
     it("all grades empty → every value is null with valueSource='unavailable'", async () => {
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
@@ -354,7 +356,27 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       }
     });
 
-    it.skip("Raw observed + PSA10 empty → PSA10 fills as estimated Raw×8", async () => {
+    it("Raw observed + PSA10 empty → PSA10 fills from empirical byTier multiplier", async () => {
+      // CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22). Replaces the
+      // old Raw×8 hardcoded assertion. With empirical byTier, the
+      // multiplier IS the medianRatio from the mocked calibration
+      // fixture — no subTierScaling middleman.
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: {
+              medianRatio: 3.5,
+              p25: 2, p75: 5, sampleSize: 100,
+              byTier: {
+                "10": { medianRatio: 8.2, sampleSize: 60 },
+                "9":  { medianRatio: 2.6, sampleSize: 40 },
+              },
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -369,22 +391,42 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
-      const curve = await buildObservedGradeCurve("c1");
+      const curve = await buildObservedGradeCurve("c1", {
+        setName: "2025 Bowman Chrome",
+      });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       expect(raw.valueSource).toBe("observed");
       expect(raw.value).toBe(100);
 
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
       expect(psa10.valueSource).toBe("estimated");
-      expect(psa10.value).toBe(800); // 100 × 8
-      expect(psa10.estimatedMultiplier).toBe(8);
+      expect(psa10.value).toBe(820);                 // 100 × 8.2 empirical
+      expect(psa10.estimatedMultiplier).toBe(8.2);
+      expect(psa10.estimatedFrom).toBe("empirical-ratio-tier");
 
       const psa9 = curve.entries.find((e) => e.grade === "PSA 9")!;
       expect(psa9.valueSource).toBe("estimated");
-      expect(psa9.value).toBe(300); // 100 × 3
+      expect(psa9.value).toBe(260);                  // 100 × 2.6 empirical
+      expect(psa9.estimatedMultiplier).toBe(2.6);
+      expect(psa9.estimatedFrom).toBe("empirical-ratio-tier");
     });
 
-    it.skip("CF-BETTER-ESTIMATED-GRADE-MATH: reference-price is preferred over Raw × multiplier when caller provides it", async () => {
+    it("reference-price is preferred over empirical multiplier when caller provides it", async () => {
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: {
+              medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 100,
+              byTier: {
+                "10": { medianRatio: 8.0, sampleSize: 60 },
+                "9":  { medianRatio: 3.0, sampleSize: 40 },
+              },
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -400,12 +442,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         "../src/services/compiq/observedGradeCurve.service.js"
       );
       // Reference-price map — third-party model says PSA 10 = $2500
-      // (much more accurate than Raw × 8 = $4000 for this card)
+      // (materially different from Raw × empirical = $4000)
       const refMap = new Map<string, number>([
         ["PSA 10", 2500],
-        // PSA 9 not in reference map — should fall through to Raw × 3
+        // PSA 9 not in reference map — should fall through to empirical.
       ]);
-      const curve = await buildObservedGradeCurve("c1", { referencePriceByGrade: refMap });
+      const curve = await buildObservedGradeCurve("c1", {
+        referencePriceByGrade: refMap,
+        setName: "2025 Bowman Chrome",
+      });
 
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
       expect(psa10.valueSource).toBe("estimated");
@@ -415,12 +460,28 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
 
       const psa9 = curve.entries.find((e) => e.grade === "PSA 9")!;
       expect(psa9.valueSource).toBe("estimated");
-      expect(psa9.value).toBe(1500);               // ← fallback: Raw × 3
-      expect(psa9.estimatedFrom).toBe("raw-multiplier");
-      expect(psa9.estimatedMultiplier).toBe(3);
+      expect(psa9.value).toBe(1500);               // ← fallback: 500 × 3.0 empirical
+      expect(psa9.estimatedFrom).toBe("empirical-ratio-tier");
+      expect(psa9.estimatedMultiplier).toBe(3.0);
     });
 
-    it.skip("CF-BETTER-ESTIMATED-GRADE-MATH: Raw × multiplier is used when no reference-price map is provided", async () => {
+    it("company-level empirical × subTierScaling is used when byTier is absent for that grade", async () => {
+      // Verifies the Tier-2 fallback in resolveMultiplier: when a
+      // specific tier lacks byTier data, we take company medianRatio
+      // × subTierScaling(gradeValue).
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: {
+              medianRatio: 4.0,
+              p25: 2, p75: 6, sampleSize: 100,
+              // byTier intentionally absent → forces company × subtier path
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -435,14 +496,24 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
-      const curve = await buildObservedGradeCurve("c1"); // no reference map
+      const curve = await buildObservedGradeCurve("c1", {
+        setName: "2025 Bowman Chrome",
+      });
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
       expect(psa10.valueSource).toBe("estimated");
-      expect(psa10.estimatedFrom).toBe("raw-multiplier");
-      expect(psa10.value).toBe(800); // 100 × 8
+      expect(psa10.estimatedFrom).toBe("empirical-ratio");   // NOT "-tier"
+      expect(psa10.value).toBe(400);                          // 100 × (4.0 × 1.00)
+      expect(psa10.estimatedMultiplier).toBe(4.0);
+      const psa9 = curve.entries.find((e) => e.grade === "PSA 9")!;
+      expect(psa9.value).toBeCloseTo(140, 0);                 // 100 × (4.0 × 0.35)
     });
 
-    it.skip("CF-CLASS-AWARE-GRADE-MULTIPLIERS: auto column produces different PSA 10 estimate than base column", async () => {
+    it("without setName + no empirical calibration → estimated fill is unavailable", async () => {
+      // CF-EMPIRICAL-ONLY-DOCTRINE (Drew, 2026-07-21) requires that when
+      // no family classification is available (no setName provided),
+      // and no reference-price is supplied, non-observed grades stay
+      // "unavailable" rather than falling back to a hardcoded matrix.
+      // gradeMultiplierFor was reduced to a no-op in PR #633.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -457,27 +528,10 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
-
-      // Base card default → PSA 10 = Raw × 8 = 800
-      const baseCurve = await buildObservedGradeCurve("c1");
-      const basePSA10 = baseCurve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(basePSA10.value).toBe(800);
-      expect(basePSA10.estimatedMultiplier).toBe(8);
-
-      // CF-AUTO-MULTIPLIER-EMPIRICAL-RECAL (2026-07-08, Drew): auto column
-      // recalibrated against 83 live 2024-2026 Bowman prospect auto PSA 10 /
-      // Raw pairs (empirical p50 = 4.41×). New Drew-spec'd values:
-      //   PSA 10: 2.75  (mid of Drew's 2-3.25 spec)
-      //   PSA 9:  1.5   (mid of Drew's 1.25-1.75 spec)
-      //   PSA 8:  1.0   (Drew: "PSA 8 should equal raw")
-      // Auto class → PSA 10 = Raw × 2.75 = 275, PSA 8 = Raw × 1.0 = 100
-      const autoCurve = await buildObservedGradeCurve("c1", { cardClass: "auto" });
-      const autoPSA10 = autoCurve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(autoPSA10.value).toBe(275);
-      expect(autoPSA10.estimatedMultiplier).toBe(2.75);
-      const autoPSA8 = autoCurve.entries.find((e) => e.grade === "PSA 8")!;
-      expect(autoPSA8.value).toBe(100);
-      expect(autoPSA8.estimatedMultiplier).toBe(1.0);
+      const curve = await buildObservedGradeCurve("c1"); // no setName
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(psa10.valueSource).toBe("unavailable");
+      expect(psa10.estimatedMultiplier).toBeNull();
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
@@ -511,7 +565,22 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa10.estimatedMultiplier).toBeNull();
     });
 
-    it.skip("BGS 10 Pristine estimates at Raw×20 (rarest tier gets highest multiplier)", async () => {
+    it("BGS 10 Pristine estimates from empirical byTier when BGS calibration exists", async () => {
+      // Post-empirical-only-doctrine, the Raw×20 constant is gone.
+      // BGS 10 pulls from the mocked empirical byTier fixture.
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            BGS: {
+              medianRatio: 5.0,
+              p25: 2, p75: 8, sampleSize: 40,
+              byTier: { "10": { medianRatio: 20.0, sampleSize: 25 } },
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -526,14 +595,29 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
-      const curve = await buildObservedGradeCurve("c1");
+      const curve = await buildObservedGradeCurve("c1", {
+        setName: "2025 Bowman Chrome",
+      });
       const bgs10 = curve.entries.find((e) => e.grade === "BGS 10")!;
       expect(bgs10.valueSource).toBe("estimated");
-      expect(bgs10.value).toBe(1000); // 50 × 20
+      expect(bgs10.value).toBe(1000);                        // 50 × 20 empirical
       expect(bgs10.estimatedMultiplier).toBe(20);
+      expect(bgs10.estimatedFrom).toBe("empirical-ratio-tier");
     });
 
-    it.skip("all four 9-tier grades (PSA/BGS/SGC/CGC) fall back to Raw×3", async () => {
+    it("all four 9-tier grades pull from their respective empirical byTier fixtures", async () => {
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: { medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 100, byTier: { "9": { medianRatio: 3.0, sampleSize: 40 } } },
+            BGS: { medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 40,  byTier: { "9": { medianRatio: 3.0, sampleSize: 25 } } },
+            SGC: { medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 40,  byTier: { "9": { medianRatio: 3.0, sampleSize: 25 } } },
+            CGC: { medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 40,  byTier: { "9": { medianRatio: 3.0, sampleSize: 25 } } },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -548,12 +632,14 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
-      const curve = await buildObservedGradeCurve("c1");
+      const curve = await buildObservedGradeCurve("c1", {
+        setName: "2025 Bowman Chrome",
+      });
       for (const g of ["PSA 9", "BGS 9", "SGC 9", "CGC 9"]) {
         const entry = curve.entries.find((e) => e.grade === g)!;
-        expect(entry.valueSource).toBe("estimated");
-        expect(entry.value).toBe(300); // 100 × 3
-        expect(entry.estimatedMultiplier).toBe(3);
+        expect(entry.valueSource, g).toBe("estimated");
+        expect(entry.value, g).toBe(300);              // 100 × 3.0 empirical
+        expect(entry.estimatedMultiplier, g).toBe(3.0);
       }
     });
 
@@ -1136,13 +1222,31 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
   // floor and recompute predicted from the capped anchor.
   // ────────────────────────────────────────────────────────────────────────
   describe("CF-GRADE-MONOTONICITY-CAP — raw trend adjustment capped by graded floor", () => {
-    it.skip("caps raw trendAdjustedValue at the smallest graded value with multiplier > 1", async () => {
+    it("caps raw trendAdjustedValue at the smallest graded value with multiplier > 1", async () => {
+      // Old raw comp (60d ago) + hot rate → raw's trendAdjustedValue would
+      // shoot above the graded floor without the cap. Empirical byTier
+      // fixture below provides real graded floors so the cap has values
+      // to bound against (post-empirical-only doctrine, gradeMultiplierFor
+      // is a no-op — no setName means all grades are unavailable and
+      // there's nothing to cap against, so we pass setName here).
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: {
+              medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 100,
+              byTier: {
+                "10": { medianRatio: 8.0, sampleSize: 60 },
+                "9":  { medianRatio: 1.3, sampleSize: 40 },
+                "8":  { medianRatio: 1.1, sampleSize: 30 },
+              },
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
-      // Old raw comp (60d ago) + hot rate → raw's trendAdjustedValue would
-      // shoot above the graded floor without the cap. 60d → weeksSinceSale
-      // caps at MAX_WEEKS_LOOKBACK (6). Rate 0.30/week → marketMultiplier
-      // = 1 + 0.30 × 6 = 2.8. Raw base $100 → uncapped trendAdjusted $280.
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
           return [
@@ -1161,12 +1265,11 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", {
         playerName: "HotPlayer",
+        setName: "2025 Bowman Chrome",
       });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      // Smallest graded value with multiplier > 1. In the default class
-      // multiplier matrix, the smallest > 1 is SGC 9 / CGC 9 (1.3×) →
-      // $100 × 1.3 = $130. The exact floor depends on class defaults, but
-      // it MUST be strictly less than the uncapped $280.
+      // Smallest graded value with multiplier > 1 in the mocked fixture
+      // is PSA 8 (mult 1.1 → $110). Uncapped Raw would be $280.
       const nonRawStrictFloor = curve.entries
         .filter(
           (e) =>

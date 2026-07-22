@@ -7,11 +7,22 @@
 // per-family per-year partitioned queries to fit Cosmos serverless
 // RU budget on the big families (topps, topps-chrome, bowman, etc.).
 
+export interface GradeCalibrationTierEntry {
+  medianRatio: number;
+  sampleSize: number;
+}
+
 export interface GradeCalibrationEntry {
   medianRatio: number;
   p25: number;
   p75: number;
   sampleSize: number;
+  // Empirical per-grade-tier ratios keyed by numeric grade as string
+  // (e.g. "10", "9.5", "9"). Optional; present only when >=20 paired-
+  // sale samples exist at that specific tier. Absent until the next
+  // Grade Calibration Refresh workflow run rebuilds the data.
+  // See CF-GRADE-CALIBRATE-PER-TIER.
+  byTier?: Record<string, GradeCalibrationTierEntry>;
 }
 
 // Baseline (baseball-implicit). Callers passing sport get sport-

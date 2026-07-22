@@ -17,10 +17,11 @@ import {
   GRADE_CALIBRATION,
   GRADE_CALIBRATION_BY_SPORT,
   type GradeCalibrationEntry,
+  type GradeCalibrationTierEntry,
 } from "./gradeCalibrationData.js";
 
 export { GRADE_CALIBRATION, GRADE_CALIBRATION_BY_SPORT };
-export type { GradeCalibrationEntry };
+export type { GradeCalibrationEntry, GradeCalibrationTierEntry };
 
 /** Lookup helper. Returns null when the (family, grader) is uncovered.
  *  When `sport` is provided, prefers sport-specific calibration; falls
@@ -40,6 +41,35 @@ export function lookupGradeRatio(
   }
   const entry = GRADE_CALIBRATION[family]?.[grader];
   return entry ? entry.medianRatio : null;
+}
+
+// CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22). Empirical per-tier
+// lookup used by observedGradeCurve when it wants a specific grade
+// multiplier (e.g. PSA 9 vs the company-level median). Returns null
+// when the specific tier isn't covered so the caller can fall back to
+// company-level × subTierScaling. Prefers sport-specific data with
+// baseline fallback, mirroring lookupGradeRatio.
+export function lookupGradeRatioByTier(
+  family: string,
+  grader: string,
+  gradeValue: number,
+  sport?: string | null,
+): number | null {
+  const tierKey = String(gradeValue);
+  if (sport) {
+    const sportEntry = GRADE_CALIBRATION_BY_SPORT[sport]?.[family]?.[grader];
+    const sportTier = sportEntry?.byTier?.[tierKey];
+    if (sportTier) return sportTier.medianRatio;
+  }
+  const baselineEntry = GRADE_CALIBRATION[family]?.[grader];
+  const baselineTier = baselineEntry?.byTier?.[tierKey];
+  if (baselineTier) return baselineTier.medianRatio;
+  // Try the "other" fallback family — it aggregates every named family
+  // and typically has broader tier coverage.
+  const otherEntry = GRADE_CALIBRATION["other"]?.[grader];
+  const otherTier = otherEntry?.byTier?.[tierKey];
+  if (otherTier) return otherTier.medianRatio;
+  return null;
 }
 
 /** Product-family classifier matching the calibration script. Any set
