@@ -45,6 +45,7 @@ jobs:
           - { sport: 'baseball',   ch_group: 'Baseball'   }
           - { sport: 'football',   ch_group: 'Football'   }
           - { sport: 'basketball', ch_group: 'Basketball' }
+          - { sport: 'pokemon',    ch_group: 'Pokemon'    }
 
     steps:
       - name: Checkout

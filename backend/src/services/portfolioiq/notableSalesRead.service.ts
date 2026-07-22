@@ -92,11 +92,18 @@ export async function readNotableSales(
 
   const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+  // CF-POKEMON-INGEST-DEFENSIVE (Drew, 2026-07-22). Explicit sports
+  // whitelist so ch_daily_sales rows in newly-ingested groups (Pokemon,
+  // Magic, Soccer, Hockey, TCG long-tail) don't silently appear on the
+  // user-visible notable sales feed. Widen when we're ready to surface
+  // Pokemon products through this feed; see memory
+  // `pokemon-tcg-expansion-parked`.
   const query = `SELECT TOP ${limit} c.card_id, c.player, c.year, c.card_set, c.variant,
                         c.number, c.grade, c.grader, c.price, c.sale_date,
                         c.image_url, c.listing_url
                  FROM c
                  WHERE c.price >= @minPrice AND c.sale_date >= @sinceIso
+                   AND c["group"] IN ('Baseball', 'Football', 'Basketball')
                  ORDER BY c.sale_date DESC`;
 
   try {
