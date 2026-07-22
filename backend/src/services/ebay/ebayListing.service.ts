@@ -868,8 +868,14 @@ const CARD_CONDITION_VALUE_ID: Record<string, string> = {
   "POOR":                "400013",
 };
 
-function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string; values: string[] }> {
-  const descriptors: Array<{ name: string; values: string[] }> = [];
+interface ConditionDescriptor {
+  name: string;
+  values?: string[];
+  additionalInfo?: string;
+}
+
+function buildConditionDescriptors(i: HoldingListingInput): ConditionDescriptor[] {
+  const descriptors: ConditionDescriptor[] = [];
   const isGraded = i.gradingCompany && i.gradingCompany.toLowerCase() !== "raw" && i.grade;
   if (isGraded) {
     const graderKey = GRADER_VALUE_ID[String(i.gradingCompany).toUpperCase()]
@@ -877,13 +883,14 @@ function buildConditionDescriptors(i: HoldingListingInput): Array<{ name: string
     const gradeKey = GRADE_VALUE_ID[String(i.grade).trim()];
     descriptors.push({ name: DESC_PROFESSIONAL_GRADER, values: [graderKey] });
     if (gradeKey) descriptors.push({ name: DESC_GRADE, values: [gradeKey] });
-    // CF-CERT-DESCRIPTOR-DEFERRED (Drew, 2026-07-21). Descriptor 27503
-    // (Certification Number) is optional per eBay's cat 261328 spec.
-    // The `{name, values: [str]}` shape gets rejected as "sent as NULL"
-    // even with a valid cert string — free-text descriptors may need a
-    // different envelope (`{name, text: str}`?). Deferred as follow-up
-    // since cert# is optional; still captured on the holding and
-    // rendered into the listing description via conditionDescription.
+    // CF-CERT-DESCRIPTOR-ADDITIONAL-INFO (Drew, 2026-07-22). Descriptor
+    // 27503 (Certification Number) is a FREE-TEXT descriptor per eBay's
+    // Sell Inventory API v1 schema — the correct envelope is
+    // `{name, additionalInfo: "<cert>"}`, NOT `{name, values: ["<cert>"]}`.
+    // The `values` array is for enum ID lookups only; a raw cert string
+    // there resolves to no enum → eBay treats the value as NULL and
+    // rejects with errorId 25066 (verified 2026-07-21 in PR #676).
+    if (i.certNumber) descriptors.push({ name: DESC_CERT_NUMBER, additionalInfo: i.certNumber.slice(0, 30) });
   } else {
     const est = (i.conditionEstimate ?? "").trim().toUpperCase();
     const cardCondKey = CARD_CONDITION_VALUE_ID[est]
