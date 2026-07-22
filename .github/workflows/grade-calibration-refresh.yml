@@ -1,7 +1,10 @@
 name: Grade Calibration Refresh (weekly)
 
 # CF-GRADE-CALIBRATION-REFRESH (Drew, 2026-07-18). Auto-refreshes
-# gradeCalibrationConfig.ts weekly from live ch_daily_sales data.
+# gradeCalibrationData.ts weekly from live ch_daily_sales data.
+# Note: watches gradeCalibrationData.ts (the AUTO-GENERATED file) —
+# gradeCalibrationConfig.ts is human-maintained and this workflow
+# leaves it alone (fixed 2026-07-22, was mistakenly watching Config).
 # When ratios shift materially, opens a PR labeled
 # `grade-calibration-refresh` for human review. Small shifts within
 # the safety band (±30% per entry) auto-merge; larger shifts require
@@ -78,8 +81,8 @@ jobs:
 
       - name: Snapshot current config for delta comparison
         run: |
-          cp backend/src/services/compiq/gradeCalibrationConfig.ts \
-             /tmp/gradeCalibrationConfig.previous.ts || true
+          cp backend/src/services/compiq/gradeCalibrationData.ts \
+             /tmp/gradeCalibrationData.previous.ts || true
 
       - name: Run calibration script
         env:
@@ -92,13 +95,13 @@ jobs:
       - name: Detect config change
         id: diff
         run: |
-          if [ ! -f /tmp/gradeCalibrationConfig.previous.ts ]; then
+          if [ ! -f /tmp/gradeCalibrationData.previous.ts ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "reason=first-run" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if diff -q /tmp/gradeCalibrationConfig.previous.ts \
-                    backend/src/services/compiq/gradeCalibrationConfig.ts > /dev/null; then
+          if diff -q /tmp/gradeCalibrationData.previous.ts \
+                    backend/src/services/compiq/gradeCalibrationData.ts > /dev/null; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No config change — nothing to commit."
             exit 0
@@ -111,8 +114,8 @@ jobs:
         if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.reason != 'first-run'
         run: |
           node -e "
-            const oldC = require('/tmp/gradeCalibrationConfig.previous.ts'.replace('.ts', '.js'));
-            const newC = require('${{ github.workspace }}/backend/src/services/compiq/gradeCalibrationConfig.ts'.replace('.ts', '.js'));
+            const oldC = require('/tmp/gradeCalibrationData.previous.ts'.replace('.ts', '.js'));
+            const newC = require('${{ github.workspace }}/backend/src/services/compiq/gradeCalibrationData.ts'.replace('.ts', '.js'));
             let maxDeltaPct = 0;
             let flagged = 0;
             for (const family of Object.keys(newC.GRADE_CALIBRATION || {})) {
@@ -142,7 +145,7 @@ jobs:
           git config user.name "grade-calibration-bot"
           git config user.email "bot@justtheboysandcards.com"
           git checkout -b "$BRANCH"
-          git add backend/src/services/compiq/gradeCalibrationConfig.ts
+          git add backend/src/services/compiq/gradeCalibrationData.ts
           cat > /tmp/commit-msg.txt <<EOF
           chore(calibration): weekly refresh of grade-tier ratios
 
@@ -160,7 +163,7 @@ jobs:
           git push origin "$BRANCH"
           gh pr create \
             --title "chore(calibration): weekly grade-tier refresh $(date -u +%Y-%m-%d)" \
-            --body "Auto-generated weekly refresh of gradeCalibrationConfig.ts. Review the diff to sanity-check the ratio changes before merging. Small shifts (< 30% per entry) are expected as the pool grows; larger shifts warrant investigation." \
+            --body "Auto-generated weekly refresh of gradeCalibrationData.ts. Review the diff to sanity-check the ratio changes before merging. Small shifts (< 30% per entry) are expected as the pool grows; larger shifts warrant investigation." \
             --label "grade-calibration-refresh" \
             --base main
 
