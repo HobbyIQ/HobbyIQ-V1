@@ -30,10 +30,20 @@ vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
 vi.mock("../src/services/compiq/cardsightUuidSource.js", () => ({
   fetchCardsightUuidNativeCandidates: vi.fn(),
 }));
+// CF-CATALOG-VERIFY-BOOST-MOCK (Drew, 2026-07-22). PR #449 shipped a
+// +0.05 confidence boost when the reference-catalog resolves the SKU
+// (Verified: +0.10, High: +0.05, Medium: +0.02). Without a mock, the
+// lookup returns null in tests so the boost never fires → the HIGH-
+// tier assertion falls short. Default mock returns null (no boost);
+// specific tests override to exercise the boost path.
+vi.mock("../src/services/compiq/referenceCatalogLookup.js", () => ({
+  inferPrintRunFromReferenceCatalog: vi.fn(async () => null),
+}));
 
 import { suggestCardIdForHolding } from "../src/services/portfolioiq/cardIdSuggester.service.js";
 import { searchCards } from "../src/services/compiq/cardhedge.client.js";
 import { fetchCardsightUuidNativeCandidates } from "../src/services/compiq/cardsightUuidSource.js";
+import { inferPrintRunFromReferenceCatalog } from "../src/services/compiq/referenceCatalogLookup.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 import type { CardIdentity } from "../src/types/cardIdentity.js";
 
@@ -81,10 +91,15 @@ function csRow(overrides: Partial<CardIdentity> = {}): CardIdentity {
 beforeEach(() => {
   vi.mocked(searchCards).mockReset();
   vi.mocked(fetchCardsightUuidNativeCandidates).mockReset();
+  vi.mocked(inferPrintRunFromReferenceCatalog).mockReset();
   // Both vendors default to empty pools so tests that don't override
   // one exercise single-vendor behavior via the OTHER one.
   vi.mocked(searchCards).mockResolvedValue([]);
   vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
+  // Reference-catalog defaults to no-hit so the +0.05/+0.10 verify
+  // boost doesn't fire by default; tests that want the boost override
+  // this in-body.
+  vi.mocked(inferPrintRunFromReferenceCatalog).mockResolvedValue(null);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -395,19 +410,26 @@ describe("CF-CARDID-SUGGESTER-FAIR-SCORING — three scorer fixes", () => {
 });
 
 describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
-  // CF-CATALOG-VERIFY-BOOST-DEFERRED (Drew, 2026-07-21). PR #449 added
-  // a small +0.05 catalog-verify boost that tips a perfect-match from
-  // 0.82 base → 0.87 (HIGH tier). Test doesn't mock the catalog-verify
-  // path so no boost fires. Real fix: add a reference-catalog mock;
-  // deferred to a dedicated session — the alternatives-surfacing test
-  // suite below still exercises the low-tier path meaningfully.
-  it.skip("HIGH tier suppresses alternatives (primary is confident enough)", async () => {
+  it("HIGH tier suppresses alternatives (primary is confident enough)", async () => {
+    // CF-CATALOG-VERIFY-BOOST-MOCK (Drew, 2026-07-22). Prime the
+    // reference-catalog lookup so the +0.10 Verified boost tips the
+    // 0.82 base score → 0.92 (HIGH tier). Without this the test's
+    // perfect-match candidate scored 0.82 → medium.
+    vi.mocked(inferPrintRunFromReferenceCatalog).mockResolvedValue({
+      confidence: "Verified",
+      printRun: null,
+      product: "Bowman Chrome",
+      cardSet: "Bowman Chrome",
+      parallel: "Blue Refractor",
+    });
     // Perfect field alignment → tier=high → NO alternatives on the wire.
+    // Candidate variant matches holding.parallel exactly (both "Blue
+    // Refractor") so the parallel-mismatch tier downgrade doesn't fire.
     vi.mocked(searchCards).mockResolvedValue([
       {
         card_id: "ch-perfect",
         title: "2026 Bowman Chrome Eric Hartman CPA-EHA Blue Refractor Auto",
-        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Blue Refractor Auto",
+        set: "Bowman Chrome", year: 2026, number: "CPA-EHA", variant: "Blue Refractor",
         name: "Eric Hartman",
       },
       {
