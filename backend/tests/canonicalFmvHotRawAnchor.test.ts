@@ -130,13 +130,17 @@ describe("hot-Raw same-card anchor — happy path", () => {
     const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
     expect(result.method).toBe("hot-raw-same-card-anchor");
     expect(result.fmv).not.toBeNull();
-    // Projected Raw ≈ $1,300-1,700 (regression + trend) × 4.0 empirical byTier.
-    expect(result.fmv!).toBeGreaterThan(4000);
-    expect(result.fmv!).toBeLessThan(9000);
+    // Raw > $500 → value-tier ceiling of 2.5 caps the 4.0 byTier ratio.
+    // Trend cap holds Raw anchor at newest × 1.15 = ~$1,760.
+    // FMV ≈ $1,760 × 2.5 ≈ $4,400.
+    expect(result.fmv!).toBeGreaterThan(3500);
+    expect(result.fmv!).toBeLessThan(5000);
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.confidence).toBeLessThanOrEqual(0.5);
     expect(result.provenance.summary).toContain("hot-Raw anchor");
-    expect(result.provenance.multipliers.gradeMultiplier).toBe(4.0);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(2.5);        // capped
+    expect(result.provenance.multipliers.gradeMultiplierUncapped).toBe(4.0);
+    expect(result.provenance.multipliers.multiplierCapFired).toBe(1);
   });
 
   it("byTier absent → falls back to company × subTierScaling", async () => {
@@ -144,9 +148,93 @@ describe("hot-Raw same-card anchor — happy path", () => {
     await installReadCompsMock([rawComp(1000, 20), rawComp(1100, 10)]);
     const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
     expect(result.method).toBe("hot-raw-same-card-anchor");
-    // Company ratio 3.5 × subTierScaling(10) = 1.0 → 3.5 total multiplier.
-    expect(result.provenance.multipliers.gradeMultiplier).toBeCloseTo(3.5, 2);
+    // Company ratio 3.5 × subTierScaling(10) = 1.0 → 3.5 uncapped.
+    // Raw > $500 → value-tier ceiling of 2.5 for PSA 10.
+    expect(result.provenance.multipliers.gradeMultiplierUncapped).toBeCloseTo(3.5, 2);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(2.5);
     expect(result.provenance.summary).toContain("company × subtier");
+  });
+});
+
+describe("hot-Raw same-card anchor — conservative-projection caps", () => {
+  beforeEach(() => vi.resetModules());
+
+  it("trend cap: rawAnchor never exceeds newest × 1.15", async () => {
+    const { computeCanonicalFmv } = await loadCanonicalFmv(CALIB_HAPPY);
+    await installReadCompsMock([rawComp(500, 20), rawComp(800, 12), rawComp(1500, 3)]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.method).toBe("hot-raw-same-card-anchor");
+    // Whether or not the regression itself extrapolated above 1725, the
+    // cap invariant holds: rawAnchor MUST NOT exceed newest × 1.15.
+    expect(result.provenance.multipliers.rawAnchor).toBeLessThanOrEqual(1500 * 1.15 + 0.01);
+  });
+
+  it("value-tier cap PSA 10: Raw > $500 caps multiplier at 2.5×", async () => {
+    // Fixture with abusive byTier 8.0× — cap must clamp to 2.5.
+    const abusive = {
+      "bowman-chrome-draft": {
+        PSA: { medianRatio: 5, p25: 3, p75: 8, sampleSize: 50,
+               byTier: { "10": { medianRatio: 8.0, sampleSize: 30 } } },
+      },
+    };
+    const { computeCanonicalFmv } = await loadCanonicalFmv(abusive);
+    await installReadCompsMock([rawComp(800, 15), rawComp(900, 5)]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(2.5);
+    expect(result.provenance.multipliers.multiplierCapFired).toBe(1);
+  });
+
+  it("value-tier cap PSA 10: Raw $50-$500 caps multiplier at 4.0×", async () => {
+    const abusive = {
+      "bowman-chrome-draft": {
+        PSA: { medianRatio: 5, p25: 3, p75: 8, sampleSize: 50,
+               byTier: { "10": { medianRatio: 8.0, sampleSize: 30 } } },
+      },
+    };
+    const { computeCanonicalFmv } = await loadCanonicalFmv(abusive);
+    await installReadCompsMock([rawComp(200, 15), rawComp(220, 5)]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(4.0);
+    expect(result.provenance.multipliers.multiplierCapFired).toBe(1);
+  });
+
+  it("value-tier cap PSA 10: Raw ≤ $50 lets byTier through unchanged", async () => {
+    const cheap = {
+      "bowman-chrome-draft": {
+        PSA: { medianRatio: 5, p25: 3, p75: 8, sampleSize: 50,
+               byTier: { "10": { medianRatio: 8.0, sampleSize: 30 } } },
+      },
+    };
+    const { computeCanonicalFmv } = await loadCanonicalFmv(cheap);
+    await installReadCompsMock([rawComp(10, 15), rawComp(12, 5)]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(8.0);
+    expect(result.provenance.multipliers.multiplierCapFired).toBe(0);
+  });
+
+  it("Hartman-shape parity: 5 Raw $1,185-1,531 hot trend + 5.30× byTier → $3,500-$5,000", async () => {
+    // Real prod fixture shape. Trend-uncapped Raw ≈ $3,450 (regression on
+    // hot slope); Raw > $500 → 2.5× cap on PSA 10; trend cap → $1,761;
+    // final ≈ $4,400. Must land in Drew's actionable range.
+    const realBowman = {
+      "bowman-chrome-draft": {
+        PSA: { medianRatio: 4.07, p25: 2.28, p75: 8.66, sampleSize: 2065,
+               byTier: { "10": { medianRatio: 5.30, sampleSize: 800 } } },
+      },
+    };
+    const { computeCanonicalFmv } = await loadCanonicalFmv(realBowman);
+    await installReadCompsMock([
+      rawComp(1185, 28), rawComp(1250, 20), rawComp(1400, 12),
+      rawComp(1450, 6),  rawComp(1531, 3),
+    ]);
+    const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
+    expect(result.method).toBe("hot-raw-same-card-anchor");
+    // The cap invariant guarantees FMV ≤ newest × 1.15 × 2.5 = ~$4,401.
+    expect(result.fmv!).toBeLessThan(5000);
+    expect(result.fmv!).toBeGreaterThan(3000);
+    // At minimum the multiplier cap must have fired (empirical 5.30 >> 2.5).
+    expect(result.provenance.multipliers.multiplierCapFired).toBe(1);
+    expect(result.provenance.multipliers.gradeMultiplier).toBe(2.5);
   });
 });
 

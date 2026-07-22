@@ -1295,6 +1295,12 @@ const HOT_RAW_WINDOW_DAYS = 60;
 const HOT_RAW_MIN_SAMPLES = 2;
 const HOT_RAW_MAX_COV = 0.6;
 const HOT_RAW_CONFIDENCE_CAP = 0.5;
+// CF-HOT-RAW-CONSERVATIVE-PROJECTION (2026-07-22). Cap projected Raw
+// anchor at 1.15× newest observed Raw. Preserves modest forward
+// projection (regression can still lift the price to "now") while
+// eliminating runaway extrapolation on 2-3-comp regressions with
+// unusually steep slopes.
+const HOT_RAW_TREND_CAP_FACTOR = 1.15;
 
 /** Fires only when the request is specific (isSpecificRequest = true)
  *  AND rungs 1-4 returned null (guaranteed by call-order). Returns
@@ -1380,10 +1386,35 @@ async function tryHotRawSameCardAnchor(
   );
   if (!rawProjection || rawProjection.nextSaleValue <= 0) return null;
 
-  const projected = rawProjection.nextSaleValue * gradeMultiplier;
+  // CF-HOT-RAW-CONSERVATIVE-PROJECTION (Drew, 2026-07-22). Two caps to
+  // keep the seller-actionable projection honest:
+  //
+  // (1) Trend cap on Raw anchor. When a hot rookie prints +100%+/mo
+  //     slope on a 2-comp regression, forwardDays=0 still lifts the
+  //     projection well past the newest observed sale (extrapolates
+  //     to "now" from the OLS intercept). Cap the effective Raw anchor
+  //     at RAW_TREND_CAP × newest observed Raw. Preserves modest
+  //     forward projection while eliminating runaway.
+  //
+  // (2) Value-tiered grade multiplier ceiling. The empirical byTier
+  //     ratio is calibrated across a family's full Raw-price distribution;
+  //     cheap base cards dominate the pool and produce PSA 10 / Raw
+  //     ratios of 5-8×. That premium doesn't apply to expensive
+  //     numbered parallels — a $1,500 Raw Orange Shimmer's PSA 10 is
+  //     ~2-3× Raw, not 5×. Cap by Raw-anchor value tier.
+  const newestRaw = Math.max(...prices);
+  const rawTrendCap = newestRaw * HOT_RAW_TREND_CAP_FACTOR;
+  const rawAnchorCapped = Math.min(rawProjection.nextSaleValue, rawTrendCap);
+
+  const multiplierCap = valueTieredMultiplierCap(rawAnchorCapped, gradeValue);
+  const effectiveMultiplier = Math.min(gradeMultiplier, multiplierCap);
+
+  const projected = rawAnchorCapped * effectiveMultiplier;
   if (!Number.isFinite(projected) || projected <= 0) return null;
 
   const gradedFmv = Math.round(projected * 100) / 100;
+  const trendCapFired = rawProjection.nextSaleValue > rawTrendCap;
+  const multiplierCapFired = gradeMultiplier > multiplierCap;
   // Confidence caps at 0.5. Anchor is a projection off calibration,
   // not an observed graded sale.
   const anchorConfidence = Math.min(HOT_RAW_CONFIDENCE_CAP, rawProjection.confidence);
@@ -1398,7 +1429,7 @@ async function tryHotRawSameCardAnchor(
     method: "hot-raw-same-card-anchor",
     confidence: anchorConfidence,
     provenance: {
-      summary: `hot-Raw anchor: ${priced.length} Raw same-card comp${priced.length === 1 ? "" : "s"} in ${HOT_RAW_WINDOW_DAYS}d, projected Raw ≈ $${rawProjection.nextSaleValue.toFixed(2)} (${slopeLabel}), × ${gradeMultiplier.toFixed(2)} ${gradeTierLabel_} ${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"} ratio → $${gradedFmv.toFixed(2)}. Range from Raw: $${Math.min(...prices).toFixed(0)}–$${Math.max(...prices).toFixed(0)}.`,
+      summary: `hot-Raw anchor: ${priced.length} Raw same-card comp${priced.length === 1 ? "" : "s"} in ${HOT_RAW_WINDOW_DAYS}d (range $${Math.min(...prices).toFixed(0)}–$${Math.max(...prices).toFixed(0)}, ${slopeLabel})${trendCapFired ? `, projected Raw ${rawProjection.nextSaleValue.toFixed(0)} → capped at $${rawAnchorCapped.toFixed(0)}` : `, projected Raw $${rawAnchorCapped.toFixed(2)}`}, × ${effectiveMultiplier.toFixed(2)} ${gradeTierLabel_}${multiplierCapFired ? ` (${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"} ${gradeMultiplier.toFixed(2)} capped by value-tier ceiling)` : ` ${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"}`} → $${gradedFmv.toFixed(2)}.`,
       comps: priced.slice(0, 10).map((c) => ({
         price: c.price,
         soldAt: c.soldAt,
@@ -1410,13 +1441,56 @@ async function tryHotRawSameCardAnchor(
       })),
       trendPctPerMonth,
       multipliers: {
-        rawAnchor: Math.round(rawProjection.nextSaleValue * 100) / 100,
-        gradeMultiplier: Math.round(gradeMultiplier * 100) / 100,
+        rawAnchor: Math.round(rawAnchorCapped * 100) / 100,
+        rawProjectedUncapped: Math.round(rawProjection.nextSaleValue * 100) / 100,
+        gradeMultiplier: Math.round(effectiveMultiplier * 100) / 100,
+        gradeMultiplierUncapped: Math.round(gradeMultiplier * 100) / 100,
+        multiplierCap: Math.round(multiplierCap * 100) / 100,
         covRaw: Math.round(cov * 100) / 100,
+        trendCapFired: trendCapFired ? 1 : 0,
+        multiplierCapFired: multiplierCapFired ? 1 : 0,
       },
     },
     computedAt: new Date().toISOString(),
   };
+}
+
+/** CF-HOT-RAW-CONSERVATIVE-PROJECTION (Drew, 2026-07-22). The empirical
+ *  byTier ratio is calibrated across a family's full Raw-price
+ *  distribution. Cheap base cards dominate the pool (e.g. bowman base
+ *  Raw $2, PSA 10 $40 → 20× ratio) so the family average lifts to
+ *  something like 5-8× even though expensive numbered parallels trade
+ *  at 2-3× Raw. Cap by Raw-anchor value tier.
+ *
+ *  Empirical tiers (informed by 2026 Bowman prospect Raw sales):
+ *   - Raw ≤ $50: base-card territory → byTier as-is (huge premiums real)
+ *   - Raw $50-$500: refractor / mid-parallel territory → cap 4× PSA 10
+ *   - Raw > $500: numbered parallel / rare colored refractor → cap 2.5× PSA 10
+ *
+ *  Same shape for PSA 9 / PSA 9.5 / lower — scaled proportionally.
+ *  When gradeValue < 9 the empirical byTier is usually already low
+ *  enough that the cap doesn't fire. */
+function valueTieredMultiplierCap(rawAnchor: number, gradeValue: number): number {
+  // PSA 10 tier caps (also used for BGS 10 / SGC 10 / CGC 10).
+  const isTop = gradeValue >= 10;
+  const isNear = gradeValue >= 9.5;
+  const isNine = gradeValue >= 9;
+
+  if (rawAnchor <= 50) {
+    // Base-card territory. Empirical byTier is honest here.
+    return Number.POSITIVE_INFINITY;
+  }
+  if (rawAnchor <= 500) {
+    if (isTop)  return 4.0;
+    if (isNear) return 2.5;
+    if (isNine) return 1.6;
+    return 1.2;
+  }
+  // Raw > $500 — numbered parallel / expensive raw territory.
+  if (isTop)  return 2.5;
+  if (isNear) return 1.8;
+  if (isNine) return 1.3;
+  return 1.1;
 }
 
 /** Same shape as observedGradeCurve.subTierScaling — kept in sync so
