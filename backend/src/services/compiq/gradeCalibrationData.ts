@@ -21,6 +21,19 @@ export interface GradeCalibrationEntry {
   byTier?: Record<string, GradeCalibrationTierEntry>;
 }
 
+/** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Empirical
+ *  grade-tier / Raw multiplier bucketed by Raw price. v1 = baseline
+ *  (all cards pooled across sports + products). Future v2+ layers add
+ *  sport, product, year, player segmentation with fall-through. */
+export interface ValueBandTierEntry {
+  medianRatio:  number;
+  p25:          number;
+  p75:          number;
+  sampleSize:   number;
+  rawMedian:    number;
+  gradedMedian: number;
+}
+
 export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = {
   "bowman": {
     "BGS": {
@@ -1372,3 +1385,14 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
   },
   "hockey": {}
 };
+
+/** Bucket → grade-tier → empirical ratio entry. Buckets keyed as
+ *  "Under $25" | "$25-49" | ... | "$10,000+"; grade tiers keyed as
+ *  "PSA 10" | "PSA 9.5" | "PSA 9" | "BGS 10" | ... — exact strings CH
+ *  emits in ch_daily_sales.grade. Absent cells fall through to the
+ *  hardcoded value-tier cap in canonicalFmv.tryHotRawSameCardAnchor.
+ *  Scaffold — real data populated by the Grade Calibration Refresh
+ *  workflow (weekly) after this PR merges. */
+export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
+  baseline: Record<string, Record<string, ValueBandTierEntry>>;
+} = { baseline: {} };

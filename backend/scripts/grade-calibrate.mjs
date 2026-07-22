@@ -150,6 +150,42 @@ function parseTier(gradeStr) {
   return m ? Number(m[1]) : null;
 }
 
+// CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Raw-price
+// buckets for the empirical GRADE_MULTIPLIER_BY_VALUE_BAND table.
+// Format: [minInclusive, maxExclusive, label]. Order matters — buckets
+// are checked in order; first match wins.
+const VALUE_BANDS = [
+  [0, 25, "Under $25"],
+  [25, 50, "$25-49"],
+  [50, 100, "$50-99"],
+  [100, 250, "$100-249"],
+  [250, 500, "$250-499"],
+  [500, 1000, "$500-999"],
+  [1000, 2500, "$1,000-2,499"],
+  [2500, 5000, "$2,500-4,999"],
+  [5000, 10000, "$5,000-9,999"],
+  [10000, Infinity, "$10,000+"],
+];
+function bucketOf(rawPrice) {
+  for (const [lo, hi, label] of VALUE_BANDS) {
+    if (rawPrice >= lo && rawPrice < hi) return label;
+  }
+  return null;
+}
+
+// Global-across-all-families accumulator for value-band calibration.
+// Every call to calibrateFamilySet contributes into this shared map,
+// so the final baseline table pools all sports + all families.
+//   valueBandRatios[bucket][gradeTier] = { ratios: [...], raws: [...], gradeds: [...] }
+const valueBandAcc = new Map();
+function bandAcc(bucket, tier) {
+  let m = valueBandAcc.get(bucket);
+  if (!m) { m = new Map(); valueBandAcc.set(bucket, m); }
+  let a = m.get(tier);
+  if (!a) { a = { ratios: [], raws: [], gradeds: [] }; m.set(tier, a); }
+  return a;
+}
+
 async function calibrateFamilySet(families, sport, minSampleSize) {
   // Two-level accumulator:
   //   ratios[family::grader]           = [ratio, ...] (company-level, for medianRatio)
@@ -184,6 +220,10 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
       const raw = gradesByCard["Raw"];
       if (!raw || raw.avgPrice <= 0) continue;
       cardsWithRatio++;
+      // CF-VALUE-BAND-CALIBRATION: which Raw-price bucket does this
+      // card's raw fall into? Bucket key is the same for every graded
+      // pair on this card.
+      const bucket = bucketOf(raw.avgPrice);
       for (const [gradeKey, stats] of Object.entries(gradesByCard)) {
         if (gradeKey === "Raw") continue;
         const ratio = stats.avgPrice / raw.avgPrice;
@@ -193,7 +233,7 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
         const cKey = `${family}::${grader}`;
         if (!ratios.has(cKey)) ratios.set(cKey, []);
         ratios.get(cKey).push(ratio);
-        // Per-tier accumulator (NEW)
+        // Per-tier accumulator
         const tier = parseTier(gradeKey);
         if (tier !== null) {
           const tKey = `${family}::${grader}`;
@@ -202,6 +242,16 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
           const tierStr = String(tier);
           if (!tierMap[tierStr]) tierMap[tierStr] = [];
           tierMap[tierStr].push(ratio);
+        }
+        // Value-band accumulator (NEW, v1: baseline dimension only).
+        // gradeKey format from ch_daily_sales: "PSA 10" | "BGS 9.5" |
+        // "SGC 9" etc. Cross-sport cross-product pooled — v2+ will
+        // segment by sport / product / etc.
+        if (bucket !== null && tier !== null) {
+          const acc = bandAcc(bucket, gradeKey);
+          acc.ratios.push(ratio);
+          acc.raws.push(raw.avgPrice);
+          acc.gradeds.push(stats.avgPrice);
         }
       }
     }
@@ -302,6 +352,44 @@ for (const sport of SPORTS) {
   bySport[sport.toLowerCase()] = await calibrateFamilySet(SPORT_FAMILIES, sport, 3);
 }
 
+// CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Emit the
+// baseline value-band table. All families + all sports pooled — v1 is
+// the "all cards, all grade tiers" baseline. Future v2+ layers add
+// sport / product / year / player segmentation.
+//
+// MIN_SAMPLE_BASELINE = 20 — need at least 20 paired sales in a
+// (bucket, tier) cell to trust the median. Cells below this are
+// dropped from the table; the consumer falls through to next-broader
+// scope or the interim 3-tier cap.
+const MIN_SAMPLE_VALUE_BAND = 20;
+const valueBandBaseline = {};
+for (const [bucket, tierMap] of valueBandAcc) {
+  const tiers = {};
+  for (const [tier, acc] of tierMap) {
+    if (acc.ratios.length < MIN_SAMPLE_VALUE_BAND) continue;
+    const sortedRatios = acc.ratios.slice().sort((a, b) => a - b);
+    const sortedRaws = acc.raws.slice().sort((a, b) => a - b);
+    const sortedGrs = acc.gradeds.slice().sort((a, b) => a - b);
+    const at = (arr, p) => arr[Math.min(arr.length - 1, Math.floor(arr.length * p))];
+    tiers[tier] = {
+      medianRatio: Math.round(at(sortedRatios, 0.5) * 100) / 100,
+      p25:         Math.round(at(sortedRatios, 0.25) * 100) / 100,
+      p75:         Math.round(at(sortedRatios, 0.75) * 100) / 100,
+      sampleSize:  acc.ratios.length,
+      rawMedian:   Math.round(at(sortedRaws, 0.5) * 100) / 100,
+      gradedMedian: Math.round(at(sortedGrs, 0.5) * 100) / 100,
+    };
+  }
+  if (Object.keys(tiers).length > 0) valueBandBaseline[bucket] = tiers;
+}
+// Human-visible progress log for CI runs.
+console.error(`\n═══ Value-band calibration ═══`);
+for (const [lo, hi, label] of VALUE_BANDS) {
+  const cell = valueBandBaseline[label];
+  const nTiers = cell ? Object.keys(cell).length : 0;
+  console.error(`  ${label.padEnd(16)} ${nTiers} tier${nTiers === 1 ? "" : "s"}${nTiers ? " calibrated" : " (thin)"}`);
+}
+
 // Sort output for stable diffs
 function sortObj(o) {
   return Object.keys(o).sort().reduce((acc, k) => {
@@ -312,6 +400,7 @@ function sortObj(o) {
 const baselineSorted = sortObj(baseline);
 const bySportSorted = { baseball: {}, football: {}, basketball: {}, hockey: {} };
 for (const s of Object.keys(bySport)) bySportSorted[s] = sortObj(bySport[s]);
+const valueBandBaselineSorted = sortObj(valueBandBaseline);
 
 const ts = `// AUTO-GENERATED by backend/scripts/grade-calibrate.mjs
 // Do not hand-edit; overwritten by the Grade Calibration Refresh workflow.
@@ -336,9 +425,31 @@ export interface GradeCalibrationEntry {
   byTier?: Record<string, GradeCalibrationTierEntry>;
 }
 
+/** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Empirical
+ *  grade-tier / Raw multiplier bucketed by Raw price. v1 = baseline
+ *  (all cards pooled across sports + products). Future v2+ layers add
+ *  sport, product, year, player segmentation with fall-through. */
+export interface ValueBandTierEntry {
+  medianRatio:  number;
+  p25:          number;
+  p75:          number;
+  sampleSize:   number;
+  rawMedian:    number;
+  gradedMedian: number;
+}
+
 export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEntry>> = ${JSON.stringify(baselineSorted, null, 2)};
 
 export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<string, GradeCalibrationEntry>>> = ${JSON.stringify(bySportSorted, null, 2)};
+
+/** Bucket → grade-tier → empirical ratio entry. Buckets keyed as
+ *  "Under $25" | "$25-49" | ... | "$10,000+"; grade tiers keyed as
+ *  "PSA 10" | "PSA 9.5" | "PSA 9" | "BGS 10" | ... — exact strings CH
+ *  emits in ch_daily_sales.grade. Absent cells fall through to the
+ *  hardcoded value-tier cap in canonicalFmv.tryHotRawSameCardAnchor. */
+export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
+  baseline: Record<string, Record<string, ValueBandTierEntry>>;
+} = { baseline: ${JSON.stringify(valueBandBaselineSorted, null, 2)} };
 `;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -349,3 +460,4 @@ console.error(`\n✓ Wrote ${outPath}`);
 console.error(`  baseline: ${Object.keys(baselineSorted).length} families`);
 console.error(`  football: ${Object.keys(bySportSorted.football ?? {}).length} families`);
 console.error(`  basketball: ${Object.keys(bySportSorted.basketball ?? {}).length} families`);
+console.error(`  value-band baseline: ${Object.keys(valueBandBaselineSorted).length} buckets covered`);

@@ -16,12 +16,65 @@
 import {
   GRADE_CALIBRATION,
   GRADE_CALIBRATION_BY_SPORT,
+  GRADE_MULTIPLIER_BY_VALUE_BAND,
   type GradeCalibrationEntry,
   type GradeCalibrationTierEntry,
+  type ValueBandTierEntry,
 } from "./gradeCalibrationData.js";
 
-export { GRADE_CALIBRATION, GRADE_CALIBRATION_BY_SPORT };
-export type { GradeCalibrationEntry, GradeCalibrationTierEntry };
+export { GRADE_CALIBRATION, GRADE_CALIBRATION_BY_SPORT, GRADE_MULTIPLIER_BY_VALUE_BAND };
+export type { GradeCalibrationEntry, GradeCalibrationTierEntry, ValueBandTierEntry };
+
+// CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Raw-price
+// bucket edges MUST match the calibration script (grade-calibrate.mjs)
+// exactly. If the script changes bucket edges, update this in the same
+// commit so the lookup keys align.
+const VALUE_BAND_EDGES: Array<[number, number, string]> = [
+  [0, 25, "Under $25"],
+  [25, 50, "$25-49"],
+  [50, 100, "$50-99"],
+  [100, 250, "$100-249"],
+  [250, 500, "$250-499"],
+  [500, 1000, "$500-999"],
+  [1000, 2500, "$1,000-2,499"],
+  [2500, 5000, "$2,500-4,999"],
+  [5000, 10000, "$5,000-9,999"],
+  [10000, Infinity, "$10,000+"],
+];
+
+/** Which Raw-price bucket does a Raw anchor fall into? Returns null
+ *  for non-positive / non-finite inputs. */
+export function valueBandBucketOf(rawAnchor: number): string | null {
+  if (!Number.isFinite(rawAnchor) || rawAnchor <= 0) return null;
+  for (const [lo, hi, label] of VALUE_BAND_EDGES) {
+    if (rawAnchor >= lo && rawAnchor < hi) return label;
+  }
+  return null;
+}
+
+/** Format a (grader, gradeValue) pair into the tier-key format the
+ *  calibration table uses (matches ch_daily_sales.grade values). */
+function tierKey(grader: string, gradeValue: number): string {
+  return `${grader.toUpperCase()} ${gradeValue}`;
+}
+
+/** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, v1). Look up the
+ *  empirical grade multiplier from the value-band calibration table.
+ *  Currently baseline-only (v1); v2+ will add sport / product / year /
+ *  player fall-through. Returns null when the (bucket, tier) cell is
+ *  absent so the caller can fall through to its next-broader scope. */
+export function lookupValueBandMultiplier(
+  rawAnchor: number,
+  grader: string,
+  gradeValue: number,
+): number | null {
+  const bucket = valueBandBucketOf(rawAnchor);
+  if (bucket === null) return null;
+  const tier = tierKey(grader, gradeValue);
+  const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.baseline?.[bucket]?.[tier];
+  if (!cell || !Number.isFinite(cell.medianRatio) || cell.medianRatio <= 0) return null;
+  return cell.medianRatio;
+}
 
 /** Lookup helper. Returns null when the (family, grader) is uncovered.
  *  When `sport` is provided, prefers sport-specific calibration; falls
