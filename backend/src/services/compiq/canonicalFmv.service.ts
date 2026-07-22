@@ -57,7 +57,7 @@ import { computeGuestimate, type PlayerTier } from "./guestimatePricing.js";
 // git-blame trail stays intact.
 import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { classifyFamily, lookupGradeRatio } from "./gradeCalibrationConfig.js";
+import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier } from "./gradeCalibrationConfig.js";
 import { titleMatchesParallel } from "./titleParallelMatch.js";
 
 export type CanonicalFmvMethod =
@@ -65,6 +65,7 @@ export type CanonicalFmvMethod =
   | "cross-parallel"
   | "neighbor-parallel"
   | "sibling-parallel"
+  | "hot-raw-same-card-anchor"
   | "family-baseline"
   | "product-tier"
   | "no-basis";
@@ -301,6 +302,19 @@ async function computeCanonicalFmvUncached(
   // request should keep falling through to family-baseline as before.
   const siblingResult = await trySiblingParallel(input, trendPctPerMonth);
   if (siblingResult) return finalize(siblingResult, input, t0);
+
+  // CF-HOT-RAW-SAME-CARD-ANCHOR (Drew, 2026-07-22, issue #690). Fills
+  // the gap where a specific SKU (non-base parallel + graded tier) has
+  // no direct/cross/neighbor/sibling PSA comps but the same cardId's
+  // Raw sales are fresh and rich. Anchors on same-card Raw × empirical
+  // per-tier grade calibration. This is the seller-actionable rung:
+  // "you just graded a hot rookie parallel — here's what to list it at."
+  // Confidence caps at 0.5 because it's a projection off calibration,
+  // not an observed graded sale. Preserves the no-basis gate: rejects
+  // (stale / single-sample / uncalibrated family / high dispersion)
+  // fall through to no-basis instead of family-baseline lies.
+  const hotRawResult = await tryHotRawSameCardAnchor(cardId, input, trendPctPerMonth);
+  if (hotRawResult) return finalize(hotRawResult, input, t0);
 
   // CF-CANONICAL-FMV-NO-BASIS-GATE (Drew, 2026-07-19). Real regressions
   // observed at 2026-07-19 card-show prep: Jared Jones 2026 Bowman
@@ -1250,6 +1264,170 @@ async function trySiblingParallel(
       computedAt: new Date().toISOString(),
     };
   } catch { return null; }
+}
+
+// ─── CF-HOT-RAW-SAME-CARD-ANCHOR (Drew, 2026-07-22, issue #690) ───────
+//
+// Fills the "new release, no graded comps yet" gap. When the user's SKU
+// is specific (non-base parallel OR graded tier) and rungs 1-4 all
+// return null, this rung anchors on the SAME cardId's Raw sales and
+// projects the target grade's value via empirical byTier calibration.
+//
+// This is the seller-actionable rung — its answer is: "you just graded
+// a hot rookie parallel that hasn't traded in PSA 10 yet; based on your
+// fresh Raw comps and the calibrated PSA 10 premium for this family,
+// here's what to list it at."
+//
+// STRICT SAME-CARD PROVENANCE — no cross-card contamination. The Raw
+// anchor pool MUST be Raw comps of the same cardId + same parallel.
+//
+// GATES (issue #690 spec):
+//   - Freshness: newest Raw sale ≤ HOT_RAW_MAX_AGE_DAYS (default 30d)
+//   - Sample floor: ≥ HOT_RAW_MIN_SAMPLES Raw sales in the 60d window
+//   - Family covered by empirical calibration (else no multiplier)
+//   - Dispersion: coefficient of variation (stdev/mean) ≤ 0.6
+//
+// FMV CAP: confidence ≤ 0.5 — this is a projection, not an observation.
+// Never allowed to out-rank a real direct-comp rung.
+
+const HOT_RAW_MAX_AGE_DAYS = 30;
+const HOT_RAW_WINDOW_DAYS = 60;
+const HOT_RAW_MIN_SAMPLES = 2;
+const HOT_RAW_MAX_COV = 0.6;
+const HOT_RAW_CONFIDENCE_CAP = 0.5;
+
+/** Fires only when the request is specific (isSpecificRequest = true)
+ *  AND rungs 1-4 returned null (guaranteed by call-order). Returns
+ *  null on any gate rejection so the no-basis gate can fire cleanly. */
+async function tryHotRawSameCardAnchor(
+  cardId: string,
+  input: CanonicalFmvInput,
+  trendPctPerMonth: number | null,
+): Promise<CanonicalFmvResult | null> {
+  // Only fires for graded requests. A Raw request with a specific
+  // parallel would have been handled by direct-comp already (which
+  // reads Raw same-card same-parallel comps and projects them).
+  if (input.gradeCompany === null || input.gradeCompany === undefined) return null;
+  if (input.gradeValue === null || input.gradeValue === undefined) return null;
+
+  // Read Raw same-card same-parallel comps within the 60d window.
+  const nowMs = Date.now();
+  const fromDate = new Date(nowMs - HOT_RAW_WINDOW_DAYS * MS_PER_DAY).toISOString();
+  const rawComps = await readCompsByCardId({
+    cardId,
+    fromDate,
+    parallel: input.parallel ?? undefined,
+    gradeCompany: null,
+    gradeValue: null,
+  }).catch(() => []);
+
+  // Filter to priced, un-flagged, dated comps.
+  const priced = rawComps.filter((c) => {
+    if (!Number.isFinite(c.price) || c.price <= 0) return false;
+    const soldMs = Date.parse(c.soldAt ?? "");
+    if (!Number.isFinite(soldMs)) return false;
+    if ((c as { flaggedWrong?: boolean }).flaggedWrong === true) return false;
+    return true;
+  });
+
+  // GATE 1: sample floor.
+  if (priced.length < HOT_RAW_MIN_SAMPLES) return null;
+
+  // GATE 2: freshness — newest Raw sale must be ≤ 30d old.
+  const newestMs = Math.max(...priced.map((c) => Date.parse(c.soldAt ?? "")));
+  if (nowMs - newestMs > HOT_RAW_MAX_AGE_DAYS * MS_PER_DAY) return null;
+
+  // GATE 3: dispersion — reject if the Raw pool is too spread (market
+  // undecided). Coefficient of variation = stdev / mean.
+  const prices = priced.map((c) => c.price);
+  const mean = prices.reduce((s, p) => s + p, 0) / prices.length;
+  if (mean <= 0) return null;
+  const variance = prices.reduce((s, p) => s + (p - mean) * (p - mean), 0) / prices.length;
+  const stdev = Math.sqrt(variance);
+  const cov = stdev / mean;
+  if (cov > HOT_RAW_MAX_COV) return null;
+
+  // GATE 4: family calibration coverage. Need a per-tier ratio (preferred)
+  // OR a company-level ratio × subTierScaling fallback.
+  const family = classifyFamily(input.product ?? null);
+  const sport = inferSportFromContext(input.product ?? null, null);
+  const gradeCompany = input.gradeCompany.trim().toUpperCase();
+  const gradeValue = input.gradeValue;
+
+  const perTierRatio = lookupGradeRatioByTier(family, gradeCompany, gradeValue, sport);
+  let gradeMultiplier: number | null = perTierRatio;
+  let calibrationSource: "byTier" | "company-scaled" = "byTier";
+  if (gradeMultiplier === null) {
+    // Fall back to company-level × subTierScaling. Same formula that
+    // observedGradeCurve.resolveMultiplier uses when a specific tier's
+    // byTier cell is thin — keeps behavior consistent across surfaces.
+    const companyRatio = lookupGradeRatio(family, gradeCompany, sport);
+    if (companyRatio !== null && companyRatio > 0) {
+      gradeMultiplier = companyRatio * subTierScalingForFallback(gradeValue);
+      calibrationSource = "company-scaled";
+    }
+  }
+  if (gradeMultiplier === null || gradeMultiplier <= 0) return null;
+
+  // Project the Raw next-sale value from the same-card Raw pool.
+  const rawProjection = projectNextSaleFromComps(
+    priced.map((c) => ({ price: c.price, soldDate: c.soldAt })),
+    {
+      broaderTrendPctPerMonth: trendPctPerMonth,
+      forwardDays: 0,
+      minNForRegression: 2,   // 2-comp regression OK for the anchor
+    },
+  );
+  if (!rawProjection || rawProjection.nextSaleValue <= 0) return null;
+
+  const projected = rawProjection.nextSaleValue * gradeMultiplier;
+  if (!Number.isFinite(projected) || projected <= 0) return null;
+
+  const gradedFmv = Math.round(projected * 100) / 100;
+  // Confidence caps at 0.5. Anchor is a projection off calibration,
+  // not an observed graded sale.
+  const anchorConfidence = Math.min(HOT_RAW_CONFIDENCE_CAP, rawProjection.confidence);
+  const slopePct = rawProjection.slopePerMonthPct;
+  const slopeLabel = slopePct !== null && Number.isFinite(slopePct)
+    ? `${slopePct >= 0 ? "+" : ""}${slopePct.toFixed(1)}%/mo`
+    : "n/a";
+  const gradeTierLabel_ = `${gradeCompany} ${gradeValue}`;
+
+  return {
+    fmv: gradedFmv,
+    method: "hot-raw-same-card-anchor",
+    confidence: anchorConfidence,
+    provenance: {
+      summary: `hot-Raw anchor: ${priced.length} Raw same-card comp${priced.length === 1 ? "" : "s"} in ${HOT_RAW_WINDOW_DAYS}d, projected Raw ≈ $${rawProjection.nextSaleValue.toFixed(2)} (${slopeLabel}), × ${gradeMultiplier.toFixed(2)} ${gradeTierLabel_} ${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"} ratio → $${gradedFmv.toFixed(2)}. Range from Raw: $${Math.min(...prices).toFixed(0)}–$${Math.max(...prices).toFixed(0)}.`,
+      comps: priced.slice(0, 10).map((c) => ({
+        price: c.price,
+        soldAt: c.soldAt,
+        source: c.source,
+        parallel: c.parallel ?? null,
+        verifiedByUser: false,
+        normalizedFromParallel: null,
+        normalizationRatio: null,
+      })),
+      trendPctPerMonth,
+      multipliers: {
+        rawAnchor: Math.round(rawProjection.nextSaleValue * 100) / 100,
+        gradeMultiplier: Math.round(gradeMultiplier * 100) / 100,
+        covRaw: Math.round(cov * 100) / 100,
+      },
+    },
+    computedAt: new Date().toISOString(),
+  };
+}
+
+/** Same shape as observedGradeCurve.subTierScaling — kept in sync so
+ *  fallback multipliers agree across the two engines. Only used when
+ *  byTier is absent for the specific (family, grader, gradeValue). */
+function subTierScalingForFallback(gradeValue: number): number {
+  if (!Number.isFinite(gradeValue)) return 0;
+  if (gradeValue >= 10) return 1.00;
+  if (gradeValue >= 9.5) return 0.65;
+  if (gradeValue >= 9)   return 0.35;
+  return 0.20;
 }
 
 /** Extract a family token for LOWER-CONTAINS matching against
