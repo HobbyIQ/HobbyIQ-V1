@@ -6823,6 +6823,87 @@ export async function computeEstimate(
       }
     }
 
+    // CF-TIER-LADDER-FALL-THROUGH (Drew, 2026-07-22). When
+    // multiplier-anchored returns null (i.e. no GRADE_CALIBRATION entry
+    // for the product family under the empirical-only doctrine, PR #633),
+    // AND we have enough queryContext to identify the set, fall through
+    // to Tier 7 setdoc-baseline instead of returning no-recent-comps
+    // with a null FMV. This closes the gap that broke the daily smoke
+    // starting 2026-07-20 without changing anything for real users who
+    // land here with a non-null mechanism1.
+    if (
+      mechanism1.predictedPrice === null &&
+      finalEstimatedValue === null &&
+      thinBranchGuestimate === null
+    ) {
+      const t7Product = queryContext.product ?? cardIdentity?.set ?? null;
+      const t7Year =
+        typeof queryContext.cardYear === "number"
+          ? queryContext.cardYear
+          : typeof cardIdentity?.year === "number"
+            ? cardIdentity.year
+            : null;
+      if (t7Product && t7Year) {
+        const t7 = await maybeTier7Fallback({ product: t7Product, year: t7Year }).catch(() => null);
+        if (t7) {
+          console.log(
+            JSON.stringify({
+              event: "tier7_setdoc_baseline_applied",
+              source: "compiq.computeEstimate.no-recent-comps-fallthrough",
+              query: cardTitle,
+              product: t7Product,
+              year: t7Year,
+              setName: t7.setName,
+              era: t7.era,
+              setTypeKey: t7.setTypeKey,
+              baseline: t7.baseline,
+              floor: t7.floor,
+            }),
+          );
+          emitPredictionToCorpus({
+            cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
+            body,
+            fairMarketValue: t7.floor,
+            fmvMechanism: "unavailable",
+            predictedPrice: t7.floor,
+            predictedPriceRange: t7.range,
+            predictedPriceMechanism: "unavailable",
+            compsUsed: fetched.comps.length,
+            callContext,
+          });
+          return {
+            source: "setdoc-baseline",
+            pricingTier: "setdoc-baseline",
+            cardIdentity,
+            fairMarketValue: t7.floor,
+            fairMarketValueLow: t7.range.low,
+            fairMarketValueHigh: t7.range.high,
+            marketValue: t7.floor,
+            predictedPrice: t7.floor,
+            predictedPriceRange: t7.range,
+            predictedPriceAttribution: {
+              mechanism: "setdoc-baseline",
+              baseline: t7.baseline,
+              era: t7.era,
+              setTypeKey: t7.setTypeKey,
+              setName: t7.setName,
+              manufacturer: t7.manufacturer,
+            },
+            quickSaleValue: Math.round(t7.floor * T7_QUICK_SALE_MULTIPLIER * 100) / 100,
+            premiumValue: Math.round(t7.floor * 1.5 * 100) / 100,
+            compsUsed: fetched.comps.length,
+            compsAvailable: fetched.comps.length,
+            recentComps: [],
+            variantWarning: [],
+            confidence: { pricingConfidence: 15 },
+            verdict: t7.verdict,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
+      }
+    }
+
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
       body,
