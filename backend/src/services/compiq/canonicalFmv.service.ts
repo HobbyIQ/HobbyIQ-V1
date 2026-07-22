@@ -168,6 +168,50 @@ export interface CanonicalFmvResult {
     /** Maximum observed sale price. */
     max: number;
   } | null;
+  /** CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22). The buyer-side counterpart
+   *  to fmv — the maximum you'd pay TODAY to still hit a target margin
+   *  when reselling at fmv. Null when fmv is null. See
+   *  computeCanonicalBuyPrice() for the derivation and options. */
+  buyPrice?: CanonicalBuyPriceResult | null;
+}
+
+/** CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22). Buyer-side sibling of
+ *  CanonicalFmvResult. Answers "what should I pay?" given the sell
+ *  target (fmv). Accounts for eBay marketplace fees and a target
+ *  profit margin so buying at buyPrice enables reselling at fmv with
+ *  that margin intact.
+ *
+ *  Context "flip" (default) targets a 20% cost markup — quick resell,
+ *  needs headroom for market noise. Context "hold" targets 10% — long
+ *  hold, willing to buy closer to fmv. */
+export interface CanonicalBuyPriceResult {
+  /** Max buy-in price to hit target margin when reselling at fmv.
+   *  Null when fmv is null. */
+  buyPrice: number | null;
+  /** Buy-side confidence — inherits from the underlying fmv.confidence
+   *  (the discount math itself is deterministic; the uncertainty lives
+   *  entirely in the fmv anchor). */
+  confidence: number;
+  /** Buy context. "flip" = plan quick resell (higher margin required).
+   *  "hold" = long-term hold (lower margin). */
+  context: "flip" | "hold";
+  /** Full economics for the transparency sheet. */
+  economics: {
+    /** The sell-side FMV this was derived from. */
+    fmv: number;
+    /** Which FMV rung fired (echoes CanonicalFmvResult.method). */
+    fmvMethod: CanonicalFmvMethod;
+    /** eBay Managed Payments final-value fee percentage (of sale). */
+    ebayFeePct: number;
+    /** eBay Managed Payments per-order flat fee. */
+    ebayFeeFlat: number;
+    /** Target cost-markup margin (buyPrice × (1+margin) = sellerNet). */
+    targetMarginPct: number;
+    /** What the seller nets from listing at fmv, after eBay fees. */
+    sellerNetIfListedAtFmv: number;
+  };
+  /** Human-readable derivation for the iOS transparency sheet. */
+  summary: string;
 }
 
 const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
@@ -374,8 +418,91 @@ function isSpecificRequest(input: CanonicalFmvInput): boolean {
 function finalize(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: number): CanonicalFmvResult {
   result.gradeLadder = buildGradeLadder(result, input);
   result.recentRange = buildRecentRange(result);
+  // CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22): compute the buyer-side
+  // sibling so the single-request response carries both. Callers who
+  // don't need it just ignore the field.
+  result.buyPrice = computeCanonicalBuyPrice(result);
   logCompute(result, input, t0);
   return result;
+}
+
+// ─── CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22) ─────────────────────────
+//
+// The buyer-side answer to canonicalFmv. Given the sell-side FMV, what
+// should a buyer pay TODAY to still hit a target margin when they
+// resell at that FMV? Deterministic math off the fmv anchor:
+//
+//   sellerNet   = fmv × (1 − ebayFeePct) − ebayFeeFlat
+//   buyPrice    = sellerNet ÷ (1 + targetMarginPct)
+//
+// eBay Managed Payments final-value fee = ~13% + $0.30 flat (Trading
+// Cards category, 2026). Adjust the constants if eBay changes their
+// fee schedule.
+//
+// Contexts:
+//   "flip"  — 20% cost markup. Assumes quick resell; needs headroom
+//             for market noise + time between purchase and resell.
+//   "hold"  — 10% cost markup. Long-term hold; buyer's OK with less
+//             immediate margin because they believe FMV will rise.
+//
+// Confidence carries from the FMV — the discount math itself adds no
+// uncertainty, but the number is only as good as the FMV anchor.
+
+const EBAY_FEE_PCT = 0.13;
+const EBAY_FEE_FLAT = 0.30;
+const FLIP_MARGIN_PCT = 0.20;
+const HOLD_MARGIN_PCT = 0.10;
+
+/** Compute the buyer-side max buy-in price for a canonical FMV result.
+ *  Pure function — safe to call any time, no I/O, deterministic given
+ *  inputs. Returns a buyPrice=null result when fmv is null. */
+export function computeCanonicalBuyPrice(
+  fmvResult: CanonicalFmvResult,
+  opts: { context?: "flip" | "hold" } = {},
+): CanonicalBuyPriceResult {
+  const context = opts.context ?? "flip";
+  const targetMarginPct = context === "flip" ? FLIP_MARGIN_PCT : HOLD_MARGIN_PCT;
+
+  if (fmvResult.fmv === null || fmvResult.fmv <= 0) {
+    return {
+      buyPrice: null,
+      confidence: 0,
+      context,
+      economics: {
+        fmv: 0,
+        fmvMethod: fmvResult.method,
+        ebayFeePct: EBAY_FEE_PCT,
+        ebayFeeFlat: EBAY_FEE_FLAT,
+        targetMarginPct,
+        sellerNetIfListedAtFmv: 0,
+      },
+      summary: "No FMV basis — no buy target.",
+    };
+  }
+
+  const fmv = fmvResult.fmv;
+  const sellerNet = fmv * (1 - EBAY_FEE_PCT) - EBAY_FEE_FLAT;
+  const buyPriceRaw = sellerNet / (1 + targetMarginPct);
+  const buyPrice = buyPriceRaw > 0 ? Math.round(buyPriceRaw * 100) / 100 : null;
+  const sellerNetRounded = Math.round(sellerNet * 100) / 100;
+  const fee = Math.round((fmv - sellerNet) * 100) / 100;
+
+  return {
+    buyPrice,
+    confidence: fmvResult.confidence,
+    context,
+    economics: {
+      fmv,
+      fmvMethod: fmvResult.method,
+      ebayFeePct: EBAY_FEE_PCT,
+      ebayFeeFlat: EBAY_FEE_FLAT,
+      targetMarginPct,
+      sellerNetIfListedAtFmv: sellerNetRounded,
+    },
+    summary: buyPrice !== null
+      ? `Sell $${fmv.toFixed(2)} → eBay fees $${fee.toFixed(2)} → net $${sellerNetRounded.toFixed(2)}. Target ${(targetMarginPct * 100).toFixed(0)}% ${context} margin → buy under $${buyPrice.toFixed(2)}.`
+      : `Sell $${fmv.toFixed(2)} → eBay fees $${fee.toFixed(2)} → net $${sellerNetRounded.toFixed(2)}. Fees exceed margin at this price — no buy target.`,
+  };
 }
 
 /** CF-CONFIDENCE-BAND (Drew, 2026-07-20). Compute the price

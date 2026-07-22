@@ -4311,6 +4311,10 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
         computedAt: result.computedAt,
         gradeLadder: result.gradeLadder ?? null,
         provenance: result.provenance,
+        // CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22): buyer-side sibling
+        // of fmv. Included in every cert-lookup response so iOS can
+        // render "Sell $X · Buy under $Y" without a second round-trip.
+        buyPrice: result.buyPrice ?? null,
       };
     } catch { /* canonical FMV failure never blocks cert lookup */ }
 
