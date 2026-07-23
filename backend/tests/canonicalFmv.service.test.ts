@@ -70,6 +70,46 @@ describe("computeCanonicalFmv contract", () => {
     expect(result.confidence).toBeLessThanOrEqual(1);
   });
 
+  it("accepts optional isAuto + printRun + sport without crashing (Phase 2b hobbyiqCardId lookup path)", async () => {
+    // CF-HOBBYIQ-CARDID-LOOKUP (Drew, 2026-07-23, issue #706 Phase 2b).
+    // When callers populate isAuto + printRun + sport, the direct-comp
+    // rung ALSO fires a canonical hobbyiqCardId lookup and unions results.
+    // Contract test: the envelope shape stays valid whether the lookup
+    // returns rows or not.
+    const result = await computeCanonicalFmv({
+      ...MINIMAL_INPUT,
+      isAuto: true,
+      printRun: 150,
+      sport: "baseball",
+      freshCompute: true,
+    });
+    expect(result).toHaveProperty("fmv");
+    expect(result).toHaveProperty("method");
+    expect(result).toHaveProperty("confidence");
+    expect([
+      "direct-comp",
+      "cross-parallel",
+      "neighbor-parallel",
+      "sibling-parallel",
+      "hot-raw-same-card-anchor",
+      "family-baseline",
+      "product-tier",
+      "no-basis",
+    ]).toContain(result.method);
+  });
+
+  it("null isAuto silently skips the hobbyiqCardId lookup (default behavior for existing callers)", async () => {
+    // Existing callers don't populate isAuto — the lookup step should be
+    // skipped cleanly and the rest of the ladder runs untouched.
+    const result = await computeCanonicalFmv({
+      ...MINIMAL_INPUT,
+      // isAuto omitted → null-equivalent
+      freshCompute: true,
+    });
+    expect(result).toHaveProperty("fmv");
+    expect(result).toHaveProperty("method");
+  });
+
   it("freshCompute=true bypasses cache (does not throw)", async () => {
     const result = await computeCanonicalFmv({ ...MINIMAL_INPUT, freshCompute: true });
     // Whatever fires (rung 1-5 or no-basis), the envelope shape is valid.

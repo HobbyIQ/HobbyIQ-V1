@@ -46,7 +46,8 @@
 // See feedback_no_medians_project_next_sale.md for the underlying
 // principle; every rung projects the next sale, none reports a middle.
 
-import { readCompsByCardId, readCompsByIdentity, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
+import { readCompsByCardId, readCompsByIdentity, readCompsByHobbyIqCardId, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
+import { computeHobbyIqCardId } from "../portfolioiq/hobbyIqCardId.service.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
@@ -87,6 +88,16 @@ export interface CanonicalFmvInput {
   player?: string | null;
   /** Card number ("CPA-EHA", "BCP-102", "#365"). Used for identity checks. */
   cardNumber?: string | null;
+  /** CF-HOBBYIQ-CARDID-LOOKUP (Drew, 2026-07-23, issue #706 Phase 2b).
+   *  When all of {sport|inferrable, product, cardYear, cardNumber, parallel,
+   *  isAuto} are provided, we compute the canonical hobbyiqCardId and query
+   *  sold_comps by it — cross-vendor row unification. isAuto and printRun
+   *  are OPTIONAL and only used for slug computation; when either is null
+   *  we skip the hiq lookup and rely on the vendor-cardId + identity paths. */
+  isAuto?: boolean | null;
+  printRun?: number | null;
+  /** Sport override. Falls back to inferSportFromContext when null. */
+  sport?: string | null;
   /** When true, forces cache miss + fresh compute. Default false. */
   freshCompute?: boolean;
 }
@@ -224,6 +235,48 @@ const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
 
 const MAX_POOL_AGE_DAYS = 180;
 const MS_PER_DAY = 86_400_000;
+
+// CF-HOBBYIQ-CARDID-LOOKUP helpers (issue #706 Phase 2b). Feature-flagged
+// canonical slug lookup that unions cross-vendor rows into the direct-comp
+// pool. Silently skipped when the input can't produce a slug — callers
+// progressively adopt isAuto + printRun as coverage lands.
+
+function isHobbyIqCardIdLookupEnabled(): boolean {
+  // Default ON per Drew 2026-07-23. Set HOBBYIQ_CARDID_LOOKUP_ENABLED=false
+  // to disable at runtime without a redeploy.
+  return process.env.HOBBYIQ_CARDID_LOOKUP_ENABLED !== "false";
+}
+
+function canComputeHobbyIqCardId(input: CanonicalFmvInput): boolean {
+  // We need every axis of the slug except the printRun (which is
+  // permitted to be null → "unnumbered"). isAuto being nullable is the
+  // real gate: false explicitly means "no-auto", null means "unknown"
+  // so we skip.
+  return (
+    input.isAuto != null &&
+    input.product != null &&
+    input.product !== "" &&
+    input.cardYear != null &&
+    input.cardNumber != null &&
+    input.cardNumber !== "" &&
+    input.parallel != null
+  );
+}
+
+function computeHobbyIqCardIdFromInput(input: CanonicalFmvInput): string | null {
+  if (!canComputeHobbyIqCardId(input)) return null;
+  const sport = input.sport ?? inferSportFromContext(input.product, input.player);
+  if (!sport) return null;
+  return computeHobbyIqCardId({
+    sport,
+    year: input.cardYear!,
+    setKey: input.product!,
+    cardNumber: input.cardNumber!,
+    parallel: input.parallel ?? "Base",
+    isAuto: input.isAuto!,
+    printRun: input.printRun ?? null,
+  });
+}
 
 /** Redis cache TTL for the canonical FMV envelope. 15 min balances
  *  "fresh enough for iOS card detail" against "not hammering the
@@ -936,6 +989,48 @@ async function tryDirectComp(
     if (chDailyAdded + ebayEndedAdded > 0) {
       comps = await readPool();
       fresh = filterFresh(comps);
+    }
+  }
+
+  // CF-HOBBYIQ-CARDID-LOOKUP (Drew, 2026-07-23, issue #706 Phase 2b).
+  // Canonical hobbyiqCardId lookup: when the input has enough attributes
+  // to compute a slug, we query sold_comps by that slug and UNION with
+  // the vendor-cardId pool. This unifies CH cardId rows + Cardsight
+  // backstop cardId rows + eBay item-ID rows for the same physical card.
+  //
+  // Runs BEFORE the identity fallback because slug-based lookup is more
+  // specific (all six identity axes) than the identity fallback (four
+  // axes). Rows the slug lookup misses may still get caught by identity
+  // fallback below.
+  //
+  // Gated by HOBBYIQ_CARDID_LOOKUP_ENABLED env var (default ON per Drew
+  // 2026-07-23). Silently skips when input can't produce a slug — this
+  // is the common case until callers start populating isAuto + printRun.
+  if (canComputeHobbyIqCardId(input) && isHobbyIqCardIdLookupEnabled()) {
+    const hiqId = computeHobbyIqCardIdFromInput(input);
+    if (hiqId) {
+      const hiqRows = await readCompsByHobbyIqCardId({
+        hobbyiqCardId: hiqId,
+        sources: [...sources] as never,
+        gradeCompany: input.gradeCompany ?? null,
+        gradeValue: input.gradeValue ?? null,
+        fromDate: new Date(nowMs - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString(),
+        limit: 500,
+      }).catch(() => []);
+      if (hiqRows.length > 0) {
+        const seenHashes = new Set(comps.map((c) => (c as { contentHash?: string }).contentHash).filter(Boolean));
+        const seenIds = new Set(comps.map((c) => c.sourceExternalId).filter(Boolean));
+        const additional = hiqRows.filter((r) => {
+          const h = (r as { contentHash?: string }).contentHash;
+          if (h && seenHashes.has(h)) return false;
+          if (r.sourceExternalId && seenIds.has(r.sourceExternalId)) return false;
+          return true;
+        });
+        if (additional.length > 0) {
+          comps = [...comps, ...additional];
+          fresh = filterFresh(comps);
+        }
+      }
     }
   }
 
