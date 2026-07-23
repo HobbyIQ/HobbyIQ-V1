@@ -455,13 +455,18 @@ export async function searchPricingByTitle(
 
   // CF-PERSIST-USER-QUERY-SIGNALS (Drew, 2026-07-23, issue #722 signals):
   // emit ALWAYS (including hitCount=0 catalog-gap events). Feature-
-  // flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED.
-  import("../portfolioiq/persistUserQuerySignals.service.js")
-    .then(({ persistUserQuerySignalsInBackground }) => {
+  // flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED. userId is picked up
+  // from the request-scoped AsyncLocalStorage set by requireSession.
+  Promise.all([
+    import("../portfolioiq/persistUserQuerySignals.service.js"),
+    import("../portfolioiq/requestContext.service.js"),
+  ])
+    .then(([{ persistUserQuerySignalsInBackground }, { getCurrentUserId }]) => {
       persistUserQuerySignalsInBackground([{
         endpoint: "cardsight.searchPricingByTitle",
         query,
         hitCount: results.length,
+        userId: getCurrentUserId(),
       }]);
     })
     .catch(() => { /* silent no-op */ });

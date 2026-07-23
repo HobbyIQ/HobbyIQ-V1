@@ -237,13 +237,18 @@ export async function searchCards(
 
   // CF-PERSIST-USER-QUERY-SIGNALS (Drew, 2026-07-23, issue #722 signals):
   // emit for the CH catalog search — including hitCount=0 catalog-gap
-  // events. Feature-flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED.
-  import("../portfolioiq/persistUserQuerySignals.service.js")
-    .then(({ persistUserQuerySignalsInBackground }) => {
+  // events. Feature-flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED. userId
+  // is picked up from AsyncLocalStorage set by requireSession.
+  Promise.all([
+    import("../portfolioiq/persistUserQuerySignals.service.js"),
+    import("../portfolioiq/requestContext.service.js"),
+  ])
+    .then(([{ persistUserQuerySignalsInBackground }, { getCurrentUserId }]) => {
       persistUserQuerySignalsInBackground([{
         endpoint: "cardhedge.searchCards",
         query,
         hitCount: results.length,
+        userId: getCurrentUserId(),
       }]);
     })
     .catch(() => { /* silent no-op */ });
