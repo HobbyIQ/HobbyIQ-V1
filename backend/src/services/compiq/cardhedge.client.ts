@@ -203,7 +203,7 @@ export async function searchCards(
   // instantly recovered the 50-candidate result. Non-empty results
   // still cache for the full TTL — the cache remains effective for
   // the common case, we just don't LOCK IN empty responses.
-  return cacheWrap<CardHedgeCard[]>(
+  const results = await cacheWrap<CardHedgeCard[]>(
     cacheKey("ch:search", query, String(limit), filterKey),
     async () => _searchCards(query, limit, h, filters, page),
     {
@@ -211,6 +211,44 @@ export async function searchCards(
       skipCacheWhen: (result) => result.length === 0,
     },
   );
+
+  // CF-PERSIST-VENDOR-CATALOG (Drew, 2026-07-23, issue #722 catalog):
+  // ship catalog entries to card_catalog in the background. Feature-
+  // flagged: PERSIST_VENDOR_CATALOG_ENABLED. Lazy import.
+  if (results.length > 0) {
+    import("../portfolioiq/persistVendorCatalog.service.js")
+      .then(({ persistVendorCatalogInBackground }) => {
+        persistVendorCatalogInBackground(
+          "cardhedge",
+          results.map((c) => ({
+            cardId: c.card_id,
+            title: c.title ?? c.name ?? null,
+            player: c.player ?? null,
+            set: c.set ?? null,
+            year: c.year ?? null,
+            number: c.number ?? null,
+            variant: c.variant ?? null,
+            imageUrl: c.image ?? null,
+          })),
+        );
+      })
+      .catch(() => { /* silent no-op */ });
+  }
+
+  // CF-PERSIST-USER-QUERY-SIGNALS (Drew, 2026-07-23, issue #722 signals):
+  // emit for the CH catalog search — including hitCount=0 catalog-gap
+  // events. Feature-flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED.
+  import("../portfolioiq/persistUserQuerySignals.service.js")
+    .then(({ persistUserQuerySignalsInBackground }) => {
+      persistUserQuerySignalsInBackground([{
+        endpoint: "cardhedge.searchCards",
+        query,
+        hitCount: results.length,
+      }]);
+    })
+    .catch(() => { /* silent no-op */ });
+
+  return results;
 }
 
 async function _searchCards(
@@ -1767,11 +1805,27 @@ export async function getPricesByCard(
 ): Promise<CardHedgeDailyPrice[]> {
   const h = headers();
   if (!h || !cardId) return [];
-  return cacheWrap(
+  const series = await cacheWrap(
     cacheKey("ch:prices-by-card", cardId, grade, String(days)),
     () => _getPricesByCard(cardId, grade, days, h),
     PRICES_BY_CARD_TTL_SEC,
   );
+  // CF-PERSIST-DAILY-PRICE-SERIES (Drew, 2026-07-23, issue #722 series):
+  // ship daily closing prices to daily_price_series in the background.
+  // Feature-flagged: PERSIST_DAILY_PRICE_SERIES_ENABLED.
+  if (series.length > 0) {
+    import("../portfolioiq/persistDailyPriceSeries.service.js")
+      .then(({ persistDailyPriceSeriesInBackground }) => {
+        persistDailyPriceSeriesInBackground(
+          "cardhedge",
+          cardId,
+          grade,
+          series.map((r) => ({ closingDate: r.closing_date, price: r.price })),
+        );
+      })
+      .catch(() => { /* silent no-op */ });
+  }
+  return series;
 }
 
 async function _getPricesByCard(
