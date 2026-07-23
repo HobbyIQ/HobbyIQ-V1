@@ -23,7 +23,7 @@ This is the source of some confusion because **"True" is used two ways**:
   they're distinguished from **patterned refractors** (see below), which have a
   textured chrome finish (mojo, atomic, speckle, wave, shimmer, etc.).
 - **"True Refractor"** (purist usage) — the *standard/base* refractor parallel
-  of a card (the classic silver rainbow-chrome refractor, e.g. the /500 base
+  of a card (the classic silver rainbow-chrome refractor, e.g. the /499 base
   Refractor Auto in Bowman Chrome), as opposed to a color parallel, insert, or
   image variation. Collectors use "true refractor" to mean "the real base
   refractor, not a colored one."
