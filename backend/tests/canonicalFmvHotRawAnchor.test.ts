@@ -274,9 +274,11 @@ describe("hot-Raw same-card anchor — conservative-projection caps", () => {
 describe("hot-Raw same-card anchor — reject conditions fall through to no-basis", () => {
   beforeEach(() => vi.resetModules());
 
-  it("stale: all Raw sales > 30 days old → no-basis", async () => {
+  it("stale: all Raw sales > 90 days old → no-basis", async () => {
+    // CF-HOT-RAW-FRESHNESS-RELAX (2026-07-23): freshness gate is 90d.
+    // 45-50d ago is now within window; genuinely-stale test uses 100-110d.
     const { computeCanonicalFmv } = await loadCanonicalFmv(CALIB_HAPPY);
-    await installReadCompsMock([rawComp(1000, 45), rawComp(1100, 50)]);
+    await installReadCompsMock([rawComp(1000, 100), rawComp(1100, 110)]);
     const result = await computeCanonicalFmv(HARTMAN_INPUT_PSA_10);
     expect(result.method).toBe("no-basis");
     expect(result.fmv).toBeNull();
