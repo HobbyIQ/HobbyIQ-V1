@@ -211,6 +211,113 @@ describe("full pipeline — a realistic messy holding gets fully cleaned", () =>
   });
 });
 
+describe("R6 setName_fallback_from_product — 'product' fills empty setName (issue #718)", () => {
+  it("undefined setName + product='Bowman Draft Chrome Prospect Autographs' → setName copied", () => {
+    const r = normalizeHoldingFields({
+      playerName: "Tim Piasentin",
+      cardYear: 2025,
+      setName: undefined,
+      product: "Bowman Draft Chrome Prospect Autographs",
+      parallel: "Gum Ball",
+      cardNumber: "CPA-TP",
+      isAuto: true,
+    });
+    expect(r.fields.setName).toBe("Bowman Draft Chrome Prospect Autographs");
+  });
+
+  it("empty-string setName + product filled → product wins", () => {
+    const r = normalizeHoldingFields({
+      setName: "",
+      product: "Topps",
+    });
+    expect(r.fields.setName).toBe("Topps");
+  });
+
+  it("both filled → setName unchanged", () => {
+    const r = normalizeHoldingFields({
+      setName: "Bowman Chrome",
+      product: "Bowman",
+      cardYear: 2026,
+    });
+    expect(r.fields.setName).toBe("Bowman Chrome");
+  });
+
+  it("both empty → nothing changes", () => {
+    const r = normalizeHoldingFields({});
+    expect(r.fields.setName).toBeUndefined();
+    expect(r.changes.filter((c) => c.rule === "setName_fallback_from_product")).toHaveLength(0);
+  });
+});
+
+describe("R7 parallel_strip_garbled_subset_prefix — legacy 'Chr Prospect Auto-X' → 'X' (issue #718)", () => {
+  it("'Chr Prospect Auto-Gold Ref' → 'Gold Ref' (then R8 expands to Gold Refractor)", () => {
+    const r = normalizeHoldingFields({
+      playerName: "Gage Wood",
+      parallel: "Chr Prospect Auto-Gold Ref",
+    });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+  });
+
+  it("'Chrome Prospect Auto-Gold Ref' (unabbreviated) → 'Gold Refractor'", () => {
+    const r = normalizeHoldingFields({
+      parallel: "Chrome Prospect Auto-Gold Ref",
+    });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+  });
+
+  it("'Prspct Au-Mini Diamond Ref' → 'Mini Diamond Refractor'", () => {
+    const r = normalizeHoldingFields({
+      playerName: "Leo De Vries",
+      parallel: "Prspct Au-Mini Diamond Ref",
+    });
+    expect(r.fields.parallel).toBe("Mini Diamond Refractor");
+  });
+
+  it("'Chr Prospect Auto-Gum Ball' → 'Gum Ball' (no Ref suffix)", () => {
+    const r = normalizeHoldingFields({
+      playerName: "Tim Piasentin",
+      parallel: "Chr Prospect Auto-Gum Ball",
+    });
+    expect(r.fields.parallel).toBe("Gum Ball");
+  });
+
+  it("clean parallel 'Gold Refractor' → unchanged (idempotent)", () => {
+    const r = normalizeHoldingFields({ parallel: "Gold Refractor" });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+    expect(r.changes.filter((c) => c.rule === "parallel_strip_garbled_subset_prefix")).toHaveLength(0);
+  });
+
+  it("does NOT strip 'Gold Ref' alone (no garbled prefix present)", () => {
+    // 'Gold Ref' by itself should just get R8 (Ref → Refractor).
+    const r = normalizeHoldingFields({ parallel: "Gold Ref" });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+    expect(r.changes.filter((c) => c.rule === "parallel_strip_garbled_subset_prefix")).toHaveLength(0);
+    expect(r.changes.filter((c) => c.rule === "parallel_expand_ref_suffix")).toHaveLength(1);
+  });
+});
+
+describe("R8 parallel_expand_ref_suffix — 'Ref' → 'Refractor'", () => {
+  it("'Gold Ref' → 'Gold Refractor'", () => {
+    const r = normalizeHoldingFields({ parallel: "Gold Ref" });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+  });
+
+  it("'Blue Ref' → 'Blue Refractor'", () => {
+    const r = normalizeHoldingFields({ parallel: "Blue Ref" });
+    expect(r.fields.parallel).toBe("Blue Refractor");
+  });
+
+  it("'Gold Refractor' → unchanged (already expanded)", () => {
+    const r = normalizeHoldingFields({ parallel: "Gold Refractor" });
+    expect(r.fields.parallel).toBe("Gold Refractor");
+  });
+
+  it("does NOT expand mid-string 'Reference' (word-boundary only, suffix only)", () => {
+    const r = normalizeHoldingFields({ parallel: "Something Reference Card" });
+    expect(r.fields.parallel).toBe("Something Reference Card");
+  });
+});
+
 describe("skipRules option — lets tests / edge cases suppress individual rules", () => {
   it("skipping year_prefix keeps '2026 Bowman' as-is", () => {
     const r = normalizeHoldingFields(

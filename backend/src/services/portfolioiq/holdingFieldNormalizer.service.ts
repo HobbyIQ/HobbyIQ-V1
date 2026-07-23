@@ -46,6 +46,11 @@ export interface NormalizableHoldingFields {
   parallel?: string | null;
   cardNumber?: string | null;
   isAuto?: boolean | null;
+  /** CF-SETNAME-FROM-PRODUCT (Drew, 2026-07-23). Older manually-entered
+   *  holdings stored the setName under `product` and left `setName`
+   *  undefined. When both fields are provided, R6 uses `product` as a
+   *  fallback source for `setName`. Passed through unchanged. */
+  product?: string | null;
 }
 
 export interface NormalizeOptions {
@@ -55,7 +60,7 @@ export interface NormalizeOptions {
 
 export interface NormalizeChange {
   rule: string;
-  field: "playerName" | "setName" | "parallel" | "cardNumber";
+  field: "playerName" | "setName" | "parallel" | "cardNumber" | "product";
   before: string | null;
   after: string | null;
 }
@@ -243,6 +248,85 @@ const RULES: Rule[] = [
       if (cleaned !== num) {
         changes.push({ rule: "cardNumber_uppercase_trim", field: "cardNumber", before: num, after: cleaned });
         return { ...fields, cardNumber: cleaned };
+      }
+      return fields;
+    },
+  },
+
+  // ── R6 setName: fall back to product when setName is unset ─────────
+  // CF-SETNAME-FROM-PRODUCT (Drew, 2026-07-23). Older manually-entered
+  // holdings (Drew's inventory audit surfaced 8 of them) stored the
+  // set name under `product` and left `setName` undefined. Copy across
+  // when the target is empty AND the source is a non-empty string.
+  //
+  // OBSERVED:
+  //   Piasentin: setName=undefined, product="Bowman Draft Chrome Prospect Autographs"
+  //   Gage Wood: setName=undefined, product="Bowman Draft Chrome Prospect Autographs"
+  //   Hank Aaron: setName=undefined, product="Topps"
+  {
+    name: "setName_fallback_from_product",
+    apply(fields, changes) {
+      const set = fields.setName;
+      const product = fields.product;
+      if (set != null && String(set).trim().length > 0) return fields;
+      if (product == null || String(product).trim().length === 0) return fields;
+      const filled = String(product).trim();
+      changes.push({ rule: "setName_fallback_from_product", field: "setName", before: (set as string | null) ?? null, after: filled });
+      return { ...fields, setName: filled };
+    },
+  },
+
+  // ── R7 parallel: strip garbled subset+auto prefix ──────────────────
+  // CF-PARALLEL-DEGARBLE (Drew, 2026-07-23). Older holdings had the
+  // subset + auto label jammed into the parallel field. R3 already
+  // handles full "Chrome Prospects Refractor" (subset words). R7
+  // handles the abbreviated forms that came out of legacy imports.
+  //
+  // Pattern: subset-prefix + hyphen + real parallel.
+  //   "Chr Prospect Auto-Gold Ref"    → "Gold Ref"
+  //   "Chrome Prospect Auto-Gold Ref" → "Gold Ref"
+  //   "Prspct Au-Mini Diamond Ref"    → "Mini Diamond Ref"
+  //   "Chr Prospect Auto-Gum Ball"    → "Gum Ball"
+  //
+  // Then R8 (below) expands "Ref" → "Refractor" for the tail.
+  {
+    name: "parallel_strip_garbled_subset_prefix",
+    apply(fields, changes) {
+      const p = fields.parallel;
+      if (!p) return fields;
+      // Anchor on start-of-string, allow abbreviated tokens, require a
+      // hyphen boundary before the real parallel. Case-insensitive.
+      // Tokens: chr | chrome | prospect | prospects | prspct | auto | au | autograph | autographs
+      const garbledRe = /^(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs)(?:\s+(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs))*\s*-\s*/i;
+      const stripped = p.replace(garbledRe, "").trim();
+      if (stripped !== p && stripped.length > 0) {
+        changes.push({ rule: "parallel_strip_garbled_subset_prefix", field: "parallel", before: p, after: stripped });
+        return { ...fields, parallel: stripped };
+      }
+      return fields;
+    },
+  },
+
+  // ── R8 parallel: expand trailing "Ref" abbreviation ────────────────
+  // CF-PARALLEL-EXPAND-REF (Drew, 2026-07-23). Legacy holdings truncated
+  // "Refractor" to "Ref" on parallel strings. Downstream lookups need
+  // the full word to match CH's catalog + our own parallel multipliers.
+  // Only expands as a whole-word suffix — never in the middle (so
+  // "Refractor" itself stays, "Reference" won't get touched).
+  //
+  // OBSERVED:
+  //   "Gold Ref"           → "Gold Refractor"
+  //   "Mini Diamond Ref"   → "Mini Diamond Refractor"
+  //   "Blue Ref"           → "Blue Refractor"
+  {
+    name: "parallel_expand_ref_suffix",
+    apply(fields, changes) {
+      const p = fields.parallel;
+      if (!p) return fields;
+      const expanded = p.replace(/(\S)\s+Ref\s*$/i, "$1 Refractor").trim();
+      if (expanded !== p) {
+        changes.push({ rule: "parallel_expand_ref_suffix", field: "parallel", before: p, after: expanded });
+        return { ...fields, parallel: expanded };
       }
       return fields;
     },
