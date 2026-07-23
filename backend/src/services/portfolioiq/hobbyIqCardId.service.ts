@@ -128,9 +128,28 @@ function normalizeCardNumber(cardNumber: string): string {
 /** Normalize parallel to a canonical slug. Caller MUST pass the
  *  specific variant (not lossy vendor labels like "Refractor" for a
  *  Gold Refractor). Base/Base Refractor/no-parallel all normalize to
- *  "base". */
+ *  "base".
+ *
+ *  CF-MARKET-LANGUAGE-ALIAS (Drew, 2026-07-23). The market uses "True
+ *  {Color}" as a synonym for "{Color} Refractor" — the base colored
+ *  refractor without a modifier (True Blue = Blue Refractor, True Green
+ *  = Green Refractor, etc). This is distinct from "{Color} Shimmer
+ *  Refractor" / "{Color} Lava Refractor" which are separate variants.
+ *  We strip the leading "True " so both forms produce the same slug.
+ *
+ *  Also drops the redundant "Refractor" suffix when we already have a
+ *  color+refractor pair. "Blue Refractor" → "blue" would collide with
+ *  the ambiguous "Blue" holding, so we KEEP the "-refractor" suffix
+ *  for now — CH's catalog and Cardsight both use the full "X Refractor"
+ *  labels. Future migration might collapse further; today's rule is
+ *  minimal-risk. */
 function normalizeParallel(parallel: string | null | undefined): string {
-  const s = slugify(parallel ?? "");
+  const raw = String(parallel ?? "").trim();
+  // Strip leading "True " (case-insensitive, whitespace-boundary).
+  // Only matches when "true" is a standalone leading word, so parallels
+  // like "TrueSonic" (hypothetical brand) aren't accidentally altered.
+  const stripped = raw.replace(/^true\s+/i, "");
+  const s = slugify(stripped);
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
   }

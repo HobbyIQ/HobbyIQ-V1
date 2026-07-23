@@ -240,12 +240,99 @@ describe("computeHobbyIqCardId — parallel normalization", () => {
     }
   });
 
-  it("preserves specific parallel names", () => {
+  it("preserves specific parallel names (Orange Shimmer stays distinct)", () => {
     const s = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
-      cardNumber: "CPA-EH", parallel: "True Blue Refractor", isAuto: true,
+      cardNumber: "CPA-EH", parallel: "Orange Shimmer Refractor", isAuto: true,
     });
-    expect(s).toContain(":true-blue-refractor:");
+    expect(s).toContain(":orange-shimmer-refractor:");
+  });
+});
+
+describe("computeHobbyIqCardId — market vocabulary aliases", () => {
+  it("True Green Refractor === Green Refractor (market synonym)", () => {
+    const trueGreen = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "True Green Refractor",
+      isAuto: true, printRun: 99,
+    });
+    const green = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Green Refractor",
+      isAuto: true, printRun: 99,
+    });
+    expect(trueGreen).toBe(green);
+    expect(trueGreen).toBe("hiq:baseball:2026:bowman:cpa-eha:green-refractor:auto:num-99");
+  });
+
+  it("True Blue Refractor === Blue Refractor (market synonym)", () => {
+    const trueBlue = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "True Blue Refractor",
+      isAuto: true, printRun: 150,
+    });
+    const blue = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Blue Refractor",
+      isAuto: true, printRun: 150,
+    });
+    expect(trueBlue).toBe(blue);
+  });
+
+  it("does NOT collapse Green Shimmer / Green Lava into base green", () => {
+    // These are distinct variants with different premiums; they must
+    // stay distinct even though they share the "green" root color.
+    const greenShimmer = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Green Shimmer Refractor",
+      isAuto: true, printRun: 99,
+    });
+    const greenLava = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Green Lava Refractor",
+      isAuto: true, printRun: 99,
+    });
+    const trueGreen = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "True Green Refractor",
+      isAuto: true, printRun: 99,
+    });
+    // All three are distinct
+    expect(greenShimmer).not.toBe(greenLava);
+    expect(greenShimmer).not.toBe(trueGreen);
+    expect(greenLava).not.toBe(trueGreen);
+    expect(greenShimmer).toContain("green-shimmer-refractor");
+    expect(greenLava).toContain("green-lava-refractor");
+    expect(trueGreen).toContain("green-refractor");
+  });
+
+  it("does NOT strip 'true' from the MIDDLE of a variant name", () => {
+    // Hypothetical variant using "true" as an internal word — the
+    // regex must only strip leading "true " with whitespace after.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "1", parallel: "Silver True Metal",
+      isAuto: false,
+    });
+    // Should keep "true" mid-string
+    expect(slug).toContain("silver-true-metal");
+  });
+
+  it("case-insensitive True prefix (TRUE / true / True)", () => {
+    const upper = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "1",
+      parallel: "TRUE BLUE REFRACTOR", isAuto: true, printRun: 150,
+    });
+    const mixed = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "1",
+      parallel: "True Blue Refractor", isAuto: true, printRun: 150,
+    });
+    const lower = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "1",
+      parallel: "true blue refractor", isAuto: true, printRun: 150,
+    });
+    expect(upper).toBe(mixed);
+    expect(mixed).toBe(lower);
   });
 });
 
