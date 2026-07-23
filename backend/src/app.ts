@@ -111,6 +111,15 @@ app.use(cors({
 }));
 app.use(requestLogger);
 
+// CF-REQUEST-CONTEXT (Drew, 2026-07-23, issue #722 signals phase 2):
+// stash per-request userId in AsyncLocalStorage so vendor client hooks
+// can attribute persistence events to the authenticated user without
+// threading userId through every function signature. Runs on every
+// request; the middleware itself never rejects, so unauthenticated
+// paths (health, public routes) just see userId = null.
+import { requestContextMiddleware } from "./services/portfolioiq/requestContext.service.js";
+app.use(requestContextMiddleware);
+
 // Publicly serve uploaded card photos saved by the uploads API.
 app.use("/uploads", express.static(path.join(process.cwd(), ".data", "uploads")));
 

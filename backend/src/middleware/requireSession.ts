@@ -62,6 +62,11 @@ export async function requireSession(
   const harnessToken = (process.env.TIER1_HARNESS_TOKEN ?? "").trim();
   if (harnessToken.length > 0 && sessionId === harnessToken) {
     req.user = HARNESS_USER;
+    // CF-REQUEST-CONTEXT: stash userId in AsyncLocalStorage so vendor
+    // client hooks can attribute persistence events. Import lazily so
+    // requireSession stays self-contained.
+    const { setCurrentUserId } = await import("../services/portfolioiq/requestContext.service.js");
+    setCurrentUserId(HARNESS_USER.userId ?? null);
     next();
     return;
   }
@@ -73,5 +78,7 @@ export async function requireSession(
   }
 
   req.user = user;
+  const { setCurrentUserId } = await import("../services/portfolioiq/requestContext.service.js");
+  setCurrentUserId(user.userId ?? null);
   next();
 }
