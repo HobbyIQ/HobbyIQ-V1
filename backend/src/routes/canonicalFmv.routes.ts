@@ -25,8 +25,63 @@ import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
 import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
+import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
 
 const router = Router();
+
+// CF-COMPUTE-HOBBYIQ-SLUG-ROUTE (Drew, 2026-07-23). iOS helper endpoint
+// that returns the canonical hobbyiqCardId slug for a given set of
+// identity fields. Mirrors the backend's computeHobbyIqCardId exactly
+// so iOS doesn't have to re-implement setKey normalization, parallel
+// slug rules, or auto-flag handling — one source of truth.
+//
+// Route: POST /api/compiq/compute-hobbyiq-slug
+// Body:
+//   {
+//     sport: string,                  // "baseball" | "football" | "basketball" | "hockey" | NFL/NBA/MLB/NHL aliases
+//     cardYear: number,               // or `year`
+//     setKey: string,                 // or `setName` / `product` (fallback chain)
+//     cardNumber: string,             // "CPA-EHA" / "BSPA-OC" / "BCP-102" etc.
+//     parallel?: string | null,       // "Blue Refractor" / "Base" / null → "Base"
+//     isAuto: boolean,
+//     printRun?: number | null,       // 150 / 199 / 50 / null
+//   }
+router.post("/compute-hobbyiq-slug", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const body = req.body ?? {};
+    const sport = String(body.sport ?? "").trim();
+    const yearRaw = body.cardYear ?? body.year;
+    const year = Number(yearRaw);
+    const setKey = String(body.setKey ?? body.setName ?? body.product ?? "").trim();
+    const cardNumber = String(body.cardNumber ?? "").trim();
+    const parallel = body.parallel == null || String(body.parallel).trim().length === 0
+      ? "Base"
+      : String(body.parallel).trim();
+    const isAuto = body.isAuto === true;
+    const printRun = body.printRun == null || body.printRun === "" ? null : Number(body.printRun);
+
+    if (!sport || !Number.isFinite(year) || !setKey || !cardNumber) {
+      res.status(400).json({
+        success: false,
+        error: "sport, cardYear (or year), setKey (or setName/product), and cardNumber are required",
+        received: { sport, year, setKey, cardNumber },
+      });
+      return;
+    }
+    if (printRun !== null && (!Number.isFinite(printRun) || printRun <= 0)) {
+      res.status(400).json({
+        success: false,
+        error: "printRun must be a positive integer or null",
+      });
+      return;
+    }
+    const slug = computeHobbyIqCardId({
+      sport, year, setKey, cardNumber, parallel, isAuto,
+      printRun: printRun as number | null,
+    });
+    res.json({ success: true, slug });
+  } catch (err) { next(err); }
+});
 
 // CF-HOBBYIQ-FMV-ROUTE (Drew, 2026-07-23). "We set the market" surface.
 // Reads OUR own sold_comps pool by canonical hobbyiqCardId slug and
