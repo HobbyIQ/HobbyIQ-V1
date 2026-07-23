@@ -357,11 +357,13 @@ for (const sport of SPORTS) {
 // the "all cards, all grade tiers" baseline. Future v2+ layers add
 // sport / product / year / player segmentation.
 //
-// MIN_SAMPLE_BASELINE = 20 — need at least 20 paired sales in a
-// (bucket, tier) cell to trust the median. Cells below this are
-// dropped from the table; the consumer falls through to next-broader
-// scope or the interim 3-tier cap.
-const MIN_SAMPLE_VALUE_BAND = 20;
+// CF-VALUE-BAND-MIN-SAMPLE-COVERAGE (Drew, 2026-07-23). Lowered from
+// 20 → 5 to maximize bucket × tier cell coverage. 5 is the minimum
+// non-noise threshold — below that a single outlier moves the median
+// too much. Trade-off: more populated cells but with wider p25/p75
+// bands on the small-sample ones. Consumers (hot-Raw rung) still cap
+// against gradeMultiplier so an outlier ratio can't fully hijack FMV.
+const MIN_SAMPLE_VALUE_BAND = 5;
 const valueBandBaseline = {};
 for (const [bucket, tierMap] of valueBandAcc) {
   const tiers = {};
