@@ -294,6 +294,16 @@ describe("R7 parallel_strip_garbled_subset_prefix — legacy 'Chr Prospect Auto-
     expect(r.changes.filter((c) => c.rule === "parallel_strip_garbled_subset_prefix")).toHaveLength(0);
     expect(r.changes.filter((c) => c.rule === "parallel_expand_ref_suffix")).toHaveLength(1);
   });
+
+  it("does NOT strip 'Chrome-Image Variation' (single-token prefix is a REAL variant)", () => {
+    // Regression: R7 originally used `{0,}` on the repeat, which matched
+    // "Chrome" alone and mis-stripped "Chrome-Image Variation" to
+    // "Image Variation". Real observed variant (Kade Anderson 2025
+    // Bowman Draft). {1,} requires ≥2 tokens.
+    const r = normalizeHoldingFields({ parallel: "Chrome-Image Variation" });
+    expect(r.fields.parallel).toBe("Chrome-Image Variation");
+    expect(r.changes.filter((c) => c.rule === "parallel_strip_garbled_subset_prefix")).toHaveLength(0);
+  });
 });
 
 describe("R8 parallel_expand_ref_suffix — 'Ref' → 'Refractor'", () => {

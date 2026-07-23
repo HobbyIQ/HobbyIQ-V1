@@ -179,6 +179,46 @@ const RULES: Rule[] = [
     },
   },
 
+  // ── R7 (runs before R3) parallel: strip garbled subset+auto prefix ─
+  // CF-PARALLEL-DEGARBLE (Drew, 2026-07-23). Legacy holdings jammed
+  // the subset+auto label into the parallel field with abbreviations.
+  // MUST run BEFORE R3 — R3 tokenizes on whitespace only, so it can't
+  // reach across the hyphen boundary that R7 uses. If R3 runs first
+  // it pre-strips the leading noise words and leaves R7 unable to match
+  // the compound prefix pattern (e.g. R3 turns "Chrome Prospect Auto-
+  // Gold Ref" into "Auto-Gold Ref" and R7 requires ≥2 tokens before
+  // the hyphen, so it declines).
+  //
+  // Pattern: ≥2 subset/auto tokens (space-separated) + hyphen + variant.
+  //   "Chr Prospect Auto-Gold Ref"    → "Gold Ref"    (3 tokens)
+  //   "Chrome Prospect Auto-Gold Ref" → "Gold Ref"    (3 tokens)
+  //   "Prspct Au-Mini Diamond Ref"    → "Mini Diamond Ref" (2 tokens)
+  //   "Chr Prospect Auto-Gum Ball"    → "Gum Ball"    (3 tokens)
+  //
+  // NOT stripped (guarded by the space-boundary after the first token —
+  // if the first token is followed by a hyphen not a space, we bail):
+  //   "Chrome-Image Variation" (Topps variant — "Chrome" is real)
+  //   "Auto-Grade Refractor"   (hypothetical single-token compound)
+  //
+  // R8 (later) expands "Ref" → "Refractor" on the tail.
+  {
+    name: "parallel_strip_garbled_subset_prefix",
+    apply(fields, changes) {
+      const p = fields.parallel;
+      if (!p) return fields;
+      // First token MUST be followed by whitespace (not directly by
+      // hyphen) — the space-boundary excludes "Chrome-Image Variation".
+      // Then require ≥1 additional noise token, then a hyphen.
+      const garbledRe = /^(?:chr|chrome|prospect|prospects|prspct|autograph|autographs)\s+(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs)(?:\s+(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs))*\s*-\s*/i;
+      const stripped = p.replace(garbledRe, "").trim();
+      if (stripped !== p && stripped.length > 0) {
+        changes.push({ rule: "parallel_strip_garbled_subset_prefix", field: "parallel", before: p, after: stripped });
+        return { ...fields, parallel: stripped };
+      }
+      return fields;
+    },
+  },
+
   // ── R3 parallel: strip subset-prefix words ─────────────────────────
   // OBSERVED: parallel="Chrome Refractor" → parallel should be
   // "Refractor" (Chrome is the set). parallel="Chrome Prospects
@@ -273,37 +313,6 @@ const RULES: Rule[] = [
       const filled = String(product).trim();
       changes.push({ rule: "setName_fallback_from_product", field: "setName", before: (set as string | null) ?? null, after: filled });
       return { ...fields, setName: filled };
-    },
-  },
-
-  // ── R7 parallel: strip garbled subset+auto prefix ──────────────────
-  // CF-PARALLEL-DEGARBLE (Drew, 2026-07-23). Older holdings had the
-  // subset + auto label jammed into the parallel field. R3 already
-  // handles full "Chrome Prospects Refractor" (subset words). R7
-  // handles the abbreviated forms that came out of legacy imports.
-  //
-  // Pattern: subset-prefix + hyphen + real parallel.
-  //   "Chr Prospect Auto-Gold Ref"    → "Gold Ref"
-  //   "Chrome Prospect Auto-Gold Ref" → "Gold Ref"
-  //   "Prspct Au-Mini Diamond Ref"    → "Mini Diamond Ref"
-  //   "Chr Prospect Auto-Gum Ball"    → "Gum Ball"
-  //
-  // Then R8 (below) expands "Ref" → "Refractor" for the tail.
-  {
-    name: "parallel_strip_garbled_subset_prefix",
-    apply(fields, changes) {
-      const p = fields.parallel;
-      if (!p) return fields;
-      // Anchor on start-of-string, allow abbreviated tokens, require a
-      // hyphen boundary before the real parallel. Case-insensitive.
-      // Tokens: chr | chrome | prospect | prospects | prspct | auto | au | autograph | autographs
-      const garbledRe = /^(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs)(?:\s+(?:chr|chrome|prospect|prospects|prspct|auto|au|autograph|autographs))*\s*-\s*/i;
-      const stripped = p.replace(garbledRe, "").trim();
-      if (stripped !== p && stripped.length > 0) {
-        changes.push({ rule: "parallel_strip_garbled_subset_prefix", field: "parallel", before: p, after: stripped });
-        return { ...fields, parallel: stripped };
-      }
-      return fields;
     },
   },
 
