@@ -25,6 +25,15 @@ export interface CompIQEstimateRequest {
   isBlackLabel?: boolean;
   isAuto?: boolean;
   /**
+   * CF-USER-COMPS-PRINTRUN-FILTER (Drew, 2026-07-23). Print run of the
+   * target card. When provided, augmentCompsWithUserPool strict-filters
+   * to same-printRun comps only. Prevents /150 auto from getting diluted
+   * by /50 or unnumbered variants sharing the same cardId. Number =
+   * numbered parallel (150, 99, 50, 25, 5); null = explicitly unnumbered;
+   * omit = don't filter (legacy behavior).
+   */
+  printRun?: number | null;
+  /**
    * Pin pricing to a specific Cardsight catalog cardId (UUID).
    * Skips text identification — fetchComps routes the pinned-id branch
    * to cardsight.client.getPricing() directly, with client-side grade

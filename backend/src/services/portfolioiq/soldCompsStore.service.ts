@@ -76,6 +76,13 @@ export interface SoldCompDoc {
   parallel: string | null;
   cardNumber: string | null;
   isAuto: boolean;
+  /** CF-SOLD-COMPS-PRINTRUN (Drew, 2026-07-23). Extracted from title on
+   *  write via extractPrintRunFromTitle. Number for numbered parallels
+   *  (/150, /50, /5), null for unnumbered. Used by pool-filter code to
+   *  strictly separate /150 auto from /50 auto — same cardId can bucket
+   *  multiple print runs together. Absent on some legacy docs; readers
+   *  treat absent as null (unnumbered). */
+  printRun?: number | null;
   // CF-SOLD-COMPS-SPORT (Drew, 2026-07-19): sport tag for cross-sport
   // filtering + sport-scoped analytics. Baseball / football / basketball /
   // hockey / soccer / other. Null on legacy docs; readers should treat
@@ -613,6 +620,20 @@ export async function readCompsByCardId(input: {
   // for raw). Case-insensitive on company.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  // CF-USER-COMPS-AUTO-FILTER (Drew, 2026-07-23). Strict isAuto equality.
+  // CH cardIds routinely bucket the base rookie + autograph variants under
+  // one id (e.g. Owen Carey Blue Refractor /150 Auto shares a cardId with
+  // 145 non-auto rookie cards at ~$2). Without this filter, holdings for
+  // autographed cards get diluted to near-zero by the base-rookie pool.
+  // When `undefined`, no filter (legacy behavior); when true or false,
+  // strict equality required.
+  isAuto?: boolean;
+  // CF-USER-COMPS-PRINTRUN-FILTER (Drew, 2026-07-23). Strict printRun
+  // equality. Under one cardId, /150 and /50 numbered parallels trade at
+  // very different prices; mixing them dilutes both. When `undefined`,
+  // no filter. When a number, strict-equal to that print run. When null,
+  // matches only unnumbered rows (printRun === null / undefined).
+  printRun?: number | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -666,6 +687,26 @@ export async function readCompsByCardId(input: {
         }
         return false;
       });
+    }
+    // CF-USER-COMPS-AUTO-FILTER (Drew, 2026-07-23): strict auto match.
+    // Undefined caller → no filter. Boolean → require exact equality.
+    // Critical: CH cardIds mix base rookies + auto variants under one
+    // id, so without this filter autographed holdings get diluted to
+    // near-zero by the base-rookie pool.
+    if (input.isAuto !== undefined) {
+      const wantAuto = input.isAuto === true;
+      all = all.filter((d) => d.isAuto === wantAuto);
+    }
+    // CF-USER-COMPS-PRINTRUN-FILTER (Drew, 2026-07-23): strict printRun
+    // match. Undefined → no filter. Number → equal. Null → unnumbered
+    // only (docs where printRun is null/undefined).
+    if (input.printRun !== undefined) {
+      if (input.printRun === null) {
+        all = all.filter((d) => d.printRun == null);
+      } else {
+        const wantedRun = input.printRun;
+        all = all.filter((d) => d.printRun === wantedRun);
+      }
     }
     // CF-USER-COMPS-GRADE-FILTER (Drew, 2026-07-18): filter to the
     // requested grade tier. Raw request (gradeCompany null/undefined
@@ -831,6 +872,13 @@ export async function readCompsByHobbyIqCardId(input: {
   gradeCompany?: string | null;
   gradeValue?: number | null;
   limit?: number;
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23). Even though the slug already encodes both, callers
+  // reading by slug FRAGMENTS (e.g. legacy compat paths that computed
+  // the slug without printRun) can strict-narrow via these. Same
+  // semantics as readCompsByCardId.
+  isAuto?: boolean;
+  printRun?: number | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -880,6 +928,23 @@ export async function readCompsByHobbyIqCardId(input: {
       return docCompany === wantedCompany && docValue === wantedValue;
     });
   }
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23). Strict auto + print-run match — same rationale as the
+  // primary pool query: CH cardIds mix auto + non-auto and multiple
+  // print runs; without these filters, autograph FMVs get diluted by
+  // base-rookie sales sharing the same cardId.
+  if (input.isAuto !== undefined) {
+    const wantAuto = input.isAuto === true;
+    rows = rows.filter((d) => d.isAuto === wantAuto);
+  }
+  if (input.printRun !== undefined) {
+    if (input.printRun === null) {
+      rows = rows.filter((d) => d.printRun == null);
+    } else {
+      const wantedRun = input.printRun;
+      rows = rows.filter((d) => d.printRun === wantedRun);
+    }
+  }
   return rows;
 }
 
@@ -892,6 +957,12 @@ export async function readCompsByIdentity(input: {
   gradeCompany?: string | null;
   gradeValue?: number | null;
   limit?: number;
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23). Same rationale as readCompsByCardId — identity fallback
+  // shouldn't mix auto + non-auto or /150 + /50. Applied JS-side after
+  // fetch (same shape as parallel/grade filters here).
+  isAuto?: boolean;
+  printRun?: number | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -986,6 +1057,23 @@ export async function readCompsByIdentity(input: {
       if (isRawRequest) return docIsRaw;
       return docCompany === wantedCompany && docValue === wantedValue;
     });
+  }
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23). Strict auto + print-run match — same rationale as the
+  // primary pool query: CH cardIds mix auto + non-auto and multiple
+  // print runs; without these filters, autograph FMVs get diluted by
+  // base-rookie sales sharing the same cardId.
+  if (input.isAuto !== undefined) {
+    const wantAuto = input.isAuto === true;
+    rows = rows.filter((d) => d.isAuto === wantAuto);
+  }
+  if (input.printRun !== undefined) {
+    if (input.printRun === null) {
+      rows = rows.filter((d) => d.printRun == null);
+    } else {
+      const wantedRun = input.printRun;
+      rows = rows.filter((d) => d.printRun === wantedRun);
+    }
   }
   return rows;
 }

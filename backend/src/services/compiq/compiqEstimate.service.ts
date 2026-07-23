@@ -3139,6 +3139,17 @@ export async function augmentCompsWithUserPool(
   // un-filtered behavior.
   gradeCompany?: string | null,
   gradeValue?: number | null,
+  // CF-USER-COMPS-AUTO-FILTER (Drew, 2026-07-23). Strict isAuto match.
+  // Without this, CH's shared cardIds mix base-rookie non-auto sales
+  // with the auto variant (Owen Carey Blue Refractor /150 Auto shared
+  // a cardId with 145 non-auto rookie cards at ~$2 → auto FMV came out
+  // at $8 instead of the real ~$180 median). Undefined = legacy pass-
+  // through; boolean = strict equality on the doc.
+  isAuto?: boolean,
+  // CF-USER-COMPS-PRINTRUN-FILTER (Drew, 2026-07-23). Strict printRun.
+  // Same rationale — one cardId can span /150 and /50 and unnumbered.
+  // Undefined = no filter; number = exact match; null = unnumbered only.
+  printRun?: number | null,
 ): Promise<FetchedComps> {
   if (process.env.COMPIQ_READ_SOLD_COMPS_ENABLED !== "true") return fetched;
   const resolvedCardId = (cardId ?? fetched.card?.card_id ?? "").trim();
@@ -3152,6 +3163,8 @@ export async function augmentCompsWithUserPool(
       parallel: parallel ?? undefined,
       gradeCompany: gradeCompany ?? undefined,
       gradeValue: gradeValue ?? undefined,
+      isAuto,
+      printRun,
     });
   } catch (err) {
     console.warn(JSON.stringify({
@@ -3232,6 +3245,10 @@ export async function augmentCompsWithUserPool(
         parallel: parallel ?? undefined,
         gradeCompany: gradeCompany ?? null,
         gradeValue: gradeValue ?? null,
+        // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER
+        // (Drew, 2026-07-23) on the compiqEstimate identity fallback.
+        isAuto,
+        printRun,
         fromDate: new Date(now - maxAgeMs).toISOString(),
         limit: 500,
       });
@@ -3280,11 +3297,16 @@ export async function augmentCompsWithUserPool(
       const targetMult = lookupParallelMultiplier(parallel);
       if (targetMult !== null && targetMult > 0) {
         // Pull all-parallel comps (no filter) then normalize non-target ones.
+        // isAuto + printRun stay STRICT even when cross-parallel — an auto
+        // /150 shouldn't get normalized against a non-auto /150 comp; they
+        // trade at wildly different prices even after parallel multiplier.
         const allParallelComps = await readCompsByCardId({
           cardId: resolvedCardId,
           sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
           gradeCompany: gradeCompany ?? undefined,
           gradeValue: gradeValue ?? undefined,
+          isAuto,
+          printRun,
         });
         // CF-PARALLEL-REFRACTOR-ALIAS (Drew, 2026-07-18): match the
         // soldCompsStore normalization so "Blue" and "Blue Refractor"
@@ -4475,12 +4497,25 @@ export async function computeEstimate(
   // comps. Prevents cross-parallel dilution when CH's search returns
   // one cardId for every variant, and cross-grade dilution when Raw +
   // PSA 10 comps mix in the sample.
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23): pass isAuto + printRun so the user-pool query strict-
+  // filters. CH cardIds mix auto + non-auto and mixed print runs; a
+  // /150 auto holding gets diluted to near-zero by 145 base rookies
+  // sharing the cardId without these filters. Only pass when the
+  // caller explicitly provided the value — legacy callers that don't
+  // populate isAuto/printRun keep un-filtered behavior.
+  const bodyIsAuto = typeof body.isAuto === "boolean" ? body.isAuto : undefined;
+  const bodyPrintRun = typeof body.printRun === "number"
+    ? body.printRun
+    : body.printRun === null ? null : undefined;
   fetched = await augmentCompsWithUserPool(
     fetched,
     body.cardId,
     body.parallel ?? null,
     body.gradeCompany ?? null,
     typeof body.gradeValue === "number" ? body.gradeValue : null,
+    bodyIsAuto,
+    bodyPrintRun,
   );
 
   // ── Catalog-miss guard ───────────────────────────────────────────────────

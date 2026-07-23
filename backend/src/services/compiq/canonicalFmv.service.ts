@@ -945,12 +945,21 @@ async function tryDirectComp(
     "cardhedge",             // CF-CH-POOL-WARM
     "ebay-browse-ended",     // CF-EBAY-BROWSE-ENDED-WARM (Option C)
   ] as const;
+  // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
+  // 2026-07-23): strict isAuto + printRun on the primary direct-comp
+  // pool. CH cardIds bucket auto + non-auto AND multiple print runs
+  // under one id; a /150 auto holding should NOT be diluted by base
+  // rookies or /50 variants.
   const readPool = async () => readCompsByCardId({
     cardId,
     sources: [...sources] as never,
     parallel: input.parallel ?? undefined,
     gradeCompany: input.gradeCompany ?? undefined,
     gradeValue: input.gradeValue ?? undefined,
+    isAuto: typeof input.isAuto === "boolean" ? input.isAuto : undefined,
+    printRun: input.printRun === null ? null
+              : typeof input.printRun === "number" ? input.printRun
+              : undefined,
   }).catch(() => [] as Awaited<ReturnType<typeof readCompsByCardId>>);
   let comps = await readPool();
 
@@ -1050,6 +1059,12 @@ async function tryDirectComp(
       parallel: input.parallel ?? undefined,
       gradeCompany: input.gradeCompany ?? null,
       gradeValue: input.gradeValue ?? null,
+      // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER on
+      // identity fallback (Drew, 2026-07-23). Same rationale.
+      isAuto: typeof input.isAuto === "boolean" ? input.isAuto : undefined,
+      printRun: input.printRun === null ? null
+                : typeof input.printRun === "number" ? input.printRun
+                : undefined,
       fromDate: new Date(nowMs - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString(),
       limit: 500,
     }).catch(() => []);
@@ -1609,6 +1624,12 @@ async function tryHotRawSameCardAnchor(
       parallel: input.parallel ?? undefined,
       gradeCompany: null,
       gradeValue: null,
+      // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER
+      // (Drew, 2026-07-23) — hot-Raw identity fallback stays strict too.
+      isAuto: typeof input.isAuto === "boolean" ? input.isAuto : undefined,
+      printRun: input.printRun === null ? null
+                : typeof input.printRun === "number" ? input.printRun
+                : undefined,
       fromDate,
       limit: 500,
     }).catch(() => []);
