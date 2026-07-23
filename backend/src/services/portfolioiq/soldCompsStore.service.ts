@@ -42,6 +42,7 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { createHash } from "crypto";
 
 function computeTtlSec(): number {
@@ -132,6 +133,14 @@ export interface SoldCompDoc {
   // both rows land. Null on legacy docs written before this migration.
   contentHash?: string | null;
 
+  // CF-HOBBYIQ-CARDID (Drew, 2026-07-23, issue #706 Phase 1b). HobbyIQ's
+  // own canonical identifier — deterministic, vendor-independent slug
+  // like "hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50".
+  // Populated on every new write. Null on legacy docs written before
+  // this migration; the Phase 1c backfill script will populate them.
+  // See hobbyIqCardId.service.ts for the format spec.
+  hobbyiqCardId?: string | null;
+
   ttl: number;
 }
 
@@ -208,6 +217,23 @@ async function getContainer(): Promise<Container | null> {
  *  is ambiguous) are a fallback. Returns null when unknown so the row
  *  is queryable but excluded from sport-filtered analytics rather than
  *  wrongly bucketed. */
+// CF-HOBBYIQ-CARDID-PRINTRUN (Drew, 2026-07-23, issue #706 Phase 1b).
+// Extract a print run number from a title. Handles common patterns:
+//   "/50", "#/50", "d/50", "/25 Braves", "/999"
+// Rejects "1/1" (which means "one of one", not print run 1 of 1 in the
+// sold_comps sense — those should be stored via a separate field if we
+// need to distinguish). Returns null when no match.
+export function extractPrintRunFromTitle(title: string | null | undefined): number | null {
+  if (typeof title !== "string" || title.length === 0) return null;
+  // Look for "/N" preceded by a non-digit boundary and followed by a
+  // non-digit boundary. Reject "1/1" which is a distinct concept.
+  const match = title.match(/(?:^|[^0-9\/])\/(\d{1,5})(?:[^0-9]|$)/);
+  if (!match) return null;
+  const n = Number(match[1]);
+  if (!Number.isFinite(n) || n <= 0 || n > 100000) return null;
+  return n;
+}
+
 export function inferSportFromContext(
   setName: string | null | undefined,
   title: string | null | undefined,
@@ -312,6 +338,25 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     soldAt: input.soldAt,
   });
 
+  // CF-HOBBYIQ-CARDID (Drew, 2026-07-23, issue #706 Phase 1b). Compute
+  // the canonical hobbyiqCardId from the input attributes. Populated on
+  // every new write so downstream consumers can migrate to it as the
+  // primary identifier over time. Print run is extracted from the title
+  // when a "/N" fragment is present (e.g. "Gold Refractor /50 Braves");
+  // otherwise omitted from the slug.
+  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title);
+  const hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
+    ? computeHobbyIqCardId({
+        sport: sportForSlug,
+        year: input.cardYear,
+        setKey: input.setName ?? "",
+        cardNumber: input.cardNumber ?? "",
+        parallel: input.parallel ?? "Base",
+        isAuto: input.isAuto ?? false,
+        printRun: extractPrintRunFromTitle(input.title),
+      })
+    : null;
+
   const doc: SoldCompDoc = {
     id: makeId(input.source, input.sourceExternalId ?? null, input.cardId, input.soldAt),
     cardId: input.cardId.trim(),
@@ -336,6 +381,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     verifiedByUser: input.verifiedByUser ?? false,
     confidence: input.confidence ?? (input.verifiedByUser ? 1.0 : 0.5),
     contentHash,
+    hobbyiqCardId,
     ttl: TTL_SEC,
   };
 
