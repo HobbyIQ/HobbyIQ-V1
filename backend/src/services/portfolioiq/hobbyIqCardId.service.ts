@@ -86,6 +86,10 @@ function normalizeSetKey(setName: string): string {
   // Controlled-vocabulary short forms. Order matters: more-specific
   // patterns first so "bowman-chrome-draft" doesn't collapse to "bowman".
   const known: Array<[RegExp, string]> = [
+    // Sapphire is a distinct product LINE, not a parallel. Must match
+    // BEFORE the base bowman-chrome / topps-chrome patterns.
+    [/bowman-chrome-sapphire|bowman-sapphire/, "bowman-chrome-sapphire"],
+    [/topps-chrome-sapphire/, "topps-chrome-sapphire"],
     [/bowman-chrome-draft/, "bowman-chrome-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     [/bowman-draft/, "bowman-draft"],
@@ -149,7 +153,16 @@ function normalizeParallel(parallel: string | null | undefined): string {
   // Only matches when "true" is a standalone leading word, so parallels
   // like "TrueSonic" (hypothetical brand) aren't accidentally altered.
   const stripped = raw.replace(/^true\s+/i, "");
-  const s = slugify(stripped);
+  let s = slugify(stripped);
+  // Compound-variant unification: same market variant, different spelling
+  // in the wild. Both forms must slug to the same canonical form or we
+  // fragment the comp pool.
+  //   "Ray Wave"  → ray-wave   (canonical)
+  //   "Raywave"   → raywave    → ray-wave
+  //   "X-Fractor" → x-fractor  (canonical)
+  //   "Xfractor"  → xfractor   → x-fractor
+  s = s.replace(/(^|-)raywave($|-)/g, "$1ray-wave$2");
+  s = s.replace(/(^|-)xfractor($|-)/g, "$1x-fractor$2");
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
   }
