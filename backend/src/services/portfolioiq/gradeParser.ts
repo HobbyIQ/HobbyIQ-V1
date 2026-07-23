@@ -24,6 +24,47 @@ export interface ParsedGrade {
    * the 9x fallback tier fires instead of the regular BGS 10 3.5x tier.
    */
   isBlackLabel?: boolean;
+  /**
+   * CF-GRADE-QUALIFIER (Drew, 2026-07-23, issue #713). PSA qualifier
+   * flag when the slab carries one — "OC" (off-center), "MK" (marks),
+   * "ST" (stain), "PD" (print defect), "MC" (miscut), "OF" (out of
+   * focus). A qualified grade is a card that would have graded higher
+   * except for one specific issue; it still trades close to the base
+   * tier but at a discount (typically 15-25% below unqualified).
+   *
+   * Only populated when a qualifier is detected. The base gradeValue
+   * is the underlying tier — a "PSA 9 (OC)" produces
+   * { gradeCompany: "PSA", gradeValue: 9, qualifier: "OC" }.
+   *
+   * Downstream: FMV projection layer should treat qualified rows as
+   * being in the same comp pool as unqualified same-tier rows but
+   * apply a per-qualifier discount when computing. That wiring is a
+   * follow-up — this file just extracts the tag.
+   */
+  qualifier?: string;
+}
+
+/** PSA grade qualifier flag codes. All slab-printed as parenthesized
+ *  or space-separated single-token suffixes on the base grade.
+ *  Reference: https://www.psacard.com/resources/gradingstandards */
+const PSA_QUALIFIERS = new Set<string>(["OC", "MK", "ST", "PD", "MC", "OF"]);
+
+// Match a qualifier suffix in ANY of these forms (only when it appears
+// AFTER the grade numeric):
+//   "PSA 9 (OC)"    parenthesized, space before
+//   "PSA 9(OC)"     parenthesized, no space
+//   "PSA 9 OC"      bare, space-separated
+//   "PSA9 OC"       compressed company
+// Enforces uppercase 2-letter tokens matching the PSA_QUALIFIERS set —
+// otherwise a random 2-letter suffix (e.g. "PSA 9 MT" meaning MINT)
+// would false-positive.
+const QUALIFIER_TAIL_RE = /(?:\s*\(([A-Za-z]{2})\)|\s+([A-Za-z]{2}))(?:\s|$)/;
+
+function detectQualifier(label: string): string | null {
+  const m = label.match(QUALIFIER_TAIL_RE);
+  if (!m) return null;
+  const tag = (m[1] ?? m[2] ?? "").toUpperCase();
+  return PSA_QUALIFIERS.has(tag) ? tag : null;
 }
 
 // Adjacent "Black Label" / "Pristine" / "BL" indicators on a BGS 10.
@@ -185,6 +226,20 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
         gradeValue: detectedValue,
         isBlackLabel: true,
       };
+    }
+    // CF-GRADE-QUALIFIER (issue #713): PSA qualifier flags only.
+    // BGS/SGC/CGC use half-point deductions instead of qualifiers,
+    // so we scope detection to PSA to avoid false-positives on
+    // legitimate BGS/SGC/CGC label text.
+    if (detectedCompany === "PSA") {
+      const qualifier = detectQualifier(trimmed);
+      if (qualifier) {
+        return {
+          gradeCompany: detectedCompany,
+          gradeValue: detectedValue,
+          qualifier,
+        };
+      }
     }
     return { gradeCompany: detectedCompany, gradeValue: detectedValue };
   }
