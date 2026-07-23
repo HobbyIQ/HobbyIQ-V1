@@ -577,12 +577,30 @@ export async function readCompsByCardId(input: {
       // Empty string as filter = "no-parallel / base holdings only" —
       // match against docs whose parallel is null / "" / "Base" / "[Base]".
       const BASE_ALIASES = new Set(["", "base", "[base]", "none", "no parallel"]);
+      // CF-TITLE-PARALLEL-FALLBACK (Drew, 2026-07-23). Cardsight + eBay
+      // sources store lossy parallel labels — Cardsight normalizes many
+      // gold/blue/green/etc. variants down to just "Refractor" or "Blue
+      // Refractor" and pushes the specific variant into the title text.
+      // When exact-match on the parallel field would exclude a row, fall
+      // back to a title-contains check with the FULL (un-stripped) wanted
+      // parallel string. Only fires when the wanted parallel has ≥2
+      // tokens — single-token "Refractor" queries stay strict to avoid
+      // over-matching. Fixes cases like Hartman Gold Refractor /50 where
+      // Cardsight rows at $2,275-$2,500 were dropped by the exact filter.
+      const wantedFull = String(input.parallel).trim().toLowerCase().replace(/\s+/g, " ");
+      const wantedTokens = wantedFull.split(" ").filter(Boolean);
+      const enableTitleFallback = wantedTokens.length >= 2 && !BASE_ALIASES.has(wanted);
       all = all.filter((d) => {
         const docP = normalizeParallelForFilter(d.parallel);
         if (wanted === "" || BASE_ALIASES.has(wanted)) {
           return BASE_ALIASES.has(docP);
         }
-        return docP === wanted;
+        if (docP === wanted) return true;
+        if (enableTitleFallback) {
+          const docTitleLower = String(d.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+          if (docTitleLower && docTitleLower.includes(wantedFull)) return true;
+        }
+        return false;
       });
     }
     // CF-USER-COMPS-GRADE-FILTER (Drew, 2026-07-18): filter to the
@@ -704,6 +722,131 @@ export async function readCompsByPlayer(input: {
     }));
     return [];
   }
+}
+
+/**
+ * CF-CROSS-CARDID-IDENTITY (Drew, 2026-07-23). Cross-cardId fallback
+ * for cases where sold_comps rows for a card are stranded under
+ * different cardIds — most commonly Cardsight "backstop:" synthetic
+ * cardIds that never got linked to a real CH catalog cardId.
+ *
+ * Cardsight generates identifiers like `backstop:eric hartman|2026||refractor`
+ * when it can't resolve a card to a specific CH cardId. Those rows
+ * have real market data (e.g. Hartman Gold Refractor /50 sold $2,275-$2,500)
+ * but are invisible to `readCompsByCardId` which filters by exact
+ * cardId. This helper matches by (playerName, cardYear, cardNumber,
+ * parallel) with title-contains fallback for lossy parallels.
+ *
+ * Cross-partition query. Only call this as a fallback when
+ * readCompsByCardId returns thin — never for the primary path.
+ * Callers should union the returned rows with their direct-cardId
+ * pool, deduplicating by contentHash.
+ */
+export async function readCompsByIdentity(input: {
+  playerName: string;
+  cardYear?: number | null;
+  cardNumber?: string | null;
+  parallel?: string | null;
+  fromDate?: string;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  limit?: number;
+}): Promise<SoldCompDoc[]> {
+  const c = await getContainer();
+  if (!c) return [];
+  const player = String(input.playerName ?? "").trim();
+  if (!player) return [];
+  const now = new Date();
+  const from = input.fromDate ?? new Date(now.getTime() - 180 * 86_400_000).toISOString();
+  const limit = Math.min(500, Math.max(1, input.limit ?? 100));
+
+  // Base query: player + soldAt window. Add year + cardNumber filters
+  // when provided — these are the strongest identity signals.
+  const params: Array<{ name: string; value: string | number }> = [
+    { name: "@lim", value: limit },
+    { name: "@player", value: player },
+    { name: "@from", value: from },
+  ];
+  let query = "SELECT TOP @lim * FROM c WHERE LOWER(c.playerName) = LOWER(@player) AND c.soldAt >= @from";
+  if (typeof input.cardYear === "number" && Number.isFinite(input.cardYear)) {
+    params.push({ name: "@year", value: input.cardYear });
+    query += " AND c.cardYear = @year";
+  }
+  // CF-CROSS-CARDID-PARALLEL-NARROW (Drew, 2026-07-23). Push the parallel
+  // match into SQL so the TOP-limit doesn't cap us out on the newest 100
+  // Hartman sales before we ever see the target rows. Match either exact
+  // parallel field OR title-contains (for lossy Cardsight/eBay parallels).
+  const wantedParallelFull = typeof input.parallel === "string"
+    ? input.parallel.trim().toLowerCase()
+    : "";
+  if (wantedParallelFull.length > 0) {
+    params.push({ name: "@par", value: wantedParallelFull });
+    query += ' AND (LOWER(c.parallel) = @par OR CONTAINS(LOWER(c.title ?? ""), @par))';
+  }
+  query += " ORDER BY c.soldAt DESC";
+  // cardNumber filter is applied JS-side (lenient — null cardNumber OK).
+  const wantedCn = typeof input.cardNumber === "string" && input.cardNumber.trim().length > 0
+    ? input.cardNumber.trim().toLowerCase()
+    : null;
+
+  let rows: SoldCompDoc[] = [];
+  try {
+    const { resources } = await c.items.query({ query, parameters: params }).fetchAll();
+    rows = resources as SoldCompDoc[];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "sold_comps_read_by_identity_error",
+      source: "soldCompsStore.service",
+      playerName: player,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
+  }
+
+  // Lenient cardNumber filter: rows with cardNumber = wanted match
+  // strictly; rows with cardNumber null/undefined match if the title-
+  // fallback catches them via parallel-in-title. That way Cardsight
+  // backstop rows with no cardNumber but a Gold Refractor title still
+  // count for a Hartman CPA-EHA Gold Refractor identity lookup.
+  if (wantedCn !== null) {
+    rows = rows.filter((d) => {
+      const docCn = typeof d.cardNumber === "string" ? d.cardNumber.trim().toLowerCase() : null;
+      return docCn === null || docCn === wantedCn;
+    });
+  }
+
+  // Apply the same parallel + grade filters as readCompsByCardId, in-JS
+  // (with the title-fallback for lossy Cardsight/eBay parallels).
+  if (typeof input.parallel === "string") {
+    const wanted = normalizeParallelForFilter(input.parallel);
+    const BASE_ALIASES = new Set(["", "base", "[base]", "none", "no parallel"]);
+    const wantedFull = String(input.parallel).trim().toLowerCase().replace(/\s+/g, " ");
+    const wantedTokens = wantedFull.split(" ").filter(Boolean);
+    const enableTitleFallback = wantedTokens.length >= 2 && !BASE_ALIASES.has(wanted);
+    rows = rows.filter((d) => {
+      const docP = normalizeParallelForFilter(d.parallel);
+      if (wanted === "" || BASE_ALIASES.has(wanted)) return BASE_ALIASES.has(docP);
+      if (docP === wanted) return true;
+      if (enableTitleFallback) {
+        const docTitleLower = String(d.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+        if (docTitleLower && docTitleLower.includes(wantedFull)) return true;
+      }
+      return false;
+    });
+  }
+  if (input.gradeCompany !== undefined || input.gradeValue !== undefined) {
+    const wantedCompany = typeof input.gradeCompany === "string" ? input.gradeCompany.trim().toUpperCase() : "";
+    const wantedValue = typeof input.gradeValue === "number" && Number.isFinite(input.gradeValue) ? input.gradeValue : null;
+    const isRawRequest = wantedCompany === "" && wantedValue === null;
+    rows = rows.filter((d) => {
+      const docCompany = typeof d.gradeCompany === "string" ? d.gradeCompany.trim().toUpperCase() : "";
+      const docValue = typeof d.gradeValue === "number" && Number.isFinite(d.gradeValue) ? d.gradeValue : null;
+      const docIsRaw = docCompany === "" && docValue === null;
+      if (isRawRequest) return docIsRaw;
+      return docCompany === wantedCompany && docValue === wantedValue;
+    });
+  }
+  return rows;
 }
 
 export function _setContainerForTests(container: Container | null): void {
