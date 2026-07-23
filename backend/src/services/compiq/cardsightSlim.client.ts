@@ -376,6 +376,16 @@ export async function searchPricingByTitle(
     period?: "7d" | "14d" | "3m" | "1y" | "all";
     listingType?: "auction" | "fixed" | "both";
     limit?: number;
+    // CF-PERSIST-VENDOR-LOOKUPS (Drew, 2026-07-23, issue #722):
+    // caller-supplied identity hint. When provided, the results are
+    // shipped to persistVendorSalesInBackground so sold_comps grows
+    // as a side-effect of the query. Feature-flagged: gated by
+    // PERSIST_VENDOR_LOOKUPS_ENABLED env var (default OFF).
+    persistIdentity?: {
+      playerName?: string | null;
+      cardYear?: number | null;
+      sport?: string | null;
+    };
   } = {},
 ): Promise<CardsightPricingSearchRecord[]> {
   const key = apiKey();
@@ -386,7 +396,7 @@ export async function searchPricingByTitle(
   const listingType = opts.listingType ?? "auction";  // completed sales only by default
   const limit = Math.min(500, Math.max(1, opts.limit ?? 50));
 
-  return cacheWrap<CardsightPricingSearchRecord[]>(
+  const results = await cacheWrap<CardsightPricingSearchRecord[]>(
     cacheKey("cs:pricing-search", query, period, listingType, String(limit)),
     async () => _searchPricingByTitleRaw(query, period, listingType, limit),
     {
@@ -396,6 +406,30 @@ export async function searchPricingByTitle(
       skipCacheWhen: (result) => !result || result.length === 0,
     },
   );
+
+  // CF-PERSIST-VENDOR-LOOKUPS: fire-and-forget persistence. If the
+  // caller provided an identity hint, ship the parsed results to
+  // sold_comps in the background. Never blocks or fails the caller.
+  if (opts.persistIdentity && results.length > 0) {
+    // Lazy import so the client module doesn't force-load persistence
+    // wiring at load time.
+    import("../portfolioiq/persistVendorSalesToPool.service.js")
+      .then(({ persistVendorSalesInBackground }) => {
+        persistVendorSalesInBackground(
+          "cardsight",
+          results.map((r) => ({
+            title: r.title,
+            price: r.price,
+            soldAt: r.date,
+            url: r.url,
+          })),
+          opts.persistIdentity!,
+        );
+      })
+      .catch(() => { /* import failure = silent no-op */ });
+  }
+
+  return results;
 }
 
 async function _searchPricingByTitleRaw(
