@@ -56,11 +56,12 @@ export interface HobbyIqFmvTrend {
 
 /** Which rung of the fallback ladder produced the number. */
 export type HobbyIqFmvMethod =
-  | "direct-slug"          // exact slug + grade match (highest confidence)
-  | "cross-printrun"       // same identity ignoring printRun (specific variants exist, this one doesn't)
-  | "sibling-parallel"     // same cardNumber + auto, different parallels (all variants of the same card)
-  | "family-baseline"      // same player + year + auto, any variant (broadest same-player fallback)
-  | "no-basis";            // truly nothing — should be rare after the ladder
+  | "direct-slug"                // exact slug + grade match (highest confidence)
+  | "cross-printrun"             // same identity ignoring printRun (specific variants exist, this one doesn't)
+  | "same-printrun-cross-parallel" // same cardNumber + auto + printRun, other parallels (best sibling for numbered cards)
+  | "sibling-parallel"           // same cardNumber + auto, different parallels (all variants of the same card)
+  | "family-baseline"            // same year + cardNumber, any variant (broadest same-card fallback)
+  | "no-basis";                  // truly nothing — should be rare after the ladder
 
 export interface HobbyIqFmvResult {
   slug: string;
@@ -228,12 +229,39 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     }
   }
 
-  // ─── Rung 3: sibling-parallel — same cardNumber + auto, different parallels ─
-  // Same year+cardNumber+auto flag, different parallels. All parallels
-  // of a specific card should trade in a defensible band; the median of
-  // sibling parallels is a reasonable anchor when the target parallel
-  // has no direct data. (playerName isn't in the slug so we use the
-  // cardNumber+year+auto tuple as the identity key.)
+  // ─── Rung 3: same-printrun-cross-parallel ─────────────────────────
+  // Same year + cardNumber + auto + PRINT RUN, other parallels. For
+  // numbered cards, all /50 auto variants (Gold Wave, Gold Shimmer,
+  // Gold Refractor, etc.) trade in a tight band vs the base auto (no
+  // printRun). This rung finds the "right" price stratum without
+  // getting polluted by cheap base autos. Only fires when the target
+  // slug has a print run.
+  if (parsed.printRun !== null && parsed.printRun !== undefined) {
+    rows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND c.printRun = @pr",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+        { name: "@pr", value: parsed.printRun },
+      ],
+      cutoffIso,
+    );
+    if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
+    if (rows.length > 0) {
+      return buildResult(slug, rows, "same-printrun-cross-parallel",
+        `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of same-print-run variants (/${parsed.printRun})`,
+        confidenceForRung("same-printrun-cross-parallel", rows.length),
+        input.previewLimit ?? 10, now);
+    }
+  }
+
+  // ─── Rung 4: sibling-parallel — same cardNumber + auto, ANY parallel ─
+  // Same year+cardNumber+auto flag, any parallel + print run. Broader
+  // than rung 3 — includes Base autos and other print runs. Fires when
+  // rung 3 was empty (or slug had no print run).
   rows = await queryPool(
     container,
     "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
@@ -288,11 +316,12 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
 function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
   const nBonus = Math.min(0.2, n / 100);      // saturating bonus for sample size
   switch (rung) {
-    case "direct-slug":       return Math.min(0.95, 0.75 + nBonus);
-    case "cross-printrun":    return Math.min(0.75, 0.50 + nBonus);
-    case "sibling-parallel":  return Math.min(0.55, 0.35 + nBonus);
-    case "family-baseline":   return Math.min(0.40, 0.20 + nBonus);
-    case "no-basis":          return 0;
+    case "direct-slug":                  return Math.min(0.95, 0.75 + nBonus);
+    case "cross-printrun":               return Math.min(0.80, 0.55 + nBonus);
+    case "same-printrun-cross-parallel": return Math.min(0.70, 0.45 + nBonus);
+    case "sibling-parallel":             return Math.min(0.55, 0.30 + nBonus);
+    case "family-baseline":              return Math.min(0.40, 0.20 + nBonus);
+    case "no-basis":                     return 0;
   }
 }
 
