@@ -316,12 +316,41 @@ export async function fetchCardActiveListings(
       knownDifferentParallels: identity.knownDifferentParallels,
     }, 5);
 
-    return {
+    const result = {
       listings: ranked,
       totalReported: typeof body.total === "number" ? body.total : rawItems.length,
       effectiveQuery,
       snapshottedAt: new Date().toISOString(),
     };
+
+    // CF-PERSIST-ACTIVE-LISTINGS (Drew, 2026-07-23, issue #722 listings):
+    // ship active listings we observed to active_listings in background.
+    // Uses the identity's stringified key as our pseudo cardId — real
+    // cardId resolution happens elsewhere. Feature-flagged:
+    // PERSIST_ACTIVE_LISTINGS_ENABLED.
+    if (ranked.length > 0) {
+      const pseudoCardId = `ebay-identity:${identity.year ?? ""}:${identity.set ?? ""}:${identity.player ?? ""}:${identity.parallel ?? ""}:${identity.cardNumber ?? ""}`.toLowerCase();
+      import("../portfolioiq/persistActiveListings.service.js")
+        .then(({ persistActiveListingsInBackground }) => {
+          persistActiveListingsInBackground(
+            "ebay",
+            ranked.map((l) => ({
+              listingId: l.id,
+              cardId: pseudoCardId,
+              title: l.title,
+              price: l.price,
+              askType: l.endsAt ? "auction" : "fixed",
+              endDate: l.endsAt,
+              url: l.itemWebUrl,
+              imageUrl: l.imageUrl,
+              sellerHandle: l.seller?.username ?? null,
+            })),
+          );
+        })
+        .catch(() => { /* silent no-op */ });
+    }
+
+    return result;
   } catch (err) {
     console.warn(JSON.stringify({
       event: "ebay_card_listings_error",

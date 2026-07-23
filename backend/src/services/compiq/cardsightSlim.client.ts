@@ -189,7 +189,7 @@ export async function searchCatalog(
   const take = opts.take ?? 10;
   const year = opts.year ?? "";
 
-  return cacheWrap<CardsightCatalogHit[]>(
+  const results = await cacheWrap<CardsightCatalogHit[]>(
     cacheKey("cs:catalog-search", q, String(take), String(year)),
     async () => _searchCatalogRaw(q, take, opts.year),
     {
@@ -199,6 +199,30 @@ export async function searchCatalog(
       skipCacheWhen: (result) => !result || result.length === 0,
     },
   );
+
+  // CF-PERSIST-VENDOR-CATALOG (Drew, 2026-07-23, issue #722 catalog):
+  // ship the returned CS catalog entries to card_catalog in background.
+  // Feature-flagged: PERSIST_VENDOR_CATALOG_ENABLED.
+  if (results.length > 0) {
+    import("../portfolioiq/persistVendorCatalog.service.js")
+      .then(({ persistVendorCatalogInBackground }) => {
+        persistVendorCatalogInBackground(
+          "cardsight",
+          results.map((c) => ({
+            cardId: c.id,
+            title: c.name,
+            player: c.player ?? null,
+            set: c.setName ?? c.releaseName ?? null,
+            year: c.year ?? null,
+            number: c.number ?? null,
+            variant: null,
+            imageUrl: null,
+          })),
+        );
+      })
+      .catch(() => { /* silent no-op */ });
+  }
+  return results;
 }
 
 async function _searchCatalogRaw(
@@ -428,6 +452,19 @@ export async function searchPricingByTitle(
       })
       .catch(() => { /* import failure = silent no-op */ });
   }
+
+  // CF-PERSIST-USER-QUERY-SIGNALS (Drew, 2026-07-23, issue #722 signals):
+  // emit ALWAYS (including hitCount=0 catalog-gap events). Feature-
+  // flagged: PERSIST_USER_QUERY_SIGNALS_ENABLED.
+  import("../portfolioiq/persistUserQuerySignals.service.js")
+    .then(({ persistUserQuerySignalsInBackground }) => {
+      persistUserQuerySignalsInBackground([{
+        endpoint: "cardsight.searchPricingByTitle",
+        query,
+        hitCount: results.length,
+      }]);
+    })
+    .catch(() => { /* silent no-op */ });
 
   return results;
 }
