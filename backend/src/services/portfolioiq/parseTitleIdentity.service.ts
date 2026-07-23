@@ -21,6 +21,13 @@ export interface ParsedListingIdentity {
   parallel: string;
   isAuto: boolean;
   printRun: number | null;
+  /** CF-AUTO-STYLE (Drew, 2026-07-23, issue #712 option B).
+   *  Autograph style — "on-card" (signed directly on the card surface,
+   *  15-30% premium) or "sticker" (signed sticker applied to card).
+   *  Null when the title doesn't hint at style OR the row isn't an auto.
+   *  Downstream FMV path applies a multiplier when comparing on-card
+   *  vs sticker sales — that math is a follow-up PR. */
+  autoStyle: "on-card" | "sticker" | null;
 }
 
 /** Default cardNumber regex — matches the common Bowman/Topps/Panini
@@ -29,7 +36,11 @@ export interface ParsedListingIdentity {
 const DEFAULT_CARD_NUMBER_RE =
   /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+)\b/i;
 
-const AUTO_RE = /\bauto\b|autograph|on\s+card/i;
+// Note: `on card` alone does NOT imply auto — "On Card Display" and
+// similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
+// "hard signed" are required. When "On Card Auto" appears, \bauto\b
+// picks it up.
+const AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
 const AUTO_NEGATIVE_RE = /auto\s+relic|auto\s+patch/i;
 
 /** Extract identity from a marketplace title.
@@ -42,11 +53,13 @@ export function parseListingIdentity(
   cardNumberRe?: RegExp,
 ): ParsedListingIdentity {
   const t = String(title ?? "");
+  const isAuto = extractIsAuto(t);
   return {
     cardNumber: extractCardNumber(t, cardNumberRe),
     parallel: extractParallel(t),
-    isAuto: extractIsAuto(t),
+    isAuto,
     printRun: extractPrintRun(t),
+    autoStyle: isAuto ? extractAutoStyle(t) : null,
   };
 }
 
@@ -58,6 +71,22 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null 
 
 function extractIsAuto(title: string): boolean {
   return AUTO_RE.test(title) && !AUTO_NEGATIVE_RE.test(title);
+}
+
+/** Extract auto style from title. Modern products drop hints like
+ *  "On-Card Auto", "On Card Auto", or "OC Auto" (rare) for on-card
+ *  signatures; "Sticker Auto" or plain "Sticker" for sticker autos.
+ *  Returns null when neither hint is present — callers should treat
+ *  as unknown, NOT infer a default. */
+function extractAutoStyle(title: string): "on-card" | "sticker" | null {
+  const T = title;
+  // On-card indicators — check first since "On Card" is very common
+  if (/\bon[-\s]card\b/i.test(T)) return "on-card";
+  if (/\bhard[-\s]signed\b/i.test(T)) return "on-card";       // Topps' PR term for on-card
+  // Sticker indicators
+  if (/\bsticker\s+auto(graph)?\b/i.test(T)) return "sticker";
+  if (/\bsticker\s+signed\b/i.test(T)) return "sticker";
+  return null;
 }
 
 /** Extract the print run from a title. Handles serial patterns:

@@ -149,6 +149,7 @@ export async function persistVendorSalesToPool(
         parallel: parsed.parallel,
         isAuto: parsed.isAuto,
         printRun: parsed.printRun,
+        autoStyle: parsed.autoStyle,
         gradeCompany: gradeParsed?.gradeCompany ?? null,
         gradeValue: gradeParsed?.gradeValue ?? null,
         gradeQualifier: gradeParsed?.qualifier ?? null,

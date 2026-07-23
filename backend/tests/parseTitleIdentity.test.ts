@@ -46,8 +46,8 @@ describe("parseListingIdentity — isAuto detection", () => {
   it("'Autograph' → isAuto = true", () => {
     expect(parseListingIdentity("Eric Hartman Autograph Refractor").isAuto).toBe(true);
   });
-  it("'On Card' → isAuto = true (implicit auto reference)", () => {
-    expect(parseListingIdentity("2026 Bowman Chrome Sapphire Owen Carey On Card 77/199 Braves RC").isAuto).toBe(true);
+  it("'Hard Signed' → isAuto = true (Topps PR term for on-card auto)", () => {
+    expect(parseListingIdentity("2026 Bowman Chrome Eric Hartman Blue Refractor Hard Signed #CPA-EHA").isAuto).toBe(true);
   });
   it("'Auto Relic' → isAuto = false (relic patch card, not just auto)", () => {
     expect(parseListingIdentity("Eric Hartman Auto Relic Patch").isAuto).toBe(false);
@@ -139,6 +139,39 @@ describe("parseListingIdentity — parallel extraction", () => {
   });
   it("Base fallback when nothing matches", () => {
     expect(parseListingIdentity("Owen Carey #BCP-69 Baseball 1st Prospect").parallel).toBe("Base");
+  });
+});
+
+describe("parseListingIdentity — autoStyle (on-card vs sticker) (#712 option B)", () => {
+  it("'On-Card Auto' → on-card", () => {
+    const r = parseListingIdentity("2026 Bowman Chrome Owen Carey On-Card Auto #BSPA-OC /199");
+    expect(r.autoStyle).toBe("on-card");
+  });
+  it("'On Card Auto' (space form) → on-card", () => {
+    const r = parseListingIdentity("2026 Bowman Sapphire Owen Carey On Card Auto 77/199");
+    expect(r.autoStyle).toBe("on-card");
+  });
+  it("'Hard Signed' (Topps PR term) → on-card", () => {
+    // Real-world Antunez description: "Hard Signed" indicates on-card
+    const r = parseListingIdentity("2026 Bowman Chrome Blue Refractor Eric Hartman Auto Hard Signed #CPA-EHA");
+    expect(r.autoStyle).toBe("on-card");
+  });
+  it("'Sticker Auto' → sticker", () => {
+    const r = parseListingIdentity("2024 Panini Immaculate Some Player Sticker Auto");
+    expect(r.autoStyle).toBe("sticker");
+  });
+  it("'Sticker Autograph' → sticker", () => {
+    const r = parseListingIdentity("2024 Panini National Treasures Sticker Autograph");
+    expect(r.autoStyle).toBe("sticker");
+  });
+  it("plain Auto without style hint → null", () => {
+    const r = parseListingIdentity("2026 Bowman Eric Hartman Auto #CPA-EHA");
+    expect(r.autoStyle).toBeNull();
+  });
+  it("non-auto row → null (no style even if 'on card' appears elsewhere)", () => {
+    const r = parseListingIdentity("Some baseball card on card display");
+    expect(r.isAuto).toBe(false);
+    expect(r.autoStyle).toBeNull();
   });
 });
 
