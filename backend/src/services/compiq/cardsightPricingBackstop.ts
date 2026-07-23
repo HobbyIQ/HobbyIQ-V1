@@ -86,6 +86,17 @@ export async function tryCardsightPricingBackstop(
   // iOS's recentComps display benefits from seeing ALL sales including
   // BIN listings for context. The narrow auction-only filter that
   // shipped in PR #458 discarded valid signal.
+  // CF-PERSIST-VENDOR-LOOKUPS (Drew, 2026-07-23, issue #722 phase 3):
+  // pass persistIdentity so the CS records ship to sold_comps in the
+  // background. Gated by PERSIST_VENDOR_LOOKUPS_ENABLED — no-op when off.
+  const persistIdentity = queryContext?.playerName
+    ? {
+        playerName: queryContext.playerName,
+        cardYear: queryContext.cardYear != null ? Number(queryContext.cardYear) || null : null,
+        sport: null,     // persist service infers from title when null
+      }
+    : undefined;
+
   let records: CardsightPricingSearchRecord[];
   let effectivePeriod: string = period;
   try {
@@ -93,6 +104,7 @@ export async function tryCardsightPricingBackstop(
       period,
       listingType: "both",   // include auction + fixed
       limit: 100,             // wider headroom for both types
+      persistIdentity,
     });
     // CF-CS-BACKSTOP-VINTAGE-FALLBACK (Drew, 2026-07-15): if the primary
     // period returned 0 records, try "all" for vintage / long-tail SKUs
@@ -105,6 +117,7 @@ export async function tryCardsightPricingBackstop(
         period: "all",
         listingType: "both",
         limit: 100,
+        persistIdentity,
       });
       if (allRecords.length > 0) {
         records = allRecords;

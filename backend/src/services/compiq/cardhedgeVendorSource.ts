@@ -96,7 +96,18 @@ export const cardhedgeVendorSource: VendorSource = {
     // knows this card") with empty rawComps.
     let rawSales: Awaited<ReturnType<typeof getCardSales>> = [];
     try {
-      rawSales = await getCardSales(top.card_id, "Raw", 30);
+      // CF-PERSIST-VENDOR-LOOKUPS (Drew, 2026-07-23, issue #722 phase 3):
+      // pass persistIdentity so the CH sales stream into sold_comps in
+      // the background. Gated by PERSIST_VENDOR_LOOKUPS_ENABLED.
+      rawSales = await getCardSales(top.card_id, "Raw", 30, {
+        persistIdentity: query.playerName
+          ? {
+              playerName: query.playerName,
+              cardYear: query.cardYear ?? null,
+              sport: null,      // persistence infers from title when null
+            }
+          : undefined,
+      });
     } catch (err) {
       console.warn(JSON.stringify({
         event: "cardhedge_vendor_raw_sales_fetch_failed",
