@@ -36,6 +36,12 @@ export interface VendorPersistIdentityHint {
   cardYear?: number | null;
   sport?: string | null;
   cardNumberRe?: RegExp;
+  /** CF-CH-CARDID-PRESERVE (Drew, 2026-07-23). When CH provides a real
+   *  cardId for the query, pass it here so persisted rows use the CH
+   *  cardId as their partition key. This makes future readCompsByCardId
+   *  lookups against the same CH id find these rows too — belt and
+   *  suspenders alongside the hobbyiqCardId slug lookup. */
+  vendorCardId?: string | null;
 }
 
 export interface VendorPersistResult {
@@ -122,7 +128,11 @@ export async function persistVendorSalesToPool(
                     : createHash("sha256").update(source + ":" + title + price + soldAt).digest("hex").slice(0, 24));
       const doc = {
         id: `${source}::${sourceExternalId}`,
-        cardId: `hiq:${slug.slice(4)}`,     // canonical pseudo-cardId matching the slug
+        // Prefer the vendor's real cardId when known (CH path) so the
+        // vendor-cardId lookup finds these rows too. Fall back to the
+        // hobbyiqCardId-derived pseudo-cardId (Cardsight-search path
+        // where no stable cardId exists).
+        cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
         hobbyiqCardId: slug,
         contentHash,
         playerName,

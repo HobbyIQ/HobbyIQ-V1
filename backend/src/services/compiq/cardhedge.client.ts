@@ -1645,19 +1645,48 @@ async function _identifyCard(query: string, h: Record<string, string>): Promise<
   }
 }
 
-/** POST /cards/comps — sold comps with raw prices in DOLLARS. */
+/** POST /cards/comps — sold comps with raw prices in DOLLARS.
+ *
+ *  CF-PERSIST-VENDOR-LOOKUPS (Drew, 2026-07-23, issue #722 phase 2):
+ *  when callers pass persistIdentity, the returned sales stream to
+ *  sold_comps via persistVendorSalesInBackground so every CH query
+ *  grows our own pool. Gated by PERSIST_VENDOR_LOOKUPS_ENABLED. */
 export async function getCardSales(
   cardId: string,
   grade: string = "Raw",
   limit: number = 20,
+  opts: {
+    persistIdentity?: {
+      playerName?: string | null;
+      cardYear?: number | null;
+      sport?: string | null;
+    };
+  } = {},
 ): Promise<CardHedgeSale[]> {
   const h = headers();
   if (!h) return [];
-  return cacheWrap(
+  const sales = await cacheWrap(
     cacheKey("ch:comps", cardId, grade, String(limit)),
     async () => _getCardSales(cardId, grade, limit, h),
     COMPS_TTL_SEC,
   );
+  if (opts.persistIdentity && sales.length > 0) {
+    import("../portfolioiq/persistVendorSalesToPool.service.js")
+      .then(({ persistVendorSalesInBackground }) => {
+        persistVendorSalesInBackground(
+          "cardhedge",
+          sales.map((s) => ({
+            title: s.title,
+            price: s.price,
+            soldAt: s.date,
+            url: s.url,
+          })),
+          { ...opts.persistIdentity!, vendorCardId: cardId },
+        );
+      })
+      .catch(() => { /* silent no-op on import failure */ });
+  }
+  return sales;
 }
 
 async function _getCardSales(
