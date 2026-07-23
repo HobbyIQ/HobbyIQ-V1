@@ -24,8 +24,44 @@
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
+import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
 
 const router = Router();
+
+// CF-HOBBYIQ-FMV-ROUTE (Drew, 2026-07-23). "We set the market" surface.
+// Reads OUR own sold_comps pool by canonical hobbyiqCardId slug and
+// returns a full breakdown iOS can render — comp count, source mix,
+// autoStyle mix (on-card vs sticker), gradeQualifier mix, trend, and
+// recent comps.
+//
+// Zero vendor calls. Every field comes from HobbyIQ's own pool.
+//
+// Route: POST /api/compiq/hobbyiq-fmv
+// Body:
+//   {
+//     hobbyiqCardId: string,        // required — canonical slug
+//     gradeCompany?: string | null,
+//     gradeValue?: number | null,
+//     maxAgeDays?: number,          // freshness cutoff (default 180)
+//     previewLimit?: number,        // recentComps preview size (default 10)
+//   }
+router.post("/hobbyiq-fmv", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const hobbyiqCardId = String(req.body?.hobbyiqCardId ?? "").trim();
+    if (!hobbyiqCardId || !hobbyiqCardId.startsWith("hiq:")) {
+      res.status(400).json({ success: false, error: "hobbyiqCardId required (must start with 'hiq:')" });
+      return;
+    }
+    const result = await computeHobbyIqFmv({
+      hobbyiqCardId,
+      gradeCompany: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
+      gradeValue: typeof req.body?.gradeValue === "number" ? req.body.gradeValue : null,
+      maxAgeDays: typeof req.body?.maxAgeDays === "number" ? req.body.maxAgeDays : undefined,
+      previewLimit: typeof req.body?.previewLimit === "number" ? req.body.previewLimit : undefined,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
 
 router.post("/canonical-fmv", requireSession, async (req: Request, res: Response, next) => {
   try {
