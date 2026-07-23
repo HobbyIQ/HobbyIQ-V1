@@ -46,7 +46,7 @@
 // See feedback_no_medians_project_next_sale.md for the underlying
 // principle; every rung projects the next sale, none reports a middle.
 
-import { readCompsByCardId, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
+import { readCompsByCardId, readCompsByIdentity, recordSoldComp, inferSportFromContext } from "../portfolioiq/soldCompsStore.service.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "./playerInSetMomentum.service.js";
 import { lookupParallelMultiplier } from "./neighborMultipliers.js";
@@ -938,6 +938,46 @@ async function tryDirectComp(
       fresh = filterFresh(comps);
     }
   }
+
+  // CF-CROSS-CARDID-IDENTITY-FALLBACK (Drew, 2026-07-23). Cardsight stores
+  // sales under synthetic "backstop:" cardIds when it can't resolve to a
+  // specific CH cardId — Hartman Gold Refractor /50 has $2,275-$2,500
+  // sales locked under backstop cardIds invisible to readCompsByCardId.
+  // When the direct + warm pool is still thin, do one cross-partition
+  // query by (playerName, cardYear, cardNumber, parallel) and union the
+  // results. Ignores rows already in our pool via contentHash + soldAt
+  // dedup (soft — duplicates get filtered later during projection).
+  if (fresh.length < 2 && input.player) {
+    const identityRows = await readCompsByIdentity({
+      playerName: input.player,
+      cardYear: input.cardYear ?? undefined,
+      cardNumber: input.cardNumber ?? undefined,
+      parallel: input.parallel ?? undefined,
+      gradeCompany: input.gradeCompany ?? null,
+      gradeValue: input.gradeValue ?? null,
+      fromDate: new Date(nowMs - MAX_POOL_AGE_DAYS * MS_PER_DAY).toISOString(),
+      limit: 500,
+    }).catch(() => []);
+    if (identityRows.length > 0) {
+      // Dedup against the existing pool via contentHash (falls back to
+      // sourceExternalId, then a soldAt+price shape). Adding only rows
+      // we don't already have keeps the projection anchored on the true
+      // fresh pool without double-counting.
+      const seenHashes = new Set(comps.map((c) => (c as { contentHash?: string }).contentHash).filter(Boolean));
+      const seenIds = new Set(comps.map((c) => c.sourceExternalId).filter(Boolean));
+      const additional = identityRows.filter((r) => {
+        const h = (r as { contentHash?: string }).contentHash;
+        if (h && seenHashes.has(h)) return false;
+        if (r.sourceExternalId && seenIds.has(r.sourceExternalId)) return false;
+        return true;
+      });
+      if (additional.length > 0) {
+        comps = [...comps, ...additional];
+        fresh = filterFresh(comps);
+      }
+    }
+  }
+
   if (fresh.length === 0) return null;
 
   const projection = projectNextSaleFromComps(
@@ -1443,16 +1483,44 @@ async function tryHotRawSameCardAnchor(
   if (input.gradeCompany === null || input.gradeCompany === undefined) return null;
   if (input.gradeValue === null || input.gradeValue === undefined) return null;
 
-  // Read Raw same-card same-parallel comps within the 60d window.
+  // Read Raw same-card same-parallel comps within the window.
   const nowMs = Date.now();
   const fromDate = new Date(nowMs - HOT_RAW_WINDOW_DAYS * MS_PER_DAY).toISOString();
-  const rawComps = await readCompsByCardId({
+  let rawComps = await readCompsByCardId({
     cardId,
     fromDate,
     parallel: input.parallel ?? undefined,
     gradeCompany: null,
     gradeValue: null,
   }).catch(() => []);
+
+  // CF-CROSS-CARDID-IDENTITY-FALLBACK-HOTRAW (Drew, 2026-07-23). Same
+  // pattern as tryDirectComp — when the same-cardId Raw pool is thin,
+  // union in Raw comps for the same identity across other cardIds
+  // (Cardsight backstop rows, etc.). Dedup by contentHash.
+  if (rawComps.length < HOT_RAW_MIN_SAMPLES && input.player) {
+    const identityRaw = await readCompsByIdentity({
+      playerName: input.player,
+      cardYear: input.cardYear ?? undefined,
+      cardNumber: input.cardNumber ?? undefined,
+      parallel: input.parallel ?? undefined,
+      gradeCompany: null,
+      gradeValue: null,
+      fromDate,
+      limit: 500,
+    }).catch(() => []);
+    if (identityRaw.length > 0) {
+      const seenHashes = new Set(rawComps.map((c) => (c as { contentHash?: string }).contentHash).filter(Boolean));
+      const seenIds = new Set(rawComps.map((c) => c.sourceExternalId).filter(Boolean));
+      const additional = identityRaw.filter((r) => {
+        const h = (r as { contentHash?: string }).contentHash;
+        if (h && seenHashes.has(h)) return false;
+        if (r.sourceExternalId && seenIds.has(r.sourceExternalId)) return false;
+        return true;
+      });
+      if (additional.length > 0) rawComps = [...rawComps, ...additional];
+    }
+  }
 
   // Filter to priced, un-flagged, dated comps.
   const priced = rawComps.filter((c) => {

@@ -15,6 +15,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // Mock everything the canonicalFmv service reads.
 vi.mock("../src/services/portfolioiq/soldCompsStore.service.js", () => ({
   readCompsByCardId: vi.fn(async () => []),
+  readCompsByIdentity: vi.fn(async () => []),
   recordSoldComp: vi.fn(async () => undefined),
   inferSportFromContext: vi.fn(() => "baseball"),
 }));
