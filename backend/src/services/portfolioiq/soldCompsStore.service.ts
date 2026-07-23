@@ -99,6 +99,14 @@ export interface SoldCompDoc {
    *  comparing qualified vs unqualified same-tier rows — that math is
    *  the follow-up PR once calibration data lands. */
   gradeQualifier?: string | null;
+  /** CF-AUTO-STYLE (Drew, 2026-07-23, issue #712 option B). Autograph
+   *  style attached at the SALE level rather than the identity level.
+   *  "on-card" (~15-30% premium), "sticker", or null when the vendor
+   *  title didn't hint at style. Absent on pre-#712 docs. Populated
+   *  from parseListingIdentity at persistVendorSalesToPool.
+   *  Follow-up: FMV pipeline applies per-style multiplier when
+   *  comparing on-card vs sticker comps in the same slug pool. */
+  autoStyle?: "on-card" | "sticker" | null;
 
   // The sale itself
   price: number;
