@@ -334,6 +334,135 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
     expect(upper).toBe(mixed);
     expect(mixed).toBe(lower);
   });
+
+  it("True Refractor (numbered /499) === Refractor /499", () => {
+    // "True Refractor" without a color is the purist's shorthand for the
+    // base silver refractor auto (numbered /499 in modern Bowman/Topps
+    // Chrome). Same physical card either way.
+    const trueVariant = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "CPA-EHA",
+      parallel: "True Refractor", isAuto: true, printRun: 499,
+    });
+    const bareVariant = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "CPA-EHA",
+      parallel: "Refractor", isAuto: true, printRun: 499,
+    });
+    expect(trueVariant).toBe(bareVariant);
+    expect(trueVariant).toContain(":refractor:");
+    expect(trueVariant.endsWith(":num-499")).toBe(true);
+  });
+});
+
+describe("computeHobbyIqCardId — compound-variant unification", () => {
+  it("Ray Wave === Raywave (space vs no-space)", () => {
+    // Cardsight and CH sometimes emit "Ray Wave", sometimes "Raywave".
+    // Same physical variant — must slug to the same canonical form.
+    const spaced = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Ray Wave Refractor",
+      isAuto: true, printRun: 99,
+    });
+    const unspaced = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Raywave Refractor",
+      isAuto: true, printRun: 99,
+    });
+    expect(spaced).toBe(unspaced);
+    expect(spaced).toContain("ray-wave-refractor");
+  });
+
+  it("Green Ray Wave === Green Raywave (with color prefix)", () => {
+    const spaced = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Green Ray Wave Refractor",
+      isAuto: true, printRun: 99,
+    });
+    const unspaced = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-EHA", parallel: "Green Raywave Refractor",
+      isAuto: true, printRun: 99,
+    });
+    expect(spaced).toBe(unspaced);
+    expect(spaced).toContain("green-ray-wave-refractor");
+  });
+
+  it("X-Fractor === Xfractor (hyphen vs no-hyphen)", () => {
+    // Topps Chrome X-Fractor. Same variant, two spellings in the wild.
+    const hyphenated = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "X-Fractor",
+      isAuto: false, printRun: 199,
+    });
+    const solid = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "Xfractor",
+      isAuto: false, printRun: 199,
+    });
+    expect(hyphenated).toBe(solid);
+    expect(hyphenated).toContain("x-fractor");
+  });
+
+  it("Blue X-Fractor === Blue Xfractor (with color prefix)", () => {
+    const hyphenated = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "Blue X-Fractor",
+      isAuto: false, printRun: 150,
+    });
+    const solid = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "Blue Xfractor",
+      isAuto: false, printRun: 150,
+    });
+    expect(hyphenated).toBe(solid);
+    expect(hyphenated).toContain("blue-x-fractor");
+  });
+});
+
+describe("computeHobbyIqCardId — Sapphire is a distinct product line", () => {
+  it("Bowman Chrome Sapphire !== Bowman Chrome", () => {
+    // Sapphire is its own product line (glossy blue-tinted chrome finish),
+    // NOT a parallel of the flagship. Must map to a distinct setKey.
+    const sapphire = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "2026 Bowman Chrome Sapphire",
+      cardNumber: "BCP-102", parallel: "Base",
+      isAuto: false, printRun: null,
+    });
+    const flagship = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "2026 Bowman Chrome",
+      cardNumber: "BCP-102", parallel: "Base",
+      isAuto: false, printRun: null,
+    });
+    expect(sapphire).not.toBe(flagship);
+    expect(sapphire).toContain(":bowman-chrome-sapphire:");
+    expect(flagship).toContain(":bowman-chrome:");
+  });
+
+  it("Topps Chrome Sapphire !== Topps Chrome", () => {
+    const sapphire = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "2024 Topps Chrome Sapphire",
+      cardNumber: "1", parallel: "Base",
+      isAuto: false, printRun: null,
+    });
+    const flagship = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "2024 Topps Chrome",
+      cardNumber: "1", parallel: "Base",
+      isAuto: false, printRun: null,
+    });
+    expect(sapphire).not.toBe(flagship);
+    expect(sapphire).toContain(":topps-chrome-sapphire:");
+    expect(flagship).toContain(":topps-chrome:");
+  });
+
+  it("Bowman Sapphire (abbrev) collapses to bowman-chrome-sapphire", () => {
+    // Vendors occasionally write "Bowman Sapphire" as shorthand for
+    // the full "Bowman Chrome Sapphire" product line.
+    const abbrev = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "2026 Bowman Sapphire",
+      cardNumber: "BCP-102", parallel: "Base",
+      isAuto: false, printRun: null,
+    });
+    expect(abbrev).toContain(":bowman-chrome-sapphire:");
+  });
 });
 
 describe("computeHobbyIqCardId — print run", () => {
