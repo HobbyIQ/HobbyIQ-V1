@@ -22,6 +22,7 @@ import { cacheStatsContext } from "../shared/cache.service.js";
 // to avoid double-writes.
 import {
   readCompsByCardId,
+  readCompsByIdentity,
   recordSoldComp,
   type SoldCompDoc,
 } from "../portfolioiq/soldCompsStore.service.js";
@@ -3161,7 +3162,10 @@ export async function augmentCompsWithUserPool(
     }));
     return fetched;
   }
-  if (userComps.length === 0) return fetched;
+  // Note: no early return on userComps.length === 0 — the CF-COMPIQ-
+  // IDENTITY-FALLBACK block below can rescue Cardsight backstop cases
+  // where the vendor-cardId path returns nothing but the pool has rows
+  // under identity attributes.
 
   // CF-USER-COMPS-AGING: filter stale comps out of the FMV merge before
   // the dedup + cap loop. Ages measured from soldAt (the sale date the
@@ -3201,6 +3205,65 @@ export async function augmentCompsWithUserPool(
       maxAgeDays,
     }));
   }
+
+  // CF-COMPIQ-IDENTITY-FALLBACK (Drew, 2026-07-23, issue #706 Phase 2b).
+  // When the vendor-cardId pool is thin, do a cross-partition query by
+  // (playerName, cardYear, cardNumber, parallel) to catch rows locked
+  // under Cardsight backstop cardIds. This is the same pattern already
+  // shipped in canonicalFmv.service.ts (rung 1c). Fixes Owen Carey
+  // Aqua Refractor $246 and similar Cardsight-only holdings whose
+  // predictedPrice was landing as null despite comps existing.
+  const playerNameForFallback = fetched.card?.player ?? null;
+  const cardYearForFallback =
+    typeof fetched.card?.year === "number"
+      ? fetched.card.year
+      : Number(fetched.card?.year) || null;
+  const cardNumberForFallback = fetched.card?.number ?? null;
+  if (
+    freshUserComps.length < 2
+    && typeof playerNameForFallback === "string"
+    && playerNameForFallback.length > 0
+  ) {
+    try {
+      const identityRows = await readCompsByIdentity({
+        playerName: playerNameForFallback,
+        cardYear: cardYearForFallback ?? undefined,
+        cardNumber: cardNumberForFallback ?? undefined,
+        parallel: parallel ?? undefined,
+        gradeCompany: gradeCompany ?? null,
+        gradeValue: gradeValue ?? null,
+        fromDate: new Date(now - maxAgeMs).toISOString(),
+        limit: 500,
+      });
+      if (identityRows.length > 0) {
+        // Dedup vs already-collected fresh rows by contentHash + sourceExternalId
+        const seenHashes = new Set(
+          freshUserComps
+            .map((c) => (c as { contentHash?: string }).contentHash)
+            .filter(Boolean),
+        );
+        const seenIds = new Set(
+          freshUserComps.map((c) => c.sourceExternalId).filter(Boolean),
+        );
+        for (const r of identityRows) {
+          const h = (r as { contentHash?: string }).contentHash;
+          if (h && seenHashes.has(h)) continue;
+          if (r.sourceExternalId && seenIds.has(r.sourceExternalId)) continue;
+          // Reject flaggedWrong here too — same discipline as the primary pool.
+          if ((r as SoldCompDoc & { flaggedWrong?: boolean }).flaggedWrong === true) continue;
+          freshUserComps.push(r);
+        }
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "compiq_identity_fallback_soft_fail",
+        source: "compiqEstimate.augmentCompsWithUserPool",
+        cardId: resolvedCardId,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
   // CF-CROSS-PARALLEL-FALLBACK (Drew, 2026-07-18): when the same-parallel
   // pool is thin (< 2 comps), pull sibling-parallel comps from the same
   // cardId and normalize them via lookupParallelMultiplier. Fills the
