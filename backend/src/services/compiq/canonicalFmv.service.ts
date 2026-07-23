@@ -1417,8 +1417,16 @@ async function trySiblingParallel(
 // FMV CAP: confidence ≤ 0.5 — this is a projection, not an observation.
 // Never allowed to out-rank a real direct-comp rung.
 
-const HOT_RAW_MAX_AGE_DAYS = 30;
-const HOT_RAW_WINDOW_DAYS = 60;
+// CF-HOT-RAW-FRESHNESS-RELAX (Drew, 2026-07-23). Bumped 30 → 90 after
+// Hartman Gold Lava Refractor case: 5 same-card Raw comps existed but
+// the newest was 37 days old, so the 30d gate returned no-basis for
+// a card that clearly had a projectable price. 90d covers a full
+// quarter of market activity while still rejecting genuinely dormant
+// cards (>90d silent = no-basis).
+const HOT_RAW_MAX_AGE_DAYS = 90;
+// Window for sample counting stays wider than the freshness gate so a
+// slow-selling parallel still qualifies for the sample-floor check.
+const HOT_RAW_WINDOW_DAYS = 120;
 const HOT_RAW_MIN_SAMPLES = 2;
 const HOT_RAW_MAX_COV = 0.6;
 const HOT_RAW_CONFIDENCE_CAP = 0.5;
