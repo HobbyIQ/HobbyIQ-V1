@@ -237,6 +237,94 @@ describe("parseGradeLabel — BGS 10 Black Label detection", () => {
 // "COMPANY GRADE" string that downstream selectors + getGraderPremium
 // expect. Black Label elevation must ONLY apply to (BGS, 10, true).
 
+describe("parseGradeLabel — PSA qualifier flags (issue #713)", () => {
+  it("PSA 9 (OC) → base 9 + qualifier OC (parenthesized)", () => {
+    expect(parseGradeLabel("PSA 9 (OC)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 9, qualifier: "OC",
+    });
+  });
+
+  it("PSA 9(OC) → base 9 + qualifier OC (no space)", () => {
+    expect(parseGradeLabel("PSA 9(OC)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 9, qualifier: "OC",
+    });
+  });
+
+  it("PSA 9 OC → base 9 + qualifier OC (bare suffix)", () => {
+    expect(parseGradeLabel("PSA 9 OC")).toEqual({
+      gradeCompany: "PSA", gradeValue: 9, qualifier: "OC",
+    });
+  });
+
+  it("PSA 8 MK → base 8 + qualifier MK (marks)", () => {
+    expect(parseGradeLabel("PSA 8 MK")).toEqual({
+      gradeCompany: "PSA", gradeValue: 8, qualifier: "MK",
+    });
+  });
+
+  it("PSA 7 (ST) → base 7 + qualifier ST (stain)", () => {
+    expect(parseGradeLabel("PSA 7 (ST)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 7, qualifier: "ST",
+    });
+  });
+
+  it("PSA 9 (PD) → base 9 + qualifier PD (print defect)", () => {
+    expect(parseGradeLabel("PSA 9 (PD)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 9, qualifier: "PD",
+    });
+  });
+
+  it("PSA 8 (MC) → base 8 + qualifier MC (miscut)", () => {
+    expect(parseGradeLabel("PSA 8 (MC)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 8, qualifier: "MC",
+    });
+  });
+
+  it("PSA 7 OF → base 7 + qualifier OF (out of focus)", () => {
+    expect(parseGradeLabel("PSA 7 OF")).toEqual({
+      gradeCompany: "PSA", gradeValue: 7, qualifier: "OF",
+    });
+  });
+
+  it("case-insensitive: PSA 9 (oc) → base 9 + qualifier OC", () => {
+    expect(parseGradeLabel("PSA 9 (oc)")).toEqual({
+      gradeCompany: "PSA", gradeValue: 9, qualifier: "OC",
+    });
+  });
+
+  it("PSA 10 (no qualifier) — qualifier field absent", () => {
+    const parsed = parseGradeLabel("PSA 10");
+    expect(parsed).toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+    expect(parsed?.qualifier).toBeUndefined();
+  });
+
+  it("PSA 9 MT → base 9, MT is NOT a qualifier (Mint descriptor)", () => {
+    // MT is the PSA MINT descriptor, not a qualifier. Must not be
+    // mistaken for a qualifier flag.
+    const parsed = parseGradeLabel("PSA 9 MT");
+    expect(parsed?.qualifier).toBeUndefined();
+    expect(parsed?.gradeCompany).toBe("PSA");
+    expect(parsed?.gradeValue).toBe(9);
+  });
+
+  it("BGS 9.5 (OC) → does NOT tag qualifier (BGS uses deductions, not qualifiers)", () => {
+    // Qualifier flags are PSA-specific. BGS/SGC/CGC use half-point
+    // deductions instead. Don't tag OC on non-PSA companies to avoid
+    // false-positive on legitimate label text.
+    const parsed = parseGradeLabel("BGS 9.5 (OC)");
+    expect(parsed?.qualifier).toBeUndefined();
+    expect(parsed?.gradeCompany).toBe("BGS");
+    expect(parsed?.gradeValue).toBe(9.5);
+  });
+
+  it("PSA 9 (XX) → base 9 only, XX is not a valid PSA qualifier", () => {
+    // Only OC/MK/ST/PD/MC/OF are recognized qualifier codes. Random
+    // 2-letter suffixes should not match.
+    const parsed = parseGradeLabel("PSA 9 (XX)");
+    expect(parsed?.qualifier).toBeUndefined();
+  });
+});
+
 import { composeGradeKey } from "../src/services/compiq/compiqEstimate.service.js";
 
 describe("composeGradeKey — canonical grade-key formatting", () => {
