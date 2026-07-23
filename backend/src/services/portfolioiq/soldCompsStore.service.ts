@@ -788,6 +788,83 @@ export async function readCompsByPlayer(input: {
  * Callers should union the returned rows with their direct-cardId
  * pool, deduplicating by contentHash.
  */
+/**
+ * CF-HOBBYIQ-CARDID-READ (Drew, 2026-07-23, issue #706 Phase 2a). Read
+ * sold_comps by canonical hobbyiqCardId. Unifies rows for the same
+ * physical card regardless of which vendor cardId they were originally
+ * stored under (CH's bubble.io ID, Cardsight backstop synthetic ID,
+ * eBay item ID — all resolve to the same hobbyiqCardId).
+ *
+ * Cross-partition query — the container is still partitioned on cardId
+ * (vendor). Once every row has hobbyiqCardId populated (post-backfill),
+ * this becomes the primary canonical read path; the legacy
+ * readCompsByCardId + readCompsByIdentity paths become fallbacks for
+ * rows that haven't been backfilled yet.
+ *
+ * Only rows with hobbyiqCardId set are returned — legacy rows (pre-
+ * migration or missing identity data) are silently excluded. Callers
+ * that need full coverage should still call the legacy read paths
+ * alongside.
+ */
+export async function readCompsByHobbyIqCardId(input: {
+  hobbyiqCardId: string;
+  fromDate?: string;
+  sources?: SoldCompSource[];
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  limit?: number;
+}): Promise<SoldCompDoc[]> {
+  const c = await getContainer();
+  if (!c) return [];
+  const hiqId = String(input.hobbyiqCardId ?? "").trim();
+  if (!hiqId || !hiqId.startsWith("hiq:")) return [];
+  const now = new Date();
+  const from = input.fromDate ?? new Date(now.getTime() - 180 * 86_400_000).toISOString();
+  const limit = Math.min(500, Math.max(1, input.limit ?? 100));
+
+  const params: Array<{ name: string; value: string | number }> = [
+    { name: "@lim", value: limit },
+    { name: "@hiq", value: hiqId },
+    { name: "@from", value: from },
+  ];
+  const query = `SELECT TOP @lim * FROM c
+                 WHERE c.hobbyiqCardId = @hiq
+                   AND c.soldAt >= @from
+                 ORDER BY c.soldAt DESC`;
+
+  let rows: SoldCompDoc[] = [];
+  try {
+    const { resources } = await c.items.query({ query, parameters: params }).fetchAll();
+    rows = resources as SoldCompDoc[];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "sold_comps_read_by_hobbyiq_cardid_error",
+      source: "soldCompsStore.service",
+      hobbyiqCardId: hiqId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
+  }
+
+  if (input.sources && input.sources.length > 0) {
+    const set = new Set(input.sources);
+    rows = rows.filter((d) => set.has(d.source));
+  }
+  if (input.gradeCompany !== undefined || input.gradeValue !== undefined) {
+    const wantedCompany = typeof input.gradeCompany === "string" ? input.gradeCompany.trim().toUpperCase() : "";
+    const wantedValue = typeof input.gradeValue === "number" && Number.isFinite(input.gradeValue) ? input.gradeValue : null;
+    const isRawRequest = wantedCompany === "" && wantedValue === null;
+    rows = rows.filter((d) => {
+      const docCompany = typeof d.gradeCompany === "string" ? d.gradeCompany.trim().toUpperCase() : "";
+      const docValue = typeof d.gradeValue === "number" && Number.isFinite(d.gradeValue) ? d.gradeValue : null;
+      const docIsRaw = docCompany === "" && docValue === null;
+      if (isRawRequest) return docIsRaw;
+      return docCompany === wantedCompany && docValue === wantedValue;
+    });
+  }
+  return rows;
+}
+
 export async function readCompsByIdentity(input: {
   playerName: string;
   cardYear?: number | null;
