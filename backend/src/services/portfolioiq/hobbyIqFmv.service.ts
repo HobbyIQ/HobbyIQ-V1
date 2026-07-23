@@ -6,16 +6,17 @@
 // Design principles:
 //   - Deterministic given (slug, grade filter): same inputs → same output.
 //   - Zero vendor calls. Every byte comes from sold_comps rows we own.
-//   - Rich breakdown: comp count by source, autoStyle mix (on-card vs
-//     sticker), gradeQualifier mix (OC/MK/ST/PD/MC/OF), recent comps
-//     with all the fields iOS wants to render badges.
-//   - Trend: linear regression slope (%/month) on the last 90 days when
-//     n≥3, anchor+broader-fallback when n<3.
-//
-// Read path is a single cross-partition query against sold_comps by
-// hobbyiqCardId. Backfill has populated 2.4M rows so lookups are fast.
+//   - NEVER returns "no data" when we can compute something reasonable.
+//     Fallback ladder — direct-slug → cross-printRun → sibling-parallel
+//     → family-baseline. First rung that produces ≥1 comp wins; the
+//     `method` field records which rung fired so iOS can render a
+//     confidence hint.
+//   - Rich breakdown: comp count by source, autoStyle mix, gradeQualifier
+//     mix, recent comps with all fields iOS wants for badges.
+//   - Trend: OLS regression when n≥3; anchor slope when n=2; flat below.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
 export interface HobbyIqFmvInput {
   hobbyiqCardId: string;              // canonical slug (hiq:sport:year:...)
@@ -38,32 +39,59 @@ export interface HobbyIqFmvComp {
 }
 
 export interface HobbyIqFmvBreakdown {
-  bySource: Record<string, number>;    // { cardsight: 12, cardhedge: 5, ... }
+  bySource: Record<string, number>;
   byAutoStyle: {
     onCard: number;
     sticker: number;
     unknown: number;
   };
-  byGradeQualifier: Record<string, number>;   // { OC: 2, MK: 1, unqualified: 20 }
+  byGradeQualifier: Record<string, number>;
 }
 
 export interface HobbyIqFmvTrend {
   direction: "up" | "down" | "flat";
-  slopePerMonthPct: number;              // signed
+  slopePerMonthPct: number;
   method: "regression" | "anchor" | "none";
 }
 
+/** Which rung of the fallback ladder produced the number. */
+export type HobbyIqFmvMethod =
+  | "direct-slug"          // exact slug + grade match (highest confidence)
+  | "cross-printrun"       // same identity ignoring printRun (specific variants exist, this one doesn't)
+  | "sibling-parallel"     // same cardNumber + auto, different parallels (all variants of the same card)
+  | "family-baseline"      // same player + year + auto, any variant (broadest same-player fallback)
+  | "no-basis";            // truly nothing — should be rare after the ladder
+
 export interface HobbyIqFmvResult {
   slug: string;
-  fmv: number | null;                    // median of fresh comps in the target grade
-  compCount: number;                     // fresh + in-grade
+  fmv: number | null;
+  compCount: number;
   min: number | null;
   max: number | null;
   breakdown: HobbyIqFmvBreakdown;
   trend: HobbyIqFmvTrend;
   recentComps: HobbyIqFmvComp[];
+  /** CF-HOBBYIQ-FMV-LADDER (Drew, 2026-07-23). Which rung produced the
+   *  fmv. iOS can render a confidence indicator + human-readable note. */
+  method: HobbyIqFmvMethod;
+  basisNote: string;
+  confidence: number;      // 0.0-1.0
   computedAt: string;
-  cachedFrom: "sold_comps";              // provenance — always HobbyIQ's own pool
+  cachedFrom: "sold_comps";
+}
+
+interface PoolRow {
+  price: number;
+  soldAt: string;
+  source: string;
+  parallel?: string | null;
+  autoStyle?: "on-card" | "sticker" | null;
+  gradeQualifier?: string | null;
+  url?: string | null;
+  isAuto?: boolean;
+  printRun?: number | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
 }
 
 let cachedContainer: Container | null = null;
@@ -81,76 +109,217 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   }
 }
 
+/** Fetch rows by an arbitrary SQL WHERE clause. Encapsulates the
+ *  cross-partition query + freshness + column list. */
+async function queryPool(
+  container: Container,
+  whereClause: string,
+  parameters: Array<{ name: string; value: string | number | boolean | null }>,
+  cutoffIso: string,
+): Promise<PoolRow[]> {
+  const params = [
+    ...parameters,
+    { name: "@from", value: cutoffIso },
+  ];
+  try {
+    const { resources } = await container.items.query({
+      query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
+                     c.isAuto, c.printRun, c.gradeCompany, c.gradeValue
+              FROM c
+              WHERE ${whereClause} AND c.soldAt > @from
+              ORDER BY c.soldAt DESC`,
+      parameters: params,
+    }).fetchAll();
+    return resources as PoolRow[];
+  } catch {
+    return [];
+  }
+}
+
+/** Apply the caller's grade filter in-JS (SQL side is optimistic; JS
+ *  handles the null-vs-undefined case that Cosmos SQL fumbles). */
+function filterByGrade(
+  rows: PoolRow[],
+  gradeCompany: string | null,
+  gradeValue: number | null,
+): PoolRow[] {
+  const isRawRequest = !gradeCompany && gradeValue === null;
+  return rows.filter((r) => {
+    const docCompany = typeof r.gradeCompany === "string"
+      ? r.gradeCompany.trim().toUpperCase()
+      : "";
+    const docValue = typeof r.gradeValue === "number" && Number.isFinite(r.gradeValue)
+      ? r.gradeValue
+      : null;
+    const docIsRaw = docCompany === "" && docValue === null;
+    if (isRawRequest) return docIsRaw;
+    return docCompany === (gradeCompany ?? "").trim().toUpperCase()
+      && docValue === gradeValue;
+  });
+}
+
 export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIqFmvResult> {
   const slug = String(input.hobbyiqCardId ?? "").trim();
   const now = new Date();
-  const emptyResult: HobbyIqFmvResult = {
+
+  const noBasis: HobbyIqFmvResult = {
     slug,
     fmv: null,
     compCount: 0,
     min: null,
     max: null,
-    breakdown: {
-      bySource: {},
-      byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 },
-      byGradeQualifier: {},
-    },
+    breakdown: { bySource: {}, byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 }, byGradeQualifier: {} },
     trend: { direction: "flat", slopePerMonthPct: 0, method: "none" },
     recentComps: [],
+    method: "no-basis",
+    basisNote: "No comparable sales in the last 180 days",
+    confidence: 0,
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
-  if (!slug || !slug.startsWith("hiq:")) return emptyResult;
+
+  if (!slug || !slug.startsWith("hiq:")) return noBasis;
 
   const container = await getSoldCompsContainer();
-  if (!container) return emptyResult;
+  if (!container) return noBasis;
+
+  const parsed = parseHobbyIqCardId(slug);
+  if (!parsed) return noBasis;
 
   const maxAgeDays = input.maxAgeDays ?? 180;
-  const maxAgeMs = maxAgeDays * 86_400_000;
-  const cutoffIso = new Date(now.getTime() - maxAgeMs).toISOString();
-
+  const cutoffIso = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
   const gradeCompany = input.gradeCompany ?? null;
   const gradeValue = input.gradeValue ?? null;
 
-  // Cross-partition query by hobbyiqCardId slug. Filter by freshness +
-  // grade tier inline so the response is only what matters.
-  const gradeFilter = gradeCompany
-    ? " AND c.gradeCompany = @gc AND c.gradeValue = @gv"
-    : " AND (NOT IS_DEFINED(c.gradeCompany) OR c.gradeCompany = null)";
-  const parameters: Array<{ name: string; value: string | number | null }> = [
-    { name: "@slug", value: slug },
-    { name: "@from", value: cutoffIso },
-  ];
-  if (gradeCompany) {
-    parameters.push({ name: "@gc", value: gradeCompany });
-    parameters.push({ name: "@gv", value: gradeValue });
+  // ─── Rung 1: exact slug + grade ─────────────────────────────────────
+  let rows = await queryPool(
+    container,
+    "c.hobbyiqCardId = @slug",
+    [{ name: "@slug", value: slug }],
+    cutoffIso,
+  );
+  rows = filterByGrade(rows, gradeCompany, gradeValue);
+  if (rows.length > 0) {
+    return buildResult(slug, rows, "direct-slug",
+      `Direct match: ${rows.length} sale${rows.length === 1 ? "" : "s"} of this exact card`,
+      confidenceForRung("direct-slug", rows.length),
+      input.previewLimit ?? 10, now);
   }
 
-  let rows: Array<{
-    price: number;
-    soldAt: string;
-    source: string;
-    parallel?: string | null;
-    autoStyle?: "on-card" | "sticker" | null;
-    gradeQualifier?: string | null;
-    url?: string | null;
-  }> = [];
-  try {
-    const { resources } = await container.items.query({
-      query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url
-              FROM c
-              WHERE c.hobbyiqCardId = @slug AND c.soldAt > @from${gradeFilter}
-              ORDER BY c.soldAt DESC`,
-      parameters,
-    }).fetchAll();
-    rows = resources;
-  } catch {
-    return emptyResult;
+  // ─── Rung 2: same identity ignoring printRun ────────────────────────
+  // Strip the print-run suffix and match anything with the same
+  // player/year/set/cardNumber/parallel/auto. Useful when the /50 auto
+  // has no sales but the /150 and /99 variants do — approximate but
+  // grounded.
+  const slugNoPrintRun = slug.replace(/:num-\d+$/, "");
+  if (slugNoPrintRun !== slug) {
+    rows = await queryPool(
+      container,
+      "STARTSWITH(c.hobbyiqCardId, @stem)",
+      [{ name: "@stem", value: slugNoPrintRun }],
+      cutoffIso,
+    );
+    rows = filterByGrade(rows, gradeCompany, gradeValue);
+    if (rows.length > 0) {
+      return buildResult(slug, rows, "cross-printrun",
+        `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of the same card at other print runs`,
+        confidenceForRung("cross-printrun", rows.length),
+        input.previewLimit ?? 10, now);
+    }
   }
-  if (rows.length === 0) return emptyResult;
 
+  // ─── Rung 3: sibling-parallel — same cardNumber + auto, different parallels ─
+  // Same year+cardNumber+auto flag, different parallels. All parallels
+  // of a specific card should trade in a defensible band; the median of
+  // sibling parallels is a reasonable anchor when the target parallel
+  // has no direct data. (playerName isn't in the slug so we use the
+  // cardNumber+year+auto tuple as the identity key.)
+  rows = await queryPool(
+    container,
+    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+    [
+      { name: "@y", value: parsed.year },
+      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+      { name: "@auto", value: parsed.isAuto },
+      { name: "@sport", value: parsed.sport },
+    ],
+    cutoffIso,
+  );
+  if (rows.length > 0) {
+    rows = filterByGrade(rows, gradeCompany, gradeValue);
+  }
+  if (rows.length > 0) {
+    return buildResult(slug, rows, "sibling-parallel",
+      `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
+      confidenceForRung("sibling-parallel", rows.length),
+      input.previewLimit ?? 10, now);
+  }
+
+  // ─── Rung 4: family-baseline — same year + cardNumber, any variant ───
+  // Broadest same-card rung. Same year + cardNumber gives player-year-
+  // typical value across ANY variant (auto/no-auto, any parallel). Useful
+  // as a floor when even sibling parallels are thin.
+  rows = await queryPool(
+    container,
+    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.sport = @sport",
+    [
+      { name: "@y", value: parsed.year },
+      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+      { name: "@sport", value: parsed.sport },
+    ],
+    cutoffIso,
+  );
+  if (rows.length > 0) {
+    rows = filterByGrade(rows, gradeCompany, gradeValue);
+  }
+  if (rows.length > 0) {
+    return buildResult(slug, rows, "family-baseline",
+      `Estimated from ${rows.length} same-card sale${rows.length === 1 ? "" : "s"} across variants`,
+      confidenceForRung("family-baseline", rows.length),
+      input.previewLimit ?? 10, now);
+  }
+
+  return noBasis;
+}
+
+// Confidence per rung × sample size. Direct + big sample → 0.95;
+// family-baseline + 1 sample → 0.20. Callers can use this to render
+// a "high/medium/low confidence" pill on iOS.
+function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
+  const nBonus = Math.min(0.2, n / 100);      // saturating bonus for sample size
+  switch (rung) {
+    case "direct-slug":       return Math.min(0.95, 0.75 + nBonus);
+    case "cross-printrun":    return Math.min(0.75, 0.50 + nBonus);
+    case "sibling-parallel":  return Math.min(0.55, 0.35 + nBonus);
+    case "family-baseline":   return Math.min(0.40, 0.20 + nBonus);
+    case "no-basis":          return 0;
+  }
+}
+
+function buildResult(
+  slug: string,
+  rows: PoolRow[],
+  method: HobbyIqFmvMethod,
+  basisNote: string,
+  confidence: number,
+  previewLimit: number,
+  now: Date,
+): HobbyIqFmvResult {
   const prices = rows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0);
-  if (prices.length === 0) return emptyResult;
+  if (prices.length === 0) {
+    return {
+      slug, fmv: null, compCount: 0, min: null, max: null,
+      breakdown: { bySource: {}, byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 }, byGradeQualifier: {} },
+      trend: { direction: "flat", slopePerMonthPct: 0, method: "none" },
+      recentComps: [],
+      method: "no-basis",
+      basisNote: "No comparable sales",
+      confidence: 0,
+      computedAt: now.toISOString(),
+      cachedFrom: "sold_comps",
+    };
+  }
+
   const sortedPrices = [...prices].sort((a, b) => a - b);
   const median = sortedPrices[Math.floor(sortedPrices.length / 2)];
   const min = sortedPrices[0];
@@ -171,8 +340,6 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   }
 
   const trend = computeTrend(rows);
-
-  const previewLimit = input.previewLimit ?? 10;
   const recentComps: HobbyIqFmvComp[] = rows.slice(0, previewLimit).map((r) => ({
     price: Number(r.price),
     soldAt: r.soldAt,
@@ -192,14 +359,14 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     breakdown,
     trend,
     recentComps,
+    method,
+    basisNote,
+    confidence,
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
 }
 
-/** Trend estimation. n≥3 → OLS regression on (daysAgo, price); n<3 →
- *  anchor slope of last vs first divided by span. Sign convention:
- *  positive = appreciating. */
 function computeTrend(rows: Array<{ price: number; soldAt: string }>): HobbyIqFmvTrend {
   const points = rows
     .map((r) => ({ price: Number(r.price), t: Date.parse(r.soldAt) }))
@@ -208,10 +375,7 @@ function computeTrend(rows: Array<{ price: number; soldAt: string }>): HobbyIqFm
   if (points.length < 2) {
     return { direction: "flat", slopePerMonthPct: 0, method: "none" };
   }
-  const nowMs = Date.now();
   if (points.length >= 3) {
-    // OLS on price vs daysAgo (negative x = older). We're regressing
-    // price on days-forward from earliest so slope is $/day.
     const xs = points.map((p) => (p.t - points[0].t) / 86_400_000);
     const ys = points.map((p) => p.price);
     const meanX = xs.reduce((s, v) => s + v, 0) / xs.length;
@@ -226,7 +390,6 @@ function computeTrend(rows: Array<{ price: number; soldAt: string }>): HobbyIqFm
     const direction = slopePerMonthPct > 1 ? "up" : slopePerMonthPct < -1 ? "down" : "flat";
     return { direction, slopePerMonthPct, method: "regression" };
   }
-  // Two-point anchor slope
   const first = points[0], last = points[points.length - 1];
   const spanDays = (last.t - first.t) / 86_400_000;
   if (spanDays <= 0 || first.price <= 0) {
