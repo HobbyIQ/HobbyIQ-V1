@@ -22,6 +22,7 @@ import {
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { parseGradeLabel } from "./gradeParser.js";
 
 export interface VendorSaleRow {
   title: string | null;
@@ -126,6 +127,12 @@ export async function persistVendorSalesToPool(
       const sourceExternalId = row.externalId
         ?? (row.url ? createHash("sha256").update(source + ":" + row.url).digest("hex").slice(0, 24)
                     : createHash("sha256").update(source + ":" + title + price + soldAt).digest("hex").slice(0, 24));
+      // CF-GRADE-QUALIFIER (Drew, 2026-07-23, issue #713 phase 2):
+      // opportunistically extract grade + qualifier from the title.
+      // parseGradeLabel returns null on unparseable titles, which we
+      // treat as "raw / grade unknown" — the sold_comps schema tolerates
+      // null gradeCompany.
+      const gradeParsed = parseGradeLabel(title);
       const doc = {
         id: `${source}::${sourceExternalId}`,
         // Prefer the vendor's real cardId when known (CH path) so the
@@ -142,6 +149,9 @@ export async function persistVendorSalesToPool(
         parallel: parsed.parallel,
         isAuto: parsed.isAuto,
         printRun: parsed.printRun,
+        gradeCompany: gradeParsed?.gradeCompany ?? null,
+        gradeValue: gradeParsed?.gradeValue ?? null,
+        gradeQualifier: gradeParsed?.qualifier ?? null,
         price,
         soldAt: new Date(soldAt).toISOString(),
         source,

@@ -89,6 +89,16 @@ export interface SoldCompDoc {
   // emit paths from PortfolioHolding.gradeCompany / gradeValue.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-GRADE-QUALIFIER (Drew, 2026-07-23, issue #713 phase 2). PSA
+   *  qualifier flag on the sale — "OC" (off-center), "MK" (marks),
+   *  "ST" (stain), "PD" (print defect), "MC" (miscut), "OF" (out of
+   *  focus). Null when the sale is unqualified. Absent on pre-#713
+   *  docs; readers treat absent as null. Populated by parseGradeLabel
+   *  at emission sites (persistVendorSalesToPool, confirm, sell). The
+   *  FMV pipeline eventually applies a per-qualifier discount when
+   *  comparing qualified vs unqualified same-tier rows — that math is
+   *  the follow-up PR once calibration data lands. */
+  gradeQualifier?: string | null;
 
   // The sale itself
   price: number;
