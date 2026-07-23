@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { computeHobbyIqFmv } from "../src/services/portfolioiq/hobbyIqFmv.service.js";
 
 describe("computeHobbyIqFmv — envelope shape", () => {
-  it("empty slug → null FMV, zero compCount, envelope preserved", async () => {
+  it("empty slug → no-basis result, envelope preserved (including new ladder fields)", async () => {
     const r = await computeHobbyIqFmv({ hobbyiqCardId: "" });
     expect(r.slug).toBe("");
     expect(r.fmv).toBeNull();
@@ -18,6 +18,9 @@ describe("computeHobbyIqFmv — envelope shape", () => {
     expect(r.breakdown.byAutoStyle).toEqual({ onCard: 0, sticker: 0, unknown: 0 });
     expect(r.breakdown.byGradeQualifier).toEqual({});
     expect(r.trend).toEqual({ direction: "flat", slopePerMonthPct: 0, method: "none" });
+    expect(r.method).toBe("no-basis");
+    expect(r.confidence).toBe(0);
+    expect(typeof r.basisNote).toBe("string");
     expect(r.cachedFrom).toBe("sold_comps");
   });
 
