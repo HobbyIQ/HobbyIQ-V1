@@ -39,7 +39,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.25,
+          "medianRatio": 1.26,
           "sampleSize": 26
         },
         "9.5": {
@@ -59,7 +59,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 21
         },
         "10": {
-          "medianRatio": 4.39,
+          "medianRatio": 4.42,
           "sampleSize": 66
         }
       },
@@ -83,18 +83,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 264
         },
         "9": {
-          "medianRatio": 1.82,
-          "sampleSize": 1751
+          "medianRatio": 1.83,
+          "sampleSize": 1753
         },
         "10": {
-          "medianRatio": 5.13,
-          "sampleSize": 2715
+          "medianRatio": 5.12,
+          "sampleSize": 2721
         }
       },
-      "medianRatio": 3.47,
-      "p25": 1.79,
+      "medianRatio": 3.46,
+      "p25": 1.8,
       "p75": 7,
-      "sampleSize": 4784
+      "sampleSize": 4792
     },
     "SGC": {
       "byTier": {
@@ -104,17 +104,17 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         },
         "10": {
           "medianRatio": 4.21,
-          "sampleSize": 264
+          "sampleSize": 266
         },
         "9.5": {
-          "medianRatio": 2.62,
-          "sampleSize": 102
+          "medianRatio": 2.58,
+          "sampleSize": 103
         }
       },
       "medianRatio": 3.3,
-      "p25": 1.69,
+      "p25": 1.7,
       "p75": 5.89,
-      "sampleSize": 401
+      "sampleSize": 404
     },
     "TAG": {
       "medianRatio": 1.11,
@@ -151,28 +151,28 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "PSA": {
       "byTier": {
         "8": {
-          "medianRatio": 1.84,
-          "sampleSize": 108
+          "medianRatio": 1.85,
+          "sampleSize": 109
         },
         "9": {
           "medianRatio": 1.69,
-          "sampleSize": 811
+          "sampleSize": 814
         },
         "10": {
           "medianRatio": 4.42,
-          "sampleSize": 1247
+          "sampleSize": 1254
         }
       },
-      "medianRatio": 3.13,
+      "medianRatio": 3.11,
       "p25": 1.73,
-      "p75": 5.71,
-      "sampleSize": 2192
+      "p75": 5.68,
+      "sampleSize": 2203
     },
     "SGC": {
       "byTier": {
         "10": {
-          "medianRatio": 2.92,
-          "sampleSize": 92
+          "medianRatio": 2.9,
+          "sampleSize": 93
         },
         "9.5": {
           "medianRatio": 1.83,
@@ -182,7 +182,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "medianRatio": 2.57,
       "p25": 1.52,
       "p75": 4.51,
-      "sampleSize": 139
+      "sampleSize": 140
     }
   },
   "bowman-chrome-draft": {
@@ -193,7 +193,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 34
         },
         "10": {
-          "medianRatio": 5.23,
+          "medianRatio": 5.05,
           "sampleSize": 52
         }
       },
@@ -227,7 +227,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.33,
+          "medianRatio": 1.34,
           "sampleSize": 71
         },
         "10": {
@@ -251,7 +251,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 95
         },
         "10": {
-          "medianRatio": 5.78,
+          "medianRatio": 5.79,
           "sampleSize": 377
         }
       },
@@ -284,21 +284,21 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         },
         "8": {
           "medianRatio": 1.67,
-          "sampleSize": 1643
+          "sampleSize": 1644
         },
         "9": {
           "medianRatio": 2.43,
-          "sampleSize": 8322
+          "sampleSize": 8327
         },
         "10": {
-          "medianRatio": 7,
-          "sampleSize": 12094
+          "medianRatio": 6.99,
+          "sampleSize": 12108
         }
       },
       "medianRatio": 4.18,
-      "p25": 2.04,
+      "p25": 2.05,
       "p75": 8.79,
-      "sampleSize": 22486
+      "sampleSize": 22506
     },
     "SGC": {
       "byTier": {
@@ -307,18 +307,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 127
         },
         "10": {
-          "medianRatio": 4.56,
-          "sampleSize": 929
+          "medianRatio": 4.55,
+          "sampleSize": 932
         },
         "9.5": {
-          "medianRatio": 2.64,
-          "sampleSize": 385
+          "medianRatio": 2.63,
+          "sampleSize": 386
         }
       },
       "medianRatio": 3.34,
-      "p25": 1.86,
+      "p25": 1.87,
       "p75": 5.93,
-      "sampleSize": 1710
+      "sampleSize": 1714
     },
     "TAG": {
       "medianRatio": 2.33,
@@ -700,13 +700,13 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         },
         "10": {
           "medianRatio": 7.27,
-          "sampleSize": 1448
+          "sampleSize": 1449
         }
       },
-      "medianRatio": 4.38,
+      "medianRatio": 4.37,
       "p25": 2.13,
       "p75": 9.23,
-      "sampleSize": 2641
+      "sampleSize": 2642
     },
     "SGC": {
       "byTier": {
@@ -764,8 +764,8 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         }
       },
       "medianRatio": 4.97,
-      "p25": 2.4,
-      "p75": 11.15,
+      "p25": 2.39,
+      "p75": 11.21,
       "sampleSize": 539
     },
     "SGC": {
@@ -777,7 +777,7 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       },
       "medianRatio": 3.21,
       "p25": 1.6,
-      "p75": 5.9,
+      "p75": 5.88,
       "sampleSize": 41
     }
   },
@@ -1573,6 +1573,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   baseline: Record<string, Record<string, ValueBandTierEntry>>;
 } = { baseline: {
   "$1,000-2,499": {
+    "BGS 10": {
+      "gradedMedian": 5560,
+      "medianRatio": 3.1,
+      "p25": 1.85,
+      "p75": 6.33,
+      "rawMedian": 1795,
+      "sampleSize": 6
+    },
     "BGS 9.5": {
       "gradedMedian": 2250,
       "medianRatio": 1.52,
@@ -1589,6 +1597,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 1437.5,
       "sampleSize": 102
     },
+    "PSA 8": {
+      "gradedMedian": 1659.17,
+      "medianRatio": 1.02,
+      "p25": 0.85,
+      "p75": 1.07,
+      "rawMedian": 1870,
+      "sampleSize": 16
+    },
     "PSA 9": {
       "gradedMedian": 1616.88,
       "medianRatio": 1.08,
@@ -1596,38 +1612,110 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 1.3,
       "rawMedian": 1472.49,
       "sampleSize": 87
+    },
+    "SGC 10": {
+      "gradedMedian": 2027.5,
+      "medianRatio": 1.51,
+      "p25": 1,
+      "p75": 1.64,
+      "rawMedian": 1795,
+      "sampleSize": 11
+    },
+    "SGC 9.5": {
+      "gradedMedian": 1860.33,
+      "medianRatio": 0.8,
+      "p25": 0.6,
+      "p75": 1.04,
+      "rawMedian": 2025.69,
+      "sampleSize": 6
     }
   },
   "$100-249": {
+    "BGS 10": {
+      "gradedMedian": 752,
+      "medianRatio": 5.28,
+      "p25": 3.97,
+      "p75": 5.35,
+      "rawMedian": 140.63,
+      "sampleSize": 11
+    },
+    "BGS 8.5": {
+      "gradedMedian": 141.17,
+      "medianRatio": 0.9,
+      "p25": 0.84,
+      "p75": 1.06,
+      "rawMedian": 168.29,
+      "sampleSize": 7
+    },
     "BGS 9": {
       "gradedMedian": 170,
       "medianRatio": 1.18,
       "p25": 0.94,
-      "p75": 1.26,
+      "p75": 1.27,
       "rawMedian": 158.33,
       "sampleSize": 29
     },
     "BGS 9.5": {
-      "gradedMedian": 291.42,
-      "medianRatio": 1.8,
-      "p25": 1.25,
+      "gradedMedian": 291.43,
+      "medianRatio": 1.81,
+      "p25": 1.32,
       "p75": 2.22,
       "rawMedian": 159.14,
-      "sampleSize": 63
+      "sampleSize": 62
+    },
+    "CGC 10": {
+      "gradedMedian": 300,
+      "medianRatio": 1.81,
+      "p25": 1.51,
+      "p75": 1.99,
+      "rawMedian": 153.93,
+      "sampleSize": 17
+    },
+    "CGC 9": {
+      "gradedMedian": 177.58,
+      "medianRatio": 1.02,
+      "p25": 0.96,
+      "p75": 1.26,
+      "rawMedian": 168.29,
+      "sampleSize": 8
+    },
+    "CGC 9.5": {
+      "gradedMedian": 194.1,
+      "medianRatio": 1.38,
+      "p25": 1.19,
+      "p75": 1.62,
+      "rawMedian": 140.63,
+      "sampleSize": 8
     },
     "PSA 10": {
       "gradedMedian": 395.6,
       "medianRatio": 2.63,
       "p25": 1.99,
-      "p75": 3.54,
-      "rawMedian": 151.1,
-      "sampleSize": 1250
+      "p75": 3.53,
+      "rawMedian": 150.91,
+      "sampleSize": 1255
+    },
+    "PSA 5": {
+      "gradedMedian": 94.03,
+      "medianRatio": 0.75,
+      "p25": 0.71,
+      "p75": 0.77,
+      "rawMedian": 132.71,
+      "sampleSize": 8
+    },
+    "PSA 6": {
+      "gradedMedian": 105.61,
+      "medianRatio": 0.75,
+      "p25": 0.59,
+      "p75": 0.8,
+      "rawMedian": 142.24,
+      "sampleSize": 19
     },
     "PSA 7": {
       "gradedMedian": 115.7,
       "medianRatio": 0.79,
       "p25": 0.75,
-      "p75": 0.83,
+      "p75": 0.84,
       "rawMedian": 155.2,
       "sampleSize": 27
     },
@@ -1639,8 +1727,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 160.01,
       "sampleSize": 217
     },
+    "PSA 8.5": {
+      "gradedMedian": 104.5,
+      "medianRatio": 0.86,
+      "p25": 0.51,
+      "p75": 0.91,
+      "rawMedian": 131.81,
+      "sampleSize": 7
+    },
     "PSA 9": {
-      "gradedMedian": 180.72,
+      "gradedMedian": 181,
       "medianRatio": 1.18,
       "p25": 1.03,
       "p75": 1.34,
@@ -1652,8 +1748,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 1.88,
       "p25": 1.55,
       "p75": 2.31,
-      "rawMedian": 154.02,
+      "rawMedian": 153.93,
       "sampleSize": 80
+    },
+    "SGC 8.5": {
+      "gradedMedian": 95.98,
+      "medianRatio": 0.76,
+      "p25": 0.57,
+      "p75": 0.88,
+      "rawMedian": 153.93,
+      "sampleSize": 10
     },
     "SGC 9": {
       "gradedMedian": 161,
@@ -1670,6 +1774,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 1.44,
       "rawMedian": 159.14,
       "sampleSize": 55
+    },
+    "TAG 10": {
+      "gradedMedian": 415.67,
+      "medianRatio": 2.96,
+      "p25": 2.67,
+      "p75": 3.13,
+      "rawMedian": 140.63,
+      "sampleSize": 8
     }
   },
   "$2,500-4,999": {
@@ -1680,9 +1792,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 2.64,
       "rawMedian": 3156,
       "sampleSize": 20
+    },
+    "PSA 9": {
+      "gradedMedian": 4850.33,
+      "medianRatio": 1.25,
+      "p25": 1.17,
+      "p75": 1.28,
+      "rawMedian": 4151.82,
+      "sampleSize": 11
     }
   },
   "$25-49": {
+    "BGS 10": {
+      "gradedMedian": 98.25,
+      "medianRatio": 3.34,
+      "p25": 3.34,
+      "p75": 3.46,
+      "rawMedian": 27.74,
+      "sampleSize": 7
+    },
+    "BGS 9": {
+      "gradedMedian": 35.99,
+      "medianRatio": 1.31,
+      "p25": 1.12,
+      "p75": 1.45,
+      "rawMedian": 31.64,
+      "sampleSize": 13
+    },
     "BGS 9.5": {
       "gradedMedian": 84.33,
       "medianRatio": 2.49,
@@ -1691,13 +1827,37 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 42.55,
       "sampleSize": 31
     },
+    "CGC 10": {
+      "gradedMedian": 136.63,
+      "medianRatio": 2.89,
+      "p25": 2.05,
+      "p75": 5.49,
+      "rawMedian": 31.72,
+      "sampleSize": 10
+    },
+    "CGC 9": {
+      "gradedMedian": 27.77,
+      "medianRatio": 1.1,
+      "p25": 1.08,
+      "p75": 1.19,
+      "rawMedian": 26.81,
+      "sampleSize": 10
+    },
     "PSA 10": {
-      "gradedMedian": 147.91,
+      "gradedMedian": 147.92,
       "medianRatio": 4.18,
-      "p25": 3,
+      "p25": 3.01,
       "p75": 5.79,
       "rawMedian": 35.25,
-      "sampleSize": 1422
+      "sampleSize": 1424
+    },
+    "PSA 6": {
+      "gradedMedian": 20.21,
+      "medianRatio": 0.63,
+      "p25": 0.61,
+      "p75": 0.88,
+      "rawMedian": 32.14,
+      "sampleSize": 12
     },
     "PSA 7": {
       "gradedMedian": 27.25,
@@ -1716,12 +1876,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 218
     },
     "PSA 9": {
-      "gradedMedian": 53.76,
+      "gradedMedian": 54,
       "medianRatio": 1.54,
       "p25": 1.25,
       "p75": 1.89,
       "rawMedian": 35.05,
-      "sampleSize": 1112
+      "sampleSize": 1110
     },
     "SGC 10": {
       "gradedMedian": 89,
@@ -1730,6 +1890,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 3.21,
       "rawMedian": 33.77,
       "sampleSize": 60
+    },
+    "SGC 9": {
+      "gradedMedian": 40.45,
+      "medianRatio": 1.3,
+      "p25": 1,
+      "p75": 1.58,
+      "rawMedian": 32.14,
+      "sampleSize": 15
     },
     "SGC 9.5": {
       "gradedMedian": 50.31,
@@ -1741,6 +1909,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     }
   },
   "$250-499": {
+    "BGS 10": {
+      "gradedMedian": 1122.57,
+      "medianRatio": 2.99,
+      "p25": 2.86,
+      "p75": 3.56,
+      "rawMedian": 385.69,
+      "sampleSize": 13
+    },
+    "BGS 9": {
+      "gradedMedian": 359.67,
+      "medianRatio": 1.02,
+      "p25": 0.93,
+      "p75": 1.18,
+      "rawMedian": 483.97,
+      "sampleSize": 12
+    },
     "BGS 9.5": {
       "gradedMedian": 544.5,
       "medianRatio": 1.61,
@@ -1749,20 +1933,36 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 365.71,
       "sampleSize": 28
     },
+    "CGC 10": {
+      "gradedMedian": 648.67,
+      "medianRatio": 1.43,
+      "p25": 1.43,
+      "p75": 1.64,
+      "rawMedian": 395.8,
+      "sampleSize": 8
+    },
     "PSA 10": {
       "gradedMedian": 777.17,
       "medianRatio": 2.26,
       "p25": 1.76,
       "p75": 3.03,
       "rawMedian": 339.45,
-      "sampleSize": 596
+      "sampleSize": 598
+    },
+    "PSA 7": {
+      "gradedMedian": 194.5,
+      "medianRatio": 0.74,
+      "p25": 0.74,
+      "p75": 0.86,
+      "rawMedian": 264.18,
+      "sampleSize": 5
     },
     "PSA 8": {
       "gradedMedian": 293.83,
       "medianRatio": 0.87,
       "p25": 0.8,
       "p75": 0.95,
-      "rawMedian": 350.97,
+      "rawMedian": 350.96,
       "sampleSize": 72
     },
     "PSA 9": {
@@ -1773,6 +1973,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 349.5,
       "sampleSize": 556
     },
+    "SGC 10": {
+      "gradedMedian": 548.15,
+      "medianRatio": 1.64,
+      "p25": 1.38,
+      "p75": 2.14,
+      "rawMedian": 345.37,
+      "sampleSize": 18
+    },
+    "SGC 9": {
+      "gradedMedian": 316.98,
+      "medianRatio": 1.09,
+      "p25": 0.81,
+      "p75": 1.1,
+      "rawMedian": 366.15,
+      "sampleSize": 14
+    },
     "SGC 9.5": {
       "gradedMedian": 468.99,
       "medianRatio": 1.07,
@@ -1782,22 +1998,80 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 22
     }
   },
+  "$5,000-9,999": {
+    "PSA 10": {
+      "gradedMedian": 15000,
+      "medianRatio": 2.41,
+      "p25": 1.72,
+      "p75": 3.11,
+      "rawMedian": 6303.38,
+      "sampleSize": 10
+    },
+    "PSA 9": {
+      "gradedMedian": 10308.14,
+      "medianRatio": 1.48,
+      "p25": 1.35,
+      "p75": 2.06,
+      "rawMedian": 8927.75,
+      "sampleSize": 8
+    }
+  },
   "$50-99": {
+    "BGS 9": {
+      "gradedMedian": 113.99,
+      "medianRatio": 1.53,
+      "p25": 1.29,
+      "p75": 1.57,
+      "rawMedian": 88.34,
+      "sampleSize": 9
+    },
     "BGS 9.5": {
       "gradedMedian": 154.5,
       "medianRatio": 2.04,
       "p25": 1.63,
       "p75": 2.49,
-      "rawMedian": 70.67,
-      "sampleSize": 27
+      "rawMedian": 75.96,
+      "sampleSize": 28
+    },
+    "CGC 10": {
+      "gradedMedian": 167.5,
+      "medianRatio": 2.09,
+      "p25": 1.77,
+      "p75": 2.64,
+      "rawMedian": 81.84,
+      "sampleSize": 16
+    },
+    "CGC 9": {
+      "gradedMedian": 85,
+      "medianRatio": 0.96,
+      "p25": 0.92,
+      "p75": 1.11,
+      "rawMedian": 90.37,
+      "sampleSize": 10
     },
     "PSA 10": {
       "gradedMedian": 226.25,
-      "medianRatio": 3.25,
+      "medianRatio": 3.24,
       "p25": 2.44,
       "p75": 4.57,
       "rawMedian": 68,
-      "sampleSize": 1181
+      "sampleSize": 1183
+    },
+    "PSA 6": {
+      "gradedMedian": 68,
+      "medianRatio": 1,
+      "p25": 0.78,
+      "p75": 1,
+      "rawMedian": 77.19,
+      "sampleSize": 6
+    },
+    "PSA 7": {
+      "gradedMedian": 58.58,
+      "medianRatio": 0.85,
+      "p25": 0.66,
+      "p75": 0.99,
+      "rawMedian": 72.42,
+      "sampleSize": 15
     },
     "PSA 8": {
       "gradedMedian": 65,
@@ -1813,7 +2087,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p25": 1.13,
       "p75": 1.61,
       "rawMedian": 69.21,
-      "sampleSize": 979
+      "sampleSize": 980
     },
     "SGC 10": {
       "gradedMedian": 153.28,
@@ -1821,7 +2095,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p25": 1.46,
       "p75": 2.69,
       "rawMedian": 72.28,
-      "sampleSize": 79
+      "sampleSize": 80
+    },
+    "SGC 9": {
+      "gradedMedian": 83,
+      "medianRatio": 1.23,
+      "p25": 0.94,
+      "p75": 1.37,
+      "rawMedian": 82.88,
+      "sampleSize": 18
     },
     "SGC 9.5": {
       "gradedMedian": 122.5,
@@ -1833,13 +2115,29 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     }
   },
   "$500-999": {
+    "BGS 9.5": {
+      "gradedMedian": 885.76,
+      "medianRatio": 1.57,
+      "p25": 1.26,
+      "p75": 1.84,
+      "rawMedian": 580,
+      "sampleSize": 16
+    },
     "PSA 10": {
       "gradedMedian": 1546.83,
       "medianRatio": 2.42,
       "p25": 1.91,
       "p75": 2.98,
       "rawMedian": 629.99,
-      "sampleSize": 248
+      "sampleSize": 247
+    },
+    "PSA 7": {
+      "gradedMedian": 506.89,
+      "medianRatio": 0.68,
+      "p25": 0.68,
+      "p75": 0.68,
+      "rawMedian": 566.12,
+      "sampleSize": 5
     },
     "PSA 8": {
       "gradedMedian": 571.44,
@@ -1856,6 +2154,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 1.34,
       "rawMedian": 625,
       "sampleSize": 214
+    },
+    "SGC 10": {
+      "gradedMedian": 1095,
+      "medianRatio": 1.84,
+      "p25": 1.73,
+      "p75": 1.88,
+      "rawMedian": 631.43,
+      "sampleSize": 9
+    },
+    "SGC 9.5": {
+      "gradedMedian": 530.18,
+      "medianRatio": 0.99,
+      "p25": 0.94,
+      "p75": 1.25,
+      "rawMedian": 567.1,
+      "sampleSize": 6
     }
   },
   "Under $25": {
@@ -1866,6 +2180,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p75": 9.69,
       "rawMedian": 8.06,
       "sampleSize": 56
+    },
+    "BGS 8.5": {
+      "gradedMedian": 11.86,
+      "medianRatio": 2.04,
+      "p25": 0.89,
+      "p75": 3.52,
+      "rawMedian": 10.14,
+      "sampleSize": 6
     },
     "BGS 9": {
       "gradedMedian": 13.9,
@@ -1899,6 +2221,30 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 2.96,
       "sampleSize": 46
     },
+    "CGC 7": {
+      "gradedMedian": 14.75,
+      "medianRatio": 7.63,
+      "p25": 1.11,
+      "p75": 7.63,
+      "rawMedian": 1.93,
+      "sampleSize": 5
+    },
+    "CGC 8": {
+      "gradedMedian": 8.5,
+      "medianRatio": 2.82,
+      "p25": 0.97,
+      "p75": 4.79,
+      "rawMedian": 3.02,
+      "sampleSize": 16
+    },
+    "CGC 8.5": {
+      "gradedMedian": 7.5,
+      "medianRatio": 1.76,
+      "p25": 0.76,
+      "p75": 6.61,
+      "rawMedian": 4.26,
+      "sampleSize": 11
+    },
     "CGC 9": {
       "gradedMedian": 12.87,
       "medianRatio": 2.72,
@@ -1915,17 +2261,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "rawMedian": 2.79,
       "sampleSize": 56
     },
+    "HGA 9": {
+      "gradedMedian": 13.48,
+      "medianRatio": 1.28,
+      "p25": 0.99,
+      "p75": 5.51,
+      "rawMedian": 3.82,
+      "sampleSize": 6
+    },
+    "HGA 9.5": {
+      "gradedMedian": 6.5,
+      "medianRatio": 2.33,
+      "p25": 1.66,
+      "p75": 2.33,
+      "rawMedian": 2.79,
+      "sampleSize": 5
+    },
     "PSA 10": {
       "gradedMedian": 50,
       "medianRatio": 10.53,
       "p25": 6.45,
       "p75": 17.09,
-      "rawMedian": 4.37,
-      "sampleSize": 9691
+      "rawMedian": 4.38,
+      "sampleSize": 9695
+    },
+    "PSA 5": {
+      "gradedMedian": 12.13,
+      "medianRatio": 1.28,
+      "p25": 1.18,
+      "p75": 3.95,
+      "rawMedian": 2.02,
+      "sampleSize": 9
     },
     "PSA 6": {
       "gradedMedian": 9.62,
-      "medianRatio": 1.62,
+      "medianRatio": 1.63,
       "p25": 1.09,
       "p75": 2.44,
       "rawMedian": 5.64,
@@ -1935,7 +2305,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "gradedMedian": 13.25,
       "medianRatio": 1.92,
       "p25": 1.18,
-      "p75": 3.51,
+      "p75": 3.52,
       "rawMedian": 6.81,
       "sampleSize": 145
     },
@@ -1945,15 +2315,23 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p25": 1.59,
       "p75": 4.29,
       "rawMedian": 5.42,
-      "sampleSize": 1269
+      "sampleSize": 1270
+    },
+    "PSA 8.5": {
+      "gradedMedian": 8.9,
+      "medianRatio": 5.63,
+      "p25": 1.14,
+      "p75": 6.9,
+      "rawMedian": 1.81,
+      "sampleSize": 5
     },
     "PSA 9": {
       "gradedMedian": 22.25,
       "medianRatio": 3.89,
-      "p25": 2.44,
+      "p25": 2.43,
       "p75": 6.4,
       "rawMedian": 5.05,
-      "sampleSize": 6094
+      "sampleSize": 6100
     },
     "SGC 10": {
       "gradedMedian": 23.25,
@@ -1961,7 +2339,23 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p25": 3.64,
       "p75": 8.49,
       "rawMedian": 3.82,
-      "sampleSize": 825
+      "sampleSize": 826
+    },
+    "SGC 8": {
+      "gradedMedian": 17.25,
+      "medianRatio": 2.9,
+      "p25": 1.17,
+      "p75": 3.35,
+      "rawMedian": 14.73,
+      "sampleSize": 6
+    },
+    "SGC 8.5": {
+      "gradedMedian": 12,
+      "medianRatio": 1.25,
+      "p25": 1.17,
+      "p75": 2.44,
+      "rawMedian": 7.57,
+      "sampleSize": 15
     },
     "SGC 9": {
       "gradedMedian": 15.75,
@@ -1973,11 +2367,35 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "SGC 9.5": {
       "gradedMedian": 15.5,
-      "medianRatio": 3.64,
+      "medianRatio": 3.63,
       "p25": 2.57,
       "p75": 5.06,
-      "rawMedian": 4.33,
-      "sampleSize": 334
+      "rawMedian": 4.32,
+      "sampleSize": 335
+    },
+    "TAG 10": {
+      "gradedMedian": 61.33,
+      "medianRatio": 14.02,
+      "p25": 9.59,
+      "p75": 16.67,
+      "rawMedian": 2.5,
+      "sampleSize": 7
+    },
+    "TAG 7.5": {
+      "gradedMedian": 8.78,
+      "medianRatio": 1.17,
+      "p25": 0.73,
+      "p75": 1.17,
+      "rawMedian": 7.55,
+      "sampleSize": 6
+    },
+    "TAG 9": {
+      "gradedMedian": 35.25,
+      "medianRatio": 2.04,
+      "p25": 1.91,
+      "p75": 2.5,
+      "rawMedian": 17.26,
+      "sampleSize": 8
     }
   }
 } };
