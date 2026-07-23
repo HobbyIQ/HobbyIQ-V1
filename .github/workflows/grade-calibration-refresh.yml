@@ -88,35 +88,13 @@ jobs:
           cp backend/src/services/compiq/gradeCalibrationData.ts \
              /tmp/gradeCalibrationData.previous.ts || true
 
-      # CF-BURST-COSMOS-DURING-REFRESH (Drew, 2026-07-22). ch_daily_sales
-      # sits at the 400 RU/s minimum for cost efficiency. The calibration
-      # script's GROUP BY queries need ~50× that to run without constant
-      # 429 backoff. Burst throughput at start, drop back at end via the
-      # always-run scale-down step below. Cost per Refresh: ~$1.60 for
-      # ~1 hour at 20,000 RU/s vs the $23/mo baseline.
-      #
-      # Record the baseline throughput so the scale-down step restores
-      # it exactly (rather than assuming 400 — future me might have
-      # bumped the baseline).
-      - name: Capture baseline throughput + burst ch_daily_sales to 20,000 RU/s
-        id: burst
-        run: |
-          BASELINE=$(az cosmosdb sql container throughput show \
-            --account-name hobbyiq-comps \
-            --resource-group rg-hobbyiq-dev \
-            --database-name hobbyiq \
-            --name ch_daily_sales \
-            --query "resource.throughput" -o tsv)
-          echo "baseline=$BASELINE" >> "$GITHUB_OUTPUT"
-          echo "Baseline throughput: $BASELINE RU/s"
-          az cosmosdb sql container throughput update \
-            --account-name hobbyiq-comps \
-            --resource-group rg-hobbyiq-dev \
-            --database-name hobbyiq \
-            --name ch_daily_sales \
-            --throughput 20000 \
-            --output none
-          echo "Burst to 20,000 RU/s complete"
+      # CF-BURST-COSMOS-DEFERRED (Drew, 2026-07-23). PR #699's burst
+      # step was removed because the GH Actions service principal
+      # lacks Cosmos DB IAM permissions. Restore this step once the
+      # `Cosmos DB Operator` role is granted to the GH Actions identity
+      # (object id aa4f53c7-02e0-43cd-a19c-b5dec1639cb7). Until then,
+      # Refresh runs at the 400 RU/s baseline and takes ~50 min instead
+      # of ~10, but succeeds without IAM changes.
 
       - name: Run calibration script
         env:
@@ -206,26 +184,6 @@ jobs:
         run: |
           echo "No calibration changes this week. Pool is stable — well-covered families."
 
-      # CF-BURST-COSMOS-DURING-REFRESH — CRITICAL: scale down ALWAYS runs.
-      # If we skip this (script crashed, timeout, whatever), ch_daily_sales
-      # stays burst-provisioned at $23/mo × 50 = ~$1,150/mo overspend
-      # until someone notices. Guardrails:
-      #   1. `if: always()` — runs on success, failure, cancellation
-      #   2. Restores to the exact throughput captured at burst time
-      #   3. Falls back to 400 if the baseline output is missing
-      - name: Restore ch_daily_sales baseline throughput (always)
-        if: always()
-        run: |
-          BASELINE="${{ steps.burst.outputs.baseline }}"
-          if [ -z "$BASELINE" ] || [ "$BASELINE" = "null" ]; then
-            echo "::warning::baseline throughput not captured; falling back to 400"
-            BASELINE=400
-          fi
-          az cosmosdb sql container throughput update \
-            --account-name hobbyiq-comps \
-            --resource-group rg-hobbyiq-dev \
-            --database-name hobbyiq \
-            --name ch_daily_sales \
-            --throughput "$BASELINE" \
-            --output none
-          echo "Restored ch_daily_sales throughput to $BASELINE RU/s"
+      # CF-BURST-COSMOS-DEFERRED (Drew, 2026-07-23). Scale-down step
+      # removed together with the burst step above. Restore both when
+      # the GH Actions identity gets Cosmos DB Operator role.
