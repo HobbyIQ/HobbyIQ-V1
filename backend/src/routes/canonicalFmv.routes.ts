@@ -26,6 +26,7 @@ import { requireSession } from "../middleware/requireSession.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
 import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
+import { canonicalCardSearch } from "../services/portfolioiq/canonicalCardSearch.service.js";
 
 const router = Router();
 
@@ -142,6 +143,25 @@ router.post("/canonical-fmv", requireSession, async (req: Request, res: Response
       player: typeof req.body?.player === "string" ? req.body.player : null,
       cardNumber: typeof req.body?.cardNumber === "string" ? req.body.cardNumber : null,
       freshCompute: req.body?.freshCompute === true,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// CF-CANONICAL-CARD-SEARCH (Drew, 2026-07-24). Free-text card search
+// over card_catalog. Handles "hartman blue auto bowman"-style queries.
+// Response includes hobbyiqCardId + recent sale image + FMV median.
+router.post("/search", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const q = String(req.body?.q ?? "").trim();
+    if (!q) {
+      res.status(400).json({ success: false, error: "q is required" });
+      return;
+    }
+    const result = await canonicalCardSearch({
+      q,
+      sport: typeof req.body?.sport === "string" ? req.body.sport : "baseball",
+      limit: Number.isFinite(Number(req.body?.limit)) ? Number(req.body.limit) : 20,
     });
     res.json(result);
   } catch (err) { next(err); }
