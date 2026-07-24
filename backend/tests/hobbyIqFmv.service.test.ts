@@ -21,6 +21,7 @@ describe("computeHobbyIqFmv — envelope shape", () => {
     expect(r.method).toBe("no-basis");
     expect(r.confidence).toBe(0);
     expect(typeof r.basisNote).toBe("string");
+    expect(r.population).toBeNull();
     expect(r.cachedFrom).toBe("sold_comps");
   });
 

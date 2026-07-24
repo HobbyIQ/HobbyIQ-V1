@@ -17,6 +17,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 
 export interface HobbyIqFmvInput {
   hobbyiqCardId: string;              // canonical slug (hiq:sport:year:...)
@@ -77,6 +78,13 @@ export interface HobbyIqFmvResult {
   method: HobbyIqFmvMethod;
   basisNote: string;
   confidence: number;      // 0.0-1.0
+  /** CF-HOBBYIQ-FMV-POPULATION (Drew, 2026-07-24). Per-grader graded
+   *  population for the resolved card identity. Present when card_population
+   *  has data for this card; null when the fill hasn't reached it yet or
+   *  Cardsight has no pop data for the SKU. iOS renders a scarcity badge
+   *  (e.g. "PSA10 pop 47"). NOT yet used in fmv math — that comes with
+   *  scarcity multiplier calibration in a follow-up. */
+  population: CardPopulationLookup | null;
   computedAt: string;
   cachedFrom: "sold_comps";
 }
@@ -175,6 +183,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     method: "no-basis",
     basisNote: "No comparable sales in the last 180 days",
     confidence: 0,
+    population: null,
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
@@ -186,6 +195,11 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
 
   const parsed = parseHobbyIqCardId(slug);
   if (!parsed) return noBasis;
+
+  // Fire the population lookup in parallel with the first ladder rung. It
+  // reads OUR containers (card_catalog → card_population) so it's cheap;
+  // running it concurrently with the pool queries hides its latency.
+  const populationPromise = loadPopulationForSlug(slug).catch(() => null);
 
   const maxAgeDays = input.maxAgeDays ?? 180;
   const cutoffIso = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
@@ -204,7 +218,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "direct-slug",
       `Direct match: ${rows.length} sale${rows.length === 1 ? "" : "s"} of this exact card`,
       confidenceForRung("direct-slug", rows.length),
-      input.previewLimit ?? 10, now);
+      input.previewLimit ?? 10, now, await populationPromise);
   }
 
   // ─── Rung 2: same identity ignoring printRun ────────────────────────
@@ -225,7 +239,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       return buildResult(slug, rows, "cross-printrun",
         `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of the same card at other print runs`,
         confidenceForRung("cross-printrun", rows.length),
-        input.previewLimit ?? 10, now);
+        input.previewLimit ?? 10, now, await populationPromise);
     }
   }
 
@@ -254,7 +268,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       return buildResult(slug, rows, "same-printrun-cross-parallel",
         `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of same-print-run variants (/${parsed.printRun})`,
         confidenceForRung("same-printrun-cross-parallel", rows.length),
-        input.previewLimit ?? 10, now);
+        input.previewLimit ?? 10, now, await populationPromise);
     }
   }
 
@@ -280,7 +294,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "sibling-parallel",
       `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
       confidenceForRung("sibling-parallel", rows.length),
-      input.previewLimit ?? 10, now);
+      input.previewLimit ?? 10, now, await populationPromise);
   }
 
   // ─── Rung 4: family-baseline — same year + cardNumber, any variant ───
@@ -304,10 +318,11 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "family-baseline",
       `Estimated from ${rows.length} same-card sale${rows.length === 1 ? "" : "s"} across variants`,
       confidenceForRung("family-baseline", rows.length),
-      input.previewLimit ?? 10, now);
+      input.previewLimit ?? 10, now, await populationPromise);
   }
 
-  return noBasis;
+  const population = await populationPromise;
+  return { ...noBasis, population };
 }
 
 // Confidence per rung × sample size. Direct + big sample → 0.95;
@@ -333,6 +348,7 @@ function buildResult(
   confidence: number,
   previewLimit: number,
   now: Date,
+  population: CardPopulationLookup | null,
 ): HobbyIqFmvResult {
   const prices = rows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0);
   if (prices.length === 0) {
@@ -344,6 +360,7 @@ function buildResult(
       method: "no-basis",
       basisNote: "No comparable sales",
       confidence: 0,
+      population,
       computedAt: now.toISOString(),
       cachedFrom: "sold_comps",
     };
@@ -391,6 +408,7 @@ function buildResult(
     method,
     basisNote,
     confidence,
+    population,
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
