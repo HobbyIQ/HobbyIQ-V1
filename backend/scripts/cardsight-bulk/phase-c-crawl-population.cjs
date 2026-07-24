@@ -108,8 +108,12 @@ async function runCardLevel(sport, year, cap, dryRun) {
     if (progress.done[c.cardId]) continue;
     try {
       const resp = await csFetch(`/population/card/${c.cardId}`, { timeoutMs: 20_000 });
-      const companies = resp?.grading_companies || resp?.aggregated_populations || [];
-      for (const co of companies) {
+      // Per OpenAPI CardPopulationResponse: top-level fields are
+      // { card_id, card_name, total_population, base, parallels[] }.
+      // Grading company breakdowns live under resp.base.grading_companies
+      // (base variant) and under each parallel's grading_companies.
+      const baseCompanies = resp?.base?.grading_companies || [];
+      for (const co of baseCompanies) {
         const doc = {
           id: `card::${c.cardId}::${co.id}`,
           cardId: c.cardId,
@@ -120,12 +124,18 @@ async function runCardLevel(sport, year, cap, dryRun) {
           player: c.player,
           releaseId: c.releaseId,
           level: "card",
+          variantLevel: "base",
           gradingCompanyId: co.id,
           gradingCompanyName: co.name,
           lastSyncedAt: co.last_synced_at || null,
           totalPopulation: co.total_population || 0,
-          basePopulation: resp?.base || null,
-          parallelPopulations: resp?.parallels || [],
+          basePopulation: resp?.base?.total_population ?? null,
+          totalPopulationAllCompanies: resp?.total_population ?? null,
+          parallelPopulations: (resp?.parallels || []).map((p) => ({
+            id: p.id,
+            name: p.name,
+            totalPopulation: p.total_population,
+          })),
           gradingTypes: co.grading_types || [],
           contentHash: contentHashOf(c.cardId, co.id, co.total_population, co.last_synced_at),
           bulkCrawledAt: nowIso(),
@@ -133,7 +143,7 @@ async function runCardLevel(sport, year, cap, dryRun) {
         if (!dryRun) { try { await container.items.upsert(doc); } catch (e) { console.warn(`  upsert fail: ${e.message}`); } }
         docCount++;
       }
-      progress.done[c.cardId] = { companies: companies.length, at: nowIso() };
+      progress.done[c.cardId] = { companies: baseCompanies.length, at: nowIso() };
     } catch (e) {
       progress.done[c.cardId] = { error: e.message, at: nowIso() };
     }
