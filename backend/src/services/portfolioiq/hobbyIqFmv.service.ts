@@ -494,10 +494,34 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // Rescues thin-market PSA10 auto lookups where raw comps exist. Explicit
   // confidence dip because the number is derived, not observed.
   if (gradeCompany && gradeValue !== null && gradeValue !== undefined) {
+    // Walk raw rungs from most-specific to broadest. For numbered cards
+    // (target has printRun), same-printrun-cross-parallel raw is
+    // critical — keeps the /50 tier (e.g. Gold Wave $875 for CPA-GW /50
+    // auto) intact instead of falling to sibling-parallel which dilutes
+    // with unnumbered base autos.
     const rawRungs: Array<{ where: string; params: Array<{ name: string; value: string | number | boolean | null }>; method: HobbyIqFmvMethod; note: (n: number) => string }> = [
       { where: "c.hobbyiqCardId = @slug", params: [{ name: "@slug", value: slug }], method: "direct-slug", note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of this exact card × ${gradeCompany} ${gradeValue} multiplier` },
-      { where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport", params: [{ name: "@y", value: parsed.year }, { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() }, { name: "@auto", value: parsed.isAuto }, { name: "@sport", value: parsed.sport }], method: "sibling-parallel", note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of sibling parallels × ${gradeCompany} ${gradeValue} multiplier` },
     ];
+    if (parsed.printRun !== null && parsed.printRun !== undefined) {
+      rawRungs.push({
+        where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND c.printRun = @pr",
+        params: [
+          { name: "@y", value: parsed.year },
+          { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+          { name: "@auto", value: parsed.isAuto },
+          { name: "@sport", value: parsed.sport },
+          { name: "@pr", value: parsed.printRun },
+        ],
+        method: "same-printrun-cross-parallel",
+        note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of same-print-run variants (/${parsed.printRun}) × ${gradeCompany} ${gradeValue} multiplier`,
+      });
+    }
+    rawRungs.push({
+      where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+      params: [{ name: "@y", value: parsed.year }, { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() }, { name: "@auto", value: parsed.isAuto }, { name: "@sport", value: parsed.sport }],
+      method: "sibling-parallel",
+      note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of sibling parallels × ${gradeCompany} ${gradeValue} multiplier`,
+    });
     for (const rung of rawRungs) {
       let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso);
       rawRows = filterByGrade(rawRows, null, null);   // raw only
