@@ -18,6 +18,14 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
+import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
+
+// CF-HOBBYIQ-FMV-EXCLUDE-USER-PURCHASE (Drew, 2026-07-24). Comps with
+// source="ebay-user-purchase" are user cost-basis imports, NOT open-market
+// sales. Including them in the FMV pool causes "FMV = purchase price"
+// for cards where a single user's import is the only comp. Filter them
+// out at the SQL layer so no rung ever sees them.
+const EXCLUDED_SOURCES = ["ebay-user-purchase"];
 
 export interface HobbyIqFmvInput {
   hobbyiqCardId: string;              // canonical slug (hiq:sport:year:...)
@@ -60,8 +68,10 @@ export type HobbyIqFmvMethod =
   | "direct-slug"                // exact slug + grade match (highest confidence)
   | "cross-printrun"             // same identity ignoring printRun (specific variants exist, this one doesn't)
   | "same-printrun-cross-parallel" // same cardNumber + auto + printRun, other parallels (best sibling for numbered cards)
+  | "printrun-discovery"         // target has no printRun; find the DOMINANT printRun for this identity and use it
   | "sibling-parallel"           // same cardNumber + auto, different parallels (all variants of the same card)
   | "family-baseline"            // same year + cardNumber, any variant (broadest same-card fallback)
+  | "grade-cross-raw"            // grade requested but no graded comps at any rung; raw median × graded multiplier
   | "no-basis";                  // truly nothing — should be rare after the ladder
 
 export interface HobbyIqFmvResult {
@@ -131,11 +141,12 @@ async function queryPool(
     { name: "@from", value: cutoffIso },
   ];
   try {
+    const excludedList = EXCLUDED_SOURCES.map((s) => `'${s}'`).join(", ");
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue
               FROM c
-              WHERE ${whereClause} AND c.soldAt > @from
+              WHERE ${whereClause} AND c.soldAt > @from AND c.source NOT IN (${excludedList})
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }).fetchAll();
@@ -272,10 +283,56 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     }
   }
 
-  // ─── Rung 4: sibling-parallel — same cardNumber + auto, ANY parallel ─
+  // ─── Rung 4 (NEW): printrun-discovery ─────────────────────────────
+  // Fires when the target slug has NO printRun (Drew's holding data
+  // often lacks the /N tag even for numbered variants). Finds the
+  // DOMINANT printRun in the pool for this identity — same cardNumber
+  // + parallel + auto — and uses that pool's median. Rescues cases
+  // where Ingest split the same physical /150 card across a "/150"-
+  // tagged pool and a "no-printRun" ghost pool depending on whether
+  // the listing title spelled out the run.
+  if (parsed.printRun === null || parsed.printRun === undefined) {
+    rows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.parallel = @par AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@par", value: parsed.parallel },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+      ],
+      cutoffIso,
+    );
+    if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
+    if (rows.length >= 3) {
+      // Group by printRun, pick the pool with the most sales (that's
+      // the market's dominant SKU for this identity).
+      const byRun = new Map<number, PoolRow[]>();
+      for (const r of rows) {
+        const pr = Number(r.printRun);
+        if (!Number.isFinite(pr)) continue;
+        if (!byRun.has(pr)) byRun.set(pr, []);
+        byRun.get(pr)!.push(r);
+      }
+      let bestRun: number | null = null;
+      let bestPool: PoolRow[] = [];
+      for (const [pr, pool] of byRun.entries()) {
+        if (pool.length > bestPool.length) { bestRun = pr; bestPool = pool; }
+      }
+      if (bestPool.length >= 3) {
+        return buildResult(slug, bestPool, "printrun-discovery",
+          `Estimated from ${bestPool.length} sale${bestPool.length === 1 ? "" : "s"} of the /${bestRun} print-run variant (dominant SKU at this identity)`,
+          confidenceForRung("printrun-discovery", bestPool.length),
+          input.previewLimit ?? 10, now, await populationPromise);
+      }
+    }
+  }
+
+  // ─── Rung 5: sibling-parallel — same cardNumber + auto, ANY parallel ─
   // Same year+cardNumber+auto flag, any parallel + print run. Broader
-  // than rung 3 — includes Base autos and other print runs. Fires when
-  // rung 3 was empty (or slug had no print run).
+  // than rung 4 — includes Base autos and other print runs. Fires when
+  // rung 4 was empty (or slug had a print run).
   rows = await queryPool(
     container,
     "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
@@ -321,6 +378,38 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       input.previewLimit ?? 10, now, await populationPromise);
   }
 
+  // ─── Rung 7 (NEW): grade-cross-raw ───────────────────────────────────
+  // Grade was requested but no graded comps at ANY rung. Fall back to raw
+  // comps at the same identity (walk the same ladder without the grade
+  // filter) and apply the observed graded multiplier from GRADE_CALIBRATION.
+  // Rescues thin-market PSA10 auto lookups where raw comps exist. Explicit
+  // confidence dip because the number is derived, not observed.
+  if (gradeCompany && gradeValue !== null && gradeValue !== undefined) {
+    const rawRungs: Array<{ where: string; params: Array<{ name: string; value: string | number | boolean | null }>; method: HobbyIqFmvMethod; note: (n: number) => string }> = [
+      { where: "c.hobbyiqCardId = @slug", params: [{ name: "@slug", value: slug }], method: "direct-slug", note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of this exact card × ${gradeCompany} ${gradeValue} multiplier` },
+      { where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport", params: [{ name: "@y", value: parsed.year }, { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() }, { name: "@auto", value: parsed.isAuto }, { name: "@sport", value: parsed.sport }], method: "sibling-parallel", note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of sibling parallels × ${gradeCompany} ${gradeValue} multiplier` },
+    ];
+    for (const rung of rawRungs) {
+      let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso);
+      rawRows = filterByGrade(rawRows, null, null);   // raw only
+      if (rawRows.length >= 3) {
+        const rawPrices = rawRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+        if (rawPrices.length === 0) continue;
+        const rawMedian = rawPrices[Math.floor(rawPrices.length / 2)];
+        const cardClass = parsed.isAuto ? "autograph" : "base";
+        const multiplier = getGraderPremium(gradeCompany, String(gradeValue), rawMedian, cardClass, parsed.year, parsed.setKey);
+        if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
+        const gradedFmv = rawMedian * multiplier;
+        // Synthesize one synthetic row so the rest of buildResult's math is stable.
+        const synth: PoolRow[] = rawRows.map((r) => ({ ...r, price: Number(r.price) * multiplier }));
+        return buildResult(slug, synth, "grade-cross-raw",
+          rung.note(rawPrices.length) + ` (${multiplier.toFixed(2)}×, applied to raw median $${Math.round(rawMedian)} → $${Math.round(gradedFmv)})`,
+          confidenceForRung("grade-cross-raw", rawPrices.length),
+          input.previewLimit ?? 10, now, await populationPromise);
+      }
+    }
+  }
+
   const population = await populationPromise;
   return { ...noBasis, population };
 }
@@ -334,8 +423,10 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
     case "direct-slug":                  return Math.min(0.95, 0.75 + nBonus);
     case "cross-printrun":               return Math.min(0.80, 0.55 + nBonus);
     case "same-printrun-cross-parallel": return Math.min(0.70, 0.45 + nBonus);
+    case "printrun-discovery":           return Math.min(0.75, 0.55 + nBonus);
     case "sibling-parallel":             return Math.min(0.55, 0.30 + nBonus);
     case "family-baseline":              return Math.min(0.40, 0.20 + nBonus);
+    case "grade-cross-raw":              return Math.min(0.45, 0.25 + nBonus);
     case "no-basis":                     return 0;
   }
 }
