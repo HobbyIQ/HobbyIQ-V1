@@ -32,18 +32,28 @@ async function main() {
   const container = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
 
   console.log(`[rebuild-state] querying card_catalog for cardsight ${sport}...`);
-  const query = `SELECT c.releaseId, c.releaseName, c.year, COUNT(1) AS cardCount
-                 FROM c
-                 WHERE c.source = 'cardsight' AND c.sport = @sp
-                 GROUP BY c.releaseId, c.releaseName, c.year`;
+  // Grouping in JS instead of SQL GROUP BY — the Cosmos SDK's cross-
+  // partition GROUP BY can return undefined `resources` mid-iteration.
+  const query = `SELECT c.releaseId, c.releaseName, c.year FROM c WHERE c.source = 'cardsight' AND c.sport = @sp`;
   const it = container.items.query({ query, parameters: [{ name: "@sp", value: sport }] }, { maxItemCount: 5000 });
-  const rows = [];
+  const byRelease = new Map();
+  let total = 0;
   while (it.hasMoreResults()) {
-    const { resources } = await it.fetchNext();
-    rows.push(...resources);
-    process.stdout.write(`\r  fetched ${rows.length} release-groups`);
+    const page = await it.fetchNext();
+    const resources = Array.isArray(page?.resources) ? page.resources : [];
+    for (const r of resources) {
+      if (!r.releaseId) continue;
+      const meta = byRelease.get(r.releaseId) || { name: r.releaseName || null, year: r.year || null, count: 0 };
+      meta.count++;
+      byRelease.set(r.releaseId, meta);
+    }
+    total += resources.length;
+    process.stdout.write(`\r  scanned ${total} rows, ${byRelease.size} releases`);
   }
-  console.log(`\n  ${rows.length} distinct releases already crawled`);
+  console.log(`\n  ${byRelease.size} distinct releases across ${total} rows`);
+  const rows = [...byRelease.entries()].map(([releaseId, meta]) => ({
+    releaseId, releaseName: meta.name, year: meta.year, cardCount: meta.count,
+  }));
 
   const stateDir = path.join(__dirname, ".state");
   if (!fs.existsSync(stateDir)) fs.mkdirSync(stateDir, { recursive: true });
