@@ -16,7 +16,7 @@
 //   - Trend: OLS regression when n≥3; anchor slope when n=2; flat below.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 
@@ -229,19 +229,25 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // Refractors, etc.).
   let rows: PoolRow[];
   if (parsed.printRun === null || parsed.printRun === undefined) {
+    // Query without the parallel filter — c.parallel in sold_comps is
+    // the human label ("Blue Refractor") but parsed.parallel is the
+    // slug fragment ("blue-refractor"). Filter parallel in JS after slug
+    // normalization.
     const identityRows = await queryPool(
       container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.parallel = @par AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
       [
         { name: "@y", value: parsed.year },
         { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@par", value: parsed.parallel },
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
       cutoffIso,
     );
-    const graded = filterByGrade(identityRows, gradeCompany, gradeValue);
+    // Filter by parallel using slug-side normalization on both sides.
+    const targetParallelSlug = parsed.parallel;
+    const parallelMatched = identityRows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
+    const graded = filterByGrade(parallelMatched, gradeCompany, gradeValue);
     if (graded.length >= 5) {
       const byRun = new Map<number, PoolRow[]>();
       for (const r of graded) {
@@ -341,16 +347,18 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   if (parsed.printRun === null || parsed.printRun === undefined) {
     rows = await queryPool(
       container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.parallel = @par AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
       [
         { name: "@y", value: parsed.year },
         { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@par", value: parsed.parallel },
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
       cutoffIso,
     );
+    // Filter parallel in JS (persisted label vs slug fragment) then apply grade.
+    const targetParallelSlug = parsed.parallel;
+    rows = rows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
     if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
     if (rows.length >= 3) {
       // Group by printRun, pick the pool with the most sales (that's
