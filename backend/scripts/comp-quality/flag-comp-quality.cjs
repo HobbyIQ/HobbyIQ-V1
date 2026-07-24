@@ -97,7 +97,18 @@ async function main() {
     if (prices.length >= 5) medians.set(k, median(prices));
   }
 
-  // Build card_catalog parallel index for R3
+  // Build card_catalog parallel index for R3 (orphan-parallel).
+  // Comparison normalization: slugify + strip "-refractor" / "-fractor"
+  // suffix. Handles cases where persisted parallel is "Blue" while
+  // catalog stores "Blue Refractor" — both normalize to "blue".
+  function normalizeParallel(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .replace(/-refractor$/, "")
+      .replace(/-fractor$/, "");
+  }
   console.log("  loading card_catalog parallels for orphan-parallel rule...");
   const parQ = `SELECT c.cardId, c.year, c.number, c.releaseName, c.parallels FROM c WHERE c.source = 'cardsight' AND c.sport = @sp`;
   const parIt = cc.items.query({ query: parQ, parameters: [{ name: "@sp", value: sport }] }, { maxItemCount: 5000 });
@@ -108,14 +119,14 @@ async function main() {
     process.stdout.write(`\r  catalog rows ${catalogRows.length}`);
   }
   console.log();
-  // Index: (year|numberUpper) → set of allowed parallel names (lowercase + slug)
+  // Index: (year|numberUpper) → set of normalized allowed parallel names.
   const allowedParallelsByCard = new Map();
   for (const c of catalogRows) {
     const numKey = `${c.year}|${String(c.number || "").toUpperCase()}`;
-    if (!allowedParallelsByCard.has(numKey)) allowedParallelsByCard.set(numKey, new Set(["base", ""]));
+    if (!allowedParallelsByCard.has(numKey)) allowedParallelsByCard.set(numKey, new Set(["base"]));
     const set = allowedParallelsByCard.get(numKey);
     for (const p of (c.parallels || [])) {
-      const n = String(p?.name || "").toLowerCase();
+      const n = normalizeParallel(p?.name);
       if (n) set.add(n);
     }
   }
@@ -170,14 +181,18 @@ async function main() {
       }
     }
 
-    // R3 — orphan parallel
+    // R3 — orphan parallel. Skip if parallel is empty or normalizes to
+    // "base" (base is always valid). Only fires when the catalog has
+    // AT LEAST ONE real parallel for this identity (else we don't
+    // trust the "allowed" list). Match by normalized slug — strips
+    // "-refractor" / "-fractor" suffix so persisted "Blue" matches
+    // catalog "Blue Refractor".
     if (r.parallel && r.cardYear && r.cardNumber) {
       const numKey = `${r.cardYear}|${String(r.cardNumber).toUpperCase()}`;
       const allowed = allowedParallelsByCard.get(numKey);
-      if (allowed && allowed.size > 1) {
-        const pn = String(r.parallel).toLowerCase();
-        const matches = [...allowed].some((a) => a === pn || pn.includes(a) || a.includes(pn));
-        if (!matches) flags.add("orphan-parallel");
+      const pn = normalizeParallel(r.parallel);
+      if (allowed && allowed.size >= 2 && pn && pn !== "base" && !allowed.has(pn)) {
+        flags.add("orphan-parallel");
       }
     }
 
