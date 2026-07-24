@@ -217,8 +217,55 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   const gradeCompany = input.gradeCompany ?? null;
   const gradeValue = input.gradeValue ?? null;
 
+  // ─── Rung 0 (PRE-empts direct-slug): printrun-discovery-preferred ──
+  // When the target slug has NO printRun tag AND the identity has a
+  // substantial pool of comps at a specific print run, that /N pool is
+  // almost certainly the real physical card — direct-slug on the
+  // no-printRun form would hit a ghost pool created by lossy title
+  // parsing (some listings don't spell "/150" so their persist happens
+  // without the printRun suffix). Fires only when the /N pool has >= 5
+  // comps at a single print run, keeping this from misfiring on cards
+  // that legitimately have no numbered variant (Base, unnumbered
+  // Refractors, etc.).
+  let rows: PoolRow[];
+  if (parsed.printRun === null || parsed.printRun === undefined) {
+    const identityRows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.parallel = @par AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@par", value: parsed.parallel },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+      ],
+      cutoffIso,
+    );
+    const graded = filterByGrade(identityRows, gradeCompany, gradeValue);
+    if (graded.length >= 5) {
+      const byRun = new Map<number, PoolRow[]>();
+      for (const r of graded) {
+        const pr = Number(r.printRun);
+        if (!Number.isFinite(pr)) continue;
+        if (!byRun.has(pr)) byRun.set(pr, []);
+        byRun.get(pr)!.push(r);
+      }
+      let bestRun: number | null = null;
+      let bestPool: PoolRow[] = [];
+      for (const [pr, pool] of byRun.entries()) {
+        if (pool.length > bestPool.length) { bestRun = pr; bestPool = pool; }
+      }
+      if (bestPool.length >= 5) {
+        return buildResult(slug, bestPool, "printrun-discovery",
+          `Estimated from ${bestPool.length} sale${bestPool.length === 1 ? "" : "s"} of the /${bestRun} variant (dominant SKU at this identity — target slug is un-tagged)`,
+          confidenceForRung("printrun-discovery", bestPool.length),
+          input.previewLimit ?? 10, now, await populationPromise);
+      }
+    }
+  }
+
   // ─── Rung 1: exact slug + grade ─────────────────────────────────────
-  let rows = await queryPool(
+  rows = await queryPool(
     container,
     "c.hobbyiqCardId = @slug",
     [{ name: "@slug", value: slug }],
