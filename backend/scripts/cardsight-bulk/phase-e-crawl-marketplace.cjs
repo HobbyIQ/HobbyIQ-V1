@@ -16,7 +16,7 @@
 
 const {
   csFetch, getContainer, contentHashOf,
-  readState, writeState, nowIso,
+  readState, writeState, nowIso, runInParallel,
 } = require("./common.cjs");
 
 function arg(name, fallback) {
@@ -100,21 +100,22 @@ async function main() {
     if (progress.done[c.cardId]) continue;
     try {
       const resp = await csFetch(`/marketplace/${c.cardId}`, { timeoutMs: 20_000 });
-      let cardListings = 0;
-      for (const rec of (resp?.raw?.records || [])) {
-        const doc = buildListingDoc(c, rec, null, sport);
-        if (!dryRun) { try { await container.items.upsert(doc); cardListings++; } catch (e) { console.warn(`  upsert fail: ${e.message}`); } }
-        else cardListings++;
-      }
+      const docs = [];
+      for (const rec of (resp?.raw?.records || [])) docs.push(buildListingDoc(c, rec, null, sport));
       for (const grp of (resp?.graded || [])) {
         for (const gg of (grp.grades || [])) {
           const ctx = { companyName: grp.company_name, gradeValue: gg.grade_value };
-          for (const rec of (gg.records || [])) {
-            const doc = buildListingDoc(c, rec, ctx, sport);
-            if (!dryRun) { try { await container.items.upsert(doc); cardListings++; } catch (e) { console.warn(`  upsert fail: ${e.message}`); } }
-            else cardListings++;
-          }
+          for (const rec of (gg.records || [])) docs.push(buildListingDoc(c, rec, ctx, sport));
         }
+      }
+      let cardListings = 0;
+      if (dryRun) {
+        cardListings = docs.length;
+      } else {
+        const { ok } = await runInParallel(docs, async (doc) => {
+          await container.items.upsert(doc);
+        });
+        cardListings = ok;
       }
       listings += cardListings;
       progress.done[c.cardId] = { listings: cardListings, at: nowIso() };
