@@ -23,7 +23,7 @@ const path = require("path");
 const crypto = require("crypto");
 const {
   csFetch, getContainer, contentHashOf,
-  readState, writeState, nowIso, chunk,
+  readState, writeState, nowIso, chunk, runInParallel, WRITE_CONCURRENCY,
 } = require("./common.cjs");
 
 const backend = path.resolve(__dirname, "..", "..");
@@ -203,7 +203,10 @@ async function main() {
       failed += batch.length;
       continue;
     }
+    // Flatten every sale in this batch into a single work-list, then
+    // upsert all of them in parallel (WRITE_CONCURRENCY workers).
     const results = Array.isArray(resp?.results) ? resp.results : [];
+    const workUnits = [];
     for (const result of results) {
       const cardId = result?.card_id;
       const catalogRow = catalogById.get(cardId);
@@ -213,31 +216,37 @@ async function main() {
         continue;
       }
       const data = result.data;
-      let cardInserted = 0, cardDeduped = 0, cardSkipped = 0;
+      const cardWorkStart = workUnits.length;
       for (const rec of (data.raw?.records || [])) {
-        const status = await upsertSale(soldCompsContainer, SOURCE, catalogRow, rec, null, dryRun);
-        if (status === "inserted") cardInserted++;
-        else if (status === "deduped") cardDeduped++;
-        else cardSkipped++;
+        workUnits.push({ cardId, catalogRow, rec, gradedContext: null });
       }
       for (const grp of (data.graded || [])) {
         for (const gg of (grp.grades || [])) {
-          const gradedContext = {
-            companyName: grp.company_name,
-            gradeValue: gg.grade_value,
-          };
+          const gradedContext = { companyName: grp.company_name, gradeValue: gg.grade_value };
           for (const rec of (gg.records || [])) {
-            const status = await upsertSale(soldCompsContainer, SOURCE, catalogRow, rec, gradedContext, dryRun);
-            if (status === "inserted") cardInserted++;
-            else if (status === "deduped") cardDeduped++;
-            else cardSkipped++;
+            workUnits.push({ cardId, catalogRow, rec, gradedContext });
           }
         }
       }
-      inserted += cardInserted;
-      deduped += cardDeduped;
-      skipped += cardSkipped;
-      progress.doneCardIds[cardId] = { inserted: cardInserted, deduped: cardDeduped, skipped: cardSkipped };
+      // Placeholder — filled in after runInParallel below
+      progress.doneCardIds[cardId] = { workStart: cardWorkStart };
+    }
+
+    const perCardStats = new Map();
+    await runInParallel(workUnits, async (u) => {
+      const status = await upsertSale(soldCompsContainer, SOURCE, u.catalogRow, u.rec, u.gradedContext, dryRun);
+      const s = perCardStats.get(u.cardId) || { inserted: 0, deduped: 0, skipped: 0 };
+      if (status === "inserted") s.inserted++;
+      else if (status === "deduped") s.deduped++;
+      else s.skipped++;
+      perCardStats.set(u.cardId, s);
+    });
+
+    for (const [cardId, s] of perCardStats.entries()) {
+      inserted += s.inserted;
+      deduped += s.deduped;
+      skipped += s.skipped;
+      progress.doneCardIds[cardId] = s;
     }
     progress.totals = { batches: bi + 1, inserted, deduped, skipped, failed };
     writeState(progressFile, progress);

@@ -17,7 +17,7 @@
 
 const {
   csFetch, paginateAll, getContainer, contentHashOf,
-  readState, writeState, nowIso,
+  readState, writeState, nowIso, runInParallel, WRITE_CONCURRENCY,
 } = require("./common.cjs");
 
 function arg(name, fallback) {
@@ -110,15 +110,15 @@ async function main() {
     const startAt = Date.now();
     try {
       const cards = await paginateAll(`/catalog/releases/${release.id}/cards`, "cards", {}, 100);
+      const docs = cards.map((c) => buildCatalogDoc(c, release, sport, releasesDoc.segmentId));
       let releaseInserted = 0;
-      for (const card of cards) {
-        const doc = buildCatalogDoc(card, release, sport, releasesDoc.segmentId);
-        if (!dryRun) {
-          try { await container.items.upsert(doc); releaseInserted++; }
-          catch (e) { console.warn(`  upsert fail ${card.id}: ${e.message}`); }
-        } else {
-          releaseInserted++;
-        }
+      if (dryRun) {
+        releaseInserted = docs.length;
+      } else {
+        const { ok } = await runInParallel(docs, async (doc) => {
+          await container.items.upsert(doc);
+        });
+        releaseInserted = ok;
       }
       totalCards += cards.length;
       insertedTotal += releaseInserted;

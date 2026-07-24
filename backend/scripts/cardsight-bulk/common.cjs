@@ -143,6 +143,32 @@ function chunk(arr, n) {
   return out;
 }
 
+// Cosmos write concurrency — biggest single throughput lever. From a
+// same-region Azure host (Cloud Shell / ACI / App Service) every upsert
+// is ~2-5ms round-trip, so 20 concurrent workers = ~4-10k writes/s.
+// From a home network it's ~30-50ms, so 20 workers = ~400-700 writes/s.
+const WRITE_CONCURRENCY = Number(process.env.CS_BULK_WRITE_CONCURRENCY || "16");
+
+/** Run `worker(item, index)` on every item with up to `concurrency`
+ *  workers in flight. Returns { ok, err } counts. Never throws — each
+ *  worker error is counted, not propagated. */
+async function runInParallel(items, worker, concurrency = WRITE_CONCURRENCY) {
+  const result = { ok: 0, err: 0 };
+  let i = 0;
+  const workers = Array.from({ length: Math.max(1, concurrency) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      try {
+        const r = await worker(items[idx], idx);
+        if (r === false) result.err++;
+        else result.ok++;
+      } catch { result.err++; }
+    }
+  });
+  await Promise.all(workers);
+  return result;
+}
+
 // Progress state helpers (JSON files under .state/)
 const path = require("path");
 const fs = require("fs");
@@ -170,4 +196,6 @@ module.exports = {
   readState,
   writeState,
   stateFile,
+  runInParallel,
+  WRITE_CONCURRENCY,
 };
