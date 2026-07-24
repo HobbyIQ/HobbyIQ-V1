@@ -27,6 +27,12 @@ import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 // out at the SQL layer so no rung ever sees them.
 const EXCLUDED_SOURCES = ["ebay-user-purchase"];
 
+// CF-HOBBYIQ-FMV-QUALITY-FLAGS (Drew, 2026-07-24). Rows tagged with any
+// of these qualityFlags are structurally suspect and should not anchor
+// the median. They stay in sold_comps for the "flagged comps" UI and
+// downstream inspection, but the FMV endpoint filters them out.
+const FILTER_QUALITY_FLAGS = ["price-outlier", "raw-priced-like-graded", "same-day-same-slug-dupe"];
+
 export interface HobbyIqFmvInput {
   hobbyiqCardId: string;              // canonical slug (hiq:sport:year:...)
   gradeCompany?: string | null;       // null = raw
@@ -95,6 +101,16 @@ export interface HobbyIqFmvResult {
    *  (e.g. "PSA10 pop 47"). NOT yet used in fmv math — that comes with
    *  scarcity multiplier calibration in a follow-up. */
   population: CardPopulationLookup | null;
+  /** CF-HOBBYIQ-FMV-QUALITY (Drew, 2026-07-24). Trust indicator for the
+   *  FMV number, on a 0.0-1.0 scale. Combines comp count, freshness,
+   *  source diversity, and how many nearby comps were dropped as flagged
+   *  by the comp-quality framework. iOS renders this as a progress bar
+   *  or badge separate from `method`/`confidence`. */
+  quality: {
+    score: number;             // 0.0-1.0
+    flaggedCompCount: number;  // # comps dropped as unreliable at the winning rung
+    sources: string[];         // distinct sources contributing to the winning pool
+  };
   computedAt: string;
   cachedFrom: "sold_comps";
 }
@@ -111,6 +127,7 @@ interface PoolRow {
   printRun?: number | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  qualityFlags?: string[];
 }
 
 let cachedContainer: Container | null = null;
@@ -144,7 +161,7 @@ async function queryPool(
     const excludedList = EXCLUDED_SOURCES.map((s) => `'${s}'`).join(", ");
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
-                     c.isAuto, c.printRun, c.gradeCompany, c.gradeValue
+                     c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from AND c.source NOT IN (${excludedList})
               ORDER BY c.soldAt DESC`,
@@ -154,6 +171,42 @@ async function queryPool(
   } catch {
     return [];
   }
+}
+
+/** Partition rows into { kept, flagged } based on qualityFlags. Any row
+ *  with a flag in FILTER_QUALITY_FLAGS is dropped from FMV computation
+ *  but counted so the response can emit flaggedCompCount. */
+function partitionByQuality(rows: PoolRow[]): { kept: PoolRow[]; flagged: PoolRow[] } {
+  const kept: PoolRow[] = [];
+  const flagged: PoolRow[] = [];
+  for (const r of rows) {
+    const flags = Array.isArray(r.qualityFlags) ? r.qualityFlags : [];
+    if (flags.some((f) => FILTER_QUALITY_FLAGS.includes(f))) flagged.push(r);
+    else kept.push(r);
+  }
+  return { kept, flagged };
+}
+
+/** Compute a 0.0-1.0 quality score for a winning pool. */
+function computeQualityScore(kept: PoolRow[], flagged: PoolRow[]): {
+  score: number; flaggedCompCount: number; sources: string[];
+} {
+  const n = kept.length;
+  const flaggedCount = flagged.length;
+  const total = n + flaggedCount;
+  const sources = [...new Set(kept.map((r) => r.source).filter(Boolean))];
+  const compTerm = 1 - Math.exp(-n / 20);
+  let freshTerm = 0;
+  if (n > 0) {
+    const mostRecent = Math.max(...kept.map((r) => Date.parse(r.soldAt) || 0));
+    const daysAgo = (Date.now() - mostRecent) / 86_400_000;
+    freshTerm = daysAgo <= 30 ? 1 : daysAgo <= 60 ? 1 - (daysAgo - 30) / 30 : 0;
+  }
+  const sourceBonus = sources.length >= 2 ? 0.1 : 0;
+  const flagPenalty = total > 0 ? -0.25 * (flaggedCount / total) : 0;
+  const raw = 0.55 * compTerm + 0.30 * freshTerm + sourceBonus + flagPenalty;
+  const score = Math.max(0, Math.min(1, raw));
+  return { score, flaggedCompCount: flaggedCount, sources };
 }
 
 /** Apply the caller's grade filter in-JS (SQL side is optimistic; JS
@@ -195,6 +248,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     basisNote: "No comparable sales in the last 180 days",
     confidence: 0,
     population: null,
+    quality: { score: 0, flaggedCompCount: 0, sources: [] },
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
@@ -466,7 +520,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   }
 
   const population = await populationPromise;
-  return { ...noBasis, population };
+  return { ...noBasis, population, quality: { score: 0, flaggedCompCount: 0, sources: [] } };
 }
 
 // Confidence per rung × sample size. Direct + big sample → 0.95;
@@ -488,7 +542,7 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
 
 function buildResult(
   slug: string,
-  rows: PoolRow[],
+  rowsIn: PoolRow[],
   method: HobbyIqFmvMethod,
   basisNote: string,
   confidence: number,
@@ -496,6 +550,8 @@ function buildResult(
   now: Date,
   population: CardPopulationLookup | null,
 ): HobbyIqFmvResult {
+  const { kept: rows, flagged } = partitionByQuality(rowsIn);
+  const quality = computeQualityScore(rows, flagged);
   const prices = rows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0);
   if (prices.length === 0) {
     return {
@@ -507,6 +563,7 @@ function buildResult(
       basisNote: "No comparable sales",
       confidence: 0,
       population,
+      quality,
       computedAt: now.toISOString(),
       cachedFrom: "sold_comps",
     };
@@ -555,6 +612,7 @@ function buildResult(
     basisNote,
     confidence,
     population,
+    quality,
     computedAt: now.toISOString(),
     cachedFrom: "sold_comps",
   };
