@@ -27,6 +27,7 @@ import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js"
 import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { canonicalCardSearch } from "../services/portfolioiq/canonicalCardSearch.service.js";
+import { computeTrending, computeRelatedCards, computeTrendingPlayers } from "../services/portfolioiq/discoverySurfaces.service.js";
 
 const router = Router();
 
@@ -168,6 +169,47 @@ router.post("/search", requireSession, async (req: Request, res: Response, next)
       printRun: Number.isFinite(Number(req.body?.printRun)) && Number(req.body.printRun) > 0 ? Number(req.body.printRun) : undefined,
       isAuto: typeof req.body?.isAuto === "boolean" ? req.body.isAuto : undefined,
       year: Number.isFinite(Number(req.body?.year)) ? Number(req.body.year) : undefined,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+// CF-DISCOVERY-SURFACES (Drew, 2026-07-25). Three read-only endpoints
+// that power iOS "explore" screens beyond typed search.
+
+router.get("/trending", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const result = await computeTrending({
+      sport: typeof req.query.sport === "string" ? req.query.sport : "baseball",
+      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+      minRecentMedian: Number.isFinite(Number(req.query.minRecentMedian)) ? Number(req.query.minRecentMedian) : undefined,
+      minMomentum: Number.isFinite(Number(req.query.minMomentum)) ? Number(req.query.minMomentum) : undefined,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get("/related-cards", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const slug = String(req.query.slug ?? "").trim();
+    if (!slug || !slug.startsWith("hiq:")) {
+      res.status(400).json({ success: false, error: "slug is required (hiq:... hobbyiqCardId format)" });
+      return;
+    }
+    const result = await computeRelatedCards(
+      slug,
+      Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 8,
+    );
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+router.get("/trending-players", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const result = await computeTrendingPlayers({
+      sport: typeof req.query.sport === "string" ? req.query.sport : "baseball",
+      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 20,
+      minRecentComps: Number.isFinite(Number(req.query.minRecentComps)) ? Number(req.query.minRecentComps) : undefined,
     });
     res.json(result);
   } catch (err) { next(err); }
