@@ -28,6 +28,8 @@ import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { canonicalCardSearch } from "../services/portfolioiq/canonicalCardSearch.service.js";
 import { computeTrending, computeRelatedCards, computeTrendingPlayers } from "../services/portfolioiq/discoverySurfaces.service.js";
+import { lookupByImage } from "../services/portfolioiq/imageSimilarityLookup.service.js";
+import { autocomplete } from "../services/portfolioiq/autocompleteLookup.service.js";
 
 const router = Router();
 
@@ -212,6 +214,59 @@ router.get("/trending-players", requireSession, async (req: Request, res: Respon
       minRecentComps: Number.isFinite(Number(req.query.minRecentComps)) ? Number(req.query.minRecentComps) : undefined,
     });
     res.json(result);
+  } catch (err) { next(err); }
+});
+
+// CF-IMAGE-SIMILARITY-LOOKUP-ROUTE (Drew, 2026-07-25). "Scan any card"
+// — user uploads a photo, we return the closest FMV-backed matches.
+//
+// POST /api/compiq/lookup-by-image
+// Body: { imageBase64?: string, imageUrl?: string, limit?: 1..20, maxHamming?: 0..64 }
+// Response: ImageLookupResult with algo=dhash-v1, hits[] enriched with recentMedian.
+router.post("/lookup-by-image", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const body = req.body ?? {};
+    const imageBase64 = typeof body.imageBase64 === "string" && body.imageBase64.length > 0 ? body.imageBase64 : undefined;
+    const imageUrl = typeof body.imageUrl === "string" && body.imageUrl.length > 0 ? body.imageUrl : undefined;
+    if (!imageBase64 && !imageUrl) {
+      res.status(400).json({ success: false, error: "imageBase64 or imageUrl required" });
+      return;
+    }
+    const limit = Number.isFinite(Number(body.limit)) ? Number(body.limit) : undefined;
+    const maxHamming = Number.isFinite(Number(body.maxHamming)) ? Number(body.maxHamming) : undefined;
+    const result = await lookupByImage({ imageBase64, imageUrl, limit, maxHamming });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// CF-AUTOCOMPLETE-ROUTES (Drew, 2026-07-25). Fast prefix-match typeahead
+// for iOS search UI. Backed by card_catalog with 10-min in-memory index.
+//
+// GET /api/compiq/autocomplete-player?q=trout&sport=baseball&limit=10
+// GET /api/compiq/autocomplete-set?q=bowman&sport=baseball&limit=10
+router.get("/autocomplete-player", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const q = String(req.query.q ?? "").trim();
+    if (!q) { res.status(400).json({ success: false, error: "q is required" }); return; }
+    const result = await autocomplete("player", {
+      q,
+      sport: typeof req.query.sport === "string" ? req.query.sport : undefined,
+      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
+router.get("/autocomplete-set", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const q = String(req.query.q ?? "").trim();
+    if (!q) { res.status(400).json({ success: false, error: "q is required" }); return; }
+    const result = await autocomplete("releaseName", {
+      q,
+      sport: typeof req.query.sport === "string" ? req.query.sport : undefined,
+      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+    });
+    res.json({ success: true, ...result });
   } catch (err) { next(err); }
 });
 
