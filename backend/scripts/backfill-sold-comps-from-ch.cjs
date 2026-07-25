@@ -31,7 +31,23 @@
  * Idempotent: uses source::sourceExternalId dedup so re-runs are safe.
  */
 
+const path = require("path");
 const { CosmosClient } = require("@azure/cosmos");
+// CF-CH-INGEST-SLUG-AT-SOURCE (Drew, 2026-07-25). Import computeHobbyIqCardId
+// so rows written from CH land with the canonical slug on first insert
+// (instead of relying on the nightly cleanup pass to backfill).
+const { computeHobbyIqCardId } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+
+// Prospect autograph cardNumber prefixes — per Drew's memory
+// `isauto-boundary-is-cardnumber-not-text`, the cardNumber prefix IS
+// the auto boundary. Text-based detection (r.variant or r.card_set
+// containing "auto") misses cases where CH's card_set is generic
+// "Bowman Baseball" for CPA-* autos.
+const AUTO_CARD_NUMBER_PREFIX = /^(CPA|BCPA|BCA|BCRA|BSA|BSHA|CDA|BDPA|BFA|CPAP|CRA|TAA|USA|RA|GA)-/i;
+
+function normalizeCardNumber(s) {
+  return String(s ?? "").trim().replace(/^#+/, "").toUpperCase();
+}
 
 function parseArgs(argv) {
   // CF-BACKFILL-CH-GROUP (Drew, 2026-07-20). Added --ch-group so BB/FB
@@ -167,15 +183,40 @@ async function main() {
         const sourceExternalId = `ch-daily::${r.card_id}::${r.sale_date}::${Math.round(Number(r.price) * 100)}`;
         const title = `${r.year} ${r.card_set} #${r.number} ${r.variant}`.trim();
         const sport = args.sport ?? inferSport(r.card_set, title);
+
+        // CF-CH-INGEST-SLUG-AT-SOURCE (Drew, 2026-07-25). Normalize cardNumber
+        // + set isAuto from cardNumber prefix (auto-boundary rule) + compute
+        // canonical hobbyiqCardId slug inline so no nightly cleanup pass is
+        // required to make CH rows searchable/FMV-usable.
+        const cardNumber = r.number ? normalizeCardNumber(r.number) : null;
+        const isAutoFromCn = cardNumber && AUTO_CARD_NUMBER_PREFIX.test(cardNumber);
+        const isAuto = !!(isAutoFromCn || /auto/i.test(r.variant ?? "") || /auto/i.test(r.card_set ?? ""));
+        const cardYear = typeof r.year === "number" ? r.year : (Number.isFinite(Number(r.year)) ? Number(r.year) : null);
+        let hobbyiqCardId = null;
+        if (r.player && cardYear && cardNumber && r.card_set && sport) {
+          try {
+            hobbyiqCardId = computeHobbyIqCardId({
+              sport,
+              year: cardYear,
+              setKey: r.card_set,
+              cardNumber,
+              parallel: r.variant || "Base",
+              isAuto,
+              printRun: null,
+            });
+          } catch { hobbyiqCardId = null; }
+        }
+
         const doc = {
           id: `cardhedge::${sourceExternalId}`,
           cardId: r.card_id,
+          hobbyiqCardId,
           playerName: r.player ?? "Unknown",
-          cardYear: typeof r.year === "number" ? r.year : (Number.isFinite(Number(r.year)) ? Number(r.year) : null),
+          cardYear,
           setName: r.card_set ?? null,
           parallel: r.variant ?? null,       // NATIVE parallel — the fix vs warmPoolFromCh pollution
-          cardNumber: r.number ?? null,       // NATIVE cardNumber
-          isAuto: /auto/i.test(r.variant ?? "") || /auto/i.test(r.card_set ?? ""),
+          cardNumber,                         // normalized
+          isAuto,
           sport,                              // sport tag for cross-sport filtering
           gradeCompany,
           gradeValue,
