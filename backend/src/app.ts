@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import path from "path";
 import { getConfig } from "./config/env.js";
 import { requestLogger } from "./middleware/requestLogger.js";
@@ -97,6 +98,18 @@ app.use("/api/", rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many requests, please slow down." },
+}));
+
+// CF-COMPRESSION (Drew, 2026-07-25). Gzip every response over 1KB.
+// Big win for the discovery/search endpoints (facets, groups, hit arrays)
+// which routinely serialize to 50-200KB of JSON. Default level=6 is the
+// standard latency/ratio balance. Skip when the client explicitly opts out.
+app.use(compression({
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers["x-no-compression"]) return false;
+    return compression.filter(req, res);
+  },
 }));
 
 app.use(express.json({ limit: "12mb" }));

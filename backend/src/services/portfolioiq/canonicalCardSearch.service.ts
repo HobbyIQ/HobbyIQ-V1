@@ -28,6 +28,13 @@ export interface CanonicalSearchInput {
   year?: number;
 }
 
+export interface MatchedRange {
+  field: "player" | "releaseName" | "cardNumber" | "parallels";
+  start: number;
+  end: number;
+  token: string;
+}
+
 export interface CanonicalSearchHit {
   hobbyiqCardId: string | null;   // computed if identity fields are complete
   player: string | null;
@@ -41,7 +48,20 @@ export interface CanonicalSearchHit {
   recentMedian: number | null;     // 90-day median (sold_comps)
   compCount: number;               // 90-day comp count
   matchedTokens: string[];
+  matchedRanges: MatchedRange[];   // for iOS to bold-highlight matched substrings
+  momentumPct: number | null;      // 30d-vs-prior-60d % change on same slug (nullable)
+  recentSaleCount: number;         // popularity indicator from card_catalog
   score: number;
+}
+
+export interface CanonicalSearchGroup {
+  groupId: string;                    // year+cardNumber+player key
+  player: string | null;
+  cardYear: number | null;
+  releaseName: string | null;
+  cardNumber: string | null;
+  variantCount: number;
+  hits: CanonicalSearchHit[];         // all hits belonging to this group
 }
 
 export interface CanonicalSearchFacets {
@@ -67,9 +87,14 @@ export interface CanonicalSearchResult {
     year: number | null;
   };
   hits: CanonicalSearchHit[];
+  groups: CanonicalSearchGroup[];   // hits collapsed by (player, year, cardNumber)
   facets: CanonicalSearchFacets;
   totalCandidates: number;
   cachedFromMemory: boolean;
+  /** CF-SEARCH-CONFIDENT-SINGLE (Drew, 2026-07-25). When top hit's score
+   *  is ≥3× the second-place, iOS can auto-jump to card detail instead
+   *  of showing a list. Reflects "clear winner" query. */
+  confidentSingleResult: boolean;
   computedAt: string;
 }
 
@@ -129,7 +154,15 @@ const GRADE_ALIAS: Record<string, { company: string; value: number }> = {
   "cgc9.5": { company: "CGC", value: 9.5 },
   "gem": { company: "PSA", value: 10 },
   "gemmint": { company: "PSA", value: 10 },
+  "mint": { company: "PSA", value: 9 },        // colloquial — "mint" = PSA 9, not PSA 10
+  "pristine": { company: "BGS", value: 10 },   // BGS Pristine 10 (all subgrades = 10)
+  "blacklabel": { company: "BGS", value: 10 }, // BGS Black Label = Pristine 10
 };
+
+// Print-run pattern — "/50", "/150", "/199" in the query → printRun filter.
+const PRINT_RUN_RE = /^\/?(\d{1,4})$/;
+// Card number pattern — "#125", "BCP-102", "CPA-EHA", "USC88", etc.
+const CARD_NUMBER_RE = /^#?([A-Z]{2,6}-[A-Z0-9]+|[A-Z]?\d{1,4}[A-Z]?|[A-Z]{2,4}\d{1,4})$/i;
 
 function tokenize(q: string): string[] {
   const raw = String(q ?? "")
@@ -212,8 +245,8 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   const empty: CanonicalSearchResult = {
     q, tokens: [], semanticFilters: { isAuto: null, year: null },
     appliedFilters: { parallel: null, grade: null, printRun: null, isAuto: null, year: null },
-    hits: [], facets: emptyFacets(), totalCandidates: 0, cachedFromMemory: false,
-    computedAt: now.toISOString(),
+    hits: [], groups: [], facets: emptyFacets(), totalCandidates: 0, cachedFromMemory: false,
+    confidentSingleResult: false, computedAt: now.toISOString(),
   };
   if (!q) return empty;
 
@@ -242,13 +275,27 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     if (g) { gradeFilterCompany = g.company; gradeFilterValue = g.value; }
   }
   const parallelFilter: string | null = input.parallel ? String(input.parallel).toLowerCase() : null;
-  const printRunFilter: number | null = input.printRun ?? null;
+  let printRunFilter: number | null = input.printRun ?? null;
 
   const searchTokens: string[] = [];
   for (const t of rawTokens) {
     if (AUTO_TOKENS.has(t)) { isAutoFilter = true; continue; }
     const y = Number(t);
     if (Number.isFinite(y) && y >= 1980 && y <= 2030) { if (yearFilter === null) yearFilter = y; continue; }
+    // Print-run token — "/50", "/150", "199" (naked print-run number, 3-4 digits).
+    // Loosely: any three- or four-digit standalone number that's not a year.
+    const prMatch = t.match(PRINT_RUN_RE);
+    if (prMatch) {
+      const n = Number(prMatch[1]);
+      if (Number.isFinite(n) && n > 0 && n <= 5000 && printRunFilter === null) {
+        // Skip common years even without prefix — 2024/2025 would be caught above,
+        // but 1990 or 1999 could look like print-runs. Since year is already
+        // handled and print-runs > 1980 & <= 2030 are rare, we're safe here
+        // because year-check ran first.
+        printRunFilter = n;
+        continue;
+      }
+    }
     // Grade tokens (psa10, bgs9.5, gem etc.)
     const g = GRADE_ALIAS[t];
     if (g) {
@@ -326,16 +373,45 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     const parallelNames = Array.isArray(c.parallels) ? c.parallels.map((p: any) => String(p?.name ?? "").toLowerCase()) : [];
 
     const matched: string[] = [];
+    const matchedRanges: MatchedRange[] = [];
     let scoreBase = 0;
     for (const t of searchTokens) {
       let matchedThis = false;
-      if (player.includes(t)) { matched.push(t); scoreBase += 4; matchedThis = true; }        // player match — strongest
-      else if (parallelNames.some((n: string) => n.includes(t))) { matched.push(t); scoreBase += 3; matchedThis = true; }
-      else if (releaseName.includes(t)) { matched.push(t); scoreBase += 2; matchedThis = true; }
-      else if (number.includes(t)) { matched.push(t); scoreBase += 1; matchedThis = true; }
-      // Fuzzy fallback — if strict match missed but the searchText was
-      // built for this card, allow edit-distance-1 as a partial credit.
-      else if (c.searchText && fuzzyContains(String(c.searchText), t)) { matched.push(t); scoreBase += 0.5; matchedThis = true; }
+      const playerHit = player.indexOf(t);
+      if (playerHit >= 0) {
+        matched.push(t); scoreBase += 4; matchedThis = true;
+        matchedRanges.push({ field: "player", start: playerHit, end: playerHit + t.length, token: t });
+      } else {
+        const parIdx = parallelNames.findIndex((n: string) => n.includes(t));
+        if (parIdx >= 0) {
+          const start = parallelNames[parIdx].indexOf(t);
+          matched.push(t); scoreBase += 3; matchedThis = true;
+          matchedRanges.push({ field: "parallels", start, end: start + t.length, token: t });
+        } else {
+          const rnHit = releaseName.indexOf(t);
+          if (rnHit >= 0) {
+            matched.push(t); scoreBase += 2; matchedThis = true;
+            matchedRanges.push({ field: "releaseName", start: rnHit, end: rnHit + t.length, token: t });
+          } else {
+            const numHit = number.indexOf(t);
+            if (numHit >= 0) {
+              // Card-number-shaped tokens (BCP-102, CPA-EH, USC88, #125) are
+              // high-signal — bump score so an exact card-number query wins
+              // over a generic 4-word text match.
+              const looksLikeCardNumber = CARD_NUMBER_RE.test(t);
+              const bump = looksLikeCardNumber ? 3 : 1;
+              matched.push(t); scoreBase += bump; matchedThis = true;
+              matchedRanges.push({ field: "cardNumber", start: numHit, end: numHit + t.length, token: t });
+            }
+            // Fuzzy fallback — if strict match missed but the searchText was
+            // built for this card, allow edit-distance-1 as a partial credit.
+            // No range emitted for fuzzy hits (positions aren't well-defined).
+            else if (c.searchText && fuzzyContains(String(c.searchText), t)) {
+              matched.push(t); scoreBase += 0.5; matchedThis = true;
+            }
+          }
+        }
+      }
       if (!matchedThis) { /* unmatched token */ }
     }
     // Popularity boost — hot cards surface first. log1p(recentSaleCount)
@@ -374,6 +450,9 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       recentMedian: null,
       compCount: 0,
       matchedTokens: matched,
+      matchedRanges,
+      momentumPct: null,
+      recentSaleCount: Number(c.recentSaleCount || 0),
       score: finalScore,
     };
   });
@@ -442,7 +521,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
         params2.push({ name: "@gv", value: gradeFilterValue });
       }
       const { resources: rows } = await containers.sold.items.query({
-        query: `SELECT TOP 30 c.price, c.imageUrl, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from${gradeSuffix} ORDER BY c.soldAt DESC`,
+        query: `SELECT TOP 90 c.price, c.imageUrl, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from${gradeSuffix} ORDER BY c.soldAt DESC`,
         parameters: params2 as { name: string; value: string | number }[],
       }).fetchAll();
       if (rows.length > 0) {
@@ -452,6 +531,22 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
         const prices = rows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
         if (prices.length > 0) h.recentMedian = prices[Math.floor(prices.length / 2)];
         h.compCount = prices.length;
+        // Momentum: 30d median vs prior 60d median (percent change).
+        // Uses the SAME 90d window we already fetched, no extra query.
+        const cutoff30 = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+        const recent30: number[] = [], prior60: number[] = [];
+        for (const r of rows) {
+          const price = Number(r.price);
+          if (!Number.isFinite(price) || price <= 0) continue;
+          if (String(r.soldAt) >= cutoff30) recent30.push(price);
+          else prior60.push(price);
+        }
+        if (recent30.length >= 3 && prior60.length >= 3) {
+          const med = (arr: number[]) => { const s = [...arr].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+          const m30 = med(recent30);
+          const m60 = med(prior60);
+          if (m60 > 0) h.momentumPct = Math.round(((m30 - m60) / m60) * 1000) / 10;
+        }
       }
       // Grade facet — collect distinct grade tiers from the enriched pool.
       // (Runs even without grade filter so facet chips show all tiers.)
@@ -468,6 +563,28 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     } catch { /* enrichment optional */ }
   }));
 
+  // Grouped-results view: cluster hits by (player, year, cardNumber) so
+  // iOS can render "Eric Hartman 2026 Bowman #CPA-EH — 14 variants" collapsed.
+  const groupsMap = new Map<string, CanonicalSearchGroup>();
+  for (const h of topHits) {
+    const key = `${(h.player ?? "?").toLowerCase()}|${h.cardYear ?? "?"}|${(h.cardNumber ?? "?").toLowerCase()}`;
+    let g = groupsMap.get(key);
+    if (!g) {
+      g = { groupId: key, player: h.player, cardYear: h.cardYear, releaseName: h.releaseName, cardNumber: h.cardNumber, variantCount: 0, hits: [] };
+      groupsMap.set(key, g);
+    }
+    g.hits.push(h);
+    g.variantCount = g.hits.length;
+  }
+  const groups = [...groupsMap.values()];
+
+  // Confident-single-result: top hit's score is >=3x runner-up, and it has
+  // real comp backing (compCount >= 3). iOS uses this to auto-jump.
+  const confidentSingleResult =
+    topHits.length >= 1 &&
+    (topHits.length === 1 || topHits[0].score >= 3 * topHits[1].score) &&
+    (topHits[0].compCount ?? 0) >= 3;
+
   const result: CanonicalSearchResult = {
     q,
     tokens: rawTokens,
@@ -480,9 +597,11 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       year: input.year ?? null,
     },
     hits: topHits,
+    groups,
     facets,
     totalCandidates: candidates.length,
     cachedFromMemory: false,
+    confidentSingleResult,
     computedAt: now.toISOString(),
   };
 

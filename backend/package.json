@@ -24,6 +24,7 @@
     "@opentelemetry/instrumentation-undici": "^0.28.0",
     "apn": "^2.2.0",
     "applicationinsights": "^3.14.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "csv-parse": "^7.0.1",
     "dotenv": "^16.4.5",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/mocha": "^10.0.10",
