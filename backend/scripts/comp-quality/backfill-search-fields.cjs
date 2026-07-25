@@ -35,6 +35,9 @@ function arg(name, fallback) {
 }
 const APPLY = process.env.SEARCH_ENRICH_APPLY === "true";
 const CONCURRENCY = Number(process.env.SEARCH_ENRICH_CONCURRENCY || "12");
+// MISSING_ONLY mode: only pull rows that lack searchTokens. Used by the
+// nightly cron so we don't re-scan 866k already-indexed rows every day.
+const MISSING_ONLY = process.env.SEARCH_ENRICH_MISSING_ONLY === "true";
 
 function buildSearchText(row) {
   const parts = [];
@@ -119,8 +122,13 @@ async function main() {
   console.log(`\n  ${recentCountByYearNumber.size} distinct (year|number) keys with recent sales`);
 
   // Pass 2: scan card_catalog, compute searchText + searchTokens + lookup recentSaleCount
-  console.log(`  scanning card_catalog...`);
-  const ccQuery = `SELECT c.id, c.cardId, c.player, c.releaseName, c.setName, c.number, c.year, c.parallels, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE c.source = 'cardsight' AND c.sport = @sp`;
+  // MISSING_ONLY mode narrows the scan to rows where searchTokens is undefined
+  // — used by the nightly cron to avoid re-scanning already-indexed rows.
+  console.log(`  scanning card_catalog${MISSING_ONLY ? " (missing-only)" : ""}...`);
+  const missingFilter = MISSING_ONLY
+    ? " AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null)"
+    : "";
+  const ccQuery = `SELECT c.id, c.cardId, c.player, c.releaseName, c.setName, c.number, c.year, c.parallels, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE c.source = 'cardsight' AND c.sport = @sp${missingFilter}`;
   const ccIt = cc.items.query({ query: ccQuery, parameters: [{ name: "@sp", value: sport }] }, { maxItemCount: 5000 });
   const patches = [];
   let scanned = 0, unchanged = 0;

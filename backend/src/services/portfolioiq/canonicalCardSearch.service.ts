@@ -498,18 +498,35 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
 
   // Facets — compute from the deduped (before top-K slicing) so filter
   // chips reflect the FULL result set, not just the visible page.
+  //
+  // CF-FACET-KEY-DEDUP (Drew, 2026-07-25). Cardsight ingest carries both
+  // "FoilFractor" and "Foilfractor" as distinct parallel-name strings;
+  // as raw object keys they split the count across meaningless variants.
+  // De-key on lowercase, then use the first casing we see as the display
+  // label. Preserves per-row parallel objects (unchanged for hit-level
+  // matching); only the facet chip dedupes.
   const facets: CanonicalSearchFacets = emptyFacets();
+  const parallelDisplay = new Map<string, string>();       // lowerName → first-seen display
+  const releaseDisplay = new Map<string, string>();
   for (const h of deduped) {
     for (const p of h.parallels) {
       if (!p.name) continue;
-      facets.parallels[p.name] = (facets.parallels[p.name] || 0) + 1;
+      const key = String(p.name).toLowerCase();
+      if (!parallelDisplay.has(key)) parallelDisplay.set(key, p.name);
+      const display = parallelDisplay.get(key)!;
+      facets.parallels[display] = (facets.parallels[display] || 0) + 1;
       if (p.numberedTo) {
         const k = `/${p.numberedTo}`;
         facets.printRuns[k] = (facets.printRuns[k] || 0) + 1;
       }
     }
     if (h.cardYear) facets.years[String(h.cardYear)] = (facets.years[String(h.cardYear)] || 0) + 1;
-    if (h.releaseName) facets.releaseNames[h.releaseName] = (facets.releaseNames[h.releaseName] || 0) + 1;
+    if (h.releaseName) {
+      const rk = h.releaseName.toLowerCase();
+      if (!releaseDisplay.has(rk)) releaseDisplay.set(rk, h.releaseName);
+      const rdisplay = releaseDisplay.get(rk)!;
+      facets.releaseNames[rdisplay] = (facets.releaseNames[rdisplay] || 0) + 1;
+    }
   }
 
   const limit = Math.max(1, Math.min(50, input.limit ?? 20));

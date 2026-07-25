@@ -1,0 +1,101 @@
+name: Nightly searchTokens backfill
+
+# Runs backfill-search-fields.cjs in MISSING_ONLY mode once per day at
+# ~03:15 AM America/New_York — after promote-aliases (02:30 ET) and
+# before the 5 AM Daily Refresh & Deploy. Catches any card_catalog rows
+# added since the last run that missed the runtime-write path in
+# persistVendorCatalog.service.ts (safety net; runtime write should
+# handle the common case per PR merging with this workflow).
+#
+# Two UTC crons + an ET gate so we hit the correct wall-clock hour in
+# both EDT and EST, matching the daily-refresh + promote-aliases pattern.
+
+on:
+  schedule:
+    - cron: '15 7 * * *'   # 07:15 UTC = 03:15 EDT
+    - cron: '15 8 * * *'   # 08:15 UTC = 03:15 EST
+  workflow_dispatch:
+
+jobs:
+  backfill-search-tokens:
+    name: Backfill searchTokens on card_catalog (missing-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Run only at 03:00-05:00 America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — skipping ET-hour gate."
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$((10#$ET_HOUR))" -ge 3 ] && [ "$((10#$ET_HOUR))" -le 5 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (within 03-05 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (outside 03-05 window); skipping this UTC trigger."
+          fi
+
+      - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # Fetch the Cosmos primary connection string from the account itself
+      # (matches the promote-aliases-nightly pattern). Never echoed.
+      - name: Fetch Cosmos connection string
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          CONN=$(az cosmosdb keys list \
+            --name hobbyiq-comps \
+            --resource-group rg-hobbyiq-dev \
+            --type connection-strings \
+            --query "connectionStrings[?description=='Primary SQL Connection String'].connectionString | [0]" \
+            -o tsv)
+          if [ -z "$CONN" ]; then
+            echo "FAILED to fetch Cosmos connection string" >&2
+            exit 1
+          fi
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+          echo "Cosmos connection string fetched (length: ${#CONN})"
+
+      # MISSING_ONLY narrows the card_catalog scan to rows lacking
+      # searchTokens. Apply mode persists. Concurrency 8 is conservative
+      # against the autoscaled 4000 RU/s ceiling — a nightly job shouldn't
+      # burn peak RUs when Drew or iOS traffic may be hitting the container.
+      - name: Backfill missing searchTokens
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        env:
+          SEARCH_ENRICH_APPLY: 'true'
+          SEARCH_ENRICH_MISSING_ONLY: 'true'
+          SEARCH_ENRICH_CONCURRENCY: '8'
+        run: node scripts/comp-quality/backfill-search-fields.cjs --sport baseball

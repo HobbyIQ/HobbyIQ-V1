@@ -12,6 +12,7 @@ import {
   logPersistEvent,
   isDomainEnabled,
 } from "./vendorPersistenceCommon.service.js";
+import { buildSearchIndex } from "./searchIndexing.service.js";
 
 export interface VendorCatalogEntry {
   cardId: string;                  // vendor cardId (CH bubble.io id or CS uuid)
@@ -58,6 +59,19 @@ export async function persistVendorCatalog(
         parameters: [{ name: "@c", value: cardId }, { name: "@h", value: contentHash }],
       }).fetchAll();
       if (existing.length > 0) { result.deduped++; continue; }
+      // CF-SEARCH-INDEX-AT-INSERT (Drew, 2026-07-25). Compute searchText
+      // + searchTokens at insert time so newly-persisted vendor rows are
+      // immediately searchable via /card-search — no dependency on the
+      // nightly backfill catching up. recentSaleCount stays nightly (it
+      // needs a sold_comps lookup that would double insert cost).
+      const { searchText, searchTokens } = buildSearchIndex({
+        title: e.title ?? null,
+        player: e.player ?? null,
+        set: e.set ?? null,
+        year: e.year ?? null,
+        number: e.number ?? null,
+        variant: e.variant ?? null,
+      });
       const doc = {
         id: `${source}::${cardId}::${contentHash.slice(0, 8)}`,
         cardId,
@@ -70,6 +84,8 @@ export async function persistVendorCatalog(
         number: e.number ?? null,
         variant: e.variant ?? null,
         imageUrl: e.imageUrl ?? null,
+        searchText,
+        searchTokens,
         observedAt: new Date().toISOString(),
       };
       await container.items.upsert(doc);
