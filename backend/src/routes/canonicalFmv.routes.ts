@@ -162,6 +162,12 @@ router.post("/search", requireSession, async (req: Request, res: Response, next)
       q,
       sport: typeof req.body?.sport === "string" ? req.body.sport : "baseball",
       limit: Number.isFinite(Number(req.body?.limit)) ? Number(req.body.limit) : 20,
+      // Explicit filter params for iOS refinement chips
+      parallel: typeof req.body?.parallel === "string" && req.body.parallel.trim() ? req.body.parallel.trim() : undefined,
+      grade: typeof req.body?.grade === "string" && req.body.grade.trim() ? req.body.grade.trim() : undefined,
+      printRun: Number.isFinite(Number(req.body?.printRun)) && Number(req.body.printRun) > 0 ? Number(req.body.printRun) : undefined,
+      isAuto: typeof req.body?.isAuto === "boolean" ? req.body.isAuto : undefined,
+      year: Number.isFinite(Number(req.body?.year)) ? Number(req.body.year) : undefined,
     });
     res.json(result);
   } catch (err) { next(err); }
