@@ -30,6 +30,7 @@ import { canonicalCardSearch } from "../services/portfolioiq/canonicalCardSearch
 import { computeTrending, computeRelatedCards, computeTrendingPlayers } from "../services/portfolioiq/discoverySurfaces.service.js";
 import { lookupByImage } from "../services/portfolioiq/imageSimilarityLookup.service.js";
 import { autocomplete } from "../services/portfolioiq/autocompleteLookup.service.js";
+import { computeCardDetail } from "../services/portfolioiq/cardDetail.service.js";
 
 const router = Router();
 
@@ -263,6 +264,39 @@ router.get("/autocomplete-player", requireSession, async (req: Request, res: Res
       limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
     });
     res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// CF-CARD-DETAIL-COMPOSITE (Drew, 2026-07-25). Single-call card-detail
+// render for iOS. Wraps computeHobbyIqFmv + computeRelatedCards in one
+// parallel-fetched envelope so tap-into-card renders instantly instead
+// of chaining 2+ round-trips.
+//
+// POST /api/compiq/card-detail
+// Body: {
+//   hobbyiqCardId: string,        // required — canonical slug
+//   gradeCompany?: string | null,
+//   gradeValue?: number | null,
+//   maxAgeDays?: number,          // freshness cutoff for FMV pool
+//   previewLimit?: number,        // recentComps preview size
+//   relatedLimit?: number,        // # of related cards per bucket
+// }
+router.post("/card-detail", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const hobbyiqCardId = String(req.body?.hobbyiqCardId ?? "").trim();
+    if (!hobbyiqCardId || !hobbyiqCardId.startsWith("hiq:")) {
+      res.status(400).json({ success: false, error: "hobbyiqCardId required (must start with 'hiq:')" });
+      return;
+    }
+    const result = await computeCardDetail({
+      hobbyiqCardId,
+      gradeCompany: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
+      gradeValue: typeof req.body?.gradeValue === "number" ? req.body.gradeValue : null,
+      maxAgeDays: typeof req.body?.maxAgeDays === "number" ? req.body.maxAgeDays : undefined,
+      previewLimit: typeof req.body?.previewLimit === "number" ? req.body.previewLimit : undefined,
+      relatedLimit: typeof req.body?.relatedLimit === "number" ? req.body.relatedLimit : undefined,
+    });
+    res.json(result);
   } catch (err) { next(err); }
 });
 
