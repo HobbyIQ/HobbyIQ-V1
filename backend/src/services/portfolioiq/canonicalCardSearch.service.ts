@@ -14,6 +14,18 @@ export interface CanonicalSearchInput {
   q: string;
   sport?: string;
   limit?: number;
+  /** Filter to a specific parallel (matches case-insensitively against
+   *  card_catalog parallels[].name and any sold_comps.parallel field on
+   *  the enrichment lookup). */
+  parallel?: string;
+  /** Filter to a specific grade — e.g. "PSA 10" or "BGS 9.5". */
+  grade?: string;
+  /** Filter to a specific print run (numeric, e.g. 150 for /150). */
+  printRun?: number;
+  /** Filter to autographs only (true) or non-autos only (false). */
+  isAuto?: boolean;
+  /** Filter to a specific card year. */
+  year?: number;
 }
 
 export interface CanonicalSearchHit {
@@ -32,6 +44,14 @@ export interface CanonicalSearchHit {
   score: number;
 }
 
+export interface CanonicalSearchFacets {
+  parallels: Record<string, number>;
+  grades: Record<string, number>;
+  printRuns: Record<string, number>;
+  years: Record<string, number>;
+  releaseNames: Record<string, number>;
+}
+
 export interface CanonicalSearchResult {
   q: string;
   tokens: string[];
@@ -39,8 +59,17 @@ export interface CanonicalSearchResult {
     isAuto: boolean | null;
     year: number | null;
   };
+  appliedFilters: {
+    parallel: string | null;
+    grade: string | null;
+    printRun: number | null;
+    isAuto: boolean | null;
+    year: number | null;
+  };
   hits: CanonicalSearchHit[];
+  facets: CanonicalSearchFacets;
   totalCandidates: number;
+  cachedFromMemory: boolean;
   computedAt: string;
 }
 
@@ -62,12 +91,59 @@ async function getContainers(): Promise<{ catalog: Container; sold: Container } 
 const STOP_WORDS = new Set(["the", "a", "an", "of", "in", "on", "with", "for", "to", "and", "or", "card", "cards", "baseball", "basketball", "football", "hockey"]);
 const AUTO_TOKENS = new Set(["auto", "autograph", "autographed", "autos"]);
 
+// CF-SEARCH-SET-ALIASES (Drew, 2026-07-25). Expand user shorthand into
+// full set names so "prizm silver" matches "Panini Prizm Silver". Applied
+// during tokenization — the alias's expanded tokens replace the original.
+const SET_ALIASES: Record<string, string[]> = {
+  "prizm": ["panini", "prizm"],
+  "tc": ["topps", "chrome"],
+  "bc": ["bowman", "chrome"],
+  "bdc": ["bowman", "draft", "chrome"],
+  "ud": ["upper", "deck"],
+  "opc": ["o-pee-chee"],
+  "sc": ["stadium", "club"],
+  "ss": ["select"],
+  "ntx": ["national", "treasures"],
+  "flawless": ["panini", "flawless"],
+  "immaculate": ["panini", "immaculate"],
+  "obsidian": ["panini", "obsidian"],
+  "mosaic": ["panini", "mosaic"],
+  "optic": ["panini", "optic"],
+  "donruss": ["panini", "donruss"],
+  "sapphire": ["sapphire"],  // keeps as-is but marks it as a distinct product hint
+  "ttcu": ["topps", "chrome", "update"],
+};
+
+// Grade shortcuts — "psa10" → PSA 10 filter, "10" alone → PSA 10 filter.
+const GRADE_ALIAS: Record<string, { company: string; value: number }> = {
+  "psa10": { company: "PSA", value: 10 },
+  "psa9": { company: "PSA", value: 9 },
+  "psa9.5": { company: "PSA", value: 9.5 },
+  "psa8": { company: "PSA", value: 8 },
+  "bgs10": { company: "BGS", value: 10 },
+  "bgs9.5": { company: "BGS", value: 9.5 },
+  "bgs9": { company: "BGS", value: 9 },
+  "sgc10": { company: "SGC", value: 10 },
+  "sgc9.5": { company: "SGC", value: 9.5 },
+  "cgc10": { company: "CGC", value: 10 },
+  "cgc9.5": { company: "CGC", value: 9.5 },
+  "gem": { company: "PSA", value: 10 },
+  "gemmint": { company: "PSA", value: 10 },
+};
+
 function tokenize(q: string): string[] {
-  return String(q ?? "")
+  const raw = String(q ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9\s#-]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
+    .filter((t) => t.length >= 1);
+  const expanded: string[] = [];
+  for (const t of raw) {
+    const alias = SET_ALIASES[t];
+    if (alias) expanded.push(...alias);
+    else expanded.push(t);
+  }
+  return expanded.filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 }
 
 /** Levenshtein distance — small, no deps. Used for fuzzy fallback when
@@ -107,14 +183,46 @@ function fuzzyContains(haystack: string, needle: string): boolean {
   return false;
 }
 
+// In-memory memoization — 5-minute TTL, capped at 128 entries.
+// Keyed by (q + all filter params) so identical queries return instantly.
+const memoCache = new Map<string, { at: number; result: CanonicalSearchResult }>();
+const MEMO_TTL_MS = 5 * 60 * 1000;
+const MEMO_CAP = 128;
+
+function memoKey(input: CanonicalSearchInput): string {
+  return [
+    input.q,
+    input.sport ?? "",
+    input.limit ?? "",
+    input.parallel ?? "",
+    input.grade ?? "",
+    input.printRun ?? "",
+    input.isAuto ?? "",
+    input.year ?? "",
+  ].join("|");
+}
+
+const emptyFacets = (): CanonicalSearchFacets => ({
+  parallels: {}, grades: {}, printRuns: {}, years: {}, releaseNames: {},
+});
+
 export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<CanonicalSearchResult> {
   const q = String(input.q ?? "").trim();
   const now = new Date();
   const empty: CanonicalSearchResult = {
     q, tokens: [], semanticFilters: { isAuto: null, year: null },
-    hits: [], totalCandidates: 0, computedAt: now.toISOString(),
+    appliedFilters: { parallel: null, grade: null, printRun: null, isAuto: null, year: null },
+    hits: [], facets: emptyFacets(), totalCandidates: 0, cachedFromMemory: false,
+    computedAt: now.toISOString(),
   };
   if (!q) return empty;
+
+  // Cache check
+  const cacheK = memoKey(input);
+  const cached = memoCache.get(cacheK);
+  if (cached && (Date.now() - cached.at) < MEMO_TTL_MS) {
+    return { ...cached.result, cachedFromMemory: true };
+  }
 
   const containers = await getContainers();
   if (!containers) return empty;
@@ -122,14 +230,31 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   const rawTokens = tokenize(q);
   if (rawTokens.length === 0) return empty;
 
-  // Extract semantic hints
-  let isAutoFilter: boolean | null = null;
-  let yearFilter: number | null = null;
+  // Extract semantic hints + resolve explicit filter params. Explicit
+  // filters win over hints when both are present.
+  let isAutoFilter: boolean | null = input.isAuto ?? null;
+  let yearFilter: number | null = input.year ?? null;
+  let gradeFilterCompany: string | null = null;
+  let gradeFilterValue: number | null = null;
+  if (input.grade) {
+    const m = String(input.grade).trim().replace(/\s+/g, "").toLowerCase();
+    const g = GRADE_ALIAS[m];
+    if (g) { gradeFilterCompany = g.company; gradeFilterValue = g.value; }
+  }
+  const parallelFilter: string | null = input.parallel ? String(input.parallel).toLowerCase() : null;
+  const printRunFilter: number | null = input.printRun ?? null;
+
   const searchTokens: string[] = [];
   for (const t of rawTokens) {
     if (AUTO_TOKENS.has(t)) { isAutoFilter = true; continue; }
     const y = Number(t);
-    if (Number.isFinite(y) && y >= 1980 && y <= 2030) { yearFilter = y; continue; }
+    if (Number.isFinite(y) && y >= 1980 && y <= 2030) { if (yearFilter === null) yearFilter = y; continue; }
+    // Grade tokens (psa10, bgs9.5, gem etc.)
+    const g = GRADE_ALIAS[t];
+    if (g) {
+      if (gradeFilterCompany === null) { gradeFilterCompany = g.company; gradeFilterValue = g.value; }
+      continue;
+    }
     searchTokens.push(t);
   }
 
@@ -255,7 +380,21 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
 
   // Only keep hits that match ALL search tokens (AND semantics)
   const requiredCount = searchTokens.length;
-  const filtered = scored.filter((h) => h.matchedTokens.length >= requiredCount);
+  let filtered = scored.filter((h) => h.matchedTokens.length >= requiredCount);
+
+  // Apply explicit filters (parallel/printRun/isAuto). Grade + year are
+  // applied later during enrichment because they touch sold_comps.
+  if (parallelFilter) {
+    filtered = filtered.filter((h) => h.parallels.some((p) => String(p.name).toLowerCase().includes(parallelFilter)));
+  }
+  if (printRunFilter !== null) {
+    filtered = filtered.filter((h) => h.parallels.some((p) => p.numberedTo === printRunFilter));
+  }
+  if (input.isAuto === true) {
+    filtered = filtered.filter((h) => h.isAutographSet);
+  } else if (input.isAuto === false) {
+    filtered = filtered.filter((h) => !h.isAutographSet);
+  }
 
   // Dedup by hobbyiqCardId — keep highest-scoring per canonical identity
   const byCanonical = new Map<string, CanonicalSearchHit>();
@@ -265,17 +404,46 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     if (!existing || h.score > existing.score) byCanonical.set(key, h);
   }
   const deduped = [...byCanonical.values()].sort((a, b) => b.score - a.score);
+
+  // Facets — compute from the deduped (before top-K slicing) so filter
+  // chips reflect the FULL result set, not just the visible page.
+  const facets: CanonicalSearchFacets = emptyFacets();
+  for (const h of deduped) {
+    for (const p of h.parallels) {
+      if (!p.name) continue;
+      facets.parallels[p.name] = (facets.parallels[p.name] || 0) + 1;
+      if (p.numberedTo) {
+        const k = `/${p.numberedTo}`;
+        facets.printRuns[k] = (facets.printRuns[k] || 0) + 1;
+      }
+    }
+    if (h.cardYear) facets.years[String(h.cardYear)] = (facets.years[String(h.cardYear)] || 0) + 1;
+    if (h.releaseName) facets.releaseNames[h.releaseName] = (facets.releaseNames[h.releaseName] || 0) + 1;
+  }
+
   const limit = Math.max(1, Math.min(50, input.limit ?? 20));
   const topHits = deduped.slice(0, limit);
 
   // Enrich top hits with imageUrl + recent median from sold_comps
+  // (grade-scoped when a grade filter was requested).
+  const gradeSuffix = (gradeFilterCompany && gradeFilterValue !== null)
+    ? ` AND c.gradeCompany = @gc AND c.gradeValue = @gv`
+    : "";
   await Promise.all(topHits.map(async (h) => {
     if (!h.hobbyiqCardId) return;
     try {
       const cutoff = new Date(now.getTime() - 90 * 86_400_000).toISOString();
+      const params2: Array<{ name: string; value: string | number | null }> = [
+        { name: "@slug", value: h.hobbyiqCardId },
+        { name: "@from", value: cutoff },
+      ];
+      if (gradeFilterCompany && gradeFilterValue !== null) {
+        params2.push({ name: "@gc", value: gradeFilterCompany });
+        params2.push({ name: "@gv", value: gradeFilterValue });
+      }
       const { resources: rows } = await containers.sold.items.query({
-        query: "SELECT TOP 30 c.price, c.imageUrl, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from ORDER BY c.soldAt DESC",
-        parameters: [{ name: "@slug", value: h.hobbyiqCardId }, { name: "@from", value: cutoff }],
+        query: `SELECT TOP 30 c.price, c.imageUrl, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from${gradeSuffix} ORDER BY c.soldAt DESC`,
+        parameters: params2 as { name: string; value: string | number }[],
       }).fetchAll();
       if (rows.length > 0) {
         for (const r of rows) {
@@ -285,11 +453,45 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
         if (prices.length > 0) h.recentMedian = prices[Math.floor(prices.length / 2)];
         h.compCount = prices.length;
       }
+      // Grade facet — collect distinct grade tiers from the enriched pool.
+      // (Runs even without grade filter so facet chips show all tiers.)
+      if (!gradeFilterCompany) {
+        const { resources: gradeRows } = await containers.sold.items.query({
+          query: "SELECT c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from",
+          parameters: [{ name: "@slug", value: h.hobbyiqCardId }, { name: "@from", value: cutoff }],
+        }).fetchAll();
+        for (const g of gradeRows) {
+          const label = g.gradeCompany ? `${g.gradeCompany} ${g.gradeValue}` : "Raw";
+          facets.grades[label] = (facets.grades[label] || 0) + 1;
+        }
+      }
     } catch { /* enrichment optional */ }
   }));
 
-  return {
-    q, tokens: rawTokens, semanticFilters: { isAuto: isAutoFilter, year: yearFilter },
-    hits: topHits, totalCandidates: candidates.length, computedAt: now.toISOString(),
+  const result: CanonicalSearchResult = {
+    q,
+    tokens: rawTokens,
+    semanticFilters: { isAuto: isAutoFilter, year: yearFilter },
+    appliedFilters: {
+      parallel: parallelFilter,
+      grade: gradeFilterCompany && gradeFilterValue !== null ? `${gradeFilterCompany} ${gradeFilterValue}` : null,
+      printRun: printRunFilter,
+      isAuto: input.isAuto ?? null,
+      year: input.year ?? null,
+    },
+    hits: topHits,
+    facets,
+    totalCandidates: candidates.length,
+    cachedFromMemory: false,
+    computedAt: now.toISOString(),
   };
+
+  // Cache the result. Cap eviction: oldest entry drops when we hit MEMO_CAP.
+  if (memoCache.size >= MEMO_CAP) {
+    const oldestKey = memoCache.keys().next().value;
+    if (oldestKey) memoCache.delete(oldestKey);
+  }
+  memoCache.set(cacheK, { at: Date.now(), result });
+
+  return result;
 }
