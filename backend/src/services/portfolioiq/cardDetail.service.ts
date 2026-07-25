@@ -22,10 +22,15 @@ export interface CardDetailInput {
   previewLimit?: number;              // passed to computeHobbyIqFmv (recentComps)
   relatedLimit?: number;              // passed to computeRelatedCards (default 8)
   /** When true, run parallel FMV computes for a fixed grade ladder so
-   *  iOS can render "PSA 10 = $X, PSA 9.5 = $Y, Raw = $Z" without N
-   *  extra calls. Default: true — this is what the tap-into-card view
-   *  wants by default. Set false to skip when only the primary FMV is
-   *  needed (e.g. quick preview cards, search-list enrichment). */
+   *  iOS can render "PSA 10 = $X, PSA 9.5 = $Y, Raw = $Z" in one call.
+   *
+   *  CF-GRADE-LADDER-OPT-IN (Drew, 2026-07-25). Default flipped to
+   *  FALSE — 7 parallel computeHobbyIqFmv calls tie up the Cosmos SDK
+   *  hard (measured 15-17s cold on `hiq:baseball:2025:topps-chrome-
+   *  sapphire:300:base:no-auto`). iOS should opt in explicitly for the
+   *  full grade breakdown view; the default fast path (primary FMV +
+   *  related) returns in ~200-700ms. A proper single-scan grade
+   *  breakdown is queued as follow-up. */
   includeGradeLadder?: boolean;
 }
 
@@ -120,7 +125,7 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
   // single Promise.allSettled so wall-clock = slowest of ANY sub-call,
   // not sum. Every sub-call goes through computeHobbyIqFmv's own cache
   // path so a second card-detail render for the same slug is near-free.
-  const includeGradeLadder = input.includeGradeLadder !== false;   // default true
+  const includeGradeLadder = input.includeGradeLadder === true;    // default false
   const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
     ? Promise.all(GRADE_LADDER_TIERS.map(async (t) => {
         const r = await computeHobbyIqFmv({
