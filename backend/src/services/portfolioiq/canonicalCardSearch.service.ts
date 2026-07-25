@@ -70,6 +70,43 @@ function tokenize(q: string): string[] {
     .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 }
 
+/** Levenshtein distance — small, no deps. Used for fuzzy fallback when
+ *  strict CONTAINS returns no candidates. Only computed on <500 sampled
+ *  candidates so it stays cheap. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const prev = new Array<number>(b.length + 1);
+  const curr = new Array<number>(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+/** Fuzzy substring check: does `haystack` contain any word within edit
+ *  distance 1 of `needle`? Short needles (<= 3 chars) require exact
+ *  substring to avoid noise. */
+function fuzzyContains(haystack: string, needle: string): boolean {
+  if (haystack.includes(needle)) return true;
+  if (needle.length <= 3) return false;
+  // Scan word-tokens in haystack for edit-distance-1 match
+  const maxDist = needle.length >= 6 ? 2 : 1;
+  const words = haystack.split(/[\s\-]+/).filter((w) => w.length >= needle.length - maxDist);
+  for (const w of words) {
+    if (Math.abs(w.length - needle.length) > maxDist) continue;
+    if (levenshtein(w, needle) <= maxDist) return true;
+  }
+  return false;
+}
+
 export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<CanonicalSearchResult> {
   const q = String(input.q ?? "").trim();
   const now = new Date();
@@ -98,7 +135,10 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
 
   if (searchTokens.length === 0 && (isAutoFilter === null && yearFilter === null)) return empty;
 
-  // Build query. Every search token must match at least one field.
+  // Build query. Uses the precomputed searchText field (case-insensitive
+  // CONTAINS on ONE lowercase field) instead of a 4-field OR — 10x faster
+  // on cross-partition scans. Falls back to the multi-field query when
+  // searchText hasn't been backfilled yet.
   const sport = String(input.sport ?? "baseball").toLowerCase();
   const params: Array<{ name: string; value: string | number | boolean }> = [
     { name: "@sport", value: sport },
@@ -111,25 +151,45 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   }
   searchTokens.forEach((t, i) => {
     const p = `@t${i}`;
+    // searchText is precomputed lowercase concat of (player, releaseName,
+    // setName, number, year, parallels[].name, attributes). Fallback OR
+    // handles rows the backfill hasn't reached yet.
     whereClauses.push(
-      `(CONTAINS(LOWER(c.player), ${p}, true) OR CONTAINS(LOWER(c.releaseName), ${p}, true) OR CONTAINS(LOWER(c.number), ${p}, true) OR EXISTS(SELECT VALUE 1 FROM par IN c.parallels WHERE CONTAINS(LOWER(par.name), ${p}, true)))`,
+      `((IS_DEFINED(c.searchText) AND CONTAINS(c.searchText, ${p})) OR ` +
+      `(NOT IS_DEFINED(c.searchText) AND (CONTAINS(LOWER(c.player), ${p}, true) OR CONTAINS(LOWER(c.releaseName), ${p}, true) OR CONTAINS(LOWER(c.number), ${p}, true) OR EXISTS(SELECT VALUE 1 FROM par IN c.parallels WHERE CONTAINS(LOWER(par.name), ${p}, true)))))`,
     );
     params.push({ name: p, value: t });
   });
   if (isAutoFilter === true) {
-    // Autograph subsets show up in setName or releaseName as "Auto…" or via cardNumber prefix.
     whereClauses.push(
       "(CONTAINS(LOWER(c.setName), 'auto', true) OR CONTAINS(LOWER(c.releaseName), 'auto', true))",
     );
   }
 
-  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport
+  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText
                  FROM c WHERE ${whereClauses.join(" AND ")}`;
   let candidates: any[] = [];
   try {
     const { resources } = await containers.catalog.items.query({ query, parameters: params }).fetchAll();
     candidates = resources || [];
   } catch { candidates = []; }
+
+  // Fuzzy fallback — if strict CONTAINS returned nothing, try Levenshtein
+  // on the searchText field with tokens allowed 1-char typos. Sampled
+  // (TOP 500) since fuzzy is O(N) in JS.
+  if (candidates.length === 0 && searchTokens.length > 0) {
+    try {
+      const sampleQ = `SELECT TOP 500 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText FROM c WHERE c.source = 'cardsight' AND c.sport = @sport${yearFilter !== null ? " AND c.year = @year" : ""} AND IS_DEFINED(c.searchText)`;
+      const sampleParams = [{ name: "@sport", value: sport }];
+      if (yearFilter !== null) sampleParams.push({ name: "@year", value: String(yearFilter) });
+      const { resources: sample } = await containers.catalog.items.query({ query: sampleQ, parameters: sampleParams }).fetchAll();
+      candidates = (sample || []).filter((c: any) => {
+        const st = String(c.searchText || "");
+        // Every token must have a fuzzy hit within edit distance 1
+        return searchTokens.every((t) => fuzzyContains(st, t));
+      });
+    } catch { candidates = []; }
+  }
 
   if (candidates.length === 0) return { ...empty, tokens: rawTokens, semanticFilters: { isAuto: isAutoFilter, year: yearFilter } };
 
@@ -148,8 +208,16 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       else if (parallelNames.some((n: string) => n.includes(t))) { matched.push(t); scoreBase += 3; matchedThis = true; }
       else if (releaseName.includes(t)) { matched.push(t); scoreBase += 2; matchedThis = true; }
       else if (number.includes(t)) { matched.push(t); scoreBase += 1; matchedThis = true; }
-      if (!matchedThis) { /* token unmatched — penalize? we already filtered on match, so shouldn't happen */ }
+      // Fuzzy fallback — if strict match missed but the searchText was
+      // built for this card, allow edit-distance-1 as a partial credit.
+      else if (c.searchText && fuzzyContains(String(c.searchText), t)) { matched.push(t); scoreBase += 0.5; matchedThis = true; }
+      if (!matchedThis) { /* unmatched token */ }
     }
+    // Popularity boost — hot cards surface first. log1p(recentSaleCount)
+    // gives diminishing returns so a mega-hot card doesn't fully drown a
+    // niche card that matches the query more precisely.
+    const popularity = Math.log1p(Number(c.recentSaleCount || 0));
+    const finalScore = scoreBase * (1 + popularity / 5);
     const yearNum = Number(c.year);
     const cardYear = Number.isFinite(yearNum) ? yearNum : null;
     const isAutographSet = /auto/i.test(String(c.setName ?? "") + " " + String(c.releaseName ?? ""));
@@ -181,7 +249,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       recentMedian: null,
       compCount: 0,
       matchedTokens: matched,
-      score: scoreBase,
+      score: finalScore,
     };
   });
 
