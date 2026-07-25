@@ -1,17 +1,22 @@
 #!/usr/bin/env node
-// CF-SEARCH-ENRICH (Drew, 2026-07-24). Backfills two new fields on
-// card_catalog to make search fast + smart:
+// CF-SEARCH-ENRICH (Drew, 2026-07-24; searchTokens 2026-07-25).
+// Backfills three fields on card_catalog to make search fast + smart:
 //
 //   1. searchText: lowercase concat of (player, releaseName, cardNumber,
-//      parallels[].name). Single indexed CONTAINS query beats a 4-field
-//      OR by ~10x on cross-partition scans.
-//   2. recentSaleCount: number of sold_comps rows in the last 90 days
+//      parallels[].name). Kept for the fuzzy fallback path.
+//   2. searchTokens: string[] of unique alpha-num tokens from searchText.
+//      canonicalCardSearch uses ARRAY_CONTAINS(c.searchTokens, @t) which
+//      IS index-accelerated — drops cold cross-partition scan from
+//      3-10s (post-autoscale) to <1s. CONTAINS on a scalar string is not
+//      index-accelerated for substring; ARRAY_CONTAINS on an indexed
+//      string array IS. This is the "do it right" fix (Drew 2026-07-25).
+//   3. recentSaleCount: number of sold_comps rows in the last 90 days
 //      whose (cardYear, UPPER(cardNumber)) match this catalog card.
 //      Used as a popularity boost in search ranking.
 //
-// Both computed in ONE pass. searchText is per-row (cheap). recentSaleCount
-// requires a pre-aggregated map of (year|number) → count that we build
-// from a single sold_comps scan up front.
+// All three computed in ONE pass. searchText/searchTokens are per-row
+// (cheap). recentSaleCount requires a pre-aggregated (year|number) map
+// built from a single sold_comps scan up front.
 //
 // Env:
 //   SEARCH_ENRICH_APPLY=true — persist. Default: dry-run.
@@ -45,6 +50,30 @@ function buildSearchText(row) {
     for (const a of row.attributes) if (a) parts.push(String(a));
   }
   return parts.join(" ").toLowerCase();
+}
+
+// Tokenize searchText into unique alphanumeric tokens for ARRAY_CONTAINS
+// lookups. Mirrors canonicalCardSearch's tokenize() (kept simple + sync).
+// Also includes card-number fragments (e.g. "cpa-eha" → also "cpa" + "eha")
+// so users typing either half of a hyphenated card number hit the row.
+function buildSearchTokens(searchText) {
+  if (!searchText) return [];
+  const seen = new Set();
+  const out = [];
+  // Split on whitespace + non-alphanum, keeping hyphenated tokens whole
+  // AND their halves so both "cpa-eha" and "cpa" match.
+  const rawTokens = String(searchText).toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean);
+  for (const raw of rawTokens) {
+    // Emit the full token (may contain hyphen, e.g. "cpa-eha", "o-pee-chee")
+    if (raw.length >= 2 && !seen.has(raw)) { seen.add(raw); out.push(raw); }
+    // Also emit hyphen-split fragments so partial-cardNumber queries hit
+    if (raw.includes("-")) {
+      for (const frag of raw.split("-")) {
+        if (frag.length >= 2 && !seen.has(frag)) { seen.add(frag); out.push(frag); }
+      }
+    }
+  }
+  return out;
 }
 
 async function runInParallel(items, worker, concurrency = CONCURRENCY) {
@@ -89,9 +118,9 @@ async function main() {
   }
   console.log(`\n  ${recentCountByYearNumber.size} distinct (year|number) keys with recent sales`);
 
-  // Pass 2: scan card_catalog, compute searchText + lookup recentSaleCount
+  // Pass 2: scan card_catalog, compute searchText + searchTokens + lookup recentSaleCount
   console.log(`  scanning card_catalog...`);
-  const ccQuery = `SELECT c.id, c.cardId, c.player, c.releaseName, c.setName, c.number, c.year, c.parallels, c.attributes, c.searchText, c.recentSaleCount FROM c WHERE c.source = 'cardsight' AND c.sport = @sp`;
+  const ccQuery = `SELECT c.id, c.cardId, c.player, c.releaseName, c.setName, c.number, c.year, c.parallels, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE c.source = 'cardsight' AND c.sport = @sp`;
   const ccIt = cc.items.query({ query: ccQuery, parameters: [{ name: "@sp", value: sport }] }, { maxItemCount: 5000 });
   const patches = [];
   let scanned = 0, unchanged = 0;
@@ -101,9 +130,14 @@ async function main() {
     for (const r of resources) {
       scanned++;
       const searchText = buildSearchText(r);
+      const searchTokens = buildSearchTokens(searchText);
       const key = `${r.year}|${String(r.number || "").toUpperCase()}`;
       const recentSaleCount = recentCountByYearNumber.get(key) || 0;
-      if (r.searchText === searchText && (r.recentSaleCount ?? 0) === recentSaleCount) {
+      // Skip only when all three match — searchTokens compared by
+      // stringified sort so array-order differences don't force rewrites.
+      const existingTokensKey = Array.isArray(r.searchTokens) ? [...r.searchTokens].sort().join("|") : "";
+      const newTokensKey = [...searchTokens].sort().join("|");
+      if (r.searchText === searchText && existingTokensKey === newTokensKey && (r.recentSaleCount ?? 0) === recentSaleCount) {
         unchanged++;
         continue;
       }
@@ -111,6 +145,7 @@ async function main() {
         id: r.id,
         partitionKey: r.cardId,
         searchText,
+        searchTokens,
         recentSaleCount,
       });
     }
@@ -132,6 +167,7 @@ async function main() {
   const result = await runInParallel(patches, async (p) => {
     await cc.item(p.id, p.partitionKey).patch([
       { op: "set", path: "/searchText", value: p.searchText },
+      { op: "set", path: "/searchTokens", value: p.searchTokens },
       { op: "set", path: "/recentSaleCount", value: p.recentSaleCount },
     ]);
     done++;
