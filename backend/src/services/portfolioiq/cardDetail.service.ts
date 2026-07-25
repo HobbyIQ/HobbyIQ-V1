@@ -21,6 +21,24 @@ export interface CardDetailInput {
   maxAgeDays?: number;                // passed to computeHobbyIqFmv
   previewLimit?: number;              // passed to computeHobbyIqFmv (recentComps)
   relatedLimit?: number;              // passed to computeRelatedCards (default 8)
+  /** When true, run parallel FMV computes for a fixed grade ladder so
+   *  iOS can render "PSA 10 = $X, PSA 9.5 = $Y, Raw = $Z" without N
+   *  extra calls. Default: true — this is what the tap-into-card view
+   *  wants by default. Set false to skip when only the primary FMV is
+   *  needed (e.g. quick preview cards, search-list enrichment). */
+  includeGradeLadder?: boolean;
+}
+
+/** One tier in the grade ladder. gradeCompany=null + gradeValue=null = "Raw". */
+export interface GradeLadderTier {
+  gradeLabel: string;                 // "PSA 10", "BGS 9.5", "Raw"
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  fmv: number | null;
+  compCount: number;                  // direct comps at this grade (before fallback)
+  trend: "up" | "down" | "flat";
+  method: string;                     // rung from HobbyIqFmvMethod
+  confidence: number;
 }
 
 export interface CardDetailIdentity {
@@ -40,11 +58,29 @@ export interface CardDetailResult {
   identity: CardDetailIdentity;
   fmv: HobbyIqFmvResult | null;
   fmvError: string | null;
+  gradeLadder: GradeLadderTier[] | null;   // null when includeGradeLadder=false
+  gradeLadderError: string | null;
   related: RelatedCardsResult | null;
   relatedError: string | null;
   processingMs: number;
   computedAt: string;
 }
+
+// Standard grade tiers surfaced in the ladder. Kept intentionally short —
+// these are the tiers 95% of iOS users care about at glance. PSA
+// dominates market share, BGS is the second-most-tracked, Raw is the
+// no-grade baseline. If a tier has zero direct comps, computeHobbyIqFmv's
+// internal fallback ladder still returns a number — the compCount field
+// signals "how much conviction" (0 = fallback-only, positive = direct).
+const GRADE_LADDER_TIERS: Array<{ label: string; company: string | null; value: number | null }> = [
+  { label: "PSA 10",  company: "PSA", value: 10 },
+  { label: "PSA 9.5", company: "PSA", value: 9.5 },
+  { label: "PSA 9",   company: "PSA", value: 9 },
+  { label: "BGS 10",  company: "BGS", value: 10 },
+  { label: "BGS 9.5", company: "BGS", value: 9.5 },
+  { label: "SGC 10",  company: "SGC", value: 10 },
+  { label: "Raw",     company: null,  value: null },
+];
 
 export async function computeCardDetail(input: CardDetailInput): Promise<CardDetailResult> {
   const t0 = Date.now();
@@ -58,6 +94,7 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
       cardNumber: null, parallel: null, isAuto: null, printRun: null,
     },
     fmv: null, fmvError: null,
+    gradeLadder: null, gradeLadderError: null,
     related: null, relatedError: null,
     processingMs: 0,
     computedAt: now.toISOString(),
@@ -78,9 +115,39 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
     printRun: parsed?.printRun ?? null,
   };
 
-  // Fan out — both sub-calls read from Cosmos in parallel. Wall-clock =
-  // slowest of the two, not sum.
-  const [fmvSettled, relatedSettled] = await Promise.allSettled([
+  // Fan out — primary FMV + related in parallel, PLUS the grade ladder
+  // fires N parallel FMV computes (one per tier). All complete under a
+  // single Promise.allSettled so wall-clock = slowest of ANY sub-call,
+  // not sum. Every sub-call goes through computeHobbyIqFmv's own cache
+  // path so a second card-detail render for the same slug is near-free.
+  const includeGradeLadder = input.includeGradeLadder !== false;   // default true
+  const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
+    ? Promise.all(GRADE_LADDER_TIERS.map(async (t) => {
+        const r = await computeHobbyIqFmv({
+          hobbyiqCardId: slug,
+          gradeCompany: t.company,
+          gradeValue: t.value,
+          maxAgeDays: input.maxAgeDays,
+          previewLimit: 1,     // don't need recentComps in ladder tiers
+        });
+        // compCount is direct-slug conviction only; fallback rungs still
+        // return an FMV number but with method != "direct-slug". iOS can
+        // gray out low-conviction tiers using this signal.
+        const directCount = r.method === "direct-slug" ? r.compCount : 0;
+        return {
+          gradeLabel: t.label,
+          gradeCompany: t.company,
+          gradeValue: t.value,
+          fmv: r.fmv,
+          compCount: directCount,
+          trend: r.trend.direction,
+          method: r.method,
+          confidence: r.confidence,
+        };
+      }))
+    : Promise.resolve([]);
+
+  const [fmvSettled, relatedSettled, gradeLadderSettled] = await Promise.allSettled([
     computeHobbyIqFmv({
       hobbyiqCardId: slug,
       gradeCompany: input.gradeCompany ?? null,
@@ -89,6 +156,7 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
       previewLimit: input.previewLimit,
     }),
     computeRelatedCards(slug, input.relatedLimit ?? 8),
+    gradeLadderPromise,
   ]);
 
   const fmv = fmvSettled.status === "fulfilled" ? fmvSettled.value : null;
@@ -99,12 +167,19 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
   const relatedError = relatedSettled.status === "rejected"
     ? (relatedSettled.reason instanceof Error ? relatedSettled.reason.message : String(relatedSettled.reason))
     : null;
+  const gradeLadder = includeGradeLadder && gradeLadderSettled.status === "fulfilled"
+    ? gradeLadderSettled.value
+    : null;
+  const gradeLadderError = gradeLadderSettled.status === "rejected"
+    ? (gradeLadderSettled.reason instanceof Error ? gradeLadderSettled.reason.message : String(gradeLadderSettled.reason))
+    : null;
 
   return {
     success: true,
     hobbyiqCardId: slug,
     identity,
     fmv, fmvError,
+    gradeLadder, gradeLadderError,
     related, relatedError,
     processingMs: Date.now() - t0,
     computedAt: new Date().toISOString(),

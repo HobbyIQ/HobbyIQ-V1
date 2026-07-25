@@ -295,6 +295,9 @@ router.post("/card-detail", requireSession, async (req: Request, res: Response, 
       maxAgeDays: typeof req.body?.maxAgeDays === "number" ? req.body.maxAgeDays : undefined,
       previewLimit: typeof req.body?.previewLimit === "number" ? req.body.previewLimit : undefined,
       relatedLimit: typeof req.body?.relatedLimit === "number" ? req.body.relatedLimit : undefined,
+      // iOS renders the grade tier ladder by default; only skipped for
+      // lightweight preview surfaces that just want the primary FMV.
+      includeGradeLadder: typeof req.body?.includeGradeLadder === "boolean" ? req.body.includeGradeLadder : true,
     });
     res.json(result);
   } catch (err) { next(err); }
