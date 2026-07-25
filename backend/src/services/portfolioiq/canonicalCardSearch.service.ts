@@ -307,10 +307,17 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
 
   if (searchTokens.length === 0 && (isAutoFilter === null && yearFilter === null)) return empty;
 
-  // Build query. Uses the precomputed searchText field (case-insensitive
-  // CONTAINS on ONE lowercase field) instead of a 4-field OR — 10x faster
-  // on cross-partition scans. Falls back to the multi-field query when
-  // searchText hasn't been backfilled yet.
+  // Build query. Prefers ARRAY_CONTAINS(c.searchTokens, @t) — this IS
+  // index-accelerated (Cosmos range index on an array field). CONTAINS on
+  // a scalar string is NOT (substring lookup can't use the index), so the
+  // pre-2026-07-25 CONTAINS(c.searchText, ...) path hit the RU wall on
+  // cross-partition scans of card_catalog (866k rows). The old CONTAINS
+  // path is kept as fallback for rows that haven't been reached by the
+  // searchTokens backfill yet — those rows still work, just slower.
+  //
+  // See scripts/comp-quality/backfill-search-fields.cjs for how
+  // searchTokens is computed (unique alphanum tokens from searchText,
+  // hyphen-split included so "cpa" hits "cpa-eha").
   const sport = String(input.sport ?? "baseball").toLowerCase();
   const params: Array<{ name: string; value: string | number | boolean }> = [
     { name: "@sport", value: sport },
@@ -323,12 +330,17 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   }
   searchTokens.forEach((t, i) => {
     const p = `@t${i}`;
-    // searchText is precomputed lowercase concat of (player, releaseName,
-    // setName, number, year, parallels[].name, attributes). Fallback OR
-    // handles rows the backfill hasn't reached yet.
+    // Tri-tier: (1) fast ARRAY_CONTAINS on the tokenized field (best);
+    // (2) CONTAINS on searchText for rows tokenized-but-not-yet-arrayed;
+    // (3) legacy 4-field OR for rows the backfill has never touched.
     whereClauses.push(
-      `((IS_DEFINED(c.searchText) AND CONTAINS(c.searchText, ${p})) OR ` +
-      `(NOT IS_DEFINED(c.searchText) AND (CONTAINS(LOWER(c.player), ${p}, true) OR CONTAINS(LOWER(c.releaseName), ${p}, true) OR CONTAINS(LOWER(c.number), ${p}, true) OR EXISTS(SELECT VALUE 1 FROM par IN c.parallels WHERE CONTAINS(LOWER(par.name), ${p}, true)))))`,
+      `(` +
+        `(IS_DEFINED(c.searchTokens) AND ARRAY_CONTAINS(c.searchTokens, ${p})) OR ` +
+        `(NOT IS_DEFINED(c.searchTokens) AND IS_DEFINED(c.searchText) AND CONTAINS(c.searchText, ${p})) OR ` +
+        `(NOT IS_DEFINED(c.searchTokens) AND NOT IS_DEFINED(c.searchText) AND ` +
+          `(CONTAINS(LOWER(c.player), ${p}, true) OR CONTAINS(LOWER(c.releaseName), ${p}, true) OR CONTAINS(LOWER(c.number), ${p}, true) OR ` +
+           `EXISTS(SELECT VALUE 1 FROM par IN c.parallels WHERE CONTAINS(LOWER(par.name), ${p}, true))))` +
+      `)`,
     );
     params.push({ name: p, value: t });
   });
