@@ -151,10 +151,19 @@ router.post("/canonical-fmv", requireSession, async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
-// CF-CANONICAL-CARD-SEARCH (Drew, 2026-07-24). Free-text card search
-// over card_catalog. Handles "hartman blue auto bowman"-style queries.
-// Response includes hobbyiqCardId + recent sale image + FMV median.
-router.post("/search", requireSession, async (req: Request, res: Response, next) => {
+// CF-CANONICAL-CARD-SEARCH (Drew, 2026-07-24, renamed 2026-07-25).
+// Free-text CATALOG search over card_catalog — returns multiple candidate
+// cards for iOS to pick from. Response includes hobbyiqCardId, matched
+// ranges, groups, momentum, and recentMedian.
+//
+// Mounted at POST /api/compiq/card-search. The old `/search` path is
+// already claimed by compiq.routes.ts:2163 (DashboardView single-card
+// FMV estimate, expects `{query}` not `{q}` and returns a full estimate
+// envelope). Mount order in app.ts registers compiqRoutes BEFORE
+// canonicalFmvRoutes, so a POST `/search` here was shadowed and never
+// reached — smoke test 2026-07-25 confirmed. This name change keeps the
+// two purposes semantically distinct without touching DashboardView.
+router.post("/card-search", requireSession, async (req: Request, res: Response, next) => {
   try {
     const q = String(req.body?.q ?? "").trim();
     if (!q) {
