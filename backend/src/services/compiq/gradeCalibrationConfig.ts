@@ -58,22 +58,82 @@ function tierKey(grader: string, gradeValue: number): string {
   return `${grader.toUpperCase()} ${gradeValue}`;
 }
 
-/** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, v1). Look up the
- *  empirical grade multiplier from the value-band calibration table.
- *  Currently baseline-only (v1); v2+ will add sport / product / year /
- *  player fall-through. Returns null when the (bucket, tier) cell is
- *  absent so the caller can fall through to its next-broader scope. */
+/** Which layer of the value-band ladder produced the multiplier. */
+export type ValueBandResolveScope =
+  | "sport-family"
+  | "sport"
+  | "baseline"
+  | "uncovered";
+
+export interface ValueBandLookupContext {
+  /** Sport name lowercased ("baseball" / "football" / "basketball" / "hockey"). */
+  sport?: string | null;
+  /** GRADE_CALIBRATION family classifier output (e.g. "bowman-chrome",
+   *  "topps-chrome", "panini-prizm"). Passed by callers that already
+   *  ran classifyFamily(setName). */
+  family?: string | null;
+}
+
+export interface ValueBandLookupResult {
+  medianRatio: number;
+  scope: ValueBandResolveScope;
+  sampleSize: number;
+}
+
+/** CF-VALUE-BAND-V2 (Drew, 2026-07-26). Walk the fall-through ladder
+ *  and return the finest cell that has data. Backwards-compat with the
+ *  scalar-returning v1 lookup below. Order:
+ *    1. bySportFamily["sport|family"][bucket][tier]
+ *    2. bySport[sport][bucket][tier]
+ *    3. baseline[bucket][tier]
+ *    4. null (caller falls back to hardcoded value-tier cap). */
+export function lookupValueBandMultiplierWithScope(
+  rawAnchor: number,
+  grader: string,
+  gradeValue: number,
+  ctx: ValueBandLookupContext = {},
+): ValueBandLookupResult | null {
+  const bucket = valueBandBucketOf(rawAnchor);
+  if (bucket === null) return null;
+  const tier = tierKey(grader, gradeValue);
+  const sport = ctx.sport ? String(ctx.sport).toLowerCase() : null;
+  const family = ctx.family ? String(ctx.family).toLowerCase() : null;
+
+  const isValid = (cell: { medianRatio?: number } | undefined): cell is { medianRatio: number; sampleSize: number } =>
+    !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0;
+
+  // 1. sport + family
+  if (sport && family) {
+    const sfKey = `${sport}|${family}`;
+    const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[bucket]?.[tier];
+    if (isValid(cell)) return { medianRatio: cell.medianRatio, scope: "sport-family", sampleSize: cell.sampleSize };
+  }
+  // 2. sport
+  if (sport) {
+    const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySport?.[sport]?.[bucket]?.[tier];
+    if (isValid(cell)) return { medianRatio: cell.medianRatio, scope: "sport", sampleSize: cell.sampleSize };
+  }
+  // 3. baseline (pooled across everything)
+  const baseCell = GRADE_MULTIPLIER_BY_VALUE_BAND.baseline?.[bucket]?.[tier];
+  if (isValid(baseCell)) return { medianRatio: baseCell.medianRatio, scope: "baseline", sampleSize: baseCell.sampleSize };
+
+  return null;
+}
+
+/** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22). Scalar wrapper for the
+ *  ladder above — preserves the v1 lookup signature for callers that
+ *  don't care about scope. When called WITHOUT ctx, behavior is
+ *  identical to v1 (baseline-only): the ladder short-circuits at step 3
+ *  because steps 1-2 need sport/family. When called WITH ctx, walks the
+ *  full ladder and returns the finest cell's medianRatio. Returns null
+ *  when no cell in the ladder has data. */
 export function lookupValueBandMultiplier(
   rawAnchor: number,
   grader: string,
   gradeValue: number,
+  ctx: ValueBandLookupContext = {},
 ): number | null {
-  const bucket = valueBandBucketOf(rawAnchor);
-  if (bucket === null) return null;
-  const tier = tierKey(grader, gradeValue);
-  const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.baseline?.[bucket]?.[tier];
-  if (!cell || !Number.isFinite(cell.medianRatio) || cell.medianRatio <= 0) return null;
-  return cell.medianRatio;
+  return lookupValueBandMultiplierWithScope(rawAnchor, grader, gradeValue, ctx)?.medianRatio ?? null;
 }
 
 /** Lookup helper. Returns null when the (family, grader) is uncovered.
