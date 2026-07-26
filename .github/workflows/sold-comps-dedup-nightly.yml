@@ -50,6 +50,12 @@ on:
         required: false
         type: string
         default: '24'
+      cross_source:
+        description: 'CF-CROSS-SOURCE-DEDUP: group by (soldMinute, priceCents, parallel) WITHOUT source — collapses CS+CH duplicates of the same underlying sale. Default true for scheduled runs.'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
 
 jobs:
   dedup:
@@ -108,6 +114,10 @@ jobs:
           # full_pool > recency (--since).
           FULL_POOL_ARG: ${{ inputs.full_pool == 'true' && '--full' || '' }}
           SINCE_HOURS: ${{ inputs.since_hours || '24' }}
+          # CF-CROSS-SOURCE-DEDUP: scheduled runs default to true so
+          # CS + CH same-sale duplicates collapse nightly. Manual
+          # dispatches can flip via input.
+          CROSS_SOURCE_ARG: ${{ (inputs.cross_source == 'false') && '' || '--cross-source' }}
         run: |
           set -euo pipefail
           # Compose scan-scope flags. Detect script picks the right
@@ -117,6 +127,7 @@ jobs:
             SINCE_ISO=$(date -u -d "-${SINCE_HOURS} hours" +%FT%TZ)
             SCOPE_ARGS="--since=$SINCE_ISO"
           fi
+          SCOPE_ARGS="$SCOPE_ARGS $CROSS_SOURCE_ARG"
           echo "scope: $SCOPE_ARGS"
           node scripts/detect-sold-comps-duplicates.cjs $SCOPE_ARGS \
             | node scripts/apply-sold-comps-dedup.cjs $DRY_RUN_ARG \
