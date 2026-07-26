@@ -14,6 +14,11 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { logSubRawInversionObserved } from "../compiq/marketRead.service.js";
+// CF-PROSPECTS-BREAKING-OUT-MATERIALIZE (Drew, 2026-07-26). Persist the
+// ranked inversions after the scan so the /prospects/breaking-out
+// route can serve reads via a single point-read instead of re-running
+// the cross-partition scan per request.
+import { writeProspectsRollup } from "../portfolioiq/prospectsBreakingOutStore.service.js";
 
 let sharedContainer: Container | null = null;
 async function getContainer(): Promise<Container | null> {
@@ -228,6 +233,30 @@ export async function runSubRawInversionScan(
         },
       });
       summary.telemetryEmitted++;
+    }
+  }
+
+  // CF-PROSPECTS-BREAKING-OUT-MATERIALIZE (Drew, 2026-07-26). Persist
+  // ranked inversions for the /prospects/breaking-out route. Best-
+  // effort mirror — a failure logs but never fails the scan (telemetry
+  // is the primary contract; the rollup is a perf cache).
+  if (!dryRun) {
+    const rankedForRollup = inversions
+      .slice()
+      .sort((a, b) => b.marginUSD - a.marginUSD);
+    const rollupWritten = await writeProspectsRollup({
+      sport: opts.sport,
+      windowDays: summary.windowDays,
+      minMarginPct: opts.minMarginPct ?? 5,
+      prospects: rankedForRollup,
+      totalDetected: inversions.length,
+    }).catch(() => false);
+    if (!rollupWritten) {
+      console.warn(JSON.stringify({
+        event: "sub_raw_inversion_scan.rollup_write_failed",
+        source: "subRawInversionScan.service",
+        sport: opts.sport,
+      }));
     }
   }
 

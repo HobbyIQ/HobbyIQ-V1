@@ -21,6 +21,11 @@
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { computeSubRawInversions } from "../services/signals/subRawInversionScan.service.js";
+// CF-PROSPECTS-BREAKING-OUT-MATERIALIZE (Drew, 2026-07-26). Serve from
+// the nightly-materialized rollup when available (single point-read);
+// fall back to live compute when the rollup is absent (cold start,
+// first run of the day, container 404).
+import { readLatestProspectsRollup } from "../services/portfolioiq/prospectsBreakingOutStore.service.js";
 
 const router = Router();
 
@@ -36,13 +41,27 @@ router.get("/prospects/breaking-out", requireSession, async (req: Request, res: 
     const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : NaN;
     const limit = Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 100 ? Math.floor(limitRaw) : 20;
 
-    const inversions = await computeSubRawInversions({
-      sport,
-      windowDays,
-      minMarginPct,
-    });
+    // CF-PROSPECTS-BREAKING-OUT-MATERIALIZE (Drew, 2026-07-26).
+    // Fast path: read today's / yesterday's pre-materialized rollup
+    // written by the nightly scan. Only serve it when the window +
+    // margin match the request — otherwise the pre-baked prospects
+    // don't answer the caller's question, so fall through to compute.
+    let inversions = null;
+    let servedFrom = "live-compute";
+    let rollupComputedAt: string | null = null;
+    const rollup = await readLatestProspectsRollup(sport).catch(() => null);
+    if (rollup && rollup.windowDays === windowDays && rollup.minMarginPct === minMarginPct) {
+      inversions = rollup.prospects;
+      servedFrom = "materialized";
+      rollupComputedAt = rollup.computedAt;
+    } else {
+      inversions = await computeSubRawInversions({ sport, windowDays, minMarginPct });
+    }
 
     // Rank by absolute-dollar uplift (bigger $ delta = stronger buy signal).
+    // Rollup writes are already ranked but we re-rank + slice here so the
+    // limit-scoping stays a route-level concern (rollup persists ALL
+    // detected prospects, up to the totalDetected count).
     const ranked = inversions
       .sort((a, b) => b.marginUSD - a.marginUSD)
       .slice(0, limit)
@@ -51,9 +70,10 @@ router.get("/prospects/breaking-out", requireSession, async (req: Request, res: 
     res.json({
       sport,
       windowDays,
-      computedAt: new Date().toISOString(),
+      computedAt: rollupComputedAt ?? new Date().toISOString(),
+      servedFrom,
       count: ranked.length,
-      totalDetected: inversions.length,
+      totalDetected: rollup?.totalDetected ?? inversions.length,
       prospects: ranked,
     });
   } catch (err) { next(err); }
