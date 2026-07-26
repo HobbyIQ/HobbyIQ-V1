@@ -103,10 +103,15 @@ jobs:
         run: node scripts/calibrate-auto-multipliers.cjs
 
       - name: Promote dated output to latest
-        # The script writes auto-multipliers-YYYY-MM-DD.json; we update
-        # auto-multipliers-latest.json (the engine reads this canonical name).
+        # The script writes auto-multipliers-YYYY-MM-DD.json into its own
+        # dir (backend/scripts/) — not backend/. CF-AUTO-MULT-OUTPUT-PATH
+        # (Drew, 2026-07-26): prior glob `backend/auto-multipliers-*.json`
+        # never matched → workflow died with "scan produced no output
+        # file" even when the scan succeeded. Now scans both scripts/ and
+        # backend root (defensive — either location is honored) and
+        # picks the newest.
         run: |
-          DATED=$(ls backend/auto-multipliers-*.json 2>/dev/null | tail -1)
+          DATED=$(ls backend/scripts/auto-multipliers-*.json backend/auto-multipliers-*.json 2>/dev/null | tail -1)
           if [ -z "$DATED" ]; then
             echo "::error::scan produced no output file"
             exit 1

@@ -74,28 +74,30 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
-      # Fetch the primary connection string directly from the Cosmos account
-      # rather than reading App Service settings — avoids a chicken-and-egg
-      # dependency where a bad App Service value would break the aggregation.
-      # Never echoed to logs.
-      - name: Fetch Cosmos connection string
+      # CF-COSMOS-CONN-VIA-APP-SERVICE (Drew, 2026-07-26). OIDC identity
+      # does NOT have Microsoft.DocumentDB/databaseAccounts/
+      # listConnectionStrings/action — this workflow has been failing
+      # for weeks with AuthorizationFailed. Swap to the pattern that
+      # actually works (used by daily-refresh.yml): read
+      # COSMOS_CONNECTION_STRING from HobbyIQ3 App Service settings.
+      # The App Service reader permission IS granted to the OIDC
+      # identity. Value masked via ::add-mask::.
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         if: steps.et-gate.outputs.should_run == 'true'
         id: cosmos
         shell: bash
         run: |
-          CONN=$(az cosmosdb keys list \
-            --name hobbyiq-comps \
-            --resource-group rg-hobbyiq-dev \
-            --type connection-strings \
-            --query "connectionStrings[?description=='Primary SQL Connection String'].connectionString | [0]" \
-            -o tsv)
+          CONN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv | tr -d '\r\n')
           if [ -z "$CONN" ]; then
-            echo "FAILED to fetch Cosmos connection string" >&2
+            echo "FAILED to fetch COSMOS_CONNECTION_STRING from App Service" >&2
             exit 1
           fi
+          echo "::add-mask::$CONN"
           echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
           echo "conn_length=${#CONN}" >> "$GITHUB_OUTPUT"
-          # Confirm we got a plausible connection string without echoing it.
           echo "Cosmos connection string fetched (length: ${#CONN})"
 
       - name: Run promote-learned-aliases
