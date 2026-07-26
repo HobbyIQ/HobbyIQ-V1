@@ -25,11 +25,25 @@
 const { CosmosClient } = require("@azure/cosmos");
 
 function parseArgs(argv) {
-  const args = { cardId: null, limit: Infinity };
+  // CF-DEDUP-RECENCY-FILTER (Drew, 2026-07-26). Add --since so the
+  // nightly cron only re-scans cardIds that had a WRITE in the last
+  // 24 hours (that's when new duplicates would be introduced). The
+  // full-pool re-scan blew past the 120min workflow timeout for 5 of
+  // the last 6 nights (only 2026-07-22 completed). Recency-filtered
+  // enumeration completes in ~10-20 min.
+  //
+  // --full          override — process every distinct cardId (weekly
+  //                 deep-scan cadence; not the default)
+  // --since=<ISO>   explicit lower bound on observedAt (default: 24h ago)
+  const args = { cardId: null, limit: Infinity, since: null, full: false };
+  const defaultSince = new Date(Date.now() - 24 * 3600_000).toISOString();
   for (const a of argv) {
     if (a.startsWith("--cardId=")) args.cardId = a.slice(9);
     else if (a.startsWith("--limit=")) args.limit = parseInt(a.slice(8), 10);
+    else if (a.startsWith("--since=")) args.since = a.slice(8);
+    else if (a === "--full") args.full = true;
   }
+  if (!args.since && !args.full && !args.cardId) args.since = defaultSince;
   return args;
 }
 
@@ -42,18 +56,33 @@ async function main() {
   const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   const sc = db.container("sold_comps");
 
-  console.error(`Scan mode: cardId=${args.cardId ?? "(all)"}  limit=${args.limit}`);
+  const mode = args.cardId ? "single-cardId"
+             : args.full   ? "full-pool"
+             : "recency-filtered";
+  console.error(`Scan mode: ${mode}  cardId=${args.cardId ?? "(n/a)"}  since=${args.since ?? "(n/a)"}  limit=${args.limit}`);
 
   let cardIds = [];
   if (args.cardId) {
     cardIds = [args.cardId];
-  } else {
-    console.error("Enumerating distinct cardIds…");
+  } else if (args.full) {
+    console.error("Enumerating ALL distinct cardIds (full-pool mode)…");
     const { resources } = await sc.items.query(
       "SELECT DISTINCT VALUE c.cardId FROM c"
     ).fetchAll();
     cardIds = resources;
-    console.error(`Found ${cardIds.length.toLocaleString()} distinct cardIds`);
+    console.error(`Found ${cardIds.length.toLocaleString()} distinct cardIds (full pool)`);
+  } else {
+    // CF-DEDUP-RECENCY-FILTER: only re-scan cardIds that had a WRITE
+    // (observedAt) in the [since, now] window. New dupes can only be
+    // introduced when new rows land — old cardIds that haven't changed
+    // haven't gained new dupes since the last nightly.
+    console.error(`Enumerating distinct cardIds with observedAt >= ${args.since}…`);
+    const { resources } = await sc.items.query({
+      query: "SELECT DISTINCT VALUE c.cardId FROM c WHERE c.observedAt >= @since",
+      parameters: [{ name: "@since", value: args.since }],
+    }).fetchAll();
+    cardIds = resources;
+    console.error(`Found ${cardIds.length.toLocaleString()} distinct cardIds with recent writes`);
   }
 
   const stripRefr = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
