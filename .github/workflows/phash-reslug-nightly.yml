@@ -1,0 +1,122 @@
+name: Nightly pHash centroid refresh + auto-reslug
+
+# Phase B of the image-verification pipeline (Drew, 2026-07-26).
+# Runs after the Phase A pHash compute completed (2.34M pHashes now
+# persisted across sold_comps). Two steps in sequence:
+#
+#   1. compute-slug-phash-centroids.cjs — rebuilds per-slug centroids
+#      from the full pHash pool. Overwrites slug_phash_centroids.
+#   2. phash-verify-and-reslug.cjs (APPLY mode) — walks pHashed rows,
+#      compares to their slug centroid, reslugs mismatches to the best
+#      sibling centroid or flags image-verification-inconclusive when
+#      no sibling matches.
+#
+# Runs at 02:15 ET so it completes before the promote-aliases job
+# (02:30 ET) and well before the 5AM deploy. Two UTC crons + ET gate
+# per the standard nightly pattern.
+
+on:
+  schedule:
+    - cron: '15 6 * * *'   # 06:15 UTC = 02:15 EDT
+    - cron: '15 7 * * *'   # 07:15 UTC = 02:15 EST
+  workflow_dispatch:
+
+jobs:
+  reslug:
+    name: Recompute pHash centroids and auto-reslug mismatches
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Run only at 02:00-03:00 America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — skipping ET-hour gate."
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$((10#$ET_HOUR))" -ge 2 ] && [ "$((10#$ET_HOUR))" -le 3 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (within 02-03 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (outside 02-03 window); skipping this UTC trigger."
+          fi
+
+      - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm ci
+
+      # Build the TS services since compute-slug-phash-centroids.cjs and
+      # phash-verify-and-reslug.cjs both require compiled dist paths
+      # (hobbyIqCardId.service.js) for slug parsing.
+      - name: Build backend
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          CONN=$(az cosmosdb keys list \
+            --name hobbyiq-comps \
+            --resource-group rg-hobbyiq-dev \
+            --type connection-strings \
+            --query "connectionStrings[?description=='Primary SQL Connection String'].connectionString | [0]" \
+            -o tsv)
+          if [ -z "$CONN" ]; then
+            echo "FAILED to fetch Cosmos connection string" >&2
+            exit 1
+          fi
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+          echo "Cosmos connection string fetched (length: ${#CONN})"
+
+      # Step 1: recompute slug centroids from the full pHash pool.
+      - name: Recompute slug pHash centroids
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        env:
+          CENTROID_APPLY: 'true'
+          CENTROID_CONCURRENCY: '8'
+        run: node scripts/comp-quality/compute-slug-phash-centroids.cjs
+
+      # Step 2: verify + reslug in APPLY mode. Uses conservative thresholds
+      # (MISMATCH >= 20, MATCH <= 12) — same as the dry-run defaults that
+      # produced 348 clean reslugs on the earlier 5,916-centroid pool.
+      # Widening these later once we see actual mismatch distribution.
+      - name: Verify + auto-reslug
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        env:
+          RESLUG_APPLY: 'true'
+          RESLUG_CONCURRENCY: '8'
+          RESLUG_DISTANCE_MISMATCH: '20'
+          RESLUG_DISTANCE_MATCH: '12'
+        run: node scripts/comp-quality/phash-verify-and-reslug.cjs

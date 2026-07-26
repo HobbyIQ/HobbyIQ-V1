@@ -1,0 +1,134 @@
+name: Nightly discovery cache pre-warm
+
+# Warms the in-memory 10-minute memoization caches on HobbyIQ3 for the
+# discovery endpoints (/trending, /trending-players, /related-cards for
+# the top-N slugs) so iOS's first-hit of the day is <100ms instead of
+# 2-3s (cold cross-partition Cosmos scan against ch_daily_sales and
+# sold_comps).
+#
+# Fires at 04:35 ET — AFTER the 4:30 ET Daily 5AM ET Refresh & Deploy
+# has run App Service through its restart cycle. Warming before the
+# restart would be wasted because the in-process cache is wiped when
+# App Service restarts on new deploy.
+#
+# Uses TIER1_HARNESS_TOKEN as x-session-id (matches the deploy
+# workflow's warm-DailyIQ steps).
+
+on:
+  schedule:
+    - cron: '35 8 * * *'   # 08:35 UTC = 04:35 EDT
+    - cron: '35 9 * * *'   # 09:35 UTC = 04:35 EST
+  workflow_dispatch:
+
+jobs:
+  prewarm:
+    name: Warm discovery caches on HobbyIQ3
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Run only at 04:00-06:00 America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — skipping ET-hour gate."
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$((10#$ET_HOUR))" -ge 4 ] && [ "$((10#$ET_HOUR))" -le 6 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (within 04-06 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (outside 04-06 window); skipping this UTC trigger."
+          fi
+
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch TIER1_HARNESS_TOKEN
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          TOKEN=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='TIER1_HARNESS_TOKEN'].value | [0]" \
+            -o tsv)
+          if [ -z "$TOKEN" ]; then
+            echo "FAILED to fetch TIER1_HARNESS_TOKEN" >&2
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "TIER1_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "Token fetched (length: ${#TOKEN})"
+
+      # Warm the discovery endpoints. Each hit populates the in-memory
+      # 10-minute memo cache on App Service. Users hitting these paths
+      # within the next 10 minutes get instant response instead of
+      # cold-scanning ch_daily_sales / sold_comps.
+      - name: Warm /trending and /trending-players (per sport)
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          BASE: 'https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net'
+        run: |
+          for sport in baseball basketball football; do
+            echo "--- warming trending sport=$sport ---"
+            t0=$(date +%s)
+            curl -sS "$BASE/api/compiq/trending?sport=$sport&limit=25" \
+              -H "x-session-id: $TIER1_TOKEN" \
+              --compressed \
+              --max-time 60 \
+              -o /tmp/trending-$sport.json
+            echo "  trending elapsed: $(($(date +%s) - t0))s  size: $(wc -c < /tmp/trending-$sport.json)"
+
+            echo "--- warming trending-players sport=$sport ---"
+            t0=$(date +%s)
+            curl -sS "$BASE/api/compiq/trending-players?sport=$sport&limit=25" \
+              -H "x-session-id: $TIER1_TOKEN" \
+              --compressed \
+              --max-time 60 \
+              -o /tmp/trending-players-$sport.json
+            echo "  trending-players elapsed: $(($(date +%s) - t0))s  size: $(wc -c < /tmp/trending-players-$sport.json)"
+          done
+
+      # Pre-warm related-cards for the top-10 slugs from the baseball
+      # trending response. Extracting via jq (available on ubuntu-latest).
+      # Each related-cards call has its own memo, so pre-warming these
+      # covers the "user taps a hot trending card" flow.
+      - name: Warm /related-cards for top-10 trending slugs
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          BASE: 'https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net'
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq not available; skipping related-cards warm"
+            exit 0
+          fi
+          # baseball is the highest-traffic sport; prioritize its top-10
+          SLUGS=$(jq -r '.hits[0:10][].hobbyiqCardId // empty' /tmp/trending-baseball.json 2>/dev/null || true)
+          if [ -z "$SLUGS" ]; then
+            echo "No slugs in trending response — nothing to warm"
+            exit 0
+          fi
+          for slug in $SLUGS; do
+            t0=$(date +%s)
+            curl -sS "$BASE/api/compiq/related-cards?slug=$(printf %s "$slug" | jq -sRr @uri)&limit=8" \
+              -H "x-session-id: $TIER1_TOKEN" \
+              --compressed \
+              --max-time 45 \
+              -o /dev/null
+            echo "  related-cards $slug: $(($(date +%s) - t0))s"
+          done
