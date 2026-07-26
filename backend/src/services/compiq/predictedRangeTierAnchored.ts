@@ -1,4 +1,24 @@
 // ---------------------------------------------------------------------------
+// ⚠️  DEPRECATED (Drew, 2026-07-26). Phase 3 tier-anchored fallback is
+// GATED OFF in prod (COMPIQ_PHASE3_TIER_ANCHORED is unset in HobbyIQ3
+// App Service). Code paths in this file — and its dependencies
+// (tierMultipliers.ts, peerPoolBuilder.ts) — are inert in production.
+//
+// Kept in the tree because full deletion requires refactoring the
+// TierAnchoredPeerComp type usage in peerPoolBuilder + the
+// predictedRangePhase3 response field in compiqEstimate.service.ts.
+// A follow-up PR can hard-delete once we confirm Phase 3 is
+// permanently retired vs. temporarily off.
+//
+// If you're thinking of re-enabling Phase 3:
+//   1. Read the memory `empirical-only-multiplier-doctrine` — Phase 3
+//      relies on OWNER-CURATED tier multipliers, which conflict with
+//      the empirical-calibration doctrine locked in by PR #633.
+//   2. Check the current GRADE_CALIBRATION coverage — Phase 3 was
+//      built as a fallback for thin coverage. That coverage has since
+//      grown materially (per PRs #793 + #797 the sport-scoped tables
+//      now populate cleanly for FB, BB, Pokemon).
+// ---------------------------------------------------------------------------
 // Predicted Range — Tier-Anchored Fallback (Issue #25 Phase 3)
 //
 // Forward-looking { low, high } range derived from a peer pool of comps for

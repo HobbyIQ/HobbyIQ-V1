@@ -58,6 +58,15 @@ import {
   type GemRateSignal,
 } from "./gemRateSignal.service.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
+// ⚠️  DEPRECATED (Drew, 2026-07-26). Phase 3 tier-anchored fallback is
+// unset in HobbyIQ3 App Service (COMPIQ_PHASE3_TIER_ANCHORED absent),
+// so this code path is inert in prod. See DEPRECATED banners in
+// predictedRangeTierAnchored.ts + tierMultipliers.ts. If you're
+// thinking of re-enabling Phase 3, read the memory
+// `empirical-only-multiplier-doctrine` first — Phase 3 uses owner-
+// curated hardcoded tier multipliers, which conflict with the
+// empirical-only calibration doctrine locked in by PR #633.
+//
 // Issue #25 Phase 3 — tier-anchored predicted-range fallback (default OFF).
 // Activated by env flag COMPIQ_PHASE3_TIER_ANCHORED=true. NEVER replaces the
 // Phase 2 result; only augments when Phase 2 returns { low: null, high: null }.
