@@ -36,6 +36,14 @@ on:
 permissions:
   contents: write  # needed to push the regenerated JSON back to main
   id-token: write  # for Azure OIDC login to fetch CH key from App Service
+  actions: write   # CF-AUTO-MULT-DISPATCH-PERM (Drew, 2026-07-26): the
+                   # "Trigger backend deploy" step calls
+                   # github.rest.actions.createWorkflowDispatch which
+                   # needs actions:write. Without it, the step throws
+                   # "Resource not accessible by integration" and the
+                   # calibration succeeds but the deploy never fires,
+                   # so the freshly-calibrated data sits in main and
+                   # doesn't reach prod until the next unrelated deploy.
 
 jobs:
   refresh-calibration:
