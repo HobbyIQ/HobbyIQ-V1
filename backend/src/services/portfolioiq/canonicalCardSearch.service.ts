@@ -481,6 +481,75 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     } catch { candidates = []; }
   }
 
+  // CF-SEARCH-SOLD-COMPS-FALLBACK (Drew, 2026-07-26). When card_catalog
+  // + fuzzy layer both miss, fall back to sold_comps. Cardsight's crawl
+  // coverage has gaps (verified 2026-07-26: 0 rows for 1989 Upper Deck,
+  // no 1980 Topps George Brett, etc.) but those cards ARE in sold_comps
+  // via CH ingest — 468K fresh pre-1980 comps + long-tail modern gaps.
+  // sold_comps rows carry hobbyiqCardId + playerName + cardYear +
+  // setName + cardNumber + imageUrl, everything the picker needs.
+  //
+  // Groups by hobbyiqCardId in-memory + emits picker-hit shape identical
+  // to the card_catalog path so iOS gets a uniform response.
+  //
+  // Only fires when the primary layers returned 0 — no perf regression
+  // on common queries. Enrichment loop (recentMedian / momentum /
+  // signal) runs AS-IS since it reads sold_comps anyway.
+  if (candidates.length === 0 && searchTokens.length > 0) {
+    try {
+      const scParams: Array<{ name: string; value: string | number | boolean }> = [
+        { name: "@sport", value: sport },
+      ];
+      const scWhere: string[] = ["c.sport = @sport", "IS_DEFINED(c.hobbyiqCardId)", "c.hobbyiqCardId != null"];
+      if (yearFilter !== null) {
+        scWhere.push("c.cardYear = @y");
+        scParams.push({ name: "@y", value: yearFilter });
+      }
+      // Every search token must appear somewhere in (playerName, setName,
+      // cardNumber). No searchText field on sold_comps (yet) so
+      // CONTAINS on individual fields is the honest option. This scan
+      // is bounded by year+sport when year present, so cost stays in
+      // proportion to the era-slice.
+      searchTokens.forEach((t, i) => {
+        const p = `@st${i}`;
+        scWhere.push(
+          `(CONTAINS(LOWER(c.playerName), ${p}, true) OR CONTAINS(LOWER(c.setName), ${p}, true) OR CONTAINS(LOWER(c.cardNumber), ${p}, true))`,
+        );
+        scParams.push({ name: p, value: t });
+      });
+      const scQuery = `SELECT TOP 500 c.hobbyiqCardId, c.playerName, c.cardYear, c.setName, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.imageUrl, c.sport, c.soldAt
+                       FROM c WHERE ${scWhere.join(" AND ")}
+                       ORDER BY c.soldAt DESC`;
+      const { resources: scRows } = await containers.sold.items.query({ query: scQuery, parameters: scParams }).fetchAll();
+      // Group by hobbyiqCardId — one picker hit per distinct slug.
+      // sold_comps has MANY rows per card (each sale) so aggregation is
+      // essential.
+      const bySlug = new Map<string, any>();
+      for (const r of scRows ?? []) {
+        const slug = String(r.hobbyiqCardId ?? "");
+        if (!slug || bySlug.has(slug)) continue;
+        // Reshape into the card_catalog candidate shape so the shared
+        // scoring / enrichment loop below handles it uniformly.
+        bySlug.set(slug, {
+          cardId: null,                                    // no vendor cardId available
+          player: r.playerName ?? null,
+          releaseId: null,
+          releaseName: r.setName ?? null,
+          setName: r.setName ?? null,
+          year: r.cardYear !== undefined && r.cardYear !== null ? String(r.cardYear) : null,
+          number: r.cardNumber ?? null,
+          parallels: r.parallel ? [{ id: null, name: r.parallel, numberedTo: r.printRun ?? null }] : [],
+          attributes: r.isAuto ? ["auto"] : [],
+          sport: r.sport ?? sport,
+          recentSaleCount: 0,                             // no popularity boost from sold_comps path
+          searchText: [r.playerName, r.setName, r.cardNumber, r.cardYear ?? "", r.parallel ?? ""].filter(Boolean).join(" ").toLowerCase(),
+          _origin: "sold-comps-fallback",                 // provenance for debugging
+        });
+      }
+      candidates = [...bySlug.values()];
+    } catch { candidates = []; }
+  }
+
   if (candidates.length === 0) return { ...empty, tokens: rawTokens, semanticFilters: { isAuto: isAutoFilter, year: yearFilter } };
 
   // Score each candidate
