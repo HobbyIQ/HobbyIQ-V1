@@ -181,6 +181,11 @@ router.post("/card-search", requireSession, async (req: Request, res: Response, 
       printRun: Number.isFinite(Number(req.body?.printRun)) && Number(req.body.printRun) > 0 ? Number(req.body.printRun) : undefined,
       isAuto: typeof req.body?.isAuto === "boolean" ? req.body.isAuto : undefined,
       year: Number.isFinite(Number(req.body?.year)) ? Number(req.body.year) : undefined,
+      // CF-SELL-SIGNAL-USER-THRESHOLD (Drew, 2026-07-26). iOS "sell at
+      // +N%" preference. Clamped 5-100 in computeSellSignal — passing
+      // through here without an extra guard so a value like 20 or 25
+      // reaches the resolver as-is.
+      sellThresholdPct: Number.isFinite(Number(req.body?.sellThresholdPct)) ? Number(req.body.sellThresholdPct) : undefined,
     });
     res.json(result);
   } catch (err) { next(err); }

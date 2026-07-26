@@ -26,6 +26,13 @@ export interface CanonicalSearchInput {
   isAuto?: boolean;
   /** Filter to a specific card year. */
   year?: number;
+  /** CF-SELL-SIGNAL-USER-THRESHOLD (Drew, 2026-07-26). User's
+   *  "sell at +N%" preference (from iOS settings). Default 15%.
+   *  Only affects the sell-now boundary in computeSellSignal;
+   *  buy/hold/watch stay at their locked doctrine defaults.
+   *  Clamped 5-100 in the resolver (out-of-range silently falls to
+   *  default so a broken client can't produce nonsense signals). */
+  sellThresholdPct?: number;
 }
 
 export interface MatchedRange {
@@ -182,25 +189,56 @@ const CARD_NUMBER_RE = /^#?([A-Z]{2,6}-[A-Z0-9]+|[A-Z]?\d{1,4}[A-Z]?|[A-Z]{2,4}\
 //   compCount     — comps in 90d window (direct-slug)
 //   recentSaleCount — popularity indicator from card_catalog
 //
-// Thresholds tuned for honest defaults:
-//   sell-now  — momentumPct >= +15 AND compCount >= 5 (real spike)
-//   buy       — momentumPct <= -15 AND compCount >= 5 (real drawdown)
-//   hold      — |momentumPct| <= 5 AND compCount >= 5 (stable)
-//   watch     — everything else (insufficient signal / mid-range noise)
+// Thresholds (defaults):
+//   sell-now  — momentumPct >= +sellThresholdPct AND compCount >= 5
+//               (USER-CONFIGURABLE per PR #776 — iOS "sell at +N%"
+//               preference passes through as sellThresholdPct on the
+//               request. Range clamped 5-100.)
+//   buy       — momentumPct <= -15 AND compCount >= 5 (LOCKED)
+//   hold      — |momentumPct| <= 5 AND compCount >= 5 (LOCKED)
+//   watch     — everything else
+//
+// Why sell-now is user-tunable and the others aren't:
+//   sell-now is a "when do I take profit" decision — deeply personal
+//   (risk tolerance, capital deployment). Buy / hold / watch are
+//   market-state readings that don't change based on user preference —
+//   a -20% drop is a -20% drop regardless of who's looking. Keeping
+//   those locked preserves comparability across users.
 //
 // The compCount>=5 gate keeps thin-comp cards out of the actionable
 // tiers — no fake urgency on cards with 1-2 recent sales. Below that
-// threshold, everything is "watch". This is empirical-only doctrine:
-// no signal without data.
+// threshold, everything is "watch". Empirical-only doctrine: no
+// signal without data.
 const SIGNAL_MIN_COMPS_FOR_ACTION = 5;
-const SIGNAL_SPIKE_PCT = 15;
+const SIGNAL_DEFAULT_SELL_PCT = 15;
+const SIGNAL_BUY_PCT = 15;
 const SIGNAL_STABLE_BAND_PCT = 5;
+// Range guard on user-passed sell threshold. Below 5 is inside the
+// stable band (silly); above 100 is fantasyland.
+const SIGNAL_SELL_MIN = 5;
+const SIGNAL_SELL_MAX = 100;
+
+export interface SellSignalOpts {
+  /** User's "sell at +N%" preference (iOS setting). Default 15. Range
+   *  clamped to [5, 100]. When passed, only affects sell-now boundary;
+   *  buy / hold / watch remain at their locked doctrine defaults. */
+  sellThresholdPct?: number;
+}
 
 export function computeSellSignal(
   momentumPct: number | null,
   compCount: number,
   recentSaleCount: number,
+  opts: SellSignalOpts = {},
 ): { signal: "sell-now" | "hold" | "buy" | "watch"; reason: string } {
+  // Resolve user-tunable sell threshold with clamping. NaN / negative /
+  // out-of-range values silently fall back to the default so a broken
+  // client can't produce a nonsense signal.
+  const rawThreshold = opts.sellThresholdPct;
+  const sellThreshold = (typeof rawThreshold === "number" && Number.isFinite(rawThreshold))
+    ? Math.max(SIGNAL_SELL_MIN, Math.min(SIGNAL_SELL_MAX, rawThreshold))
+    : SIGNAL_DEFAULT_SELL_PCT;
+
   if (momentumPct === null || compCount < SIGNAL_MIN_COMPS_FOR_ACTION) {
     const compsFragment = compCount === 0 ? "no recent sales" : `only ${compCount} sale${compCount === 1 ? "" : "s"} in 90d`;
     return { signal: "watch", reason: `Insufficient signal — ${compsFragment}` };
@@ -208,10 +246,10 @@ export function computeSellSignal(
   const abs = Math.abs(momentumPct);
   const dirWord = momentumPct >= 0 ? "up" : "down";
   const compsFragment = `${compCount} sales in 90d`;
-  if (momentumPct >= SIGNAL_SPIKE_PCT) {
-    return { signal: "sell-now", reason: `Up ${momentumPct.toFixed(1)}% in last 30d (${compsFragment})` };
+  if (momentumPct >= sellThreshold) {
+    return { signal: "sell-now", reason: `Up ${momentumPct.toFixed(1)}% in last 30d — over your +${sellThreshold}% target (${compsFragment})` };
   }
-  if (momentumPct <= -SIGNAL_SPIKE_PCT) {
+  if (momentumPct <= -SIGNAL_BUY_PCT) {
     return { signal: "buy", reason: `Down ${abs.toFixed(1)}% in last 30d (${compsFragment})` };
   }
   if (abs <= SIGNAL_STABLE_BAND_PCT) {
@@ -638,7 +676,11 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       // CF-SELL-SIGNAL (Drew, 2026-07-26). Compute after momentumPct +
       // compCount are known. Everything else already computed — this
       // is pure derivation, no additional Cosmos work.
-      const sig = computeSellSignal(h.momentumPct, h.compCount, h.recentSaleCount);
+      // Pass through the user's per-request sellThresholdPct so the
+      // sell-now boundary reflects their preference (default 15%).
+      const sig = computeSellSignal(h.momentumPct, h.compCount, h.recentSaleCount, {
+        sellThresholdPct: input.sellThresholdPct,
+      });
       h.signal = sig.signal;
       h.signalReason = sig.reason;
       // Grade facet — collect distinct grade tiers from the enriched pool.
