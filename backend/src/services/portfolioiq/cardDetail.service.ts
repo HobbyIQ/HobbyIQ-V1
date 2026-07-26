@@ -10,7 +10,7 @@
 // per-section error flags iOS can render as "temporarily unavailable"
 // rather than blanking the whole screen.
 
-import { computeHobbyIqFmv, type HobbyIqFmvResult } from "./hobbyIqFmv.service.js";
+import { computeHobbyIqFmv, computeGradeBreakdownSingleScan, type HobbyIqFmvResult, type GradeBreakdownTier } from "./hobbyIqFmv.service.js";
 import { computeRelatedCards, type RelatedCardsResult } from "./discoverySurfaces.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
@@ -120,36 +120,29 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
     printRun: parsed?.printRun ?? null,
   };
 
-  // Fan out — primary FMV + related in parallel, PLUS the grade ladder
-  // fires N parallel FMV computes (one per tier). All complete under a
-  // single Promise.allSettled so wall-clock = slowest of ANY sub-call,
-  // not sum. Every sub-call goes through computeHobbyIqFmv's own cache
-  // path so a second card-detail render for the same slug is near-free.
-  const includeGradeLadder = input.includeGradeLadder === true;    // default false
+  // CF-GRADE-BREAKDOWN-SINGLE-SCAN (Drew, 2026-07-26). Replaced the
+  // 7-parallel-computeHobbyIqFmv implementation (measured 15-17s cold
+  // on prod due to Cosmos SDK contention) with ONE Cosmos scan of the
+  // slug's comps, grouped by (gradeCompany, gradeValue) in-memory.
+  // O(1) Cosmos queries. Empirical-only: tiers with fewer than
+  // minTierComps direct comps are OMITTED (iOS shows "insufficient
+  // data" not a fabricated fallback multiplier).
+  //
+  // includeGradeLadder default remains false per the PR #763 opt-in
+  // hotfix; iOS asks for it explicitly on the grade-breakdown view.
+  const includeGradeLadder = input.includeGradeLadder === true;
   const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
-    ? Promise.all(GRADE_LADDER_TIERS.map(async (t) => {
-        const r = await computeHobbyIqFmv({
-          hobbyiqCardId: slug,
-          gradeCompany: t.company,
-          gradeValue: t.value,
-          maxAgeDays: input.maxAgeDays,
-          previewLimit: 1,     // don't need recentComps in ladder tiers
-        });
-        // compCount is direct-slug conviction only; fallback rungs still
-        // return an FMV number but with method != "direct-slug". iOS can
-        // gray out low-conviction tiers using this signal.
-        const directCount = r.method === "direct-slug" ? r.compCount : 0;
-        return {
-          gradeLabel: t.label,
-          gradeCompany: t.company,
-          gradeValue: t.value,
-          fmv: r.fmv,
-          compCount: directCount,
-          trend: r.trend.direction,
-          method: r.method,
-          confidence: r.confidence,
-        };
-      }))
+    ? computeGradeBreakdownSingleScan(slug, { maxAgeDays: input.maxAgeDays })
+        .then((r): GradeLadderTier[] => r.tiers.map((t: GradeBreakdownTier) => ({
+          gradeLabel: t.gradeLabel,
+          gradeCompany: t.gradeCompany,
+          gradeValue: t.gradeValue,
+          fmv: t.fmv,
+          compCount: t.compCount,
+          trend: t.trend,
+          method: "direct-slug",     // single-scan is direct-slug by definition
+          confidence: 0.95,          // matches computeHobbyIqFmv direct-slug confidence
+        })))
     : Promise.resolve([]);
 
   const [fmvSettled, relatedSettled, gradeLadderSettled] = await Promise.allSettled([

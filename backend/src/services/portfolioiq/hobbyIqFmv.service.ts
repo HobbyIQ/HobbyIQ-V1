@@ -674,3 +674,140 @@ function computeTrend(rows: Array<{ price: number; soldAt: string }>): HobbyIqFm
   const direction = slopePerMonthPct > 1 ? "up" : slopePerMonthPct < -1 ? "down" : "flat";
   return { direction, slopePerMonthPct, method: "anchor" };
 }
+
+// ─── CF-GRADE-BREAKDOWN-SINGLE-SCAN (Drew, 2026-07-26) ───────────────
+// Efficient per-grade summary from ONE Cosmos scan of a slug's comps.
+// Replaces the /card-detail?includeGradeLadder=true implementation
+// that fired 7 parallel computeHobbyIqFmv calls (measured 15-17s cold
+// on prod due to Cosmos SDK contention). Single-scan approach:
+//
+//   1. One SELECT for c.hobbyiqCardId = @slug over the freshness window
+//   2. Filter out flagged rows via partitionByQuality
+//   3. Group by (gradeCompany, gradeValue) — including "Raw" (both null)
+//   4. Per group: median = fmv, count = compCount, 30d/60d trend
+//
+// Only returns tiers with at least MIN_TIER_COMPS direct comps (default
+// 2). Missing tiers are OMITTED — iOS shows "insufficient data" not a
+// fabricated fallback multiplier. Empirical-only doctrine preserved.
+
+export interface GradeBreakdownTier {
+  /** Human display label — "PSA 10", "BGS 9.5", "SGC 10", "Raw". */
+  gradeLabel: string;
+  gradeCompany: string | null;   // null = raw
+  gradeValue: number | null;     // null = raw
+  fmv: number;                   // median of comps in this tier
+  compCount: number;             // direct comps at this tier in window
+  trend: "up" | "down" | "flat"; // 30d vs prior-60d median direction
+  min: number;
+  max: number;
+  freshestSoldAt: string;
+}
+
+export interface GradeBreakdownResult {
+  slug: string;
+  tiers: GradeBreakdownTier[];   // sorted by fmv desc; Raw last
+  totalCompsScanned: number;
+  processingMs: number;
+  computedAt: string;
+}
+
+/** Empirical per-tier summary from a single Cosmos scan. Returns
+ *  {tiers: []} when the slug has no comps in the window. */
+export async function computeGradeBreakdownSingleScan(
+  slug: string,
+  opts: { maxAgeDays?: number; minTierComps?: number } = {},
+): Promise<GradeBreakdownResult> {
+  const t0 = Date.now();
+  const now = new Date();
+  const empty: GradeBreakdownResult = {
+    slug, tiers: [], totalCompsScanned: 0,
+    processingMs: 0, computedAt: now.toISOString(),
+  };
+  if (!slug || !slug.startsWith("hiq:")) return { ...empty, processingMs: Date.now() - t0 };
+
+  const container = await getSoldCompsContainer();
+  if (!container) return { ...empty, processingMs: Date.now() - t0 };
+
+  const maxAgeDays = opts.maxAgeDays ?? 180;
+  const minTierComps = opts.minTierComps ?? 2;
+  const cutoffIso = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
+
+  // ONE query. Every tier gets computed from this pool.
+  const rows = await queryPool(container, "c.hobbyiqCardId = @slug", [{ name: "@slug", value: slug }], cutoffIso);
+  if (rows.length === 0) return { ...empty, processingMs: Date.now() - t0 };
+
+  // Drop flagged rows (same discipline as the primary FMV path).
+  const { kept } = partitionByQuality(rows);
+
+  // Group by (gradeCompany, gradeValue). "Raw" key = (null, null).
+  const byGrade = new Map<string, { company: string | null; value: number | null; rows: PoolRow[] }>();
+  for (const r of kept) {
+    const company = (typeof r.gradeCompany === "string" && r.gradeCompany.trim().length > 0)
+      ? r.gradeCompany.trim().toUpperCase() : null;
+    const value = (typeof r.gradeValue === "number" && Number.isFinite(r.gradeValue)) ? r.gradeValue : null;
+    const key = company === null ? "raw" : `${company}:${value}`;
+    if (!byGrade.has(key)) byGrade.set(key, { company, value, rows: [] });
+    byGrade.get(key)!.rows.push(r);
+  }
+
+  const cutoff30 = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+
+  const tiers: GradeBreakdownTier[] = [];
+  for (const { company, value, rows: groupRows } of byGrade.values()) {
+    const prices: number[] = [];
+    for (const r of groupRows) {
+      const p = Number(r.price);
+      if (Number.isFinite(p) && p > 0) prices.push(p);
+    }
+    if (prices.length < minTierComps) continue;    // skip tiers with too few comps
+    const sorted = [...prices].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+
+    // 30d/60d trend from THIS group's rows only (no cross-tier contamination)
+    const recent30: number[] = [], prior60: number[] = [];
+    for (const r of groupRows) {
+      const p = Number(r.price);
+      if (!Number.isFinite(p) || p <= 0) continue;
+      if (r.soldAt >= cutoff30) recent30.push(p);
+      else prior60.push(p);
+    }
+    let trend: "up" | "down" | "flat" = "flat";
+    if (recent30.length >= 2 && prior60.length >= 2) {
+      const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+      const m30 = med(recent30);
+      const m60 = med(prior60);
+      if (m60 > 0) {
+        const pct = ((m30 - m60) / m60) * 100;
+        trend = pct > 3 ? "up" : pct < -3 ? "down" : "flat";
+      }
+    }
+
+    const gradeLabel = company === null ? "Raw" : `${company} ${value}`;
+    // Pick freshest soldAt in this group (rows sorted by soldAt DESC from queryPool)
+    const freshest = groupRows.map(r => r.soldAt).sort().reverse()[0] ?? "";
+
+    tiers.push({
+      gradeLabel, gradeCompany: company, gradeValue: value,
+      fmv: Math.round(median * 100) / 100,
+      compCount: prices.length,
+      trend,
+      min: sorted[0],
+      max: sorted[sorted.length - 1],
+      freshestSoldAt: freshest,
+    });
+  }
+
+  // Sort: Raw always last, others by fmv desc (highest tier first — PSA 10 > BGS 9.5 > ...)
+  tiers.sort((a, b) => {
+    if (a.gradeCompany === null && b.gradeCompany !== null) return 1;
+    if (a.gradeCompany !== null && b.gradeCompany === null) return -1;
+    return b.fmv - a.fmv;
+  });
+
+  return {
+    slug, tiers,
+    totalCompsScanned: rows.length,
+    processingMs: Date.now() - t0,
+    computedAt: new Date().toISOString(),
+  };
+}
