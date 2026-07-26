@@ -34,6 +34,34 @@ describe("inferSportFromContext", () => {
     expect(inferSportFromContext("2024 Topps Chrome UFC", null)).not.toBe("baseball");
   });
 
+  // CF-POKEMON-INFER-SPORT (Drew, 2026-07-26). Pokemon TCG detection.
+  describe("Pokemon TCG", () => {
+    it("detects lowercase pokemon in setName", () => {
+      expect(inferSportFromContext("2003 Pokemon Aquapolis", null)).toBe("pokemon");
+      expect(inferSportFromContext("2025 Pokemon Scarlet & Violet", null)).toBe("pokemon");
+    });
+
+    it("detects pokemon in title even when setName is null", () => {
+      expect(inferSportFromContext(null, "1999 Pokemon Base Set Charizard Holo")).toBe("pokemon");
+    });
+
+    it("detects the é-accented Pokémon form", () => {
+      expect(inferSportFromContext("Pokémon Japanese Base Set", null)).toBe("pokemon");
+    });
+
+    it("wins over vintage-baseball fallback when both would match", () => {
+      // Not realistic in the wild, but tests precedence: pokemon check
+      // runs before the vintage-flagship rule.
+      expect(inferSportFromContext("Topps Pokemon", null, 1980)).toBe("pokemon");
+    });
+
+    it("explicit baseball substring still wins over pokemon (defensive)", () => {
+      // Pokemon Baseball card doesn't really exist, but if a title
+      // somehow contained both, the explicit sport wins as designed.
+      expect(inferSportFromContext("Pokemon Baseball Crossover", null)).toBe("baseball");
+    });
+  });
+
   // CF-INFERSPORT-VINTAGE-P1 (Drew, 2026-07-26). Vintage flagship rule.
   describe("vintage flagship (pre-1986) → baseball", () => {
     it("defaults bare vintage Topps to baseball (ceiling 1980)", () => {

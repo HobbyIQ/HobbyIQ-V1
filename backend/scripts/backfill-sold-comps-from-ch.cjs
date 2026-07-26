@@ -81,6 +81,9 @@ function inferSport(setName, title) {
   if (text.includes("basketball") || text.includes("nba")) return "basketball";
   if (text.includes("hockey") || text.includes("nhl")) return "hockey";
   if (text.includes("soccer") || text.includes("mls") || text.includes("premier league")) return "soccer";
+  // CF-POKEMON-INFER-SPORT (Drew, 2026-07-26). Duplicated from
+  // soldCompsStore.inferSportFromContext — keep in sync.
+  if (text.includes("pokemon") || text.includes("pokémon")) return "pokemon";
   if (/\bbowman\b/.test(text)) return "baseball";
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
   return null;
