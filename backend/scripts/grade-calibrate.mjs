@@ -34,7 +34,15 @@ if (!connStr) { console.error("COSMOS_CONNECTION_STRING missing"); process.exit(
 const client = new CosmosClient(connStr);
 const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
 const container = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
-const cutoff = new Date(Date.now() - 365 * 86400000).toISOString();
+// CF-CALIBRATION-LOOKBACK-V2 (Drew, 2026-07-26). Baseline stays 365d
+// (baseball is thick — 500k+ rows/mo, ratios are stable). Sport overlays
+// bump to 730d because FB/BB/Pokemon pool volume is 2-10× thinner per
+// family × grader × tier cell — doubling the window nearly doubles n
+// without any code risk. Slight staleness trade-off in fast-moving
+// sports; still net-positive vs the small-sample noise the shorter
+// window produced.
+const BASELINE_CUTOFF = new Date(Date.now() - 365 * 86400000).toISOString();
+const SPORT_OVERLAY_CUTOFF = new Date(Date.now() - 730 * 86400000).toISOString();
 
 // Baseline (baseball-implicit) family tokens — includes the full
 // baseball catalog + long-tail brands worth calibrating.
@@ -91,6 +99,26 @@ const PANINI_SPORT_FAMILIES = [
   { family: "panini-revolution", token: "Revolution" },
   { family: "topps-chrome", token: "Topps Chrome" },
   { family: "bowman-chrome", token: "Bowman Chrome" },
+  // CF-FAMILY-EXPANSION-V2 (Drew, 2026-07-26). Additional premium /
+  // scarcity lines missing from v1 that carry real per-family grade
+  // premiums (specifically BB Court Kings + Illusions + Zenith are
+  // very different value curves from Prizm/Select). More families =
+  // more (family × grader × tier) cells populated at the sport-specific
+  // level instead of falling through to the coarse "other" bucket.
+  { family: "panini-court-kings", token: "Court Kings" },
+  { family: "panini-illusions", token: "Illusions" },
+  { family: "panini-zenith", token: "Zenith" },
+  { family: "panini-crown-royale", token: "Crown Royale" },
+  { family: "panini-encased", token: "Encased" },
+  { family: "panini-noir", token: "Noir" },
+  { family: "panini-eminence", token: "Eminence" },
+  { family: "panini-elite", token: "Elite" },
+  { family: "panini-luminance", token: "Luminance" },
+  { family: "panini-rookies-stars", token: "Rookies & Stars" },
+  { family: "topps-inception", token: "Topps Inception" },
+  { family: "topps-transcendent", token: "Topps Transcendent" },
+  { family: "topps-finest", token: "Topps Finest" },
+  { family: "bowman-university", token: "Bowman University" },
 ];
 
 // CF-POKEMON-CALIBRATION (Drew, 2026-07-26). Pokemon TCG has entirely
@@ -121,7 +149,28 @@ const POKEMON_FAMILIES = [
   { family: "pokemon-sun-moon",        token: "Pokemon Sun & Moon" },
   { family: "pokemon-sword-shield",    token: "Pokemon Sword" },
   { family: "pokemon-scarlet-violet",  token: "Pokemon Scarlet" },
-  { family: "pokemon",                 token: "Pokemon" },   // catch-all fallback
+  // CF-POKEMON-FAMILY-EXPANSION-V2 (Drew, 2026-07-26). Specific hot
+  // expansion sets that carry disproportionate PSA-graded volume — each
+  // one has its own grade-value curve worth calibrating separately.
+  // Ordered rough-chronologically within era.
+  { family: "pokemon-legendary-collection", token: "Pokemon Legendary Collection" },
+  { family: "pokemon-shining-legends",      token: "Pokemon Shining Legends" },
+  { family: "pokemon-hidden-fates",         token: "Pokemon Hidden Fates" },
+  { family: "pokemon-shining-fates",        token: "Pokemon Shining Fates" },
+  { family: "pokemon-vivid-voltage",        token: "Pokemon Vivid Voltage" },
+  { family: "pokemon-brilliant-stars",      token: "Pokemon Brilliant Stars" },
+  { family: "pokemon-astral-radiance",      token: "Pokemon Astral Radiance" },
+  { family: "pokemon-lost-origin",          token: "Pokemon Lost Origin" },
+  { family: "pokemon-silver-tempest",       token: "Pokemon Silver Tempest" },
+  { family: "pokemon-crown-zenith",         token: "Pokemon Crown Zenith" },
+  { family: "pokemon-evolving-skies",       token: "Pokemon Evolving Skies" },
+  { family: "pokemon-fusion-strike",        token: "Pokemon Fusion Strike" },
+  { family: "pokemon-celebrations",         token: "Pokemon Celebrations" },
+  { family: "pokemon-obsidian-flames",      token: "Pokemon Obsidian Flames" },
+  { family: "pokemon-paldea-evolved",       token: "Pokemon Paldea Evolved" },
+  { family: "pokemon-151",                  token: "Pokemon 151" },
+  { family: "pokemon-japanese",             token: "Pokemon Japanese" },   // huge Japanese-market slice
+  { family: "pokemon",                      token: "Pokemon" },            // catch-all fallback (keep LAST)
 ];
 
 const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
@@ -143,9 +192,13 @@ const median = (arr) => {
   return s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
 };
 
-async function fetchYearWithRetry(token, year, sport, attempt = 1) {
+async function fetchYearWithRetry(token, year, sport, cutoffOverride = null, attempt = 1) {
+  // CF-CALIBRATION-LOOKBACK-V2: sport overlays get the longer window
+  // (BASELINE_CUTOFF used when no override passed, for backwards compat
+  // with any direct caller). calibrateFamilySet passes its own cutoff.
+  const effectiveCutoff = cutoffOverride ?? BASELINE_CUTOFF;
   const params = [
-    { name: "@cutoff", value: cutoff },
+    { name: "@cutoff", value: effectiveCutoff },
     { name: "@year", value: year },
     { name: "@token", value: token },
   ];
@@ -182,7 +235,7 @@ async function fetchYearWithRetry(token, year, sport, attempt = 1) {
     const delayMs = 3000 * Math.pow(2, attempt - 1);
     console.error(`  429 ${sport ?? "baseline"}/${year} attempt ${attempt}, ${delayMs}ms`);
     await sleep(delayMs);
-    return fetchYearWithRetry(token, year, sport, attempt + 1);
+    return fetchYearWithRetry(token, year, sport, cutoffOverride, attempt + 1);
   }
 }
 
@@ -260,17 +313,21 @@ function bandAccSportFamily(sport, family, bucket, tier) {
 }
 
 async function calibrateFamilySet(families, sport, minSampleSize) {
+  // CF-CALIBRATION-LOOKBACK-V2 (Drew, 2026-07-26): baseline pool (sport
+  // is null) uses 365d, sport overlays use 730d — see BASELINE_CUTOFF /
+  // SPORT_OVERLAY_CUTOFF definitions at top of file for rationale.
+  const cutoffForSet = sport ? SPORT_OVERLAY_CUTOFF : BASELINE_CUTOFF;
   // Two-level accumulator:
   //   ratios[family::grader]           = [ratio, ...] (company-level, for medianRatio)
   //   perTierRatios[family::grader][t] = [ratio, ...] (per-tier, for byTier)
   const ratios = new Map();
   const perTierRatios = new Map();
   const sportLabel = sport ?? "baseline";
-  console.error(`\n═══ ${sportLabel} ═══`);
+  console.error(`\n═══ ${sportLabel} (lookback ${sport ? "730d" : "365d"}) ═══`);
   for (const { family, token } of families) {
     const familyRows = [];
     for (const year of YEARS) {
-      const yearRows = await fetchYearWithRetry(token, year, sport);
+      const yearRows = await fetchYearWithRetry(token, year, sport, cutoffForSet);
       familyRows.push(...yearRows);
       await sleep(800);
     }
