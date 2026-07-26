@@ -43,7 +43,14 @@ jobs:
     # RU pressure has increased as ch_daily_sales grew past 2.4M rows;
     # the 30-min timeout is now regularly hit, cancelling the workflow
     # before it can emit data. Bump to 60 to give retry chains room.
-    timeout-minutes: 60
+    #
+    # CF-CALIBRATION-TIMEOUT-V2 (Drew, 2026-07-26). Bumped 60 → 120 to
+    # accommodate the expanded family lists (PANINI_SPORT_FAMILIES 22 → 36,
+    # POKEMON_FAMILIES 15 → 32, added Pokemon as a third sport) and the
+    # 730-day lookback for sport overlays. Rough query count: baseline 207,
+    # sport overlays 972 (3×36×9), pokemon 288 → ~1500 total queries, up
+    # from ~600. RU-per-query is also higher on the 2× window.
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repo
