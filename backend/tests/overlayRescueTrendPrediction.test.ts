@@ -3,7 +3,7 @@
 // Cardsight-only SKUs now get our full engine output (FMV + trend +
 // predictedPrice) computed off their own raw records, not just FMV.
 
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   computePooledTrend,
   computePooledPrediction,
@@ -163,6 +163,17 @@ describe("overlayResolverRescue — trend + prediction integration", () => {
     setName: "2026 Bowman Baseball",
     cardNumber: "CPA-EHA",
   };
+
+  // CF-TEST-TIME-PIN (Drew, 2026-07-26). `saleAt(daysAgo, price)` builds
+  // timestamps relative to the constant NOW = 2026-07-15. `computePooledTrend`
+  // in overlayResolverRescue uses Date.now() by default (production
+  // callers never pass a nowMs), so as real wall-clock advances past
+  // NOW, all saleAt() timestamps age out of the recent-window and the
+  // trend returns null → response.trendIQ stays undefined → test fails.
+  // Pin fake timers to NOW inside this suite so day-relative ages match
+  // what the underlying compute expects.
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it("populates trendIQ + predictedPrice on the rescue response", async () => {
     const rawComps = [

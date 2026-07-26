@@ -35,13 +35,12 @@ on:
 
 permissions:
   contents: write  # needed to push the regenerated JSON back to main
+  id-token: write  # for Azure OIDC login to fetch CH key from App Service
 
 jobs:
   refresh-calibration:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      CARD_HEDGE_API_KEY: ${{ secrets.CARD_HEDGE_API_KEY }}
 
     steps:
       - name: Checkout repo
@@ -57,6 +56,37 @@ jobs:
       - name: Install backend deps (for @azure/cosmos + ioredis etc — script needs @azure/cosmos isn't required, but install keeps node-fetch ABI consistent)
         working-directory: backend
         run: npm ci
+
+      # CF-CH-KEY-APP-SERVICE-SOURCE (Drew, 2026-07-26). CARD_HEDGE_API_KEY
+      # is not a repo secret — it lives in HobbyIQ3 App Service application
+      # settings (memory: reference_card_hedge_api_key_location). Prior
+      # workflow used `env: CARD_HEDGE_API_KEY: ${{ secrets.CARD_HEDGE_API_KEY }}`
+      # which resolved to empty and killed the calibration on every weekly
+      # run. Fetch it via `az` (same pattern as searchtokens-nightly /
+      # promote-aliases-nightly). Never echoed; masked in logs via
+      # ::add-mask::.
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch CARD_HEDGE_API_KEY from HobbyIQ3 App Service
+        shell: bash
+        run: |
+          KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value | [0]" \
+            -o tsv)
+          if [ -z "$KEY" ]; then
+            echo "FAILED to fetch CARD_HEDGE_API_KEY from App Service" >&2
+            exit 1
+          fi
+          echo "::add-mask::$KEY"
+          echo "CARD_HEDGE_API_KEY=$KEY" >> "$GITHUB_ENV"
+          echo "CARD_HEDGE_API_KEY fetched (length: ${#KEY})"
 
       - name: Snapshot prior calibration for sanity gate
         id: snapshot
