@@ -1725,12 +1725,17 @@ async function tryHotRawSameCardAnchor(
   const rawTrendCap = newestRaw * HOT_RAW_TREND_CAP_FACTOR;
   const rawAnchorCapped = Math.min(rawProjection.nextSaleValue, rawTrendCap);
 
-  // CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Prefer
-  // the empirical bucket × grade-tier ratio from the value-band
-  // calibration table when the (bucket, tier) cell has data. Falls back
-  // to the interim hardcoded value-tier cap from CF-HOT-RAW-CONSERVATIVE-
-  // PROJECTION when the cell is thin or absent.
-  const empiricalBandRatio = lookupValueBandMultiplier(rawAnchorCapped, gradeCompany, gradeValue);
+  // CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693) +
+  // CF-VALUE-BAND-V2 (Drew, 2026-07-26). Prefer the empirical
+  // bucket × grade-tier ratio from the value-band calibration table.
+  // v2 walks a fall-through ladder using the sport + family this
+  // function already computed (lines 1677-1678):
+  //   sport+family+band → sport+band → baseline+band → hardcodedCap
+  // Finer cells win when they have data; the ladder auto-degrades to
+  // baseline when a cell is thin. Provenance available via
+  // lookupValueBandMultiplierWithScope if we later want to surface
+  // which layer resolved (currently a scalar wire for backwards-compat).
+  const empiricalBandRatio = lookupValueBandMultiplier(rawAnchorCapped, gradeCompany, gradeValue, { sport, family });
   const hardcodedCap = valueTieredMultiplierCap(rawAnchorCapped, gradeValue);
   // When empirical is present, use it as the ceiling (still cap against
   // gradeMultiplier since the byTier value may be lower for niche cells).

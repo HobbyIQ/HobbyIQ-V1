@@ -1571,7 +1571,9 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
  *  hardcoded value-tier cap in canonicalFmv.tryHotRawSameCardAnchor. */
 export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   baseline: Record<string, Record<string, ValueBandTierEntry>>;
-} = { baseline: {
+  bySport: Record<string, Record<string, Record<string, ValueBandTierEntry>>>;
+  bySportFamily: Record<string, Record<string, Record<string, ValueBandTierEntry>>>;
+} = { bySport: {}, bySportFamily: {}, baseline: {
   "$1,000-2,499": {
     "BGS 10": {
       "gradedMedian": 5560,
