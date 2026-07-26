@@ -31,7 +31,11 @@ const EXCLUDED_SOURCES = ["ebay-user-purchase"];
 // of these qualityFlags are structurally suspect and should not anchor
 // the median. They stay in sold_comps for the "flagged comps" UI and
 // downstream inspection, but the FMV endpoint filters them out.
-const FILTER_QUALITY_FLAGS = ["price-outlier", "raw-priced-like-graded", "same-day-same-slug-dupe"];
+// CF-USER-COMP-FLAG (Drew, 2026-07-26). "user-flagged" is added when
+// the flag-comp endpoint receives a user report. Drops the comp from
+// FMV compute the same way the algorithmic flags do. See
+// flagComp.service.ts for the write path + threshold logic.
+const FILTER_QUALITY_FLAGS = ["price-outlier", "raw-priced-like-graded", "same-day-same-slug-dupe", "user-flagged"];
 
 export interface HobbyIqFmvInput {
   hobbyiqCardId: string;              // canonical slug (hiq:sport:year:...)
