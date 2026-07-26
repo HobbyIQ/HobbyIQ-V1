@@ -105,13 +105,42 @@ jobs:
           echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
           echo "Cosmos connection string fetched (length: ${#CONN})"
 
-      # Step 1: recompute slug centroids from the full pHash pool.
-      - name: Recompute slug pHash centroids
+      # CF-PHASH-CENTROID-DAILY-GATE (Drew, 2026-07-26, prod-readiness
+      # audit P0.6). Centroid recompute burns hundreds of thousands of
+      # Cosmos RU (scans the entire pHash pool) and repeatedly 429'd on
+      # the 6h cadence introduced in PR #772. Centroids don't need to
+      # move every 6 hours — the pHash pool only grows by ~7-10K rows
+      # per day. Run only on the first cron of the day (UTC hour == 4)
+      # OR manual dispatch. Other 6h runs SKIP centroid recompute and
+      # reuse the existing centroids for the reslug pass.
+      - name: Determine whether to recompute centroids
         if: steps.et-gate.outputs.should_run == 'true'
+        id: centroid-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "recompute=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — recomputing centroids."
+            exit 0
+          fi
+          UTC_HOUR=$(date -u +%H)
+          if [ "$UTC_HOUR" = "04" ]; then
+            echo "recompute=true" >> "$GITHUB_OUTPUT"
+            echo "First cron of the day (UTC 04) — recomputing centroids."
+          else
+            echo "recompute=false" >> "$GITHUB_OUTPUT"
+            echo "Not the first cron of the day (UTC $UTC_HOUR) — reusing existing centroids to avoid RU spike."
+          fi
+
+      # Step 1: recompute slug centroids from the full pHash pool.
+      # Concurrency reduced 8 -> 4 so RU consumption stays under the
+      # sold_comps container's steady-state ceiling.
+      - name: Recompute slug pHash centroids
+        if: steps.et-gate.outputs.should_run == 'true' && steps.centroid-gate.outputs.recompute == 'true'
         working-directory: backend
         env:
           CENTROID_APPLY: 'true'
-          CENTROID_CONCURRENCY: '8'
+          CENTROID_CONCURRENCY: '4'
         run: node scripts/comp-quality/compute-slug-phash-centroids.cjs
 
       # Step 2: verify + reslug in APPLY mode. Uses conservative thresholds
