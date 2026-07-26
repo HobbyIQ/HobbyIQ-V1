@@ -167,4 +167,92 @@ router.post("/verify", async (req: Request, res: Response) => {
   }
 });
 
+// ═════════════════════════════════════════════════════════════════════════════
+// CF-REFERRAL-LOOP (Drew, 2026-07-26). Free-month for both parties.
+// See backend/src/services/subscriptions/referralCode.service.ts.
+// ═════════════════════════════════════════════════════════════════════════════
+
+import {
+  getReferrerStats,
+  redeemReferralCode,
+  recordRefereeSubscribed,
+} from "../services/subscriptions/referralCode.service.js";
+
+/**
+ * GET /api/subscriptions/my-referral-code
+ * Returns the caller's referral code + stats. Auto-creates the code on
+ * first call (idempotent). Auth: requireSession.
+ */
+router.get("/my-referral-code", requireSession, async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) { res.status(401).json({ success: false, error: "no-session" }); return; }
+  try {
+    const stats = await getReferrerStats(userId);
+    res.json({ success: true, ...stats });
+  } catch (err) {
+    console.error("[subscriptions.my-referral-code] error:", err);
+    res.status(500).json({ success: false, error: "internal_error" });
+  }
+});
+
+/**
+ * POST /api/subscriptions/apply-referral
+ * Redeems a referral code for the calling user.
+ * Body: { code: string }
+ * Returns: { success, status, code, message? }
+ * Status values: 'redeemed' | 'self-redemption' | 'code-not-found' |
+ *                'already-redeemed' | 'error'
+ * Auth: requireSession.
+ */
+router.post("/apply-referral", requireSession, async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) { res.status(401).json({ success: false, error: "no-session" }); return; }
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+  if (!code || code.length < 4 || code.length > 20) {
+    res.status(400).json({ success: false, error: "code-required" });
+    return;
+  }
+  try {
+    const result = await redeemReferralCode({ code, refereeUserId: userId });
+    if (result.status === "redeemed") {
+      res.json({ success: true, ...result });
+    } else if (result.status === "code-not-found") {
+      res.status(404).json({ success: false, ...result });
+    } else if (result.status === "self-redemption") {
+      res.status(400).json({ success: false, ...result });
+    } else if (result.status === "already-redeemed") {
+      res.status(409).json({ success: false, ...result });
+    } else {
+      res.status(500).json({ success: false, ...result });
+    }
+  } catch (err) {
+    console.error("[subscriptions.apply-referral] error:", err);
+    res.status(500).json({ success: false, error: "internal_error" });
+  }
+});
+
+/**
+ * Internal: called by the subscriptions verify path after a paid-plan
+ * signup confirms. Exported here as a separate route mainly so the ops
+ * team can trigger it manually when reconciling a webhook that arrived
+ * out-of-order. Guarded by admin key.
+ */
+router.post("/mark-referee-subscribed", async (req: Request, res: Response) => {
+  const adminKey = req.header("x-admin-key") ?? "";
+  const expected = process.env.BACKEND_ADMIN_KEY ?? "";
+  if (!expected || adminKey !== expected) {
+    res.status(401).json({ success: false, error: "unauthorized" });
+    return;
+  }
+  const refereeUserId = typeof req.body?.refereeUserId === "string" ? req.body.refereeUserId : "";
+  if (!refereeUserId) { res.status(400).json({ success: false, error: "refereeUserId required" }); return; }
+  try {
+    const marked = await recordRefereeSubscribed(refereeUserId);
+    res.json({ success: true, marked });
+  } catch (err) {
+    console.error("[subscriptions.mark-referee-subscribed] error:", err);
+    res.status(500).json({ success: false, error: "internal_error" });
+  }
+});
+
 export default router;
