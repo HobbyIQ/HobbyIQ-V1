@@ -35,13 +35,19 @@ function parseArgs(argv) {
   // --full          override — process every distinct cardId (weekly
   //                 deep-scan cadence; not the default)
   // --since=<ISO>   explicit lower bound on observedAt (default: 24h ago)
-  const args = { cardId: null, limit: Infinity, since: null, full: false };
+  // --cross-source  CF-CROSS-SOURCE-DEDUP (Drew, 2026-07-26). Group by
+  //                 (soldMinute, priceCents, parallelKey) — WITHOUT
+  //                 source. Catches CardSight + CardHedge reporting
+  //                 the same underlying eBay sale. Default OFF for
+  //                 backwards compat; workflows enable via flag.
+  const args = { cardId: null, limit: Infinity, since: null, full: false, crossSource: false };
   const defaultSince = new Date(Date.now() - 24 * 3600_000).toISOString();
   for (const a of argv) {
     if (a.startsWith("--cardId=")) args.cardId = a.slice(9);
     else if (a.startsWith("--limit=")) args.limit = parseInt(a.slice(8), 10);
     else if (a.startsWith("--since=")) args.since = a.slice(8);
     else if (a === "--full") args.full = true;
+    else if (a === "--cross-source") args.crossSource = true;
   }
   if (!args.since && !args.full && !args.cardId) args.since = defaultSince;
   return args;
@@ -104,7 +110,12 @@ async function main() {
       const soldMinute = r.soldAt ? new Date(r.soldAt).toISOString().slice(0, 16) : "null";
       const priceCents = Math.round(Number(r.price ?? 0) * 100);
       const parallelKey = stripRefr(r.parallel);
-      const key = `${r.source}::${soldMinute}::${priceCents}::${parallelKey}`;
+      // CF-CROSS-SOURCE-DEDUP: in cross-source mode, group WITHOUT
+      // source so CardSight + CardHedge same-day-same-price sales
+      // collapse to one canonical row.
+      const key = args.crossSource
+        ? `${soldMinute}::${priceCents}::${parallelKey}`
+        : `${r.source}::${soldMinute}::${priceCents}::${parallelKey}`;
       const arr = clusters.get(key) ?? [];
       arr.push(r);
       clusters.set(key, arr);

@@ -105,14 +105,24 @@ async function upsertSale(soldCompsContainer, source, catalogRow, saleRecord, gr
 
   const url = saleRecord.url || null;
   const title = saleRecord.title || null;
+  // CF-CROSS-SOURCE-DEDUP (Drew, 2026-07-26). Content hash EXCLUDES
+  // `source` so a CS-reported sale of X for $Y on day D collides with a
+  // CH-reported sale of X for $Y on day D. Only ONE row lands in
+  // sold_comps for the real-world underlying eBay sale. Matches the
+  // recordSoldComp contract (hash on cardId + parallel + isAuto + grade
+  // + priceCents + soldDay — no source). "Super clean data" per Drew's
+  // ask 2026-07-26. Excludes url from hash for the same reason (CS + CH
+  // report different URLs for the same underlying eBay sale).
+  const gradeCompany = gradedContext?.companyName ?? "raw";
+  const gradeValue = gradedContext?.gradeValue ?? 0;
   const contentHash = crypto.createHash("sha256").update(
-    `${slug}|${price.toFixed(2)}|${String(soldAt).slice(0, 10)}|${source}|${url || ""}`,
+    `${slug}|${gradeCompany}|${gradeValue}|${Math.round(price * 100)}|${String(soldAt).slice(0, 10)}`,
   ).digest("hex").slice(0, 32);
 
   if (!dryRun) {
     try {
       const { resources: existing } = await soldCompsContainer.items.query({
-        query: "SELECT c.id FROM c WHERE c.hobbyiqCardId = @hiq AND c.contentHash = @ch",
+        query: "SELECT c.id, c.source FROM c WHERE c.hobbyiqCardId = @hiq AND c.contentHash = @ch",
         parameters: [{ name: "@hiq", value: slug }, { name: "@ch", value: contentHash }],
       }).fetchAll();
       if (existing.length > 0) return "deduped";

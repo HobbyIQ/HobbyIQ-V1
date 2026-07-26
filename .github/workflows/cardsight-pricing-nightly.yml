@@ -1,0 +1,131 @@
+name: Cardsight Pricing Nightly Sync
+
+# CF-CARDSIGHT-PRICING-NIGHTLY (Drew, 2026-07-26). Runs Cardsight
+# Phase B (pricing) per sport with a rolling 7-day lookback window.
+# Cardsight adds sales that CardHedge misses (Heritage / PWCC / Goldin
+# auction house feed). Cross-source dedup happens naturally via the
+# content-hash change shipped alongside this workflow — same underlying
+# eBay sale from CS + CH hashes to the same value, only one row lands.
+#
+# Schedule: 03:00 UTC (before sold-comps-dedup-nightly at 04:45 UTC).
+# 03:00 UTC = 11PM ET so it runs in the quiet window before the daily
+# cron cluster (04:00/04:15/04:45).
+#
+# Rate-limit: uses phase-b-crawl-pricing.cjs's built-in RPS control
+# (default 8 req/s per common.cjs). At ~50 batches/min it processes
+# ~500 sales per API call — a 7-day window per sport typically
+# consumes 100-500 calls per sport per night.
+#
+# Skip Phase B failure handling: if the crawl errors on any sport,
+# other sports still run in sequence (matrix.fail-fast: false).
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC = 11:00 PM ET
+  workflow_dispatch:
+    inputs:
+      period:
+        description: 'Pricing lookback window'
+        required: false
+        type: choice
+        default: '7d'
+        options: ['7d', '14d', '3m', '1y', 'all']
+      sports:
+        description: 'Comma-separated sport list (default: all 4)'
+        required: false
+        type: string
+        default: 'baseball,basketball,football,hockey'
+      dry_run:
+        description: 'Dry-run (no Cosmos writes)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  pricing:
+    name: Cardsight pricing crawl (${{ matrix.sport }})
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 90
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sport: ${{ github.event_name == 'workflow_dispatch' && fromJson(format('[{0}]', inputs.sports)) || fromJson('["baseball", "basketball", "football", "hockey"]') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      # Phase B needs the compiled hobbyIqCardId.service.js for slug
+      # generation. Build the TypeScript once so the script's require()
+      # of dist/services/... resolves.
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch secrets from App Service (never echoed)
+        id: secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          CS_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARDSIGHT_API_KEY'].value" -o tsv | tr -d '\r\n')
+          COSMOS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS_KEY" ] || [ -z "$COSMOS" ]; then
+            echo "::error::Required App Service secrets missing"
+            exit 1
+          fi
+          echo "::add-mask::$CS_KEY"
+          echo "::add-mask::$COSMOS"
+          echo "cs=$CS_KEY" >> "$GITHUB_OUTPUT"
+          echo "cosmos=$COSMOS" >> "$GITHUB_OUTPUT"
+
+      - name: Run Phase B pricing crawl for ${{ matrix.sport }}
+        working-directory: backend
+        env:
+          CARDSIGHT_API_KEY: ${{ steps.secrets.outputs.cs }}
+          COSMOS_CONNECTION_STRING: ${{ steps.secrets.outputs.cosmos }}
+          PERIOD: ${{ inputs.period || '7d' }}
+          DRY_RUN: ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+        run: |
+          set -euo pipefail
+          echo "sport=${{ matrix.sport }} period=$PERIOD dry_run=$DRY_RUN"
+          node scripts/cardsight-bulk/phase-b-crawl-pricing.cjs \
+            --sport "${{ matrix.sport }}" \
+            --period "$PERIOD" \
+            --listing-type auction \
+            $DRY_RUN \
+            2>&1 | tee "phase-b-${{ matrix.sport }}.log"
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cardsight-pricing-${{ matrix.sport }}-${{ github.run_id }}
+          path: backend/phase-b-${{ matrix.sport }}.log
+          retention-days: 14
