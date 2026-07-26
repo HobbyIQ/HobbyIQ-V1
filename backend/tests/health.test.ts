@@ -104,3 +104,64 @@ describe("/api/health", () => {
   });
 });
 
+// CF-HEALTH-DEEP-P1 (Drew, 2026-07-26). Deep readiness probe. Cosmos
+// probe is exercised against the real getPortfolioContainer(); under
+// vitest that returns null (isPortfolioTestMode) and the probe reports
+// "down" — the test asserts the shape + status-code contract rather
+// than end-to-end Cosmos success.
+describe("/api/health/deep", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("returns a well-shaped body with checks.cosmos + checks.config", async () => {
+    const res = await request(app).get("/api/health/deep");
+    expect([200, 503]).toContain(res.status);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        ok: expect.any(Boolean),
+        status: expect.stringMatching(/^(healthy|degraded|down)$/),
+        uptimeSec: expect.any(Number),
+        totalLatencyMs: expect.any(Number),
+        timestamp: expect.any(String),
+        checks: expect.objectContaining({
+          cosmos: expect.objectContaining({
+            status: expect.stringMatching(/^(ok|degraded|down)$/),
+            latencyMs: expect.any(Number),
+          }),
+          config: expect.objectContaining({
+            status: expect.stringMatching(/^(ok|down)$/),
+            criticalEnvsMissing: expect.any(Array),
+            recommendedEnvsMissing: expect.any(Array),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("returns 503 when a critical env is missing", async () => {
+    // In test mode Cosmos is unreachable anyway (isPortfolioTestMode),
+    // so the total status will be down regardless of env. This asserts
+    // the config-check surfaces the missing env in the output.
+    vi.stubEnv("AUTH_SESSION_SECRET", "");
+    vi.stubEnv("COSMOS_CONNECTION_STRING", "");
+    vi.stubEnv("COSMOS_ENDPOINT", "");
+    vi.stubEnv("CARD_HEDGE_API_KEY", "");
+    const res = await request(app).get("/api/health/deep");
+    expect(res.status).toBe(503);
+    expect(res.body.ok).toBe(false);
+    expect(res.body.checks.config.status).toBe("down");
+    expect(res.body.checks.config.criticalEnvsMissing).toContain("AUTH_SESSION_SECRET");
+    expect(res.body.checks.config.criticalEnvsMissing).toContain("CARD_HEDGE_API_KEY");
+  });
+
+  it("recommendedEnvsMissing enumerates App Insights / Cardsight when absent (non-fatal)", async () => {
+    vi.stubEnv("APPLICATIONINSIGHTS_CONNECTION_STRING", "");
+    vi.stubEnv("CARDSIGHT_API_KEY", "");
+    const res = await request(app).get("/api/health/deep");
+    expect(res.body.checks.config.recommendedEnvsMissing).toEqual(
+      expect.arrayContaining(["APPLICATIONINSIGHTS_CONNECTION_STRING", "CARDSIGHT_API_KEY"]),
+    );
+  });
+});
+

@@ -1,8 +1,56 @@
 import { Router } from "express";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+// CF-HEALTH-DEEP-P1 (Drew, 2026-07-26). /api/health/deep probes actual
+// downstream dependencies (Cosmos reachability + critical envs). The
+// shallow /api/health above just says "process is alive" — deep says
+// "process is READY to serve traffic". Ops-monitoring should hit deep
+// for meaningful alarms; App Service liveness stays on shallow so a
+// dep blip doesn't kill the container.
+import { getPortfolioContainer } from "../services/portfolioiq/portfolioStore.service.js";
 
 const router = Router();
+
+const PROBE_TIMEOUT_MS = 3_000;
+
+async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return await Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`probe timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
+async function probeCosmos(): Promise<{ status: "ok" | "degraded" | "down"; latencyMs: number; error?: string }> {
+  const t0 = Date.now();
+  try {
+    const container = await withTimeout(getPortfolioContainer(), PROBE_TIMEOUT_MS);
+    if (!container) {
+      return { status: "down", latencyMs: Date.now() - t0, error: "container unavailable" };
+    }
+    // Cheapest reachability signal: point-read on a synthetic id.
+    // Cosmos returns 404 quickly (single RU); anything else is degradation.
+    try {
+      await withTimeout(
+        container.item("__healthprobe__", "__healthprobe__").read(),
+        PROBE_TIMEOUT_MS,
+      );
+    } catch (err: any) {
+      if (err?.code === 404 || err?.statusCode === 404) {
+        return { status: "ok", latencyMs: Date.now() - t0 };
+      }
+      throw err;
+    }
+    return { status: "ok", latencyMs: Date.now() - t0 };
+  } catch (err: any) {
+    return {
+      status: "down",
+      latencyMs: Date.now() - t0,
+      error: err?.message ?? String(err),
+    };
+  }
+}
 
 // ── CF-DEPLOY-SCRIPT-RESTART-FIX — code-baked build-info ─────────────────
 //
@@ -94,6 +142,67 @@ router.get(["/", ""], (req, res) => {
       builtAt: BUILD_INFO?.builtAt ?? null,
     },
   });
+});
+
+// CF-HEALTH-DEEP-P1 (Drew, 2026-07-26). Readiness probe. Returns 200
+// when the process is ready to serve production traffic (Cosmos
+// reachable + all critical envs set); 503 when a critical dependency
+// is down or missing. Intended for ops-monitoring dashboards, NOT for
+// App Service liveness (that stays on shallow /api/health — a transient
+// Cosmos blip should not cause App Service to kill and restart the
+// container, which would just move the failure without fixing it).
+router.get("/deep", async (_req, res) => {
+  const t0 = Date.now();
+
+  const [cosmos] = await Promise.all([probeCosmos()]);
+
+  const criticalEnvsMissing: string[] = [];
+  if (!process.env.COSMOS_CONNECTION_STRING && !process.env.COSMOS_ENDPOINT) {
+    criticalEnvsMissing.push("COSMOS_CONNECTION_STRING/COSMOS_ENDPOINT");
+  }
+  if (!process.env.AUTH_SESSION_SECRET) {
+    criticalEnvsMissing.push("AUTH_SESSION_SECRET");
+  }
+  if (!process.env.CARD_HEDGE_API_KEY) {
+    criticalEnvsMissing.push("CARD_HEDGE_API_KEY");
+  }
+
+  const recommendedEnvsMissing: string[] = [];
+  if (!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+    recommendedEnvsMissing.push("APPLICATIONINSIGHTS_CONNECTION_STRING");
+  }
+  if (!process.env.CARDSIGHT_API_KEY) {
+    recommendedEnvsMissing.push("CARDSIGHT_API_KEY");
+  }
+
+  const ok = cosmos.status === "ok" && criticalEnvsMissing.length === 0;
+  const status = ok
+    ? "healthy"
+    : cosmos.status === "down" || criticalEnvsMissing.length > 0
+      ? "down"
+      : "degraded";
+
+  const body = {
+    ok,
+    status,
+    uptimeSec: Math.floor(process.uptime()),
+    totalLatencyMs: Date.now() - t0,
+    timestamp: new Date().toISOString(),
+    build: {
+      shaShort: process.env.GIT_SHA_SHORT || "unknown",
+      shaFromCodeShort: BUILD_INFO?.shaShort ?? null,
+    },
+    checks: {
+      cosmos,
+      config: {
+        status: criticalEnvsMissing.length === 0 ? "ok" : "down",
+        criticalEnvsMissing,
+        recommendedEnvsMissing,
+      },
+    },
+  };
+
+  res.status(ok ? 200 : 503).json(body);
 });
 
 export default router;
