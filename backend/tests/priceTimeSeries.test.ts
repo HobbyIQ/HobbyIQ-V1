@@ -52,12 +52,20 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
 }
 
 let store: Map<string, any>;
+// CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26). Pin threshold=1 for
+// single-user-flag semantics preserved by these tests.
+const ORIGINAL_LEGACY_THRESHOLD = process.env.LEGACY_FLAG_THRESHOLD;
 beforeEach(() => {
+  process.env.LEGACY_FLAG_THRESHOLD = "1";
   const f = fakeContainer();
   store = f.store;
   _setContainerForTests(f.container);
 });
-afterEach(() => _setContainerForTests(null));
+afterEach(() => {
+  if (ORIGINAL_LEGACY_THRESHOLD === undefined) delete process.env.LEGACY_FLAG_THRESHOLD;
+  else process.env.LEGACY_FLAG_THRESHOLD = ORIGINAL_LEGACY_THRESHOLD;
+  _setContainerForTests(null);
+});
 
 async function seed(cardId: string, sales: Array<{ price: number; date: string; source?: any; extId?: string; confidence?: number }>) {
   let idx = 0;

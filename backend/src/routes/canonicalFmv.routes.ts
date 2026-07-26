@@ -32,6 +32,7 @@ import { lookupByImage } from "../services/portfolioiq/imageSimilarityLookup.ser
 import { autocomplete } from "../services/portfolioiq/autocompleteLookup.service.js";
 import { computeCardDetail } from "../services/portfolioiq/cardDetail.service.js";
 import { flagComp, type FlagCompReason } from "../services/portfolioiq/flagComp.service.js";
+import { enforceUserFlagRateLimit } from "../middleware/enforceUserFlagRateLimit.js";
 
 const router = Router();
 
@@ -344,7 +345,7 @@ router.get("/autocomplete-set", requireSession, async (req: Request, res: Respon
 const VALID_FLAG_REASONS: FlagCompReason[] = [
   "wrong-price", "wrong-card", "wrong-grade", "off-market", "duplicate", "other",
 ];
-router.post("/flag-comp", requireSession, async (req: Request, res: Response, next) => {
+router.post("/flag-comp", requireSession, enforceUserFlagRateLimit, async (req: Request, res: Response, next) => {
   try {
     const compId = String(req.body?.compId ?? "").trim();
     const cardId = String(req.body?.cardId ?? "").trim();
