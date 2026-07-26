@@ -74,7 +74,27 @@ const REQUIRED_SCOPES = [
 // correctly regardless of how many App Service instances are running.
 // ---------------------------------------------------------------------------
 
-const STATE_SECRET = process.env.AUTH_SESSION_SECRET ?? "hobbyiq-admin-testing-session-secret";
+// CF-AUTH-SESSION-SECRET-FAIL-CLOSED (Drew, 2026-07-26, prod-readiness
+// audit P0.3). Same fail-closed guard as authService.ts — refuses to
+// resolve if the shared secret is unset, blank, or matches the retired
+// literal. If authService.ts already threw at boot the process died
+// there; this second guard exists so any code path that imports THIS
+// module without pulling in authService also fails visibly.
+const RETIRED_DEFAULT_SECRET = "hobbyiq-admin-testing-session-secret";
+function resolveStateSecret(): string {
+  const raw = process.env.AUTH_SESSION_SECRET;
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    throw new Error("AUTH_SESSION_SECRET is unset — ebayAuth cannot sign OAuth state. Set a high-entropy value in App Service.");
+  }
+  if (raw.trim() === RETIRED_DEFAULT_SECRET) {
+    throw new Error("AUTH_SESSION_SECRET is the retired hardcoded default — ebayAuth refuses to sign OAuth state. Rotate immediately.");
+  }
+  if (raw.trim().length < 32) {
+    throw new Error(`AUTH_SESSION_SECRET too short (length=${raw.trim().length}) — ebayAuth refuses. Minimum 32; recommended 64+.`);
+  }
+  return raw;
+}
+const STATE_SECRET = resolveStateSecret();
 
 function buildState(userId: string): string {
   const payload = Buffer.from(JSON.stringify({
