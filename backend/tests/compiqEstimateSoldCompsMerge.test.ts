@@ -84,8 +84,14 @@ const emptyFetched = (compsArgs: Array<{ price: number; soldDate: string; title?
 });
 
 const ORIGINAL_ENV = process.env.COMPIQ_READ_SOLD_COMPS_ENABLED;
+// CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26). Pin threshold=1
+// so flagCompAsWrong flips flaggedWrong on the first flag — the merge
+// test at line 315 relies on this to verify augmentCompsWithUserPool
+// filters flagged rows.
+const ORIGINAL_LEGACY_THRESHOLD = process.env.LEGACY_FLAG_THRESHOLD;
 
 beforeEach(() => {
+  process.env.LEGACY_FLAG_THRESHOLD = "1";
   const f = fakeContainer();
   _setContainerForTests(f.container);
   process.env.COMPIQ_READ_SOLD_COMPS_ENABLED = "true";
@@ -94,6 +100,8 @@ afterEach(() => {
   _setContainerForTests(null);
   if (ORIGINAL_ENV === undefined) delete process.env.COMPIQ_READ_SOLD_COMPS_ENABLED;
   else process.env.COMPIQ_READ_SOLD_COMPS_ENABLED = ORIGINAL_ENV;
+  if (ORIGINAL_LEGACY_THRESHOLD === undefined) delete process.env.LEGACY_FLAG_THRESHOLD;
+  else process.env.LEGACY_FLAG_THRESHOLD = ORIGINAL_LEGACY_THRESHOLD;
 });
 
 describe("augmentCompsWithUserPool — env gate", () => {

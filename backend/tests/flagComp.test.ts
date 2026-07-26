@@ -52,7 +52,9 @@ describe("flagComp — write path", () => {
   });
 
   it("first flag from a user appends to flaggedBy + flagHistory + applies user-flagged (threshold=1)", async () => {
-    delete process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;   // default 1
+    // CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26): default is now 3 (was 1);
+    // pin explicit threshold=1 to keep single-user-flag intent test.
+    process.env.USER_FLAG_AUTO_FILTER_THRESHOLD = "1";
     const svc = await loadService();
     vi.spyOn(svc as any, "flagComp");
     // Wire the internal container getter via env — but simpler: mock via a spy at call
@@ -91,7 +93,7 @@ describe("flagComp — write path", () => {
   });
 
   it("second flag from same user is idempotent — no-op, returns alreadyFlaggedByYou=true", async () => {
-    delete process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;
+    process.env.USER_FLAG_AUTO_FILTER_THRESHOLD = "1";   // CF-COMP-FLAG-THRESHOLD-P0.2: default is now 3
     vi.doMock("@azure/cosmos", () => ({
       CosmosClient: class {
         database() { return { container: () => fakeContainer(docState) }; }
@@ -131,7 +133,7 @@ describe("flagComp — write path", () => {
   });
 
   it("truncates notes to 500 chars", async () => {
-    delete process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;
+    process.env.USER_FLAG_AUTO_FILTER_THRESHOLD = "1";   // CF-COMP-FLAG-THRESHOLD-P0.2: default is now 3
     vi.doMock("@azure/cosmos", () => ({
       CosmosClient: class {
         database() { return { container: () => fakeContainer(docState) }; }
@@ -146,7 +148,7 @@ describe("flagComp — write path", () => {
   });
 
   it("throws when compId not found in container", async () => {
-    delete process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;
+    process.env.USER_FLAG_AUTO_FILTER_THRESHOLD = "1";   // CF-COMP-FLAG-THRESHOLD-P0.2: default is now 3
     vi.doMock("@azure/cosmos", () => ({
       CosmosClient: class {
         database() { return { container: () => fakeContainer(docState) }; }
@@ -168,7 +170,7 @@ describe("flagComp — write path", () => {
   });
 
   it("preserves EXISTING qualityFlags when adding user-flagged (doesn't clobber algorithmic flags)", async () => {
-    delete process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;
+    process.env.USER_FLAG_AUTO_FILTER_THRESHOLD = "1";   // CF-COMP-FLAG-THRESHOLD-P0.2: default is now 3
     docState.qualityFlags = ["price-outlier"];    // pre-existing algo flag
     vi.doMock("@azure/cosmos", () => ({
       CosmosClient: class {

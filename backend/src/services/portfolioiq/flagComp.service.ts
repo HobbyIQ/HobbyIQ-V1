@@ -59,13 +59,18 @@ async function getSoldContainer(): Promise<Container | null> {
 }
 
 /** Number of distinct users required before we add "user-flagged" to
- *  qualityFlags (and thereby drop the comp from FMV). Default 1 (any
- *  single user flag drops immediately — high responsiveness, risk of
- *  false-positive but reversible). Raise via env var if abuse observed. */
+ *  qualityFlags (and thereby drop the comp from FMV).
+ *
+ *  CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26). Default raised
+ *  1 → 3 per prod-readiness audit. Previously a single user flag
+ *  could drop any comp instantly from FMV → any bad-faith account
+ *  could poison the pool. Threshold 3 requires triangulation. Rate
+ *  limit (20/day per user, enforceUserFlagRateLimit middleware) is
+ *  belt-and-suspenders. */
 function autoFilterThreshold(): number {
   const raw = process.env.USER_FLAG_AUTO_FILTER_THRESHOLD;
-  const n = raw ? parseInt(raw, 10) : 1;
-  return Number.isFinite(n) && n > 0 ? n : 1;
+  const n = raw ? parseInt(raw, 10) : 3;
+  return Number.isFinite(n) && n > 0 ? n : 3;
 }
 
 const MAX_NOTE_LEN = 500;

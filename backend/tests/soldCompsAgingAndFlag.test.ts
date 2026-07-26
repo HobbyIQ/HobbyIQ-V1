@@ -53,12 +53,24 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
 }
 
 let store: Map<string, any>;
+// CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26). These tests validate
+// single-user-flag semantics (write shape + reason truncation + reader
+// filtering). Pin LEGACY_FLAG_THRESHOLD=1 so first-flag flips
+// flaggedWrong immediately — preserves original intent. Multi-user
+// threshold behavior is covered separately in soldCompsFlagThreshold
+// tests (see below).
+const ORIGINAL_LEGACY_THRESHOLD = process.env.LEGACY_FLAG_THRESHOLD;
 beforeEach(() => {
+  process.env.LEGACY_FLAG_THRESHOLD = "1";
   const f = fakeContainer();
   store = f.store;
   _setContainerForTests(f.container);
 });
-afterEach(() => _setContainerForTests(null));
+afterEach(() => {
+  if (ORIGINAL_LEGACY_THRESHOLD === undefined) delete process.env.LEGACY_FLAG_THRESHOLD;
+  else process.env.LEGACY_FLAG_THRESHOLD = ORIGINAL_LEGACY_THRESHOLD;
+  _setContainerForTests(null);
+});
 
 describe("flagCompAsWrong — write path", () => {
   it("guards on empty cardId or compId", async () => {
@@ -120,11 +132,16 @@ describe("flagCompAsWrong — write path", () => {
     const r2 = await flagCompAsWrong({
       cardId: "cs-x", compId: "ebay-user-purchase::a", flaggedByUserId: "u-1",
     });
+    // CF-COMP-FLAG-THRESHOLD-P0.2 (Drew, 2026-07-26): idempotency now
+    // returns "already-flagged-by-you" on the second call from the same
+    // user. First still flips flaggedWrong=true because beforeEach
+    // pinned threshold=1.
     expect(r1.status).toBe("flagged");
-    expect(r2.status).toBe("flagged");
+    expect(r2.status).toBe("already-flagged-by-you");
     expect(store.size).toBe(1);
-    const doc = Array.from(store.values())[0] as SoldCompDoc & { flaggedWrong?: boolean };
+    const doc = Array.from(store.values())[0] as SoldCompDoc & { flaggedWrong?: boolean; flaggedByUsers?: string[] };
     expect(doc.flaggedWrong).toBe(true);
+    expect(doc.flaggedByUsers).toEqual(["u-1"]);   // no duplicate append
   });
 
   it("truncates flaggedReason to 500 chars", async () => {

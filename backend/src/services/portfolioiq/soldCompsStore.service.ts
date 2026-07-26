@@ -554,29 +554,79 @@ export function getEmitFailureCount(): number { return _emitFailureCounter; }
  * Auth check happens upstream (route enforces the flagger is either
  * the contributor or an ops-role); this function trusts the caller.
  */
+// CF-COMP-FLAG-THRESHOLD (Drew, 2026-07-26, prod-readiness audit P0.2).
+// Prior version set flaggedWrong=true on the FIRST user flag — one
+// bad-faith user could drop any comp from FMV instantly. Now tracks
+// flaggedByUsers[] deduped per user and only flips flaggedWrong=true
+// once distinct-user count meets threshold (LEGACY_FLAG_THRESHOLD env
+// var, default 3). Idempotent per (userId, compId). Full audit trail
+// via flaggedByUsers + flaggedHistory arrays.
+//
+// Paired with enforceUserFlagRateLimit middleware (20 flags per user
+// per day) at the route level, this closes the abuse vector.
+const LEGACY_FLAG_THRESHOLD_DEFAULT = 3;
+const LEGACY_MAX_NOTE_LEN = 500;
+function legacyFlagThreshold(): number {
+  const raw = process.env.LEGACY_FLAG_THRESHOLD;
+  const n = raw ? parseInt(raw, 10) : LEGACY_FLAG_THRESHOLD_DEFAULT;
+  return Number.isFinite(n) && n > 0 ? n : LEGACY_FLAG_THRESHOLD_DEFAULT;
+}
+
 export async function flagCompAsWrong(input: {
   cardId: string;
   compId: string;
   flaggedByUserId: string;
   reason?: string;
-}): Promise<{ status: "flagged" | "not-found" | "no-store" | "error"; error?: string }> {
+}): Promise<{ status: "flagged" | "recorded" | "already-flagged-by-you" | "not-found" | "no-store" | "error"; error?: string; totalFlags?: number; thresholdApplied?: boolean }> {
   if (!input.cardId?.trim() || !input.compId?.trim()) {
     return { status: "error", error: "missing cardId or compId" };
   }
   const c = await getContainer();
   if (!c) return { status: "no-store" };
   try {
-    const { resource: existing } = await c.item(input.compId, input.cardId).read<SoldCompDoc>();
+    const { resource: existing } = await c.item(input.compId, input.cardId).read<SoldCompDoc & {
+      flaggedByUsers?: string[];
+      flaggedHistory?: Array<{ userId: string; reason?: string; at: string }>;
+    }>();
     if (!existing) return { status: "not-found" };
-    const updated: SoldCompDoc = {
+
+    const flaggedByUsers = Array.isArray(existing.flaggedByUsers) ? [...existing.flaggedByUsers] : [];
+    const flaggedHistory = Array.isArray(existing.flaggedHistory) ? [...existing.flaggedHistory] : [];
+
+    if (flaggedByUsers.includes(input.flaggedByUserId)) {
+      return {
+        status: "already-flagged-by-you",
+        totalFlags: flaggedByUsers.length,
+        thresholdApplied: existing.flaggedWrong === true,
+      };
+    }
+
+    flaggedByUsers.push(input.flaggedByUserId);
+    flaggedHistory.push({
+      userId: input.flaggedByUserId,
+      reason: input.reason?.trim().slice(0, LEGACY_MAX_NOTE_LEN),
+      at: new Date().toISOString(),
+    });
+
+    const threshold = legacyFlagThreshold();
+    const shouldFlipFlag = flaggedByUsers.length >= threshold;
+
+    const updated = {
       ...existing,
-      flaggedWrong: true,
-      flaggedByUserId: input.flaggedByUserId,
+      flaggedByUsers,
+      flaggedHistory,
+      // Legacy fields kept for back-compat readers; flipped only at threshold.
+      flaggedWrong: shouldFlipFlag ? true : (existing.flaggedWrong ?? false),
+      flaggedByUserId: input.flaggedByUserId,       // most-recent flagger
       flaggedAt: new Date().toISOString(),
-      flaggedReason: input.reason?.trim().slice(0, 500) ?? null,
+      flaggedReason: input.reason?.trim().slice(0, LEGACY_MAX_NOTE_LEN) ?? null,
     };
     await c.items.upsert(updated as any);
-    return { status: "flagged" };
+    return {
+      status: shouldFlipFlag ? "flagged" : "recorded",
+      totalFlags: flaggedByUsers.length,
+      thresholdApplied: shouldFlipFlag,
+    };
   } catch (err) {
     const msg = (err as Error)?.message ?? String(err);
     console.warn(JSON.stringify({

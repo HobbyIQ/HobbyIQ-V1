@@ -3,6 +3,7 @@ import * as portfolio from "../services/portfolioiq/portfolioStore.service.js";
 import { getConnectionStatus } from "../services/ebay/ebayAuth.service.js";
 import { buildListingPreview, createListing, HoldingListingInput } from "../services/ebay/ebayListing.service.js";
 import { requireSession } from "../middleware/requireSession.js";
+import { enforceUserFlagRateLimit } from "../middleware/enforceUserFlagRateLimit.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireCapacity } from "../middleware/requireCapacity.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
@@ -1168,11 +1169,12 @@ router.post("/holdings/:id/sell", portfolio.sellHolding);
 // Auth: session-required (already enforced by router.use above). Trust
 // boundary — future enhancement: check that the flagger is either the
 // contributor OR has a reputation score above threshold OR is ops.
-// CF-BROKEN-SESSION-P0.1: was reading `(req as any).userId` from
-// middleware that doesn't set it. Also had no `requireSession` guard.
-// Combined with P0.2's abuse-vector fixes (higher threshold + per-user
-// rate limit) below.
-router.post("/comps/flag-wrong", requireSession, async (req, res, next) => {
+// CF-BROKEN-SESSION-P0.1 + CF-COMP-FLAG-ABUSE-P0.2 (Drew, 2026-07-26):
+// requireSession (was broken), enforceUserFlagRateLimit (20 flags per
+// user per day cap — 429 when exceeded), + underlying
+// flagCompAsWrong now requires 3 distinct users before flipping
+// flaggedWrong=true.
+router.post("/comps/flag-wrong", requireSession, enforceUserFlagRateLimit, async (req, res, next) => {
   try {
     const { cardId, compId, reason } = req.body ?? {};
     if (typeof cardId !== "string" || !cardId.trim()) {
@@ -1221,11 +1223,18 @@ router.post("/comps/flag-wrong", requireSession, async (req, res, next) => {
         }
       })();
     }
+    // CF-COMP-FLAG-THRESHOLD-P0.2: new statuses "recorded" (below
+    // threshold, flag counted but flaggedWrong not flipped yet) and
+    // "already-flagged-by-you" (idempotent) both return 200 with
+    // success:true — the flag was accepted, iOS just renders whatever
+    // acknowledgment badge is appropriate. Only "not-found" / infra
+    // errors are non-200.
+    const okStatuses = new Set(["flagged", "recorded", "already-flagged-by-you"]);
     const status =
-      result.status === "flagged" ? 200 :
+      okStatuses.has(result.status) ? 200 :
       result.status === "not-found" ? 404 :
       result.status === "no-store" ? 503 : 500;
-    return res.status(status).json({ success: result.status === "flagged", ...result });
+    return res.status(status).json({ success: okStatuses.has(result.status), ...result });
   } catch (err) { next(err); }
 });
 // CF-REGRADE-COST-ROLLIN (2026-07-06, iOS ask): atomic grade
