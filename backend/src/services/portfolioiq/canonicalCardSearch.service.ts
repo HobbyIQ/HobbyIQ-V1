@@ -51,6 +51,18 @@ export interface CanonicalSearchHit {
   matchedRanges: MatchedRange[];   // for iOS to bold-highlight matched substrings
   momentumPct: number | null;      // 30d-vs-prior-60d % change on same slug (nullable)
   recentSaleCount: number;         // popularity indicator from card_catalog
+  /** CF-SELL-SIGNAL (Drew, 2026-07-26). Actionable seller-intelligence
+   *  tag derived from momentumPct + compCount. Per product doctrine
+   *  (project_product_actionable_seller_intelligence): timed action
+   *  recommendations, not prediction accuracy. iOS renders as a small
+   *  badge on each hit.
+   *    "sell-now" — spike detected (up >15% in 30d with real volume)
+   *    "buy"      — drawdown detected (down >15% in 30d with real volume)
+   *    "hold"     — stable (within ±5% with real volume)
+   *    "watch"    — insufficient signal (thin volume OR indeterminate) */
+  signal: "sell-now" | "hold" | "buy" | "watch";
+  /** One-sentence human explanation of the signal for iOS tooltip. */
+  signalReason: string;
   score: number;
 }
 
@@ -163,6 +175,50 @@ const GRADE_ALIAS: Record<string, { company: string; value: number }> = {
 const PRINT_RUN_RE = /^\/?(\d{1,4})$/;
 // Card number pattern — "#125", "BCP-102", "CPA-EHA", "USC88", etc.
 const CARD_NUMBER_RE = /^#?([A-Z]{2,6}-[A-Z0-9]+|[A-Z]?\d{1,4}[A-Z]?|[A-Z]{2,4}\d{1,4})$/i;
+
+// CF-SELL-SIGNAL (Drew, 2026-07-26). Actionable-intelligence signal
+// tags derived from three fields the search already computes:
+//   momentumPct   — 30d median vs prior-60d median % change
+//   compCount     — comps in 90d window (direct-slug)
+//   recentSaleCount — popularity indicator from card_catalog
+//
+// Thresholds tuned for honest defaults:
+//   sell-now  — momentumPct >= +15 AND compCount >= 5 (real spike)
+//   buy       — momentumPct <= -15 AND compCount >= 5 (real drawdown)
+//   hold      — |momentumPct| <= 5 AND compCount >= 5 (stable)
+//   watch     — everything else (insufficient signal / mid-range noise)
+//
+// The compCount>=5 gate keeps thin-comp cards out of the actionable
+// tiers — no fake urgency on cards with 1-2 recent sales. Below that
+// threshold, everything is "watch". This is empirical-only doctrine:
+// no signal without data.
+const SIGNAL_MIN_COMPS_FOR_ACTION = 5;
+const SIGNAL_SPIKE_PCT = 15;
+const SIGNAL_STABLE_BAND_PCT = 5;
+
+export function computeSellSignal(
+  momentumPct: number | null,
+  compCount: number,
+  recentSaleCount: number,
+): { signal: "sell-now" | "hold" | "buy" | "watch"; reason: string } {
+  if (momentumPct === null || compCount < SIGNAL_MIN_COMPS_FOR_ACTION) {
+    const compsFragment = compCount === 0 ? "no recent sales" : `only ${compCount} sale${compCount === 1 ? "" : "s"} in 90d`;
+    return { signal: "watch", reason: `Insufficient signal — ${compsFragment}` };
+  }
+  const abs = Math.abs(momentumPct);
+  const dirWord = momentumPct >= 0 ? "up" : "down";
+  const compsFragment = `${compCount} sales in 90d`;
+  if (momentumPct >= SIGNAL_SPIKE_PCT) {
+    return { signal: "sell-now", reason: `Up ${momentumPct.toFixed(1)}% in last 30d (${compsFragment})` };
+  }
+  if (momentumPct <= -SIGNAL_SPIKE_PCT) {
+    return { signal: "buy", reason: `Down ${abs.toFixed(1)}% in last 30d (${compsFragment})` };
+  }
+  if (abs <= SIGNAL_STABLE_BAND_PCT) {
+    return { signal: "hold", reason: `Stable (±${SIGNAL_STABLE_BAND_PCT}% in 30d, ${compsFragment})` };
+  }
+  return { signal: "watch", reason: `${dirWord} ${abs.toFixed(1)}% in 30d — mid-range, monitor (${compsFragment})` };
+}
 
 function tokenize(q: string): string[] {
   const raw = String(q ?? "")
@@ -465,6 +521,8 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       matchedRanges,
       momentumPct: null,
       recentSaleCount: Number(c.recentSaleCount || 0),
+      signal: "watch",                                         // default until enrichment sets it
+      signalReason: "Insufficient signal — no recent sales",
       score: finalScore,
     };
   });
@@ -577,6 +635,12 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
           if (m60 > 0) h.momentumPct = Math.round(((m30 - m60) / m60) * 1000) / 10;
         }
       }
+      // CF-SELL-SIGNAL (Drew, 2026-07-26). Compute after momentumPct +
+      // compCount are known. Everything else already computed — this
+      // is pure derivation, no additional Cosmos work.
+      const sig = computeSellSignal(h.momentumPct, h.compCount, h.recentSaleCount);
+      h.signal = sig.signal;
+      h.signalReason = sig.reason;
       // Grade facet — collect distinct grade tiers from the enriched pool.
       // (Runs even without grade filter so facet chips show all tiers.)
       if (!gradeFilterCompany) {
