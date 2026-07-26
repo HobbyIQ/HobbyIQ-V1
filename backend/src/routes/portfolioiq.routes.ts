@@ -778,11 +778,14 @@ router.patch("/preferences", async (req, res, next) => {
 // CF-SIGNAL-WEIGHTED-TOTALS (Drew, 2026-07-13, PR #430): three portfolio
 // valuations side-by-side (gross MV / trend-adjusted / fees-adjusted) +
 // breakdown by verdict class (bull / static / bear).
-router.get("/signal-weighted-totals", async (req, res, next) => {
+// CF-BROKEN-SESSION-P0.1 (Drew, 2026-07-26). Was reading
+// `(req as any).session?.userId` from middleware that doesn't exist —
+// audit found every call 401'd. Fixed to use requireSession + req.user.
+router.get("/signal-weighted-totals", requireSession, async (req, res, next) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json({ success: false, error: "no session userId" });
+      res.status(401).json({ success: false, error: "session userId required" });
       return;
     }
     const { buildSignalWeightedTotals } = await import(
@@ -798,11 +801,12 @@ router.get("/signal-weighted-totals", async (req, res, next) => {
 // CF-WATCHLIST-BULL-CANDIDATES (Drew, 2026-07-13, PR #429): surface
 // watchlisted players whose supply signal is bullish so users see a
 // "buy candidates" list right in the app.
-router.get("/watchlist-bull-candidates", async (req, res, next) => {
+// CF-BROKEN-SESSION-P0.1: same fix as /signal-weighted-totals above.
+router.get("/watchlist-bull-candidates", requireSession, async (req, res, next) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json({ success: false, error: "no session userId" });
+      res.status(401).json({ success: false, error: "session userId required" });
       return;
     }
     const { buildWatchlistBullCandidates } = await import(
@@ -819,11 +823,12 @@ router.get("/watchlist-bull-candidates", async (req, res, next) => {
 // aggregate the supply/demand signal across every holding for the
 // authed user. Returns portfolio-level bias + breakdown + top movers +
 // full per-holding list. iOS renders as a dashboard on Portfolio Home.
-router.get("/supply-demand-summary", async (req, res, next) => {
+// CF-BROKEN-SESSION-P0.1: same fix as sibling routes above.
+router.get("/supply-demand-summary", requireSession, async (req, res, next) => {
   try {
-    const userId = (req as any).session?.userId;
+    const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json({ success: false, error: "no session userId" });
+      res.status(401).json({ success: false, error: "session userId required" });
       return;
     }
     const { buildPortfolioSupplyDemandSummary } = await import(
@@ -1163,7 +1168,11 @@ router.post("/holdings/:id/sell", portfolio.sellHolding);
 // Auth: session-required (already enforced by router.use above). Trust
 // boundary — future enhancement: check that the flagger is either the
 // contributor OR has a reputation score above threshold OR is ops.
-router.post("/comps/flag-wrong", async (req, res, next) => {
+// CF-BROKEN-SESSION-P0.1: was reading `(req as any).userId` from
+// middleware that doesn't set it. Also had no `requireSession` guard.
+// Combined with P0.2's abuse-vector fixes (higher threshold + per-user
+// rate limit) below.
+router.post("/comps/flag-wrong", requireSession, async (req, res, next) => {
   try {
     const { cardId, compId, reason } = req.body ?? {};
     if (typeof cardId !== "string" || !cardId.trim()) {
@@ -1172,7 +1181,7 @@ router.post("/comps/flag-wrong", async (req, res, next) => {
     if (typeof compId !== "string" || !compId.trim()) {
       return res.status(400).json({ success: false, error: "compId required" });
     }
-    const flaggedByUserId = (req as any).userId ?? "";
+    const flaggedByUserId = req.user?.userId ?? "";
     if (!flaggedByUserId) {
       return res.status(401).json({ success: false, error: "session required" });
     }
