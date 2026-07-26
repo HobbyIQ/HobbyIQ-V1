@@ -64,9 +64,11 @@ const BASELINE_FAMILIES = [
   { family: "upper-deck", token: "Upper Deck" },
 ];
 
-// Per-sport overlays — FB/BB product lines. Runs against
-// c["group"] = @sport rather than blanket query.
-const SPORT_FAMILIES = [
+// Per-sport family sets. Runs against c["group"] = @sport rather than
+// blanket query. Football/Basketball share the Panini + Topps/Bowman
+// Chrome family set (both are Panini-dominant since ~2016). Pokemon has
+// completely different product families — separate list below.
+const PANINI_SPORT_FAMILIES = [
   { family: "panini-prizm", token: "Prizm" },
   { family: "panini-select", token: "Select" },
   { family: "panini-mosaic", token: "Mosaic" },
@@ -91,8 +93,49 @@ const SPORT_FAMILIES = [
   { family: "bowman-chrome", token: "Bowman Chrome" },
 ];
 
+// CF-POKEMON-CALIBRATION (Drew, 2026-07-26). Pokemon TCG has entirely
+// different product families than modern sports. Grade math also differs
+// materially — Pokemon PSA 10 vs 9 is often 10-30× (vs baseball's 2-3×) —
+// so we MUST calibrate Pokemon separately, not fall back to baseline.
+//
+// Family tokens ordered vintage → modern (rough era grouping). CH's
+// card_set field for Pokemon looks like "2003 Pokemon Aquapolis",
+// "2016 Pokemon XY BREAKpoint", "2025 Pokemon Scarlet & Violet White
+// Flare" — the token match is CONTAINS(LOWER(...)), so partial names
+// hit the right expansion set families.
+//
+// "pokemon" catch-all at the end so any Pokemon row lands SOMEWHERE
+// even if its expansion isn't in the specific-family list.
+const POKEMON_FAMILIES = [
+  { family: "pokemon-base",            token: "Pokemon Base" },
+  { family: "pokemon-jungle",          token: "Pokemon Jungle" },
+  { family: "pokemon-fossil",          token: "Pokemon Fossil" },
+  { family: "pokemon-team-rocket",     token: "Pokemon Team Rocket" },
+  { family: "pokemon-neo",             token: "Pokemon Neo" },
+  { family: "pokemon-ex",              token: "Pokemon EX" },
+  { family: "pokemon-diamond-pearl",   token: "Pokemon Diamond" },
+  { family: "pokemon-platinum",        token: "Pokemon Platinum" },
+  { family: "pokemon-heartgold",       token: "Pokemon HeartGold" },
+  { family: "pokemon-black-white",     token: "Pokemon Black & White" },
+  { family: "pokemon-xy",              token: "Pokemon XY" },
+  { family: "pokemon-sun-moon",        token: "Pokemon Sun & Moon" },
+  { family: "pokemon-sword-shield",    token: "Pokemon Sword" },
+  { family: "pokemon-scarlet-violet",  token: "Pokemon Scarlet" },
+  { family: "pokemon",                 token: "Pokemon" },   // catch-all fallback
+];
+
 const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const SPORTS = ["Football", "Basketball"];
+// CF-POKEMON-CALIBRATION (Drew, 2026-07-26): "Pokemon" added.
+// SPORT_FAMILIES resolution moved to per-sport dispatch in the loop below.
+const SPORTS = ["Football", "Basketball", "Pokemon"];
+
+// Sport → family set. Each sport pulls only families that make sense
+// for it. Football/Basketball share the Panini + Topps/Bowman Chrome
+// set; Pokemon has its own family list.
+function familiesForSport(sport) {
+  if (sport === "Pokemon") return POKEMON_FAMILIES;
+  return PANINI_SPORT_FAMILIES;
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const median = (arr) => {
@@ -392,9 +435,12 @@ function computeOtherFallback(baseline) {
 const baseline = await calibrateFamilySet(BASELINE_FAMILIES, null, 5);
 baseline["other"] = computeOtherFallback(baseline);
 
-const bySport = { baseball: {}, hockey: {} };
+const bySport = { baseball: {}, hockey: {}, pokemon: {} };
 for (const sport of SPORTS) {
-  bySport[sport.toLowerCase()] = await calibrateFamilySet(SPORT_FAMILIES, sport, 3);
+  // CF-POKEMON-CALIBRATION (Drew, 2026-07-26): route each sport to its
+  // matching family set (Panini/Chrome for FB/BB, Pokemon-specific for
+  // Pokemon TCG). Both use the n>=3 sport threshold.
+  bySport[sport.toLowerCase()] = await calibrateFamilySet(familiesForSport(sport), sport, 3);
 }
 
 // CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Emit the
