@@ -27,10 +27,21 @@ on:
         default: 'false'
         options: ['true', 'false']
       card_id:
-        description: 'Restrict to a single cardId (optional; blank = pool-wide)'
+        description: 'Restrict to a single cardId (optional; blank = recency-filtered pool)'
         required: false
         type: string
         default: ''
+      full_pool:
+        description: 'Full-pool deep scan (all cardIds ever, not just recent writes). Runs ~2h. Use for weekly deep-clean, not routine nightly.'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+      since_hours:
+        description: 'Recency window in hours (default 24 = last day of writes). Ignored when full_pool=true or card_id is set.'
+        required: false
+        type: string
+        default: '24'
 
 jobs:
   dedup:
@@ -83,9 +94,23 @@ jobs:
           DEDUP_RATE_MS: '50'
           DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '' || '--apply' }}
           CARD_ID_ARG: ${{ inputs.card_id != '' && format('--cardId={0}', inputs.card_id) || '' }}
+          # CF-DEDUP-RECENCY-FILTER (Drew, 2026-07-26). Default to recency-
+          # filtered nightly (last 24h of writes). Full-pool mode is
+          # available via workflow_dispatch input. Priority: card_id >
+          # full_pool > recency (--since).
+          FULL_POOL_ARG: ${{ inputs.full_pool == 'true' && '--full' || '' }}
+          SINCE_HOURS: ${{ inputs.since_hours || '24' }}
         run: |
           set -euo pipefail
-          node scripts/detect-sold-comps-duplicates.cjs $CARD_ID_ARG \
+          # Compose scan-scope flags. Detect script picks the right
+          # scope based on priority (cardId wins > full > since).
+          SCOPE_ARGS="$CARD_ID_ARG $FULL_POOL_ARG"
+          if [ -z "$CARD_ID_ARG" ] && [ -z "$FULL_POOL_ARG" ]; then
+            SINCE_ISO=$(date -u -d "-${SINCE_HOURS} hours" +%FT%TZ)
+            SCOPE_ARGS="--since=$SINCE_ISO"
+          fi
+          echo "scope: $SCOPE_ARGS"
+          node scripts/detect-sold-comps-duplicates.cjs $SCOPE_ARGS \
             | node scripts/apply-sold-comps-dedup.cjs $DRY_RUN_ARG \
             2>&1 | tee dedup-out.log
 
