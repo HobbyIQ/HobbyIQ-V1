@@ -28,6 +28,15 @@ const APPLY = process.env.RESLUG_APPLY === "true";
 const CONCURRENCY = Number(process.env.RESLUG_CONCURRENCY || "12");
 const MISMATCH_THRESHOLD = Number(process.env.RESLUG_DISTANCE_MISMATCH || "20");
 const MATCH_THRESHOLD = Number(process.env.RESLUG_DISTANCE_MATCH || "12");
+// CF-PHASH-RESLUG-CHUNKED (Drew, 2026-07-26). Cap patches applied per
+// run so a nightly cron drains the backlog over N runs instead of
+// dying at GH Actions' 6h job cap. 0 = no limit (default matches prior
+// behavior). Set to e.g. 400000 for a ~5h/run cadence.
+const LIMIT = Number(process.env.RESLUG_LIMIT || "0");
+// Sort patches by id before slicing so successive runs process
+// different chunks (rather than always re-attempting the same top-N
+// which the mismatch computer may re-detect on the next centroid pass).
+const CHUNK_SORT = (process.env.RESLUG_CHUNK_SORT || "id").toLowerCase();
 
 function hamming(a, b) {
   let dist = 0;
@@ -165,10 +174,21 @@ async function main() {
     return;
   }
 
-  console.log(`\nPatching ${patches.length} rows at concurrency ${CONCURRENCY}...`);
+  // CF-PHASH-RESLUG-CHUNKED: honor per-run cap so nightly cron drains
+  // the backlog over multiple runs instead of dying at GH Actions' 6h
+  // job cap. Sort by id first so successive runs pick a stable
+  // deterministic slice (round-robin as centroid state evolves).
+  let toApply = patches;
+  if (CHUNK_SORT === "id") toApply = patches.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  if (LIMIT > 0 && toApply.length > LIMIT) {
+    console.log(`  chunking: applying first ${LIMIT} of ${toApply.length} patches (RESLUG_LIMIT=${LIMIT}). Remaining will apply on next run.`);
+    toApply = toApply.slice(0, LIMIT);
+  }
+
+  console.log(`\nPatching ${toApply.length} rows at concurrency ${CONCURRENCY}...`);
   const t0 = Date.now();
   let done = 0;
-  const result = await runInParallel(patches, async (p) => {
+  const result = await runInParallel(toApply, async (p) => {
     if (p.action === "reslug") {
       await sc.item(p.id, p.partitionKey).patch([
         { op: "set", path: "/hobbyiqCardId", value: p.newSlug },
@@ -179,8 +199,12 @@ async function main() {
       ]);
     }
     done++;
-    if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${patches.length}`);
+    if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${toApply.length}`);
   });
   console.log(`\n  patched ${result.ok} / errors ${result.err} in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+  const remaining = patches.length - toApply.length;
+  if (remaining > 0) {
+    console.log(`  BACKLOG: ${remaining} patches remaining — next run picks up`);
+  }
 }
 main().catch(e => { console.error(e); process.exit(1); });
