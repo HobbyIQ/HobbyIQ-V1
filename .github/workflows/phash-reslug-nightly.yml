@@ -15,10 +15,30 @@ name: Nightly pHash centroid refresh + auto-reslug
 # (02:30 ET) and well before the 5AM deploy. Two UTC crons + ET gate
 # per the standard nightly pattern.
 
+# CF-PHASH-RESLUG-SIZING-HALT (Drew, 2026-07-26). Schedule DISABLED.
+# Manual dispatch still available. Reason:
+#
+# The re-verification run 2026-07-26 05:20 UTC (post PR #768 auth fix)
+# got past auth and ran successfully — but processed only 43,500 of
+# 1,140,378 patches identified before hitting the 60min job timeout.
+# At post-Phase-A scale (2.34M pHashes) the centroid mismatch counts
+# are far larger than the earlier 5,916-centroid dry-run predicted
+# (which produced ~348 clean reslugs). Rate is ~725 patches/min at
+# concurrency=8 → full run would take ~26 hours — over GH Actions'
+# 6h job cap. Bumping timeout can't rescue this shape.
+#
+# Real fix requires a design choice — leaving for triage:
+#   (a) Chunk incrementally: --limit 250K per run, catch up over N nights
+#   (b) Tune thresholds up (MISMATCH >= 30?) so fewer rows patch per pass
+#   (c) Move the work to an Azure Function (no 6h cap)
+#   (d) Prune the centroid recompute (only recompute changed slugs)
+#
+# Option (a) is easiest and most conservative. Restore this schedule
+# after a --limit flag lands on phash-verify-and-reslug.cjs.
 on:
-  schedule:
-    - cron: '15 6 * * *'   # 06:15 UTC = 02:15 EDT
-    - cron: '15 7 * * *'   # 07:15 UTC = 02:15 EST
+  # schedule:
+  #   - cron: '15 6 * * *'   # 06:15 UTC = 02:15 EDT
+  #   - cron: '15 7 * * *'   # 07:15 UTC = 02:15 EST
   workflow_dispatch:
 
 jobs:
