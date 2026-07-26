@@ -62,6 +62,16 @@ jobs:
         working-directory: backend
         run: npm ci --omit=optional --no-audit --no-fund
 
+      # CF-SOLDCOMPS-DELTA-BUILD-STEP (Drew, 2026-07-26). Promote script
+      # requires compiled dist/services/portfolioiq/hobbyIqCardId.service.js
+      # (memory: cardIdentity snake_case convention — script imports the
+      # compiled TS module). Without a build step, script exits with
+      # "Cannot find module" on every sport partition — chronic failure
+      # observed in 2026-07-26 11:28 UTC nightly run.
+      - name: Build backend (produces dist/ needed by promote script)
+        working-directory: backend
+        run: npm run build
+
       - name: Login to Azure
         uses: azure/login@v3
         with:
