@@ -3268,6 +3268,20 @@ export async function augmentCompsWithUserPool(
           if (r.sourceExternalId && seenIds.has(r.sourceExternalId)) continue;
           // Reject flaggedWrong here too — same discipline as the primary pool.
           if ((r as SoldCompDoc & { flaggedWrong?: boolean }).flaggedWrong === true) continue;
+          // CF-IDENTITY-FALLBACK-AGED-OUT-PARITY (Drew, 2026-07-26).
+          // The primary-pool loop above filters unparseable and >maxAge
+          // soldAt via Date.parse. The identity fallback route bypassed
+          // that check — Cosmos SQL's `soldAt >= @from` string compare
+          // lets garbage strings like "not-a-real-date" through because
+          // ASCII "n" > "2" (the year prefix). Apply the same aged-out
+          // guard here so identity-fallback rows go through the same
+          // gate as primary reads. Fixes the failing
+          // compiqEstimateSoldCompsMerge:298 test (unparseable-date
+          // row leaking into the merge because primary loop dropped it
+          // → count fell below 2 → fallback ran → fallback re-added it).
+          const rSoldMs = Date.parse(r.soldAt ?? "");
+          if (!Number.isFinite(rSoldMs)) continue;
+          if (now - rSoldMs > maxAgeMs) continue;
           freshUserComps.push(r);
         }
       }
