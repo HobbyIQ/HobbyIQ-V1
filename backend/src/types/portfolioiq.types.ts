@@ -262,6 +262,19 @@ export interface PortfolioHolding {
   // card include the pinned parallelId from the engine response.
   parallelId?: string | null;
 
+  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Canonical HobbyIQ slug
+  // (hiq:sport:year:setKey:cardNumber:parallel:autoFlag[:num-PR]) so
+  // iOS can tap a holding → POST /api/compiq/card-detail with this
+  // value directly, without re-deriving from raw fields on the client.
+  //
+  // Populated at every write via deriveHoldingSlug() (addHolding,
+  // autoPriceHolding). Read paths also compute-on-fly when absent, so
+  // legacy holdings that predate this CF still surface a slug when
+  // their identity fields are complete. null when identity is
+  // insufficient (missing year / setName / cardNumber, or sport not
+  // inferrable) — iOS falls back to legacy tap behavior in that case.
+  hobbyiqCardId?: string | null;
+
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail valuation fields.
   // STRUCTURALLY SEPARATE from fairMarketValue (observed-only). When the
   // holding's grade matches a grounded gradedEstimates entry, the rail

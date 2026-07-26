@@ -62,6 +62,7 @@
 // semantics (cost-basis proxy vs $0) before the C/D deploy.
 
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { deriveHoldingSlug } from "./holdingSlug.service.js";
 import {
   computePerUnitValue,
   computeCostBasisTotal,
@@ -159,6 +160,11 @@ export interface PortfolioHoldingWire {
   serialNumber?: string;
   isAuto?: boolean;
   variation?: string;
+  /** CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Canonical HobbyIQ slug
+   *  for tap-into-card. Populated at write time via deriveHoldingSlug;
+   *  compose paths compute-on-fly for legacy holdings that predate the
+   *  CF. null when identity is insufficient. */
+  hobbyiqCardId?: string | null;
   // Grade
   gradeCompany?: string;
   gradeValue?: number;
@@ -520,6 +526,12 @@ export function composeHoldingWireShape(
   const qty = Math.max(1, typeof holding.quantity === "number" && holding.quantity > 0 ? holding.quantity : 1);
   const displayableValue = displayable.value !== null ? displayable.value * qty : null;
 
+  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Prefer the stored slug;
+  // compute on-fly for legacy holdings that predate the CF so iOS's
+  // tap-into-card still resolves for holdings that were added before
+  // write-time slugging landed.
+  const hobbyiqCardId = holding.hobbyiqCardId ?? deriveHoldingSlug(holding);
+
   return {
     // Identity
     id: holding.id,
@@ -532,6 +544,7 @@ export function composeHoldingWireShape(
     serialNumber: holding.serialNumber,
     isAuto: holding.isAuto,
     variation: holding.variation,
+    hobbyiqCardId,
     // Grade
     gradeCompany: holding.gradeCompany,
     gradeValue: holding.gradeValue,

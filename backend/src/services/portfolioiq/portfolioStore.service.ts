@@ -19,6 +19,7 @@ import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
+import { withDerivedSlug } from "./holdingSlug.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
 // SAME cropped URL /api/compiq/price-by-id emits on cardImageUrl. iOS
@@ -3839,6 +3840,11 @@ export async function addHolding(req: Request, res: Response) {
     "portfolioStore.service.addHolding",
   );
   holding = await populateCardsightGradeId(holding);
+  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Populate the canonical
+  // hobbyiqCardId at add-time so iOS's tap-into-card flow can hit
+  // /api/compiq/card-detail with holding.hobbyiqCardId directly. Null
+  // when identity is insufficient (iOS falls back to legacy tap).
+  holding = withDerivedSlug(holding);
 
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: gate must run AFTER
   // normalizeR1CardsightCardId (which can hoist cardId from
@@ -3944,6 +3950,11 @@ export async function updateHolding(req: Request, res: Response) {
     "portfolioStore.service.updateHolding",
   );
   next = await populateCardsightGradeId(next);
+  // CF-PORTFOLIO-DETAIL-SLUG: recompute slug on every update — identity
+  // edits (fixed parallel, corrected cardNumber, added year) must
+  // propagate to hobbyiqCardId or it goes stale relative to the merged
+  // holding state.
+  next = withDerivedSlug(next);
 
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: symmetric with addHolding.
   // Validates the merged AFTER-state — an update of an existing legacy
