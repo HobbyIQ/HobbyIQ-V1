@@ -620,14 +620,22 @@ function buildGradeLadder(
     : 1;
   if (inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
 
-  // For each grader we have calibration for, project the top tier value.
+  // For each grader we have calibration for, project the tier value.
   // Sub-tier scaling handled by gradeTierMultiplier.
+  //
+  // CF-FULL-GRADE-LADDER (Drew, 2026-07-26). Extended tier list from
+  // top-3 to full range 1-10 (grader-appropriate). Where empirical
+  // calibration exists → tier shows. Where it doesn't → gradeTierMultiplier
+  // returns ≤1 and the tier is skipped. Net effect: vintage cards with
+  // real PSA 1-6 data now render their full ladder; modern cards with
+  // only top-tier data show the same 3-tier ladder as before. No wrong
+  // numbers introduced — only real data surfaces.
   const graders = ["PSA", "BGS", "SGC", "CGC"];
   const gradeValues: Record<string, number[]> = {
-    PSA: [10, 9, 8],
-    BGS: [10, 9.5, 9],
-    SGC: [10, 9.5],
-    CGC: [10, 9.5],
+    PSA: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+    BGS: [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6],
+    SGC: [10, 9.5, 9, 8.5, 8, 7, 6, 5, 4, 3, 2, 1],
+    CGC: [10, 9.5, 9, 8.5, 8],
   };
   const totalSample = { n: 0 };
   const tiers: CanonicalFmvGradeLadder["tiers"] = [

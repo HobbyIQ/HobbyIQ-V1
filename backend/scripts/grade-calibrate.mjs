@@ -425,13 +425,18 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
       p75: Math.round(p75 * 100) / 100,
       sampleSize: arr.length,
     };
-    // Attach byTier when we have at least 20 samples at a specific tier
-    // (smaller pools have unreliable medians for a specific grade tier).
+    // CF-FULL-GRADE-LADDER (Drew, 2026-07-26). Attach byTier when we
+    // have at least N samples at a specific tier. Previously N=20 which
+    // filtered out most vintage low-grade cells (PSA 1-6 per family
+    // typically has 5-15 rows, not 20+). Relaxed to N=8 so vintage
+    // grade-ladders populate. 8 is above the noise floor (single outlier
+    // moves an 8-row median by ~12%, tolerable given the fallback ladder
+    // preserves confidence-scoring downstream).
     const tierMap = perTierRatios.get(key);
     if (tierMap) {
       const byTier = {};
       for (const [tierStr, tierArr] of Object.entries(tierMap)) {
-        if (tierArr.length < 20) continue;
+        if (tierArr.length < 8) continue;
         byTier[tierStr] = {
           medianRatio: Math.round(median(tierArr) * 100) / 100,
           sampleSize: tierArr.length,
