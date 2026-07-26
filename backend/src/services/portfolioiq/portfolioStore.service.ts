@@ -37,6 +37,16 @@ import {
   tryFinalizeReconciliation,
   type LedgerEntryForErp,
 } from "./erpReconciliation.service.js";
+// CF-EBAY-LINK-INDEX-P0.5 (Drew, 2026-07-26). Prod-readiness audit fix:
+// per-webhook cross-partition scan of the portfolio container has been
+// replaced by a point-read on a dedicated ebay_link_index container.
+// See ebayLinkIndex.service.ts for shape + semantics.
+import {
+  writeLinkIndex as writeEbayLinkIndex,
+  removeLinkIndex as removeEbayLinkIndex,
+  findByOfferId as findEbayLinkByOfferId,
+  findByListingId as findEbayLinkByListingId,
+} from "./ebayLinkIndex.service.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -4567,6 +4577,14 @@ export async function linkEbayListing(
   };
   doc.holdings[canonicalKey] = updated;
   await writeUserDoc(userId, doc);
+  // CF-EBAY-LINK-INDEX-P0.5: best-effort mirror into the point-read index.
+  // Failure MUST NOT fail the link — the holding write is source of truth.
+  void writeEbayLinkIndex({
+    userId,
+    holdingId: canonicalKey,
+    offerId: link.offerId,
+    listingId: link.listingId,
+  }).catch(() => {});
   return updated;
 }
 
@@ -4590,6 +4608,7 @@ export async function unlinkEbayListingByOfferId(
     }
   }
   if (!target) return null;
+  const priorListingId = target.holding.ebayListingId ?? null;
   const cleared: PortfolioHolding = {
     ...target.holding,
     ebayOfferId: null,
@@ -4599,6 +4618,12 @@ export async function unlinkEbayListingByOfferId(
   };
   doc.holdings[target.id] = cleared;
   await writeUserDoc(userId, doc);
+  // CF-EBAY-LINK-INDEX-P0.5: best-effort index cleanup (both offer + prior
+  // listing rows). Failure MUST NOT fail the unlink.
+  void removeEbayLinkIndex({
+    offerId,
+    listingId: priorListingId,
+  }).catch(() => {});
   return cleared;
 }
 
@@ -4647,6 +4672,29 @@ export async function findHoldingByEbayOfferIdAcrossUsers(
   offerId: string,
 ): Promise<{ userId: string; holdingId: string; holding: PortfolioHolding } | null> {
   if (!offerId) return null;
+
+  // CF-EBAY-LINK-INDEX-P0.5 (Drew, 2026-07-26). Fast path: point-read on
+  // ebay_link_index. On hit, dereference the holding via a single-partition
+  // read of the portfolio doc. On miss (or index unavailable, or holding
+  // dereferenced but no longer present) fall through to the legacy
+  // cross-partition scan below so behaviour is unchanged for historical
+  // holdings pre-backfill.
+  const indexEntry = await findEbayLinkByOfferId(offerId).catch(() => null);
+  if (indexEntry) {
+    const holding = await findHoldingByEbayOfferId(indexEntry.userId, offerId);
+    if (holding) {
+      return { userId: indexEntry.userId, holdingId: indexEntry.holdingId, holding };
+    }
+    // Index says user X had it but the holding no longer references
+    // offerId. Log and fall through — the scan will resolve correctly
+    // (return null or find a fresher owner).
+    console.warn(JSON.stringify({
+      event: "ebay_link_index_stale_offer",
+      offerId,
+      indexUserId: indexEntry.userId,
+      indexHoldingId: indexEntry.holdingId,
+    }));
+  }
 
   type Match = { userId: string; holdingId: string; holding: PortfolioHolding };
   const matches: Match[] = [];
@@ -4728,6 +4776,24 @@ export async function findHoldingByEbayListingIdAcrossUsers(
   listingId: string,
 ): Promise<{ userId: string; holdingId: string; holding: PortfolioHolding } | null> {
   if (!listingId) return null;
+
+  // CF-EBAY-LINK-INDEX-P0.5 (Drew, 2026-07-26). Fast path — see
+  // findHoldingByEbayOfferIdAcrossUsers for the pattern rationale.
+  const indexEntry = await findEbayLinkByListingId(listingId).catch(() => null);
+  if (indexEntry) {
+    const doc = await readUserDoc(indexEntry.userId);
+    const canonicalKey = findHoldingKey(doc, indexEntry.holdingId);
+    const holding = canonicalKey ? doc.holdings[canonicalKey] : undefined;
+    if (holding && holding.ebayListingId === listingId) {
+      return { userId: indexEntry.userId, holdingId: canonicalKey!, holding };
+    }
+    console.warn(JSON.stringify({
+      event: "ebay_link_index_stale_listing",
+      listingId,
+      indexUserId: indexEntry.userId,
+      indexHoldingId: indexEntry.holdingId,
+    }));
+  }
 
   type Match = { userId: string; holdingId: string; holding: PortfolioHolding };
   const matches: Match[] = [];
