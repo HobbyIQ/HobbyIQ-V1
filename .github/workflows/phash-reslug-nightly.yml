@@ -15,37 +15,33 @@ name: Nightly pHash centroid refresh + auto-reslug
 # (02:30 ET) and well before the 5AM deploy. Two UTC crons + ET gate
 # per the standard nightly pattern.
 
-# CF-PHASH-RESLUG-SIZING-HALT (Drew, 2026-07-26). Schedule DISABLED.
-# Manual dispatch still available. Reason:
+# CF-PHASH-RESLUG-CHUNKED-CRON (Drew, 2026-07-26). Schedule RE-ENABLED
+# at 6h cadence with chunked apply so the ~1.14M-patch backlog drains
+# over ~4-6 runs (24-36h wall) instead of dying at GH Actions' 6h
+# per-job cap.
 #
-# The re-verification run 2026-07-26 05:20 UTC (post PR #768 auth fix)
-# got past auth and ran successfully — but processed only 43,500 of
-# 1,140,378 patches identified before hitting the 60min job timeout.
-# At post-Phase-A scale (2.34M pHashes) the centroid mismatch counts
-# are far larger than the earlier 5,916-centroid dry-run predicted
-# (which produced ~348 clean reslugs). Rate is ~725 patches/min at
-# concurrency=8 → full run would take ~26 hours — over GH Actions'
-# 6h job cap. Bumping timeout can't rescue this shape.
+# Per-run cap: RESLUG_LIMIT=400000 at RESLUG_CONCURRENCY=16 fits in
+# ~5h (extrapolated from the truncated 43.5K/60min baseline at
+# concurrency=8 → ~24K/min at concurrency=16 → 400K in ~17min IF
+# Cosmos RU keeps up). Timeout raised to 330min for safety margin.
+# ET-gate widened to accept any hour on the 6h cadence.
 #
-# Real fix requires a design choice — leaving for triage:
-#   (a) Chunk incrementally: --limit 250K per run, catch up over N nights
-#   (b) Tune thresholds up (MISMATCH >= 30?) so fewer rows patch per pass
-#   (c) Move the work to an Azure Function (no 6h cap)
-#   (d) Prune the centroid recompute (only recompute changed slugs)
-#
-# Option (a) is easiest and most conservative. Restore this schedule
-# after a --limit flag lands on phash-verify-and-reslug.cjs.
+# When the backlog drains to 0 the script no-ops fast — remaining
+# scheduled runs are effectively cheap health-checks.
 on:
-  # schedule:
-  #   - cron: '15 6 * * *'   # 06:15 UTC = 02:15 EDT
-  #   - cron: '15 7 * * *'   # 07:15 UTC = 02:15 EST
+  schedule:
+    - cron: '15 */6 * * *'   # every 6h at :15 UTC (04:15/10:15/16:15/22:15 UTC)
   workflow_dispatch:
 
 jobs:
   reslug:
     name: Recompute pHash centroids and auto-reslug mismatches
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # CF-PHASH-RESLUG-CHUNKED-CRON: 330min gives ~5.5h to drain a 400K
+    # chunk at concurrency=16, leaving 30min safety margin under GH's 6h
+    # cap. If a chunk finishes fast (backlog cleared), the job exits
+    # early and the rest of the timeout is unused.
+    timeout-minutes: 330
     permissions:
       id-token: write
       contents: read
@@ -54,22 +50,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v5
 
-      - name: Run only at 02:00-03:00 America/New_York
+      - name: Always-run gate (6h cadence with chunked drain)
         id: et-gate
         shell: bash
+        # CF-PHASH-RESLUG-CHUNKED-CRON: schedule fires every 6h. No
+        # ET-hour filtering — each run drains a chunk of the backlog.
+        # Manual dispatch also always runs.
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch — skipping ET-hour gate."
-            exit 0
-          fi
-          ET_HOUR=$(TZ=America/New_York date +%H)
-          if [ "$((10#$ET_HOUR))" -ge 2 ] && [ "$((10#$ET_HOUR))" -le 3 ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Current ET hour is $ET_HOUR (within 02-03 window); continuing."
-          else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Current ET hour is $ET_HOUR (outside 02-03 window); skipping this UTC trigger."
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Running (event=${{ github.event_name }})"
           fi
 
       - name: Setup Node.js 24
@@ -129,13 +118,19 @@ jobs:
       # Step 2: verify + reslug in APPLY mode. Uses conservative thresholds
       # (MISMATCH >= 20, MATCH <= 12) — same as the dry-run defaults that
       # produced 348 clean reslugs on the earlier 5,916-centroid pool.
-      # Widening these later once we see actual mismatch distribution.
+      #
+      # CF-PHASH-RESLUG-CHUNKED-CRON (Drew, 2026-07-26): apply a per-run
+      # cap so a nightly-cron chunk fits in the 6h GH Actions job cap.
+      # RESLUG_LIMIT=400000 at concurrency=16 fits comfortably; backlog
+      # ~1.14M drains over ~3 runs. When backlog reaches 0 the script
+      # no-ops fast.
       - name: Verify + auto-reslug
         if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
         env:
           RESLUG_APPLY: 'true'
-          RESLUG_CONCURRENCY: '8'
+          RESLUG_CONCURRENCY: '16'
+          RESLUG_LIMIT: '400000'
           RESLUG_DISTANCE_MISMATCH: '20'
           RESLUG_DISTANCE_MATCH: '12'
         run: node scripts/comp-quality/phash-verify-and-reslug.cjs
