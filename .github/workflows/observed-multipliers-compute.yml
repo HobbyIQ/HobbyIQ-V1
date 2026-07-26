@@ -9,7 +9,14 @@ name: Observed Grader Multipliers Nightly Compute
 
 on:
   schedule:
-    - cron: '15 4 * * *'
+    # CF-CRON-COLLISION-04-15-UTC (Drew, 2026-07-26). 04:15 UTC had a
+    # 3-way collision: this workflow + sold-comps-dedup-nightly (also
+    # 15 4) + phash-reslug-nightly (fires 15 */6, so hits 04:15). All
+    # three hit Cosmos hard on the same partition-heavy paths.
+    # Stagger: this one 04:00 (was 04:15), sold-comps-dedup 04:45,
+    # phash stays 04:15 (can't easily move — its 6h cadence anchors
+    # centroid-recompute daily-gate to UTC hour==04).
+    - cron: '0 4 * * *'
   workflow_dispatch:
     inputs:
       window:
