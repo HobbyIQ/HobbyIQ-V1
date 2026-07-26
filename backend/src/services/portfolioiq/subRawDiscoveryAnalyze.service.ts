@@ -75,9 +75,14 @@ async function readRawAggregates(
     // CF-POKEMON-INGEST-DEFENSIVE (Drew, 2026-07-22). Explicit sports
     // whitelist so Pokemon Raw sales don't flow into the sub-raw
     // discovery signal — this signal feeds the DailyIQ hot-prospects
-    // pipe (memory `sub_raw_telemetry_is_dailyiq_pipe`) and Pokemon
-    // Raw pricing lacks the grade calibration needed to interpret
-    // inversions correctly. Widen when Pokemon calibration lands.
+    // pipe (memory `sub_raw_telemetry_is_dailyiq_pipe`).
+    //
+    // CF-POKEMON-USER-FACING-FLIP-PR-D (Drew, 2026-07-26). Pokemon
+    // added — the calibration land (#797) put 6,921 Pokemon samples
+    // across 15 families in prod, and PR C (#798) made grade-tier
+    // lookup Pokemon-safe. Sub-raw inversions can now be computed
+    // against real Pokemon calibration rather than falling back to
+    // baseball ratios.
     query: `SELECT c.card_id, c.player, c.year, c.card_set, c.card_set_type,
                    c.variant, c.number, c.price, c.image_url
             FROM c
@@ -85,7 +90,7 @@ async function readRawAggregates(
               AND c.sale_date >= @cutoff
               AND c.price > 0
               AND c.price <= @maxPrice
-              AND c["group"] IN ('Baseball', 'Football', 'Basketball')`,
+              AND c["group"] IN ('Baseball', 'Football', 'Basketball', 'Pokemon')`,
     parameters: [
       { name: "@cutoff", value: cutoff },
       { name: "@maxPrice", value: maxRawPrice },
