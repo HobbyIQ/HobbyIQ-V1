@@ -257,8 +257,33 @@ export function _resetMemStoreForTests(): void {
 // ─── Session helpers ─────────────────────────────────────────────────────────
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
-const SESSION_SECRET =
-  process.env.AUTH_SESSION_SECRET ?? "hobbyiq-admin-testing-session-secret";
+
+// CF-AUTH-SESSION-SECRET-FAIL-CLOSED (Drew, 2026-07-26, prod-readiness
+// audit P0.3). The prior fallback to a hardcoded literal was a
+// launch-day exploit vector — a missing/blanked env var would silently
+// let every session token in prod be signed with a value visible in
+// git history. Fail-closed at module load: throw if the env var is
+// unset, blank, or matches the retired literal, so bad deploys can't
+// silently re-enable the exploit.
+//
+// The exact-string check is deliberate — the literal used to appear in
+// two files (authService.ts + ebayAuth.service.ts) as a matching
+// fallback; both now guard against it.
+const RETIRED_DEFAULT_SECRET = "hobbyiq-admin-testing-session-secret";
+function resolveSessionSecret(): string {
+  const raw = process.env.AUTH_SESSION_SECRET;
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    throw new Error("AUTH_SESSION_SECRET is unset — refusing to start. Set a high-entropy value in App Service application settings.");
+  }
+  if (raw.trim() === RETIRED_DEFAULT_SECRET) {
+    throw new Error("AUTH_SESSION_SECRET is set to the retired hardcoded default — refusing to start. Rotate to a high-entropy value.");
+  }
+  if (raw.trim().length < 32) {
+    throw new Error(`AUTH_SESSION_SECRET is too short (length=${raw.trim().length}) — refusing to start. Minimum 32 chars; recommended 64+.`);
+  }
+  return raw;
+}
+const SESSION_SECRET = resolveSessionSecret();
 
 function hashPassword(password: string): string {
   // Legacy SHA-256 — retained ONLY for verifying old hashes / seeded admin compat.

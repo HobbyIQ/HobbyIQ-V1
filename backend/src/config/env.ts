@@ -25,6 +25,63 @@ export function parseCorsAllowedOrigins(
   return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+// CF-ENV-FAIL-FAST (Drew, 2026-07-26, prod-readiness audit P0.4).
+// Prior config loader silently returned undefined for missing critical
+// vars — the ops audit found this produces:
+//   COSMOS_CONNECTION_STRING unset → every read fails at runtime with
+//   generic ECONN. APPLICATIONINSIGHTS_CONNECTION_STRING unset →
+//   silent no-telemetry launch. CARDSIGHT_API_KEY unset → 401 storm.
+//
+// Fail fast at boot: refuse to return a config with a missing required
+// var in production. In development / test we still tolerate missing
+// telemetry / vendor keys but shout warnings so it's obvious in local
+// runs why things are broken.
+const CRITICAL_PRODUCTION_ENVS = [
+  "COSMOS_CONNECTION_STRING",
+  "AUTH_SESSION_SECRET",
+  "CARD_HEDGE_API_KEY",
+] as const;
+
+const RECOMMENDED_PRODUCTION_ENVS = [
+  "APPLICATIONINSIGHTS_CONNECTION_STRING",
+  "CARDSIGHT_API_KEY",
+  "REDIS_URL",
+] as const;
+
+function validateEnvOrThrow(): void {
+  const nodeEnv = process.env.NODE_ENV ?? "development";
+  if (nodeEnv !== "production") return;   // dev / test tolerate missing vars
+
+  const missing: string[] = [];
+  for (const name of CRITICAL_PRODUCTION_ENVS) {
+    const val = process.env[name];
+    if (typeof val !== "string" || val.trim().length === 0) missing.push(name);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Critical env vars missing in production: ${missing.join(", ")}. ` +
+      `Refusing to start. Set these in App Service application settings.`,
+    );
+  }
+
+  // Recommended but not fatal — warn loudly so it's visible in App
+  // Service log stream and future App Insights instrumentation.
+  const soft: string[] = [];
+  for (const name of RECOMMENDED_PRODUCTION_ENVS) {
+    const val = process.env[name];
+    if (typeof val !== "string" || val.trim().length === 0) soft.push(name);
+  }
+  if (soft.length > 0) {
+    console.warn(JSON.stringify({
+      event: "env_recommended_missing",
+      severity: "warn",
+      missing: soft,
+      note: "app will boot but degrades — telemetry / vendor / cache disabled",
+    }));
+  }
+}
+validateEnvOrThrow();
+
 export function getConfig() {
   return {
     NODE_ENV: process.env.NODE_ENV || "development",
