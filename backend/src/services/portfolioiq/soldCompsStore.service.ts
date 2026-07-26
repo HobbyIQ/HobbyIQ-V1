@@ -259,13 +259,40 @@ export function extractPrintRunFromTitle(title: string | null | undefined): numb
   return n;
 }
 
+// CF-INFERSPORT-VINTAGE-P1 (Drew, 2026-07-26). Vintage era: each flagship
+// brand had a distinct year before it extended into another sport, so we
+// key the fallback per brand — a bare "Topps" from 1985 or earlier, a
+// bare "Fleer" from 1985 or earlier, etc. is overwhelmingly baseball.
+// Pre-fix, those rows returned null and downstream sport-filtered analytics
+// silently skipped them. Post-fix, we default to baseball when the year is
+// within the brand's vintage window AND the text carries no other-sport
+// signal (explicit sport substrings are checked first and win).
+//
+// Ceilings sourced from brand licensing history:
+//   - Topps: basketball came back 1981 → cap at 1980
+//   - Fleer: basketball inaugural 1986 → cap at 1985
+//   - Donruss: basketball inaugural 1988 → cap at 1987
+//   - Upper Deck: 1989 inaugural (baseball-only), basketball 1991 → cap at 1990
+//
+// Year is optional: pre-existing call sites can keep passing (setName, title)
+// and get today's behaviour. Call sites that already carry cardYear now pass
+// it as the 3rd arg.
+const VINTAGE_BASEBALL_BRAND_CEILINGS: ReadonlyArray<{ pattern: RegExp; ceiling: number }> = [
+  { pattern: /\btopps\b/,           ceiling: 1980 },
+  { pattern: /\bfleer\b/,           ceiling: 1985 },
+  { pattern: /\bdonruss\b/,         ceiling: 1987 },
+  { pattern: /\bupper\s+deck\b/,    ceiling: 1990 },
+];
+
 export function inferSportFromContext(
   setName: string | null | undefined,
   title: string | null | undefined,
+  year?: number | null,
 ): string | null {
   const text = `${setName ?? ""} ${title ?? ""}`.toLowerCase();
   if (!text.trim()) return null;
-  // Explicit sport substring wins
+  // Explicit sport substring wins — do this FIRST so a "1985 Topps
+  // Football" gets football, not the vintage-baseball fallback.
   if (text.includes("baseball")) return "baseball";
   if (text.includes("football") || text.includes("nfl")) return "football";
   if (text.includes("basketball") || text.includes("nba")) return "basketball";
@@ -274,6 +301,16 @@ export function inferSportFromContext(
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
+  // CF-INFERSPORT-VINTAGE-P1 vintage-flagship rule. Only fires when we
+  // have a year AND the setName matches a vintage-baseball flagship AND
+  // the year is at or below that brand's per-brand ceiling. Explicit
+  // other-sport substrings are checked above and short-circuit, so a
+  // "1985 Topps Football" gets football, not baseball here.
+  if (typeof year === "number" && year > 0) {
+    for (const { pattern, ceiling } of VINTAGE_BASEBALL_BRAND_CEILINGS) {
+      if (year <= ceiling && pattern.test(text)) return "baseball";
+    }
+  }
   // Any other product line → sport-unknown (return null so downstream
   // sport-filtered analytics skip it rather than mis-bucket).
   return null;
@@ -369,7 +406,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // primary identifier over time. Print run is extracted from the title
   // when a "/N" fragment is present (e.g. "Gold Refractor /50 Braves");
   // otherwise omitted from the slug.
-  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title);
+  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
   const hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
     ? computeHobbyIqCardId({
         sport: sportForSlug,
@@ -391,7 +428,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     parallel: input.parallel ?? null,
     cardNumber: input.cardNumber ?? null,
     isAuto: input.isAuto ?? false,
-    sport: input.sport ?? inferSportFromContext(input.setName, input.title),
+    sport: input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear),
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
     price: input.price,

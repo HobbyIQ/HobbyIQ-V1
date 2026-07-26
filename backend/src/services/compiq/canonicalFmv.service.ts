@@ -265,7 +265,7 @@ function canComputeHobbyIqCardId(input: CanonicalFmvInput): boolean {
 
 function computeHobbyIqCardIdFromInput(input: CanonicalFmvInput): string | null {
   if (!canComputeHobbyIqCardId(input)) return null;
-  const sport = input.sport ?? inferSportFromContext(input.product, input.player);
+  const sport = input.sport ?? inferSportFromContext(input.product, input.player, input.cardYear);
   if (!sport) return null;
   return computeHobbyIqCardId({
     sport,
@@ -614,7 +614,7 @@ function buildGradeLadder(
   // null → the FMV IS raw. Otherwise reverse the grade multiplier to
   // recover an implied raw base.
   let rawAnchor = result.fmv;
-  const sport = inferSportFromContext(input.product ?? null, null);
+  const sport = inferSportFromContext(input.product ?? null, null, input.cardYear);
   const inputGradeMult = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
     ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family, sport)
     : 1;
@@ -1675,7 +1675,7 @@ async function tryHotRawSameCardAnchor(
   // GATE 4: family calibration coverage. Need a per-tier ratio (preferred)
   // OR a company-level ratio × subTierScaling fallback.
   const family = classifyFamily(input.product ?? null);
-  const sport = inferSportFromContext(input.product ?? null, null);
+  const sport = inferSportFromContext(input.product ?? null, null, input.cardYear);
   const gradeCompany = input.gradeCompany.trim().toUpperCase();
   const gradeValue = input.gradeValue;
 
@@ -1959,7 +1959,7 @@ async function tryProductTier(
     ? (lookupParallelMultiplier(input.parallel) ?? 1)
     : 1;
   const productFamily = classifyFamily(input.product);
-  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily, inferSportFromContext(input.product ?? null, null));
+  const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily, inferSportFromContext(input.product ?? null, null, input.cardYear));
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
