@@ -20,17 +20,17 @@ name: Nightly pHash centroid refresh + auto-reslug
 # over ~4-6 runs (24-36h wall) instead of dying at GH Actions' 6h
 # per-job cap.
 #
-# Per-run cap: RESLUG_LIMIT=400000 at RESLUG_CONCURRENCY=16 fits in
-# ~5h (extrapolated from the truncated 43.5K/60min baseline at
-# concurrency=8 → ~24K/min at concurrency=16 → 400K in ~17min IF
-# Cosmos RU keeps up). Timeout raised to 330min for safety margin.
-# ET-gate widened to accept any hour on the 6h cadence.
-#
-# When the backlog drains to 0 the script no-ops fast — remaining
-# scheduled runs are effectively cheap health-checks.
+# CF-PHASH-RESLUG-CADENCE-V2 (Drew, 2026-07-26 cost-cleanup). Backlog
+# drained. Cut cadence from 6h → 24h (04:15 UTC daily). 3 of 4 old
+# fires were reslug-only no-ops (centroid gate already limited that
+# to UTC 04). Now the single daily fire does centroid + reslug, and
+# skips the 3 redundant Cosmos scans. Save ~$15-25/mo Cosmos RU.
+# Restore the 6h cadence if a large backlog re-accumulates (script's
+# apply-limit metric in the summary shows if the daily run isn't
+# catching up).
 on:
   schedule:
-    - cron: '15 */6 * * *'   # every 6h at :15 UTC (04:15/10:15/16:15/22:15 UTC)
+    - cron: '15 4 * * *'   # daily at 04:15 UTC (00:15 EDT / 23:15 EST prior day)
   workflow_dispatch:
 
 jobs:
