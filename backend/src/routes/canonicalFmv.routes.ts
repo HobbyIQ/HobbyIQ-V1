@@ -295,9 +295,12 @@ router.post("/card-detail", requireSession, async (req: Request, res: Response, 
       maxAgeDays: typeof req.body?.maxAgeDays === "number" ? req.body.maxAgeDays : undefined,
       previewLimit: typeof req.body?.previewLimit === "number" ? req.body.previewLimit : undefined,
       relatedLimit: typeof req.body?.relatedLimit === "number" ? req.body.relatedLimit : undefined,
-      // iOS renders the grade tier ladder by default; only skipped for
-      // lightweight preview surfaces that just want the primary FMV.
-      includeGradeLadder: typeof req.body?.includeGradeLadder === "boolean" ? req.body.includeGradeLadder : true,
+      // CF-GRADE-LADDER-OPT-IN (Drew, 2026-07-25). Default FALSE — 7
+      // parallel FMV computes on the ladder take 15-17s cold in prod
+      // (Cosmos SDK contention). iOS opts in explicitly when rendering
+      // the grade-breakdown view; default keeps the tap-into-card path
+      // at ~200-700ms.
+      includeGradeLadder: req.body?.includeGradeLadder === true,
     });
     res.json(result);
   } catch (err) { next(err); }
