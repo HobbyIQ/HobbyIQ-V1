@@ -901,12 +901,17 @@ export async function readCompsByPlayer(input: {
   const from = input.fromDate ?? new Date(now.getTime() - 90 * 86_400_000).toISOString();
   const limit = Math.min(500, Math.max(1, input.limit ?? 50));
 
+  // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). Pre-lowercase
+  // the parameter at the client so Cosmos doesn't LOWER(@X) per row —
+  // the param is constant per query, so lowering it once here is free.
+  // Still LOWER(c.playerName) per row (can't be avoided without a
+  // denormalized c.playerNameLower field + backfill; deferred).
   const q = {
     query:
-      "SELECT TOP @lim * FROM c WHERE LOWER(c.playerName) = LOWER(@player) AND c.soldAt >= @from ORDER BY c.soldAt DESC",
+      "SELECT TOP @lim * FROM c WHERE LOWER(c.playerName) = @player AND c.soldAt >= @from ORDER BY c.soldAt DESC",
     parameters: [
       { name: "@lim", value: limit },
-      { name: "@player", value: input.playerName },
+      { name: "@player", value: (input.playerName ?? "").toLowerCase() },
       { name: "@from", value: from },
     ],
   };
@@ -1069,12 +1074,17 @@ export async function readCompsByIdentity(input: {
 
   // Base query: player + soldAt window. Add year + cardNumber filters
   // when provided — these are the strongest identity signals.
+  //
+  // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). Pre-lowercase
+  // @player at the client — one LOWER() call at bind time instead of
+  // per-row LOWER(@player). Still LOWER(c.playerName) per row —
+  // denormalizing playerName_lower is a separate PR.
   const params: Array<{ name: string; value: string | number }> = [
     { name: "@lim", value: limit },
-    { name: "@player", value: player },
+    { name: "@player", value: player.toLowerCase() },
     { name: "@from", value: from },
   ];
-  let query = "SELECT TOP @lim * FROM c WHERE LOWER(c.playerName) = LOWER(@player) AND c.soldAt >= @from";
+  let query = "SELECT TOP @lim * FROM c WHERE LOWER(c.playerName) = @player AND c.soldAt >= @from";
   if (typeof input.cardYear === "number" && Number.isFinite(input.cardYear)) {
     params.push({ name: "@year", value: input.cardYear });
     query += " AND c.cardYear = @year";
@@ -1088,7 +1098,13 @@ export async function readCompsByIdentity(input: {
     : "";
   if (wantedParallelFull.length > 0) {
     params.push({ name: "@par", value: wantedParallelFull });
-    query += ' AND (LOWER(c.parallel) = @par OR CONTAINS(LOWER(c.title ?? ""), @par))';
+    // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). Cosmos SQL doesn't
+    // support the JS ?? operator; the previous `LOWER(c.title ?? "")`
+    // was being sent as-is and either erroring or coercing to undefined
+    // (making the CONTAINS half of the OR silently dead). Cosmos LOWER
+    // returns undefined for null/absent fields, which CONTAINS treats
+    // as false — same semantic as `?? ""` without the syntax abuse.
+    query += ' AND (LOWER(c.parallel) = @par OR CONTAINS(LOWER(c.title), @par))';
   }
   query += " ORDER BY c.soldAt DESC";
   // cardNumber filter is applied JS-side (lenient — null cardNumber OK).

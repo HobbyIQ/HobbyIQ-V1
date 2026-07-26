@@ -1306,10 +1306,13 @@ async function tryNeighborParallel(
       sale_date: string;
       image_url: string | null;
     }>({
+      // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). @productLike
+      // is already lowercased at bind time (line below), so the
+      // LOWER(@productLike) inside the query was redundant work per row.
       query: `SELECT TOP 100 c.card_id, c.year, c.card_set, c.variant, c.number,
                               c.price, c.sale_date, c.image_url
               FROM c
-              WHERE CONTAINS(LOWER(c.card_set), LOWER(@productLike))
+              WHERE CONTAINS(LOWER(c.card_set), @productLike)
                 AND c.year != @targetYear
                 AND c.grade = @grader
                 AND c.sale_date >= @cutoff
