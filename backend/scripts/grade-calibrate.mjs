@@ -213,15 +213,23 @@ async function fetchYearWithRetry(token, year, sport, cutoffOverride = null, att
   // a per-tier byTier map, letting observedGradeCurve use empirical per-
   // grade ratios when data is thick (~2M sold_comps rows available) and
   // fall back to company × subTierScaling when a specific tier is thin.
+  // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). Pre-lowercase
+  // the @token at bind time. Cross-partition queries run this
+  // predicate on every row scanned; LOWER(@token) was doing the same
+  // string-lower millions of times per query. Cheap win.
+  const tokenLower = String(token ?? "").toLowerCase();
+  const paramsPrelowered = params.map((p) =>
+    p.name === "@token" ? { name: "@token", value: tokenLower } : p,
+  );
   const iter = container.items.query({
     query: `SELECT c.card_id, c.grader, c.grade, AVG(c.price) AS avgPrice, COUNT(1) AS n
              FROM c
              WHERE c.sale_date >= @cutoff
                AND c.price > 0
                AND c.year = @year
-               AND CONTAINS(LOWER(c.card_set), LOWER(@token))${sportClause}
+               AND CONTAINS(LOWER(c.card_set), @token)${sportClause}
              GROUP BY c.card_id, c.grader, c.grade`,
-    parameters: params,
+    parameters: paramsPrelowered,
   }, { maxItemCount: 100 });
   const rows = [];
   try {
