@@ -148,26 +148,29 @@ jobs:
           # downstream steps. If the .ts import above fails at runtime,
           # we conservatively require human review.
 
-      # CF-GRADE-CAL-DIRECT-PUSH (Drew, 2026-07-26). GH org security no
-      # longer permits Actions to create PRs (`GitHub Actions is not
-      # permitted to create or approve pull requests` — observed
-      # 2026-07-26 10:36 UTC run). Repo setting fix (Settings → Actions
-      # → Workflow permissions → check "Allow GitHub Actions to create
-      # and approve pull requests") is Drew's action, not a workflow
-      # change.
+      # CF-GRADE-CAL-BRANCH-PUSH (Drew, 2026-07-26, prod-readiness
+      # audit P0.6 follow-through). PR #774 tried direct-push to main
+      # but branch protection blocks it. Ops-audit run
+      # 30202416639 confirmed: `error: failed to push some refs to main`.
+      # The org "Allow GitHub Actions to create and approve pull
+      # requests" setting also isn't enabled, so `gh pr create` from
+      # the bot fails too.
       #
-      # Switch to direct-push to main matching daily-refresh.yml's
-      # established pattern. Safety gate already runs inside
-      # calibrate.mjs (rejects >30% shifts and writes safety.txt);
-      # commit message includes the safety summary so the git-log audit
-      # trail preserves what was auto-approved.
-      - name: Commit + push refreshed calibration
+      # Compromise: push to a dated branch. Drew merges manually via
+      # normal GitHub UI (or via `gh pr create` from his laptop after
+      # reviewing the diff). The branch always exists post-run;
+      # workflow summary tells him it's there. Manual merge means
+      # weekly (~1 min of Drew's time) but works within existing
+      # branch protection + org security.
+      - name: Commit + push refreshed calibration to dated branch
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH="grade-calibration-refresh-$(date -u +%Y%m%d)"
           git config user.name "grade-calibration-bot"
           git config user.email "bot@justtheboysandcards.com"
+          git checkout -b "$BRANCH"
           git add backend/src/services/compiq/gradeCalibrationData.ts
           cat > /tmp/commit-msg.txt <<EOF
           chore(calibration): weekly refresh of grade-tier ratios
@@ -183,7 +186,19 @@ jobs:
           $(tail -60 /tmp/calibrate.log || echo 'no output captured')
           EOF
           git commit -F /tmp/commit-msg.txt
-          git push origin HEAD:main
+          git push -u origin "$BRANCH" --force-with-lease
+          # Emit an actions-summary note so Drew sees it in the run page.
+          {
+            echo "## Grade calibration refresh — MANUAL MERGE REQUIRED"
+            echo ""
+            echo "Branch \`$BRANCH\` was pushed with a fresh \`gradeCalibrationData.ts\`."
+            echo ""
+            echo "**Next step:** review the diff and merge to main (branch protection blocks the bot from doing this)."
+            echo ""
+            echo "\`\`\`"
+            echo "gh pr create --base main --head $BRANCH --title 'chore(calibration): weekly grade-tier refresh' --body '$(cat /tmp/safety.txt || echo auto)'"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report no-change
         if: steps.diff.outputs.changed == 'false'
