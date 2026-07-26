@@ -34,7 +34,7 @@ export function deriveHoldingSlug(holding: PortfolioHolding): string | null {
 
   // Sport isn't a first-class field on PortfolioHolding — infer from
   // setName + cardTitle context (same helper used by soldCompsStore).
-  const sport = inferSportFromContext(holding.setName ?? holding.product ?? null, holding.cardTitle ?? null);
+  const sport = inferSportFromContext(holding.setName ?? holding.product ?? null, holding.cardTitle ?? null, year);
   if (!sport) return null;
 
   const parallel = String(holding.parallel ?? "").trim() || "Base";

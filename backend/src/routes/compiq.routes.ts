@@ -4328,7 +4328,7 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
         const { recordSoldComp, inferSportFromContext } = await import(
           "../services/portfolioiq/soldCompsStore.service.js"
         );
-        const sport = inferSportFromContext(card.set ?? null, safeDescription);
+        const sport = inferSportFromContext(card.set ?? null, safeDescription, yearNum);
         for (const p of pricesResult?.prices ?? []) {
           const rawPrice = (p as { price?: string | number }).price;
           const priceNum = typeof rawPrice === "number" ? rawPrice
