@@ -33,6 +33,9 @@ import { autocomplete } from "../services/portfolioiq/autocompleteLookup.service
 import { computeCardDetail } from "../services/portfolioiq/cardDetail.service.js";
 import { flagComp, type FlagCompReason } from "../services/portfolioiq/flagComp.service.js";
 import { enforceUserFlagRateLimit } from "../middleware/enforceUserFlagRateLimit.js";
+// CF-PAGINATION-CLAMP-P1 (Drew, 2026-07-26). Bound ?limit on discovery
+// + autocomplete endpoints so a caller can't force a runaway result set.
+import { clampLimit } from "../middleware/paginationClamp.js";
 
 const router = Router();
 
@@ -200,7 +203,7 @@ router.get("/trending", requireSession, async (req: Request, res: Response, next
   try {
     const result = await computeTrending({
       sport: typeof req.query.sport === "string" ? req.query.sport : "baseball",
-      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+      limit: clampLimit(req.query.limit, { default: 10, max: 100 }),
       minRecentMedian: Number.isFinite(Number(req.query.minRecentMedian)) ? Number(req.query.minRecentMedian) : undefined,
       minMomentum: Number.isFinite(Number(req.query.minMomentum)) ? Number(req.query.minMomentum) : undefined,
     });
@@ -217,7 +220,7 @@ router.get("/related-cards", requireSession, async (req: Request, res: Response,
     }
     const result = await computeRelatedCards(
       slug,
-      Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 8,
+      clampLimit(req.query.limit, { default: 8, max: 50 }),
     );
     res.json(result);
   } catch (err) { next(err); }
@@ -227,7 +230,7 @@ router.get("/trending-players", requireSession, async (req: Request, res: Respon
   try {
     const result = await computeTrendingPlayers({
       sport: typeof req.query.sport === "string" ? req.query.sport : "baseball",
-      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 20,
+      limit: clampLimit(req.query.limit, { default: 20, max: 100 }),
       minRecentComps: Number.isFinite(Number(req.query.minRecentComps)) ? Number(req.query.minRecentComps) : undefined,
     });
     res.json(result);
@@ -268,7 +271,7 @@ router.get("/autocomplete-player", requireSession, async (req: Request, res: Res
     const result = await autocomplete("player", {
       q,
       sport: typeof req.query.sport === "string" ? req.query.sport : undefined,
-      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+      limit: clampLimit(req.query.limit, { default: 10, max: 50 }),
     });
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
@@ -320,7 +323,7 @@ router.get("/autocomplete-set", requireSession, async (req: Request, res: Respon
     const result = await autocomplete("releaseName", {
       q,
       sport: typeof req.query.sport === "string" ? req.query.sport : undefined,
-      limit: Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 10,
+      limit: clampLimit(req.query.limit, { default: 10, max: 50 }),
     });
     res.json({ success: true, ...result });
   } catch (err) { next(err); }

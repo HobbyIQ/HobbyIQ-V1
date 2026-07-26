@@ -18,6 +18,9 @@ import {
   getPlayerTrendHistory,
   updatePlayerScoreFromEstimate,
 } from "../services/playerScore/playerScore.service.js";
+// CF-PAGINATION-CLAMP-P1 (Drew, 2026-07-26). Prevent runaway ?limit
+// values from Cosmos-scanning the entire player_trends container.
+import { clampLimit } from "../middleware/paginationClamp.js";
 import { getPlayerSeasonAndCareerStats } from "../services/playerScore/mlbStats.service.js";
 import { playerNameSlug, type PlayerIQDirection } from "../types/playerScore.js";
 
@@ -33,8 +36,7 @@ router.get("/health", (_req, res) => {
 
 // Leaderboard — keep before /:playerName so "top" doesn't get matched as a name.
 router.get("/top", async (req: Request, res: Response) => {
-  const limitNum = Number.parseInt(String(req.query.limit ?? "25"), 10);
-  const limit = Number.isFinite(limitNum) ? limitNum : 25;
+  const limit = clampLimit(req.query.limit, { default: 25, max: 100 });
   const dirRaw = String(req.query.direction ?? "").trim().toLowerCase();
   const dir: PlayerIQDirection | undefined =
     dirRaw === "rising" || dirRaw === "falling" || dirRaw === "stable" ? dirRaw : undefined;
@@ -62,8 +64,7 @@ router.get("/:playerName/history", async (req: Request, res: Response) => {
     res.status(400).json({ error: "playerName is required" });
     return;
   }
-  const limitNum = Number.parseInt(String(req.query.limit ?? "30"), 10);
-  const limit = Number.isFinite(limitNum) ? limitNum : 30;
+  const limit = clampLimit(req.query.limit, { default: 30, max: 200 });
   try {
     const current = await getPlayerScoreByName(name);
     if (!current) {
