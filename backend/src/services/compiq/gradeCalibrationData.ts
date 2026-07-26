@@ -42,6 +42,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "medianRatio": 1.27,
           "sampleSize": 27
         },
+        "10": {
+          "medianRatio": 8.1,
+          "sampleSize": 13
+        },
         "9.5": {
           "medianRatio": 2.36,
           "sampleSize": 61
@@ -126,6 +130,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   "bowman-chrome": {
     "BGS": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.13,
+          "sampleSize": 12
+        },
         "9.5": {
           "medianRatio": 2.1,
           "sampleSize": 25
@@ -138,6 +146,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "CGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.1,
+          "sampleSize": 11
+        },
         "10": {
           "medianRatio": 4.7,
           "sampleSize": 22
@@ -150,6 +162,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "7": {
+          "medianRatio": 1.3,
+          "sampleSize": 14
+        },
         "8": {
           "medianRatio": 1.83,
           "sampleSize": 113
@@ -170,6 +186,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "SGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.48,
+          "sampleSize": 8
+        },
         "10": {
           "medianRatio": 2.96,
           "sampleSize": 95
@@ -233,16 +253,16 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.35,
-          "sampleSize": 75
+          "medianRatio": 1.3,
+          "sampleSize": 101
         },
         "10": {
-          "medianRatio": 4.77,
-          "sampleSize": 60
+          "medianRatio": 4.98,
+          "sampleSize": 90
         },
         "9.5": {
           "medianRatio": 2.47,
-          "sampleSize": 279
+          "sampleSize": 337
         }
       },
       "medianRatio": 2.52,
@@ -253,12 +273,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "CGC": {
       "byTier": {
         "9": {
-          "medianRatio": 2.13,
-          "sampleSize": 98
+          "medianRatio": 2.18,
+          "sampleSize": 131
         },
         "10": {
-          "medianRatio": 6.1,
-          "sampleSize": 429
+          "medianRatio": 6.04,
+          "sampleSize": 438
         }
       },
       "medianRatio": 4.43,
@@ -281,44 +301,44 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "PSA": {
       "byTier": {
         "6": {
-          "medianRatio": 1.21,
-          "sampleSize": 62
+          "medianRatio": 1.17,
+          "sampleSize": 76
         },
         "7": {
-          "medianRatio": 1.51,
-          "sampleSize": 147
+          "medianRatio": 1.41,
+          "sampleSize": 188
         },
         "8": {
-          "medianRatio": 1.65,
-          "sampleSize": 1765
+          "medianRatio": 1.66,
+          "sampleSize": 1804
         },
         "9": {
           "medianRatio": 2.42,
-          "sampleSize": 8762
+          "sampleSize": 8774
         },
         "10": {
-          "medianRatio": 7.08,
-          "sampleSize": 12774
+          "medianRatio": 7.1,
+          "sampleSize": 12790
         }
       },
       "medianRatio": 4.17,
       "p25": 2.03,
-      "p75": 8.79,
-      "sampleSize": 23780
+      "p75": 8.8,
+      "sampleSize": 23778
     },
     "SGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.81,
-          "sampleSize": 131
+          "medianRatio": 1.73,
+          "sampleSize": 170
         },
         "10": {
-          "medianRatio": 4.55,
-          "sampleSize": 1009
+          "medianRatio": 4.56,
+          "sampleSize": 1045
         },
         "9.5": {
-          "medianRatio": 2.66,
-          "sampleSize": 414
+          "medianRatio": 2.61,
+          "sampleSize": 461
         }
       },
       "medianRatio": 3.35,
@@ -335,6 +355,16 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "panini-contenders": {
     "PSA": {
+      "byTier": {
+        "9": {
+          "medianRatio": 4.63,
+          "sampleSize": 12
+        },
+        "10": {
+          "medianRatio": 13.77,
+          "sampleSize": 18
+        }
+      },
       "medianRatio": 8.83,
       "p25": 3.99,
       "p75": 20.88,
@@ -343,6 +373,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "panini-donruss": {
     "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 1.58,
+          "sampleSize": 10
+        }
+      },
       "medianRatio": 1.58,
       "p25": 1.35,
       "p75": 3.04,
@@ -362,6 +398,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "7": {
+          "medianRatio": 0.78,
+          "sampleSize": 8
+        },
         "8": {
           "medianRatio": 1.16,
           "sampleSize": 118
@@ -382,6 +422,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "SGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.24,
+          "sampleSize": 9
+        },
         "10": {
           "medianRatio": 4.03,
           "sampleSize": 21
@@ -399,6 +443,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "panini-mosaic": {
     "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 3.98,
+          "sampleSize": 8
+        }
+      },
       "medianRatio": 3.98,
       "p25": 1.28,
       "p75": 12.32,
@@ -412,6 +462,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "8": {
+          "medianRatio": 2.74,
+          "sampleSize": 9
+        },
         "9": {
           "medianRatio": 2.15,
           "sampleSize": 123
@@ -427,6 +481,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "sampleSize": 407
     },
     "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 6.99,
+          "sampleSize": 8
+        }
+      },
       "medianRatio": 6.99,
       "p25": 5.16,
       "p75": 10.79,
@@ -469,6 +529,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "panini-prizm": {
     "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 2.64,
+          "sampleSize": 18
+        }
+      },
       "medianRatio": 2.5,
       "p25": 1.79,
       "p75": 3.53,
@@ -482,6 +548,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "7": {
+          "medianRatio": 0.82,
+          "sampleSize": 11
+        },
         "8": {
           "medianRatio": 1.37,
           "sampleSize": 124
@@ -502,9 +572,17 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "SGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.72,
+          "sampleSize": 10
+        },
         "10": {
           "medianRatio": 4.26,
           "sampleSize": 24
+        },
+        "9.5": {
+          "medianRatio": 1.63,
+          "sampleSize": 10
         }
       },
       "medianRatio": 2.71,
@@ -522,6 +600,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "8": {
+          "medianRatio": 2.29,
+          "sampleSize": 12
+        },
         "9": {
           "medianRatio": 3.12,
           "sampleSize": 98
@@ -554,6 +636,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "medianRatio": 4.77,
           "sampleSize": 60
         },
+        "8.5": {
+          "medianRatio": 1.01,
+          "sampleSize": 8
+        },
         "9.5": {
           "medianRatio": 2.65,
           "sampleSize": 141
@@ -585,6 +671,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "sampleSize": 606
     },
     "CSG": {
+      "byTier": {
+        "8": {
+          "medianRatio": 3.5,
+          "sampleSize": 9
+        }
+      },
       "medianRatio": 3.5,
       "p25": 2.19,
       "p75": 4.77,
@@ -598,6 +690,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "5": {
+          "medianRatio": 0.72,
+          "sampleSize": 10
+        },
         "6": {
           "medianRatio": 1.05,
           "sampleSize": 42
@@ -615,14 +711,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 2562
         },
         "10": {
-          "medianRatio": 8.49,
-          "sampleSize": 3544
+          "medianRatio": 8.5,
+          "sampleSize": 3543
+        },
+        "8.5": {
+          "medianRatio": 1.05,
+          "sampleSize": 13
         }
       },
       "medianRatio": 4.71,
       "p25": 2.22,
       "p75": 10.28,
-      "sampleSize": 6947
+      "sampleSize": 6946
     },
     "SGC": {
       "byTier": {
@@ -633,6 +733,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         "10": {
           "medianRatio": 4.91,
           "sampleSize": 383
+        },
+        "8.5": {
+          "medianRatio": 1.15,
+          "sampleSize": 12
         },
         "9.5": {
           "medianRatio": 2.74,
@@ -645,6 +749,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "sampleSize": 662
     },
     "TAG": {
+      "byTier": {
+        "10": {
+          "medianRatio": 3.12,
+          "sampleSize": 13
+        }
+      },
       "medianRatio": 2.84,
       "p25": 1.91,
       "p75": 4.93,
@@ -666,6 +776,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "8": {
+          "medianRatio": 2.01,
+          "sampleSize": 8
+        },
         "9": {
           "medianRatio": 4.38,
           "sampleSize": 39
@@ -690,6 +804,14 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   "topps-chrome": {
     "BGS": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.13,
+          "sampleSize": 14
+        },
+        "10": {
+          "medianRatio": 3.34,
+          "sampleSize": 17
+        },
         "9.5": {
           "medianRatio": 2.29,
           "sampleSize": 52
@@ -702,9 +824,17 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "CGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.96,
+          "sampleSize": 14
+        },
         "10": {
           "medianRatio": 5.51,
           "sampleSize": 58
+        },
+        "9.5": {
+          "medianRatio": 4.69,
+          "sampleSize": 12
         }
       },
       "medianRatio": 4.73,
@@ -714,6 +844,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "6": {
+          "medianRatio": 0.99,
+          "sampleSize": 14
+        },
         "7": {
           "medianRatio": 1.12,
           "sampleSize": 27
@@ -765,12 +899,24 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "topps-chrome-update": {
     "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 1.95,
+          "sampleSize": 9
+        }
+      },
       "medianRatio": 1.99,
       "p25": 1.43,
       "p75": 3.66,
       "sampleSize": 18
     },
     "CGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 3.52,
+          "sampleSize": 9
+        }
+      },
       "medianRatio": 4.5,
       "p25": 1.66,
       "p75": 8.32,
@@ -801,6 +947,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         "10": {
           "medianRatio": 3.51,
           "sampleSize": 27
+        },
+        "9.5": {
+          "medianRatio": 2.54,
+          "sampleSize": 9
         }
       },
       "medianRatio": 3.09,
@@ -824,6 +974,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "8": {
+          "medianRatio": 1.58,
+          "sampleSize": 10
+        },
         "9": {
           "medianRatio": 2.73,
           "sampleSize": 70
@@ -839,6 +993,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "sampleSize": 241
     },
     "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 4.97,
+          "sampleSize": 13
+        }
+      },
       "medianRatio": 3.99,
       "p25": 1.65,
       "p75": 6.94,
@@ -869,18 +1029,28 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 165
         },
         "10": {
-          "medianRatio": 8.21,
-          "sampleSize": 201
+          "medianRatio": 8.31,
+          "sampleSize": 200
         }
       },
-      "medianRatio": 4.96,
+      "medianRatio": 4.89,
       "p25": 2.56,
-      "p75": 11.06,
-      "sampleSize": 409
+      "p75": 11.22,
+      "sampleSize": 408
     },
     "SGC": {
+      "byTier": {
+        "10": {
+          "medianRatio": 3.7,
+          "sampleSize": 15
+        },
+        "9.5": {
+          "medianRatio": 1.96,
+          "sampleSize": 10
+        }
+      },
       "medianRatio": 2.5,
-      "p25": 1.76,
+      "p25": 1.74,
       "p75": 5.12,
       "sampleSize": 29
     }
@@ -935,6 +1105,12 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   },
   "topps-update": {
     "BGS": {
+      "byTier": {
+        "9.5": {
+          "medianRatio": 2.44,
+          "sampleSize": 13
+        }
+      },
       "medianRatio": 2.33,
       "p25": 1.57,
       "p75": 4.69,
@@ -942,6 +1118,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "CGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 4.72,
+          "sampleSize": 8
+        },
         "10": {
           "medianRatio": 7.96,
           "sampleSize": 20
@@ -954,6 +1134,10 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "PSA": {
       "byTier": {
+        "7": {
+          "medianRatio": 1.37,
+          "sampleSize": 8
+        },
         "8": {
           "medianRatio": 1.72,
           "sampleSize": 84
@@ -974,9 +1158,17 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     },
     "SGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 1.46,
+          "sampleSize": 12
+        },
         "10": {
           "medianRatio": 6.12,
           "sampleSize": 37
+        },
+        "9.5": {
+          "medianRatio": 2.46,
+          "sampleSize": 18
         }
       },
       "medianRatio": 3.19,
@@ -992,6 +1184,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
   "football": {
     "bowman-chrome": {
       "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 14.59,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 10.66,
         "p25": 6.57,
         "p75": 19.03,
@@ -1062,6 +1260,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "panini-contenders": {
       "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 16.33,
+            "sampleSize": 9
+          }
+        },
         "medianRatio": 11.45,
         "p25": 4.22,
         "p75": 25.74,
@@ -1076,6 +1280,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 7
       },
       "CGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 6.54,
+            "sampleSize": 17
+          }
+        },
         "medianRatio": 3.48,
         "p25": 2.26,
         "p75": 10.04,
@@ -1102,6 +1312,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 1098
       },
       "SGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 3.12,
+            "sampleSize": 9
+          },
+          "9.5": {
+            "medianRatio": 2.96,
+            "sampleSize": 12
+          }
+        },
         "medianRatio": 2.15,
         "p25": 1.25,
         "p75": 5.41,
@@ -1117,6 +1337,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 0.83,
+            "sampleSize": 17
+          },
           "9": {
             "medianRatio": 1.9,
             "sampleSize": 83
@@ -1304,6 +1528,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 652
       },
       "SGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 5.37,
+            "sampleSize": 8
+          }
+        },
         "medianRatio": 4.02,
         "p25": 1.22,
         "p75": 5.37,
@@ -1326,6 +1556,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "panini-score": {
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 9.97,
+            "sampleSize": 8
+          },
+          "10": {
+            "medianRatio": 17.25,
+            "sampleSize": 16
+          }
+        },
         "medianRatio": 14.6,
         "p25": 8.02,
         "p75": 21.19,
@@ -1385,6 +1625,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 2.04,
+            "sampleSize": 17
+          },
           "9": {
             "medianRatio": 3.17,
             "sampleSize": 34
@@ -1412,6 +1656,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
   "basketball": {
     "bowman-chrome": {
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 2.67,
+            "sampleSize": 13
+          },
+          "10": {
+            "medianRatio": 8.8,
+            "sampleSize": 19
+          }
+        },
         "medianRatio": 3.44,
         "p25": 1.89,
         "p75": 8.8,
@@ -1435,6 +1689,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     "panini-chronicles": {
       "PSA": {
         "byTier": {
+          "9": {
+            "medianRatio": 2.58,
+            "sampleSize": 18
+          },
           "10": {
             "medianRatio": 9.8,
             "sampleSize": 20
@@ -1448,6 +1706,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "panini-contenders": {
       "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 6.42,
+            "sampleSize": 9
+          }
+        },
         "medianRatio": 5.05,
         "p25": 1.8,
         "p75": 12.83,
@@ -1470,6 +1734,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 10
       },
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.29,
+            "sampleSize": 16
+          },
+          "10": {
+            "medianRatio": 3.35,
+            "sampleSize": 8
+          }
+        },
         "medianRatio": 1.3,
         "p25": 0.98,
         "p75": 2.18,
@@ -1491,6 +1765,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 2.11,
+            "sampleSize": 18
+          },
           "9": {
             "medianRatio": 2.84,
             "sampleSize": 98
@@ -1506,6 +1784,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 280
       },
       "SGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 5.19,
+            "sampleSize": 8
+          }
+        },
         "medianRatio": 4.47,
         "p25": 3.62,
         "p75": 5.76,
@@ -1521,6 +1805,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 3.34,
+            "sampleSize": 10
+          },
           "9": {
             "medianRatio": 3.92,
             "sampleSize": 57
@@ -1618,12 +1906,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "SGC": {
         "medianRatio": 2.14,
         "p25": 1.74,
-        "p75": 4.08,
+        "p75": 4.06,
         "sampleSize": 3
       }
     },
     "panini-phoenix": {
       "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 6.16,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 4.93,
         "p25": 3.82,
         "p75": 6.68,
@@ -1632,6 +1926,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "panini-prizm": {
       "BGS": {
+        "byTier": {
+          "9.5": {
+            "medianRatio": 2.77,
+            "sampleSize": 16
+          }
+        },
         "medianRatio": 2.77,
         "p25": 1.96,
         "p75": 4.52,
@@ -1664,6 +1964,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 871
       },
       "SGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 3.6,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 2.31,
         "p25": 1.69,
         "p75": 3.63,
@@ -1672,6 +1978,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "panini-revolution": {
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 3.61,
+            "sampleSize": 11
+          },
+          "10": {
+            "medianRatio": 9.17,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 5.47,
         "p25": 3.32,
         "p75": 10.74,
@@ -1763,6 +2079,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "9": {
+            "medianRatio": 2.25,
+            "sampleSize": 8
+          },
           "10": {
             "medianRatio": 5.11,
             "sampleSize": 20
@@ -1780,6 +2100,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     "pokemon": {
       "BGS": {
         "byTier": {
+          "10": {
+            "medianRatio": 3.65,
+            "sampleSize": 9
+          },
           "9.5": {
             "medianRatio": 1.62,
             "sampleSize": 21
@@ -1815,6 +2139,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 875
       },
       "CSG": {
+        "byTier": {
+          "8": {
+            "medianRatio": 2,
+            "sampleSize": 13
+          }
+        },
         "medianRatio": 2,
         "p25": 1.23,
         "p75": 2.5,
@@ -1822,6 +2152,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "6": {
+            "medianRatio": 1.51,
+            "sampleSize": 10
+          },
           "7": {
             "medianRatio": 1.32,
             "sampleSize": 28
@@ -1871,6 +2205,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-brilliant-stars": {
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.33,
+            "sampleSize": 13
+          },
+          "10": {
+            "medianRatio": 6.96,
+            "sampleSize": 18
+          }
+        },
         "medianRatio": 3.18,
         "p25": 1.28,
         "p75": 7.24,
@@ -1879,6 +2223,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-celebrations": {
       "CGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 5.48,
+            "sampleSize": 19
+          }
+        },
         "medianRatio": 2.83,
         "p25": 2.11,
         "p75": 5.81,
@@ -1886,6 +2236,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 2.1,
+            "sampleSize": 16
+          },
           "9": {
             "medianRatio": 3.16,
             "sampleSize": 25
@@ -1903,12 +2257,28 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-crown-zenith": {
       "CGC": {
+        "byTier": {
+          "10": {
+            "medianRatio": 4.31,
+            "sampleSize": 8
+          }
+        },
         "medianRatio": 3.03,
         "p25": 0.9,
         "p75": 4.6,
         "sampleSize": 11
       },
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.51,
+            "sampleSize": 12
+          },
+          "10": {
+            "medianRatio": 9.8,
+            "sampleSize": 17
+          }
+        },
         "medianRatio": 3.06,
         "p25": 1.25,
         "p75": 11.9,
@@ -1917,6 +2287,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-evolving-skies": {
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.4,
+            "sampleSize": 11
+          },
+          "10": {
+            "medianRatio": 2.97,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 2.67,
         "p25": 1.27,
         "p75": 3.62,
@@ -1933,6 +2313,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-japanese": {
       "BGS": {
+        "byTier": {
+          "9.5": {
+            "medianRatio": 1.51,
+            "sampleSize": 8
+          }
+        },
         "medianRatio": 2.23,
         "p25": 1.2,
         "p75": 3.65,
@@ -1963,6 +2349,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 523
       },
       "CSG": {
+        "byTier": {
+          "8": {
+            "medianRatio": 1.53,
+            "sampleSize": 9
+          }
+        },
         "medianRatio": 1.53,
         "p25": 1.22,
         "p75": 2,
@@ -1970,6 +2362,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 2.07,
+            "sampleSize": 14
+          },
           "9": {
             "medianRatio": 1.82,
             "sampleSize": 134
@@ -2005,6 +2401,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 6
       },
       "PSA": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.57,
+            "sampleSize": 11
+          },
+          "10": {
+            "medianRatio": 8.63,
+            "sampleSize": 18
+          }
+        },
         "medianRatio": 4.91,
         "p25": 1.69,
         "p75": 10.97,
@@ -2036,6 +2442,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "7": {
+            "medianRatio": 1.03,
+            "sampleSize": 8
+          },
           "8": {
             "medianRatio": 1.12,
             "sampleSize": 93
@@ -2056,6 +2466,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "TAG": {
         "byTier": {
+          "9": {
+            "medianRatio": 1.36,
+            "sampleSize": 8
+          },
           "10": {
             "medianRatio": 4.61,
             "sampleSize": 20
@@ -2101,6 +2515,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-sun-moon": {
       "CGC": {
+        "byTier": {
+          "9": {
+            "medianRatio": 1.47,
+            "sampleSize": 9
+          },
+          "10": {
+            "medianRatio": 2.87,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 2.66,
         "p25": 1.47,
         "p75": 4.12,
@@ -2155,6 +2579,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 3
       },
       "PSA": {
+        "byTier": {
+          "10": {
+            "medianRatio": 11.06,
+            "sampleSize": 10
+          }
+        },
         "medianRatio": 4.72,
         "p25": 3.24,
         "p75": 12.13,
@@ -2399,7 +2829,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 1.32,
       "p25": 1.2,
       "p75": 1.43,
-      "rawMedian": 163.78,
+      "rawMedian": 164.98,
       "sampleSize": 56
     },
     "TAG 10": {
@@ -3034,11 +3464,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "PSA 10": {
       "gradedMedian": 52.4,
-      "medianRatio": 10.49,
+      "medianRatio": 10.5,
       "p25": 6.45,
       "p75": 16.81,
       "rawMedian": 4.67,
-      "sampleSize": 12389
+      "sampleSize": 12387
     },
     "PSA 4": {
       "gradedMedian": 8.33,
@@ -3431,7 +3861,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 21.24,
         "medianRatio": 3.62,
         "p25": 2.51,
-        "p75": 4.08,
+        "p75": 4.06,
         "rawMedian": 5.12,
         "sampleSize": 22
       }
@@ -4350,7 +4780,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.32,
         "p25": 1.2,
         "p75": 1.43,
-        "rawMedian": 163.78,
+        "rawMedian": 164.98,
         "sampleSize": 54
       },
       "TAG 10": {
@@ -4837,7 +5267,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 6.27,
         "p75": 17.09,
         "rawMedian": 4.13,
-        "sampleSize": 8599
+        "sampleSize": 8597
       },
       "PSA 5": {
         "gradedMedian": 17.23,
@@ -5081,7 +5511,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 9.5": {
         "gradedMedian": 21.94,
-        "medianRatio": 4.08,
+        "medianRatio": 4.06,
         "p25": 3.8,
         "p75": 5.76,
         "rawMedian": 3.14,
@@ -5280,7 +5710,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 59.81,
         "medianRatio": 10.54,
-        "p25": 7.72,
+        "p25": 7.71,
         "p75": 17.95,
         "rawMedian": 3.61,
         "sampleSize": 84
@@ -9176,7 +9606,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.82,
         "p25": 1.4,
         "p75": 2.12,
-        "rawMedian": 163.64,
+        "rawMedian": 164.98,
         "sampleSize": 27
       },
       "CGC 10": {
@@ -9382,7 +9812,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.1,
         "p25": 1.02,
         "p75": 1.16,
-        "rawMedian": 350.97,
+        "rawMedian": 350.96,
         "sampleSize": 5
       },
       "BGS 9.5": {
@@ -9637,7 +10067,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 7.37,
         "p75": 19.61,
         "rawMedian": 3.48,
-        "sampleSize": 2534
+        "sampleSize": 2533
       },
       "PSA 6": {
         "gradedMedian": 10.93,
@@ -9935,7 +10365,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 43,
         "medianRatio": 4.55,
         "p25": 2.88,
-        "p75": 6.78,
+        "p75": 6.77,
         "rawMedian": 12.89,
         "sampleSize": 26
       },
@@ -10274,7 +10704,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.98,
         "p25": 2.07,
         "p75": 3.98,
-        "rawMedian": 163.64,
+        "rawMedian": 164.98,
         "sampleSize": 17
       },
       "PSA 9": {
@@ -10344,8 +10774,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 13.39,
         "p25": 6.95,
         "p75": 24.6,
-        "rawMedian": 3.02,
-        "sampleSize": 140
+        "rawMedian": 2.92,
+        "sampleSize": 139
       },
       "PSA 7": {
         "gradedMedian": 27.99,
