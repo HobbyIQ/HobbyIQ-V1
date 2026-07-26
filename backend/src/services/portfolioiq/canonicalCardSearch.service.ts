@@ -375,7 +375,19 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   for (const t of rawTokens) {
     if (AUTO_TOKENS.has(t)) { isAutoFilter = true; continue; }
     const y = Number(t);
-    if (Number.isFinite(y) && y >= 1980 && y <= 2030) { if (yearFilter === null) yearFilter = y; continue; }
+    // CF-VINTAGE-YEAR-RANGE (Drew, 2026-07-26). Was `y >= 1980 && y <= 2030` —
+    // that lower bound made vintage years (1961, 1972, 1985, etc.) fall
+    // through to the print-run branch and silently corrupt every vintage
+    // query. Smoke test 2026-07-26 confirmed: q="nolan ryan 1972 topps"
+    // set printRun=1972 (nonsense) and returned 0 hits. Range expanded
+    // to 1900-2030 to cover pre-war → ultra-modern. Also short-circuits
+    // ambiguity with print-run: any 4-digit token in [1900, 2030] is a
+    // year first — real print-runs go up to ~10000 but almost none are
+    // in that specific window (Bowman /1000 exists, /1500, /2000 — but
+    // print-runs of 1900-2030 are essentially unheard of, and if such a
+    // card exists the user can filter via the explicit printRun body
+    // param instead of a bare token).
+    if (Number.isFinite(y) && y >= 1900 && y <= 2030) { if (yearFilter === null) yearFilter = y; continue; }
     // Print-run token — "/50", "/150", "199" (naked print-run number, 3-4 digits).
     // Loosely: any three- or four-digit standalone number that's not a year.
     const prMatch = t.match(PRINT_RUN_RE);
