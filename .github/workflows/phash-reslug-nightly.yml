@@ -85,16 +85,15 @@ jobs:
         if: steps.et-gate.outputs.should_run == 'true'
         shell: bash
         run: |
-          CONN=$(az cosmosdb keys list \
-            --name hobbyiq-comps \
-            --resource-group rg-hobbyiq-dev \
-            --type connection-strings \
-            --query "connectionStrings[?description=='Primary SQL Connection String'].connectionString | [0]" \
-            -o tsv)
+          CONN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv | tr -d '\r\n')
           if [ -z "$CONN" ]; then
-            echo "FAILED to fetch Cosmos connection string" >&2
+            echo "FAILED to fetch COSMOS_CONNECTION_STRING from App Service" >&2
             exit 1
           fi
+          echo "::add-mask::$CONN"
           echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
           echo "Cosmos connection string fetched (length: ${#CONN})"
 
