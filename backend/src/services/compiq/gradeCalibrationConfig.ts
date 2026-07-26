@@ -147,10 +147,22 @@ export function lookupGradeRatio(
   if (sport) {
     const sportEntry = GRADE_CALIBRATION_BY_SPORT[sport]?.[family]?.[grader];
     if (sportEntry) return sportEntry.medianRatio;
-    // No sport-specific entry — for non-baseball sports we intentionally
-    // FALL THROUGH to the baseline table so the app still returns a
-    // number. Downstream telemetry can track "sport uncovered" as a
-    // signal to prioritize regenerating per-sport calibration.
+    // CF-POKEMON-ENGINE-WIRING (Drew, 2026-07-26). Pokemon TCG grade
+    // math differs materially from baseball (PSA 10 vs 9 = 10-30×, not
+    // 2-3×). Refuse to fall through to the baseline (baseball-implicit)
+    // table for Pokemon — a wrong number is worse than null in a
+    // pricing-icon context. Try the sport-scoped "pokemon" catch-all
+    // family first (POKEMON_FAMILIES ends with a catch-all), then
+    // return null. Downstream FMV code handles null-ratio by degrading
+    // gracefully (skipping the multiplier, returning a raw-only or
+    // no-basis result).
+    if (sport === "pokemon") {
+      const catchAll = GRADE_CALIBRATION_BY_SPORT["pokemon"]?.["pokemon"]?.[grader];
+      return catchAll ? catchAll.medianRatio : null;
+    }
+    // Non-Pokemon sports: baseline fall-through is fine (FB/BB grade
+    // math is close enough to baseball's that a wrong-family estimate
+    // beats null).
   }
   const entry = GRADE_CALIBRATION[family]?.[grader];
   return entry ? entry.medianRatio : null;
@@ -173,6 +185,16 @@ export function lookupGradeRatioByTier(
     const sportEntry = GRADE_CALIBRATION_BY_SPORT[sport]?.[family]?.[grader];
     const sportTier = sportEntry?.byTier?.[tierKey];
     if (sportTier) return sportTier.medianRatio;
+    // CF-POKEMON-ENGINE-WIRING (Drew, 2026-07-26). Pokemon-safe
+    // fallback ladder: sport-scoped "pokemon" catch-all family, then
+    // null. NEVER falls through to baseline (baseball-implicit)
+    // multipliers — those would emit wildly wrong FMV for Pokemon
+    // graded cards (10-30× vs baseball's 2-3× per-tier premium).
+    if (sport === "pokemon") {
+      const catchAll = GRADE_CALIBRATION_BY_SPORT["pokemon"]?.["pokemon"]?.[grader];
+      const catchAllTier = catchAll?.byTier?.[tierKey];
+      return catchAllTier ? catchAllTier.medianRatio : null;
+    }
   }
   const baselineEntry = GRADE_CALIBRATION[family]?.[grader];
   const baselineTier = baselineEntry?.byTier?.[tierKey];
@@ -191,6 +213,47 @@ export function lookupGradeRatioByTier(
  *  (e.g. "topps chrome update" before "topps chrome" before "topps"). */
 export function classifyFamily(setName: string | null | undefined): string {
   const s = String(setName ?? "").toLowerCase();
+  // CF-POKEMON-ENGINE-WIRING (Drew, 2026-07-26). Pokemon TCG expansion
+  // set classifiers — mirror POKEMON_FAMILIES in grade-calibrate.mjs.
+  // Check FIRST so a Pokemon setName never falls through to the sports-
+  // brand catch-alls below (e.g. "Pokemon Prizm" doesn't exist but a
+  // defensive first-check keeps the ordering safe if it ever does).
+  // "pokemon" catch-all at the end so any unclassified Pokemon expansion
+  // still maps to a sport-scoped calibration cell.
+  if (s.includes("pokemon") || s.includes("pokémon")) {
+    if (s.includes("hidden fates")) return "pokemon-hidden-fates";
+    if (s.includes("shining fates")) return "pokemon-shining-fates";
+    if (s.includes("vivid voltage")) return "pokemon-vivid-voltage";
+    if (s.includes("brilliant stars")) return "pokemon-brilliant-stars";
+    if (s.includes("astral radiance")) return "pokemon-astral-radiance";
+    if (s.includes("lost origin")) return "pokemon-lost-origin";
+    if (s.includes("silver tempest")) return "pokemon-silver-tempest";
+    if (s.includes("crown zenith")) return "pokemon-crown-zenith";
+    if (s.includes("evolving skies")) return "pokemon-evolving-skies";
+    if (s.includes("fusion strike")) return "pokemon-fusion-strike";
+    if (s.includes("celebrations")) return "pokemon-celebrations";
+    if (s.includes("obsidian flames")) return "pokemon-obsidian-flames";
+    if (s.includes("paldea evolved")) return "pokemon-paldea-evolved";
+    if (s.includes("151")) return "pokemon-151";
+    if (s.includes("scarlet")) return "pokemon-scarlet-violet";
+    if (s.includes("sword")) return "pokemon-sword-shield";
+    if (s.includes("sun & moon") || s.includes("sun and moon")) return "pokemon-sun-moon";
+    if (s.includes("xy")) return "pokemon-xy";
+    if (s.includes("black & white") || s.includes("black and white")) return "pokemon-black-white";
+    if (s.includes("heartgold")) return "pokemon-heartgold";
+    if (s.includes("platinum")) return "pokemon-platinum";
+    if (s.includes("diamond")) return "pokemon-diamond-pearl";
+    if (s.includes(" ex")) return "pokemon-ex";
+    if (s.includes("neo")) return "pokemon-neo";
+    if (s.includes("team rocket")) return "pokemon-team-rocket";
+    if (s.includes("fossil")) return "pokemon-fossil";
+    if (s.includes("jungle")) return "pokemon-jungle";
+    if (s.includes("base")) return "pokemon-base";
+    if (s.includes("legendary collection")) return "pokemon-legendary-collection";
+    if (s.includes("shining legends")) return "pokemon-shining-legends";
+    if (s.includes("japanese")) return "pokemon-japanese";
+    return "pokemon";  // catch-all — always resolves to a sport-scoped cell
+  }
   if (s.includes("bowman chrome draft") || s.includes("bowman draft chrome")) return "bowman-chrome-draft";
   if (s.includes("bowman chrome")) return "bowman-chrome";
   if (s.includes("bowman sterling")) return "bowman-sterling";
