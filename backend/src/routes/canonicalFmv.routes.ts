@@ -31,6 +31,7 @@ import { computeTrending, computeRelatedCards, computeTrendingPlayers } from "..
 import { lookupByImage } from "../services/portfolioiq/imageSimilarityLookup.service.js";
 import { autocomplete } from "../services/portfolioiq/autocompleteLookup.service.js";
 import { computeCardDetail } from "../services/portfolioiq/cardDetail.service.js";
+import { flagComp, type FlagCompReason } from "../services/portfolioiq/flagComp.service.js";
 
 const router = Router();
 
@@ -322,6 +323,63 @@ router.get("/autocomplete-set", requireSession, async (req: Request, res: Respon
     });
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
+});
+
+// CF-USER-COMP-FLAG (Drew, 2026-07-26). iOS in-app comp verification.
+// When a user sees a bad comp on /card-detail, tap "flag this comp" →
+// this route. First user flag adds "user-flagged" to qualityFlags
+// (threshold env-tunable via USER_FLAG_AUTO_FILTER_THRESHOLD, default
+// 1), which the FMV pipeline drops from every future compute.
+//
+// Full audit trail persisted on the row (flaggedBy[] + flagHistory[])
+// for admin review + eventual unflag. Idempotent per (userId, compId).
+//
+// POST /api/compiq/flag-comp
+// Body: {
+//   compId: string,        // sold_comps document id (from /card-detail.fmv.recentComps or /recent-sales)
+//   cardId: string,        // partition key (comes back on the same comp record)
+//   reason: "wrong-price" | "wrong-card" | "wrong-grade" | "off-market" | "duplicate" | "other",
+//   note?: string          // free-form context, capped 500 chars
+// }
+const VALID_FLAG_REASONS: FlagCompReason[] = [
+  "wrong-price", "wrong-card", "wrong-grade", "off-market", "duplicate", "other",
+];
+router.post("/flag-comp", requireSession, async (req: Request, res: Response, next) => {
+  try {
+    const compId = String(req.body?.compId ?? "").trim();
+    const cardId = String(req.body?.cardId ?? "").trim();
+    const reason = String(req.body?.reason ?? "").trim() as FlagCompReason;
+    const note = typeof req.body?.note === "string" ? req.body.note : undefined;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "session user required" });
+      return;
+    }
+    if (!compId || !cardId) {
+      res.status(400).json({ success: false, error: "compId and cardId are required" });
+      return;
+    }
+    if (!VALID_FLAG_REASONS.includes(reason)) {
+      res.status(400).json({ success: false, error: `reason must be one of: ${VALID_FLAG_REASONS.join(", ")}` });
+      return;
+    }
+
+    const result = await flagComp({ compId, cardId, userId, reason, note });
+    res.json(result);
+  } catch (err) {
+    // Common expected errors surface as 400/404; unexpected go to error middleware
+    const msg = (err as Error)?.message ?? String(err);
+    if (msg.startsWith("comp not found")) {
+      res.status(404).json({ success: false, error: msg });
+      return;
+    }
+    if (msg.includes("required") || msg.includes("unavailable")) {
+      res.status(400).json({ success: false, error: msg });
+      return;
+    }
+    next(err);
+  }
 });
 
 export default router;
