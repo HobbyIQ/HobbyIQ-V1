@@ -1,4 +1,11 @@
 // ---------------------------------------------------------------------------
+// ⚠️  DEPRECATED (Drew, 2026-07-26). Owner-curated hardcoded tier
+// multipliers CONFLICT with the empirical-only calibration doctrine
+// locked in by PR #633 (see memory `empirical-only-multiplier-doctrine`).
+// Only consumer is predictedRangeTierAnchored.ts, which is Phase 3 —
+// gated off in prod. Both files inert. Hard-delete deferred to a
+// follow-up PR once Phase 3 is confirmed permanently retired.
+// ---------------------------------------------------------------------------
 // Tier Multipliers — Issue #25 Phase 3
 //
 // Owner-curated lookup table that maps `tierWithinSet` (the primary scarcity
