@@ -20,6 +20,15 @@ export default defineConfig({
     ],
     env: {
       NODE_ENV: "test",
+      // CF-CI-AUTH-GUARDS-P0.9 (Drew, 2026-07-26). PR #781 added
+      // fail-closed guards to authService.ts + ebayAuth.service.ts that
+      // throw at module-load if AUTH_SESSION_SECRET is unset, retired-
+      // default, or <32 chars. Every test file that transitively imports
+      // authService therefore fails to load in CI (npm test runs with
+      // NODE_ENV=test but no ambient secret). Provide a synthetic,
+      // clearly-non-prod value here so the guard is satisfied without
+      // relaxing prod behaviour.
+      AUTH_SESSION_SECRET: "vitest-only-not-a-production-secret-min-length-32",
     },
     // PHASE-4A-2.2 (2026-06-02): bumped from default 10s. Integration-style
     // tests that `await import("../src/app")` in beforeAll trigger a cold
