@@ -16,8 +16,12 @@ on:
       - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
+# Split concurrency groups: PR-close staging cleanup runs in its own
+# lane, so it doesn't cancel the push-to-main prod deploy that fires
+# from a squash-merge event. Previously both jobs collided in one
+# group and one always got killed.
 concurrency:
-  group: deploy-web-${{ github.ref }}
+  group: deploy-web-${{ github.event_name == 'pull_request' && github.event.action == 'closed' && 'close-pr' || 'build-deploy' }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
