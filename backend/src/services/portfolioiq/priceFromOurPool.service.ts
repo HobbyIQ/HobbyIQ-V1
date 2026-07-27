@@ -56,6 +56,7 @@ export interface OurPoolPricingResult {
 // and "grade-cross-raw" are handled explicitly outside this set.
 const OBSERVED_RUNGS: ReadonlySet<HobbyIqFmvMethod> = new Set<HobbyIqFmvMethod>([
   "direct-slug",
+  "cross-setkey",
   "cross-printrun",
   "same-printrun-cross-parallel",
   "printrun-discovery",
