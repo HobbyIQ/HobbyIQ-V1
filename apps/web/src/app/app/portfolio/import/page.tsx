@@ -117,6 +117,11 @@ export default function PortfolioImportPage() {
           </a>{" "}
           — canonical column names + 3 sample rows.
         </p>
+        <p className="text-xs text-[color:var(--color-muted)] mt-2">
+          Coming from Card Ladder? Their CSV export drops in unchanged — we
+          understand Date Purchased, Subject, Set, Variation, Number,
+          Condition, Investment, Graded Cert #, and Population.
+        </p>
       </div>
 
       {/* File picker card */}
