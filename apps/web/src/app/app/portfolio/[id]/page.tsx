@@ -8,6 +8,7 @@ import {
   fetchHoldingHistory,
   deleteHolding,
   sellHolding,
+  refreshHolding,
   holdingDisplayValue,
   type PortfolioHolding,
   type HoldingPricePoint,
@@ -28,6 +29,8 @@ export default function HoldingDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [ebayOpen, setEbayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!holdingId) return;
@@ -193,6 +196,34 @@ export default function HoldingDetailPage() {
         <button onClick={() => setEditOpen(true)} className="hiq-btn-secondary">
           Edit card
         </button>
+        <button
+          onClick={async () => {
+            if (refreshing) return;
+            setRefreshing(true);
+            setRefreshError(null);
+            try {
+              const res = await refreshHolding(h.id);
+              if (res.success && res.holding) {
+                setH(res.holding);
+              } else {
+                setRefreshError(res.message ?? "Refresh failed");
+              }
+            } catch (err) {
+              const e = err as { message?: string; status?: number };
+              if (e.status === 429) {
+                setRefreshError("Daily price-check limit reached — try again tomorrow.");
+              } else {
+                setRefreshError(e.message ?? "Refresh failed");
+              }
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+          disabled={refreshing}
+          className="hiq-btn-secondary disabled:opacity-60"
+        >
+          {refreshing ? "Refreshing…" : "Refresh price"}
+        </button>
         <button onClick={() => setEbayOpen(true)} className="hiq-btn-secondary">
           List on eBay
         </button>
@@ -204,6 +235,15 @@ export default function HoldingDetailPage() {
           Delete holding
         </button>
       </div>
+
+      {refreshError && (
+        <div
+          className="hiq-card p-3 mb-6 text-sm"
+          style={{ color: "var(--color-danger)" }}
+        >
+          {refreshError}
+        </div>
+      )}
 
       {/* Price history */}
       {history.length > 0 && (
