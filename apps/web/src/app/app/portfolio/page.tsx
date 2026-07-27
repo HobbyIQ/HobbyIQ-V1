@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { fetchPortfolio, holdingDisplayValue, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
+import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -16,6 +17,9 @@ export default function PortfolioPage() {
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [query, setQuery] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +77,22 @@ export default function PortfolioPage() {
             {" "}with observed FMV · {data.summary.estimatedCount} estimated · {data.summary.pendingCount} pending
           </p>
         </div>
-        <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
-          + Add card
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectMode((v) => {
+                if (v) setSelected(new Set());
+                return !v;
+              });
+            }}
+            className="hiq-btn-secondary text-sm"
+          >
+            {selectMode ? "Cancel select" : "Select"}
+          </button>
+          <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
+            + Add card
+          </Link>
+        </div>
       </div>
 
       <PortfolioValueChart headlineTotal={data.summary.totalValue} />
@@ -98,18 +115,84 @@ export default function PortfolioPage() {
         <SortDirBtn value={sortDir} onChange={setSortDir} />
       </div>
 
+      {selectMode && (
+        <div className="mt-4 flex items-center justify-between flex-wrap gap-2 text-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (selected.size === sorted.length) {
+                  setSelected(new Set());
+                } else {
+                  setSelected(new Set(sorted.map((h) => h.id)));
+                }
+              }}
+              className="text-[color:var(--color-accent)] hover:underline"
+            >
+              {selected.size === sorted.length ? "Deselect all" : "Select all"}
+            </button>
+            <span className="text-[color:var(--color-muted)]">
+              {selected.size} selected
+            </span>
+          </div>
+          <button
+            onClick={() => setBulkOpen(true)}
+            disabled={selected.size === 0}
+            className="hiq-btn-primary text-sm disabled:opacity-40"
+          >
+            List {selected.size} on eBay
+          </button>
+        </div>
+      )}
+
       <div className="mt-6 space-y-3">
-        {sorted.map((h) => (
-          <Link key={h.id} href={`/app/portfolio/${encodeURIComponent(h.id)}`} className="block">
-            <HoldingRow h={h} />
-          </Link>
-        ))}
+        {sorted.map((h) =>
+          selectMode ? (
+            <label
+              key={h.id}
+              className="flex items-center gap-3 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(h.id)}
+                onChange={(e) => {
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (e.target.checked) next.add(h.id);
+                    else next.delete(h.id);
+                    return next;
+                  });
+                }}
+                className="w-4 h-4 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <HoldingRow h={h} />
+              </div>
+            </label>
+          ) : (
+            <Link key={h.id} href={`/app/portfolio/${encodeURIComponent(h.id)}`} className="block">
+              <HoldingRow h={h} />
+            </Link>
+          ),
+        )}
       </div>
 
       {sorted.length === 0 && query && (
         <div className="mt-8 text-center text-sm text-[color:var(--color-muted)]">
           No holdings match &ldquo;{query}&rdquo;.
         </div>
+      )}
+
+      {bulkOpen && (
+        <BulkEbayListModal
+          holdings={sorted.filter((h) => selected.has(h.id))}
+          onClose={() => setBulkOpen(false)}
+          onFinished={() => {
+            // Selection stays so user can review status inside the modal;
+            // when they close it, exit select mode entirely.
+            setSelectMode(false);
+            setSelected(new Set());
+          }}
+        />
       )}
     </div>
   );
