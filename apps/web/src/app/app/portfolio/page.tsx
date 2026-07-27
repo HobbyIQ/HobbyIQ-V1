@@ -78,7 +78,7 @@ export default function PortfolioPage() {
         </Link>
       </div>
 
-      <PortfolioValueChart />
+      <PortfolioValueChart headlineTotal={data.summary.totalValue} />
       <SummaryBar summary={data.summary} />
 
       <div className="mt-8 flex items-center gap-3 flex-wrap">

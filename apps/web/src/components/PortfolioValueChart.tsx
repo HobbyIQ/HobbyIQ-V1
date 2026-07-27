@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { fetchValueHistory, type ValueHistoryResponse } from "@/lib/api";
 import { formatUSD, formatPct } from "@/lib/format";
 
+interface PortfolioValueChartProps {
+  // Headline total to display. Passed in from the parent so it stays
+  // in sync with the summary bar below (which uses the same value).
+  // If omitted, falls back to the value-history endpoint's own total
+  // (which uses different aggregation and can disagree by thousands
+  // when some holdings have inconsistent valuationStatus/fmv state).
+  headlineTotal?: number;
+}
+
 // Portfolio value trail chart — line + gain/loss meta.
 // Silently hides if the endpoint fails so the portfolio page keeps working.
-export function PortfolioValueChart() {
+export function PortfolioValueChart({ headlineTotal }: PortfolioValueChartProps = {}) {
   const [data, setData] = useState<ValueHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +39,12 @@ export function PortfolioValueChart() {
   if (loading) return null;
   if (!data || !data.historySeries || data.historySeries.length < 2) return null;
 
+  // Prefer the caller-supplied headline (which is summary.totalValue and
+  // matches the summary bar). Fall back to value-history's own total only
+  // when the parent didn't pass one — that path is inconsistent with the
+  // summary bar so should be treated as the last resort.
+  const displayedTotal = headlineTotal ?? data.totalDisplayable;
+
   const points = data.historySeries;
   const values = points.map((p) => p.total);
   const min = Math.min(...values);
@@ -47,16 +62,24 @@ export function PortfolioValueChart() {
   const areaPath = `${path} L ${W} ${H} L 0 ${H} Z`;
 
   const change = data.change30d;
-  const changeColor = (change?.deltaValue ?? 0) > 0 ? "var(--color-success)" : (change?.deltaValue ?? 0) < 0 ? "var(--color-danger)" : undefined;
+  const hasChange =
+    change &&
+    (typeof change.deltaValue === "number" || typeof change.deltaPct === "number");
+  const changeColor =
+    (change?.deltaValue ?? 0) > 0
+      ? "var(--color-success)"
+      : (change?.deltaValue ?? 0) < 0
+        ? "var(--color-danger)"
+        : undefined;
 
   return (
     <div className="hiq-card p-6 mb-6">
       <div className="flex items-baseline justify-between mb-4 flex-wrap gap-4">
         <div>
           <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">Portfolio value</div>
-          <div className="text-3xl font-bold tabular-nums">{formatUSD(data.totalDisplayable, { hideCents: true })}</div>
+          <div className="text-3xl font-bold tabular-nums">{formatUSD(displayedTotal, { hideCents: true })}</div>
         </div>
-        {change && (
+        {hasChange && (
           <div className="text-right">
             <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">30-day change</div>
             <div className="text-lg font-medium tabular-nums" style={changeColor ? { color: changeColor } : undefined}>
