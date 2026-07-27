@@ -19,6 +19,7 @@ import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { RegradeModal } from "@/components/RegradeModal";
 import { GradeCalcModal } from "@/components/GradeCalcModal";
 import { RecentCompsList } from "@/components/RecentCompsList";
+import { GradeCurveView } from "@/components/GradeCurveView";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -257,6 +258,13 @@ export default function HoldingDetailPage() {
           style={{ color: "var(--color-danger)" }}
         >
           {refreshError}
+        </div>
+      )}
+
+      {/* Grade curve — what every grade of this card is worth */}
+      {h.cardId && (
+        <div className="mb-6">
+          <GradeCurveView cardId={h.cardId} />
         </div>
       )}
 

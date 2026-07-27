@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CardPriceDetail } from "@/components/CardPriceDetail";
 import { RecentCompsList } from "@/components/RecentCompsList";
+import { GradeCurveView } from "@/components/GradeCurveView";
 import { readStashedCandidate } from "@/lib/candidateStash";
 import type { SearchCandidate } from "@/lib/api";
 
@@ -85,6 +86,10 @@ function CardDetailInner() {
         initialParallel={initialParallel}
         onSelectionChange={onSelectionChange}
       />
+
+      <div className="mt-6">
+        <GradeCurveView cardId={cardsightCardId} />
+      </div>
 
       <div className="mt-6">
         <RecentCompsList

@@ -754,6 +754,54 @@ export async function fetchTradeTargets(source: "watchlist" | "inventory" = "wat
   return await request<TradeTargetsResponse>(`/api/portfolio/trade-targets?source=${source}`);
 }
 
+// ─── Observed grade curve for a card ─────────────────────────────
+
+export interface ObservedGradeEntry {
+  grade: string;
+  grader: string;
+  sampleCount: number;
+  weightedMedianPrice: number | null;
+  plainMedianPrice: number | null;
+  priceRangeLow: number | null;
+  priceRangeHigh: number | null;
+  newestSaleDate: string | null;
+  oldestSaleDate: string | null;
+  confidenceScore: number;
+  value: number | null;
+  valueSource: "observed" | "estimated" | "unavailable";
+  estimatedMultiplier: number | null;
+  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
+  trendAdjustedValue: number | null;
+  trendAdjustmentPct: number | null;
+  predictedPriceAt30d: number | null;
+  predictedPricePct: number | null;
+  predictedPriceRangeLow: number | null;
+  predictedPriceRangeHigh: number | null;
+  predictedHorizonDays: number;
+  daysSinceNewestSale: number | null;
+  newestSalePrice: number | null;
+  salesHistory: Array<{ price: number; date: string | null; saleType: string | null }>;
+  referencePrice: number | null;
+  referenceDivergencePct: number | null;
+  referenceAnomaly: boolean;
+}
+
+export interface ObservedGradeCurveResponse {
+  success: boolean;
+  cardId: string;
+  entries: ObservedGradeEntry[];
+  totalSampleCount: number;
+  computedAt: string;
+  ratePerWeek?: number | null;
+  signalSource?: string | null;
+}
+
+export async function fetchObservedGradeCurve(cardId: string): Promise<ObservedGradeCurveResponse> {
+  return await request<ObservedGradeCurveResponse>(
+    `/api/compiq/observed-grade-curve/${encodeURIComponent(cardId)}`,
+  );
+}
+
 // ─── Recent sold comps for a card ─────────────────────────────────
 
 export interface RecentCompSale {
