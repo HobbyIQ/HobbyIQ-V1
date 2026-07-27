@@ -7,7 +7,10 @@ import {
   setUsernameForSession,
   setPublicShareEnabled,
   isUsernameAvailable,
+  issueEmailVerification,
+  consumeEmailVerification,
 } from "../services/authService.js";
+import { sendEmail, verificationEmailContent } from "../services/emailService.js";
 // CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
 // register stay PRE-auth.
 import { requireSession } from "../middleware/requireSession.js";
@@ -142,6 +145,94 @@ router.post("/public-share", requireSession, async (req: Request, res: Response)
   const ok = await setPublicShareEnabled(userId, enabled);
   if (!ok) return res.status(404).json({ success: false, error: "User not found" });
   return res.json({ success: true, publicShareEnabled: enabled });
+});
+
+// CF-EMAIL-VERIFICATION (Drew, 2026-07-27). Two endpoints:
+//   POST /send-verification  → issue a fresh token + mail it to the
+//                              account's email (session-gated)
+//   GET  /verify-email       → consume ?token=... and mark verified
+//                              (public — anyone with a valid token,
+//                              which is single-use + 24h + only sent to
+//                              the account owner's inbox)
+//
+// The send route ALWAYS returns a shape that doesn't leak whether the
+// email actually went out (delivered vs dev-fallback) beyond a simple
+// boolean, so an attacker who lands a session on a bogus account can't
+// probe the mail provider from the response.
+
+const sendVerificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many attempts, try again later" },
+});
+
+router.post(
+  "/send-verification",
+  requireSession,
+  sendVerificationLimiter,
+  async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const issued = await issueEmailVerification(userId);
+    if (!issued) {
+      return res.status(400).json({
+        success: false,
+        error: "No email on file for this account",
+      });
+    }
+
+    // Build the click-through URL. Prefer the web origin so users land on
+    // the branded /verify-email page which then calls the API. Fall back
+    // to a direct API URL if WEB_ORIGIN is unset (edge case; local dev).
+    const webOrigin = (process.env.WEB_ORIGIN ?? "").replace(/\/+$/, "");
+    const apiOrigin = (process.env.BACKEND_ORIGIN ?? "").replace(/\/+$/, "");
+    const verifyUrl = webOrigin
+      ? `${webOrigin}/verify-email?token=${encodeURIComponent(issued.token)}`
+      : apiOrigin
+        ? `${apiOrigin}/api/auth/verify-email?token=${encodeURIComponent(issued.token)}`
+        : `/api/auth/verify-email?token=${encodeURIComponent(issued.token)}`;
+
+    const content = verificationEmailContent({
+      verifyUrl,
+      toEmail: issued.email,
+      displayName: req.user?.username ?? null,
+    });
+    const result = await sendEmail({
+      to: issued.email,
+      subject: content.subject,
+      plainText: content.plainText,
+      html: content.html,
+    });
+
+    // devLogged: local dev + no ACS. Surface it so the settings UI can
+    // show "verification link written to server log" instead of pretending
+    // an email went out.
+    return res.json({
+      success: true,
+      sent: result.delivered,
+      devLogged: Boolean(result.devLogged),
+      expiresAt: issued.expiresAt,
+    });
+  },
+);
+
+// Public: the link in the verification email hits this endpoint. Web
+// prefers to call it from the /verify-email page (so we can show a nice
+// UI) — direct GET also works and returns a JSON verdict.
+router.get("/verify-email", async (req: Request, res: Response) => {
+  const token = String(req.query.token ?? "").trim();
+  if (!token) {
+    return res.status(400).json({ success: false, error: "Missing token" });
+  }
+  const result = await consumeEmailVerification(token);
+  if (!result) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid or expired verification link",
+    });
+  }
+  return res.json({ success: true, user: result.user });
 });
 
 export default router;

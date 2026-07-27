@@ -36,6 +36,9 @@ export interface AuthUser {
   publicShareEnabled?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionStatus?: string;
+  // CF-EMAIL-VERIFICATION (Drew, 2026-07-27).
+  emailVerified?: boolean;
+  emailVerificationPending?: boolean;
 }
 
 // Backend contract (authService.AuthResult): { success, user?, sessionId?, error? }
@@ -497,6 +500,35 @@ export async function setUsername(username: string): Promise<{ success: boolean;
 export async function checkUsernameAvailable(username: string): Promise<{ available: boolean; reason?: string }> {
   return await request<{ available: boolean; reason?: string }>(
     `/api/auth/username-available?username=${encodeURIComponent(username)}`,
+    { auth: false },
+  );
+}
+
+// CF-EMAIL-VERIFICATION (Drew, 2026-07-27). Kick off a verification
+// email for the currently signed-in account. Server picks the address
+// from the user record — we don't send it. Returns `sent: false,
+// devLogged: true` when the backend has no ACS connection configured
+// (local dev); UI should show a "verification link in server log"
+// hint in that case.
+export async function sendEmailVerification(): Promise<{
+  success: boolean;
+  sent: boolean;
+  devLogged: boolean;
+  expiresAt?: string;
+  error?: string;
+}> {
+  return await request("/api/auth/send-verification", { method: "POST" });
+}
+
+// CF-EMAIL-VERIFICATION. Called from the /verify-email page to redeem
+// the token from the query string. Public — no session header needed.
+export async function verifyEmailToken(token: string): Promise<{
+  success: boolean;
+  user?: AuthUser;
+  error?: string;
+}> {
+  return await request(
+    `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
     { auth: false },
   );
 }

@@ -12,6 +12,7 @@ import {
   signOut,
   setPublicShareEnabled,
   createStripePortalSession,
+  sendEmailVerification,
   type AuthUser,
   type EntitlementsMeResponse,
 } from "@/lib/api";
@@ -86,6 +87,10 @@ export default function SettingsPage() {
           </button>
         </div>
       </section>
+
+      {/* Email verification */}
+      <EmailVerificationSection user={user} />
+
 
       {/* Subscription */}
       <section className="hiq-card p-6">
@@ -175,6 +180,114 @@ type CheckStatus =
   | { kind: "available" }
   | { kind: "taken"; reason: string }
   | { kind: "invalid"; reason: string };
+
+// CF-EMAIL-VERIFICATION (Drew, 2026-07-27). Shows the current verified
+// state and, when unverified, a Send-verification button. Idempotent
+// resend (server overwrites the pending token). Devlogged fallback lets
+// local dev see "server logged the link" instead of a broken silent path.
+function EmailVerificationSection({ user }: { user: AuthUser }) {
+  const verified = Boolean(user.emailVerified);
+  const [sending, setSending] = useState(false);
+  const [sentAt, setSentAt] = useState<number | null>(null);
+  const [devLogged, setDevLogged] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSend() {
+    setSending(true);
+    setError(null);
+    try {
+      const res = await sendEmailVerification();
+      if (!res.success) {
+        setError(res.error ?? "Failed to send verification email");
+      } else {
+        setSentAt(Date.now());
+        setDevLogged(Boolean(res.devLogged));
+      }
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message ?? "Failed to send verification email");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (verified) {
+    return (
+      <section className="hiq-card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-lg">Email verification</h2>
+            <p className="text-sm mt-1" style={{ color: "var(--hiq-muted-text)" }}>
+              Your email is confirmed.
+            </p>
+          </div>
+          <span
+            className="px-3 py-1 rounded-full text-xs font-semibold"
+            style={{
+              color: "var(--hiq-hobby-green)",
+              background: "color-mix(in oklab, var(--hiq-hobby-green) 14%, transparent)",
+              border: "1px solid color-mix(in oklab, var(--hiq-hobby-green) 35%, transparent)",
+            }}
+          >
+            ✓ Verified
+          </span>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="hiq-card p-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <h2 className="font-bold text-lg mb-1">Email verification</h2>
+          <p className="text-sm" style={{ color: "var(--hiq-muted-text)" }}>
+            {sentAt
+              ? "Check your inbox — the link is good for 24 hours."
+              : "Confirm your address so we can send you alerts, receipts, and password-reset links."}
+          </p>
+        </div>
+        <button
+          onClick={onSend}
+          disabled={sending}
+          className="hiq-btn-primary disabled:opacity-50"
+        >
+          {sending
+            ? "Sending…"
+            : sentAt
+              ? "Resend email"
+              : "Send verification email"}
+        </button>
+      </div>
+      {devLogged && !error && (
+        <div
+          className="mt-3 text-xs"
+          style={{ color: "var(--hiq-muted-text)" }}
+        >
+          Dev mode: the verification link was written to the backend log
+          (no email provider configured).
+        </div>
+      )}
+      {error && (
+        <div
+          className="mt-3 text-sm"
+          style={{ color: "var(--hiq-danger)" }}
+        >
+          {error}
+        </div>
+      )}
+      {sentAt && !error && !devLogged && (
+        <div
+          className="mt-3 text-sm"
+          style={{ color: "var(--hiq-hobby-green)" }}
+        >
+          Sent. Didn&apos;t get it? Check spam, or resend after a minute.
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function UsernameSection({ currentUsername }: { currentUsername: string | null }) {
   const [value, setValue] = useState(currentUsername ?? "");

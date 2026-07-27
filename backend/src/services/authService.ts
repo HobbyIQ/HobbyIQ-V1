@@ -114,6 +114,22 @@ interface AuthUserRecord {
   // by effectivePlanFor() at every enforcement site (requireEntitlement,
   // requireCapacity, requireRateLimited) AND at /api/entitlements/me.
   entitlementOverride?: SubscriptionPlan | null;
+  // CF-EMAIL-VERIFICATION (Drew, 2026-07-27): opt-in email verification.
+  // Absent on legacy rows → treat as unverified. `verifiedAt` set when
+  // the user clicks the link in the verification email. `pending` holds
+  // the current outstanding token + its expiry so a fresh send-verify
+  // replaces the old one (only the most-recent token is valid). We don't
+  // gate any surface on this yet — the field is here so a future PR can
+  // require verification for e.g. bulk uploads or public storefront.
+  emailVerification?: {
+    verifiedAt?: string | null;
+    pending?: {
+      token: string;         // 32-byte hex, single-use
+      expiresAt: string;     // ISO
+      sentTo: string;        // email address the link was mailed to
+      sentAt: string;        // ISO
+    } | null;
+  };
 }
 
 export interface AuthUser {
@@ -142,6 +158,13 @@ export interface AuthUser {
   // the persisted customer id without a second Cosmos round-trip.
   stripeCustomerId?: string;
   stripeSubscriptionStatus?: AuthUserRecord["stripeSubscriptionStatus"];
+  // CF-EMAIL-VERIFICATION (Drew, 2026-07-27): surfaced booleans only —
+  // the raw token never leaves the backend. `emailVerified` is true iff
+  // the user has clicked their verification link at least once; it
+  // stays true even if the email later changes (we clear it on email
+  // change in a future PR when email-change is user-facing).
+  emailVerified?: boolean;
+  emailVerificationPending?: boolean;
 }
 
 export interface AuthResult {
@@ -425,6 +448,8 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     publicShareEnabled: user.publicShareEnabled ?? false,
     stripeCustomerId: user.stripeCustomerId,
     stripeSubscriptionStatus: user.stripeSubscriptionStatus,
+    emailVerified: Boolean(user.emailVerification?.verifiedAt),
+    emailVerificationPending: Boolean(user.emailVerification?.pending?.token),
   };
 }
 
@@ -1047,3 +1072,112 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   const sessionId = createSessionToken(userId);
   return { success: true, user: toAuthUser(record), sessionId };
 }
+
+// ─── CF-EMAIL-VERIFICATION (Drew, 2026-07-27) ────────────────────────────────
+//
+// Two-step flow:
+//   1) POST /api/auth/send-verification (session-gated) → issueEmailVerification
+//      writes a new random token onto the user record and returns the token
+//      + email so the caller (route handler) hands it to emailService for
+//      delivery. Overwrites any prior pending token, so a resend is safe.
+//   2) GET /api/auth/verify-email?token=T (public) → consumeEmailVerification
+//      finds the user carrying that pending token, checks expiry, sets
+//      `verifiedAt`, and clears `pending`.
+//
+// Design choices:
+// - Token is 32 random bytes (256 bits) as base64url — 43 chars, single-use,
+//   opaque. Never derived from userId or email.
+// - Storage lives on the user doc, not a side container: single-user backend,
+//   no need to spend a container + index policy on tokens that only exist
+//   for 24h.
+// - We store the exact email the link was mailed to (`sentTo`) so if the
+//   user changes their address between issue and click, the click doesn't
+//   silently verify a stale address.
+
+const VERIFICATION_TOKEN_TTL_MS = 1000 * 60 * 60 * 24; // 24h
+
+function generateVerificationToken(): string {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+/**
+ * Issue a new email-verification token for the given user. Overwrites any
+ * previous pending token — resend is a full replacement, not additive.
+ * Returns the token + destination email so the caller can hand them to the
+ * mailer, or null if the user doesn't exist / has no email on file.
+ */
+export async function issueEmailVerification(
+  userId: string,
+): Promise<{ token: string; email: string; expiresAt: string } | null> {
+  const user = await readUser(userId);
+  if (!user) return null;
+  const email = (user.email ?? "").trim();
+  if (!email) return null;
+  const token = generateVerificationToken();
+  const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS).toISOString();
+  const now = new Date().toISOString();
+  user.emailVerification = {
+    verifiedAt: user.emailVerification?.verifiedAt ?? null,
+    pending: {
+      token,
+      expiresAt,
+      sentTo: email,
+      sentAt: now,
+    },
+  };
+  await writeUser(user);
+  return { token, email, expiresAt };
+}
+
+/**
+ * Consume a verification token. If it matches an outstanding pending token
+ * that hasn't expired AND still points at the user's current email, marks
+ * verified + clears pending. Returns the updated AuthUser projection or null
+ * on any failure (unknown token, expired, email-changed).
+ *
+ * Lookup: scans users by pending token. At single-user backend scale this
+ * is O(n) with n≈small; if that changes, add a Cosmos index on
+ * `emailVerification.pending.token` and a partitioned lookup. The scan is
+ * scoped to docType="user" AND IS_DEFINED(pending.token) so it's cheap.
+ */
+export async function consumeEmailVerification(
+  token: string,
+): Promise<{ user: AuthUser } | null> {
+  const t = (token ?? "").trim();
+  if (!t) return null;
+
+  const container = await getContainer();
+  let hit: AuthUserRecord | undefined;
+  if (!container) {
+    hit = Array.from(memStore.values()).find(
+      (u) => u.emailVerification?.pending?.token === t,
+    );
+  } else {
+    const { resources } = await container.items
+      .query<AuthUserRecord>({
+        query:
+          'SELECT TOP 1 * FROM c WHERE c.docType = "user" ' +
+          'AND IS_DEFINED(c.emailVerification.pending.token) ' +
+          'AND c.emailVerification.pending.token = @t',
+        parameters: [{ name: "@t", value: t }],
+      })
+      .fetchAll();
+    hit = resources[0];
+  }
+  if (!hit) return null;
+
+  const pending = hit.emailVerification?.pending;
+  if (!pending) return null;
+  if (Date.parse(pending.expiresAt) <= Date.now()) return null;
+  // Email-changed-between-issue-and-click: reject rather than silently
+  // verify a stale address.
+  if (pending.sentTo.toLowerCase() !== (hit.email ?? "").toLowerCase()) return null;
+
+  hit.emailVerification = {
+    verifiedAt: new Date().toISOString(),
+    pending: null,
+  };
+  await writeUser(hit);
+  return { user: toAuthUser(hit) };
+}
+
