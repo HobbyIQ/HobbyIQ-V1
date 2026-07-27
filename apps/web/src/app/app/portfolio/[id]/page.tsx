@@ -18,6 +18,7 @@ import { EbayListModal } from "@/components/EbayListModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { RegradeModal } from "@/components/RegradeModal";
 import { GradeCalcModal } from "@/components/GradeCalcModal";
+import { RecentCompsList } from "@/components/RecentCompsList";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -256,6 +257,19 @@ export default function HoldingDetailPage() {
           style={{ color: "var(--color-danger)" }}
         >
           {refreshError}
+        </div>
+      )}
+
+      {/* Recent comps (backs the FMV shown up top) */}
+      {h.cardId && (
+        <div className="mb-6">
+          <RecentCompsList
+            cardId={h.cardId}
+            parallel={h.parallel ?? ""}
+            gradeCompany={h.gradeCompany ?? undefined}
+            gradeValue={h.gradeValue ?? undefined}
+            subtitle="Sales that back the value shown above."
+          />
         </div>
       )}
 
