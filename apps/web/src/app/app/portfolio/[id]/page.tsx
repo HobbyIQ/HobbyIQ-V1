@@ -16,6 +16,7 @@ import {
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { EbayListModal } from "@/components/EbayListModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
+import { RegradeModal } from "@/components/RegradeModal";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ export default function HoldingDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [ebayOpen, setEbayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [regradeOpen, setRegradeOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
 
@@ -196,6 +198,11 @@ export default function HoldingDetailPage() {
         <button onClick={() => setEditOpen(true)} className="hiq-btn-secondary">
           Edit card
         </button>
+        {!h.gradeCompany && (
+          <button onClick={() => setRegradeOpen(true)} className="hiq-btn-secondary">
+            Mark as graded
+          </button>
+        )}
         <button
           onClick={async () => {
             if (refreshing) return;
@@ -302,6 +309,16 @@ export default function HoldingDetailPage() {
           onSaved={(next) => {
             setH(next);
             setEditOpen(false);
+          }}
+        />
+      )}
+      {regradeOpen && (
+        <RegradeModal
+          holding={h}
+          onCancel={() => setRegradeOpen(false)}
+          onSaved={(next) => {
+            setH(next);
+            setRegradeOpen(false);
           }}
         />
       )}

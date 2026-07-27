@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateHolding, type PortfolioHolding } from "@/lib/api";
+import { updateHolding, uploadHoldingPhoto, type PortfolioHolding } from "@/lib/api";
 
 interface Props {
   holding: PortfolioHolding;
@@ -33,9 +33,41 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
     holding.purchasePrice != null ? String(holding.purchasePrice) : "",
   );
   const [purchaseDate, setPurchaseDate] = useState<string>(holding.purchaseDate?.slice(0, 10) ?? "");
+  const [certNumber, setCertNumber] = useState<string>(holding.certNumber ?? "");
   const [notes, setNotes] = useState<string>(holding.notes ?? "");
+  const [photos, setPhotos] = useState<string[]>(holding.photos ?? []);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";  // allow re-selecting same filename
+    if (!file) return;
+    if (!/^image\//.test(file.type)) {
+      setError("Choose an image file (jpg / png / webp).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Photo must be under 10 MB.");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      const blobUrl = await uploadHoldingPhoto(file);
+      setPhotos((prev) => [...prev, blobUrl]);
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message ?? "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function onRemovePhoto(url: string) {
+    setPhotos((prev) => prev.filter((p) => p !== url));
+  }
 
   async function onSave() {
     setSubmitting(true);
@@ -73,6 +105,8 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
         // the backend accepts null to clear.
         gradeCompany: gradeCompany.trim() || null,
         gradeValue: gvN,
+        certNumber: certNumber.trim() || null,
+        photos,
         purchasePrice: ppN,
         purchaseDate: purchaseDate || undefined,
         notes: notes.trim() || undefined,
@@ -179,6 +213,17 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
               placeholder={gradeCompany ? "10" : "—"}
             />
           </Field>
+          <div className="md:col-span-2">
+            <Field label="Cert # (optional)">
+              <input
+                value={certNumber}
+                onChange={(e) => setCertNumber(e.target.value)}
+                className={inputCls}
+                disabled={!gradeCompany}
+                placeholder={gradeCompany ? "e.g. 12345678" : "Set grade first"}
+              />
+            </Field>
+          </div>
           <Field label="Purchase price ($)">
             <input
               type="number"
@@ -197,6 +242,43 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
               className={inputCls}
             />
           </Field>
+          <div className="md:col-span-2">
+            <Field label="Photos">
+              <div className="flex flex-wrap items-center gap-3">
+                {photos.map((url) => (
+                  <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden" style={{ background: "var(--color-bg)" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => onRemovePhoto(url)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs leading-none"
+                      style={{ background: "rgba(0,0,0,0.7)", color: "white" }}
+                      aria-label="Remove photo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <label
+                  className={`w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer text-xs text-center px-2 ${uploading ? "opacity-60 cursor-wait" : "hover:border-[color:var(--color-accent)]"}`}
+                  style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
+                >
+                  {uploading ? "Uploading…" : "+ Photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onPickPhoto}
+                    disabled={uploading}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+              <p className="text-[10px] text-[color:var(--color-muted)] mt-2">
+                JPG / PNG / WebP · max 10 MB · first photo shows in your portfolio list
+              </p>
+            </Field>
+          </div>
           <div className="md:col-span-2">
             <Field label="Notes">
               <textarea
