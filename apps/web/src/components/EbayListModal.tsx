@@ -101,7 +101,7 @@ export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
       onClick={submitting ? undefined : onClose}
     >
       <div
-        className="hiq-card p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto"
+        className="hiq-card p-6 max-w-4xl w-full max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-6">
@@ -599,23 +599,19 @@ function ListingEditor({
   );
 }
 
-function Section({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen);
+// Flat layout — every section always visible in one scroll. Section
+// headers still act as a visual anchor / eyebrow so users can skim, but
+// nothing collapses. Every field is on-screen the moment the modal
+// mounts.
+function Section({ title, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   return (
-    <div className="mb-3 rounded-xl border border-[color:var(--color-border)]">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
-      >
-        <span>{title}</span>
-        <span className="text-xs text-[color:var(--color-muted)]">{open ? "▼" : "▶"}</span>
-      </button>
-      {open && (
-        <div className="px-4 pb-4 pt-1 space-y-3 border-t border-[color:var(--color-border)]">
-          {children}
-        </div>
-      )}
+    <div className="mb-4 rounded-xl border border-[color:var(--color-border)]">
+      <div className="px-4 py-3 text-sm font-medium border-b border-[color:var(--color-border)]">
+        {title}
+      </div>
+      <div className="px-4 py-4 space-y-3">
+        {children}
+      </div>
     </div>
   );
 }
