@@ -799,6 +799,9 @@ export interface Message {
 export interface ThreadSummary {
   threadId: string;
   otherUserId: string;
+  // CF-MESSAGING-USERNAMES (Drew, 2026-07-27): server-enriched.
+  // Absent/null → renderer falls back to a shortened userId.
+  otherUsername?: string | null;
   lastMessage: {
     text: string;
     kind: MessageKind;
@@ -809,12 +812,25 @@ export interface ThreadSummary {
   unreadCount: number;
 }
 
+export interface UserDisplay {
+  userId: string;
+  username: string | null;
+}
+
 export async function fetchThreads(): Promise<{ success: boolean; threads: ThreadSummary[] }> {
   return await request("/api/messages/threads");
 }
 
-export async function fetchThread(otherUserId: string): Promise<{ success: boolean; messages: Message[] }> {
+export async function fetchThread(otherUserId: string): Promise<{
+  success: boolean;
+  messages: Message[];
+  other: UserDisplay;
+}> {
   return await request(`/api/messages/threads/${encodeURIComponent(otherUserId)}`);
+}
+
+export async function fetchUserDisplay(userId: string): Promise<{ success: boolean; user: UserDisplay }> {
+  return await request(`/api/messages/user/${encodeURIComponent(userId)}`);
 }
 
 export async function sendMessage(input: {

@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { updateHolding, uploadHoldingPhoto, type PortfolioHolding } from "@/lib/api";
+import { useEffect, useState } from "react";
+import {
+  searchCards,
+  updateHolding,
+  uploadHoldingPhoto,
+  type PortfolioHolding,
+  type SearchCandidate,
+} from "@/lib/api";
 
 interface Props {
   holding: PortfolioHolding;
@@ -39,6 +45,61 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // CF-EDIT-CATALOG-PICKER (Drew, 2026-07-27). Search /api/search/cards
+  // with a free-text query (or a cert number). Debounced 400ms. Picking
+  // a candidate autofills every identity field in one click — same UX
+  // as the iOS "find card, select card" flow.
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerResults, setPickerResults] = useState<SearchCandidate[]>([]);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [pickerShow, setPickerShow] = useState(false);
+
+  useEffect(() => {
+    const q = pickerQuery.trim();
+    if (!q || q.length < 3) {
+      setPickerResults([]);
+      setPickerError(null);
+      return;
+    }
+    setPickerLoading(true);
+    setPickerError(null);
+    const handle = setTimeout(async () => {
+      try {
+        const res = await searchCards(q);
+        setPickerResults(res.candidates ?? []);
+      } catch (err) {
+        const e = err as { message?: string };
+        setPickerError(e.message ?? "Search failed");
+        setPickerResults([]);
+      } finally {
+        setPickerLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [pickerQuery]);
+
+  function applyCandidate(c: SearchCandidate) {
+    if (c.player) setPlayerName(c.player);
+    if (c.year != null) setCardYear(String(c.year));
+    // Prefer setName; fall back to brand for legacy cards without a
+    // split identity.
+    const productPick = c.setName ?? c.brand ?? "";
+    if (productPick) setProduct(productPick);
+    if (c.parallel) setParallel(c.parallel);
+    if (c.cardNumber) setCardNumber(c.cardNumber);
+    if (c.serialNumber) setSerialNumber(c.serialNumber);
+    if (typeof c.isAuto === "boolean") setIsAuto(c.isAuto);
+    // Cert-source candidates (PSA/BGS/SGC/CGC lookups) carry an
+    // authoritative grade — apply if present.
+    if (c.gradeCompany) setGradeCompany(c.gradeCompany);
+    if (c.gradeValue != null) setGradeValue(String(c.gradeValue));
+    if (c.certNumber) setCertNumber(c.certNumber);
+    setPickerShow(false);
+    setPickerQuery("");
+    setPickerResults([]);
+  }
 
   async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -151,6 +212,104 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
           >
             ×
           </button>
+        </div>
+
+        {/* CF-EDIT-CATALOG-PICKER: search + select flow. Collapsed by
+            default so returning users who just want to fix a typo
+            aren't distracted by it. */}
+        <div className="mb-4">
+          {!pickerShow ? (
+            <button
+              type="button"
+              onClick={() => setPickerShow(true)}
+              className="w-full text-sm text-left px-3 py-2 rounded-lg border border-dashed hover:border-[color:var(--color-accent)] transition-colors flex items-center gap-2"
+              style={{ borderColor: "var(--color-border)", color: "var(--hiq-muted-text)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 2a8 8 0 016.32 12.9l5.39 5.4-1.42 1.4-5.39-5.39A8 8 0 1110 2zm0 2a6 6 0 100 12 6 6 0 000-12z" />
+              </svg>
+              Find card in catalog to autofill identity…
+            </button>
+          ) : (
+            <div className="rounded-lg border p-3" style={{ borderColor: "var(--color-border)", background: "var(--color-bg)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={pickerQuery}
+                  onChange={(e) => setPickerQuery(e.target.value)}
+                  placeholder="Player, set, cert number… (e.g. 'trout 2011 update' or '76556858')"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickerShow(false);
+                    setPickerQuery("");
+                    setPickerResults([]);
+                    setPickerError(null);
+                  }}
+                  className="text-xs px-2 py-1 hover:underline"
+                  style={{ color: "var(--hiq-muted-text)" }}
+                >
+                  Cancel
+                </button>
+              </div>
+              {pickerLoading && (
+                <div className="text-xs px-2 py-3" style={{ color: "var(--hiq-muted-text)" }}>
+                  Searching…
+                </div>
+              )}
+              {pickerError && (
+                <div className="text-xs px-2 py-2" style={{ color: "var(--hiq-danger)" }}>
+                  {pickerError}
+                </div>
+              )}
+              {!pickerLoading && !pickerError && pickerQuery.trim().length >= 3 && pickerResults.length === 0 && (
+                <div className="text-xs px-2 py-3" style={{ color: "var(--hiq-muted-text)" }}>
+                  No matches. Try broader keywords or a cert number.
+                </div>
+              )}
+              {pickerResults.length > 0 && (
+                <div className="max-h-64 overflow-y-auto divide-y divide-[color:var(--color-border)] rounded" style={{ background: "var(--color-bg-card)" }}>
+                  {pickerResults.slice(0, 15).map((c) => (
+                    <button
+                      key={c.candidateId}
+                      type="button"
+                      onClick={() => applyCandidate(c)}
+                      className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors"
+                    >
+                      {c.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.imageUrl} alt="" className="w-8 h-11 object-cover rounded flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-11 rounded flex-shrink-0" style={{ background: "var(--hiq-slate-gray)" }} />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">{c.title}</div>
+                        <div className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: "var(--hiq-muted-text)" }}>
+                          <span>{c.source}</span>
+                          {c.attribution === "authoritative" && (
+                            <span
+                              className="px-1 rounded"
+                              style={{ background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)", color: "var(--hiq-hobby-green)" }}
+                            >
+                              VERIFIED
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {pickerQuery.trim().length > 0 && pickerQuery.trim().length < 3 && (
+                <div className="text-xs px-2 py-2" style={{ color: "var(--hiq-muted-text)" }}>
+                  Type 3+ characters.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

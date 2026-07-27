@@ -98,12 +98,15 @@ export default function InboxPage() {
                 className="hiq-avatar flex-shrink-0"
                 style={{ width: 40, height: 40, fontSize: 16 }}
               >
-                {t.otherUserId.slice(-2).toUpperCase()}
+                {(t.otherUsername ?? t.otherUserId).slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold truncate">
-                    {t.otherUserId}
+                    {/* CF-MESSAGING-USERNAMES: prefer the resolved handle,
+                        fall back to a shortened userId if the lookup returned
+                        null (deleted account, race, etc.). */}
+                    {t.otherUsername ? `@${t.otherUsername}` : `${t.otherUserId.slice(0, 12)}…`}
                   </div>
                   <div
                     className="text-xs flex-shrink-0"

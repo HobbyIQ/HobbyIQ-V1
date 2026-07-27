@@ -22,6 +22,7 @@ import {
   type HoldingRef,
   type MessageKind,
 } from "../services/messaging.service.js";
+import { findUserDisplayById, findUserDisplaysByIds } from "../services/authService.js";
 
 const router = Router();
 
@@ -35,7 +36,16 @@ const sendLimiter = rateLimit({
 
 router.get("/threads", requireSession, async (req: Request, res: Response) => {
   const summaries = await listThreads(req.user!.userId);
-  return res.json({ success: true, threads: summaries });
+  // CF-MESSAGING-USERNAMES: enrich each summary with the other party's
+  // display handle so the inbox renders "@drew" instead of the raw
+  // "user-abc123…" uuid. Batch lookup keeps this at one Cosmos hit per
+  // unique participant regardless of thread count.
+  const displayMap = await findUserDisplaysByIds(summaries.map((s) => s.otherUserId));
+  const enriched = summaries.map((s) => ({
+    ...s,
+    otherUsername: displayMap[s.otherUserId] ?? null,
+  }));
+  return res.json({ success: true, threads: enriched });
 });
 
 router.get("/threads/:otherUserId", requireSession, async (req: Request, res: Response) => {
@@ -43,8 +53,27 @@ router.get("/threads/:otherUserId", requireSession, async (req: Request, res: Re
   if (!otherUserId) {
     return res.status(400).json({ success: false, error: "otherUserId required" });
   }
-  const messages = await listMessagesInThread(req.user!.userId, otherUserId);
-  return res.json({ success: true, messages });
+  const [messages, otherDisplay] = await Promise.all([
+    listMessagesInThread(req.user!.userId, otherUserId),
+    findUserDisplayById(otherUserId),
+  ]);
+  return res.json({
+    success: true,
+    messages,
+    other: otherDisplay ?? { userId: otherUserId, username: null },
+  });
+});
+
+// CF-MESSAGING-USERNAMES: single-user lookup used by any inbox/thread
+// surface that needs a display handle for a userId it doesn't already
+// have enriched. Session-gated because "who is this userId" IS
+// enumerable to unauthed callers today (via /u/<username>) but we
+// don't want to hand out a bulk-crawl helper without auth.
+router.get("/user/:userId", requireSession, async (req: Request, res: Response) => {
+  const target = String(req.params.userId ?? "").trim();
+  if (!target) return res.status(400).json({ success: false, error: "userId required" });
+  const display = await findUserDisplayById(target);
+  return res.json({ success: true, user: display ?? { userId: target, username: null } });
 });
 
 router.post("/", requireSession, sendLimiter, async (req: Request, res: Response) => {

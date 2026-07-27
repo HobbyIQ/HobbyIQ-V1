@@ -464,6 +464,38 @@ export async function findUserRecordByUsername(username: string): Promise<AuthUs
   return findUserByIdentifier(username);
 }
 
+/** CF-MESSAGING-USERNAMES (Drew, 2026-07-27). Resolve userId → display
+ *  handle for message inbox / thread rendering. Returns just {userId,
+ *  username} so callers can render a human-readable name without ever
+ *  seeing password hashes, email addresses, or any other row content. */
+export async function findUserDisplayById(
+  userId: string,
+): Promise<{ userId: string; username: string | null } | null> {
+  const raw = (userId ?? "").trim();
+  if (!raw) return null;
+  const rec = await readUser(raw);
+  if (!rec) return null;
+  return { userId: rec.userId, username: rec.aliases?.[0] ?? null };
+}
+
+/** CF-MESSAGING-USERNAMES: batch variant. Deduplicates ids and returns
+ *  a map of userId → username (nullable when unknown). One Cosmos read
+ *  per id today; migrate to a single IN-query once the inbox routinely
+ *  needs > 10 lookups. */
+export async function findUserDisplaysByIds(
+  userIds: ReadonlyArray<string>,
+): Promise<Record<string, string | null>> {
+  const unique = Array.from(new Set(userIds.map((u) => (u ?? "").trim()).filter(Boolean)));
+  const out: Record<string, string | null> = {};
+  await Promise.all(
+    unique.map(async (id) => {
+      const rec = await readUser(id).catch(() => undefined);
+      out[id] = rec?.aliases?.[0] ?? null;
+    }),
+  );
+  return out;
+}
+
 /** CF-PUBLIC-SELLER-STOREFRONT: toggle the opt-in flag from an authed
  *  session. Idempotent — writing the same value twice is a no-op after
  *  the first write. */
