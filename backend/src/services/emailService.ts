@@ -99,6 +99,41 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
 // ─── Verification-email templates ────────────────────────────────────────────
 
+// CF-EMAIL-VERIFICATION-WELCOME (Drew, 2026-07-27). Welcome template
+// fired automatically on register. Same one-click verify link as the
+// bare verificationEmailContent, wrapped in a "welcome to HobbyIQ"
+// preamble so users know why they're getting mail from us.
+export function welcomeEmailContent(opts: {
+  verifyUrl: string;
+  toEmail: string;
+  displayName?: string | null;
+}): { subject: string; plainText: string; html: string } {
+  const who = opts.displayName?.trim() || opts.toEmail;
+  const subject = "Welcome to HobbyIQ — verify your email";
+  const plainText =
+    `Hey ${who},\n\n` +
+    `Welcome to HobbyIQ. Your account is ready to go.\n\n` +
+    `One quick step: confirm your email so we can send you alerts, ` +
+    `subscription receipts, and — later — password-reset links:\n` +
+    `${opts.verifyUrl}\n\n` +
+    `The link is good for 24 hours. If you didn't create this account, ` +
+    `you can ignore this email.\n\n` +
+    `— HobbyIQ`;
+  const html =
+    `<!doctype html><html><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif;color:#111;line-height:1.5;padding:24px;max-width:560px;margin:auto">` +
+    `<h2 style="margin:0 0 12px 0">Welcome to HobbyIQ</h2>` +
+    `<p>Hey ${who},</p>` +
+    `<p>Your account is ready to go — thanks for joining.</p>` +
+    `<p>One quick step: confirm your email so we can send alerts, receipts, ` +
+    `and password-reset links.</p>` +
+    `<p style="margin:24px 0"><a href="${opts.verifyUrl}" style="background:#1EA75A;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Verify email</a></p>` +
+    `<p style="color:#555;font-size:13px">Or paste this link into your browser:<br><span style="word-break:break-all">${opts.verifyUrl}</span></p>` +
+    `<p style="color:#555;font-size:13px">The link is good for 24 hours. If you didn't create this account, you can ignore this email.</p>` +
+    `<p style="color:#888;font-size:12px;margin-top:32px">— HobbyIQ</p>` +
+    `</body></html>`;
+  return { subject, plainText, html };
+}
+
 export function verificationEmailContent(opts: {
   verifyUrl: string;
   toEmail: string;

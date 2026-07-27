@@ -9,8 +9,9 @@ import {
   isUsernameAvailable,
   issueEmailVerification,
   consumeEmailVerification,
+  changePasswordForSession,
 } from "../services/authService.js";
-import { sendEmail, verificationEmailContent } from "../services/emailService.js";
+import { sendEmail, verificationEmailContent, welcomeEmailContent } from "../services/emailService.js";
 // CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
 // register stay PRE-auth.
 import { requireSession } from "../middleware/requireSession.js";
@@ -80,6 +81,39 @@ router.post("/register", registerLimiter, async (req: Request, res: Response) =>
     else if (/Apple verification/i.test(msg)) code = 401;
     return res.status(code).json(result);
   }
+
+  // CF-EMAIL-VERIFICATION-WELCOME (Drew, 2026-07-27). Fire-and-forget
+  // welcome email with an embedded verification link. Non-blocking: we
+  // return the register response immediately; the mail send races on its
+  // own promise. Any failure is server-logged only — a mail-provider
+  // outage MUST NOT block a new signup. If the user misses the welcome,
+  // they can hit Send verification email from Settings.
+  if (result.user?.userId && result.user.email) {
+    void (async () => {
+      try {
+        const issued = await issueEmailVerification(result.user!.userId);
+        if (!issued) return;
+        const webOrigin = (process.env.WEB_ORIGIN ?? "").replace(/\/+$/, "");
+        const verifyUrl = webOrigin
+          ? `${webOrigin}/verify-email?token=${encodeURIComponent(issued.token)}`
+          : `/api/auth/verify-email?token=${encodeURIComponent(issued.token)}`;
+        const content = welcomeEmailContent({
+          verifyUrl,
+          toEmail: result.user!.email,
+          displayName: result.user!.username ?? null,
+        });
+        await sendEmail({
+          to: result.user!.email,
+          subject: content.subject,
+          plainText: content.plainText,
+          html: content.html,
+        });
+      } catch (err) {
+        console.error("[auth] welcome email failed:", err instanceof Error ? err.message : String(err));
+      }
+    })();
+  }
+
   return res.json(result);
 });
 
@@ -214,6 +248,39 @@ router.post(
       devLogged: Boolean(result.devLogged),
       expiresAt: issued.expiresAt,
     });
+  },
+);
+
+// CF-CHANGE-PASSWORD (Drew, 2026-07-27). Session-gated. Verifies the
+// current password before writing the new scrypt hash. Rate-limited
+// separately from signin — a compromised session shouldn't turn this
+// endpoint into a password-brute-force lever.
+const changePasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many attempts, try again later" },
+});
+
+router.post(
+  "/change-password",
+  requireSession,
+  changePasswordLimiter,
+  async (req: Request, res: Response) => {
+    const sessionId = String(req.headers["x-session-id"] ?? "");
+    const currentPassword = String(req.body?.currentPassword ?? "");
+    const newPassword = String(req.body?.newPassword ?? "");
+    const result = await changePasswordForSession(sessionId, currentPassword, newPassword);
+    if (!result.success) {
+      const msg = result.error ?? "";
+      let code = 400;
+      if (/Invalid session/i.test(msg)) code = 401;
+      else if (/Current password/i.test(msg)) code = 401;
+      else if (/Apple Sign-In/i.test(msg)) code = 400;
+      return res.status(code).json(result);
+    }
+    return res.json({ success: true });
   },
 );
 

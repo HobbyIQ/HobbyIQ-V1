@@ -1073,6 +1073,55 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   return { success: true, user: toAuthUser(record), sessionId };
 }
 
+// ─── CF-CHANGE-PASSWORD (Drew, 2026-07-27) ──────────────────────────────────
+//
+// Change the password on an already-signed-in email/password account.
+// Apple-OAuth accounts (passwordAlgo === "apple-oauth") CANNOT change
+// their password here — the identity provider owns it — so we surface
+// a "sign-in method doesn't support password change" error rather than
+// silently rewriting the hash. All other paths verify the current
+// password before writing the new scrypt hash.
+//
+// Reasoning for min-length checks matching registerUser:
+// - Keep symmetry with registration (8 chars, same regex not enforced —
+//   just a length floor). Future PR can add complexity rules once we
+//   have HIBP / breach-check infra.
+// - We don't check "new != old" because a user re-typing their same
+//   password is not a security issue, just a UX oddity; the client
+//   surfaces that if it matters.
+
+export async function changePasswordForSession(
+  sessionId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<AuthResult> {
+  const session = readSessionToken(sessionId);
+  if (!session) {
+    return { success: false, error: "Invalid session" };
+  }
+  const user = await readUser(session.userId);
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+  if (user.passwordAlgo === "apple-oauth") {
+    return {
+      success: false,
+      error: "Password change isn't available for Apple Sign-In accounts.",
+    };
+  }
+  const currentOk = await verifyPassword(currentPassword, user);
+  if (!currentOk) {
+    return { success: false, error: "Current password is incorrect" };
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    return { success: false, error: "New password must be at least 8 characters" };
+  }
+  user.passwordHash = await hashPasswordScrypt(newPassword);
+  user.passwordAlgo = "scrypt";
+  await writeUser(user);
+  return { success: true, user: toAuthUser(user), sessionId };
+}
+
 // ─── CF-EMAIL-VERIFICATION (Drew, 2026-07-27) ────────────────────────────────
 //
 // Two-step flow:

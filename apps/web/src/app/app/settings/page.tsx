@@ -13,6 +13,7 @@ import {
   setPublicShareEnabled,
   createStripePortalSession,
   sendEmailVerification,
+  changePassword,
   type AuthUser,
   type EntitlementsMeResponse,
 } from "@/lib/api";
@@ -141,21 +142,8 @@ export default function SettingsPage() {
       )}
 
       {/* Password */}
-      <section className="hiq-card p-6">
-        <h2 className="font-bold text-lg mb-4">Password</h2>
-        <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">
-          Password change via the web isn&apos;t wired up yet — coming in the next sprint.
-          Contact{" "}
-          <a
-            href="mailto:drew@justtheboysandcards.com"
-            className="hover:underline"
-            style={{ color: "var(--color-accent)" }}
-          >
-            drew@justtheboysandcards.com
-          </a>{" "}
-          for a manual reset in the meantime.
-        </p>
-      </section>
+      <PasswordSection />
+
 
       {/* Danger zone */}
       <DangerZone />
@@ -575,6 +563,155 @@ function PublicShareSection({
         </div>
       )}
     </section>
+  );
+}
+
+// CF-CHANGE-PASSWORD (Drew, 2026-07-27). Three-field form: current, new,
+// confirm. Server verifies the current password; front end just checks
+// new === confirm before submit to save a round-trip on the trivial typo.
+// Apple-OAuth accounts see a "not available for Apple Sign-In" message
+// surfaced from the backend if they somehow submit — this component
+// doesn't hide itself for them since we don't know at render time.
+function PasswordSection() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const mismatch = confirm.length > 0 && next !== confirm;
+  const canSubmit =
+    !saving && current.length >= 1 && next.length >= 8 && next === confirm;
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const res = await changePassword(current, next);
+      if (res.success) {
+        setSaved(true);
+        setCurrent("");
+        setNext("");
+        setConfirm("");
+      } else {
+        setError(res.error ?? "Password change failed");
+      }
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      if (e.status === 401) setError(e.message ?? "Current password is incorrect");
+      else setError(e.message ?? "Password change failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="hiq-card p-6">
+      <h2 className="font-bold text-lg mb-4">Password</h2>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <PasswordInput
+          label="Current password"
+          value={current}
+          onChange={(v) => {
+            setCurrent(v);
+            setSaved(false);
+            setError(null);
+          }}
+          autoComplete="current-password"
+        />
+        <PasswordInput
+          label="New password"
+          value={next}
+          onChange={(v) => {
+            setNext(v);
+            setSaved(false);
+            setError(null);
+          }}
+          autoComplete="new-password"
+          hint={next.length > 0 && next.length < 8 ? "At least 8 characters" : undefined}
+        />
+        <PasswordInput
+          label="Confirm new password"
+          value={confirm}
+          onChange={(v) => {
+            setConfirm(v);
+            setSaved(false);
+            setError(null);
+          }}
+          autoComplete="new-password"
+          errorText={mismatch ? "Doesn't match new password" : undefined}
+        />
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="hiq-btn-primary text-sm px-4 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Change password"}
+          </button>
+        </div>
+      </form>
+      {error && (
+        <div className="mt-3 text-sm" style={{ color: "var(--hiq-danger)" }}>
+          {error}
+        </div>
+      )}
+      {saved && (
+        <div className="mt-3 text-sm" style={{ color: "var(--hiq-hobby-green)" }}>
+          Password updated.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PasswordInput({
+  label,
+  value,
+  onChange,
+  autoComplete,
+  hint,
+  errorText,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete: string;
+  hint?: string;
+  errorText?: string;
+}) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">
+        {label}
+      </div>
+      <input
+        type="password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete={autoComplete}
+        className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)]"
+        style={{
+          background: "var(--color-bg)",
+          borderColor: errorText ? "var(--hiq-danger)" : "var(--color-border)",
+          color: "white",
+        }}
+      />
+      {errorText && (
+        <div className="mt-1 text-xs" style={{ color: "var(--hiq-danger)" }}>
+          {errorText}
+        </div>
+      )}
+      {!errorText && hint && (
+        <div className="mt-1 text-xs" style={{ color: "var(--hiq-muted-text)" }}>
+          {hint}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -533,6 +533,20 @@ export async function verifyEmailToken(token: string): Promise<{
   );
 }
 
+// CF-CHANGE-PASSWORD (Drew, 2026-07-27). Session-gated. Server verifies
+// currentPassword before writing the new hash. Never Apple-OAuth-safe:
+// backend surfaces "sign-in method doesn't support password change" for
+// those accounts and this helper propagates it.
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; error?: string }> {
+  return await request("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function deleteAccount(): Promise<{ success: boolean }> {
   return await request<{ success: boolean }>("/api/account/", {
     method: "DELETE",
