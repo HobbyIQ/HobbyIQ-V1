@@ -52,8 +52,18 @@ function asNumber(value: unknown): number | null {
   return null;
 }
 
+// CF-PSA-AUTH-RAW-TOKEN (Drew, 2026-07-27). PSA's publicapi rejects the
+// "Bearer " prefix now — sending `Authorization: Bearer <token>` returns
+// 403 "Access to this API is limited to approved customers", while
+// sending the RAW token (no prefix) auths correctly (429 quota-exceeded
+// is the "auth worked but quota" signal on the same path). Reproduced
+// live 2026-07-27 against cert 76556858.
+//
+// Historically their docs listed the Bearer format. This normalizer
+// strips it defensively — token can be stored either way in App Service
+// settings without breaking, and the wire format is always the raw token.
 function normalizeBearerToken(rawToken: string): string {
-  return rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
+  return rawToken.replace(/^Bearer\s+/i, "");
 }
 
 function readPsaBearerToken(): string {
