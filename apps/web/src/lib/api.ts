@@ -513,6 +513,92 @@ export async function fetchValueHistory(): Promise<ValueHistoryResponse> {
   return await request<ValueHistoryResponse>("/api/portfolio/value-history");
 }
 
+// ─── Insights (weekly brief + sell radar + notable sales) ─────────
+
+export interface WeeklyBriefMove {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  movePct: number;
+  latestValue: number;
+}
+
+export interface WeeklyBriefResponse {
+  period: string;
+  generatedAt: string;
+  headline: string;
+  summary: {
+    holdings: number;
+    alerts: number;
+    criticalAlerts: number;
+    feedbackEvents?: number;
+    recommendationFollowRatePct?: number;
+  };
+  topWinners?: WeeklyBriefMove[];
+  topLosers?: WeeklyBriefMove[];
+  recommendations?: string[];
+}
+
+export async function fetchWeeklyBrief(): Promise<WeeklyBriefResponse> {
+  return await request<WeeklyBriefResponse>("/api/portfolio/insights/weekly-brief");
+}
+
+export interface SellRadarCandidate {
+  holdingId: string;
+  player: string;
+  cardTitle: string;
+  graderTier: string;
+  currentMarketValue: number | null;
+  purchasePrice: number | null;
+  unrealizedGainUsd: number | null;
+  velocityPerWeek: number;
+  velocityBaseline: number;
+  velocityMultiple: number;
+  playerMomentum: number;
+  playerDirection: "up" | "flat" | "down";
+  reason: string;
+  urgencyScore: number;
+}
+
+export interface SellRadarResponse {
+  count: number;
+  candidates: SellRadarCandidate[];
+}
+
+export async function fetchSellNowRadar(): Promise<SellRadarResponse> {
+  return await request<SellRadarResponse>("/api/portfolio/sell-now-radar");
+}
+
+export interface NotableSale {
+  cardId: string;
+  player: string;
+  year: number;
+  cardSet: string;
+  variant: string;
+  number: string;
+  grade: string;
+  grader: string;
+  price: number;
+  saleDate: string;
+  imageUrl: string;
+  listingUrl: string;
+  sourceLabel: "eBay" | "Goldin" | "Heritage" | "Fanatics Collect" | "Private" | null;
+}
+
+export interface NotableSalesResponse {
+  count: number;
+  sales: NotableSale[];
+}
+
+export async function fetchNotableSales(opts: { minPrice?: number; days?: number; limit?: number } = {}): Promise<NotableSalesResponse> {
+  const params = new URLSearchParams();
+  if (opts.minPrice != null) params.set("minPrice", String(opts.minPrice));
+  if (opts.days != null) params.set("days", String(opts.days));
+  if (opts.limit != null) params.set("limit", String(opts.limit));
+  const q = params.toString();
+  return await request<NotableSalesResponse>(`/api/portfolio/notable-sales${q ? `?${q}` : ""}`);
+}
+
 // ─── DailyIQ ───────────────────────────────────────────────────────
 
 export interface DailyPlayer {
