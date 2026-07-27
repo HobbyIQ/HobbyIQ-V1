@@ -6,6 +6,7 @@ import {
   registerUser,
   setUsernameForSession,
   setPublicShareEnabled,
+  isUsernameAvailable,
 } from "../services/authService.js";
 // CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
 // register stay PRE-auth.
@@ -105,6 +106,28 @@ router.post("/username", requireSession, usernameLimiter, async (req: Request, r
     else if (/already/i.test(msg)) code = 409;
     return res.status(code).json(result);
   }
+  return res.json(result);
+});
+
+// CF-RESERVED-USERNAMES (Drew, 2026-07-27). Cheap availability probe
+// used by the client BEFORE submit so the change-username / signup
+// flows can show live green/red feedback instead of failing after the
+// user tabs away.
+//
+// Public (no auth needed to check availability at signup). When called
+// from an authed session, the caller's own currently-held handle is
+// treated as available so the check doesn't say "taken" when you're
+// looking at your own name.
+router.get("/username-available", async (req: Request, res: Response) => {
+  const username = String(req.query.username ?? "").trim();
+  if (!username) {
+    return res.status(400).json({ available: false, reason: "Missing 'username' query" });
+  }
+  // If the caller is authed (session middleware may have set req.user
+  // depending on mount order), let their own handle green-light.
+  const requesterEmail = (req.user as { email?: string } | undefined)?.email ?? null;
+  const requesterUserId = req.user?.userId ?? null;
+  const result = await isUsernameAvailable(username, { requesterEmail, requesterUserId });
   return res.json(result);
 });
 

@@ -873,6 +873,12 @@ export async function setUsernameForSession(
   if (user.usernameLower === username.toLowerCase()) {
     return { success: true, user: toAuthUser(user), sessionId };
   }
+  // CF-RESERVED-USERNAMES: allow-list check runs BEFORE the uniqueness
+  // scan so an owner-reserved handle (empty allow-list) is rejected the
+  // same way whether or not somebody has already tried to grab it.
+  if (isUsernameReserved(username, user.emailLower)) {
+    return { success: false, error: "Username already taken" };
+  }
   const conflict = await findUserByIdentifier(username);
   if (conflict && conflict.userId !== user.userId) {
     return { success: false, error: "Username already taken" };
@@ -894,6 +900,67 @@ export interface RegisterInput {
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,30}$/;
+
+// CF-RESERVED-USERNAMES (Drew, 2026-07-27). Handles that can only be
+// claimed by pre-approved accounts. Everyone else who tries — at signup
+// OR at change-username — sees "Username already taken." The reservation
+// is enforced case-insensitively (usernames are stored lowercased).
+//
+// Key: lowercased handle. Value: array of lowercased emails the handle
+// is claimable by. Empty array = owner-only (nobody can claim until Drew
+// updates this table with a specific email).
+//
+// Drew is currently the only "owner" — future me can turn this into a
+// runtime-configurable list if the list grows, but hardcoded-here-in-a-PR
+// is the right latency/security tradeoff for a small allow-list.
+const RESERVED_USERNAMES: Readonly<Record<string, ReadonlyArray<string>>> = {
+  drew: ["dvabulas@outlook.com"],
+  luke: ["lsinnard1002@gmail.com"],
+  jordan: ["jwduggan2@gmail.com"],
+  lutz: ["zacklutzfranco@gmail.com"],
+  // Handles reserved for the owner to distribute later. Anyone else
+  // trying to claim them gets a "taken" error today.
+  oliver: [],
+  beau: [],
+  justtheboysandcards: [],
+  hobbyiq: [],
+};
+
+/** CF-RESERVED-USERNAMES: returns true when this (handle, email) pair
+ *  is blocked. Case-insensitive on both handle + email. Owner-only
+ *  handles (empty allow-list) return true for every email. */
+function isUsernameReserved(rawUsername: string, requesterEmail: string | null | undefined): boolean {
+  const handle = String(rawUsername ?? "").trim().toLowerCase();
+  if (!handle) return false;
+  const allowlist = RESERVED_USERNAMES[handle];
+  if (!allowlist) return false; // not reserved at all
+  const email = String(requesterEmail ?? "").trim().toLowerCase();
+  if (!email) return true;      // must be logged in with an allow-listed email
+  return !allowlist.includes(email);
+}
+
+/** CF-RESERVED-USERNAMES: cheap availability probe used by the client
+ *  before submit. Returns { available, reason? }. Availability check
+ *  runs the same three gates as setUsernameForSession: regex, reserved
+ *  list, uniqueness. Passes { requesterEmail } when the caller is
+ *  logged in so we can green-light their own currently-held handle. */
+export async function isUsernameAvailable(
+  rawUsername: string,
+  opts: { requesterEmail?: string | null; requesterUserId?: string | null } = {},
+): Promise<{ available: boolean; reason?: string }> {
+  const trimmed = String(rawUsername ?? "").trim();
+  if (!USERNAME_RE.test(trimmed)) {
+    return { available: false, reason: "Username must be 3-30 chars (letters, numbers, . _ -)" };
+  }
+  if (isUsernameReserved(trimmed, opts.requesterEmail ?? null)) {
+    return { available: false, reason: "Username already taken" };
+  }
+  const conflict = await findUserByIdentifier(trimmed);
+  if (conflict && conflict.userId !== (opts.requesterUserId ?? null)) {
+    return { available: false, reason: "Username already taken" };
+  }
+  return { available: true };
+}
 
 export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   const username = (input.username ?? "").trim();
@@ -944,6 +1011,12 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     if (existingEmail) {
       return { success: false, error: "Email already registered" };
     }
+  }
+  // CF-RESERVED-USERNAMES: block reserved handles at registration time
+  // so a bad actor can't grab one during a race. Owner-only handles
+  // return "taken" for every email.
+  if (isUsernameReserved(username, email || null)) {
+    return { success: false, error: "Username already taken" };
   }
   const existingUsername = await findUserByIdentifier(username);
   if (existingUsername) {

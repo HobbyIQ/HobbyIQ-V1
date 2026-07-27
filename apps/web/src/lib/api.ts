@@ -489,6 +489,18 @@ export async function setUsername(username: string): Promise<{ success: boolean;
   });
 }
 
+// CF-RESERVED-USERNAMES: debounced availability probe used by the
+// settings + signup flows to render live green/red feedback before the
+// user submits. Runs the same validation gates as the change endpoint
+// (regex → reserved list → uniqueness) so a green response is a
+// commit-safe green.
+export async function checkUsernameAvailable(username: string): Promise<{ available: boolean; reason?: string }> {
+  return await request<{ available: boolean; reason?: string }>(
+    `/api/auth/username-available?username=${encodeURIComponent(username)}`,
+    { auth: false },
+  );
+}
+
 export async function deleteAccount(): Promise<{ success: boolean }> {
   return await request<{ success: boolean }>("/api/account/", {
     method: "DELETE",

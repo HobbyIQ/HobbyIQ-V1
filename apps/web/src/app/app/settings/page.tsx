@@ -7,6 +7,7 @@ import {
   fetchSessionUser,
   fetchEntitlements,
   setUsername,
+  checkUsernameAvailable,
   deleteAccount,
   signOut,
   setPublicShareEnabled,
@@ -168,11 +169,56 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+type CheckStatus =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "available" }
+  | { kind: "taken"; reason: string }
+  | { kind: "invalid"; reason: string };
+
 function UsernameSection({ currentUsername }: { currentUsername: string | null }) {
   const [value, setValue] = useState(currentUsername ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [check, setCheck] = useState<CheckStatus>({ kind: "idle" });
+
+  const trimmed = value.trim();
+  const isSelf = trimmed === (currentUsername ?? "").trim();
+
+  // CF-RESERVED-USERNAMES: debounced availability probe. Only fires
+  // when the input has diverged from the currently-held name so we're
+  // not spamming the endpoint on every keystroke or checking the user's
+  // own handle. Reserved-name gate is enforced server-side; this just
+  // surfaces the verdict.
+  useEffect(() => {
+    if (!trimmed || isSelf) {
+      setCheck({ kind: "idle" });
+      return;
+    }
+    setCheck({ kind: "checking" });
+    const handle = setTimeout(async () => {
+      try {
+        const res = await checkUsernameAvailable(trimmed);
+        if (res.available) {
+          setCheck({ kind: "available" });
+        } else {
+          // Distinguish format failures from taken so the pill copy is
+          // accurate.
+          if (res.reason && /3-30|letters|numbers/i.test(res.reason)) {
+            setCheck({ kind: "invalid", reason: res.reason });
+          } else {
+            setCheck({ kind: "taken", reason: res.reason ?? "Username already taken" });
+          }
+        }
+      } catch {
+        // Network failure — leave the pill idle. Submit will still hit
+        // the change endpoint and show the server's verdict.
+        setCheck({ kind: "idle" });
+      }
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [trimmed, isSelf]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -198,34 +244,58 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
     }
   }
 
+  const canSubmit =
+    !saving &&
+    trimmed.length > 0 &&
+    !isSelf &&
+    (check.kind === "available" || check.kind === "idle");
+
   return (
     <section className="hiq-card p-6">
       <h2 className="font-bold text-lg mb-4">Username</h2>
       <form onSubmit={onSubmit} className="flex gap-3">
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setSaved(false);
-            setError(null);
-          }}
-          placeholder="pick a handle"
-          className="flex-1 px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
-          style={{
-            background: "var(--color-bg)",
-            borderColor: "var(--color-border)",
-            color: "white",
-          }}
-        />
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setSaved(false);
+              setError(null);
+            }}
+            placeholder="pick a handle"
+            className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
+            style={{
+              background: "var(--color-bg)",
+              borderColor:
+                check.kind === "available"
+                  ? "var(--hiq-hobby-green)"
+                  : check.kind === "taken" || check.kind === "invalid"
+                  ? "var(--hiq-danger)"
+                  : "var(--color-border)",
+              color: "white",
+            }}
+          />
+          <CheckPill status={check} />
+        </div>
         <button
           type="submit"
-          disabled={saving || value.trim() === currentUsername || !value.trim()}
+          disabled={!canSubmit}
           className="hiq-btn-primary disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
         </button>
       </form>
+      {(check.kind === "taken" || check.kind === "invalid") && !error && !saved && (
+        <div className="mt-3 text-sm" style={{ color: "var(--hiq-danger)" }}>
+          {check.reason}
+        </div>
+      )}
+      {check.kind === "available" && !error && !saved && (
+        <div className="mt-3 text-sm" style={{ color: "var(--hiq-hobby-green)" }}>
+          Available — click Save to claim it.
+        </div>
+      )}
       {error && (
         <div className="mt-3 text-sm" style={{ color: "var(--color-danger)" }}>
           {error}
@@ -237,6 +307,35 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
         </div>
       )}
     </section>
+  );
+}
+
+function CheckPill({ status }: { status: CheckStatus }) {
+  if (status.kind === "idle") return null;
+  const color =
+    status.kind === "available"
+      ? "var(--hiq-hobby-green)"
+      : status.kind === "checking"
+      ? "var(--hiq-muted-text)"
+      : "var(--hiq-danger)";
+  const label =
+    status.kind === "available"
+      ? "Available"
+      : status.kind === "checking"
+      ? "Checking…"
+      : status.kind === "taken"
+      ? "Taken"
+      : "Invalid";
+  return (
+    <span
+      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide"
+      style={{
+        color,
+        background: `color-mix(in oklab, ${color} 12%, transparent)`,
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
