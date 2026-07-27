@@ -454,11 +454,30 @@ export interface AddHoldingInput {
   cardsightGradeId?: string;
 }
 
-export async function addHolding(h: AddHoldingInput): Promise<{ success: boolean; holding?: PortfolioHolding; error?: string }> {
-  return await request("/api/portfolio/holdings", {
-    method: "POST",
-    body: JSON.stringify(h),
-  });
+export interface AddHoldingResult {
+  success: boolean;
+  id?: string;
+  message?: string;
+  error?: string;
+}
+
+// Backend returns { message: "Holding saved", id: "<uuid>" } on success,
+// NOT { success: true }. request() throws on non-2xx HTTP, so any return
+// from this function is a success by construction.
+export async function addHolding(h: AddHoldingInput): Promise<AddHoldingResult> {
+  const raw = await request<{ message?: string; id?: string; error?: string }>(
+    "/api/portfolio/holdings",
+    { method: "POST", body: JSON.stringify(h) },
+  );
+  // Defensively check for both shapes: modern { message, id } and any
+  // legacy { success } if the route ever grew that field.
+  const looksSaved = typeof raw.id === "string" || raw.message === "Holding saved";
+  return {
+    success: looksSaved,
+    id: raw.id,
+    message: raw.message,
+    error: looksSaved ? undefined : raw.error,
+  };
 }
 
 export async function fetchHolding(id: string): Promise<PortfolioHolding> {
@@ -654,20 +673,28 @@ export async function fetchWatchlist(): Promise<WatchlistResponse> {
   return await request<WatchlistResponse>("/api/dailyiq/watchlist");
 }
 
+// Backend returns { message: "Added to watchlist", watchlistItemId, ... }
+// on success, NOT { success: true }. request() throws on non-2xx.
 export async function addWatchlist(
   args: { playerId?: string; playerName: string; league?: "MLB" | "MiLB" | "All" },
-): Promise<{ success: boolean }> {
-  // Backend requires playerId OR playerName; when only playerName is
-  // supplied, resolveAddablePlayer() maps it to a persistable playerId.
-  // Some non-MLB players won't resolve — 404 handled by the caller.
-  return await request("/api/dailyiq/watchlist", {
-    method: "POST",
-    body: JSON.stringify({
-      playerId: args.playerId ?? "",
-      playerName: args.playerName,
-      ...(args.league ? { league: args.league } : {}),
-    }),
-  });
+): Promise<{ success: boolean; watchlistItemId?: string; message?: string }> {
+  const raw = await request<{ message?: string; watchlistItemId?: string; error?: string }>(
+    "/api/dailyiq/watchlist",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        playerId: args.playerId ?? "",
+        playerName: args.playerName,
+        ...(args.league ? { league: args.league } : {}),
+      }),
+    },
+  );
+  const looksSaved = typeof raw.watchlistItemId === "string" || raw.message === "Added to watchlist";
+  return {
+    success: looksSaved,
+    watchlistItemId: raw.watchlistItemId,
+    message: raw.message,
+  };
 }
 
 // ─── Public marketing stats (unauthenticated) ─────────────────────
