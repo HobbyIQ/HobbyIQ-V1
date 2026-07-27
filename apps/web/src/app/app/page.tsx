@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { PortfolioTodayCard } from "@/components/PortfolioTodayCard";
 import { MarketTodayCard } from "@/components/MarketTodayCard";
+import { DailyIQCard } from "@/components/DailyIQCard";
 
 export default function TodayPage() {
   return (
@@ -15,41 +15,8 @@ export default function TodayPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PortfolioTodayCard />
         <MarketTodayCard />
-        <PlaceholderCard
-          title="Search"
-          body="Look up any card. Empirical FMV across the full grade ladder."
-          href="/app/search"
-          cta="Open search →"
-        />
+        <DailyIQCard />
       </div>
-    </div>
-  );
-}
-
-function PlaceholderCard({
-  title,
-  body,
-  href,
-  cta,
-}: {
-  title: string;
-  body: string;
-  href: string;
-  cta: string;
-}) {
-  return (
-    <div className="hiq-card p-6 flex flex-col">
-      <h2 className="font-bold text-lg mb-2">{title}</h2>
-      <p className="text-sm text-[color:var(--color-muted)] flex-1 leading-relaxed">
-        {body}
-      </p>
-      <Link
-        href={href}
-        className="mt-4 text-sm font-medium hover:underline"
-        style={{ color: "var(--color-accent)" }}
-      >
-        {cta}
-      </Link>
     </div>
   );
 }
