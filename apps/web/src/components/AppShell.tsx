@@ -57,24 +57,26 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex-1 w-full flex">
-      {/* Sidebar — desktop */}
+      {/* Sidebar — desktop, frozen while main content scrolls */}
       <aside
-        className="hidden md:flex md:w-60 lg:w-64 flex-col border-r border-[color:var(--color-border)]"
+        className="hidden md:flex md:w-60 lg:w-64 flex-col border-r border-[color:var(--color-border)] sticky top-0 h-screen self-start flex-shrink-0"
         style={{ background: "var(--color-bg)" }}
       >
-        <div className="p-6 border-b border-[color:var(--color-border)]">
+        <div className="p-6 border-b border-[color:var(--color-border)] flex-shrink-0">
           <Link href="/app" className="font-bold text-xl block">
             <span className="hiq-hero-stroke text-transparent bg-clip-text">
               HobbyIQ
             </span>
           </Link>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
           {APP_NAV.map((item) => (
             <NavLink key={item.href} item={item} isActive={active?.href === item.href} />
           ))}
         </nav>
-        <AccountChip user={user} />
+        <div className="flex-shrink-0">
+          <AccountChip user={user} />
+        </div>
       </aside>
 
       {/* Top bar — mobile */}
