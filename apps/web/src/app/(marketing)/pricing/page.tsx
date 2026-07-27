@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PricingCheckoutButton } from "@/components/PricingCheckoutButton";
 
 export const metadata: Metadata = {
   title: "Pricing — HobbyIQ",
@@ -45,20 +46,6 @@ export default function PricingPage() {
         </p>
       </section>
 
-      {/* Web-checkout notice */}
-      <section className="max-w-4xl mx-auto px-6 pb-6">
-        <div
-          className="rounded-xl p-4 text-sm text-center"
-          style={{
-            background: "color-mix(in oklab, var(--color-accent) 10%, transparent)",
-            color: "var(--color-accent)",
-          }}
-        >
-          Web-side subscription checkout is launching soon. In the meantime, upgrade via the iOS app —
-          your subscription flows through to web automatically.
-        </div>
-      </section>
-
       {/* Plan cards */}
       <section className="max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6">
         <PlanCard
@@ -66,16 +53,14 @@ export default function PricingPage() {
           price="$9.99"
           period="/mo"
           tagline="Casual collectors tracking a personal portfolio."
-          cta="Coming soon"
-          disabled
+          plan="collector"
         />
         <PlanCard
           name="Investor"
           price="$19.99"
           period="/mo"
           tagline="Active traders — timed sell/hold/list signals."
-          cta="Coming soon"
-          disabled
+          plan="investor"
           featured
         />
         <PlanCard
@@ -83,8 +68,7 @@ export default function PricingPage() {
           price="$29.99"
           period="/mo"
           tagline="Pros with bulk inventory + eBay workflows."
-          cta="Coming soon"
-          disabled
+          plan="pro_seller"
         />
       </section>
 
@@ -162,19 +146,15 @@ function PlanCard({
   price,
   period,
   tagline,
-  cta,
-  ctaHref,
+  plan,
   featured,
-  disabled,
 }: {
   name: string;
   price: string;
   period: string;
   tagline: string;
-  cta: string;
-  ctaHref?: string;
+  plan: "collector" | "investor" | "pro_seller";
   featured?: boolean;
-  disabled?: boolean;
 }) {
   return (
     <div
@@ -195,24 +175,11 @@ function PlanCard({
         <span className="text-4xl font-bold">{price}</span>
         <span className="text-[color:var(--color-muted)]">{period}</span>
       </div>
-      {disabled ? (
-        <button
-          type="button"
-          disabled
-          className={`text-center ${featured ? "hiq-btn-primary" : "hiq-btn-secondary"}`}
-          style={{ opacity: 0.55, cursor: "not-allowed" }}
-          title="Web-side checkout launches soon. Upgrade via iOS in the meantime."
-        >
-          {cta}
-        </button>
-      ) : (
-        <Link
-          href={ctaHref ?? "#"}
-          className={`text-center ${featured ? "hiq-btn-primary" : "hiq-btn-secondary"}`}
-        >
-          {cta}
-        </Link>
-      )}
+      <PricingCheckoutButton
+        plan={plan}
+        label={`Start ${name}`}
+        featured={featured}
+      />
     </div>
   );
 }
