@@ -39,6 +39,7 @@ import priceSeriesRoutes from "./routes/priceSeries.routes.js";
 import opsPoolHealthRoutes from "./routes/opsPoolHealth.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import messagingRoutes from "./routes/messaging.routes.js";
 import ebayRoutes from "./routes/ebay.routes.js";
 import ebayWebhookRoutes from "./routes/ebayWebhook.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
@@ -147,6 +148,7 @@ app.use("/api/stats", publicStatsRoutes);
 app.use("/api/public", publicSellerRoutes);
 app.use("/api/daily", dailyPublishRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/messages", messagingRoutes);
 app.use("/api/compiq", compiqRoutes);
 // CF-CANONICAL-FMV (Drew, 2026-07-18): single source of truth FMV
 // pipeline. Every consumer should call this. Behind

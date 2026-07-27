@@ -51,6 +51,12 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z",
   },
   {
+    href: "/app/messages",
+    label: "Messages",
+    iconPath: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
+    prefixMatch: true,
+  },
+  {
     href: "/app/watchlist",
     label: "Watchlist",
     iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",

@@ -101,6 +101,18 @@ export default function PublicSellerPage() {
               {data.portfolio.cardCount === 1 ? "" : "s"} for sale · seller since{" "}
               {data.seller.joinedAt.slice(0, 10)}
             </p>
+            {/* CF-MESSAGING (Drew, 2026-07-27): open a thread with this
+                seller. Signed-out visitors get redirected to /login and
+                back — handled by /app/messages layout. */}
+            <Link
+              href={`/app/messages/${encodeURIComponent(data.seller.userId)}`}
+              className="hiq-btn-primary text-sm inline-flex items-center gap-2 mt-3"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+              </svg>
+              Message seller
+            </Link>
             {data.portfolio.sports.length > 0 && (
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 {data.portfolio.sports.slice(0, 6).map((s) => (

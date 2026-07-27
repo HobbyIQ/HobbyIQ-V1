@@ -733,6 +733,7 @@ export interface StorefrontCard {
 export interface PublicSellerResponse {
   success: boolean;
   seller: {
+    userId: string;
     username: string;
     joinedAt: string;
   };
@@ -748,6 +749,79 @@ export async function fetchPublicSeller(username: string): Promise<PublicSellerR
     `/api/public/seller/${encodeURIComponent(username)}`,
     { auth: false },
   );
+}
+
+// ─── CF-MESSAGING (Drew, 2026-07-27) ────────────────────────────────────
+
+export type MessageKind = "chat" | "offer" | "accepted" | "sold";
+
+export interface HoldingRef {
+  holdingId: string;
+  sellerUserId: string;
+  cardTitle: string;
+  imageUrl?: string | null;
+  askingPriceCents?: number | null;
+}
+
+export interface Message {
+  id: string;
+  threadId: string;
+  fromUserId: string;
+  toUserId: string;
+  text: string;
+  createdAt: string;
+  readAt?: string | null;
+  kind: MessageKind;
+  priceCents?: number | null;
+  holdingRef?: HoldingRef | null;
+}
+
+export interface ThreadSummary {
+  threadId: string;
+  otherUserId: string;
+  lastMessage: {
+    text: string;
+    kind: MessageKind;
+    fromMe: boolean;
+    createdAt: string;
+    priceCents?: number | null;
+  };
+  unreadCount: number;
+}
+
+export async function fetchThreads(): Promise<{ success: boolean; threads: ThreadSummary[] }> {
+  return await request("/api/messages/threads");
+}
+
+export async function fetchThread(otherUserId: string): Promise<{ success: boolean; messages: Message[] }> {
+  return await request(`/api/messages/threads/${encodeURIComponent(otherUserId)}`);
+}
+
+export async function sendMessage(input: {
+  toUserId: string;
+  text: string;
+  kind?: MessageKind;
+  priceCents?: number | null;
+  holdingRef?: HoldingRef | null;
+}): Promise<{ success: boolean; message?: Message; error?: string }> {
+  return await request("/api/messages/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function markSold(
+  messageId: string,
+  threadId: string,
+): Promise<{ success: boolean; message?: Message; error?: string }> {
+  return await request(
+    `/api/messages/${encodeURIComponent(messageId)}/mark-sold?threadId=${encodeURIComponent(threadId)}`,
+    { method: "POST" },
+  );
+}
+
+export async function fetchUnreadCount(): Promise<{ success: boolean; unread: number }> {
+  return await request("/api/messages/unread-count");
 }
 
 export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {
