@@ -45,6 +45,20 @@ export default function PricingPage() {
         </p>
       </section>
 
+      {/* Web-checkout notice */}
+      <section className="max-w-4xl mx-auto px-6 pb-6">
+        <div
+          className="rounded-xl p-4 text-sm text-center"
+          style={{
+            background: "color-mix(in oklab, var(--color-accent) 10%, transparent)",
+            color: "var(--color-accent)",
+          }}
+        >
+          Web-side subscription checkout is launching soon. In the meantime, upgrade via the iOS app —
+          your subscription flows through to web automatically.
+        </div>
+      </section>
+
       {/* Plan cards */}
       <section className="max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6">
         <PlanCard
@@ -52,16 +66,16 @@ export default function PricingPage() {
           price="$12.99"
           period="/mo"
           tagline="Casual collectors tracking a personal portfolio."
-          cta="Choose Collector"
-          ctaHref="/login?signup=true&plan=collector"
+          cta="Coming soon"
+          disabled
         />
         <PlanCard
           name="Investor"
           price="$24.99"
           period="/mo"
           tagline="Active traders — timed sell/hold/list signals."
-          cta="Choose Investor"
-          ctaHref="/login?signup=true&plan=investor"
+          cta="Coming soon"
+          disabled
           featured
         />
         <PlanCard
@@ -69,8 +83,8 @@ export default function PricingPage() {
           price="$49.99"
           period="/mo"
           tagline="Pros with bulk inventory + eBay workflows."
-          cta="Choose Pro Seller"
-          ctaHref="/login?signup=true&plan=proseller"
+          cta="Coming soon"
+          disabled
         />
       </section>
 
@@ -151,14 +165,16 @@ function PlanCard({
   cta,
   ctaHref,
   featured,
+  disabled,
 }: {
   name: string;
   price: string;
   period: string;
   tagline: string;
   cta: string;
-  ctaHref: string;
+  ctaHref?: string;
   featured?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -179,12 +195,24 @@ function PlanCard({
         <span className="text-4xl font-bold">{price}</span>
         <span className="text-[color:var(--color-muted)]">{period}</span>
       </div>
-      <Link
-        href={ctaHref}
-        className={`text-center ${featured ? "hiq-btn-primary" : "hiq-btn-secondary"}`}
-      >
-        {cta}
-      </Link>
+      {disabled ? (
+        <button
+          type="button"
+          disabled
+          className={`text-center ${featured ? "hiq-btn-primary" : "hiq-btn-secondary"}`}
+          style={{ opacity: 0.55, cursor: "not-allowed" }}
+          title="Web-side checkout launches soon. Upgrade via iOS in the meantime."
+        >
+          {cta}
+        </button>
+      ) : (
+        <Link
+          href={ctaHref ?? "#"}
+          className={`text-center ${featured ? "hiq-btn-primary" : "hiq-btn-secondary"}`}
+        >
+          {cta}
+        </Link>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchPortfolio, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
+import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -72,8 +73,12 @@ export default function PortfolioPage() {
             {" "}with observed FMV · {data.summary.estimatedCount} estimated · {data.summary.pendingCount} pending
           </p>
         </div>
+        <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
+          + Add card
+        </Link>
       </div>
 
+      <PortfolioValueChart />
       <SummaryBar summary={data.summary} />
 
       <div className="mt-8 flex items-center gap-3 flex-wrap">
@@ -95,7 +100,9 @@ export default function PortfolioPage() {
 
       <div className="mt-6 space-y-3">
         {sorted.map((h) => (
-          <HoldingRow key={h.id} h={h} />
+          <Link key={h.id} href={`/app/portfolio/${encodeURIComponent(h.id)}`} className="block">
+            <HoldingRow h={h} />
+          </Link>
         ))}
       </div>
 
@@ -274,11 +281,10 @@ function EmptyState() {
       <div className="hiq-card p-10 text-center">
         <h1 className="text-2xl font-bold mb-3">Your portfolio is empty</h1>
         <p className="text-[color:var(--color-muted)] mb-6 leading-relaxed">
-          Add holdings via the iOS app or import a spreadsheet. Web-side bulk workflows land
-          in the Pro Seller sprint.
+          Add your first card to start tracking FMV, gain/loss, and market movement.
         </p>
-        <Link href="/app" className="hiq-btn-primary inline-block">
-          Back to Today
+        <Link href="/app/portfolio/add" className="hiq-btn-primary inline-block">
+          + Add card
         </Link>
       </div>
     </div>

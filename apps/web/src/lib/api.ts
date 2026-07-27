@@ -165,6 +165,8 @@ export interface PortfolioHolding {
   gradeValue?: number | null;
   quantity: number;
   purchasePrice?: number | null;
+  purchaseDate?: string | null;
+  purchaseSource?: string | null;
   totalCostBasis?: number | null;
   fairMarketValue?: number | null;   // per unit
   currentValue?: number | null;      // fmv × qty (cost-proxy fallback)
@@ -401,5 +403,154 @@ export async function deleteAccount(): Promise<{ success: boolean }> {
   return await request<{ success: boolean }>("/api/account/", {
     method: "DELETE",
     body: JSON.stringify({ confirm: "DELETE_MY_ACCOUNT" }),
+  });
+}
+
+// ─── Portfolio mutations ───────────────────────────────────────────
+
+export interface AddHoldingInput {
+  playerName?: string;
+  cardTitle?: string;
+  cardYear?: number;
+  product?: string;
+  parallel?: string;
+  cardNumber?: string;
+  serialNumber?: string;
+  isAuto?: boolean;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  quantity: number;
+  purchasePrice?: number;
+  purchaseDate?: string;
+  purchaseSource?: string;
+  notes?: string;
+  cardsightCardId?: string;
+  cardsightGradeId?: string;
+}
+
+export async function addHolding(h: AddHoldingInput): Promise<{ success: boolean; holding?: PortfolioHolding; error?: string }> {
+  return await request("/api/portfolio/holdings", {
+    method: "POST",
+    body: JSON.stringify(h),
+  });
+}
+
+export async function fetchHolding(id: string): Promise<PortfolioHolding> {
+  return await request<PortfolioHolding>(`/api/portfolio/holdings/${encodeURIComponent(id)}`);
+}
+
+export interface HoldingPricePoint {
+  at: string;
+  value: number;
+  source?: string;
+}
+
+export async function fetchHoldingHistory(id: string): Promise<{ holdingId: string; count: number; points: HoldingPricePoint[] }> {
+  return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/history`);
+}
+
+export async function updateHolding(id: string, patch: Partial<AddHoldingInput>): Promise<{ success: boolean; holding?: PortfolioHolding }> {
+  return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteHolding(id: string): Promise<{ success: boolean }> {
+  return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function sellHolding(id: string, salePrice: number, saleDate?: string): Promise<{ success: boolean }> {
+  return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/sell`, {
+    method: "POST",
+    body: JSON.stringify({ salePrice, saleDate: saleDate ?? new Date().toISOString().slice(0, 10) }),
+  });
+}
+
+// ─── Value history ─────────────────────────────────────────────────
+
+export interface ValueHistoryResponse {
+  success: boolean;
+  asOf: string;
+  totalDisplayable: number;
+  rangeLow?: number;
+  rangeHigh?: number;
+  observedValue: number;
+  estimatedValue: number;
+  change30d?: { deltaValue?: number; deltaPct?: number };
+  historySeries: Array<{ date: string; total: number }>;
+}
+
+export async function fetchValueHistory(): Promise<ValueHistoryResponse> {
+  return await request<ValueHistoryResponse>("/api/portfolio/value-history");
+}
+
+// ─── DailyIQ ───────────────────────────────────────────────────────
+
+export interface DailyPlayer {
+  playerId: string;
+  playerName: string;
+  team?: string | null;
+  position?: string | null;
+  league?: string | null;
+  onWatchlist?: boolean;
+  headline?: string | null;
+  movement?: { performanceDelta?: number | null; direction?: "up" | "down" | "flat" };
+  imageUrl?: string | null;
+}
+
+export interface DailyBriefResponse {
+  date: string;
+  generatedAt?: string;
+  lastUpdated?: string;
+  mlb?: DailyPlayer[];
+  milb?: DailyPlayer[];
+  risers?: DailyPlayer[];
+  fallers?: DailyPlayer[];
+  breakouts?: DailyPlayer[];
+  watchlist?: DailyPlayer[];
+}
+
+export async function fetchDailyBrief(): Promise<DailyBriefResponse> {
+  return await request<DailyBriefResponse>("/api/dailyiq/brief");
+}
+
+// ─── Watchlist ─────────────────────────────────────────────────────
+
+export interface WatchlistItem {
+  watchlistItemId: string;
+  playerId: string;
+  playerName: string;
+  team?: string | null;
+  position?: string | null;
+  league?: string | null;
+  createdAt: string;
+  onWatchlist?: boolean;
+  movement?: { performanceDelta?: number | null; direction?: "up" | "down" | "flat" };
+}
+
+export interface WatchlistResponse {
+  userId: string;
+  date: string;
+  count: number;
+  watchlist: WatchlistItem[];
+}
+
+export async function fetchWatchlist(): Promise<WatchlistResponse> {
+  return await request<WatchlistResponse>("/api/dailyiq/watchlist");
+}
+
+export async function addWatchlist(playerId: string, playerName: string): Promise<{ success: boolean }> {
+  return await request("/api/dailyiq/watchlist", {
+    method: "POST",
+    body: JSON.stringify({ playerId, playerName }),
+  });
+}
+
+export async function removeWatchlist(playerId: string): Promise<{ success: boolean }> {
+  return await request(`/api/dailyiq/watchlist/${encodeURIComponent(playerId)}`, {
+    method: "DELETE",
   });
 }
