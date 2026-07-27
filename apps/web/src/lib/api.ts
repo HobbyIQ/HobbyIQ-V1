@@ -840,6 +840,68 @@ export async function fetchGradeAnalysis(holdingId: string): Promise<GradeAnalys
   );
 }
 
+export interface PurchaseEntry {
+  id: string;
+  userId: string;
+  purchaseDate: string;
+  source: "manual" | "ebay";
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  otherFees: number;
+  totalCost: number;
+  holdingIds: string[];
+  vendor?: string;
+  invoiceRef?: string;
+  notes?: string;
+  ebayOrderId?: string;
+}
+
+export interface PurchasesListResponse {
+  success: boolean;
+  window: { from: string | null; to: string | null };
+  source: "manual" | "ebay" | null;
+  purchases: PurchaseEntry[];
+  totals: {
+    count: number;
+    subtotal: number;
+    tax: number;
+    shipping: number;
+    otherFees: number;
+    totalCost: number;
+  };
+}
+
+export async function fetchPurchases(opts?: { from?: string; to?: string; source?: "manual" | "ebay" }): Promise<PurchasesListResponse> {
+  const q = new URLSearchParams();
+  if (opts?.from) q.set("from", opts.from);
+  if (opts?.to) q.set("to", opts.to);
+  if (opts?.source) q.set("source", opts.source);
+  const qs = q.toString();
+  return await request<PurchasesListResponse>(`/api/portfolio/erp/purchases${qs ? `?${qs}` : ""}`);
+}
+
+export interface CreatePurchaseInput {
+  purchaseDate: string;
+  source?: "manual" | "ebay";
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  otherFees?: number;
+  vendor?: string;
+  invoiceRef?: string;
+  notes?: string;
+  holdingIds?: string[];
+}
+
+export async function createPurchase(body: CreatePurchaseInput): Promise<PurchaseEntry> {
+  const res = await request<{ success: boolean; purchase: PurchaseEntry }>(
+    "/api/portfolio/erp/purchases",
+    { method: "POST", body: JSON.stringify(body) },
+  );
+  return res.purchase;
+}
+
 export type TaxFilingRail = "ebay" | "paypal" | "venmo";
 export const TAX_FILING_RAILS: ReadonlyArray<{ value: TaxFilingRail; label: string }> = [
   { value: "ebay", label: "eBay Managed Payments" },
