@@ -168,11 +168,16 @@ export interface PortfolioHolding {
   purchaseDate?: string | null;
   purchaseSource?: string | null;
   totalCostBasis?: number | null;
-  fairMarketValue?: number | null;   // per unit
-  currentValue?: number | null;      // fmv × qty (cost-proxy fallback)
+  fairMarketValue?: number | null;   // per unit (observed FMV)
+  currentValue?: number | null;      // fmv × qty; cost-proxy fallback when fmv null — do not trust as "value"
   totalProfitLoss?: number | null;
   totalProfitLossPct?: number | null;
   valuationStatus?: "observed" | "estimated" | "pending" | null;
+  // Per-unit estimate when no observed FMV exists.
+  estimatedValue?: number | null;
+  estimateLow?: number | null;
+  estimateHigh?: number | null;
+  estimateBasis?: string | null;
   estimateConfidence?:
     | "estimate"
     | "rough"
@@ -180,8 +185,22 @@ export interface PortfolioHolding {
     | "no-data"
     | "insufficient"
     | null;
+  // Backend-computed "what the UI should show" — combines observed FMV
+  // and estimates and marks the source. Prefer this over currentValue.
+  displayableValue?: number | null;
+  displayableValueSource?: string | null;
   photos?: string[] | null;
   lastUpdated?: string | null;
+}
+
+// Prefer explicit fmv → estimate → null. NEVER fall back to cost-proxy
+// for a display value; that's what caused the "$1539 value" bug where a
+// PSA 10 estimated at $1531 was rendered as its $1539 cost basis.
+export function holdingDisplayValue(h: PortfolioHolding): number | null {
+  const qty = Math.max(1, h.quantity ?? 1);
+  if (h.fairMarketValue != null) return h.fairMarketValue * qty;
+  if (h.estimatedValue != null) return h.estimatedValue * qty;
+  return null;
 }
 
 export interface PortfolioSummary {

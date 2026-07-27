@@ -8,6 +8,7 @@ import {
   fetchHoldingHistory,
   deleteHolding,
   sellHolding,
+  holdingDisplayValue,
   type PortfolioHolding,
   type HoldingPricePoint,
 } from "@/lib/api";
@@ -70,11 +71,21 @@ export default function HoldingDetailPage() {
   const title = formatCardTitle(h);
   const grade = formatGrade(h);
   const fmv = h.fairMarketValue;
-  const value = h.currentValue ?? (fmv != null ? fmv * h.quantity : null);
+  const value = holdingDisplayValue(h);
   const cost = h.totalCostBasis;
-  const gain = h.totalProfitLoss;
-  const gainPct = h.totalProfitLossPct;
+  const paidPrice = h.purchasePrice;
+  const totalPaid = paidPrice != null ? paidPrice * h.quantity : null;
+  const feesAdded = cost != null && totalPaid != null ? cost - totalPaid : null;
+  // Recompute P&L against what we're actually displaying so the number matches
+  // the Value column instead of any stale server-side cost-proxy math.
+  let gain: number | null = h.totalProfitLoss ?? null;
+  let gainPct: number | null = h.totalProfitLossPct ?? null;
+  if (value != null && cost != null) {
+    gain = value - cost;
+    gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+  }
   const gainColor = (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
+  const showEstimateBadge = fmv == null && h.estimatedValue != null;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -115,11 +126,59 @@ export default function HoldingDetailPage() {
 
         {/* Value / cost / P&L */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 pt-4 border-t border-[color:var(--color-border)]">
-          <Stat label="Current value" value={formatUSD(value, { hideCents: true })} />
+          <Stat label="Current value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
           <Stat label="Cost basis" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
         </div>
+
+        {/* Cost breakdown — matters when totalCostBasis != purchasePrice (fees) */}
+        {feesAdded != null && Math.abs(feesAdded) > 0.005 && (
+          <div className="mt-4 pt-4 border-t border-[color:var(--color-border)] text-sm">
+            <div className="flex justify-between text-[color:var(--color-muted)]">
+              <span>Paid at purchase</span>
+              <span className="tabular-nums text-white">{formatUSD(totalPaid, { hideCents: false })}</span>
+            </div>
+            <div className="flex justify-between text-[color:var(--color-muted)] mt-1">
+              <span>Fees / grading added</span>
+              <span className="tabular-nums text-white">{formatUSD(feesAdded, { hideCents: false })}</span>
+            </div>
+            <div className="flex justify-between mt-1 pt-1 border-t border-[color:var(--color-border)]">
+              <span className="text-[color:var(--color-muted)]">Total cost basis</span>
+              <span className="font-medium tabular-nums">{formatUSD(cost, { hideCents: false })}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Estimate details — only shown when we're rendering an estimate */}
+        {showEstimateBadge && (
+          <div className="mt-4 pt-4 border-t border-[color:var(--color-border)]">
+            <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-2">
+              Estimate details
+            </div>
+            <div className="text-sm space-y-1">
+              {h.estimateLow != null && h.estimateHigh != null && (
+                <div className="flex justify-between">
+                  <span className="text-[color:var(--color-muted)]">Range</span>
+                  <span className="tabular-nums">
+                    {formatUSD(h.estimateLow, { hideCents: h.estimateLow >= 100 })} – {formatUSD(h.estimateHigh, { hideCents: h.estimateHigh >= 100 })}
+                  </span>
+                </div>
+              )}
+              {h.estimateConfidence && (
+                <div className="flex justify-between">
+                  <span className="text-[color:var(--color-muted)]">Confidence</span>
+                  <span className="capitalize">{h.estimateConfidence}</span>
+                </div>
+              )}
+              {h.estimateBasis && (
+                <div className="mt-2 text-xs text-[color:var(--color-muted)] leading-relaxed">
+                  {h.estimateBasis}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -184,11 +243,22 @@ export default function HoldingDetailPage() {
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+function Stat({ label, value, color, badge }: { label: string; value: string; color?: string; badge?: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">
+      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1 flex items-center gap-2">
         {label}
+        {badge && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide"
+            style={{
+              background: "color-mix(in oklab, var(--color-accent) 15%, transparent)",
+              color: "var(--color-accent)",
+            }}
+          >
+            {badge}
+          </span>
+        )}
       </div>
       <div className="text-xl font-bold tabular-nums" style={color ? { color } : undefined}>
         {value}

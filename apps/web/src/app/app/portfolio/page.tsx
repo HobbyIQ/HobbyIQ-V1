@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchPortfolio, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 
@@ -190,11 +190,18 @@ function SortDirBtn({ value, onChange }: { value: SortDir; onChange: (d: SortDir
 function HoldingRow({ h }: { h: PortfolioHolding }) {
   const title = formatCardTitle(h);
   const grade = formatGrade(h);
-  const fmvUnit = h.fairMarketValue;
-  const value = h.currentValue ?? (fmvUnit != null ? fmvUnit * h.quantity : null);
+  const value = holdingDisplayValue(h);
   const cost = h.totalCostBasis;
-  const gainPct = h.totalProfitLossPct;
-  const gain = h.totalProfitLoss;
+  // Recompute P&L against the display value we're actually rendering so the row
+  // never shows a P&L that doesn't match its Value column. If the backend
+  // sent a null FMV but we're displaying an estimate, its totalProfitLoss
+  // will be null/cost-proxy — override with our own math.
+  let gain: number | null = h.totalProfitLoss ?? null;
+  let gainPct: number | null = h.totalProfitLossPct ?? null;
+  if (value != null && cost != null) {
+    gain = value - cost;
+    gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+  }
   const gainColor =
     (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
 
@@ -315,21 +322,29 @@ function sortHoldings(items: PortfolioHolding[], key: SortKey, dir: SortDir): Po
     let bv: number | string;
     switch (key) {
       case "value":
-        av = a.currentValue ?? -Infinity;
-        bv = b.currentValue ?? -Infinity;
+        av = holdingDisplayValue(a) ?? -Infinity;
+        bv = holdingDisplayValue(b) ?? -Infinity;
         break;
       case "cost":
         av = a.totalCostBasis ?? -Infinity;
         bv = b.totalCostBasis ?? -Infinity;
         break;
-      case "gainPct":
-        av = a.totalProfitLossPct ?? -Infinity;
-        bv = b.totalProfitLossPct ?? -Infinity;
+      case "gainPct": {
+        const av0 = holdingDisplayValue(a);
+        const bv0 = holdingDisplayValue(b);
+        const acost = a.totalCostBasis ?? 0;
+        const bcost = b.totalCostBasis ?? 0;
+        av = av0 != null && acost > 0 ? ((av0 - acost) / acost) * 100 : -Infinity;
+        bv = bv0 != null && bcost > 0 ? ((bv0 - bcost) / bcost) * 100 : -Infinity;
         break;
-      case "gain":
-        av = a.totalProfitLoss ?? -Infinity;
-        bv = b.totalProfitLoss ?? -Infinity;
+      }
+      case "gain": {
+        const av0 = holdingDisplayValue(a);
+        const bv0 = holdingDisplayValue(b);
+        av = av0 != null && a.totalCostBasis != null ? av0 - a.totalCostBasis : -Infinity;
+        bv = bv0 != null && b.totalCostBasis != null ? bv0 - b.totalCostBasis : -Infinity;
         break;
+      }
       case "title":
         av = formatCardTitle(a).toLowerCase();
         bv = formatCardTitle(b).toLowerCase();
