@@ -81,11 +81,12 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
         photos?: unknown;
         playerName?: unknown;
         cardTitle?: unknown;
-        hideFromStorefront?: unknown;
+        showOnStorefront?: unknown;
       };
-      // CF-STOREFRONT-HIDE (Drew, 2026-07-27): owner-set per-card opt-out
-      // wins over every other display gate.
-      if (anyH.hideFromStorefront === true) return false;
+      // CF-STOREFRONT-OPT-IN (Drew, 2026-07-27 rev 2): opt-in wins.
+      // Nothing renders publicly unless the owner explicitly picked
+      // this card from /app/storefront.
+      if (anyH.showOnStorefront !== true) return false;
       const hasPhoto = Array.isArray(anyH.photos) && anyH.photos.length > 0;
       const hasIdentity = typeof anyH.playerName === "string" || typeof anyH.cardTitle === "string";
       return hasPhoto && hasIdentity;

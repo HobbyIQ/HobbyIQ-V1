@@ -38,12 +38,24 @@ export interface HoldingHeldExpense {
 export interface PortfolioHolding {
   id: string;
   /**
-   * CF-STOREFRONT-HIDE (Drew, 2026-07-27): per-holding opt-out from the
-   * public /u/<username> storefront. Absent/false → shown when the
-   * seller has publicShareEnabled + Pro Seller + emailVerified. True →
-   * hidden regardless. Owner controls this from the portfolio detail
-   * screen so a card being repaired / traded / just-not-listed can be
-   * kept off the public shop without deleting the holding.
+   * CF-STOREFRONT-OPT-IN (Drew, 2026-07-27, rev 2): explicit per-card
+   * opt-in for the public /u/<username> storefront. Default false —
+   * NOTHING renders on the public page unless the owner has clicked
+   * "Add to storefront" on that specific holding. Investor caps at 50
+   * selected; Pro Seller at 200. Anything selected beyond the cap is
+   * rejected at write time so a stale over-cap state can't exist.
+   *
+   * Why opt-in: sellers hold cards for investment vs. sale. Opting in
+   * per-card lets a seller keep long-term holds off the shop without
+   * a "hide" click per card. The pre-existing hideFromStorefront flag
+   * is now legacy — the storefront filter reads only showOnStorefront.
+   */
+  showOnStorefront?: boolean;
+  /**
+   * CF-STOREFRONT-HIDE (Drew, 2026-07-27): DEPRECATED as of the
+   * CF-STOREFRONT-OPT-IN flip. Historic values ignored by the
+   * publicSeller filter; kept on the type for backward-compat during
+   * reads. Do not gate anything new on this field.
    */
   hideFromStorefront?: boolean;
   playerName?: string;
