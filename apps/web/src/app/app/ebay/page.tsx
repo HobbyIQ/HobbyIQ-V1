@@ -8,9 +8,15 @@ import {
   reconnectEbay,
   disconnectEbay,
   fetchEbayPolicies,
+  fetchPortfolio,
+  fetchEbayOfferStatus,
+  endEbayListing,
   type EbayStatus,
   type EbayPoliciesResponse,
+  type EbayOfferStatus,
+  type PortfolioHolding,
 } from "@/lib/api";
+import { formatUSD, formatCardTitle } from "@/lib/format";
 
 export default function EbayPage() {
   const [status, setStatus] = useState<EbayStatus | null>(null);
@@ -226,6 +232,8 @@ export default function EbayPage() {
             />
           </div>
 
+          <LiveListingsSection />
+
           <div className="hiq-card p-6">
             <h2 className="font-bold text-lg mb-3">Next steps</h2>
             <p className="text-sm text-[color:var(--color-muted)] mb-4 leading-relaxed">
@@ -248,6 +256,173 @@ export default function EbayPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function LiveListingsSection() {
+  const [holdings, setHoldings] = useState<PortfolioHolding[] | null>(null);
+  const [statuses, setStatuses] = useState<Record<string, EbayOfferStatus | { error: string }>>({});
+  const [ending, setEnding] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const port = await fetchPortfolio();
+        if (cancelled) return;
+        const listed = port.items.filter((h) => h.ebayOfferId && h.ebayListingId);
+        setHoldings(listed);
+
+        // Fan-out per-offer status. Parallel is fine — eBay's Sell API
+        // handles single-offer reads well and the offer count is small.
+        const results = await Promise.allSettled(
+          listed.map((h) => fetchEbayOfferStatus(h.ebayOfferId as string)),
+        );
+        if (cancelled) return;
+        const nextStatuses: Record<string, EbayOfferStatus | { error: string }> = {};
+        results.forEach((res, i) => {
+          const offerId = listed[i].ebayOfferId as string;
+          if (res.status === "fulfilled") {
+            nextStatuses[offerId] = res.value;
+          } else {
+            nextStatuses[offerId] = { error: (res.reason as { message?: string })?.message ?? "eBay error" };
+          }
+        });
+        setStatuses(nextStatuses);
+        setLoading(false);
+      } catch {
+        if (cancelled) return;
+        setHoldings([]);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function onEnd(h: PortfolioHolding) {
+    const offerId = h.ebayOfferId;
+    if (!offerId) return;
+    if (!confirm(`End the eBay listing for ${formatCardTitle(h)}?`)) return;
+    setEnding((prev) => ({ ...prev, [offerId]: true }));
+    try {
+      const res = await endEbayListing(offerId);
+      if (res.success) {
+        setHoldings((prev) => (prev ? prev.filter((x) => x.id !== h.id) : prev));
+      } else {
+        alert(res.error ?? "End failed.");
+      }
+    } catch (err) {
+      alert((err as { message?: string }).message ?? "End failed.");
+    } finally {
+      setEnding((prev) => ({ ...prev, [offerId]: false }));
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="hiq-card p-6 mb-6">
+        <h2 className="font-bold text-lg mb-2">Live listings</h2>
+        <div className="text-sm text-[color:var(--color-muted)]">Loading your active listings…</div>
+      </div>
+    );
+  }
+
+  if (!holdings || holdings.length === 0) {
+    return null;   // nothing to show — hide the section when no listings exist
+  }
+
+  return (
+    <div className="hiq-card p-6 mb-6">
+      <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="font-bold text-lg">Live listings</h2>
+          <p className="text-xs text-[color:var(--color-muted)] mt-1">
+            Active offers from your portfolio. Status is fetched live from eBay.
+          </p>
+        </div>
+        <span className="text-xs text-[color:var(--color-muted)]">
+          {holdings.length} listing{holdings.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {holdings.map((h) => {
+          const offerId = h.ebayOfferId as string;
+          const s = statuses[offerId];
+          const isError = s && "error" in s;
+          const status = s && !isError ? (s as EbayOfferStatus) : null;
+          return (
+            <div
+              key={h.id}
+              className="flex items-center gap-4 p-3 rounded-lg"
+              style={{ background: "var(--color-bg)" }}
+            >
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/app/portfolio/${encodeURIComponent(h.id)}`}
+                  className="text-sm font-medium hover:underline truncate block"
+                >
+                  {formatCardTitle(h)}
+                </Link>
+                <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-3 flex-wrap">
+                  {status?.status && (
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide"
+                      style={{
+                        background:
+                          status.status.toUpperCase() === "PUBLISHED"
+                            ? "color-mix(in oklab, var(--color-success) 15%, transparent)"
+                            : "color-mix(in oklab, var(--color-accent) 15%, transparent)",
+                        color:
+                          status.status.toUpperCase() === "PUBLISHED"
+                            ? "var(--color-success)"
+                            : "var(--color-accent)",
+                      }}
+                    >
+                      {status.status}
+                    </span>
+                  )}
+                  {isError && (
+                    <span style={{ color: "var(--color-danger)" }}>eBay status error</span>
+                  )}
+                  {status?.price != null && (
+                    <span className="tabular-nums">
+                      {formatUSD(status.price, { hideCents: status.price >= 100 })}
+                    </span>
+                  )}
+                  {h.ebayListingPublishedAt && (
+                    <span>listed {h.ebayListingPublishedAt.slice(0, 10)}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {status?.listingUrl && (
+                  <a
+                    href={status.listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hiq-btn-secondary text-xs"
+                  >
+                    View on eBay ↗
+                  </a>
+                )}
+                <button
+                  onClick={() => onEnd(h)}
+                  disabled={!!ending[offerId]}
+                  className="hiq-btn-secondary text-xs disabled:opacity-40"
+                  style={{ color: "var(--color-danger)" }}
+                >
+                  {ending[offerId] ? "Ending…" : "End"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

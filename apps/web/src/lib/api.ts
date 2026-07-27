@@ -222,6 +222,12 @@ export interface PortfolioHolding {
   photos?: string[] | null;
   notes?: string | null;
   certNumber?: string | null;
+  // eBay link — populated after a successful publish. Used by the live-
+  // listings surface on /app/ebay to render active listings + wire the
+  // End/Revise actions per holding.
+  ebayOfferId?: string | null;
+  ebayListingId?: string | null;
+  ebayListingPublishedAt?: string | null;
   lastUpdated?: string | null;
 }
 
@@ -1235,6 +1241,29 @@ export async function prepareEbayListing(holdingId: string): Promise<EbayListing
     method: "POST",
     body: JSON.stringify({ holdingId }),
   });
+}
+
+export interface EbayOfferStatus {
+  success: boolean;
+  offerId: string;
+  status: string;
+  listingId?: string;
+  listingUrl?: string;
+  price?: number;
+  quantity?: number;
+  categoryId?: string;
+  marketplaceId?: string;
+}
+
+export async function fetchEbayOfferStatus(offerId: string): Promise<EbayOfferStatus> {
+  return await request<EbayOfferStatus>(`/api/ebay/listings/${encodeURIComponent(offerId)}/status`);
+}
+
+export async function endEbayListing(offerId: string): Promise<{ success: boolean; error?: string }> {
+  return await request<{ success: boolean; error?: string }>(
+    `/api/ebay/listings/${encodeURIComponent(offerId)}/end`,
+    { method: "POST" },
+  );
 }
 
 export async function publishEbayListing(
