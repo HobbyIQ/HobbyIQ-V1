@@ -7,8 +7,14 @@ import {
   fetchAlertPreferences,
   updateAlertPreferences,
   deletePriceAlert,
+  fetchAlertPresets,
+  fetchAdvancedAlerts,
+  activateAlertPreset,
+  deleteAdvancedAlert,
   type PriceAlert,
   type AlertPreferences,
+  type AlertPreset,
+  type AdvancedAlertRule,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 
@@ -17,6 +23,10 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [presets, setPresets] = useState<AlertPreset[]>([]);
+  const [advanced, setAdvanced] = useState<AdvancedAlertRule[]>([]);
+  const [advancedLocked, setAdvancedLocked] = useState(false);
+  const [activating, setActivating] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +49,53 @@ export default function AlertsPage() {
       cancelled = true;
     };
   }, []);
+
+  // Advanced alerts + presets — entitlement-gated. Non-Investor users
+  // see the upsell tile instead of the preset gallery.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetchAlertPresets().catch(() => ({ success: true, presets: [] as AlertPreset[] })),
+      fetchAdvancedAlerts().catch((err: { status?: number }) => {
+        if (err.status === 402 || err.status === 403) {
+          if (!cancelled) setAdvancedLocked(true);
+        }
+        return { success: true, rules: [] as AdvancedAlertRule[] };
+      }),
+    ]).then(([pr, ru]) => {
+      if (cancelled) return;
+      setPresets(pr.presets);
+      setAdvanced(ru.rules);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function onActivate(preset: AlertPreset) {
+    setActivating(preset.presetId);
+    try {
+      const res = await activateAlertPreset(preset.presetId);
+      if (res.success && res.rule) {
+        setAdvanced((prev) => [res.rule as AdvancedAlertRule, ...prev]);
+      }
+    } catch (err) {
+      const e = err as { status?: number };
+      if (e.status === 402 || e.status === 403) setAdvancedLocked(true);
+    } finally {
+      setActivating(null);
+    }
+  }
+
+  async function onDeleteAdvanced(id: string) {
+    const prev = advanced;
+    setAdvanced((p) => p.filter((r) => r.id !== id));
+    try {
+      await deleteAdvancedAlert(id);
+    } catch {
+      setAdvanced(prev);
+    }
+  }
 
   async function togglePref(key: "dailyIQAlerts" | "priceAlerts") {
     if (!prefs) return;
@@ -135,6 +192,111 @@ export default function AlertsPage() {
                   <AlertRow key={a.alertId} a={a} onDelete={() => onDelete(a.alertId)} />
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* Advanced rules — Investor+ */}
+          <div className="hiq-card p-6 mb-6">
+            <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
+              <div>
+                <h2 className="font-bold text-lg">Advanced rules</h2>
+                <p className="text-xs text-[color:var(--color-muted)] mt-1">
+                  Curated one-click templates. Investor+ only.
+                </p>
+              </div>
+              {!advancedLocked && advanced.length > 0 && (
+                <span className="text-xs text-[color:var(--color-muted)]">
+                  {advanced.length} active
+                </span>
+              )}
+            </div>
+
+            {advancedLocked ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-[color:var(--color-muted)] mb-4 max-w-md mx-auto leading-relaxed">
+                  Advanced alert rules — momentum flips, sell-window detection,
+                  watchlist drops — come with Investor and Pro Seller.
+                </p>
+                <Link href="/pricing" className="hiq-btn-primary text-sm inline-block">
+                  See plans
+                </Link>
+              </div>
+            ) : (
+              <>
+                {advanced.length > 0 && (
+                  <div className="space-y-2 mb-5">
+                    {advanced.map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-center gap-3 p-3 rounded-lg"
+                        style={{ background: "var(--color-bg)" }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{r.name}</div>
+                          <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-3 flex-wrap">
+                            <span>Scope: {r.scope.type}</span>
+                            <span>{r.combinator} · {r.conditions.length} condition{r.conditions.length === 1 ? "" : "s"}</span>
+                            {r.lastFiredAt && <span>fired {r.lastFiredAt.slice(0, 10)}</span>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => onDeleteAdvanced(r.id)}
+                          className="text-xs text-[color:var(--color-muted)] hover:text-white"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {presets.length > 0 && (
+                  <>
+                    <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-3">
+                      Preset gallery
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {presets.map((p) => {
+                        const alreadyActive = advanced.some((r) => r.presetId === p.presetId);
+                        return (
+                          <div
+                            key={p.presetId}
+                            className="hiq-card p-4"
+                            style={{ background: "var(--color-bg)" }}
+                          >
+                            <div className="flex items-baseline justify-between mb-1 gap-2">
+                              <div className="font-medium text-sm">{p.name}</div>
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide flex-shrink-0"
+                                style={{ background: "var(--color-bg-elevated,#000)", color: "var(--color-muted)" }}
+                              >
+                                {p.category.replace(/_/g, " ")}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[color:var(--color-muted)] mb-2 leading-relaxed">
+                              {p.description}
+                            </p>
+                            <p className="text-[10px] italic text-[color:var(--color-muted)] mb-3 leading-relaxed">
+                              {p.whyItMatters}
+                            </p>
+                            <button
+                              onClick={() => onActivate(p)}
+                              disabled={activating === p.presetId || alreadyActive}
+                              className={alreadyActive ? "hiq-btn-secondary text-xs disabled:opacity-100" : "hiq-btn-primary text-xs disabled:opacity-50"}
+                            >
+                              {alreadyActive
+                                ? "Active"
+                                : activating === p.presetId
+                                ? "Activating…"
+                                : "Activate"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
 
