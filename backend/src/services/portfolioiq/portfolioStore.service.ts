@@ -20,6 +20,7 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { withDerivedSlug } from "./holdingSlug.service.js";
+import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
 // SAME cropped URL /api/compiq/price-by-id emits on cardImageUrl. iOS
@@ -2413,6 +2414,36 @@ async function autoPriceHolding(
     }
   }
 
+  // CF-OUR-POOL-PORTFOLIO-PRICER (Drew, 2026-07-27): when the flag is on,
+  // the hobbyiq-fmv service (which reads OUR sold_comps pool by canonical
+  // slug and applies grade multipliers via GRADE_CALIBRATION) takes final
+  // authority over the FMV/estimate fields on the write. Legacy engine
+  // still ran above and supplies identityPatch / chLastSalePatch /
+  // predictedPrice / trendIQ — Our-Pool only overrides the price surface.
+  // Returns null → legacy resolved holds, no override applied.
+  let priceSurface = resolvedAfterLadder;
+  let ourPoolMeta: {
+    slug: string;
+    method: string;
+    compsUsed: number;
+  } | null = null;
+  if (isPriceFromOurPoolEnabled()) {
+    const ourPool = await priceHoldingFromOurPool(holding);
+    if (ourPool !== null) {
+      priceSurface = {
+        fairMarketValueOverride: ourPool.fairMarketValue,
+        valuationStatus: ourPool.valuationStatus,
+        estimatedValue: ourPool.estimatedValue,
+        estimateLow: ourPool.estimateLow,
+        estimateHigh: ourPool.estimateHigh,
+        estimateConfidence: ourPool.estimateConfidence,
+        estimateBasis: ourPool.estimateBasis,
+        isEstimate: ourPool.valuationStatus === "estimated",
+      };
+      ourPoolMeta = { slug: ourPool.slug, method: ourPool.method, compsUsed: ourPool.compsUsed };
+    }
+  }
+
   // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18): identity
   // patch already computed above (hoisted to fire on both the success path
   // here AND the no-FMV early return). Spread is a no-op when the patch
@@ -2420,16 +2451,20 @@ async function autoPriceHolding(
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
-    fairMarketValue: resolvedAfterLadder.fairMarketValueOverride === null
+    fairMarketValue: priceSurface.fairMarketValueOverride === null
       ? null as any  // null erases the field on display; ERP read coerces null→null
-      : resolvedAfterLadder.fairMarketValueOverride,
-    estimatedValue: resolvedAfterLadder.estimatedValue,
-    estimateLow: resolvedAfterLadder.estimateLow,
-    estimateHigh: resolvedAfterLadder.estimateHigh,
-    estimateConfidence: resolvedAfterLadder.estimateConfidence,
-    estimateBasis: resolvedAfterLadder.estimateBasis,
-    isEstimate: resolvedAfterLadder.isEstimate,
-    valuationStatus: resolvedAfterLadder.valuationStatus,
+      : priceSurface.fairMarketValueOverride,
+    estimatedValue: priceSurface.estimatedValue,
+    estimateLow: priceSurface.estimateLow,
+    estimateHigh: priceSurface.estimateHigh,
+    estimateConfidence: priceSurface.estimateConfidence,
+    estimateBasis: priceSurface.estimateBasis,
+    isEstimate: priceSurface.isEstimate,
+    valuationStatus: priceSurface.valuationStatus,
+    // CF-OUR-POOL-PORTFOLIO-PRICER: telemetry so we can audit which pricing
+    // path actually landed on each holding after the flag flips on.
+    pricingSource: ourPoolMeta ? "our-pool" : "legacy-engine",
+    pricingSourceMeta: ourPoolMeta ?? undefined,
     // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): persist the
     // anchor snapshot so the iOS detail surface can render
     // "Last sold: PSA 9 $1325 · 236 days ago" alongside the estimated
