@@ -548,6 +548,24 @@ export async function deleteHolding(id: string): Promise<{ success: boolean }> {
   });
 }
 
+// POST /holdings/:id/refresh — reruns autoPriceHolding on the server so
+// the estimatedValue picks up any pricing-engine changes (e.g. a
+// calibration refresh, or a new comp landing in sold_comps). Rate-limited
+// server-side per user's plan tier — surfaces as a 429 the caller must
+// handle. Response shape mirrors updateHolding.
+export async function refreshHolding(id: string): Promise<{ success: boolean; holding?: PortfolioHolding; message?: string }> {
+  const raw = await request<{ message?: string; id?: string; holding?: PortfolioHolding; entry?: { holding?: PortfolioHolding } }>(
+    `/api/portfolio/holdings/${encodeURIComponent(id)}/refresh`,
+    { method: "POST" },
+  );
+  const holding = raw.holding ?? raw.entry?.holding;
+  return {
+    success: typeof raw.id === "string" || raw.message === "Holding refreshed" || holding != null,
+    holding,
+    message: raw.message,
+  };
+}
+
 export async function sellHolding(id: string, salePrice: number, saleDate?: string): Promise<{ success: boolean }> {
   return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/sell`, {
     method: "POST",
