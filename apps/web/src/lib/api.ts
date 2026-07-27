@@ -221,6 +221,7 @@ export interface PortfolioHolding {
   displayableValueSource?: string | null;
   photos?: string[] | null;
   notes?: string | null;
+  certNumber?: string | null;
   lastUpdated?: string | null;
 }
 
@@ -476,6 +477,8 @@ export interface AddHoldingInput {
   isAuto?: boolean;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  certNumber?: string | null;
+  photos?: string[];
   quantity: number;
   purchasePrice?: number;
   purchaseDate?: string;
@@ -546,6 +549,66 @@ export async function deleteHolding(id: string): Promise<{ success: boolean }> {
   return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+}
+
+// Two-step photo upload matching the iOS wire contract:
+//   1. POST /api/uploads/card-photo → returns { uploadUrl, blobUrl }
+//   2. PUT bytes directly to uploadUrl (Azure Blob SAS)
+// The caller then appends `blobUrl` to the holding's photos[] via a
+// PATCH. Returns the blobUrl for that append step.
+export async function uploadHoldingPhoto(file: File): Promise<string> {
+  const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const sas = await request<{
+    success: boolean;
+    uploadUrl: string;
+    blobUrl: string;
+    contentType?: string;
+  }>("/api/uploads/card-photo", {
+    method: "POST",
+    body: JSON.stringify({
+      clientId: `web-${Date.now()}`,
+      fileExtension: ext,
+    }),
+  });
+  if (!sas.uploadUrl || !sas.blobUrl) {
+    throw new Error("Upload URL not issued");
+  }
+  const put = await fetch(sas.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "x-ms-blob-type": "BlockBlob",
+      "Content-Type": sas.contentType ?? file.type ?? "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!put.ok) {
+    throw new Error(`Blob upload failed (${put.status})`);
+  }
+  return sas.blobUrl;
+}
+
+// POST /holdings/:id/regrade — atomic grade conversion. Rolls
+// `gradingCost` into totalCostBasis, sets grade + optional cert#, and
+// emits a `regrade` price-history point in ONE commit. Preferred over
+// PATCH when the user is doing the "raw → slabbed" flow because it
+// keeps P&L honest by adding the grading fee to their all-in cost.
+export interface RegradeInput {
+  gradeCompany: string;
+  gradeValue: number;
+  certNumber?: string | null;
+  gradingCost?: number;
+}
+export async function regradeHolding(id: string, body: RegradeInput): Promise<{ success: boolean; holding?: PortfolioHolding; message?: string }> {
+  const raw = await request<{ message?: string; id?: string; updatedHolding?: PortfolioHolding; holding?: PortfolioHolding }>(
+    `/api/portfolio/holdings/${encodeURIComponent(id)}/regrade`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+  const holding = raw.updatedHolding ?? raw.holding;
+  return {
+    success: typeof raw.id === "string" || holding != null,
+    holding,
+    message: raw.message,
+  };
 }
 
 // POST /holdings/:id/refresh — reruns autoPriceHolding on the server so
