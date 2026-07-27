@@ -611,6 +611,61 @@ export async function regradeHolding(id: string, body: RegradeInput): Promise<{ 
   };
 }
 
+// ─── Sold ledger ───────────────────────────────────────────────────
+
+export interface LedgerEntry {
+  id: string;
+  userId: string;
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  quantitySold: number;
+  unitSalePrice: number;
+  grossProceeds: number;
+  fees: number;
+  tax: number;
+  shipping: number;
+  netProceeds: number;
+  costBasisSold: number;
+  realizedProfitLoss: number;
+  realizedProfitLossPct: number;
+  soldAt: string;
+  notes?: string;
+  source?: "manual" | "ebay";
+  ebayOrderId?: string;
+  needsReconciliation?: boolean;
+  gradingCost?: number | null;
+  suppliesCost?: number | null;
+  actualShippingCost?: number | null;
+  dismissedAt?: string;
+}
+
+export interface LedgerResponse {
+  userId: string;
+  count: number;
+  totals: {
+    realizedProfitLoss: number;
+    grossProceeds: number;
+    netProceeds: number;
+    costBasisSold: number;
+  };
+  entries: LedgerEntry[];
+}
+
+export async function fetchLedger(): Promise<LedgerResponse> {
+  return await request<LedgerResponse>("/api/portfolio/ledger");
+}
+
+export async function updateLedgerEntry(
+  id: string,
+  patch: Partial<Pick<LedgerEntry, "gradingCost" | "suppliesCost" | "notes"> & { dismissedAt?: string | null; dismissedReason?: string | null }>,
+): Promise<LedgerEntry> {
+  return await request<LedgerEntry>(`/api/portfolio/ledger/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
 // ─── ERP (Pro Seller) ──────────────────────────────────────────────
 
 export interface ErpTopMover {

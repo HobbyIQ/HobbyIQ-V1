@@ -78,6 +78,12 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/app/portfolio/sold"
+            className="hiq-btn-secondary text-sm hidden sm:inline-block"
+          >
+            Sold history
+          </Link>
           <button
             onClick={() => {
               setSelectMode((v) => {
