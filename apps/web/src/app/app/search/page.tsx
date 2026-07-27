@@ -7,6 +7,7 @@ import {
   searchCards,
   fetchPriceById,
   addHolding,
+  addWatchlist,
   candidateIdToCardsightId,
   type SearchCandidate,
   type SearchResponse,
@@ -379,7 +380,12 @@ function PriceDetail({
   const [added, setAdded] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const [watching, setWatching] = useState(false);
+  const [watched, setWatched] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
+
   const parallels = candidate.parallels ?? [];
+  const canWatch = Boolean(candidate.player);
 
   async function onAddToPortfolio() {
     setAdding(true);
@@ -413,6 +419,27 @@ function PriceDetail({
     }
   }
 
+  async function onAddToWatchlist() {
+    if (!candidate.player) return;
+    setWatching(true);
+    setWatchError(null);
+    try {
+      const res = await addWatchlist({ playerName: candidate.player });
+      if (res.success) {
+        setWatched(true);
+      } else {
+        setWatchError("Failed to add");
+      }
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      if (e.status === 402) setWatchError("Watchlist is Collector+.");
+      else if (e.status === 404) setWatchError("Player not found in DailyIQ pool.");
+      else setWatchError(e.message ?? "Failed to add");
+    } finally {
+      setWatching(false);
+    }
+  }
+
   return (
     <div className="hiq-card p-6 space-y-6">
       {/* Header */}
@@ -436,12 +463,22 @@ function PriceDetail({
             <p className="text-sm text-[color:var(--color-muted)]">{detail.summary}</p>
           )}
         </div>
-        <AddToPortfolioButton
-          adding={adding}
-          added={added}
-          error={addError}
-          onClick={onAddToPortfolio}
-        />
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          <AddToPortfolioButton
+            adding={adding}
+            added={added}
+            error={addError}
+            onClick={onAddToPortfolio}
+          />
+          {canWatch && (
+            <AddToWatchlistButton
+              watching={watching}
+              watched={watched}
+              error={watchError}
+              onClick={onAddToWatchlist}
+            />
+          )}
+        </div>
       </div>
 
       {/* Grade + parallel selectors */}
@@ -575,6 +612,43 @@ function AddToPortfolioButton({
         className="hiq-btn-primary text-sm whitespace-nowrap disabled:opacity-60"
       >
         {adding ? "Adding…" : "+ Add to portfolio"}
+      </button>
+      {error && (
+        <div className="text-xs max-w-[180px] text-right" style={{ color: "var(--color-danger)" }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddToWatchlistButton({
+  watching, watched, error, onClick,
+}: {
+  watching: boolean;
+  watched: boolean;
+  error: string | null;
+  onClick: () => void;
+}) {
+  if (watched) {
+    return (
+      <Link
+        href="/app/watchlist"
+        className="hiq-btn-secondary text-sm whitespace-nowrap"
+        style={{ borderColor: "var(--color-success)", color: "var(--color-success)" }}
+      >
+        ★ On watchlist
+      </Link>
+    );
+  }
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={onClick}
+        disabled={watching}
+        className="hiq-btn-secondary text-sm whitespace-nowrap disabled:opacity-60"
+      >
+        {watching ? "Adding…" : "★ Watchlist player"}
       </button>
       {error && (
         <div className="text-xs max-w-[180px] text-right" style={{ color: "var(--color-danger)" }}>

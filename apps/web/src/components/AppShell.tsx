@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { APP_NAV, activeNavItem, type NavItem } from "@/lib/navigation";
 import { fetchSessionUser, signOut, type AuthUser } from "@/lib/api";
+import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -79,16 +80,19 @@ export function AppShell({ children }: AppShellProps) {
       {/* Top bar — mobile */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 border-b border-[color:var(--color-border)]"
            style={{ background: "var(--color-bg)" }}>
-        <div className="flex items-center justify-between px-4 h-14">
-          <Link href="/app" className="font-bold text-lg">
+        <div className="flex items-center gap-3 px-4 h-14">
+          <Link href="/app" className="font-bold text-lg flex-shrink-0">
             <span className="hiq-hero-stroke text-transparent bg-clip-text">
               HobbyIQ
             </span>
           </Link>
+          <div className="flex-1 min-w-0">
+            <GlobalSearchBar compact />
+          </div>
           <button
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle navigation"
-            className="p-2 rounded-lg hover:bg-white/5"
+            className="p-2 rounded-lg hover:bg-white/5 flex-shrink-0"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d={mobileOpen ? "M6.4 4.9L12 10.5l5.6-5.6 1.4 1.4L13.4 12l5.6 5.6-1.4 1.4L12 13.4l-5.6 5.6-1.4-1.4L10.6 12 5 6.4z" : "M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"} />
@@ -113,8 +117,17 @@ export function AppShell({ children }: AppShellProps) {
       )}
 
       {/* Main content */}
-      <main className="flex-1 md:pl-0 pt-14 md:pt-0 min-w-0">
-        {children}
+      <main className="flex-1 md:pl-0 pt-14 md:pt-0 min-w-0 flex flex-col">
+        {/* Desktop top bar — global search */}
+        <div
+          className="hidden md:flex sticky top-0 z-30 border-b border-[color:var(--color-border)] px-6 h-14 items-center gap-4"
+          style={{ background: "color-mix(in oklab, var(--color-bg) 92%, transparent)", backdropFilter: "blur(8px)" }}
+        >
+          <div className="w-full max-w-2xl">
+            <GlobalSearchBar />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">{children}</div>
       </main>
     </div>
   );
