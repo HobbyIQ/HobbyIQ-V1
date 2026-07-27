@@ -125,6 +125,24 @@ export interface PortfolioHolding {
   sourceVendor?: "cardhedge" | "cardsight" | "ebay" | "manual";
   /** ISO timestamp the sourceVendor was last written. */
   sourceVendorUpdatedAt?: string;
+
+  // CF-OUR-POOL-PORTFOLIO-PRICER (Drew, 2026-07-27). Which pricing path
+  // authored the current fairMarketValue / estimatedValue on this holding.
+  //   "our-pool"       — hobbyiq-fmv service reading OUR sold_comps pool
+  //                      by canonical hobbyiqCardId slug
+  //   "legacy-engine"  — computeEstimate / rail / ladder (pre-Our-Pool
+  //                      wiring OR Our-Pool returned no data + fell back)
+  // Absent → legacy pre-CF holding, treat as "legacy-engine".
+  pricingSource?: "our-pool" | "legacy-engine";
+  /** Extra breadcrumbs when pricingSource === "our-pool": which ladder
+   *  rung won, how many comps contributed, and the exact slug that got
+   *  matched. Absent on legacy-engine rows. */
+  pricingSourceMeta?: {
+    slug: string;
+    method: string;    // HobbyIqFmvMethod, but a plain string here to keep
+                       // types.ts import-cycle-free
+    compsUsed: number;
+  };
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from
