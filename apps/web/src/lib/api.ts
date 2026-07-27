@@ -236,9 +236,13 @@ export interface PortfolioHolding {
   ebayListingId?: string | null;
   ebayListingPublishedAt?: string | null;
   lastUpdated?: string | null;
-  // CF-STOREFRONT-HIDE (Drew, 2026-07-27): owner-set per-card opt-out
-  // from the public /u/<username> storefront. Absent/false → shown;
-  // true → hidden. Toggle lives on the portfolio detail page.
+  // CF-STOREFRONT-OPT-IN (Drew, 2026-07-27 rev 2): explicit per-card
+  // opt-in for the public /u/<username> storefront. Absent/false →
+  // hidden; true → shown (subject to tier cap). Owner picks from
+  // /app/storefront or the portfolio detail button.
+  showOnStorefront?: boolean | null;
+  // Legacy field kept for backward compat during reads. Do not gate
+  // new UI on this — the storefront filter reads only showOnStorefront.
   hideFromStorefront?: boolean | null;
 }
 
@@ -580,10 +584,13 @@ export interface AddHoldingInput {
   notes?: string;
   cardsightCardId?: string;
   cardsightGradeId?: string;
-  // CF-STOREFRONT-HIDE (Drew, 2026-07-27): allow PATCH to toggle this
-  // without dragging every other identity field along. Backend spread-
-  // merges partial patches so a bare `{hideFromStorefront: true}` is a
-  // valid update.
+  // CF-STOREFRONT-OPT-IN (Drew, 2026-07-27 rev 2): allow PATCH to toggle
+  // showOnStorefront without dragging every other identity field along.
+  // Backend spread-merges partial patches so `{showOnStorefront: true}`
+  // is a valid update.
+  showOnStorefront?: boolean;
+  // Legacy — kept for backward compat during reads; new writes should
+  // use showOnStorefront instead.
   hideFromStorefront?: boolean;
 }
 

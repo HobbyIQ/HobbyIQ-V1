@@ -560,9 +560,10 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   );
 }
 
-// CF-STOREFRONT-HIDE (Drew, 2026-07-27). Toggles the holding's
-// hideFromStorefront flag with an optimistic UI so the pill flips
-// instantly. Rolls back on server failure.
+// CF-STOREFRONT-OPT-IN (Drew, 2026-07-27 rev 2). Opt-IN toggle: the
+// button is off by default; click to add this card to the public
+// storefront. Server enforces tier caps via /app/storefront's bulk
+// selector; here we just fire the write and reflect the new state.
 function StorefrontVisibilityButton({
   holding,
   onChange,
@@ -571,19 +572,18 @@ function StorefrontVisibilityButton({
   onChange: (next: PortfolioHolding) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const hidden = Boolean(holding.hideFromStorefront);
+  const shown = holding.showOnStorefront === true;
 
   async function toggle() {
     if (saving) return;
-    const nextHidden = !hidden;
-    // Optimistic — UI updates immediately, revert on error.
-    onChange({ ...holding, hideFromStorefront: nextHidden });
+    const nextShown = !shown;
+    onChange({ ...holding, showOnStorefront: nextShown });
     setSaving(true);
     try {
-      const res = await updateHolding(holding.id, { hideFromStorefront: nextHidden });
+      const res = await updateHolding(holding.id, { showOnStorefront: nextShown });
       if (res.holding) onChange(res.holding);
     } catch {
-      onChange({ ...holding, hideFromStorefront: hidden });
+      onChange({ ...holding, showOnStorefront: shown });
     } finally {
       setSaving(false);
     }
@@ -594,11 +594,11 @@ function StorefrontVisibilityButton({
       onClick={toggle}
       disabled={saving}
       className="hiq-btn-secondary disabled:opacity-60"
-      title={hidden
-        ? "Currently hidden from your public storefront. Click to publish."
-        : "Currently visible on your public storefront. Click to hide."}
+      title={shown
+        ? "On your public storefront. Click to remove."
+        : "Off your storefront. Click to add (uses one of your tier cap slots)."}
     >
-      {saving ? "…" : hidden ? "Show on storefront" : "Hide from storefront"}
+      {saving ? "…" : shown ? "Remove from storefront" : "Add to storefront"}
     </button>
   );
 }
