@@ -568,11 +568,38 @@ export async function fetchWatchlist(): Promise<WatchlistResponse> {
   return await request<WatchlistResponse>("/api/dailyiq/watchlist");
 }
 
-export async function addWatchlist(playerId: string, playerName: string): Promise<{ success: boolean }> {
+export async function addWatchlist(
+  args: { playerId?: string; playerName: string; league?: "MLB" | "MiLB" | "All" },
+): Promise<{ success: boolean }> {
+  // Backend requires playerId OR playerName; when only playerName is
+  // supplied, resolveAddablePlayer() maps it to a persistable playerId.
+  // Some non-MLB players won't resolve — 404 handled by the caller.
   return await request("/api/dailyiq/watchlist", {
     method: "POST",
-    body: JSON.stringify({ playerId, playerName }),
+    body: JSON.stringify({
+      playerId: args.playerId ?? "",
+      playerName: args.playerName,
+      ...(args.league ? { league: args.league } : {}),
+    }),
   });
+}
+
+// ─── Autocomplete (public suggest) ─────────────────────────────────
+
+export interface SuggestionsResponse {
+  query: string;
+  suggestions: string[];
+}
+
+// GET /api/compiq/suggest is unauthenticated per compiq.routes.ts:674.
+// Query length must be > 0; empty query returns { suggestions: [] }.
+export async function fetchSuggestions(q: string, take = 8): Promise<SuggestionsResponse> {
+  const query = q.trim();
+  if (!query) return { query: "", suggestions: [] };
+  return await request<SuggestionsResponse>(
+    `/api/compiq/suggest?q=${encodeURIComponent(query)}&take=${take}`,
+    { auth: false },
+  );
 }
 
 export async function removeWatchlist(playerId: string): Promise<{ success: boolean }> {
