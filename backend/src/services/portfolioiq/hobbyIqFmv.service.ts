@@ -91,6 +91,7 @@ export interface HobbyIqFmvTrend {
 /** Which rung of the fallback ladder produced the number. */
 export type HobbyIqFmvMethod =
   | "direct-slug"                // exact slug + grade match (highest confidence)
+  | "cross-setkey"               // same year+cardNumber+parallel+isAuto+sport, ANY setKey — rescues cards where ingest fragmentation put the same physical card under different product slugs (e.g. "bowman" vs "bowman-chrome" vs "chrome-prospects-autographs" for the same CPA-EHA auto). Higher confidence than sibling-parallel because parallel still matches; slightly lower than direct-slug because setKey unification means the pool crosses ingest variants.
   | "cross-printrun"             // same identity ignoring printRun (specific variants exist, this one doesn't)
   | "same-printrun-cross-parallel" // same cardNumber + auto + printRun, other parallels (best sibling for numbered cards)
   | "printrun-discovery"         // target has no printRun; find the DOMINANT printRun for this identity and use it
@@ -147,6 +148,9 @@ interface PoolRow {
   gradeCompany?: string | null;
   gradeValue?: number | null;
   qualityFlags?: string[];
+  // Included only so the cross-setKey rung can count distinct source
+  // slug variants for its basisNote; not consumed by anything else.
+  hobbyiqCardId?: string;
 }
 
 let cachedContainer: Container | null = null;
@@ -187,7 +191,8 @@ async function queryPool(
       : "";
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
-                     c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags
+                     c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
+                     c.hobbyiqCardId
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from${sourceClause}
               ORDER BY c.soldAt DESC`,
@@ -365,6 +370,59 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       input.previewLimit ?? 10, now, await populationPromise);
   }
 
+  // ─── Rung 1.5 (NEW): cross-setKey identity + parallel ────────────────
+  // Rescue for ingest-fragmentation: the same physical card is often
+  // stored in sold_comps under multiple slug variants because CH,
+  // Cardsight, and eBay emit different product strings that
+  // normalizeSetKey maps to different setKeys (e.g. "bowman" vs
+  // "bowman-chrome" vs "chrome-prospects-autographs" for the same
+  // CPA-EHA Chrome Prospects Auto). Direct-slug misses those. Sibling-
+  // parallel finds them but ALSO includes every other parallel at the
+  // same cardNumber, diluting rare rainbow parallels to base-auto
+  // medians. This rung threads the needle: query by
+  // (year, cardNumber, isAuto, sport) — any setKey — then JS-filter to
+  // the target parallel slug.
+  //
+  // Only fires when direct-slug came up empty. Higher confidence than
+  // sibling-parallel because parallel identity still matches; slightly
+  // lower than direct-slug because we're crossing ingest variants.
+  {
+    const identityRows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+      ],
+      cutoffIso,
+    );
+    const targetParallelSlug = parsed.parallel;
+    const parallelMatched = identityRows.filter(
+      (r) => slugify(r.parallel ?? "") === targetParallelSlug,
+    );
+    // Only count as a hit if this rung finds MORE than direct-slug did
+    // AND the target slug isn't already the "canonical" hit — otherwise
+    // we'd return the same pool with a lower-confidence label. The
+    // guard `direct-slug returned 0` is enforced by the empty-rows
+    // check preceding this block.
+    const graded = filterByGrade(parallelMatched, gradeCompany, gradeValue);
+    if (graded.length > 0) {
+      // Count distinct slugs unified — surfaced in basisNote so the
+      // user can see how many ingest variants contributed.
+      const distinctSlugs = new Set(graded.map((r) => (r as { hobbyiqCardId?: string }).hobbyiqCardId));
+      const variantCount = distinctSlugs.size;
+      const variantSuffix = variantCount > 1
+        ? ` (unified across ${variantCount} ingest variants)`
+        : "";
+      return buildResult(slug, graded, "cross-setkey",
+        `Estimated from ${graded.length} sale${graded.length === 1 ? "" : "s"} of this exact card${variantSuffix}`,
+        confidenceForRung("cross-setkey", graded.length),
+        input.previewLimit ?? 10, now, await populationPromise);
+    }
+  }
+
   // ─── Rung 2: same identity ignoring printRun ────────────────────────
   // Strip the print-run suffix and match anything with the same
   // player/year/set/cardNumber/parallel/auto. Useful when the /50 auto
@@ -525,8 +583,24 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     // critical — keeps the /50 tier (e.g. Gold Wave $875 for CPA-GW /50
     // auto) intact instead of falling to sibling-parallel which dilutes
     // with unnumbered base autos.
-    const rawRungs: Array<{ where: string; params: Array<{ name: string; value: string | number | boolean | null }>; method: HobbyIqFmvMethod; note: (n: number) => string }> = [
+    const rawRungs: Array<{ where: string; params: Array<{ name: string; value: string | number | boolean | null }>; method: HobbyIqFmvMethod; note: (n: number) => string; parallelFilter?: string }> = [
       { where: "c.hobbyiqCardId = @slug", params: [{ name: "@slug", value: slug }], method: "direct-slug", note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of this exact card × ${gradeCompany} ${gradeValue} multiplier` },
+      // NEW rung: cross-setKey raw, before same-printrun-cross-parallel.
+      // Same rescue as the observed cross-setKey rung above — physical
+      // card is fragmented across ingest variants. JS-filters on parallel
+      // slug so rare parallels don't get diluted to base-auto medians.
+      {
+        where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+        params: [
+          { name: "@y", value: parsed.year },
+          { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+          { name: "@auto", value: parsed.isAuto },
+          { name: "@sport", value: parsed.sport },
+        ],
+        method: "cross-setkey",
+        parallelFilter: parsed.parallel,
+        note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of this exact card across ingest variants × ${gradeCompany} ${gradeValue} multiplier`,
+      },
     ];
     if (parsed.printRun !== null && parsed.printRun !== undefined) {
       rawRungs.push({
@@ -550,6 +624,12 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     });
     for (const rung of rawRungs) {
       let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso);
+      // Cross-setKey rung applies its parallel filter in JS on top of the
+      // SQL-side identity query. Other rungs skip this (their WHERE
+      // clauses already scope to the intended pool).
+      if (rung.parallelFilter) {
+        rawRows = rawRows.filter((r) => slugify(r.parallel ?? "") === rung.parallelFilter);
+      }
       rawRows = filterByGrade(rawRows, null, null);   // raw only
       if (rawRows.length >= 3) {
         const rawPrices = rawRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
@@ -580,6 +660,9 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
   const nBonus = Math.min(0.2, n / 100);      // saturating bonus for sample size
   switch (rung) {
     case "direct-slug":                  return Math.min(0.95, 0.75 + nBonus);
+    // Between direct-slug and cross-printrun — parallel identity still
+    // matches, only setKey was normalized differently at ingest.
+    case "cross-setkey":                 return Math.min(0.90, 0.70 + nBonus);
     case "cross-printrun":               return Math.min(0.80, 0.55 + nBonus);
     case "same-printrun-cross-parallel": return Math.min(0.70, 0.45 + nBonus);
     case "printrun-discovery":           return Math.min(0.75, 0.55 + nBonus);
