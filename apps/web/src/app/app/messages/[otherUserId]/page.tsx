@@ -65,6 +65,7 @@ function ThreadBody() {
 
   const [me, setMe] = useState<AuthUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [otherUsername, setOtherUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [offerCents, setOfferCents] = useState<string>("");
@@ -82,6 +83,7 @@ function ThreadBody() {
         const res = await fetchThread(otherUserId);
         if (cancelled) return;
         setMessages(res.messages ?? []);
+        setOtherUsername(res.other?.username ?? null);
       } catch (err) {
         const e = err as { message?: string };
         setError(e.message ?? "Failed to load thread");
@@ -163,7 +165,11 @@ function ThreadBody() {
         >
           ← Inbox
         </Link>
-        <h1 className="text-2xl font-bold mt-2">{otherUserId}</h1>
+        {/* CF-MESSAGING-USERNAMES: prefer the resolved handle, fall
+            back to a shortened userId. */}
+        <h1 className="text-2xl font-bold mt-2">
+          {otherUsername ? `@${otherUsername}` : `${otherUserId.slice(0, 12)}…`}
+        </h1>
       </div>
 
       <section className="hiq-card p-0 flex flex-col" style={{ height: "60vh" }}>
