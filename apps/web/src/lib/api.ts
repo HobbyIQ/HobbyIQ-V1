@@ -795,6 +795,62 @@ export async function deleteExpense(id: string): Promise<void> {
   });
 }
 
+export type TaxFilingRail = "ebay" | "paypal" | "venmo";
+export const TAX_FILING_RAILS: ReadonlyArray<{ value: TaxFilingRail; label: string }> = [
+  { value: "ebay", label: "eBay Managed Payments" },
+  { value: "paypal", label: "PayPal" },
+  { value: "venmo", label: "Venmo" },
+];
+
+export interface RailReconciliation {
+  rail: TaxFilingRail;
+  reported1099K: number | null;
+  ledgerGross: number;
+  delta: number | null;
+  deltaPct: number | null;
+  ledgerEntryCount: number;
+  unreconciledExcluded: number;
+  note?: string;
+}
+
+export interface TaxFilingReport {
+  success: boolean;
+  taxYear: number;
+  rails: RailReconciliation[];
+  totals: {
+    reported1099K: number | null;
+    ledgerGross: number;
+    delta: number | null;
+  };
+  updatedAt: string | null;
+}
+
+export async function fetchTaxFiling(year: number): Promise<TaxFilingReport> {
+  return await request<TaxFilingReport>(`/api/portfolio/erp/tax/filings/${year}`);
+}
+
+export async function upsertTaxFiling(
+  year: number,
+  rails: Partial<Record<TaxFilingRail, { reportedGross1099K: number; note?: string }>>,
+): Promise<TaxFilingReport> {
+  return await request<TaxFilingReport>(`/api/portfolio/erp/tax/filings/${year}`, {
+    method: "PUT",
+    body: JSON.stringify({ rails }),
+  });
+}
+
+// Accounting export — returns a CSV or JSON download the user can save
+// for QuickBooks / Xero import. We surface as a same-tab redirect
+// (browser handles the download) so the session cookie carries through.
+export function accountingExportUrl(opts?: { from?: string; to?: string; format?: "csv" | "json" }): string {
+  const q = new URLSearchParams();
+  if (opts?.from) q.set("from", opts.from);
+  if (opts?.to) q.set("to", opts.to);
+  if (opts?.format) q.set("format", opts.format);
+  const qs = q.toString();
+  return `${API_BASE}/api/portfolio/erp/accounting-export${qs ? `?${qs}` : ""}`;
+}
+
 // POST /holdings/:id/refresh — reruns autoPriceHolding on the server so
 // the estimatedValue picks up any pricing-engine changes (e.g. a
 // calibration refresh, or a new comp landing in sold_comps). Rate-limited

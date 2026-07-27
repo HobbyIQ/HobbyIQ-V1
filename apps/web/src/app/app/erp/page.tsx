@@ -172,7 +172,7 @@ export default function ErpPage() {
         </div>
       )}
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link href="/app/erp/expenses" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
           <div className="flex items-baseline justify-between">
             <h2 className="font-bold text-lg">Expenses</h2>
@@ -180,7 +180,16 @@ export default function ErpPage() {
           </div>
           <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
             Log deductible costs — supplies, shipping, grading, subscriptions.
-            Auto-tagged for tax exports.
+          </p>
+        </Link>
+        <Link href="/app/erp/tax" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-bold text-lg">Tax filings</h2>
+            <span className="text-xs text-[color:var(--color-accent)]">Open →</span>
+          </div>
+          <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
+            1099-K reconciliation across eBay, PayPal, Venmo. Accounting-export
+            CSV for QuickBooks / Xero.
           </p>
         </Link>
         <Link href="/app/portfolio/sold" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
@@ -189,8 +198,7 @@ export default function ErpPage() {
             <span className="text-xs text-[color:var(--color-accent)]">Open →</span>
           </div>
           <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
-            Every closed position with realized P&amp;L, gross / net proceeds,
-            and reconciliation status per sale.
+            Every closed position with realized P&amp;L and reconciliation status.
           </p>
         </Link>
       </div>
@@ -199,9 +207,9 @@ export default function ErpPage() {
       <div className="hiq-card p-5 mt-4">
         <h2 className="font-bold text-lg mb-3">Coming to ERP</h2>
         <ul className="text-sm text-[color:var(--color-muted)] space-y-2 leading-relaxed">
-          <li>• Tax filings (1099-K reconciliation by rail, exportable for Schedule D)</li>
-          <li>• Unreconciled reconciliation queue (auto-match eBay sales to portfolio cards)</li>
-          <li>• Accounting export (QuickBooks / Xero-friendly CSV)</li>
+          <li>• Unreconciled queue (auto-match eBay sales to portfolio cards, edit fees + costs per sale)</li>
+          <li>• Bulk cost-basis editor</li>
+          <li>• Purchases ledger (imported from eBay purchase history)</li>
         </ul>
       </div>
     </div>
