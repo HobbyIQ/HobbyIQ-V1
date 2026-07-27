@@ -18,6 +18,7 @@ const SYNONYMS: Record<string, string> = {
   "playername": "playerName",
   "name": "playerName",
   "player name": "playerName",
+  "subject": "playerName",                       // Card Ladder
   // cardYear
   "year": "cardYear",
   "yr": "cardYear",
@@ -40,7 +41,9 @@ const SYNONYMS: Record<string, string> = {
   "card #": "cardNumber",
   "#": "cardNumber",
   "number": "cardNumber",
-  // parallel
+  // parallel — Card Ladder's "Variation" header maps directly to our
+  // canonical `variation` column (matched case-insensitively before
+  // this table is consulted), so no synonym for "variation" is needed.
   "variant": "parallel",
   "color": "parallel",
   "refractor": "parallel",
@@ -66,7 +69,16 @@ const SYNONYMS: Record<string, string> = {
   "certificate": "certNumber",
   "certnumber": "certNumber",
   "cert number": "certNumber",
+  "cert #": "certNumber",
+  "graded cert": "certNumber",                   // Card Ladder
+  "graded cert #": "certNumber",                 // Card Ladder
   "certificate number": "certNumber",
+  // CF-CARDLADDER-IMPORT (Drew, 2026-07-27): Card Ladder puts the full
+  // grade string ("PSA 10", "BGS 9.5", "Raw", "BGS 10 Black Label")
+  // in one column called "Condition". The fileParser reads this
+  // synonym and splits the value into gradeCompany + gradeValue at
+  // parse time — see splitConditionString().
+  "condition": "_gradeCombined",                 // Card Ladder
   // quantity
   "qty": "quantity",
   "qnty": "quantity",
@@ -79,6 +91,7 @@ const SYNONYMS: Record<string, string> = {
   "purchase price": "purchasePrice",
   "purchaseprice": "purchasePrice",
   "buy price": "purchasePrice",
+  "investment": "purchasePrice",                 // Card Ladder
   // totalCostBasis
   "total cost": "totalCostBasis",
   "totalcost": "totalCostBasis",
@@ -92,6 +105,7 @@ const SYNONYMS: Record<string, string> = {
   "acquired": "purchaseDate",
   "acquired date": "purchaseDate",
   "bought": "purchaseDate",
+  "date purchased": "purchaseDate",              // Card Ladder
   // purchaseSource
   "source": "purchaseSource",
   "seller": "purchaseSource",
@@ -120,6 +134,7 @@ const SYNONYMS: Record<string, string> = {
   "comment": "notes",
   "comments": "notes",
   "memo": "notes",
+  "population": "notes",                         // Card Ladder — pop info folded into notes
 };
 
 /**

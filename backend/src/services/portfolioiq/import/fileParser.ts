@@ -65,6 +65,57 @@ const COMPUTED_IGNORE_SET = new Set(
 /** Boolean columns. */
 const BOOLEAN_COLUMNS = new Set(["isAuto"]);
 
+// CF-CARDLADDER-IMPORT (Drew, 2026-07-27). Card Ladder + a few other
+// sheets ship a single "Condition" column carrying the full grade
+// string ("PSA 10", "BGS 9.5", "SGC 10", "BGS 10 Black Label", "Raw",
+// "Ungraded", etc.). Our schema splits that across two fields —
+// gradeCompany + gradeValue — so the header auto-map points such
+// columns at the pseudo-canonical "_gradeCombined" and the row parser
+// (see splitConditionString) fans it out.
+const GRADE_COMBINED_PSEUDO = "_gradeCombined";
+const GRADERS = ["PSA", "BGS", "SGC", "CGC"] as const;
+type Grader = (typeof GRADERS)[number];
+
+interface SplitCondition {
+  gradeCompany: Grader | null;
+  gradeValue: number | null;
+  /** Free-text tail we couldn't fit into (company, value) — e.g. "Black Label", "Pristine". */
+  qualifier: string | null;
+  /** Original string, preserved for the row-flags reason. */
+  raw: string;
+  /** True when the value looks like a real grade string we could split. */
+  matched: boolean;
+}
+
+function splitConditionString(input: string): SplitCondition {
+  const raw = String(input ?? "").trim();
+  const out: SplitCondition = { gradeCompany: null, gradeValue: null, qualifier: null, raw, matched: false };
+  if (!raw) return out;
+
+  // "Raw" / "Ungraded" — leave gradeCompany + gradeValue null so the
+  // downstream normalizer treats this as a raw card.
+  if (/^(raw|ungraded)$/i.test(raw)) {
+    out.matched = true;
+    return out;
+  }
+
+  // <Company> <numeric grade> <optional qualifier>. Company may be
+  // followed by a space, hyphen, or nothing.
+  const m = raw.match(/^\s*(PSA|BGS|SGC|CGC)\b[\s\-]*([0-9]+(?:\.5)?)\b(.*)$/i);
+  if (m) {
+    const company = m[1].toUpperCase() as Grader;
+    const value = Number(m[2]);
+    const qualifier = m[3]?.trim() || null;
+    if (Number.isFinite(value) && value > 0 && value <= 10) {
+      out.gradeCompany = company;
+      out.gradeValue = value;
+      out.qualifier = qualifier;
+      out.matched = true;
+    }
+  }
+  return out;
+}
+
 /**
  * Parse a file buffer (xlsx) or string (csv) into rows + path detection.
  */
@@ -112,6 +163,57 @@ export function parseHoldingsFile(
       if (!canonical) continue; // Unmapped — user will assign in reconciliation step
       if (COMPUTED_IGNORE_SET.has(canonical)) continue; // Drop computed columns
 
+      // CF-CARDLADDER-IMPORT: fan the combined condition column out into
+      // gradeCompany + gradeValue at parse time so downstream sees the
+      // normal two-column shape. NEVER stores anything under the
+      // pseudo-canonical itself.
+      if (canonical === GRADE_COMBINED_PSEUDO) {
+        const s = rawValue === null || rawValue === undefined ? "" : String(rawValue);
+        if (!s.trim()) continue;   // empty condition = raw, leave both null
+        const split = splitConditionString(s);
+        if (split.matched) {
+          if (split.gradeCompany && split.gradeValue != null) {
+            // Only overwrite the two grade cells when the incoming
+            // combined string is a real grade — a "Raw" / "Ungraded"
+            // value leaves both untouched (matches our raw-card
+            // convention of grade fields absent).
+            cells["gradeCompany"] = {
+              value: split.gradeCompany,
+              rawHeader,
+              outcome: "ok",
+            };
+            cells["gradeValue"] = {
+              value: split.gradeValue,
+              rawHeader,
+              outcome: "ok",
+            };
+            if (split.qualifier && split.qualifier.length > 0) {
+              // Qualifier ("Black Label", "Pristine") gets appended to
+              // notes so the visual distinction survives the round-trip.
+              const existingNote = cells["notes"]?.value as string | undefined;
+              const noteBits = [existingNote, `Condition: ${split.qualifier}`].filter(Boolean);
+              cells["notes"] = {
+                value: noteBits.join(" · "),
+                rawHeader,
+                outcome: "ok",
+              };
+            }
+          }
+        } else {
+          // Non-standard condition string — carry it through as a note
+          // so nothing is silently lost.
+          const existingNote = cells["notes"]?.value as string | undefined;
+          const noteBits = [existingNote, `Condition: ${s.trim()}`].filter(Boolean);
+          cells["notes"] = {
+            value: noteBits.join(" · "),
+            rawHeader,
+            outcome: "ok",
+          };
+          flags.push({ column: "condition", reason: `Couldn't split "${s.trim()}" into grade company + value` });
+        }
+        continue;
+      }
+
       let parsed: ParsedCell;
 
       if (NUMERIC_USER_EDITABLE_COLUMNS.has(canonical)) {
@@ -143,6 +245,22 @@ export function parseHoldingsFile(
         parsed = { value: s, rawHeader, outcome: s === null ? "empty" : "ok" };
       }
 
+      // CF-CARDLADDER-IMPORT: don't overwrite an already-populated
+      // cell with an empty value. Two sheet columns can target the
+      // same canonical (Card Ladder's Population + Notes both map to
+      // "notes"; condition-qualifier also writes there). Iteration
+      // order is column order, so an empty Notes column that comes
+      // AFTER a populated Population column was clobbering the good
+      // data. First-non-empty-wins semantics guard the notes / string
+      // fields against that.
+      const existing = cells[canonical];
+      if (
+        existing
+        && (existing.value !== null && existing.value !== undefined && existing.value !== "")
+        && (parsed.value === null || parsed.value === undefined || parsed.value === "")
+      ) {
+        continue;
+      }
       cells[canonical] = parsed;
     }
 
