@@ -28,8 +28,11 @@ export function clearStoredSessionId(): void {
 export interface AuthUser {
   userId: string;
   email: string;
+  username?: string | null;
+  fullName?: string | null;
   plan?: "free" | "collector" | "investor" | "pro_seller" | string;
   expiresAt?: string | null;
+  entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
 }
 
 // Backend contract (authService.AuthResult): { success, user?, sessionId?, error? }
@@ -369,4 +372,34 @@ export async function fetchPriceById(input: {
 export function candidateIdToCardsightId(candidateId: string): string | null {
   if (candidateId.startsWith("cardsight:")) return candidateId.slice("cardsight:".length);
   return null;
+}
+
+// ─── Account / settings ────────────────────────────────────────────
+
+// GET /api/entitlements/me returns the resolved plan + features/caps.
+// Full shape is broad; we type only what the settings page reads.
+export interface EntitlementsMeResponse {
+  success: boolean;
+  plan: "free" | "collector" | "investor" | "pro_seller" | string;
+  entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
+  features?: Record<string, boolean>;
+  caps?: Record<string, unknown>;
+}
+
+export async function fetchEntitlements(): Promise<EntitlementsMeResponse> {
+  return await request<EntitlementsMeResponse>("/api/entitlements/me");
+}
+
+export async function setUsername(username: string): Promise<{ success: boolean; error?: string }> {
+  return await request<{ success: boolean; error?: string }>("/api/auth/username", {
+    method: "POST",
+    body: JSON.stringify({ username }),
+  });
+}
+
+export async function deleteAccount(): Promise<{ success: boolean }> {
+  return await request<{ success: boolean }>("/api/account/", {
+    method: "DELETE",
+    body: JSON.stringify({ confirm: "DELETE_MY_ACCOUNT" }),
+  });
 }
