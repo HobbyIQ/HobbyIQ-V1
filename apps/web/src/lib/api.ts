@@ -244,3 +244,129 @@ export async function fetchMarketMovers(
     `/api/compiq/market-trend/top-movers?window=${window}&limit=${limit}`,
   );
 }
+
+// ─── Card search + FMV ─────────────────────────────────────────────
+
+// Matches backend/src/types/cardIdentity.ts:CardIdentity — only the
+// fields the web UI actually consumes.
+export interface SearchCandidate {
+  candidateId: string;  // e.g. "cardsight:<uuid>" or "psa:<cert>"
+  source: string;
+  attribution: "authoritative" | "ranked";
+  confidence: number;
+  player: string | null;
+  year: number | null;
+  brand: string | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  variation: string | null;
+  isAuto: boolean;
+  serialNumber: string | null;
+  title: string;
+  imageUrl: string | null;
+  parallels?: Array<{ id: string; name: string; numberedTo?: number | null }>;
+  attributes?: string[];
+}
+
+export interface SearchResponse {
+  success?: boolean;
+  input: {
+    raw: string;
+    detectedMode: "cert" | "freetext";
+    recognizingGraders?: string[];
+  };
+  candidates: SearchCandidate[];
+  warnings: string[];
+}
+
+export async function searchCards(input: string, hint?: "cert" | "freetext"): Promise<SearchResponse> {
+  return await request<SearchResponse>("/api/search/cards", {
+    method: "POST",
+    body: JSON.stringify({ input, ...(hint ? { hint } : {}) }),
+  });
+}
+
+// price-by-id response is very rich; we type the fields the UI reads.
+// Full type spans compiq.routes.ts:1261+. Money = dollars-float.
+export interface PriceGradeBreakdownEntry {
+  gradeCompany?: string;
+  gradeValue?: number;
+  count?: number;
+  medianPrice?: number;
+  meanPrice?: number;
+  lastSalePrice?: number;
+  lastSaleDate?: string;
+  windowDays?: number;
+}
+
+export interface PriceGradedEstimate {
+  gradeCompany: string;
+  gradeValue: number;
+  estimatedValue?: number | null;
+  estimateLow?: number | null;
+  estimateHigh?: number | null;
+  fairMarketValue: null;  // always null per contract — display-only, not train
+  estimateConfidence?: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
+  estimateBasis?: string | null;
+}
+
+export interface PriceByIdResponse {
+  success: boolean;
+  cardsightCardId: string;
+  summary?: string;
+  marketTier?: { value?: number; high?: number };
+  buyZone?: [number, number];
+  holdZone?: [number, number];
+  sellZone?: [number, number];
+  fairMarketValueLive?: number | null;
+  marketValue?: number | null;
+  predictedPrice?: number | null;
+  predictedPriceRange?: [number, number] | null;
+  confidence?: number;
+  approximate?: boolean;
+  outOfScopeReason?: string | null;
+  source?: string;
+  recentComps?: Array<{
+    price: number;
+    soldDate: string;
+    grader?: string | null;
+    gradeValue?: number | null;
+    parallel?: string | null;
+    marketplace?: string;
+    listingUrl?: string;
+  }>;
+  gradeBreakdown?: PriceGradeBreakdownEntry[];
+  gradedEstimates?: PriceGradedEstimate[];
+  cardImageUrl?: string | null;
+  cardImageThumbUrl?: string | null;
+  gradeUsed?: string | null;
+  compsUsed?: number;
+  compsAvailable?: number;
+  daysSinceNewestComp?: number | null;
+  lastSale?: {
+    price?: number;
+    soldDate?: string;
+    grader?: string | null;
+    gradeValue?: number | null;
+  } | null;
+}
+
+export async function fetchPriceById(input: {
+  cardsightCardId: string;
+  gradeCompany?: string;
+  gradeValue?: number;
+  parallelName?: string;
+}): Promise<PriceByIdResponse> {
+  return await request<PriceByIdResponse>("/api/compiq/price-by-id", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// Strip the "cardsight:" prefix from a search candidate id to get the
+// UUID needed by price-by-id. Returns null for non-cardsight candidates.
+export function candidateIdToCardsightId(candidateId: string): string | null {
+  if (candidateId.startsWith("cardsight:")) return candidateId.slice("cardsight:".length);
+  return null;
+}
