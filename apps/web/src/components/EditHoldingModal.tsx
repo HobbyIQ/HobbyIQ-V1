@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import {
+  previewFmvForCard,
   searchCards,
   updateHolding,
   uploadHoldingPhoto,
+  type FmvPreviewResponse,
   type PortfolioHolding,
   type SearchCandidate,
 } from "@/lib/api";
+import { formatUSD } from "@/lib/format";
 
 interface Props {
   holding: PortfolioHolding;
@@ -56,6 +59,23 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [pickerShow, setPickerShow] = useState(false);
 
+  // CF-IDENTITY-VERIFIED (Drew, 2026-07-27). After picking a candidate,
+  // pop a Confirm gate: side-by-side identity + photo, projected FMV at
+  // the current grade. Only on Confirm do we autofill the form fields
+  // AND stamp identityVerified=true. Cert-source (authoritative)
+  // candidates bypass the gate — grader IS the source of truth.
+  const [confirmCandidate, setConfirmCandidate] = useState<SearchCandidate | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [preview, setPreview] = useState<FmvPreviewResponse | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [verifiedTag, setVerifiedTag] = useState<{
+    source: string;
+    candidateId: string;
+    verifiedAt: string;
+  } | null>(
+    holding.identityVerifiedBy ?? null,
+  );
+
   useEffect(() => {
     const q = pickerQuery.trim();
     if (!q || q.length < 3) {
@@ -80,25 +100,58 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
     return () => clearTimeout(handle);
   }, [pickerQuery]);
 
-  function applyCandidate(c: SearchCandidate) {
+  // CF-IDENTITY-VERIFIED: writes identity fields + stamps the
+  // verified marker so Save persists both atomically.
+  function applyAndVerify(c: SearchCandidate, source: "cert" | "manual-confirm") {
     if (c.player) setPlayerName(c.player);
     if (c.year != null) setCardYear(String(c.year));
-    // Prefer setName; fall back to brand for legacy cards without a
-    // split identity.
     const productPick = c.setName ?? c.brand ?? "";
     if (productPick) setProduct(productPick);
     if (c.parallel) setParallel(c.parallel);
     if (c.cardNumber) setCardNumber(c.cardNumber);
     if (c.serialNumber) setSerialNumber(c.serialNumber);
     if (typeof c.isAuto === "boolean") setIsAuto(c.isAuto);
-    // Cert-source candidates (PSA/BGS/SGC/CGC lookups) carry an
-    // authoritative grade — apply if present.
     if (c.gradeCompany) setGradeCompany(c.gradeCompany);
     if (c.gradeValue != null) setGradeValue(String(c.gradeValue));
     if (c.certNumber) setCertNumber(c.certNumber);
+    setVerifiedTag({
+      source: source === "cert" ? "cert-lookup" : "manual-confirm",
+      candidateId: c.candidateId,
+      verifiedAt: new Date().toISOString(),
+    });
     setPickerShow(false);
     setPickerQuery("");
     setPickerResults([]);
+  }
+
+  function onPickCandidate(c: SearchCandidate) {
+    // Cert-source lookups (PSA/BGS/SGC/CGC) are authoritative — skip
+    // the manual confirm step because the grader is the source of truth.
+    if (c.attribution === "authoritative" || /^(psa|bgs|sgc|cgc):/i.test(c.candidateId)) {
+      applyAndVerify(c, "cert");
+      return;
+    }
+    // Otherwise open the Confirm gate + kick off an FMV preview at the
+    // user's CURRENT grade so a wrong pick reads as "$50 vs the $5k
+    // I know this is" on sight.
+    setConfirmCandidate(c);
+    setPreview(null);
+    setPreviewError(null);
+    setPreviewLoading(true);
+    const rawCardId = c.candidateId.replace(/^[a-z-]+:/i, "").split("::")[0];
+    const gvN = gradeValue.trim() ? Number(gradeValue) : NaN;
+    previewFmvForCard({
+      cardId: rawCardId,
+      gradeCompany: gradeCompany || null,
+      gradeValue: Number.isFinite(gvN) ? gvN : null,
+      parallelName: c.parallel || null,
+    })
+      .then((r) => setPreview(r))
+      .catch((err: unknown) => {
+        const e = err as { message?: string };
+        setPreviewError(e.message ?? "Preview failed");
+      })
+      .finally(() => setPreviewLoading(false));
   }
 
   async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -172,6 +225,17 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
         purchaseDate: purchaseDate || undefined,
         notes: notes.trim() || undefined,
         quantity: holding.quantity,   // required by AddHoldingInput type, preserve
+        // CF-IDENTITY-VERIFIED (Drew, 2026-07-27): stamp verified marker
+        // when the user confirmed a picker candidate this session. Never
+        // clears an existing verified flag — a bare Save of an already-
+        // verified holding leaves the marker intact.
+        ...(verifiedTag
+          ? {
+              identityVerified: true,
+              identityVerifiedAt: verifiedTag.verifiedAt,
+              identityVerifiedBy: verifiedTag,
+            }
+          : {}),
       };
 
       const res = await updateHolding(holding.id, patch);
@@ -187,6 +251,148 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
       setSubmitting(false);
     }
   }
+
+  // CF-IDENTITY-VERIFIED Confirm gate. Rendered as a NESTED overlay
+  // above the Edit modal so pressing Back / Cancel returns you to the
+  // form with your typed edits intact.
+  const confirmView = confirmCandidate ? (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)" }}
+      onClick={() => setConfirmCandidate(null)}
+    >
+      <div
+        className="hiq-card p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold">Confirm this is your card</h2>
+            <p className="text-xs mt-1" style={{ color: "var(--hiq-muted-text)" }}>
+              Compare your photo + the current identity to the catalog match.
+              Confirming stamps <strong>Verified</strong> on this holding so
+              future FMV runs trust the ID.
+            </p>
+          </div>
+          <button
+            onClick={() => setConfirmCandidate(null)}
+            aria-label="Back"
+            className="text-2xl leading-none hover:text-white"
+            style={{ color: "var(--hiq-muted-text)" }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="hiq-card p-4">
+            <div className="text-xs uppercase tracking-wide mb-2" style={{ color: "var(--hiq-muted-text)" }}>
+              Your current identity
+            </div>
+            <div className="flex items-start gap-3">
+              {photos[0] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photos[0]} alt="" className="w-16 h-22 object-cover rounded flex-shrink-0" style={{ maxHeight: 88 }} />
+              ) : (
+                <div className="w-16 h-22 rounded flex-shrink-0" style={{ background: "var(--hiq-slate-gray)", height: 88 }} />
+              )}
+              <div className="min-w-0 text-sm space-y-1">
+                <div className="font-semibold">{playerName || "(no player)"}</div>
+                <IdRow label="Year" value={cardYear || "—"} />
+                <IdRow label="Set" value={product || "—"} />
+                <IdRow label="#" value={cardNumber || "—"} />
+                <IdRow label="Parallel" value={parallel || "—"} />
+                <IdRow label="Auto" value={isAuto ? "Yes" : "No"} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="hiq-card p-4"
+            style={{ borderColor: "color-mix(in oklab, var(--hiq-hobby-green) 45%, transparent)" }}
+          >
+            <div className="text-xs uppercase tracking-wide mb-2" style={{ color: "var(--hiq-hobby-green)" }}>
+              Catalog match
+            </div>
+            <div className="flex items-start gap-3">
+              {confirmCandidate.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={confirmCandidate.imageUrl} alt="" className="w-16 h-22 object-cover rounded flex-shrink-0" style={{ maxHeight: 88 }} />
+              ) : (
+                <div className="w-16 h-22 rounded flex-shrink-0" style={{ background: "var(--hiq-slate-gray)", height: 88 }} />
+              )}
+              <div className="min-w-0 text-sm space-y-1">
+                <div className="font-semibold">{confirmCandidate.player || "(no player)"}</div>
+                <IdRow label="Year" value={confirmCandidate.year != null ? String(confirmCandidate.year) : "—"} />
+                <IdRow label="Set" value={confirmCandidate.setName ?? confirmCandidate.brand ?? "—"} />
+                <IdRow label="#" value={confirmCandidate.cardNumber ?? "—"} />
+                <IdRow label="Parallel" value={confirmCandidate.parallel ?? "—"} />
+                <IdRow label="Auto" value={confirmCandidate.isAuto ? "Yes" : "No"} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FMV preview */}
+        <div className="mt-4 hiq-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs uppercase tracking-wide" style={{ color: "var(--hiq-muted-text)" }}>
+              Projected FMV at {gradeCompany && gradeValue ? `${gradeCompany} ${gradeValue}` : "current grade"}
+            </div>
+            {gradeCompany && gradeValue ? null : (
+              <div className="text-[10px]" style={{ color: "var(--hiq-muted-text)" }}>
+                (set grade for a graded preview)
+              </div>
+            )}
+          </div>
+          {previewLoading ? (
+            <div className="text-sm mt-2" style={{ color: "var(--hiq-muted-text)" }}>
+              Calculating…
+            </div>
+          ) : previewError ? (
+            <div className="text-sm mt-2" style={{ color: "var(--hiq-danger)" }}>
+              Couldn&apos;t preview FMV: {previewError}
+            </div>
+          ) : preview ? (
+            <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+              <div className="text-3xl font-bold tabular-nums" style={{ color: "var(--hiq-hobby-green)" }}>
+                {preview.fmv != null ? formatUSD(preview.fmv, { hideCents: preview.fmv >= 100 }) : "—"}
+              </div>
+              {preview.compsCount != null && (
+                <div className="text-xs" style={{ color: "var(--hiq-muted-text)" }}>
+                  {preview.compsCount} comp{preview.compsCount === 1 ? "" : "s"}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm mt-2" style={{ color: "var(--hiq-muted-text)" }}>—</div>
+          )}
+          <div className="text-[10px] mt-2" style={{ color: "var(--hiq-muted-text)" }}>
+            Sanity check: if this number looks wildly wrong for this card, you probably picked the wrong candidate — go Back and try again.
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            onClick={() => setConfirmCandidate(null)}
+            className="hiq-btn-secondary"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => {
+              const c = confirmCandidate;
+              setConfirmCandidate(null);
+              if (c) applyAndVerify(c, "manual-confirm");
+            }}
+            className="hiq-btn-primary"
+          >
+            Confirm — this is my card
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div
@@ -276,7 +482,7 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
                     <button
                       key={c.candidateId}
                       type="button"
-                      onClick={() => applyCandidate(c)}
+                      onClick={() => onPickCandidate(c)}
                       className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors"
                     >
                       {c.imageUrl ? (
@@ -456,6 +662,25 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
           </div>
         )}
 
+        {verifiedTag && (
+          <div
+            className="mt-4 text-xs flex items-center gap-2"
+            style={{ color: "var(--hiq-hobby-green)" }}
+          >
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{
+                background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
+              }}
+            >
+              ✓ VERIFIED
+            </span>
+            <span style={{ color: "var(--hiq-muted-text)" }}>
+              Identity confirmed via {verifiedTag.source}. Save to persist.
+            </span>
+          </div>
+        )}
+
         <div className="mt-6 flex items-center justify-end gap-3">
           <button onClick={onCancel} className="hiq-btn-secondary" disabled={submitting}>
             Cancel
@@ -469,6 +694,21 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
           </button>
         </div>
       </div>
+      {confirmView}
+    </div>
+  );
+}
+
+function IdRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span
+        className="text-[10px] uppercase tracking-wide w-14 flex-shrink-0"
+        style={{ color: "var(--hiq-muted-text)" }}
+      >
+        {label}
+      </span>
+      <span className="truncate">{value}</span>
     </div>
   );
 }

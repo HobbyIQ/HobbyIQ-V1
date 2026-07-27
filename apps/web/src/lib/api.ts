@@ -244,6 +244,17 @@ export interface PortfolioHolding {
   // Legacy field kept for backward compat during reads. Do not gate
   // new UI on this — the storefront filter reads only showOnStorefront.
   hideFromStorefront?: boolean | null;
+  // CF-IDENTITY-VERIFIED (Drew, 2026-07-27): true iff the owner has
+  // explicitly picked a catalog candidate via the Confirm gate in the
+  // Edit modal. Portfolio row shows a chip; follow-up PR can gate
+  // storefront publication on this.
+  identityVerified?: boolean | null;
+  identityVerifiedAt?: string | null;
+  identityVerifiedBy?: {
+    source: string;
+    candidateId: string;
+    verifiedAt: string;
+  } | null;
 }
 
 // Prefer explicit fmv → estimate → null. NEVER fall back to cost-proxy
@@ -390,6 +401,38 @@ export async function searchCards(input: string, hint?: "cert" | "freetext"): Pr
   return await request<SearchResponse>("/api/search/cards", {
     method: "POST",
     body: JSON.stringify({ input, ...(hint ? { hint } : {}) }),
+  });
+}
+
+// CF-IDENTITY-VERIFIED (Drew, 2026-07-27). Preview FMV for a specific
+// cardId at a specific grade — used by the Edit modal's Confirm gate so
+// the user sees "PSA 10: $12,000 (24 comps)" next to a picker candidate
+// before committing. Returns just the fields the preview UI needs;
+// backend payload is much richer but we don't parse the whole thing.
+export interface FmvPreviewResponse {
+  success?: boolean;
+  fmv?: number | null;
+  currency?: string;
+  compsCount?: number | null;
+  gradeCompany?: string;
+  gradeValue?: number;
+  cardTitle?: string;
+  cardImageUrl?: string | null;
+}
+export async function previewFmvForCard(input: {
+  cardId: string;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  parallelName?: string | null;
+}): Promise<FmvPreviewResponse> {
+  return await request("/api/compiq/price-by-id", {
+    method: "POST",
+    body: JSON.stringify({
+      cardId: input.cardId,
+      ...(input.gradeCompany ? { gradeCompany: input.gradeCompany } : {}),
+      ...(input.gradeValue != null ? { gradeValue: input.gradeValue } : {}),
+      ...(input.parallelName ? { parallelName: input.parallelName } : {}),
+    }),
   });
 }
 
@@ -592,6 +635,16 @@ export interface AddHoldingInput {
   // Legacy — kept for backward compat during reads; new writes should
   // use showOnStorefront instead.
   hideFromStorefront?: boolean;
+  // CF-IDENTITY-VERIFIED (Drew, 2026-07-27): sent when the user
+  // confirms a picker candidate. Reads/writes atomically via the same
+  // PATCH endpoint.
+  identityVerified?: boolean;
+  identityVerifiedAt?: string;
+  identityVerifiedBy?: {
+    source: string;
+    candidateId: string;
+    verifiedAt: string;
+  };
 }
 
 export interface AddHoldingResult {

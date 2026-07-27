@@ -299,6 +299,14 @@ export interface PortfolioHoldingWire {
   // Cert
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
+  // CF-IDENTITY-VERIFIED (Drew, 2026-07-27): see PortfolioHolding.
+  identityVerified?: boolean;
+  identityVerifiedAt?: string;
+  identityVerifiedBy?: {
+    source: string;
+    candidateId: string;
+    verifiedAt: string;
+  };
   // Cardsight FK
   cardId?: string | null;
   gradeId?: string | null;
@@ -620,6 +628,13 @@ export function composeHoldingWireShape(
     // Cert
     certNumber: holding.certNumber,
     certGrader: holding.certGrader,
+    // CF-IDENTITY-VERIFIED (Drew, 2026-07-27): true iff the owner has
+    // explicitly picked a catalog candidate through the Confirm gate.
+    // Surfaced on the wire so portfolio row / storefront filters can
+    // read it without a second call.
+    identityVerified: (holding as { identityVerified?: boolean }).identityVerified,
+    identityVerifiedAt: (holding as { identityVerifiedAt?: string }).identityVerifiedAt,
+    identityVerifiedBy: (holding as { identityVerifiedBy?: { source: string; candidateId: string; verifiedAt: string } }).identityVerifiedBy,
     // Cardsight FK
     cardId: holding.cardId,
     gradeId: holding.gradeId,
