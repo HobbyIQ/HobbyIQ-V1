@@ -32,8 +32,9 @@ export function Brand({ href = "/", size = "md", variant = "icon-only", classNam
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
       {variant === "logo-full" ? (
         imgFailed ? (
-          <span className={`font-bold tracking-tight ${textCls}`}>
-            <span className="hiq-hero-stroke text-transparent bg-clip-text">HobbyIQ</span>
+          <span className={`font-bold tracking-tight ${textCls}`} style={{ fontFamily: "var(--hiq-font-rounded)" }}>
+            <span className="hiq-wordmark">Hobby</span>
+            <span className="hiq-wordmark-iq">IQ</span>
           </span>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
@@ -60,8 +61,9 @@ export function Brand({ href = "/", size = "md", variant = "icon-only", classNam
               onError={() => setImgFailed(true)}
             />
           )}
-          <span className={`font-bold tracking-tight ${textCls}`}>
-            <span className="hiq-hero-stroke text-transparent bg-clip-text">HobbyIQ</span>
+          <span className={`font-bold tracking-tight ${textCls}`} style={{ fontFamily: "var(--hiq-font-rounded)" }}>
+            <span className="hiq-wordmark">Hobby</span>
+            <span className="hiq-wordmark-iq">IQ</span>
           </span>
         </>
       )}

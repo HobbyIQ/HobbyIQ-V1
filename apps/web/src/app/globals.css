@@ -1,118 +1,414 @@
-/* HobbyIQ web — visual identity mapped 1:1 from HobbyIQ/DesignSystem/HobbyIQTheme.swift.
- * When the iOS theme changes, update BOTH files together.
- * Reference: memory `hobbyiq-design-system`. */
+/* HobbyIQ web design system — the exact spec Drew handed off.
+ * Match every value below to iOS + design system. Do not eyeball.
+ *
+ * Two token layers live side by side:
+ *   (1) --hiq-*   — the canonical, hand-audited spec tokens
+ *   (2) --color-* — legacy aliases mapped to the same values so pages
+ *                    written against the older token set keep rendering
+ *                    without a sweeping refactor. New code should use
+ *                    --hiq-* directly.
+ */
 
 @import "tailwindcss";
 
 @theme {
-  /* Base palette (exact hex from HobbyIQTheme.swift) */
-  --color-bg:             #06101D;   /* appBackground */
-  --color-bg-deep:        #0B1424;   /* deepNavy — gradient midpoint */
-  --color-bg-card:        #101B2D;   /* cardNavy — all card fills */
-  --color-border:         #2A3344;   /* steelGray */
-  --color-border-soft:    rgba(30, 144, 255, 0.28);
+  /* Legacy alias layer (kept so existing Tailwind arbitrary-value calls
+   * like text-[color:var(--color-muted)] don't break). Every value here
+   * maps to a --hiq-* token below. */
+  --color-bg:              #06101D;
+  --color-bg-deep:         #0B1424;
+  --color-bg-card:         #101B2D;
+  --color-bg-elevated:     #1A2333;
+  --color-border:          rgba(42,51,68,0.88);
+  --color-border-soft:     rgba(30,144,255,0.28);
 
-  --color-accent:         #1E90FF;   /* electricBlue */
-  --color-accent-bright:  #3DA9FF;   /* brightBlue (hover) */
+  --color-accent:          #1E90FF;
+  --color-accent-bright:   #3DA9FF;
 
-  --color-positive:         #7CFF72; /* hobbyGreen */
-  --color-positive-bright:  #B6FF4D; /* brightGreen */
-  --color-positive-success: #41E66F; /* successGreen */
+  --color-positive:         #7CFF72;
+  --color-positive-bright:  #B6FF4D;
+  --color-positive-success: #41E66F;
+  --color-success:          #41E66F;
 
-  --color-muted:          #C4CDD9;   /* mutedText */
-  --color-foreground:     #FFFFFF;
+  --color-muted:           #C4CDD9;
+  --color-foreground:      #FFFFFF;
 
-  --color-warning:        #F97316;
-  --color-danger:         #EF4444;
+  --color-warning:         #FFA500;
+  --color-danger:          #FF3B30;
 
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Gradients (from Gradients.background / topGlow / dashboardStroke).
- * Kept outside @theme so Tailwind doesn't try to generate utility classes
- * for them — they're used via CSS `background:` on specific elements. */
+/* ─── HIQ canonical tokens ──────────────────────────────────────── */
+
 :root {
-  --gradient-app-bg:      linear-gradient(135deg, #06101D 0%, #0B1424 50%, #06101D 100%);
-  --gradient-top-glow:    radial-gradient(ellipse at top, rgba(30, 144, 255, 0.34) 0%, rgba(30, 144, 255, 0.08) 30%, transparent 70%);
-  --gradient-hero-stroke: linear-gradient(135deg, #2A6A9E 0%, #2C8F66 100%);
-  --duration-press: 160ms;
+  /* Backgrounds */
+  --hiq-app-bg:        #06101D;
+  --hiq-deep-navy:     #0B1424;
+  --hiq-card-navy:     #101B2D;
+  --hiq-slate-gray:    #1A2333;
+  --hiq-steel-gray:    #2A3344;
+
+  /* Blues */
+  --hiq-electric-blue: #1E90FF;
+  --hiq-bright-blue:   #3DA9FF;
+
+  /* Greens */
+  --hiq-hobby-green:   #7CFF72;
+  --hiq-bright-green:  #B6FF4D;
+  --hiq-success-green: #41E66F;
+
+  /* Text */
+  --hiq-pure-white:    #FFFFFF;
+  --hiq-muted-text:    #C4CDD9;
+
+  /* Signal */
+  --hiq-warning:       #FFA500;
+  --hiq-danger:        #FF3B30;
+
+  /* Derived */
+  --hiq-subtle-surface: rgba(255,255,255,0.05);
+  --hiq-border:         rgba(42,51,68,0.88);
+  --hiq-soft-border:    rgba(30,144,255,0.28);
+  --hiq-glow:           rgba(30,144,255,0.24);
+  --hiq-success-glow:   rgba(124,255,114,0.24);
+  --hiq-shadow:         rgba(0,0,0,0.35);
+
+  /* Signature gradient — used on every primary tile edge, search bar,
+   * and modal. Ships everywhere via a ::before mask. */
+  --hiq-brand-gradient: linear-gradient(135deg, #2A6A9E 0%, #2C8F66 100%);
+
+  /* Spacing */
+  --hiq-space-xxs: 4px;
+  --hiq-space-xs:  8px;
+  --hiq-space-sm:  12px;
+  --hiq-space-md:  16px;
+  --hiq-space-lg:  20px;
+  --hiq-space-xl:  24px;
+  --hiq-space-xxl: 32px;
+  --hiq-screen-pad: 16px;
+  --hiq-card-pad:   18px;
+
+  /* Radius */
+  --hiq-radius-xs:  10px;
+  --hiq-radius-sm:  14px;
+  --hiq-radius-md:  18px;
+  --hiq-radius-lg:  24px;
+  --hiq-radius-xl:  28px;
+  --hiq-radius-pill: 999px;
+
+  /* Fonts */
+  --hiq-font-rounded: "SF Pro Rounded", ui-rounded, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hiq-font-body:    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Motion */
+  --duration-press: 120ms;
 }
 
-/* HobbyIQ is dark-mode-only, matching iOS. No light-mode override. */
-html,
-body {
-  background: var(--color-bg);
-  color: var(--color-foreground);
+/* ─── Base ──────────────────────────────────────────────────────── */
+
+html {
+  background: var(--hiq-app-bg);
+  color: var(--hiq-pure-white);
   min-height: 100%;
 }
 
 body {
-  background: var(--gradient-app-bg) fixed;
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  margin: 0;
+  color: var(--hiq-pure-white);
+  font-family: var(--hiq-font-body);
+  /* Layered radial + linear per spec: dead-center soft blue → top blue
+   * plume → diagonal app-bg → deep-navy midpoint. */
+  background:
+    radial-gradient(circle at 50% 50%, rgba(61,169,255,0.18) 0%, transparent 60%),
+    radial-gradient(circle at 50% 0%, rgba(30,144,255,0.34) 0%, rgba(30,144,255,0.08) 20%, transparent 55%),
+    linear-gradient(135deg, #06101D 0%, #0B1424 50%, #06101D 100%);
+  background-attachment: fixed;
 }
 
-/* Utility classes for the signature HobbyIQ surfaces. Use these on
- * specific components rather than piling them into every Tailwind class. */
+/* ─── Typography scale ─────────────────────────────────────────── */
+
+.hiq-hero          { font: 700 34px/1.15 var(--hiq-font-rounded); }
+.hiq-title         { font: 700 28px/1.2  var(--hiq-font-rounded); }
+.hiq-section-title { font: 700 22px/1.25 var(--hiq-font-rounded); }
+.hiq-card-title    { font: 600 18px/1.3  var(--hiq-font-rounded); }
+.hiq-body          { font: 400 16px/1.4  var(--hiq-font-body); }
+.hiq-body-emph     { font: 600 16px/1.4  var(--hiq-font-body); }
+.hiq-caption       { font: 400 13px/1.35 var(--hiq-font-body); color: var(--hiq-muted-text); }
+.hiq-caption-emph  { font: 600 13px/1.35 var(--hiq-font-body); color: var(--hiq-muted-text); }
+.hiq-stat-number   { font: 700 30px/1.1  var(--hiq-font-rounded); }
+.hiq-stat-subtle   { font: 600 15px/1.3  var(--hiq-font-rounded); }
+
+/* Uppercase section header — blue hairline · TITLE · blue hairline */
+.hiq-section-header {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--hiq-muted-text);
+  font: 700 13px var(--hiq-font-body);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.hiq-section-header::before,
+.hiq-section-header::after {
+  content: ""; flex: 1; height: 1px; background: rgba(30,144,255,0.25);
+}
+
+/* ─── Signature glow (used behind the marketing hero) ─────────── */
+
 .hiq-glow-top {
   position: relative;
   isolation: isolate;
 }
-
 .hiq-glow-top::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--gradient-top-glow);
+  background: radial-gradient(ellipse at top, rgba(30, 144, 255, 0.34) 0%, rgba(30, 144, 255, 0.08) 30%, transparent 70%);
   z-index: -1;
 }
 
-.hiq-hero-stroke {
-  background: var(--gradient-hero-stroke);
+/* Wordmark "IQ" — green portion of the HobbyIQ lockup.
+ * `.hiq-hero-stroke` is the legacy class name; both are kept so
+ * existing components render correctly regardless of which they use. */
+.hiq-hero-stroke,
+.hiq-wordmark-iq {
+  color: var(--hiq-hobby-green);
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
 }
+.hiq-wordmark { color: var(--hiq-pure-white); }
+
+/* ─── Tiles / cards ─────────────────────────────────────────────
+
+   Level A — primary tile (28px radius, 2px gradient border, deep shadow)
+   Level B — nested/group tile (70% fill, 1.6px border, softer shadow)
+   Level C — signal-tinted row (inside a group card)
+   Flat    — compact list cell without the gradient border
+*/
 
 .hiq-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  position: relative;
+  background: var(--hiq-card-navy);
+  border: none;
+  border-radius: var(--hiq-radius-xl);
+  padding: var(--hiq-card-pad);
+  box-shadow: 0 10px 18px rgba(30,144,255,0.18);
+}
+.hiq-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--hiq-brand-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
+.hiq-group-card {
+  position: relative;
+  background: rgba(16,27,45,0.7);
+  border: none;
+  border-radius: var(--hiq-radius-xl);
+  padding: var(--hiq-space-md);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+.hiq-group-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.6px;
+  background: var(--hiq-brand-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
+.hiq-row-positive { background: rgba(124,255,114,0.08); border: 1px solid rgba(124,255,114,0.18); border-radius: var(--hiq-radius-md); }
+.hiq-row-negative { background: rgba(255,59,48,0.08);  border: 1px solid rgba(255,59,48,0.18);  border-radius: var(--hiq-radius-md); }
+.hiq-row-neutral  { background: rgba(196,205,217,0.08); border: 1px solid rgba(196,205,217,0.18); border-radius: var(--hiq-radius-md); }
+
+.hiq-tile-flat {
+  background: rgba(16,27,45,0.55);
+  border: 1px solid rgba(42,51,68,0.35);
+  border-radius: var(--hiq-radius-md);
+  padding: 12px;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────── */
+
+.hiq-btn,
+.hiq-btn-primary,
+.hiq-btn-secondary,
+.hiq-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px 24px;
+  font: 600 16px var(--hiq-font-body);
+  border-radius: var(--hiq-radius-md);
+  cursor: pointer;
+  transition: filter 120ms ease-in-out, transform 120ms ease-in-out, background 120ms ease-in-out;
+  text-decoration: none;
+  line-height: 1;
+}
+.hiq-btn:active,
+.hiq-btn-primary:active,
+.hiq-btn-secondary:active,
+.hiq-btn-ghost:active {
+  transform: translateY(1px);
 }
 
 .hiq-btn-primary {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  font-weight: 700;
-  transition: transform var(--duration-press) ease-in-out,
-              opacity var(--duration-press) ease-in-out,
-              background var(--duration-press) ease-in-out;
-  box-shadow: 0 6px 12px rgba(30, 144, 255, 0.24);
-  border: none;
-  cursor: pointer;
+  background: var(--hiq-electric-blue);
+  color: var(--hiq-pure-white);
+  border: 1.6px solid rgba(30,144,255,0.45);
+  box-shadow: 0 8px 14px rgba(30,144,255,0.34);
 }
-
-.hiq-btn-primary:hover {
-  background: var(--color-accent-bright);
-}
-
-.hiq-btn-primary:active {
-  transform: scale(0.985);
-  opacity: 0.96;
-}
+.hiq-btn-primary:hover { filter: brightness(1.08); }
 
 .hiq-btn-secondary {
+  background: rgba(30,144,255,0.12);
+  color: var(--hiq-pure-white);
+  border: 1.6px solid var(--hiq-electric-blue);
+}
+.hiq-btn-secondary:hover { background: rgba(30,144,255,0.20); }
+
+.hiq-btn-ghost {
+  background: rgba(30,144,255,0.12);
+  color: var(--hiq-electric-blue);
+  border: 1.6px solid rgba(30,144,255,0.45);
+}
+.hiq-btn-ghost:hover { background: rgba(30,144,255,0.20); }
+
+/* ─── Badge / pill ─────────────────────────────────────────── */
+
+.hiq-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--hiq-radius-pill);
+  font: 700 12px var(--hiq-font-body);
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
+}
+.hiq-badge--positive { color: var(--hiq-hobby-green);   background: rgba(124,255,114,0.14); border: 1px solid rgba(124,255,114,0.35); }
+.hiq-badge--negative { color: var(--hiq-danger);        background: rgba(255,59,48,0.14);  border: 1px solid rgba(255,59,48,0.35); }
+.hiq-badge--neutral  { color: var(--hiq-muted-text);    background: rgba(196,205,217,0.14); border: 1px solid rgba(196,205,217,0.35); }
+.hiq-badge--brand    { color: var(--hiq-electric-blue); background: rgba(30,144,255,0.12); border: 1px solid rgba(30,144,255,0.35); }
+.hiq-badge--warning  { color: var(--hiq-warning);       background: rgba(255,165,0,0.14);  border: 1px solid rgba(255,165,0,0.35); }
+
+/* ─── Search bar ───────────────────────────────────────────── */
+
+.hiq-search {
+  position: relative;
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px;
+  background: var(--hiq-card-navy);
+  border-radius: var(--hiq-radius-lg);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.hiq-search::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 3.5px;
+  background: var(--hiq-brand-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+.hiq-search input {
+  flex: 1;
   background: transparent;
-  color: var(--color-accent);
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  font-weight: 600;
-  border: 1px solid var(--color-border-soft);
-  transition: background var(--duration-press) ease-in-out;
-  cursor: pointer;
+  border: 0;
+  outline: 0;
+  color: var(--hiq-pure-white);
+  font: 400 16px var(--hiq-font-body);
+}
+.hiq-search input::placeholder { color: var(--hiq-muted-text); }
+.hiq-search .icon-search { color: var(--hiq-muted-text); }
+.hiq-search .icon-mic    { color: var(--hiq-hobby-green); }
+.hiq-search .icon-mic--active { color: var(--hiq-danger); }
+.hiq-search .icon-filter { color: var(--hiq-electric-blue); }
+
+/* ─── Avatar / monogram ───────────────────────────────────── */
+
+.hiq-avatar {
+  width: 40px; height: 40px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(42,51,68,0.35);
+  border: 1.6px solid rgba(30,144,255,0.35);
+  color: var(--hiq-pure-white);
+  font: 700 15px var(--hiq-font-rounded);
+  box-shadow: 0 3px 6px var(--hiq-shadow);
 }
 
-.hiq-btn-secondary:hover {
-  background: rgba(30, 144, 255, 0.08);
+/* ─── Stat card recipe ───────────────────────────────────── */
+
+.hiq-stat-card {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.hiq-stat-card .stat-value--positive { color: var(--hiq-hobby-green); }
+.hiq-stat-card .stat-value--negative { color: var(--hiq-danger); }
+.hiq-stat-card .stat-value--neutral  { color: var(--hiq-electric-blue); }
+.hiq-stat-card .stat-icon {
+  width: 30px; height: 30px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--hiq-hobby-green);
+  background: rgba(124,255,114,0.16);
+}
+
+/* ─── Sparkline ─────────────────────────────────────────── */
+
+.hiq-sparkline-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(124,255,114,0.12);
+  margin-top: 6px;
+}
+.hiq-sparkline-track--negative {
+  background: rgba(30,144,255,0.12);
+}
+
+/* ─── Modal / popup ─────────────────────────────────────── */
+
+.hiq-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+.hiq-modal {
+  position: relative;
+  max-width: 360px;
+  background: var(--hiq-card-navy);
+  border-radius: var(--hiq-radius-xl);
+  padding: var(--hiq-card-pad);
+  box-shadow: 0 10px 20px rgba(30,144,255,0.22);
+}
+.hiq-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--hiq-brand-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
 }

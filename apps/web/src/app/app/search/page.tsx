@@ -84,10 +84,10 @@ function SearchPageInner() {
     stashCandidate(c);
     const cardsightId = candidateIdToCardsightId(c.candidateId);
     if (!cardsightId) {
-      // Cert-only candidate (PSA cert with no Cardsight match) — fall
-      // back to a query-based route that shows the identity info alone.
+      // Cert-only candidate (no catalog match on file) — fall back to a
+      // query-based route that shows the identity info alone.
       setError(
-        "This candidate is a cert lookup without a Cardsight catalog match — pricing detail isn't available yet.",
+        "This card is a cert lookup without a catalog match — pricing detail isn't available yet.",
       );
       return;
     }

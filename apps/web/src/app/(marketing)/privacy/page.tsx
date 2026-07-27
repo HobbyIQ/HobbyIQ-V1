@@ -60,7 +60,8 @@ export default function PrivacyPage() {
             <li><strong className="text-white">Cloudflare</strong> — DNS + edge routing for hobby-iq.com</li>
             <li><strong className="text-white">Stripe</strong> — payment processing for web subscriptions</li>
             <li><strong className="text-white">Apple</strong> — payment processing for iOS subscriptions via StoreKit</li>
-            <li><strong className="text-white">CardHedge, Cardsight, eBay, PSA</strong> — trading card data sources (we query these on your behalf when you look up cards)</li>
+            <li><strong className="text-white">eBay, PSA</strong> — trading card marketplaces and grading services (we query these on your behalf when you look up cards)</li>
+            <li><strong className="text-white">Third-party pricing partners</strong> — anonymized market data providers used to enrich our comp pool</li>
           </ul>
           <p className="mt-3">
             We do not sell your personal information to advertisers, brokers, or any third
