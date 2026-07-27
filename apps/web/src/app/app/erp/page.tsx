@@ -172,7 +172,7 @@ export default function ErpPage() {
         </div>
       )}
 
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/app/erp/expenses" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
           <div className="flex items-baseline justify-between">
             <h2 className="font-bold text-lg">Expenses</h2>
@@ -192,6 +192,15 @@ export default function ErpPage() {
             CSV for QuickBooks / Xero.
           </p>
         </Link>
+        <Link href="/app/erp/purchases" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-bold text-lg">Purchases</h2>
+            <span className="text-xs text-[color:var(--color-accent)]">Open →</span>
+          </div>
+          <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
+            Acquisition ledger — every buy with tax, shipping, other fees.
+          </p>
+        </Link>
         <Link href="/app/portfolio/sold" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
           <div className="flex items-baseline justify-between">
             <h2 className="font-bold text-lg">Sold history</h2>
@@ -209,7 +218,7 @@ export default function ErpPage() {
         <ul className="text-sm text-[color:var(--color-muted)] space-y-2 leading-relaxed">
           <li>• Unreconciled queue (auto-match eBay sales to portfolio cards, edit fees + costs per sale)</li>
           <li>• Bulk cost-basis editor</li>
-          <li>• Purchases ledger (imported from eBay purchase history)</li>
+          <li>• eBay purchase-history import</li>
         </ul>
       </div>
     </div>
