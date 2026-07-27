@@ -63,7 +63,7 @@ export default function PricingPage() {
       <section className="max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6">
         <PlanCard
           name="Collector"
-          price="$12.99"
+          price="$9.99"
           period="/mo"
           tagline="Casual collectors tracking a personal portfolio."
           cta="Coming soon"
@@ -71,7 +71,7 @@ export default function PricingPage() {
         />
         <PlanCard
           name="Investor"
-          price="$24.99"
+          price="$19.99"
           period="/mo"
           tagline="Active traders — timed sell/hold/list signals."
           cta="Coming soon"
@@ -80,7 +80,7 @@ export default function PricingPage() {
         />
         <PlanCard
           name="Pro Seller"
-          price="$49.99"
+          price="$29.99"
           period="/mo"
           tagline="Pros with bulk inventory + eBay workflows."
           cta="Coming soon"
@@ -149,7 +149,7 @@ export default function PricingPage() {
           />
           <FaqCard
             q="What if I run a card business? Do you have team pricing?"
-            a="Pro Seller ($49.99/mo) covers most single-operator card businesses. For 3+ seats or a custom integration, email drew@justtheboysandcards.com."
+            a="Pro Seller ($29.99/mo) covers most single-operator card businesses. For 3+ seats or a custom integration, email drew@justtheboysandcards.com."
           />
         </div>
       </section>
