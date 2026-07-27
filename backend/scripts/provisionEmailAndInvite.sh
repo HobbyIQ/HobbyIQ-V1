@@ -36,6 +36,15 @@
 
 set -euo pipefail
 
+# CF-EMAIL-VERIFICATION script fix (Drew, 2026-07-27). On Git Bash /
+# MSYS2 on Windows, arguments that look like absolute POSIX paths
+# (anything starting with "/") get rewritten to Windows paths — so
+# `--linked-domains /subscriptions/...` was arriving at az as
+# `C:/Program Files/Git/subscriptions/...` and 400ing. This env var
+# turns that translation off for every command in the script.
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
 # ─── Config ──────────────────────────────────────────────────────────────
 RG="rg-hobbyiq-dev"
 EMAIL_SVC="hobbyiq-email-svc"

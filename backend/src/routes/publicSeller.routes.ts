@@ -67,7 +67,15 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
 
   const cards: StorefrontCard[] = holdings
     .filter((h) => {
-      const anyH = h as { photos?: unknown; playerName?: unknown; cardTitle?: unknown };
+      const anyH = h as {
+        photos?: unknown;
+        playerName?: unknown;
+        cardTitle?: unknown;
+        hideFromStorefront?: unknown;
+      };
+      // CF-STOREFRONT-HIDE (Drew, 2026-07-27): owner-set per-card opt-out
+      // wins over every other display gate.
+      if (anyH.hideFromStorefront === true) return false;
       const hasPhoto = Array.isArray(anyH.photos) && anyH.photos.length > 0;
       const hasIdentity = typeof anyH.playerName === "string" || typeof anyH.cardTitle === "string";
       return hasPhoto && hasIdentity;

@@ -10,6 +10,7 @@ import {
   sellHolding,
   refreshHolding,
   holdingDisplayValue,
+  updateHolding,
   type PortfolioHolding,
   type HoldingPricePoint,
 } from "@/lib/api";
@@ -243,6 +244,10 @@ export default function HoldingDetailPage() {
         <button onClick={() => setEbayOpen(true)} className="hiq-btn-secondary">
           List on eBay
         </button>
+        <StorefrontVisibilityButton
+          holding={h}
+          onChange={(next) => setH(next)}
+        />
         <button
           onClick={() => setDeleteOpen(true)}
           className="hiq-btn-secondary"
@@ -552,5 +557,48 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
         {children}
       </div>
     </div>
+  );
+}
+
+// CF-STOREFRONT-HIDE (Drew, 2026-07-27). Toggles the holding's
+// hideFromStorefront flag with an optimistic UI so the pill flips
+// instantly. Rolls back on server failure.
+function StorefrontVisibilityButton({
+  holding,
+  onChange,
+}: {
+  holding: PortfolioHolding;
+  onChange: (next: PortfolioHolding) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const hidden = Boolean(holding.hideFromStorefront);
+
+  async function toggle() {
+    if (saving) return;
+    const nextHidden = !hidden;
+    // Optimistic — UI updates immediately, revert on error.
+    onChange({ ...holding, hideFromStorefront: nextHidden });
+    setSaving(true);
+    try {
+      const res = await updateHolding(holding.id, { hideFromStorefront: nextHidden });
+      if (res.holding) onChange(res.holding);
+    } catch {
+      onChange({ ...holding, hideFromStorefront: hidden });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={saving}
+      className="hiq-btn-secondary disabled:opacity-60"
+      title={hidden
+        ? "Currently hidden from your public storefront. Click to publish."
+        : "Currently visible on your public storefront. Click to hide."}
+    >
+      {saving ? "…" : hidden ? "Show on storefront" : "Hide from storefront"}
+    </button>
   );
 }

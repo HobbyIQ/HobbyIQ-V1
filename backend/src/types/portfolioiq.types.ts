@@ -37,6 +37,15 @@ export interface HoldingHeldExpense {
 
 export interface PortfolioHolding {
   id: string;
+  /**
+   * CF-STOREFRONT-HIDE (Drew, 2026-07-27): per-holding opt-out from the
+   * public /u/<username> storefront. Absent/false → shown when the
+   * seller has publicShareEnabled + Pro Seller + emailVerified. True →
+   * hidden regardless. Owner controls this from the portfolio detail
+   * screen so a card being repaired / traded / just-not-listed can be
+   * kept off the public shop without deleting the holding.
+   */
+  hideFromStorefront?: boolean;
   playerName?: string;
   cardTitle?: string;
   cardYear?: number;

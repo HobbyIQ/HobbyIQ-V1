@@ -236,6 +236,10 @@ export interface PortfolioHolding {
   ebayListingId?: string | null;
   ebayListingPublishedAt?: string | null;
   lastUpdated?: string | null;
+  // CF-STOREFRONT-HIDE (Drew, 2026-07-27): owner-set per-card opt-out
+  // from the public /u/<username> storefront. Absent/false → shown;
+  // true → hidden. Toggle lives on the portfolio detail page.
+  hideFromStorefront?: boolean | null;
 }
 
 // Prefer explicit fmv → estimate → null. NEVER fall back to cost-proxy
@@ -576,6 +580,11 @@ export interface AddHoldingInput {
   notes?: string;
   cardsightCardId?: string;
   cardsightGradeId?: string;
+  // CF-STOREFRONT-HIDE (Drew, 2026-07-27): allow PATCH to toggle this
+  // without dragging every other identity field along. Backend spread-
+  // merges partial patches so a bare `{hideFromStorefront: true}` is a
+  // valid update.
+  hideFromStorefront?: boolean;
 }
 
 export interface AddHoldingResult {
