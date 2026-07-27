@@ -125,7 +125,7 @@ function SummaryBar({ summary }: { summary: PortfolioResponse["summary"] }) {
   return (
     <div className="hiq-card p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
       <Stat label="Total value" value={formatUSD(summary.totalValue, { hideCents: true })} />
-      <Stat label="Cost basis" value={formatUSD(summary.totalCost, { hideCents: true })} />
+      <Stat label="Total paid" value={formatUSD(summary.totalCost, { hideCents: true })} />
       <Stat
         label="Total gain/loss"
         value={formatUSD(summary.totalGainLoss, { hideCents: true })}
@@ -162,7 +162,7 @@ function SortSelect({ value, onChange }: { value: SortKey; onChange: (k: SortKey
       }}
     >
       <option value="value">Sort: current value</option>
-      <option value="cost">Sort: cost basis</option>
+      <option value="cost">Sort: total paid</option>
       <option value="gainPct">Sort: return %</option>
       <option value="gain">Sort: gain $</option>
       <option value="title">Sort: card title</option>

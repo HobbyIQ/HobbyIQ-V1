@@ -101,7 +101,7 @@ export default function AddCardPage() {
       </div>
       <h1 className="text-3xl font-bold mb-2">Add a card</h1>
       <p className="text-sm text-[color:var(--color-muted)] mb-8">
-        Search for the card first, then fill in your grade and cost basis.
+        Search for the card first, then fill in your grade and what you paid.
       </p>
 
       {/* Step 1: Search */}
