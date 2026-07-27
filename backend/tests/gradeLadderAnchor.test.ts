@@ -160,28 +160,28 @@ describe("gradeLadderConversionRatio", () => {
     expect(r.ratio).toBe(1);
   });
 
-  it("LIMITATION: PSA 9 anchor at HIGH price → ratio > 1 (inverse table breakdown)", () => {
-    // GRADER_PREMIUMS for PSA 9 at "100+" tier is 0.85 (the "PSA 9 loses
-    // value above $50" calibration from Prospects Live MiLB data). For
-    // forward conversion (raw → PSA 9) this means PSA 9 is CHEAPER than
-    // raw at high prices, which works for the prospect-base cards the
-    // table was calibrated on. For INVERSE on high-end autos like Kurtz
-    // Green Lava (PSA 9 at $1325 → table implies Raw at $1559), the
-    // multiplier is wrong because autographs DO command grading premiums
-    // even at high values. Pinned here as a known limitation; the
-    // auto-aware multiplier-calibration CF will introduce a separate
-    // table that produces sane inverses for autos.
+  it("PSA 9 anchor at HIGH price → ratio ≤ ~1 (CF-CALIBRATION-LADDER fixes the pre-ladder inverse breakdown)", () => {
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): before
+    // this fix, PSA 9 at "100+" tier used the static 0.85, which produced
+    // an inverse ratio > 1 for the Kurtz Green Lava case (PSA 9 $1325 →
+    // Raw $1559 implied — nonsensical). Post-ladder, PSA 9 at $1000-2499
+    // raw band = ~1.03× empirical, so the inverse ratio is essentially
+    // 1.0 (Raw ≈ anchor). Still not the $278 CH quotes — perfect Kurtz
+    // parity needs family + parallel granularity the calibration doesn't
+    // yet cover — but the pre-ladder "wildly > 1" breakdown is fixed.
     const r = gradeLadderConversionRatio("PSA 9", "Raw", 1325);
-    expect(r.ratio).toBeGreaterThan(1); // documented breakdown
-    expect(r.rawTierUsed).toBeGreaterThan(1000); // also breakdown — actual raw is ~$278
+    expect(r.ratio).toBeLessThanOrEqual(1.05);
+    expect(r.ratio).toBeGreaterThan(0.5);
   });
 
-  it("PSA 9 anchor at LOW price → ratio < 1 (table works in low tier)", () => {
-    // For sub-$50 base cards the table's forward and inverse are both
-    // sound. PSA 9 at $30 implies raw ~$15-20 (PSA 9 multiplier ~1.5).
+  it("PSA 9 anchor at LOW price → ratio < 1 (empirical PSA 9 multiplier at low bands)", () => {
+    // Post-ladder: PSA 9 at $30 raw hits value-band baseline "Under $25"
+    // × PSA 9 = 3.78× (n=large). Inverse ratio = 1/3.78 ≈ 0.26. Sound
+    // downgrade direction; the empirical multiplier is materially
+    // higher than the static 1.5× the old test pinned.
     const r = gradeLadderConversionRatio("PSA 9", "Raw", 30);
     expect(r.ratio).toBeLessThan(1);
-    expect(r.ratio).toBeGreaterThan(0.3);
+    expect(r.ratio).toBeGreaterThan(0.2);
   });
 
   it("Raw anchor → PSA 10 requested → ratio > 1 (PSA 10 commands premium)", () => {

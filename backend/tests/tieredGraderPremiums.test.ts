@@ -69,25 +69,34 @@ describe("rawPriceToGradeTier — tier boundary mapping", () => {
 // 2. PSA TIERED VALUES (matches the Prospects Live article)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("getGraderPremium — PSA tier values match the article's reported figures", () => {
-  it("PSA 10 — tiered values: 5.0 / 3.6 / 2.8 / 2.2 / fallback 3.5 (PR #494 modern rebase)", () => {
-    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 lifted to
-    // Drew's modern anchor. Tier boundaries unchanged; slab-floor tier
-    // <$25 lifted 4.9 → 5.0; fallback lifted 3.43 → 3.5.
-    expect(getGraderPremium("PSA", "10", 10)).toBe(5.0);
-    expect(getGraderPremium("PSA", "10", 35)).toBe(3.6);
-    expect(getGraderPremium("PSA", "10", 75)).toBe(2.8);
-    expect(getGraderPremium("PSA", "10", 500)).toBe(2.2);
-    expect(getGraderPremium("PSA", "10")).toBe(3.5); // fallback
+describe("getGraderPremium — PSA tier values (post-CF-CALIBRATION-LADDER)", () => {
+  // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+  // pre-empirical Prospects Live article values (PSA 10 = 5.0 / 3.6 /
+  // 2.8 / 2.2 / fallback 3.5) were pinned as the exact contract for
+  // years. Ladder now returns the empirical GRADE_MULTIPLIER_BY_VALUE_BAND
+  // baseline cells which disagree in the specific numbers but still
+  // preserve the qualitative "premium shrinks as raw rises" pattern.
+  // Empirical (baseline, n=large across most bands):
+  //   PSA 10: <$25=10.5×, $25-49=4.18×, $50-99=3.25×, $500-999=2.44×
+  //   PSA  9: <$25=3.78×, $25-49=1.5×, $50-99=1.32×, $500-999=1.16×
+  // Ranges below tolerate calibration-refresh drift while pinning the
+  // ladder is what actually fires.
+  it("PSA 10 — value-band baseline cells fire (>= article values across the tier boundaries)", () => {
+    expect(getGraderPremium("PSA", "10", 10)).toBeGreaterThan(8);
+    expect(getGraderPremium("PSA", "10", 35)).toBeGreaterThan(3.5);
+    expect(getGraderPremium("PSA", "10", 75)).toBeGreaterThan(2.9);
+    expect(getGraderPremium("PSA", "10", 500)).toBeGreaterThan(2.0);
+    expect(getGraderPremium("PSA", "10")).toBe(3.5); // fallback — ladder needs rawPrice > 0
   });
 
-  it("PSA 9 — tiered values: 2.0 / 1.3 / 1.05 / 0.95 / fallback 1.2 (PR #495 modern rebase)", () => {
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 9 modernized —
-    // Drew's anchor 1.2× (post-2015 modern cards trade at/near raw).
-    expect(getGraderPremium("PSA", "9", 10)).toBe(2.0);
-    expect(getGraderPremium("PSA", "9", 35)).toBe(1.3);
-    expect(getGraderPremium("PSA", "9", 75)).toBe(1.05);
-    expect(getGraderPremium("PSA", "9", 500)).toBe(0.95);
+  it("PSA 9 — value-band baseline cells fire (empirical values ≥ article static)", () => {
+    expect(getGraderPremium("PSA", "9", 10)).toBeGreaterThan(3.0);
+    expect(getGraderPremium("PSA", "9", 35)).toBeGreaterThan(1.3);
+    expect(getGraderPremium("PSA", "9", 75)).toBeGreaterThan(1.2);
+    // Post-empirical: PSA 9 at $500-999 is ~1.16× (not sub-1.0 as the
+    // article claimed). The article's "PSA 9 loses value above $50" is
+    // superseded by the calibration data.
+    expect(getGraderPremium("PSA", "9", 500)).toBeGreaterThan(1.0);
     expect(getGraderPremium("PSA", "9")).toBe(1.2);
   });
 
@@ -167,10 +176,14 @@ describe("getGraderPremium — cross-grader directional ordering at same tier", 
   });
 
   it("BGS 10 (regular) ≈ PSA 10 (BGS 10 non-BL trades similar to PSA 10)", () => {
-    // Regular BGS 10 (at least one subgrade < 10) rebased to match PSA 10.
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM: post-ladder, BGS 10 and
+    // PSA 10 pull from separate empirical value-band cells (different
+    // grader populations), so the exact equality that the static tables
+    // enforced no longer holds. The directional invariant — regular
+    // BGS 10 within ~30% of PSA 10 — is what we actually care about.
     const psa10 = getGraderPremium("PSA", "10", 50)!;
     const bgs10 = getGraderPremium("BGS", "10", 50)!;
-    expect(bgs10).toBe(psa10);
+    expect(Math.abs(bgs10 - psa10) / psa10).toBeLessThan(0.3);
   });
 
   it("PSA 10 > SGC 10 (SGC discount vs PSA)", () => {
@@ -217,9 +230,13 @@ describe("getGraderPremium — monotonic decrease in multiplier as raw rises", (
     expect(m10_upper).toBeGreaterThan(m10_top);
   });
 
-  it("PSA 9 multiplier strictly decreases — eventually below 1.0 (PR #495 modern tiers)", () => {
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 9 tiered
-    // 2.0 / 1.3 / 1.05 / 0.95; sub-1.0 threshold now at $100+ (was $50+).
+  it("PSA 9 multiplier strictly decreases at tested breakpoints (empirical calibration)", () => {
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM: post-ladder empirical
+    // PSA 9 at (10, 35, 75, 500) → (~3.78, ~1.5, ~1.32, ~1.16). Still
+    // monotonically decreasing across those points. The "sub-1.0
+    // eventually" invariant from the article does NOT hold in the
+    // empirical data — PSA 9 at $500-999 raw is 1.16× (n=large), a
+    // slight premium not a discount.
     const m9_low = getGraderPremium("PSA", "9", 10)!;
     const m9_mid = getGraderPremium("PSA", "9", 35)!;
     const m9_upper = getGraderPremium("PSA", "9", 75)!;
@@ -227,8 +244,6 @@ describe("getGraderPremium — monotonic decrease in multiplier as raw rises", (
     expect(m9_low).toBeGreaterThan(m9_mid);
     expect(m9_mid).toBeGreaterThan(m9_upper);
     expect(m9_upper).toBeGreaterThan(m9_top);
-    // Post-2015 modern: at $100+ raw, PSA 9 trades below raw value.
-    expect(m9_top).toBeLessThan(1.0);
   });
 });
 

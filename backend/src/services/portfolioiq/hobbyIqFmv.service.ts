@@ -636,7 +636,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         if (rawPrices.length === 0) continue;
         const rawMedian = rawPrices[Math.floor(rawPrices.length / 2)];
         const cardClass = parsed.isAuto ? "autograph" : "base";
-        const multiplier = getGraderPremium(gradeCompany, String(gradeValue), rawMedian, cardClass, parsed.year, parsed.setKey);
+        // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27).
+        // parsed.setKey is a hyphen-slug ("bowman-chrome"); classifyFamily
+        // inside getGraderPremium does substring matches on the LOWERED
+        // string so hyphens vs. spaces both hit. parsed.sport is passed
+        // as the sportHint so the calibration ladder can route into the
+        // sport-scoped cells (baseball × bowman-chrome × band × tier).
+        const multiplier = getGraderPremium(gradeCompany, String(gradeValue), rawMedian, cardClass, parsed.year, parsed.setKey, null, parsed.sport);
         if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
         const gradedFmv = rawMedian * multiplier;
         // Synthesize one synthetic row so the rest of buildResult's math is stable.

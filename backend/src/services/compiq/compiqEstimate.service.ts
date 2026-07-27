@@ -73,6 +73,16 @@ import { computePredictedRange, type PredictedRangeResult } from "./predictedRan
 import { computeTierAnchoredRange, type TierAnchoredResult } from "./predictedRangeTierAnchored.js";
 import { buildPeerPool } from "./peerPoolBuilder.js";
 import { getParallelAttributesLookup } from "./parallelAttributesLookup.js";
+// CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27). Family +
+// price-band + sport aware grade math for getGraderPremium. See the
+// long comment in that function for the full ladder + rationale.
+import {
+  classifyFamily,
+  lookupGradeRatio,
+  lookupGradeRatioByTier,
+  lookupValueBandMultiplierWithScope,
+  subTierScalingForFallback,
+} from "./gradeCalibrationConfig.js";
 // Issue #25 Phase 3 REBUILD — multiplier-anchored predictedRange. Fires
 // inside the variant-mismatch cross-parallel synthesis branch when sibling
 // comps for the same player/year/set are available. Never replaces
@@ -1284,6 +1294,13 @@ export function getGraderPremium(
   cardYear?: number | null,
   productSet?: string | null,
   gemRateSignal?: GemRateSignal | null,
+  /** CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27). Optional
+   *  sport hint routes into the sport-scoped calibration cells
+   *  (bySportFamily band, sport-scoped byTier). Callers that know sport
+   *  (e.g. hobbyIqFmv derives it from parsed.sport) should pass it. When
+   *  absent, the ladder walks the sport-agnostic layers only — still
+   *  strictly better than the pre-calibration auto/base tables. */
+  sportHint?: string | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
@@ -1377,6 +1394,58 @@ export function getGraderPremium(
       }
     }
     // else fall through (vintage table may not cover every era/grade combo yet)
+  }
+
+  // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27). Family
+  // + price-band + sport aware ladder. Runs BEFORE the auto/base tables
+  // below because those tables are family-BLIND and were the reason a
+  // Bowman Chrome Orange Shimmer auto at $100 raw was returning the
+  // same 2.3× PSA10 multiplier as a base sticker auto at $100 raw.
+  //
+  // The empirical GRADE_MULTIPLIER_BY_VALUE_BAND table (auto-generated
+  // by grade-calibrate.mjs, lives in gradeCalibrationData.ts) buckets
+  // paired Raw/graded sales by (sport, family, priceBand, `${grader}
+  // ${grade}`). lookupValueBandMultiplierWithScope walks its own three-
+  // layer ladder (sport+family → sport → baseline) internally. When it
+  // returns anything, use it — the coarsest layer (baseline) still
+  // preserves the price-band signal, and that already beats the
+  // family-blind auto-table baseline for most cells.
+  //
+  // Fall-through order below that: family-scoped byTier scalar → family
+  // scalar × subTierScaling → legacy auto/base tables. Vintage above
+  // still takes precedence for 1948-1989 cards; gem-rate short-circuit
+  // above still takes precedence when a per-card gem-rate signal is
+  // strong enough. This ladder is the middle band.
+  if (rawPrice != null && Number.isFinite(rawPrice) && rawPrice > 0) {
+    const gradeValueNum = Number(gradeKey);
+    if (Number.isFinite(gradeValueNum) && gradeValueNum > 0) {
+      const family = classifyFamily(productSet ?? null);
+      const sport = sportHint ? String(sportHint).toLowerCase() : null;
+
+      const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, company, gradeValueNum, { sport, family });
+      if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
+        return bandLookup.medianRatio * setBump;
+      }
+
+      const tierRatio = lookupGradeRatioByTier(family, company, gradeValueNum, sport);
+      if (tierRatio !== null && Number.isFinite(tierRatio) && tierRatio > 0) {
+        return tierRatio * setBump;
+      }
+
+      // Only run the family-scalar × subTierScaling layer for grades
+      // within the calibrated range [5, 10]. subTierScalingForFallback
+      // returns 1.0 for anything >= 10, which would extrapolate wildly
+      // for out-of-range inputs (PSA "11", test-only or malformed data).
+      // Layers 1 and 2 above are already tier-cell-guarded so they
+      // fail gracefully; only this scalar path needs the manual bound.
+      if (gradeValueNum >= 5 && gradeValueNum <= 10) {
+        const familyScalar = lookupGradeRatio(family, company, sport);
+        if (familyScalar !== null && Number.isFinite(familyScalar) && familyScalar > 0) {
+          return familyScalar * subTierScalingForFallback(gradeValueNum) * setBump;
+        }
+      }
+      // else fall through to legacy auto/base tables below
+    }
   }
 
   // CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): prefer the empirical auto

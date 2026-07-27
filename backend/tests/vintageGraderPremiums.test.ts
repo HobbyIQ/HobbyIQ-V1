@@ -24,14 +24,24 @@ describe("getGraderPremium — vintage cardYear gating", () => {
     // PSA 10 at $50 raw, no cardClass, no cardYear: static GRADER_PREMIUMS
     // PSA 10 "50-100" tier = 2.8
     const r = getGraderPremium("PSA", "10", 50);
-    expect(r).toBeCloseTo(2.8, 1);
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+    // ladder replaces the static 2.8 with the value-band baseline
+    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
+    // exact value so the assertion survives calibration refresh drift.
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);
   });
 
   it("cardYear=2024 (modern) → vintage path skipped, static used", () => {
     // Modern card with PSA 10 at $50, no autograph: should still use
     // the static base table (vintage table doesn't apply).
     const r = getGraderPremium("PSA", "10", 50, "base", 2024);
-    expect(r).toBeCloseTo(2.8, 1);
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+    // ladder replaces the static 2.8 with the value-band baseline
+    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
+    // exact value so the assertion survives calibration refresh drift.
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);
   });
 
   it("cardYear=1952 + PSA 8 + raw at 5000+ tier → vintage table 1948-1969 row used", () => {
@@ -58,12 +68,22 @@ describe("getGraderPremium — vintage cardYear gating", () => {
   it("cardYear=1990 → outside vintage range (1948-1989), no vintage routing", () => {
     // 1990+ uses the auto table when autograph, else static. NOT vintage.
     const r = getGraderPremium("PSA", "10", 50, "base", 1990);
-    expect(r).toBeCloseTo(2.8, 1);  // matches static "50-100"
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+    // ladder replaces the static 2.8 with the value-band baseline
+    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
+    // exact value so the assertion survives calibration refresh drift.
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);  // matches static "50-100"
   });
 
   it("cardYear=1947 → below vintage range floor, no vintage routing", () => {
     const r = getGraderPremium("PSA", "10", 50, "base", 1947);
-    expect(r).toBeCloseTo(2.8, 1);
+    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+    // ladder replaces the static 2.8 with the value-band baseline
+    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
+    // exact value so the assertion survives calibration refresh drift.
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);
   });
 });
 
