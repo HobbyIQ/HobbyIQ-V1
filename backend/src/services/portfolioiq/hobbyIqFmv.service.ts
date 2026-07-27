@@ -20,12 +20,27 @@ import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 
-// CF-HOBBYIQ-FMV-EXCLUDE-USER-PURCHASE (Drew, 2026-07-24). Comps with
-// source="ebay-user-purchase" are user cost-basis imports, NOT open-market
-// sales. Including them in the FMV pool causes "FMV = purchase price"
-// for cards where a single user's import is the only comp. Filter them
-// out at the SQL layer so no rung ever sees them.
-const EXCLUDED_SOURCES = ["ebay-user-purchase"];
+// CF-HOBBYIQ-FMV-INCLUDE-USER-PURCHASE (Drew, 2026-07-27). Reverses the
+// 2026-07-24 exclusion of source="ebay-user-purchase". The rationale
+// for excluding was "cost-basis inflation" — a user paying above market
+// for a card and that price becoming their own FMV. In practice the
+// exclusion silently killed direct-slug matches for cards where the
+// user's own eBay purchase is the primary or only comp, causing:
+//   - Devin Taylor Gold Wave Refractor PSA 9: 1 real PSA 9 sale at $196
+//     was excluded → engine walked to sibling-parallel base auto at $22.
+//   - Eric Hartman Orange Shimmer PSA 10: dropped from 3→2 raw direct
+//     comps, below the ≥3 threshold in grade-cross-raw rung 7 → walked
+//     to sibling-parallel median $110 × PSA10 mult, priced at $258
+//     instead of using the actual $1531/$1190/$1185 direct-slug pool.
+//
+// ebay-user-purchase IS a real market transaction (someone SOLD to the
+// user). Cost-basis-inflation risk is handled by the qualityFlags
+// system (price-outlier drops from the pool). Trust that layer to catch
+// overpays; don't silently blacklist a whole source class.
+//
+// canonicalFmv.service.ts:950 already INCLUDES ebay-user-purchase in
+// its allowed sources; hobbiq-fmv now matches that treatment.
+const EXCLUDED_SOURCES: readonly string[] = [];
 
 // CF-HOBBYIQ-FMV-QUALITY-FLAGS (Drew, 2026-07-24). Rows tagged with any
 // of these qualityFlags are structurally suspect and should not anchor
