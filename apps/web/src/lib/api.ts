@@ -795,6 +795,51 @@ export async function deleteExpense(id: string): Promise<void> {
   });
 }
 
+// ─── Grade-worthy analysis ────────────────────────────────────────
+
+export type GradeWorthyRecommendation =
+  | "grade_now"
+  | "grade_worthy_but_wait"
+  | "not_worth"
+  | "insufficient_data";
+
+export interface GradeWorthyTier {
+  graderTier: string;
+  gradedMedianPrice: number;
+  gradedSampleSize: number;
+  gradingCostAssumed: number;
+  expectedGain: number;
+  expectedRoi: number;
+  recommendation: GradeWorthyRecommendation;
+  reason: string;
+}
+
+export interface GradeWorthyAnalysis {
+  rawPrice: number;
+  bestTier: GradeWorthyTier | null;
+  allTiers: GradeWorthyTier[];
+  overallRecommendation: GradeWorthyRecommendation;
+  reason: string;
+}
+
+export interface GradeAnalysisResponse {
+  holdingId: string;
+  player: string | null;
+  year: number | null;
+  cardNumber: string | null;
+  set: string | null;
+  variant: string | null;
+  analysis: GradeWorthyAnalysis;
+  failureRate?: { rate: number; nGraded: number; caveat: string } | null;
+  diagnostics?: unknown;
+}
+
+export async function fetchGradeAnalysis(holdingId: string): Promise<GradeAnalysisResponse> {
+  return await request<GradeAnalysisResponse>(
+    `/api/portfolio/holdings/${encodeURIComponent(holdingId)}/grade-analysis`,
+  );
+}
+
 export type TaxFilingRail = "ebay" | "paypal" | "venmo";
 export const TAX_FILING_RAILS: ReadonlyArray<{ value: TaxFilingRail; label: string }> = [
   { value: "ebay", label: "eBay Managed Payments" },
