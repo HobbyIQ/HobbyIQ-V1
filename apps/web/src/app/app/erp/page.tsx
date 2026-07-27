@@ -147,19 +147,18 @@ export default function ErpPage() {
       <div className="hiq-card p-5 mb-6">
         <h2 className="font-bold text-lg mb-3">Data health</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-          <HealthPill label="Fresh" n={data.totals.freshCount} color="var(--color-success)" />
-          <HealthPill label="Stale" n={data.totals.staleCount} color="var(--color-accent)" />
-          <HealthPill label="Estimated" n={data.totals.estimatedCount} />
-          <HealthPill label="Pending" n={data.totals.pendingCount} />
-          <HealthPill label="Missing" n={data.totals.missingCount} color="var(--color-danger)" />
+          <HealthPill label="Fresh" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
+          <HealthPill label="Stale" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
+          <HealthPill label="Estimated" n={data.totals.estimatedCount} filter="estimated" />
+          <HealthPill label="Pending" n={data.totals.pendingCount} filter="pending" />
+          <HealthPill label="Missing" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
         </div>
         {(data.totals.staleCount > 0 || data.totals.missingCount > 0) && (
           <p className="text-xs text-[color:var(--color-muted)] mt-3">
-            Head to your{" "}
-            <Link href="/app/portfolio" className="hover:underline" style={{ color: "var(--color-accent)" }}>
-              portfolio
-            </Link>{" "}
-            to refresh stale prices or fix cards with insufficient identity.
+            Click <strong>Missing</strong> to see cards with no FMV (usually
+            insufficient identity — pick a real card in Edit, or run Refresh
+            price). <strong>Stale</strong> = FMV over 72h old. <strong>Estimated</strong> =
+            engine gave a ballpark, not a real comp match.
           </p>
         )}
       </div>
@@ -285,16 +284,47 @@ function MoversCard({ title, movers, tint }: { title: string; movers: ErpTopMove
   );
 }
 
-function HealthPill({ label, n, color }: { label: string; n: number; color?: string }) {
-  return (
-    <div className="text-center py-2 rounded-lg" style={{ background: "var(--color-bg)" }}>
+// CF-DATA-HEALTH-DRILLDOWN (Drew, 2026-07-27): each pill deep-links into
+// /app/portfolio?filter=<label>. Zero-count pills stay static (no filter
+// gets applied to an empty set — clicking would just show "no matches").
+function HealthPill({
+  label,
+  n,
+  color,
+  filter,
+}: {
+  label: string;
+  n: number;
+  color?: string;
+  filter?: "fresh" | "stale" | "estimated" | "pending" | "missing";
+}) {
+  const body = (
+    <>
       <div className="text-xl font-bold tabular-nums" style={color && n > 0 ? { color } : undefined}>
         {n}
       </div>
       <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-muted)] mt-1">
         {label}
       </div>
-    </div>
+    </>
+  );
+  const base = "text-center py-2 rounded-lg block transition-colors";
+  const style = { background: "var(--color-bg)" };
+  if (!filter || n === 0) {
+    return (
+      <div className={base} style={style}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={`/app/portfolio?filter=${filter}`}
+      className={`${base} hover:bg-white/5 hover:ring-1 hover:ring-[color:var(--color-border)]`}
+      style={style}
+    >
+      {body}
+    </Link>
   );
 }
 
