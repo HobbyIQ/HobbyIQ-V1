@@ -92,7 +92,7 @@ export default function PurchasesPage() {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
         <Link href="/app/erp" className="text-sm text-[color:var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">
-          ← Back to ERP
+          ← Back to Financials
         </Link>
         <div className="hiq-card p-6 mt-4 text-sm" style={{ color: "var(--color-danger)" }}>
           {error ?? "Failed to load."}
@@ -104,7 +104,7 @@ export default function PurchasesPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <Link href="/app/erp" className="text-sm text-[color:var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">
-        ← Back to ERP
+        ← Back to Financials
       </Link>
       <div className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
         <div>

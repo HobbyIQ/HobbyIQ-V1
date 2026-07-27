@@ -62,7 +62,7 @@ export const APP_NAV: NavItem[] = [
   },
   {
     href: "/app/erp",
-    label: "ERP",
+    label: "Financials",
     iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
   },
   {

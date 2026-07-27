@@ -25,7 +25,7 @@ export default function ErpPage() {
           setGate("upsell");
         } else {
           setGate("error");
-          setError(err.message ?? "Failed to load ERP summary");
+          setError(err.message ?? "Failed to load financials");
         }
         setLoading(false);
       });
@@ -37,7 +37,7 @@ export default function ErpPage() {
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="text-sm text-[color:var(--color-muted)]">Loading ERP dashboard…</div>
+        <div className="text-sm text-[color:var(--color-muted)]">Loading financials…</div>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function ErpPage() {
   if (gate === "error" || !data) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-1">ERP dashboard</h1>
+        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
         <div className="hiq-card p-6 mt-6 text-sm" style={{ color: "var(--color-danger)" }}>
           {error ?? "Failed to load."}
         </div>
@@ -68,7 +68,7 @@ export default function ErpPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">ERP dashboard</h1>
+        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
         <p className="text-sm text-[color:var(--color-muted)]">
           Portfolio-wide P&amp;L, position, and movement. Snapshot as of{" "}
           {data.asOf.slice(0, 10)}.
@@ -351,7 +351,7 @@ function UpsellCard() {
             <path d="M3 3v18h18v-2H5V3H3zm4 12h2v-6H7v6zm4 0h2V5h-2v10zm4 0h2v-4h-2v4zm4 0h2V8h-2v7z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold mb-3">ERP is a Pro Seller feature</h1>
+        <h1 className="text-2xl font-bold mb-3">Financials is a Pro Seller feature</h1>
         <p className="text-[color:var(--color-muted)] mb-6 leading-relaxed max-w-md mx-auto">
           Portfolio-wide P&amp;L, 1099-K reconciliation, tax filings, expenses,
           and accounting exports — built for people moving 100+ cards a year.

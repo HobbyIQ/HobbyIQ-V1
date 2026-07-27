@@ -958,7 +958,9 @@ export async function updateLedgerEntry(
   });
 }
 
-// ─── ERP (Pro Seller) ──────────────────────────────────────────────
+// ─── Financials (Pro Seller) ──────────────────────────────────────
+// URL slug + backend routes still use "/erp" for backward compat with
+// bookmarks + iOS deep links. User-facing labels say "Financials".
 
 export interface ErpTopMover {
   holdingId: string;
