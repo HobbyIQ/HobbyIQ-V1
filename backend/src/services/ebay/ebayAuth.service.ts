@@ -96,16 +96,19 @@ function resolveStateSecret(): string {
 }
 const STATE_SECRET = resolveStateSecret();
 
-function buildState(userId: string): string {
+export type EbayAuthPlatform = "ios" | "web";
+
+function buildState(userId: string, platform: EbayAuthPlatform): string {
   const payload = Buffer.from(JSON.stringify({
     userId,
+    platform,
     exp: Date.now() + 10 * 60 * 1000,
   })).toString("base64url");
   const sig = crypto.createHmac("sha256", STATE_SECRET).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
 
-function parseState(state: string): { userId: string } | null {
+function parseState(state: string): { userId: string; platform: EbayAuthPlatform } | null {
   const dot = state.lastIndexOf(".");
   if (dot === -1) return null;
   const payload = state.slice(0, dot);
@@ -117,10 +120,11 @@ function parseState(state: string): { userId: string } | null {
   } catch { return null; }
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as {
-      userId: string; exp: number;
+      userId: string; exp: number; platform?: string;
     };
     if (data.exp < Date.now()) return null;
-    return { userId: data.userId };
+    const platform: EbayAuthPlatform = data.platform === "web" ? "web" : "ios";
+    return { userId: data.userId, platform };
   } catch { return null; }
 }
 
@@ -128,11 +132,14 @@ function parseState(state: string): { userId: string } | null {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Build the eBay OAuth authorization URL for this user. */
-export function buildAuthUrl(userId: string): string {
+/** Build the eBay OAuth authorization URL for this user.
+ *  `platform` is encoded into the signed state so the OAuth callback can
+ *  redirect back to the appropriate destination (iOS deep link vs the
+ *  web app). Defaults to "ios" for iOS-app callers who never pass one. */
+export function buildAuthUrl(userId: string, platform: EbayAuthPlatform = "ios"): string {
   // State is self-contained and HMAC-signed — no server-side store needed.
   // eBay does not support PKCE, so we use standard authorization code flow.
-  const state = buildState(userId);
+  const state = buildState(userId, platform);
 
   const params = new URLSearchParams({
     client_id:     process.env.EBAY_CLIENT_ID ?? "",
@@ -145,13 +152,18 @@ export function buildAuthUrl(userId: string): string {
   return `${EBAY_BASE_AUTH}/oauth2/authorize?${params.toString()}`;
 }
 
-/** Exchange the auth code from eBay's callback for tokens and persist them. */
-export async function handleCallback(code: string, state: string): Promise<EbayTokenRecord> {
+/** Exchange the auth code from eBay's callback for tokens and persist them.
+ *  Returns the token record augmented with the platform hint from state
+ *  so the route can decide where to redirect the browser. */
+export async function handleCallback(
+  code: string,
+  state: string,
+): Promise<EbayTokenRecord & { platform: EbayAuthPlatform }> {
   const pending = parseState(state);
   if (!pending) {
     throw new Error("Invalid or expired OAuth state parameter");
   }
-  const { userId } = pending;
+  const { userId, platform } = pending;
 
   const body = new URLSearchParams({
     grant_type:   "authorization_code",
@@ -193,7 +205,7 @@ export async function handleCallback(code: string, state: string): Promise<EbayT
 
   await writeTokenRecord(record);
 
-  return record;
+  return { ...record, platform };
 }
 
 /** Returns a valid access token for the user, refreshing if needed. Throws if not connected. */

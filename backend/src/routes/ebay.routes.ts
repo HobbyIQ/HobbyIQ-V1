@@ -127,6 +127,10 @@ const router = Router();
 // The OAuth callback is a browser redirect from eBay — no session cookie
 // is available. It validates state separately. Mount it FIRST so it doesn't
 // accidentally fall under the gated middleware below.
+// Web-app origin used when the connect flow was initiated from the web
+// dashboard rather than the iOS app. Falls back to prod hobby-iq.com.
+const WEB_APP_ORIGIN = process.env.WEB_APP_ORIGIN ?? "https://hobby-iq.com";
+
 router.get("/connect/callback", async (req: Request, res: Response) => {
   const { code, state } = req.query as Record<string, string>;
 
@@ -137,10 +141,22 @@ router.get("/connect/callback", async (req: Request, res: Response) => {
 
   try {
     const record = await handleCallback(code, state);
+    if (record.platform === "web") {
+      res.redirect(302, `${WEB_APP_ORIGIN}/app/ebay?connected=true`);
+      return;
+    }
     const appDeepLink = `hobbyiq://ebay/connected?ebayUser=${encodeURIComponent(record.ebayUserId)}`;
     res.redirect(302, appDeepLink);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
+    // On error we can't recover the platform from a bad state, so honor
+    // an explicit `?src=web` hint on the callback URL if present, else
+    // default to the iOS deep-link scheme the app expects.
+    const src = String((req.query.src ?? "")).toLowerCase();
+    if (src === "web") {
+      res.redirect(302, `${WEB_APP_ORIGIN}/app/ebay?error=${encodeURIComponent(msg)}`);
+      return;
+    }
     const appDeepLink = `hobbyiq://ebay/error?message=${encodeURIComponent(msg)}`;
     res.redirect(302, appDeepLink);
   }
@@ -165,10 +181,15 @@ router.get("/status", async (req: Request, res: Response) => {
 // OAuth connect
 // ---------------------------------------------------------------------------
 
+function readPlatform(req: Request): "ios" | "web" {
+  const raw = String((req.query.platform ?? "")).toLowerCase();
+  return raw === "web" ? "web" : "ios";
+}
+
 router.get("/connect/start", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   try {
-    const url = buildAuthUrl(userId);
+    const url = buildAuthUrl(userId, readPlatform(req));
     res.json({ success: true, authUrl: url });
   } catch (err) {
     res.status(500).json({ success: false, error: err instanceof Error ? err.message : "Unknown error" });
@@ -179,7 +200,7 @@ router.get("/connect/restart", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   try {
     await disconnect(userId);
-    const url = buildAuthUrl(userId);
+    const url = buildAuthUrl(userId, readPlatform(req));
     res.json({ success: true, authUrl: url, reconnected: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err instanceof Error ? err.message : "Unknown error" });

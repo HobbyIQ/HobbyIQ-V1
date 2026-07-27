@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { Brand } from "@/components/Brand";
 
 // Public-page header — used on landing + all marketing routes.
 // AppShell handles its own header for authenticated /app/* routes.
 export function MarketingHeader() {
   return (
     <nav className="flex items-center justify-between w-full max-w-7xl mx-auto px-6 py-6">
-      <Link href="/" className="flex items-center gap-2 font-bold tracking-tight text-xl">
-        <span className="hiq-hero-stroke text-transparent bg-clip-text">HobbyIQ</span>
-      </Link>
+      <Brand href="/" size="md" variant="icon-only" />
       <div className="flex items-center gap-6 text-sm">
         <Link
           href="/pricing"

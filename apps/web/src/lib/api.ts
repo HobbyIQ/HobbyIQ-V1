@@ -618,6 +618,148 @@ export async function fetchNotableSales(opts: { minPrice?: number; days?: number
   return await request<NotableSalesResponse>(`/api/portfolio/notable-sales${q ? `?${q}` : ""}`);
 }
 
+// ─── eBay ──────────────────────────────────────────────────────────
+
+export interface EbayStatus {
+  success: boolean;
+  connected: boolean;
+  ebayUserId?: string;
+  connectedUser?: string;
+  connectedAt?: string;
+  accessTokenExpiresAt?: number;
+  refreshTokenExpiresAt?: number;
+}
+
+export interface EbayAuthUrlResponse {
+  success: boolean;
+  authUrl: string;
+  reconnected?: boolean;
+}
+
+export interface EbayPolicy {
+  policyId?: string;
+  name?: string;
+  description?: string;
+  [k: string]: unknown;
+}
+
+export interface EbayPoliciesResponse {
+  success: boolean;
+  paymentPolicies?: EbayPolicy[];
+  returnPolicies?: EbayPolicy[];
+  fulfillmentPolicies?: EbayPolicy[];
+  locations?: unknown[];
+}
+
+export async function fetchEbayStatus(): Promise<EbayStatus> {
+  return await request<EbayStatus>("/api/ebay/status");
+}
+
+export async function fetchEbayConnectUrl(): Promise<EbayAuthUrlResponse> {
+  // ?platform=web tells the OAuth callback to redirect back to
+  // /app/ebay?connected=true instead of the iOS hobbyiq:// deep link.
+  return await request<EbayAuthUrlResponse>("/api/ebay/connect/start?platform=web");
+}
+
+export async function reconnectEbay(): Promise<EbayAuthUrlResponse> {
+  return await request<EbayAuthUrlResponse>("/api/ebay/connect/restart?platform=web");
+}
+
+export async function disconnectEbay(): Promise<{ success: boolean }> {
+  return await request("/api/ebay/disconnect", { method: "DELETE" });
+}
+
+export async function fetchEbayPolicies(): Promise<EbayPoliciesResponse> {
+  return await request<EbayPoliciesResponse>("/api/ebay/policies");
+}
+
+// ─── eBay listing prepare + publish (per-holding) ─────────────────
+
+export interface EbayListingPrepared {
+  success: boolean;
+  holdingId: string;
+  identity: {
+    playerName: string | null;
+    cardYear: number | null;
+    setName: string | null;
+    parallel: string | null;
+    cardNumber: string | null;
+    isAuto: boolean;
+    isRookie: boolean;
+    team: string | null;
+    sport: string | null;
+  };
+  condition: {
+    isGraded: boolean;
+    gradingCompany: string | null;
+    grade: string | null;
+    certNumber: string | null;
+    conditionEstimate: string | null;
+    conditionNotes: string | null;
+  };
+  categoryAspects: {
+    league: string | null;
+    type: string | null;
+    countryOfManufacture: string | null;
+    yearManufactured: number | null;
+    season: number | null;
+    language: string | null;
+  };
+  photos: string[];
+  listing: {
+    quantity: number;
+    priceCents: number;
+    bestOfferEnabled: boolean;
+    bestOfferMinPriceCents: number | null;
+    description: string;
+    titleSuggested: string;
+  };
+  validation: {
+    requiredMissing: string[];
+    warnings: string[];
+    readyToPublish: boolean;
+  };
+}
+
+export interface EbayPublishResult {
+  success: boolean;
+  offerId?: string;
+  listingId?: string;
+  error?: string;
+  requiredMissing?: string[];
+}
+
+export async function prepareEbayListing(holdingId: string): Promise<EbayListingPrepared> {
+  return await request<EbayListingPrepared>("/api/ebay/listings/prepare", {
+    method: "POST",
+    body: JSON.stringify({ holdingId }),
+  });
+}
+
+export async function publishEbayListing(
+  payload: EbayListingPrepared,
+): Promise<EbayPublishResult> {
+  const {
+    holdingId,
+    identity,
+    condition,
+    categoryAspects,
+    photos,
+    listing,
+  } = payload;
+  return await request<EbayPublishResult>("/api/ebay/listings/publish", {
+    method: "POST",
+    body: JSON.stringify({
+      holdingId,
+      identity,
+      condition,
+      categoryAspects,
+      photos,
+      listing,
+    }),
+  });
+}
+
 // ─── Alerts ────────────────────────────────────────────────────────
 
 export type PriceAlertDirection = "above" | "below";
