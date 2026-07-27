@@ -56,6 +56,11 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
   },
   {
+    href: "/app/trade-targets",
+    label: "Trade targets",
+    iconPath: "M3 12l4-4v3h9V8l4 4-4 4v-3H7v3l-4-4z",
+  },
+  {
     href: "/app/erp",
     label: "ERP",
     iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",

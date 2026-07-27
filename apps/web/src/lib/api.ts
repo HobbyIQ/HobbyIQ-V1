@@ -725,6 +725,35 @@ export async function commitImport(
   });
 }
 
+// ─── Trade targets (buy-side discovery) ──────────────────────────
+
+export interface TradeTarget {
+  cardId: string;
+  playerName: string;
+  cardTitle: string;
+  imageUrl: string | null;
+  askPrice: number;
+  engineValue: number;
+  discountPct: number;
+  discountAbsolute: number;
+  confidence: "high" | "medium" | "low";
+  reason: string;
+  listingUrl: string;
+  seller: { username: string; feedbackScore: number | null };
+}
+
+export interface TradeTargetsResponse {
+  computedAt: string;
+  source: "watchlist" | "inventory";
+  cardsScanned: number;
+  listingsSeen: number;
+  targets: TradeTarget[];
+}
+
+export async function fetchTradeTargets(source: "watchlist" | "inventory" = "watchlist"): Promise<TradeTargetsResponse> {
+  return await request<TradeTargetsResponse>(`/api/portfolio/trade-targets?source=${source}`);
+}
+
 // ─── Recent sold comps for a card ─────────────────────────────────
 
 export interface RecentCompSale {
