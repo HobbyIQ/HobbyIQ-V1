@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   fetchSessionUser,
   fetchEntitlements,
   setUsername,
   deleteAccount,
   signOut,
+  setPublicShareEnabled,
   type AuthUser,
   type EntitlementsMeResponse,
 } from "@/lib/api";
@@ -111,6 +113,14 @@ export default function SettingsPage() {
       {/* Username */}
       <UsernameSection currentUsername={user.username ?? null} />
 
+      {/* Public storefront — Pro Seller only */}
+      {effectivePlan === "pro_seller" && user.username && (
+        <PublicShareSection
+          initialEnabled={user.publicShareEnabled ?? false}
+          username={user.username}
+        />
+      )}
+
       {/* Password */}
       <section className="hiq-card p-6">
         <h2 className="font-bold text-lg mb-4">Password</h2>
@@ -211,6 +221,89 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
       {saved && (
         <div className="mt-3 text-sm" style={{ color: "var(--color-success)" }}>
           Username updated.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PublicShareSection({
+  initialEnabled,
+  username,
+}: {
+  initialEnabled: boolean;
+  username: string;
+}) {
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onToggle() {
+    const next = !enabled;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await setPublicShareEnabled(next);
+      setEnabled(res.publicShareEnabled);
+    } catch (err) {
+      setError((err as { message?: string }).message ?? "Failed to update");
+      setEnabled(!next);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const storefrontUrl = `/u/${encodeURIComponent(username)}`;
+
+  return (
+    <section className="hiq-card p-6">
+      <h2 className="font-bold text-lg mb-2">Public storefront</h2>
+      <p className="text-sm text-[color:var(--color-muted)] mb-4 leading-relaxed">
+        Share your inventory publicly at{" "}
+        <span className="text-white font-medium">hobby-iq.com/u/{username}</span>.
+        Cards show with photos, grades, and HobbyIQ market values. Cost basis,
+        gain/loss, and personal info stay private.
+      </p>
+
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggle}
+            disabled={saving}
+            role="switch"
+            aria-checked={enabled}
+            className="relative w-10 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50"
+            style={{
+              background: enabled ? "var(--color-accent)" : "var(--color-border)",
+            }}
+          >
+            <span
+              className="absolute top-0.5 h-5 w-5 rounded-full transition-transform"
+              style={{
+                background: enabled ? "var(--color-bg)" : "var(--color-muted)",
+                transform: enabled ? "translateX(18px)" : "translateX(2px)",
+              }}
+            />
+          </button>
+          <span className="text-sm font-medium">
+            {enabled ? "Storefront is live" : "Storefront is off"}
+          </span>
+        </div>
+
+        {enabled && (
+          <Link
+            href={storefrontUrl}
+            target="_blank"
+            className="hiq-btn-secondary text-sm"
+          >
+            Open storefront ↗
+          </Link>
+        )}
+      </div>
+
+      {error && (
+        <div className="mt-3 text-sm" style={{ color: "var(--color-danger)" }}>
+          {error}
         </div>
       )}
     </section>

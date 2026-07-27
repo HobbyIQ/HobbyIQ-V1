@@ -84,6 +84,11 @@ interface AuthUserRecord {
   // that never went through /api/subscriptions/verify (free users + every
   // pre-Payments-Apple-1 record).
   appleSubscription?: AppleSubscriptionState;
+  // CF-PUBLIC-SELLER-STOREFRONT (Drew, 2026-07-27): when true AND
+  // effective plan is Pro Seller, hobby-iq.com/u/<username> renders a
+  // public storefront showing the user's inventory (photos + card
+  // titles + FMV, no purchase price or P&L). Default off — opt-in only.
+  publicShareEnabled?: boolean;
   // CF-OWNER-OVERRIDE (2026-06-05): server-side comp. Authoritative tier
   // assignment that overrides BOTH the Apple-derived `plan` field AND the
   // "free" default. Read-modify-write at setUserSubscriptionState +
@@ -113,6 +118,9 @@ export interface AuthUser {
   // absent → fall through to `plan`. See effectivePlanFor() — the single
   // shared resolver every gate/route reads through.
   entitlementOverride?: SubscriptionPlan | null;
+  // CF-PUBLIC-SELLER-STOREFRONT (Drew, 2026-07-27): opt-in flag Pro
+  // Sellers flip to publish their inventory at hobby-iq.com/u/<username>.
+  publicShareEnabled?: boolean;
 }
 
 export interface AuthResult {
@@ -393,7 +401,27 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     // CF-OWNER-OVERRIDE (2026-06-05): server-side comp override. NULL
     // or undefined → effectivePlanFor falls through to `plan`.
     entitlementOverride: user.entitlementOverride ?? null,
+    publicShareEnabled: user.publicShareEnabled ?? false,
   };
+}
+
+/** CF-PUBLIC-SELLER-STOREFRONT: internal helper for the public storefront
+ *  route. Looks a user up by their public username (case-insensitive) and
+ *  returns the full record so the route can read holdings + plan. Public
+ *  route MUST NOT expose the record itself — only the safe surface fields. */
+export async function findUserRecordByUsername(username: string): Promise<AuthUserRecord | undefined> {
+  return findUserByIdentifier(username);
+}
+
+/** CF-PUBLIC-SELLER-STOREFRONT: toggle the opt-in flag from an authed
+ *  session. Idempotent — writing the same value twice is a no-op after
+ *  the first write. */
+export async function setPublicShareEnabled(userId: string, enabled: boolean): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  user.publicShareEnabled = enabled;
+  await writeUser(user);
+  return true;
 }
 
 // ─── CF-PAYMENTS-B1: usage counter writer ───────────────────────────────────

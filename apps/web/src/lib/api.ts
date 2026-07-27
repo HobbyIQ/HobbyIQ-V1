@@ -33,6 +33,7 @@ export interface AuthUser {
   plan?: "free" | "collector" | "investor" | "pro_seller" | string;
   expiresAt?: string | null;
   entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
+  publicShareEnabled?: boolean;
 }
 
 // Backend contract (authService.AuthResult): { success, user?, sessionId?, error? }
@@ -616,6 +617,46 @@ export async function regradeHolding(id: string, body: RegradeInput): Promise<{ 
     holding,
     message: raw.message,
   };
+}
+
+// ─── Public seller storefront ─────────────────────────────────────
+
+export interface StorefrontCard {
+  holdingId: string;
+  cardTitle: string;
+  playerName: string | null;
+  imageUrl: string | null;
+  grade: string | null;
+  fmv: number | null;
+  parallel: string | null;
+  year: number | null;
+}
+
+export interface PublicSellerResponse {
+  success: boolean;
+  seller: {
+    username: string;
+    joinedAt: string;
+  };
+  portfolio: {
+    cardCount: number;
+    sports: Array<{ sport: string; count: number }>;
+  };
+  cards: StorefrontCard[];
+}
+
+export async function fetchPublicSeller(username: string): Promise<PublicSellerResponse> {
+  return await request<PublicSellerResponse>(
+    `/api/public/seller/${encodeURIComponent(username)}`,
+    { auth: false },
+  );
+}
+
+export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {
+  return await request<{ success: boolean; publicShareEnabled: boolean }>(
+    "/api/auth/public-share",
+    { method: "POST", body: JSON.stringify({ enabled }) },
+  );
 }
 
 // ─── Portfolio CSV / xlsx import ──────────────────────────────────
