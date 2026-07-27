@@ -1895,22 +1895,73 @@ async function applyGradeLadderFallback(opts: {
   source: string;
 }): Promise<LadderFallbackResult | null> {
   try {
-    const { deriveGradeLadderAnchor } = await import(
+    const { deriveGradeLadderAnchor, getGraderPremium } = await import(
       "../compiq/compiqEstimate.service.js"
     );
+    const { inferSportFromContext } = await import(
+      "./soldCompsStore.service.js"
+    );
+    const cardYear =
+      typeof (opts.holding as { cardYear?: number }).cardYear === "number"
+        ? ((opts.holding as { cardYear?: number }).cardYear as number)
+        : null;
+    const cardClass = (opts.holding as { isAuto?: boolean }).isAuto === true ? "autograph" : "base";
     const ladder = await deriveGradeLadderAnchor({
       cardId: opts.cardId,
-      // Always request "Raw" so the ladder picks the freshest anchor
-      // regardless of the user's requested grade; the auto-aware
-      // multiplier table converts it to the user's grade when applicable.
+      // Ask the ladder for Raw to get the freshest anchor regardless of
+      // the user's grade. If the user's holding is graded, we apply the
+      // grade multiplier ourselves below (CF-LADDER-APPLY-USER-GRADE).
       requestedGrade: "Raw",
-      cardClass: (opts.holding as { isAuto?: boolean }).isAuto === true ? "autograph" : "base",
-      cardYear:
-        typeof (opts.holding as { cardYear?: number }).cardYear === "number"
-          ? ((opts.holding as { cardYear?: number }).cardYear as number)
-          : null,
+      cardClass,
+      cardYear,
     });
     if (!ladder || ladder.derivedFmv <= 0) return null;
+
+    // CF-LADDER-APPLY-USER-GRADE (Drew, 2026-07-27). Prior code path
+    // wrote `ladder.derivedFmv` (= Raw anchor × 1.0 when anchor is Raw)
+    // straight into estimatedValue for the graded holding. Comment on
+    // the requestedGrade:"Raw" line claimed "the auto-aware multiplier
+    // table converts it to the user's grade when applicable" — but no
+    // code did the conversion, so a PSA 10 holding with Raw comps
+    // persisted at the Raw comp price. Apply getGraderPremium (family
+    // + sport + price-band aware post CF-CALIBRATION-LADDER-IN-GRADER-
+    // PREMIUM, PR #837) here so PSA 10 / BGS 9.5 / etc. get their real
+    // multiplier over the Raw anchor.
+    const gradeCompany = String((opts.holding as { gradeCompany?: unknown }).gradeCompany ?? "").trim().toUpperCase();
+    const rawGradeVal = (opts.holding as { gradeValue?: unknown }).gradeValue;
+    const gradeValueNum = Number(rawGradeVal);
+    const hasGrade = gradeCompany.length > 0 && Number.isFinite(gradeValueNum) && gradeValueNum > 0;
+    let finalFmv = ladder.derivedFmv;
+    let finalExplanation = ladder.explanation;
+    if (hasGrade && ladder.anchorGrade === "Raw" && ladder.anchorPrice > 0) {
+      const productSetHint =
+        (opts.holding as { setName?: string }).setName
+        ?? (opts.holding as { product?: string }).product
+        ?? null;
+      const cardTitleHint =
+        (opts.holding as { cardTitle?: string }).cardTitle
+        ?? null;
+      const sportHint =
+        (opts.holding as { sport?: string | null }).sport
+        ?? inferSportFromContext(productSetHint, cardTitleHint, cardYear);
+      const multiplier = getGraderPremium(
+        gradeCompany,
+        String(gradeValueNum),
+        ladder.anchorPrice,
+        cardClass,
+        cardYear,
+        productSetHint,
+        null,
+        sportHint ?? null,
+      );
+      if (Number.isFinite(multiplier) && multiplier > 0 && Math.abs(multiplier - 1) > 0.01) {
+        finalFmv = ladder.anchorPrice * multiplier;
+        finalExplanation =
+          `Raw anchor $${ladder.anchorPrice} (${ladder.anchorDaysOld}d, ${ladder.anchorSampleSize} samples) `
+          + `× ${multiplier.toFixed(2)} ${gradeCompany} ${gradeValueNum} → $${Math.round(finalFmv)}.`;
+      }
+    }
+
     try {
       console.log(JSON.stringify({
         event: "autoprice_grade_ladder_fallback_applied",
@@ -1920,7 +1971,8 @@ async function applyGradeLadderFallback(opts: {
         anchorGrade: ladder.anchorGrade,
         anchorPrice: ladder.anchorPrice,
         anchorDaysOld: ladder.anchorDaysOld,
-        derivedFmv: ladder.derivedFmv,
+        derivedFmv: finalFmv,
+        gradeConversionApplied: hasGrade && ladder.anchorGrade === "Raw" && finalFmv !== ladder.derivedFmv,
         confidence: ladder.confidence,
         timestamp: new Date().toISOString(),
       }));
@@ -1928,9 +1980,9 @@ async function applyGradeLadderFallback(opts: {
       // Telemetry must never propagate.
     }
     return {
-      derivedFmv: ladder.derivedFmv,
+      derivedFmv: finalFmv,
       confidence: ladder.confidence,
-      explanation: ladder.explanation,
+      explanation: finalExplanation,
       anchorGrade: ladder.anchorGrade,
       anchorPrice: ladder.anchorPrice,
       anchorDaysOld: ladder.anchorDaysOld,
