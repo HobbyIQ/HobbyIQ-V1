@@ -1,6 +1,7 @@
 import { PortfolioTodayCard } from "@/components/PortfolioTodayCard";
 import { MarketTodayCard } from "@/components/MarketTodayCard";
 import { DailyIQCard } from "@/components/DailyIQCard";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 
 export default function TodayPage() {
   return (
@@ -11,6 +12,8 @@ export default function TodayPage() {
           Your portfolio, market, and action items at a glance.
         </p>
       </div>
+
+      <OnboardingBanner />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PortfolioTodayCard />
