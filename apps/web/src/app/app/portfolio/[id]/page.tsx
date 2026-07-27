@@ -134,7 +134,7 @@ export default function HoldingDetailPage() {
         {/* Value / cost / P&L */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 pt-4 border-t border-[color:var(--color-border)]">
           <Stat label="Current value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
-          <Stat label="Cost basis" value={formatUSD(cost, { hideCents: true })} />
+          <Stat label="Total paid" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
         </div>
@@ -151,7 +151,7 @@ export default function HoldingDetailPage() {
               <span className="tabular-nums text-white">{formatUSD(feesAdded, { hideCents: false })}</span>
             </div>
             <div className="flex justify-between mt-1 pt-1 border-t border-[color:var(--color-border)]">
-              <span className="text-[color:var(--color-muted)]">Total cost basis</span>
+              <span className="text-[color:var(--color-muted)]">Total paid</span>
               <span className="font-medium tabular-nums">{formatUSD(cost, { hideCents: false })}</span>
             </div>
           </div>
