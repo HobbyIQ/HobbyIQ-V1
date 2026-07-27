@@ -206,3 +206,41 @@ export interface PortfolioResponse {
 export async function fetchPortfolio(): Promise<PortfolioResponse> {
   return await request<PortfolioResponse>("/api/portfolio/");
 }
+
+// ─── Market movers ─────────────────────────────────────────────────
+
+// Matches shape returned by GET /api/compiq/market-trend/top-movers
+// (compiq.routes.ts:2586). Delta shape is roughly:
+//   { pct: number | null, absolute?: number | null, direction?: "up"|"down"|"flat", ... }
+// but we treat it as loose because the exact interface isn't exported.
+export interface MarketDelta {
+  pct?: number | null;
+  absolute?: number | null;
+  direction?: "up" | "down" | "flat" | null;
+  window?: string;
+  currentValue?: number | null;
+  priorValue?: number | null;
+}
+
+export interface MarketMover {
+  playerName: string;
+  delta: MarketDelta;
+  confidence: "high" | "low" | "none";
+}
+
+export interface MarketMoversResponse {
+  success: boolean;
+  window: { selected: "1d" | "7d" | "30d"; pct30dLabel: string };
+  limit: number;
+  movers: MarketMover[];
+  poolSize: number;
+}
+
+export async function fetchMarketMovers(
+  window: "1d" | "7d" | "30d" = "7d",
+  limit = 20,
+): Promise<MarketMoversResponse> {
+  return await request<MarketMoversResponse>(
+    `/api/compiq/market-trend/top-movers?window=${window}&limit=${limit}`,
+  );
+}
