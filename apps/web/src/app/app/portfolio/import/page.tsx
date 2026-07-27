@@ -105,6 +105,18 @@ export default function PortfolioImportPage() {
           to a known SKU and let you review before anything commits to your
           portfolio.
         </p>
+        <p className="text-xs text-[color:var(--color-muted)] mt-3">
+          Not sure of the format?{" "}
+          <a
+            href="/hobbyiq-portfolio-template.csv"
+            download
+            className="hover:underline"
+            style={{ color: "var(--hiq-electric-blue)" }}
+          >
+            Download the CSV template ↓
+          </a>{" "}
+          — canonical column names + 3 sample rows.
+        </p>
       </div>
 
       {/* File picker card */}

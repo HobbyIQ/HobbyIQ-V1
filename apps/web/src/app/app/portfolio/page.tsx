@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
@@ -22,6 +22,10 @@ export default function PortfolioPage() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkCostOpen, setBulkCostOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshBanner, setRefreshBanner] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<null | "csv" | "xlsx">(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +83,55 @@ export default function PortfolioPage() {
             {" "}with observed FMV · {data.summary.estimatedCount} estimated · {data.summary.pendingCount} pending
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={async () => {
+              if (refreshing) return;
+              setRefreshing(true);
+              setRefreshBanner(null);
+              try {
+                const res = await refreshAllHoldings();
+                if (res.throttled) {
+                  setRefreshBanner("Refresh cooldown active — try again in a minute.");
+                } else if (res.reason && res.repriced === 0) {
+                  setRefreshBanner(res.reason);
+                } else {
+                  setRefreshBanner(
+                    `Refreshed ${res.repriced} of ${res.requested} · ${res.freshSkipped ?? 0} already fresh`,
+                  );
+                  const next = await fetchPortfolio().catch(() => null);
+                  if (next) setData(next);
+                }
+              } catch (err) {
+                const e = err as { message?: string; status?: number };
+                if (e.status === 402) {
+                  setRefreshBanner("Bulk refresh needs Collector+ — head to pricing.");
+                } else {
+                  setRefreshBanner(e.message ?? "Refresh failed.");
+                }
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            disabled={refreshing}
+            className="hiq-btn-secondary text-sm disabled:opacity-60"
+          >
+            {refreshing ? "Refreshing…" : "Refresh prices"}
+          </button>
+          <ExportMenu
+            exporting={exporting}
+            onExport={async (fmt) => {
+              setExporting(fmt);
+              setExportError(null);
+              try {
+                await exportPortfolio(fmt);
+              } catch (err) {
+                setExportError((err as { message?: string }).message ?? "Export failed.");
+              } finally {
+                setExporting(null);
+              }
+            }}
+          />
           <Link
             href="/app/portfolio/import"
             className="hiq-btn-secondary text-sm hidden sm:inline-block"
@@ -108,6 +160,15 @@ export default function PortfolioPage() {
           </Link>
         </div>
       </div>
+
+      {(refreshBanner || exportError) && (
+        <div className="hiq-card p-3 mb-4 text-sm">
+          {refreshBanner && <div>{refreshBanner}</div>}
+          {exportError && (
+            <div style={{ color: "var(--color-danger)" }}>{exportError}</div>
+          )}
+        </div>
+      )}
 
       <PortfolioValueChart headlineTotal={data.summary.totalValue} />
       <SummaryBar summary={data.summary} />
@@ -250,6 +311,60 @@ function SummaryBar({ summary }: { summary: PortfolioResponse["summary"] }) {
         color={gainColor}
       />
       <Stat label="Return" value={formatPct(summary.totalGainLossPct)} color={gainColor} />
+    </div>
+  );
+}
+
+function ExportMenu({
+  exporting,
+  onExport,
+}: {
+  exporting: null | "csv" | "xlsx";
+  onExport: (fmt: "csv" | "xlsx") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={exporting != null}
+        className="hiq-btn-secondary text-sm disabled:opacity-60"
+      >
+        {exporting != null ? `Exporting ${exporting.toUpperCase()}…` : "Export ▾"}
+      </button>
+      {open && exporting == null && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 mt-1 rounded-lg overflow-hidden z-30"
+            style={{
+              background: "var(--hiq-card-navy)",
+              border: "1px solid var(--hiq-border)",
+              minWidth: 160,
+              boxShadow: "0 8px 16px rgba(0,0,0,0.35)",
+            }}
+          >
+            <button
+              onClick={() => {
+                setOpen(false);
+                onExport("xlsx");
+              }}
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5"
+            >
+              Excel (.xlsx)
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                onExport("csv");
+              }}
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5 border-t border-[color:var(--hiq-border)]"
+            >
+              CSV (.csv)
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
