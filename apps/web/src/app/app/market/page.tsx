@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchMarketMovers,
   fetchNotableSales,
+  fetchMarketSnapshot,
   type MarketMoversResponse,
   type MarketMover,
   type NotableSale,
@@ -23,44 +24,79 @@ export default function MarketPage() {
   const [notable, setNotable] = useState<NotableSale[]>([]);
   const [notableLoading, setNotableLoading] = useState(true);
 
+  // CF-DAILY-PUBLISH: pre-computed snapshot published at 5AM ET + 5PM
+  // ET. When present it wins over the live fetch for both the top-
+  // movers block and the notable-sales tail; the "As of" line renders
+  // above the movers so users know it's editorial, not intraday.
+  const [snapshotPublishedAt, setSnapshotPublishedAt] = useState<string | null>(null);
+  const [snapshotSlot, setSnapshotSlot] = useState<"morning" | "evening" | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     setLocked(false);
-    fetchMarketMovers(win, 60)
-      .then((res) => {
+    setNotableLoading(true);
+
+    // Try the snapshot first. If it lands and win === "7d" (its scope),
+    // reuse it for both movers + notable sales. Otherwise fall back to
+    // the live paths.
+    (async () => {
+      if (win === "7d") {
+        try {
+          const snap = await fetchMarketSnapshot();
+          if (cancelled) return;
+          if (snap.success && snap.snapshot) {
+            setSnapshotPublishedAt(snap.snapshot.publishedAt);
+            setSnapshotSlot(snap.snapshot.publishedSlot);
+            setData({
+              success: true,
+              window: { selected: "7d", pct30dLabel: snap.snapshot.window.pct30dLabel },
+              limit: snap.snapshot.topGainers.length + snap.snapshot.topLosers.length,
+              movers: [...snap.snapshot.topGainers, ...snap.snapshot.topLosers],
+              poolSize: snap.snapshot.poolSize,
+            });
+            setNotable(snap.snapshot.notableSales.slice(0, 12));
+            setLoading(false);
+            setNotableLoading(false);
+            return;
+          }
+        } catch {
+          // 404 (no snapshot yet) or network error — fall through to live.
+        }
+      }
+
+      // Live fallback: hits the entitlement-gated top-movers endpoint.
+      setSnapshotPublishedAt(null);
+      setSnapshotSlot(null);
+      try {
+        const res = await fetchMarketMovers(win, 60);
         if (cancelled) return;
         setData(res);
         setLoading(false);
-      })
-      .catch((err: { status?: number; message?: string }) => {
+      } catch (err) {
+        const e = err as { status?: number; message?: string };
         if (cancelled) return;
-        if (err.status === 402) setLocked(true);
-        else setError(err.message ?? "Failed to load market movers");
+        if (e.status === 402) setLocked(true);
+        else setError(e.message ?? "Failed to load market movers");
         setLoading(false);
-      });
+      }
+
+      try {
+        const nres = await fetchNotableSales({ days: 30, minPrice: 500, limit: 12 });
+        if (cancelled) return;
+        setNotable(nres.sales);
+      } catch {
+        // Notable sales failure is non-fatal — the section just hides itself.
+      } finally {
+        if (!cancelled) setNotableLoading(false);
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
   }, [win]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchNotableSales({ days: 30, minPrice: 500, limit: 12 })
-      .then((res) => {
-        if (cancelled) return;
-        setNotable(res.sales);
-        setNotableLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setNotableLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const { gainers, losers } = useMemo(() => {
     if (!data) return { gainers: [] as MarketMover[], losers: [] as MarketMover[] };
@@ -80,6 +116,23 @@ export default function MarketPage() {
         <p className="text-sm text-[color:var(--color-muted)]">
           Top movers across the comp pool. Click a player for their full detail.
         </p>
+        {snapshotPublishedAt && (
+          <p className="text-xs mt-2" style={{ color: "var(--hiq-muted-text)" }}>
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+              style={{ background: "var(--hiq-hobby-green)" }}
+            />
+            Published{" "}
+            {new Date(snapshotPublishedAt).toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              timeZoneName: "short",
+            })}{" "}
+            · {snapshotSlot === "evening" ? "Evening" : "Morning"} edition · Updates 5AM &amp; 5PM ET
+          </p>
+        )}
       </div>
 
       <div className="mb-6 flex items-center gap-2 flex-wrap">

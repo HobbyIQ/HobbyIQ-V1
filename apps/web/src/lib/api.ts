@@ -311,6 +311,28 @@ export async function fetchMarketMovers(
   );
 }
 
+// CF-DAILY-PUBLISH: pre-computed twice-daily editorial snapshot. Server
+// publishes at 5AM ET + 5PM ET; every read is a Cosmos point-read (fast
+// + no auth required). Web pages hit this first and fall back to the
+// live top-movers endpoint if the snapshot isn't available yet.
+export interface MarketSnapshotResponse {
+  success: boolean;
+  snapshot: {
+    id: "market";
+    publishedAt: string;
+    publishedSlot: "morning" | "evening";
+    window: { selected: "7d"; pct30dLabel: string };
+    topGainers: MarketMover[];
+    topLosers: MarketMover[];
+    poolSize: number;
+    notableSales: NotableSale[];
+  };
+}
+
+export async function fetchMarketSnapshot(): Promise<MarketSnapshotResponse> {
+  return await request<MarketSnapshotResponse>("/api/daily/market-snapshot", { auth: false });
+}
+
 // ─── Card search + FMV ─────────────────────────────────────────────
 
 // Matches backend/src/types/cardIdentity.ts:CardIdentity — only the
