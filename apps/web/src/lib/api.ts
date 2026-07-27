@@ -611,6 +611,58 @@ export async function regradeHolding(id: string, body: RegradeInput): Promise<{ 
   };
 }
 
+// ─── ERP (Pro Seller) ──────────────────────────────────────────────
+
+export interface ErpTopMover {
+  holdingId: string;
+  title: string;
+  playerName: string;
+  costBasis: number;
+  snapshotValue: number;
+  unrealizedGainLoss: number;
+  unrealizedPct: number;
+}
+
+export interface ErpSummaryResponse {
+  success: boolean;
+  asOf: string;
+  totals: {
+    costBasis: number;
+    snapshotValue: number;
+    unrealizedGainLoss: number;
+    unrealizedPct: number;
+    holdingCount: number;
+    freshCount: number;
+    staleCount: number;
+    missingCount: number;
+    estimatedCount: number;
+    pendingCount: number;
+  };
+  fullPosition: {
+    realizedYtd: number;
+    unrealized: number;
+    total: number;
+    realizedYtdNote: string;
+  };
+  change30d: {
+    absolute: number;
+    percent: number | null;
+    asOfDate: string;
+    rangeWeak: boolean;
+  } | null;
+  topGainers: ErpTopMover[];
+  topLosers: ErpTopMover[];
+  valueTrend30d: Array<{ date: string; displayableTotal: number }>;
+}
+
+// Backend responds 402/403 when the caller doesn't have the
+// erpReconciliation entitlement (free-tier / Collector-tier users).
+// The error handler in `request()` throws with the status code so the
+// caller can render an upsell instead of a generic failure.
+export async function fetchErpSummary(): Promise<ErpSummaryResponse> {
+  return await request<ErpSummaryResponse>("/api/portfolio/erp/summary");
+}
+
 // POST /holdings/:id/refresh — reruns autoPriceHolding on the server so
 // the estimatedValue picks up any pricing-engine changes (e.g. a
 // calibration refresh, or a new comp landing in sold_comps). Rate-limited
