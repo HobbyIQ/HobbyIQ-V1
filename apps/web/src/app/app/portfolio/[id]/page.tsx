@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { EbayListModal } from "@/components/EbayListModal";
+import { EditHoldingModal } from "@/components/EditHoldingModal";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export default function HoldingDetailPage() {
   const [sellOpen, setSellOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [ebayOpen, setEbayOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!holdingId) return;
@@ -188,6 +190,9 @@ export default function HoldingDetailPage() {
         <button onClick={() => setSellOpen(true)} className="hiq-btn-primary">
           Mark as sold
         </button>
+        <button onClick={() => setEditOpen(true)} className="hiq-btn-secondary">
+          Edit card
+        </button>
         <button onClick={() => setEbayOpen(true)} className="hiq-btn-secondary">
           List on eBay
         </button>
@@ -248,6 +253,16 @@ export default function HoldingDetailPage() {
         <EbayListModal
           holdingId={h.id}
           onClose={() => setEbayOpen(false)}
+        />
+      )}
+      {editOpen && (
+        <EditHoldingModal
+          holding={h}
+          onCancel={() => setEditOpen(false)}
+          onSaved={(next) => {
+            setH(next);
+            setEditOpen(false);
+          }}
         />
       )}
     </div>

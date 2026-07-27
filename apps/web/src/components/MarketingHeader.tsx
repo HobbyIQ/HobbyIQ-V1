@@ -6,7 +6,7 @@ import { Brand } from "@/components/Brand";
 export function MarketingHeader() {
   return (
     <nav className="flex items-center justify-between w-full max-w-7xl mx-auto px-6 py-6">
-      <Brand href="/" size="md" variant="icon-only" />
+      <Brand href="/" size="md" variant="logo-full" />
       <div className="flex items-center gap-6 text-sm">
         <Link
           href="/pricing"

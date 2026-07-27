@@ -40,17 +40,33 @@ export function formatCardTitle(h: {
   parallel?: string | null;
   cardTitle?: string | null;
 }): string {
+  // Strip a leading year from product when we're already going to prepend
+  // cardYear — otherwise "2026" + "2026 Bowman Baseball" collapses to
+  // "2026 2026 Bowman Baseball". Same year (four digits) at the very
+  // start of product is the only shape we drop; anything else stays.
+  let product = h.product?.trim() ?? "";
+  if (h.cardYear && product) {
+    const yearStr = String(h.cardYear);
+    const leadingYear = product.match(/^(\d{4})\s+/);
+    if (leadingYear && leadingYear[1] === yearStr) {
+      product = product.slice(leadingYear[0].length);
+    }
+  }
+
   const parts: string[] = [];
   if (h.cardYear) parts.push(String(h.cardYear));
-  if (h.product) parts.push(h.product);
+  if (product) parts.push(product);
+  // Parallel goes inline right after the product (before the player) so
+  // the title reads like "2026 Bowman Baseball Orange Shimmer Eric
+  // Hartman #CPA-EHA" — the parallel is what distinguishes similarly-
+  // numbered cards and needs to be visible without a second glance.
+  if (h.parallel && h.parallel.trim().toLowerCase() !== "base") {
+    parts.push(h.parallel.trim());
+  }
   if (h.playerName) parts.push(h.playerName);
   if (h.cardNumber) parts.push(`#${h.cardNumber}`);
   const base = parts.join(" ");
-  const suffix = h.parallel && h.parallel.toLowerCase() !== "base" ? ` — ${h.parallel}` : "";
   return base || h.cardTitle || "Untitled card";
-  // parallel appended below to preserve fallback
-  // (kept concise; caller can render the parallel separately if preferred)
-  void suffix;
 }
 
 export function formatGrade(h: {

@@ -64,7 +64,7 @@ export function AppShell({ children }: AppShellProps) {
         style={{ background: "var(--color-bg)" }}
       >
         <div className="p-6 border-b border-[color:var(--color-border)] flex-shrink-0">
-          <Brand href="/app" size="md" variant="icon-only" />
+          <Brand href="/app" size="lg" variant="logo-full" />
         </div>
         <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
           {APP_NAV.map((item) => (
@@ -80,7 +80,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="md:hidden fixed top-0 inset-x-0 z-30 border-b border-[color:var(--color-border)]"
            style={{ background: "var(--color-bg)" }}>
         <div className="flex items-center gap-3 px-4 h-14">
-          <Brand href="/app" size="sm" variant="icon-only" className="flex-shrink-0" />
+          <Brand href="/app" size="sm" variant="logo-full" className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <GlobalSearchBar compact />
           </div>

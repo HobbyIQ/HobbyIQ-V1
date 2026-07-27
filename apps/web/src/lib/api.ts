@@ -190,6 +190,7 @@ export interface PortfolioHolding {
   displayableValue?: number | null;
   displayableValueSource?: string | null;
   photos?: string[] | null;
+  notes?: string | null;
   lastUpdated?: string | null;
 }
 
@@ -494,11 +495,21 @@ export async function fetchHoldingHistory(id: string): Promise<{ holdingId: stri
   return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/history`);
 }
 
-export async function updateHolding(id: string, patch: Partial<AddHoldingInput>): Promise<{ success: boolean; holding?: PortfolioHolding }> {
-  return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: JSON.stringify(patch),
-  });
+// Backend returns { message: "Holding updated", id, holding, entry } — NOT
+// { success: true, holding }. Normalize so callers see the modern shape.
+// request() throws on non-2xx, so a successful return is a success by
+// construction.
+export async function updateHolding(id: string, patch: Partial<AddHoldingInput>): Promise<{ success: boolean; holding?: PortfolioHolding; message?: string }> {
+  const raw = await request<{ message?: string; id?: string; holding?: PortfolioHolding; entry?: { holding?: PortfolioHolding } }>(
+    `/api/portfolio/holdings/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(patch) },
+  );
+  const holding = raw.holding ?? raw.entry?.holding;
+  return {
+    success: typeof raw.id === "string" || raw.message === "Holding updated" || holding != null,
+    holding,
+    message: raw.message,
+  };
 }
 
 export async function deleteHolding(id: string): Promise<{ success: boolean }> {
