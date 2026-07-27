@@ -79,14 +79,17 @@ function VerifyEmailBody() {
               className="text-sm mb-6"
               style={{ color: "var(--hiq-muted-text)" }}
             >
-              Thanks — your address is confirmed. You can close this tab or
-              head back to the app.
+              Thanks — your address is confirmed. A few quick steps and
+              you&apos;re fully set up.
             </p>
+            {/* CF-ONBOARDING: land on /app/welcome so the user immediately
+                sees the checklist (link eBay, add first card, etc.) rather
+                than an empty dashboard. */}
             <button
-              onClick={() => router.push("/app")}
+              onClick={() => router.push("/app/welcome?verified=1")}
               className="hiq-btn-primary"
             >
-              Go to HobbyIQ
+              Continue setup
             </button>
           </>
         )}

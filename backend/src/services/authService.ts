@@ -114,6 +114,9 @@ interface AuthUserRecord {
   // by effectivePlanFor() at every enforcement site (requireEntitlement,
   // requireCapacity, requireRateLimited) AND at /api/entitlements/me.
   entitlementOverride?: SubscriptionPlan | null;
+  // CF-ONBOARDING (Drew, 2026-07-27): user clicked "hide the checklist"
+  // on the /app/welcome banner. Persists across sessions.
+  onboardingDismissed?: boolean;
   // CF-EMAIL-VERIFICATION (Drew, 2026-07-27): opt-in email verification.
   // Absent on legacy rows → treat as unverified. `verifiedAt` set when
   // the user clicks the link in the verification email. `pending` holds
@@ -468,6 +471,19 @@ export async function setPublicShareEnabled(userId: string, enabled: boolean): P
   const user = await readUser(userId);
   if (!user) return false;
   user.publicShareEnabled = enabled;
+  await writeUser(user);
+  return true;
+}
+
+/** CF-ONBOARDING: read/write the dismissed flag. Absent → false. */
+export async function readOnboardingDismissed(userId: string): Promise<boolean> {
+  const user = await readUser(userId);
+  return Boolean(user?.onboardingDismissed);
+}
+export async function setOnboardingDismissed(userId: string, dismissed: boolean): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  user.onboardingDismissed = dismissed;
   await writeUser(user);
   return true;
 }

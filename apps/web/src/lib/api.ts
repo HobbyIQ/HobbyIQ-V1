@@ -824,6 +824,38 @@ export async function fetchUnreadCount(): Promise<{ success: boolean; unread: nu
   return await request("/api/messages/unread-count");
 }
 
+// ─── CF-ONBOARDING (Drew, 2026-07-27) ───────────────────────────────────
+
+export interface OnboardingStep {
+  id: "verify" | "link-ebay" | "first-card" | "first-alert" | "storefront";
+  label: string;
+  description: string;
+  done: boolean;
+  href: string;
+  cta?: string;
+}
+
+export interface OnboardingResponse {
+  success: boolean;
+  steps: OnboardingStep[];
+  doneCount: number;
+  total: number;
+  percentComplete: number;
+  dismissed: boolean;
+}
+
+export async function fetchOnboarding(): Promise<OnboardingResponse> {
+  return await request("/api/onboarding/");
+}
+
+export async function dismissOnboarding(): Promise<{ success: boolean }> {
+  return await request("/api/onboarding/dismiss", { method: "POST" });
+}
+
+export async function reopenOnboarding(): Promise<{ success: boolean }> {
+  return await request("/api/onboarding/reopen", { method: "POST" });
+}
+
 export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {
   return await request<{ success: boolean; publicShareEnabled: boolean }>(
     "/api/auth/public-share",
