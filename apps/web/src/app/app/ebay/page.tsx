@@ -17,6 +17,7 @@ import {
   type PortfolioHolding,
 } from "@/lib/api";
 import { formatUSD, formatCardTitle } from "@/lib/format";
+import { EbayListModal } from "@/components/EbayListModal";
 
 export default function EbayPage() {
   const [status, setStatus] = useState<EbayStatus | null>(null);
@@ -265,6 +266,7 @@ function LiveListingsSection() {
   const [statuses, setStatuses] = useState<Record<string, EbayOfferStatus | { error: string }>>({});
   const [ending, setEnding] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [revising, setRevising] = useState<{ holdingId: string; offerId: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -411,6 +413,12 @@ function LiveListingsSection() {
                   </a>
                 )}
                 <button
+                  onClick={() => setRevising({ holdingId: h.id, offerId })}
+                  className="hiq-btn-secondary text-xs"
+                >
+                  Revise
+                </button>
+                <button
                   onClick={() => onEnd(h)}
                   disabled={!!ending[offerId]}
                   className="hiq-btn-secondary text-xs disabled:opacity-40"
@@ -423,6 +431,15 @@ function LiveListingsSection() {
           );
         })}
       </div>
+
+      {revising && (
+        <EbayListModal
+          holdingId={revising.holdingId}
+          reviseOfferId={revising.offerId}
+          onClose={() => setRevising(null)}
+          onPublished={() => setRevising(null)}
+        />
+      )}
     </div>
   );
 }
