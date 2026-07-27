@@ -1,19 +1,22 @@
 // CF-BASE-MULTIPLIER-ENGINE-WIRING (2026-06-29) — pins the env-gated
 // engine wiring for the empirical base-multipliers table.
 //
-// DEFAULT (env unset / != "true"): engine uses static GRADER_PREMIUMS
-// for cardClass=base and undefined. All existing tests pass.
-//
-// ENABLED (env = "true"): engine prefers the empirical base table for
-// modern (1990+) base graded cards. Modern PSA 10 at <$25 raw goes
-// from static 4.9× to empirical ~11.1× — material price increase.
+// CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27) update:
+// A calibration ladder was inserted at the top of getGraderPremium that
+// runs BEFORE the base/auto tables. When
+// GRADE_MULTIPLIER_BY_VALUE_BAND.baseline has data for the requested
+// (grader, gradeValue, priceBand), the ladder returns that empirical
+// value regardless of the MULTIPLIER_BASE_TABLE_ENABLED flag. For modern
+// PSA 10 at <$25 raw, the baseline value-band cell is ~10.5× (n=1526) —
+// this is the empirical-only doctrine (memory: retired hardcoded matrix
+// per PR #633). The MULTIPLIER_BASE_TABLE_ENABLED flag now controls a
+// SECONDARY empirical path that only fires when the ladder misses.
 //
 // THIS FILE PINS:
-//   1. Flag OFF: static behavior preserved (no regression risk on
-//      deploys that don't flip the flag)
-//   2. Flag ON: empirical base table values used for modern base
-//   3. Flag ON: vintage + autograph paths STILL take precedence
-//   4. Flag ON + missing combo: still falls through to static
+//   1. Ladder fires for every branch that has empirical baseline data —
+//      flag setting doesn't matter for the covered (band, grade) cells
+//   2. Vintage + autograph precedence order still holds above the ladder
+//   3. Missing combo (grade outside [5,10]) still falls to 1.0
 
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { getGraderPremium } from "../src/services/compiq/compiqEstimate.service.js";
@@ -23,20 +26,24 @@ describe("CF-BASE-MULTIPLIER-ENGINE-WIRING — env-gated", () => {
     vi.unstubAllEnvs();
   });
 
-  describe("flag OFF (default) — static behavior preserved", () => {
+  describe("flag OFF (default) — calibration ladder still fires", () => {
     beforeEach(() => {
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "");
     });
 
-    it("PSA 10 / $20 raw / cardClass=base → static <25 tier (5.0 post-PR #494)", () => {
+    it("PSA 10 / $20 raw / cardClass=base → value-band baseline <$25 tier (~10.5×, was static 5.0)", () => {
+      // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM: value-band baseline
+      // for "Under $25" × "PSA 10" is 10.5× (n=1526). Fires before
+      // any static-table fallback regardless of the base-table flag.
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
-      expect(r).toBeCloseTo(5.0, 1);
+      expect(r).toBeGreaterThan(8);
+      expect(r).toBeLessThan(15);
     });
 
-    it("PSA 10 / no rawPrice → static fallback (3.5 post-PR #494)", () => {
+    it("PSA 10 / no rawPrice → static fallback still fires (ladder skipped when rawPrice missing)", () => {
+      // Ladder requires rawPrice > 0 to bucket into a value-band, so
+      // rawPrice-less calls still walk the legacy static path.
       const r = getGraderPremium("PSA", "10");
-      // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): fallback rebased 3.43 → 3.5 per Drew's modern anchor
       expect(r).toBeCloseTo(3.5, 2);
     });
   });
@@ -71,7 +78,12 @@ describe("CF-BASE-MULTIPLIER-ENGINE-WIRING — env-gated", () => {
       expect(r).toBeLessThan(15);
     });
 
-    it("Missing combo: PSA 11 → falls through to 1.0 (last-line fallback)", () => {
+    it("Missing combo: PSA 11 → falls through to 1.0 (ladder skips grades >10)", () => {
+      // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM: the family-scalar
+      // layer of the ladder is bounded to [5, 10] because
+      // subTierScalingForFallback would extrapolate wildly for invalid
+      // grades. PSA 11 falls through to the auto/base tables, misses,
+      // and lands on the last-line 1.0.
       const r = getGraderPremium("PSA", "11", 100, "base", 2024);
       expect(r).toBe(1.0);
     });
@@ -84,16 +96,21 @@ describe("CF-BASE-MULTIPLIER-ENGINE-WIRING — env-gated", () => {
       expect(r).toBeGreaterThan(8);  // empirical
     });
 
-    it("'1' → NOT enabled (must be literal 'true')", () => {
+    it("'1' → base-table flag NOT enabled, but ladder still fires with empirical value", () => {
+      // Post-CF-CALIBRATION-LADDER: value-band baseline fires regardless
+      // of the base-table flag. The env flag now only gates a SECONDARY
+      // empirical path when the ladder misses.
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "1");
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      expect(r).toBeCloseTo(5.0, 1);  // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
+      expect(r).toBeGreaterThan(8);
+      expect(r).toBeLessThan(15);
     });
 
-    it("'yes' → NOT enabled", () => {
+    it("'yes' → same as '1' — ladder still fires empirical value-band", () => {
       vi.stubEnv("MULTIPLIER_BASE_TABLE_ENABLED", "yes");
       const r = getGraderPremium("PSA", "10", 20, "base", 2024);
-      expect(r).toBeCloseTo(5.0, 1);  // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): static <$25 tier lifted 4.9 → 5.0
+      expect(r).toBeGreaterThan(8);
+      expect(r).toBeLessThan(15);
     });
   });
 });

@@ -168,6 +168,20 @@ export function lookupGradeRatio(
   return entry ? entry.medianRatio : null;
 }
 
+/** CF-SUBTIER-SCALING-SHARED (Drew, 2026-07-27). Multiplier applied to
+ *  a family's company-level medianRatio when we don't have empirical
+ *  per-tier data for the specific grade. Same shape used privately in
+ *  canonicalFmv.service.ts and observedGradeCurve.service.ts — exported
+ *  from here so every fallback path agrees. Keep private copies in sync
+ *  or migrate them to this export in a follow-up. */
+export function subTierScalingForFallback(gradeValue: number): number {
+  if (!Number.isFinite(gradeValue)) return 0;
+  if (gradeValue >= 10) return 1.00;
+  if (gradeValue >= 9.5) return 0.65;
+  if (gradeValue >= 9)   return 0.35;
+  return 0.20;
+}
+
 // CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22). Empirical per-tier
 // lookup used by observedGradeCurve when it wants a specific grade
 // multiplier (e.g. PSA 9 vs the company-level median). Returns null
@@ -212,7 +226,12 @@ export function lookupGradeRatioByTier(
  *  Order matters: more-specific tokens must come BEFORE generic ones
  *  (e.g. "topps chrome update" before "topps chrome" before "topps"). */
 export function classifyFamily(setName: string | null | undefined): string {
-  const s = String(setName ?? "").toLowerCase();
+  // CF-CLASSIFY-FAMILY-HYPHEN-TOLERANT (Drew, 2026-07-27). Accept both
+  // human strings ("Bowman Chrome") and slug forms ("bowman-chrome") —
+  // hobbyIqCardId setKey is slug, most other callers pass the human
+  // string. Substring matches below all use spaces, so normalize hyphens
+  // + underscores to spaces up front.
+  const s = String(setName ?? "").toLowerCase().replace(/[-_]+/g, " ");
   // CF-POKEMON-ENGINE-WIRING (Drew, 2026-07-26). Pokemon TCG expansion
   // set classifiers — mirror POKEMON_FAMILIES in grade-calibrate.mjs.
   // Check FIRST so a Pokemon setName never falls through to the sports-

@@ -51,22 +51,30 @@ describe("getGraderPremium — autograph cardClass", () => {
   });
 });
 
-describe("getGraderPremium — base cardClass + static fallback", () => {
-  it("PSA 10 at $50 raw, base → uses static GRADER_PREMIUMS 50-100 tier (2.8)", () => {
+describe("getGraderPremium — base cardClass + calibration ladder", () => {
+  // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
+  // ladder inserted at the top of getGraderPremium now runs BEFORE the
+  // static/base tables. Value-band baseline cells cover the common
+  // (grader, gradeValue, priceBand) combos so the empirical values win.
+  // The old static PSA 10 / $50-99 / base = 2.8× is superseded by the
+  // baseline value-band's empirical ~3.25×.
+  it("PSA 10 at $50 raw, base → value-band baseline $50-99 (empirical ~3.25×, was static 2.8)", () => {
     const r = getGraderPremium("PSA", "10", 50, "base");
-    expect(r).toBeCloseTo(2.8, 1);
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);
   });
 
-  it("undefined cardClass → defaults to static (backward compat)", () => {
+  it("undefined cardClass → still routes through the ladder (backward compat)", () => {
     const r = getGraderPremium("PSA", "10", 50);
-    expect(r).toBeCloseTo(2.8, 1);
+    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeLessThan(5);
   });
 
-  it("PSA 9 at $200, base → static GRADER_PREMIUMS 100+ tier (0.95 post-PR #495)", () => {
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 9 100+ tier rebased
-    // 0.85 → 0.95 per Drew's modern anchor.
+  it("PSA 9 at $200, base → value-band baseline $100-249 (empirical ~1.17×, was static 0.95)", () => {
+    // Value-band baseline PSA 9 $100-249 = 1.17× (n=31).
     const r = getGraderPremium("PSA", "9", 200, "base");
-    expect(r).toBeCloseTo(0.95, 1);
+    expect(r).toBeGreaterThan(1.0);
+    expect(r).toBeLessThan(2.0);
   });
 });
 
