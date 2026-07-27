@@ -1310,6 +1310,63 @@ export function accountingExportUrl(opts?: { from?: string; to?: string; format?
 // calibration refresh, or a new comp landing in sold_comps). Rate-limited
 // server-side per user's plan tier — surfaces as a 429 the caller must
 // handle. Response shape mirrors updateHolding.
+// POST /portfolio/reprice/batch — bulk refresh every stale holding on the
+// user's doc. Rate-limited server-side (60s user throttle by default);
+// caller sees the result summary directly. Collector+ tier only —
+// backend returns 402 for free-tier callers, surfaced as an entitlement
+// error the caller can render as an upsell nudge.
+export interface BatchRepriceResult {
+  requested: number;
+  repriced: number;
+  skipped: number;
+  reason?: string;
+  throttled?: boolean;
+  freshSkipped?: number;
+  examined?: number;
+  updates: Array<{
+    id: string;
+    status: "repriced" | "skipped" | "error" | "fresh";
+    reason?: string;
+  }>;
+}
+
+export async function refreshAllHoldings(): Promise<BatchRepriceResult> {
+  return await request<BatchRepriceResult>("/api/portfolio/reprice/batch", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+// GET /portfolio/export?format=csv|xlsx — server returns the file as an
+// attachment. Sits outside request() because we need the raw blob body
+// + Content-Disposition filename, not JSON. Session header still on
+// every request via getStoredSessionId().
+export async function exportPortfolio(format: "csv" | "xlsx" = "xlsx"): Promise<void> {
+  const sid = getStoredSessionId();
+  const res = await fetch(`${API_BASE}/api/portfolio/export?format=${format}`, {
+    method: "GET",
+    headers: sid ? { "x-session-id": sid } : {},
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Export failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  // Extract filename from Content-Disposition if server sent one.
+  const cd = res.headers.get("Content-Disposition") ?? "";
+  const fnMatch = cd.match(/filename="([^"]+)"/);
+  const filename = fnMatch?.[1] ?? `hobbyiq-portfolio.${format}`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function refreshHolding(id: string): Promise<{ success: boolean; holding?: PortfolioHolding; message?: string }> {
   const raw = await request<{ message?: string; id?: string; holding?: PortfolioHolding; entry?: { holding?: PortfolioHolding } }>(
     `/api/portfolio/holdings/${encodeURIComponent(id)}/refresh`,

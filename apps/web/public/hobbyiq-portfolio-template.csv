@@ -1,0 +1,4 @@
+playerName,cardYear,product,cardNumber,parallel,serialNumber,isAuto,gradeCompany,gradeValue,certNumber,quantity,purchasePrice,purchaseDate,purchaseSource,notes
+Shohei Ohtani,2018,Bowman Chrome Prospects,BCP1,Refractor,,FALSE,PSA,10,,1,45.00,2024-03-14,eBay,Bought after Angels debut
+Eric Hartman,2026,Bowman Chrome Prospect Autographs,CPA-EHA,Orange Shimmer,01/25,TRUE,PSA,10,,1,1190.26,2026-05-20,eBay,
+Sasaki,2024,Topps Chrome Update,US150,,,FALSE,,,,1,12.00,2024-08-10,LCS,Raw base
