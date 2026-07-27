@@ -67,7 +67,14 @@ async function loadTargetCards(sport, year, cap) {
     where += " AND c.year = @y";
     params.push({ name: "@y", value: String(year) });
   }
-  const query = `SELECT c.cardId, c.player, c.number, c.year, c.set, c.setName, c.releaseName, c.parallels, c.sport, c.attributes FROM c WHERE ${where}`;
+  // CF-PHASE-B-SET-KEYWORD-FIX (Drew, 2026-07-26). `set` is a Cosmos
+  // SQL keyword — projecting `c.set` via dot notation triggers a 400
+  // "One of the input values is invalid" on every query. Bracket
+  // notation `c["set"]` bypasses the parser and returns the column
+  // as expected. This bug had been silently killing every Phase B run
+  // (including tonight's hockey / basketball / football / baseball
+  // catch-up attempts).
+  const query = `SELECT c.cardId, c.player, c.number, c.year, c["set"], c.setName, c.releaseName, c.parallels, c.sport, c.attributes FROM c WHERE ${where}`;
   const rows = [];
   const iterator = container.items.query({ query, parameters: params }, { maxItemCount: 1000 });
   while (iterator.hasMoreResults()) {
