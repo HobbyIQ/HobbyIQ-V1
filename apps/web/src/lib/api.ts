@@ -1533,6 +1533,56 @@ export async function fetchAlertPreferences(): Promise<{ success: boolean; prefe
   return await request("/api/alerts/preferences");
 }
 
+export interface AlertPreset {
+  presetId: string;
+  name: string;
+  category: "portfolio_sell_signal" | "watchlist_move" | "grade_opportunity" | "market_dip";
+  description: string;
+  whyItMatters: string;
+  scope: { type: string };
+  combinator: "AND" | "OR";
+  conditions: Array<Record<string, unknown>>;
+  cooldownMin: number;
+}
+
+export interface AdvancedAlertRule {
+  id: string;
+  userId: string;
+  name: string;
+  scope: { type: string };
+  combinator: "AND" | "OR";
+  conditions: Array<Record<string, unknown>>;
+  cooldownMin: number;
+  active: boolean;
+  createdAt: string;
+  lastFiredAt?: string | null;
+  presetId?: string | null;
+}
+
+export async function fetchAlertPresets(): Promise<{ success: boolean; presets: AlertPreset[] }> {
+  return await request("/api/alerts/advanced/presets");
+}
+
+export async function activateAlertPreset(
+  presetId: string,
+  opts: { priceTarget?: number; customName?: string } = {},
+): Promise<{ success: boolean; rule?: AdvancedAlertRule; error?: string }> {
+  return await request(`/api/alerts/advanced/presets/${encodeURIComponent(presetId)}/activate`, {
+    method: "POST",
+    body: JSON.stringify(opts),
+  });
+}
+
+export async function fetchAdvancedAlerts(): Promise<{ success: boolean; rules: AdvancedAlertRule[] }> {
+  return await request("/api/alerts/advanced/");
+}
+
+export async function deleteAdvancedAlert(ruleId: string): Promise<{ success: boolean }> {
+  return await request(`/api/alerts/advanced/${encodeURIComponent(ruleId)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function updateAlertPreferences(patch: { dailyIQAlerts?: boolean; priceAlerts?: boolean }): Promise<{ success: boolean; preferences: AlertPreferences }> {
   return await request("/api/alerts/preferences", {
     method: "PUT",
