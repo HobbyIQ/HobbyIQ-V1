@@ -6,6 +6,7 @@ import { fetchPortfolio, holdingDisplayValue, type PortfolioResponse, type Portf
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
+import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -20,6 +21,7 @@ export default function PortfolioPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkCostOpen, setBulkCostOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,13 +142,22 @@ export default function PortfolioPage() {
               {selected.size} selected
             </span>
           </div>
-          <button
-            onClick={() => setBulkOpen(true)}
-            disabled={selected.size === 0}
-            className="hiq-btn-primary text-sm disabled:opacity-40"
-          >
-            List {selected.size} on eBay
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBulkCostOpen(true)}
+              disabled={selected.size === 0}
+              className="hiq-btn-secondary text-sm disabled:opacity-40"
+            >
+              Update cost basis
+            </button>
+            <button
+              onClick={() => setBulkOpen(true)}
+              disabled={selected.size === 0}
+              className="hiq-btn-primary text-sm disabled:opacity-40"
+            >
+              List {selected.size} on eBay
+            </button>
+          </div>
         </div>
       )}
 
@@ -197,6 +208,18 @@ export default function PortfolioPage() {
             // when they close it, exit select mode entirely.
             setSelectMode(false);
             setSelected(new Set());
+          }}
+        />
+      )}
+      {bulkCostOpen && (
+        <BulkCostBasisModal
+          holdings={sorted.filter((h) => selected.has(h.id))}
+          onClose={() => setBulkCostOpen(false)}
+          onDone={(n) => {
+            if (n > 0) {
+              // Reload portfolio to pick up the fresh cost bases + recomputed P&L.
+              fetchPortfolio().then((res) => setData(res)).catch(() => undefined);
+            }
           }}
         />
       )}
