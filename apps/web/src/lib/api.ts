@@ -618,6 +618,89 @@ export async function fetchNotableSales(opts: { minPrice?: number; days?: number
   return await request<NotableSalesResponse>(`/api/portfolio/notable-sales${q ? `?${q}` : ""}`);
 }
 
+// ─── PlayerIQ ──────────────────────────────────────────────────────
+
+export type PlayerIQDirection = "rising" | "falling" | "stable";
+export type PlayerConfidence = "high" | "medium" | "low";
+
+export interface PlayerMarketScore {
+  marketScore: number;
+  marketDirection: PlayerIQDirection;
+  avgTrendPct: number;
+  totalSamples: number;
+  cardCount: number;
+  topCardName: string | null;
+  confidence: PlayerConfidence;
+}
+
+export interface PlayerPerformanceScore {
+  performanceScore: number;
+  performanceDirection: PlayerIQDirection;
+  momentumRatio: number;
+  statLine: string | null;
+  statGroup: "hitting" | "pitching" | null;
+  milestone: string | null;
+  confidence: PlayerConfidence;
+}
+
+export interface PlayerScore {
+  id: string;
+  playerId: string;
+  playerName: string;
+  mlbPlayerId: number | null;
+  team: string | null;
+  position: string | null;
+  league: "MLB" | "MiLB" | "unknown";
+  level: string | null;
+  market: PlayerMarketScore;
+  performance: PlayerPerformanceScore;
+  playerIQScore: number;
+  playerIQLabel: string;
+  playerIQDirection: PlayerIQDirection;
+  updatedAt: string;
+  dataSource: "realtime_estimate" | "nightly_job" | "manual_seed";
+  confidence: PlayerConfidence;
+}
+
+export interface PlayerHistoryPoint {
+  playerIQScore: number;
+  playerIQDirection: PlayerIQDirection;
+  playerIQLabel: string;
+  marketScore: number;
+  performanceScore: number;
+  updatedAt: string;
+  dataSource: string;
+}
+
+export interface PlayerHistoryResponse {
+  playerName: string;
+  playerId: string | null;
+  points: PlayerHistoryPoint[];
+  count: number;
+}
+
+export interface PlayerTopResponse {
+  players: PlayerScore[];
+  count: number;
+  generatedAt: string;
+}
+
+export async function fetchPlayerByName(name: string): Promise<PlayerScore> {
+  return await request<PlayerScore>(`/api/playeriq/${encodeURIComponent(name)}`);
+}
+
+export async function fetchPlayerHistory(name: string, limit = 30): Promise<PlayerHistoryResponse> {
+  return await request<PlayerHistoryResponse>(`/api/playeriq/${encodeURIComponent(name)}/history?limit=${limit}`);
+}
+
+export async function fetchTopPlayers(opts: { limit?: number; direction?: PlayerIQDirection } = {}): Promise<PlayerTopResponse> {
+  const params = new URLSearchParams();
+  if (opts.limit != null) params.set("limit", String(opts.limit));
+  if (opts.direction) params.set("direction", opts.direction);
+  const q = params.toString();
+  return await request<PlayerTopResponse>(`/api/playeriq/top${q ? `?${q}` : ""}`);
+}
+
 // ─── DailyIQ ───────────────────────────────────────────────────────
 
 export interface DailyPlayer {
