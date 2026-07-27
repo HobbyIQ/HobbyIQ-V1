@@ -15,7 +15,7 @@ export interface NavItem {
 export const APP_NAV: NavItem[] = [
   {
     href: "/app",
-    label: "Today",
+    label: "DailyIQ",
     iconPath: "M4 12l1.4-1.4L11 16.2V4h2v12.2l5.6-5.6L20 12l-8 8-8-8z",
   },
   {
@@ -56,11 +56,9 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
     prefixMatch: true,
   },
-  {
-    href: "/app/watchlist",
-    label: "Watchlist",
-    iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
-  },
+  // Watchlist removed from sidebar 2026-07-27 per Drew — surface is still
+  // live at /app/watchlist for anyone with a saved link but no longer
+  // occupies a nav slot.
   {
     href: "/app/trade-targets",
     label: "Trade targets",

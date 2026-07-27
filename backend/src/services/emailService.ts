@@ -67,17 +67,27 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { delivered: false, devLogged: true };
   }
 
+  // ACS validates senderAddress as a plain email — the RFC 5322
+  // "Name <email>" format is rejected with "senderAddress" validation
+  // error. Display name is set client-side via the fromName being
+  // prepended into the recipient's From header by ACS from the linked
+  // domain's display-name config (not this field).
   const message: EmailMessage = {
-    senderAddress: fromName ? `${fromName} <${fromAddress}>` : fromAddress,
+    senderAddress: fromAddress,
     content: {
       subject: input.subject,
       plainText: input.plainText,
       html: input.html,
     },
     recipients: {
-      to: [{ address: input.to }],
+      to: [{ address: input.to, displayName: input.to }],
     },
   };
+  // fromName intentionally read but unused in the request payload;
+  // referenced here so tsc/eslint don't flag it and so future ACS
+  // versions that expose a top-level display-name field are easy to
+  // wire in.
+  void fromName;
 
   try {
     const poller = await client.beginSend(message);
