@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
@@ -10,8 +11,50 @@ import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
+// CF-DATA-HEALTH-DRILLDOWN (Drew, 2026-07-27): filter param mirrors the
+// buckets from ERP's Data health card so clicking a pill lands here
+// with the matching cards pre-selected.
+type HealthFilter = "fresh" | "stale" | "missing" | "estimated" | "pending";
+const HEALTH_LABELS: Record<HealthFilter, string> = {
+  fresh: "Fresh",
+  stale: "Stale",
+  missing: "Missing",
+  estimated: "Estimated",
+  pending: "Pending",
+};
+// Freshness thresholds mirror backend erpValuation.service.ts. If those
+// constants ever change, update here too.
+const FRESH_MAX_MS = 12 * 60 * 60 * 1000;
 
-export default function PortfolioPage() {
+function isHealthFilter(v: string | null): v is HealthFilter {
+  return v === "fresh" || v === "stale" || v === "missing" || v === "estimated" || v === "pending";
+}
+
+function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean {
+  const fmv = typeof h.fairMarketValue === "number" && Number.isFinite(h.fairMarketValue) ? h.fairMarketValue : null;
+  const vs = h.valuationStatus;
+  const updatedMs = h.lastUpdated ? Date.parse(h.lastUpdated) : NaN;
+  const age = Number.isFinite(updatedMs) ? Date.now() - updatedMs : Infinity;
+  switch (filter) {
+    case "fresh":
+      return fmv !== null && age <= FRESH_MAX_MS;
+    case "stale":
+      return fmv !== null && age > FRESH_MAX_MS;
+    case "missing":
+      return fmv === null;
+    case "estimated":
+      return vs === "estimated";
+    case "pending":
+      return vs === "pending";
+  }
+}
+
+function PortfolioPageBody() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawFilter = searchParams.get("filter");
+  const activeFilter: HealthFilter | null = isHealthFilter(rawFilter) ? rawFilter : null;
+
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +113,10 @@ export default function PortfolioPage() {
     return <EmptyState />;
   }
 
-  const sorted = sortHoldings(filterHoldings(data.items, query), sortKey, sortDir);
+  const healthFiltered = activeFilter
+    ? data.items.filter((h) => matchesHealthFilter(h, activeFilter))
+    : data.items;
+  const sorted = sortHoldings(filterHoldings(healthFiltered, query), sortKey, sortDir);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -82,6 +128,43 @@ export default function PortfolioPage() {
             {Math.max(0, data.summary.cardCount - data.summary.estimatedCount - data.summary.pendingCount)}
             {" "}with observed FMV · {data.summary.estimatedCount} estimated · {data.summary.pendingCount} pending
           </p>
+          {/* CF-DATA-HEALTH-DRILLDOWN chip: shows the active filter with
+              a Clear button. Clicking Clear strips the query param. */}
+          {activeFilter && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
+                style={{
+                  background:
+                    activeFilter === "missing"
+                      ? "color-mix(in oklab, var(--hiq-danger) 15%, transparent)"
+                      : "color-mix(in oklab, var(--color-accent) 15%, transparent)",
+                  color:
+                    activeFilter === "missing"
+                      ? "var(--hiq-danger)"
+                      : "var(--color-accent)",
+                }}
+              >
+                Filter: {HEALTH_LABELS[activeFilter]} · {sorted.length} of {data.summary.cardCount}
+                <button
+                  onClick={() => router.push("/app/portfolio")}
+                  className="hover:opacity-80"
+                  aria-label="Clear filter"
+                >
+                  ✕
+                </button>
+              </span>
+              {activeFilter === "missing" && (
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--hiq-muted-text)" }}
+                >
+                  These cards have no observed FMV. Usually needs the identity
+                  fixed (edit + pick a real card) or a price refresh.
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -484,6 +567,30 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
               PENDING
             </span>
           )}
+          {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
+              couldn't price at all (no observed FMV, no estimate). Fix link
+              jumps to the detail page where Edit + Refresh price live. */}
+          {value == null && h.valuationStatus !== "estimated" && h.valuationStatus !== "pending" && (
+            <>
+              <span
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{
+                  background: "color-mix(in oklab, var(--hiq-danger) 15%, transparent)",
+                  color: "var(--hiq-danger)",
+                }}
+              >
+                MISSING
+              </span>
+              <Link
+                href={`/app/portfolio/${encodeURIComponent(h.id)}`}
+                className="text-[10px] font-semibold underline"
+                style={{ color: "var(--color-accent)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Fix identity →
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -512,6 +619,17 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
         )}
       </div>
     </div>
+  );
+}
+
+// CF-DATA-HEALTH-DRILLDOWN: useSearchParams requires a Suspense boundary
+// under Next 15's static-generation rules. Body is the previous default
+// export; this is a thin wrapper.
+export default function PortfolioPage() {
+  return (
+    <Suspense fallback={null}>
+      <PortfolioPageBody />
+    </Suspense>
   );
 }
 
