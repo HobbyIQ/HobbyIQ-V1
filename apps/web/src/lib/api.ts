@@ -183,6 +183,7 @@ export async function signOut(): Promise<void> {
 // unless the field name says "total".
 export interface PortfolioHolding {
   id: string;
+  cardId?: string | null;   // canonical Cardsight cardId — used for the recent-comps + listing-range surfaces
   playerName?: string | null;
   cardTitle?: string | null;
   cardYear?: number | null;
@@ -722,6 +723,48 @@ export async function commitImport(
     method: "POST",
     body: JSON.stringify({ idempotencyToken, envelopes, actions }),
   });
+}
+
+// ─── Recent sold comps for a card ─────────────────────────────────
+
+export interface RecentCompSale {
+  source: string;
+  price: number;
+  soldAt: string;
+  title: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  cardYear: number | null;
+  cardNumber: string | null;
+  imageUrl?: string | null;
+  sellerHandle?: string | null;
+  listingUrl?: string | null;
+}
+
+export interface RecentCompsResponse {
+  count: number;
+  sales: RecentCompSale[];
+}
+
+export async function fetchRecentComps(opts: {
+  cardId: string;
+  parallel?: string | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  days?: number;
+  limit?: number;
+}): Promise<RecentCompsResponse> {
+  const q = new URLSearchParams();
+  if (opts.parallel !== undefined && opts.parallel !== null) q.set("parallel", opts.parallel);
+  if (opts.gradeCompany) q.set("gradeCompany", opts.gradeCompany);
+  if (opts.gradeValue != null) q.set("gradeValue", String(opts.gradeValue));
+  if (opts.days != null) q.set("days", String(opts.days));
+  if (opts.limit != null) q.set("limit", String(opts.limit));
+  const qs = q.toString();
+  return await request<RecentCompsResponse>(
+    `/api/compiq/cards/${encodeURIComponent(opts.cardId)}/recent-sales${qs ? `?${qs}` : ""}`,
+  );
 }
 
 // ─── Sold ledger ───────────────────────────────────────────────────

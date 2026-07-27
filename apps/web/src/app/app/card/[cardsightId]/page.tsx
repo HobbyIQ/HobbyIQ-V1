@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CardPriceDetail } from "@/components/CardPriceDetail";
+import { RecentCompsList } from "@/components/RecentCompsList";
 import { readStashedCandidate } from "@/lib/candidateStash";
 import type { SearchCandidate } from "@/lib/api";
 
@@ -84,6 +85,16 @@ function CardDetailInner() {
         initialParallel={initialParallel}
         onSelectionChange={onSelectionChange}
       />
+
+      <div className="mt-6">
+        <RecentCompsList
+          cardId={cardsightCardId}
+          parallel={initialParallel ?? ""}
+          gradeCompany={initialGrade?.company}
+          gradeValue={initialGrade?.value}
+          subtitle="Live comps that back this card's price. Filter by source or window."
+        />
+      </div>
     </div>
   );
 }

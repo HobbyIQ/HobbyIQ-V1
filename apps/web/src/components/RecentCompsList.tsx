@@ -1,0 +1,229 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { fetchRecentComps, type RecentCompSale } from "@/lib/api";
+import { formatUSD } from "@/lib/format";
+
+interface Props {
+  cardId: string;
+  // Optional filters — when provided, the component pre-filters to this
+  // parallel + grade so the comps shown are the ones that actually back
+  // the surface's FMV. Callers pass null explicitly to filter on "base"
+  // parallel; undefined means "show all parallels for this cardId."
+  parallel?: string | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  defaultDays?: number;
+  title?: string;
+  subtitle?: string;
+}
+
+// "Show me the actual comps behind this price" — surfaces
+// /api/compiq/cards/:cardId/recent-sales as a compact list. Renders on
+// the holding detail page (right under the FMV/estimate block) so users
+// can see WHY the number is what it is.
+export function RecentCompsList({
+  cardId,
+  parallel,
+  gradeCompany,
+  gradeValue,
+  defaultDays = 180,
+  title = "Recent comps",
+  subtitle,
+}: Props) {
+  const [sales, setSales] = useState<RecentCompSale[]>([]);
+  const [count, setCount] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [days, setDays] = useState(defaultDays);
+  const [sourceFilter, setSourceFilter] = useState<"all" | "user" | "ebay" | "ch">("all");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchRecentComps({ cardId, parallel, gradeCompany, gradeValue, days, limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        setSales(res.sales);
+        setCount(res.count);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError((err as { message?: string })?.message ?? "Failed to load comps");
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cardId, parallel, gradeCompany, gradeValue, days]);
+
+  const filtered = useMemo(() => {
+    if (sourceFilter === "all") return sales;
+    return sales.filter((s) => {
+      const src = (s.source ?? "").toLowerCase();
+      if (sourceFilter === "user") return src.startsWith("ebay-user") || src === "manual" || src === "user";
+      if (sourceFilter === "ebay") return src === "ebay" || src.startsWith("ebay-");
+      if (sourceFilter === "ch") return src === "cardhedge" || src.startsWith("ch-") || src === "ch";
+      return true;
+    });
+  }, [sales, sourceFilter]);
+
+  const stats = useMemo(() => {
+    if (filtered.length === 0) return null;
+    const prices = filtered.map((s) => s.price).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+    const median = prices[Math.floor(prices.length / 2)] ?? 0;
+    const min = prices[0] ?? 0;
+    const max = prices[prices.length - 1] ?? 0;
+    const newest = filtered.reduce((acc, s) => (s.soldAt > acc ? s.soldAt : acc), "");
+    return { median, min, max, newest, n: prices.length };
+  }, [filtered]);
+
+  return (
+    <div className="hiq-card p-6">
+      <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h2 className="font-bold text-lg">{title}</h2>
+          {subtitle && (
+            <p className="text-xs text-[color:var(--color-muted)] mt-1">{subtitle}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={String(days)}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className={filterCls}
+          >
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="180">180 days</option>
+            <option value="365">365 days</option>
+          </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as typeof sourceFilter)}
+            className={filterCls}
+          >
+            <option value="all">All sources</option>
+            <option value="user">HobbyIQ users</option>
+            <option value="ebay">eBay</option>
+            <option value="ch">CardHedge</option>
+          </select>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="text-sm text-[color:var(--color-muted)] py-6 text-center">Loading comps…</div>
+      )}
+      {error && (
+        <div className="text-sm py-4" style={{ color: "var(--color-danger)" }}>{error}</div>
+      )}
+
+      {!loading && !error && stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MiniStat label={`Median (${stats.n})`} value={formatUSD(stats.median, { hideCents: stats.median >= 100 })} />
+          <MiniStat label="Low" value={formatUSD(stats.min, { hideCents: stats.min >= 100 })} />
+          <MiniStat label="High" value={formatUSD(stats.max, { hideCents: stats.max >= 100 })} />
+          <MiniStat label="Newest sale" value={stats.newest.slice(0, 10)} />
+        </div>
+      )}
+
+      {!loading && !error && filtered.length === 0 && (
+        <div className="text-sm text-[color:var(--color-muted)] text-center py-6">
+          No comps in the selected window.
+        </div>
+      )}
+
+      {!loading && !error && filtered.length > 0 && (
+        <div className="space-y-1 max-h-96 overflow-y-auto -mr-2 pr-2">
+          {filtered.map((s, i) => (
+            <CompRow key={s.soldAt + i} s={s} />
+          ))}
+          {count > filtered.length && (
+            <div className="text-xs text-[color:var(--color-muted)] text-center mt-2 py-2">
+              {count - filtered.length} more comps in the full pool (filters applied)
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompRow({ s }: { s: RecentCompSale }) {
+  const grade =
+    s.gradeCompany && s.gradeValue != null ? `${s.gradeCompany} ${s.gradeValue}` : "Raw";
+  const inner = (
+    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+      <div className="w-12 h-12 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+        {s.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
+            <path d="M4 6h16v12H4V6z" />
+          </svg>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm truncate">{s.title ?? "Sale"}</div>
+        <div className="text-xs text-[color:var(--color-muted)] flex items-center gap-2 flex-wrap mt-0.5">
+          <span>{s.soldAt.slice(0, 10)}</span>
+          <span>{grade}</span>
+          {s.parallel && s.parallel.toLowerCase() !== "base" && <span>{s.parallel}</span>}
+          <SourcePill src={s.source} />
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0 ml-2">
+        <div className="text-sm font-medium tabular-nums">
+          {formatUSD(s.price, { hideCents: s.price >= 100 })}
+        </div>
+      </div>
+    </div>
+  );
+  if (s.listingUrl) {
+    return (
+      <a href={s.listingUrl} target="_blank" rel="noopener noreferrer" className="block">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
+function SourcePill({ src }: { src: string }) {
+  const label = prettySource(src);
+  return (
+    <span
+      className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide"
+      style={{ background: "var(--color-bg)", color: "var(--color-muted)" }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function prettySource(s: string): string {
+  const l = s.toLowerCase();
+  if (l === "cardhedge" || l.startsWith("ch")) return "CH";
+  if (l.startsWith("ebay-user")) return "User (eBay)";
+  if (l === "ebay") return "eBay";
+  if (l === "manual" || l === "user") return "User";
+  if (l === "cardsight" || l.startsWith("cs")) return "CS";
+  return s.slice(0, 10);
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="hiq-card p-3" style={{ background: "var(--color-bg)" }}>
+      <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
+        {label}
+      </div>
+      <div className="text-sm font-bold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+const filterCls =
+  "px-2 py-1 rounded border text-xs outline-none " +
+  "bg-[color:var(--color-bg)] border-[color:var(--color-border)] text-white";
