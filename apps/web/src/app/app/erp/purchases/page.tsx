@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchPurchases,
   createPurchase,
+  importEbayPurchases,
   type PurchaseEntry,
   type PurchasesListResponse,
+  type EbayImportSummary,
 } from "@/lib/api";
 import { formatUSD, formatUSDCompact } from "@/lib/format";
 
@@ -20,6 +22,7 @@ export default function PurchasesPage() {
   const [yearFilter, setYearFilter] = useState<number | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   function reload() {
     fetchPurchases()
@@ -111,9 +114,14 @@ export default function PurchasesPage() {
             split out. All-time cost {formatUSDCompact(data.totals.totalCost)}.
           </p>
         </div>
-        <button onClick={() => setAddOpen(true)} className="hiq-btn-primary text-sm">
-          + Log purchase
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setImportOpen(true)} className="hiq-btn-secondary text-sm">
+            Import from eBay
+          </button>
+          <button onClick={() => setAddOpen(true)} className="hiq-btn-primary text-sm">
+            + Log purchase
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -172,6 +180,176 @@ export default function PurchasesPage() {
           }}
         />
       )}
+      {importOpen && (
+        <EbayImportModal
+          onCancel={() => setImportOpen(false)}
+          onDone={() => {
+            setImportOpen(false);
+            reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EbayImportModal({
+  onCancel,
+  onDone,
+}: {
+  onCancel: () => void;
+  onDone: () => void;
+}) {
+  const [days, setDays] = useState<30 | 60 | 90>(30);
+  const [running, setRunning] = useState(false);
+  const [summary, setSummary] = useState<EbayImportSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onRun() {
+    setRunning(true);
+    setError(null);
+    try {
+      const res = await importEbayPurchases(days);
+      setSummary(res);
+    } catch (err) {
+      const e = err as { message?: string; status?: number };
+      if (e.status === 400 && e.message?.toLowerCase().includes("ebay")) {
+        setError("Connect your eBay account first at /app/ebay.");
+      } else {
+        setError(e.message ?? "Import failed.");
+      }
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={running ? undefined : onCancel}
+    >
+      <div
+        className="hiq-card p-6 max-w-lg w-full max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h2 className="text-xl font-bold">Import from eBay</h2>
+            <p className="text-xs text-[color:var(--color-muted)] mt-1">
+              Pulls your eBay buy history for the selected window and creates
+              purchase records with tax, shipping, and fee splits.
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            aria-label="Close"
+            disabled={running}
+            className="text-[color:var(--color-muted)] hover:text-white text-2xl leading-none disabled:opacity-40"
+          >
+            ×
+          </button>
+        </div>
+
+        {!summary ? (
+          <>
+            <div className="mb-4">
+              <label className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium block mb-1.5">
+                Window
+              </label>
+              <div className="flex items-center gap-2">
+                {([30, 60, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDays(d)}
+                    disabled={running}
+                    className="px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-40"
+                    style={{
+                      background: d === days ? "var(--hiq-electric-blue)" : "transparent",
+                      color: d === days ? "var(--hiq-pure-white)" : "var(--hiq-muted-text)",
+                      border: `1px solid ${d === days ? "var(--hiq-electric-blue)" : "var(--hiq-border)"}`,
+                    }}
+                  >
+                    {d} days
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[color:var(--color-muted)] mt-2">
+                eBay caps buy-history windows at 90 days. Re-run monthly to keep
+                your ledger current. Idempotent — replays skip anything already
+                imported.
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-4 text-sm" style={{ color: "var(--color-danger)" }}>
+                {error}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button onClick={onCancel} className="hiq-btn-secondary text-sm" disabled={running}>
+                Cancel
+              </button>
+              <button onClick={onRun} disabled={running} className="hiq-btn-primary text-sm disabled:opacity-50">
+                {running ? "Importing…" : `Import last ${days} days`}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <SummaryTile label="eBay orders fetched" value={String(summary.fetched)} />
+              <SummaryTile label="Newly imported" value={String(summary.imported)} tint="var(--hiq-success-green)" />
+              <SummaryTile label="Already on file" value={String(summary.replayHits)} />
+              <SummaryTile label="Skipped / errors" value={String(summary.skipped + summary.errors)} />
+              <SummaryTile
+                label="Holdings auto-created"
+                value={String(summary.holdingsCreated)}
+                tint="var(--hiq-hobby-green)"
+              />
+              <SummaryTile
+                label="Holdings needs review"
+                value={String(summary.holdingsNeedingReview)}
+                tint="var(--hiq-warning)"
+              />
+            </div>
+            <div className="hiq-tile-flat text-sm mb-4">
+              <div className="flex justify-between">
+                <span className="text-[color:var(--color-muted)]">Total spent in window</span>
+                <span className="tabular-nums font-medium">
+                  ${summary.totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              {summary.ebayTotalReported != null && (
+                <div className="flex justify-between mt-1 text-xs text-[color:var(--color-muted)]">
+                  <span>eBay-reported total</span>
+                  <span className="tabular-nums">
+                    ${summary.ebayTotalReported.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button onClick={onDone} className="hiq-btn-primary text-sm">Done</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SummaryTile({ label, value, tint }: { label: string; value: string; tint?: string }) {
+  return (
+    <div className="hiq-tile-flat">
+      <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
+        {label}
+      </div>
+      <div className="text-xl font-bold tabular-nums" style={tint ? { color: tint } : undefined}>
+        {value}
+      </div>
     </div>
   );
 }

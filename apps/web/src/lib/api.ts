@@ -1079,6 +1079,29 @@ export interface CreatePurchaseInput {
   holdingIds?: string[];
 }
 
+export interface EbayImportSummary {
+  daysWindow: number;
+  fetched: number;
+  imported: number;
+  replayHits: number;
+  skipped: number;
+  errors: number;
+  totalCost: number;
+  ebayTotalReported: number | null;
+  entries: PurchaseEntry[];
+  holdingsCreated: number;
+  holdingsNeedingReview: number;
+  holdingsSkipped: number;
+  holdingsBrowseEnriched: number;
+}
+
+export async function importEbayPurchases(days: number): Promise<{ success: boolean } & EbayImportSummary> {
+  return await request<{ success: boolean } & EbayImportSummary>(
+    "/api/portfolio/erp/purchases/import/ebay",
+    { method: "POST", body: JSON.stringify({ days }) },
+  );
+}
+
 export async function createPurchase(body: CreatePurchaseInput): Promise<PurchaseEntry> {
   const res = await request<{ success: boolean; purchase: PurchaseEntry }>(
     "/api/portfolio/erp/purchases",
