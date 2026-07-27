@@ -13,7 +13,7 @@ const FALLBACK: PublicStats = {
   cardsWithSlug: 2_400_000,
   categories: 4,
   sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-  vendorsIngested: ["CardHedge", "Cardsight", "eBay"],
+  vendorsIngested: ["eBay", "PSA", "Partner data"],
   generatedAt: new Date().toISOString(),
 };
 

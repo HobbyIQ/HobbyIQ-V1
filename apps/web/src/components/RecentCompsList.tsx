@@ -36,7 +36,7 @@ export function RecentCompsList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(defaultDays);
-  const [sourceFilter, setSourceFilter] = useState<"all" | "user" | "ebay" | "ch">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "user" | "ebay" | "partner">("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +64,7 @@ export function RecentCompsList({
       const src = (s.source ?? "").toLowerCase();
       if (sourceFilter === "user") return src.startsWith("ebay-user") || src === "manual" || src === "user";
       if (sourceFilter === "ebay") return src === "ebay" || src.startsWith("ebay-");
-      if (sourceFilter === "ch") return src === "cardhedge" || src.startsWith("ch-") || src === "ch";
+      if (sourceFilter === "partner") return src === "cardhedge" || src.startsWith("ch-") || src === "ch" || src === "cardsight" || src.startsWith("cs");
       return true;
     });
   }, [sales, sourceFilter]);
@@ -107,7 +107,7 @@ export function RecentCompsList({
             <option value="all">All sources</option>
             <option value="user">HobbyIQ users</option>
             <option value="ebay">eBay</option>
-            <option value="ch">CardHedge</option>
+            <option value="partner">Partner data</option>
           </select>
         </div>
       </div>
@@ -205,11 +205,12 @@ function SourcePill({ src }: { src: string }) {
 
 function prettySource(s: string): string {
   const l = s.toLowerCase();
-  if (l === "cardhedge" || l.startsWith("ch")) return "CH";
+  // Third-party pricing partners are surfaced under a single neutral
+  // label to keep the comp source anonymous on the UI.
+  if (l === "cardhedge" || l.startsWith("ch") || l === "cardsight" || l.startsWith("cs")) return "Partner";
   if (l.startsWith("ebay-user")) return "User (eBay)";
   if (l === "ebay") return "eBay";
   if (l === "manual" || l === "user") return "User";
-  if (l === "cardsight" || l.startsWith("cs")) return "CS";
   return s.slice(0, 10);
 }
 

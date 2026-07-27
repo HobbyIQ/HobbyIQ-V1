@@ -47,7 +47,7 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
       cardsWithSlug: Number(sluggedRes[0] ?? 0),
       categories: 4,
       sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-      vendorsIngested: ["CardHedge", "Cardsight", "eBay"],
+      vendorsIngested: ["eBay", "PSA", "Partner data"],
       generatedAt: new Date().toISOString(),
     };
   } catch {

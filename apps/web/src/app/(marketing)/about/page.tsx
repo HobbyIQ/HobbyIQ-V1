@@ -34,10 +34,10 @@ export default function AboutPage() {
         <Section title="How we're different">
           <p className="font-semibold text-white mb-2">Every price rung is a real sale, not a guess.</p>
           <p>
-            Our fair market value (FMV) is derived from observed transactions across
-            CardHedge, Cardsight, eBay, and our own verified user comps. When we don&apos;t have
-            real sales for a specific grade or parallel, we say so — you get an &quot;estimated&quot;
-            badge, not a made-up number.
+            Our fair market value (FMV) is derived from observed transactions on eBay
+            and our own verified user comps. When we don&apos;t have real sales for a
+            specific grade or parallel, we say so — you get an &quot;estimated&quot; badge,
+            not a made-up number.
           </p>
 
           <p className="font-semibold text-white mt-6 mb-2">FMV is the projected next sale, not the median.</p>

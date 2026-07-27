@@ -183,7 +183,7 @@ export async function signOut(): Promise<void> {
 // unless the field name says "total".
 export interface PortfolioHolding {
   id: string;
-  cardId?: string | null;   // canonical Cardsight cardId — used for the recent-comps + listing-range surfaces
+  cardId?: string | null;   // canonical HobbyIQ cardId — used for the recent-comps + listing-range surfaces
   playerName?: string | null;
   cardTitle?: string | null;
   cardYear?: number | null;
