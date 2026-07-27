@@ -751,6 +751,10 @@ export interface PublicSellerResponse {
     sports: Array<{ sport: string; count: number }>;
   };
   cards: StorefrontCard[];
+  // CF-STOREFRONT-TIER (Drew, 2026-07-27): per-tier storefront cap +
+  // effective plan. Investor: 50 cards. Pro Seller: 200 (safety cap).
+  tier?: "investor" | "pro_seller";
+  cap?: number;
 }
 
 export async function fetchPublicSeller(username: string): Promise<PublicSellerResponse> {

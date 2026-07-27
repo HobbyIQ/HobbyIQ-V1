@@ -12,11 +12,23 @@ export interface NavItem {
   prefixMatch?: boolean;
 }
 
+// Order (Drew, 2026-07-27): DailyIQ → Financials → Portfolio → Search →
+// Market → Messages → Insights → Players → Alerts → Storefront →
+// Trade targets → eBay → Settings. Financials sits above Portfolio for
+// the seller-first workflow (money view first, holdings second),
+// Messages sits right under Market so conversations are near the
+// discovery surface that spawns most of them, and Storefront is a new
+// first-class entry for the /u/<username> management page.
 export const APP_NAV: NavItem[] = [
   {
     href: "/app",
     label: "DailyIQ",
     iconPath: "M4 12l1.4-1.4L11 16.2V4h2v12.2l5.6-5.6L20 12l-8 8-8-8z",
+  },
+  {
+    href: "/app/erp",
+    label: "Financials",
+    iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
   },
   {
     href: "/app/portfolio",
@@ -35,6 +47,12 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M3 3h2v18H3V3zm4 12h2v6H7v-6zm4-4h2v10h-2V11zm4-6h2v16h-2V5zm4 8h2v8h-2v-8z",
   },
   {
+    href: "/app/messages",
+    label: "Messages",
+    iconPath: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
+    prefixMatch: true,
+  },
+  {
     href: "/app/insights",
     label: "Insights",
     iconPath: "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z",
@@ -51,23 +69,16 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z",
   },
   {
-    href: "/app/messages",
-    label: "Messages",
-    iconPath: "M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z",
-    prefixMatch: true,
+    href: "/app/storefront",
+    label: "Storefront",
+    // CF-STOREFRONT-EDITOR (Drew, 2026-07-27). New page at /app/storefront
+    // for managing the public /u/<username> shop.
+    iconPath: "M4 4h16l-1 4H5L4 4zm1 6h14l-1 10H6L5 10zm4 3v5h6v-5H9z",
   },
-  // Watchlist removed from sidebar 2026-07-27 per Drew — surface is still
-  // live at /app/watchlist for anyone with a saved link but no longer
-  // occupies a nav slot.
   {
     href: "/app/trade-targets",
     label: "Trade targets",
     iconPath: "M3 12l4-4v3h9V8l4 4-4 4v-3H7v3l-4-4z",
-  },
-  {
-    href: "/app/erp",
-    label: "Financials",
-    iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
   },
   {
     href: "/app/ebay",

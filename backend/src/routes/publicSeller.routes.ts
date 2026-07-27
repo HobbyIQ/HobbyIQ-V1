@@ -7,12 +7,19 @@
 // Gating rules:
 //   1. User must exist and have a username set.
 //   2. User must have publicShareEnabled === true.
-//   3. Effective plan (after Owner override) must be pro_seller.
+//   3. Effective plan (after Owner override) must be investor OR
+//      pro_seller (CF-STOREFRONT-TIER, 2026-07-27). Collector + free
+//      tiers are excluded regardless of the toggle.
 //   4. User's email must be verified (CF-EMAIL-VERIFICATION-GATE,
 //      2026-07-27) — prevents impersonation-storefronts from unverified
 //      throwaway accounts.
 //   Any miss → 404 (deliberately, not 403 — don't leak whether an
 //   account exists at all).
+//
+// Card-count caps per tier (CF-STOREFRONT-TIER):
+//   investor    → 50   (soft-cap; oldest additions win, newest hidden)
+//   pro_seller  → unlimited (existing 200 hard cap remains as a
+//                            safety valve — see cards.slice below)
 
 import { Router, type Request, type Response } from "express";
 import { findUserRecordByUsername } from "../services/authService.js";
@@ -34,9 +41,12 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
     plan: record.plan,
     entitlementOverride: record.entitlementOverride,
   });
-  if (effectivePlan !== "pro_seller") {
+  // CF-STOREFRONT-TIER: investor + pro_seller only. Collector / free
+  // are 404 even with the toggle on.
+  if (effectivePlan !== "pro_seller" && effectivePlan !== "investor") {
     return res.status(404).json({ success: false, error: "Not found" });
   }
+  const storefrontCap = effectivePlan === "investor" ? 50 : 200;
 
   if (record.publicShareEnabled !== true) {
     return res.status(404).json({ success: false, error: "Not found" });
@@ -139,7 +149,9 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
       cardCount: cards.length,
       sports,
     },
-    cards: cards.slice(0, 200), // hard cap to keep the wire response bounded
+    cards: cards.slice(0, storefrontCap),
+    tier: effectivePlan,
+    cap: storefrontCap,
   });
 });
 
