@@ -69,11 +69,14 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Account */}
+      {/* Account — email, user id, editable username, sign out. Username
+          used to be its own tile below Subscription; consolidated here
+          2026-07-27 so identity fields live in one card. */}
       <section className="hiq-card p-6">
         <h2 className="font-bold text-lg mb-4">Account</h2>
         <ReadonlyField label="Email" value={user.email} />
         <ReadonlyField label="User ID" value={user.userId} />
+        <UsernameField currentUsername={user.username ?? null} />
         <div className="mt-4 pt-4 border-t border-[color:var(--color-border)]">
           <button
             onClick={async () => {
@@ -128,9 +131,6 @@ export default function SettingsPage() {
           )}
         </div>
       </section>
-
-      {/* Username */}
-      <UsernameSection currentUsername={user.username ?? null} />
 
       {/* Public storefront — Pro Seller only */}
       {effectivePlan === "pro_seller" && user.username && (
@@ -289,7 +289,11 @@ function EmailVerificationSection({ user }: { user: AuthUser }) {
 }
 
 
-function UsernameSection({ currentUsername }: { currentUsername: string | null }) {
+// UsernameField (was UsernameSection prior to 2026-07-27): renders inline
+// inside the Account tile, no card wrapper of its own. Everything else —
+// debounced availability probe, reserved-name pill, disable-Save gating —
+// is unchanged.
+function UsernameField({ currentUsername }: { currentUsername: string | null }) {
   const [value, setValue] = useState(currentUsername ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -364,9 +368,11 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
     (check.kind === "available" || check.kind === "idle");
 
   return (
-    <section className="hiq-card p-6">
-      <h2 className="font-bold text-lg mb-4">Username</h2>
-      <form onSubmit={onSubmit} className="flex gap-3">
+    <div className="mb-3 last:mb-0">
+      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">
+        Username
+      </div>
+      <form onSubmit={onSubmit} className="flex gap-2">
         <div className="flex-1 relative">
           <input
             type="text"
@@ -377,7 +383,7 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
               setError(null);
             }}
             placeholder="pick a handle"
-            className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
+            className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)]"
             style={{
               background: "var(--color-bg)",
               borderColor:
@@ -394,32 +400,32 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
         <button
           type="submit"
           disabled={!canSubmit}
-          className="hiq-btn-primary disabled:opacity-50"
+          className="hiq-btn-primary text-sm px-4 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
         </button>
       </form>
       {(check.kind === "taken" || check.kind === "invalid") && !error && !saved && (
-        <div className="mt-3 text-sm" style={{ color: "var(--hiq-danger)" }}>
+        <div className="mt-2 text-xs" style={{ color: "var(--hiq-danger)" }}>
           {check.reason}
         </div>
       )}
       {check.kind === "available" && !error && !saved && (
-        <div className="mt-3 text-sm" style={{ color: "var(--hiq-hobby-green)" }}>
+        <div className="mt-2 text-xs" style={{ color: "var(--hiq-hobby-green)" }}>
           Available — click Save to claim it.
         </div>
       )}
       {error && (
-        <div className="mt-3 text-sm" style={{ color: "var(--color-danger)" }}>
+        <div className="mt-2 text-xs" style={{ color: "var(--color-danger)" }}>
           {error}
         </div>
       )}
       {saved && (
-        <div className="mt-3 text-sm" style={{ color: "var(--color-success)" }}>
+        <div className="mt-2 text-xs" style={{ color: "var(--color-success)" }}>
           Username updated.
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
