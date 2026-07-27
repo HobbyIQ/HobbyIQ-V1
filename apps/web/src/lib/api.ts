@@ -1,6 +1,6 @@
 // HobbyIQ web — backend fetch helper. Talks to the same Node/TS API
 // that serves iOS. Session model is `x-session-id` header on every
-// authenticated call; token is minted by /api/auth/login and stored
+// authenticated call; token is minted by /api/auth/signin and stored
 // in localStorage (matches how iOS keeps its session token via
 // Keychain — same wire contract).
 
@@ -30,6 +30,17 @@ export interface AuthUser {
   email: string;
   plan?: "free" | "collector" | "investor" | "pro_seller" | string;
   expiresAt?: string | null;
+}
+
+// Backend contract (authService.AuthResult): { success, user?, sessionId?, error? }
+// Note: /signin and /register return HTTP 200 EVEN ON FAILURE (bad creds return
+// 200 with success:false + error). So gating on res.ok is not enough — must
+// also check body.success.
+interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  sessionId?: string;
+  error?: string;
 }
 
 export interface ApiError {
@@ -67,46 +78,66 @@ async function request<T>(
   return body as T;
 }
 
+function throwIfAuthFailed(body: AuthResponse): asserts body is AuthResponse & {
+  success: true;
+  sessionId: string;
+  user: AuthUser;
+} {
+  if (!body.success || !body.sessionId || !body.user) {
+    const err: ApiError = {
+      status: 401,
+      code: "auth_failed",
+      message: body.error ?? "Invalid credentials",
+    };
+    throw err;
+  }
+}
+
 // ─── Auth ──────────────────────────────────────────────────────────
 
 export async function signIn(email: string, password: string): Promise<AuthUser> {
-  const res = await request<{ success: true; sessionId: string; user: AuthUser }>(
-    "/api/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-      auth: false,
-    },
-  );
-  setStoredSessionId(res.sessionId);
-  return res.user;
+  const body = await request<AuthResponse>("/api/auth/signin", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    auth: false,
+  });
+  throwIfAuthFailed(body);
+  setStoredSessionId(body.sessionId);
+  return body.user;
 }
 
 export async function signUp(email: string, password: string): Promise<AuthUser> {
-  const res = await request<{ success: true; sessionId: string; user: AuthUser }>(
-    "/api/auth/register",
-    {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-      auth: false,
-    },
-  );
-  setStoredSessionId(res.sessionId);
-  return res.user;
+  const body = await request<AuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    auth: false,
+  });
+  throwIfAuthFailed(body);
+  setStoredSessionId(body.sessionId);
+  return body.user;
 }
 
 export async function fetchSessionUser(): Promise<AuthUser | null> {
   const sid = getStoredSessionId();
   if (!sid) return null;
   try {
-    const res = await request<{ user: AuthUser }>("/api/auth/session");
-    return res.user;
+    const res = await request<{ success: boolean; user?: AuthUser }>(
+      "/api/auth/session",
+    );
+    return res.success && res.user ? res.user : null;
   } catch {
     clearStoredSessionId();
     return null;
   }
 }
 
-export function signOut(): void {
+export async function signOut(): Promise<void> {
+  const sid = getStoredSessionId();
   clearStoredSessionId();
+  if (!sid) return;
+  try {
+    await request("/api/auth/signout", { method: "POST" });
+  } catch {
+    // best-effort server invalidation; local token already cleared
+  }
 }
