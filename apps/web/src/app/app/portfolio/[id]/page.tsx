@@ -13,6 +13,7 @@ import {
   type HoldingPricePoint,
 } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
+import { EbayListModal } from "@/components/EbayListModal";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function HoldingDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [ebayOpen, setEbayOpen] = useState(false);
 
   useEffect(() => {
     if (!holdingId) return;
@@ -186,6 +188,9 @@ export default function HoldingDetailPage() {
         <button onClick={() => setSellOpen(true)} className="hiq-btn-primary">
           Mark as sold
         </button>
+        <button onClick={() => setEbayOpen(true)} className="hiq-btn-secondary">
+          List on eBay
+        </button>
         <button
           onClick={() => setDeleteOpen(true)}
           className="hiq-btn-secondary"
@@ -237,6 +242,12 @@ export default function HoldingDetailPage() {
             await deleteHolding(h.id);
             router.push("/app/portfolio");
           }}
+        />
+      )}
+      {ebayOpen && (
+        <EbayListModal
+          holdingId={h.id}
+          onClose={() => setEbayOpen(false)}
         />
       )}
     </div>
