@@ -10,6 +10,7 @@ import {
   type PortfolioHolding,
 } from "@/lib/api";
 import { formatUSD, formatCardTitle } from "@/lib/format";
+import { EbayListModal } from "@/components/EbayListModal";
 
 interface Props {
   holdings: PortfolioHolding[];
@@ -43,6 +44,7 @@ export function BulkEbayListModal({ holdings, onClose, onFinished }: Props) {
   );
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drillHoldingId, setDrillHoldingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,7 +212,13 @@ export function BulkEbayListModal({ holdings, onClose, onFinished }: Props) {
 
             <div className="mt-4 space-y-2">
               {rows.map((r, i) => (
-                <BulkRow key={r.holding.id} row={r} onChange={(p) => updateRow(i, p)} disabled={publishing || r.status === "publishing" || r.status === "success"} />
+                <BulkRow
+                  key={r.holding.id}
+                  row={r}
+                  onChange={(p) => updateRow(i, p)}
+                  disabled={publishing || r.status === "publishing" || r.status === "success"}
+                  onOpenFullEditor={() => setDrillHoldingId(r.holding.id)}
+                />
               ))}
             </div>
 
@@ -234,6 +242,20 @@ export function BulkEbayListModal({ holdings, onClose, onFinished }: Props) {
           </>
         )}
       </div>
+
+      {drillHoldingId && (
+        <EbayListModal
+          holdingId={drillHoldingId}
+          onClose={() => setDrillHoldingId(null)}
+          onPublished={(offerId, listingId) => {
+            const idx = rows.findIndex((r) => r.holding.id === drillHoldingId);
+            if (idx !== -1) {
+              updateRow(idx, { status: "success", offerId, listingId });
+            }
+            setDrillHoldingId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -242,10 +264,12 @@ function BulkRow({
   row,
   onChange,
   disabled,
+  onOpenFullEditor,
 }: {
   row: RowState;
   onChange: (patch: Partial<RowState>) => void;
   disabled: boolean;
+  onOpenFullEditor: () => void;
 }) {
   const h = row.holding;
 
@@ -296,6 +320,16 @@ function BulkRow({
             )}
             {row.status === "ready" && row.prep && row.prep.photos.length === 0 && (
               <span style={{ color: "var(--color-accent)" }}>Add a photo before publishing</span>
+            )}
+            {(row.status === "ready" || row.status === "error") && (
+              <button
+                type="button"
+                onClick={onOpenFullEditor}
+                disabled={disabled}
+                className="ml-auto text-[color:var(--color-accent)] hover:underline disabled:opacity-40"
+              >
+                Review all fields →
+              </button>
             )}
           </div>
         </div>
