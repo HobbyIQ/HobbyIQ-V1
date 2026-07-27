@@ -177,12 +177,19 @@ async function queryPool(
     { name: "@from", value: cutoffIso },
   ];
   try {
-    const excludedList = EXCLUDED_SOURCES.map((s) => `'${s}'`).join(", ");
+    // Cosmos SQL rejects "NOT IN ()" (empty tuple), so only append the
+    // source-exclusion clause when we actually have sources to exclude.
+    // Otherwise every query silently errors → try/catch returns [] →
+    // every rung on every request returns no-basis (this is the bug
+    // the empty-EXCLUDED_SOURCES change tripped on 2026-07-27).
+    const sourceClause = EXCLUDED_SOURCES.length > 0
+      ? ` AND c.source NOT IN (${EXCLUDED_SOURCES.map((s) => `'${s}'`).join(", ")})`
+      : "";
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags
               FROM c
-              WHERE ${whereClause} AND c.soldAt > @from AND c.source NOT IN (${excludedList})
+              WHERE ${whereClause} AND c.soldAt > @from${sourceClause}
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }).fetchAll();
