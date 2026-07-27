@@ -109,15 +109,45 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
   return body.user;
 }
 
+// Backend /api/auth/register requires a `username` matching
+// [a-zA-Z0-9_.-]{3,30}. The web form doesn't ask for one — derive a
+// valid handle from the email local-part, retry with a random suffix
+// on the "Username already taken" collision. User can rename later
+// from account settings (setUsernameForSession).
 export async function signUp(email: string, password: string): Promise<AuthUser> {
-  const body = await request<AuthResponse>("/api/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-    auth: false,
-  });
-  throwIfAuthFailed(body);
-  setStoredSessionId(body.sessionId);
-  return body.user;
+  const baseUsername = deriveUsernameFromEmail(email);
+  let username = baseUsername;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const body = await request<AuthResponse>("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email, password, username }),
+        auth: false,
+      });
+      throwIfAuthFailed(body);
+      setStoredSessionId(body.sessionId);
+      return body.user;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg === "Username already taken" && attempt < 2) {
+        const suffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 4) || "0001";
+        username = `${baseUsername.slice(0, 25)}-${suffix}`;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Couldn't create a unique handle — try a different email.");
+}
+
+function deriveUsernameFromEmail(email: string): string {
+  const localPart = (email.split("@")[0] ?? "").trim();
+  const sanitized = localPart.replace(/[^a-zA-Z0-9_.-]/g, "");
+  if (sanitized.length >= 3) return sanitized.slice(0, 30);
+  // Local part is too short or got sanitized to nothing (e.g. all `+`
+  // or non-ASCII). Synthesize a valid handle they can rename later.
+  const rand = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 6) || "user01";
+  return `hiq-${rand}`;
 }
 
 export async function fetchSessionUser(): Promise<AuthUser | null> {
