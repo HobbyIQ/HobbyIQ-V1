@@ -120,6 +120,10 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
   return res.json({
     success: true,
     seller: {
+      // CF-MESSAGING (2026-07-27): expose userId so an authed buyer can
+      // open a thread. Not sensitive — userId is already the canonical
+      // partition key across public API surfaces.
+      userId: record.userId,
       username: record.aliases?.[0] ?? usernameRaw,
       joinedAt: record.createdAt,
     },
