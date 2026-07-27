@@ -6,14 +6,15 @@
 // participant can mark an offer sold (records a kind=sold event).
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   fetchSessionUser,
   fetchThread,
   markSold,
   sendMessage,
   type AuthUser,
+  type HoldingRef,
   type Message,
 } from "@/lib/api";
 
@@ -32,10 +33,35 @@ function timestamp(iso: string): string {
   });
 }
 
-export default function ThreadPage() {
+function ThreadBody() {
   const router = useRouter();
   const params = useParams<{ otherUserId: string }>();
+  const search = useSearchParams();
   const otherUserId = decodeURIComponent(String(params?.otherUserId ?? ""));
+
+  // CF-MESSAGING per-card CTA. Storefront tiles pass a serialized
+  // holdingRef in ?about=. Attach it to the first outbound message so
+  // the seller sees which card the buyer is asking about, then clear
+  // it so subsequent messages in the same thread stay bare.
+  const aboutRef: HoldingRef | null = useMemo(() => {
+    const raw = search.get("about");
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as Partial<HoldingRef>;
+      if (!parsed.holdingId || !parsed.sellerUserId || !parsed.cardTitle) return null;
+      return {
+        holdingId: String(parsed.holdingId),
+        sellerUserId: String(parsed.sellerUserId),
+        cardTitle: String(parsed.cardTitle),
+        imageUrl: parsed.imageUrl ?? null,
+        askingPriceCents:
+          typeof parsed.askingPriceCents === "number" ? parsed.askingPriceCents : null,
+      };
+    } catch {
+      return null;
+    }
+  }, [search]);
+  const [pendingRef, setPendingRef] = useState<HoldingRef | null>(aboutRef);
 
   const [me, setMe] = useState<AuthUser | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,11 +111,15 @@ export default function ThreadPage() {
         text: trimmed,
         kind: priceCents != null ? "offer" : "chat",
         priceCents,
+        holdingRef: pendingRef,
       });
       if (res.success && res.message) {
         setMessages((m) => [...m, res.message!]);
         setText("");
         setOfferCents("");
+        // Clear the pending ref after the first send so subsequent
+        // messages in the same thread stay bare.
+        if (pendingRef) setPendingRef(null);
       } else {
         setError(res.error ?? "Send failed");
       }
@@ -199,6 +229,46 @@ export default function ThreadPage() {
           })}
         </div>
 
+        {pendingRef && (
+          <div
+            className="border-t border-[color:var(--color-border)] px-3 py-2 flex items-center gap-3"
+            style={{ background: "color-mix(in oklab, var(--color-accent) 8%, transparent)" }}
+          >
+            {pendingRef.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pendingRef.imageUrl}
+                alt=""
+                className="w-10 h-14 object-cover rounded flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-[10px] uppercase tracking-wide"
+                style={{ color: "var(--hiq-muted-text)" }}
+              >
+                About this card
+              </div>
+              <div className="text-sm font-semibold truncate">{pendingRef.cardTitle}</div>
+              {pendingRef.askingPriceCents != null && (
+                <div
+                  className="text-xs"
+                  style={{ color: "var(--hiq-hobby-green)" }}
+                >
+                  Listed at {formatCents(pendingRef.askingPriceCents)}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPendingRef(null)}
+              className="text-xs hover:underline flex-shrink-0"
+              style={{ color: "var(--hiq-muted-text)" }}
+            >
+              Remove
+            </button>
+          </div>
+        )}
         <form
           onSubmit={onSend}
           className="border-t border-[color:var(--color-border)] p-3 flex items-center gap-2 flex-wrap"
@@ -207,7 +277,7 @@ export default function ThreadPage() {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Type a message…"
+            placeholder={pendingRef ? "Ask about the card…" : "Type a message…"}
             className="flex-1 min-w-[200px] px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)]"
             style={{
               background: "var(--color-bg)",
@@ -246,5 +316,13 @@ export default function ThreadPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ThreadPage() {
+  return (
+    <Suspense fallback={null}>
+      <ThreadBody />
+    </Suspense>
   );
 }

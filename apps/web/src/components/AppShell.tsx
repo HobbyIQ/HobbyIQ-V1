@@ -4,7 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { APP_NAV, activeNavItem, type NavItem } from "@/lib/navigation";
-import { fetchSessionUser, signOut, type AuthUser } from "@/lib/api";
+import {
+  fetchSessionUser,
+  signOut,
+  fetchUnreadCount,
+  type AuthUser,
+} from "@/lib/api";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { Brand } from "@/components/Brand";
 
@@ -20,6 +25,7 @@ export function AppShell({ children }: AppShellProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +46,30 @@ export function AppShell({ children }: AppShellProps) {
       cancelled = true;
     };
   }, [router]);
+
+  // CF-MESSAGING (Drew, 2026-07-27). Poll the unread count so the
+  // sidebar badge stays fresh without a websocket. 60s interval —
+  // aggressive enough to feel live, cheap enough to leave running.
+  // Refreshes immediately when the pathname changes (opening the
+  // Messages tab often means the user just read something).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    async function tick() {
+      try {
+        const res = await fetchUnreadCount();
+        if (!cancelled) setUnreadMessages(res.unread ?? 0);
+      } catch {
+        // Silent — leave the last known count.
+      }
+    }
+    tick();
+    const timer = setInterval(tick, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [user, pathname]);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -68,7 +98,12 @@ export function AppShell({ children }: AppShellProps) {
         </div>
         <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
           {APP_NAV.map((item) => (
-            <NavLink key={item.href} item={item} isActive={active?.href === item.href} />
+            <NavLink
+              key={item.href}
+              item={item}
+              isActive={active?.href === item.href}
+              badge={item.href === "/app/messages" ? unreadMessages : 0}
+            />
           ))}
         </nav>
         <div className="flex-shrink-0">
@@ -102,7 +137,12 @@ export function AppShell({ children }: AppShellProps) {
              style={{ background: "var(--color-bg)" }}>
           <nav className="p-4 space-y-2">
             {APP_NAV.map((item) => (
-              <NavLink key={item.href} item={item} isActive={active?.href === item.href} />
+              <NavLink
+              key={item.href}
+              item={item}
+              isActive={active?.href === item.href}
+              badge={item.href === "/app/messages" ? unreadMessages : 0}
+            />
             ))}
           </nav>
           <div className="p-4 border-t border-[color:var(--color-border)]">
@@ -128,7 +168,15 @@ export function AppShell({ children }: AppShellProps) {
   );
 }
 
-function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
+function NavLink({
+  item,
+  isActive,
+  badge = 0,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  badge?: number;
+}) {
   return (
     <Link
       href={item.href}
@@ -142,7 +190,20 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d={item.iconPath} />
       </svg>
-      <span>{item.label}</span>
+      <span className="flex-1">{item.label}</span>
+      {badge > 0 && (
+        <span
+          className="px-1.5 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0"
+          style={{
+            background: "var(--hiq-hobby-green)",
+            color: "#000",
+            minWidth: 18,
+            textAlign: "center",
+          }}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </Link>
   );
 }

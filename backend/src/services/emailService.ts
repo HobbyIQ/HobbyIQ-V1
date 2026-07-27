@@ -109,14 +109,24 @@ export function welcomeEmailContent(opts: {
   displayName?: string | null;
 }): { subject: string; plainText: string; html: string } {
   const who = opts.displayName?.trim() || opts.toEmail;
-  const subject = "Welcome to HobbyIQ — verify your email";
+  const subject = "Welcome to HobbyIQ — 5 quick steps to get set up";
+  // The verify link lands on /verify-email → success routes to
+  // /app/welcome?verified=1 (the onboarding checklist). So the same
+  // click both confirms the email AND surfaces the next four steps
+  // (link eBay, add first card, set first alert, enable storefront).
   const plainText =
     `Hey ${who},\n\n` +
     `Welcome to HobbyIQ. Your account is ready to go.\n\n` +
-    `One quick step: confirm your email so we can send you alerts, ` +
-    `subscription receipts, and — later — password-reset links:\n` +
+    `We built a 5-step setup to get you the full HobbyIQ signal in a\n` +
+    `few minutes:\n\n` +
+    `  1. Verify your email  ← this link\n` +
+    `  2. Link your eBay account (auto-import sales so P&L stays accurate)\n` +
+    `  3. Add your first card (search, scan, or Card Ladder import)\n` +
+    `  4. Set a price alert (know the moment FMV crosses a threshold)\n` +
+    `  5. Enable your public storefront (Pro Seller only)\n\n` +
+    `Start here — it kicks off the checklist:\n` +
     `${opts.verifyUrl}\n\n` +
-    `The link is good for 24 hours. If you didn't create this account, ` +
+    `The link is good for 24 hours. If you didn't create this account,\n` +
     `you can ignore this email.\n\n` +
     `— HobbyIQ`;
   const html =
@@ -124,9 +134,15 @@ export function welcomeEmailContent(opts: {
     `<h2 style="margin:0 0 12px 0">Welcome to HobbyIQ</h2>` +
     `<p>Hey ${who},</p>` +
     `<p>Your account is ready to go — thanks for joining.</p>` +
-    `<p>One quick step: confirm your email so we can send alerts, receipts, ` +
-    `and password-reset links.</p>` +
-    `<p style="margin:24px 0"><a href="${opts.verifyUrl}" style="background:#1EA75A;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Verify email</a></p>` +
+    `<p>We built a 5-step setup to get you the full HobbyIQ signal in a few minutes:</p>` +
+    `<ol style="padding-left:20px;margin:16px 0;color:#333">` +
+    `<li style="margin:6px 0"><strong>Verify your email</strong> — starts with this link</li>` +
+    `<li style="margin:6px 0">Link your eBay account (auto-imports sales for accurate P&amp;L)</li>` +
+    `<li style="margin:6px 0">Add your first card (search, scan, or Card Ladder import)</li>` +
+    `<li style="margin:6px 0">Set a price alert (know the moment FMV crosses a threshold)</li>` +
+    `<li style="margin:6px 0">Enable your public storefront (Pro Seller only)</li>` +
+    `</ol>` +
+    `<p style="margin:24px 0"><a href="${opts.verifyUrl}" style="background:#1EA75A;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Start setup</a></p>` +
     `<p style="color:#555;font-size:13px">Or paste this link into your browser:<br><span style="word-break:break-all">${opts.verifyUrl}</span></p>` +
     `<p style="color:#555;font-size:13px">The link is good for 24 hours. If you didn't create this account, you can ignore this email.</p>` +
     `<p style="color:#888;font-size:12px;margin-top:32px">— HobbyIQ</p>` +

@@ -164,7 +164,11 @@ export default function PublicSellerPage() {
       {filtered.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((c) => (
-            <StorefrontCardTile key={c.holdingId} card={c} />
+            <StorefrontCardTile
+              key={c.holdingId}
+              card={c}
+              sellerUserId={data.seller.userId}
+            />
           ))}
         </div>
       )}
@@ -189,7 +193,26 @@ export default function PublicSellerPage() {
   );
 }
 
-function StorefrontCardTile({ card }: { card: StorefrontCard }) {
+function StorefrontCardTile({
+  card,
+  sellerUserId,
+}: {
+  card: StorefrontCard;
+  sellerUserId: string;
+}) {
+  // CF-MESSAGING per-card CTA. Encode the holdingRef into the thread
+  // route's `?about=` param so the thread page can prefill the compose
+  // card preview + attach the ref to the first outbound message.
+  const holdingRef = {
+    holdingId: card.holdingId,
+    sellerUserId,
+    cardTitle: card.cardTitle,
+    imageUrl: card.imageUrl,
+    askingPriceCents: card.fmv != null ? Math.round(card.fmv * 100) : null,
+  };
+  const aboutParam = encodeURIComponent(JSON.stringify(holdingRef));
+  const threadHref = `/app/messages/${encodeURIComponent(sellerUserId)}?about=${aboutParam}`;
+
   return (
     <div className="hiq-group-card">
       <div
@@ -224,6 +247,20 @@ function StorefrontCardTile({ card }: { card: StorefrontCard }) {
           </div>
         )}
       </div>
+
+      <Link
+        href={threadHref}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition"
+        style={{
+          background: "color-mix(in oklab, var(--color-accent) 20%, transparent)",
+          color: "var(--color-accent)",
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+        </svg>
+        Ask about this card
+      </Link>
     </div>
   );
 }
