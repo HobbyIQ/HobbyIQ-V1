@@ -1,0 +1,118 @@
+/* HobbyIQ web — visual identity mapped 1:1 from HobbyIQ/DesignSystem/HobbyIQTheme.swift.
+ * When the iOS theme changes, update BOTH files together.
+ * Reference: memory `hobbyiq-design-system`. */
+
+@import "tailwindcss";
+
+@theme {
+  /* Base palette (exact hex from HobbyIQTheme.swift) */
+  --color-bg:             #06101D;   /* appBackground */
+  --color-bg-deep:        #0B1424;   /* deepNavy — gradient midpoint */
+  --color-bg-card:        #101B2D;   /* cardNavy — all card fills */
+  --color-border:         #2A3344;   /* steelGray */
+  --color-border-soft:    rgba(30, 144, 255, 0.28);
+
+  --color-accent:         #1E90FF;   /* electricBlue */
+  --color-accent-bright:  #3DA9FF;   /* brightBlue (hover) */
+
+  --color-positive:         #7CFF72; /* hobbyGreen */
+  --color-positive-bright:  #B6FF4D; /* brightGreen */
+  --color-positive-success: #41E66F; /* successGreen */
+
+  --color-muted:          #C4CDD9;   /* mutedText */
+  --color-foreground:     #FFFFFF;
+
+  --color-warning:        #F97316;
+  --color-danger:         #EF4444;
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Gradients (from Gradients.background / topGlow / dashboardStroke).
+ * Kept outside @theme so Tailwind doesn't try to generate utility classes
+ * for them — they're used via CSS `background:` on specific elements. */
+:root {
+  --gradient-app-bg:      linear-gradient(135deg, #06101D 0%, #0B1424 50%, #06101D 100%);
+  --gradient-top-glow:    radial-gradient(ellipse at top, rgba(30, 144, 255, 0.34) 0%, rgba(30, 144, 255, 0.08) 30%, transparent 70%);
+  --gradient-hero-stroke: linear-gradient(135deg, #2A6A9E 0%, #2C8F66 100%);
+  --duration-press: 160ms;
+}
+
+/* HobbyIQ is dark-mode-only, matching iOS. No light-mode override. */
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-foreground);
+  min-height: 100%;
+}
+
+body {
+  background: var(--gradient-app-bg) fixed;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Utility classes for the signature HobbyIQ surfaces. Use these on
+ * specific components rather than piling them into every Tailwind class. */
+.hiq-glow-top {
+  position: relative;
+  isolation: isolate;
+}
+
+.hiq-glow-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--gradient-top-glow);
+  z-index: -1;
+}
+
+.hiq-hero-stroke {
+  background: var(--gradient-hero-stroke);
+}
+
+.hiq-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.hiq-btn-primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: transform var(--duration-press) ease-in-out,
+              opacity var(--duration-press) ease-in-out,
+              background var(--duration-press) ease-in-out;
+  box-shadow: 0 6px 12px rgba(30, 144, 255, 0.24);
+  border: none;
+  cursor: pointer;
+}
+
+.hiq-btn-primary:hover {
+  background: var(--color-accent-bright);
+}
+
+.hiq-btn-primary:active {
+  transform: scale(0.985);
+  opacity: 0.96;
+}
+
+.hiq-btn-secondary {
+  background: transparent;
+  color: var(--color-accent);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px solid var(--color-border-soft);
+  transition: background var(--duration-press) ease-in-out;
+  cursor: pointer;
+}
+
+.hiq-btn-secondary:hover {
+  background: rgba(30, 144, 255, 0.08);
+}
