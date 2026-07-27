@@ -617,6 +617,113 @@ export async function regradeHolding(id: string, body: RegradeInput): Promise<{ 
   };
 }
 
+// ─── Portfolio CSV / xlsx import ──────────────────────────────────
+
+export type ImportLane = "update" | "new";
+export type ImportBucket = "clean" | "collision" | "ambiguous" | "unresolved" | "identity-edited";
+export type CommitAction = "commit" | "skip" | "add-as-copy" | "update-cost";
+
+export interface NormalizedHoldingPayload {
+  id?: string;
+  cardId?: string | null;
+  playerName?: string;
+  cardYear?: number;
+  product?: string;
+  cardTitle?: string;
+  cardNumber?: string;
+  parallel?: string;
+  serialNumber?: string;
+  isAuto?: boolean;
+  gradeCompany?: string;
+  gradeValue?: number;
+  certNumber?: string;
+  quantity?: number;
+  purchasePrice?: number;
+  totalCostBasis?: number;
+  purchaseDate?: string;
+  purchaseSource?: string;
+  notes?: string;
+}
+
+export interface ImportRowEnvelope {
+  rowNumber: number;
+  lane: ImportLane;
+  bucket: ImportBucket;
+  cardId: string | null;
+  existingHoldingId?: string;
+  payload: NormalizedHoldingPayload;
+  parseFlags: Array<{ column: string; reason: string }>;
+  message: string;
+}
+
+export interface ImportPreviewResponse {
+  ok: boolean;
+  summary?: {
+    totalRows: number;
+    parsedRows: number;
+    byBucket: Record<ImportBucket, number>;
+    defaultCommitCount: number;
+    capacityProjection?: {
+      currentCount: number;
+      projectedTotal: number;
+      cap: number | null;
+      wouldExceed: boolean;
+    };
+  };
+  envelopes?: ImportRowEnvelope[];
+  unmappedHeaders?: string[];
+  proposedMapping?: Record<string, string | null>;
+  // Async path — for large files
+  async?: true;
+  jobId?: string;
+  totalRows?: number;
+}
+
+// Preview a portfolio import. Encode the file as base64 in the request
+// body — backend supports both csv (plain text OR base64) and xlsx
+// (base64 only). Returns either envelopes for the sync path or a jobId
+// for the async large-file path (>40 rows).
+export async function previewImport(file: File, format: "csv" | "xlsx"): Promise<ImportPreviewResponse> {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  // Chunked base64 to avoid stack limits on big files.
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  const b64 = btoa(binary);
+  return await request<ImportPreviewResponse>("/api/portfolio/import/preview", {
+    method: "POST",
+    body: JSON.stringify({ file: b64, format }),
+  });
+}
+
+export interface ImportCommitResponse {
+  ok: boolean;
+  idempotencyToken?: string;
+  outcomes?: Array<{
+    rowNumber: number;
+    action: CommitAction;
+    outcome: "added" | "updated" | "skipped" | "failed";
+    holdingId?: string;
+    reason?: string;
+  }>;
+  totals?: { added: number; updated: number; skipped: number; failed: number };
+  capacityExceeded?: { currentCount: number; cap: number; wouldBeTotal: number };
+}
+
+export async function commitImport(
+  idempotencyToken: string,
+  envelopes: ImportRowEnvelope[],
+  actions: Record<number, CommitAction>,
+): Promise<ImportCommitResponse> {
+  return await request<ImportCommitResponse>("/api/portfolio/import/commit", {
+    method: "POST",
+    body: JSON.stringify({ idempotencyToken, envelopes, actions }),
+  });
+}
+
 // ─── Sold ledger ───────────────────────────────────────────────────
 
 export interface LedgerEntry {

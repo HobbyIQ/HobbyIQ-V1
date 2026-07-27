@@ -81,6 +81,12 @@ export default function PortfolioPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/app/portfolio/import"
+            className="hiq-btn-secondary text-sm hidden sm:inline-block"
+          >
+            Import
+          </Link>
+          <Link
             href="/app/portfolio/sold"
             className="hiq-btn-secondary text-sm hidden sm:inline-block"
           >
