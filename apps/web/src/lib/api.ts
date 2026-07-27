@@ -289,6 +289,13 @@ export interface SearchCandidate {
   serialNumber: string | null;
   title: string;
   imageUrl: string | null;
+  // Populated on cert-source candidates (PSA/BGS/SGC/CGC lookups) — the
+  // graders return the card's slabbed grade + cert number authoritatively.
+  // Absent on ranked catalog candidates.
+  grade?: string | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  certNumber?: string | null;
   parallels?: Array<{ id: string; name: string; numberedTo?: number | null }>;
   attributes?: string[];
 }
