@@ -35,9 +35,35 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M3 3h2v18H3V3zm4 12h2v6H7v-6zm4-4h2v10h-2V11zm4-6h2v16h-2V5zm4 8h2v8h-2v-8z",
   },
   {
+    href: "/app/insights",
+    label: "Insights",
+    iconPath: "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z",
+  },
+  {
+    href: "/app/players",
+    label: "Players",
+    iconPath: "M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.7-8 6v2h16v-2c0-3.3-3.6-6-8-6z",
+    prefixMatch: true,
+  },
+  {
+    href: "/app/alerts",
+    label: "Alerts",
+    iconPath: "M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z",
+  },
+  {
     href: "/app/watchlist",
     label: "Watchlist",
     iconPath: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+  },
+  {
+    href: "/app/erp",
+    label: "ERP",
+    iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
+  },
+  {
+    href: "/app/ebay",
+    label: "eBay",
+    iconPath: "M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM12 15l-6-6h4V6h4v3h4l-6 6z",
   },
   {
     href: "/app/settings",

@@ -6,6 +6,7 @@ import { getConfig } from "./config/env.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import healthRoutes from "./routes/health.routes.js";
+import publicStatsRoutes from "./routes/publicStats.routes.js";
 import compiqRoutes from "./routes/compiq.routes.js";
 import portfolioiqRoutes from "./routes/portfolioiq.routes.js";
 import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
@@ -132,6 +133,7 @@ app.use(requestContextMiddleware);
 app.use("/uploads", express.static(path.join(process.cwd(), ".data", "uploads")));
 
 app.use("/api/health", healthRoutes);
+app.use("/api/stats", publicStatsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/compiq", compiqRoutes);
 // CF-CANONICAL-FMV (Drew, 2026-07-18): single source of truth FMV
