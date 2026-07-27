@@ -584,6 +584,21 @@ export async function addWatchlist(
   });
 }
 
+// ─── Public marketing stats (unauthenticated) ─────────────────────
+
+export interface PublicStats {
+  soldCompsIndexed: number;
+  cardsWithSlug: number;
+  categories: number;
+  sportsCovered: string[];
+  vendorsIngested: string[];
+  generatedAt: string;
+}
+
+export async function fetchPublicStats(): Promise<PublicStats> {
+  return await request<PublicStats>("/api/stats/public", { auth: false });
+}
+
 // ─── Autocomplete (public suggest) ─────────────────────────────────
 
 export interface SuggestionsResponse {
