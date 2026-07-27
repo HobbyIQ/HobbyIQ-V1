@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import healthRoutes from "./routes/health.routes.js";
 import publicStatsRoutes from "./routes/publicStats.routes.js";
 import publicSellerRoutes from "./routes/publicSeller.routes.js";
+import stripeRoutes from "./routes/stripe.routes.js";
 import compiqRoutes from "./routes/compiq.routes.js";
 import portfolioiqRoutes from "./routes/portfolioiq.routes.js";
 import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
@@ -108,6 +109,13 @@ app.use("/api/", rateLimit({
 // standard latency/ratio balance; default filter already handles
 // content-type (skips already-compressed responses like images).
 app.use(compression({ threshold: 1024 }));
+
+// CF-STRIPE-SUBSCRIPTIONS (Drew, 2026-07-27). Stripe webhook needs the
+// RAW request body to verify the HMAC signature. Mount the whole
+// /api/stripe subrouter BEFORE express.json() — the /checkout + /portal
+// endpoints inside apply express.json themselves via the requireSession
+// middleware chain, and the /webhook route uses express.raw() locally.
+app.use("/api/stripe", stripeRoutes);
 
 app.use(express.json({ limit: "12mb" }));
 // CF-FINALIZE (2026-06-03): config.CORS_ALLOWED_ORIGINS is now pre-parsed

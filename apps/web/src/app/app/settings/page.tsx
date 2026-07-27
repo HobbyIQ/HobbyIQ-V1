@@ -10,6 +10,7 @@ import {
   deleteAccount,
   signOut,
   setPublicShareEnabled,
+  createStripePortalSession,
   type AuthUser,
   type EntitlementsMeResponse,
 } from "@/lib/api";
@@ -102,12 +103,24 @@ export default function SettingsPage() {
           )}
         </div>
         <ReadonlyField label="Current plan" value={PLAN_LABEL[effectivePlan] ?? effectivePlan} />
+        {user.stripeSubscriptionStatus && user.stripeSubscriptionStatus !== "canceled" && (
+          <ReadonlyField label="Subscription status" value={user.stripeSubscriptionStatus} />
+        )}
         {isOwnerOverride && (
           <p className="mt-4 text-xs text-[color:var(--color-muted)] leading-relaxed">
             Owner override active — your effective tier is set server-side and won&apos;t be
             affected by App Store or Stripe subscription changes.
           </p>
         )}
+        <div className="mt-4 pt-4 border-t border-[color:var(--color-border)] flex items-center gap-3 flex-wrap">
+          {user.stripeCustomerId ? (
+            <ManageSubscriptionButton />
+          ) : (
+            <Link href="/pricing" className="hiq-btn-primary text-sm">
+              Upgrade
+            </Link>
+          )}
+        </div>
       </section>
 
       {/* Username */}
@@ -224,6 +237,43 @@ function UsernameSection({ currentUsername }: { currentUsername: string | null }
         </div>
       )}
     </section>
+  );
+}
+
+function ManageSubscriptionButton() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function onClick() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await createStripePortalSession();
+      if (res.success && res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      setError(res.error ?? "Portal unavailable");
+    } catch (err) {
+      setError((err as { message?: string }).message ?? "Portal failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <>
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className="hiq-btn-primary text-sm disabled:opacity-60"
+      >
+        {loading ? "Loading…" : "Manage subscription"}
+      </button>
+      {error && (
+        <span className="text-xs" style={{ color: "var(--color-danger)" }}>
+          {error}
+        </span>
+      )}
+    </>
   );
 }
 

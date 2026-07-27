@@ -34,6 +34,8 @@ export interface AuthUser {
   expiresAt?: string | null;
   entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
   publicShareEnabled?: boolean;
+  stripeCustomerId?: string;
+  stripeSubscriptionStatus?: string;
 }
 
 // Backend contract (authService.AuthResult): { success, user?, sessionId?, error? }
@@ -617,6 +619,22 @@ export async function regradeHolding(id: string, body: RegradeInput): Promise<{ 
     holding,
     message: raw.message,
   };
+}
+
+// ─── Stripe subscriptions ────────────────────────────────────────
+
+export async function createStripeCheckoutSession(plan: "collector" | "investor" | "pro_seller"): Promise<{ success: boolean; url?: string; error?: string }> {
+  return await request<{ success: boolean; url?: string; error?: string }>(
+    "/api/stripe/checkout",
+    { method: "POST", body: JSON.stringify({ plan }) },
+  );
+}
+
+export async function createStripePortalSession(): Promise<{ success: boolean; url?: string; error?: string }> {
+  return await request<{ success: boolean; url?: string; error?: string }>(
+    "/api/stripe/portal",
+    { method: "POST", body: JSON.stringify({}) },
+  );
 }
 
 // ─── Public seller storefront ─────────────────────────────────────

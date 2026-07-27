@@ -89,6 +89,22 @@ interface AuthUserRecord {
   // public storefront showing the user's inventory (photos + card
   // titles + FMV, no purchase price or P&L). Default off — opt-in only.
   publicShareEnabled?: boolean;
+  // CF-STRIPE-SUBSCRIPTIONS (Drew, 2026-07-27): web-side subscription
+  // wiring. stripeCustomerId is the persistent customer object we
+  // reference for portal + repeat checkout. stripeSubscriptionId is
+  // the most-recent active subscription; when it moves to canceled or
+  // past_due, the webhook re-derives `plan` and clears this field.
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  stripeSubscriptionStatus?:
+    | "active"
+    | "trialing"
+    | "past_due"
+    | "canceled"
+    | "incomplete"
+    | "incomplete_expired"
+    | "unpaid";
   // CF-OWNER-OVERRIDE (2026-06-05): server-side comp. Authoritative tier
   // assignment that overrides BOTH the Apple-derived `plan` field AND the
   // "free" default. Read-modify-write at setUserSubscriptionState +
@@ -121,6 +137,11 @@ export interface AuthUser {
   // CF-PUBLIC-SELLER-STOREFRONT (Drew, 2026-07-27): opt-in flag Pro
   // Sellers flip to publish their inventory at hobby-iq.com/u/<username>.
   publicShareEnabled?: boolean;
+  // CF-STRIPE-SUBSCRIPTIONS (Drew, 2026-07-27): passed through to the
+  // session middleware so /stripe/checkout + /stripe/portal can read
+  // the persisted customer id without a second Cosmos round-trip.
+  stripeCustomerId?: string;
+  stripeSubscriptionStatus?: AuthUserRecord["stripeSubscriptionStatus"];
 }
 
 export interface AuthResult {
@@ -402,6 +423,8 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     // or undefined → effectivePlanFor falls through to `plan`.
     entitlementOverride: user.entitlementOverride ?? null,
     publicShareEnabled: user.publicShareEnabled ?? false,
+    stripeCustomerId: user.stripeCustomerId,
+    stripeSubscriptionStatus: user.stripeSubscriptionStatus,
   };
 }
 
@@ -422,6 +445,67 @@ export async function setPublicShareEnabled(userId: string, enabled: boolean): P
   user.publicShareEnabled = enabled;
   await writeUser(user);
   return true;
+}
+
+/** CF-STRIPE-SUBSCRIPTIONS: persist the Stripe customer id on first
+ *  checkout so subsequent portal + repeat-checkout calls can reuse it. */
+export async function setStripeCustomerId(userId: string, stripeCustomerId: string): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  user.stripeCustomerId = stripeCustomerId;
+  await writeUser(user);
+  return true;
+}
+
+/** CF-STRIPE-SUBSCRIPTIONS: apply a subscription state transition from
+ *  a webhook event. Maps priceId to plan tier via env vars. Setting
+ *  plan=null clears the paid plan back to "free" (used on cancel). */
+export async function applyStripeSubscriptionState(
+  userId: string,
+  state: {
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    stripePriceId?: string;
+    stripeSubscriptionStatus?: AuthUserRecord["stripeSubscriptionStatus"];
+    plan?: SubscriptionPlan;
+  },
+): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  if (state.stripeCustomerId) user.stripeCustomerId = state.stripeCustomerId;
+  if (state.stripeSubscriptionId !== undefined) {
+    user.stripeSubscriptionId = state.stripeSubscriptionId || undefined;
+  }
+  if (state.stripePriceId !== undefined) {
+    user.stripePriceId = state.stripePriceId || undefined;
+  }
+  if (state.stripeSubscriptionStatus !== undefined) {
+    user.stripeSubscriptionStatus = state.stripeSubscriptionStatus;
+  }
+  if (state.plan !== undefined) {
+    user.plan = state.plan;
+  }
+  await writeUser(user);
+  return true;
+}
+
+/** CF-STRIPE-SUBSCRIPTIONS: look a user up by their Stripe customer id.
+ *  Used by the webhook to find who a subscription belongs to when the
+ *  event only carries `customer`, not `client_reference_id`. */
+export async function findUserByStripeCustomerId(stripeCustomerId: string): Promise<AuthUserRecord | undefined> {
+  const trimmed = stripeCustomerId.trim();
+  if (!trimmed) return undefined;
+  const container = await getContainer();
+  if (!container) {
+    return Array.from(memStore.values()).find((u) => u.stripeCustomerId === trimmed);
+  }
+  const { resources } = await container.items
+    .query<AuthUserRecord>({
+      query: 'SELECT TOP 1 * FROM c WHERE c.docType = "user" AND c.stripeCustomerId = @id',
+      parameters: [{ name: "@id", value: trimmed }],
+    })
+    .fetchAll();
+  return resources[0];
 }
 
 // ─── CF-PAYMENTS-B1: usage counter writer ───────────────────────────────────
