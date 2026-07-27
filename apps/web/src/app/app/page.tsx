@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PortfolioTodayCard } from "@/components/PortfolioTodayCard";
+import { MarketTodayCard } from "@/components/MarketTodayCard";
 
 export default function TodayPage() {
   return (
@@ -13,12 +14,7 @@ export default function TodayPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PortfolioTodayCard />
-        <PlaceholderCard
-          title="Market Today"
-          body="Sector movers per sport, notable sales, hot prospects."
-          href="/app/market"
-          cta="Open market →"
-        />
+        <MarketTodayCard />
         <PlaceholderCard
           title="Search"
           body="Look up any card. Empirical FMV across the full grade ladder."
