@@ -141,3 +141,68 @@ export async function signOut(): Promise<void> {
     // best-effort server invalidation; local token already cleared
   }
 }
+
+// ─── Portfolio ─────────────────────────────────────────────────────
+
+// Subset of the PortfolioHoldingWire shape (defined in
+// backend/src/services/portfolioiq/responseAssembly.ts) — only fields
+// the web dashboard actually reads. All money is dollars-float, per unit
+// unless the field name says "total".
+export interface PortfolioHolding {
+  id: string;
+  playerName?: string | null;
+  cardTitle?: string | null;
+  cardYear?: number | null;
+  product?: string | null;
+  parallel?: string | null;
+  cardNumber?: string | null;
+  serialNumber?: string | null;
+  isAuto?: boolean | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  quantity: number;
+  purchasePrice?: number | null;
+  totalCostBasis?: number | null;
+  fairMarketValue?: number | null;   // per unit
+  currentValue?: number | null;      // fmv × qty (cost-proxy fallback)
+  totalProfitLoss?: number | null;
+  totalProfitLossPct?: number | null;
+  valuationStatus?: "observed" | "estimated" | "pending" | null;
+  estimateConfidence?:
+    | "estimate"
+    | "rough"
+    | "ballpark"
+    | "no-data"
+    | "insufficient"
+    | null;
+  photos?: string[] | null;
+  lastUpdated?: string | null;
+}
+
+export interface PortfolioSummary {
+  totalValue: number;
+  totalCost: number;
+  totalGainLoss: number;
+  totalGainLossPct: number;
+  cardCount: number;
+  observedValue: number;
+  estimatedValue: number;
+  estimatedCount: number;
+  pendingCount: number;
+  observedPct: number;
+  displayableTotalValue?: number;
+  observedCostBasis?: number;
+  observedGainLoss?: number;
+  observedGainLossPct?: number;
+}
+
+export interface PortfolioResponse {
+  success: boolean;
+  userId: string;
+  items: PortfolioHolding[];
+  summary: PortfolioSummary;
+}
+
+export async function fetchPortfolio(): Promise<PortfolioResponse> {
+  return await request<PortfolioResponse>("/api/portfolio/");
+}
