@@ -172,7 +172,20 @@ export default function ErpPage() {
         </div>
       )}
 
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <Link href="/app/erp/unreconciled" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors md:col-span-2 lg:col-span-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-bold text-lg">Reconciliation queue</h2>
+            <span className="text-xs text-[color:var(--color-accent)]">Open →</span>
+          </div>
+          <p className="text-sm text-[color:var(--color-muted)] mt-2 leading-relaxed">
+            eBay sales waiting on user cost input (grading, supplies) before
+            they land in P&amp;L totals and tax exports.
+          </p>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/app/erp/expenses" className="hiq-card p-5 hover:border-[color:var(--color-accent)] transition-colors">
           <div className="flex items-baseline justify-between">
             <h2 className="font-bold text-lg">Expenses</h2>
@@ -212,14 +225,13 @@ export default function ErpPage() {
         </Link>
       </div>
 
-      {/* Follow-ups */}
-      <div className="hiq-card p-5 mt-4">
-        <h2 className="font-bold text-lg mb-3">Coming to ERP</h2>
-        <ul className="text-sm text-[color:var(--color-muted)] space-y-2 leading-relaxed">
-          <li>• Unreconciled queue (auto-match eBay sales to portfolio cards, edit fees + costs per sale)</li>
-          <li>• Bulk cost-basis editor</li>
-          <li>• eBay purchase-history import</li>
-        </ul>
+      {/* Sold history link on the Sold-history nudge for the reconciliation page */}
+      <div className="mt-6 text-xs text-[color:var(--color-muted)] leading-relaxed">
+        Tip — the reconciliation queue also surfaces from your{" "}
+        <Link href="/app/portfolio/sold" className="hover:underline" style={{ color: "var(--color-accent)" }}>
+          sold history
+        </Link>{" "}
+        when sales are waiting on input.
       </div>
     </div>
   );
