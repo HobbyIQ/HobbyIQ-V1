@@ -5,6 +5,7 @@ import {
   signOut,
   registerUser,
   setUsernameForSession,
+  setPublicShareEnabled,
 } from "../services/authService.js";
 // CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
 // register stay PRE-auth.
@@ -105,6 +106,19 @@ router.post("/username", requireSession, usernameLimiter, async (req: Request, r
     return res.status(code).json(result);
   }
   return res.json(result);
+});
+
+// CF-PUBLIC-SELLER-STOREFRONT (Drew, 2026-07-27). Toggle the public
+// storefront visibility flag. Endpoint is session-gated but does NOT
+// enforce plan tier — the storefront ROUTE itself gates on effective
+// plan == pro_seller, so a user who flips this on and then downgrades
+// simply hides their storefront automatically without a second write.
+router.post("/public-share", requireSession, async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const enabled = req.body?.enabled === true;
+  const ok = await setPublicShareEnabled(userId, enabled);
+  if (!ok) return res.status(404).json({ success: false, error: "User not found" });
+  return res.json({ success: true, publicShareEnabled: enabled });
 });
 
 export default router;
