@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { fetchMarketMovers, type MarketMoversResponse } from "@/lib/api";
-import { formatPct } from "@/lib/format";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchMarketMovers,
+  fetchNotableSales,
+  type MarketMoversResponse,
+  type MarketMover,
+  type NotableSale,
+} from "@/lib/api";
+import { formatPct, formatUSD, formatUSDCompact } from "@/lib/format";
 
 type Window = "1d" | "7d" | "30d";
 
@@ -14,12 +20,15 @@ export default function MarketPage() {
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [notable, setNotable] = useState<NotableSale[]>([]);
+  const [notableLoading, setNotableLoading] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     setLocked(false);
-    fetchMarketMovers(win, 30)
+    fetchMarketMovers(win, 60)
       .then((res) => {
         if (cancelled) return;
         setData(res);
@@ -27,11 +36,8 @@ export default function MarketPage() {
       })
       .catch((err: { status?: number; message?: string }) => {
         if (cancelled) return;
-        if (err.status === 402) {
-          setLocked(true);
-        } else {
-          setError(err.message ?? "Failed to load market movers");
-        }
+        if (err.status === 402) setLocked(true);
+        else setError(err.message ?? "Failed to load market movers");
         setLoading(false);
       });
     return () => {
@@ -39,26 +45,52 @@ export default function MarketPage() {
     };
   }, [win]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchNotableSales({ days: 30, minPrice: 500, limit: 12 })
+      .then((res) => {
+        if (cancelled) return;
+        setNotable(res.sales);
+        setNotableLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotableLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const { gainers, losers } = useMemo(() => {
+    if (!data) return { gainers: [] as MarketMover[], losers: [] as MarketMover[] };
+    const sorted = [...data.movers].sort((a, b) => (b.delta.pct ?? 0) - (a.delta.pct ?? 0));
+    const g = sorted.filter((m) => (m.delta.pct ?? 0) > 0).slice(0, 10);
+    const l = sorted
+      .filter((m) => (m.delta.pct ?? 0) < 0)
+      .sort((a, b) => (a.delta.pct ?? 0) - (b.delta.pct ?? 0))
+      .slice(0, 10);
+    return { gainers: g, losers: l };
+  }, [data]);
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-1">Market</h1>
         <p className="text-sm text-[color:var(--color-muted)]">
-          Top movers across the comp pool. Signals lag from the observed sales stream.
+          Top movers across the comp pool. Click a player for their full detail.
         </p>
       </div>
 
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
         {(["1d", "7d", "30d"] as Window[]).map((w) => (
           <button
             key={w}
             onClick={() => setWin(w)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              w === win ? "text-white" : "text-[color:var(--color-muted)] hover:text-white"
-            }`}
+            className="px-4 py-2 rounded-full text-sm font-medium transition-colors"
             style={{
               background: w === win ? "var(--color-accent)" : "var(--color-bg-card)",
-              color: w === win ? "var(--color-bg)" : undefined,
+              color: w === win ? "var(--color-bg)" : "var(--color-muted)",
             }}
           >
             {w === "1d" ? "1 day" : w === "7d" ? "7 days" : "30 days"}
@@ -98,57 +130,144 @@ export default function MarketPage() {
         </div>
       )}
 
-      {data && data.movers.length > 0 && (
+      {data && !locked && (
         <>
           <div className="text-sm text-[color:var(--color-muted)] mb-4">
-            {data.movers.length} movers · pool: {data.poolSize.toLocaleString()} tracked players
+            Tracking {data.poolSize.toLocaleString()} players ·{" "}
+            {(data.movers.length).toLocaleString()} moved in the last {winLabel(win)}
           </div>
-          <div className="hiq-card overflow-hidden">
-            <div className="grid grid-cols-12 px-5 py-3 text-xs uppercase tracking-wide text-[color:var(--color-muted)] border-b border-[color:var(--color-border)]">
-              <div className="col-span-1">#</div>
-              <div className="col-span-7">Player</div>
-              <div className="col-span-2 text-right">Δ {win}</div>
-              <div className="col-span-2 text-right">Confidence</div>
-            </div>
-            {data.movers.map((m, idx) => (
-              <MoverRow key={m.playerName} m={m} rank={idx + 1} />
-            ))}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <MoverCard title="Top gainers" movers={gainers} tint="var(--color-success)" empty="No gainers this window." />
+            <MoverCard title="Top losers" movers={losers} tint="var(--color-danger)" empty="No losers this window." />
           </div>
         </>
       )}
 
-      {data && data.movers.length === 0 && (
-        <div className="hiq-card p-10 text-center text-sm text-[color:var(--color-muted)]">
-          No significant movement in the last {win === "1d" ? "day" : win === "7d" ? "7 days" : "30 days"}.
+      {!notableLoading && notable.length > 0 && (
+        <div className="hiq-card p-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h2 className="font-bold text-lg">Notable recent sales</h2>
+              <p className="text-xs text-[color:var(--color-muted)] mt-1">
+                $500+ sold in the last 30 days across our comp pool.
+              </p>
+            </div>
+            <Link href="/app/insights" className="text-xs text-[color:var(--color-accent)] hover:underline">
+              See all →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {notable.slice(0, 12).map((s, i) => (
+              <NotableRow key={s.cardId + s.saleDate + i} s={s} />
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function MoverRow({ m, rank }: { m: MarketMoversResponse["movers"][number]; rank: number }) {
-  const pct = m.delta?.pct ?? null;
-  const color =
-    (pct ?? 0) > 0
-      ? "var(--color-success)"
-      : (pct ?? 0) < 0
-        ? "var(--color-danger)"
-        : "var(--color-muted)";
-  const confColor =
-    m.confidence === "high" ? "var(--color-success)" : m.confidence === "low" ? "var(--color-muted)" : "var(--color-muted)";
-
+function MoverCard({
+  title,
+  movers,
+  tint,
+  empty,
+}: {
+  title: string;
+  movers: MarketMover[];
+  tint: string;
+  empty: string;
+}) {
   return (
-    <div className="grid grid-cols-12 items-center px-5 py-3 border-b border-[color:var(--color-border)] last:border-0 hover:bg-white/[0.02] transition-colors">
-      <div className="col-span-1 text-sm text-[color:var(--color-muted)] tabular-nums">
+    <div className="hiq-card p-5">
+      <h2 className="font-bold text-lg mb-3">{title}</h2>
+      {movers.length === 0 ? (
+        <p className="text-sm text-[color:var(--color-muted)]">{empty}</p>
+      ) : (
+        <div className="space-y-1">
+          {movers.map((m, idx) => (
+            <MoverRow key={m.playerName + idx} m={m} rank={idx + 1} tint={tint} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoverRow({ m, rank, tint }: { m: MarketMover; rank: number; tint: string }) {
+  const pct = m.delta.pct ?? 0;
+  const abs = m.delta.absolute ?? null;
+  const confColor =
+    m.confidence === "high"
+      ? "var(--color-success)"
+      : m.confidence === "low"
+      ? "var(--color-muted)"
+      : "var(--color-muted)";
+  return (
+    <Link
+      href={`/app/players/${encodeURIComponent(m.playerName)}`}
+      className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-white/5 transition-colors"
+    >
+      <div className="text-xs text-[color:var(--color-muted)] tabular-nums w-5 flex-shrink-0">
         {rank}
       </div>
-      <div className="col-span-7 truncate font-medium text-sm">{m.playerName}</div>
-      <div className="col-span-2 text-right tabular-nums font-medium text-sm" style={{ color }}>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm truncate">{m.playerName}</div>
+        <div className="text-[10px] text-[color:var(--color-muted)] mt-0.5" style={{ color: confColor }}>
+          {m.confidence} confidence
+          {abs != null && (
+            <span className="text-[color:var(--color-muted)] ml-2">
+              · {abs > 0 ? "+" : ""}{formatUSD(abs, { hideCents: true })}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="text-sm font-medium tabular-nums text-right flex-shrink-0" style={{ color: tint }}>
         {formatPct(pct)}
       </div>
-      <div className="col-span-2 text-right text-xs capitalize" style={{ color: confColor }}>
-        {m.confidence}
+    </Link>
+  );
+}
+
+function NotableRow({ s }: { s: NotableSale }) {
+  const inner = (
+    <div className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-white/5 transition-colors">
+      <div className="w-10 h-10 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+        {s.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
+            <path d="M4 6h16v12H4V6z" />
+          </svg>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm truncate">
+          {s.year} {s.cardSet} {s.variant} {s.player}
+        </div>
+        <div className="text-xs text-[color:var(--color-muted)] flex items-center gap-2 flex-wrap mt-0.5">
+          <span>{s.grader} {s.grade}</span>
+          <span>· {s.saleDate.slice(0, 10)}</span>
+          {s.sourceLabel && <span>· {s.sourceLabel}</span>}
+        </div>
+      </div>
+      <div className="text-sm font-medium tabular-nums flex-shrink-0" style={{ color: "var(--color-success)" }}>
+        {formatUSDCompact(s.price)}
       </div>
     </div>
   );
+  if (s.listingUrl) {
+    return (
+      <a href={s.listingUrl} target="_blank" rel="noopener noreferrer">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
+function winLabel(w: Window): string {
+  return w === "1d" ? "day" : w === "7d" ? "7 days" : "30 days";
 }
