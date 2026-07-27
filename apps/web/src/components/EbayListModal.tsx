@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   prepareEbayListing,
   publishEbayListing,
+  reviseEbayListing,
   fetchEbayStatus,
   uploadHoldingPhoto,
   type EbayListingPrepared,
@@ -14,6 +15,9 @@ interface Props {
   holdingId: string;
   onClose: () => void;
   onPublished?: (offerId: string, listingId: string) => void;
+  // Optional: when set, the modal opens in "revise" mode and PUT
+  // /listings/:offerId/revise on submit instead of publishing.
+  reviseOfferId?: string;
 }
 
 // Full-fidelity review-and-publish for one holding. Surfaces every field
@@ -27,7 +31,8 @@ interface Props {
 //                          season / language
 //   5. Photos           — reorder + add + remove
 //   6. Advanced         — best-offer + description-full editor
-export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
+export function EbayListModal({ holdingId, onClose, onPublished, reviseOfferId }: Props) {
+  const isRevise = !!reviseOfferId;
   const [prep, setPrep] = useState<EbayListingPrepared | null>(null);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState<boolean | null>(null);
@@ -76,7 +81,20 @@ export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await publishEbayListing(prep);
+      const res = isRevise
+        ? await reviseEbayListing(reviseOfferId as string, prep)
+        : await publishEbayListing(prep);
+      if (isRevise) {
+        // Revise returns just success; there's no new offerId. Close on success.
+        if (!res.success) {
+          setError(res.error ?? "eBay rejected the revision.");
+          setSubmitting(false);
+          return;
+        }
+        onPublished?.(reviseOfferId as string, "");
+        onClose();
+        return;
+      }
       if (!res.success || !res.offerId || !res.listingId) {
         const missing = res.requiredMissing?.length
           ? ` Missing: ${res.requiredMissing.join(", ")}.`
@@ -89,7 +107,7 @@ export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
       onPublished?.(res.offerId, res.listingId);
     } catch (err) {
       const e = err as { message?: string };
-      setError(e.message ?? "Publish failed.");
+      setError(e.message ?? (isRevise ? "Revise failed." : "Publish failed."));
       setSubmitting(false);
     }
   }
@@ -106,10 +124,11 @@ export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
       >
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold">List on eBay</h2>
+            <h2 className="text-xl font-bold">{isRevise ? "Revise eBay listing" : "List on eBay"}</h2>
             <p className="text-xs text-[color:var(--color-muted)] mt-1">
-              Review every field before publishing. Anything you leave alone
-              posts as-is from the holding.
+              {isRevise
+                ? "Update your live listing. Changes push to eBay on save."
+                : "Review every field before publishing. Anything you leave alone posts as-is from the holding."}
             </p>
           </div>
           <button
@@ -169,6 +188,8 @@ export function EbayListModal({ holdingId, onClose, onPublished }: Props) {
             onCancel={onClose}
             submitting={submitting}
             error={error}
+            submitLabel={isRevise ? "Save revision" : "Publish to eBay"}
+            submitLoadingLabel={isRevise ? "Saving…" : "Publishing…"}
           />
         )}
 
@@ -188,6 +209,8 @@ function ListingEditor({
   onPublish,
   onCancel,
   submitting,
+  submitLabel = "Publish to eBay",
+  submitLoadingLabel = "Publishing…",
   error,
 }: {
   prep: EbayListingPrepared;
@@ -195,6 +218,8 @@ function ListingEditor({
   onPublish: () => void;
   onCancel: () => void;
   submitting: boolean;
+  submitLabel?: string;
+  submitLoadingLabel?: string;
   error: string | null;
 }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -592,7 +617,7 @@ function ListingEditor({
           disabled={submitting || !prep.validation.readyToPublish || prep.photos.length === 0}
           className="hiq-btn-primary text-sm disabled:opacity-40"
         >
-          {submitting ? "Publishing…" : "Publish to eBay"}
+          {submitting ? submitLoadingLabel : submitLabel}
         </button>
       </div>
     </>

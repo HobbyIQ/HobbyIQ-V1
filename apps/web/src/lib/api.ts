@@ -1440,6 +1440,55 @@ export async function publishEbayListing(
   });
 }
 
+// PUT /listings/:offerId/revise — updates a LIVE listing. Backend takes
+// the flat `HoldingListingInput` shape (unlike publish which also
+// accepts the nested prepared payload), so we flatten here. Any field
+// left out of the prepared shape is either derivable or optional.
+export async function reviseEbayListing(
+  offerId: string,
+  payload: EbayListingPrepared,
+): Promise<EbayPublishResult> {
+  const flat = flattenPreparedForRevise(payload);
+  return await request<EbayPublishResult>(
+    `/api/ebay/listings/${encodeURIComponent(offerId)}/revise`,
+    { method: "PUT", body: JSON.stringify(flat) },
+  );
+}
+
+function flattenPreparedForRevise(p: EbayListingPrepared): Record<string, unknown> {
+  return {
+    holdingId: p.holdingId,
+    playerName: p.identity.playerName ?? "",
+    cardTitle: p.listing.titleSuggested,
+    cardYear: p.identity.cardYear ?? 0,
+    brand: p.identity.setName?.split(" ")[0] ?? "",   // best-effort — backend fills the gaps
+    setName: p.identity.setName ?? "",
+    product: p.identity.setName ?? "",
+    sport: (p.identity.sport ?? undefined) as string | undefined,
+    cardNumber: p.identity.cardNumber ?? undefined,
+    parallel: p.identity.parallel ?? undefined,
+    isAuto: p.identity.isAuto,
+    isPatch: false,
+    isRookie: p.identity.isRookie,
+    team: p.identity.team ?? undefined,
+    grade: p.condition.grade ?? undefined,
+    gradingCompany: p.condition.gradingCompany ?? undefined,
+    certNumber: p.condition.certNumber ?? undefined,
+    conditionNotes: p.condition.conditionNotes ?? undefined,
+    conditionEstimate: p.condition.conditionEstimate ?? undefined,
+    quantity: p.listing.quantity,
+    listingPrice: p.listing.priceCents / 100,
+    bestOfferEnabled: p.listing.bestOfferEnabled,
+    bestOfferMinPrice: p.listing.bestOfferMinPriceCents != null
+      ? p.listing.bestOfferMinPriceCents / 100
+      : undefined,
+    imageFrontUrl: p.photos[0],
+    imageBackUrl: p.photos[1],
+    photos: p.photos,
+    description: p.listing.description,
+  };
+}
+
 // ─── Alerts ────────────────────────────────────────────────────────
 
 export type PriceAlertDirection = "above" | "below";
