@@ -8,6 +8,9 @@
 //   1. User must exist and have a username set.
 //   2. User must have publicShareEnabled === true.
 //   3. Effective plan (after Owner override) must be pro_seller.
+//   4. User's email must be verified (CF-EMAIL-VERIFICATION-GATE,
+//      2026-07-27) — prevents impersonation-storefronts from unverified
+//      throwaway accounts.
 //   Any miss → 404 (deliberately, not 403 — don't leak whether an
 //   account exists at all).
 
@@ -36,6 +39,13 @@ router.get("/seller/:username", async (req: Request, res: Response) => {
   }
 
   if (record.publicShareEnabled !== true) {
+    return res.status(404).json({ success: false, error: "Not found" });
+  }
+
+  // CF-EMAIL-VERIFICATION-GATE: hide storefronts whose owner hasn't
+  // verified their email. Owner sees "Verify to enable" prompt on
+  // Settings so this isn't a silent trap.
+  if (!record.emailVerification?.verifiedAt) {
     return res.status(404).json({ success: false, error: "Not found" });
   }
 
