@@ -618,6 +618,77 @@ export async function fetchNotableSales(opts: { minPrice?: number; days?: number
   return await request<NotableSalesResponse>(`/api/portfolio/notable-sales${q ? `?${q}` : ""}`);
 }
 
+// ─── Alerts ────────────────────────────────────────────────────────
+
+export type PriceAlertDirection = "above" | "below";
+
+export interface PriceAlertCardSnapshot {
+  playerName: string;
+  year?: number | null;
+  setName?: string | null;
+  cardNumber?: string | null;
+  grade?: string | null;
+  variant?: string | null;
+  printRun?: number | null;
+  isRookie?: boolean | null;
+}
+
+export interface PriceAlert {
+  alertId: string;
+  userId: string;
+  cardId: string;
+  playerName: string;
+  targetPrice: number;
+  direction: PriceAlertDirection;
+  currentPrice: number | null;
+  createdAt: string;
+  triggeredAt: string | null;
+  isActive: boolean;
+  cardSnapshot: PriceAlertCardSnapshot | null;
+}
+
+export interface AlertPreferences {
+  userId: string;
+  dailyIQAlerts: boolean;
+  priceAlerts: boolean;
+  updatedAt: string | null;
+}
+
+export async function fetchAlerts(): Promise<{ success: boolean; alerts: PriceAlert[] }> {
+  return await request("/api/alerts/");
+}
+
+export async function fetchAlertPreferences(): Promise<{ success: boolean; preferences: AlertPreferences }> {
+  return await request("/api/alerts/preferences");
+}
+
+export async function updateAlertPreferences(patch: { dailyIQAlerts?: boolean; priceAlerts?: boolean }): Promise<{ success: boolean; preferences: AlertPreferences }> {
+  return await request("/api/alerts/preferences", {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function createPriceAlert(input: {
+  cardId: string;
+  playerName: string;
+  targetPrice: number;
+  direction: PriceAlertDirection;
+  currentPrice?: number | null;
+  cardSnapshot?: PriceAlertCardSnapshot | null;
+}): Promise<{ success: boolean; alert?: PriceAlert }> {
+  return await request("/api/alerts/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deletePriceAlert(alertId: string): Promise<{ success: boolean }> {
+  return await request(`/api/alerts/${encodeURIComponent(alertId)}`, {
+    method: "DELETE",
+  });
+}
+
 // ─── PlayerIQ ──────────────────────────────────────────────────────
 
 export type PlayerIQDirection = "rising" | "falling" | "stable";

@@ -6,6 +6,7 @@ import {
   fetchPriceById,
   addHolding,
   addWatchlist,
+  createPriceAlert,
   candidateIdToCardsightId,
   type SearchCandidate,
   type PriceByIdResponse,
@@ -47,6 +48,7 @@ export function CardPriceDetail({
   const [detail, setDetail] = useState<PriceByIdResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alertOpen, setAlertOpen] = useState(false);
 
   const load = useCallback(async (g: Grade | null, p: string | null) => {
     setLoading(true);
@@ -119,19 +121,44 @@ export function CardPriceDetail({
 
       {detail && !loading && !error && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Stat
-              label={grade ? `${grade.company} ${grade.value} FMV` : "Raw FMV"}
-              value={formatUSD(fmv, { hideCents: fmv != null && fmv >= 100 })}
-            />
-            <Stat
-              label="Predicted next sale"
-              value={formatUSD(predicted, { hideCents: predicted != null && predicted >= 100 })}
-            />
-            {detail.confidence != null && (
-              <Stat label="Confidence" value={formatPct(detail.confidence * 100, { signed: false })} />
-            )}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 flex-1 min-w-0">
+              <Stat
+                label={grade ? `${grade.company} ${grade.value} FMV` : "Raw FMV"}
+                value={formatUSD(fmv, { hideCents: fmv != null && fmv >= 100 })}
+              />
+              <Stat
+                label="Predicted next sale"
+                value={formatUSD(predicted, { hideCents: predicted != null && predicted >= 100 })}
+              />
+              {detail.confidence != null && (
+                <Stat label="Confidence" value={formatPct(detail.confidence * 100, { signed: false })} />
+              )}
+            </div>
+            <button
+              onClick={() => setAlertOpen(true)}
+              className="hiq-btn-secondary text-sm whitespace-nowrap"
+            >
+              🔔 Set price alert
+            </button>
           </div>
+
+          {alertOpen && (
+            <AlertModal
+              cardsightCardId={cardsightCardId}
+              playerName={candidate?.player ?? title}
+              currentPrice={fmv ?? predicted ?? null}
+              snapshot={{
+                playerName: candidate?.player ?? title,
+                year: candidate?.year ?? null,
+                setName: candidate?.setName ?? candidate?.brand ?? null,
+                cardNumber: candidate?.cardNumber ?? null,
+                grade: grade ? `${grade.company} ${grade.value}` : null,
+                variant: parallel ?? null,
+              }}
+              onClose={() => setAlertOpen(false)}
+            />
+          )}
 
           {(detail.buyZone || detail.holdZone || detail.sellZone) && (
             <div>
@@ -190,6 +217,164 @@ export function CardPriceDetail({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Price alert modal ─────────────────────────────────────────────
+
+function AlertModal({
+  cardsightCardId,
+  playerName,
+  currentPrice,
+  snapshot,
+  onClose,
+}: {
+  cardsightCardId: string;
+  playerName: string;
+  currentPrice: number | null;
+  snapshot: {
+    playerName: string;
+    year: number | null;
+    setName: string | null;
+    cardNumber: string | null;
+    grade: string | null;
+    variant: string | null;
+  };
+  onClose: () => void;
+}) {
+  const [direction, setDirection] = useState<"above" | "below">("above");
+  const [target, setTarget] = useState<string>(
+    currentPrice != null ? currentPrice.toFixed(2) : "",
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function onSubmit() {
+    const n = Number(target);
+    if (!(n > 0)) {
+      setError("Enter a positive target price.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await createPriceAlert({
+        cardId: cardsightCardId,
+        playerName,
+        targetPrice: n,
+        direction,
+        currentPrice: currentPrice ?? null,
+        cardSnapshot: snapshot,
+      });
+      if (res.success) setSaved(true);
+      else setError("Failed to create alert");
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      if (e.status === 402) setError("Price alerts cap reached. Upgrade for more.");
+      else setError(e.message ?? "Failed to create alert");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div className="hiq-card p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        {saved ? (
+          <>
+            <h2 className="text-xl font-bold mb-2">✓ Alert created</h2>
+            <p className="text-sm text-[color:var(--color-muted)] mb-6">
+              You&apos;ll be notified when {playerName} crosses ${target} {direction}.
+              Manage or delete on the alerts page.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={onClose} className="hiq-btn-secondary">
+                Close
+              </button>
+              <Link href="/app/alerts" className="hiq-btn-primary">
+                View alerts
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-bold mb-1">Set price alert</h2>
+            <p className="text-sm text-[color:var(--color-muted)] mb-6">
+              Push notification when {playerName} crosses your target.
+              {currentPrice != null && ` Current price ${formatUSD(currentPrice, { hideCents: currentPrice >= 100 })}.`}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-2 block font-medium">
+                  Notify me when price is
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDirection("above")}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+                    style={
+                      direction === "above"
+                        ? { background: "var(--color-accent)", color: "var(--color-bg)" }
+                        : { background: "var(--color-bg-card)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }
+                    }
+                  >
+                    ≥ Above
+                  </button>
+                  <button
+                    onClick={() => setDirection("below")}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+                    style={
+                      direction === "below"
+                        ? { background: "var(--color-accent)", color: "var(--color-bg)" }
+                        : { background: "var(--color-bg-card)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }
+                    }
+                  >
+                    ≤ Below
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-2 block font-medium">
+                  Target price (USD)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
+                  style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+                  autoFocus
+                />
+              </div>
+            </div>
+            {error && (
+              <div className="mt-4 text-sm" style={{ color: "var(--color-danger)" }}>
+                {error}
+              </div>
+            )}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button onClick={onClose} className="hiq-btn-secondary" disabled={submitting}>
+                Cancel
+              </button>
+              <button
+                onClick={onSubmit}
+                disabled={submitting || !target}
+                className="hiq-btn-primary disabled:opacity-50"
+              >
+                {submitting ? "Creating…" : "Create alert"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
