@@ -29,6 +29,9 @@ const FEATURES: PlanFeature[] = [
   { label: "Notable-sales feed", free: false, collector: false, investor: true, proSeller: true },
   { label: "Bulk CSV / spreadsheet inventory", free: false, collector: false, investor: false, proSeller: true },
   { label: "eBay listing draft integration", free: false, collector: false, investor: false, proSeller: true },
+  // CF-STOREFRONT-TIER (Drew, 2026-07-27). Collector no storefront,
+  // Investor capped at 50 cards, Pro Seller unlimited.
+  { label: "Public storefront (hobby-iq.com/u/<you>)", free: false, collector: false, investor: "50 cards", proSeller: "Unlimited" },
   { label: "Priority support", free: false, collector: false, investor: false, proSeller: true },
 ];
 
@@ -65,9 +68,9 @@ export default function PricingPage() {
         />
         <PlanCard
           name="Pro Seller"
-          price="$29.99"
+          price="$49.99"
           period="/mo"
-          tagline="Pros with bulk inventory + eBay workflows."
+          tagline="Pros with bulk inventory + eBay workflows + unlimited storefront."
           plan="pro_seller"
         />
       </section>
@@ -133,7 +136,7 @@ export default function PricingPage() {
           />
           <FaqCard
             q="What if I run a card business? Do you have team pricing?"
-            a="Pro Seller ($29.99/mo) covers most single-operator card businesses. For 3+ seats or a custom integration, email drew@justtheboysandcards.com."
+            a="Pro Seller ($49.99/mo) covers most single-operator card businesses — unlimited storefront, bulk CSV, eBay drafts, priority support. For 3+ seats or a custom integration, email drew@justtheboysandcards.com."
           />
         </div>
       </section>
