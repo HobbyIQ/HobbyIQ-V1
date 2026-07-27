@@ -718,6 +718,83 @@ export async function fetchErpSummary(): Promise<ErpSummaryResponse> {
   return await request<ErpSummaryResponse>("/api/portfolio/erp/summary");
 }
 
+export type ExpenseCategory =
+  | "store_subscription"
+  | "show_booth"
+  | "show_admission"
+  | "mileage"
+  | "supplies"
+  | "shipping_supplies"
+  | "grading_fees"
+  | "software"
+  | "hobbyiq_subscription"
+  | "travel"
+  | "meals"
+  | "other";
+
+export const EXPENSE_CATEGORIES: ReadonlyArray<{ value: ExpenseCategory; label: string }> = [
+  { value: "supplies", label: "Supplies" },
+  { value: "shipping_supplies", label: "Shipping supplies" },
+  { value: "grading_fees", label: "Grading fees" },
+  { value: "store_subscription", label: "Store subscription" },
+  { value: "hobbyiq_subscription", label: "HobbyIQ subscription" },
+  { value: "software", label: "Software" },
+  { value: "show_booth", label: "Show booth" },
+  { value: "show_admission", label: "Show admission" },
+  { value: "mileage", label: "Mileage" },
+  { value: "travel", label: "Travel" },
+  { value: "meals", label: "Meals" },
+  { value: "other", label: "Other" },
+];
+
+export interface ExpenseEntry {
+  id: string;
+  userId: string;
+  category: ExpenseCategory;
+  categoryNote?: string;
+  amount: number;
+  date: string;
+  note?: string;
+  receiptRef?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateExpenseInput {
+  category: ExpenseCategory;
+  amount: number;
+  date: string;
+  categoryNote?: string;
+  note?: string;
+  receiptRef?: string;
+}
+
+export async function fetchExpenses(opts?: { from?: string; to?: string; category?: ExpenseCategory }): Promise<ExpenseEntry[]> {
+  const q = new URLSearchParams();
+  if (opts?.from) q.set("from", opts.from);
+  if (opts?.to) q.set("to", opts.to);
+  if (opts?.category) q.set("category", opts.category);
+  const qs = q.toString();
+  const res = await request<{ success: boolean; entries: ExpenseEntry[] }>(
+    `/api/portfolio/erp/expenses${qs ? `?${qs}` : ""}`,
+  );
+  return res.entries;
+}
+
+export async function createExpense(body: CreateExpenseInput): Promise<ExpenseEntry> {
+  const res = await request<{ success: boolean; expense: ExpenseEntry }>(
+    "/api/portfolio/erp/expenses",
+    { method: "POST", body: JSON.stringify(body) },
+  );
+  return res.expense;
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  await request(`/api/portfolio/erp/expenses/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 // POST /holdings/:id/refresh — reruns autoPriceHolding on the server so
 // the estimatedValue picks up any pricing-engine changes (e.g. a
 // calibration refresh, or a new comp landing in sold_comps). Rate-limited
