@@ -1,0 +1,110 @@
+name: Publish Market Snapshot (5AM + 5PM ET)
+
+# CF-DAILY-PUBLISH (Drew, 2026-07-27). Twice-daily editorial snapshot
+# for Market + Insights pages. Compute + persist runs on the backend
+# (POST /api/daily/publish-market gated by DAILY_PUBLISH_ADMIN_TOKEN);
+# this workflow just hits that endpoint.
+#
+# GitHub cron uses UTC. We schedule four UTC times — two for EDT, two
+# for EST — and gate at runtime by America/New_York hour so only the
+# intended window fires. Same pattern as .github/workflows/daily-refresh.yml.
+
+on:
+  schedule:
+    # Morning: 5:00 AM ET.
+    #   EDT (UTC-4): 09:00 UTC. EST (UTC-5): 10:00 UTC.
+    - cron: '0 9 * * *'
+    - cron: '0 10 * * *'
+    # Evening: 5:00 PM ET.
+    #   EDT (UTC-4): 21:00 UTC. EST (UTC-5): 22:00 UTC.
+    - cron: '0 21 * * *'
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Which slot to publish'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - evening
+
+jobs:
+  publish:
+    name: Publish Market Snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Resolve slot from ET hour
+        id: slot
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "slot=${{ github.event.inputs.slot }}" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — using inputs.slot"
+            exit 0
+          fi
+
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          ET_HOUR_INT=$((10#$ET_HOUR))
+          # Morning window: 05:00–09:59 ET (absorbs GH Actions cron drift up to ~5h).
+          if [ "$ET_HOUR_INT" -ge 5 ] && [ "$ET_HOUR_INT" -le 9 ]; then
+            echo "slot=morning" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR → morning slot"
+            exit 0
+          fi
+          # Evening window: 17:00–21:59 ET.
+          if [ "$ET_HOUR_INT" -ge 17 ] && [ "$ET_HOUR_INT" -le 21 ]; then
+            echo "slot=evening" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "ET hour $ET_HOUR → evening slot"
+            exit 0
+          fi
+          echo "slot=" >> "$GITHUB_OUTPUT"
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "ET hour $ET_HOUR outside publish windows; skipping"
+
+      - name: POST /api/daily/publish-market
+        if: steps.slot.outputs.should_run == 'true'
+        shell: bash
+        env:
+          # BACKEND_ORIGIN + DAILY_PUBLISH_ADMIN_TOKEN are stored as repo
+          # secrets. The token is checked server-side against the App
+          # Service env var of the same name; the workflow never sees
+          # or logs the token value.
+          BACKEND_ORIGIN: ${{ secrets.BACKEND_ORIGIN }}
+          DAILY_PUBLISH_ADMIN_TOKEN: ${{ secrets.DAILY_PUBLISH_ADMIN_TOKEN }}
+          SLOT: ${{ steps.slot.outputs.slot }}
+        run: |
+          set -e
+          if [ -z "$BACKEND_ORIGIN" ] || [ -z "$DAILY_PUBLISH_ADMIN_TOKEN" ]; then
+            echo "Missing BACKEND_ORIGIN or DAILY_PUBLISH_ADMIN_TOKEN secret; aborting"
+            exit 1
+          fi
+
+          echo "Publishing $SLOT snapshot to $BACKEND_ORIGIN"
+
+          # --silent + --write-out so we can gate on the HTTP status
+          # without dumping the response body (which contains counts, no
+          # secrets — but still keep output tight).
+          HTTP_STATUS=$(curl \
+            --silent \
+            --output response.json \
+            --write-out "%{http_code}" \
+            --request POST \
+            --header "Authorization: Bearer $DAILY_PUBLISH_ADMIN_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "{\"slot\":\"$SLOT\"}" \
+            "$BACKEND_ORIGIN/api/daily/publish-market")
+
+          echo "HTTP $HTTP_STATUS"
+          cat response.json
+          echo
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            exit 1
+          fi
