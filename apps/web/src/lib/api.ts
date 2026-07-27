@@ -902,6 +902,38 @@ export async function createPurchase(body: CreatePurchaseInput): Promise<Purchas
   return res.purchase;
 }
 
+// ─── Unreconciled queue ───────────────────────────────────────────
+
+export type CostsStatus = "needs_action" | "saved_pending_fees";
+
+export interface UnreconciledEntry extends LedgerEntry {
+  missingFields: string[];
+  costsStatus: CostsStatus;
+}
+
+export interface UnreconciledListResponse {
+  success: boolean;
+  entries: UnreconciledEntry[];
+  counts: { unreconciledTotal: number; dismissedHidden: number };
+}
+
+export async function fetchUnreconciled(): Promise<UnreconciledListResponse> {
+  return await request<UnreconciledListResponse>("/api/portfolio/erp/unreconciled");
+}
+
+// Save user-provided costs (gradingCost + suppliesCost) on an eBay
+// ledger entry. Backend flips the axis-2 marker and, if fees are also
+// filled in, finalizes the entry and removes it from the queue.
+export async function saveUnreconciledCosts(
+  id: string,
+  body: { gradingCost?: number | null; suppliesCost?: number | null },
+): Promise<{ success: boolean; entry: UnreconciledEntry }> {
+  return await request<{ success: boolean; entry: UnreconciledEntry }>(
+    `/api/portfolio/erp/unreconciled/${encodeURIComponent(id)}/save-costs`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+}
+
 export type TaxFilingRail = "ebay" | "paypal" | "venmo";
 export const TAX_FILING_RAILS: ReadonlyArray<{ value: TaxFilingRail; label: string }> = [
   { value: "ebay", label: "eBay Managed Payments" },

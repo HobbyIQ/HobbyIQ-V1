@@ -149,8 +149,8 @@ export default function SoldLedgerPage() {
             {needsReconciliationCount === 1 ? "" : "s"} awaiting reconciliation
             — add supply / shipping / grading costs to keep P&amp;L honest.
           </div>
-          <Link href="/app/erp" className="hiq-btn-secondary text-sm">
-            Open ERP
+          <Link href="/app/erp/unreconciled" className="hiq-btn-secondary text-sm">
+            Reconcile now
           </Link>
         </div>
       )}
