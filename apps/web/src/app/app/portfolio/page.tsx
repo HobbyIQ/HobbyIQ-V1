@@ -702,16 +702,53 @@ export default function PortfolioPage() {
 }
 
 function EmptyState() {
+  // CF-EMPTY-STATES (Drew, 2026-07-28): richer empty state — hero,
+  // three-column value pitch, primary + secondary CTAs (add card
+  // opens the modal via ?add=1; import for CSV / Card Ladder users).
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <div className="hiq-card p-10 text-center">
+        <div
+          className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
+          style={{ background: "color-mix(in oklab, var(--color-accent) 15%, transparent)" }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--color-accent)" }}>
+            <path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2h4v4H7V9zm6 0h4v2h-4V9zm0 4h4v2h-4v-2z" />
+          </svg>
+        </div>
         <h1 className="text-2xl font-bold mb-3">Your portfolio is empty</h1>
-        <p className="text-[color:var(--color-muted)] mb-6 leading-relaxed">
-          Add your first card to start tracking FMV, gain/loss, and market movement.
+        <p className="text-[color:var(--color-muted)] mb-8 leading-relaxed max-w-md mx-auto">
+          Add your cards to see live FMV, gain/loss, and market movement — all
+          calibrated from actual sales, not rough medians.
         </p>
-        <Link href="/app/portfolio/add" className="hiq-btn-primary inline-block">
-          + Add card
-        </Link>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 max-w-lg mx-auto text-left">
+          <MiniBullet title="Live FMV" body="Projected next-sale from the comp trend, not a mean or median." />
+          <MiniBullet title="P&L that works" body="Cost basis + auto-refresh keeps gain/loss accurate every day." />
+          <MiniBullet title="Sell signals" body="Alerts when your cards cross a threshold you set." />
+        </div>
+        <div className="flex items-center justify-center gap-3 flex-wrap">
+          <Link href="/app/portfolio?add=1" className="hiq-btn-primary inline-block">
+            + Add your first card
+          </Link>
+          <Link
+            href="/app/portfolio/import"
+            className="text-sm hover:underline"
+            style={{ color: "var(--color-muted)" }}
+          >
+            or import CSV
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniBullet({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <div className="text-sm font-semibold mb-1">{title}</div>
+      <div className="text-xs" style={{ color: "var(--color-muted)" }}>
+        {body}
       </div>
     </div>
   );

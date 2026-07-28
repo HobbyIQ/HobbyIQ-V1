@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { fetchSuggestions } from "@/lib/api";
+import {
+  candidateIdToCardsightId,
+  fetchSuggestions,
+  searchCards,
+  type SearchCandidate,
+} from "@/lib/api";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/recentSearches";
 
 interface Props {
@@ -24,6 +29,15 @@ export function GlobalSearchBar({ compact = false, autoFocus = false }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // CF-SEARCH-TYPEAHEAD-CARDS (Drew, 2026-07-28). Real card matches
+  // (with image + title) fire on a longer 500ms debounce so users who
+  // type at full speed don't burn priceChecksPerDay quota per
+  // keystroke. Clicking a card goes straight to /app/card/<id>,
+  // skipping the /app/search intermediate page.
+  const [cardMatches, setCardMatches] = useState<SearchCandidate[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const cardsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showRecent = useCallback(() => {
     const recent = getRecentSearches();
@@ -70,6 +84,48 @@ export function GlobalSearchBar({ compact = false, autoFocus = false }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
+
+  // CF-SEARCH-TYPEAHEAD-CARDS: fires searchCards on a longer debounce
+  // than the text-suggestion path. Min 3 chars so single-letter typing
+  // doesn't hammer the endpoint.
+  useEffect(() => {
+    const trimmed = q.trim();
+    if (trimmed.length < 3) {
+      setCardMatches([]);
+      return;
+    }
+    if (cardsDebounceRef.current) clearTimeout(cardsDebounceRef.current);
+    cardsDebounceRef.current = setTimeout(async () => {
+      setCardsLoading(true);
+      try {
+        const res = await searchCards(trimmed);
+        if (trimmed !== q.trim()) return;
+        setCardMatches((res.candidates ?? []).slice(0, 3));
+      } catch {
+        // Best-effort — silent
+        setCardMatches([]);
+      } finally {
+        setCardsLoading(false);
+      }
+    }, 500);
+    return () => {
+      if (cardsDebounceRef.current) clearTimeout(cardsDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  function goToCard(c: SearchCandidate) {
+    const cardsightId = candidateIdToCardsightId(c.candidateId);
+    if (!cardsightId) {
+      // Fallback: not a cardsight candidate, hand off to full search.
+      commit(c.title);
+      return;
+    }
+    addRecentSearch(q.trim());
+    setOpen(false);
+    setActive(-1);
+    router.push(`/app/card/${encodeURIComponent(cardsightId)}`);
+  }
 
   function commit(value: string) {
     const trimmed = value.trim();
@@ -162,7 +218,7 @@ export function GlobalSearchBar({ compact = false, autoFocus = false }: Props) {
         )}
       </form>
 
-      {open && items.length > 0 && (
+      {open && (items.length > 0 || cardMatches.length > 0 || cardsLoading) && (
         <div
           className="absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-2xl overflow-hidden z-40"
           style={{
@@ -170,6 +226,65 @@ export function GlobalSearchBar({ compact = false, autoFocus = false }: Props) {
             borderColor: "var(--color-border)",
           }}
         >
+          {/* CF-SEARCH-TYPEAHEAD-CARDS: top matches with images.
+              Fires whenever q ≥ 3 chars, shows up to 3 candidates. */}
+          {(cardMatches.length > 0 || cardsLoading) && (
+            <>
+              <div className="px-4 py-2 text-[10px] uppercase tracking-wide font-medium text-[color:var(--color-muted)]">
+                Top matches
+              </div>
+              {cardsLoading && cardMatches.length === 0 && (
+                <div className="px-4 py-3 text-xs" style={{ color: "var(--color-muted)" }}>
+                  Searching…
+                </div>
+              )}
+              {cardMatches.length > 0 && (
+                <ul className="border-b border-[color:var(--color-border)]">
+                  {cardMatches.map((c) => (
+                    <li key={c.candidateId}>
+                      <button
+                        type="button"
+                        onClick={() => goToCard(c)}
+                        className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                      >
+                        {c.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={c.imageUrl}
+                            alt=""
+                            className="w-8 h-11 object-cover rounded flex-shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-8 h-11 rounded flex-shrink-0"
+                            style={{ background: "var(--color-bg)" }}
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium truncate">{c.title}</div>
+                          <div
+                            className="text-[10px] mt-0.5"
+                            style={{ color: "var(--color-muted)" }}
+                          >
+                            {[c.year, c.setName ?? c.brand, c.cardNumber ? `#${c.cardNumber}` : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </div>
+                        </div>
+                        <div
+                          className="text-[10px] flex-shrink-0"
+                          style={{ color: "var(--color-muted)" }}
+                        >
+                          Open →
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+
           <div className="flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-wide font-medium text-[color:var(--color-muted)]">
             {mode === "recent" && (
               <>

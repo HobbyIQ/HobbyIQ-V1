@@ -178,13 +178,29 @@ export default function AlertsPage() {
             </div>
 
             {activeAlerts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-[color:var(--color-muted)] mb-4">
-                  No active alerts yet. Find a card you want to track and set a target.
+              <div className="text-center py-10">
+                <div
+                  className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                  style={{ background: "color-mix(in oklab, var(--color-accent) 15%, transparent)" }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--color-accent)" }}>
+                    <path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold mb-1">No alerts yet</h3>
+                <p className="text-sm text-[color:var(--color-muted)] mb-5 max-w-md mx-auto">
+                  Pick a card you care about and set a price threshold. We&apos;ll
+                  notify you the moment FMV crosses it — buy low or sell high without
+                  refreshing.
                 </p>
-                <Link href="/app/search" className="hiq-btn-primary inline-block text-sm">
-                  Search cards
-                </Link>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Link href="/app/search" className="hiq-btn-primary text-sm">
+                    Find a card to track
+                  </Link>
+                  <Link href="/app/portfolio" className="hiq-btn-secondary text-sm">
+                    Or alert on holdings I own
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
