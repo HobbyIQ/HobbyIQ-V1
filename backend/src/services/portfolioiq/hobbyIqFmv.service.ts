@@ -19,6 +19,8 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
+import { projectNextSaleFromComps } from "../compiq/nextSaleProjection.service.js";
+import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "../compiq/playerInSetMomentum.service.js";
 
 // CF-HOBBYIQ-FMV-INCLUDE-USER-PURCHASE (Drew, 2026-07-27). Reverses the
 // 2026-07-24 exclusion of source="ebay-user-purchase". The rationale
@@ -151,6 +153,17 @@ interface PoolRow {
   // Included only so the cross-setKey rung can count distinct source
   // slug variants for its basisNote; not consumed by anything else.
   hobbyiqCardId?: string;
+  // CF-HOBBYIQ-FMV-PROJECT-NOT-MEDIAN (Drew, 2026-07-28). Player+product
+  // pulled off the pool row so buildResult can fetch matched-cohort /
+  // player-in-set momentum without re-querying by slug (which the
+  // service already parsed). Enables the direct-slug path to project
+  // next sale via nextSaleProjection.service.ts instead of returning
+  // a bare median — the golden-rule fix that surfaced on Hartshorn
+  // Blue Auto (2 same-day $608 comps medianed to $608, ignored a
+  // meaningful player momentum signal).
+  playerName?: string | null;
+  product?: string | null;
+  cardYear?: number | null;
 }
 
 let cachedContainer: Container | null = null;
@@ -192,7 +205,7 @@ async function queryPool(
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
-                     c.hobbyiqCardId
+                     c.hobbyiqCardId, c.playerName, c.product, c.cardYear
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from${sourceClause}
               ORDER BY c.soldAt DESC`,
@@ -679,7 +692,7 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
   }
 }
 
-function buildResult(
+async function buildResult(
   slug: string,
   rowsIn: PoolRow[],
   method: HobbyIqFmvMethod,
@@ -688,7 +701,7 @@ function buildResult(
   previewLimit: number,
   now: Date,
   population: CardPopulationLookup | null,
-): HobbyIqFmvResult {
+): Promise<HobbyIqFmvResult> {
   const { kept: rows, flagged } = partitionByQuality(rowsIn);
   const quality = computeQualityScore(rows, flagged);
   const prices = rows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0);
@@ -712,6 +725,81 @@ function buildResult(
   const median = sortedPrices[Math.floor(sortedPrices.length / 2)];
   const min = sortedPrices[0];
   const max = sortedPrices[sortedPrices.length - 1];
+
+  // CF-HOBBYIQ-FMV-PROJECT-NOT-MEDIAN (Drew, 2026-07-28).
+  //
+  // FMV is the projected NEXT sale from the pool's trend — never a
+  // median (golden rule / feedback_no_medians_project_next_sale). Prior
+  // implementation emitted `median` as fmv, which was flat-wrong on the
+  // Hartshorn Blue Auto case: 2 same-day $608 comps → median $608 with
+  // no player-momentum signal applied. Downstream reprice trusted that
+  // number as the "canonical HobbyIQ price."
+  //
+  // Now: route every rung's winning pool through projectNextSaleFromComps
+  // — regression when n≥3 with distinct dates, anchor + broader-trend
+  // fallback below. Broader-trend source: player-in-set momentum (Layer
+  // 1 of the compiq trend stack, cached, 14-day window normalized to
+  // %/month). Same helper canonicalFmv uses on the CH/CS engine side,
+  // so the two pricing surfaces converge on the same math.
+  //
+  // forwardDays=0 matches canonicalFmv: "worth today," not "worth in
+  // 30 days" — FMV is a current-sale projection, not a forecast.
+  //
+  // minNForRegression=3 also matches canonical to guard against
+  // unbounded 2-point OLS extrapolation on thin pools.
+  //
+  // Fallback: if the projection helper returns null (0 usable priced
+  // comps — shouldn't happen given the check above), fall back to
+  // median so the ladder still emits SOMETHING rather than silently
+  // dropping the rung. Logged with a warning so we notice.
+  const anchorRow = rows.find((r) => typeof r.playerName === "string" && (r.playerName ?? "").trim() !== "")
+    ?? rows[0];
+  const playerName = (anchorRow.playerName ?? "").trim();
+  const product = (anchorRow.product ?? "").trim();
+  const cardYear = typeof anchorRow.cardYear === "number" && Number.isFinite(anchorRow.cardYear)
+    ? anchorRow.cardYear
+    : undefined;
+
+  let trendPctPerMonth: number | null = null;
+  if (playerName && product) {
+    try {
+      const momentum = await fetchPlayerInSetMomentum({
+        playerName,
+        product,
+        cardYear,
+      });
+      trendPctPerMonth = momentumMultiplierToPctPerMonth(momentum?.multiplier ?? null);
+    } catch {
+      trendPctPerMonth = null;
+    }
+  }
+
+  const projection = projectNextSaleFromComps(
+    rows.map((r) => ({ price: Number(r.price), soldDate: r.soldAt })),
+    {
+      broaderTrendPctPerMonth: trendPctPerMonth,
+      forwardDays: 0,
+      minNForRegression: 3,
+      nowMs: now.getTime(),
+    },
+  );
+
+  let fmv: number;
+  if (projection && projection.nextSaleValue > 0) {
+    fmv = projection.nextSaleValue;
+  } else {
+    // Shouldn't hit — the priced.length > 0 guard means projection has
+    // at least 1 comp to anchor on. Belt-and-suspenders: fall back to
+    // median so the rung still emits, log so we notice the shape drift.
+    console.warn(JSON.stringify({
+      event: "hobbyiq_fmv_projection_null_fallback",
+      slug,
+      method,
+      compCount: prices.length,
+      trendPctPerMonth,
+    }));
+    fmv = median;
+  }
 
   const breakdown: HobbyIqFmvBreakdown = {
     bySource: {},
@@ -740,7 +828,7 @@ function buildResult(
 
   return {
     slug,
-    fmv: median,
+    fmv,
     compCount: prices.length,
     min,
     max,
