@@ -6945,6 +6945,37 @@ export async function repriceHoldingsForUser(
           if (parallelStr && yearN && setStr && playerStr) {
             const { attemptSiblingPriceFallback } = await import("../compiq/siblingCardPriceFallback.service.js");
             const { mapSiblingToRepriceFmv, siblingEstimateBasis } = await import("./siblingReprice.helper.js");
+            // CF-SIBLING-TRAJECTORY-WIRE (Drew, 2026-07-28). PR #891
+            // originally passed trajectoryRateWeekly: null here — the
+            // trajectory chain (matched-cohort → parallel-tier → release-
+            // decay) already exists in deriveWeeklyRate but wasn't
+            // plumbed into the nightly reprice's sibling rescue. Result:
+            // every missing-card rescue priced at the sibling's stale
+            // historical median with zero up/down/flat projection. Now
+            // we compute the same rate the interactive card-panel route
+            // uses (manualIdentityPricing.service.ts:114 is the direct
+            // model). Wrapped in a race + try/catch so a stalled or
+            // errored trajectory lookup falls through to null and the
+            // sibling call still runs (existing behavior).
+            let trajectoryRateWeekly: number | null = null;
+            try {
+              const [{ deriveWeeklyRate }, { getReleaseDecayForCardAsync }] = await Promise.all([
+                import("../compiq/observedGradeCurve.service.js"),
+                import("../compiq/releaseDecayPrior.service.js"),
+              ]);
+              const parallelTierKey = { year: yearN, set: setStr, variant: parallelStr };
+              const releaseDecay = await getReleaseDecayForCardAsync(yearN, setStr).catch(() => null);
+              const derivation = await Promise.race([
+                deriveWeeklyRate(playerStr, parallelTierKey, { year: yearN, set: setStr }, releaseDecay),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+              ]);
+              if (derivation && Number.isFinite(derivation.cappedRate)) {
+                trajectoryRateWeekly = derivation.cappedRate;
+              }
+            } catch {
+              // Silent — trajectory is a nice-to-have here; sibling
+              // still fires with null rate = raw median (previous behavior).
+            }
             const sibling = await attemptSiblingPriceFallback({
               targetCardId: (holding as any).cardId ?? holding.id,
               year: yearN,
@@ -6952,7 +6983,7 @@ export async function repriceHoldingsForUser(
               parallel: parallelStr,
               isAuto: Boolean(holding.isAuto),
               playerName: playerStr,
-              trajectoryRateWeekly: null,
+              trajectoryRateWeekly,
             });
             if (sibling) {
               const match = mapSiblingToRepriceFmv(
