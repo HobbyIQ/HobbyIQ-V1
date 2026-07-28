@@ -118,6 +118,27 @@ function extractPrintRun(title: string): number | null {
 function extractParallel(title: string): string {
   const T = title;
   if (/superfractor|super\s+fractor/i.test(T)) return "SuperFractor";
+  // CF-TRUE-COLOR-PARALLEL (Drew, 2026-07-28). Market vernacular:
+  // "True <Color>" means "<Color> Refractor" (the base colored
+  // refractor variant). Real-world example: Eric Hartman's True Blue
+  // #CPA-EHA sold at $905 tagged as parallel="Base" because the
+  // parser missed the alias.
+  //
+  // eBay listings put "True" and the color in either order — "True
+  // Blue Refractor" OR "Bowman Blue …True" (verified 2026-07-28 on
+  // Hartman "2026 Bowman Blue Eric Hartman True #CPA-EHA"). We match
+  // when both tokens are present ANYWHERE in the title, ordering
+  // agnostic, but guarded to the canonical refractor colors so we
+  // don't accidentally absorb "True Metal" / "True Silver" (real
+  // Panini parallels distinct from Silver Refractor) or match on
+  // stray marketing text.
+  //
+  // Runs BEFORE the plain color-refractor rules below so both
+  // "True Blue Refractor" and "True Blue" land on "Blue Refractor".
+  if (/\btrue\b/i.test(T)) {
+    const c = T.match(/\b(blue|red|green|orange|yellow|purple|gold|aqua)\b/i);
+    if (c) return capFirst(c[1]) + " Refractor";
+  }
   // Explicit adjacent Sapphire variants (Color + Sapphire)
   if (/red\s+sapphire/i.test(T)) return "Red Sapphire";
   if (/orange\s+sapphire\s+refractor/i.test(T)) return "Orange Sapphire Refractor";
