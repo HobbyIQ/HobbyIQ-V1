@@ -62,6 +62,7 @@ import searchRoutes from "./routes/search.routes.js";
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
 import searchAdminRoutes from "./routes/searchAdmin.routes.js";
 import verifyQueueRoutes from "./routes/verifyQueue.routes.js";
+import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
 // structured-search form and internal CompIQ code paths.
@@ -227,6 +228,10 @@ app.use("/api/admin", searchAdminRoutes);
 // CF-VERIFY-QUEUE-ROUTES (Drew, 2026-07-28): human-in-the-loop verify
 // queue + pool-level data-quality report. Both admin-gated.
 app.use("/api", verifyQueueRoutes);
+// CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
+// the data-clean → image-verify → promotion jobs + a live health
+// counter over staging status buckets.
+app.use("/api", stagingPipelineRoutes);
 app.use("/api/reference", referenceRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
