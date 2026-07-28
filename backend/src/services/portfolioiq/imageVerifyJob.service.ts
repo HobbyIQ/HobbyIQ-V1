@@ -140,17 +140,25 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
  */
 async function verifyRow(row: StagingDoc): Promise<StagingVerification> {
   const now = new Date().toISOString();
-  const mirroredUrl = row.mirroredImage?.blobUrl;
-  if (!mirroredUrl || row.mirroredImage?.mirrorError) {
+  // Prefer our mirrored blob; fall back to the vendor's original URL
+  // for legacy-migrated rows that haven't been mirrored yet. Vision +
+  // pHash both accept a public URL, so this works either way — the
+  // mirror is a permanence bonus, not a hard requirement for
+  // verification.
+  const imageUrl = row.mirroredImage?.blobUrl
+    ?? row.raw.vendorPayload.imageUrl
+    ?? null;
+  if (!imageUrl || row.mirroredImage?.mirrorError && !row.raw.vendorPayload.imageUrl) {
     return {
       verifiedAt: now,
       method: "no-image-available",
       matched: false,
       detail: row.mirroredImage?.mirrorError
-        ? `mirror failed: ${row.mirroredImage.mirrorError.reason}`
-        : "no mirrored image on file",
+        ? `mirror failed AND no vendor URL fallback: ${row.mirroredImage.mirrorError.reason}`
+        : "no image URL available (vendor omitted + no mirror)",
     };
   }
+  const mirroredUrl = String(imageUrl);
 
   // Tier 1: pHash vs catalog reference.
   const catalogEntry = await getCatalogEntry(row.hobbyiqCardId);
