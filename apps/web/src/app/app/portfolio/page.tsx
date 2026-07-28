@@ -227,18 +227,11 @@ function PortfolioPageBody() {
               }
             }}
           />
-          <Link
-            href="/app/portfolio/import"
-            className="hiq-btn-secondary text-sm hidden sm:inline-block"
-          >
-            Import
-          </Link>
-          <Link
-            href="/app/portfolio/sold"
-            className="hiq-btn-secondary text-sm hidden sm:inline-block"
-          >
-            Sold history
-          </Link>
+          {/* CF-UX-CLEANUP (Drew, 2026-07-27): Import + Sold history
+              removed from the primary toolbar. Sold history reachable
+              via the sidebar Sold entry. Import demoted to a small
+              text link inline with Add card — low-frequency action
+              shouldn't eat button real-estate. */}
           <button
             onClick={() => {
               setSelectMode((v) => {
@@ -250,9 +243,18 @@ function PortfolioPageBody() {
           >
             {selectMode ? "Cancel select" : "Select"}
           </button>
-          <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
-            + Add card
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
+              + Add card
+            </Link>
+            <Link
+              href="/app/portfolio/import"
+              className="text-xs hover:underline hidden sm:inline"
+              style={{ color: "var(--color-muted)" }}
+            >
+              or import CSV
+            </Link>
+          </div>
         </div>
       </div>
 

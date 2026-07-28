@@ -80,6 +80,20 @@ export const APP_NAV: NavItem[] = [
     label: "Trade targets",
     iconPath: "M3 12l4-4v3h9V8l4 4-4 4v-3H7v3l-4-4z",
   },
+  // CF-UX-CLEANUP (Drew, 2026-07-27): Sold history + Watchlist added
+  // to nav — both were orphaned. Sold was reachable only via a
+  // Portfolio toolbar button (now removed in the toolbar trim);
+  // Watchlist had no nav entry at all despite the page existing.
+  {
+    href: "/app/portfolio/sold",
+    label: "Sold history",
+    iconPath: "M20.5 5.9L9.4 17l-5.9-5.9 1.4-1.4L9.4 14.2 19.1 4.5z",
+  },
+  {
+    href: "/app/watchlist",
+    label: "Watchlist",
+    iconPath: "M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z",
+  },
   {
     href: "/app/ebay",
     label: "eBay",
