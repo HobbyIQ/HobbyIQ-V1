@@ -14,20 +14,28 @@ type SortDir = "asc" | "desc";
 // CF-DATA-HEALTH-DRILLDOWN (Drew, 2026-07-27): filter param mirrors the
 // buckets from ERP's Data health card so clicking a pill lands here
 // with the matching cards pre-selected.
-type HealthFilter = "fresh" | "stale" | "missing" | "estimated" | "pending";
+type HealthFilter = "fresh" | "stale" | "missing" | "estimated" | "pending" | "unverified";
 const HEALTH_LABELS: Record<HealthFilter, string> = {
   fresh: "Fresh",
   stale: "Stale",
   missing: "Missing",
   estimated: "Estimated",
   pending: "Pending",
+  unverified: "Unverified",
 };
 // Freshness thresholds mirror backend erpValuation.service.ts. If those
 // constants ever change, update here too.
 const FRESH_MAX_MS = 12 * 60 * 60 * 1000;
 
 function isHealthFilter(v: string | null): v is HealthFilter {
-  return v === "fresh" || v === "stale" || v === "missing" || v === "estimated" || v === "pending";
+  return (
+    v === "fresh" ||
+    v === "stale" ||
+    v === "missing" ||
+    v === "estimated" ||
+    v === "pending" ||
+    v === "unverified"
+  );
 }
 
 function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean {
@@ -46,6 +54,10 @@ function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean
       return vs === "estimated";
     case "pending":
       return vs === "pending";
+    case "unverified":
+      // CF-IDENTITY-VERIFIED: opt-in filter to walk everything that
+      // still needs a confirm-gate review.
+      return h.identityVerified !== true;
   }
 }
 
@@ -565,6 +577,30 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
           {h.valuationStatus === "pending" && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]" style={{ background: "var(--color-bg)" }}>
               PENDING
+            </span>
+          )}
+          {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27): tiny chip that says
+              whether this holding's identity has been explicitly confirmed
+              via the Confirm gate in Edit. Follow-up PR can gate storefront
+              publication on this — for now it's a surfacing signal only. */}
+          {h.identityVerified ? (
+            <span
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
+                color: "var(--hiq-hobby-green)",
+              }}
+              title="Identity confirmed via the Confirm gate — FMV pipeline trusts this ID."
+            >
+              ✓ VERIFIED
+            </span>
+          ) : (
+            <span
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
+              style={{ background: "var(--color-bg)" }}
+              title="Identity not yet confirmed via the Confirm gate — open Edit and pick a catalog match."
+            >
+              UNVERIFIED
             </span>
           )}
           {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine

@@ -38,6 +38,21 @@ export interface HoldingHeldExpense {
 export interface PortfolioHolding {
   id: string;
   /**
+   * CF-IDENTITY-VERIFIED (Drew, 2026-07-27): true once the owner has
+   * explicitly picked a catalog candidate through the Confirm gate in
+   * the Edit modal (or supplied a cert# that resolved authoritatively).
+   * Downstream: portfolio row shows a VERIFIED / UNVERIFIED chip;
+   * follow-up PR can gate storefront publication on this. Never set
+   * silently — always via an explicit user action.
+   */
+  identityVerified?: boolean;
+  identityVerifiedAt?: string;
+  identityVerifiedBy?: {
+    source: string;          // e.g. "cardsight", "psa-cert", "manual-confirm"
+    candidateId: string;     // e.g. "cardsight:<uuid>" or "psa:<cert>"
+    verifiedAt: string;      // ISO — mirrors identityVerifiedAt for audit
+  };
+  /**
    * CF-STOREFRONT-OPT-IN (Drew, 2026-07-27, rev 2): explicit per-card
    * opt-in for the public /u/<username> storefront. Default false —
    * NOTHING renders on the public page unless the owner has clicked
