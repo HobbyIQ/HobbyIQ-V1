@@ -259,12 +259,31 @@ export async function priceByCardsightUuid(
       for (const r of rawRecords) {
         if (typeof r.price !== "number" || r.price <= 0) continue;
         if (!r.date) continue;
+        // CF-PARALLEL-FROM-TITLE (Drew, 2026-07-28). Cardsight's
+        // parallel_name field is unreliable — it stamps "Blue"/"Red"/etc.
+        // on sale records whose eBay title has NO color word (verified
+        // 2026-07-28 on Josiah Hartshorn CPA-JHA: 16 base Chrome auto
+        // sales titled "Chrome Prospect 1st Auto" arrived tagged
+        // parallel="Blue" and slugged into the Blue Refractor pool,
+        // dragging Drew's FMV from ~$600 down to $90).
+        //
+        // Fix: title is the ONLY authority for parallel. parseListingIdentity
+        // returns "Base" when no color/parallel word appears in the
+        // title — which correctly labels Cardsight's mis-tagged base
+        // sales as Base. Cardsight's parallel_name is used only when
+        // there is NO title at all (rare — kept as belt-and-suspenders).
+        const { parseListingIdentity } = await import(
+          "../portfolioiq/parseTitleIdentity.service.js"
+        );
+        const parallelFromTitle = r.title
+          ? parseListingIdentity(String(r.title)).parallel
+          : r.parallel_name ?? "Base";
         await recordSoldComp({
           cardId: input.cardId,
           playerName,
           cardYear: yearNum,
           setName: releaseName ?? setName,
-          parallel: r.parallel_name ?? null,
+          parallel: parallelFromTitle,
           cardNumber: numberVal,
           isAuto,
           price: r.price,
