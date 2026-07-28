@@ -27,7 +27,7 @@
  */
 
 import { CosmosClient } from "@azure/cosmos";
-import { parseListingIdentity } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+import { parseListingIdentity, inferSetKeyFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 interface Row {
@@ -95,19 +95,26 @@ async function main(): Promise<void> {
         sameParallel += 1;
         continue;
       }
-      // Recompute slug with the new parallel. Fall back to skip if
-      // required identity is missing (row would need repair anyway).
-      if (!row.cardYear || !row.setName || !row.cardNumber || !row.sport) {
+      // Recompute slug with the new parallel. Fall back to title-parsed
+      // cardNumber + inferSetKeyFromTitle when the stored fields are null
+      // (verified 2026-07-28 on Hartman :blue-refractor:auto pool — 10
+      // Cardsight rows landed with cardNumber=null even though the title
+      // clearly carries #CPA-EHA, so the prior skip-on-null guard left
+      // them stuck in the wrong parallel pool).
+      const effectiveCardNumber = row.cardNumber ?? parsed.cardNumber ?? null;
+      const effectiveSetName = row.setName ?? inferSetKeyFromTitle(title);
+      const effectiveSport = row.sport ?? "baseball";  // Cardsight is baseball-only in practice
+      if (!row.cardYear || !effectiveSetName || !effectiveCardNumber || !effectiveSport) {
         missingContext += 1;
         continue;
       }
       let newSlug: string;
       try {
         newSlug = computeHobbyIqCardId({
-          sport: row.sport,
+          sport: effectiveSport,
           year: row.cardYear,
-          setKey: row.setName,
-          cardNumber: row.cardNumber,
+          setKey: effectiveSetName,
+          cardNumber: effectiveCardNumber,
           parallel: newParallel || "Base",
           isAuto: row.isAuto ?? parsed.isAuto ?? false,
           printRun: row.printRun ?? parsed.printRun ?? null,
@@ -122,12 +129,23 @@ async function main(): Promise<void> {
       flipCounts.set(flipKey, (flipCounts.get(flipKey) ?? 0) + 1);
 
       if (apply) {
-        // Patch the two fields. Cosmos patchOperations lets us update
-        // in-place without a full doc rewrite.
-        const patchP = container.item(row.id, row.cardId).patch([
+        // Patch parallel + hobbyiqCardId. Also patch cardNumber /
+        // setName / sport when we filled them from title so the row is
+        // future-proof for the next backfill pass.
+        const ops: Array<{ op: "set"; path: string; value: unknown }> = [
           { op: "set", path: "/parallel", value: newParallel || "Base" },
           { op: "set", path: "/hobbyiqCardId", value: newSlug },
-        ]).then(() => {
+        ];
+        if (!row.cardNumber && effectiveCardNumber) {
+          ops.push({ op: "set", path: "/cardNumber", value: effectiveCardNumber });
+        }
+        if (!row.setName && effectiveSetName) {
+          ops.push({ op: "set", path: "/setName", value: effectiveSetName });
+        }
+        if (!row.sport && effectiveSport) {
+          ops.push({ op: "set", path: "/sport", value: effectiveSport });
+        }
+        const patchP = container.item(row.id, row.cardId).patch(ops).then(() => {
           // ok
         }).catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
