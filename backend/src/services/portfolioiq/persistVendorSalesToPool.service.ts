@@ -429,6 +429,22 @@ export async function persistVendorSalesToPool(
         observedAt: new Date().toISOString(),
         sport,
       };
+      // CF-STAGING-CUTOVER (Drew, 2026-07-28). When cutover is on,
+      // vendor ingest ONLY writes to comps_staging (the shim above
+      // fires unconditionally). sold_comps writes come from the
+      // promotion job that reads staging + applies verification
+      // lineage. Legacy pool stays untouched — every new comp earns
+      // its way in.
+      //
+      // Flag-gated so the cutover can be flipped without a redeploy
+      // if the promotion job falls behind or a bug surfaces.
+      if (process.env.COMPS_STAGING_CUTOVER_ENABLED === "true") {
+        // Skip the direct sold_comps write. Staging shim already
+        // fired above the dedup check, so the record is captured.
+        result.skipped++;
+        continue;
+      }
+
       await container.items.upsert(doc);
       result.inserted++;
       // Staging shim runs earlier (above the dedup check) so it fires

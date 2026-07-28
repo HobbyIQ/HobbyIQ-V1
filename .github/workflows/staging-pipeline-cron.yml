@@ -1,0 +1,74 @@
+name: Staging Pipeline Cron
+
+# CF-STAGING-PIPELINE-CRON (Drew, 2026-07-28). Autonomous drain of
+# the staging pipeline every 5 minutes. Each run walks all three
+# jobs in order: data-clean (200 rows) → image-verify (50 rows)
+# → promotion (500 rows). Sizing tuned to catch up on the 3,172
+# anomaly backlog in ~5 hours, then maintain steady-state ingest.
+#
+# Rate-limit friendly:
+#   - Vision: 50 rows × 2s/call = 100s per run, well under 300s job
+#   - Cosmos: batch operations already bounded server-side
+#
+# Silent-safe: any transient failure just fails this run; the next
+# 5-minute tick picks up where we left off (no state to corrupt).
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes
+  workflow_dispatch:
+    inputs:
+      data_clean_limit:
+        description: 'Data-clean batch size'
+        default: '200'
+      image_verify_limit:
+        description: 'Image-verify batch size'
+        default: '50'
+      promotion_limit:
+        description: 'Promotion batch size'
+        default: '500'
+
+concurrency:
+  group: staging-pipeline
+  cancel-in-progress: false   # never cancel — pipeline is safe to overlap
+
+jobs:
+  drain:
+    name: Drain staging pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Data-clean
+        env:
+          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          LIMIT: ${{ inputs.data_clean_limit || '200' }}
+        run: |
+          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/data-clean?limit=$LIMIT" --max-time 120 2>&1)
+          echo "$RESULT" | jq .
+      - name: Image-verify
+        env:
+          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          LIMIT: ${{ inputs.image_verify_limit || '50' }}
+        run: |
+          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1)
+          echo "$RESULT" | jq .
+      - name: Promotion
+        env:
+          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          LIMIT: ${{ inputs.promotion_limit || '500' }}
+        run: |
+          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/promotion?limit=$LIMIT" --max-time 120 2>&1)
+          echo "$RESULT" | jq .
+      - name: Health snapshot
+        env:
+          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          curl -sf -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/health" | jq .
