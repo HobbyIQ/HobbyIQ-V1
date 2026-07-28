@@ -84,7 +84,9 @@ export type VerifyReason =
   | "cross-source-mismatch"
   | "sample-audit"
   | "manual"
-  | "divergence-alert";
+  | "divergence-alert"
+  | "catalog-gap"
+  | "parallel-price-mismatch";
 
 export interface VerifyQueueItem {
   id: string;

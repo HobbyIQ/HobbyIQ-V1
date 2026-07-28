@@ -33,6 +33,8 @@ const VALID_REASONS: readonly VerifyReason[] = [
   "sample-audit",
   "manual",
   "divergence-alert",
+  "catalog-gap",
+  "parallel-price-mismatch",
 ];
 
 router.get("/verify/queue", async (req, res, next) => {

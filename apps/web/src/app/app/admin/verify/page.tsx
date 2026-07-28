@@ -20,6 +20,8 @@ const REASONS: readonly VerifyReason[] = [
   "sample-audit",
   "manual",
   "divergence-alert",
+  "catalog-gap",
+  "parallel-price-mismatch",
 ];
 
 export default function VerifyPage() {
