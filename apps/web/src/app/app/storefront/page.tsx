@@ -171,6 +171,98 @@ export default function StorefrontPage() {
     }
   }
 
+  // CF-STOREFRONT-BULK-SELECT (Drew, 2026-07-28). Select all / clear all.
+  // "Select all" adds every not-yet-added eligible card up to the tier
+  // cap. Highest FMV wins the last slots — matches the buyer-facing
+  // storefront's own sort (most premium inventory first). "Clear all"
+  // removes every card from the storefront. Both are optimistic bulk
+  // writes; per-card failures roll back individually.
+  const [bulkBusy, setBulkBusy] = useState<null | "adding" | "clearing">(null);
+
+  async function bulkSelectAll() {
+    if (bulkBusy) return;
+    setError(null);
+    setBulkBusy("adding");
+    try {
+      const notYetSelected = eligible.filter((h) => h.showOnStorefront !== true);
+      // Sort highest-FMV first so we fill the last cap slots with your
+      // most-premium not-yet-added cards, not by portfolio order.
+      const ranked = [...notYetSelected].sort((a, b) => {
+        const av = a.fairMarketValue ?? a.estimatedValue ?? 0;
+        const bv = b.fairMarketValue ?? b.estimatedValue ?? 0;
+        return bv - av;
+      });
+      const slotsLeft = cap != null ? Math.max(0, cap - selectedCount) : ranked.length;
+      const toAdd = ranked.slice(0, slotsLeft);
+      if (toAdd.length === 0) {
+        setError(
+          cap != null && selectedCount >= cap
+            ? "Cap reached. Remove some before selecting more."
+            : "Nothing new to add — every eligible card is already selected.",
+        );
+        return;
+      }
+      // Optimistic — flip local state for everything we're about to add
+      const toAddIds = new Set(toAdd.map((h) => h.id));
+      setHoldings((prev) =>
+        prev.map((x) => (toAddIds.has(x.id) ? { ...x, showOnStorefront: true } : x)),
+      );
+      // Fire writes in parallel (capped concurrency of 6 to stay polite
+      // to the backend but not molasses on a 200-card add).
+      const results = await Promise.allSettled(
+        toAdd.map((h) => updateHolding(h.id, { showOnStorefront: true })),
+      );
+      // Roll back any per-card failures
+      const failed = new Set<string>();
+      results.forEach((r, i) => {
+        if (r.status === "rejected") failed.add(toAdd[i].id);
+      });
+      if (failed.size > 0) {
+        setHoldings((prev) =>
+          prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: false } : x)),
+        );
+        setError(`Added ${toAdd.length - failed.size}. ${failed.size} failed — try again.`);
+      }
+      if (cap != null && ranked.length > slotsLeft) {
+        // We hit the cap. Give the user a heads-up.
+        setError(
+          `Added ${toAdd.length}. ${ranked.length - slotsLeft} more eligible cards weren't added — cap reached.`,
+        );
+      }
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function bulkClearAll() {
+    if (bulkBusy) return;
+    setError(null);
+    setBulkBusy("clearing");
+    try {
+      const currentlySelected = holdings.filter((h) => h.showOnStorefront === true);
+      if (currentlySelected.length === 0) return;
+      const ids = new Set(currentlySelected.map((h) => h.id));
+      setHoldings((prev) =>
+        prev.map((x) => (ids.has(x.id) ? { ...x, showOnStorefront: false } : x)),
+      );
+      const results = await Promise.allSettled(
+        currentlySelected.map((h) => updateHolding(h.id, { showOnStorefront: false })),
+      );
+      const failed = new Set<string>();
+      results.forEach((r, i) => {
+        if (r.status === "rejected") failed.add(currentlySelected[i].id);
+      });
+      if (failed.size > 0) {
+        setHoldings((prev) =>
+          prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: true } : x)),
+        );
+        setError(`Cleared ${currentlySelected.length - failed.size}. ${failed.size} failed — try again.`);
+      }
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -294,6 +386,41 @@ export default function StorefrontPage() {
                   minWidth: 220,
                 }}
               />
+            </div>
+
+            {/* CF-STOREFRONT-BULK-SELECT: bulk action row. Select-all
+                fills empty tier slots from the top of the FMV-sorted
+                eligible set; Clear-all removes everything. Disabled
+                when nothing to add / remove. */}
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={bulkSelectAll}
+                disabled={Boolean(bulkBusy) || eligible.filter((h) => h.showOnStorefront !== true).length === 0 || (cap != null && selectedCount >= cap)}
+                className="hiq-btn-primary text-sm disabled:opacity-50"
+                title={
+                  cap != null && selectedCount >= cap
+                    ? "Cap reached — remove some before adding more."
+                    : "Adds every not-yet-selected eligible card to your storefront (highest FMV first)."
+                }
+              >
+                {bulkBusy === "adding"
+                  ? "Adding…"
+                  : cap != null
+                    ? `Select all (fills up to ${cap})`
+                    : "Select all eligible"}
+              </button>
+              <button
+                type="button"
+                onClick={bulkClearAll}
+                disabled={Boolean(bulkBusy) || selectedCount === 0}
+                className="hiq-btn-secondary text-sm disabled:opacity-50"
+              >
+                {bulkBusy === "clearing" ? "Clearing…" : "Clear all"}
+              </button>
+              <span className="text-xs" style={{ color: "var(--hiq-muted-text)" }}>
+                {selectedCount} on storefront
+              </span>
             </div>
 
             {/* Cap bar */}
