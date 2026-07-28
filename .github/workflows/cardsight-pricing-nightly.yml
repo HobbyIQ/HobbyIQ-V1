@@ -29,7 +29,7 @@ on:
         required: false
         type: choice
         default: '7d'
-        options: ['7d', '14d', '3m', '1y', 'all']
+        options: ['1d', '3d', '7d', '14d', '3m', '1y', 'all']
       sport:
         description: 'Single sport (matrix runs one job). Use scheduled cron for all 4.'
         required: false
