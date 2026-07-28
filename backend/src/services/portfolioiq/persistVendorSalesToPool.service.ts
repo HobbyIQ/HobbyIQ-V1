@@ -125,6 +125,89 @@ export async function persistVendorSalesToPool(
       }).fetchAll();
       if (existing.length > 0) { result.deduped++; continue; }
 
+      // CF-VERIFY-PARSER-LOW-CONFIDENCE (Drew, 2026-07-28). See
+      // parserSuspicionDetector for the rule + rationale.
+      const { isParserProbablyWrong } = await import("./parserSuspicionDetector.js");
+      if (isParserProbablyWrong({ parsedParallel: parsed.parallel, title })) {
+        try {
+          const { enqueueForVerify } = await import("./verifyQueue.service.js");
+          await enqueueForVerify({
+            reason: "parser-low-confidence",
+            saleInput: {
+              cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+              playerName,
+              cardYear,
+              setName: setKey,
+              parallel: parsed.parallel,
+              cardNumber: parsed.cardNumber,
+              isAuto: parsed.isAuto,
+              gradeCompany: null,
+              gradeValue: null,
+              price,
+              soldAt: new Date(soldAt).toISOString(),
+              source,
+              sourceExternalId: row.externalId ?? null,
+              title,
+              imageUrl: null,
+              sellerHandle: null,
+              sport,
+              verifiedByUser: false,
+              confidence: 0.3,
+            },
+            signal: {
+              parserConfidence: 0.4,
+              note: `parser tagged Base but title carries a color word + parallel-adjacent context — probable miss`,
+            },
+          });
+          result.skipped++;
+          continue;
+        } catch {
+          // Non-fatal — fall through and persist as Base.
+        }
+      }
+
+      // CF-VERIFY-SAMPLE-AUDIT (Drew, 2026-07-28). Random 0.5%
+      // (env-tunable) of ingests get enqueued regardless of any signal
+      // so Drew can spot-check the base rate of ingest quality —
+      // the number he calls when he says "we're 99.9% accurate."
+      // Sampling is bounded so the queue never becomes noise.
+      const sampleRate = Number(process.env.VERIFY_SAMPLE_AUDIT_RATE ?? "0.005");
+      if (Number.isFinite(sampleRate) && sampleRate > 0 && Math.random() < sampleRate) {
+        try {
+          const { enqueueForVerify } = await import("./verifyQueue.service.js");
+          await enqueueForVerify({
+            reason: "sample-audit",
+            saleInput: {
+              cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+              playerName,
+              cardYear,
+              setName: setKey,
+              parallel: parsed.parallel,
+              cardNumber: parsed.cardNumber,
+              isAuto: parsed.isAuto,
+              gradeCompany: null,
+              gradeValue: null,
+              price,
+              soldAt: new Date(soldAt).toISOString(),
+              source,
+              sourceExternalId: row.externalId ?? null,
+              title,
+              imageUrl: null,
+              sellerHandle: null,
+              sport,
+              verifiedByUser: false,
+              confidence: 0.7,
+            },
+            signal: { note: `random ${(sampleRate * 100).toFixed(2)}% sample for statistical accuracy audit` },
+          });
+          // Fall through — sample-audit does NOT block the persist.
+          // The sample sits in verify_queue for review AND the row
+          // still lands in sold_comps so the pool stays complete.
+        } catch {
+          // Non-fatal
+        }
+      }
+
       // CF-VERIFY-QUEUE-PRICE-OUTLIER (Drew, 2026-07-28). Before we
       // commit this sale to the pool, sanity-check against the
       // rolling 30d median for the same slug. If we're >3× median or
