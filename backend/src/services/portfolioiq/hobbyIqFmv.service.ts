@@ -436,6 +436,16 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // Only fires when direct-slug came up empty. Higher confidence than
   // sibling-parallel because parallel identity still matches; slightly
   // lower than direct-slug because we're crossing ingest variants.
+  //
+  // CF-CATALOG-GAP-NO-BASIS (Drew, 2026-07-28). We also record whether
+  // the target parallel had ANY comps at the identity, so the
+  // sibling-parallel fallback can refuse to fabricate when a rare
+  // parallel (Black /1, Superfractor, Red /5) has zero direct data.
+  // Devin Taylor CPA-DT Black auto: pool has 461 comps across every
+  // OTHER parallel, but zero at "Black" — walking to sibling-parallel
+  // returned $4 for a card that cost $650. Better UX: emit no-basis
+  // and route to verify_queue so Drew can spot-check.
+  let targetParallelHadIdentityComps = false;
   {
     const identityRows = await queryPool(
       container,
@@ -452,6 +462,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     const parallelMatched = identityRows.filter(
       (r) => slugify(r.parallel ?? "") === targetParallelSlug,
     );
+    targetParallelHadIdentityComps = parallelMatched.length > 0;
     // Only count as a hit if this rung finds MORE than direct-slug did
     // AND the target slug isn't already the "canonical" hit — otherwise
     // we'd return the same pool with a lower-confidence label. The
@@ -576,49 +587,66 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // Same year+cardNumber+auto flag, any parallel + print run. Broader
   // than rung 4 — includes Base autos and other print runs. Fires when
   // rung 4 was empty (or slug had a print run).
-  rows = await queryPool(
-    container,
-    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
-    [
-      { name: "@y", value: parsed.year },
-      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-      { name: "@auto", value: parsed.isAuto },
-      { name: "@sport", value: parsed.sport },
-    ],
-    cutoffIso,
-  );
-  if (rows.length > 0) {
-    rows = filterByGrade(rows, gradeCompany, gradeValue);
-  }
-  if (rows.length > 0) {
-    return buildResult(slug, rows, "sibling-parallel",
-      `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
-      confidenceForRung("sibling-parallel", rows.length),
-      input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
+  //
+  // CF-CATALOG-GAP-NO-BASIS (Drew, 2026-07-28). Skip this rung when
+  // the target parallel had ZERO comps at the identity AND the target
+  // isn't Base. Sibling-parallel across ALL parallels would return a
+  // Base-auto median that's fundamentally wrong for a rare parallel
+  // (Black /1 auto priced from Base auto sales = fabrication). Better
+  // to emit no-basis and route to verify_queue.
+  const targetIsBase = parsed.parallel === "base";
+  const shouldSkipSiblingParallel = !targetParallelHadIdentityComps && !targetIsBase;
+  if (!shouldSkipSiblingParallel) {
+    rows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+      ],
+      cutoffIso,
+    );
+    if (rows.length > 0) {
+      rows = filterByGrade(rows, gradeCompany, gradeValue);
+    }
+    if (rows.length > 0) {
+      return buildResult(slug, rows, "sibling-parallel",
+        `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
+        confidenceForRung("sibling-parallel", rows.length),
+        input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
+    }
   }
 
   // ─── Rung 4: family-baseline — same year + cardNumber, any variant ───
   // Broadest same-card rung. Same year + cardNumber gives player-year-
   // typical value across ANY variant (auto/no-auto, any parallel). Useful
   // as a floor when even sibling parallels are thin.
-  rows = await queryPool(
-    container,
-    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.sport = @sport",
-    [
-      { name: "@y", value: parsed.year },
-      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-      { name: "@sport", value: parsed.sport },
-    ],
-    cutoffIso,
-  );
-  if (rows.length > 0) {
-    rows = filterByGrade(rows, gradeCompany, gradeValue);
-  }
-  if (rows.length > 0) {
-    return buildResult(slug, rows, "family-baseline",
-      `Estimated from ${rows.length} same-card sale${rows.length === 1 ? "" : "s"} across variants`,
-      confidenceForRung("family-baseline", rows.length),
-      input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
+  //
+  // CF-CATALOG-GAP-NO-BASIS: same gate as sibling-parallel — if the
+  // target parallel has ZERO comps at the identity AND isn't Base,
+  // this rung's cross-variant median is fabrication territory.
+  if (!shouldSkipSiblingParallel) {
+    rows = await queryPool(
+      container,
+      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.sport = @sport",
+      [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@sport", value: parsed.sport },
+      ],
+      cutoffIso,
+    );
+    if (rows.length > 0) {
+      rows = filterByGrade(rows, gradeCompany, gradeValue);
+    }
+    if (rows.length > 0) {
+      return buildResult(slug, rows, "family-baseline",
+        `Estimated from ${rows.length} same-card sale${rows.length === 1 ? "" : "s"} across variants`,
+        confidenceForRung("family-baseline", rows.length),
+        input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
+    }
   }
 
   // ─── Rung 7 (NEW): grade-cross-raw ───────────────────────────────────
@@ -666,12 +694,19 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of same-print-run variants (/${parsed.printRun}) × ${gradeCompany} ${gradeValue} multiplier`,
       });
     }
-    rawRungs.push({
-      where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
-      params: [{ name: "@y", value: parsed.year }, { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() }, { name: "@auto", value: parsed.isAuto }, { name: "@sport", value: parsed.sport }],
-      method: "sibling-parallel",
-      note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of sibling parallels × ${gradeCompany} ${gradeValue} multiplier`,
-    });
+    // CF-CATALOG-GAP-NO-BASIS: sibling-parallel raw dilutes hard on
+    // rare parallels. Only include when the target IS Base OR the
+    // target had ≥1 comp at the identity (thin market, sibling is
+    // an honest floor). Otherwise skip and let the ladder emit
+    // no-basis.
+    if (targetIsBase || targetParallelHadIdentityComps) {
+      rawRungs.push({
+        where: "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+        params: [{ name: "@y", value: parsed.year }, { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() }, { name: "@auto", value: parsed.isAuto }, { name: "@sport", value: parsed.sport }],
+        method: "sibling-parallel",
+        note: (n) => `Grade estimated from ${n} raw sale${n === 1 ? "" : "s"} of sibling parallels × ${gradeCompany} ${gradeValue} multiplier`,
+      });
+    }
     for (const rung of rawRungs) {
       let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso);
       // Cross-setKey rung applies its parallel filter in JS on top of the
@@ -719,8 +754,55 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     }
   }
 
+  // CF-CATALOG-GAP-NO-BASIS (Drew, 2026-07-28). If we skipped
+  // sibling-parallel because the target parallel is rare + missing
+  // data, enqueue a catalog-gap item so Drew can see the SKUs the
+  // engine can't confidently price. Fire-and-forget; never blocks
+  // the caller (no-basis still returns).
+  if (shouldSkipSiblingParallel) {
+    void (async () => {
+      try {
+        const { enqueueForVerify } = await import("./verifyQueue.service.js");
+        await enqueueForVerify({
+          reason: "catalog-gap",
+          saleInput: {
+            cardId: `hiq:${slug.slice(4)}`,
+            playerName: "(unknown — catalog-gap)",
+            cardYear: parsed.year,
+            setName: parsed.setKey,
+            parallel: parsed.parallel,
+            cardNumber: parsed.cardNumber,
+            isAuto: parsed.isAuto,
+            gradeCompany,
+            gradeValue,
+            price: 0,
+            soldAt: new Date().toISOString(),
+            source: "manual-user-entry",
+            sourceExternalId: null,
+            title: null,
+            imageUrl: null,
+            sellerHandle: null,
+            sport: parsed.sport,
+            verifiedByUser: false,
+            confidence: 0,
+          },
+          signal: {
+            note: `no direct data for parallel "${parsed.parallel}" at (${parsed.year}, ${parsed.cardNumber}, ${parsed.isAuto ? "auto" : "no-auto"}) — refusing to fabricate from siblings`,
+          },
+        });
+      } catch { /* silent */ }
+    })();
+  }
+
   const population = await populationPromise;
-  return { ...noBasis, population, quality: { score: 0, flaggedCompCount: 0, sources: [] } };
+  return {
+    ...noBasis,
+    basisNote: shouldSkipSiblingParallel
+      ? `No comparable sales for parallel "${parsed.parallel}" at this card — data gap flagged for review`
+      : noBasis.basisNote,
+    population,
+    quality: { score: 0, flaggedCompCount: 0, sources: [] },
+  };
 }
 
 // Confidence per rung × sample size. Direct + big sample → 0.95;
