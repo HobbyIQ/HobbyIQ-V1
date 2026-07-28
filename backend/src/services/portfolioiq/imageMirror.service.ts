@@ -21,8 +21,16 @@ import { BlobServiceClient } from "@azure/storage-blob";
 import { DefaultAzureCredential } from "@azure/identity";
 import { createHash } from "crypto";
 
+// CF-STAGING-BLOB-COLOCATE (Drew, 2026-07-28). Reuse the existing
+// `card-images` container that the App Service managed identity
+// already has Storage Blob Data Contributor on. Vendor mirrors live
+// under the `vendor-mirror/` path prefix so lifecycle rules can
+// still target them independently of user-uploaded card photos.
+// Provisioned `comps-staging-images` container stays available for
+// future migration when we can grant the identity access to it.
 const STORAGE_ACCOUNT_NAME = process.env.AZURE_PHOTO_STORAGE_ACCOUNT ?? "stghobbyiqdev";
-const CONTAINER_NAME = process.env.AZURE_COMPS_STAGING_CONTAINER ?? "comps-staging-images";
+const CONTAINER_NAME = process.env.AZURE_COMPS_STAGING_CONTAINER ?? "card-images";
+const PATH_PREFIX = process.env.AZURE_COMPS_STAGING_PATH_PREFIX ?? "vendor-mirror";
 const ACCOUNT_URL = `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net`;
 
 // Match the sizing gate from photoStorage — vendor CDNs shouldn't
@@ -137,7 +145,7 @@ export async function mirrorVendorImage(
 
   const contentHash = createHash("sha256").update(bytes).digest("hex");
   const ext = EXT_BY_CONTENT_TYPE[contentType] ?? "jpg";
-  const blobName = `${todayPathSegments()}/${contentHash.slice(0, 8)}-${stagingId}.${ext}`;
+  const blobName = `${PATH_PREFIX}/${todayPathSegments()}/${contentHash.slice(0, 8)}-${stagingId}.${ext}`;
 
   // Upload
   try {
