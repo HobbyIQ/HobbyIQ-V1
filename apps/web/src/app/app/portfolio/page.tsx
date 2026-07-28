@@ -8,6 +8,7 @@ import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } 
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
+import { AddCardModal } from "@/components/AddCardModal";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -81,6 +82,31 @@ function PortfolioPageBody() {
   const [refreshBanner, setRefreshBanner] = useState<string | null>(null);
   const [exporting, setExporting] = useState<null | "csv" | "xlsx">(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  // CF-UX-CLEANUP #4: AddCardModal state. Also auto-opens when
+  // ?add=1 is present (that's how the old /app/portfolio/add route
+  // redirect lands the user + how iOS deep links can reach the flow).
+  const [addOpen, setAddOpen] = useState(searchParams.get("add") === "1");
+  useEffect(() => {
+    // Sync when the URL param changes (browser back / forward or
+    // client-side push into ?add=1 from elsewhere).
+    if (searchParams.get("add") === "1") setAddOpen(true);
+  }, [searchParams]);
+  function closeAdd() {
+    setAddOpen(false);
+    // Strip the query param so refreshing doesn't reopen the modal.
+    if (searchParams.get("add")) router.replace("/app/portfolio");
+  }
+  async function onAdded() {
+    setAddOpen(false);
+    if (searchParams.get("add")) router.replace("/app/portfolio");
+    // Reload the portfolio so the new card appears immediately.
+    try {
+      const next = await fetchPortfolio();
+      setData(next);
+    } catch {
+      // Silent — user can refresh manually.
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -244,9 +270,12 @@ function PortfolioPageBody() {
             {selectMode ? "Cancel select" : "Select"}
           </button>
           <div className="flex items-center gap-2">
-            <Link href="/app/portfolio/add" className="hiq-btn-primary text-sm">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="hiq-btn-primary text-sm"
+            >
               + Add card
-            </Link>
+            </button>
             <Link
               href="/app/portfolio/import"
               className="text-xs hover:underline hidden sm:inline"
@@ -387,6 +416,7 @@ function PortfolioPageBody() {
           }}
         />
       )}
+      {addOpen && <AddCardModal onClose={closeAdd} onAdded={onAdded} />}
     </div>
   );
 }
