@@ -6856,6 +6856,91 @@ export async function repriceHoldingsForUser(
           }));
         }
 
+        // CF-SIBLING-FALLBACK-WIRE-IN (Drew, 2026-07-28): last-mile
+        // rescue before the skip branch. Wires the existing
+        // attemptSiblingPriceFallback (compiq/siblingCardPriceFallback)
+        // into the nightly reprice — previously this ran only for
+        // interactive card-panel routes via observedGradeCurve's
+        // enableSiblingFallback opt-in, so any parallel card that CH
+        // has no comps for at any grade stayed permanently Missing
+        // between refreshes.
+        //
+        // Bounded cost: only fires for cards with (parallel, playerName,
+        // cardYear, product) all present — sibling function itself
+        // returns null in ~15ms if the calibration table has no match.
+        // On a hit, stamps the same wire shape the resolver-fallback
+        // branch above uses so downstream code paths (iOS row render,
+        // ERP totals, alerts) don't need to change.
+        try {
+          const parallelStr = typeof holding.parallel === "string" ? holding.parallel.trim() : "";
+          const yearN = shimmedCardYear(holding) ?? (typeof holding.cardYear === "number" ? holding.cardYear : null);
+          const setStr =
+            (typeof holding.setName === "string" && holding.setName.trim()) ||
+            (typeof (holding as any).product === "string" && ((holding as any).product as string).trim()) ||
+            "";
+          const playerStr = typeof holding.playerName === "string" ? holding.playerName.trim() : "";
+          if (parallelStr && yearN && setStr && playerStr) {
+            const { attemptSiblingPriceFallback } = await import("../compiq/siblingCardPriceFallback.service.js");
+            const { mapSiblingToRepriceFmv, siblingEstimateBasis } = await import("./siblingReprice.helper.js");
+            const sibling = await attemptSiblingPriceFallback({
+              targetCardId: (holding as any).cardId ?? holding.id,
+              year: yearN,
+              set: setStr,
+              parallel: parallelStr,
+              isAuto: Boolean(holding.isAuto),
+              playerName: playerStr,
+              trajectoryRateWeekly: null,
+            });
+            if (sibling) {
+              const match = mapSiblingToRepriceFmv(
+                sibling,
+                holding.gradeCompany ?? null,
+                typeof holding.gradeValue === "number" ? holding.gradeValue : null,
+              );
+              if (match) {
+                const now = new Date().toISOString();
+                const basis = siblingEstimateBasis(sibling);
+                doc.holdings[holding.id] = {
+                  ...holding,
+                  ...repriceIdentityPatch,
+                  fairMarketValue: match.price,
+                  estimatedValue: null,
+                  isEstimate: true,
+                  valuationStatus: "estimated",
+                  estimateBasis: basis,
+                  verdict: "Estimated",
+                  recommendation: "Hold",
+                  lastUpdated: now,
+                  sourceVendor: "cardhedge" as any,
+                  sourceVendorUpdatedAt: now,
+                };
+                repriced += 1;
+                updates.push({ id: holding.id, status: "repriced", reason: "sibling-fallback" });
+                console.log(JSON.stringify({
+                  event: "sibling_fallback_wired_from_reprice_hit",
+                  source: "portfolioStore.repriceHoldingsForUser",
+                  holdingId: holding.id,
+                  targetCardId: (holding as any).cardId ?? null,
+                  siblingCardId: sibling.siblingCardId,
+                  chosenGrade: match.grade,
+                  chosenPrice: match.price,
+                  parallelPremium: sibling.parallelPremium,
+                  floorApplied: sibling.floorApplied,
+                  siblingIsCrossClass: sibling.siblingIsCrossClass,
+                }));
+                continue;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "sibling_fallback_wired_from_reprice_error",
+            source: "portfolioStore.repriceHoldingsForUser",
+            holdingId: holding.id,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+
         skipped += 1;
         const failed: string[] = [];
         if (confidence < minPricingConfidence) failed.push(`confidence=${Math.round(confidence)}<${minPricingConfidence}`);
