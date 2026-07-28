@@ -152,6 +152,7 @@ function normalizeParallel(parallel: string | null | undefined): string {
   // Strip leading "True " (case-insensitive, whitespace-boundary).
   // Only matches when "true" is a standalone leading word, so parallels
   // like "TrueSonic" (hypothetical brand) aren't accidentally altered.
+  const hadTruePrefix = /^true\s+/i.test(raw);
   const stripped = raw.replace(/^true\s+/i, "");
   let s = slugify(stripped);
   // Compound-variant unification: same market variant, different spelling
@@ -165,6 +166,19 @@ function normalizeParallel(parallel: string | null | undefined): string {
   s = s.replace(/(^|-)xfractor($|-)/g, "$1x-fractor$2");
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
+  }
+  // CF-TRUE-COLOR-IMPLIES-REFRACTOR (Drew, 2026-07-28). "True Blue"
+  // (with no explicit "Refractor" suffix) is a market synonym for
+  // "Blue Refractor" — same physical card, canonical form ends in
+  // "-refractor". Prior code stripped "True" and stopped at "blue",
+  // fragmenting the comp pool: "True Blue" sales landed at :blue: while
+  // "Blue Refractor" sales landed at :blue-refractor:. Only applies
+  // when we actually stripped a leading "True" AND the remainder isn't
+  // already a refractor-tagged variant (so "True Blue Refractor" and
+  // "True Blue Shimmer Refractor" pass through unchanged after their
+  // own strip).
+  if (hadTruePrefix && !/(^|-)refractor(-|$)/.test(s)) {
+    s = `${s}-refractor`;
   }
   return s;
 }

@@ -526,6 +526,93 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     }
   }
 
+  // CF-SOLDCOMPS-CROSS-PARTITION-USER-DEDUP (Drew, 2026-07-28). The
+  // contentHash pre-write dedup above is partition-scoped (same cardId).
+  // But a single physical eBay purchase can land under DIFFERENT cardIds
+  // when the ReviewQueue confirm path picks one cardId and the periodic
+  // cardIdSuggester later picks a different one (real repro: Hartshorn
+  // Blue Auto emitted both `1769294032882x511083935394397250` from
+  // reviewQueue and `1769288647225x684303281054543500` from suggester —
+  // same sale, same user, same $608.30, 4 days apart, contentHash
+  // includes cardId so it didn't collide).
+  //
+  // Cross-partition preflight for user-scoped sources only (ebay-user-
+  // purchase, ebay-user-sale, manual-user-entry) when hobbyiqCardId +
+  // contributorUserId are both known. Query on the well-indexed slug
+  // field so cross-partition cost stays low. Same scoreForCanonical
+  // arbitration as the partition-scoped path — verifiedByUser=true
+  // beats false, longer parallel beats shorter, newer observedAt breaks
+  // ties.
+  const isUserScoped = doc.source === "ebay-user-purchase"
+    || doc.source === "ebay-user-sale"
+    || doc.source === "manual-user-entry";
+  if (isUserScoped && hobbyiqCardId && doc.contributorUserId && doc.soldAt) {
+    try {
+      const soldDay = doc.soldAt.slice(0, 10);
+      const { resources: crossPartitionExisting } = await c.items.query<SoldCompDoc>({
+        query: `SELECT * FROM c
+                WHERE c.hobbyiqCardId = @slug
+                  AND c.source = @src
+                  AND c.contributorUserId = @u
+                  AND c.price = @p
+                  AND STARTSWITH(c.soldAt, @day)
+                  AND c.cardId != @cardId`,
+        parameters: [
+          { name: "@slug", value: hobbyiqCardId },
+          { name: "@src", value: doc.source },
+          { name: "@u", value: doc.contributorUserId },
+          { name: "@p", value: doc.price },
+          { name: "@day", value: soldDay },
+          { name: "@cardId", value: doc.cardId },
+        ],
+      }).fetchAll();
+
+      if (crossPartitionExisting.length > 0) {
+        const incomingScore = scoreForCanonical(doc);
+        const bestExistingScore = Math.max(...crossPartitionExisting.map(scoreForCanonical));
+        if (incomingScore <= bestExistingScore) {
+          // Existing row wins — skip the write entirely so we don't
+          // create a second doc under a different cardId partition.
+          console.log(JSON.stringify({
+            event: "sold_comps_cross_partition_user_dedup_skipped",
+            source: "soldCompsStore.recordSoldComp",
+            slug: hobbyiqCardId,
+            incomingCardId: doc.cardId,
+            incomingSource: doc.source,
+            incomingScore,
+            existingCardIds: crossPartitionExisting.map(e => e.cardId),
+            bestExistingScore,
+          }));
+          return;
+        }
+        // Incoming beats existing — delete the losers so we don't leave
+        // stale duplicates under the other cardId partitions.
+        for (const e of crossPartitionExisting) {
+          try { await c.item(e.id, e.cardId).delete(); } catch { /* best effort */ }
+        }
+        console.log(JSON.stringify({
+          event: "sold_comps_cross_partition_user_dedup_replaced",
+          source: "soldCompsStore.recordSoldComp",
+          slug: hobbyiqCardId,
+          incomingCardId: doc.cardId,
+          replacedCount: crossPartitionExisting.length,
+          replacedCardIds: crossPartitionExisting.map(e => e.cardId),
+        }));
+      }
+    } catch (err) {
+      // Non-fatal — fall through to upsert.
+      if (Math.random() < 0.01) {
+        console.warn(JSON.stringify({
+          event: "sold_comps_cross_partition_user_dedup_query_failed",
+          source: "soldCompsStore.recordSoldComp",
+          slug: hobbyiqCardId,
+          error: (err as Error)?.message ?? String(err),
+          sampled: true,
+        }));
+      }
+    }
+  }
+
   try {
     await c.items.upsert(doc as any);
     // CF-CANONICAL-FMV-INVALIDATION (Drew, 2026-07-18): kick the
