@@ -315,6 +315,43 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   const gradeCompany = input.gradeCompany ?? null;
   const gradeValue = input.gradeValue ?? null;
 
+  // CF-HOBBYIQ-FMV-BROADER-TREND-ANCHOR (Drew, 2026-07-28). Read the
+  // same-identity broader-set trend ONCE per computeHobbyIqFmv call
+  // and thread into every buildResult. The query — (year, cardNumber,
+  // isAuto, sport) any parallel — nearly always has more dated comps
+  // than any single-parallel rung, so its regression slope reads a
+  // trustworthy market direction that buildResult can uplift a thin
+  // anchor with. Null when the broader pool itself is too thin for
+  // a regression (n<3 or all-same-date). Fired in parallel with the
+  // population lookup so it doesn't add serial latency.
+  const broaderIdentityTrendPromise = queryPool(
+    container,
+    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+    [
+      { name: "@y", value: parsed.year },
+      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+      { name: "@auto", value: parsed.isAuto },
+      { name: "@sport", value: parsed.sport },
+    ],
+    cutoffIso,
+  )
+    .then((broaderRows) => {
+      const kept = partitionByQuality(broaderRows).kept;
+      if (kept.length < 3) return null;
+      const t = computeTrend(
+        kept.map((r) => ({ price: Number(r.price), soldAt: r.soldAt })),
+      );
+      if (t.method !== "regression") return null;
+      const slope = t.slopePerMonthPct;
+      if (!Number.isFinite(slope)) return null;
+      // Guard runaway trends (a base pool spiking to +200%/mo would
+      // extrapolate the anchor into fantasy territory). Cap symmetric
+      // around ±60%/mo — well beyond real market direction, tight
+      // enough to catch OLS pathology on same-week volume spikes.
+      return Math.max(-60, Math.min(60, slope));
+    })
+    .catch(() => null);
+
   // ─── Rung 0 (PRE-empts direct-slug): printrun-discovery-preferred ──
   // When the target slug has NO printRun tag AND the identity has a
   // substantial pool of comps at a specific print run, that /N pool is
@@ -363,7 +400,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         return buildResult(slug, bestPool, "printrun-discovery",
           `Estimated from ${bestPool.length} sale${bestPool.length === 1 ? "" : "s"} of the /${bestRun} variant (dominant SKU at this identity — target slug is un-tagged)`,
           confidenceForRung("printrun-discovery", bestPool.length),
-          input.previewLimit ?? 10, now, await populationPromise);
+          input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
       }
     }
   }
@@ -380,7 +417,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "direct-slug",
       `Direct match: ${rows.length} sale${rows.length === 1 ? "" : "s"} of this exact card`,
       confidenceForRung("direct-slug", rows.length),
-      input.previewLimit ?? 10, now, await populationPromise);
+      input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
   }
 
   // ─── Rung 1.5 (NEW): cross-setKey identity + parallel ────────────────
@@ -432,7 +469,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       return buildResult(slug, graded, "cross-setkey",
         `Estimated from ${graded.length} sale${graded.length === 1 ? "" : "s"} of this exact card${variantSuffix}`,
         confidenceForRung("cross-setkey", graded.length),
-        input.previewLimit ?? 10, now, await populationPromise);
+        input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }
   }
 
@@ -454,7 +491,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       return buildResult(slug, rows, "cross-printrun",
         `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of the same card at other print runs`,
         confidenceForRung("cross-printrun", rows.length),
-        input.previewLimit ?? 10, now, await populationPromise);
+        input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }
   }
 
@@ -483,7 +520,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       return buildResult(slug, rows, "same-printrun-cross-parallel",
         `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of same-print-run variants (/${parsed.printRun})`,
         confidenceForRung("same-printrun-cross-parallel", rows.length),
-        input.previewLimit ?? 10, now, await populationPromise);
+        input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }
   }
 
@@ -530,7 +567,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         return buildResult(slug, bestPool, "printrun-discovery",
           `Estimated from ${bestPool.length} sale${bestPool.length === 1 ? "" : "s"} of the /${bestRun} print-run variant (dominant SKU at this identity)`,
           confidenceForRung("printrun-discovery", bestPool.length),
-          input.previewLimit ?? 10, now, await populationPromise);
+          input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
       }
     }
   }
@@ -557,7 +594,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "sibling-parallel",
       `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
       confidenceForRung("sibling-parallel", rows.length),
-      input.previewLimit ?? 10, now, await populationPromise);
+      input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
   }
 
   // ─── Rung 4: family-baseline — same year + cardNumber, any variant ───
@@ -581,7 +618,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     return buildResult(slug, rows, "family-baseline",
       `Estimated from ${rows.length} same-card sale${rows.length === 1 ? "" : "s"} across variants`,
       confidenceForRung("family-baseline", rows.length),
-      input.previewLimit ?? 10, now, await populationPromise);
+      input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
   }
 
   // ─── Rung 7 (NEW): grade-cross-raw ───────────────────────────────────
@@ -663,7 +700,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         return buildResult(slug, synth, "grade-cross-raw",
           rung.note(rawPrices.length) + ` (${multiplier.toFixed(2)}×, applied to raw median $${Math.round(rawMedian)} → $${Math.round(gradedFmv)})`,
           confidenceForRung("grade-cross-raw", rawPrices.length),
-          input.previewLimit ?? 10, now, await populationPromise);
+          input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
       }
     }
   }
@@ -701,6 +738,17 @@ async function buildResult(
   previewLimit: number,
   now: Date,
   population: CardPopulationLookup | null,
+  // CF-HOBBYIQ-FMV-BROADER-TREND-ANCHOR (Drew, 2026-07-28). Rare
+  // parallels with 1-2 comps have no regression signal in their OWN
+  // pool. But the same (year, cardNumber, isAuto, sport) identity —
+  // across every parallel — usually DOES have enough dated comps to
+  // read a broader-set direction. Caller computes it once at the top
+  // of computeHobbyIqFmv and threads it into every rung's buildResult
+  // so the anchor branch can uplift a rare comp with the same trend
+  // its base sibling is riding. Null when the broader query is thin
+  // too, or when player-in-set momentum already covered the same
+  // signal (Layer 1 wins the priority race).
+  broaderIdentityTrendPctPerMonth: number | null = null,
 ): Promise<HobbyIqFmvResult> {
   const { kept: rows, flagged } = partitionByQuality(rowsIn);
   const quality = computeQualityScore(rows, flagged);
@@ -761,6 +809,7 @@ async function buildResult(
     : undefined;
 
   let trendPctPerMonth: number | null = null;
+  let trendSource: "player-in-set" | "broader-identity" | "none" = "none";
   if (playerName && product) {
     try {
       const momentum = await fetchPlayerInSetMomentum({
@@ -769,9 +818,21 @@ async function buildResult(
         cardYear,
       });
       trendPctPerMonth = momentumMultiplierToPctPerMonth(momentum?.multiplier ?? null);
+      if (trendPctPerMonth !== null) trendSource = "player-in-set";
     } catch {
       trendPctPerMonth = null;
     }
+  }
+  // CF-HOBBYIQ-FMV-BROADER-TREND-ANCHOR fallback: when player-in-set
+  // momentum is unavailable (thin cache, missing playerName, etc.) but
+  // the same-identity broader pool CAN read a trend, use it. Rare
+  // parallels ARE anchors — a Blue Refractor Auto with 2 same-day
+  // comps at $608 sits on top of a Base pool trending +26%/mo; the
+  // Blue anchor should ride that same broader-set signal even without
+  // its own dated regression.
+  if (trendPctPerMonth === null && broaderIdentityTrendPctPerMonth !== null && Number.isFinite(broaderIdentityTrendPctPerMonth)) {
+    trendPctPerMonth = broaderIdentityTrendPctPerMonth;
+    trendSource = "broader-identity";
   }
 
   const projection = projectNextSaleFromComps(
@@ -797,8 +858,24 @@ async function buildResult(
       method,
       compCount: prices.length,
       trendPctPerMonth,
+      trendSource,
     }));
     fmv = median;
+  }
+
+  // Telemetry: when broader-identity trend kicked in on a thin rung,
+  // emit an event so App Insights can slice by rung × trend-source.
+  // Also useful for verifying the fix on Hartshorn-class cards.
+  if (trendSource === "broader-identity" && projection?.method === "trend-adjusted-last-sale") {
+    console.log(JSON.stringify({
+      event: "hobbyiq_fmv_broader_identity_trend_applied",
+      slug,
+      method,
+      compCount: prices.length,
+      broaderTrendPctPerMonth: Math.round(trendPctPerMonth! * 100) / 100,
+      medianWouldHaveBeen: median,
+      projectedFmv: fmv,
+    }));
   }
 
   const breakdown: HobbyIqFmvBreakdown = {
