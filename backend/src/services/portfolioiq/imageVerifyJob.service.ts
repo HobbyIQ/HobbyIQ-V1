@@ -110,6 +110,7 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
               sourceExternalId: row.raw.vendorRawId,
               title: String(row.raw.vendorPayload.title ?? ""),
               imageUrl: row.mirroredImage?.blobUrl ?? String(row.raw.vendorPayload.imageUrl ?? ""),
+              url: row.raw.vendorPayload.url ?? null,
               sellerHandle: null,
               sport: row.raw.identityHint.sport ?? "baseball",
               verifiedByUser: false,

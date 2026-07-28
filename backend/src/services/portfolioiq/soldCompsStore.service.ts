@@ -190,6 +190,12 @@ export interface RecordSoldCompInput {
   contributorUserId?: string | null;
   title?: string | null;
   imageUrl?: string | null;
+  /** Original vendor listing URL (eBay item, CH card page, etc.).
+   *  Kept on the record so the admin triage UI can link back to the
+   *  original context when a comp lands in verify_queue. Not written
+   *  to sold_comps; only threaded through so the enqueue can carry
+   *  the pointer. */
+  url?: string | null;
   sellerHandle?: string | null;
   verifiedByUser?: boolean;
   confidence?: number;
