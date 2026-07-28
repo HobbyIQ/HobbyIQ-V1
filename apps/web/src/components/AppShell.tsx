@@ -153,9 +153,9 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main content */}
       <main className="flex-1 md:pl-0 pt-14 md:pt-0 min-w-0 flex flex-col">
-        {/* Desktop top bar — global search */}
+        {/* Desktop top bar — global search, horizontally centered */}
         <div
-          className="hidden md:flex sticky top-0 z-30 border-b border-[color:var(--color-border)] px-6 h-14 items-center gap-4"
+          className="hidden md:flex sticky top-0 z-30 border-b border-[color:var(--color-border)] px-6 h-14 items-center justify-center gap-4"
           style={{ background: "color-mix(in oklab, var(--color-bg) 92%, transparent)", backdropFilter: "blur(8px)" }}
         >
           <div className="w-full max-w-2xl">

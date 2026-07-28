@@ -140,6 +140,26 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Base fallback when nothing matches", () => {
     expect(parseListingIdentity("Owen Carey #BCP-69 Baseball 1st Prospect").parallel).toBe("Base");
   });
+
+  // CF-TRUE-COLOR-PARALLEL (Drew, 2026-07-28). "True <Color>" is a
+  // market synonym for "<Color> Refractor". Real repro: Hartman
+  // Blue Auto sold at $905 tagged as "Base" because the parser
+  // didn't recognize "Bowman Blue …True" as True Blue Refractor.
+  it("True Blue → Blue Refractor (adjacent, market synonym)", () => {
+    expect(parseListingIdentity("2026 Bowman True Blue Eric Hartman #CPA-EHA Auto").parallel).toBe("Blue Refractor");
+  });
+  it("True Blue → Blue Refractor (color before True, eBay title order)", () => {
+    expect(parseListingIdentity("2026 Bowman Blue Eric Hartman True #CPA-EHA").parallel).toBe("Blue Refractor");
+  });
+  it("True Green → Green Refractor", () => {
+    expect(parseListingIdentity("2026 Bowman True Green Refractor Hartman #CPA-EHA").parallel).toBe("Green Refractor");
+  });
+  it("True Orange → Orange Refractor (color anywhere)", () => {
+    expect(parseListingIdentity("2026 Bowman Orange Hartman True Auto").parallel).toBe("Orange Refractor");
+  });
+  it("'True' alone (no refractor color) → Base (no false positive)", () => {
+    expect(parseListingIdentity("2026 Bowman True Grit Prospect Auto #BCP-1").parallel).toBe("Base");
+  });
 });
 
 describe("parseListingIdentity — autoStyle (on-card vs sticker) (#712 option B)", () => {
