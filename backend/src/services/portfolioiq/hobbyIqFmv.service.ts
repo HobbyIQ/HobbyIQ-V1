@@ -744,12 +744,31 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         const multiplier = getGraderPremium(gradeCompany, String(gradeValue), rawMedian, cardClass, parsed.year, parsed.setKey, null, parsed.sport);
         if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
         const gradedFmv = rawMedian * multiplier;
-        // Synthesize one synthetic row so the rest of buildResult's math is stable.
-        const synth: PoolRow[] = rawRows.map((r) => ({ ...r, price: Number(r.price) * multiplier }));
-        return buildResult(slug, synth, "grade-cross-raw",
+
+        // CF-ESTIMATE-NO-SYNTH-POOLROW (Drew, 2026-07-28). Don't
+        // synthesize graded PoolRows from raw × multiplier — that
+        // pollutes the trend/regression with derived numbers pretending
+        // to be observations. Instead: compute the projection on the
+        // ACTUAL raw pool, then scale the fmv by the multiplier at
+        // the end. min/max/trend all come from real observed prices
+        // (raw), just multiplied by the same constant so the shape is
+        // preserved. Result stays flagged `method: "grade-cross-raw"`
+        // so consumers know this fmv is a synthesized graded value.
+        //
+        // Full raw pool goes into buildResult so trend + projection
+        // math sees genuine observations; the ×multiplier applies
+        // consistently to fmv, min, max, recentComps.
+        const rawResult = await buildResult(slug, rawRows, "grade-cross-raw",
           rung.note(rawPrices.length) + ` (${multiplier.toFixed(2)}×, applied to raw median $${Math.round(rawMedian)} → $${Math.round(gradedFmv)})`,
           confidenceForRung("grade-cross-raw", rawPrices.length),
           input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
+        return {
+          ...rawResult,
+          fmv: rawResult.fmv !== null ? rawResult.fmv * multiplier : null,
+          min: rawResult.min !== null ? rawResult.min * multiplier : null,
+          max: rawResult.max !== null ? rawResult.max * multiplier : null,
+          recentComps: rawResult.recentComps.map((c) => ({ ...c, price: c.price * multiplier })),
+        };
       }
     }
   }
