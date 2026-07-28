@@ -279,6 +279,26 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
     expect(trueBlue).toBe(blue);
   });
 
+  it("True Blue (no explicit Refractor) === Blue Refractor (CF-TRUE-COLOR-IMPLIES-REFRACTOR)", () => {
+    // Hartshorn 2026-07-28 root cause: parallel="True Blue" stripped
+    // "True", produced :blue: slug — fragmented the pool from
+    // :blue-refractor: where every CH/CS ingest of the same physical
+    // card lands. Now: True<Color> without "Refractor" also emits
+    // -refractor suffix.
+    const trueBlue = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Draft",
+      cardNumber: "CPA-JHA", parallel: "True Blue",
+      isAuto: true, printRun: null,
+    });
+    const blueRefractor = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Draft",
+      cardNumber: "CPA-JHA", parallel: "Blue Refractor",
+      isAuto: true, printRun: null,
+    });
+    expect(trueBlue).toBe(blueRefractor);
+    expect(trueBlue).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto");
+  });
+
   it("does NOT collapse Green Shimmer / Green Lava into base green", () => {
     // These are distinct variants with different premiums; they must
     // stay distinct even though they share the "green" root color.

@@ -37,9 +37,24 @@ export function deriveHoldingSlug(holding: PortfolioHolding): string | null {
   const sport = inferSportFromContext(holding.setName ?? holding.product ?? null, holding.cardTitle ?? null, year);
   if (!sport) return null;
 
-  const parallel = String(holding.parallel ?? "").trim() || "Base";
+  const rawParallel = String(holding.parallel ?? "").trim() || "Base";
   const isAuto = holding.isAuto === true;
   const printRun = extractPrintRunFromTitle(holding.cardTitle ?? null);
+
+  // CF-BARE-COLOR-TITLE-REFRACTOR-UPGRADE (Drew, 2026-07-28). User-
+  // typed / eBay-imported holdings often carry a bare color word
+  // ("Blue", "Green", "Orange") in the parallel field even when the
+  // card is the "<Color> Refractor" market variant — the title carries
+  // "Refractor" or "True". Without an upgrade, deriveHoldingSlug emits
+  // :blue:auto while every CH/CS ingest of the same physical card
+  // emits :blue-refractor:auto, forking the comp pool.
+  //
+  // Rule: if parallel is a single-token color word AND the title
+  // contains "Refractor" OR "True <same color>", upgrade parallel to
+  // "<Color> Refractor" so the slug generator's existing "-refractor"
+  // suffix rule fires. Conservative: only fires for canonical refractor
+  // colors, only when the title explicitly signals refractor semantics.
+  const parallel = upgradeBareColorFromTitle(rawParallel, holding.cardTitle ?? null);
 
   try {
     return computeHobbyIqCardId({
@@ -48,6 +63,27 @@ export function deriveHoldingSlug(holding: PortfolioHolding): string | null {
   } catch {
     return null;
   }
+}
+
+const REFRACTOR_COLORS = new Set([
+  "blue", "red", "green", "orange", "yellow", "purple", "gold",
+  "black", "aqua", "teal", "pink",
+]);
+
+function upgradeBareColorFromTitle(parallel: string, title: string | null): string {
+  const lc = parallel.trim().toLowerCase();
+  if (!REFRACTOR_COLORS.has(lc)) return parallel;
+  if (!title) return parallel;
+  const t = title.toLowerCase();
+  // Title carries the refractor signal in either form:
+  //   - "Refractor" anywhere in the title (Chrome-set marker)
+  //   - "True <color>" adjacent to the color (market synonym)
+  const refractorSignal = /\brefractor(s)?\b/.test(t);
+  const trueColorSignal = new RegExp(`\\btrue\\s+${lc}\\b`).test(t);
+  if (refractorSignal || trueColorSignal) {
+    return `${parallel} Refractor`;
+  }
+  return parallel;
 }
 
 /** Mutation-free: return a copy of the holding with hobbyiqCardId
