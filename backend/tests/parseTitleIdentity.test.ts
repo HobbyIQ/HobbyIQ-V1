@@ -160,6 +160,38 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("'True' alone (no refractor color) → Base (no false positive)", () => {
     expect(parseListingIdentity("2026 Bowman True Grit Prospect Auto #BCP-1").parallel).toBe("Base");
   });
+
+  // CF-BASKETBALL-PARALLELS (Drew, 2026-07-28). Basketball vocabulary.
+  it("Panini Prizm Silver Prizm → Silver Prizm", () => {
+    expect(parseListingIdentity("2024 Panini Prizm Basketball Victor Wembanyama Silver Prizm").parallel).toBe("Silver Prizm");
+  });
+  it("Panini Prizm Blue → Blue Prizm", () => {
+    expect(parseListingIdentity("2024 Panini Prizm Anthony Edwards Blue Prizm").parallel).toBe("Blue Prizm");
+  });
+  it("Panini Prizm Green Pulsar → Green Pulsar Prizm", () => {
+    expect(parseListingIdentity("2024 Panini Prizm Cooper Flagg Green Pulsar").parallel).toBe("Green Pulsar Prizm");
+  });
+  it("Fast Break Blue → Fast Break Blue Prizm", () => {
+    expect(parseListingIdentity("2023 Panini Prizm Fast Break Blue Luka Doncic").parallel).toBe("Fast Break Blue Prizm");
+  });
+  it("Donruss Optic Blue Velocity → Blue Velocity Optic", () => {
+    expect(parseListingIdentity("2024 Donruss Optic Basketball Ja Morant Blue Velocity").parallel).toBe("Blue Velocity Optic");
+  });
+  it("Donruss Optic Holo → Holo Optic", () => {
+    expect(parseListingIdentity("2024 Donruss Optic Holo Cooper Flagg").parallel).toBe("Holo Optic");
+  });
+  it("Select Blue → Blue Select", () => {
+    expect(parseListingIdentity("2024 Panini Select Basketball Blue Select LeBron James").parallel).toBe("Blue Select");
+  });
+  it("Contenders Cracked Ice → Cracked Ice", () => {
+    expect(parseListingIdentity("2024 Panini Contenders Cracked Ice Nikola Jokic").parallel).toBe("Cracked Ice");
+  });
+  it("Zebra Select → Zebra Select", () => {
+    expect(parseListingIdentity("2024 Panini Select Zebra Anthony Edwards").parallel).toBe("Zebra Select");
+  });
+  it("no-false-positive: 'basketball' word alone doesn't trigger", () => {
+    expect(parseListingIdentity("2024 Panini Basketball Base Card #100 LeBron").parallel).toBe("Base");
+  });
 });
 
 describe("parseListingIdentity — autoStyle (on-card vs sticker) (#712 option B)", () => {
