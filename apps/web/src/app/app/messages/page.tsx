@@ -76,15 +76,28 @@ export default function InboxPage() {
       </div>
 
       {threads.length === 0 ? (
-        <section className="hiq-card p-8 text-center">
-          <h2 className="font-bold text-lg mb-2">No messages yet</h2>
-          <p className="text-sm mb-6" style={{ color: "var(--hiq-muted-text)" }}>
-            When someone messages you about a card — or you message a seller —
-            the thread shows up here.
+        <section className="hiq-card p-10 text-center">
+          <div
+            className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ background: "color-mix(in oklab, var(--color-accent) 15%, transparent)" }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--color-accent)" }}>
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+            </svg>
+          </div>
+          <h2 className="font-bold text-lg mb-2">Your inbox is quiet</h2>
+          <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--hiq-muted-text)" }}>
+            Threads land here when a buyer messages you from your storefront, or
+            when you message a seller from theirs. Two ways to get one going:
           </p>
-          <Link href="/app/portfolio" className="hiq-btn-primary text-sm">
-            Browse your portfolio
-          </Link>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <Link href="/app/storefront" className="hiq-btn-primary text-sm">
+              Set up my storefront
+            </Link>
+            <Link href="/app/search" className="hiq-btn-secondary text-sm">
+              Find a seller
+            </Link>
+          </div>
         </section>
       ) : (
         <section className="hiq-card divide-y divide-[color:var(--color-border)]">
