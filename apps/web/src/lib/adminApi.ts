@@ -107,6 +107,7 @@ export interface VerifyQueueItem {
     source: string;
     title?: string | null;
     imageUrl?: string | null;
+    url?: string | null;
   };
   signal?: {
     rollingMedian?: number;
