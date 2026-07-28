@@ -30,6 +30,10 @@ export interface VendorSaleRow {
   soldAt: string | null | undefined;       // ISO date
   url?: string | null;
   externalId?: string | null;              // vendor's ID if available; falls back to hash of url/title/price
+  // CF-IMAGE-VERIFY-INGEST (Drew, 2026-07-28). Image URL from the
+  // vendor's sale record. When present alongside a catalog reference
+  // phash, ingest hashes and compares — mismatch routes to verify.
+  imageUrl?: string | null;
 }
 
 export interface VendorPersistIdentityHint {
@@ -259,6 +263,61 @@ export async function persistVendorSalesToPool(
         }
       } catch {
         // Detector failure is non-fatal — fall through and persist.
+      }
+
+      // CF-IMAGE-VERIFY-INGEST (Drew, 2026-07-28). If we have both an
+      // ingest image URL AND a catalog reference with a pHash, compare
+      // — mismatch (Hamming distance > threshold) routes to
+      // verify_queue with reason="cross-source-mismatch". The comp
+      // still persists — user gets the pricing signal AND the queue
+      // gets a triage row so the ingest classification can be audited.
+      // Feature-flagged: IMAGE_VERIFY_ENABLED (off by default until
+      // catalog phash coverage lands).
+      if (process.env.IMAGE_VERIFY_ENABLED === "true" && row.url && row.imageUrl) {
+        try {
+          const { getCatalogEntry } = await import("./cardCatalog.service.js");
+          const catalogEntry = await getCatalogEntry(slug);
+          const refPhash = catalogEntry?.referenceImage?.phash;
+          if (refPhash) {
+            const { computeImageHash, classifyImageMatch } = await import("./imageVerify.service.js");
+            const ingestPhash = await computeImageHash(String(row.imageUrl));
+            if (ingestPhash) {
+              const classification = classifyImageMatch(refPhash, ingestPhash);
+              if (classification.verdict === "mismatch") {
+                const { enqueueForVerify } = await import("./verifyQueue.service.js");
+                await enqueueForVerify({
+                  reason: "image-mismatch",
+                  saleInput: {
+                    cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+                    playerName,
+                    cardYear,
+                    setName: setKey,
+                    parallel: parsed.parallel,
+                    cardNumber: parsed.cardNumber,
+                    isAuto: parsed.isAuto,
+                    gradeCompany: null,
+                    gradeValue: null,
+                    price,
+                    soldAt: new Date(soldAt).toISOString(),
+                    source,
+                    sourceExternalId: row.externalId ?? null,
+                    title,
+                    imageUrl: String(row.imageUrl),
+                    sellerHandle: null,
+                    sport,
+                    verifiedByUser: false,
+                    confidence: 0.3,
+                  },
+                  signal: {
+                    note: `image mismatch vs catalog reference (distance=${classification.distance}, similarity=${classification.similarity?.toFixed(3)}) — probable classification error`,
+                  },
+                });
+              }
+            }
+          }
+        } catch {
+          // Image-verify failures never block the persist path.
+        }
       }
 
       const sourceExternalId = row.externalId

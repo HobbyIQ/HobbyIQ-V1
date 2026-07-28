@@ -35,8 +35,9 @@ export type VerifyReason =
   | "sample-audit"        // random sample for statistical accuracy audit
   | "manual"              // admin flagged a persisted row for re-verification
   | "divergence-alert"    // cost-basis vs FMV divergence surfaced here for review
-  | "catalog-gap"         // FMV request for a parallel with ZERO direct data at the identity (rare parallel; refuse to fabricate)
-  | "parallel-price-mismatch"; // ingest price fits another parallel's band better than the classified parallel
+  | "catalog-gap"           // FMV request for a parallel with ZERO direct data at the identity (rare parallel; refuse to fabricate)
+  | "parallel-price-mismatch" // ingest price fits another parallel's band better than the classified parallel
+  | "image-mismatch";       // ingest image pHash disagrees with catalog reference for the classified slug
 
 export interface VerifyQueueDoc {
   id: string;
