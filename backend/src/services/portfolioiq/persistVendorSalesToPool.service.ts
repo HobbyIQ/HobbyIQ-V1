@@ -360,6 +360,75 @@ export async function persistVendorSalesToPool(
       };
       await container.items.upsert(doc);
       result.inserted++;
+
+      // CF-COMPS-STAGING-SHIM (Drew, 2026-07-28). Rollout-safe:
+      // ALSO write to comps_staging so the data-clean / image-verify /
+      // promotion pipeline has data to work on. sold_comps direct-write
+      // continues until step 7 cutover. Gated by env flag so it can be
+      // toggled without a redeploy during the rollout.
+      if (process.env.COMPS_STAGING_SHIM_ENABLED === "true") {
+        void (async () => {
+          try {
+            const { stageIngestedComp, computeStagingContentHash } = await import("./compsStaging.service.js");
+            // Mirror the image to our blob first (fire-and-forget on
+            // failure — the staging row still lands, just without a
+            // mirroredImage attached).
+            let mirroredImage;
+            if (row.imageUrl && process.env.COMPS_STAGING_MIRROR_ENABLED === "true") {
+              try {
+                const { mirrorVendorImage } = await import("./imageMirror.service.js");
+                const mirror = await mirrorVendorImage(String(row.imageUrl), doc.id);
+                mirroredImage = mirror.ok ? {
+                  blobUrl: mirror.image.blobUrl,
+                  contentHash: mirror.image.contentHash,
+                  size: mirror.image.size,
+                  contentType: mirror.image.contentType,
+                  mirroredAt: mirror.image.mirroredAt,
+                } : {
+                  blobUrl: "",
+                  contentHash: "",
+                  size: 0,
+                  contentType: "",
+                  mirroredAt: new Date().toISOString(),
+                  mirrorError: { reason: mirror.reason, detail: mirror.detail },
+                };
+              } catch { /* mirror is optional — never blocks staging */ }
+            }
+            const stagingContentHash = computeStagingContentHash({
+              cardYear,
+              cardNumber: parsed.cardNumber,
+              parallel: parsed.parallel,
+              isAuto: parsed.isAuto,
+              price,
+              soldAt: new Date(soldAt).toISOString(),
+            });
+            await stageIngestedComp({
+              hobbyiqCardId: slug,
+              raw: {
+                vendor: source,
+                vendorRawId: row.externalId ?? identity.vendorCardId ?? null,
+                vendorPayload: {
+                  title,
+                  price,
+                  soldAt: new Date(soldAt).toISOString(),
+                  url: row.url ?? null,
+                  imageUrl: row.imageUrl ?? null,
+                  externalId: row.externalId ?? null,
+                },
+                identityHint: {
+                  playerName,
+                  cardYear,
+                  sport,
+                  vendorCardId: identity.vendorCardId ?? null,
+                },
+                fetchedAt: new Date().toISOString(),
+                contentHash: stagingContentHash,
+              },
+              mirroredImage,
+            });
+          } catch { /* staging shim never blocks the pool write */ }
+        })();
+      }
     } catch (err) {
       console.warn(JSON.stringify({
         event: "persist_vendor_sales_error",

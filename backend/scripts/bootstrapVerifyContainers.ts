@@ -27,6 +27,20 @@ async function main(): Promise<void> {
     // real card. Partition /sport (small cardinality). No TTL — this
     // is the source of truth for slug canonicalization.
     { id: "card_catalog", partitionKey: "/sport", defaultTtl: -1 },
+    // CF-COMPS-STAGING (Drew, 2026-07-28). Immutable landing zone
+    // for vendor ingest. Every raw vendor record lands here first,
+    // provenance-stamped. Data-clean job flips status → clean or
+    // anomaly. Image-verify job resolves anomalies. Promotion job
+    // moves clean+verified rows into sold_comps with lineage.
+    //
+    // Partition /hobbyiqCardId so readers can query "all staged
+    // rows for a slug" cheap. Every persist path already derives
+    // this slug at write time.
+    //
+    // No default TTL — the no-reject rule means rows sit in
+    // pending-manual until Drew triages them. Per-doc TTL only on
+    // rejected rows via the promotion job.
+    { id: "comps_staging", partitionKey: "/hobbyiqCardId", defaultTtl: -1 },
   ]) {
     try {
       const { resource } = await db.containers.createIfNotExists({

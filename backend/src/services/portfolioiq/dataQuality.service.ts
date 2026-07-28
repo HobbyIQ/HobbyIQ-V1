@@ -77,6 +77,37 @@ async function loadCatalogSlugs(): Promise<Set<string> | null> {
   }
 }
 
+/** Count catalog entries + how many have referenceImage / phash coverage.
+ *  All three COUNTs in one round-trip via COUNT(1) + conditional aggregates
+ *  so we don't fire 3 separate cross-partition scans. */
+async function computeCatalogCoverage(): Promise<DataQualityReport["catalog"]> {
+  const empty = { total: 0, withReferenceImage: 0, withReferenceImagePhash: 0, imageCoveragePct: 0, phashCoveragePct: 0 };
+  const c = await getCatalogContainer();
+  if (!c) return empty;
+  try {
+    // Cosmos SQL doesn't support conditional aggregates natively; run 3
+    // COUNTs in parallel instead. Cheap because the queries are
+    // partition-agnostic + count-only (no doc fetch).
+    const [t, i, p] = await Promise.all([
+      c.items.query<number>("SELECT VALUE COUNT(1) FROM c").fetchAll(),
+      c.items.query<number>("SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.referenceImage)").fetchAll(),
+      c.items.query<number>("SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.referenceImage.phash)").fetchAll(),
+    ]);
+    const total = t.resources[0] ?? 0;
+    const withReferenceImage = i.resources[0] ?? 0;
+    const withReferenceImagePhash = p.resources[0] ?? 0;
+    return {
+      total,
+      withReferenceImage,
+      withReferenceImagePhash,
+      imageCoveragePct: total > 0 ? withReferenceImage / total : 0,
+      phashCoveragePct: total > 0 ? withReferenceImagePhash / total : 0,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export interface DataQualityReport {
   totalRows: number;
   cutoffDays: number;
@@ -97,6 +128,18 @@ export interface DataQualityReport {
     uncertainPct: number;
   }>;
   topFlagReasons: Array<{ reason: string; count: number }>;
+  // CF-IMAGE-VERIFY (Drew, 2026-07-28). Catalog-level coverage
+  // numbers — separate from the sold_comps pool trust score. These
+  // measure the substrate the pool leans on: how many real cards
+  // do we have identity for, and how many of those have a
+  // pHash-comparable reference image.
+  catalog: {
+    total: number;
+    withReferenceImage: number;
+    withReferenceImagePhash: number;
+    imageCoveragePct: number;   // withReferenceImage / total
+    phashCoveragePct: number;   // withReferenceImagePhash / total
+  };
   computedAt: string;
 }
 
@@ -123,6 +166,13 @@ export async function computeDataQualityReport(cutoffDays = 180): Promise<DataQu
     trustPercentageDisplay: "0.0%",
     bySource: {},
     topFlagReasons: [],
+    catalog: {
+      total: 0,
+      withReferenceImage: 0,
+      withReferenceImagePhash: 0,
+      imageCoveragePct: 0,
+      phashCoveragePct: 0,
+    },
     computedAt: now.toISOString(),
   };
 
@@ -132,7 +182,11 @@ export async function computeDataQualityReport(cutoffDays = 180): Promise<DataQu
   // Load catalog slugs ONCE so the sold_comps scan can hit an in-memory
   // Set instead of firing a point-read per row. Falls back to the
   // slug-prefix heuristic when the catalog isn't seeded (early days).
-  const catalogSlugs = await loadCatalogSlugs();
+  // Also fetch catalog coverage stats in parallel.
+  const [catalogSlugs, catalogCoverage] = await Promise.all([
+    loadCatalogSlugs(),
+    computeCatalogCoverage(),
+  ]);
 
   const cutoffIso = new Date(now.getTime() - cutoffDays * 86_400_000).toISOString();
 
@@ -226,6 +280,7 @@ export async function computeDataQualityReport(cutoffDays = 180): Promise<DataQu
     trustPercentageDisplay: `${(trustScore * 100).toFixed(1)}%`,
     bySource,
     topFlagReasons,
+    catalog: catalogCoverage,
     computedAt: now.toISOString(),
   };
 }
