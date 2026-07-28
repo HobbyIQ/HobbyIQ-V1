@@ -271,10 +271,21 @@ export default function HoldingDetailPage() {
         </div>
       )}
 
-      {/* Grade curve — what every grade of this card is worth */}
-      {h.cardId && (
-        <div className="mb-6">
-          <GradeCurveView cardId={h.cardId} />
+      {/* CF-UX-CLEANUP (Drew, 2026-07-27): section order rethought so
+          the "how has THIS card done?" answer is above the fold.
+          Order:
+            Value history (this card's trend) →
+            Recent comps (sales that back the current FMV) →
+            Grade curve (deeper: what other grades are worth) →
+            Details.
+          Previous order buried the chart under Grade curve + Recent
+          comps, forcing a heavy scroll for the most-asked question. */}
+
+      {/* Price history — this card's trend */}
+      {history.length > 0 && (
+        <div className="hiq-card p-6 mb-6">
+          <h2 className="font-bold text-lg mb-4">Value history</h2>
+          <MiniChart points={history} />
         </div>
       )}
 
@@ -291,11 +302,10 @@ export default function HoldingDetailPage() {
         </div>
       )}
 
-      {/* Price history */}
-      {history.length > 0 && (
-        <div className="hiq-card p-6 mb-6">
-          <h2 className="font-bold text-lg mb-4">Value history</h2>
-          <MiniChart points={history} />
+      {/* Grade curve — what every grade of this card is worth */}
+      {h.cardId && (
+        <div className="mb-6">
+          <GradeCurveView cardId={h.cardId} />
         </div>
       )}
 
