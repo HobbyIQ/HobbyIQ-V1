@@ -1,0 +1,58 @@
+// CF-PARALLEL-FROM-TITLE (Drew, 2026-07-28). Pins the invariant that
+// Cardsight sales stored into sold_comps derive their `parallel` field
+// from the sale TITLE, not from Cardsight's parallel_name — which is
+// unreliable and was slugging base Chrome autos into Blue Refractor
+// pools (see the Josiah Hartshorn incident).
+//
+// This is a pin on parseListingIdentity's behavior for the specific
+// title shapes Cardsight was mis-tagging. If a real regression happens
+// in the future (someone loosens the parser), these tests fail.
+
+import { describe, expect, it } from "vitest";
+import { parseListingIdentity } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+
+describe("CF-PARALLEL-FROM-TITLE — Cardsight title-parallel guard", () => {
+  it("returns Base for 'Chrome Prospect 1st Auto' with no color word", () => {
+    const r = parseListingIdentity(
+      "JOSIAH HARTSHORN - 2025 Bowman Draft - Chrome Prospect 1st Auto #CPA-JHA Cubs 🔥 - Raw",
+    );
+    expect(r.parallel).toBe("Base");
+    expect(r.isAuto).toBe(true);
+    expect(r.cardNumber).toBe("CPA-JHA");
+  });
+
+  it("returns Base when title just says 'Chrome Auto' (Cardsight's common mis-tag)", () => {
+    const r = parseListingIdentity("2025 Bowman Draft Josiah Hartshorn Chrome Auto 1st Prospect");
+    expect(r.parallel).toBe("Base");
+  });
+
+  it("returns Blue Refractor when title actually says Blue Refractor", () => {
+    const r = parseListingIdentity(
+      "2025 Bowman Chrome Refractor Draft Josiah Hartshorn True Blue Refractor Auto /150",
+    );
+    expect(r.parallel).toBe("Blue Refractor");
+  });
+
+  it("returns Blue Refractor when title says Blue with /150 print run (implicit color)", () => {
+    const r = parseListingIdentity(
+      "2025 Bowman Draft Chrome Josiah Hartshorn Auto Blue /150",
+    );
+    expect(r.parallel).toBe("Blue Refractor");
+  });
+
+  it("does NOT stamp Blue on a plain Chrome Auto listing", () => {
+    // Regression pin for the incident: Cardsight returned parallel_name="Blue"
+    // for these bare Chrome Auto sales. The title-based parser correctly
+    // labels them Base, so with the new derivation logic they never land
+    // in the Blue Refractor sold_comps pool.
+    const titles = [
+      "2025 Bowman Draft Josiah Hartshorn Chrome Auto 1st Prospect",
+      "JOSIAH HARTSHORN - 2025 Bowman Draft - Chrome Prospect 1st Autograph #CPA-JHA Cubs",
+      "2025 Bowman Draft 1st Bowman Chrome Auto Josiah Hartshorn #CPA-JHA",
+    ];
+    for (const t of titles) {
+      const r = parseListingIdentity(t);
+      expect(r.parallel, `title="${t}"`).toBe("Base");
+    }
+  });
+});
