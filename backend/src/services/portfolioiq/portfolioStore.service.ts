@@ -7185,6 +7185,40 @@ export async function repriceHoldingsForUser(
 
   await writeUserDoc(userId, doc);
   _lastRepriceAt.set(userId, Date.now());
+
+  // CF-TRAJECTORY-12WK bounds alerts (Drew, 2026-07-28). After every
+  // reprice run, drain any projection-multiplier bound hits (floor
+  // 0.20 / ceiling 3.0) and email Drew a digest so he can review
+  // whether the linear model needs a non-linear taper. Silent-no-op
+  // when no bounds hit. Silent-no-op when ACS is unconfigured (dev).
+  try {
+    const { drainAlerts } = await import("../compiq/boundedProjectionAlerts.service.js");
+    const hits = drainAlerts();
+    if (hits.length > 0) {
+      const { sendEmail } = await import("../emailService.js").catch(() => ({ sendEmail: null as any }));
+      if (sendEmail) {
+        const preview = hits.slice(0, 10).map((h) => {
+          const pctRaw = Math.round((h.rawMultiplier - 1) * 1000) / 10;
+          const pctBounded = Math.round((h.bounded - 1) * 1000) / 10;
+          return `  ${h.playerName ?? "?"} — rate ${(h.rate * 100).toFixed(1)}%/wk × ${h.weeksSinceSale.toFixed(1)}wk → raw ${pctRaw >= 0 ? "+" : ""}${pctRaw}% (bounded ${pctBounded >= 0 ? "+" : ""}${pctBounded}%) [${h.direction}]`;
+        }).join("\n");
+        const overflow = hits.length > 10 ? `\n\n... and ${hits.length - 10} more` : "";
+        await sendEmail({
+          to: "drew@justtheboysandcards.com",
+          subject: `[HobbyIQ] ${hits.length} projection-bound hit${hits.length === 1 ? "" : "s"} in reprice for ${userId}`,
+          plainText:
+            `Reprice for userId=${userId} triggered ${hits.length} projection-multiplier bound hits.\n\n` +
+            `First ${Math.min(10, hits.length)}:\n${preview}${overflow}\n\n` +
+            `KQL: search for event="bounded_projection_alert" in App Insights to review the full set.\n\n` +
+            `If these persist, consider the non-linear taper option we discussed (full rate 0-4wk, half 4-8wk, quarter 8-12wk) instead of the current hard cap.`,
+          html: `<p>Reprice for <strong>${userId}</strong> triggered <strong>${hits.length}</strong> projection-multiplier bound hits.</p><pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:12px;border-radius:6px">${preview}${overflow}</pre><p>KQL: search for <code>event="bounded_projection_alert"</code> in App Insights.</p>`,
+        }).catch(() => { /* silent — telemetry already logged */ });
+      }
+    }
+  } catch {
+    // Never let alerting break the reprice.
+  }
+
   return {
     requested: allHoldings.length,
     repriced,

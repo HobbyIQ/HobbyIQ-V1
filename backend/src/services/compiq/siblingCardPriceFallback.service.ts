@@ -525,7 +525,15 @@ export async function attemptSiblingPriceFallback(
   // rate, capped at 6 weeks lookback for stability). Player is the
   // SAME between target and sibling, so the trajectory rate applies
   // one-for-one.
-  const MAX_WEEKS = 6;
+  // CF-TRAJECTORY-12WK (Drew, 2026-07-28): extended lookback from 6→12
+  // weeks so 60-90-day-old sibling comps on trending players get real
+  // projection instead of stale-comp treatment. Multiplier bounds
+  // (floor 0.20 / ceiling 3.0) prevent 12w × ±10%/w from producing
+  // negative or absurd projections. Both bounds emit
+  // bounded_projection_alert telemetry for review.
+  const MAX_WEEKS = 12;
+  const PROJECTION_MULTIPLIER_FLOOR = 0.20;
+  const PROJECTION_MULTIPLIER_CEILING = 3.0;
   let siblingWeeksSinceNewestSale: number | null = null;
   if (siblingNewestSaleDate) {
     const ms = Date.parse(siblingNewestSaleDate);
@@ -542,7 +550,24 @@ export async function attemptSiblingPriceFallback(
     Number.isFinite(input.trajectoryRateWeekly) &&
     siblingWeeksSinceNewestSale !== null
   ) {
-    const marketMultiplier = 1 + input.trajectoryRateWeekly * siblingWeeksSinceNewestSale;
+    const rawMultiplier = 1 + input.trajectoryRateWeekly * siblingWeeksSinceNewestSale;
+    const marketMultiplier = Math.max(
+      PROJECTION_MULTIPLIER_FLOOR,
+      Math.min(PROJECTION_MULTIPLIER_CEILING, rawMultiplier),
+    );
+    if (marketMultiplier !== rawMultiplier) {
+      const { recordBoundedProjectionAlert } = await import("./boundedProjectionAlerts.service.js");
+      recordBoundedProjectionAlert({
+        source: "siblingCardPriceFallback.projectForward",
+        playerName: input.playerName,
+        cardId: input.targetCardId,
+        rate: input.trajectoryRateWeekly,
+        weeksSinceSale: siblingWeeksSinceNewestSale,
+        rawMultiplier,
+        bounded: marketMultiplier,
+        direction: rawMultiplier > marketMultiplier ? "capped-ceiling" : "capped-floor",
+      });
+    }
     siblingBaseProjectedToday =
       Math.round(siblingBaseMedianRaw * marketMultiplier * 100) / 100;
   }
