@@ -12,13 +12,22 @@ export interface NavItem {
   prefixMatch?: boolean;
 }
 
-// Order (Drew, 2026-07-27): DailyIQ → Financials → Portfolio → Search →
-// Market → Messages → Insights → Players → Alerts → Storefront →
-// Trade targets → eBay → Settings. Financials sits above Portfolio for
-// the seller-first workflow (money view first, holdings second),
-// Messages sits right under Market so conversations are near the
-// discovery surface that spawns most of them, and Storefront is a new
-// first-class entry for the /u/<username> management page.
+// CF-SIDEBAR-TRIM (Drew, 2026-07-27). Cut from 15 → 10 items after the
+// UX audit + Drew's "keep only what is really important" ask. Every
+// removed page still exists at its URL and is reachable from cross-
+// links on parent surfaces:
+//
+//   Insights       → linked from DailyIQ (editorial content lives there)
+//   Players        → linked from Search results + player names elsewhere
+//   Watchlist      → linked from Players page + portfolio row context
+//   Trade targets  → linked from DailyIQ
+//   Sold history   → linked from Financials page grid + Portfolio
+//                    (SoldHistoryLink card added in DailyIQCard when
+//                    a user has any sold events)
+//
+// eBay stays because it's a live-listings surface Pro Sellers hit
+// daily. Storefront stays for the same reason — active management +
+// per-card picker.
 export const APP_NAV: NavItem[] = [
   {
     href: "/app",
@@ -53,17 +62,6 @@ export const APP_NAV: NavItem[] = [
     prefixMatch: true,
   },
   {
-    href: "/app/insights",
-    label: "Insights",
-    iconPath: "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z",
-  },
-  {
-    href: "/app/players",
-    label: "Players",
-    iconPath: "M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.7-8 6v2h16v-2c0-3.3-3.6-6-8-6z",
-    prefixMatch: true,
-  },
-  {
     href: "/app/alerts",
     label: "Alerts",
     iconPath: "M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z",
@@ -71,28 +69,7 @@ export const APP_NAV: NavItem[] = [
   {
     href: "/app/storefront",
     label: "Storefront",
-    // CF-STOREFRONT-EDITOR (Drew, 2026-07-27). New page at /app/storefront
-    // for managing the public /u/<username> shop.
     iconPath: "M4 4h16l-1 4H5L4 4zm1 6h14l-1 10H6L5 10zm4 3v5h6v-5H9z",
-  },
-  {
-    href: "/app/trade-targets",
-    label: "Trade targets",
-    iconPath: "M3 12l4-4v3h9V8l4 4-4 4v-3H7v3l-4-4z",
-  },
-  // CF-UX-CLEANUP (Drew, 2026-07-27): Sold history + Watchlist added
-  // to nav — both were orphaned. Sold was reachable only via a
-  // Portfolio toolbar button (now removed in the toolbar trim);
-  // Watchlist had no nav entry at all despite the page existing.
-  {
-    href: "/app/portfolio/sold",
-    label: "Sold history",
-    iconPath: "M20.5 5.9L9.4 17l-5.9-5.9 1.4-1.4L9.4 14.2 19.1 4.5z",
-  },
-  {
-    href: "/app/watchlist",
-    label: "Watchlist",
-    iconPath: "M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z",
   },
   {
     href: "/app/ebay",
