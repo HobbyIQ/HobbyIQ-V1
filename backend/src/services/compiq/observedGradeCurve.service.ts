@@ -22,6 +22,7 @@
 // so per-card fetch cost stays predictable.
 
 import { getCardSales } from "./cardhedge.client.js";
+import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
@@ -565,10 +566,23 @@ async function aggregateGrade(
 // legitimately trading up +20%/wk got compressed to +10%/wk, so
 // Predicted came in below live bids. See deriveWeeklyRate() for the
 // full rationale + extreme-rate warning telemetry.
-/** Maximum weeks look-back — trends beyond 6 weeks aren't reliable enough
- *  to linearly extrapolate. A 6-month-old comp on a hot player gets treated
- *  as-if 6 weeks old for trajectory purposes. */
-const MAX_WEEKS_LOOKBACK = 6;
+/** Maximum weeks look-back — trends beyond 12 weeks aren't reliable
+ *  enough to linearly extrapolate. A 6-month-old comp on a hot player
+ *  gets treated as-if 12 weeks old for trajectory purposes.
+ *  CF-TRAJECTORY-12WK (Drew, 2026-07-28): extended from 6 → 12 weeks
+ *  so 60-90-day-old comps on trending players get real projection
+ *  instead of stale-comp treatment. Multiplier bounds below stop
+ *  the extrapolation from producing negative or unreasonable FMVs. */
+const MAX_WEEKS_LOOKBACK = 12;
+/** CF-TRAJECTORY-12WK bounds. With 12-week lookback + ±10%/week rate
+ *  cap, linear multiplier can hit ±120% which produces a negative FMV
+ *  on the down side. Floor at 0.20 (80% max drop from anchor) and
+ *  ceiling at 3.0 (200% max rise). Beyond these, we're saying "we can
+ *  predict a card lost 90%+ of value in 3 months on linear model" —
+ *  not defensible without direct comps. Hitting either bound emits
+ *  a KQL telemetry event so we can review over time. */
+const PROJECTION_MULTIPLIER_FLOOR = 0.20;
+const PROJECTION_MULTIPLIER_CEILING = 3.0;
 /** Predicted horizon — 7 days forward from today. Shortened 2026-07-06
  *  from 30 → 7 (Drew: "the numbers are too big"). Over 30 days the
  *  compounded rate produced projections that were psychologically
@@ -1072,7 +1086,28 @@ async function applyTrajectory(
       entry.daysSinceNewestSale >= FRESH_COMP_THRESHOLD_DAYS
     ) {
       const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
-      const marketMultiplier = 1 + rate * weeksSinceSale;
+      const rawMultiplier = 1 + rate * weeksSinceSale;
+      // CF-TRAJECTORY-12WK bounds. 12 weeks × ±10%/week = ±120% linear
+      // rate, which produces negative multipliers on the down side.
+      // Floor/ceiling stop extrapolation from producing indefensible
+      // projections; hits log a boundedProjectionAlert so a nightly
+      // digest can email Drew for review.
+      const marketMultiplier = Math.max(
+        PROJECTION_MULTIPLIER_FLOOR,
+        Math.min(PROJECTION_MULTIPLIER_CEILING, rawMultiplier),
+      );
+      if (marketMultiplier !== rawMultiplier) {
+        recordBoundedProjectionAlert({
+          source: "observedGradeCurve.trendAdjust",
+          playerName: playerName ?? null,
+          cardId: null,
+          rate,
+          weeksSinceSale,
+          rawMultiplier,
+          bounded: marketMultiplier,
+          direction: rawMultiplier > marketMultiplier ? "capped-ceiling" : "capped-floor",
+        });
+      }
       const trendAdjusted = Math.round(anchorForTrajectory * marketMultiplier * 100) / 100;
       entry.trendAdjustedValue = trendAdjusted;
       // trendAdjustmentPct is now measured against ORIGINAL value (pill),

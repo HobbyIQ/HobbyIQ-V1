@@ -800,7 +800,10 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.predictedPricePct).toBeLessThan(0);
     });
 
-    it("weeks-since-sale is capped at 6 (no runaway on 6-month-old comps)", async () => {
+    it("weeks-since-sale is capped at 12 (no runaway on 6-month-old comps)", async () => {
+      // CF-TRAJECTORY-12WK (Drew, 2026-07-28): lookback extended 6→12
+      // weeks so 60-90d comps on trending players get real projection.
+      // Multiplier bounded at ceiling 3.0 so 12×10%=120% doesn't blow up.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       // Sale is 180d old — would normally be 25.7 weeks
@@ -822,9 +825,9 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", { playerName: "Hot" });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      // Capped at 6 weeks × 10%/wk = +60% → $160 (not 25.7 × 10% = 257%)
-      expect(raw.trendAdjustedValue).toBeCloseTo(160, 0);
-      expect(raw.trendAdjustmentPct).toBeCloseTo(60, 0);
+      // Capped at 12 weeks × 10%/wk = +120% → $220 (not 25.7 × 10% = +257%)
+      expect(raw.trendAdjustedValue).toBeCloseTo(220, 0);
+      expect(raw.trendAdjustmentPct).toBeCloseTo(120, 0);
     });
 
     it("fresh comp (<14d): Market Value stays observed, Predicted STILL projects forward", async () => {
