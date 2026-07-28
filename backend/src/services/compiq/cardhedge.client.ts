@@ -1723,6 +1723,7 @@ export async function getCardSales(
             price: s.price,
             soldAt: s.date,
             url: s.url,
+            imageUrl: s.image_url,   // CF-IMAGE-VERIFY-INGEST: threads to persistVendorSalesToPool for pHash comparison
           })),
           { ...opts.persistIdentity!, vendorCardId: cardId },
         );

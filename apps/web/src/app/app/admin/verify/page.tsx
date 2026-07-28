@@ -22,6 +22,7 @@ const REASONS: readonly VerifyReason[] = [
   "divergence-alert",
   "catalog-gap",
   "parallel-price-mismatch",
+  "image-mismatch",
 ];
 
 export default function VerifyPage() {
