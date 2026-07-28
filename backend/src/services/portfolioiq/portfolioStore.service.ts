@@ -6856,6 +6856,69 @@ export async function repriceHoldingsForUser(
           }));
         }
 
+        // CF-OUR-POOL-FALLBACK-WIRE-IN (Drew, 2026-07-28): before we
+        // fall through to sibling-fallback + skip, check OUR OWN
+        // sold_comps pool via hobbyiq-fmv. Diagnostic on Drew's account
+        // showed 5/6 currently-Missing holdings have sold_comps rows
+        // (222 for a 1964 Banks, 13 for a 1972 Aaron, 7 for a 2026
+        // Bowman prospect) that the CH-primary reprice never consulted.
+        // No feature flag — this is a last-resort "check our own data
+        // before giving up," same shape as sibling-fallback below.
+        // priceHoldingFromOurPool returns null (silent) on any error,
+        // missing slug, or empty pool.
+        try {
+          const ourPool = await priceHoldingFromOurPool(holding);
+          if (ourPool !== null) {
+            const now = new Date().toISOString();
+            const fmv = ourPool.fairMarketValue ?? ourPool.estimatedValue;
+            if (typeof fmv === "number" && fmv > 0) {
+              doc.holdings[holding.id] = {
+                ...holding,
+                ...repriceIdentityPatch,
+                fairMarketValue: ourPool.fairMarketValue ?? undefined,
+                estimatedValue: ourPool.estimatedValue,
+                estimateLow: ourPool.estimateLow,
+                estimateHigh: ourPool.estimateHigh,
+                estimateConfidence: ourPool.estimateConfidence,
+                estimateBasis: ourPool.estimateBasis,
+                isEstimate: ourPool.valuationStatus === "estimated",
+                valuationStatus: ourPool.valuationStatus,
+                verdict: ourPool.valuationStatus === "observed" ? "Observed" : "Estimated",
+                recommendation: "Hold",
+                lastUpdated: now,
+                sourceVendor: "hobbyiq-pool" as any,
+                sourceVendorUpdatedAt: now,
+                pricingSource: "our-pool",
+                pricingSourceMeta: {
+                  slug: ourPool.slug,
+                  method: ourPool.method,
+                  compsUsed: ourPool.compsUsed,
+                },
+              };
+              repriced += 1;
+              updates.push({ id: holding.id, status: "repriced", reason: `our-pool:${ourPool.method}` });
+              console.log(JSON.stringify({
+                event: "our_pool_fallback_wired_from_reprice_hit",
+                source: "portfolioStore.repriceHoldingsForUser",
+                holdingId: holding.id,
+                slug: ourPool.slug,
+                method: ourPool.method,
+                compsUsed: ourPool.compsUsed,
+                fmv,
+                valuationStatus: ourPool.valuationStatus,
+              }));
+              continue;
+            }
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "our_pool_fallback_wired_from_reprice_error",
+            source: "portfolioStore.repriceHoldingsForUser",
+            holdingId: holding.id,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+
         // CF-SIBLING-FALLBACK-WIRE-IN (Drew, 2026-07-28): last-mile
         // rescue before the skip branch. Wires the existing
         // attemptSiblingPriceFallback (compiq/siblingCardPriceFallback)
