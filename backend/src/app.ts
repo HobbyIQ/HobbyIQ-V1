@@ -61,6 +61,7 @@ import searchRoutes from "./routes/search.routes.js";
 // Cosmos-backed alias store — add/correct/reload aliases without a
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
 import searchAdminRoutes from "./routes/searchAdmin.routes.js";
+import verifyQueueRoutes from "./routes/verifyQueue.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
 // structured-search form and internal CompIQ code paths.
@@ -223,6 +224,9 @@ app.use("/api/search", searchRoutes);
 // CF-SEARCH-ADMIN (2026-07-08, Drew): mount admin surface after the
 // user-facing /api/search so path resolution can't shadow user routes.
 app.use("/api/admin", searchAdminRoutes);
+// CF-VERIFY-QUEUE-ROUTES (Drew, 2026-07-28): human-in-the-loop verify
+// queue + pool-level data-quality report. Both admin-gated.
+app.use("/api", verifyQueueRoutes);
 app.use("/api/reference", referenceRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);

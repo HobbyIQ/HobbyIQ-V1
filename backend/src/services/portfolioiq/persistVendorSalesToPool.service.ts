@@ -124,6 +124,60 @@ export async function persistVendorSalesToPool(
         parameters: [{ name: "@hiq", value: slug }, { name: "@ch", value: contentHash }],
       }).fetchAll();
       if (existing.length > 0) { result.deduped++; continue; }
+
+      // CF-VERIFY-QUEUE-PRICE-OUTLIER (Drew, 2026-07-28). Before we
+      // commit this sale to the pool, sanity-check against the
+      // rolling 30d median for the same slug. If we're >3× median or
+      // <1/3× median AND the slug already has ≥5 comps for context,
+      // divert to verify_queue instead of poisoning the pool. Cheap:
+      // single indexed query on hobbyiqCardId.
+      try {
+        const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+        const { resources: rollingRows } = await container.items.query<{ price: number }>({
+          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+          parameters: [{ name: "@hiq", value: slug }, { name: "@cutoff", value: rollingCutoff }],
+        }).fetchAll();
+        if (rollingRows.length >= 5) {
+          const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+          if (prices.length >= 5) {
+            const rollingMedian = prices[Math.floor(prices.length / 2)];
+            const ratio = price / rollingMedian;
+            if (ratio > 3 || ratio < (1 / 3)) {
+              const { enqueueForVerify } = await import("./verifyQueue.service.js");
+              await enqueueForVerify({
+                reason: "price-outlier",
+                saleInput: {
+                  cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+                  playerName,
+                  cardYear,
+                  setName: setKey,
+                  parallel: parsed.parallel,
+                  cardNumber: parsed.cardNumber,
+                  isAuto: parsed.isAuto,
+                  gradeCompany: null,
+                  gradeValue: null,
+                  price,
+                  soldAt: new Date(soldAt).toISOString(),
+                  source,
+                  sourceExternalId: row.externalId ?? null,
+                  title,
+                  imageUrl: null,
+                  sellerHandle: null,
+                  sport,
+                  verifiedByUser: false,
+                  confidence: 0.3,
+                },
+                signal: { rollingMedian, ratio, note: `${ratio > 3 ? "high" : "low"}-outlier vs 30d median ($${rollingMedian.toFixed(2)}, n=${prices.length})` },
+              });
+              result.skipped++;
+              continue;
+            }
+          }
+        }
+      } catch {
+        // Detector failure is non-fatal — fall through and persist.
+      }
+
       const sourceExternalId = row.externalId
         ?? (row.url ? createHash("sha256").update(source + ":" + row.url).digest("hex").slice(0, 24)
                     : createHash("sha256").update(source + ":" + title + price + soldAt).digest("hex").slice(0, 24));
