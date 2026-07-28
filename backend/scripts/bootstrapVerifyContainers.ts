@@ -23,6 +23,10 @@ async function main(): Promise<void> {
   for (const spec of [
     { id: "verify_queue", partitionKey: "/reason", defaultTtl: 60 * 24 * 3600 },
     { id: "verify_corrections", partitionKey: "/reason", defaultTtl: -1 },
+    // CF-CARD-CATALOG (Drew, 2026-07-28). Authoritative identity per
+    // real card. Partition /sport (small cardinality). No TTL — this
+    // is the source of truth for slug canonicalization.
+    { id: "card_catalog", partitionKey: "/sport", defaultTtl: -1 },
   ]) {
     try {
       const { resource } = await db.containers.createIfNotExists({

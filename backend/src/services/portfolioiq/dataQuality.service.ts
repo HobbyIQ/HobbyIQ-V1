@@ -45,6 +45,38 @@ async function getContainer(): Promise<Container | null> {
   }
 }
 
+let _catCached: Container | null = null;
+async function getCatalogContainer(): Promise<Container | null> {
+  if (_catCached) return _catCached;
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return null;
+  try {
+    const client = new CosmosClient(conn);
+    const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+    _catCached = db.container(process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog");
+    return _catCached;
+  } catch {
+    return null;
+  }
+}
+
+/** Pull every slug present in card_catalog into a Set for O(1) match
+ *  during the sold_comps scan. Cardinality is bounded by distinct
+ *  cards in the market (tens-of-thousands, not millions), so an
+ *  in-memory Set is fine. Empty on Cosmos failure or when the catalog
+ *  hasn't been seeded — falls back to the slug-prefix heuristic. */
+async function loadCatalogSlugs(): Promise<Set<string> | null> {
+  const c = await getCatalogContainer();
+  if (!c) return null;
+  try {
+    const { resources } = await c.items.query<string>("SELECT VALUE c.id FROM c").fetchAll();
+    if (!Array.isArray(resources) || resources.length === 0) return null;
+    return new Set(resources);
+  } catch {
+    return null;
+  }
+}
+
 export interface DataQualityReport {
   totalRows: number;
   cutoffDays: number;
@@ -97,6 +129,11 @@ export async function computeDataQualityReport(cutoffDays = 180): Promise<DataQu
   const container = await getContainer();
   if (!container) return empty;
 
+  // Load catalog slugs ONCE so the sold_comps scan can hit an in-memory
+  // Set instead of firing a point-read per row. Falls back to the
+  // slug-prefix heuristic when the catalog isn't seeded (early days).
+  const catalogSlugs = await loadCatalogSlugs();
+
   const cutoffIso = new Date(now.getTime() - cutoffDays * 86_400_000).toISOString();
 
   // Single scan; classify each row in JS. Cheaper than firing 6 separate
@@ -140,8 +177,14 @@ export async function computeDataQualityReport(cutoffDays = 180): Promise<DataQu
     if (r.verifiedByUser === true) {
       verified += 1;
     }
-    if (typeof r.hobbyiqCardId === "string" && r.hobbyiqCardId.startsWith("hiq:")) {
-      catalogMatched += 1;  // proxy until real catalog-master lands
+    // Real catalog match when the seed has run; slug-prefix heuristic
+    // as a fallback until then.
+    const slug = typeof r.hobbyiqCardId === "string" ? r.hobbyiqCardId : "";
+    const hasSlug = slug.startsWith("hiq:");
+    if (catalogSlugs) {
+      if (hasSlug && catalogSlugs.has(slug)) catalogMatched += 1;
+    } else if (hasSlug) {
+      catalogMatched += 1;
     }
 
     const par = String(r.parallel ?? "").trim();
