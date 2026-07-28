@@ -198,6 +198,59 @@ function extractParallel(title: string): string {
   if (/blue\s+refractor/i.test(T) || /\bblue\b.*\/150\b/i.test(T) || /\bblue\b.*\/125\b/i.test(T)) return "Blue Refractor";
   // Bare "Refractor" on auto = base refractor (silver)
   if (/\brefractor\b/i.test(T) && AUTO_RE.test(T) && !AUTO_NEGATIVE_RE.test(T)) return "Refractor";
+
+  // ─── Basketball parallels (Prizm, Optic, Select, Contenders, Hoops) ───
+  // CF-BASKETBALL-PARALLELS (Drew, 2026-07-28). Basketball card
+  // conventions are distinct from baseball's Bowman Chrome vocabulary.
+  // These rules run AFTER the baseball checks above so a hybrid title
+  // like "Prizm Silver Refractor" still matches "Silver Refractor" first
+  // when applicable (rare — most Prizm titles say "Silver Prizm").
+  //
+  // Verified against real Cardsight/CH titles landing in the verify_queue:
+  //   "Panini Prizm Basketball Silver Prizm"
+  //   "2024 Donruss Optic Blue Velocity"
+  //   "Select Basketball Blue Zebra"
+  //   "Contenders Cracked Ice"
+
+  // Prizm — Panini Prizm/Prizm Draft/NBA Hoops Premium Stock uses the same
+  // vocabulary. "Silver Prizm" is the base foil; every other color+Prizm
+  // is a numbered parallel.
+  if (/silver\s+prizm/i.test(T) || /prizm\s+silver/i.test(T)) return "Silver Prizm";
+  m = T.match(/(blue|green|red|purple|gold|orange|pink|black)\s+ice\s+prizm/i);
+  if (m) return capFirst(m[1]) + " Ice Prizm";
+  m = T.match(/(blue|green|red|purple|gold|orange|pink|black)\s+pulsar/i);
+  if (m) return capFirst(m[1]) + " Pulsar Prizm";
+  m = T.match(/(red|blue|green|orange|purple|gold|pink)\s+wave\s+prizm/i);
+  if (m) return capFirst(m[1]) + " Wave Prizm";
+  m = T.match(/fast\s+break\s+(silver|blue|red|green|purple|gold|pink|orange|neon)/i);
+  if (m) return "Fast Break " + capFirst(m[1]) + " Prizm";
+  m = T.match(/hyper\s+(silver|blue|red|green|purple|gold)/i);
+  if (m) return "Hyper " + capFirst(m[1]) + " Prizm";
+  m = T.match(/mojo\s+prizm/i);
+  if (m) return "Mojo Prizm";
+  m = T.match(/(blue|red|green|purple|gold|pink|orange)\s+prizm/i);
+  if (m) return capFirst(m[1]) + " Prizm";
+
+  // Donruss Optic (basketball) — Holo/Silver base, then color velocities +
+  // Pandora + Choice variants
+  if (/\boptic\s+holo\b|\bholo\s+optic\b/i.test(T)) return "Holo Optic";
+  m = T.match(/(blue|red|green|purple|orange|pink|gold)\s+velocity/i);
+  if (m) return capFirst(m[1]) + " Velocity Optic";
+  m = T.match(/choice\s+(blue|red|green|purple|orange|pink|gold)/i);
+  if (m) return "Choice " + capFirst(m[1]) + " Optic";
+  m = T.match(/(blue|red|green|purple|orange|pink|gold)\s+pandora/i);
+  if (m) return capFirst(m[1]) + " Pandora Optic";
+  m = T.match(/\b(silver|blue|red|green|purple|orange|pink|gold|holo)\s+optic\b/i);
+  if (m) return capFirst(m[1]) + " Optic";
+
+  // Panini Select — Concourse/Premier/Courtside tiers; Zebra is a pattern parallel
+  if (/\bzebra\b/i.test(T)) return "Zebra Select";
+  m = T.match(/(silver|blue|red|green|purple|gold|orange|pink)\s+select/i);
+  if (m) return capFirst(m[1]) + " Select";
+
+  // Contenders — Cracked Ice is the iconic parallel
+  if (/cracked\s+ice/i.test(T)) return "Cracked Ice";
+
   return "Base";
 }
 
