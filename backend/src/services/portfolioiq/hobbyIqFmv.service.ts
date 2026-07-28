@@ -681,7 +681,21 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         rawRows = rawRows.filter((r) => slugify(r.parallel ?? "") === rung.parallelFilter);
       }
       rawRows = filterByGrade(rawRows, null, null);   // raw only
-      if (rawRows.length >= 3) {
+      // CF-GRADE-CROSS-RAW-EXACT-IDENTITY-N2 (Drew, 2026-07-28). Exact-
+      // identity rungs (direct-slug + cross-setkey) accept n≥2 raw
+      // comps as the anchor; the broader rungs (same-printrun-cross-
+      // parallel + sibling-parallel) keep the n≥3 floor.
+      //
+      // Verified live 2026-07-28 on Hartman Gold Refractor Auto PSA 9:
+      // pool has 2 real Gold Refractor raw sales at $1,475 + $2,500 →
+      // median $2,500 × PSA9 mult (1.18) = $2,950. Prior n≥3 gate
+      // dropped through to sibling-parallel raw (832 comps of BASE +
+      // every parallel, median $113) × 1.18 = $133 → returned $370.
+      // A rare parallel's own 2 sales carry far more identity-signal
+      // than 832 unrelated sibling sales; the broader rungs keep the
+      // n≥3 floor precisely because they DO dilute across parallels.
+      const rawFloor = (rung.method === "direct-slug" || rung.method === "cross-setkey") ? 2 : 3;
+      if (rawRows.length >= rawFloor) {
         const rawPrices = rawRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
         if (rawPrices.length === 0) continue;
         const rawMedian = rawPrices[Math.floor(rawPrices.length / 2)];
