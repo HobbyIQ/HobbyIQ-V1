@@ -234,27 +234,9 @@ export default function EbayPage() {
           </div>
 
           <LiveListingsSection />
-
-          <div className="hiq-card p-6">
-            <h2 className="font-bold text-lg mb-3">Next steps</h2>
-            <p className="text-sm text-[color:var(--color-muted)] mb-4 leading-relaxed">
-              Head to your{" "}
-              <Link
-                href="/app/portfolio"
-                className="hover:underline"
-                style={{ color: "var(--color-accent)" }}
-              >
-                portfolio
-              </Link>{" "}
-              — every holding will get a &ldquo;List on eBay&rdquo; action that generates a
-              draft using the FMV as the suggested price and the card&apos;s metadata as
-              the listing title. Approve → publish. Sales sync automatically feeds back
-              into your holdings and our sold-comps pool.
-            </p>
-            <Link href="/app/portfolio" className="hiq-btn-primary text-sm inline-block">
-              Open portfolio
-            </Link>
-          </div>
+          {/* CF-UX-CLEANUP (Drew, 2026-07-27): "Next steps" filler card
+              removed — its only CTA was "Open portfolio" which is one
+              click away in the sidebar anyway. */}
         </>
       )}
     </div>

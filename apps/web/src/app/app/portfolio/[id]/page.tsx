@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   fetchHolding,
   fetchHoldingHistory,
@@ -195,7 +195,11 @@ export default function HoldingDetailPage() {
         )}
       </div>
 
-      {/* Actions */}
+      {/* CF-UX-CLEANUP (Drew, 2026-07-27): action row collapsed 9→3
+          primary. Mark sold + Edit + Refresh are the daily-use actions
+          and stay visible. Everything else (grade decisions, eBay list,
+          storefront toggle, delete) tucks into a ⋯ menu so the row
+          isn't a 9-button wall. */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <button onClick={() => setSellOpen(true)} className="hiq-btn-primary">
           Mark as sold
@@ -203,16 +207,6 @@ export default function HoldingDetailPage() {
         <button onClick={() => setEditOpen(true)} className="hiq-btn-secondary">
           Edit card
         </button>
-        {!h.gradeCompany && (
-          <>
-            <button onClick={() => setGradeCalcOpen(true)} className="hiq-btn-secondary">
-              Should I grade?
-            </button>
-            <button onClick={() => setRegradeOpen(true)} className="hiq-btn-secondary">
-              Mark as graded
-            </button>
-          </>
-        )}
         <button
           onClick={async () => {
             if (refreshing) return;
@@ -241,20 +235,31 @@ export default function HoldingDetailPage() {
         >
           {refreshing ? "Refreshing…" : "Refresh price"}
         </button>
-        <button onClick={() => setEbayOpen(true)} className="hiq-btn-secondary">
-          List on eBay
-        </button>
-        <StorefrontVisibilityButton
-          holding={h}
-          onChange={(next) => setH(next)}
-        />
-        <button
-          onClick={() => setDeleteOpen(true)}
-          className="hiq-btn-secondary"
-          style={{ color: "var(--color-danger)" }}
-        >
-          Delete holding
-        </button>
+        <MoreMenu>
+          <button onClick={() => setEbayOpen(true)} className={MENU_ITEM_CLS}>
+            List on eBay
+          </button>
+          {!h.gradeCompany && (
+            <>
+              <button onClick={() => setGradeCalcOpen(true)} className={MENU_ITEM_CLS}>
+                Should I grade?
+              </button>
+              <button onClick={() => setRegradeOpen(true)} className={MENU_ITEM_CLS}>
+                Mark as graded
+              </button>
+            </>
+          )}
+          <StorefrontVisibilityMenuItem
+            holding={h}
+            onChange={(next) => setH(next)}
+          />
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className={MENU_ITEM_DANGER_CLS}
+          >
+            Delete holding
+          </button>
+        </MoreMenu>
       </div>
 
       {refreshError && (
@@ -560,11 +565,63 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   );
 }
 
+// CF-UX-CLEANUP (Drew, 2026-07-27): MoreMenu is a lightweight dropdown
+// used by the action row to hide low-frequency actions behind a ⋯ so
+// the row shows 3 primary buttons instead of 9. Closes on outside
+// click and after any child button click.
+function MoreMenu({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="hiq-btn-secondary"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        ⋯ More
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 min-w-[220px] rounded-lg shadow-2xl border overflow-hidden z-10"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border)",
+          }}
+          onClick={() => setOpen(false)}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Shared Tailwind classes for MoreMenu children. Kept close to the
+// MoreMenu component (not a global CSS class) so the styling stays
+// scoped and there's no worry about accidental reuse elsewhere.
+export const MENU_ITEM_CLS =
+  "block w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 disabled:opacity-50 disabled:cursor-default transition-colors";
+export const MENU_ITEM_DANGER_CLS = MENU_ITEM_CLS + " text-[color:var(--color-danger)]";
+
 // CF-STOREFRONT-OPT-IN (Drew, 2026-07-27 rev 2). Opt-IN toggle: the
 // button is off by default; click to add this card to the public
 // storefront. Server enforces tier caps via /app/storefront's bulk
 // selector; here we just fire the write and reflect the new state.
-function StorefrontVisibilityButton({
+// Now a menu item (was a full button) after the CF-UX-CLEANUP row
+// compression.
+function StorefrontVisibilityMenuItem({
   holding,
   onChange,
 }: {
@@ -590,14 +647,7 @@ function StorefrontVisibilityButton({
   }
 
   return (
-    <button
-      onClick={toggle}
-      disabled={saving}
-      className="hiq-btn-secondary disabled:opacity-60"
-      title={shown
-        ? "On your public storefront. Click to remove."
-        : "Off your storefront. Click to add (uses one of your tier cap slots)."}
-    >
+    <button onClick={toggle} disabled={saving} className={MENU_ITEM_CLS}>
       {saving ? "…" : shown ? "Remove from storefront" : "Add to storefront"}
     </button>
   );

@@ -224,14 +224,9 @@ export default function ErpPage() {
         </Link>
       </div>
 
-      {/* Sold history link on the Sold-history nudge for the reconciliation page */}
-      <div className="mt-6 text-xs text-[color:var(--color-muted)] leading-relaxed">
-        Tip — the reconciliation queue also surfaces from your{" "}
-        <Link href="/app/portfolio/sold" className="hover:underline" style={{ color: "var(--color-accent)" }}>
-          sold history
-        </Link>{" "}
-        when sales are waiting on input.
-      </div>
+      {/* CF-UX-CLEANUP (Drew, 2026-07-27): "Tip — sold history" filler
+          link removed. Sold history is now a first-class sidebar entry
+          so the tip pointer is redundant. */}
     </div>
   );
 }
