@@ -110,7 +110,9 @@ function normalizeSetKey(setName: string): string {
     // rule, normalizeSetKey falls through to slugify → "chrome-prospects"
     // fragmenting the pool. Must come AFTER the bowman-chrome rule so
     // "Bowman Chrome Prospects" full spellings still match cleanly first.
-    [/chrome-prospects/, "bowman-chrome"],
+    // Match all variants: chrome-prospect, chrome-prospects,
+    // chrome-prospect-autographs, chrome-prospects-autographs.
+    [/chrome-prospects?(?:-autographs?)?/, "bowman-chrome"],
     // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). BPA-XX / BDA-XX
     // cardNumbers indicate the paper-stock autograph subset. These get
     // their own setKeys so paper-auto FMV pools don't blend with paper

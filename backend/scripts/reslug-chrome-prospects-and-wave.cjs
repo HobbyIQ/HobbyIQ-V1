@@ -151,49 +151,48 @@ async function waveRefractorPass(sc) {
   console.log(`\n  ${rows.length} rows with 'wave refractor' in title`);
 
   const patches = [];
-  let noChange = 0, computeFailed = 0, parseError = 0, colorLost = 0;
+  let noChange = 0, parseError = 0, colorLost = 0, notWave = 0;
   const parallelDist = {};
 
   for (const r of rows) {
     const title = String(r.title || r.rawTitle || "");
     if (!title) continue;
 
-    let parsedTitle, titleSet;
+    let parsedTitle;
     try {
       parsedTitle = parseListingIdentity(title);
-      titleSet = inferSetKeyFromTitle(title, parsedTitle.cardNumber ?? null);
     } catch { parseError++; continue; }
 
-    let newSlug;
-    try {
-      newSlug = computeHobbyIqCardId({
-        sport: r.sport || "baseball",
-        year: Number(r.cardYear),
-        setKey: titleSet,
-        cardNumber: parsedTitle.cardNumber || r.cardNumber || "",
-        parallel: parsedTitle.parallel || r.parallel || "Base",
-        isAuto: (parsedTitle.isAuto === true) || (r.isAuto === true),
-        printRun: parsedTitle.printRun ?? r.printRun ?? null,
-      });
-    } catch { computeFailed++; continue; }
-
-    if (!newSlug || newSlug === r.hobbyiqCardId) { noChange++; continue; }
-
+    // Only touch parallel in this pass. setKey unification is chrome-
+    // prospects pass's job. Surgical slug rewrite: keep every other
+    // slug slot, replace only parallelSlug (slot 5).
     const oldParts = String(r.hobbyiqCardId ?? "").split(":");
-    const newParts = newSlug.split(":");
-    // Only accept if new parallel contains "wave" (this is a Wave recovery).
-    if (!newParts[5].includes("wave")) continue;
-
+    if (oldParts.length < 7) continue;
+    const newParallel = parsedTitle.parallel || "Base";
+    // Only accept "wave" outputs (this is a Wave recovery).
+    if (!/wave/i.test(newParallel)) { notWave++; continue; }
+    // Slugify parallel the same way computeHobbyIqCardId does.
+    const newParallelSlug = String(newParallel).toLowerCase()
+      .replace(/[^\w\s-]/g, "").replace(/_/g, "-")
+      .replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    if (!newParallelSlug || newParallelSlug === oldParts[5]) { noChange++; continue; }
     // Color preservation: if old parallel starts with a color, new must too.
     const oldColor = COLORS.find(c => oldParts[5].startsWith(`${c}-`));
-    if (oldColor && !newParts[5].startsWith(`${oldColor}-`)) { colorLost++; continue; }
+    if (oldColor && !newParallelSlug.startsWith(`${oldColor}-`)) { colorLost++; continue; }
+    // Refuse to downgrade: if old parallel already contains "wave" and
+    // new doesn't ADD specificity, skip.
+    if (oldParts[5].includes("wave") && !newParallelSlug.includes("wave")) { noChange++; continue; }
 
-    parallelDist[newParts[5]] = (parallelDist[newParts[5]] ?? 0) + 1;
+    const newParts = oldParts.slice();
+    newParts[5] = newParallelSlug;
+    const newSlug = newParts.join(":");
+
+    parallelDist[newParallelSlug] = (parallelDist[newParallelSlug] ?? 0) + 1;
     patches.push({ id: r.id, partitionKey: r.cardId, oldSlug: r.hobbyiqCardId, newSlug });
   }
 
   console.log(`  Parse error:     ${parseError}`);
-  console.log(`  Compute failed:  ${computeFailed}`);
+  console.log(`  Not wave:        ${notWave}`);
   console.log(`  No change:       ${noChange}`);
   console.log(`  Color lost:      ${colorLost}`);
   console.log(`  Ready patches:   ${patches.length}`);
