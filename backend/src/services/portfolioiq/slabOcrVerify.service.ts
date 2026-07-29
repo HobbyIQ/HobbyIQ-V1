@@ -122,6 +122,18 @@ Rules:
 - confidence: your honest self-assessment. If the label is blurry or partially cropped, discount accordingly.
 - Return ONLY the JSON object matching the provided schema. No prose.`;
 
+/** Rewrite common vendor thumbnail URLs to their full-resolution
+ *  equivalents. Critical for OCR: slab-label text at 140px is
+ *  unreadable; at 1600px it's crisp. Silent-safe — returns the
+ *  original URL when no rewrite pattern matches.
+ *
+ *  eBay pattern: s-l64.jpg / s-l140.jpg / s-l500.jpg → s-l1600.jpg */
+export function upscaleImageUrl(url: string): string {
+  if (!url) return url;
+  // eBay image sizes: s-l{N}.jpg, s-l{N}.webp
+  return url.replace(/\/s-l\d+(\.(?:jpg|jpeg|png|webp))/i, "/s-l1600$1");
+}
+
 /** Extract structured slab-label fields from a card image.
  *  Does NOT check SLAB_OCR_ENABLED — that gate belongs to the call
  *  site (imageVerifyJob) so exploratory tools (prototype-slab-ocr.cjs)
@@ -142,6 +154,8 @@ export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractRes
   if (!imageUrl) {
     return { ok: false, error: "empty imageUrl", durationMs: Date.now() - t0 };
   }
+
+  const highResUrl = upscaleImageUrl(imageUrl);
 
   try {
     const { AzureOpenAI } = await import("openai");
@@ -165,7 +179,7 @@ export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractRes
             role: "user",
             content: [
               { type: "text", text: "Extract the slab label fields from this card image." },
-              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "image_url", image_url: { url: highResUrl, detail: "high" } },
             ],
           },
         ],
