@@ -234,8 +234,45 @@ function extractParallel(title: string): string {
   // Bowman Chrome variants surfaced in the verify_queue that weren't
   // covered by the existing rules. Confirmed against real Cardsight
   // titles landing in pending-manual today.
-  if (/mojo\s+refractor/i.test(T)) return "Mojo Refractor";
+  // CF-MEGA-MOJO-ALIAS (Drew, 2026-07-29). "Mega Refractor" and "Mojo
+  // Refractor" are the SAME physical parallel — orange stock with a
+  // pattern overlay — just named differently in the market vocabulary.
+  // Distinct from plain Orange Refractor (which is solid orange). Both
+  // titles collapse to "Mojo Refractor" here (the more common form) and
+  // normalizeParallel in hobbyIqCardId.service.ts also collapses the
+  // slug at the write layer so any vendor-supplied "Mega Refractor"
+  // parallel string maps to the same canonical slug.
+  if (/mojo\s+refractor/i.test(T) || /mega\s+refractor/i.test(T)) return "Mojo Refractor";
   if (/lazer\s+refractor/i.test(T) || /\blaser\s+refractor/i.test(T)) return "Lazer Refractor";
+
+  // CF-STERLING-REFRACTOR (Drew, 2026-07-29). Bowman Sterling is an
+  // insert set within Bowman flagship — identified by the BST-XX
+  // cardNumber prefix. Its refractor parallel is called "Sterling
+  // Refractor" in vendor titles. Kept as its own parallel so pricing
+  // pools don't blend Sterling Refractor with Chrome Refractor (they
+  // are visually and market-distinct products).
+  //
+  // OBSERVED 2026-07-29: "2026 Bowman JAC CAGLIANONE Bowman Sterling
+  // Refractor Insert #BST-14 Royals RC" landed with parallel="Base".
+  //
+  // Also: bare "Sterling" appearing alongside a color modifier maps to
+  // "<Color> Sterling Refractor" — mirrors the Sapphire treatment.
+  {
+    const sm = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|black)\s+sterling\s+refractor/i);
+    if (sm) return capFirst(sm[1]) + " Sterling Refractor";
+    if (/sterling\s+refractor/i.test(T)) return "Sterling Refractor";
+  }
+
+  // CF-COLOR-ROOKIE (Drew, 2026-07-29). "Red Rookie" is a parallel —
+  // rookie-designated color-foiled variant seen in Topps flagship /
+  // Panini Prizm / Bowman rookie subsets. Generalize to the color
+  // ladder (Red/Blue/Green/Gold/etc). Matches "<Color> Rookie" phrase
+  // ordering because that's how the market vocab labels these.
+  {
+    const rm = T.match(/(red|blue|green|orange|purple|gold|yellow|pink|black|silver)\s+rookie\b/i);
+    if (rm) return capFirst(rm[1]) + " Rookie";
+  }
+
   if (/sepia\s+refractor/i.test(T)) return "Sepia Refractor";
   if (/\bsepia\b/i.test(T) && /\brefractor\b/i.test(T)) return "Sepia Refractor";
   m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil/i);

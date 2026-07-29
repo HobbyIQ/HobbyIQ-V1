@@ -180,6 +180,14 @@ function normalizeParallel(parallel: string | null | undefined): string {
   //   "Xfractor"  → xfractor   → x-fractor
   s = s.replace(/(^|-)raywave($|-)/g, "$1ray-wave$2");
   s = s.replace(/(^|-)xfractor($|-)/g, "$1x-fractor$2");
+  // CF-MEGA-MOJO-ALIAS (Drew, 2026-07-29). "Mega Refractor" and "Mojo
+  // Refractor" are the same physical parallel (orange stock with a
+  // pattern), different market vocabulary. Collapse mega-refractor →
+  // mojo-refractor at the slug layer so the two aliases produce the
+  // same slug and share one FMV pool. Bare "Mega" alone is NOT
+  // collapsed here — too ambiguous (could be Bowman Mega Box product
+  // context). Only the explicit "Mega Refractor" phrase.
+  s = s.replace(/(^|-)mega-refractor($|-)/g, "$1mojo-refractor$2");
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
   }
