@@ -203,6 +203,16 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Ray Wave Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+wave/i);
   if (m) return capFirst(m[1]) + " Wave Refractor";
+  // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Wave Refractor exists
+  // as a bare (silver-based) parallel too — "2026 Bowman Eric Hartman
+  // Wave Refractor /350 #BCP-102" landed at parallel="Refractor"
+  // because the color-prefix rules above didn't match and the bare
+  // Refractor fallback at the bottom did. Order: after color-prefixed
+  // Wave rules so "Blue Wave" still returns "Blue Wave Refractor",
+  // before the bare "Refractor" fallback so bare "Wave Refractor"
+  // beats bare "Refractor". Same for Ray Wave.
+  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "Ray Wave Refractor";
+  if (/wave\s+refractor/i.test(T)) return "Wave Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+grass/i);
   if (m) return capFirst(m[1]) + " Grass Refractor";
   // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Speckle is a Bowman Chrome

@@ -146,6 +146,18 @@ describe("parseListingIdentity — parallel extraction", () => {
     // Explicit Draft product line wins over the chrome-implied upgrade.
     expect(inferSetKeyFromTitle("2025 Bowman Draft Gage Wood Refractor #BD-100")).toBe("Bowman Draft");
   });
+  // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Bare Wave Refractor
+  // (silver-based, no color modifier) was falling through to bare
+  // "Refractor" because color-prefixed Wave rules didn't match.
+  it("Patterned refractor: bare Wave Refractor (no color)", () => {
+    expect(parseListingIdentity("2026 Bowman - Eric Hartman Wave Refractor /350 #BCP-102").parallel).toBe("Wave Refractor");
+  });
+  it("Patterned refractor: bare Ray Wave Refractor (no color)", () => {
+    expect(parseListingIdentity("Owen Carey Ray Wave Refractor #BCP-99").parallel).toBe("Ray Wave Refractor");
+  });
+  it("Guardrail: 'Blue Wave Refractor' still returns Blue-prefixed (color rule wins)", () => {
+    expect(parseListingIdentity("Owen Carey Blue Wave Refractor").parallel).toBe("Blue Wave Refractor");
+  });
   it("Patterned refractor: Blue X-Fractor (hyphenated)", () => {
     expect(parseListingIdentity("Eric Hartman Blue X-Fractor #CPA-EHA").parallel).toBe("Blue X-Fractor");
   });

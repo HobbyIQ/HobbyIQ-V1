@@ -101,6 +101,16 @@ function normalizeSetKey(setName: string): string {
     // setKey layer.
     [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome-draft"],
     [/bowman-chrome/, "bowman-chrome"],
+    // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
+    // the BCP-XX subset as setName="Chrome Prospects" (their own naming
+    // for the top-prospects insert within Bowman Chrome). Same for
+    // "Chrome Prospects Autographs" (CPA-XX). Both are Bowman Chrome
+    // — subsets, not distinct product lines — and their FMV pool
+    // must unify with the parent bowman-chrome slug. Without this
+    // rule, normalizeSetKey falls through to slugify → "chrome-prospects"
+    // fragmenting the pool. Must come AFTER the bowman-chrome rule so
+    // "Bowman Chrome Prospects" full spellings still match cleanly first.
+    [/chrome-prospects/, "bowman-chrome"],
     // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). BPA-XX / BDA-XX
     // cardNumbers indicate the paper-stock autograph subset. These get
     // their own setKeys so paper-auto FMV pools don't blend with paper
