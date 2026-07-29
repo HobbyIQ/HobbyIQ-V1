@@ -38,6 +38,7 @@ on:
           - reslug-chrome-draft-collision
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
+          - prototype-slab-ocr
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -100,6 +101,36 @@ jobs:
           echo "::add-mask::$CS"
           echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
           echo "COSMOS_CONNECTION_STRING fetched (length: ${#CS})"
+
+      # Azure OpenAI env — only required by the slab-OCR prototype
+      # script; always fetch (cheap read-only) so any future backfill
+      # that needs LLM calls can rely on them being present.
+      - name: Fetch Azure OpenAI env from HobbyIQ3 App Service
+        if: startsWith(inputs.script, 'prototype-slab') || startsWith(inputs.script, 'slab-')
+        shell: bash
+        run: |
+          fetch_setting() {
+            az webapp config appsettings list \
+              --name HobbyIQ3 \
+              --resource-group rg-hobbyiq-dev \
+              --query "[?name=='$1'].value | [0]" \
+              -o tsv
+          }
+          ENDPOINT=$(fetch_setting AZURE_OPENAI_ENDPOINT)
+          KEY=$(fetch_setting AZURE_OPENAI_API_KEY)
+          [ -z "$KEY" ] && KEY=$(fetch_setting AZURE_OPENAI_KEY)
+          DEPLOY=$(fetch_setting AZURE_OPENAI_DEPLOYMENT)
+          API_VERSION=$(fetch_setting AZURE_OPENAI_API_VERSION)
+          if [ -z "$ENDPOINT" ] || [ -z "$KEY" ] || [ -z "$DEPLOY" ]; then
+            echo "::error::Azure OpenAI env missing (endpoint / key / deployment)"
+            exit 1
+          fi
+          echo "::add-mask::$KEY"
+          echo "AZURE_OPENAI_ENDPOINT=$ENDPOINT" >> "$GITHUB_ENV"
+          echo "AZURE_OPENAI_API_KEY=$KEY" >> "$GITHUB_ENV"
+          echo "AZURE_OPENAI_DEPLOYMENT=$DEPLOY" >> "$GITHUB_ENV"
+          [ -n "$API_VERSION" ] && echo "AZURE_OPENAI_API_VERSION=$API_VERSION" >> "$GITHUB_ENV"
+          echo "Azure OpenAI env fetched (deployment: $DEPLOY)"
 
       - name: Verify script exists
         # Guardrail: whitelisted input, but confirm file is present in
