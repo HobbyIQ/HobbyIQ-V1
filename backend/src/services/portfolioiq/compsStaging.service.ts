@@ -27,7 +27,13 @@ export type StagingStatus =
   | "anomaly"
   | "verified"
   | "pending-manual"
-  | "promoted";
+  | "promoted"
+  // CF-STAGING-REJECT-ZERO-PRICE (Drew, 2026-07-29). "There is no sales
+  // at 0 dollars." Rows with price <= 0 are rejected outright and stay
+  // out of the manual queue. Distinct from `promoted` so we can audit
+  // what was tossed. Not to be confused with the general no-reject rule
+  // (which applies to missing-image rows).
+  | "rejected";
 
 export type StagingVendor = "cardhedge" | "cardsight" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "ebay-browse-ended";
 

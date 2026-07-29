@@ -70,6 +70,11 @@ export interface DataCleanResult {
   skipped: number;
   errors: number;
   anomalyReasons: Record<string, number>;
+  // CF-STAGING-REJECT-ZERO-PRICE (Drew, 2026-07-29). Count of rows
+  // rejected in this tick because vendor reported price <= 0. Never
+  // enters the manual queue; also closes any pre-existing verify_queue
+  // entry for the same slug+day.
+  zeroPriceRejected: number;
 }
 
 /**
@@ -90,10 +95,58 @@ export async function runDataCleanBatch(opts: {
     skipped: 0,
     errors: 0,
     anomalyReasons: {},
+    zeroPriceRejected: 0,
   };
   if (!staging) return result;
 
   const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+
+  // CF-STAGING-REJECT-ZERO-PRICE-SWEEP (Drew, 2026-07-29). "There is no
+  // sales at 0 dollars." Reject any row with vendorPayload.price <= 0
+  // across ALL non-terminal statuses (pending/anomaly/pending-manual) —
+  // sweeps existing junk out of the manual queue AND catches new
+  // zero-price rows in the same tick. Uses same limit as the clean
+  // pass; if there are more, next tick picks them up. Also closes any
+  // corresponding verify_queue entries.
+  try {
+    const { resources: zeroRows } = await staging.items.query<StagingDoc>({
+      query:
+        "SELECT TOP @n * FROM c WHERE c.status IN ('pending','anomaly','pending-manual') AND (c.raw.vendorPayload.price = null OR c.raw.vendorPayload.price = 0 OR c.raw.vendorPayload.price < 0) ORDER BY c.observedAt ASC",
+      parameters: [{ name: "@n", value: limit }],
+    }).fetchAll();
+    for (const row of zeroRows) {
+      try {
+        row.status = "rejected";
+        await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
+        result.zeroPriceRejected += 1;
+        // Close any corresponding verify_queue entry so triage UI
+        // stops showing it. Best-effort — a miss just leaves the queue
+        // row visible.
+        try {
+          const soldDay = String(row.raw.vendorPayload.soldAt ?? "").slice(0, 10);
+          const { CosmosClient: _CC } = await import("@azure/cosmos");
+          const client = new _CC(process.env.COSMOS_CONNECTION_STRING!);
+          const q = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container(process.env.COSMOS_VERIFY_QUEUE_CONTAINER ?? "verify_queue");
+          const { resources: matches } = await q.items.query<{ id: string; reason: string }>({
+            query:
+              "SELECT c.id, c.reason FROM c WHERE c.status = 'pending' AND c.input.cardId = @slug AND (c.input.price = 0 OR c.input.price = null OR c.input.price < 0) AND STARTSWITH(c.input.soldAt, @day)",
+            parameters: [
+              { name: "@slug", value: row.hobbyiqCardId },
+              { name: "@day", value: soldDay },
+            ],
+          }).fetchAll();
+          for (const m of matches) {
+            await q.item(m.id, m.reason).patch([
+              { op: "set", path: "/status", value: "rejected" },
+              { op: "set", path: "/resolvedAt", value: new Date().toISOString() },
+              { op: "set", path: "/resolvedBy", value: "data-clean-zero-price" },
+            ]).catch(() => { /* best-effort */ });
+          }
+        } catch { /* never let queue sync break the reject */ }
+      } catch { result.errors += 1; }
+    }
+  } catch { /* sweep is best-effort — main loop still runs */ }
+
   const { resources: pending } = await staging.items.query<StagingDoc>({
     query: "SELECT TOP @n * FROM c WHERE c.status = 'pending' ORDER BY c.observedAt ASC",
     parameters: [{ name: "@n", value: limit }],
@@ -102,6 +155,17 @@ export async function runDataCleanBatch(opts: {
   for (const row of pending) {
     result.scanned += 1;
     try {
+      // CF-STAGING-REJECT-ZERO-PRICE (Drew, 2026-07-29). Belt-and-braces
+      // vs the sweep above — if the sweep hit its limit and left some
+      // pending zero-price rows behind, catch them here so they never
+      // reach the anomaly/manual pipeline.
+      const rawPrice = Number(row.raw.vendorPayload.price ?? 0);
+      if (!Number.isFinite(rawPrice) || rawPrice <= 0) {
+        row.status = "rejected";
+        await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
+        result.zeroPriceRejected += 1;
+        continue;
+      }
       const clean = await classifyRow(row, soldComps);
       const nextStatus = clean.anomalies.length === 0 ? "clean" : "anomaly";
       row.clean = clean;
