@@ -489,6 +489,43 @@ describe("parseListingIdentity — Color Rookie parallels", () => {
   });
 });
 
+// CF-PINK-REFRACTOR + CF-BARE-REFRACTOR (Drew, 2026-07-29). Two
+// omissions in the Topps Chrome parallel vocab that caused Aaron
+// Judge 2017 #169 rows to collapse to parallel="Base":
+//   1. "Pink Refractor" — Mother's Day pink variant, common on Topps
+//      Chrome. Was not in the color-ladder.
+//   2. Bare "Refractor" without AUTO — the silver-base refractor
+//      parallel of the base card. Prior rule required AUTO, so non-auto
+//      refractors collapsed to Base.
+describe("parseListingIdentity — Refractor + Pink Refractor fixes", () => {
+  it("'Pink Refractor' → Pink Refractor", () => {
+    expect(parseListingIdentity("Aaron Judge 2017 Topps Chrome Catching PINK Refractor #169 RC PSA 10 GEM MT").parallel)
+      .toBe("Pink Refractor");
+  });
+  it("bare 'Refractor' on a non-auto Topps Chrome card → Refractor", () => {
+    // "2017 Topps Chrome Aaron Judge #169 Catching Refractor RC PSA 10"
+    // — no color, no auto. Base silver refractor parallel.
+    expect(parseListingIdentity("2017 Topps Chrome - Aaron Judge #169 Catching Refractor RC PSA 10").parallel)
+      .toBe("Refractor");
+  });
+  it("guardrail: 'Blue Refractor' still → Blue Refractor (specific rules win first)", () => {
+    expect(parseListingIdentity("2025 Topps Chrome Blue Refractor #100").parallel)
+      .toBe("Blue Refractor");
+  });
+  it("guardrail: 'Mojo Refractor' still → Mojo Refractor", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Mojo Refractor #100").parallel)
+      .toBe("Mojo Refractor");
+  });
+  it("bare 'Refractor' + auto → Refractor (pre-existing behavior preserved)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospect Auto #CPA-XX Refractor").parallel)
+      .toBe("Refractor");
+  });
+  it("guardrail: title without 'refractor' does NOT get Refractor label", () => {
+    expect(parseListingIdentity("2017 Topps Chrome Aaron Judge #169 RC PSA 10").parallel)
+      .toBe("Base");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

@@ -18,7 +18,46 @@ describe("normalizer rule inventory", () => {
     expect(names).toContain("setName_title_case");
     expect(names).toContain("parallel_strip_subset_prefix");
     expect(names).toContain("playerName_strip_leading_noise");
+    expect(names).toContain("playerName_strip_trailing_action");
     expect(names).toContain("cardNumber_uppercase_trim");
+  });
+});
+
+// CF-ACTION-WORD-SUFFIX (Drew, 2026-07-29). CH concatenates the photo
+// pose descriptor onto the player name field for Topps Chrome variation
+// subsets. Strip it as trailing noise so pricing / dedupe work on the
+// real player name.
+describe("R4b playerName_strip_trailing_action — 'Aaron Judge Catching' → 'Aaron Judge'", () => {
+  it("strips trailing 'Catching' (Topps Chrome variation subset)", () => {
+    const r = normalizeHoldingFields({ playerName: "Aaron Judge Catching" });
+    expect(r.fields.playerName).toBe("Aaron Judge");
+  });
+  it("strips trailing 'Pitching'", () => {
+    const r = normalizeHoldingFields({ playerName: "Gerrit Cole Pitching" });
+    expect(r.fields.playerName).toBe("Gerrit Cole");
+  });
+  it("strips trailing 'Batting'", () => {
+    const r = normalizeHoldingFields({ playerName: "Mike Trout Batting" });
+    expect(r.fields.playerName).toBe("Mike Trout");
+  });
+  it("strips trailing 'RC' and 'Rookie'", () => {
+    expect(normalizeHoldingFields({ playerName: "Julio Rodriguez RC" }).fields.playerName)
+      .toBe("Julio Rodriguez");
+    expect(normalizeHoldingFields({ playerName: "Julio Rodriguez Rookie" }).fields.playerName)
+      .toBe("Julio Rodriguez");
+  });
+  it("strips multiple trailing tokens ('Aaron Judge Catching RC')", () => {
+    const r = normalizeHoldingFields({ playerName: "Aaron Judge Catching RC" });
+    expect(r.fields.playerName).toBe("Aaron Judge");
+  });
+  it("does NOT strip if it would leave name empty (safety)", () => {
+    const r = normalizeHoldingFields({ playerName: "Catching" });
+    expect(r.fields.playerName).toBe("Catching");
+  });
+  it("leaves a clean name alone", () => {
+    const r = normalizeHoldingFields({ playerName: "Aaron Judge" });
+    expect(r.fields.playerName).toBe("Aaron Judge");
+    expect(r.changes.filter(c => c.rule === "playerName_strip_trailing_action")).toHaveLength(0);
   });
 });
 

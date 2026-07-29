@@ -287,6 +287,42 @@ const RULES: Rule[] = [
     },
   },
 
+  // ── R4b playerName: strip trailing action-word descriptors ─────────
+  // CF-ACTION-WORD-SUFFIX (Drew, 2026-07-29). Vendor titles include
+  // action descriptors like "Aaron Judge #169 Catching" — the pose /
+  // action the photo shows, not part of the player's name. CH is
+  // concatenating that descriptor into the player field. Strip any
+  // number of trailing descriptors (and don't null the whole name).
+  //
+  // OBSERVED 2026-07-29 verify_queue:
+  //   playerName "Aaron Judge Catching" (title "…Aaron Judge #169
+  //   Catching Refractor…" — Catching is the photo pose).
+  {
+    name: "playerName_strip_trailing_action",
+    apply(fields, changes) {
+      const name = fields.playerName;
+      if (!name) return fields;
+      const trailingNoise = new Set([
+        // Photo pose / action descriptors (Topps Chrome variation subsets)
+        "catching", "pitching", "batting", "fielding", "sliding",
+        "throwing", "running", "hitting", "swinging", "diving",
+        "bunting", "sprinting", "dunking", "shooting", "passing",
+        // Variation markers
+        "variation", "sp", "ssp",
+        // Team-designation trailing tokens that leak in occasionally
+        "rc", "rookie",
+      ]);
+      const tokens = name.split(/\s+/).filter((t) => t.length > 0);
+      let j = tokens.length;
+      while (j > 0 && trailingNoise.has(tokens[j - 1].toLowerCase())) j--;
+      if (j === tokens.length) return fields;   // nothing to strip
+      if (j === 0) return fields;               // don't null the whole name
+      const rebuilt = tokens.slice(0, j).join(" ");
+      changes.push({ rule: "playerName_strip_trailing_action", field: "playerName", before: name, after: rebuilt });
+      return { ...fields, playerName: rebuilt };
+    },
+  },
+
   // ── R5 cardNumber: uppercase + trim ────────────────────────────────
   // OBSERVED: "cpa-eha" (lowercase). CH's catalog stores numbers uppercase.
   // Trivial fix, high impact when hit.

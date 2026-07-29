@@ -332,8 +332,22 @@ function extractParallel(title: string): string {
   if (/yellow\s+refractor/i.test(T)) return "Yellow Refractor";
   if (/aqua\s+refractor/i.test(T)) return "Aqua Refractor";
   if (/blue\s+refractor/i.test(T) || /\bblue\b.*\/150\b/i.test(T) || /\bblue\b.*\/125\b/i.test(T)) return "Blue Refractor";
-  // Bare "Refractor" on auto = base refractor (silver)
-  if (/\brefractor\b/i.test(T) && AUTO_RE.test(T) && !AUTO_NEGATIVE_RE.test(T)) return "Refractor";
+  // CF-PINK-REFRACTOR (Drew, 2026-07-29). Pink refractor is a Topps
+  // Chrome parallel (Mother's Day pink, and other pink variants). Was
+  // missing from the color ladder. OBSERVED: "Aaron Judge 2017 Topps
+  // Chrome Catching PINK Refractor #169 RC PSA 10 GEM MT" landed as
+  // parallel="Base" because no rule caught "Pink Refractor".
+  if (/pink\s+refractor/i.test(T)) return "Pink Refractor";
+
+  // CF-BARE-REFRACTOR (Drew, 2026-07-29). Bare "Refractor" (no color
+  // modifier) is the base-silver refractor parallel of the base card —
+  // real and priced distinct from Base. Prior rule required AUTO_RE to
+  // be true, so non-auto refractors like "2017 Topps Chrome Aaron Judge
+  // #169 Refractor RC PSA 10" collapsed to Base. Fixed by removing the
+  // AUTO gate — all specific color/pattern refractor rules run BEFORE
+  // this line, so "Blue Refractor" / "Gold Refractor" / "Mojo Refractor"
+  // still return their specific values first. This is the fallback.
+  if (/\brefractor\b/i.test(T) && !AUTO_NEGATIVE_RE.test(T)) return "Refractor";
 
   // ─── Basketball parallels (Prizm, Optic, Select, Contenders, Hoops) ───
   // CF-BASKETBALL-PARALLELS (Drew, 2026-07-28). Basketball card
