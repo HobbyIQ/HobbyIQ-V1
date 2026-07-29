@@ -118,6 +118,17 @@ const PLAYERNAME_LEADING_NOISE_EXTRA = [
   "mosaic",
   "refractors",
   "refractor",
+  // CF-HERITAGE-PLAYERNAME-NOISE (Drew, 2026-07-29). Topps Heritage
+  // has subset words that CH sometimes prepends to the player field
+  // itself (not just the set/parallel). OBSERVED: "Patchwork Jac
+  // Caglianone" for Heritage #136 — "Patchwork" is a Heritage subset
+  // name pointing to the patchwork uniform-swatch variant, not a
+  // person's name. Same shape for Chrome/Action Variation subsets.
+  "patchwork",
+  "action",     // Heritage \"Action Variation\" subset
+  "variation",  // \"Action Variation\" trailing word
+  "sp",         // \"SP\" short-print marker
+  "ssp",        // \"SSP\" super short-print marker
 ];
 
 /**

@@ -141,6 +141,28 @@ describe("R4 playerName_strip_leading_noise — 'Refractors Eric Hartman' → 'E
     expect(r.fields.playerName).toBe("Eric Hartman");
   });
 
+  // CF-HERITAGE-PLAYERNAME-NOISE (Drew, 2026-07-29). Topps Heritage
+  // subset names leak into CH's player_name field on Heritage rows.
+  // 2026-07-29 verify_queue observation: "Patchwork Jac Caglianone"
+  // for Heritage #136 — Patchwork is the Heritage subset name, not
+  // part of the player's name.
+  it("strips leading 'Patchwork' (Heritage Patchwork subset leak)", () => {
+    const r = normalizeHoldingFields({ playerName: "Patchwork Jac Caglianone" });
+    expect(r.fields.playerName).toBe("Jac Caglianone");
+  });
+  it("strips leading 'Action Variation' (Heritage Action Variation subset)", () => {
+    const r = normalizeHoldingFields({ playerName: "Action Variation Jac Caglianone" });
+    expect(r.fields.playerName).toBe("Jac Caglianone");
+  });
+  it("strips leading 'SP' short-print marker", () => {
+    const r = normalizeHoldingFields({ playerName: "SP Jac Caglianone" });
+    expect(r.fields.playerName).toBe("Jac Caglianone");
+  });
+  it("strips leading 'SSP' super short-print marker", () => {
+    const r = normalizeHoldingFields({ playerName: "SSP Jac Caglianone" });
+    expect(r.fields.playerName).toBe("Jac Caglianone");
+  });
+
   it("leaves clean player name alone", () => {
     const r = normalizeHoldingFields({ playerName: "Eric Hartman" });
     expect(r.fields.playerName).toBe("Eric Hartman");

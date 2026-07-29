@@ -28,9 +28,10 @@
 // can filter and Drew can spot patterns.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { parseListingIdentity } from "./parseTitleIdentity.service.js";
+import { parseListingIdentity, inferSetKeyFromTitle } from "./parseTitleIdentity.service.js";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
+import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 
 let _cached: Container | null = null;
@@ -203,10 +204,51 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
   const price = Number(raw.vendorPayload.price ?? 0);
   const soldAt = String(raw.vendorPayload.soldAt ?? new Date().toISOString());
   const title = String(raw.vendorPayload.title ?? "");
-  const playerName = String(raw.identityHint.playerName ?? "").trim() || "(unknown)";
 
   const normalizations: string[] = [];
   const anomalies: StagingClean["anomalies"] = [];
+
+  // CF-HERITAGE-PLAYERNAME-CLEAN (Drew, 2026-07-29). Run the standard
+  // holdingFieldNormalizer on the ingest playerName so leaked subset
+  // words ("Patchwork", "Sapphire", "SP", etc.) get stripped before
+  // classification. CH sometimes returns subset-prefixed player fields
+  // for Heritage Patchwork / Bowman Sapphire / Panini SP subsets.
+  const rawPlayerName = String(raw.identityHint.playerName ?? "").trim();
+  let playerName = rawPlayerName || "(unknown)";
+  if (rawPlayerName) {
+    try {
+      const cleaned = normalizeHoldingFields({ playerName: rawPlayerName, cardYear });
+      const scrubbed = String(cleaned.fields.playerName ?? "").trim();
+      if (scrubbed && scrubbed !== rawPlayerName) {
+        playerName = scrubbed;
+        normalizations.push(`playerName-stripped:${cleaned.changes.map(c => c.rule).join(",")}`);
+      }
+    } catch { /* normalizer failure is non-fatal; keep raw playerName */ }
+  }
+
+  // CF-HERITAGE-SETKEY-RE-INFER (Drew, 2026-07-29). The slug is frozen
+  // at ingest time from the CH-supplied title/set fields — which for
+  // Heritage subsets often say "Topps Chrome" in the group field even
+  // though the product is Topps Heritage. Re-run the title-based set
+  // inference on the vendor title and prefer that when it disagrees
+  // with the slug's setKey. Also flags the mismatch as a parser anomaly
+  // so it shows up in the triage counters. Writes the corrected setKey
+  // to clean.setName; the slug itself stays until a re-slug pass.
+  let derivedSetName = parsed?.setKey ?? null;
+  if (title) {
+    const titleSet = inferSetKeyFromTitle(title);
+    const titleSetSlug = slugify(titleSet);
+    if (parsed && titleSetSlug !== parsed.setKey) {
+      anomalies.push({
+        kind: "parser-low-confidence",
+        detail: `title infers setKey "${titleSet}" (slug=${titleSetSlug}) — disagrees with slug setKey "${parsed.setKey}"`,
+      });
+      derivedSetName = titleSetSlug;    // prefer title over the frozen slug
+      normalizations.push("setKey-preferred-from-title");
+    } else {
+      normalizations.push("setKey-agrees-with-title");
+    }
+  }
 
   // Check 1: parser sanity — title vs stored slug parallel/isAuto.
   if (title && parsed) {
@@ -295,7 +337,7 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
     printRun: parsed?.printRun ?? null,
     gradeCompany: gradeParsed?.gradeCompany ?? null,
     gradeValue: gradeParsed?.gradeValue ?? null,
-    setName: parsed?.setKey ?? null,
+    setName: derivedSetName,
     playerName,
     cardYear: cardYear as number,
     sport,
