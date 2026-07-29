@@ -682,6 +682,19 @@ describe("inferSportFromTitle — player-name fallback (by sport)", () => {
       expect(inferSportFromTitle("Herbert 2020 Bowman Chrome", "baseball"))
         .toBe("baseball");
     });
+    it("Deion Sanders (two-sport NFL+MLB) does NOT match", () => {
+      // Deion played for Yankees/Braves/Reds/Giants. No correct default.
+      expect(inferSportFromTitle("Deion Sanders 1989 Bowman Rookie", "baseball"))
+        .toBe("baseball");
+    });
+    it("Bill Russell alone does NOT match (NBA legend + MLB Dodgers namesake)", () => {
+      expect(inferSportFromTitle("Bill Russell 1970 Topps", "baseball"))
+        .toBe("baseball");
+    });
+    it("Michael Jordan alone does NOT match (NBA + 1994-95 Barons baseball cards)", () => {
+      expect(inferSportFromTitle("Michael Jordan 1994 Upper Deck Rookie", "baseball"))
+        .toBe("baseball");
+    });
     it("explicit sport keyword still wins over player hint", () => {
       // "basketball" keyword fires FIRST, before we ever reach the
       // player-name pass. Cross-sport player-name mismatches (which
