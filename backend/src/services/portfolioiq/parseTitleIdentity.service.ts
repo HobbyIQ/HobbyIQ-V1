@@ -179,6 +179,8 @@ function extractParallel(title: string): string {
   // Named non-refractor parallels
   if (/mini\s+diamond\s+refractor/i.test(T)) return "Mini Diamond Refractor";
   if (/mini\s+diamond/i.test(T)) return "Mini Diamond";
+  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|black|pink)\s+geometric/i);
+  if (m) return capFirst(m[1]) + " Geometric";
   if (/reptilian(\s+refractor)?/i.test(T)) return "Reptilian Refractor";
   if (/golden\s+mirror/i.test(T)) return "Golden Mirror";
   if (/heavy\s+lumber/i.test(T)) return "Heavy Lumber";
@@ -186,6 +188,28 @@ function extractParallel(title: string): string {
   if (/image\s+variation/i.test(T)) return "Image Variation";
   if (/logo\s+pattern/i.test(T)) return "Bowman Logo Pattern";
   if (/gum\s+ball/i.test(T)) return "Gum Ball";
+  // CF-EXTEND-BASEBALL-PARALLELS (Drew, 2026-07-28). Bowman Draft +
+  // Bowman Chrome variants surfaced in the verify_queue that weren't
+  // covered by the existing rules. Confirmed against real Cardsight
+  // titles landing in pending-manual today.
+  if (/mojo\s+refractor/i.test(T)) return "Mojo Refractor";
+  if (/lazer\s+refractor/i.test(T) || /\blaser\s+refractor/i.test(T)) return "Lazer Refractor";
+  if (/sepia\s+refractor/i.test(T)) return "Sepia Refractor";
+  if (/\bsepia\b/i.test(T) && /\brefractor\b/i.test(T)) return "Sepia Refractor";
+  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil/i);
+  if (m) return capFirst(m[1].replace(/\s+/, " ")) + " Foil";
+  if (/sky\s+blue/i.test(T)) return "Sky Blue Refractor";
+  if (/aqua\s+lava/i.test(T)) return "Aqua Lava Refractor";
+  if (/aqua\s+wave/i.test(T)) return "Aqua Wave Refractor";
+  if (/aqua\s+shimmer/i.test(T)) return "Aqua Shimmer Refractor";
+  m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor|mini)/i);
+  if (m) return "Rose Gold " + capFirst(m[2].replace(/-/, "-"));
+  if (/black\s+shimmer\s+refractor/i.test(T)) return "Black Shimmer Refractor";
+  if (/black.{0,3}white\s+shimmer/i.test(T)) return "Black & White Shimmer Refractor";
+  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua)\s+prism/i);
+  if (m) return capFirst(m[1]) + " Prism Refractor";
+  if (/gold\s+ink/i.test(T)) return "Gold Ink";
+  if (/prism\s+refractor/i.test(T)) return "Prism Refractor";
   // Base color refractors — accept "Color Refractor" OR "Color /N" where
   // N matches the traditional print run for that color.
   if (/gold\s+refractor/i.test(T) || /\bgold\b.*\/50\b/i.test(T)) return "Gold Refractor";
