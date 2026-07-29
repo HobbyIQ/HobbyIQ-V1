@@ -90,7 +90,16 @@ function normalizeSetKey(setName: string): string {
     // BEFORE the base bowman-chrome / topps-chrome patterns.
     [/bowman-chrome-sapphire|bowman-sapphire/, "bowman-chrome-sapphire"],
     [/topps-chrome-sapphire/, "topps-chrome-sapphire"],
-    [/bowman-chrome-draft/, "bowman-chrome-draft"],
+    // CF-SETKEY-DRAFT-CHROME-COLLISION (Drew, 2026-07-29). The set is
+    // titled "Bowman Draft Chrome" (that word order) — slugify emits
+    // `bowman-draft-chrome`, so the /bowman-chrome-draft/ regex NEVER
+    // matched real inputs. All chrome-draft rows fell through to the
+    // paper `bowman-draft` bucket below, COLLIDING with paper Bowman
+    // Draft. Fix: accept either ordering. Chrome-draft now canonicalizes
+    // to "bowman-chrome-draft"; paper Bowman Draft (BDA-XX autos) keeps
+    // its "bowman-draft" setKey — the stock signal is preserved at the
+    // setKey layer.
+    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     [/bowman-draft/, "bowman-draft"],
     [/bowman-sterling/, "bowman-sterling"],
