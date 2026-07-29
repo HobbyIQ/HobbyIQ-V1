@@ -518,5 +518,32 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // — no basketball keyword, defaulted to baseball. Fleer Sticker is
   // a strong basketball signal by product convention.
   if (/fleer\s+sticker/i.test(t)) return "basketball";
+
+  // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). When the title carries
+  // no explicit sport keyword, look for UNAMBIGUOUS team names as a
+  // fallback signal. NFL/NBA/NHL each have some names that also exist
+  // in another league (Panthers/Kings/Jets); those are excluded to
+  // avoid false positives. OBSERVED: Justin Herbert 2020 Panini Prizm
+  // / Mosaic rows landed at sport=baseball because the title says
+  // neither "football" nor "NFL" — but "Chargers" / "Bolts" would
+  // disambiguate.
+  //
+  // Order: check most-specific franchise names first.
+  //
+  // NFL — 32 teams (dropping ambiguous: Cardinals[MLB], Rangers[NHL],
+  // Panthers[NHL], Jets[NHL], Giants[MLB]).
+  if (/\b(chargers|bolts|cowboys|eagles|ravens|steelers|packers|bears|49ers|niners|rams|chiefs|bills|patriots|pats|broncos|raiders|vikings|lions|falcons|buccaneers|bucs|saints|seahawks|bengals|titans|colts|texans|jaguars|jags|dolphins|commanders|redskins)\b/i.test(t)) return "football";
+  // NBA — 30 teams (dropping ambiguous: Kings[NHL], Jazz→OK, Suns→OK,
+  // Hawks→OK, Nets→OK. Bruins→NHL, Hornets→OK).
+  if (/\b(lakers|celtics|warriors|dubs|heat|knicks|nets|bucks|nuggets|suns|mavericks|mavs|rockets|spurs|pelicans|pels|grizzlies|timberwolves|wolves|thunder|okc|trail\s+blazers|blazers|clippers|jazz|hawks|hornets|magic|pistons|cavaliers|cavs|wizards|pacers|76ers|sixers|raptors)\b/i.test(t)) return "basketball";
+  // NHL — 32 teams (dropping ambiguous: Kings[NBA], Jets[NFL],
+  // Panthers[NFL], Rangers→MLB).
+  if (/\b(bruins|islanders|isles|devils|flyers|penguins|pens|capitals|caps|blue\s+jackets|red\s+wings|blackhawks|hawks|wild|blues|predators|preds|stars|avalanche|avs|kraken|ducks|sharks|golden\s+knights|coyotes|canucks|flames|oilers|canadiens|habs|maple\s+leafs|leafs|senators|sens|sabres|hurricanes|canes|lightning|bolts)\b/i.test(t)) {
+    // "Bolts" overlaps NFL Chargers ("Bolts") and NHL Lightning
+    // ("Bolts"). If the football-team check above already fired, we
+    // won't reach here. Skip Hawks (matched both NBA Atlanta and NHL
+    // Chicago — but NHL bruins/leafs are unique enough).
+    return "hockey";
+  }
   return fallback;
 }
