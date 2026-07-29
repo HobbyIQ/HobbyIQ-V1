@@ -36,9 +36,13 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
     expect(slug).toBe("hiq:baseball:2026:bowman-chrome-sapphire:bspa-oc:base:auto:num-199");
   });
 
-  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto", () => {
-    // Bowman Draft Chrome collapses to bowman-draft in the current
-    // normalizer — iOS mirrors this via the slug helper endpoint.
+  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto → bowman-chrome-draft", () => {
+    // CF-SETKEY-DRAFT-CHROME-COLLISION (Drew, 2026-07-29). Prior expected
+    // "bowman-draft" (the buggy collision output) — that pinned the bug
+    // in place. Now the setKey correctly routes to "bowman-chrome-draft",
+    // preserving the paper-vs-chrome stock distinction at the slug layer.
+    // Chrome autos (CPA-/BCDA-) live under bowman-chrome-draft; paper
+    // autos (BDA-) live under bowman-draft.
     const slug = computeHobbyIqCardId({
       sport: "baseball",
       year: 2025,
@@ -48,7 +52,40 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 50,
     });
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:gold-refractor:auto:num-50");
+    expect(slug).toBe("hiq:baseball:2025:bowman-chrome-draft:cpa-jha:gold-refractor:auto:num-50");
+  });
+
+  it("2025 Bowman Draft (paper) BDA-XX Blue Border /150 Auto → bowman-draft (stock-preserving)", () => {
+    // Guardrail: paper Bowman Draft keeps its "bowman-draft" setKey,
+    // does NOT accidentally fall into "bowman-chrome-draft". Paper BDA-XX
+    // autos and Chrome BCDA-XX autos of the same card number now produce
+    // DIFFERENT slugs, which is the correct behavior for pricing.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2025,
+      setKey: "Bowman Draft",
+      cardNumber: "BDA-EW",
+      parallel: "Blue Border",
+      isAuto: true,
+      printRun: 150,
+    });
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:bda-ew:blue-border:auto:num-150");
+  });
+
+  it("2025 Bowman (paper flagship) BPA-XX Gold Border /50 Auto → bowman", () => {
+    // Paper flagship Bowman keeps its "bowman" setKey — where BPA-XX
+    // paper autos live. This has always been correct; pinning as a
+    // regression guard alongside the chrome-draft fix.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2025,
+      setKey: "Bowman",
+      cardNumber: "BPA-EH",
+      parallel: "Gold Border",
+      isAuto: true,
+      printRun: 50,
+    });
+    expect(slug).toBe("hiq:baseball:2025:bowman:bpa-eh:gold-border:auto:num-50");
   });
 });
 
