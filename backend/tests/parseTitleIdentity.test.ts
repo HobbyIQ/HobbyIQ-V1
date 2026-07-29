@@ -385,6 +385,55 @@ describe("parseListingIdentity — Bowman/Topps Chrome unaffected by Heritage ru
   });
 });
 
+// CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). BPA-XX / BDA-XX indicate
+// paper-stock autograph subset — must slug distinctly from paper base
+// and from chrome variants. Prior parser collapsed everything to
+// "Bowman", blending pool.
+describe("inferSetKeyFromTitle — Bowman Paper", () => {
+  it("'1st Paper Prospect Auto' title → Bowman Paper", () => {
+    expect(inferSetKeyFromTitle("Andrew Fischer BPA-AF 1st Paper Prospect Auto Brewers 2026 Bowman"))
+      .toBe("Bowman Paper");
+  });
+  it("'Paper Prospect' → Bowman Paper", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Paper Prospect Autographs #BPA-EH Hartman"))
+      .toBe("Bowman Paper");
+  });
+  it("'Paper Auto' → Bowman Paper", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Chrome Prospect Auto Paper Auto #BPA-XX"))
+      .toBe("Bowman Paper");
+  });
+  it("cardNumber BPA-XX with bare '2026 Bowman' title → Bowman Paper (cardNum-driven)", () => {
+    // CH sometimes returns terse titles like "2026 Bowman Andrew Fischer";
+    // the BPA card# is the fallback signal that says "paper auto".
+    expect(inferSetKeyFromTitle("2026 Bowman Andrew Fischer", "BPA-AF"))
+      .toBe("Bowman Paper");
+  });
+  it("cardNumber BDA-XX + 'draft' → Bowman Draft Paper", () => {
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Andrew Fischer", "BDA-AF"))
+      .toBe("Bowman Draft Paper");
+  });
+  it("'Paper Prospect' + 'Draft' → Bowman Draft Paper", () => {
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Paper Prospect Auto Hartman"))
+      .toBe("Bowman Draft Paper");
+  });
+});
+
+// Guardrails: Bowman Paper detection must NOT hijack Chrome/Draft-Chrome
+// titles (which use CPA-/BCDA- prefixes and lack the "Paper" token).
+describe("inferSetKeyFromTitle — Chrome/Draft-Chrome NOT hijacked by Bowman Paper", () => {
+  it("'2026 Bowman Chrome Prospect Auto CPA-EHA' → Bowman Chrome (not Bowman Paper)", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Chrome Prospect Auto Eric Hartman #CPA-EHA", "CPA-EHA"))
+      .toBe("Bowman Chrome");
+  });
+  it("'2025 Bowman Draft Chrome Gage Wood #BCDA-GW' → Bowman Draft Chrome", () => {
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Chrome Gage Wood #BCDA-GW", "BCDA-GW"))
+      .toBe("Bowman Draft Chrome");
+  });
+  it("bare '2026 Bowman' base card with no BPA/BDA prefix → Bowman", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Andrew Fischer #100")).toBe("Bowman");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

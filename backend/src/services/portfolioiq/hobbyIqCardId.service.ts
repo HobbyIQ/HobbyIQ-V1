@@ -101,7 +101,14 @@ function normalizeSetKey(setName: string): string {
     // setKey layer.
     [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome-draft"],
     [/bowman-chrome/, "bowman-chrome"],
+    // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). BPA-XX / BDA-XX
+    // cardNumbers indicate the paper-stock autograph subset. These get
+    // their own setKeys so paper-auto FMV pools don't blend with paper
+    // base or chrome variants. "Bowman Draft Paper" MUST match before
+    // "Bowman Draft" to preserve stock specificity.
+    [/bowman-draft-paper/, "bowman-draft-paper"],
     [/bowman-draft/, "bowman-draft"],
+    [/bowman-paper/, "bowman-paper"],
     [/bowman-sterling/, "bowman-sterling"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
