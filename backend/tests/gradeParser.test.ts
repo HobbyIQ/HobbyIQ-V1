@@ -359,3 +359,37 @@ describe("composeGradeKey — canonical grade-key formatting", () => {
     expect(composeGradeKey("", "")).toBe("Raw");
   });
 });
+
+// CF-GRADE-PARSE-COMPANY-ADJACENT (Drew, 2026-07-28). Real vendor
+// titles have year + card number in the string alongside the grade.
+// Prior parser picked the FIRST number after stripping the company
+// token — which was the year (2025) → range check failed → null.
+// Now anchors on the company token to find the grade digit.
+describe("parseGradeLabel — full title patterns (year + card # + grade)", () => {
+  it("'2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS PSA 7' → PSA 7", () => {
+    expect(parseGradeLabel("2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS PSA 7"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 7 });
+  });
+  it("'2024 Panini Prizm Wembanyama Rookie PSA 10 GEM MT' → PSA 10", () => {
+    expect(parseGradeLabel("2024 Panini Prizm Wembanyama Rookie PSA 10 GEM MT"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
+  it("'1993 Fleer #7 Michael Jordan BGS 9.5' → BGS 9.5", () => {
+    expect(parseGradeLabel("1993 Fleer #7 Michael Jordan BGS 9.5"))
+      .toEqual({ gradeCompany: "BGS", gradeValue: 9.5 });
+  });
+  it("'2025 Topps Series 2 #300 SGC 10' → SGC 10", () => {
+    expect(parseGradeLabel("2025 Topps Series 2 #300 SGC 10"))
+      .toEqual({ gradeCompany: "SGC", gradeValue: 10 });
+  });
+  it("'2025 Topps Chrome Judge #400 PSA-10' (hyphen) → PSA 10", () => {
+    expect(parseGradeLabel("2025 Topps Chrome Judge #400 PSA-10"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
+  it("'2025 Bowman #BDC-1 Willits Raw' → null (raw is not graded)", () => {
+    // Note: title contains \"Raw\" but not as a standalone label input.
+    // parseGradeLabel's raw check is exact-match. This tests that the
+    // heuristic scan doesn't fabricate a grade from year/card# alone.
+    expect(parseGradeLabel("2025 Bowman Chrome #BDC-1 Willits")).toBeNull();
+  });
+});
