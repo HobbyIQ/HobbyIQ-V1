@@ -237,6 +237,9 @@ async function verifyRow(row: StagingDoc): Promise<StagingVerification> {
         gradeCompany: row.clean?.gradeCompany ?? null,
         gradeValue: row.clean?.gradeValue ?? null,
         setKey: parsed?.setKey ?? null,
+        parallel: row.clean?.parallel ?? null,
+        printRun: row.clean?.printRun ?? null,
+        isAuto: row.clean?.isAuto ?? null,
       });
       if (check.matched) {
         return {

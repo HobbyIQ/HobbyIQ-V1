@@ -41,6 +41,15 @@ export interface SlabLabel {
   brand: string | null;        // as printed on label — "TOPPS CHROME", "BOWMAN", "PANINI PRIZM"
   playerName: string | null;
   cardNumber: string | null;
+  // CF-SLAB-OCR-PARALLEL (Drew, 2026-07-29). Parallel and subset are
+  // often on the slab label ("REFRACTOR", "GOLD /50", "1ST BOWMAN
+  // CHROME AUTO", "SAPPHIRE") but NOT always — the LLM should extract
+  // only what the label actually prints. Null when the label doesn't
+  // include it (e.g. base cards).
+  parallel: string | null;     // e.g. "REFRACTOR", "GOLD REFRACTOR", "SAPPHIRE"
+  subset: string | null;       // e.g. "1ST BOWMAN CHROME AUTOGRAPH", "PROSPECTS", "ROOKIE"
+  printRun: number | null;     // e.g. 50 for "/50", when printed
+  isAuto: boolean | null;      // true if "AUTO"/"AUTOGRAPH" appears on label
   confidence: number;          // model's self-assessed 0..1
 }
 
@@ -94,6 +103,22 @@ const SLAB_LABEL_SCHEMA = {
       type: ["string", "null"],
       description: "Card number as printed on the label. Keep any letter prefix (BCP-102, CPA-EHA, US1). Strip leading '#'.",
     },
+    parallel: {
+      type: ["string", "null"],
+      description: "Parallel/variant name as printed on the label. Examples: 'REFRACTOR', 'GOLD REFRACTOR', 'SAPPHIRE', 'PRIZM', 'MOJO REFRACTOR', 'ORANGE REFRACTOR /25'. Null when the label doesn't call out a specific parallel (base cards).",
+    },
+    subset: {
+      type: ["string", "null"],
+      description: "Subset name as printed. Examples: '1ST BOWMAN CHROME AUTOGRAPH', 'CHROME PROSPECTS', 'ROOKIE', 'ALL-STAR ROOKIE'. Null when no subset is named.",
+    },
+    printRun: {
+      type: ["number", "null"],
+      description: "Print-run denominator when '/N' appears on the label. E.g. 50 for '/50', 499 for '/499'. Null when unnumbered.",
+    },
+    isAuto: {
+      type: ["boolean", "null"],
+      description: "True when 'AUTO' or 'AUTOGRAPH' appears on the label. False when the label clearly does NOT include auto text. Null if uncertain.",
+    },
     confidence: {
       type: "number",
       description: "Your self-assessed confidence that the extraction is correct, from 0 to 1. Discount for blur, glare, occlusion, unusual angles.",
@@ -101,7 +126,9 @@ const SLAB_LABEL_SCHEMA = {
   },
   required: [
     "hasSlab", "grader", "gradeValue", "gradeLabel", "certNumber",
-    "year", "brand", "playerName", "cardNumber", "confidence",
+    "year", "brand", "playerName", "cardNumber",
+    "parallel", "subset", "printRun", "isAuto",
+    "confidence",
   ],
 } as const;
 
@@ -119,6 +146,10 @@ Rules:
 - Extract EXACTLY what the label says — do not correct spelling, do not translate brand names.
 - cardNumber: preserve letter prefix (BCP-102, CPA-EHA), strip leading '#'.
 - gradeValue: numeric only. For "GEM MT 10" that's 10. For "9.5" that's 9.5.
+- parallel: extract only if the label EXPLICITLY names one — "REFRACTOR", "GOLD REFRACTOR", "SAPPHIRE", "PRIZM", "MOJO REFRACTOR", "SPECKLE REFRACTOR", "1ST WAVE REFRACTOR". If the label just says "BOWMAN CHROME" with no parallel modifier, this is null (base). Do NOT infer parallel from the card image — only from the LABEL TEXT.
+- subset: extract subset text as printed — "1ST BOWMAN CHROME AUTOGRAPH", "CHROME PROSPECTS", "ROOKIE", "ALL-STAR ROOKIE". Null when no subset is named.
+- printRun: extract N when "/N" or "N/M" appears on the label (report the M denominator). Null when unnumbered.
+- isAuto: true when "AUTO" or "AUTOGRAPH" appears on the label; false when clearly absent; null when uncertain.
 - confidence: your honest self-assessment. If the label is blurry or partially cropped, discount accordingly.
 - Return ONLY the JSON object matching the provided schema. No prose.`;
 
@@ -228,6 +259,13 @@ export interface SlabIdentityCheck {
   matched: boolean;
   agreements: string[];   // fields where slab agrees with parsed identity
   disagreements: string[]; // fields where slab clearly disagrees
+  // CF-SLAB-OCR-ADOPT (Drew, 2026-07-29). When parser is null on a
+  // field but the slab has a confident value, we "adopt" the slab
+  // value as an agreement — and the caller can apply it as a
+  // correction on approve. Prototype v5 showed multiple cases where
+  // the parser had no cardNumber but the LLM cleanly read one from
+  // the label; that's a strict IMPROVEMENT the queue should absorb.
+  adopted: Array<{ field: "cardNumber" | "parallel" | "printRun" | "isAuto"; value: string | number | boolean }>;
   detail: string;
 }
 
@@ -238,23 +276,34 @@ export interface ParsedIdentity {
   gradeCompany: string | null;
   gradeValue: number | null;
   setKey: string | null;
+  parallel: string | null;
+  printRun: number | null;
+  isAuto: boolean | null;
 }
 
 /** Compare an extracted slab label against a parsed identity. Returns
- *  matched=true only when there's strong multi-field agreement. Silent-
- *  safe: never throws; returns matched=false on unusable inputs. */
+ *  matched=true when there's strong multi-field agreement (with any
+ *  parser-null field the slab confidently filled treated as an
+ *  "adoption" rather than a blocker). Silent-safe: never throws;
+ *  returns matched=false on unusable inputs.
+ *
+ *  Match bar: (year AND (cardNumber OR adopted-cardNumber)) AND
+ *             player agreement AND grader NOT-disagreed AND
+ *             confidence >= 0.6. */
 export function checkSlabAgainstIdentity(
   slab: SlabLabel | null | undefined,
   identity: ParsedIdentity,
 ): SlabIdentityCheck {
   const agreements: string[] = [];
   const disagreements: string[] = [];
+  const adopted: SlabIdentityCheck["adopted"] = [];
 
   if (!slab || slab.hasSlab === false) {
     return {
       matched: false,
       agreements,
       disagreements,
+      adopted,
       detail: "no slab detected in image",
     };
   }
@@ -286,14 +335,20 @@ export function checkSlabAgainstIdentity(
     }
   }
 
-  // cardNumber — normalized: strip #, hyphens, uppercase
-  if (identity.cardNumber && slab.cardNumber) {
+  // cardNumber — normalized: strip #, hyphens, uppercase.
+  // ADOPTION: parser-null + slab-has-value → adopt as agreement.
+  const parsedCardNumber = (identity.cardNumber ?? "").trim();
+  if (parsedCardNumber && slab.cardNumber) {
     const normalize = (s: string) => s.toUpperCase().replace(/^#/, "").replace(/[-\s]/g, "");
-    if (normalize(identity.cardNumber) === normalize(slab.cardNumber)) {
+    if (normalize(parsedCardNumber) === normalize(slab.cardNumber)) {
       agreements.push(`cardNumber=${slab.cardNumber}`);
     } else {
       disagreements.push(`cardNumber: parsed=${identity.cardNumber} slab=${slab.cardNumber}`);
     }
+  } else if (!parsedCardNumber && slab.cardNumber && slab.confidence >= 0.8) {
+    // Parser had no cardNumber; slab has one at high confidence → adopt.
+    adopted.push({ field: "cardNumber", value: slab.cardNumber });
+    agreements.push(`cardNumber=${slab.cardNumber} (adopted)`);
   }
 
   // Player name — fuzzy: normalize both, check either contains other
@@ -318,18 +373,77 @@ export function checkSlabAgainstIdentity(
     }
   }
 
-  // Match decision: matched when we have year+cardNumber agreement AND
-  // no disagreement on grader (if both known). This is the auto-approve
-  // bar; anything short falls through to manual.
+  // Parallel — case-insensitive contains OR adopt when parser had "base"/null.
+  // Parallel is often absent from the slab; NEVER treat missing as disagreement.
+  if (slab.parallel) {
+    const parsedParallel = (identity.parallel ?? "").toLowerCase().trim();
+    const labelParallel = slab.parallel.toLowerCase();
+    const isBaseParsed = !parsedParallel || parsedParallel === "base";
+    if (isBaseParsed && slab.confidence >= 0.8) {
+      adopted.push({ field: "parallel", value: slab.parallel });
+      agreements.push(`parallel=${slab.parallel} (adopted)`);
+    } else if (parsedParallel && (labelParallel.includes(parsedParallel) || parsedParallel.includes(labelParallel))) {
+      agreements.push(`parallel=${slab.parallel}`);
+    } else if (parsedParallel && !isBaseParsed) {
+      // Both known, neither contains the other → soft disagreement,
+      // does NOT block the match (parallel language varies).
+      disagreements.push(`parallel(soft): parsed=${identity.parallel} slab=${slab.parallel}`);
+    }
+  }
+
+  // printRun — adopt when parser is null; verify when both present
+  if (slab.printRun != null) {
+    if (identity.printRun == null && slab.confidence >= 0.8) {
+      adopted.push({ field: "printRun", value: slab.printRun });
+      agreements.push(`printRun=${slab.printRun} (adopted)`);
+    } else if (identity.printRun === slab.printRun) {
+      agreements.push(`printRun=${slab.printRun}`);
+    } else if (identity.printRun != null) {
+      disagreements.push(`printRun: parsed=${identity.printRun} slab=${slab.printRun}`);
+    }
+  }
+
+  // isAuto — adopt when parser is null; verify when both present
+  if (slab.isAuto != null) {
+    if (identity.isAuto == null && slab.confidence >= 0.8) {
+      adopted.push({ field: "isAuto", value: slab.isAuto });
+      agreements.push(`isAuto=${slab.isAuto} (adopted)`);
+    } else if (identity.isAuto === slab.isAuto) {
+      agreements.push(`isAuto=${slab.isAuto}`);
+    } else if (identity.isAuto != null && identity.isAuto !== slab.isAuto) {
+      // Only flag as disagreement when identity says NO but slab says
+      // YES (or vice versa). Preserve HIGHER trust: label is truth.
+      disagreements.push(`isAuto: parsed=${identity.isAuto} slab=${slab.isAuto}`);
+    }
+  }
+
+  // Match decision (relaxed): matched when
+  //   year AGREED
+  //   AND (cardNumber AGREED — either exact or adopted)
+  //   AND player AGREED
+  //   AND grader NOT-disagreed (if both were known)
+  //   AND confidence >= 0.6
+  //
+  // Adopted counts as agreement. Soft parallel/printRun/isAuto
+  // disagreements do NOT block the match — those are informational.
   const yearAgreed = agreements.some(a => a.startsWith("year="));
   const cardNumberAgreed = agreements.some(a => a.startsWith("cardNumber="));
+  const playerAgreed = agreements.some(a => a === "player");
   const graderDisagreed = disagreements.some(d => d.startsWith("grader:"));
+  const hardDisagreement = disagreements.some(d =>
+    d.startsWith("grader:") || d.startsWith("year:") || d.startsWith("cardNumber:") || d.startsWith("grade:")
+  );
 
-  const matched = yearAgreed && cardNumberAgreed && !graderDisagreed && slab.confidence >= 0.6;
+  const matched = yearAgreed
+    && cardNumberAgreed
+    && playerAgreed
+    && !hardDisagreement
+    && !graderDisagreed
+    && slab.confidence >= 0.6;
 
   const detail = matched
     ? `slab-verified: agreements=[${agreements.join(", ")}] confidence=${slab.confidence.toFixed(2)}`
     : `slab-inconclusive: agreements=[${agreements.join(", ")}] disagreements=[${disagreements.join(", ")}] confidence=${slab.confidence.toFixed(2)}`;
 
-  return { matched, agreements, disagreements, detail };
+  return { matched, agreements, disagreements, adopted, detail };
 }
