@@ -25,6 +25,7 @@ import { getCatalogEntry } from "./cardCatalog.service.js";
 import { ocrImageUrl, checkTokensAgainstOcr } from "./azureVisionOcr.service.js";
 import type { StagingDoc, StagingVerification } from "./compsStaging.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { extractSlabLabel, checkSlabAgainstIdentity } from "./slabOcrVerify.service.js";
 
 let _cached: Container | null = null;
 async function getStagingContainer(): Promise<Container | null> {
@@ -214,7 +215,51 @@ async function verifyRow(row: StagingDoc): Promise<StagingVerification> {
     // pHash mismatch → try Tier 2 for tie-break.
   }
 
-  // Tier 2: Azure Vision OCR + token check.
+  // Tier 2a (NEW): LLM slab-label extraction. Feature-flagged via
+  // SLAB_OCR_ENABLED — off returns quickly and falls through to the
+  // existing vision-tokens tier. Structured JSON extraction gives us
+  // grader/grade/year/cardNumber directly, so we can auto-approve
+  // rows where the slab label matches the parsed identity — much
+  // higher signal than generic token search.
+  //
+  // Only fires when the caller's identity has a gradeCompany hint
+  // (i.e., we THINK this is a graded card). Raw cards skip straight
+  // to vision-tokens.
+  const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
+  const identityHasGrade = (row.clean?.gradeCompany ?? null) != null;
+  if (identityHasGrade && process.env.SLAB_OCR_ENABLED === "true") {
+    const extract = await extractSlabLabel(mirroredUrl);
+    if (extract.ok && extract.label) {
+      const check = checkSlabAgainstIdentity(extract.label, {
+        year: parsed?.year ?? row.raw.identityHint.cardYear ?? null,
+        cardNumber: parsed?.cardNumber ?? null,
+        playerName: row.raw.identityHint.playerName ?? null,
+        gradeCompany: row.clean?.gradeCompany ?? null,
+        gradeValue: row.clean?.gradeValue ?? null,
+        setKey: parsed?.setKey ?? null,
+      });
+      if (check.matched) {
+        return {
+          verifiedAt: now,
+          method: "vision-slab-label",
+          matched: true,
+          detail: check.detail,
+          vision: {
+            rawText: extract.rawResponse ?? "",
+            extractedTokens: check.agreements,
+            confidence: extract.label.confidence,
+          },
+        };
+      }
+      // Extraction succeeded but didn't confirm — remember for the
+      // final detail line, then try vision-tokens as a last automated
+      // pass before manual.
+    }
+    // Extraction failed (LLM error, image unreachable, etc) — fall
+    // through silently to vision-tokens.
+  }
+
+  // Tier 2b: Azure Vision OCR + token check (existing, unchanged).
   const ocr = await ocrImageUrl(mirroredUrl);
   if (!ocr.ok) {
     return {
@@ -225,7 +270,7 @@ async function verifyRow(row: StagingDoc): Promise<StagingVerification> {
     };
   }
 
-  const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
+  // parsed already computed above for the slab-OCR pass; reuse.
   const tokens = checkTokensAgainstOcr(ocr.rawText, {
     playerName: row.raw.identityHint.playerName ?? null,
     cardNumber: parsed?.cardNumber ?? null,
