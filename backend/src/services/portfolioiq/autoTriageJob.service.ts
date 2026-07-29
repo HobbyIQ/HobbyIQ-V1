@@ -169,6 +169,36 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
         });
       } catch { /* corrections log is best-effort */ }
 
+      // CF-AUTO-TRIAGE-CLOSE-QUEUE (Drew, 2026-07-28). When auto-triage
+      // silently promotes a staging row, also mark ANY corresponding
+      // verify_queue entries as `fixed` so the triage UI stops showing
+      // them. Match by cardId + price + soldAt-day (same fuzzy key
+      // the sync script uses). Best-effort; a miss just leaves the
+      // queue row visible — Drew can approve/reject it manually.
+      try {
+        const soldDay = String(row.raw.vendorPayload.soldAt ?? "").slice(0, 10);
+        const price = Number(row.raw.vendorPayload.price ?? 0);
+        const { CosmosClient: _CC } = await import("@azure/cosmos");
+        const client = new _CC(process.env.COSMOS_CONNECTION_STRING!);
+        const q = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container(process.env.COSMOS_VERIFY_QUEUE_CONTAINER ?? "verify_queue");
+        const { resources: matches } = await q.items.query<{ id: string; reason: string }>({
+          query:
+            "SELECT c.id, c.reason FROM c WHERE c.status = 'pending' AND c.input.cardId = @slug AND ABS(c.input.price - @p) < 0.02 AND STARTSWITH(c.input.soldAt, @day)",
+          parameters: [
+            { name: "@slug", value: row.hobbyiqCardId },
+            { name: "@p", value: price },
+            { name: "@day", value: soldDay },
+          ],
+        }).fetchAll();
+        for (const m of matches) {
+          await q.item(m.id, m.reason).patch([
+            { op: "set", path: "/status", value: "fixed" },
+            { op: "set", path: "/resolvedAt", value: new Date().toISOString() },
+            { op: "set", path: "/resolvedBy", value: "auto-triage-job" },
+          ]).catch(() => { /* best-effort */ });
+        }
+      } catch { /* never let queue sync break the triage */ }
+
       result.autoFixed += 1;
       const key = titleParsed.parallel ?? "Base";
       result.byNewParallel[key] = (result.byNewParallel[key] ?? 0) + 1;
