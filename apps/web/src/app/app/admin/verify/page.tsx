@@ -114,6 +114,8 @@ function QueueItemCard({
   const [parallel, setParallel] = useState(item.input.parallel ?? "");
   const [cardNumber, setCardNumber] = useState(item.input.cardNumber ?? "");
   const [isAuto, setIsAuto] = useState(item.input.isAuto ?? false);
+  const [gradeCompany, setGradeCompany] = useState(item.input.gradeCompany ?? "");
+  const [gradeValue, setGradeValue] = useState(String(item.input.gradeValue ?? ""));
   const [playerName, setPlayerName] = useState(item.input.playerName ?? "");
   const [cardYear, setCardYear] = useState(String(item.input.cardYear ?? ""));
   const [setName, setSetName] = useState(item.input.setName ?? "");
@@ -177,9 +179,9 @@ function QueueItemCard({
             <Meta k="Parallel" v={item.input.parallel ?? "Base"} />
             <Meta k="Card #" v={item.input.cardNumber ?? "?"} />
             <Meta k="isAuto" v={item.input.isAuto ? "yes" : "no"} />
+            <Meta k="Grade" v={item.input.gradeCompany ? `${item.input.gradeCompany} ${item.input.gradeValue ?? ""}` : "Raw"} />
             <Meta k="Source" v={item.input.source} />
             <Meta k="Sold" v={new Date(item.input.soldAt).toLocaleDateString()} />
-            <Meta k="Queued" v={new Date(item.observedAt).toLocaleString()} />
           </div>
 
           {item.signal && (
@@ -193,23 +195,25 @@ function QueueItemCard({
           )}
 
           {showFix && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 border-t border-[color:var(--color-border)] pt-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 border-t border-[color:var(--color-border)] pt-3">
               <FixField label="Player" value={playerName} onChange={setPlayerName} />
               <FixField label="Year" value={cardYear} onChange={setCardYear} />
-              <FixField label="Set / Product" value={setName} onChange={setSetName} className="md:col-span-2" />
+              <FixField label="Price ($)" value={price} onChange={setPrice} />
+              <FixField label="Set / Product" value={setName} onChange={setSetName} className="md:col-span-3" />
               <FixField label="Parallel" value={parallel} onChange={setParallel} />
               <FixField label="Card #" value={cardNumber} onChange={setCardNumber} />
-              <FixField label="Price ($)" value={price} onChange={setPrice} />
               <label className="text-xs flex items-center gap-2">
                 <input type="checkbox" checked={isAuto} onChange={(e) => setIsAuto(e.target.checked)} />
                 <span>isAuto</span>
               </label>
+              <FixField label="Grade company (PSA / BGS / SGC / blank=Raw)" value={gradeCompany} onChange={(v) => setGradeCompany(v.toUpperCase().trim())} className="md:col-span-2" />
+              <FixField label="Grade value (10, 9.5, blank=Raw)" value={gradeValue} onChange={setGradeValue} />
               <FixField
-                label="Correction note (optional)"
+                label="Correction note (optional — teaches the parser)"
                 value={note}
                 onChange={setNote}
-                placeholder="Why did the parser miss this? (train the model)"
-                className="md:col-span-2"
+                placeholder="Why did the parser miss this?"
+                className="md:col-span-3"
               />
             </div>
           )}
@@ -242,15 +246,21 @@ function QueueItemCard({
                   onClick={() => {
                     const priceNum = Number(price);
                     const yearNum = Number(cardYear);
+                    const gradeValueNum = Number(gradeValue);
+                    const gradeCompanyClean = gradeCompany.trim() || null;
+                    const gradeValueClean = gradeCompanyClean && Number.isFinite(gradeValueNum) && gradeValueNum > 0 ? gradeValueNum : null;
                     onResolve(item, "fix", {
                       parallel,
                       cardNumber,
                       isAuto,
+                      gradeCompany: gradeCompanyClean,
+                      gradeValue: gradeValueClean,
                       price: Number.isFinite(priceNum) && priceNum > 0 ? priceNum : undefined,
                       reasonNote: [
                         playerName !== item.input.playerName ? `player→${playerName}` : "",
                         Number.isFinite(yearNum) && yearNum !== item.input.cardYear ? `year→${yearNum}` : "",
                         setName !== item.input.setName ? `set→${setName}` : "",
+                        (gradeCompanyClean ?? "") !== (item.input.gradeCompany ?? "") ? `grade→${gradeCompanyClean ?? "Raw"} ${gradeValueClean ?? ""}` : "",
                         note,
                       ].filter(Boolean).join(" | ") || undefined,
                     });

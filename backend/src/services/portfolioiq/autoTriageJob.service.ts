@@ -26,6 +26,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseListingIdentity } from "./parseTitleIdentity.service.js";
 import { slugify, computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { parseGradeLabel } from "./gradeParser.js";
 import { recordSoldComp } from "./soldCompsStore.service.js";
 import type { StagingDoc } from "./compsStaging.service.js";
 
@@ -110,6 +111,14 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
         printRun: titleParsed.printRun ?? row.clean?.printRun ?? null,
       });
 
+      // Also extract grade from title — data-clean now does this, but
+      // legacy staging rows classified before that fix may still have
+      // gradeCompany/gradeValue null. Re-parse defensively so PSA 7
+      // in the title becomes a real (PSA, 7) tuple on the promotion.
+      const gradeParsed = parseGradeLabel(title);
+      const gradeCompany = row.clean?.gradeCompany ?? gradeParsed?.gradeCompany ?? null;
+      const gradeValue = row.clean?.gradeValue ?? gradeParsed?.gradeValue ?? null;
+
       // Promote to sold_comps with the corrected identity.
       await recordSoldComp({
         cardId: row.raw.identityHint.vendorCardId ?? `hiq:${newSlug.slice(4)}`,
@@ -120,8 +129,8 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
         cardNumber: row.clean?.cardNumber ?? null,
         isAuto: titleParsed.isAuto,
         sport: row.raw.identityHint.sport ?? row.clean?.sport ?? "baseball",
-        gradeCompany: row.clean?.gradeCompany ?? null,
-        gradeValue: row.clean?.gradeValue ?? null,
+        gradeCompany,
+        gradeValue,
         price: row.clean?.price ?? Number(row.raw.vendorPayload.price ?? 0),
         soldAt: row.clean?.soldAt ?? String(row.raw.vendorPayload.soldAt ?? new Date().toISOString()),
         source: row.raw.vendor,
