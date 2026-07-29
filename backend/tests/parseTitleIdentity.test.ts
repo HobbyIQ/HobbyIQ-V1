@@ -248,6 +248,98 @@ describe("inferSetKeyFromTitle", () => {
   });
 });
 
+// CF-PAPER-AUTO-BORDERS (Drew, 2026-07-29). Bowman flagship paper autos
+// use a Color Border ladder that's paper's parallel to Chrome's Refractor
+// ladder. Prior parser collapsed every Border color to "Base" — losing
+// the parallel means every paper-auto priced against the base pool.
+describe("parseListingIdentity — Bowman paper-auto Border ladder", () => {
+  it("Sky Blue Border /499 → Sky Blue Border", () => {
+    const r = parseListingIdentity("2025 Bowman Chrome Prospects Auto Eric Hartman #BPA-EH Sky Blue Border /499");
+    expect(r.parallel).toBe("Sky Blue Border");
+    expect(r.isAuto).toBe(true);
+    expect(r.printRun).toBe(499);
+    expect(r.cardNumber).toBe("BPA-EH");
+  });
+  it("Neon Green Border /399 → Neon Green Border", () => {
+    expect(parseListingIdentity("2025 Bowman Baseball Auto Neon Green Border /399 #BPA-XY").parallel)
+      .toBe("Neon Green Border");
+  });
+  it("Fuchsia Border /299 → Fuchsia Border", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospects Auto Fuchsia Border /299 #BPA-AB").parallel)
+      .toBe("Fuchsia Border");
+  });
+  it("Purple Border /250 → Purple Border", () => {
+    expect(parseListingIdentity("2025 Bowman Draft Auto Purple Border /250 #BDA-CD").parallel)
+      .toBe("Purple Border");
+  });
+  it("Blue Border /150 → Blue Border (not Blue Refractor)", () => {
+    // Print-run overlap (Blue Refractor is also /150) — Border rule
+    // must win. This is the concrete collision reason Border rules run
+    // BEFORE base color refractor rules in parseTitleIdentity.
+    const r = parseListingIdentity("2025 Bowman Baseball Auto Blue Border /150 #BPA-EF");
+    expect(r.parallel).toBe("Blue Border");
+    expect(r.printRun).toBe(150);
+  });
+  it("Yellow Border /75 → Yellow Border", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospects Auto Yellow Border /75 #BPA-GH").parallel)
+      .toBe("Yellow Border");
+  });
+  it("Gold Border /50 → Gold Border (not Gold Refractor)", () => {
+    const r = parseListingIdentity("2025 Bowman Draft Auto Gold Border /50 #BDA-IJ");
+    expect(r.parallel).toBe("Gold Border");
+    expect(r.printRun).toBe(50);
+  });
+  it("Orange Border /25 → Orange Border (not Orange Refractor)", () => {
+    expect(parseListingIdentity("2025 Bowman Baseball Auto Orange Border /25 #BPA-KL").parallel)
+      .toBe("Orange Border");
+  });
+  it("Red Border /5 → Red Border (not Red Refractor)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospects Auto Red Border /5 #BPA-MN").parallel)
+      .toBe("Red Border");
+  });
+  it("Platinum Border 1/1 → Platinum Border", () => {
+    const r = parseListingIdentity("2025 Bowman Draft Auto Platinum Border 1/1 #BDA-OP");
+    expect(r.parallel).toBe("Platinum Border");
+    expect(r.printRun).toBe(1);
+  });
+  it("bare 'Border' on an auto → 'Border' (unknown color, still not Base)", () => {
+    // Better a generic Border marker than collapsing to Base — Base
+    // routing would price the paper auto against the wrong comp pool.
+    expect(parseListingIdentity("2025 Bowman Prospect Autographs Border variant #BPA-QR").parallel)
+      .toBe("Border");
+  });
+  it("BPA- card number prefix extracts cleanly", () => {
+    expect(parseListingIdentity("#BPA-EH Hartman 2025 Bowman auto").cardNumber).toBe("BPA-EH");
+  });
+  it("BDA- card number prefix extracts cleanly", () => {
+    expect(parseListingIdentity("#BDA-JW Willits 2025 Bowman Draft auto").cardNumber).toBe("BDA-JW");
+  });
+  it("BCRA- card number prefix extracts cleanly (Bowman Chrome Rookie Auto)", () => {
+    expect(parseListingIdentity("#BCRA-JS Skenes 2025 Bowman auto").cardNumber).toBe("BCRA-JS");
+  });
+  it("TCRA- card number prefix extracts cleanly (Topps Chrome Rookie Auto)", () => {
+    expect(parseListingIdentity("#TCRA-PC Crow-Armstrong 2025 Topps Chrome auto").cardNumber).toBe("TCRA-PC");
+  });
+});
+
+// Guardrail: chrome refractor titles MUST still match refractor rules,
+// not the new Border rules. If someone regressed the ordering, these
+// would flip to "Blue Border" / "Gold Border" incorrectly.
+describe("parseListingIdentity — chrome refractor unaffected by Border rules", () => {
+  it("'Blue Refractor /150' → Blue Refractor (Border rule NOT triggered — 'Refractor' present)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospects Auto #CPA-EH Blue Refractor /150").parallel)
+      .toBe("Blue Refractor");
+  });
+  it("'Gold Refractor /50' → Gold Refractor (no 'border' token)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Prospects Auto #CPA-XX Gold Refractor /50").parallel)
+      .toBe("Gold Refractor");
+  });
+  it("'True Blue' Chrome auto → Blue Refractor (True-color mapping intact)", () => {
+    expect(parseListingIdentity("2026 Bowman Blue Eric Hartman True #CPA-EHA Auto").parallel)
+      .toBe("Blue Refractor");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

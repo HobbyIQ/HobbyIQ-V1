@@ -33,8 +33,14 @@ export interface ParsedListingIdentity {
 /** Default cardNumber regex — matches the common Bowman/Topps/Panini
  *  slab-printed formats. Caller-passed regexes take precedence when a
  *  specific target is known. */
+// CF-PAPER-AUTO-CARDNUMBERS (Drew, 2026-07-29). Bowman flagship (paper)
+// carries autograph subsets on paper stock — Bowman Prospect Autographs
+// (BPA-XX), Bowman Draft Autographs (BDA-XX), Bowman Chrome Rookie Autos
+// on paper (BCRA-XX overlaps chrome variant), Topps Chrome Rookie Autos
+// paper (TCRA-XX). Card-number prefix is the disambiguating signal —
+// CPA/BCPA/BCDA/BDPA on chrome stock, BPA/BDA on paper stock.
 const DEFAULT_CARD_NUMBER_RE =
-  /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+)\b/i;
+  /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+)\b/i;
 
 // Note: `on card` alone does NOT imply auto — "On Card Display" and
 // similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
@@ -118,6 +124,36 @@ function extractPrintRun(title: string): number | null {
 function extractParallel(title: string): string {
   const T = title;
   if (/superfractor|super\s+fractor/i.test(T)) return "SuperFractor";
+
+  // ─── Paper-auto Border ladder (runs FIRST to win vs refractor rules) ─
+  // CF-PAPER-AUTO-BORDERS (Drew, 2026-07-29). Bowman paper autos
+  // (BPA-/BDA-/BCRA- prefixes; on flagship Bowman + Bowman Draft, on
+  // paper stock, not chrome) use a "Color Border" parallel ladder
+  // that's paper's equivalent of Chrome's Refractor color ladder.
+  // Standard Bowman paper-auto Border ladder + print runs:
+  //   Sky Blue Border /499     (COLLIDES with Sky Blue Refractor rule
+  //                            below — Border MUST win, must run first)
+  //   Neon Green Border /399
+  //   Fuchsia Border /299
+  //   Purple Border /250
+  //   Blue Border /150         (COLLIDES with Blue Refractor /150)
+  //   Yellow Border /75
+  //   Gold Border /50          (COLLIDES with Gold Refractor /50)
+  //   Orange Border /25        (COLLIDES with Orange Refractor /25)
+  //   Red Border /5            (COLLIDES with Red Refractor /5)
+  //   Platinum Border 1/1
+  //
+  // Match ordering: multi-word colors (sky blue, neon green) first so
+  // "sky blue" doesn't fall to the single "blue" match.
+  {
+    if (/sky\s+blue\s+border/i.test(T)) return "Sky Blue Border";
+    if (/neon\s+green\s+border/i.test(T)) return "Neon Green Border";
+    if (/platinum\s+border/i.test(T)) return "Platinum Border";
+    const bm = T.match(/(fuchsia|purple|blue|yellow|gold|orange|red|black|green)\s+border/i);
+    if (bm) return capFirst(bm[1]) + " Border";
+    if (/\bborder\b/i.test(T) && AUTO_RE.test(T)) return "Border";
+  }
+
   // CF-TRUE-COLOR-PARALLEL (Drew, 2026-07-28). Market vernacular:
   // "True <Color>" means "<Color> Refractor" (the base colored
   // refractor variant). Real-world example: Eric Hartman's True Blue
