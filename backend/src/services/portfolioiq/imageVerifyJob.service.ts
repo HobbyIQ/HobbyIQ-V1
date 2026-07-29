@@ -92,6 +92,18 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
         // even if the enqueue fails.
         try {
           const { enqueueForVerify } = await import("./verifyQueue.service.js");
+          // CF-CATALOG-REF-IMAGE-FALLBACK (Drew, 2026-07-28). When
+          // the vendor didn't record an image URL (~46% of
+          // Cardsight-source legacy rows), fall back to the catalog
+          // entry's reference image. Drew still gets to SEE what the
+          // card should look like — even if the specific listing had
+          // no photo, the canonical CH catalog image is a valid proxy.
+          const { getCatalogEntry } = await import("./cardCatalog.service.js");
+          const catalogRefImage = (await getCatalogEntry(row.hobbyiqCardId).catch(() => null))?.referenceImage?.url ?? null;
+          const primaryImage = row.mirroredImage?.blobUrl
+            || String(row.raw.vendorPayload.imageUrl ?? "")
+            || catalogRefImage
+            || "";
           await enqueueForVerify({
             reason: "image-mismatch",
             saleInput: {
@@ -109,7 +121,7 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
               source: row.raw.vendor,
               sourceExternalId: row.raw.vendorRawId,
               title: String(row.raw.vendorPayload.title ?? ""),
-              imageUrl: row.mirroredImage?.blobUrl ?? String(row.raw.vendorPayload.imageUrl ?? ""),
+              imageUrl: primaryImage,
               url: row.raw.vendorPayload.url ?? null,
               sellerHandle: null,
               sport: row.raw.identityHint.sport ?? "baseball",
@@ -117,7 +129,9 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
               confidence: 0.3,
             },
             signal: {
-              note: `image-verify inconclusive (method=${verification.method}) — awaiting manual review`,
+              note: catalogRefImage && !row.raw.vendorPayload.imageUrl
+                ? `image-verify inconclusive (method=${verification.method}) — showing catalog reference image (vendor had none)`
+                : `image-verify inconclusive (method=${verification.method}) — awaiting manual review`,
             },
           });
         } catch { /* enqueue is best-effort */ }
