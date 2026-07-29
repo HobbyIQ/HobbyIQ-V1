@@ -25,6 +25,24 @@ const REASONS: readonly VerifyReason[] = [
   "image-mismatch",
 ];
 
+// CF-VERIFY-DISPLAY-SETKEY-FROM-SLUG (Drew, 2026-07-29). The triage
+// display used to read `input.setName` — CH's raw ingest field, which
+// says generic "topps" for many BCP/finest/heritage subset rows even
+// though the parser correctly derives "topps-finest" and puts it in
+// the slug. Read the setKey from the slug (position 3 after ":"
+// split — see hobbyIqCardId.service.ts) so what the user sees matches
+// what the FMV pool actually uses. Falls back to input.setName if the
+// slug is missing or malformed.
+function setKeyFromSlug(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  const parts = String(slug).split(":");
+  // Canonical slug: hiq:sport:year:setKey:cardNumber:parallel:autoFlag[:num-N]
+  if (parts.length < 7 || parts[0] !== "hiq") return null;
+  const setKey = parts[3];
+  if (!setKey) return null;
+  return setKey;
+}
+
 export default function VerifyPage() {
   const [items, setItems] = useState<VerifyQueueItem[]>([]);
   const [totalPending, setTotalPending] = useState(0);
@@ -175,7 +193,7 @@ function QueueItemCard({
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1.5 text-xs">
             <Meta k="Player" v={item.input.playerName} />
             <Meta k="Year" v={String(item.input.cardYear ?? "?")} />
-            <Meta k="Set" v={item.input.setName ?? "?"} />
+            <Meta k="Set" v={setKeyFromSlug(item.input.cardId) ?? item.input.setName ?? "?"} />
             <Meta k="Parallel" v={item.input.parallel ?? "Base"} />
             <Meta k="Card #" v={item.input.cardNumber ?? "?"} />
             <Meta k="isAuto" v={item.input.isAuto ? "yes" : "no"} />
