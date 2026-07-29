@@ -442,6 +442,26 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+update/.test(t)) return "Topps Update";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
+  // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so
+  // rows for these distinct product lines stop collapsing to bare "topps"
+  // (which pollutes pricing pools and misroutes the family ladder). All
+  // must match BEFORE /topps\s+chrome/ where possible; Finest/Pristine/
+  // Stadium Club/Allen-Ginter are their own products, not chrome variants.
+  if (/topps\s+finest/i.test(t)) return "Topps Finest";
+  if (/topps\s+pristine/i.test(t)) return "Topps Pristine";
+  if (/topps\s+transcendent/i.test(t)) return "Topps Transcendent";
+  if (/topps\s+dynasty/i.test(t)) return "Topps Dynasty";
+  if (/topps\s+tribute/i.test(t)) return "Topps Tribute";
+  if (/topps\s+inception/i.test(t)) return "Topps Inception";
+  if (/topps\s+definitive/i.test(t)) return "Topps Definitive";
+  if (/topps\s+five[-\s]?star|five[-\s]?star/i.test(t)) return "Topps Five Star";
+  if (/topps\s+museum|museum\s+collection/i.test(t)) return "Topps Museum Collection";
+  if (/topps\s+stadium\s+club|stadium\s+club/i.test(t)) return "Topps Stadium Club";
+  if (/topps\s+allen[-\s]?(and\s+)?ginter|allen[-\s]?(and\s+)?ginter/i.test(t)) return "Topps Allen Ginter";
+  if (/topps\s+gypsy\s+queen|gypsy\s+queen/i.test(t)) return "Topps Gypsy Queen";
+  if (/topps\s+archives/i.test(t)) return "Topps Archives";
+  if (/topps\s+big\s+league|big\s+league/i.test(t)) return "Topps Big League";
+  if (/topps\s+bunt/i.test(t)) return "Topps Bunt";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
@@ -456,7 +476,29 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   if (/bowman\s+mega\s+box/.test(t)) return "Bowman Chrome Mega Box";
-  if (/panini\s+prizm/.test(t)) return "Panini Prizm";
+  // CF-PANINI-PRODUCT-LINES (Drew, 2026-07-29). Full Panini taxonomy so
+  // rows for these distinct products stop collapsing to bare "panini".
+  // Match on either "Panini <Product>" OR the bare product name when the
+  // product IS uniquely Panini (Prizm, Optic, Select, etc. are all
+  // Panini-exclusive brand names). Order most-specific first.
+  if (/panini\s+national\s+treasures|national\s+treasures/i.test(t)) return "Panini National Treasures";
+  if (/panini\s+immaculate|immaculate/i.test(t)) return "Panini Immaculate";
+  if (/panini\s+flawless|\bflawless\b/i.test(t)) return "Panini Flawless";
+  if (/panini\s+one[-\s]?one|\bone\s+one\b/i.test(t)) return "Panini One One";
+  if (/panini\s+contenders|\bcontenders\b/i.test(t)) return "Panini Contenders";
+  if (/panini\s+absolute|\babsolute\b/i.test(t)) return "Panini Absolute";
+  if (/panini\s+chronicles|\bchronicles\b/i.test(t)) return "Panini Chronicles";
+  if (/panini\s+phoenix|\bphoenix\b/i.test(t)) return "Panini Phoenix";
+  if (/panini\s+illusions|\billusions\b/i.test(t)) return "Panini Illusions";
+  if (/panini\s+obsidian|\bobsidian\b/i.test(t)) return "Panini Obsidian";
+  if (/panini\s+spectra|\bspectra\b/i.test(t)) return "Panini Spectra";
+  if (/panini\s+revolution|\brevolution\b/i.test(t)) return "Panini Revolution";
+  if (/panini\s+crown\s+royale|crown\s+royale/i.test(t)) return "Panini Crown Royale";
+  if (/panini\s+select|\bselect\b/i.test(t)) return "Panini Select";
+  if (/panini\s+mosaic|\bmosaic\b/i.test(t)) return "Panini Mosaic";
+  if (/panini\s+optic|donruss\s+optic|\boptic\b/i.test(t)) return "Panini Optic";
+  if (/panini\s+donruss|\bdonruss\b/i.test(t)) return "Panini Donruss";
+  if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
   return "Bowman";
 }

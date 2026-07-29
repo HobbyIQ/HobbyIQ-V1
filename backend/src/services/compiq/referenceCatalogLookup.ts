@@ -100,7 +100,16 @@ const KNOWN_SUBSET_TO_BRAND: Record<string, string> = {
   contenders: "panini",
   absolute: "panini",
   chronicles: "panini",
-  // "national-treasures" is 2 segments; peel handles it
+  // CF-PANINI-EXPAND (Drew, 2026-07-29). Full Panini vocabulary so
+  // orphan single-segment setKeys walk to their brand parent.
+  phoenix: "panini",
+  illusions: "panini",
+  obsidian: "panini",
+  spectra: "panini",
+  revolution: "panini",
+  donruss: "panini",
+  // "national-treasures" / "crown-royale" / "one-one" are 2-segment;
+  // peel handles them via right-to-left segment drop.
   // Topps-family subsets
   heritage: "topps",
   finest: "topps",
@@ -109,9 +118,12 @@ const KNOWN_SUBSET_TO_BRAND: Record<string, string> = {
   dynasty: "topps",
   tribute: "topps",
   inception: "topps",
-  // "stadium-club" / "allen-ginter" / "five-star" are 2-segment; peel
-  // handles them (drop trailing segment → "topps-stadium" doesn't
-  // help; better: match on the whole 2-seg name in a separate check)
+  // CF-TOPPS-EXPAND (Drew, 2026-07-29).
+  definitive: "topps",
+  archives: "topps",
+  bunt: "topps",
+  // 2-segment: "stadium-club", "allen-ginter", "gypsy-queen",
+  // "five-star", "museum-collection", "big-league" — peel handles.
 };
 
 function productFamilyLadder(productKey: string): string[] {
