@@ -24,43 +24,86 @@ const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfol
 const LIMIT = Math.max(1, Math.min(100, Number(process.env.PROTOTYPE_LIMIT || "10")));
 // PROTOTYPE_REASON="any" to skip the reason filter (broadest sample).
 const REASON = process.env.PROTOTYPE_REASON || "any";
+// PROTOTYPE_SOURCE default is sold_comps (biggest pool of real slab
+// images). Set to "verify_queue" to sample from pending manual triage
+// rows instead.
+const SOURCE = process.env.PROTOTYPE_SOURCE || "sold_comps";
+// PROTOTYPE_URL=<url> to skip Cosmos entirely and extract from a
+// single ad-hoc image. Useful for validating extraction on a known
+// slab URL.
+const DIRECT_URL = process.env.PROTOTYPE_URL || "";
 
 async function main() {
   // Prototype calls the extractor directly — no SLAB_OCR_ENABLED gate
   // required. That flag gates the production tier-2a call site in
   // imageVerifyJob only.
-  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
-  const q = client.database("hobbyiq").container("verify_queue");
-
   console.log(`[prototype-slab-ocr]`);
+
+  // Direct URL mode: skip Cosmos, extract from one URL, print result.
+  if (DIRECT_URL) {
+    console.log(`  mode:   direct-url`);
+    console.log(`  url:    ${DIRECT_URL}\n`);
+    const extract = await extractSlabLabel(DIRECT_URL);
+    if (!extract.ok) {
+      console.log(`  ✗ extraction failed: ${extract.error}`);
+      return;
+    }
+    const label = extract.label;
+    console.log(`  slab:   hasSlab=${label.hasSlab} grader=${label.grader} ${label.gradeValue ?? ""} year=${label.year} #=${label.cardNumber} player="${label.playerName}" brand="${label.brand}" conf=${label.confidence.toFixed(2)} (${extract.durationMs}ms)`);
+    console.log(`  raw:    ${extract.rawResponse}`);
+    return;
+  }
+
+  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+  const q = client.database("hobbyiq").container(SOURCE);
+
+  console.log(`  source: ${SOURCE}`);
   console.log(`  reason: ${REASON}`);
   console.log(`  limit:  ${LIMIT}`);
 
-  // Filters:
-  //   - pending status only
-  //   - non-empty imageUrl (rows enqueued without any image can't be OCR'd)
-  //   - has gradeCompany (raw cards have no slab to read)
-  //   - reason filter optional (PROTOTYPE_REASON=any bypasses)
-  const reasonClause = REASON === "any" ? "" : "AND c.reason = @reason";
-  // IS_STRING excludes null (Cosmos returns true only for actual
-  // string values); + length check filters empty-string. Both needed
-  // because verify_queue rows sometimes store imageUrl as null when
-  // vendor omitted an image AND no mirror OR catalog fallback existed.
-  const query = `
-    SELECT TOP @n
-      c.id, c.reason, c.input.cardId, c.input.title, c.input.imageUrl,
-      c.input.cardYear, c.input.cardNumber, c.input.playerName,
-      c.input.gradeCompany, c.input.gradeValue
-    FROM c
-    WHERE c.status = "pending"
-      ${reasonClause}
-      AND IS_STRING(c.input.imageUrl)
-      AND LENGTH(c.input.imageUrl) > 10
-      AND c.input.gradeCompany != null
-  `;
-  const params = [{ name: "@n", value: LIMIT }];
-  if (REASON !== "any") params.push({ name: "@reason", value: REASON });
-  const { resources: rows } = await q.items.query({ query, parameters: params }).fetchAll();
+  // Query varies by source. verify_queue: pending, filter by reason.
+  // sold_comps: rows with gradeCompany + real imageUrl (bigger pool
+  // for smoke testing extraction on real slabs). Both filter to
+  // IS_STRING(imageUrl) with LENGTH > 10 to exclude null/empty rows.
+  let query, params;
+  if (SOURCE === "sold_comps") {
+    query = `
+      SELECT TOP @n
+        c.id AS docId, c.cardId AS docCardId,
+        c.title, c.imageUrl,
+        c.cardYear, c.cardNumber, c.playerName,
+        c.gradeCompany, c.gradeValue
+      FROM c
+      WHERE IS_STRING(c.imageUrl)
+        AND LENGTH(c.imageUrl) > 10
+        AND c.gradeCompany != null
+        AND CONTAINS(c.imageUrl, "s-l")
+    `;
+    params = [{ name: "@n", value: LIMIT }];
+  } else {
+    const reasonClause = REASON === "any" ? "" : "AND c.reason = @reason";
+    query = `
+      SELECT TOP @n
+        c.id, c.reason, c.input.cardId, c.input.title, c.input.imageUrl,
+        c.input.cardYear, c.input.cardNumber, c.input.playerName,
+        c.input.gradeCompany, c.input.gradeValue
+      FROM c
+      WHERE c.status = "pending"
+        ${reasonClause}
+        AND IS_STRING(c.input.imageUrl)
+        AND LENGTH(c.input.imageUrl) > 10
+        AND c.input.gradeCompany != null
+    `;
+    params = [{ name: "@n", value: LIMIT }];
+    if (REASON !== "any") params.push({ name: "@reason", value: REASON });
+  }
+  const { resources: raw } = await q.items.query({ query, parameters: params }).fetchAll();
+  // Normalize sold_comps row shape to match verify_queue's { cardId }.
+  const rows = raw.map(r => SOURCE === "sold_comps"
+    ? { id: r.docId, cardId: r.docCardId, title: r.title, imageUrl: r.imageUrl,
+        cardYear: r.cardYear, cardNumber: r.cardNumber, playerName: r.playerName,
+        gradeCompany: r.gradeCompany, gradeValue: r.gradeValue }
+    : r);
 
   console.log(`  Rows fetched: ${rows.length}\n`);
   if (rows.length === 0) {
