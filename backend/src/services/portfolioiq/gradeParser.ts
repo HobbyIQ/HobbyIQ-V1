@@ -175,7 +175,20 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
     // Match "PSA 10", "PSA10", "PSA-10", "PSA10.0", etc. with the
     // company keyword immediately followed by a whitespace/hyphen and
     // the grade number. Case-insensitive.
-    const companyRe = new RegExp(`\\b${detectedCompany}\\b[\\s-]*([0-9]+(?:\\.[0-9]+)?)`, "i");
+    //
+    // CF-GRADE-MODIFIER-BETWEEN (Drew, 2026-07-29). Vendor titles often
+    // interpose a grade-modifier word between the company token and the
+    // digit: "PSA MINT 9", "PSA GEM MT 10", "BGS PRISTINE 10". Allow an
+    // optional whitelisted modifier so the anchored path catches these.
+    // OBSERVED: "MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"
+    // — anchored match failed, fallback picked "8" from "#8" as the
+    // grade (wrong) instead of PSA 9.
+    const companyRe = new RegExp(
+      `\\b${detectedCompany}\\b[\\s-]*` +
+      `(?:(?:GEM[\\s-]+)?(?:MT|MINT|PRISTINE|NM(?:-MT)?|EX(?:-MT)?)[\\s-]+)?` +
+      `([0-9]+(?:\\.[0-9]+)?)`,
+      "i"
+    );
     const m = trimmed.match(companyRe);
     if (m) {
       const parsed = Number(m[1]);

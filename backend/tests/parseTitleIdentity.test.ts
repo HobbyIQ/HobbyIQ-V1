@@ -526,6 +526,43 @@ describe("parseListingIdentity — Refractor + Pink Refractor fixes", () => {
   });
 });
 
+// CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers is
+// basketball's iconic debut product (Michael Jordan Sticker #8 rookie).
+// Distinct from base 1986 Fleer basketball. Sport = basketball by
+// product convention when no basketball keyword is in the title.
+describe("inferSetKeyFromTitle + inferSportFromTitle — Fleer Stickers", () => {
+  it("'MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9' → Fleer Stickers", () => {
+    expect(inferSetKeyFromTitle("MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"))
+      .toBe("Fleer Stickers");
+  });
+  it("'Michael Jordan 1986 Fleer Sticker #8 Rookie PSA 8 Chicago Bulls RC' → Fleer Stickers", () => {
+    expect(inferSetKeyFromTitle("Michael Jordan 1986 Fleer Sticker #8 Rookie PSA 8 Chicago Bulls RC"))
+      .toBe("Fleer Stickers");
+  });
+  it("plural 'Fleer Stickers' also matches", () => {
+    expect(inferSetKeyFromTitle("1986 Fleer Stickers Michael Jordan #8"))
+      .toBe("Fleer Stickers");
+  });
+  it("'1986 Fleer' base (no stickers word) → Fleer (not Bowman default)", () => {
+    // Base Fleer is now recognized as its own set — separate from
+    // Fleer Stickers (which is a distinct product line).
+    expect(inferSetKeyFromTitle("1986 Fleer #57 Michael Jordan Rookie"))
+      .toBe("Fleer");
+  });
+  it("'Fleer Sticker' with no other basketball keyword → sport=basketball", () => {
+    expect(inferSportFromTitle("MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"))
+      .toBe("basketball");
+  });
+  it("explicit 'basketball' keyword still wins", () => {
+    expect(inferSportFromTitle("2023 Panini Prizm Basketball Wembanyama"))
+      .toBe("basketball");
+  });
+  it("guardrail: no basketball signal → baseball fallback preserved", () => {
+    expect(inferSportFromTitle("2025 Bowman Chrome Eric Hartman #CPA-EH"))
+      .toBe("baseball");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

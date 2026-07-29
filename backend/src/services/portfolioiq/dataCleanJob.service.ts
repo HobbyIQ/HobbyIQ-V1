@@ -28,7 +28,7 @@
 // can filter and Drew can spot patterns.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { parseListingIdentity, inferSetKeyFromTitle } from "./parseTitleIdentity.service.js";
+import { parseListingIdentity, inferSetKeyFromTitle, inferSportFromTitle } from "./parseTitleIdentity.service.js";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
@@ -200,10 +200,21 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
   const raw = row.raw;
   const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
   const cardYear = parsed?.year ?? raw.identityHint.cardYear ?? 0;
-  const sport = parsed?.sport ?? raw.identityHint.sport ?? "baseball";
   const price = Number(raw.vendorPayload.price ?? 0);
   const soldAt = String(raw.vendorPayload.soldAt ?? new Date().toISOString());
   const title = String(raw.vendorPayload.title ?? "");
+
+  // CF-SPORT-RE-INFER (Drew, 2026-07-29). Slug sport is frozen at
+  // ingest — 1986 Fleer Sticker Michael Jordan #8 landed at sport=
+  // baseball because the title carries no basketball keyword. Re-infer
+  // from title-visible product signals (Fleer Sticker → basketball)
+  // and prefer the title-derived sport when it disagrees. Fall back
+  // to slug sport / identity hint / baseball default.
+  let sport = parsed?.sport ?? raw.identityHint.sport ?? "baseball";
+  if (title) {
+    const titleSport = inferSportFromTitle(title, sport);
+    if (titleSport !== sport) sport = titleSport;
+  }
 
   const normalizations: string[] = [];
   const anomalies: StagingClean["anomalies"] = [];

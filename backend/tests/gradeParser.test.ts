@@ -392,4 +392,39 @@ describe("parseGradeLabel — full title patterns (year + card # + grade)", () =
     // heuristic scan doesn't fabricate a grade from year/card# alone.
     expect(parseGradeLabel("2025 Bowman Chrome #BDC-1 Willits")).toBeNull();
   });
+
+  // CF-GRADE-MODIFIER-BETWEEN (Drew, 2026-07-29). Vendor titles often
+  // interpose a grade-modifier word between company token and digit:
+  // "PSA MINT 9", "PSA GEM MT 10", "BGS PRISTINE 10". Anchored regex
+  // now accepts optional whitelisted modifiers so these parse
+  // correctly instead of falling to the any-number fallback (which
+  // could latch onto a card number like #8 as the grade).
+  it("'PSA MINT 9' → PSA 9", () => {
+    expect(parseGradeLabel("MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 9 });
+  });
+  it("'PSA GEM MT 10' → PSA 10", () => {
+    expect(parseGradeLabel("2025 Topps Chrome #100 PSA GEM MT 10"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
+  it("'PSA GEM MINT 10' → PSA 10", () => {
+    expect(parseGradeLabel("2025 Topps Chrome #100 PSA GEM MINT 10"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
+  it("'BGS MINT 9' → BGS 9 (modifier between company and digit)", () => {
+    // Note: BGS PRISTINE 10 also parses correctly BUT the existing
+    // parser tags it as isBlackLabel=true (pre-existing behavior, not
+    // affected by this PR). Using "BGS MINT 9" here to isolate the
+    // modifier-between fix without touching Black Label semantics.
+    expect(parseGradeLabel("1993 Fleer #7 BGS MINT 9"))
+      .toEqual({ gradeCompany: "BGS", gradeValue: 9 });
+  });
+  it("'PSA NM-MT 8' → PSA 8", () => {
+    expect(parseGradeLabel("Michael Jordan 1986 Fleer Sticker #8 Rookie PSA NM-MT 8"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 8 });
+  });
+  it("guardrail: 'PSA 10' (no modifier) still works", () => {
+    expect(parseGradeLabel("2025 Topps Chrome #100 PSA 10"))
+      .toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
 });
