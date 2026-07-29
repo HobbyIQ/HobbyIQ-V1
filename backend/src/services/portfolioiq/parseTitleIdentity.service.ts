@@ -443,6 +443,14 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
+  // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
+  // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
+  // rookie is separate from Fleer #57 Jordan base rookie. Recognize as
+  // its own setKey. Must match BEFORE bare /topps/ / default Bowman
+  // fallback. Applies to any year — Fleer produced sticker inserts across
+  // multiple sports/years, all distinct products.
+  if (/fleer\s+stickers?/i.test(t)) return "Fleer Stickers";
+  if (/\bfleer\b/i.test(t)) return "Fleer";
   if (/bowman\s+draft\s+chrome/.test(t)) return "Bowman Draft Chrome";
   if (/bowman\s+draft/.test(t)) return "Bowman Draft";
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
@@ -459,5 +467,14 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   if (/football|nfl\b/.test(t)) return "football";
   if (/basketball|nba\b/.test(t)) return "basketball";
   if (/hockey|nhl\b/.test(t)) return "hockey";
+  // CF-BASKETBALL-BY-PRODUCT (Drew, 2026-07-29). Some famous basketball
+  // products don't carry "basketball"/"nba" in the title but their
+  // product line is basketball-exclusive:
+  //   - 1986 Fleer Stickers (basketball only — that's the debut product)
+  //   - Any Fleer Sticker across years is basketball-first
+  // OBSERVED: "MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"
+  // — no basketball keyword, defaulted to baseball. Fleer Sticker is
+  // a strong basketball signal by product convention.
+  if (/fleer\s+sticker/i.test(t)) return "basketball";
   return fallback;
 }

@@ -130,6 +130,11 @@ function normalizeSetKey(setName: string): string {
     [/panini-flawless|flawless/, "panini-flawless"],
     [/national-treasures/, "panini-national-treasures"],
     [/upper-deck/, "upper-deck"],
+    // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
+    // basketball's iconic debut product line (1986 Michael Jordan
+    // Sticker #8) plus other sport/year Fleer sticker inserts.
+    [/fleer-stickers?/, "fleer-stickers"],
+    [/fleer/, "fleer"],
   ];
   for (const [re, canonical] of known) {
     if (re.test(s)) return canonical;
