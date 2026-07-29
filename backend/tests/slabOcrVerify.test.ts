@@ -4,7 +4,7 @@
 // fixtures); the comparison + match decision IS pure and testable.
 
 import { describe, it, expect } from "vitest";
-import { checkSlabAgainstIdentity, type SlabLabel, type ParsedIdentity } from "../src/services/portfolioiq/slabOcrVerify.service.js";
+import { checkSlabAgainstIdentity, upscaleImageUrl, type SlabLabel, type ParsedIdentity } from "../src/services/portfolioiq/slabOcrVerify.service.js";
 
 const IDENT_JUDGE: ParsedIdentity = {
   year: 2024,
@@ -131,6 +131,33 @@ describe("checkSlabAgainstIdentity — negative signals", () => {
     const ident: ParsedIdentity = { ...IDENT_JUDGE, year: null };
     const r = checkSlabAgainstIdentity(slab, ident);
     expect(r.matched).toBe(false);
+  });
+});
+
+// CF-SLAB-OCR-UPSCALE-URL (Drew, 2026-07-29). First prototype run on
+// live data returned hasSlab=false because vendor URLs pointed at
+// eBay thumbnails (s-l140.jpg = 140px). Slab-label text is unreadable
+// at that resolution. Rewrite to full-res (s-l1600.jpg) before the
+// LLM call.
+describe("upscaleImageUrl", () => {
+  it("rewrites eBay s-l140.jpg → s-l1600.jpg", () => {
+    expect(upscaleImageUrl("https://i.ebayimg.com/images/g/abc/s-l140.jpg"))
+      .toBe("https://i.ebayimg.com/images/g/abc/s-l1600.jpg");
+  });
+  it("rewrites eBay s-l500.webp → s-l1600.webp (preserves extension)", () => {
+    expect(upscaleImageUrl("https://i.ebayimg.com/images/g/x/s-l500.webp"))
+      .toBe("https://i.ebayimg.com/images/g/x/s-l1600.webp");
+  });
+  it("leaves non-eBay URLs untouched", () => {
+    expect(upscaleImageUrl("https://catalogimages.cardhedge.com/x.jpg"))
+      .toBe("https://catalogimages.cardhedge.com/x.jpg");
+  });
+  it("leaves already-full-res eBay URLs untouched (s-l1600 → s-l1600)", () => {
+    expect(upscaleImageUrl("https://i.ebayimg.com/images/g/x/s-l1600.jpg"))
+      .toBe("https://i.ebayimg.com/images/g/x/s-l1600.jpg");
+  });
+  it("empty string returns empty (no throw)", () => {
+    expect(upscaleImageUrl("")).toBe("");
   });
 });
 
