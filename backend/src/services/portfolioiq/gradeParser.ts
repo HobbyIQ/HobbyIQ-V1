@@ -160,27 +160,53 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
   }
 
   // ── Detect numeric value ─────────────────────────────────────────────
-  // Look for a decimal number (e.g. 9.5) or integer (10, 9, 8). The
-  // value can be a string anywhere in the label — we extract the first
-  // standalone number after company tokens are stripped.
-  let strippedForNumber = trimmed;
-  for (const { token } of COMPANY_TOKENS) {
-    strippedForNumber = strippedForNumber.replace(token, " ");
-  }
-  // Also strip PSA-10 descriptor phrases so the trailing number isn't
-  // shadowed by literal "MT" or "MINT" residue.
-  strippedForNumber = strippedForNumber
-    .replace(/\bgem[\s-]*(mt|mint)\b/gi, " ")
-    .replace(/\bmt\b/gi, " ")
-    .replace(/\bmint\b/gi, " ")
-    .replace(/\bpristine\b/gi, " ");
-
-  const numberMatch = strippedForNumber.match(/(\d+(?:\.\d+)?)/);
+  // Look for a decimal number (e.g. 9.5) or integer (10, 9, 8) that
+  // sits in a valid grade range (0.5-10).
+  //
+  // CF-GRADE-PARSE-COMPANY-ADJACENT (Drew, 2026-07-28). When a company
+  // token is present, prefer the number that comes RIGHT AFTER it —
+  // titles like "2025 BOWMAN DRAFT PSA 7" have both "2025" (year, too
+  // big to be a grade) and "7" (grade), but the old logic picked the
+  // first stripped number which was 2025 → skipped → null. Now we
+  // look for the digit anchored to the company token first, and only
+  // fall back to any-number scan if that misses.
   let detectedValue: number | null = null;
-  if (numberMatch) {
-    const parsed = Number(numberMatch[1]);
-    if (Number.isFinite(parsed) && parsed > 0 && parsed <= 10) {
-      detectedValue = parsed;
+  if (detectedCompany) {
+    // Match "PSA 10", "PSA10", "PSA-10", "PSA10.0", etc. with the
+    // company keyword immediately followed by a whitespace/hyphen and
+    // the grade number. Case-insensitive.
+    const companyRe = new RegExp(`\\b${detectedCompany}\\b[\\s-]*([0-9]+(?:\\.[0-9]+)?)`, "i");
+    const m = trimmed.match(companyRe);
+    if (m) {
+      const parsed = Number(m[1]);
+      if (Number.isFinite(parsed) && parsed > 0 && parsed <= 10) {
+        detectedValue = parsed;
+      }
+    }
+  }
+
+  // Fallback: any-number scan (used for descriptor-only labels where
+  // there's no company token, or when the anchored match failed).
+  if (detectedValue === null) {
+    let strippedForNumber = trimmed;
+    for (const { token } of COMPANY_TOKENS) {
+      strippedForNumber = strippedForNumber.replace(token, " ");
+    }
+    strippedForNumber = strippedForNumber
+      .replace(/\bgem[\s-]*(mt|mint)\b/gi, " ")
+      .replace(/\bmt\b/gi, " ")
+      .replace(/\bmint\b/gi, " ")
+      .replace(/\bpristine\b/gi, " ");
+    // Skip 4-digit years like 2020-2029 to avoid false matches on
+    // titles like "2025 Bowman ... MINT 10" where the anchored-match
+    // path missed.
+    const noYears = strippedForNumber.replace(/\b(19|20)\d{2}\b/g, " ");
+    const numberMatch = noYears.match(/(\d+(?:\.\d+)?)/);
+    if (numberMatch) {
+      const parsed = Number(numberMatch[1]);
+      if (Number.isFinite(parsed) && parsed > 0 && parsed <= 10) {
+        detectedValue = parsed;
+      }
     }
   }
 
