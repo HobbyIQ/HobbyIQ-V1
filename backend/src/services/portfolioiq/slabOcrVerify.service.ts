@@ -122,12 +122,12 @@ Rules:
 - confidence: your honest self-assessment. If the label is blurry or partially cropped, discount accordingly.
 - Return ONLY the JSON object matching the provided schema. No prose.`;
 
+/** Extract structured slab-label fields from a card image.
+ *  Does NOT check SLAB_OCR_ENABLED — that gate belongs to the call
+ *  site (imageVerifyJob) so exploratory tools (prototype-slab-ocr.cjs)
+ *  can invoke this directly without flipping the prod flag. */
 export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractResult> {
   const t0 = Date.now();
-  if (process.env.SLAB_OCR_ENABLED !== "true") {
-    return { ok: false, error: "SLAB_OCR_ENABLED flag off", durationMs: Date.now() - t0 };
-  }
-
   const endpoint = (process.env.AZURE_OPENAI_ENDPOINT ?? "").trim();
   const apiKey = (process.env.AZURE_OPENAI_API_KEY ?? process.env.AZURE_OPENAI_KEY ?? "").trim();
   const deployment = (

@@ -25,10 +25,9 @@ const LIMIT = Math.max(1, Math.min(100, Number(process.env.PROTOTYPE_LIMIT || "1
 const REASON = process.env.PROTOTYPE_REASON || "image-mismatch";
 
 async function main() {
-  if (process.env.SLAB_OCR_ENABLED !== "true") {
-    console.error("SLAB_OCR_ENABLED must be true to run this prototype");
-    process.exit(1);
-  }
+  // Prototype calls the extractor directly — no SLAB_OCR_ENABLED gate
+  // required. That flag gates the production tier-2a call site in
+  // imageVerifyJob only.
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const q = client.database("hobbyiq").container("verify_queue");
 
