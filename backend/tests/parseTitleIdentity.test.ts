@@ -113,6 +113,39 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: Green Grass Refractor", () => {
     expect(parseListingIdentity("Eric Hartman Green Grass Refractor #CPA-EHA /99").parallel).toBe("Green Grass Refractor");
   });
+  // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Bowman Chrome speckle
+  // parallel — small-dot foil pattern. Bare form + color-prefixed form.
+  it("Patterned refractor: Blue Speckle Refractor", () => {
+    expect(parseListingIdentity("Eric Hartman Blue Speckle Refractor #CPA-EHA /150").parallel).toBe("Blue Speckle Refractor");
+  });
+  it("Patterned refractor: Orange Speckle Refractor", () => {
+    expect(parseListingIdentity("Owen Carey 2026 Bowman Chrome Orange Speckle Refractor /25").parallel).toBe("Orange Speckle Refractor");
+  });
+  it("Patterned refractor: bare Speckle Refractor (silver-based)", () => {
+    expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle Refractor #CPA-EHA").parallel).toBe("Speckle Refractor");
+  });
+  it("Patterned refractor: bare 'Speckle' word alone still resolves", () => {
+    expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle #CPA-EHA").parallel).toBe("Speckle Refractor");
+  });
+  // CF-CHROME-IMPLIED (Drew, 2026-07-29). Speckle/Shimmer/Lava/etc are
+  // Chrome-only parallels; title with "Bowman" + Speckle should resolve
+  // setKey → "Bowman Chrome" even when "Chrome" isn't in the title.
+  it("Chrome-implied: 'Bowman' + Speckle → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Eric Hartman Blue Speckle Refractor #CPA-EHA")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied: 'Bowman' + Shimmer → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Owen Carey Green Shimmer Refractor")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied: 'Bowman' + bare Refractor → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Aaron Judge Refractor #100")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied guardrail: 'Bowman' with no chrome signal stays 'Bowman'", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Eric Hartman base rookie card")).toBe("Bowman");
+  });
+  it("Chrome-implied guardrail: explicit Bowman Draft + refractor stays Bowman Draft", () => {
+    // Explicit Draft product line wins over the chrome-implied upgrade.
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Gage Wood Refractor #BD-100")).toBe("Bowman Draft");
+  });
   it("Patterned refractor: Blue X-Fractor (hyphenated)", () => {
     expect(parseListingIdentity("Eric Hartman Blue X-Fractor #CPA-EHA").parallel).toBe("Blue X-Fractor");
   });
@@ -624,9 +657,11 @@ describe("inferSportFromTitle — player-name fallback (by sport)", () => {
       expect(inferSportFromTitle("Ja'Marr Chase Rookie Card"))
         .toBe("football");
     });
-    it("'Tom Brady' → football", () => {
-      expect(inferSportFromTitle("Tom Brady 2000 Bowman Chrome Rookie"))
-        .toBe("football");
+    it("Tom Brady EXCLUDED — MLB Expos draft cards exist", () => {
+      // Brady was drafted by the Expos in '95 and has Bowman Draft
+      // baseball cards. Two-sport → no default (stays fallback).
+      expect(inferSportFromTitle("Tom Brady Bowman Draft 1995 Expos", "baseball"))
+        .toBe("baseball");
     });
   });
 

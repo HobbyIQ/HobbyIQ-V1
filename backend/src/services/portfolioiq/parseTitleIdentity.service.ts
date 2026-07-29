@@ -205,6 +205,16 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Wave Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+grass/i);
   if (m) return capFirst(m[1]) + " Grass Refractor";
+  // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Speckle is a Bowman Chrome
+  // pattern refractor — small-dot foil overlay. Ships as bare Speckle
+  // (silver-based) and as colored variants (Blue Speckle, Orange
+  // Speckle, etc.). Same treatment shape as Shimmer/Lava/Wave/Grass.
+  // OBSERVED: Bowman Chrome Speckle Refractor rows landed at
+  // setKey=bowman parallel=Base because "Speckle" had no rule.
+  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|silver)\s+speckle/i);
+  if (m) return capFirst(m[1]) + " Speckle Refractor";
+  if (/speckle\s+refractor/i.test(T)) return "Speckle Refractor";
+  if (/\bspeckle\b/i.test(T)) return "Speckle Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x-?fractor/i);
   if (m) return capFirst(m[1]) + " X-Fractor";
   // Sapphire product context + standalone color → "Color Sapphire".
@@ -476,6 +486,19 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   if (/bowman\s+mega\s+box/.test(t)) return "Bowman Chrome Mega Box";
+  // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
+  // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
+  // Lava, Wave, Ray Wave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
+  // and any bare "Refractor". When a title says "Bowman" but omits
+  // "Chrome" AND carries one of these chrome-only signals, upgrade to
+  // Bowman Chrome. Ordered AFTER bowman-draft/chrome/sapphire so
+  // explicit product-line phrases still win.
+  //
+  // OBSERVED: "2026 Bowman Speckle Refractor" (title omits "Chrome")
+  // landed at setKey=bowman. Speckle is chrome-only; this is bowman-chrome.
+  if (/bowman/.test(t) && /speckle|shimmer\s+refractor|\blava\s+refractor|wave\s+refractor|grass\s+refractor|x-?fractor|mojo\s+refractor|mega\s+refractor|prism\s+refractor|mini\s+diamond|\brefractor\b/i.test(t)) {
+    return "Bowman Chrome";
+  }
   // CF-PANINI-PRODUCT-LINES (Drew, 2026-07-29). Full Panini taxonomy so
   // rows for these distinct products stop collapsing to bare "panini".
   // Match on either "Panini <Product>" OR the bare product name when the
@@ -575,7 +598,10 @@ const PLAYER_SPORT_HINTS: Array<{ sport: string; pattern: RegExp }> = [
     //   bo jackson    — NFL + MLB (Royals/White Sox/Angels)
     //   drew henson   — NFL + MLB (Yankees minor leagues)
     //   jim thorpe    — NFL + MLB (Braves/Reds)
-    pattern: /\b(?:justin\s+herbert|patrick\s+mahomes|joe\s+burrow|josh\s+allen|lamar\s+jackson|jalen\s+hurts|dak\s+prescott|kyler\s+murray|trevor\s+lawrence|tua\s+tagovailoa|justin\s+fields|c\.?j\.?\s+stroud|caleb\s+williams|jayden\s+daniels|drake\s+maye|bo\s+nix|michael\s+penix|anthony\s+richardson|brock\s+purdy|jordan\s+love|aaron\s+rodgers|tom\s+brady|peyton\s+manning|eli\s+manning|drew\s+brees|ben\s+roethlisberger|philip\s+rivers|russell\s+wilson|joe\s+montana|dan\s+marino|brett\s+favre|john\s+elway|steve\s+young|troy\s+aikman|kurt\s+warner|ja[’']?marr\s+chase|justin\s+jefferson|ceedee\s+lamb|tyreek\s+hill|puka\s+nacua|rome\s+odunze|marvin\s+harrison(?:\s+jr)?|malik\s+nabers|xavier\s+worthy|garrett\s+wilson|chris\s+olave|drake\s+london|deebo\s+samuel|amon-?ra\s+st\.?\s+brown|devonta\s+smith|jaylen\s+waddle|davante\s+adams|stefon\s+diggs|cooper\s+kupp|deandre\s+hopkins|jerry\s+rice|randy\s+moss|calvin\s+johnson|travis\s+kelce|sam\s+laporta|george\s+kittle|brock\s+bowers|dallas\s+goedert|mark\s+andrews|t\.?j\.?\s+hockenson|christian\s+mccaffrey|saquon\s+barkley|bijan\s+robinson|jonathan\s+taylor|derrick\s+henry|nick\s+chubb|kenneth\s+walker|breece\s+hall|jahmyr\s+gibbs|de[’']?von\s+achane|jonathan\s+brooks|kaleb\s+johnson|omarion\s+hampton|ashton\s+jeanty|barry\s+sanders|walter\s+payton|emmitt\s+smith|jim\s+brown|adrian\s+peterson|ladainian\s+tomlinson|micah\s+parsons|nick\s+bosa|myles\s+garrett|t\.?j\.?\s+watt|aidan\s+hutchinson|maxx\s+crosby|khalil\s+mack|von\s+miller|lawrence\s+taylor|reggie\s+white|bruce\s+smith|sauce\s+gardner|patrick\s+surtain|jalen\s+ramsey|charles\s+woodson|ed\s+reed|troy\s+polamalu|ray\s+lewis|brian\s+urlacher|dick\s+butkus|derrick\s+brooks|ladd\s+mcconkey)\b/i,
+    //   tom brady     — NFL + MLB draft (Expos '95); Bowman Draft has
+    //                    Brady baseball cards in the Expos era. 4 rows
+    //                    surfaced in dry-run 2.
+    pattern: /\b(?:justin\s+herbert|patrick\s+mahomes|joe\s+burrow|josh\s+allen|lamar\s+jackson|jalen\s+hurts|dak\s+prescott|kyler\s+murray|trevor\s+lawrence|tua\s+tagovailoa|justin\s+fields|c\.?j\.?\s+stroud|caleb\s+williams|jayden\s+daniels|drake\s+maye|bo\s+nix|michael\s+penix|anthony\s+richardson|brock\s+purdy|jordan\s+love|aaron\s+rodgers|peyton\s+manning|eli\s+manning|drew\s+brees|ben\s+roethlisberger|philip\s+rivers|russell\s+wilson|joe\s+montana|dan\s+marino|brett\s+favre|john\s+elway|steve\s+young|troy\s+aikman|kurt\s+warner|ja[’']?marr\s+chase|justin\s+jefferson|ceedee\s+lamb|tyreek\s+hill|puka\s+nacua|rome\s+odunze|marvin\s+harrison(?:\s+jr)?|malik\s+nabers|xavier\s+worthy|garrett\s+wilson|chris\s+olave|drake\s+london|deebo\s+samuel|amon-?ra\s+st\.?\s+brown|devonta\s+smith|jaylen\s+waddle|davante\s+adams|stefon\s+diggs|cooper\s+kupp|deandre\s+hopkins|jerry\s+rice|randy\s+moss|calvin\s+johnson|travis\s+kelce|sam\s+laporta|george\s+kittle|brock\s+bowers|dallas\s+goedert|mark\s+andrews|t\.?j\.?\s+hockenson|christian\s+mccaffrey|saquon\s+barkley|bijan\s+robinson|jonathan\s+taylor|derrick\s+henry|nick\s+chubb|kenneth\s+walker|breece\s+hall|jahmyr\s+gibbs|de[’']?von\s+achane|jonathan\s+brooks|kaleb\s+johnson|omarion\s+hampton|ashton\s+jeanty|barry\s+sanders|walter\s+payton|emmitt\s+smith|jim\s+brown|adrian\s+peterson|ladainian\s+tomlinson|micah\s+parsons|nick\s+bosa|myles\s+garrett|t\.?j\.?\s+watt|aidan\s+hutchinson|maxx\s+crosby|khalil\s+mack|von\s+miller|lawrence\s+taylor|reggie\s+white|bruce\s+smith|sauce\s+gardner|patrick\s+surtain|jalen\s+ramsey|charles\s+woodson|ed\s+reed|troy\s+polamalu|ray\s+lewis|brian\s+urlacher|dick\s+butkus|derrick\s+brooks|ladd\s+mcconkey)\b/i,
   },
   {
     sport: "basketball",
