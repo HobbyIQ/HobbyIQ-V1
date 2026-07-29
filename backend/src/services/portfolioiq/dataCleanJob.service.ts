@@ -234,9 +234,14 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
   // with the slug's setKey. Also flags the mismatch as a parser anomaly
   // so it shows up in the triage counters. Writes the corrected setKey
   // to clean.setName; the slug itself stays until a re-slug pass.
+  //
+  // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). Pass the parsed slug's
+  // cardNumber into inferSetKeyFromTitle so BPA-XX / BDA-XX prefixes
+  // trigger "Bowman Paper" / "Bowman Draft Paper" even when the vendor
+  // title is bare ("2026 Bowman").
   let derivedSetName = parsed?.setKey ?? null;
   if (title) {
-    const titleSet = inferSetKeyFromTitle(title);
+    const titleSet = inferSetKeyFromTitle(title, parsed?.cardNumber ?? null);
     const titleSetSlug = slugify(titleSet);
     if (parsed && titleSetSlug !== parsed.setKey) {
       anomalies.push({

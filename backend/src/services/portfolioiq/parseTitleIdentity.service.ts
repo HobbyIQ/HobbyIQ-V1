@@ -360,9 +360,33 @@ function capFirst(s: string): string {
 /** Infer setKey from a title. Best-effort — recognizes the common
  *  Bowman/Topps/Panini product lines. When nothing matches, returns
  *  a generic "Bowman" fallback (callers should override when they
- *  have more specific knowledge). */
-export function inferSetKeyFromTitle(title: string): string {
+ *  have more specific knowledge).
+ *
+ *  CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). "bpa = bowman paper" —
+ *  BPA-XX / BDA-XX cardNumbers indicate the paper-stock autograph
+ *  subset of Bowman flagship / Bowman Draft, which is a DISTINCT
+ *  product from the paper base cards and from Bowman Chrome autos.
+ *  Historically these collapsed into the generic "Bowman" setKey,
+ *  blending paper-auto FMV with paper-base FMV. Now derive
+ *  "Bowman Paper" whenever the title carries explicit Paper Prospect
+ *  Auto tokens. The card-number-driven form (BPA-XX with a bare
+ *  "2026 Bowman" title that omits "Paper") is handled by the
+ *  cardNumber-aware overload below. */
+export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
   const t = String(title ?? "").toLowerCase();
+  const cn = String(cardNumber ?? "").toUpperCase();
+
+  // Bowman Paper detection — title-first, then cardNumber-prefix fallback.
+  // Must run BEFORE the plain /bowman/ rules below so a "2026 Bowman
+  // ... 1st Paper Prospect Auto" title doesn't collapse to plain "Bowman".
+  const titleSaysPaper =
+    /1st\s+paper|paper\s+prospect|paper\s+auto|paper\s+autograph/i.test(t);
+  const cardNumSaysPaper = /^BPA-|^BDA-/i.test(cn);
+  if (titleSaysPaper || cardNumSaysPaper) {
+    if (/draft/i.test(t) || /^BDA-/i.test(cn)) return "Bowman Draft Paper";
+    return "Bowman Paper";
+  }
+
   if (/sapphire/.test(t)) return "Bowman Chrome Sapphire";
   if (/topps\s+update/.test(t)) return "Topps Update";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";

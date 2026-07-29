@@ -87,6 +87,34 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
     });
     expect(slug).toBe("hiq:baseball:2025:bowman:bpa-eh:gold-border:auto:num-50");
   });
+
+  // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). When callers explicitly
+  // pass "Bowman Paper" (via inferSetKeyFromTitle's Paper detection),
+  // the slug should encode that specificity — bowman-paper, not bowman.
+  // This preserves the paper-auto-vs-paper-base distinction at the
+  // pool-lookup layer.
+  it("2026 Bowman Paper BPA-AF Andrew Fischer Auto → bowman-paper", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2026,
+      setKey: "Bowman Paper",
+      cardNumber: "BPA-AF",
+      parallel: "Base",
+      isAuto: true,
+    });
+    expect(slug).toBe("hiq:baseball:2026:bowman-paper:bpa-af:base:auto");
+  });
+  it("2025 Bowman Draft Paper BDA-XX Auto → bowman-draft-paper", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2025,
+      setKey: "Bowman Draft Paper",
+      cardNumber: "BDA-EW",
+      parallel: "Base",
+      isAuto: true,
+    });
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft-paper:bda-ew:base:auto");
+  });
 });
 
 describe("computeHobbyIqCardId — sport aliases the helper accepts", () => {
