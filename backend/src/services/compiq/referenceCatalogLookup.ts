@@ -59,26 +59,95 @@ import type { ParallelDoc } from "../reference/referenceCatalog.types.js";
  *
  * Order matters: most-specific → least-specific. First hit wins.
  */
+// CF-FAMILY-LADDER-BRAND-ROOT (Drew, 2026-07-29). Every set name starts
+// with a company/brand token that is the family root: "Topps Chrome
+// Sapphire" nests under Topps Chrome nests under Topps; "Bowman Draft
+// Paper" nests under Bowman Draft nests under Bowman; "Fleer Stickers"
+// nests under Fleer. Prior ladder was ad-hoc (only "-chrome" suffix
+// stripping + "topps-*" branch that required ≥3 parts) — missed many
+// real cases like bowman-chrome-draft, bowman-chrome-sapphire,
+// topps-heritage, fleer-stickers.
+//
+// Algorithm: peel one hyphen-separated segment at a time from the RIGHT,
+// STOPPING at a known brand root (or the first segment when no known
+// root matches). Order preserved: most-specific → least-specific.
+// First catalog hit wins downstream.
+//
+// KNOWN_BRAND_ROOTS lists company names that are multi-segment when
+// slugified but should NOT be split (Upper Deck = one company; Allen &
+// Ginter = a Topps subset but historically its own brand pattern).
+// Everything else terminates at the first segment.
+const KNOWN_BRAND_ROOTS = new Set([
+  "topps", "bowman", "panini", "fleer", "donruss", "score",
+  "upper-deck",  // multi-segment brand
+]);
+
+// CF-SUBSET-TO-BRAND-FALLBACK (Drew, 2026-07-29). "Not every time is
+// the first word the parent company." Sometimes historical rows carry
+// a setKey where the leading segment is a subset name (Prizm, Optic,
+// Heritage) rather than the brand (Panini, Topps). Map those back to
+// their brand parent so the ladder still terminates at the family
+// root. When the leading segment isn't a known subset either, we stop
+// at the first segment (best effort).
+const KNOWN_SUBSET_TO_BRAND: Record<string, string> = {
+  // Panini-family subsets
+  prizm: "panini",
+  optic: "panini",
+  select: "panini",
+  mosaic: "panini",
+  immaculate: "panini",
+  flawless: "panini",
+  contenders: "panini",
+  absolute: "panini",
+  chronicles: "panini",
+  // "national-treasures" is 2 segments; peel handles it
+  // Topps-family subsets
+  heritage: "topps",
+  finest: "topps",
+  pristine: "topps",
+  transcendent: "topps",
+  dynasty: "topps",
+  tribute: "topps",
+  inception: "topps",
+  // "stadium-club" / "allen-ginter" / "five-star" are 2-segment; peel
+  // handles them (drop trailing segment → "topps-stadium" doesn't
+  // help; better: match on the whole 2-seg name in a separate check)
+};
+
 function productFamilyLadder(productKey: string): string[] {
   const ladder: string[] = [productKey];
-  // Bowman family: bowman-chrome / bowman-draft-chrome / bowman-sterling-chrome / etc.
-  // → try dropping "-chrome" suffix (chrome variants nest under the base line)
-  if (productKey.endsWith("-chrome")) {
-    ladder.push(productKey.slice(0, -"-chrome".length));
+  const parts = productKey.split("-");
+  if (parts.length <= 1) {
+    // Single-segment setKey — check if it's a known subset whose brand
+    // parent isn't in the key itself.
+    const brand = KNOWN_SUBSET_TO_BRAND[productKey];
+    if (brand) ladder.push(brand);
+    return Array.from(new Set(ladder));
   }
-  // Bowman-family: any bowman-* → bowman flagship as terminal fallback
-  if (productKey.startsWith("bowman-") && productKey !== "bowman") {
-    ladder.push("bowman");
+
+  // Peel trailing segments one at a time. Stop when we hit a known
+  // brand root OR the single leading segment. Check current BEFORE
+  // peeling so multi-segment brand roots (e.g. "upper-deck") are not
+  // split into upper→deck.
+  let current = productKey;
+  while (current.includes("-")) {
+    if (KNOWN_BRAND_ROOTS.has(current)) break;
+    const idx = current.lastIndexOf("-");
+    const parent = current.slice(0, idx);
+    ladder.push(parent);
+    if (KNOWN_BRAND_ROOTS.has(parent)) break;
+    current = parent;
   }
-  // Topps-family: topps-chrome-update / topps-heritage-high-number → base line
-  if (productKey.startsWith("topps-") && productKey !== "topps") {
-    // Try dropping trailing modifier segments (last "-word") once
-    const parts = productKey.split("-");
-    if (parts.length >= 3) {
-      ladder.push(parts.slice(0, -1).join("-"));
-    }
+
+  // If the terminal segment is NOT a known brand root but IS a known
+  // subset name, append its brand parent. Handles historical setKeys
+  // like "prizm-silver" → prizm → panini.
+  const terminal = current;
+  if (!KNOWN_BRAND_ROOTS.has(terminal)) {
+    const brand = KNOWN_SUBSET_TO_BRAND[terminal];
+    if (brand) ladder.push(brand);
   }
-  // De-dupe while preserving order
+
   return Array.from(new Set(ladder));
 }
 
