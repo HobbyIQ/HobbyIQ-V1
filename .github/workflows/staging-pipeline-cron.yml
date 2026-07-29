@@ -56,6 +56,15 @@ jobs:
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1)
           echo "$RESULT" | jq .
+      - name: Auto-triage
+        env:
+          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          LIMIT: '500'
+        run: |
+          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/auto-triage?limit=$LIMIT" --max-time 120 2>&1)
+          echo "$RESULT" | jq .
       - name: Promotion
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
