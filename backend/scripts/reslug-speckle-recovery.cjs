@@ -121,8 +121,17 @@ async function main() {
     // Only-improve guardrail: new parallel must include "speckle" if we
     // claim the parallel improved. New setKey must extend the old (or
     // be bowman-chrome vs bowman).
+    //
+    // COLOR PRESERVATION: if old parallel carries a color modifier
+    // (blue/red/green/etc), new parallel MUST retain the SAME color.
+    // Rejects "blue-refractor" → "speckle-refractor" (loses "blue")
+    // as an ambiguous rewrite; accepts "blue-refractor" →
+    // "blue-speckle-refractor" (strict improvement, keeps blue).
     if (parallelChanged) {
       if (!newParts[5].includes("speckle")) continue;
+      const COLORS = ["blue","red","green","gold","orange","purple","yellow","aqua","pink","black","silver"];
+      const oldColor = COLORS.find(c => oldParts[5].startsWith(`${c}-`));
+      if (oldColor && !newParts[5].startsWith(`${oldColor}-`)) continue;
     }
     if (setKeyChanged) {
       // Accept only bowman → bowman-chrome (or bowman-draft → bowman-draft-chrome).
