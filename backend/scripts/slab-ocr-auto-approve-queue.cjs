@@ -61,8 +61,12 @@ async function main() {
   console.log(`  limit:       ${LIMIT}`);
   console.log(`  concurrency: ${CONCURRENCY}\n`);
 
-  // Fetch pending rows with graded + real imageUrl. IS_STRING excludes
-  // null; LENGTH > 10 excludes empty and pathological short values.
+  // Fetch pending rows with a real imageUrl — DO NOT filter on
+  // gradeCompany, because the biggest opportunity is discovering
+  // graded cards the parser thought were raw (parser missed the
+  // grade in the title but the slab is right there in the image).
+  // Slab OCR self-classifies raw vs graded via hasSlab.
+  // IS_STRING excludes null; LENGTH > 10 excludes empty + short values.
   const query = `
     SELECT TOP @n
       c.id, c.reason,
@@ -74,7 +78,6 @@ async function main() {
     WHERE c.status = "pending"
       AND IS_STRING(c.input.imageUrl)
       AND LENGTH(c.input.imageUrl) > 10
-      AND c.input.gradeCompany != null
   `;
   const { resources: rows } = await q.items.query({
     query,
@@ -152,6 +155,8 @@ async function main() {
       if (a.field === "parallel") correction.parallel = a.value;
       if (a.field === "printRun") correction.printRun = a.value;
       if (a.field === "isAuto") correction.isAuto = a.value;
+      if (a.field === "gradeCompany") correction.gradeCompany = a.value;
+      if (a.field === "gradeValue") correction.gradeValue = a.value;
     }
     correction.reasonNote = `slab-ocr-auto-approve confidence=${extract.label.confidence.toFixed(2)}`;
 

@@ -265,7 +265,7 @@ export interface SlabIdentityCheck {
   // correction on approve. Prototype v5 showed multiple cases where
   // the parser had no cardNumber but the LLM cleanly read one from
   // the label; that's a strict IMPROVEMENT the queue should absorb.
-  adopted: Array<{ field: "cardNumber" | "parallel" | "printRun" | "isAuto"; value: string | number | boolean }>;
+  adopted: Array<{ field: "cardNumber" | "parallel" | "printRun" | "isAuto" | "gradeCompany" | "gradeValue"; value: string | number | boolean }>;
   detail: string;
 }
 
@@ -308,22 +308,33 @@ export function checkSlabAgainstIdentity(
     };
   }
 
-  // Grader match — case-insensitive
+  // Grader match — case-insensitive.
+  // ADOPTION: parser had no grader (thought card was raw) but slab
+  // clearly shows one at HIGH confidence — adopt (this is a big data
+  // improvement because raw vs graded FMV differs 5-30x). Bar 0.9,
+  // stricter than other adoptions.
   if (identity.gradeCompany && slab.grader) {
     if (identity.gradeCompany.toUpperCase() === slab.grader.toUpperCase()) {
       agreements.push(`grader=${slab.grader}`);
     } else {
       disagreements.push(`grader: parsed=${identity.gradeCompany} slab=${slab.grader}`);
     }
+  } else if (!identity.gradeCompany && slab.grader && slab.confidence >= 0.9) {
+    adopted.push({ field: "gradeCompany", value: slab.grader });
+    agreements.push(`grader=${slab.grader} (adopted)`);
   }
 
-  // Grade value — exact numeric equality (handles half-grades)
+  // Grade value — exact numeric equality (handles half-grades).
+  // Same adoption pattern for the numeric grade.
   if (identity.gradeValue != null && slab.gradeValue != null) {
     if (Math.abs(identity.gradeValue - slab.gradeValue) < 0.01) {
       agreements.push(`grade=${slab.gradeValue}`);
     } else {
       disagreements.push(`grade: parsed=${identity.gradeValue} slab=${slab.gradeValue}`);
     }
+  } else if (identity.gradeValue == null && slab.gradeValue != null && slab.confidence >= 0.9) {
+    adopted.push({ field: "gradeValue", value: slab.gradeValue });
+    agreements.push(`grade=${slab.gradeValue} (adopted)`);
   }
 
   // Year — exact 4-digit match
