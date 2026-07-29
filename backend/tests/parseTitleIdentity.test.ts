@@ -340,6 +340,51 @@ describe("parseListingIdentity — chrome refractor unaffected by Border rules",
   });
 });
 
+// CF-HERITAGE-CHROME-PARALLELS + CF-HERITAGE-BARE-CARDNUMBER
+// (Drew, 2026-07-29). Topps Heritage rows shipping with cardNumber=null
+// and parallel="Base" because the parser didn't handle bare-digit
+// card#s (#136) or Chrome-<modifier> Heritage parallels (Chrome White).
+describe("parseListingIdentity — Topps Heritage patterns", () => {
+  it("bare-digit '#136' extracts cardNumber", () => {
+    expect(parseListingIdentity("2026 Topps Heritage Jac Caglianone Chrome White RC #136").cardNumber)
+      .toBe("136");
+  });
+  it("bare-digit '#500' extracts cardNumber (vintage safety)", () => {
+    expect(parseListingIdentity("1972 Topps Hank Aaron #500").cardNumber)
+      .toBe("500");
+  });
+  it("'Chrome White' in Heritage title → 'Chrome White' parallel (not Base)", () => {
+    expect(parseListingIdentity("2026 Topps Heritage Jac Caglianone Chrome White RC #136").parallel)
+      .toBe("Chrome White");
+  });
+  it("'Chrome Purple Refractor' in Heritage → 'Chrome Purple Refractor'", () => {
+    expect(parseListingIdentity("2026 Topps Heritage #250 Chrome Purple Refractor").parallel)
+      .toBe("Chrome Purple Refractor");
+  });
+  it("'Chrome Refractor' in Heritage → 'Chrome Refractor'", () => {
+    expect(parseListingIdentity("2026 Topps Heritage #100 Chrome Refractor").parallel)
+      .toBe("Chrome Refractor");
+  });
+  it("bare 'Chrome' in Heritage → 'Chrome' (base chromium parallel)", () => {
+    expect(parseListingIdentity("2026 Topps Heritage #136 Jac Caglianone Chrome RC").parallel)
+      .toBe("Chrome");
+  });
+});
+
+// Guardrail: Heritage Chrome rules must NOT hijack Bowman Chrome /
+// Topps Chrome titles where "Gold" means Gold Refractor. Without the
+// heritage-gate these would flip to "Chrome Gold" and split the pool.
+describe("parseListingIdentity — Bowman/Topps Chrome unaffected by Heritage rules", () => {
+  it("'Bowman Chrome Gold /50' → Gold Refractor (heritage-gate holds)", () => {
+    expect(parseListingIdentity("Owen Carey Bowman Chrome Gold /50 Braves").parallel)
+      .toBe("Gold Refractor");
+  });
+  it("'Topps Chrome Judge Blue /150' → Blue Refractor", () => {
+    expect(parseListingIdentity("2025 Topps Chrome Judge Blue /150 #100").parallel)
+      .toBe("Blue Refractor");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

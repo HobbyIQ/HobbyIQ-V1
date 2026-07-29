@@ -39,8 +39,14 @@ export interface ParsedListingIdentity {
 // on paper (BCRA-XX overlaps chrome variant), Topps Chrome Rookie Autos
 // paper (TCRA-XX). Card-number prefix is the disambiguating signal —
 // CPA/BCPA/BCDA/BDPA on chrome stock, BPA/BDA on paper stock.
+//
+// CF-HERITAGE-BARE-CARDNUMBER (Drew, 2026-07-29). Topps Heritage +
+// vintage Topps use bare digit card numbers like #136, #500. The prior
+// regex required 1-3 leading letters before digits, so #136 got no
+// match and Heritage rows shipped with cardNumber=null. Now accepts
+// 1-4 pure digits after '#' as a fallback alternative.
 const DEFAULT_CARD_NUMBER_RE =
-  /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+)\b/i;
+  /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4})\b/i;
 
 // Note: `on card` alone does NOT imply auto — "On Card Display" and
 // similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
@@ -246,6 +252,39 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Prism Refractor";
   if (/gold\s+ink/i.test(T)) return "Gold Ink";
   if (/prism\s+refractor/i.test(T)) return "Prism Refractor";
+
+  // ─── Topps Heritage "Chrome" family parallels ─────────────────────
+  // CF-HERITAGE-CHROME-PARALLELS (Drew, 2026-07-29). Topps Heritage
+  // (a paper base product) ships chromium PARALLELS of the base card —
+  // "Chrome" itself is the base chromium parallel, then Chrome Refractor,
+  // Chrome Purple Refractor, Chrome Black Refractor, Chrome White, etc.
+  // These are DISTINCT from the "Topps Chrome" set (which is its own
+  // separate product). Detected via the "Chrome <modifier>" ordering
+  // that Heritage uses (as opposed to "<color> Refractor" that Topps
+  // Chrome uses).
+  //
+  // OBSERVED: "2026 Topps Heritage Jac Caglianone Chrome White RC #136"
+  // — parser was returning "Base" because no rule caught "Chrome White".
+  //
+  // Ordered specific-first so "Chrome White Refractor" beats bare
+  // "Chrome White".
+  //
+  // ALL Chrome-<modifier> rules here are GATED on /heritage/i so we
+  // don't hijack Bowman Chrome / Topps Chrome titles where "Gold"
+  // already means Gold Refractor. Without the gate, "Bowman Chrome
+  // Gold /50" would wrongly return "Chrome Gold" instead of "Gold
+  // Refractor". Heritage is the only context where "Chrome <Color>"
+  // is a distinct parallel; elsewhere it's just the color refractor.
+  if (/heritage/i.test(T)) {
+    const cm = T.match(/chrome\s+(white|purple|black|blue|red|green|gold|orange|yellow)\s+refractor/i);
+    if (cm) return "Chrome " + capFirst(cm[1]) + " Refractor";
+    const cm2 = T.match(/chrome\s+(white|purple|black|blue|red|green|gold|orange|yellow)\b/i);
+    if (cm2) return "Chrome " + capFirst(cm2[1]);
+    if (/chrome\s+refractor/i.test(T)) return "Chrome Refractor";
+    // Bare "Chrome" in a Heritage title = the base chromium parallel.
+    if (/\bchrome\b/i.test(T)) return "Chrome";
+  }
+
   // Base color refractors — accept "Color Refractor" OR "Color /N" where
   // N matches the traditional print run for that color.
   if (/gold\s+refractor/i.test(T) || /\bgold\b.*\/50\b/i.test(T)) return "Gold Refractor";
