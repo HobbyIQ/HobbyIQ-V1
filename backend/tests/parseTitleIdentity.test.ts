@@ -434,6 +434,61 @@ describe("inferSetKeyFromTitle — Chrome/Draft-Chrome NOT hijacked by Bowman Pa
   });
 });
 
+// CF-MEGA-MOJO-ALIAS (Drew, 2026-07-29). Mega Refractor and Mojo
+// Refractor are the same physical parallel; different market vocab.
+// Collapse to canonical "Mojo Refractor" so their comp pool doesn't
+// split.
+describe("parseListingIdentity — Mega/Mojo alias", () => {
+  it("'Mojo Refractor' → Mojo Refractor", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Mojo Refractor #100").parallel)
+      .toBe("Mojo Refractor");
+  });
+  it("'Mega Refractor' → Mojo Refractor (same physical parallel)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Mega Refractor #100").parallel)
+      .toBe("Mojo Refractor");
+  });
+  it("guardrail: 'Orange Refractor' stays Orange Refractor (visually distinct — solid orange, no pattern)", () => {
+    expect(parseListingIdentity("2025 Bowman Chrome Orange Refractor #100 /25").parallel)
+      .toBe("Orange Refractor");
+  });
+});
+
+// CF-STERLING-REFRACTOR (Drew, 2026-07-29). Bowman Sterling insert
+// (BST-XX cardNumber) with Sterling Refractor parallel — its own pool
+// so pricing doesn't blend with Chrome Refractor.
+describe("parseListingIdentity — Bowman Sterling insert", () => {
+  it("'Bowman Sterling #BST-14' → cardNumber BST-14", () => {
+    expect(parseListingIdentity("2026 Bowman Jac Caglianone Bowman Sterling #BST-14 Kansas City Royals").cardNumber)
+      .toBe("BST-14");
+  });
+  it("'Bowman Sterling Refractor Insert #BST-14' → parallel Sterling Refractor + cardNumber BST-14", () => {
+    const r = parseListingIdentity("2026 Bowman JAC CAGLIANONE Bowman Sterling Refractor Insert #BST-14 Royals RC");
+    expect(r.parallel).toBe("Sterling Refractor");
+    expect(r.cardNumber).toBe("BST-14");
+  });
+  it("'Blue Sterling Refractor' → Blue Sterling Refractor (color-ladder support)", () => {
+    expect(parseListingIdentity("2026 Bowman Blue Sterling Refractor #BST-14").parallel)
+      .toBe("Blue Sterling Refractor");
+  });
+});
+
+// CF-COLOR-ROOKIE (Drew, 2026-07-29). "Red Rookie" is a distinct
+// parallel — rookie-designated color-foiled variant.
+describe("parseListingIdentity — Color Rookie parallels", () => {
+  it("'Red Rookie' → Red Rookie", () => {
+    expect(parseListingIdentity("2025 Topps Red Rookie #100 Wembanyama").parallel)
+      .toBe("Red Rookie");
+  });
+  it("'Blue Rookie' → Blue Rookie", () => {
+    expect(parseListingIdentity("2025 Topps Blue Rookie #100").parallel)
+      .toBe("Blue Rookie");
+  });
+  it("'Gold Rookie' → Gold Rookie", () => {
+    expect(parseListingIdentity("2025 Topps Gold Rookie #100").parallel)
+      .toBe("Gold Rookie");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");

@@ -104,6 +104,33 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
     });
     expect(slug).toBe("hiq:baseball:2026:bowman-paper:bpa-af:base:auto");
   });
+  // CF-MEGA-MOJO-ALIAS (Drew, 2026-07-29). Even if a vendor passes the
+  // parallel string as "Mega Refractor" directly (bypassing the title
+  // parser), the slug layer must collapse it to mojo-refractor so the
+  // comp pool doesn't fragment.
+  it("parallel='Mega Refractor' → slug carries :mojo-refractor: (alias collapsed)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2025,
+      setKey: "Bowman Chrome",
+      cardNumber: "100",
+      parallel: "Mega Refractor",
+      isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:2025:bowman-chrome:100:mojo-refractor:no-auto");
+  });
+  it("parallel='Mojo Refractor' → same slug (canonical form unchanged)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball",
+      year: 2025,
+      setKey: "Bowman Chrome",
+      cardNumber: "100",
+      parallel: "Mojo Refractor",
+      isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:2025:bowman-chrome:100:mojo-refractor:no-auto");
+  });
+
   it("2025 Bowman Draft Paper BDA-XX Auto → bowman-draft-paper", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball",

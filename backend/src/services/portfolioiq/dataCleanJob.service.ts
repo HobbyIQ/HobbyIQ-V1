@@ -333,10 +333,30 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
   // but many Cardsight rows never captured them.
   const gradeParsed = title ? parseGradeLabel(title) : null;
 
+  // CF-STERLING-CARDNUMBER-REPARSE (Drew, 2026-07-29). The slug's
+  // cardNumber slot is frozen at ingest time — and for legacy CH rows
+  // it's often empty (CH ingest didn't emit a cardNumber for many
+  // Bowman Sterling / vintage / Heritage rows) even when the vendor
+  // title clearly carries "#BST-14" / "#136". Re-parse the title and
+  // prefer the parsed cardNumber whenever the slug has none. Same
+  // shape as the setKey re-inference block above.
+  //
+  // OBSERVED 2026-07-29: two Bowman Sterling BST-14 rows landed with
+  // empty cardNumber (slug = "hiq:baseball:2026:bowman::base:no-auto")
+  // even though "#BST-14" is in both titles.
+  let derivedCardNumber = parsed?.cardNumber ?? null;
+  if (!derivedCardNumber && title) {
+    const titleParsedForCn = parseListingIdentity(title);
+    if (titleParsedForCn.cardNumber) {
+      derivedCardNumber = slugify(titleParsedForCn.cardNumber);
+      normalizations.push("cardNumber-recovered-from-title");
+    }
+  }
+
   return {
     cleanedAt: new Date().toISOString(),
     slug: row.hobbyiqCardId,
-    cardNumber: parsed?.cardNumber ?? null,
+    cardNumber: derivedCardNumber,
     parallel: parsed?.parallel ?? null,
     isAuto: parsed?.isAuto ?? false,
     printRun: parsed?.printRun ?? null,
