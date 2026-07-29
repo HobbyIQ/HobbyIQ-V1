@@ -22,7 +22,8 @@ const { extractSlabLabel, checkSlabAgainstIdentity } = require(path.join(backend
 const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 
 const LIMIT = Math.max(1, Math.min(100, Number(process.env.PROTOTYPE_LIMIT || "10")));
-const REASON = process.env.PROTOTYPE_REASON || "image-mismatch";
+// PROTOTYPE_REASON="any" to skip the reason filter (broadest sample).
+const REASON = process.env.PROTOTYPE_REASON || "any";
 
 async function main() {
   // Prototype calls the extractor directly — no SLAB_OCR_ENABLED gate
@@ -35,6 +36,12 @@ async function main() {
   console.log(`  reason: ${REASON}`);
   console.log(`  limit:  ${LIMIT}`);
 
+  // Filters:
+  //   - pending status only
+  //   - non-empty imageUrl (rows enqueued without any image can't be OCR'd)
+  //   - has gradeCompany (raw cards have no slab to read)
+  //   - reason filter optional (PROTOTYPE_REASON=any bypasses)
+  const reasonClause = REASON === "any" ? "" : "AND c.reason = @reason";
   const query = `
     SELECT TOP @n
       c.id, c.reason, c.input.cardId, c.input.title, c.input.imageUrl,
@@ -42,17 +49,14 @@ async function main() {
       c.input.gradeCompany, c.input.gradeValue
     FROM c
     WHERE c.status = "pending"
-      AND c.reason = @reason
+      ${reasonClause}
       AND IS_DEFINED(c.input.imageUrl)
+      AND c.input.imageUrl != ""
       AND c.input.gradeCompany != null
   `;
-  const { resources: rows } = await q.items.query({
-    query,
-    parameters: [
-      { name: "@n", value: LIMIT },
-      { name: "@reason", value: REASON },
-    ],
-  }).fetchAll();
+  const params = [{ name: "@n", value: LIMIT }];
+  if (REASON !== "any") params.push({ name: "@reason", value: REASON });
+  const { resources: rows } = await q.items.query({ query, parameters: params }).fetchAll();
 
   console.log(`  Rows fetched: ${rows.length}\n`);
   if (rows.length === 0) {
