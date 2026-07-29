@@ -203,8 +203,28 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Ray Wave Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+wave/i);
   if (m) return capFirst(m[1]) + " Wave Refractor";
+  // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Wave Refractor exists
+  // as a bare (silver-based) parallel too — "2026 Bowman Eric Hartman
+  // Wave Refractor /350 #BCP-102" landed at parallel="Refractor"
+  // because the color-prefix rules above didn't match and the bare
+  // Refractor fallback at the bottom did. Order: after color-prefixed
+  // Wave rules so "Blue Wave" still returns "Blue Wave Refractor",
+  // before the bare "Refractor" fallback so bare "Wave Refractor"
+  // beats bare "Refractor". Same for Ray Wave.
+  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "Ray Wave Refractor";
+  if (/wave\s+refractor/i.test(T)) return "Wave Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+grass/i);
   if (m) return capFirst(m[1]) + " Grass Refractor";
+  // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Speckle is a Bowman Chrome
+  // pattern refractor — small-dot foil overlay. Ships as bare Speckle
+  // (silver-based) and as colored variants (Blue Speckle, Orange
+  // Speckle, etc.). Same treatment shape as Shimmer/Lava/Wave/Grass.
+  // OBSERVED: Bowman Chrome Speckle Refractor rows landed at
+  // setKey=bowman parallel=Base because "Speckle" had no rule.
+  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|silver)\s+speckle/i);
+  if (m) return capFirst(m[1]) + " Speckle Refractor";
+  if (/speckle\s+refractor/i.test(T)) return "Speckle Refractor";
+  if (/\bspeckle\b/i.test(T)) return "Speckle Refractor";
   m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x-?fractor/i);
   if (m) return capFirst(m[1]) + " X-Fractor";
   // Sapphire product context + standalone color → "Color Sapphire".
@@ -476,6 +496,19 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   if (/bowman\s+mega\s+box/.test(t)) return "Bowman Chrome Mega Box";
+  // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
+  // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
+  // Lava, Wave, Ray Wave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
+  // and any bare "Refractor". When a title says "Bowman" but omits
+  // "Chrome" AND carries one of these chrome-only signals, upgrade to
+  // Bowman Chrome. Ordered AFTER bowman-draft/chrome/sapphire so
+  // explicit product-line phrases still win.
+  //
+  // OBSERVED: "2026 Bowman Speckle Refractor" (title omits "Chrome")
+  // landed at setKey=bowman. Speckle is chrome-only; this is bowman-chrome.
+  if (/bowman/.test(t) && /speckle|shimmer\s+refractor|\blava\s+refractor|wave\s+refractor|grass\s+refractor|x-?fractor|mojo\s+refractor|mega\s+refractor|prism\s+refractor|mini\s+diamond|\brefractor\b/i.test(t)) {
+    return "Bowman Chrome";
+  }
   // CF-PANINI-PRODUCT-LINES (Drew, 2026-07-29). Full Panini taxonomy so
   // rows for these distinct products stop collapsing to bare "panini".
   // Match on either "Panini <Product>" OR the bare product name when the
@@ -545,5 +578,66 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
     // Chicago — but NHL bruins/leafs are unique enough).
     return "hockey";
   }
+
+  // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Some Herbert / Mahomes /
+  // Wembanyama-style titles carry ONLY the player name — no team, no
+  // league, no product-line hint. Player→sport is the last-resort
+  // disambiguator. Curated: unambiguous FULL-NAME matches only
+  // (single-token last names like "Herbert" collide across sports;
+  // "Justin Herbert" doesn't). Two-sport players (Bo Jackson, Deion
+  // Sanders) are DELIBERATELY EXCLUDED — no correct default there.
+  //
+  // OBSERVED: Justin Herbert 2020 Panini Prizm / Mosaic rows landed at
+  // sport=baseball because the title carries neither team nor "NFL";
+  // full-name "Justin Herbert" is the only signal.
+  const playerSport = inferSportFromPlayer(t);
+  if (playerSport) return playerSport;
+
   return fallback;
+}
+
+// CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Full-name → sport table,
+// grouped by sport for maintainability. Only include names that are
+// UNAMBIGUOUS across sports at the full-name level. New additions
+// should be sanity-checked against Wikipedia's disambiguation page.
+const PLAYER_SPORT_HINTS: Array<{ sport: string; pattern: RegExp }> = [
+  {
+    sport: "football",
+    // TWO-SPORT PLAYERS EXCLUDED (no correct default):
+    //   deion sanders — NFL + MLB (Yankees/Braves/Reds/Giants)
+    //   bo jackson    — NFL + MLB (Royals/White Sox/Angels)
+    //   drew henson   — NFL + MLB (Yankees minor leagues)
+    //   jim thorpe    — NFL + MLB (Braves/Reds)
+    //   tom brady     — NFL + MLB draft (Expos '95); Bowman Draft has
+    //                    Brady baseball cards in the Expos era. 4 rows
+    //                    surfaced in dry-run 2.
+    pattern: /\b(?:justin\s+herbert|patrick\s+mahomes|joe\s+burrow|josh\s+allen|lamar\s+jackson|jalen\s+hurts|dak\s+prescott|kyler\s+murray|trevor\s+lawrence|tua\s+tagovailoa|justin\s+fields|c\.?j\.?\s+stroud|caleb\s+williams|jayden\s+daniels|drake\s+maye|bo\s+nix|michael\s+penix|anthony\s+richardson|brock\s+purdy|jordan\s+love|aaron\s+rodgers|peyton\s+manning|eli\s+manning|drew\s+brees|ben\s+roethlisberger|philip\s+rivers|russell\s+wilson|joe\s+montana|dan\s+marino|brett\s+favre|john\s+elway|steve\s+young|troy\s+aikman|kurt\s+warner|ja[’']?marr\s+chase|justin\s+jefferson|ceedee\s+lamb|tyreek\s+hill|puka\s+nacua|rome\s+odunze|marvin\s+harrison(?:\s+jr)?|malik\s+nabers|xavier\s+worthy|garrett\s+wilson|chris\s+olave|drake\s+london|deebo\s+samuel|amon-?ra\s+st\.?\s+brown|devonta\s+smith|jaylen\s+waddle|davante\s+adams|stefon\s+diggs|cooper\s+kupp|deandre\s+hopkins|jerry\s+rice|randy\s+moss|calvin\s+johnson|travis\s+kelce|sam\s+laporta|george\s+kittle|brock\s+bowers|dallas\s+goedert|mark\s+andrews|t\.?j\.?\s+hockenson|christian\s+mccaffrey|saquon\s+barkley|bijan\s+robinson|jonathan\s+taylor|derrick\s+henry|nick\s+chubb|kenneth\s+walker|breece\s+hall|jahmyr\s+gibbs|de[’']?von\s+achane|jonathan\s+brooks|kaleb\s+johnson|omarion\s+hampton|ashton\s+jeanty|barry\s+sanders|walter\s+payton|emmitt\s+smith|jim\s+brown|adrian\s+peterson|ladainian\s+tomlinson|micah\s+parsons|nick\s+bosa|myles\s+garrett|t\.?j\.?\s+watt|aidan\s+hutchinson|maxx\s+crosby|khalil\s+mack|von\s+miller|lawrence\s+taylor|reggie\s+white|bruce\s+smith|sauce\s+gardner|patrick\s+surtain|jalen\s+ramsey|charles\s+woodson|ed\s+reed|troy\s+polamalu|ray\s+lewis|brian\s+urlacher|dick\s+butkus|derrick\s+brooks|ladd\s+mcconkey)\b/i,
+  },
+  {
+    sport: "basketball",
+    // TWO-SPORT / AMBIGUOUS EXCLUDED:
+    //   bill russell   — NBA Celtics dominant, but MLB Bill Russell
+    //                    (Dodgers 70s) exists; some era-baseball cards
+    //                    would flip incorrectly.
+    //   michael jordan — NBA dominant, but 1994-95 Upper Deck Minor
+    //                    League Birmingham Barons cards exist; those
+    //                    are actually baseball-category rows. Skip.
+    pattern: /\b(?:lebron\s+james|steph(?:en)?\s+curry|kevin\s+durant|giannis\s+antetokounmpo|nikola\s+jokic|luka\s+doncic|jayson\s+tatum|jaylen\s+brown|devin\s+booker|anthony\s+edwards|ja\s+morant|trae\s+young|zion\s+williamson|victor\s+wembanyama|wemby|chet\s+holmgren|paolo\s+banchero|scoot\s+henderson|cade\s+cunningham|jalen\s+brunson|karl-?anthony\s+towns|shai\s+gilgeous-?alexander|de[’']?aaron\s+fox|alperen\s+sengun|bam\s+adebayo|domantas\s+sabonis|tyrese\s+haliburton|tyrese\s+maxey|anthony\s+davis|joel\s+embiid|jimmy\s+butler|kawhi\s+leonard|paul\s+george|damian\s+lillard|james\s+harden|russell\s+westbrook|chris\s+paul|dwyane\s+wade|klay\s+thompson|draymond\s+green|kyrie\s+irving|zach\s+lavine|donovan\s+mitchell|jamal\s+murray|michael\s+porter|amen\s+thompson|ausar\s+thompson|jabari\s+smith|jaden\s+ivey|dyson\s+daniels|bennedict\s+mathurin|jeremy\s+sochan|walker\s+kessler|jalen\s+williams|jalen\s+duren|franz\s+wagner|reed\s+sheppard|alex\s+sarr|zaccharie\s+risacher|donovan\s+clingan|matas\s+buzelis|stephon\s+castle|zach\s+edey|dalton\s+knecht|rob\s+dillingham|nikola\s+topic|ron\s+holland|cody\s+williams|isaiah\s+collier|carlton\s+carrington|jared\s+mccain|kobe\s+bryant|magic\s+johnson|larry\s+bird|kareem\s+abdul-?jabbar|wilt\s+chamberlain|shaquille\s+o[’']?neal|hakeem\s+olajuwon|tim\s+duncan|dirk\s+nowitzki|allen\s+iverson|charles\s+barkley|karl\s+malone|john\s+stockton|scottie\s+pippen|isiah\s+thomas|david\s+robinson|patrick\s+ewing|reggie\s+miller|julius\s+erving|oscar\s+robertson|elgin\s+baylor|jerry\s+west|rui\s+hachimura)\b/i,
+  },
+  {
+    sport: "hockey",
+    pattern: /\b(?:connor\s+mcdavid|auston\s+matthews|sidney\s+crosby|alex(?:ander)?\s+ovechkin|leon\s+draisaitl|nathan\s+mackinnon|cale\s+makar|jack\s+hughes|quinn\s+hughes|luke\s+hughes|connor\s+bedard|matvei\s+michkov|macklin\s+celebrini|kirill\s+kaprizov|igor\s+shesterkin|andrei\s+vasilevskiy|nikita\s+kucherov|artemi\s+panarin|david\s+pastrnak|mikko\s+rantanen|elias\s+pettersson|aleksander\s+barkov|sebastian\s+aho|mitch\s+marner|william\s+nylander|brady\s+tkachuk|matthew\s+tkachuk|trevor\s+zegras|juraj\s+slafkovsky|owen\s+power|adam\s+fantilli|jesper\s+bratt|wayne\s+gretzky|mario\s+lemieux|bobby\s+orr|gordie\s+howe|mark\s+messier|patrick\s+roy|steve\s+yzerman|jaromir\s+jagr|joe\s+sakic|nicklas\s+lidstrom|martin\s+brodeur|dominik\s+hasek|teemu\s+selanne|jarome\s+iginla|pavel\s+bure|brett\s+hull|paul\s+kariya)\b/i,
+  },
+  {
+    sport: "baseball",
+    pattern: /\b(?:aaron\s+judge|shohei\s+ohtani|mike\s+trout|bryce\s+harper|mookie\s+betts|freddie\s+freeman|ronald\s+acuna|juan\s+soto|fernando\s+tatis|julio\s+rodriguez|adley\s+rutschman|corbin\s+carroll|elly\s+de\s+la\s+cruz|jackson\s+chourio|wyatt\s+langford|jackson\s+merrill|jackson\s+holliday|paul\s+skenes|roman\s+anthony|ethan\s+salas|sebastian\s+walcott|kevin\s+mcgonigle|bryce\s+eldridge|josue\s+de\s+paula|konnor\s+griffin|termarr\s+johnson|druw\s+jones|jasson\s+dominguez|anthony\s+volpe|jose\s+altuve|clayton\s+kershaw|justin\s+verlander|max\s+scherzer|derek\s+jeter|albert\s+pujols|miguel\s+cabrera|ken\s+griffey|barry\s+bonds|hank\s+aaron|willie\s+mays|babe\s+ruth|mickey\s+mantle|ted\s+williams|jackie\s+robinson|nolan\s+ryan|cal\s+ripken|greg\s+maddux|randy\s+johnson|pedro\s+martinez|chipper\s+jones|frank\s+thomas|eric\s+hartman|ethan\s+conrad|owen\s+carey|gage\s+wood)\b/i,
+  },
+];
+
+export function inferSportFromPlayer(title: string): string | null {
+  const t = String(title ?? "").toLowerCase();
+  for (const { sport, pattern } of PLAYER_SPORT_HINTS) {
+    if (pattern.test(t)) return sport;
+  }
+  return null;
 }

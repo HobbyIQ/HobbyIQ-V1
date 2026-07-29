@@ -1,0 +1,125 @@
+name: Backfill Runner (sold_comps re-slug / verify_queue batch)
+
+# CF-BACKFILL-RUNNER (Drew, 2026-07-29). Server-side runner for any
+# `backend/scripts/reslug-*.cjs` or `backend/scripts/approve-*.cjs`
+# backfill so we can execute long-running data cleanup jobs without
+# tying up a laptop. Cosmos connection string is fetched from
+# HobbyIQ3 App Service at run time (same pattern as
+# auto-multiplier-refresh.yml).
+#
+# Whitelisted scripts only — the input is a dropdown, not free-form —
+# so this workflow can't be turned into a general "run arbitrary code"
+# vector.
+#
+# Modes:
+#   dry-run (default): scan + report distribution + sample; NO writes
+#   apply:             actually mutate sold_comps / verify_queue
+#
+# Always run the dry-run first; review the distribution + samples in
+# the workflow log; then re-dispatch with apply=true if it looks right.
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Backfill script to run"
+        required: true
+        type: choice
+        options:
+          - reslug-speckle-recovery
+          - reslug-chrome-prospects-and-wave
+          - reslug-player-sport-fix
+          - reslug-brand-root-refinement
+          - reslug-cross-brand-fix
+          - reslug-heritage-vs-topps-chrome
+          - reslug-bowman-paper-vs-bowman
+          - reslug-fleer-stickers
+          - reslug-recover-cardnumbers
+          - reslug-chrome-draft-collision
+          - approve-topps-finest-2026
+          - backfill-verify-queue-grades
+      apply:
+        description: "Actually write (true) or dry-run only (false)"
+        required: true
+        type: boolean
+        default: false
+      concurrency:
+        description: "Parallel patch workers (leave default unless tuning)"
+        required: false
+        default: "16"
+
+permissions:
+  contents: read
+  id-token: write   # Azure OIDC for App Service secret fetch
+
+jobs:
+  run-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60   # some scans (e.g. player-sport) touch 2.5M rows
+
+    steps:
+      - name: Checkout repo at dispatched ref
+        # workflow_dispatch checks out the branch chosen in the UI, so
+        # Drew can run scripts that live on a feature branch before merge.
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend dist
+        # Backfill scripts require compiled JS from backend/dist. Build
+        # here so the checked-out branch's parser code is what runs.
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
+        shell: bash
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv)
+          if [ -z "$CS" ]; then
+            echo "::error::FAILED to fetch COSMOS_CONNECTION_STRING from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$CS"
+          echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
+          echo "COSMOS_CONNECTION_STRING fetched (length: ${#CS})"
+
+      - name: Verify script exists
+        # Guardrail: whitelisted input, but confirm file is present in
+        # the checked-out branch (a script added in a PR branch that
+        # never landed on the dispatch ref would silently fail otherwise).
+        run: |
+          SCRIPT="backend/scripts/${{ inputs.script }}.cjs"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::error::Script $SCRIPT not present on branch ${GITHUB_REF#refs/heads/}"
+            exit 1
+          fi
+          echo "Script confirmed: $SCRIPT"
+
+      - name: Run backfill (${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }})
+        # Both RESLUG_APPLY and APPROVE_APPLY env vars are set so this
+        # single step works for both reslug-* and approve-* scripts;
+        # each script only reads the one it cares about.
+        env:
+          RESLUG_APPLY: ${{ inputs.apply == true && 'true' || 'false' }}
+          APPROVE_APPLY: ${{ inputs.apply == true && 'true' || 'false' }}
+          RESLUG_CONCURRENCY: ${{ inputs.concurrency }}
+          APPROVE_CONCURRENCY: ${{ inputs.concurrency }}
+        run: node "backend/scripts/${{ inputs.script }}.cjs"

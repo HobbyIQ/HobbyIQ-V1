@@ -205,6 +205,26 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
     expect(slug).toContain(":bowman-chrome:");
   });
 
+  // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
+  // BCP/CPA rows with a bare setName="Chrome Prospects" (no "Bowman"
+  // prefix). Without a dedicated rule, normalizeSetKey slugifies to
+  // "chrome-prospects" which fragments the FMV pool. These MUST unify
+  // with bowman-chrome.
+  it("bare 'Chrome Prospects' setName → bowman-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Chrome Prospects",
+      cardNumber: "BCP-102", parallel: "Refractor", isAuto: false,
+    });
+    expect(slug).toContain(":bowman-chrome:");
+  });
+  it("bare 'Chrome Prospects Autographs' setName → bowman-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Chrome Prospects Autographs",
+      cardNumber: "CPA-EHA", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-chrome:");
+  });
+
   it("Topps Chrome Update → topps-chrome-update (specific)", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2024, setKey: "2024 Topps Chrome Update Series",

@@ -113,6 +113,51 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: Green Grass Refractor", () => {
     expect(parseListingIdentity("Eric Hartman Green Grass Refractor #CPA-EHA /99").parallel).toBe("Green Grass Refractor");
   });
+  // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Bowman Chrome speckle
+  // parallel — small-dot foil pattern. Bare form + color-prefixed form.
+  it("Patterned refractor: Blue Speckle Refractor", () => {
+    expect(parseListingIdentity("Eric Hartman Blue Speckle Refractor #CPA-EHA /150").parallel).toBe("Blue Speckle Refractor");
+  });
+  it("Patterned refractor: Orange Speckle Refractor", () => {
+    expect(parseListingIdentity("Owen Carey 2026 Bowman Chrome Orange Speckle Refractor /25").parallel).toBe("Orange Speckle Refractor");
+  });
+  it("Patterned refractor: bare Speckle Refractor (silver-based)", () => {
+    expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle Refractor #CPA-EHA").parallel).toBe("Speckle Refractor");
+  });
+  it("Patterned refractor: bare 'Speckle' word alone still resolves", () => {
+    expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle #CPA-EHA").parallel).toBe("Speckle Refractor");
+  });
+  // CF-CHROME-IMPLIED (Drew, 2026-07-29). Speckle/Shimmer/Lava/etc are
+  // Chrome-only parallels; title with "Bowman" + Speckle should resolve
+  // setKey → "Bowman Chrome" even when "Chrome" isn't in the title.
+  it("Chrome-implied: 'Bowman' + Speckle → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Eric Hartman Blue Speckle Refractor #CPA-EHA")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied: 'Bowman' + Shimmer → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Owen Carey Green Shimmer Refractor")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied: 'Bowman' + bare Refractor → Bowman Chrome setKey", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Aaron Judge Refractor #100")).toBe("Bowman Chrome");
+  });
+  it("Chrome-implied guardrail: 'Bowman' with no chrome signal stays 'Bowman'", () => {
+    expect(inferSetKeyFromTitle("2026 Bowman Eric Hartman base rookie card")).toBe("Bowman");
+  });
+  it("Chrome-implied guardrail: explicit Bowman Draft + refractor stays Bowman Draft", () => {
+    // Explicit Draft product line wins over the chrome-implied upgrade.
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Gage Wood Refractor #BD-100")).toBe("Bowman Draft");
+  });
+  // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Bare Wave Refractor
+  // (silver-based, no color modifier) was falling through to bare
+  // "Refractor" because color-prefixed Wave rules didn't match.
+  it("Patterned refractor: bare Wave Refractor (no color)", () => {
+    expect(parseListingIdentity("2026 Bowman - Eric Hartman Wave Refractor /350 #BCP-102").parallel).toBe("Wave Refractor");
+  });
+  it("Patterned refractor: bare Ray Wave Refractor (no color)", () => {
+    expect(parseListingIdentity("Owen Carey Ray Wave Refractor #BCP-99").parallel).toBe("Ray Wave Refractor");
+  });
+  it("Guardrail: 'Blue Wave Refractor' still returns Blue-prefixed (color rule wins)", () => {
+    expect(parseListingIdentity("Owen Carey Blue Wave Refractor").parallel).toBe("Blue Wave Refractor");
+  });
   it("Patterned refractor: Blue X-Fractor (hyphenated)", () => {
     expect(parseListingIdentity("Eric Hartman Blue X-Fractor #CPA-EHA").parallel).toBe("Blue X-Fractor");
   });
@@ -604,6 +649,110 @@ describe("inferSportFromTitle — team-name fallback", () => {
     // Word is intentionally excluded from BOTH team lists.
     expect(inferSportFromTitle("Some Panthers Player 2020"))
       .toBe("baseball");
+  });
+});
+
+// CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Last-resort player→sport
+// disambiguation: title carries neither team nor league keyword —
+// only the player name. Full-name matches only.
+describe("inferSportFromTitle — player-name fallback (by sport)", () => {
+  describe("football players", () => {
+    it("'Justin Herbert' (no team, no NFL) → football", () => {
+      expect(inferSportFromTitle("Justin Herbert 2020 Panini Stained Glass Prizm #18"))
+        .toBe("football");
+    });
+    it("'Patrick Mahomes' → football", () => {
+      expect(inferSportFromTitle("Patrick Mahomes 2020 Panini Prizm"))
+        .toBe("football");
+    });
+    it("'Ja'Marr Chase' → football (apostrophe variants)", () => {
+      expect(inferSportFromTitle("Ja'Marr Chase Rookie Card"))
+        .toBe("football");
+    });
+    it("Tom Brady EXCLUDED — MLB Expos draft cards exist", () => {
+      // Brady was drafted by the Expos in '95 and has Bowman Draft
+      // baseball cards. Two-sport → no default (stays fallback).
+      expect(inferSportFromTitle("Tom Brady Bowman Draft 1995 Expos", "baseball"))
+        .toBe("baseball");
+    });
+  });
+
+  describe("basketball players", () => {
+    it("'LeBron James' → basketball", () => {
+      expect(inferSportFromTitle("LeBron James 2003 Topps Chrome"))
+        .toBe("basketball");
+    });
+    it("'Victor Wembanyama' → basketball", () => {
+      expect(inferSportFromTitle("Victor Wembanyama 2023 Rookie"))
+        .toBe("basketball");
+    });
+    it("'Steph Curry' → basketball", () => {
+      expect(inferSportFromTitle("Steph Curry 2009 Topps"))
+        .toBe("basketball");
+    });
+    it("'Kobe Bryant' → basketball", () => {
+      expect(inferSportFromTitle("Kobe Bryant 1996 Topps Chrome"))
+        .toBe("basketball");
+    });
+  });
+
+  describe("hockey players", () => {
+    it("'Connor McDavid' → hockey", () => {
+      expect(inferSportFromTitle("Connor McDavid 2015 Upper Deck Rookie"))
+        .toBe("hockey");
+    });
+    it("'Wayne Gretzky' → hockey", () => {
+      expect(inferSportFromTitle("Wayne Gretzky 1979 O-Pee-Chee"))
+        .toBe("hockey");
+    });
+    it("'Connor Bedard' → hockey", () => {
+      expect(inferSportFromTitle("Connor Bedard 2023 Upper Deck Young Guns"))
+        .toBe("hockey");
+    });
+  });
+
+  describe("baseball players (would already hit fallback, but explicit is safer)", () => {
+    it("'Shohei Ohtani' → baseball", () => {
+      expect(inferSportFromTitle("Shohei Ohtani 2018 Topps Chrome", "football"))
+        .toBe("baseball");
+    });
+    it("'Eric Hartman' → baseball (curated Drew personal roster)", () => {
+      expect(inferSportFromTitle("Eric Hartman 2025 Bowman Chrome", "football"))
+        .toBe("baseball");
+    });
+  });
+
+  describe("guardrails", () => {
+    it("last-name only ('Herbert') does NOT match — first name required", () => {
+      // 'Herbert' alone appears in multiple sports (e.g. Herbert perry MLB).
+      // Only full-name matches are safe.
+      expect(inferSportFromTitle("Herbert 2020 Bowman Chrome", "baseball"))
+        .toBe("baseball");
+    });
+    it("Deion Sanders (two-sport NFL+MLB) does NOT match", () => {
+      // Deion played for Yankees/Braves/Reds/Giants. No correct default.
+      expect(inferSportFromTitle("Deion Sanders 1989 Bowman Rookie", "baseball"))
+        .toBe("baseball");
+    });
+    it("Bill Russell alone does NOT match (NBA legend + MLB Dodgers namesake)", () => {
+      expect(inferSportFromTitle("Bill Russell 1970 Topps", "baseball"))
+        .toBe("baseball");
+    });
+    it("Michael Jordan alone does NOT match (NBA + 1994-95 Barons baseball cards)", () => {
+      expect(inferSportFromTitle("Michael Jordan 1994 Upper Deck Rookie", "baseball"))
+        .toBe("baseball");
+    });
+    it("explicit sport keyword still wins over player hint", () => {
+      // "basketball" keyword fires FIRST, before we ever reach the
+      // player-name pass. Cross-sport player-name mismatches (which
+      // shouldn't happen in practice) always defer to the keyword.
+      expect(inferSportFromTitle("Michael Jordan 1994 basketball fantasy", "football"))
+        .toBe("basketball");
+    });
+    it("no player match falls through to caller fallback", () => {
+      expect(inferSportFromTitle("Some Random 2020 Card", "baseball"))
+        .toBe("baseball");
+    });
   });
 });
 
