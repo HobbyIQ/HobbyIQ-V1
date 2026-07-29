@@ -119,16 +119,150 @@ describe("productFamilyLadder walk — bowman-chrome → bowman fallback", () =>
     expect(r?.product).toBe("Topps Chrome");
   });
 
-  it("non-bowman/topps product does NOT walk — returns null on miss", async () => {
-    listParallelsByProductYearMock.mockResolvedValue([]);
+  // CF-FAMILY-LADDER-BRAND-ROOT (Drew, 2026-07-29). Previously the
+  // ladder only walked bowman-* and topps-* families. Extended so
+  // every brand's subsets nest under the company parent (Panini Prizm
+  // Football → Panini Prizm → Panini; Fleer Stickers → Fleer). This
+  // test used to pin the old restrictive behavior; flipped to pin the
+  // new expected walk.
+  it("panini-prizm-football walks: → panini-prizm → panini (all brands walk)", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "panini") return [doc({
+        productKey: "panini", product: "Panini", printRun: 199,
+      })];
+      return [];
+    });
     const { inferPrintRunFromReferenceCatalog } = await load();
     const r = await inferPrintRunFromReferenceCatalog(
-      "Panini Prizm Football", 2024, "Purple Ice", { isAuto: false },
+      "Panini Prizm Football", 2024, "Green Refractor", { isAuto: true },
     );
-    expect(r).toBeNull();
-    // Should only query the exact key, no ladder fallback
+    expect(r?.printRun).toBe(199);
     const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
-    expect(calls).toEqual(["panini-prizm-football"]);
+    expect(calls[0]).toBe("panini-prizm-football");
+    expect(calls).toContain("panini-prizm");
+    expect(calls).toContain("panini");
+  });
+
+  // CF-FAMILY-LADDER-BRAND-ROOT — expanded coverage
+  it("fleer-stickers walks to fleer (Fleer is its own company parent)", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "fleer") return [doc({
+        productKey: "fleer", product: "Fleer", printRun: 100,
+      })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Fleer Stickers", 1986, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(100);
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("fleer-stickers");
+    expect(calls).toContain("fleer");
+  });
+
+  it("topps-heritage walks to topps (heritage is a Topps subset)", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "topps") return [doc({ product: "Topps", printRun: 50 })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Topps Heritage", 2026, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(50);
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("topps-heritage");
+    expect(calls).toContain("topps");
+  });
+
+  it("bowman-chrome-draft walks: → bowman-chrome → bowman (previously missed the -chrome intermediate)", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "bowman-chrome") return [doc({
+        productKey: "bowman-chrome", product: "Bowman Chrome", printRun: 150,
+      })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Bowman Chrome Draft", 2026, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(150);
+    expect(r?.product).toBe("Bowman Chrome");
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("bowman-chrome-draft");
+    expect(calls).toContain("bowman-chrome");
+  });
+
+  it("bowman-chrome-sapphire walks: → bowman-chrome → bowman", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "bowman-chrome") return [doc({ product: "Bowman Chrome", printRun: 199 })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Bowman Chrome Sapphire", 2026, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(199);
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("bowman-chrome-sapphire");
+    expect(calls).toContain("bowman-chrome");
+  });
+
+  it("bowman-draft-paper walks: → bowman-draft → bowman", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "bowman-draft") return [doc({ product: "Bowman Draft", printRun: 75 })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Bowman Draft Paper", 2026, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(75);
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("bowman-draft-paper");
+    expect(calls).toContain("bowman-draft");
+  });
+
+  it("bowman-paper walks straight to bowman", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "bowman") return [doc({ product: "Bowman", printRun: 499 })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Bowman Paper", 2026, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(499);
+  });
+
+  it("bare 'prizm' setKey (orphan, no brand prefix) walks to panini via subset-to-brand fallback", async () => {
+    listParallelsByProductYearMock.mockImplementation(async (pk: string) => {
+      if (pk === "panini") return [doc({ product: "Panini", printRun: 25 })];
+      return [];
+    });
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const r = await inferPrintRunFromReferenceCatalog(
+      "Prizm", 2024, "Green Refractor", { isAuto: true },
+    );
+    expect(r?.printRun).toBe(25);
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("prizm");
+    expect(calls).toContain("panini");
+  });
+
+  it("upper-deck (multi-segment brand) does NOT get split into upper→deck", async () => {
+    // Regression guard: upper-deck is one company. The peel loop would
+    // normally walk upper-deck → upper, but KNOWN_BRAND_ROOTS contains
+    // "upper-deck" so we terminate there.
+    listParallelsByProductYearMock.mockResolvedValue([]);
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    await inferPrintRunFromReferenceCatalog(
+      "Upper Deck", 2000, "Base", { isAuto: false },
+    );
+    const calls = listParallelsByProductYearMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain("upper-deck");
+    expect(calls).not.toContain("upper");
   });
 
   it("miss on the whole ladder returns null cleanly", async () => {
