@@ -116,6 +116,26 @@ describe("checkSlabAgainstIdentity — happy path", () => {
     expect(r.adopted).toContainEqual({ field: "isAuto", value: true });
   });
 
+  // CF-SLAB-OCR-GRADE-ADOPTION (2026-07-29). Biggest win: parser
+  // thought row was raw (no gradeCompany), slab clearly shows a
+  // grade. Adopt at HIGHER confidence bar (0.9) because raw vs
+  // graded FMV differs 5-30x.
+  it("adopts gradeCompany when parser thought raw + slab shows grader at 0.9+", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, gradeCompany: null, gradeValue: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, confidence: 0.95 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "gradeCompany", value: "PSA" });
+    expect(r.adopted).toContainEqual({ field: "gradeValue", value: 10 });
+    expect(r.matched).toBe(true);
+  });
+
+  it("does NOT adopt gradeCompany at 0.85 confidence (below 0.9 bar)", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, gradeCompany: null, gradeValue: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, confidence: 0.85 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted.some(a => a.field === "gradeCompany")).toBe(false);
+  });
+
   it("does NOT adopt parallel when parser already has a real value", () => {
     const ident: ParsedIdentity = { ...IDENT_JUDGE, parallel: "Gold Refractor" };
     const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, parallel: "GOLD REFRACTOR" };
