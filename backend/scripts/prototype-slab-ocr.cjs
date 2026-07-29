@@ -42,6 +42,10 @@ async function main() {
   //   - has gradeCompany (raw cards have no slab to read)
   //   - reason filter optional (PROTOTYPE_REASON=any bypasses)
   const reasonClause = REASON === "any" ? "" : "AND c.reason = @reason";
+  // IS_STRING excludes null (Cosmos returns true only for actual
+  // string values); + length check filters empty-string. Both needed
+  // because verify_queue rows sometimes store imageUrl as null when
+  // vendor omitted an image AND no mirror OR catalog fallback existed.
   const query = `
     SELECT TOP @n
       c.id, c.reason, c.input.cardId, c.input.title, c.input.imageUrl,
@@ -50,8 +54,8 @@ async function main() {
     FROM c
     WHERE c.status = "pending"
       ${reasonClause}
-      AND IS_DEFINED(c.input.imageUrl)
-      AND c.input.imageUrl != ""
+      AND IS_STRING(c.input.imageUrl)
+      AND LENGTH(c.input.imageUrl) > 10
       AND c.input.gradeCompany != null
   `;
   const params = [{ name: "@n", value: LIMIT }];
