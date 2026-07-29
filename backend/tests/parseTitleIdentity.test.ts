@@ -563,6 +563,50 @@ describe("inferSetKeyFromTitle + inferSportFromTitle — Fleer Stickers", () => 
   });
 });
 
+// CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). Recover sport for
+// titles that carry no explicit football/NFL/basketball/NBA keyword
+// but do carry an unambiguous team name.
+describe("inferSportFromTitle — team-name fallback", () => {
+  it("'Justin Herbert Chargers' (no football keyword) → football", () => {
+    expect(inferSportFromTitle("JUSTIN HERBERT 2020 PANINI PRIZM ROOKIE Chargers"))
+      .toBe("football");
+  });
+  it("'Bolts' also maps to football (Chargers slang)", () => {
+    expect(inferSportFromTitle("Herbert 2020 Panini Mosaic Bolts"))
+      .toBe("football");
+  });
+  it("'Lakers' → basketball", () => {
+    expect(inferSportFromTitle("Kobe Bryant Panini Prizm Lakers"))
+      .toBe("basketball");
+  });
+  it("'Celtics' → basketball", () => {
+    expect(inferSportFromTitle("Jayson Tatum Panini Select Celtics"))
+      .toBe("basketball");
+  });
+  it("'Bruins' → hockey", () => {
+    expect(inferSportFromTitle("Bobby Orr Bruins Rookie Card"))
+      .toBe("hockey");
+  });
+  it("'Maple Leafs' → hockey", () => {
+    expect(inferSportFromTitle("Auston Matthews Maple Leafs Rookie"))
+      .toBe("hockey");
+  });
+  it("guardrail: title with EXPLICIT 'football' still wins", () => {
+    expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey"))
+      .toBe("football");
+  });
+  it("guardrail: title with no team + no sport keyword falls back to caller default", () => {
+    expect(inferSportFromTitle("2025 Bowman Chrome Eric Hartman #CPA-EH"))
+      .toBe("baseball");
+  });
+  it("guardrail: ambiguous 'Panthers' (NFL + NHL) NOT recognized — stays fallback", () => {
+    // Carolina Panthers (NFL) + Florida Panthers (NHL) share the name.
+    // Word is intentionally excluded from BOTH team lists.
+    expect(inferSportFromTitle("Some Panthers Player 2020"))
+      .toBe("baseball");
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");
