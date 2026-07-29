@@ -80,9 +80,13 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
   for (const row of pending) {
     result.scanned += 1;
     try {
-      const parserAnomaly = row.clean?.anomalies.find((a) => a.kind === "parser-low-confidence");
-      if (!parserAnomaly) { result.skippedNoParserSignal += 1; continue; }
-
+      // CF-AUTO-TRIAGE-ALWAYS-REPARSE (Drew, 2026-07-28). Don't gate
+      // on the stale anomaly flag — data-clean may have classified
+      // this row before we extended the parser (PRs #921, #923), so
+      // an old row's anomalies array might not carry parser-low-
+      // confidence even when today's parser would flag it. Always
+      // re-run the parser against the title and act on TODAY's
+      // disagreement.
       const title = String(row.raw.vendorPayload.title ?? "");
       if (!title) { result.skippedNoTitle += 1; continue; }
 
