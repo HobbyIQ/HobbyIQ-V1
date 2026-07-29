@@ -39,6 +39,7 @@ on:
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
           - prototype-slab-ocr
+          - slab-ocr-auto-approve-queue
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -106,7 +107,7 @@ jobs:
       # script; always fetch (cheap read-only) so any future backfill
       # that needs LLM calls can rely on them being present.
       - name: Fetch Azure OpenAI env from HobbyIQ3 App Service
-        if: startsWith(inputs.script, 'prototype-slab') || startsWith(inputs.script, 'slab-')
+        if: startsWith(inputs.script, 'prototype-slab') || startsWith(inputs.script, 'slab-ocr')
         shell: bash
         run: |
           fetch_setting() {

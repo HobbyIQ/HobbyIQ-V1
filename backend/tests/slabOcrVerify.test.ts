@@ -13,6 +13,9 @@ const IDENT_JUDGE: ParsedIdentity = {
   gradeCompany: "PSA",
   gradeValue: 10,
   setKey: "bowman-chrome",
+  parallel: null,
+  printRun: null,
+  isAuto: null,
 };
 
 const SLAB_JUDGE_EXACT: SlabLabel = {
@@ -25,6 +28,10 @@ const SLAB_JUDGE_EXACT: SlabLabel = {
   brand: "TOPPS BOWMAN CHROME",
   playerName: "SHOHEI OHTANI",
   cardNumber: "85",
+  parallel: null,
+  subset: null,
+  printRun: null,
+  isAuto: false,
   confidence: 0.95,
 };
 
@@ -65,6 +72,74 @@ describe("checkSlabAgainstIdentity — happy path", () => {
     const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "OHTANI" };
     const r = checkSlabAgainstIdentity(slab, IDENT_JUDGE);
     expect(r.agreements).toEqual(expect.arrayContaining(["player"]));
+  });
+
+  // CF-SLAB-OCR-ADOPT (2026-07-29). Prototype v5 revealed multiple
+  // cases where parser had null cardNumber but LLM cleanly read one
+  // from the slab — those should count as agreements + adopted
+  // corrections, not "inconclusive".
+  it("adopts cardNumber when parser is null but slab has one at high confidence", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, cardNumber: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, cardNumber: "CPA-EHA" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.matched).toBe(true);
+    expect(r.adopted).toContainEqual({ field: "cardNumber", value: "CPA-EHA" });
+    expect(r.agreements).toEqual(expect.arrayContaining(["cardNumber=CPA-EHA (adopted)"]));
+  });
+
+  it("does NOT adopt cardNumber when slab confidence < 0.8", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, cardNumber: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, cardNumber: "CPA-EHA", confidence: 0.7 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.matched).toBe(false);
+    expect(r.adopted).toEqual([]);
+  });
+
+  it("adopts parallel when parser was base/null and slab has REFRACTOR", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, parallel: "base" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, parallel: "REFRACTOR" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "parallel", value: "REFRACTOR" });
+  });
+
+  it("adopts printRun when parser was null and slab reads /50", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, printRun: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, printRun: 50 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "printRun", value: 50 });
+  });
+
+  it("adopts isAuto when parser was null and slab shows AUTO", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, isAuto: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, isAuto: true };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "isAuto", value: true });
+  });
+
+  it("does NOT adopt parallel when parser already has a real value", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, parallel: "Gold Refractor" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, parallel: "GOLD REFRACTOR" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    // Both known + match → agreement (not adoption)
+    expect(r.adopted.some(a => a.field === "parallel")).toBe(false);
+    expect(r.agreements.some(a => a.startsWith("parallel="))).toBe(true);
+  });
+
+  it("soft parallel disagreement does NOT block match", () => {
+    // Parser says "Gold Refractor", slab reads "PRIZM SILVER" — parallel
+    // language varies; year+cardNumber+player still agree → still matched.
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, parallel: "Gold Refractor" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, parallel: "PRIZM SILVER" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.matched).toBe(true);
+    expect(r.disagreements.some(d => d.startsWith("parallel(soft):"))).toBe(true);
+  });
+
+  it("player required for match — grader+year+cardNumber alone not enough", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, playerName: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: null };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.matched).toBe(false);
   });
 
   it("brand fuzzy: 'TOPPS BOWMAN CHROME' matches bowman-chrome setKey", () => {
@@ -174,11 +249,14 @@ describe("checkSlabAgainstIdentity — real-world fixtures", () => {
     const slab: SlabLabel = {
       hasSlab: true, grader: "SGC", gradeValue: 10, gradeLabel: "10",
       certNumber: "99887766", year: 2024, brand: "BOWMAN",
-      playerName: "SHOHEI OHTANI", cardNumber: "33", confidence: 0.9,
+      playerName: "SHOHEI OHTANI", cardNumber: "33",
+      parallel: null, subset: null, printRun: null, isAuto: false,
+      confidence: 0.9,
     };
     const ident: ParsedIdentity = {
       year: 2024, cardNumber: "33", playerName: "Shohei Ohtani",
       gradeCompany: "SGC", gradeValue: 10, setKey: "bowman",
+      parallel: null, printRun: null, isAuto: null,
     };
     const r = checkSlabAgainstIdentity(slab, ident);
     expect(r.matched).toBe(true);
@@ -189,7 +267,9 @@ describe("checkSlabAgainstIdentity — real-world fixtures", () => {
     const slab: SlabLabel = {
       hasSlab: true, grader: "PSA", gradeValue: 10, gradeLabel: "GEM MT 10",
       certNumber: "1", year: 2024, brand: "BOWMAN CHROME",
-      playerName: "MIKE TROUT", cardNumber: "1", confidence: 0.95,
+      playerName: "MIKE TROUT", cardNumber: "1",
+      parallel: null, subset: null, printRun: null, isAuto: false,
+      confidence: 0.95,
     };
     const r = checkSlabAgainstIdentity(slab, IDENT_JUDGE);
     expect(r.matched).toBe(false);
