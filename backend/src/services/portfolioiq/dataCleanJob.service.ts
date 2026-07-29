@@ -30,6 +30,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseListingIdentity } from "./parseTitleIdentity.service.js";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
+import { parseGradeLabel } from "./gradeParser.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 
 let _cached: Container | null = null;
@@ -214,6 +215,13 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
     normalizations.push("image-mirrored");
   }
 
+  // CF-DATA-CLEAN-EXTRACT-GRADE (Drew, 2026-07-28). Title often carries
+  // grade tokens (PSA 10, BGS 9.5, SGC 9, "Raw", "Ungraded"). Extract
+  // now so the triage UI + promotion carry the right grade — the
+  // legacy migration copied sold_comps.gradeCompany/Value verbatim
+  // but many Cardsight rows never captured them.
+  const gradeParsed = title ? parseGradeLabel(title) : null;
+
   return {
     cleanedAt: new Date().toISOString(),
     slug: row.hobbyiqCardId,
@@ -221,8 +229,8 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
     parallel: parsed?.parallel ?? null,
     isAuto: parsed?.isAuto ?? false,
     printRun: parsed?.printRun ?? null,
-    gradeCompany: null,
-    gradeValue: null,
+    gradeCompany: gradeParsed?.gradeCompany ?? null,
+    gradeValue: gradeParsed?.gradeValue ?? null,
     setName: parsed?.setKey ?? null,
     playerName,
     cardYear: cardYear as number,

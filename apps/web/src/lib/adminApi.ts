@@ -102,6 +102,8 @@ export interface VerifyQueueItem {
     parallel?: string | null;
     cardNumber?: string | null;
     isAuto?: boolean;
+    gradeCompany?: string | null;
+    gradeValue?: number | null;
     price: number;
     soldAt: string;
     source: string;
@@ -143,6 +145,8 @@ export async function resolveVerifyItem(
     parallel?: string | null;
     cardNumber?: string | null;
     isAuto?: boolean;
+    gradeCompany?: string | null;
+    gradeValue?: number | null;
     price?: number;
     soldAt?: string;
     reasonNote?: string;

@@ -63,6 +63,8 @@ export interface VerifyQueueDoc {
     cardNumber?: string | null;
     printRun?: number | null;
     isAuto?: boolean;
+    gradeCompany?: string | null;
+    gradeValue?: number | null;
     price?: number;
     soldAt?: string;
     reasonNote?: string;
@@ -227,6 +229,8 @@ export async function resolveQueued(
     ...(opts.correction?.cardNumber !== undefined ? { cardNumber: opts.correction.cardNumber } : {}),
     ...(opts.correction?.printRun !== undefined ? {} : {}),  // printRun not on RecordSoldCompInput surface; captured in correction log
     ...(opts.correction?.isAuto !== undefined ? { isAuto: opts.correction.isAuto } : {}),
+    ...(opts.correction?.gradeCompany !== undefined ? { gradeCompany: opts.correction.gradeCompany } : {}),
+    ...(opts.correction?.gradeValue !== undefined ? { gradeValue: opts.correction.gradeValue } : {}),
     ...(opts.correction?.price !== undefined ? { price: opts.correction.price } : {}),
     ...(opts.correction?.soldAt !== undefined ? { soldAt: opts.correction.soldAt } : {}),
     verifiedByUser: true,
