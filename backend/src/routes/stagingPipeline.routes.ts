@@ -14,6 +14,7 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 import { runDataCleanBatch } from "../services/portfolioiq/dataCleanJob.service.js";
 import { runImageVerifyBatch } from "../services/portfolioiq/imageVerifyJob.service.js";
 import { runPromotionBatch } from "../services/portfolioiq/promotionJob.service.js";
+import { runAutoTriageBatch } from "../services/portfolioiq/autoTriageJob.service.js";
 import { CosmosClient } from "@azure/cosmos";
 
 const router = Router();
@@ -49,13 +50,22 @@ router.post("/staging/promotion", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post("/staging/auto-triage", async (req, res, next) => {
+  try {
+    const limit = parseLimit(req.query.limit, 100, 500);
+    const result = await runAutoTriageBatch({ limit });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
 router.post("/staging/full-cycle", async (req, res, next) => {
   try {
     const limit = parseLimit(req.query.limit, 25, 200);
     const dc = await runDataCleanBatch({ limit: limit * 4 });
     const iv = await runImageVerifyBatch({ limit });
+    const at = await runAutoTriageBatch({ limit: limit * 4 });
     const pr = await runPromotionBatch({ limit: limit * 4 });
-    res.json({ success: true, dataClean: dc, imageVerify: iv, promotion: pr });
+    res.json({ success: true, dataClean: dc, imageVerify: iv, autoTriage: at, promotion: pr });
   } catch (err) { next(err); }
 });
 
