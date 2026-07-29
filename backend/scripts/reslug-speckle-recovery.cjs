@@ -105,7 +105,12 @@ async function main() {
         setKey: titleSet,
         cardNumber: parsedTitle.cardNumber || r.cardNumber || "",
         parallel: parsedTitle.parallel || r.parallel || "Base",
-        isAuto: parsedTitle.isAuto ?? r.isAuto ?? false,
+        // Preserve auto status: if EITHER the current row OR the parsed
+        // title says auto, treat as auto. Prevents this backfill from
+        // demoting a known-auto row when the title text doesn't include
+        // "auto" explicitly (some CPA-prefixed rows have terse titles).
+        isAuto: (parsedTitle.isAuto === true) || (r.isAuto === true),
+        // Same idea for printRun: prefer whichever is defined.
         printRun: parsedTitle.printRun ?? r.printRun ?? null,
       });
     } catch { computeFailed++; continue; }
