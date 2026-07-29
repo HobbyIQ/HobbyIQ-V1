@@ -607,6 +607,95 @@ describe("inferSportFromTitle — team-name fallback", () => {
   });
 });
 
+// CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Last-resort player→sport
+// disambiguation: title carries neither team nor league keyword —
+// only the player name. Full-name matches only.
+describe("inferSportFromTitle — player-name fallback (by sport)", () => {
+  describe("football players", () => {
+    it("'Justin Herbert' (no team, no NFL) → football", () => {
+      expect(inferSportFromTitle("Justin Herbert 2020 Panini Stained Glass Prizm #18"))
+        .toBe("football");
+    });
+    it("'Patrick Mahomes' → football", () => {
+      expect(inferSportFromTitle("Patrick Mahomes 2020 Panini Prizm"))
+        .toBe("football");
+    });
+    it("'Ja'Marr Chase' → football (apostrophe variants)", () => {
+      expect(inferSportFromTitle("Ja'Marr Chase Rookie Card"))
+        .toBe("football");
+    });
+    it("'Tom Brady' → football", () => {
+      expect(inferSportFromTitle("Tom Brady 2000 Bowman Chrome Rookie"))
+        .toBe("football");
+    });
+  });
+
+  describe("basketball players", () => {
+    it("'LeBron James' → basketball", () => {
+      expect(inferSportFromTitle("LeBron James 2003 Topps Chrome"))
+        .toBe("basketball");
+    });
+    it("'Victor Wembanyama' → basketball", () => {
+      expect(inferSportFromTitle("Victor Wembanyama 2023 Rookie"))
+        .toBe("basketball");
+    });
+    it("'Steph Curry' → basketball", () => {
+      expect(inferSportFromTitle("Steph Curry 2009 Topps"))
+        .toBe("basketball");
+    });
+    it("'Kobe Bryant' → basketball", () => {
+      expect(inferSportFromTitle("Kobe Bryant 1996 Topps Chrome"))
+        .toBe("basketball");
+    });
+  });
+
+  describe("hockey players", () => {
+    it("'Connor McDavid' → hockey", () => {
+      expect(inferSportFromTitle("Connor McDavid 2015 Upper Deck Rookie"))
+        .toBe("hockey");
+    });
+    it("'Wayne Gretzky' → hockey", () => {
+      expect(inferSportFromTitle("Wayne Gretzky 1979 O-Pee-Chee"))
+        .toBe("hockey");
+    });
+    it("'Connor Bedard' → hockey", () => {
+      expect(inferSportFromTitle("Connor Bedard 2023 Upper Deck Young Guns"))
+        .toBe("hockey");
+    });
+  });
+
+  describe("baseball players (would already hit fallback, but explicit is safer)", () => {
+    it("'Shohei Ohtani' → baseball", () => {
+      expect(inferSportFromTitle("Shohei Ohtani 2018 Topps Chrome", "football"))
+        .toBe("baseball");
+    });
+    it("'Eric Hartman' → baseball (curated Drew personal roster)", () => {
+      expect(inferSportFromTitle("Eric Hartman 2025 Bowman Chrome", "football"))
+        .toBe("baseball");
+    });
+  });
+
+  describe("guardrails", () => {
+    it("last-name only ('Herbert') does NOT match — first name required", () => {
+      // 'Herbert' alone appears in multiple sports (e.g. Herbert perry MLB).
+      // Only full-name matches are safe.
+      expect(inferSportFromTitle("Herbert 2020 Bowman Chrome", "baseball"))
+        .toBe("baseball");
+    });
+    it("explicit sport keyword still wins over player hint", () => {
+      // "basketball" keyword fires FIRST, before we ever reach the
+      // player-name pass. Cross-sport player-name mismatches (which
+      // shouldn't happen in practice) always defer to the keyword.
+      expect(inferSportFromTitle("Michael Jordan 1994 basketball fantasy", "football"))
+        .toBe("basketball");
+    });
+    it("no player match falls through to caller fallback", () => {
+      expect(inferSportFromTitle("Some Random 2020 Card", "baseball"))
+        .toBe("baseball");
+    });
+  });
+});
+
 describe("inferSportFromTitle", () => {
   it("football / NFL → football", () => {
     expect(inferSportFromTitle("2024 Panini Prizm Football Ladd McConkey")).toBe("football");
