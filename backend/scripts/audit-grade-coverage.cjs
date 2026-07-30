@@ -19,7 +19,24 @@ const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { parseGradeLabel } = require(path.join(backend, "dist/services/portfolioiq/gradeParser.js"));
 
-const LIMIT = Number(process.env.AUDIT_LIMIT || "250000");
+const LIMIT = Number(process.env.AUDIT_LIMIT || "100000");
+
+async function fetchWithRetry(iterator, maxRetries = 5) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await iterator.fetchNext();
+    } catch (err) {
+      const code = err?.code ?? err?.statusCode;
+      if ((code === 429 || String(err?.message || "").includes("request rate is too large")) && attempt < maxRetries) {
+        const wait = 2000 * (attempt + 1);
+        process.stdout.write(`\r  [429 backoff ${wait}ms attempt ${attempt+1}]`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 async function main() {
   const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
@@ -39,9 +56,10 @@ async function main() {
   );
   const rows = [];
   while (it.hasMoreResults()) {
-    const { resources } = await it.fetchNext();
-    if (Array.isArray(resources)) rows.push(...resources);
+    const page = await fetchWithRetry(it);
+    if (page && Array.isArray(page.resources)) rows.push(...page.resources);
     process.stdout.write(`\r  scanning ${rows.length}`);
+    if (rows.length >= LIMIT) break;
   }
   console.log(`\r  ${rows.length} rows scanned.        \n`);
 
