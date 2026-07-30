@@ -156,6 +156,64 @@ describe("checkSlabAgainstIdentity — happy path", () => {
     expect(r.adopted.some(a => a.field === "gradeCompany")).toBe(false);
   });
 
+  // CF-SLAB-OCR-TRUST-GROUND-TRUTH (2026-07-30). Apply v2 tail:
+  // "year: parsed=1966 slab=1986" at conf 1.00 was rejected. Slab
+  // is authoritative at very high confidence — parser had a typo.
+  it("adopts year at confidence >= 0.95 when parser disagrees", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, year: 1966 };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, year: 1986, confidence: 0.95 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "year", value: 1986 });
+    expect(r.agreements.some(a => a.startsWith("year=1986 (adopted"))).toBe(true);
+  });
+
+  it("does NOT adopt year at 0.9 confidence (below 0.95 bar for disagreement)", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, year: 1966 };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, year: 1986, confidence: 0.9 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted.some(a => a.field === "year")).toBe(false);
+    expect(r.disagreements.some(d => d.startsWith("year:"))).toBe(true);
+  });
+
+  it("adopts year when parser was null and slab has year at 0.9+", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, year: null };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, year: 2024, confidence: 0.9 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted).toContainEqual({ field: "year", value: 2024 });
+  });
+
+  it("adopts player when parsed is a SUBSET name ('Bird Belters') at 0.9+", () => {
+    // "Bird Belters" is a Topps subset; slab reads actual players.
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, playerName: "Bird Belters" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "FRANK ROBINSON, BROOKS ROBINSON", confidence: 0.95 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted.some(a => a.field === "playerName")).toBe(true);
+    expect(r.agreements.some(a => a.includes("adopted from subset"))).toBe(true);
+  });
+
+  it("last-name fuzzy match: 'Justin Herbert' matches slab 'HERBERT'", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, playerName: "Justin Herbert" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "HERBERT" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.agreements).toEqual(expect.arrayContaining(["player"]));
+    expect(r.disagreements.some(d => d.startsWith("player:"))).toBe(false);
+  });
+
+  it("adopts player when parsed is '(unknown — catalog-gap)'", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, playerName: "(unknown — catalog-gap)" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "SHOHEI OHTANI", confidence: 0.95 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted.some(a => a.field === "playerName")).toBe(true);
+  });
+
+  it("at conf 0.95+ adopts player disagreement even without subset markers", () => {
+    // LLM is authoritative at very high confidence.
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, playerName: "Someone Else" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "SHOHEI OHTANI", confidence: 0.95 };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.adopted.some(a => a.field === "playerName")).toBe(true);
+  });
+
   it("does NOT adopt parallel when parser already has a real value", () => {
     const ident: ParsedIdentity = { ...IDENT_JUDGE, parallel: "Gold Refractor" };
     const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, parallel: "GOLD REFRACTOR" };
@@ -214,8 +272,10 @@ describe("checkSlabAgainstIdentity — negative signals", () => {
     expect(r.disagreements.some(d => d.startsWith("grader:"))).toBe(true);
   });
 
-  it("year disagreement blocks match", () => {
-    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, year: 2023 };
+  it("year disagreement blocks match at confidence < 0.95", () => {
+    // At >= 0.95 the year is ADOPTED (see trust-ground-truth suite).
+    // At 0.9 the disagreement blocks the match.
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, year: 2023, confidence: 0.9 };
     const r = checkSlabAgainstIdentity(slab, IDENT_JUDGE);
     expect(r.matched).toBe(false);
     expect(r.disagreements.some(d => d.startsWith("year:"))).toBe(true);
@@ -309,7 +369,10 @@ describe("checkSlabAgainstIdentity — real-world fixtures", () => {
       certNumber: "1", year: 2024, brand: "BOWMAN CHROME",
       playerName: "MIKE TROUT", cardNumber: "1",
       parallel: null, subset: null, printRun: null, isAuto: false,
-      confidence: 0.95,
+      // Use 0.85 confidence so player + cardNumber both fail-block
+      // rather than triggering adoption paths (which fire at 0.95+ for
+      // player disagreement, 0.8+ for cardNumber overwrite).
+      confidence: 0.85,
     };
     const r = checkSlabAgainstIdentity(slab, IDENT_JUDGE);
     expect(r.matched).toBe(false);

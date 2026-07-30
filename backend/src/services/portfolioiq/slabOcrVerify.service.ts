@@ -196,7 +196,11 @@ export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractRes
   // exponential backoff on 429/500/503; give up on 4xx-not-429 and
   // network-level failures. Never throws — returns SlabExtractResult
   // either way.
-  const MAX_ATTEMPTS = 3;
+  //
+  // 2026-07-30 bump: MAX_ATTEMPTS=5 (was 3) + longer backoff ceiling.
+  // Even at concurrency 2 the TPM cap can be hit when several
+  // large images land together; more retries + waits handle the tail.
+  const MAX_ATTEMPTS = 5;
   let lastError: string = "";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -264,9 +268,11 @@ export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractRes
           durationMs: Date.now() - t0,
         };
       }
-      // Exponential backoff with jitter: 1s, 3s, 7s
-      const delayMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 1000) - 500;
-      await new Promise(res => setTimeout(res, Math.max(500, delayMs)));
+      // Exponential backoff with jitter, capped at 30s:
+      //   attempt 1 → ~2s, 2 → ~4s, 3 → ~8s, 4 → ~16s, 5 → ~30s
+      const rawDelayMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 1500) - 500;
+      const delayMs = Math.min(30_000, Math.max(500, rawDelayMs));
+      await new Promise(res => setTimeout(res, delayMs));
     }
   }
   return {
@@ -289,7 +295,7 @@ export interface SlabIdentityCheck {
   // correction on approve. Prototype v5 showed multiple cases where
   // the parser had no cardNumber but the LLM cleanly read one from
   // the label; that's a strict IMPROVEMENT the queue should absorb.
-  adopted: Array<{ field: "cardNumber" | "parallel" | "printRun" | "isAuto" | "gradeCompany" | "gradeValue"; value: string | number | boolean }>;
+  adopted: Array<{ field: "cardNumber" | "parallel" | "printRun" | "isAuto" | "gradeCompany" | "gradeValue" | "year" | "playerName"; value: string | number | boolean }>;
   detail: string;
 }
 
@@ -361,13 +367,23 @@ export function checkSlabAgainstIdentity(
     agreements.push(`grade=${slab.gradeValue} (adopted)`);
   }
 
-  // Year — exact 4-digit match
+  // Year — exact 4-digit match.
+  // ADOPTION: at very high confidence (>= 0.95), the slab is
+  // authoritative — parser can have wrong year from garbled vendor
+  // titles ("1966" vs "1986" on a 1986 Topps card was seen in v2).
+  // At lower confidence, disagreement blocks the match.
   if (identity.year != null && slab.year != null) {
     if (identity.year === slab.year) {
       agreements.push(`year=${slab.year}`);
+    } else if (slab.confidence >= 0.95) {
+      adopted.push({ field: "year", value: slab.year });
+      agreements.push(`year=${slab.year} (adopted, parser had ${identity.year})`);
     } else {
       disagreements.push(`year: parsed=${identity.year} slab=${slab.year}`);
     }
+  } else if (identity.year == null && slab.year != null && slab.confidence >= 0.9) {
+    adopted.push({ field: "year", value: slab.year });
+    agreements.push(`year=${slab.year} (adopted)`);
   }
 
   // cardNumber — normalized: strip #, hyphens, uppercase, AND strip
@@ -393,16 +409,40 @@ export function checkSlabAgainstIdentity(
     agreements.push(`cardNumber=${slab.cardNumber} (adopted)`);
   }
 
-  // Player name — fuzzy: normalize both, check either contains other
+  // Player name — fuzzy: normalize both, check either contains other.
+  // ADOPTION: at very high confidence (>= 0.95), adopt slab player
+  // when it disagrees. Common cases the parser gets wrong:
+  //   - "Bird Belters" (subset name) → LLM reads "FRANK ROBINSON, BROOKS ROBINSON"
+  //   - "World Series Game #3" → LLM reads "MANTLE'S CLUTCH HR"
+  //   - "(unknown — catalog-gap)" → LLM reads real player
+  // Also adopt when parsed player is empty/unknown or looks like a
+  // non-player subset descriptor (contains subset keywords).
+  const SUBSET_KEYWORDS = /\b(belters|series|game|leaders|combo|checklist|team\s+card|world\s+series|all-?stars?|catalog-gap|unknown|rookie\s+stars?)\b/i;
   if (identity.playerName && slab.playerName) {
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z\s]/g, "").replace(/\s+/g, " ").trim();
     const parsed = normalize(identity.playerName);
     const label = normalize(slab.playerName);
-    if (parsed && label && (parsed === label || parsed.includes(label) || label.includes(parsed))) {
+    const parsedIsSubset = SUBSET_KEYWORDS.test(identity.playerName);
+    const parsedLastName = parsed.split(" ").pop() || "";
+    const labelHasParsedLastName = parsedLastName.length >= 3 && label.includes(parsedLastName);
+    if (parsed && label && (parsed === label || parsed.includes(label) || label.includes(parsed) || labelHasParsedLastName)) {
       agreements.push(`player`);
+    } else if (parsedIsSubset && slab.confidence >= 0.9) {
+      // Parser stored a subset name, not a real player — trust slab.
+      adopted.push({ field: "playerName", value: slab.playerName });
+      agreements.push(`player=${slab.playerName} (adopted from subset "${identity.playerName}")`);
+    } else if (slab.confidence >= 0.95) {
+      // Very high LLM confidence + disagreement — trust label, but
+      // only for auto-approve if OTHER fields (year, cardNumber, grader)
+      // also agree.
+      adopted.push({ field: "playerName", value: slab.playerName });
+      agreements.push(`player=${slab.playerName} (adopted, parser had "${identity.playerName}")`);
     } else {
       disagreements.push(`player: parsed=${identity.playerName} slab=${slab.playerName}`);
     }
+  } else if ((!identity.playerName || SUBSET_KEYWORDS.test(identity.playerName)) && slab.playerName && slab.confidence >= 0.9) {
+    adopted.push({ field: "playerName", value: slab.playerName });
+    agreements.push(`player=${slab.playerName} (adopted)`);
   }
 
   // Brand — fuzzy: slug the label brand and check it starts with parsed setKey

@@ -57,7 +57,10 @@ permissions:
 jobs:
   run-backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 60   # some scans (e.g. player-sport) touch 2.5M rows
+    # 120 minutes: slab-ocr-auto-approve-queue at concurrency 2 processes
+    # ~500 rows in ~80 min including retry backoffs. Also covers the
+    # player-sport style scans that touch 2.5M rows.
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repo at dispatched ref
