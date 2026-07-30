@@ -753,8 +753,26 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   //
   // OBSERVED: "2026 Bowman Speckle Refractor" (title omits "Chrome")
   // landed at setKey=bowman. Speckle is chrome-only; this is bowman-chrome.
+  //
+  // CF-CHROME-IMPLIED-EDITION-GUARD (Drew, 2026-07-30). Framework rule:
+  // edition tokens (Sapphire, Mega Box, 1st Edition, Sonic, Cosmic,
+  // Lite) reroute the whole comp pool. If the title carries an edition
+  // token, DO NOT collapse to base "Bowman Chrome" — the edition-
+  // specific handler (Sapphire → Bowman Chrome Sapphire; Mega Box →
+  // Bowman Chrome Mega Box) should already have matched above, but if
+  // it didn't, DEFER rather than pool with base. Also skip when the
+  // cardNumber prefix implies a Sapphire subset (BSPA-XX).
   if (/bowman/.test(t) && /speckle|shimmer\s+refractor|\blava\s+refractor|wave\s+refractor|grass\s+refractor|x-?fractor|mojo\s+refractor|mega\s+refractor|prism\s+refractor|mini\s+diamond|\brefractor\b/i.test(t)) {
-    return "Bowman Chrome";
+    // Edition guard: any explicit edition token → don't collapse to base
+    if (/\b(sapphire|mega\s?box|1st\s+edition|first\s+edition|sonic|cosmic\s+chrome|\blite\b)/i.test(t)) {
+      // Fall through — an edition-specific rule above should have
+      // matched, or the caller will treat as base with an edition flag.
+    } else if (/^BSPA-/i.test(cn)) {
+      // cardNumber says this is Sapphire Prospect Autographs subset.
+      return "Bowman Chrome Sapphire";
+    } else {
+      return "Bowman Chrome";
+    }
   }
   // CF-PANINI-PRODUCT-LINES (Drew, 2026-07-29). Full Panini taxonomy so
   // rows for these distinct products stop collapsing to bare "panini".

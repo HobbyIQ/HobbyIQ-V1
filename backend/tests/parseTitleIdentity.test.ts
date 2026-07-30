@@ -368,6 +368,20 @@ describe("parseListingIdentity — parallel extraction", () => {
     // Explicit Draft product line wins over the chrome-implied upgrade.
     expect(inferSetKeyFromTitle("2025 Bowman Draft Gage Wood Refractor #BD-100")).toBe("Bowman Draft");
   });
+  // CF-CHROME-IMPLIED-EDITION-GUARD (Drew, 2026-07-30). Sapphire/Mega
+  // are separate FMV pools; chrome-implied MUST NOT collapse them.
+  it("Chrome-implied edition guard: 'Bowman Chrome Sapphire Speckle Refractor' stays Sapphire", () => {
+    expect(inferSetKeyFromTitle("2024 Bowman Chrome Sapphire Speckle Refractor Eric Hartman")).toBe("Bowman Chrome Sapphire");
+  });
+  it("Chrome-implied edition guard: 'Bowman Mega Box' + wave refractor stays Mega Box", () => {
+    expect(inferSetKeyFromTitle("2024 Bowman Mega Box Mojo Refractor Aaron Judge")).toBe("Bowman Chrome Mega Box");
+  });
+  it("Chrome-implied via BSPA cardNumber: 'Bowman' + speckle + BSPA-* → Bowman Chrome Sapphire", () => {
+    expect(inferSetKeyFromTitle("2024 Bowman Speckle Refractor #BSPA-EH", "BSPA-EH")).toBe("Bowman Chrome Sapphire");
+  });
+  it("Chrome-implied still fires when NO edition present: 'Bowman + Speckle Refractor' → Bowman Chrome", () => {
+    expect(inferSetKeyFromTitle("2024 Bowman Speckle Refractor Eric Hartman #BCP-102")).toBe("Bowman Chrome");
+  });
   // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Bare Wave Refractor
   // (silver-based, no color modifier) was falling through to bare
   // "Refractor" because color-prefixed Wave rules didn't match.
