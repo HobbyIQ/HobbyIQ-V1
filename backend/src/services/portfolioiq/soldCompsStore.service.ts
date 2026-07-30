@@ -43,7 +43,35 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { createHash } from "crypto";
+
+// CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
+// from the incoming attributes. Silent-safe — returns null on any
+// error so the write path never fails on parser bugs.
+function computeCompositeForRow(input: {
+  title?: string | null;
+  cardNumber?: string | null;
+  sport?: string | null;
+  setName?: string | null;
+}): { edition: string | null; insertSet: string | null; colorFamily: string | null; finishModifier: string | null; isRefractor: boolean; confidence: "high" | "medium" | "low" } | null {
+  try {
+    const c = parseParallelComposite(input.title ?? "", input.cardNumber ?? null, {
+      sport: input.sport ?? null,
+      setName: input.setName ?? null,
+    });
+    return {
+      edition: c.edition,
+      insertSet: c.insertSet,
+      colorFamily: c.colorFamily,
+      finishModifier: c.finishModifier,
+      isRefractor: c.isRefractor,
+      confidence: c.confidence,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function computeTtlSec(): number {
   const raw = process.env.SOLD_COMPS_TTL_YEARS;
@@ -165,6 +193,28 @@ export interface SoldCompDoc {
   // this migration; the Phase 1c backfill script will populate them.
   // See hobbyIqCardId.service.ts for the format spec.
   hobbyiqCardId?: string | null;
+
+  // CF-COMPOSITE-IDENTITY (Drew, 2026-07-30). 6-axis composite parallel
+  // identity per parallel-vocabulary framework. Each axis is queryable
+  // independently, enabling neighbor-multiplier lookups, ladder walking
+  // for thin-market FMV, faceted search, and impossible-serial fraud
+  // flagging. Populated on new writes via parseParallelComposite;
+  // backfill populates historic rows.
+  //   edition        — SAPPHIRE / MEGA_BOX / FIRST_EDITION / SONIC / etc.
+  //   insertSet      — scouts-top-100 / home-run-challenge / etc.
+  //   colorFamily    — BLUE / GOLD / REFRACTOR / SPECKLE / etc.
+  //   finishModifier — WAVE / SHIMMER / VINYL / etc.
+  //   isRefractor    — bool (separate from color)
+  //   compositeConfidence — self-assessed parser confidence
+  // isAuto/autoStyle/serialRun already exist above as separate fields.
+  composite?: {
+    edition: string | null;
+    insertSet: string | null;
+    colorFamily: string | null;
+    finishModifier: string | null;
+    isRefractor: boolean;
+    confidence: "high" | "medium" | "low";
+  } | null;
 
   ttl: number;
 }
@@ -455,6 +505,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     imageUrl: input.imageUrl ?? null,
     sellerHandle: input.sellerHandle ?? null,
     verifiedByUser: input.verifiedByUser ?? false,
+    composite: computeCompositeForRow({
+      title: input.title,
+      cardNumber: input.cardNumber,
+      sport: input.sport,
+      setName: input.setName,
+    }),
     confidence: input.confidence ?? (input.verifiedByUser ? 1.0 : 0.5),
     contentHash,
     hobbyiqCardId,
