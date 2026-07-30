@@ -1,0 +1,9 @@
+{
+  "productKey": "2024-bowman-chrome-prospects",
+  "sport": "baseball",
+  "year": 2024,
+  "setKey": "bowman-chrome",
+  "source": "seed",
+  "confidence": 0.95,
+  "provenance": "baseballcardpedia.com fetched 2026-07-30 — BCP-153..252 (second half). BCP-1..152 pending followup fetch."
+}
