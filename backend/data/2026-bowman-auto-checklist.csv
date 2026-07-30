@@ -1,0 +1,323 @@
+setKey,prefix,cardNumber,player,team,note
+chrome_prospect_autographs,CPA,CPA-AA,Aiva Arquette,Miami Marlins,
+chrome_prospect_autographs,CPA,CPA-AF,Andrew Fischer,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-AFR,Anthony Frobose,New York Mets,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-AG,Adrian Gil,Chicago White Sox,
+chrome_prospect_autographs,CPA,CPA-ANA,Anderson Araujo,Philadelphia Phillies,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-AT,Andrew Tess,Baltimore Orioles,
+chrome_prospect_autographs,CPA,CPA-BA,Brailyn Antunez,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-BB,Blaine Bullard,Toronto Blue Jays,
+chrome_prospect_autographs,CPA,CPA-BC,Billy Carlson,Chicago White Sox,
+chrome_prospect_autographs,CPA,CPA-BG,Breyson Guedez,Athletics,
+chrome_prospect_autographs,CPA,CPA-BI,Brent Iredale,Pittsburgh Pirates,
+chrome_prospect_autographs,CPA,CPA-BT,Brendan Tunink,Los Angeles Dodgers,
+chrome_prospect_autographs,CPA,CPA-CC,Charlie Condon,Colorado Rockies,
+chrome_prospect_autographs,CPA,CPA-CGU,Carlos Gutierrez,San Francisco Giants,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-CJ,Coy James,Washington Nationals,
+chrome_prospect_autographs,CPA,CPA-CSC,Caden Scarborough,Texas Rangers,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-CV,Carlos Virahonda,Arizona Diamondbacks,
+chrome_prospect_autographs,CPA,CPA-DD,Daniel Dickinson,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-DDA,David Davalillo,Texas Rangers,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-DF,Dauri Fernandez,Cleveland Guardians,
+chrome_prospect_autographs,CPA,CPA-DH,Dasan Hill,Minnesota Twins,
+chrome_prospect_autographs,CPA,CPA-DL,Dillon Lewis,New York Yankees,
+chrome_prospect_autographs,CPA,CPA-DOR,Deniel Ortiz,St. Louis Cardinals,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-DP,Daniel Pierce,Tampa Bay Rays,
+chrome_prospect_autographs,CPA,CPA-DSH,David Shields,Kansas City Royals,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-EDO,Ethan Dorchies,Milwaukee Brewers,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-EF,Edward Florentino,Pittsburgh Pirates,
+chrome_prospect_autographs,CPA,CPA-EH,Ethan Holliday,Colorado Rockies,headliner
+chrome_prospect_autographs,CPA,CPA-EHA,Eric Hartman,Atlanta Braves,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-EM,Edgar Montero,Athletics,
+chrome_prospect_autographs,CPA,CPA-EME,Esteban Mejia,Baltimore Orioles,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-EW,Eli Willits,Washington Nationals,
+chrome_prospect_autographs,CPA,CPA-GJ,Gage Jump,Athletics,
+chrome_prospect_autographs,CPA,CPA-GL,George Lombard Jr.,New York Yankees,
+chrome_prospect_autographs,CPA,CPA-GR,Gabriel Rodriguez,Cleveland Guardians,
+chrome_prospect_autographs,CPA,CPA-GS,Gage Stanifer,Toronto Blue Jays,
+chrome_prospect_autographs,CPA,CPA-HE,Handelfry Encarnacion,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-HL,Henry Lalane,New York Yankees,
+chrome_prospect_autographs,CPA,CPA-HR,Hector Ramos,Boston Red Sox,
+chrome_prospect_autographs,CPA,CPA-IJ,Isaiah Jackson,Los Angeles Angels,
+chrome_prospect_autographs,CPA,CPA-JG,Justin Gonzales,Boston Red Sox,
+chrome_prospect_autographs,CPA,CPA-JJ,Jared Jones,Pittsburgh Pirates,
+chrome_prospect_autographs,CPA,CPA-JK,Josh Knoth,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-JM,Jase Mitchell,Houston Astros,
+chrome_prospect_autographs,CPA,CPA-JQ,Jorge Quintana,San Diego Padres,
+chrome_prospect_autographs,CPA,CPA-JQU,James Quinn-Irons,Tampa Bay Rays,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-JS,Juan Sanchez,Toronto Blue Jays,
+chrome_prospect_autographs,CPA,CPA-JSL,Jean Carlos Sio,San Francisco Giants,nonstandard suffix
+chrome_prospect_autographs,CPA,CPA-JU,Jose Urbina,Tampa Bay Rays,
+chrome_prospect_autographs,CPA,CPA-JW,Jude Warwick,Detroit Tigers,
+chrome_prospect_autographs,CPA,CPA-JWH,Jack Wheeler,Texas Rangers,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-KAN,Kade Anderson,Seattle Mariners,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-KC,Kendry Chourio,Kansas City Royals,
+chrome_prospect_autographs,CPA,CPA-KG,Konnor Griffin,Pittsburgh Pirates,headliner
+chrome_prospect_autographs,CPA,CPA-KH,Kenly Hunter,St. Louis Cardinals,
+chrome_prospect_autographs,CPA,CPA-KHE,Kehden Hettiger,Philadelphia Phillies,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-KMC,Kevin McGonigle,Detroit Tigers,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-KSN,Kade Snell,Chicago Cubs,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-LA,Luis Arana,Miami Marlins,
+chrome_prospect_autographs,CPA,CPA-LDE,Leo De Vries,Athletics,3-letter disambiguation; headliner
+chrome_prospect_autographs,CPA,CPA-MC,Max Clark,Detroit Tigers,
+chrome_prospect_autographs,CPA,CPA-MCH,Moisés Chace,Philadelphia Phillies,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-MF,Matthew Ferrara,Philadelphia Phillies,
+chrome_prospect_autographs,CPA,CPA-MG,Marconi German,Washington Nationals,
+chrome_prospect_autographs,CPA,CPA-MHO,Marek Houston,Minnesota Twins,3-letter disambiguation
+chrome_prospect_autographs,CPA,CPA-MS,Seojun Moon,Toronto Blue Jays,initials reversed (surname-first)
+chrome_prospect_autographs,CPA,CPA-NM,Nick Monistere,Houston Astros,
+chrome_prospect_autographs,CPA,CPA-NT,Nelly Taylor,Boston Red Sox,
+chrome_prospect_autographs,CPA,CPA-OC,Owen Carey,Atlanta Braves,
+chrome_prospect_autographs,CPA,CPA-PI,Pedro Ibarguen,Milwaukee Brewers,
+chrome_prospect_autographs,CPA,CPA-PN,Pablo Nunez,Cincinnati Reds,auto-only (no BCP base)
+chrome_prospect_autographs,CPA,CPA-RB,Roldy Brito,Colorado Rockies,
+chrome_prospect_autographs,CPA,CPA-RC,Ricardo Cova,Seattle Mariners,
+chrome_prospect_autographs,CPA,CPA-RN,Riley Nelson,Cleveland Guardians,
+chrome_prospect_autographs,CPA,CPA-SK,Seong-Jun Kim,Texas Rangers,
+chrome_prospect_autographs,CPA,CPA-SP,Sam Petersen,Washington Nationals,
+chrome_prospect_autographs,CPA,CPA-TB,Travis Bazzana,Cleveland Guardians,
+chrome_prospect_autographs,CPA,CPA-TGI,Trey Gibson,Baltimore Orioles,auto-only (no BCP base); 3-letter
+chrome_prospect_autographs,CPA,CPA-TM,Truitt Madonna,San Diego Padres,
+chrome_prospect_autographs,CPA,CPA-TR,T.J. Rumfield,New York Yankees,
+chrome_prospect_autographs,CPA,CPA-TW,Thomas White,Miami Marlins,
+chrome_prospect_autographs,CPA,CPA-VA,Victor Arias,Toronto Blue Jays,
+chrome_prospect_autographs,CPA,CPA-VF,Victor Figueroa,Baltimore Orioles,
+chrome_prospect_autographs,CPA,CPA-WA,Wehiwa Aloy,Baltimore Orioles,
+chrome_prospect_autographs,CPA,CPA-WL,Wei-En Lin,Athletics,
+chrome_prospect_autographs,CPA,CPA-WS,Wyatt Sanford,Pittsburgh Pirates,
+chrome_prospect_autographs,CPA,CPA-YCA,Yojancel Cabrera,Los Angeles Angels,3-letter disambiguation
+gold_ink_autographs,CPA,CPA-AA,Aiva Arquette,Miami Marlins,/15 variation of base CPA
+gold_ink_autographs,CPA,CPA-AF,Andrew Fischer,Milwaukee Brewers,/15
+gold_ink_autographs,CPA,CPA-ANA,Anderson Araujo,Philadelphia Phillies,/15
+gold_ink_autographs,CPA,CPA-BA,Brailyn Antunez,Milwaukee Brewers,/15
+gold_ink_autographs,CPA,CPA-BB,Blaine Bullard,Toronto Blue Jays,/15
+gold_ink_autographs,CPA,CPA-BG,Breyson Guedez,Athletics,/15
+gold_ink_autographs,CPA,CPA-BT,Brendan Tunink,Los Angeles Dodgers,/15
+gold_ink_autographs,CPA,CPA-CJ,Coy James,Washington Nationals,/15
+gold_ink_autographs,CPA,CPA-DF,Dauri Fernandez,Cleveland Guardians,/15
+gold_ink_autographs,CPA,CPA-DH,Dasan Hill,Minnesota Twins,/15
+gold_ink_autographs,CPA,CPA-DL,Dillon Lewis,New York Yankees,/15
+gold_ink_autographs,CPA,CPA-DOR,Deniel Ortiz,St. Louis Cardinals,/15
+gold_ink_autographs,CPA,CPA-DP,Daniel Pierce,Tampa Bay Rays,/15
+gold_ink_autographs,CPA,CPA-DSH,David Shields,Kansas City Royals,/15
+gold_ink_autographs,CPA,CPA-EF,Edward Florentino,Pittsburgh Pirates,/15
+gold_ink_autographs,CPA,CPA-EH,Ethan Holliday,Colorado Rockies,/15
+gold_ink_autographs,CPA,CPA-EM,Edgar Montero,Athletics,/15
+gold_ink_autographs,CPA,CPA-EME,Esteban Mejia,Baltimore Orioles,/15
+gold_ink_autographs,CPA,CPA-EW,Eli Willits,Washington Nationals,/15
+gold_ink_autographs,CPA,CPA-GJ,Gage Jump,Athletics,/15
+gold_ink_autographs,CPA,CPA-GR,Gabriel Rodriguez,Cleveland Guardians,/15
+gold_ink_autographs,CPA,CPA-HE,Handelfry Encarnacion,Milwaukee Brewers,/15
+gold_ink_autographs,CPA,CPA-HL,Henry Lalane,New York Yankees,/15
+gold_ink_autographs,CPA,CPA-HR,Hector Ramos,Boston Red Sox,/15
+gold_ink_autographs,CPA,CPA-IJ,Isaiah Jackson,Los Angeles Angels,/15
+gold_ink_autographs,CPA,CPA-JG,Justin Gonzales,Boston Red Sox,/15
+gold_ink_autographs,CPA,CPA-JQ,Jorge Quintana,San Diego Padres,/15
+gold_ink_autographs,CPA,CPA-JS,Juan Sanchez,Toronto Blue Jays,/15
+gold_ink_autographs,CPA,CPA-JW,Jude Warwick,Detroit Tigers,/15
+gold_ink_autographs,CPA,CPA-KC,Kendry Chourio,Kansas City Royals,/15
+gold_ink_autographs,CPA,CPA-KG,Konnor Griffin,Pittsburgh Pirates,/15
+gold_ink_autographs,CPA,CPA-KH,Kenly Hunter,St. Louis Cardinals,/15
+gold_ink_autographs,CPA,CPA-KMC,Kevin McGonigle,Detroit Tigers,/15
+gold_ink_autographs,CPA,CPA-LA,Luis Arana,Miami Marlins,/15
+gold_ink_autographs,CPA,CPA-LDE,Leo De Vries,Athletics,/15
+gold_ink_autographs,CPA,CPA-MG,Marconi German,Washington Nationals,/15
+gold_ink_autographs,CPA,CPA-MHO,Marek Houston,Minnesota Twins,/15
+gold_ink_autographs,CPA,CPA-MS,Seojun Moon,Toronto Blue Jays,/15
+gold_ink_autographs,CPA,CPA-NT,Nelly Taylor,Boston Red Sox,/15
+gold_ink_autographs,CPA,CPA-OC,Owen Carey,Atlanta Braves,/15
+gold_ink_autographs,CPA,CPA-RB,Roldy Brito,Colorado Rockies,/15
+gold_ink_autographs,CPA,CPA-SK,Seong-Jun Kim,Texas Rangers,/15
+gold_ink_autographs,CPA,CPA-VA,Victor Arias,Toronto Blue Jays,/15
+gold_ink_autographs,CPA,CPA-VF,Victor Figueroa,Baltimore Orioles,/15
+gold_ink_autographs,CPA,CPA-WA,Wehiwa Aloy,Baltimore Orioles,/15
+gold_ink_autographs,CPA,CPA-WL,Wei-En Lin,Athletics,/15
+gold_ink_autographs,CPA,CPA-WS,Wyatt Sanford,Pittsburgh Pirates,/15
+packfractor_autographs,CPA,CPA-AA,Aiva Arquette,Miami Marlins,/89 variation
+packfractor_autographs,CPA,CPA-AF,Andrew Fischer,Milwaukee Brewers,/89
+packfractor_autographs,CPA,CPA-BA,Brailyn Antunez,Milwaukee Brewers,/89
+packfractor_autographs,CPA,CPA-BG,Breyson Guedez,Athletics,/89
+packfractor_autographs,CPA,CPA-BT,Brendan Tunink,Los Angeles Dodgers,/89
+packfractor_autographs,CPA,CPA-CJ,Coy James,Washington Nationals,/89
+packfractor_autographs,CPA,CPA-DF,Dauri Fernandez,Cleveland Guardians,/89
+packfractor_autographs,CPA,CPA-DH,Dasan Hill,Minnesota Twins,/89
+packfractor_autographs,CPA,CPA-DOR,Deniel Ortiz,St. Louis Cardinals,/89
+packfractor_autographs,CPA,CPA-DP,Daniel Pierce,Tampa Bay Rays,/89
+packfractor_autographs,CPA,CPA-DSH,David Shields,Kansas City Royals,/89
+packfractor_autographs,CPA,CPA-EF,Edward Florentino,Pittsburgh Pirates,/89
+packfractor_autographs,CPA,CPA-EH,Ethan Holliday,Colorado Rockies,/89
+packfractor_autographs,CPA,CPA-EM,Edgar Montero,Athletics,/89
+packfractor_autographs,CPA,CPA-EW,Eli Willits,Washington Nationals,/89
+packfractor_autographs,CPA,CPA-GJ,Gage Jump,Athletics,/89
+packfractor_autographs,CPA,CPA-GR,Gabriel Rodriguez,Cleveland Guardians,/89
+packfractor_autographs,CPA,CPA-HE,Handelfry Encarnacion,Milwaukee Brewers,/89
+packfractor_autographs,CPA,CPA-HL,Henry Lalane,New York Yankees,/89
+packfractor_autographs,CPA,CPA-HR,Hector Ramos,Boston Red Sox,/89
+packfractor_autographs,CPA,CPA-JG,Justin Gonzales,Boston Red Sox,/89
+packfractor_autographs,CPA,CPA-JQ,Jorge Quintana,San Diego Padres,/89
+packfractor_autographs,CPA,CPA-JS,Juan Sanchez,Toronto Blue Jays,/89
+packfractor_autographs,CPA,CPA-JW,Jude Warwick,Detroit Tigers,/89
+packfractor_autographs,CPA,CPA-KC,Kendry Chourio,Kansas City Royals,/89
+packfractor_autographs,CPA,CPA-KG,Konnor Griffin,Pittsburgh Pirates,/89
+packfractor_autographs,CPA,CPA-KMC,Kevin McGonigle,Detroit Tigers,/89
+packfractor_autographs,CPA,CPA-LA,Luis Arana,Miami Marlins,/89
+packfractor_autographs,CPA,CPA-LDE,Leo De Vries,Athletics,/89
+packfractor_autographs,CPA,CPA-MG,Marconi German,Washington Nationals,/89
+packfractor_autographs,CPA,CPA-MHO,Marek Houston,Minnesota Twins,/89
+packfractor_autographs,CPA,CPA-MS,Seojun Moon,Toronto Blue Jays,/89
+packfractor_autographs,CPA,CPA-NT,Nelly Taylor,Boston Red Sox,/89
+packfractor_autographs,CPA,CPA-OC,Owen Carey,Atlanta Braves,/89
+packfractor_autographs,CPA,CPA-RB,Roldy Brito,Colorado Rockies,/89
+packfractor_autographs,CPA,CPA-SK,Seong-Jun Kim,Texas Rangers,/89
+packfractor_autographs,CPA,CPA-WA,Wehiwa Aloy,Baltimore Orioles,/89
+packfractor_autographs,CPA,CPA-WL,Wei-En Lin,Athletics,/89
+packfractor_autographs,CPA,CPA-WS,Wyatt Sanford,Pittsburgh Pirates,/89
+chrome_rookie_autographs,CRA,CRA-AF,Alex Freeland,Los Angeles Dodgers,
+chrome_rookie_autographs,CRA,CRA-BH,Brady House,Washington Nationals,
+chrome_rookie_autographs,CRA,CRA-CAG,Jac Caglianone,Kansas City Royals,3-letter disambiguation
+chrome_rookie_autographs,CRA,CRA-CB,Chase Burns,Cincinnati Reds,
+chrome_rookie_autographs,CRA,CRA-CJ,Carter Jensen,Kansas City Royals,
+chrome_rookie_autographs,CRA,CRA-CK,C.J. Kayfus,Cleveland Guardians,
+chrome_rookie_autographs,CRA,CRA-CM,Christian Moore,Los Angeles Angels,
+chrome_rookie_autographs,CRA,CRA-JT,Jonah Tong,New York Mets,
+chrome_rookie_autographs,CRA,CRA-KO,Kazuma Okamoto,Toronto Blue Jays,
+chrome_rookie_autographs,CRA,CRA-MM,Munetaka Murakami,Chicago White Sox,
+chrome_rookie_autographs,CRA,CRA-RA,Roman Anthony,Boston Red Sox,headliner
+chrome_rookie_autographs,CRA,CRA-SS,Sal Stewart,Cincinnati Reds,
+chrome_rookie_autographs,CRA,CRA-TI,Tatsuya Imai,Houston Astros,
+paper_prospect_retail_autographs,BPA,BPA-AA,Aiva Arquette,Miami Marlins,retail exclusive
+paper_prospect_retail_autographs,BPA,BPA-AF,Andrew Fischer,Milwaukee Brewers,retail
+paper_prospect_retail_autographs,BPA,BPA-AG,Angel Guzman,San Francisco Giants,retail
+paper_prospect_retail_autographs,BPA,BPA-AL,Arnaldo Lantigua,Cincinnati Reds,retail
+paper_prospect_retail_autographs,BPA,BPA-BM,Blake Mitchell,Kansas City Royals,retail
+paper_prospect_retail_autographs,BPA,BPA-CB,Caleb Bonemer,Chicago White Sox,retail
+paper_prospect_retail_autographs,BPA,BPA-CBE,Carson Benge,New York Mets,retail; 3-letter
+paper_prospect_retail_autographs,BPA,BPA-CE,Colt Emerson,Seattle Mariners,retail
+paper_prospect_retail_autographs,BPA,BPA-CJ,Coy James,Washington Nationals,retail
+paper_prospect_retail_autographs,BPA,BPA-DP,Daniel Pierce,Tampa Bay Rays,retail
+paper_prospect_retail_autographs,BPA,BPA-DT,Diego Tornes,Atlanta Braves,retail
+paper_prospect_retail_autographs,BPA,BPA-EC,Ethan Conrad,Chicago Cubs,retail
+paper_prospect_retail_autographs,BPA,BPA-EF,Edward Florentino,Pittsburgh Pirates,retail
+paper_prospect_retail_autographs,BPA,BPA-EH,Ethan Holliday,Colorado Rockies,retail
+paper_prospect_retail_autographs,BPA,BPA-GS,Grant Shepardson,Miami Marlins,retail
+paper_prospect_retail_autographs,BPA,BPA-GT,Gavin Turley,Athletics,retail
+paper_prospect_retail_autographs,BPA,BPA-JP,Jose Perdomo,Atlanta Braves,retail
+paper_prospect_retail_autographs,BPA,BPA-JT,James Tibbs III,Los Angeles Dodgers,retail
+paper_prospect_retail_autographs,BPA,BPA-KC,Kaelen Culpepper,Minnesota Twins,retail
+paper_prospect_retail_autographs,BPA,BPA-KD,Korbyn Dickerson,Seattle Mariners,retail
+paper_prospect_retail_autographs,BPA,BPA-KG,Konnor Griffin,Pittsburgh Pirates,retail
+paper_prospect_retail_autographs,BPA,BPA-LP,Luis Peña,Milwaukee Brewers,retail
+paper_prospect_retail_autographs,BPA,BPA-MH,Marek Houston,Minnesota Twins,retail
+paper_prospect_retail_autographs,BPA,BPA-PM,PJ Morlando,Miami Marlins,retail
+paper_prospect_retail_autographs,BPA,BPA-QM,Quinn Mathews,St. Louis Cardinals,retail
+paper_prospect_retail_autographs,BPA,BPA-SH,Steele Hall,Cincinnati Reds,retail
+paper_prospect_retail_autographs,BPA,BPA-SKI,Seaver King,Washington Nationals,retail; 3-letter
+paper_prospect_retail_autographs,BPA,BPA-SM,Shotaro Morii,Athletics,retail
+paper_prospect_retail_autographs,BPA,BPA-WA,Wehiwa Aloy,Baltimore Orioles,retail
+paper_prospect_retail_autographs,BPA,BPA-WJ,Walker Jenkins,Minnesota Twins,retail
+paper_prospect_retail_autographs,BPA,BPA-ZE,Zach Ehrhard,Los Angeles Dodgers,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-AF,Alex Freeland,Los Angeles Dodgers,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-AR,Adley Rutschman,Baltimore Orioles,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-AS,AJ Smith-Shawver,Atlanta Braves,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-BC,Bubba Chandler,Pittsburgh Pirates,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-BE,Bryce Eldridge,San Francisco Giants,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CC,Corbin Carroll,Arizona Diamondbacks,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CE,Connelly Early,Boston Red Sox,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CF,Cody Freeman,Texas Rangers,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CM,Colson Montgomery,Chicago White Sox,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CS,Cam Schlittler,New York Yankees,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-CW,Carson Williams,Tampa Bay Rays,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-DBE,David Bednar,New York Yankees,retail; 3-letter
+paper_rookies_veterans_retail_autographs,PRV,PRV-DF,Didier Fuentes,Atlanta Braves,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-FT,Fernando Tatis Jr.,San Diego Padres,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-HF,Harry Ford,Washington Nationals,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-HG,Hunter Goodman,Colorado Rockies,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-JC,Jac Caglianone,Kansas City Royals,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-JD,Justin Dean,Los Angeles Dodgers,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-JM,Jacob Misiorowski,Milwaukee Brewers,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-JMA,Jakob Marsee,Miami Marlins,retail; 3-letter
+paper_rookies_veterans_retail_autographs,PRV,PRV-KB,Kris Bryant,Colorado Rockies,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-KK,Kyle Karros,Colorado Rockies,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-KT,Kyle Teel,Chicago White Sox,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-MT,Mike Trout,Los Angeles Angels,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-NK,Nick Kurtz,Athletics,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-NL,Nathan Lukes,Toronto Blue Jays,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-NM,Nolan McLean,New York Mets,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-PT,Payton Tolle,Boston Red Sox,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-RA,Roman Anthony,Boston Red Sox,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-RAC,Ronald Acuña Jr.,Atlanta Braves,retail; 3-letter
+paper_rookies_veterans_retail_autographs,PRV,PRV-SB,Samuel Basallo,Baltimore Orioles,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-TY,Trey Yesavage,Toronto Blue Jays,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-VG,Vladimir Guerrero Jr.,Toronto Blue Jays,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-WB,Walker Buehler,Philadelphia Phillies,retail
+paper_rookies_veterans_retail_autographs,PRV,PRV-WK,Will Klein,Los Angeles Dodgers,retail
+draft_pick_pairings_autographs,DPPA,DPPA-BB,Byron Buxton / Kris Bryant,Twins / Cubs,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-BBR,Chase Burns / Tyler Bremner,Reds / Angels,dual auto; 3-letter
+draft_pick_pairings_autographs,DPPA,DPPA-BC,Dylan Crews / Alex Bregman,Nationals / Astros,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-BW,Alex Bregman / Bobby Witt Jr.,Astros / Royals,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-BWI,Travis Bazzana / Eli Willits,Guardians / Nationals,dual auto; 3-letter
+draft_pick_pairings_autographs,DPPA,DPPA-CA,Kade Anderson / Charlie Condon,Mariners / Rockies,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-GR,Alex Rodriguez / Ken Griffey Jr.,Mariners,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-JC,Jackson Jobe / Max Clark,Tigers,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-LK,Wyatt Langford / Nick Kurtz,Rangers / Athletics,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-LM,Evan Longoria / Manny Machado,Devil Rays / Orioles,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-MS,Max Scherzer / Andrew McCutchen,Diamondbacks / Pirates,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-RH,Adley Rutschman / Jackson Holliday,Orioles,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-SD,Hagen Smith / Liam Doyle,White Sox / Cardinals,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-SS,Stephen Strasburg / Paul Skenes,Nationals / Pirates,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-WC,Jac Caglianone / Jacob Wilson,Royals / Athletics,dual auto
+draft_pick_pairings_autographs,DPPA,DPPA-WL,Dave Winfield / Barry Larkin,Padres / Reds,dual auto
+all_america_game_autographs,,,Ethan Holliday,Colorado Rockies,numbering not listed in source
+bowman_sterling_autographs,,,Max Clark,Detroit Tigers,/150 per BaseballCardPedia; numbering not listed
+bowman_sterling_autographs,,,Julio Rodríguez,Seattle Mariners,/150
+bowman_sterling_autographs,,,Konnor Griffin,Pittsburgh Pirates,/150
+bowman_sterling_autographs,,,Freddie Freeman,Los Angeles Dodgers,/150
+bowman_sterling_autographs,,,Leo De Vries,Athletics,/150
+bowman_sterling_autographs,,,Ethan Holliday,Colorado Rockies,/150
+bowman_sterling_autographs,,,Chase Burns,Cincinnati Reds,/150
+bowman_sterling_autographs,,,Jac Caglianone,Kansas City Royals,/150
+bowman_sterling_autographs,,,Roman Anthony,Boston Red Sox,/150
+bowman_sterling_autographs,,,Jacob Misiorowski,Milwaukee Brewers,/150
+electric_sluggers_autographs,,,Samuel Basallo,Baltimore Orioles,/99 per BaseballCardPedia
+electric_sluggers_autographs,,,Bryce Eldridge,San Francisco Giants,/99
+electric_sluggers_autographs,,,Ethan Holliday,Colorado Rockies,/99
+electric_sluggers_autographs,,,Konnor Griffin,Pittsburgh Pirates,/99
+electric_sluggers_autographs,,,Jesús Made,Milwaukee Brewers,/99
+electric_sluggers_autographs,,,JJ Wetherholt,St. Louis Cardinals,/99
+electric_sluggers_autographs,,,Roman Anthony,Boston Red Sox,/99
+electric_sluggers_autographs,,,Jac Caglianone,Kansas City Royals,/99
+electric_sluggers_autographs,,,Vladimir Guerrero Jr.,Toronto Blue Jays,/99
+electric_sluggers_autographs,,,Juan Soto,New York Mets,/99
+electric_sluggers_autographs,,,Ronald Acuña Jr.,Atlanta Braves,/99
+electric_sluggers_autographs,,,Cal Raleigh,Seattle Mariners,/99
+electric_sluggers_autographs,,,Nick Kurtz,Athletics,/99
+electric_sluggers_autographs,,,Mike Trout,Los Angeles Angels,/99
+power_chords_autographs,,,Mike Trout,Los Angeles Angels,numbering not listed in source
+power_chords_autographs,,,Ronald Acuña Jr.,Atlanta Braves,
+power_chords_autographs,,,Juan Soto,New York Mets,
+power_chords_autographs,,,Junior Caminero,Tampa Bay Rays,
+power_chords_autographs,,,Kevin McGonigle,Detroit Tigers,
+power_chords_autographs,,,JJ Wetherholt,St. Louis Cardinals,
+power_chords_autographs,,,Cal Raleigh,Seattle Mariners,
+power_chords_autographs,,,Bryce Eldridge,San Francisco Giants,
+power_chords_autographs,,,Walker Jenkins,Minnesota Twins,
+power_chords_autographs,,,Edward Florentino,Pittsburgh Pirates,
+power_chords_autographs,,,Christian Moore,Los Angeles Angels,
+power_chords_autographs,,,Samuel Basallo,Baltimore Orioles,
+power_chords_autographs,,,Roman Anthony,Boston Red Sox,
+power_chords_autographs,,,Jac Caglianone,Kansas City Royals,
+power_chords_autographs,,,Ethan Holliday,Colorado Rockies,
+under_the_radar_autographs,,,Connelly Early,Boston Red Sox,numbering not listed in source
+under_the_radar_autographs,,,Samuel Basallo,Baltimore Orioles,
+under_the_radar_autographs,,,Cam Schlittler,New York Yankees,
+under_the_radar_autographs,,,Trey Yesavage,Toronto Blue Jays,
+under_the_radar_autographs,,,Carson Benge,New York Mets,
+under_the_radar_autographs,,,Kyle Teel,Chicago White Sox,
+under_the_radar_autographs,,,Sal Stewart,Cincinnati Reds,
+under_the_radar_autographs,,,Franklin Arias,Boston Red Sox,
+under_the_radar_autographs,,,Josue De Paula,Los Angeles Dodgers,
+under_the_radar_autographs,,,Kaelen Culpepper,Minnesota Twins,
+under_the_radar_autographs,,,Edward Florentino,Pittsburgh Pirates,
+under_the_radar_autographs,,,Colt Emerson,Seattle Mariners,
+under_the_radar_autographs,,,Kevin McGonigle,Detroit Tigers,
+ultimate_autograph_book,UAC,UAC-1,24-signer book (Josuar Gonzalez et al.),Multiple,single 1/1-style book card; signers incl. Holliday/Griffin/De Vries/Made/McGonigle/Jenkins/Bazzana/Willits/Wetherholt/Condon

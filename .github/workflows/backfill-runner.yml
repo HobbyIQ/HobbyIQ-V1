@@ -61,6 +61,8 @@ on:
           - market-analysis-composite
           - refresh-market-signals
           - refresh-calibration-multipliers
+          - ingest-product-checklist
+          - ingest-2026-bowman-auto-checklist
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
