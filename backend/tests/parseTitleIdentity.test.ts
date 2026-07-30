@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  inferIsAuto,
   isCardNumberAutoSubset,
   parseListingIdentity,
   inferSetKeyFromTitle,
@@ -83,6 +84,74 @@ describe("isCardNumberAutoSubset — empirical prefixes", () => {
   it("pure-digit cardNumber → false", () => {
     expect(isCardNumberAutoSubset("500")).toBe(false);
     expect(isCardNumberAutoSubset("#87")).toBe(false);
+  });
+});
+
+// CF-UNIFIED-AUTO-INFERENCE (Drew, 2026-07-30). Sport-aware detector.
+describe("inferIsAuto — sport-aware routing", () => {
+  describe("baseball", () => {
+    it("cardNumber prefix CPA-EHA → auto", () => {
+      expect(inferIsAuto({ sport: "baseball", cardNumber: "CPA-EHA" })).toBe(true);
+    });
+    it("setName 'Real One Autographs' → auto (Heritage)", () => {
+      expect(inferIsAuto({ sport: "baseball", setName: "Topps Heritage Real One Autographs" })).toBe(true);
+    });
+    it("no signals → false", () => {
+      expect(inferIsAuto({ sport: "baseball", cardNumber: "BCP-102", setName: "Bowman Chrome Prospects" })).toBe(false);
+    });
+  });
+
+  describe("basketball (Panini era — setName-primary)", () => {
+    it("setName 'Panini Prizm Signatures' → auto", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "2020 Panini Prizm Signatures" })).toBe(true);
+    });
+    it("setName 'Rookie Ink' → auto (Hoops)", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "Panini Hoops Rookie Ink" })).toBe(true);
+    });
+    it("setName 'Rookie Ticket Autographs' → auto (Contenders)", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "Panini Contenders Rookie Ticket Autographs" })).toBe(true);
+    });
+    it("setName 'Sensational Signatures' → auto (Prizm insert)", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "Prizm Sensational Signatures" })).toBe(true);
+    });
+    it("cardNumber prefix does NOT trigger for basketball (Panini era has no prefixes)", () => {
+      // "PA-" is baseball prefix but basketball Panini era doesn't use
+      // prefixes — should NOT auto-tag a basketball row on cardNumber alone.
+      expect(inferIsAuto({ sport: "basketball", cardNumber: "PA-100", setName: null })).toBe(false);
+    });
+    it("plain base insert (no auto keyword) → false", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "Panini Prizm Kaboom", cardNumber: "K-1" })).toBe(false);
+    });
+  });
+
+  describe("football (hybrid — WT/SOT prefix + setName)", () => {
+    it("Winning Ticket cardNumber WT-15 → auto", () => {
+      expect(inferIsAuto({ sport: "football", cardNumber: "WT-15" })).toBe(true);
+    });
+    it("baseball prefix RA-XX also works (Prizm Draft Picks)", () => {
+      expect(inferIsAuto({ sport: "football", cardNumber: "RA-CJS" })).toBe(true);
+    });
+    it("setName 'Panini Prizm Rookie Autographs' → auto", () => {
+      expect(inferIsAuto({ sport: "football", setName: "Panini Prizm Rookie Autographs" })).toBe(true);
+    });
+    it("setName 'NFL Ink' → auto (Contenders)", () => {
+      expect(inferIsAuto({ sport: "football", setName: "Contenders NFL Ink" })).toBe(true);
+    });
+  });
+
+  describe("title has explicit auto text — always wins", () => {
+    it("title with 'auto' short-circuits regardless of other signals", () => {
+      expect(inferIsAuto({ sport: "basketball", titleHasAutoText: true })).toBe(true);
+    });
+  });
+
+  describe("guardrails", () => {
+    it("basketball setName 'Signatures Series' → auto (broad match)", () => {
+      expect(inferIsAuto({ sport: "basketball", setName: "Panini Chronicles Signature Series" })).toBe(true);
+    });
+    it("baseball with no setName + non-auto cardNumber → false", () => {
+      expect(inferIsAuto({ sport: "baseball", cardNumber: "100", setName: null })).toBe(false);
+    });
   });
 });
 

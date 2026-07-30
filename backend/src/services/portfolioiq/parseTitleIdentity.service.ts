@@ -168,6 +168,78 @@ export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
   return /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/.test(cn);
 }
 
+// CF-UNIFIED-AUTO-INFERENCE (Drew, 2026-07-30). Sport-aware auto
+// detection that consolidates every signal:
+//   - Title text ("auto" / "autograph" / "hard signed")
+//   - Baseball cardNumber prefix (via isCardNumberAutoSubset)
+//   - Football-specific cardNumber prefixes (WT for Winning Ticket +
+//     baseball prefixes that also work in football: RA/BA/PA)
+//   - Basketball + football setName keyword ("Signatures", "Autographs",
+//     "Ink", "Penmanship", "Rookie Ticket", "Season Ticket", etc.)
+//     — this is the PRIMARY rule for Panini basketball (2009-2024) and
+//     Panini football (2016-2025) which don't use prefixes at all
+//
+// Traps (NOT handled by this function — need slab OCR):
+//   - Contenders "Rookie Ticket" autos numbered within base set
+//   - Nat'l Treasures / Immaculate / Flawless RPAs numbered within base
+//   - Prizm veteran auto parallels sharing base card number
+// For those, the caller (image-verify Tier-2a slab OCR) is authoritative.
+
+/** Case-insensitive keyword regex covering auto-set NAMES across
+ *  Panini + Topps NBA/NFL. Broad but conservative — must match a full
+ *  word/phrase, not a substring inside another word. Includes both
+ *  auto keywords and product families that ARE 100% auto (Ink,
+ *  Penmanship, Rookie Ticket, Real One, etc.). */
+const AUTO_SETNAME_RE = /\b(?:signatures?|autographs?|hard[-\s]signed|signature\s+(?:series|blend|style|class)|rookie\s+(?:signatures?|ticket|photo\s+shoot|premiere\s+materials)|season\s+ticket|playoff\s+ticket|championship\s+ticket|winning\s+ticket|clutch\s+gene|next\s+day\s+auto|penmanship|scripts?|signings?|significance|silhouettes?|ink\b|hot\s+signatures?|sensational\s+signatures?|great\s+significance|shadow\s+scripts?|manuscripts?|eternal\s+marks?|hoop\s+signs?|chromographs?|autograph\s+issue|real\s+one|sign\s+of\s+the\s+times|sott|volcanic\s+signatures?|aurora\s+ink|elusive\s+ink|cactus\s+ink|fresh\s+paint|heir\s+apparent|next\s+stop\s+signatures?|skywrite\s+signatures?|stratospheric\s+signatures?|1989\s+signatures?|hyper\s+signatures?|crystal\s+clear\s+autographs?|fast\s+break\s+autographs?|in\s+flight\s+signatures?|signature\s+series|rated\s+rookies?\s+signatures?|autograph\s+patch|dynasty\s+autograph|nfl\s+ink|breakout\s+autographs?|dual\s+autographs?|triple\s+autographs?|quad\s+autographs?|clearly\s+authentic|definitive\s+autographs?|flashback\s+autograph|framed\s+autographs?|prime\s+performers|tier\s+one\s+auto|clubhouse\s+collection\s+auto|inception\s+auto|hometown\s+heroes\s+auto|tribute\s+auto|museum\s+collection\s+auto|allen[-\s]?(?:and\s+)?ginter\s+auto|gypsy\s+queen\s+auto|opening\s+day\s+auto|five\s+star\s+auto|dynasty\s+patch\s+auto|1st\s+bowman(?:\s+chrome)?\s+auto)\b/i;
+
+/** Football-specific cardNumber prefixes NOT in the baseball list.
+ *  WT = Winning Ticket (Contenders). Baseball prefixes RA/BA/PA also
+ *  work in football (draft/collegiate products), so
+ *  isCardNumberAutoSubset already covers them. */
+function isFootballCardNumberAutoSubset(cardNumber: string | null): boolean {
+  if (!cardNumber) return false;
+  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
+  return /^(WT|SOT)(-|$)/.test(cn);
+}
+
+export interface InferIsAutoInput {
+  sport?: string | null;               // "baseball" | "football" | "basketball" | "hockey" | null
+  cardNumber?: string | null;
+  setName?: string | null;             // full product/insert name if known
+  titleHasAutoText?: boolean;          // pre-computed from extractIsAuto if available
+}
+
+/** Sport-aware isAuto inference — the ONE function callers should use
+ *  when they have context beyond a raw title. Combines every signal
+ *  and short-circuits on the first positive.
+ *
+ *  Returns true if ANY of:
+ *    1. Title has explicit auto text (extractIsAuto)
+ *    2. Baseball or football: cardNumber prefix on the curated list
+ *    3. Football-only: Winning Ticket / SOT prefix
+ *    4. Any sport: setName matches AUTO_SETNAME_RE
+ *
+ *  Never returns true just from being "possibly" an auto — bar is
+ *  "one clear positive signal". Slab OCR is a separate authoritative
+ *  path for numbered-within-base autos. */
+export function inferIsAuto(input: InferIsAutoInput): boolean {
+  if (input.titleHasAutoText === true) return true;
+
+  const sport = (input.sport ?? "").toLowerCase();
+  // Baseball + football + hockey (rare): prefix rule.
+  // Basketball Panini era has NO prefix vocabulary — skip prefix rule
+  // for basketball unless the sport hint is unset (safer default).
+  if (sport !== "basketball") {
+    if (isCardNumberAutoSubset(input.cardNumber ?? null)) return true;
+  }
+  if (sport === "football" && isFootballCardNumberAutoSubset(input.cardNumber ?? null)) return true;
+
+  // Any sport: setName keyword.
+  if (input.setName && AUTO_SETNAME_RE.test(input.setName)) return true;
+
+  return false;
+}
+
 function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null {
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
   const m = title.match(re);

@@ -42,6 +42,7 @@ on:
           - slab-ocr-auto-approve-queue
           - discover-auto-cardnumber-prefixes
           - backfill-isauto-from-cardnumber
+          - backfill-isauto-cross-sport
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
