@@ -185,6 +185,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-origins/, "panini-origins"],
     [/panini-encased/, "panini-encased"],
     [/panini-eminence/, "panini-eminence"],
+    // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). New product-line
+    // vocab from parallel-vocabulary.json productLines section. Fixes
+    // the ~5-6K rows the setKey audit found with raw-slugified titles
+    // (Flair, Goudey, SP/SP Prospects, Pinnacle Aficionado).
+    // Order matters — more specific before less specific.
+    [/pinnacle-aficionado/, "pinnacle-aficionado"],
+    [/pinnacle/, "pinnacle"],
+    [/goudey/, "goudey"],
+    [/flair-showcase|flair/, "flair"],
+    [/sp-prospects/, "sp-prospects"],
+    [/sp-authentic/, "sp-authentic"],
+    // NOTE: bare "sp" is NOT in strict tier — "SP" collides with the
+    // short-print abbreviation. Only qualified sp-prospects / sp-authentic
+    // land here. Bare "SP" resolves via the routingRule downstream.
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan

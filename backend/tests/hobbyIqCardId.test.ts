@@ -613,4 +613,28 @@ describe("matchKnownProductLine — strict product-line detection", () => {
     expect(matchKnownProductLine("2024 Bowman Chrome Prospects CPA-EHA Eric Hartman"))
       .toBe("bowman-chrome");
   });
+
+  // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). Vocab v3 additions
+  // — fixes the ~5-6K raw-slugified rows the setKey audit found.
+  it("Flair title → flair", () => {
+    expect(matchKnownProductLine("2003 Flair Baseball #2 Base")).toBe("flair");
+  });
+  it("Flair Showcase → flair (both variants pool)", () => {
+    expect(matchKnownProductLine("1998 Flair Showcase Row 2 Ken Griffey Jr")).toBe("flair");
+  });
+  it("Goudey vintage → goudey", () => {
+    expect(matchKnownProductLine("1933 R319 Goudey Baseball #53 Babe Ruth")).toBe("goudey");
+  });
+  it("Pinnacle Aficionado → pinnacle-aficionado (specific wins over generic)", () => {
+    expect(matchKnownProductLine("1996 Pinnacle Aficionado Baseball #4 Base")).toBe("pinnacle-aficionado");
+  });
+  it("Pinnacle (bare) → pinnacle", () => {
+    expect(matchKnownProductLine("1993 Pinnacle Baseball #100 Barry Bonds")).toBe("pinnacle");
+  });
+  it("SP Prospects → sp-prospects", () => {
+    expect(matchKnownProductLine("2004 SP Prospects Baseball #140 Base")).toBe("sp-prospects");
+  });
+  it("SP Authentic → sp-authentic", () => {
+    expect(matchKnownProductLine("2001 SP Authentic Chirography Ken Griffey Jr")).toBe("sp-authentic");
+  });
 });

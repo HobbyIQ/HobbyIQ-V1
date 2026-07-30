@@ -39,6 +39,8 @@ on:
           - reslug-cross-product-mis-slug
           - audit-setkey-distribution
           - audit-grade-coverage
+          - reslug-suspicious-setkeys
+          - backfill-grade-from-ch-daily
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
           - prototype-slab-ocr

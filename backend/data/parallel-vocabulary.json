@@ -1879,5 +1879,86 @@
     "midladderShuffle": "Panini COLORED_MIDLADDER slots intentionally hold no runs: assignments shuffle per sport-year. Backfill exclusively from observed serials.",
     "levelAxis": "Select-style tri-level products: LEVEL resolves before color. (level, color, run) is the tier key.",
     "editionFirst": "Edition isolation (Sapphire, Mega, FOTL-only products) resolves before ladder validation runs at all."
+  },
+  "productLines": {
+    "flair": {
+      "brandFamily": "fleer",
+      "own_line": true,
+      "aliases": ["flair", "flair showcase"],
+      "years": [1993, 2005],
+      "era": "E2",
+      "note": "1993-96 Flair = thick-stock premium. 1997-98 Flair Showcase = tiered base (see ladder). 2003-05 revival exists.",
+      "confidence": "verified"
+    },
+    "goudey-vintage": {
+      "brandFamily": "goudey",
+      "aliases": ["goudey", "r319-goudey", "r319", "r320", "big league gum"],
+      "years": [1933, 1941],
+      "era": "E0",
+      "yearMap": {
+        "1933": "R319",
+        "1934": "R320",
+        "1935": "R321 (4-in-1)",
+        "1936": "R322",
+        "1938": "R323 Heads-Up"
+      },
+      "routingRule": "token 'goudey' + year < 1942 -> here; year >= 2007 -> goudey-ud-retro",
+      "relatedSeparateLines": {
+        "world-wide-gum": "Canadian Goudey (V353/V354) - OPC-style separate productLine, never pooled"
+      },
+      "compRules": "grade-driven; qualifier-sensitive; trimming/alteration + counterfeit risk EXTREME on Ruth/Gehrig; Ruth has 4 cards in R319 (#53 #144 #149 #181), Lajoie #106 issued 1934",
+      "confidence": "verified"
+    },
+    "goudey-ud-retro": {
+      "brandFamily": "upper-deck",
+      "aliases": ["goudey (2007-2009)", "ud goudey"],
+      "years": [2007, 2009],
+      "era": "E3",
+      "note": "Upper Deck retro line reusing the Goudey name. Mini parallels, Sport Royalty. Never pooled with vintage.",
+      "confidence": "verified"
+    },
+    "sp": {
+      "brandFamily": "upper-deck",
+      "aliases": ["sp"],
+      "years": [1993, 1998],
+      "era": "E2",
+      "tokenCollision": "CRITICAL: 'SP' = short-print abbreviation in titles. Resolve to product ONLY with UD context or set-name position + 1993-98 year. Otherwise treat as shortPrint attribute token.",
+      "keyKnowledge": "1993 SP #279 Jeter foil RC - extreme foil condition sensitivity (corner chip), steep grade curve, gem pop tiny. Die-cut subsets.",
+      "confidence": "verified"
+    },
+    "sp-authentic": {
+      "brandFamily": "upper-deck",
+      "aliases": ["sp authentic", "spa"],
+      "years": [1999, 2010],
+      "era": "E3",
+      "note": "Chirography autos; serial-era parallels.",
+      "confidence": "probable"
+    },
+    "sp-prospects": {
+      "brandFamily": "upper-deck",
+      "aliases": ["sp prospects"],
+      "years": [2004, 2007],
+      "era": "E3",
+      "note": "UD minor-league prospect autos - pre-Bowman first-autos exist for some players. Affects earliest-auto CHRONOLOGY, never 1st Bowman logic.",
+      "confidence": "probable"
+    },
+    "pinnacle": {
+      "brandFamily": "pinnacle",
+      "aliases": ["pinnacle"],
+      "years": [1992, 1998],
+      "era": "E2",
+      "siblingLines": ["score", "select (pinnacle-era)", "summit", "zenith", "certified (pinnacle-era)", "new pinnacle", "totally certified"],
+      "note": "Pinnacle Brands bankrupt 1998. Odds/pop-driven pricing, minimal serials.",
+      "confidence": "verified"
+    },
+    "pinnacle-aficionado": {
+      "brandFamily": "pinnacle",
+      "own_line": true,
+      "aliases": ["aficionado", "pinnacle aficionado"],
+      "years": [1996, 1996],
+      "era": "E2",
+      "note": "1996 one-year premium line; Artist's Proof parallels.",
+      "confidence": "verified"
+    }
   }
 }
