@@ -1,0 +1,197 @@
+name: Grade Backfill Auto-Apply (dry-run → apply → retry → review issue)
+
+# CF-GRADE-BACKFILL-AUTO-APPLY (Drew, 2026-07-30). Fire-and-forget
+# chain: waits for the referenced dry-run of backfill-grade-from-ch-daily,
+# reads its "Ready to patch:" count, dispatches apply=true if there's
+# work, retries once at lower concurrency to catch 429 stragglers, then
+# opens a GitHub issue with the numeric summary for morning review.
+#
+# STOPS before any live App Service config changes — the flag flip stays
+# a human-in-the-loop step per the standing rule.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryrun_run_id:
+        description: "The backfill-grade-from-ch-daily dry-run to wait for"
+        required: true
+        default: ""
+      target_script:
+        description: "Script to apply (defaults to backfill-grade-from-ch-daily)"
+        required: false
+        default: "backfill-grade-from-ch-daily"
+
+permissions:
+  contents: read
+  id-token: write
+  actions: write   # dispatch backfill-runner for apply + retry
+  issues: write    # open the morning review issue
+
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Wait for dry-run to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          RUN_ID="${{ inputs.dryrun_run_id }}"
+          echo "Waiting for dry-run $RUN_ID..."
+          for i in $(seq 1 60); do
+            STATUS=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo unknown)
+            echo "[$(date -u +%H:%M:%S)] attempt=$i status=$STATUS"
+            [ "$STATUS" = "completed" ] && break
+            sleep 60
+          done
+
+      - name: Read patch count from dry-run log
+        id: patchcount
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          RUN_ID="${{ inputs.dryrun_run_id }}"
+          LOG=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log 2>&1 || echo "")
+          # Grep for "ready to patch:" (case-insensitive) — the grade
+          # backfill script prints this line with a numeric count.
+          COUNT=$(echo "$LOG" | grep -iE "ready to patch:" | head -1 | grep -oE "[0-9,]+" | tr -d ',' | head -1)
+          COUNT="${COUNT:-0}"
+          echo "patches=$COUNT"
+          echo "patches=$COUNT" >> "$GITHUB_OUTPUT"
+          # Also capture the grader distribution summary
+          GRADER_LINES=$(echo "$LOG" | grep -A 5 "GRADER DISTRIBUTION" | head -8 || echo "(no distribution captured)")
+          # Escape for output
+          {
+            echo "grader_dist<<EOF"
+            echo "$GRADER_LINES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch APPLY (if patches > 0)
+        if: ${{ steps.patchcount.outputs.patches != '0' && steps.patchcount.outputs.patches != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          echo "Dispatching apply=true for ${{ inputs.target_script }}"
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script="${{ inputs.target_script }}" \
+            -f apply=true \
+            -f concurrency=8
+
+      - name: Wait for apply to complete
+        if: ${{ steps.patchcount.outputs.patches != '0' && steps.patchcount.outputs.patches != '' }}
+        id: apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # Give the new dispatch a moment to appear.
+          sleep 30
+          # Find the newest backfill-runner run for this script.
+          APPLY_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 3 --json databaseId,createdAt --jq '.[0].databaseId')
+          echo "apply_id=$APPLY_ID"
+          echo "apply_id=$APPLY_ID" >> "$GITHUB_OUTPUT"
+          for i in $(seq 1 60); do
+            STATUS=$(gh run view "$APPLY_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo unknown)
+            echo "[$(date -u +%H:%M:%S)] apply status=$STATUS"
+            [ "$STATUS" = "completed" ] && break
+            sleep 60
+          done
+
+      - name: Dispatch RETRY at concurrency 4 to catch 429 stragglers
+        if: ${{ steps.patchcount.outputs.patches != '0' && steps.patchcount.outputs.patches != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          echo "Dispatching retry at concurrency 4"
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script="${{ inputs.target_script }}" \
+            -f apply=true \
+            -f concurrency=4
+
+      - name: Wait for retry to complete
+        if: ${{ steps.patchcount.outputs.patches != '0' && steps.patchcount.outputs.patches != '' }}
+        id: retry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          sleep 30
+          RETRY_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          echo "retry_id=$RETRY_ID"
+          echo "retry_id=$RETRY_ID" >> "$GITHUB_OUTPUT"
+          for i in $(seq 1 60); do
+            STATUS=$(gh run view "$RETRY_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo unknown)
+            echo "[$(date -u +%H:%M:%S)] retry status=$STATUS"
+            [ "$STATUS" = "completed" ] && break
+            sleep 60
+          done
+
+      - name: Open morning review issue
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # Pull final summary lines from apply + retry
+          APPLY_ID="${{ steps.apply.outputs.apply_id }}"
+          RETRY_ID="${{ steps.retry.outputs.retry_id }}"
+          APPLY_SUMMARY=""
+          RETRY_SUMMARY=""
+          if [ -n "$APPLY_ID" ]; then
+            APPLY_SUMMARY=$(gh run view "$APPLY_ID" --repo "$GITHUB_REPOSITORY" --log 2>&1 | grep -E "patched:|errors:|ok=" | tail -4 || echo "(no summary captured)")
+          fi
+          if [ -n "$RETRY_ID" ]; then
+            RETRY_SUMMARY=$(gh run view "$RETRY_ID" --repo "$GITHUB_REPOSITORY" --log 2>&1 | grep -E "patched:|errors:|ok=" | tail -4 || echo "(no summary captured)")
+          fi
+
+          BODY=$(cat <<EOF
+          # Grade backfill auto-apply summary — $(date -u +%Y-%m-%d)
+
+          Chain triggered by workflow [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
+
+          ## Dry-run
+          - Referenced run: [${{ inputs.dryrun_run_id }}]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${{ inputs.dryrun_run_id }})
+          - Patch count: **${{ steps.patchcount.outputs.patches }}**
+          - Grader distribution:
+          \`\`\`
+          ${{ steps.patchcount.outputs.grader_dist }}
+          \`\`\`
+
+          ## Apply run
+          $( [ -n "$APPLY_ID" ] && echo "- Run: [$APPLY_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$APPLY_ID)" || echo "- Skipped (0 patches)" )
+          \`\`\`
+          $APPLY_SUMMARY
+          \`\`\`
+
+          ## Retry run (429 straggler catch)
+          $( [ -n "$RETRY_ID" ] && echo "- Run: [$RETRY_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RETRY_ID)" || echo "- Skipped" )
+          \`\`\`
+          $RETRY_SUMMARY
+          \`\`\`
+
+          ## Your review
+          - [ ] Confirm grader distribution passes smell test (PSA > BGS > SGC > CGC expected in most pools)
+          - [ ] Spot-check a few sold_comps rows for correct gradeCompany/gradeValue
+          - [ ] If more null-grade rows remain (~outside 100K scan window), dispatch another grade backfill
+
+          Composite backfill loop continues in background. Signals + calibration crons pick up improved coverage automatically.
+          EOF
+          )
+          echo "$BODY" | gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "🌙 Grade backfill review — $(date -u +%Y-%m-%d)" \
+            --body-file -
