@@ -41,6 +41,7 @@ on:
           - audit-grade-coverage
           - reslug-suspicious-setkeys
           - backfill-grade-from-ch-daily
+          - bulk-import-ch-daily-to-sold-comps
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
           - prototype-slab-ocr
