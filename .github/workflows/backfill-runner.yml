@@ -68,6 +68,14 @@ on:
         description: "Parallel patch workers (leave default unless tuning)"
         required: false
         default: "16"
+      bulk_start_date:
+        description: "For bulk-import-ch-daily-to-sold-comps: start walking backward from this date (YYYY-MM-DD). Empty = today. Used by self-relaunch to resume from where the previous run stopped."
+        required: false
+        default: ""
+      bulk_end_date:
+        description: "For bulk-import-ch-daily-to-sold-comps: stop at this date (YYYY-MM-DD). Default 2018-01-01."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -183,7 +191,10 @@ jobs:
           RESLUG_CONCURRENCY: ${{ inputs.concurrency }}
           APPROVE_CONCURRENCY: ${{ inputs.concurrency }}
           BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
-        run: node "backend/scripts/${{ inputs.script }}.cjs"
+          BULK_START_DATE: ${{ inputs.bulk_start_date }}
+          BULK_END_DATE: ${{ inputs.bulk_end_date }}
+        run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
+        shell: bash
 
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
@@ -236,4 +247,41 @@ jobs:
             echo "Re-dispatch queued. This workflow exits; new run continues the drain."
           else
             echo "::notice::Composite backfill COMPLETE — 0 rows without composite. No re-dispatch."
+          fi
+
+      - name: Self-relaunch bulk-import until date-window hits END_DATE
+        # CF-BULK-IMPORT-SELF-RELAUNCH (Drew, 2026-07-30). Bulk import
+        # walks backward through ch_daily_sales in 7-day slices, capped
+        # at BULK_LIMIT=500K rows per iteration. To cover the full 8yr
+        # corpus (~18M rows/yr), the script must re-dispatch itself with
+        # the "next start date" as its new BULK_START_DATE. Reads the
+        # printed "next start date:" line from the log, then re-dispatches
+        # if the date is still > END_DATE (2018-01-01 default).
+        if: ${{ always() && inputs.script == 'bulk-import-ch-daily-to-sold-comps' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          NEXT_START=$(grep -oE 'next start date:\s+[0-9-]+' /tmp/backfill.log 2>/dev/null | tail -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+          END_DATE="${{ inputs.bulk_end_date }}"
+          [ -z "$END_DATE" ] && END_DATE="2018-01-01"
+          echo "next_start=$NEXT_START  end_date=$END_DATE"
+          if [ -z "$NEXT_START" ]; then
+            echo "::warning::Could not parse next start date from log — no self-relaunch. Manual re-dispatch will be needed."
+            exit 0
+          fi
+          if [ "$NEXT_START" \> "$END_DATE" ]; then
+            echo "::notice::Bulk import has more history to cover — re-dispatching with BULK_START_DATE=$NEXT_START"
+            gh workflow run backfill-runner.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              -f script=bulk-import-ch-daily-to-sold-comps \
+              -f apply=true \
+              -f concurrency="${{ inputs.concurrency }}" \
+              -f bulk_start_date="$NEXT_START" \
+              -f bulk_end_date="$END_DATE"
+            echo "Re-dispatch queued. This workflow exits; new run continues walking backward."
+          else
+            echo "::notice::Bulk import reached END_DATE ($END_DATE). Full corpus back-import complete."
           fi
