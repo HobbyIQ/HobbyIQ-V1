@@ -331,26 +331,44 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   const gradeCompany = input.gradeCompany ?? null;
   const gradeValue = input.gradeValue ?? null;
 
-  // CF-HOBBYIQ-FMV-BROADER-TREND-ANCHOR (Drew, 2026-07-28). Read the
-  // same-identity broader-set trend ONCE per computeHobbyIqFmv call
-  // and thread into every buildResult. The query — (year, cardNumber,
-  // isAuto, sport) any parallel — nearly always has more dated comps
-  // than any single-parallel rung, so its regression slope reads a
-  // trustworthy market direction that buildResult can uplift a thin
-  // anchor with. Null when the broader pool itself is too thin for
-  // a regression (n<3 or all-same-date). Fired in parallel with the
-  // population lookup so it doesn't add serial latency.
-  const broaderIdentityTrendPromise = queryPool(
-    container,
-    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
-    [
+  // CF-HOBBYIQ-FMV-BROADER-TREND-ANCHOR (Drew, 2026-07-28, revised
+  // 2026-07-30). Read the same-identity broader-set trend ONCE per
+  // computeHobbyIqFmv call and thread into every buildResult.
+  //
+  // ORIGINAL query pooled ANY parallel of same (year, cardNumber,
+  // isAuto, sport). Problem: if recent sales are all BASE ($5) and
+  // earlier sales were mixed with GOLD/RED ($200+), OLS regression
+  // reads a huge negative slope — but that's a COLOR-MIX SHIFT over
+  // time, not a market decay. Seen in A/B on 2026 Bowman CPA-BA
+  // returning -41%/mo when the color mix was rotating from earlier
+  // GOLD sales to recent BLUE and BASE.
+  //
+  // FIX: restrict the broader pool to the SAME colorFamily as the
+  // target when the target row has a composite. That way OLS reads
+  // the price trend of the specific variant class, not the mix. Falls
+  // back to the wider pool when target lacks composite (unbackfilled).
+  // Target's colorFamily comes from a quick composite lookup fired
+  // alongside the trend query so it doesn't add serial latency.
+  const targetCompositePromise = container.items.query<{ composite?: { colorFamily?: string | null } | null }>({
+    query: "SELECT TOP 1 c.composite FROM c WHERE c.hobbyiqCardId = @slug",
+    parameters: [{ name: "@slug", value: slug }],
+  }).fetchAll().then(({ resources }) => resources[0]?.composite ?? null).catch(() => null);
+
+  const broaderIdentityTrendPromise = targetCompositePromise.then(async (targetComp) => {
+    const targetColor = targetComp?.colorFamily ?? null;
+    const params: Array<{ name: string; value: string | number | boolean | null }> = [
       { name: "@y", value: parsed.year },
       { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
       { name: "@auto", value: parsed.isAuto },
       { name: "@sport", value: parsed.sport },
-    ],
-    cutoffIso,
-  )
+    ];
+    let where = "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport";
+    if (targetColor) {
+      where += " AND c.composite.colorFamily = @cf";
+      params.push({ name: "@cf", value: targetColor });
+    }
+    return queryPool(container, where, params, cutoffIso);
+  })
     .then((broaderRows) => {
       const kept = partitionByQuality(broaderRows).kept;
       if (kept.length < 3) return null;
@@ -360,11 +378,11 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       if (t.method !== "regression") return null;
       const slope = t.slopePerMonthPct;
       if (!Number.isFinite(slope)) return null;
-      // Guard runaway trends (a base pool spiking to +200%/mo would
-      // extrapolate the anchor into fantasy territory). Cap symmetric
-      // around ±60%/mo — well beyond real market direction, tight
-      // enough to catch OLS pathology on same-week volume spikes.
-      return Math.max(-60, Math.min(60, slope));
+      // Guard runaway trends. With same-color pool, real market
+      // direction rarely exceeds ±25%/mo — anything larger is OLS
+      // pathology from a tight same-week volume spike or a single
+      // outlier. Cap tight.
+      return Math.max(-25, Math.min(25, slope));
     })
     .catch(() => null);
 
@@ -1257,8 +1275,16 @@ async function tryCompositePath(
   slug: string,
   now: Date,
 ): Promise<HobbyIqFmvResult | null> {
-  const MIN_COMPS = Number(process.env.HOBBYIQFMV_COMPOSITE_MIN_COMPS ?? "5");
-  const MAX_DIST = Number(process.env.HOBBYIQFMV_COMPOSITE_MAX_DIST ?? "4");
+  // CF-COMPOSITE-TIGHTEN (Drew, 2026-07-30). A/B test showed the
+  // composite path was over-widening — 200-row pools across every
+  // prospect in a set. Root cause: filter lacked cardNumber (fixed in
+  // findNeighborComps). Belt-and-suspenders here: cap MAX_DIST at 2
+  // (only drop 2 variant axes before giving up), cap the working pool
+  // at 30 (median of a small tight pool is what we want, not a huge
+  // mixed pool), and require min 3 direct-match comps to fire.
+  const MIN_COMPS = Number(process.env.HOBBYIQFMV_COMPOSITE_MIN_COMPS ?? "3");
+  const MAX_DIST = Number(process.env.HOBBYIQFMV_COMPOSITE_MAX_DIST ?? "2");
+  const MAX_POOL = Number(process.env.HOBBYIQFMV_COMPOSITE_MAX_POOL ?? "30");
 
   // Step 1: Derive filter from slug. Enrich with the target's own
   // composite (colorFamily / edition / finishModifier) when available.
@@ -1292,10 +1318,15 @@ async function tryCompositePath(
   };
 
   // Step 2: Neighbor lookup with axis-drop widening.
+  // Note: filter is anchored on (sport, cardYear, cardNumber, isAuto)
+  // via compositeFilterFromCardId — those NEVER drop. Only variant
+  // axes (color / finish / edition / etc) widen if the tight pool is
+  // thin. maxComps=MAX_POOL keeps the working pool small enough that
+  // the median stays representative of THIS card, not the set cohort.
   const neighbors = await findNeighborComps(container, filter, {
     maxDistance: MAX_DIST,
-    minComps: 20,
-    maxComps: 200,
+    minComps: MIN_COMPS,
+    maxComps: MAX_POOL,
     recencyDays: input.maxAgeDays ?? 180,
   });
 
@@ -1303,9 +1334,10 @@ async function tryCompositePath(
     return null; // Fall through to legacy ladder
   }
 
-  // Step 3: Build the base trend fit from the neighbor pool. Use
-  // distance=0 (exact composite match) comps first; extend to distance 1+
-  // if the exact pool is thin.
+  // Step 3: Prefer the tightest match. If distance=0 has enough comps,
+  // use ONLY those — never contaminate a good direct-slug pool with
+  // widened neighbors. Only fall to the mixed set when distance=0 is
+  // insufficient.
   const exact = neighbors.filter(n => n.distance === 0);
   const workingComps = exact.length >= MIN_COMPS ? exact : neighbors;
 
@@ -1317,15 +1349,24 @@ async function tryCompositePath(
   const projection = projectNextSaleFromComps(compsForProjection, { forwardDays: 0, minNForRegression: 3 });
   if (!projection || !Number.isFinite(projection.nextSaleValue)) return null;
 
-  // Step 4: Compute per-axis multiplier adjustment.
+  // Step 4: Compute per-axis multiplier adjustment ONLY for axes that
+  // were DROPPED to gather workingComps. Applying, say, the BLUE
+  // multiplier to a pool that's already BLUE-only double-counts the
+  // premium. Only when the finishModifier axis was dropped do we
+  // multiply by the target's finishModifier premium — because the pool
+  // then contains mixed finishes and needs to be normalized up to the
+  // target's finish. gradeCompany + gradeValue are always in the
+  // filter, so gradeTier is never applied here (pool is grade-matched
+  // by construction).
+  const droppedAxes = new Set(workingComps.flatMap(n => n.droppedAxes));
   const adjustment = await computeAxisAdjustment({
     productLine: parsed.setKey,
-    colorFamily: targetComposite?.colorFamily ?? null,
-    edition: targetComposite?.edition ?? null,
-    finishModifier: targetComposite?.finishModifier ?? null,
-    autoStyle: input.gradeCompany ? null : null, // TODO: thread autoStyle when caller provides it
-    gradeCompany: input.gradeCompany ?? null,
-    gradeValue: input.gradeValue ?? null,
+    colorFamily: droppedAxes.has("colorFamily") ? (targetComposite?.colorFamily ?? null) : null,
+    edition: droppedAxes.has("edition") ? (targetComposite?.edition ?? null) : null,
+    finishModifier: droppedAxes.has("finishModifier") ? (targetComposite?.finishModifier ?? null) : null,
+    autoStyle: null,
+    gradeCompany: null,
+    gradeValue: null,
   });
 
   const baseFmv = projection.nextSaleValue;

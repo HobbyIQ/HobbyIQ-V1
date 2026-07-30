@@ -26,6 +26,7 @@ export interface CompositeFilter {
   sport?: string | null;
   cardYear?: number | null;
   playerName?: string | null;
+  cardNumber?: string | null;       // CPA-BA / BCP-102 / 82 — anchor axis, never dropped
   productLine?: string | null;      // setKey slot from slug
   edition?: string | null;
   insertSet?: string | null;
@@ -62,13 +63,16 @@ export interface NeighborLookupOptions {
   axisDropOrder?: Array<keyof CompositeFilter>;
 }
 
+// Anchor axes never appear here: sport, cardYear, cardNumber, isAuto
+// identify WHICH CARD. They are always kept. Only the VARIANT axes
+// (which specific parallel of that card) are progressively dropped.
 const DEFAULT_AXIS_DROP: Array<keyof CompositeFilter> = [
   "serialRun",
   "finishModifier",
   "colorFamily",
   "insertSet",
   "edition",
-  "productLine",  // last resort: any product for same player+year
+  "productLine",  // last resort: any product for same cardNumber+year
 ];
 
 /** Derive a CompositeFilter from a slug (hiq:...:...). Useful when
@@ -80,6 +84,7 @@ export function compositeFilterFromCardId(cardId: string): CompositeFilter {
     sport: parts.sport,
     cardYear: parts.year,
     productLine: parts.setKey,
+    cardNumber: parts.cardNumber ?? null,   // anchor axis — never dropped
     isAuto: parts.isAuto,
     serialRun: parts.printRun ?? null,
     // colorFamily / edition / insertSet / finishModifier live in
@@ -104,6 +109,14 @@ function buildFilterClause(f: CompositeFilter): { where: string; parameters: Arr
   if (f.sport != null) add("c.sport", f.sport);
   if (f.cardYear != null) add("c.cardYear", f.cardYear);
   if (f.playerName != null) add("c.playerName", f.playerName);
+  if (f.cardNumber != null) {
+    // cardNumber slugs are lowercased in hobbiqCardId but stored as
+    // vendor-provided casing on the doc's c.cardNumber field. Compare
+    // uppercased both sides.
+    const pname = `@p${params.length}`;
+    conds.push(`UPPER(c.cardNumber) = ${pname}`);
+    params.push({ name: pname, value: String(f.cardNumber).toUpperCase() });
+  }
   if (f.isAuto != null) add("c.isAuto", f.isAuto);
   if (f.gradeCompany != null) add("c.gradeCompany", f.gradeCompany);
   if (f.gradeValue != null) add("c.gradeValue", f.gradeValue);
