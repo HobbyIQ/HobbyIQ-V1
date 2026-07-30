@@ -17,7 +17,7 @@
 const path = require("path");
 const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+const { computeHobbyIqCardId, matchKnownProductLine } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
@@ -82,12 +82,20 @@ async function main() {
     } catch { noPrintRunInTitle++; continue; }
     if (parsed.printRun == null) { noPrintRunInTitle++; continue; }
 
+    // CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Never default to
+    // "bowman" — that silent fallback was landing Panini/Topps rows in
+    // the Bowman namespace. Precedence: title-derived > existing slug > skip.
+    const setKey = matchKnownProductLine(title)
+      || (r.hobbyiqCardId || "").split(":")[3]
+      || null;
+    if (!setKey) { computeFailed++; continue; }
+
     let newSlug;
     try {
       newSlug = computeHobbyIqCardId({
         sport: r.sport || "baseball",
         year: Number(r.cardYear),
-        setKey: (r.hobbyiqCardId || "").split(":")[3] || "bowman",
+        setKey,
         cardNumber: r.cardNumber || "",
         parallel: r.parallel || "Base",
         isAuto: r.isAuto === true,

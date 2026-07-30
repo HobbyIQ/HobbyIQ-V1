@@ -78,14 +78,22 @@ function normalizeSport(sport: string): string {
   return s;
 }
 
-/** Normalize setKey — accepts either an already-normalized short form
- *  ("bowman-chrome") or a longer product string ("2026 Bowman Chrome
- *  Prospects Baseball") and returns the canonical short form. */
-function normalizeSetKey(setName: string): string {
-  const s = slugify(setName);
-  // Controlled-vocabulary short forms. Order matters: more-specific
-  // patterns first so "bowman-chrome-draft" doesn't collapse to "bowman".
-  const known: Array<[RegExp, string]> = [
+// The controlled vocabulary.
+//
+// Two tiers (CF-CROSS-PRODUCT-MIS-SLUG-FIX, Drew, 2026-07-30):
+//   1. STRICT — matches fully-qualified product names ("panini-select",
+//      "topps-chrome"). Every Panini title includes "prizm" as parallel
+//      language ("Blue Prizm", "Gold Prizm") even when the product is
+//      Select/Playoff/Mosaic; matching bare "prizm" first stole every
+//      cross-product row for panini-prizm. Strict tier prevents that.
+//   2. BARE — fallback aliases for titles that omit the brand prefix
+//      ("2024 Prizm Silver ..."). Only consulted when strict tier
+//      returns nothing.
+//
+// Order matters WITHIN each tier: more-specific patterns first so
+// "bowman-chrome-draft" doesn't collapse to "bowman".
+function knownSetKeyPatterns(): Array<[RegExp, string]> {
+  return [
     // Sapphire is a distinct product LINE, not a parallel. Must match
     // BEFORE the base bowman-chrome / topps-chrome patterns.
     [/bowman-chrome-sapphire|bowman-sapphire/, "bowman-chrome-sapphire"],
@@ -144,25 +152,39 @@ function normalizeSetKey(setName: string): string {
     [/allen-(and-)?ginter/, "topps-allen-ginter"],
     [/stadium-club/, "topps-stadium-club"],
     [/topps/, "topps"],
-    [/panini-prizm|prizm/, "panini-prizm"],
-    [/panini-select|select/, "panini-select"],
-    [/panini-mosaic|mosaic/, "panini-mosaic"],
-    [/panini-donruss|donruss/, "panini-donruss"],
-    [/panini-optic|optic/, "panini-optic"],
-    [/panini-contenders|contenders/, "panini-contenders"],
-    [/panini-immaculate|immaculate/, "panini-immaculate"],
-    [/panini-flawless|flawless/, "panini-flawless"],
+    // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
+    // comment on knownSetKeyPatterns. National Treasures is included
+    // here as a bare match because the name is uniquely Panini.
+    [/panini-prizm/, "panini-prizm"],
+    [/panini-select/, "panini-select"],
+    [/panini-mosaic/, "panini-mosaic"],
+    [/panini-donruss-optic/, "panini-optic"],
+    [/panini-donruss/, "panini-donruss"],
+    [/panini-optic/, "panini-optic"],
+    [/panini-contenders/, "panini-contenders"],
+    [/panini-immaculate/, "panini-immaculate"],
+    [/panini-flawless/, "panini-flawless"],
     [/national-treasures/, "panini-national-treasures"],
-    // CF-PANINI-PRODUCT-LINES (Drew, 2026-07-29). Full Panini taxonomy.
-    [/panini-absolute|absolute/, "panini-absolute"],
-    [/panini-chronicles|chronicles/, "panini-chronicles"],
-    [/panini-phoenix|phoenix/, "panini-phoenix"],
-    [/panini-illusions|illusions/, "panini-illusions"],
-    [/panini-obsidian|obsidian/, "panini-obsidian"],
-    [/panini-spectra|spectra/, "panini-spectra"],
-    [/panini-revolution|revolution/, "panini-revolution"],
+    [/panini-absolute/, "panini-absolute"],
+    [/panini-chronicles/, "panini-chronicles"],
+    [/panini-phoenix/, "panini-phoenix"],
+    [/panini-illusions/, "panini-illusions"],
+    [/panini-obsidian/, "panini-obsidian"],
+    [/panini-spectra/, "panini-spectra"],
+    [/panini-revolution/, "panini-revolution"],
     [/panini-crown-royale/, "panini-crown-royale"],
-    [/panini-one-one|one-one/, "panini-one-one"],
+    [/panini-one-one/, "panini-one-one"],
+    [/panini-playoff/, "panini-playoff"],
+    [/panini-score/, "panini-score"],
+    [/panini-classics/, "panini-classics"],
+    [/panini-legacy/, "panini-legacy"],
+    [/panini-threads/, "panini-threads"],
+    [/panini-rookies-and-stars/, "panini-rookies-and-stars"],
+    [/panini-zenith/, "panini-zenith"],
+    [/panini-court-kings/, "panini-court-kings"],
+    [/panini-origins/, "panini-origins"],
+    [/panini-encased/, "panini-encased"],
+    [/panini-eminence/, "panini-eminence"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan
@@ -170,12 +192,88 @@ function normalizeSetKey(setName: string): string {
     [/fleer-stickers?/, "fleer-stickers"],
     [/fleer/, "fleer"],
   ];
-  for (const [re, canonical] of known) {
+}
+
+// BARE tier — vendor titles that omit the brand prefix ("2024 Prizm
+// Silver ..."). Word-boundary-anchored so "prizm" the parallel word
+// doesn't match inside "Blue Prizm". Only consulted when the strict
+// tier returns nothing. Ordering within this tier still matters —
+// more-specific bare aliases first.
+function bareAliasPatterns(): Array<[RegExp, string]> {
+  return [
+    [/(^|-)court-kings(-|$)/, "panini-court-kings"],
+    [/(^|-)rookies-and-stars(-|$)/, "panini-rookies-and-stars"],
+    [/(^|-)crown-royale(-|$)/, "panini-crown-royale"],
+    [/(^|-)prizm(-|$)/, "panini-prizm"],
+    [/(^|-)mosaic(-|$)/, "panini-mosaic"],
+    [/(^|-)donruss(-|$)/, "panini-donruss"],
+    [/(^|-)optic(-|$)/, "panini-optic"],
+    [/(^|-)contenders(-|$)/, "panini-contenders"],
+    [/(^|-)immaculate(-|$)/, "panini-immaculate"],
+    [/(^|-)flawless(-|$)/, "panini-flawless"],
+    [/(^|-)absolute(-|$)/, "panini-absolute"],
+    [/(^|-)chronicles(-|$)/, "panini-chronicles"],
+    [/(^|-)phoenix(-|$)/, "panini-phoenix"],
+    [/(^|-)illusions(-|$)/, "panini-illusions"],
+    [/(^|-)obsidian(-|$)/, "panini-obsidian"],
+    [/(^|-)spectra(-|$)/, "panini-spectra"],
+    [/(^|-)revolution(-|$)/, "panini-revolution"],
+    [/(^|-)playoff(-|$)/, "panini-playoff"],
+    [/(^|-)classics(-|$)/, "panini-classics"],
+    [/(^|-)legacy(-|$)/, "panini-legacy"],
+    [/(^|-)threads(-|$)/, "panini-threads"],
+    [/(^|-)zenith(-|$)/, "panini-zenith"],
+    [/(^|-)encased(-|$)/, "panini-encased"],
+    [/(^|-)eminence(-|$)/, "panini-eminence"],
+    [/(^|-)origins(-|$)/, "panini-origins"],
+    // NOTE: "select" and "score" are excluded from bare tier — they
+    // appear in too many false-positive contexts ("Select Level Blue
+    // Prizm" isn't necessarily Panini Select the product; "Score" also
+    // appears in random title text). Panini Select and Panini Score
+    // rows must include the "Panini" brand word in the title to match
+    // via the strict tier.
+  ];
+}
+
+/** Normalize setKey — accepts either an already-normalized short form
+ *  ("bowman-chrome") or a longer product string ("2026 Bowman Chrome
+ *  Prospects Baseball") and returns the canonical short form. Falls back
+ *  to slugified full name when no known pattern matches (preserves
+ *  determinism). Callers that need STRICT matching (return null on
+ *  unknown) should use matchKnownProductLine below. */
+export function normalizeSetKey(setName: string): string {
+  const s = slugify(setName);
+  for (const [re, canonical] of knownSetKeyPatterns()) {
     if (re.test(s)) return canonical;
   }
-  // Unknown set — fall back to slugified full name. Not ideal but
-  // preserves determinism.
+  for (const [re, canonical] of bareAliasPatterns()) {
+    if (re.test(s)) return canonical;
+  }
   return s;
+}
+
+/** CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Strict variant of
+ *  normalizeSetKey: returns the canonical short form ONLY when the input
+ *  matches a known product-line pattern; returns null otherwise. Use
+ *  this in backfill scripts that were previously defaulting to "bowman"
+ *  when they couldn't extract setKey — silent "bowman" fallback landed
+ *  Panini/Topps/other rows in the Bowman namespace. Callers should now
+ *  fall back to the existing slug's setKey when this returns null,
+ *  or skip the row entirely.
+ *
+ *  Two-pass: strict brand-qualified patterns (e.g. "panini-select") win
+ *  over bare aliases (e.g. "prizm"). This prevents "Panini Playoff Blue
+ *  Prizm 3/10" from being mis-classified as panini-prizm because "prizm"
+ *  appears in the parallel language of every Panini product. */
+export function matchKnownProductLine(text: string): string | null {
+  const s = slugify(text);
+  for (const [re, canonical] of knownSetKeyPatterns()) {
+    if (re.test(s)) return canonical;
+  }
+  for (const [re, canonical] of bareAliasPatterns()) {
+    if (re.test(s)) return canonical;
+  }
+  return null;
 }
 
 /** Normalize cardNumber: lowercase, kept literal. Preserves letters,

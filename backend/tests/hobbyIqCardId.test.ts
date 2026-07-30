@@ -8,6 +8,7 @@ import {
   computeHobbyIqCardId,
   parseHobbyIqCardId,
   slugify,
+  matchKnownProductLine,
 } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 describe("slugify", () => {
@@ -569,5 +570,47 @@ describe("parseHobbyIqCardId — round-trip", () => {
     expect(parsed).not.toBeNull();
     const slug2 = computeHobbyIqCardId(parsed!);
     expect(slug1).toBe(slug2);
+  });
+});
+
+// CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Regressions.
+describe("matchKnownProductLine — strict product-line detection", () => {
+  it("returns panini-playoff for a Panini Playoff title (was falling through to slugify)", () => {
+    expect(matchKnownProductLine("2020 Panini Playoff Justin Herbert RC Call to Arms Gold Prizm 3/10 PSA 10"))
+      .toBe("panini-playoff");
+  });
+  it("returns panini-prizm for a Panini Prizm title", () => {
+    expect(matchKnownProductLine("2020 Panini Prizm Silver Ja Morant Rookie"))
+      .toBe("panini-prizm");
+  });
+  it("returns panini-select for a Panini Select title", () => {
+    expect(matchKnownProductLine("2020 Panini Select Justin Herbert #244 Club Level Blue Prizm"))
+      .toBe("panini-select");
+  });
+  it("returns topps-chrome for a Topps Chrome title", () => {
+    expect(matchKnownProductLine("2024 Topps Chrome Refractor Aaron Judge"))
+      .toBe("topps-chrome");
+  });
+  it("returns bowman-chrome-sapphire (edition specificity preserved)", () => {
+    expect(matchKnownProductLine("2020 BOWMAN CHROME SAPPHIRE Bobby Witt Jr Auto"))
+      .toBe("bowman-chrome-sapphire");
+  });
+  it("returns bowman-chrome for a Bowman Chrome title", () => {
+    expect(matchKnownProductLine("2024 Bowman Chrome Eric Hartman CPA-EHA"))
+      .toBe("bowman-chrome");
+  });
+  it("returns null when NO known product-line pattern matches (strict — no fall-through)", () => {
+    expect(matchKnownProductLine("just some random text about cards"))
+      .toBeNull();
+    expect(matchKnownProductLine(""))
+      .toBeNull();
+  });
+  it("returns panini-classics on a football classics title (previously missing rule)", () => {
+    expect(matchKnownProductLine("2020 Panini Classics Justin Herbert RC #201"))
+      .toBe("panini-classics");
+  });
+  it("longest-match-first: 'Bowman Chrome Prospects' → bowman-chrome (not chrome-prospects fallback)", () => {
+    expect(matchKnownProductLine("2024 Bowman Chrome Prospects CPA-EHA Eric Hartman"))
+      .toBe("bowman-chrome");
   });
 });
