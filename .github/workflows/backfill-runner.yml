@@ -51,6 +51,8 @@ on:
           - audit-ladder-violations
           - prototype-neighbor-lookup
           - market-analysis-composite
+          - refresh-market-signals
+          - refresh-calibration-multipliers
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
