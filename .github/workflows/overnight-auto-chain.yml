@@ -1,0 +1,182 @@
+name: Overnight Auto-Chain (post-backfill signals + calibration + audit)
+
+# CF-OVERNIGHT-AUTO-CHAIN (Drew, 2026-07-30). Fire-and-forget chain that
+# waits for a composite-backfill run to complete, then sequentially
+# runs the three post-backfill jobs, then opens a GitHub issue with a
+# summary + next-step checklist. STOPS before the FMV flag flip —
+# that live-config change requires explicit HALT-for-confirm.
+#
+# Usage:
+#   gh workflow run overnight-auto-chain.yml \
+#     -f wait_for_run_id=<backfill-run-id>
+#
+# Pass an empty wait_for_run_id to skip the wait and run everything
+# immediately (useful when backfill has already completed).
+
+on:
+  workflow_dispatch:
+    inputs:
+      wait_for_run_id:
+        description: "Backfill run ID to wait for (empty = run chain immediately)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    # 180 min: backfill has 120 min ceiling + we need up to 45 min for
+    # the three chained steps + a buffer.
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Wait for backfill run to finish
+        if: ${{ inputs.wait_for_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          RUN_ID="${{ inputs.wait_for_run_id }}"
+          echo "Waiting for backfill run $RUN_ID to complete..."
+          ATTEMPT=0
+          while [ $ATTEMPT -lt 90 ]; do
+            STATUS=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo "unknown")
+            CONCLUSION=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion --jq '.conclusion' 2>/dev/null || echo "")
+            echo "[$(date -u +%H:%M:%S)] attempt=$ATTEMPT status=$STATUS conclusion=$CONCLUSION"
+            if [ "$STATUS" = "completed" ]; then
+              echo "Backfill run $RUN_ID reached terminal state: $CONCLUSION"
+              # Non-success is still OK — we've already emitted composite for
+              # everything written so far; the chain adds value regardless.
+              break
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 90
+          done
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend dist
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3
+        shell: bash
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv)
+          if [ -z "$CS" ]; then
+            echo "::error::FAILED to fetch COSMOS_CONNECTION_STRING"
+            exit 1
+          fi
+          echo "::add-mask::$CS"
+          echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
+
+      - name: "Step 1/3: Refresh market signals (daily momentum)"
+        id: signals
+        env:
+          MARKET_SIGNALS_APPLY: "true"
+          MARKET_SIGNALS_WINDOW_DAYS: "30"
+          MARKET_SIGNALS_MIN_VOLUME: "20"
+        shell: bash
+        run: |
+          set -o pipefail
+          node backend/scripts/refresh-market-signals.cjs 2>&1 | tee /tmp/signals.log
+          echo "signals_exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: "Step 2/3: Refresh calibration multipliers (weekly fit)"
+        id: calibration
+        env:
+          CALIBRATION_APPLY: "true"
+          CALIBRATION_WINDOW_DAYS: "90"
+        shell: bash
+        run: |
+          set -o pipefail
+          node backend/scripts/refresh-calibration-multipliers.cjs 2>&1 | tee /tmp/calibration.log
+          echo "cal_exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: "Step 3/3: Audit ladder violations (read-only report)"
+        id: audit
+        env:
+          BACKFILL_APPLY: "false"
+        shell: bash
+        run: |
+          set -o pipefail
+          node backend/scripts/audit-ladder-violations.cjs 2>&1 | tee /tmp/audit.log
+          echo "audit_exit=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Open review issue with morning checklist
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          SIGNALS_TAIL=$(tail -n 40 /tmp/signals.log 2>/dev/null || echo "(no signals log)")
+          CAL_TAIL=$(tail -n 40 /tmp/calibration.log 2>/dev/null || echo "(no calibration log)")
+          AUDIT_TAIL=$(tail -n 80 /tmp/audit.log 2>/dev/null || echo "(no audit log)")
+
+          BODY=$(cat <<EOF
+          # Overnight auto-chain summary — $(date -u +%Y-%m-%d)
+
+          Chain triggered by workflow run [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
+
+          ## What ran overnight
+          1. ✅ Waited for composite backfill to complete
+          2. ✅ Refreshed daily market signals (30d vs prior-30d momentum, 9 dimensions)
+          3. ✅ Refreshed weekly calibration multipliers (color ladder / edition / finish / autoStyle / gradeTier)
+          4. ✅ Audited ladder violations (read-only report)
+
+          ## Your morning checklist
+          - [ ] Inspect the calibration multipliers written to \`market_signals\` — do color-ladder / edition / finish premiums pass smell test?
+              - Bowman Chrome BLUE should be ~2-3× BASE, SUPERFRACTOR 1/1 should be dominant
+              - SAPPHIRE edition should be ~1.5-2× flagship
+              - on-card autoStyle should be > sticker (~1.3-1.5×)
+          - [ ] Run the neighbor-lookup prototype on 5-10 real cardIds to verify axis-drop tree behaves
+          - [ ] A/B test composite vs legacy FMV on ~100 sample cards (dispatch \`prototype-neighbor-lookup\` script)
+          - [ ] If everything looks clean → HALT for confirm before setting \`HOBBYIQFMV_COMPOSITE_ENABLED=true\` on HobbyIQ3 App Service
+
+          ## Signals log (last 40 lines)
+          \`\`\`
+          $SIGNALS_TAIL
+          \`\`\`
+
+          ## Calibration log (last 40 lines)
+          \`\`\`
+          $CAL_TAIL
+          \`\`\`
+
+          ## Ladder audit log (last 80 lines)
+          \`\`\`
+          $AUDIT_TAIL
+          \`\`\`
+          EOF
+          )
+          echo "$BODY" | gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "🌙 Overnight auto-run — review $(date -u +%Y-%m-%d)" \
+            --body-file -
