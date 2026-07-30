@@ -68,6 +68,26 @@ describe("checkSlabAgainstIdentity — happy path", () => {
     expect(r.agreements).toEqual(expect.arrayContaining(["cardNumber=BCP102"]));
   });
 
+  // CF-CARDNUMBER-LEADING-ZERO (Drew, 2026-07-29). Prototype inconclusive
+  // tail showed "#87" (parser) vs "#087" (slab label) rejected as
+  // disagreement. Pure-digit strings should ignore leading zeros;
+  // letter-prefixed numbers keep their format.
+  it("cardNumber: '87' matches '087' (leading zero on pure-digit)", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, cardNumber: "87" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, cardNumber: "087" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    expect(r.agreements).toEqual(expect.arrayContaining(["cardNumber=087"]));
+    expect(r.disagreements.some(d => d.startsWith("cardNumber:"))).toBe(false);
+  });
+  it("cardNumber: letter-prefixed strings still exact-match (BCP-87 != BCP-087)", () => {
+    const ident: ParsedIdentity = { ...IDENT_JUDGE, cardNumber: "BCP-87" };
+    const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, cardNumber: "BCP-087" };
+    const r = checkSlabAgainstIdentity(slab, ident);
+    // These are genuinely different cardNumbers in the letter-prefixed
+    // format; only pure-digit leading zeros are equivalent.
+    expect(r.disagreements.some(d => d.startsWith("cardNumber:"))).toBe(true);
+  });
+
   it("player fuzzy match: 'Shohei Ohtani' contains 'OHTANI'", () => {
     const slab: SlabLabel = { ...SLAB_JUDGE_EXACT, playerName: "OHTANI" };
     const r = checkSlabAgainstIdentity(slab, IDENT_JUDGE);

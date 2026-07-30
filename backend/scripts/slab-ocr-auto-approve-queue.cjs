@@ -38,7 +38,11 @@ const { resolveQueued } = require(path.join(backend, "dist/services/portfolioiq/
 
 const APPLY = process.env.APPROVE_APPLY === "true";
 const LIMIT = Math.max(1, Math.min(1000, Number(process.env.APPROVE_LIMIT || "200")));
-const CONCURRENCY = Math.max(1, Math.min(16, Number(process.env.APPROVE_CONCURRENCY || "4")));
+// HARD CAP concurrency at 4 for slab-OCR — AOAI TPM limits hit hard at
+// 16 (429s dominated the first apply). Backfill Runner defaults env
+// concurrency to 16 for reslug scripts; for LLM-bound scripts we
+// override in-script to protect the deployment quota.
+const CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.APPROVE_CONCURRENCY || "4")));
 const ADMIN_USER_ID = "slab-ocr-auto-approve";
 
 async function runInParallel(items, worker, concurrency = CONCURRENCY) {
@@ -97,6 +101,9 @@ async function main() {
     alreadyResolved: 0,
     totalLlmMs: 0,
   };
+  // Error-type histogram so we know whether failures are AOAI rate
+  // limits vs expired eBay image URLs vs image decode errors vs other.
+  const errorHisto = { rateLimit: 0, timeout: 0, imageUrl4xx: 0, jsonParse: 0, other: 0 };
   const disagreementSample = [];
 
   await runInParallel(rows, async (r, idx) => {
@@ -106,6 +113,12 @@ async function main() {
 
     if (!extract.ok) {
       stats.extractionFailed++;
+      const err = String(extract.error || "");
+      if (/\b429\b|rate\s?limit|throttl/i.test(err)) errorHisto.rateLimit++;
+      else if (/timeout|ETIMEDOUT|ECONNRESET/i.test(err)) errorHisto.timeout++;
+      else if (/\b(400|403|404)\b|image_url|invalid.*image/i.test(err)) errorHisto.imageUrl4xx++;
+      else if (/JSON parse|json/i.test(err)) errorHisto.jsonParse++;
+      else errorHisto.other++;
       if (idx < 5) console.log(`  ✗ ${r.id.slice(0,8)} extraction failed: ${extract.error}`);
       return;
     }
@@ -177,6 +190,13 @@ async function main() {
   console.log(`\n════════════════ SUMMARY ════════════════`);
   console.log(`  scanned:              ${rows.length}`);
   console.log(`  extraction failed:    ${stats.extractionFailed}`);
+  if (stats.extractionFailed > 0) {
+    console.log(`    ↳ rate-limit (429):    ${errorHisto.rateLimit}`);
+    console.log(`    ↳ timeout:             ${errorHisto.timeout}`);
+    console.log(`    ↳ image url 4xx:       ${errorHisto.imageUrl4xx}`);
+    console.log(`    ↳ json-parse:          ${errorHisto.jsonParse}`);
+    console.log(`    ↳ other:               ${errorHisto.other}`);
+  }
   console.log(`  hasSlab=false (raw):  ${stats.hasSlabFalse}`);
   console.log(`  MATCHED:              ${stats.matched}`);
   console.log(`  inconclusive:         ${stats.inconclusive}`);
