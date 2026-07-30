@@ -1,0 +1,9 @@
+{
+  "productKey": "2025-bowman-draft",
+  "sport": "baseball",
+  "year": 2025,
+  "setKey": "bowman-draft",
+  "source": "seed",
+  "confidence": 0.95,
+  "provenance": "baseballcardpedia.com fetched 2026-07-30 — BD paper base 1..200. Chrome (BDC) mirrors of the same numbers pending followup."
+}
