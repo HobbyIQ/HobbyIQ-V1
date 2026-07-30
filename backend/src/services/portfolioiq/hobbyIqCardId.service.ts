@@ -166,7 +166,10 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-flawless/, "panini-flawless"],
     [/national-treasures/, "panini-national-treasures"],
     [/panini-absolute/, "panini-absolute"],
-    [/panini-chronicles/, "panini-chronicles"],
+    // CF-CHRONICLES-VARIANT (Drew, 2026-07-30). CH has "Panini Chronicled"
+    // (participle form) for some 2025 basketball products (Caitlin Clark).
+    // Same product family as Chronicles — pool together.
+    [/panini-chronicled|panini-chronicles/, "panini-chronicles"],
     [/panini-phoenix/, "panini-phoenix"],
     [/panini-illusions/, "panini-illusions"],
     [/panini-obsidian/, "panini-obsidian"],
@@ -226,6 +229,7 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)immaculate(-|$)/, "panini-immaculate"],
     [/(^|-)flawless(-|$)/, "panini-flawless"],
     [/(^|-)absolute(-|$)/, "panini-absolute"],
+    [/(^|-)chronicled(-|$)/, "panini-chronicles"],
     [/(^|-)chronicles(-|$)/, "panini-chronicles"],
     [/(^|-)phoenix(-|$)/, "panini-phoenix"],
     [/(^|-)illusions(-|$)/, "panini-illusions"],
