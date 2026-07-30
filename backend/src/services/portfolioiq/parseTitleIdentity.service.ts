@@ -65,14 +65,107 @@ export function parseListingIdentity(
   cardNumberRe?: RegExp,
 ): ParsedListingIdentity {
   const t = String(title ?? "");
-  const isAuto = extractIsAuto(t);
+  const cardNumber = extractCardNumber(t, cardNumberRe);
+  // CF-CARDNUMBER-IMPLIES-AUTO (Drew, 2026-07-30). Auto-subset card
+  // numbers carry a fixed prefix on ALL products — CPA-, BCPA-, BSPA-,
+  // BDA-, BPA-, BCRA-, TCRA-, CA-, SPA-, CPALD-, etc. If the title
+  // failed the AUTO_RE check but the card number is one of these,
+  // trust the card number. This rescues terse marketplace titles that
+  // omit "auto" but list a #CPA-XXX card number (very common when
+  // sellers use CH's slab-derived title).
+  const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber);
   return {
-    cardNumber: extractCardNumber(t, cardNumberRe),
+    cardNumber,
     parallel: extractParallel(t),
     isAuto,
     printRun: extractPrintRun(t),
     autoStyle: isAuto ? extractAutoStyle(t) : null,
   };
+}
+
+/** True when the cardNumber prefix belongs to a known BASEBALL autograph
+ *  subset. Domain-curated list from Drew (2026-07-30) — where an
+ *  empirically-low auto ratio contradicts the list, that's a signal
+ *  that parser text-extraction is UNDER-tagging these products, which
+ *  is exactly what this rule (+ backfill-isauto-from-cardnumber.cjs)
+ *  is designed to fix.
+ *
+ *  BOWMAN FAMILY (all 100% auto by product definition):
+ *    CPA   Chrome Prospect Autographs (Bowman/Bowman Chrome flagship 1st)
+ *    CDA   Chrome Draft Pick Autographs (Bowman Draft)
+ *    CRA   Chrome Rookie Autographs
+ *    BPA   Bowman Prospect Autographs (paper, retail)
+ *    PA    Paper Prospect Autographs / Bowman Inception Prospect Autos
+ *    BSPA  Bowman Sterling Prospect Autographs (2016+)
+ *    BGA   Bowman Glass Autographs (Draft insert)
+ *    MRA   Mood Ring Autographs (Draft insert)
+ *    DPPA  Draft Picks & Prospects Autographs
+ *    54FAV Bowman '54 Flag Variation Autographs
+ *    FFDA  Franchise Futures Dual Autographs
+ *    APDCA Applied Pressure Autographs (Draft)
+ *    UAC   Ultimate Autograph Book Card
+ *    BA    Bowman's Best Autographs
+ *    B96A  Bowman's Best "Best of '96" Autographs
+ *    C##A  Class of [Year] Autographs (year-varying, C20A/C23A/etc)
+ *
+ *  TOPPS CHROME / CHROME-ADJACENT:
+ *    RA    Topps Chrome Rookie Autographs (flagship auto)
+ *    CUSA  Chrome Update Series Autographs
+ *    CBA   Topps Chrome Black Autographs
+ *    CCA   Cosmic Chrome Autographs
+ *    FSA   Future Stars Autographs / Five Star Autographs (collision, both auto)
+ *
+ *  TOPPS HERITAGE:
+ *    ROA   Real One Autographs
+ *    RODA  Real One Dual Autographs
+ *    ROTA  Real One Triple Autographs
+ *    CCAR  Clubhouse Collection Autograph Relics
+ *    FAR   Flashback Autograph Relics
+ *
+ *  OTHER TOPPS:
+ *    GQA   Gypsy Queen Autographs
+ *    FFA   Archives Fan Favorites Autographs
+ *    AGA   Allen & Ginter Framed Autographs
+ *    BSA   Baseball Stars Autographs (2021+)
+ *    SCA   Stadium Club Autographs
+ *    T1A   Tier One Autographs
+ *    BOA   Tier One Break Out Autographs
+ *    PPA   Tier One Prime Performers Autographs
+ *    TA    Tribute Autographs
+ *    AA    Museum Collection Archival Autographs
+ *    DCA   Definitive Autograph Collection
+ *    CAA   Clearly Authentic Autographs
+ *    FA    Finest Autographs / Fire Autographs (collision, both auto)
+ *    ODA   Opening Day Autographs
+ *    TTAR  Triple Threads Autograph Relics
+ *    UAR   Triple Threads Unity Autograph Relics
+ *    IAP   Inception Autograph Patch
+ *    AP    Dynasty Autograph Patches
+ *
+ *  PLUS earlier empirical additions:
+ *    USA   Update Series Autographs — 100%, n=516
+ *    SCCA  Sterling Chrome Certified — 93.3%, n=445
+ *    DAS   Draft Autograph Series — 100%, n=254
+ *    NTS   National Treasures Signatures — 100%, n=137
+ *    SSM   Sterling Signature Materials — 100%, n=116
+ *    CPALD, CPATWH  Chrome Prospect Auto special CH variants
+ *    BCPA, BCRA, TCRA  Bowman Chrome Prospect/Rookie + Topps Chrome Rookie
+ *                       (product convention, sub-100 sample)
+ *
+ *  Regex ordering: LONGEST alternatives first because JS regex
+ *  alternation is left-to-right (not longest-match). "APDCA" MUST
+ *  come before "AP" or every APDCA-XX would match as AP prefix.
+ *
+ *  Sport-awareness: currently BASEBALL-scoped implicitly (Drew's list).
+ *  Football/basketball/hockey have their own auto-prefix vocab; this
+ *  function may over-tag when applied cross-sport. Consider adding a
+ *  sport param when we expand to other sports.
+ *
+ *  Silent-safe on null/empty. */
+export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
+  if (!cardNumber) return false;
+  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
+  return /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/.test(cn);
 }
 
 function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null {
