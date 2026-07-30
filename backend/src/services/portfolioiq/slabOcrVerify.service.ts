@@ -510,7 +510,12 @@ export function checkSlabAgainstIdentity(
   // disagreements do NOT block the match — those are informational.
   const yearAgreed = agreements.some(a => a.startsWith("year="));
   const cardNumberAgreed = agreements.some(a => a.startsWith("cardNumber="));
-  const playerAgreed = agreements.some(a => a === "player");
+  // CF-PLAYER-AGREE-BUG (Drew, 2026-07-30). The adoption path pushes
+  // "player=FRANK ROBINSON, BROOKS ROBINSON (adopted from subset ...)"
+  // — the strict `=== "player"` check missed those, blocking otherwise
+  // clean matches. Accept either the exact-match form OR any "player="
+  // prefix (agreement + adoption paths).
+  const playerAgreed = agreements.some(a => a === "player" || a.startsWith("player="));
   const graderDisagreed = disagreements.some(d => d.startsWith("grader:"));
   const hardDisagreement = disagreements.some(d =>
     d.startsWith("grader:") || d.startsWith("year:") || d.startsWith("cardNumber:") || d.startsWith("grade:")
