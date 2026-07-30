@@ -4,10 +4,109 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  isCardNumberAutoSubset,
   parseListingIdentity,
   inferSetKeyFromTitle,
   inferSportFromTitle,
 } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+
+// CF-CARDNUMBER-IMPLIES-AUTO (Drew, 2026-07-30). Empirical prefixes
+// mined from sold_comps (2005+, discover-auto-cardnumber-prefixes).
+// The rule promotes isAuto=true whenever the cardNumber prefix is on
+// the confident-auto list (>=90% empirical, n>=100 samples).
+describe("isCardNumberAutoSubset — empirical prefixes", () => {
+  it("CPA-EHA → auto (98.6% empirical, Chrome Prospect Autographs)", () => {
+    expect(isCardNumberAutoSubset("CPA-EHA")).toBe(true);
+    expect(isCardNumberAutoSubset("#CPA-BA")).toBe(true);
+    expect(isCardNumberAutoSubset("cpa-oc")).toBe(true);
+  });
+  it("BSA-JL → auto (99.5%, Bowman Sterling Autographs)", () => {
+    expect(isCardNumberAutoSubset("BSA-JL")).toBe(true);
+  });
+  it("CDA-BOB → auto (90.9%, Chrome Draft Autographs)", () => {
+    expect(isCardNumberAutoSubset("CDA-BOB")).toBe(true);
+  });
+  it("CRA-CAG → auto (95.9%, Chrome Rookie Autographs)", () => {
+    expect(isCardNumberAutoSubset("CRA-CAG")).toBe(true);
+  });
+  it("USA-JH → auto (100%, Update Series Autographs)", () => {
+    expect(isCardNumberAutoSubset("USA-JH")).toBe(true);
+  });
+  it("SCCA-JH → auto (93.3%)", () => {
+    expect(isCardNumberAutoSubset("SCCA-JH")).toBe(true);
+  });
+
+  it("BCP-102 → NOT auto (0.0% empirical, base Bowman Chrome Prospects)", () => {
+    expect(isCardNumberAutoSubset("BCP-102")).toBe(false);
+    expect(isCardNumberAutoSubset("#BCP-102")).toBe(false);
+  });
+  it("BST-14 → NOT auto (0.0%, Bowman Sterling insert BASE — my initial rule was WRONG)", () => {
+    expect(isCardNumberAutoSubset("BST-14")).toBe(false);
+  });
+  it("BPA-AF → auto (Bowman Prospect Autographs; parser under-tagged; Drew's list)", () => {
+    // Empirical was 21.8% because parser MISSED the auto flag on most
+    // BPA rows — Drew's domain list confirms BPA is 100% auto by product
+    // definition. This rule fixes the mislabeling retroactively via the
+    // backfill-isauto-from-cardnumber pass.
+    expect(isCardNumberAutoSubset("BPA-AF")).toBe(true);
+  });
+  it("BCPA-LGA → auto (Bowman Chrome Prospect Autographs; Drew's list)", () => {
+    expect(isCardNumberAutoSubset("BCPA-LGA")).toBe(true);
+  });
+  it("RA-BL → auto (Topps Chrome Rookie Autos / Prizm Draft Rookie Autos)", () => {
+    expect(isCardNumberAutoSubset("RA-BL")).toBe(true);
+  });
+  it("AA-JD → auto (Museum Collection Archival Autographs)", () => {
+    expect(isCardNumberAutoSubset("AA-JD")).toBe(true);
+  });
+  it("BA-14 → auto (Bowman's Best Autographs / Leaf Draft)", () => {
+    expect(isCardNumberAutoSubset("BA-14")).toBe(true);
+  });
+  it("ROA-JV → auto (Real One Autographs)", () => {
+    expect(isCardNumberAutoSubset("ROA-JV")).toBe(true);
+  });
+  it("C20A-KM → auto (Class of 2020 Autographs, year-varying)", () => {
+    expect(isCardNumberAutoSubset("C20A-KM")).toBe(true);
+  });
+  it("APDCA-XX → auto but NOT AP (5-char prefix wins over 2-char AP)", () => {
+    // Regex ordering test: APDCA must precede AP in the alternation.
+    expect(isCardNumberAutoSubset("APDCA-XX")).toBe(true);
+  });
+  it("CA-LD → NOT auto (5.4%, mostly base)", () => {
+    expect(isCardNumberAutoSubset("CA-LD")).toBe(false);
+  });
+
+  it("null/empty → false", () => {
+    expect(isCardNumberAutoSubset(null)).toBe(false);
+    expect(isCardNumberAutoSubset("")).toBe(false);
+  });
+  it("pure-digit cardNumber → false", () => {
+    expect(isCardNumberAutoSubset("500")).toBe(false);
+    expect(isCardNumberAutoSubset("#87")).toBe(false);
+  });
+});
+
+describe("parseListingIdentity — cardNumber → isAuto promotion", () => {
+  it("terse title without 'auto' but CPA-XXX cardNumber → isAuto=true", () => {
+    // Sellers frequently list "2025 Bowman #CPA-EHA Braves" with no
+    // "auto" text at all — the prefix carries the signal.
+    const r = parseListingIdentity("2025 Bowman #CPA-EHA Braves");
+    expect(r.isAuto).toBe(true);
+    expect(r.cardNumber).toBe("CPA-EHA");
+  });
+  it("title says 'auto' AND cardNumber is CPA-XXX → isAuto=true (both signals)", () => {
+    const r = parseListingIdentity("2025 Bowman Chrome Auto #CPA-EHA");
+    expect(r.isAuto).toBe(true);
+  });
+  it("title without 'auto' and BCP-XXX cardNumber → isAuto=false (base prospect)", () => {
+    const r = parseListingIdentity("2025 Bowman Chrome #BCP-102 Braves");
+    expect(r.isAuto).toBe(false);
+  });
+  it("title without 'auto' and BST-XX cardNumber → isAuto=false (Sterling insert base)", () => {
+    const r = parseListingIdentity("2026 Bowman Sterling #BST-14");
+    expect(r.isAuto).toBe(false);
+  });
+});
 
 describe("parseListingIdentity — cardNumber extraction", () => {
   it("extracts CPA-EHA from an Eric Hartman auto title", () => {
