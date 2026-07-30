@@ -1,0 +1,66 @@
+name: Daily Market Signals Refresh
+
+# CF-DAILY-MARKET-SIGNALS (Drew, 2026-07-30). Runs after the 5 AM ET
+# refresh + CH ingest completes. Computes 30d-vs-prior-30d momentum
+# per (dimension, key) across colorFamily/edition/finishModifier/
+# insertSet/sport/productLine/isAuto/autoStyle/gradeTier. Writes to
+# market_signals container with 8-day TTL. Consumed by hobbyIqFmv
+# for daily-refreshed momentum adjustment.
+
+on:
+  schedule:
+    # 5:30 AM ET = 09:30 UTC (EST) / 10:30 UTC (EDT). Use 10:30 UTC
+    # to catch both — it's 6:30 EDT / 5:30 EST which both fall after
+    # the 5:00 AM ingest.
+    - cron: "30 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # Azure OIDC for App Service secret fetch
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Build backend dist
+        working-directory: backend
+        run: npm run build
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Fetch COSMOS_CONNECTION_STRING
+        shell: bash
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv)
+          if [ -z "$CS" ]; then
+            echo "::error::FAILED to fetch COSMOS_CONNECTION_STRING"
+            exit 1
+          fi
+          echo "::add-mask::$CS"
+          echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
+      - name: Run market signals refresh
+        env:
+          MARKET_SIGNALS_APPLY: "true"
+          MARKET_SIGNALS_WINDOW_DAYS: "30"
+          MARKET_SIGNALS_MIN_VOLUME: "20"
+        run: node backend/scripts/refresh-market-signals.cjs
