@@ -188,69 +188,93 @@ export async function extractSlabLabel(imageUrl: string): Promise<SlabExtractRes
 
   const highResUrl = upscaleImageUrl(imageUrl);
 
-  try {
-    const { AzureOpenAI } = await import("openai");
-    const client = new AzureOpenAI({ endpoint, apiKey, deployment, apiVersion });
-    const response = await client.chat.completions.create(
-      {
-        model: deployment,
-        temperature: 0,
-        max_tokens: 500,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "slab_label",
-            strict: true,
-            schema: SLAB_LABEL_SCHEMA,
-          },
-        },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract the slab label fields from this card image." },
-              { type: "image_url", image_url: { url: highResUrl, detail: "high" } },
-            ],
-          },
-        ],
-      },
-      { signal: AbortSignal.timeout(30_000) },
-    );
+  const { AzureOpenAI } = await import("openai");
+  const client = new AzureOpenAI({ endpoint, apiKey, deployment, apiVersion });
 
-    const raw = response.choices[0]?.message?.content ?? "";
-    if (!raw) {
-      return { ok: false, error: "empty LLM response", modelUsed: deployment, durationMs: Date.now() - t0 };
-    }
-
-    let label: SlabLabel;
+  // CF-SLAB-OCR-RETRY (Drew, 2026-07-29). First batch apply against
+  // 200 rows saw many 429s from gpt-4o-mini's TPM cap. Retry with
+  // exponential backoff on 429/500/503; give up on 4xx-not-429 and
+  // network-level failures. Never throws — returns SlabExtractResult
+  // either way.
+  const MAX_ATTEMPTS = 3;
+  let lastError: string = "";
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      label = JSON.parse(raw) as SlabLabel;
-    } catch (e) {
+      const response = await client.chat.completions.create(
+        {
+          model: deployment,
+          temperature: 0,
+          max_tokens: 500,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "slab_label",
+              strict: true,
+              schema: SLAB_LABEL_SCHEMA,
+            },
+          },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Extract the slab label fields from this card image." },
+                { type: "image_url", image_url: { url: highResUrl, detail: "high" } },
+              ],
+            },
+          ],
+        },
+        { signal: AbortSignal.timeout(30_000) },
+      );
+
+      const raw = response.choices[0]?.message?.content ?? "";
+      if (!raw) {
+        return { ok: false, error: "empty LLM response", modelUsed: deployment, durationMs: Date.now() - t0 };
+      }
+
+      let label: SlabLabel;
+      try {
+        label = JSON.parse(raw) as SlabLabel;
+      } catch (e) {
+        return {
+          ok: false,
+          error: `JSON parse failed: ${(e as Error).message}`,
+          rawResponse: raw.slice(0, 500),
+          modelUsed: deployment,
+          durationMs: Date.now() - t0,
+        };
+      }
+
       return {
-        ok: false,
-        error: `JSON parse failed: ${(e as Error).message}`,
+        ok: true,
+        label,
         rawResponse: raw.slice(0, 500),
         modelUsed: deployment,
         durationMs: Date.now() - t0,
       };
+    } catch (e) {
+      const msg = (e as Error).message ?? String(e);
+      lastError = msg;
+      const isRetryable = /\b(429|500|502|503|504)\b/i.test(msg) || /rate\s?limit|throttl|timeout|ECONNRESET|ETIMEDOUT/i.test(msg);
+      if (!isRetryable || attempt === MAX_ATTEMPTS) {
+        return {
+          ok: false,
+          error: `LLM call failed (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg}`,
+          modelUsed: deployment,
+          durationMs: Date.now() - t0,
+        };
+      }
+      // Exponential backoff with jitter: 1s, 3s, 7s
+      const delayMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 1000) - 500;
+      await new Promise(res => setTimeout(res, Math.max(500, delayMs)));
     }
-
-    return {
-      ok: true,
-      label,
-      rawResponse: raw.slice(0, 500),
-      modelUsed: deployment,
-      durationMs: Date.now() - t0,
-    };
-  } catch (e) {
-    return {
-      ok: false,
-      error: `LLM call failed: ${(e as Error).message}`,
-      modelUsed: deployment,
-      durationMs: Date.now() - t0,
-    };
   }
+  return {
+    ok: false,
+    error: `LLM call failed after ${MAX_ATTEMPTS} attempts: ${lastError}`,
+    modelUsed: deployment,
+    durationMs: Date.now() - t0,
+  };
 }
 
 // ─── Comparison ──────────────────────────────────────────────────────
@@ -346,11 +370,18 @@ export function checkSlabAgainstIdentity(
     }
   }
 
-  // cardNumber — normalized: strip #, hyphens, uppercase.
+  // cardNumber — normalized: strip #, hyphens, uppercase, AND strip
+  // leading zeros on pure-numeric card numbers ("87" == "087").
   // ADOPTION: parser-null + slab-has-value → adopt as agreement.
   const parsedCardNumber = (identity.cardNumber ?? "").trim();
   if (parsedCardNumber && slab.cardNumber) {
-    const normalize = (s: string) => s.toUpperCase().replace(/^#/, "").replace(/[-\s]/g, "");
+    const normalize = (s: string) => {
+      const stripped = s.toUpperCase().replace(/^#/, "").replace(/[-\s]/g, "");
+      // Leading-zero strip: pure-digit strings only ("087" → "87").
+      // Preserves letter-prefixed numbers (BCP-102 → BCP102).
+      if (/^\d+$/.test(stripped)) return stripped.replace(/^0+/, "") || "0";
+      return stripped;
+    };
     if (normalize(parsedCardNumber) === normalize(slab.cardNumber)) {
       agreements.push(`cardNumber=${slab.cardNumber}`);
     } else {
