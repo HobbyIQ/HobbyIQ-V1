@@ -38,6 +38,7 @@ on:
           - reslug-chrome-draft-collision
           - reslug-cross-product-mis-slug
           - audit-setkey-distribution
+          - audit-grade-coverage
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
           - prototype-slab-ocr
