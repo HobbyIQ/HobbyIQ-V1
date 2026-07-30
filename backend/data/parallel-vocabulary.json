@@ -1,136 +1,1616 @@
 {
   "$schema": "hobbyiq/parallel-vocabulary/v1",
   "notes": "Alias normalization + ladder registry. confidence: verified | probable | unverified. Unverified entries may FLAG matches but never GATE promotion. Longest-match-first on aliases.",
-
   "editionTokens": {
-    "sapphire": { "canonical": "SAPPHIRE", "aliases": ["sapphire", "sapphire edition"], "poolingRule": "isolate", "confidence": "verified" },
-    "megaBox": { "canonical": "MEGA_BOX", "aliases": ["mega box", "mega-box", "mojo mega"], "poolingRule": "isolate", "confidence": "verified" },
-    "firstEdition": { "canonical": "FIRST_EDITION", "aliases": ["1st edition", "first edition"], "poolingRule": "isolate", "confidence": "verified" },
-    "sonic": { "canonical": "SONIC", "aliases": ["sonic"], "poolingRule": "isolate", "confidence": "probable" },
-    "cosmic": { "canonical": "COSMIC", "aliases": ["cosmic chrome", "cosmic"], "poolingRule": "isolate", "confidence": "verified" },
-    "lite": { "canonical": "LITE", "aliases": ["bowman lite", "chrome lite", "lite"], "poolingRule": "isolate", "confidence": "probable" }
+    "sapphire": {
+      "canonical": "SAPPHIRE",
+      "aliases": [
+        "sapphire",
+        "sapphire edition"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "verified"
+    },
+    "megaBox": {
+      "canonical": "MEGA_BOX",
+      "aliases": [
+        "mega box",
+        "mega-box",
+        "mojo mega"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "verified"
+    },
+    "firstEdition": {
+      "canonical": "FIRST_EDITION",
+      "aliases": [
+        "1st edition",
+        "first edition"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "verified"
+    },
+    "sonic": {
+      "canonical": "SONIC",
+      "aliases": [
+        "sonic"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "probable"
+    },
+    "cosmic": {
+      "canonical": "COSMIC",
+      "aliases": [
+        "cosmic chrome",
+        "cosmic"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "verified"
+    },
+    "lite": {
+      "canonical": "LITE",
+      "aliases": [
+        "bowman lite",
+        "chrome lite",
+        "lite"
+      ],
+      "poolingRule": "isolate",
+      "confidence": "probable"
+    }
   },
-
   "colorFamilies": {
-    "BASE": { "aliases": ["base"], "confidence": "verified" },
-    "REFRACTOR": { "aliases": ["refractor", "ref", "silver refractor"], "confidence": "verified", "trap": "title-noise; require serial or product rule" },
-    "SPECKLE": { "aliases": ["speckle refractor", "speckle"], "confidence": "verified" },
-    "MOJO": { "aliases": ["mojo refractor", "mojo"], "confidence": "verified", "note": "mega box channel" },
-    "PURPLE": { "aliases": ["purple refractor", "purple"], "confidence": "verified" },
-    "AQUA": { "aliases": ["aqua refractor", "aqua"], "confidence": "verified" },
-    "BLUE": { "aliases": ["blue refractor", "blue"], "confidence": "verified" },
-    "GREEN": { "aliases": ["green refractor", "green"], "confidence": "verified" },
-    "YELLOW": { "aliases": ["yellow refractor", "yellow"], "confidence": "verified" },
-    "GOLD": { "aliases": ["gold refractor", "gold"], "confidence": "verified" },
-    "ORANGE": { "aliases": ["orange refractor", "orange"], "confidence": "verified" },
-    "RED": { "aliases": ["red refractor", "red"], "confidence": "verified" },
-    "PINK": { "aliases": ["pink refractor", "pink"], "confidence": "verified" },
-    "SEPIA": { "aliases": ["sepia refractor", "sepia"], "confidence": "verified" },
-    "NEGATIVE": { "aliases": ["negative refractor", "negative"], "confidence": "verified" },
-    "PRISM": { "aliases": ["prism refractor", "prism"], "confidence": "verified", "trap": "not Panini Prizm; sport+brand check" },
-    "XFRACTOR": { "aliases": ["x-fractor", "xfractor", "x fractor"], "confidence": "verified" },
-    "SKY_BLUE": { "aliases": ["sky blue"], "confidence": "verified", "note": "paper bowman" },
-    "PLATINUM": { "aliases": ["platinum"], "confidence": "verified", "note": "paper 1/1; also a bowman product name — require serial context" },
-    "SUPERFRACTOR": { "aliases": ["superfractor", "super fractor", "supe", "1/1 superfractor"], "confidence": "verified" },
-    "PRINTING_PLATE": { "aliases": ["printing plate", "plate", "1/1 plate", "cyan plate", "magenta plate", "yellow plate", "black plate"], "confidence": "verified", "note": "1/1 but prices far below superfractor" },
-    "RAINBOW_FOIL": { "aliases": ["rainbow foil"], "confidence": "verified", "trap": "flagship paper; bare 'rainbow' is noise" },
-    "VINTAGE_STOCK": { "aliases": ["vintage stock"], "confidence": "verified" },
-    "INDEPENDENCE_DAY": { "aliases": ["independence day"], "confidence": "verified" },
-    "BLACK": { "aliases": ["black"], "confidence": "verified", "trap": "flagship anniversary-numbered; also 'black label' BGS collision — grade parse first" }
+    "BASE": {
+      "aliases": [
+        "base"
+      ],
+      "confidence": "verified"
+    },
+    "REFRACTOR": {
+      "aliases": [
+        "refractor",
+        "ref",
+        "silver refractor"
+      ],
+      "confidence": "verified",
+      "trap": "title-noise; require serial or product rule"
+    },
+    "SPECKLE": {
+      "aliases": [
+        "speckle refractor",
+        "speckle"
+      ],
+      "confidence": "verified"
+    },
+    "MOJO": {
+      "aliases": [
+        "mojo refractor",
+        "mojo"
+      ],
+      "confidence": "verified",
+      "note": "mega box channel"
+    },
+    "PURPLE": {
+      "aliases": [
+        "purple refractor",
+        "purple"
+      ],
+      "confidence": "verified"
+    },
+    "AQUA": {
+      "aliases": [
+        "aqua refractor",
+        "aqua"
+      ],
+      "confidence": "verified"
+    },
+    "BLUE": {
+      "aliases": [
+        "blue refractor",
+        "blue"
+      ],
+      "confidence": "verified"
+    },
+    "GREEN": {
+      "aliases": [
+        "green refractor",
+        "green"
+      ],
+      "confidence": "verified"
+    },
+    "YELLOW": {
+      "aliases": [
+        "yellow refractor",
+        "yellow"
+      ],
+      "confidence": "verified"
+    },
+    "GOLD": {
+      "aliases": [
+        "gold refractor",
+        "gold"
+      ],
+      "confidence": "verified"
+    },
+    "ORANGE": {
+      "aliases": [
+        "orange refractor",
+        "orange"
+      ],
+      "confidence": "verified"
+    },
+    "RED": {
+      "aliases": [
+        "red refractor",
+        "red"
+      ],
+      "confidence": "verified"
+    },
+    "PINK": {
+      "aliases": [
+        "pink refractor",
+        "pink"
+      ],
+      "confidence": "verified"
+    },
+    "SEPIA": {
+      "aliases": [
+        "sepia refractor",
+        "sepia"
+      ],
+      "confidence": "verified"
+    },
+    "NEGATIVE": {
+      "aliases": [
+        "negative refractor",
+        "negative"
+      ],
+      "confidence": "verified"
+    },
+    "PRISM": {
+      "aliases": [
+        "prism refractor",
+        "prism"
+      ],
+      "confidence": "verified",
+      "trap": "not Panini Prizm; sport+brand check"
+    },
+    "XFRACTOR": {
+      "aliases": [
+        "x-fractor",
+        "xfractor",
+        "x fractor"
+      ],
+      "confidence": "verified"
+    },
+    "SKY_BLUE": {
+      "aliases": [
+        "sky blue"
+      ],
+      "confidence": "verified",
+      "note": "paper bowman"
+    },
+    "PLATINUM": {
+      "aliases": [
+        "platinum"
+      ],
+      "confidence": "verified",
+      "note": "paper 1/1; also a bowman product name \u2014 require serial context"
+    },
+    "SUPERFRACTOR": {
+      "aliases": [
+        "superfractor",
+        "super fractor",
+        "supe",
+        "1/1 superfractor"
+      ],
+      "confidence": "verified"
+    },
+    "PRINTING_PLATE": {
+      "aliases": [
+        "printing plate",
+        "plate",
+        "1/1 plate",
+        "cyan plate",
+        "magenta plate",
+        "yellow plate",
+        "black plate"
+      ],
+      "confidence": "verified",
+      "note": "1/1 but prices far below superfractor"
+    },
+    "RAINBOW_FOIL": {
+      "aliases": [
+        "rainbow foil"
+      ],
+      "confidence": "verified",
+      "trap": "flagship paper; bare 'rainbow' is noise"
+    },
+    "VINTAGE_STOCK": {
+      "aliases": [
+        "vintage stock"
+      ],
+      "confidence": "verified"
+    },
+    "INDEPENDENCE_DAY": {
+      "aliases": [
+        "independence day"
+      ],
+      "confidence": "verified"
+    },
+    "BLACK": {
+      "aliases": [
+        "black"
+      ],
+      "confidence": "verified",
+      "trap": "flagship anniversary-numbered; also 'black label' BGS collision \u2014 grade parse first"
+    }
   },
-
   "finishModifiers": {
-    "SHIMMER": { "aliases": ["shimmer"], "premium": "fotl", "confidence": "verified" },
-    "WAVE": { "aliases": ["wave"], "confidence": "verified" },
-    "RAYWAVE": { "aliases": ["raywave", "ray wave"], "confidence": "verified" },
-    "LAVA": { "aliases": ["lava", "lava lamp"], "confidence": "verified" },
-    "ATOMIC": { "aliases": ["atomic"], "confidence": "probable" },
-    "ICE": { "aliases": ["ice"], "confidence": "probable" },
-    "VINYL": { "aliases": ["vinyl"], "confidence": "verified", "note": "gold vinyl etc." },
-    "MINI_DIAMOND": { "aliases": ["mini-diamond", "mini diamond", "b&w mini-diamond"], "channel": "breaker", "confidence": "verified" },
-    "GEOMETRIC": { "aliases": ["geometric"], "confidence": "probable" }
+    "SHIMMER": {
+      "aliases": [
+        "shimmer"
+      ],
+      "premium": "fotl",
+      "confidence": "verified"
+    },
+    "WAVE": {
+      "aliases": [
+        "wave"
+      ],
+      "confidence": "verified"
+    },
+    "RAYWAVE": {
+      "aliases": [
+        "raywave",
+        "ray wave"
+      ],
+      "confidence": "verified"
+    },
+    "LAVA": {
+      "aliases": [
+        "lava",
+        "lava lamp"
+      ],
+      "confidence": "verified"
+    },
+    "ATOMIC": {
+      "aliases": [
+        "atomic"
+      ],
+      "confidence": "probable"
+    },
+    "ICE": {
+      "aliases": [
+        "ice"
+      ],
+      "confidence": "probable"
+    },
+    "VINYL": {
+      "aliases": [
+        "vinyl"
+      ],
+      "confidence": "verified",
+      "note": "gold vinyl etc."
+    },
+    "MINI_DIAMOND": {
+      "aliases": [
+        "mini-diamond",
+        "mini diamond",
+        "b&w mini-diamond"
+      ],
+      "channel": "breaker",
+      "confidence": "verified"
+    },
+    "GEOMETRIC": {
+      "aliases": [
+        "geometric"
+      ],
+      "confidence": "probable"
+    }
   },
-
   "ladders": {
     "bowman_chrome_hobby_2016_plus": {
-      "appliesTo": ["Bowman", "Bowman Chrome", "Bowman Draft"],
+      "appliesTo": [
+        "Bowman",
+        "Bowman Chrome",
+        "Bowman Draft"
+      ],
       "eraStart": 2016,
       "tiers": [
-        { "color": "BASE", "run": null },
-        { "color": "REFRACTOR", "run": 499, "confidence": "verified" },
-        { "color": "SPECKLE", "run": null, "confidence": "probable" },
-        { "color": "PURPLE", "run": 250, "confidence": "verified" },
-        { "color": "BLUE", "run": 150, "confidence": "verified" },
-        { "color": "AQUA", "run": 125, "confidence": "probable" },
-        { "color": "GREEN", "run": 99, "confidence": "verified" },
-        { "color": "YELLOW", "run": 75, "confidence": "probable", "note": "unnumbered retail in earlier years" },
-        { "color": "GOLD", "run": 50, "confidence": "verified" },
-        { "color": "ORANGE", "run": 25, "confidence": "verified" },
-        { "color": "RED", "run": 5, "confidence": "verified" },
-        { "color": "SUPERFRACTOR", "run": 1, "confidence": "verified" },
-        { "color": "PRINTING_PLATE", "run": 1, "priceTierOverride": "belowNumberedLow", "confidence": "verified" }
-      ]
+        {
+          "color": "BASE",
+          "run": null
+        },
+        {
+          "color": "REFRACTOR",
+          "run": 499,
+          "confidence": "verified"
+        },
+        {
+          "color": "SPECKLE",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "color": "PURPLE",
+          "run": 250,
+          "confidence": "verified"
+        },
+        {
+          "color": "BLUE",
+          "run": 150,
+          "confidence": "verified"
+        },
+        {
+          "color": "AQUA",
+          "run": 125,
+          "confidence": "probable"
+        },
+        {
+          "color": "GREEN",
+          "run": 99,
+          "confidence": "verified"
+        },
+        {
+          "color": "YELLOW",
+          "run": 75,
+          "confidence": "probable",
+          "note": "unnumbered retail in earlier years"
+        },
+        {
+          "color": "GOLD",
+          "run": 50,
+          "confidence": "verified"
+        },
+        {
+          "color": "ORANGE",
+          "run": 25,
+          "confidence": "verified"
+        },
+        {
+          "color": "RED",
+          "run": 5,
+          "confidence": "verified"
+        },
+        {
+          "color": "SUPERFRACTOR",
+          "run": 1,
+          "confidence": "verified"
+        },
+        {
+          "color": "PRINTING_PLATE",
+          "run": 1,
+          "priceTierOverride": "belowNumberedLow",
+          "confidence": "verified"
+        }
+      ],
+      "sport": "baseball"
     },
     "bowman_paper_2016_plus": {
-      "appliesTo": ["Bowman (paper)"],
+      "appliesTo": [
+        "Bowman (paper)"
+      ],
       "eraStart": 2016,
       "poolingRule": "never pool with chrome",
       "tiers": [
-        { "color": "BASE", "run": null },
-        { "color": "SKY_BLUE", "run": 499, "confidence": "probable" },
-        { "color": "PURPLE", "run": 250, "confidence": "verified" },
-        { "color": "BLUE", "run": 150, "confidence": "verified" },
-        { "color": "GREEN", "run": 99, "confidence": "verified" },
-        { "color": "GOLD", "run": 50, "confidence": "verified" },
-        { "color": "ORANGE", "run": 25, "confidence": "verified" },
-        { "color": "RED", "run": 5, "confidence": "verified" },
-        { "color": "PLATINUM", "run": 1, "confidence": "verified" }
-      ]
+        {
+          "color": "BASE",
+          "run": null
+        },
+        {
+          "color": "SKY_BLUE",
+          "run": 499,
+          "confidence": "probable"
+        },
+        {
+          "color": "PURPLE",
+          "run": 250,
+          "confidence": "verified"
+        },
+        {
+          "color": "BLUE",
+          "run": 150,
+          "confidence": "verified"
+        },
+        {
+          "color": "GREEN",
+          "run": 99,
+          "confidence": "verified"
+        },
+        {
+          "color": "GOLD",
+          "run": 50,
+          "confidence": "verified"
+        },
+        {
+          "color": "ORANGE",
+          "run": 25,
+          "confidence": "verified"
+        },
+        {
+          "color": "RED",
+          "run": 5,
+          "confidence": "verified"
+        },
+        {
+          "color": "PLATINUM",
+          "run": 1,
+          "confidence": "verified"
+        }
+      ],
+      "sport": "baseball"
     },
     "topps_chrome_2016_plus": {
-      "appliesTo": ["Topps Chrome", "Topps Chrome Update"],
+      "appliesTo": [
+        "Topps Chrome",
+        "Topps Chrome Update"
+      ],
       "eraStart": 2016,
       "tiers": [
-        { "color": "BASE", "run": null },
-        { "color": "REFRACTOR", "run": null, "confidence": "verified", "note": "UNNUMBERED - key difference vs Bowman" },
-        { "color": "PRISM", "run": null, "confidence": "verified" },
-        { "color": "SEPIA", "run": null, "confidence": "verified" },
-        { "color": "NEGATIVE", "run": null, "confidence": "verified" },
-        { "color": "PINK", "run": null, "confidence": "probable" },
-        { "color": "PURPLE", "run": 299, "confidence": "unverified" },
-        { "color": "AQUA", "run": 199, "confidence": "probable" },
-        { "color": "BLUE", "run": 150, "confidence": "verified" },
-        { "color": "GREEN", "run": 99, "confidence": "verified" },
-        { "color": "YELLOW", "run": 75, "confidence": "probable", "note": "retail tier, autos" },
-        { "color": "GOLD", "run": 50, "confidence": "verified" },
-        { "color": "ORANGE", "run": 25, "confidence": "verified" },
-        { "color": "RED", "run": 5, "confidence": "verified" },
-        { "color": "SUPERFRACTOR", "run": 1, "confidence": "verified" }
-      ]
+        {
+          "color": "BASE",
+          "run": null
+        },
+        {
+          "color": "REFRACTOR",
+          "run": null,
+          "confidence": "verified",
+          "note": "UNNUMBERED - key difference vs Bowman"
+        },
+        {
+          "color": "PRISM",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "color": "SEPIA",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "color": "NEGATIVE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "color": "PINK",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "color": "PURPLE",
+          "run": 299,
+          "confidence": "unverified"
+        },
+        {
+          "color": "AQUA",
+          "run": 199,
+          "confidence": "probable"
+        },
+        {
+          "color": "BLUE",
+          "run": 150,
+          "confidence": "verified"
+        },
+        {
+          "color": "GREEN",
+          "run": 99,
+          "confidence": "verified"
+        },
+        {
+          "color": "YELLOW",
+          "run": 75,
+          "confidence": "probable",
+          "note": "retail tier, autos"
+        },
+        {
+          "color": "GOLD",
+          "run": 50,
+          "confidence": "verified"
+        },
+        {
+          "color": "ORANGE",
+          "run": 25,
+          "confidence": "verified"
+        },
+        {
+          "color": "RED",
+          "run": 5,
+          "confidence": "verified"
+        },
+        {
+          "color": "SUPERFRACTOR",
+          "run": 1,
+          "confidence": "verified"
+        }
+      ],
+      "sport": "baseball"
     },
     "topps_flagship_paper": {
-      "appliesTo": ["Topps Series 1", "Topps Series 2", "Topps Update"],
+      "appliesTo": [
+        "Topps Series 1",
+        "Topps Series 2",
+        "Topps Update"
+      ],
       "multiplierCohort": "flagship_paper_separate",
       "tiers": [
-        { "color": "BASE", "run": null },
-        { "color": "RAINBOW_FOIL", "run": null, "confidence": "verified" },
-        { "color": "GOLD", "run": "calendarYear", "confidence": "verified" },
-        { "color": "VINTAGE_STOCK", "run": 99, "confidence": "verified" },
-        { "color": "INDEPENDENCE_DAY", "run": 76, "confidence": "verified" },
-        { "color": "BLACK", "run": "anniversaryNumber", "confidence": "probable", "note": "changes annually - verify per year" },
-        { "color": "PLATINUM", "run": 1, "confidence": "verified" }
+        {
+          "color": "BASE",
+          "run": null
+        },
+        {
+          "color": "RAINBOW_FOIL",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "color": "GOLD",
+          "run": "calendarYear",
+          "confidence": "verified"
+        },
+        {
+          "color": "VINTAGE_STOCK",
+          "run": 99,
+          "confidence": "verified"
+        },
+        {
+          "color": "INDEPENDENCE_DAY",
+          "run": 76,
+          "confidence": "verified"
+        },
+        {
+          "color": "BLACK",
+          "run": "anniversaryNumber",
+          "confidence": "probable",
+          "note": "changes annually - verify per year"
+        },
+        {
+          "color": "PLATINUM",
+          "run": 1,
+          "confidence": "verified"
+        }
+      ],
+      "sport": "baseball"
+    },
+    "heritage_modern": {
+      "appliesTo": [
+        "Topps Heritage",
+        "Topps Heritage High Number"
+      ],
+      "grammar": "variationDriven",
+      "tiers": [
+        {
+          "name": "SP_HIGH_SERIES",
+          "note": "#401-500 short prints, elevated base value",
+          "confidence": "verified"
+        },
+        {
+          "name": "CHROME",
+          "run": 999,
+          "confidence": "probable"
+        },
+        {
+          "name": "CHROME_REFRACTOR",
+          "run": "designYearPattern",
+          "note": "e.g. /572 for 1972-design year",
+          "confidence": "probable"
+        },
+        {
+          "name": "FLIP_STOCK",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK_BORDERED",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "MINI",
+          "run": 100,
+          "confidence": "unverified"
+        },
+        {
+          "name": "PHOTO_VARIATIONS",
+          "sharesBaseNumber": true,
+          "confidence": "verified"
+        }
+      ],
+      "sport": "baseball"
+    },
+    "premium_serial_base_products": {
+      "appliesTo": [
+        "Tribute",
+        "Museum Collection",
+        "Five Star",
+        "Definitive",
+        "Dynasty",
+        "National Treasures",
+        "Immaculate",
+        "Flawless"
+      ],
+      "grammar": "baseIsSerialed",
+      "rule": "no unnumbered tier exists; serial-less listing = misidentification signal",
+      "confidence": "verified",
+      "sport": "baseball"
+    },
+    "allen_ginter": {
+      "appliesTo": [
+        "Allen & Ginter"
+      ],
+      "grammar": "miniEconomy",
+      "axes": [
+        "fullSize|mini",
+        "backType",
+        "border"
+      ],
+      "tiers": [
+        {
+          "name": "MINI",
+          "run": null
+        },
+        {
+          "name": "MINI_AG_BACK",
+          "run": null
+        },
+        {
+          "name": "MINI_BLACK",
+          "run": null
+        },
+        {
+          "name": "MINI_BROOKLYN_BACK",
+          "run": 25
+        },
+        {
+          "name": "MINI_NO_NUMBER",
+          "run": 1
+        },
+        {
+          "name": "MINI_WOOD",
+          "run": 1
+        }
+      ],
+      "confidence": "probable",
+      "sport": "baseball"
+    },
+    "panini_baseball": {
+      "appliesTo": [
+        "Panini Prizm Baseball",
+        "Select",
+        "Optic",
+        "Mosaic",
+        "Donruss Baseball",
+        "Chronicles"
+      ],
+      "grammar": "paniniRainbow_setNamePrimary",
+      "licenseNote": "MLBPA-only, no logos; structural discount vs licensed; pool separately",
+      "refractorEquivalent": "SILVER_PRIZM",
+      "confidence": "verified_structure_runs_unverified",
+      "sport": "baseball"
+    },
+    "bowman_sapphire": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Bowman Sapphire Edition",
+        "Topps Chrome Sapphire"
+      ],
+      "grammar": "chromeRainbow",
+      "tiers": [
+        {
+          "name": "SAPPHIRE_BASE",
+          "run": null,
+          "confidence": "verified",
+          "note": "edition-isolated pool; base sapphire often > regular refractor"
+        },
+        {
+          "name": "AQUA",
+          "run": 99,
+          "confidence": "unverified"
+        },
+        {
+          "name": "GOLD",
+          "run": 50,
+          "confidence": "probable"
+        },
+        {
+          "name": "ORANGE",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "PURPLE",
+          "run": 10,
+          "confidence": "unverified"
+        },
+        {
+          "name": "RED",
+          "run": 5,
+          "confidence": "probable"
+        },
+        {
+          "name": "PADPARADSCHA",
+          "run": 1,
+          "confidence": "verified",
+          "note": "the Sapphire 1/1 - NOT called Superfractor"
+        }
+      ],
+      "note": "Runs drift per year; anchor = Padparadscha 1/1."
+    },
+    "finest_modern": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Finest"
+      ],
+      "grammar": "chromeRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "REFRACTOR",
+          "run": null,
+          "confidence": "probable",
+          "note": "unnumbered modern"
+        },
+        {
+          "name": "BLUE",
+          "run": 150,
+          "confidence": "unverified"
+        },
+        {
+          "name": "GREEN",
+          "run": 99,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 50,
+          "confidence": "verified"
+        },
+        {
+          "name": "ORANGE",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "RED",
+          "run": 5,
+          "confidence": "verified"
+        },
+        {
+          "name": "SUPERFRACTOR",
+          "run": 1,
+          "confidence": "verified"
+        }
       ]
+    },
+    "bowmans_best_modern": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Bowman's Best"
+      ],
+      "grammar": "chromeRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "REFRACTOR",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "ATOMIC",
+          "run": null,
+          "confidence": "verified",
+          "note": "premium unnumbered tier"
+        },
+        {
+          "name": "BLUE",
+          "run": 150,
+          "confidence": "unverified"
+        },
+        {
+          "name": "GREEN",
+          "run": 99,
+          "confidence": "unverified"
+        },
+        {
+          "name": "GOLD",
+          "run": 50,
+          "confidence": "probable"
+        },
+        {
+          "name": "ORANGE",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "RED",
+          "run": 5,
+          "confidence": "probable"
+        },
+        {
+          "name": "SUPERFRACTOR",
+          "run": 1,
+          "confidence": "verified"
+        }
+      ]
+    },
+    "stadium_club": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Stadium Club"
+      ],
+      "grammar": "foilTiers",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "CHROME",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "SEPIA",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "RAINBOW_FOIL",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "RED_FOIL",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "BLACK_FOIL",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "MEMBERS_ONLY",
+          "run": null,
+          "confidence": "verified",
+          "note": "stamped tier"
+        },
+        {
+          "name": "FIRST_DAY_ISSUE",
+          "run": null,
+          "confidence": "probable",
+          "note": "revival of 90s tier some years"
+        }
+      ]
+    },
+    "gypsy_queen": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Gypsy Queen"
+      ],
+      "grammar": "namedTiers",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "GREEN",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "PURPLE",
+          "run": 250,
+          "confidence": "unverified"
+        },
+        {
+          "name": "BLUE",
+          "run": 150,
+          "confidence": "unverified"
+        },
+        {
+          "name": "RED",
+          "run": 50,
+          "confidence": "unverified"
+        },
+        {
+          "name": "BLACK_GOLD",
+          "run": 25,
+          "confidence": "unverified"
+        },
+        {
+          "name": "MISSING_NAMEPLATE",
+          "run": null,
+          "confidence": "verified",
+          "note": "variation-parallel"
+        },
+        {
+          "name": "MISSING_BLACKPLATE",
+          "run": 50,
+          "confidence": "unverified"
+        }
+      ]
+    },
+    "topps_fire_biglague_archives": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Topps Fire",
+        "Big League",
+        "Archives"
+      ],
+      "grammar": "budgetColor",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "FOIL_OR_RAINBOW",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLUE",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GREEN",
+          "run": 99,
+          "confidence": "unverified"
+        },
+        {
+          "name": "GOLD",
+          "run": 50,
+          "confidence": "probable"
+        },
+        {
+          "name": "ORANGE",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "RED",
+          "run": 5,
+          "confidence": "probable"
+        },
+        {
+          "name": "ONE_OF_ONE",
+          "run": 1,
+          "confidence": "verified",
+          "note": "Fire=Inferno/Onyx naming varies"
+        }
+      ],
+      "note": "Budget ladders; names vary per product-year, structure stable."
+    },
+    "topps_chrome_black": {
+      "sport": "baseball",
+      "appliesTo": [
+        "Topps Chrome Black"
+      ],
+      "grammar": "chromeRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "REFRACTOR",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GREEN",
+          "run": 99,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 50,
+          "confidence": "verified"
+        },
+        {
+          "name": "ORANGE",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "RED",
+          "run": 5,
+          "confidence": "verified"
+        },
+        {
+          "name": "SUPERFRACTOR",
+          "run": 1,
+          "confidence": "verified"
+        }
+      ]
+    },
+    "prizm_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "Panini Prizm"
+      ],
+      "grammar": "paniniRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "SILVER",
+          "run": null,
+          "confidence": "verified",
+          "note": "the refractor-equivalent"
+        },
+        {
+          "name": "RETAIL_UNNUMBERED_SET",
+          "run": null,
+          "confidence": "verified",
+          "note": "Red White Blue / Hyper / Green / Ice variants - retail, unnumbered"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable",
+          "note": "e.g. Red /299, Blue /199, Purple Wave etc - runs shuffle yearly, backfill from serials"
+        },
+        {
+          "name": "ORANGE",
+          "run": 49,
+          "confidence": "unverified"
+        },
+        {
+          "name": "MOJO",
+          "run": 25,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "GOLD_SHIMMER_FOTL",
+          "run": 10,
+          "confidence": "probable"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "verified"
+        },
+        {
+          "name": "WHITE_SPARKLE",
+          "run": null,
+          "confidence": "verified",
+          "note": "FOTL SSP"
+        }
+      ]
+    },
+    "optic_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "Donruss Optic"
+      ],
+      "grammar": "paniniRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "HOLO",
+          "run": null,
+          "confidence": "verified",
+          "note": "refractor-equivalent"
+        },
+        {
+          "name": "RETAIL_UNNUMBERED_SET",
+          "run": null,
+          "confidence": "verified",
+          "note": "Shock/Hyper Pink/Lime etc"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "probable"
+        },
+        {
+          "name": "NEBULA",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ]
+    },
+    "select_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "Panini Select"
+      ],
+      "grammar": "paniniTriLevel",
+      "tiers": [
+        {
+          "name": "CONCOURSE",
+          "run": null,
+          "confidence": "verified",
+          "note": "base tier"
+        },
+        {
+          "name": "PREMIER",
+          "run": null,
+          "confidence": "verified",
+          "note": "mid tier, scarcer"
+        },
+        {
+          "name": "COURTSIDE",
+          "run": null,
+          "confidence": "verified",
+          "note": "top tier, scarcest base level"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable",
+          "note": "per-level color parallels - composite key needs LEVEL + color"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "probable"
+        },
+        {
+          "name": "ZEBRA",
+          "run": null,
+          "confidence": "verified",
+          "note": "SSP"
+        }
+      ],
+      "note": "Tri-level base structure is the trap: level axis BEFORE color axis."
+    },
+    "mosaic_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "Panini Mosaic"
+      ],
+      "grammar": "paniniRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "MOSAIC",
+          "run": null,
+          "confidence": "verified",
+          "note": "refractor-equivalent (silver mosaic)"
+        },
+        {
+          "name": "RETAIL_UNNUMBERED_SET",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "probable"
+        },
+        {
+          "name": "GENESIS",
+          "run": null,
+          "confidence": "verified",
+          "note": "SSP"
+        }
+      ]
+    },
+    "hoops_donruss_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "NBA Hoops",
+        "Donruss"
+      ],
+      "grammar": "budgetColor",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "RETAIL_COLORS",
+          "run": null,
+          "confidence": "verified",
+          "note": "Purple/Blue/Green explosion etc unnumbered"
+        },
+        {
+          "name": "COLORED_SERIAL",
+          "run": null,
+          "confidence": "probable",
+          "note": "/99 /49 /25 style"
+        },
+        {
+          "name": "GOLD_OR_TOP_SERIAL",
+          "run": 10,
+          "confidence": "unverified"
+        },
+        {
+          "name": "BLACK_OR_ONE_OF_ONE",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ]
+    },
+    "premium_bk": {
+      "sport": "basketball",
+      "appliesTo": [
+        "National Treasures",
+        "Immaculate",
+        "Flawless",
+        "One and One",
+        "Noir"
+      ],
+      "grammar": "baseIsSerialed",
+      "tiers": [
+        {
+          "name": "BASE_SERIALED",
+          "run": 99,
+          "confidence": "verified",
+          "note": "NT/Immaculate convention; Flawless lower (/20-25 range, verify)"
+        },
+        {
+          "name": "TIGHTER_TIERS",
+          "run": null,
+          "confidence": "verified",
+          "note": "/49 /25 /10 /5 1/1 chains"
+        }
+      ],
+      "note": "Serial-less listing = misID signal, same rule as Topps premium."
+    },
+    "prizm_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Panini Prizm Football"
+      ],
+      "grammar": "paniniRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "SILVER",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "RETAIL_UNNUMBERED_SET",
+          "run": null,
+          "confidence": "verified",
+          "note": "Red White Blue etc"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable",
+          "note": "runs shuffle yearly"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "verified"
+        },
+        {
+          "name": "WHITE_SPARKLE",
+          "run": null,
+          "confidence": "verified",
+          "note": "FOTL SSP"
+        }
+      ]
+    },
+    "optic_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Donruss Optic Football"
+      ],
+      "grammar": "paniniRainbow",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "HOLO",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "RETAIL_UNNUMBERED_SET",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ]
+    },
+    "select_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Panini Select Football"
+      ],
+      "grammar": "paniniTriLevel",
+      "tiers": [
+        {
+          "name": "CONCOURSE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "PREMIER",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "FIELD_LEVEL",
+          "run": null,
+          "confidence": "verified",
+          "note": "FB name for top tier"
+        },
+        {
+          "name": "COLORED_MIDLADDER",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "GOLD",
+          "run": 10,
+          "confidence": "verified"
+        },
+        {
+          "name": "BLACK",
+          "run": 1,
+          "confidence": "probable"
+        },
+        {
+          "name": "ZEBRA",
+          "run": null,
+          "confidence": "verified"
+        }
+      ]
+    },
+    "contenders_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Panini Contenders Football"
+      ],
+      "grammar": "ticketParallels",
+      "tiers": [
+        {
+          "name": "SEASON_OR_ROOKIE_TICKET",
+          "run": null,
+          "confidence": "verified",
+          "note": "base; rookie tickets base-numbered autos"
+        },
+        {
+          "name": "PLAYOFF_TICKET",
+          "run": 99,
+          "confidence": "unverified",
+          "note": "runs shift yearly"
+        },
+        {
+          "name": "CRACKED_ICE_TICKET",
+          "run": 23,
+          "confidence": "unverified",
+          "note": "low-run fan favorite; run varies ~/20-25"
+        },
+        {
+          "name": "SUPER_BOWL_TICKET",
+          "run": 1,
+          "confidence": "probable"
+        },
+        {
+          "name": "CHAMPIONSHIP_TICKET",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ],
+      "note": "Parallel names are all 'Ticket' - never auto-keywords."
+    },
+    "donruss_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Donruss Football"
+      ],
+      "grammar": "budgetColor",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "PRESS_PROOF",
+          "run": null,
+          "confidence": "verified",
+          "note": "modern revival, silver/gold/serial variants"
+        },
+        {
+          "name": "COLORED_SERIAL",
+          "run": null,
+          "confidence": "probable"
+        },
+        {
+          "name": "ONE_OF_ONE",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ]
+    },
+    "absolute_certified_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "Absolute",
+        "Certified",
+        "Limited",
+        "Phoenix",
+        "Spectra",
+        "Obsidian"
+      ],
+      "grammar": "serialColor",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified",
+          "note": "Spectra/Obsidian base often serialed - check per product"
+        },
+        {
+          "name": "COLORED_SERIAL_CHAIN",
+          "run": null,
+          "confidence": "probable",
+          "note": "/99 /75 /49 /25 /10 /5 1/1 patterns"
+        }
+      ],
+      "note": "Mid-tier Panini: structure stable, runs per-year backfill."
+    },
+    "premium_fb": {
+      "sport": "football",
+      "appliesTo": [
+        "National Treasures Football",
+        "Immaculate Football",
+        "Flawless Football"
+      ],
+      "grammar": "baseIsSerialed",
+      "tiers": [
+        {
+          "name": "BASE_SERIALED",
+          "run": 99,
+          "confidence": "verified"
+        },
+        {
+          "name": "TIGHTER_TIERS",
+          "run": null,
+          "confidence": "verified"
+        }
+      ]
+    },
+    "leaf_draft": {
+      "sport": "football",
+      "appliesTo": [
+        "Leaf Metal Draft",
+        "Leaf Trinity",
+        "Leaf Valiant"
+      ],
+      "grammar": "prismaticColor",
+      "tiers": [
+        {
+          "name": "BASE",
+          "run": null,
+          "confidence": "verified"
+        },
+        {
+          "name": "PRISMATIC_COLORS",
+          "run": null,
+          "confidence": "probable",
+          "note": "Blue/Green/Purple/Pink/Orange/Red serial chain, runs vary"
+        },
+        {
+          "name": "SUPERFRACTOR_STYLE_1of1",
+          "run": 1,
+          "confidence": "probable"
+        }
+      ],
+      "note": "Applies to Leaf baseball and multi-sport too; unlicensed pool isolation."
     }
   },
-
   "serialSemantics": {
-    "jerseyMatch": { "action": "flag", "neverAutoMultiply": true },
-    "firstSerial": { "action": "flag" },
-    "lastSerial": { "action": "flag" },
-    "oneOfOneHierarchy": ["SUPERFRACTOR", "PLATINUM", "PRINTING_PLATE"],
-    "impossibleSerialForLadder": { "action": "quarantine" }
+    "jerseyMatch": {
+      "action": "flag",
+      "neverAutoMultiply": true
+    },
+    "firstSerial": {
+      "action": "flag"
+    },
+    "lastSerial": {
+      "action": "flag"
+    },
+    "oneOfOneHierarchy": [
+      "SUPERFRACTOR",
+      "PLATINUM",
+      "PRINTING_PLATE"
+    ],
+    "impossibleSerialForLadder": {
+      "action": "quarantine"
+    },
+    "statLine": {
+      "products": [
+        "Donruss",
+        "Leaf (Donruss-era)"
+      ],
+      "rule": "serial run equals a career/season stat; arbitrary non-round runs are VALID, do not quarantine as impossible",
+      "confidence": "verified"
+    }
   },
-
   "crossVendorVocabulary": {
     "panini_to_topps_equivalents": {
       "silver prizm": "REFRACTOR",
@@ -138,5 +1618,266 @@
       "mojo (panini)": "context-dependent",
       "note": "Panini tokens on Topps-product listings = misidentification signal"
     }
+  },
+  "eraRegistry": {
+    "E0_vintage": {
+      "years": [
+        1900,
+        1983
+      ],
+      "parallelModel": "none",
+      "pricingAxis": "condition_grade_pop"
+    },
+    "E1_factory": {
+      "years": [
+        1984,
+        1991
+      ],
+      "parallelModel": "factorySet",
+      "pricingAxis": "provenance_grade"
+    },
+    "E2_boom": {
+      "years": [
+        1992,
+        1999
+      ],
+      "parallelModel": "oddsBasedUnnumbered",
+      "pricingAxis": "oddsScarcity_gradePop"
+    },
+    "E3_serial": {
+      "years": [
+        2000,
+        2012
+      ],
+      "parallelModel": "serialEmergent",
+      "pricingAxis": "hybrid"
+    },
+    "E4_modern": {
+      "years": [
+        2013,
+        2100
+      ],
+      "parallelModel": "fullLadder",
+      "pricingAxis": "ladderCurves"
+    }
+  },
+  "vintageFactoryParallels": {
+    "TIFFANY": {
+      "aliases": [
+        "tiffany",
+        "traded tiffany"
+      ],
+      "years": [
+        1984,
+        1991
+      ],
+      "poolingRule": "isolate",
+      "counterfeitRisk": "high",
+      "confidence": "verified"
+    },
+    "FLEER_GLOSSY": {
+      "aliases": [
+        "fleer glossy",
+        "collector's edition"
+      ],
+      "years": [
+        1987,
+        1989
+      ],
+      "poolingRule": "isolate",
+      "confidence": "probable"
+    },
+    "OPC": {
+      "aliases": [
+        "o-pee-chee",
+        "opc"
+      ],
+      "poolingRule": "isolate_productLine",
+      "confidence": "verified"
+    },
+    "DESERT_SHIELD": {
+      "aliases": [
+        "desert shield"
+      ],
+      "year": 1991,
+      "estRun": 6800,
+      "counterfeitRisk": "extreme",
+      "gradedCompsOnly": true,
+      "confidence": "verified"
+    },
+    "VENEZUELAN": {
+      "aliases": [
+        "venezuelan"
+      ],
+      "poolingRule": "quarantine_default",
+      "confidence": "verified"
+    }
+  },
+  "famousPremiumParallels_E2": [
+    {
+      "name": "1993 Finest Refractor",
+      "product": "Finest",
+      "year": 1993,
+      "estRun": 241,
+      "tier": "grail",
+      "counterfeitRisk": "high",
+      "confidence": "verified"
+    },
+    {
+      "name": "Topps Gold",
+      "years": [
+        1992,
+        1994
+      ],
+      "note": "one-per-pack; Gold Winners 1992 is a distinct lesser version",
+      "confidence": "verified"
+    },
+    {
+      "name": "Stadium Club First Day Issue",
+      "yearsStart": 1993,
+      "estRun": 2000,
+      "confidence": "verified"
+    },
+    {
+      "name": "Donruss Press Proof",
+      "yearsStart": 1994,
+      "estRun": 2000,
+      "confidence": "probable"
+    },
+    {
+      "name": "Score Gold Rush",
+      "year": 1994,
+      "tier": "commodity",
+      "confidence": "verified"
+    },
+    {
+      "name": "Select Certified Mirror Gold",
+      "year": 1995,
+      "estRun": 30,
+      "unnumbered": true,
+      "tier": "grail",
+      "confidence": "probable"
+    },
+    {
+      "name": "Pinnacle Artist's Proof",
+      "yearsStart": 1994,
+      "unnumbered": true,
+      "confidence": "verified"
+    },
+    {
+      "name": "Fleer Ultra Gold Medallion",
+      "yearsStart": 1994,
+      "tier": "commodity",
+      "confidence": "verified"
+    },
+    {
+      "name": "Fleer Ultra Platinum Medallion",
+      "yearsStart": 1996,
+      "serial": true,
+      "confidence": "unverified"
+    },
+    {
+      "name": "Donruss Crusade",
+      "year": 1998,
+      "ladder": {
+        "GREEN": 250,
+        "PURPLE": 100,
+        "RED": 25
+      },
+      "confidence": "probable"
+    },
+    {
+      "name": "Metal Universe Precious Metal Gems",
+      "note": "baseball years/runs need verification; specialist market",
+      "poolingRule": "quarantine_default",
+      "confidence": "unverified"
+    },
+    {
+      "name": "Bowman's Best Atomic Refractor",
+      "years": [
+        1996,
+        1998
+      ],
+      "confidence": "verified"
+    }
+  ],
+  "conditionForks": {
+    "FINEST_COATING": {
+      "years": [
+        1994,
+        2001
+      ],
+      "tokens": [
+        "coating",
+        "peeled",
+        "protector",
+        "w/ coating"
+      ],
+      "rule": "peeled vs coated = separate comp pools",
+      "confidence": "verified"
+    }
+  },
+  "counterfeitRiskRegistry": [
+    "DESERT_SHIELD",
+    "TIFFANY",
+    "1993_FINEST_REFRACTOR",
+    "SELECT_CERTIFIED_MIRROR",
+    "MODERN_SUPERFRACTOR_FAKES",
+    "REHOLDERED_SLABS",
+    "STICKER_AUTO_SWAPS"
+  ],
+  "paniniRainbowConstants": {
+    "GOLD": {
+      "run": 10,
+      "confidence": "verified",
+      "appliesAcross": [
+        "Prizm",
+        "Optic",
+        "Select",
+        "Mosaic"
+      ]
+    },
+    "BLACK": {
+      "run": 1,
+      "confidence": "verified",
+      "note": "modern top of rainbow across core Panini brands"
+    },
+    "WHITE_SPARKLE": {
+      "run": null,
+      "confidence": "verified",
+      "note": "Prizm FOTL SSP, unnumbered"
+    },
+    "GENESIS": {
+      "brand": "Mosaic",
+      "run": null,
+      "confidence": "verified",
+      "note": "SSP tier"
+    },
+    "ZEBRA": {
+      "brand": "Select",
+      "run": null,
+      "confidence": "verified",
+      "note": "SSP tier"
+    },
+    "NEBULA": {
+      "brand": "Optic",
+      "run": 1,
+      "confidence": "probable"
+    },
+    "GOLD_VINYL": {
+      "run": 5,
+      "confidence": "unverified",
+      "note": "premium vinyl tier, brand/run verify"
+    },
+    "note": "Mid-ladder colored runs (/299 /199 /149 /99 /75 /49 /25) shuffle assignments per sport-year; anchors above are stable."
+  },
+  "ladderValidationPolicy": {
+    "nullRun": "Tier exists but run is year-variable or unnumbered. Validator accepts any observed serial for this tier, RECORDS (product, year, tier, observedRun) to the learning table, and promotes to a concrete run after N consistent observations (suggest N=5).",
+    "unverifiedTier": "May flag mismatches, must not gate promotion or reject comps.",
+    "verifiedRunMismatch": "Observed serial contradicts a verified run -> quarantine the comp (misID, fake, or new-year drift); if drift confirmed across multiple comps, open a registry-update task.",
+    "unknownTier": "Color/finish token not in ladder -> quarantine + registry-update task. Never silently classify.",
+    "midladderShuffle": "Panini COLORED_MIDLADDER slots intentionally hold no runs: assignments shuffle per sport-year. Backfill exclusively from observed serials.",
+    "levelAxis": "Select-style tri-level products: LEVEL resolves before color. (level, color, run) is the tier key.",
+    "editionFirst": "Edition isolation (Sapphire, Mega, FOTL-only products) resolves before ladder validation runs at all."
   }
 }
