@@ -37,12 +37,12 @@ const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfol
 const { resolveQueued } = require(path.join(backend, "dist/services/portfolioiq/verifyQueue.service.js"));
 
 const APPLY = process.env.APPROVE_APPLY === "true";
-const LIMIT = Math.max(1, Math.min(1000, Number(process.env.APPROVE_LIMIT || "200")));
-// HARD CAP concurrency at 4 for slab-OCR — AOAI TPM limits hit hard at
-// 16 (429s dominated the first apply). Backfill Runner defaults env
-// concurrency to 16 for reslug scripts; for LLM-bound scripts we
-// override in-script to protect the deployment quota.
-const CONCURRENCY = Math.max(1, Math.min(4, Number(process.env.APPROVE_CONCURRENCY || "4")));
+const LIMIT = Math.max(1, Math.min(2000, Number(process.env.APPROVE_LIMIT || "500")));
+// HARD CAP concurrency at 2 for slab-OCR — v2 apply at concurrency 4
+// still saw 29 rate-limit 429s in the tail. AOAI TPM math suggests
+// 2 concurrent requests × ~3s each × 1500 tokens = well within
+// limits. Fewer 429s + more retries = higher final match rate.
+const CONCURRENCY = Math.max(1, Math.min(2, Number(process.env.APPROVE_CONCURRENCY || "2")));
 const ADMIN_USER_ID = "slab-ocr-auto-approve";
 
 async function runInParallel(items, worker, concurrency = CONCURRENCY) {
@@ -71,17 +71,22 @@ async function main() {
   // grade in the title but the slab is right there in the image).
   // Slab OCR self-classifies raw vs graded via hasSlab.
   // IS_STRING excludes null; LENGTH > 10 excludes empty + short values.
+  // ORDER BY observedAt ASC so re-runs process the queue in stable
+  // order and don't skip / repeat rows. Combined with the LIMIT this
+  // lets multiple sequential runs drain the whole queue.
   const query = `
     SELECT TOP @n
       c.id, c.reason,
       c.input.cardId, c.input.title, c.input.imageUrl,
       c.input.playerName, c.input.cardYear, c.input.cardNumber,
       c.input.parallel, c.input.gradeCompany, c.input.gradeValue,
-      c.input.printRun, c.input.isAuto
+      c.input.printRun, c.input.isAuto,
+      c.observedAt
     FROM c
     WHERE c.status = "pending"
       AND IS_STRING(c.input.imageUrl)
       AND LENGTH(c.input.imageUrl) > 10
+    ORDER BY c.observedAt ASC
   `;
   const { resources: rows } = await q.items.query({
     query,
