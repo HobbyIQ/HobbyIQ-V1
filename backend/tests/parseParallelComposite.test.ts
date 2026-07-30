@@ -114,6 +114,40 @@ describe("parseParallelComposite — end-to-end", () => {
     const c = parseParallelComposite("2024 Topps Aaron Judge /9999");
     expect(c.serialRun).toBe(null);
   });
+
+  // CF-COMPOSITE-AUTO-AXIS (Drew, 2026-07-30). isAuto is first-class.
+  it("isAuto via title text 'Auto' → true", () => {
+    const c = parseParallelComposite("2024 Bowman Chrome Auto Eric Hartman #CPA-EHA", "CPA-EHA");
+    expect(c.isAuto).toBe(true);
+  });
+  it("isAuto via cardNumber prefix CPA-* → true (no 'auto' in title)", () => {
+    // Terse title without "auto" text still resolves via cardNumber prefix.
+    const c = parseParallelComposite("2024 Bowman #CPA-EHA Braves", "CPA-EHA");
+    expect(c.isAuto).toBe(true);
+  });
+  it("isAuto via basketball setName 'Rookie Ink' → true", () => {
+    const c = parseParallelComposite("Panini Hoops Anthony Edwards", null,
+      { sport: "basketball", setName: "Panini Hoops Rookie Ink" });
+    expect(c.isAuto).toBe(true);
+  });
+  it("isAuto via football setName 'NFL Ink' → true", () => {
+    const c = parseParallelComposite("Panini Contenders Justin Herbert", null,
+      { sport: "football", setName: "Panini Contenders NFL Ink" });
+    expect(c.isAuto).toBe(true);
+  });
+  it("base card, no signals → isAuto=false", () => {
+    const c = parseParallelComposite("2024 Bowman Chrome Prospects Eric Hartman #BCP-102", "BCP-102");
+    expect(c.isAuto).toBe(false);
+  });
+  it("autoStyle 'on-card' detected from title", () => {
+    const c = parseParallelComposite("2024 Bowman Chrome On-Card Auto Eric Hartman #CPA-EHA", "CPA-EHA");
+    expect(c.isAuto).toBe(true);
+    expect(c.autoStyle).toBe("on-card");
+  });
+  it("autoStyle 'sticker' detected from title", () => {
+    const c = parseParallelComposite("2019 Panini Prizm Signatures Ja Morant Sticker Auto");
+    expect(c.autoStyle).toBe("sticker");
+  });
 });
 
 describe("hasNonBaseEdition — chrome-implied guard hook", () => {

@@ -27,7 +27,7 @@ import {
   matchEditionAlias,
   matchFinishModifierAlias,
 } from "./parallelVocabulary.service.js";
-import { detectInsertSet } from "./parseTitleIdentity.service.js";
+import { detectInsertSet, inferIsAuto, parseListingIdentity } from "./parseTitleIdentity.service.js";
 
 export interface ParallelComposite {
   edition: string | null;         // "SAPPHIRE" | "MEGA_BOX" | "FIRST_EDITION" | "SONIC" | "COSMIC" | "LITE" | null
@@ -35,15 +35,29 @@ export interface ParallelComposite {
   colorFamily: string | null;     // "BASE" | "REFRACTOR" | "BLUE" | ... (uppercase key from vocab)
   finishModifier: string | null;  // "SHIMMER" | "WAVE" | "SPECKLE" | ... (uppercase key from vocab)
   isRefractor: boolean;           // true when title says "refractor" or product implies (e.g., "Blue Refractor")
+  // CF-COMPOSITE-AUTO-AXIS (Drew, 2026-07-30). isAuto is a first-class
+  // axis of the composite identity — framework parsing order has auto/
+  // relic detection as step 5. Uses the sport-aware inferIsAuto which
+  // combines title text ("auto"/"autograph"/"hard signed") + baseball
+  // cardNumber prefix (isCardNumberAutoSubset with ~55 prefixes) +
+  // football WT/SOT prefix + setName keyword (Signatures/Autographs/
+  // Ink/Penmanship/Rookie Ticket for basketball/football Panini era).
+  isAuto: boolean;
+  autoStyle: "on-card" | "sticker" | null;  // detected from title text; null when uncertain
   serialRun: number | null;       // captured from serial pattern or /N (X/Y denominator wins)
   serialObserved: string | null;  // raw text of the serial as captured (for jersey-match detection later)
   confidence: "high" | "medium" | "low";  // aggregate self-assessment across the composite
 }
 
 /** Extract the composite parallel identity from a listing title.
- *  cardNumber is used to detect insertSet (via detectInsertSet); the
- *  rest of extraction is product-agnostic. */
-export function parseParallelComposite(title: string, cardNumber?: string | null): ParallelComposite {
+ *  cardNumber → insertSet + baseball auto-prefix detection.
+ *  sport + setName → cross-sport isAuto via setName-keyword rule
+ *  (Panini basketball/football era). */
+export function parseParallelComposite(
+  title: string,
+  cardNumber?: string | null,
+  opts?: { sport?: string | null; setName?: string | null }
+): ParallelComposite {
   const t = String(title ?? "").toLowerCase();
 
   // ─── Step 1: Edition (must run first) ─────────────────────────────
@@ -68,6 +82,19 @@ export function parseParallelComposite(title: string, cardNumber?: string | null
   const isRefractor = /\brefractor\b/i.test(title)
     || (colorMatch?.value.aliases.some(a => /\brefractor\b/i.test(a)) ?? false);
 
+  // ─── Step 5: Auto/relic (framework parsing order) ────────────────
+  // Sport-aware via inferIsAuto — combines title text + cardNumber
+  // prefix + setName keyword. Reuse parseListingIdentity for the
+  // title-text extraction (isAuto + autoStyle in one call).
+  const legacyParsed = parseListingIdentity(title);
+  const isAuto = inferIsAuto({
+    sport: opts?.sport ?? null,
+    cardNumber: cardNumber ?? null,
+    setName: opts?.setName ?? null,
+    titleHasAutoText: legacyParsed.isAuto,
+  });
+  const autoStyle = legacyParsed.autoStyle;
+
   // Confidence:
   //   high    — edition/color known, plus serial matches or explicit refractor
   //   medium  — some tokens matched but ambiguous
@@ -75,7 +102,7 @@ export function parseParallelComposite(title: string, cardNumber?: string | null
   let confidence: ParallelComposite["confidence"] = "low";
   if (edition && colorFamily) confidence = "high";
   else if (colorFamily && (isRefractor || serialRun != null)) confidence = "high";
-  else if (colorFamily || edition || insertSet) confidence = "medium";
+  else if (colorFamily || edition || insertSet || isAuto) confidence = "medium";
 
   return {
     edition,
@@ -83,6 +110,8 @@ export function parseParallelComposite(title: string, cardNumber?: string | null
     colorFamily,
     finishModifier,
     isRefractor,
+    isAuto,
+    autoStyle,
     serialRun,
     serialObserved,
     confidence,
