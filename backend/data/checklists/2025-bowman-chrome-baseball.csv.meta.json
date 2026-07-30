@@ -5,5 +5,5 @@
   "setKey": "bowman-chrome",
   "source": "seed",
   "confidence": 0.95,
-  "provenance": "baseballcardpedia.com fetched 2026-07-30 — BCP prospects, BCP-153..252 (second half). BCP-1..152 pending followup fetch."
+  "provenance": "baseballcardpedia.com fetched 2026-07-30 — BCP prospects BCP-1..252 (BCP-151, BCP-152 missing from source; will re-fetch)."
 }
