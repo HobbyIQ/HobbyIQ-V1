@@ -199,6 +199,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
+        # CF-COMPOSITE-SELF-RELAUNCH-CWD-FIX (Drew, 2026-07-30). Run
+        # from backend/ so `require('@azure/cosmos')` resolves. Earlier
+        # runs failed at this step with "Cannot find module '@azure/cosmos'"
+        # which caused the self-relaunch to skip — killing the loop
+        # after 09:38 UTC on 2026-07-30.
+        working-directory: backend
         run: |
           set +e
           REMAINING=$(node -e "
