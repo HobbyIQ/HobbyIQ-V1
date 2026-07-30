@@ -47,31 +47,80 @@ async function main() {
   console.log(`  concurrency: ${CONCURRENCY}`);
   console.log(`  scan-limit: ${LIMIT}\n`);
 
-  // Cosmos SQL: STARTSWITH is per-prefix, no OR-of-many indexed. Use
-  // regex-side matching by fetching all isAuto=false rows with a
-  // cardNumber starting with any of the confident-auto letter blocks.
-  // We rely on the JS filter for correctness (STARTSWITH would over-
-  // match variants); Cosmos filter uses IN on the first-letter set.
+  // Cosmos SQL: STARTSWITH is per-prefix; enumerate every auto prefix
+  // from Drew's curated baseball list (2026-07-30). The JS-side
+  // isCardNumberAutoSubset re-verifies each row, so any prefix that
+  // ambiguously matches (e.g. "PA-*" is also a common Panini pattern)
+  // will still be routed through the strict letter-boundary regex
+  // check before we touch the row.
+  //
+  // Note: Cosmos SQL has ~256 arg limit; enumerating ~55 prefixes as
+  // STARTSWITH ORs stays well under. Two-char prefixes (BA/PA/RA/etc.)
+  // will over-match at the Cosmos level (e.g. "BA-14" AND "BASEBALL"),
+  // but the LENGTH > 3 filter + JS-side regex rejects false positives.
   const query = `
     SELECT TOP @n
       c.id, c.cardId, c.hobbyiqCardId, c.sport, c.cardYear, c.cardNumber,
       c.parallel, c.isAuto, c.printRun
     FROM c
     WHERE c.isAuto = false
+      AND c.sport = "baseball"
       AND IS_STRING(c.cardNumber)
       AND LENGTH(c.cardNumber) > 3
       AND (
-        STARTSWITH(c.cardNumber, "CPA", true) OR
-        STARTSWITH(c.cardNumber, "CDA", true) OR
-        STARTSWITH(c.cardNumber, "CRA", true) OR
-        STARTSWITH(c.cardNumber, "BSA", true) OR
-        STARTSWITH(c.cardNumber, "USA", true) OR
-        STARTSWITH(c.cardNumber, "SCCA", true) OR
-        STARTSWITH(c.cardNumber, "DAS", true) OR
-        STARTSWITH(c.cardNumber, "NTS", true) OR
-        STARTSWITH(c.cardNumber, "SSM", true) OR
+        STARTSWITH(c.cardNumber, "CPATWH", true) OR
         STARTSWITH(c.cardNumber, "CPALD", true) OR
-        STARTSWITH(c.cardNumber, "CPATWH", true)
+        STARTSWITH(c.cardNumber, "APDCA", true) OR
+        STARTSWITH(c.cardNumber, "54FAV", true) OR
+        STARTSWITH(c.cardNumber, "FFDA", true) OR
+        STARTSWITH(c.cardNumber, "CUSA", true) OR
+        STARTSWITH(c.cardNumber, "SCCA", true) OR
+        STARTSWITH(c.cardNumber, "CCAR", true) OR
+        STARTSWITH(c.cardNumber, "RODA", true) OR
+        STARTSWITH(c.cardNumber, "ROTA", true) OR
+        STARTSWITH(c.cardNumber, "TTAR", true) OR
+        STARTSWITH(c.cardNumber, "DPPA", true) OR
+        STARTSWITH(c.cardNumber, "BSPA", true) OR
+        STARTSWITH(c.cardNumber, "BCPA", true) OR
+        STARTSWITH(c.cardNumber, "BCRA", true) OR
+        STARTSWITH(c.cardNumber, "TCRA", true) OR
+        STARTSWITH(c.cardNumber, "B96A", true) OR
+        STARTSWITH(c.cardNumber, "BGA-", true) OR
+        STARTSWITH(c.cardNumber, "MRA-", true) OR
+        STARTSWITH(c.cardNumber, "UAC-", true) OR
+        STARTSWITH(c.cardNumber, "BSA-", true) OR
+        STARTSWITH(c.cardNumber, "FSA-", true) OR
+        STARTSWITH(c.cardNumber, "CPA-", true) OR
+        STARTSWITH(c.cardNumber, "CDA-", true) OR
+        STARTSWITH(c.cardNumber, "CRA-", true) OR
+        STARTSWITH(c.cardNumber, "BPA-", true) OR
+        STARTSWITH(c.cardNumber, "CBA-", true) OR
+        STARTSWITH(c.cardNumber, "CCA-", true) OR
+        STARTSWITH(c.cardNumber, "USA-", true) OR
+        STARTSWITH(c.cardNumber, "DAS-", true) OR
+        STARTSWITH(c.cardNumber, "NTS-", true) OR
+        STARTSWITH(c.cardNumber, "SSM-", true) OR
+        STARTSWITH(c.cardNumber, "DCA-", true) OR
+        STARTSWITH(c.cardNumber, "CAA-", true) OR
+        STARTSWITH(c.cardNumber, "GQA-", true) OR
+        STARTSWITH(c.cardNumber, "AGA-", true) OR
+        STARTSWITH(c.cardNumber, "ROA-", true) OR
+        STARTSWITH(c.cardNumber, "FAR-", true) OR
+        STARTSWITH(c.cardNumber, "FFA-", true) OR
+        STARTSWITH(c.cardNumber, "BOA-", true) OR
+        STARTSWITH(c.cardNumber, "T1A-", true) OR
+        STARTSWITH(c.cardNumber, "SCA-", true) OR
+        STARTSWITH(c.cardNumber, "PPA-", true) OR
+        STARTSWITH(c.cardNumber, "ODA-", true) OR
+        STARTSWITH(c.cardNumber, "IAP-", true) OR
+        STARTSWITH(c.cardNumber, "UAR-", true) OR
+        STARTSWITH(c.cardNumber, "BA-", true) OR
+        STARTSWITH(c.cardNumber, "PA-", true) OR
+        STARTSWITH(c.cardNumber, "RA-", true) OR
+        STARTSWITH(c.cardNumber, "FA-", true) OR
+        STARTSWITH(c.cardNumber, "TA-", true) OR
+        STARTSWITH(c.cardNumber, "AA-", true) OR
+        STARTSWITH(c.cardNumber, "AP-", true)
       )
   `;
   const { resources: rows } = await sc.items.query(
