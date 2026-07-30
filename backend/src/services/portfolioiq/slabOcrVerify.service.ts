@@ -36,6 +36,23 @@ export interface SlabLabel {
   grader: "PSA" | "BGS" | "SGC" | "CGC" | "HGA" | "TAG" | "GMA" | null;
   gradeValue: number | null;   // e.g. 10, 9.5, 8
   gradeLabel: string | null;   // e.g. "GEM MT 10", "MINT 9", "PRISTINE 10 BLACK LABEL"
+  // CF-SLAB-QUALIFIER + CF-BGS-SUBGRADES (Drew, 2026-07-30). Reserved
+  // for a follow-up PR that extends the JSON schema + prompt to also
+  // extract these. Marked OPTIONAL so future callers can start reading
+  // without breaking existing extraction that doesn't populate them.
+  //   gradeQualifier: PSA suffix — "OC" (off-center, 30-60% discount),
+  //     "MK" (mark), "MC" (miscut), "ST" (stain), "PD" (print defect),
+  //     "OF" (out of focus). Null when clean.
+  //   bgsSubgrades: BGS 4-subgrade panel (Centering/Corners/Edges/
+  //     Surface, each 1..10 in 0.5 increments). Only BGS labels have
+  //     these; PSA/SGC/CGC → null.
+  gradeQualifier?: string | null;
+  bgsSubgrades?: {
+    centering: number | null;
+    corners: number | null;
+    edges: number | null;
+    surface: number | null;
+  } | null;
   certNumber: string | null;
   year: number | null;
   brand: string | null;        // as printed on label — "TOPPS CHROME", "BOWMAN", "PANINI PRIZM"

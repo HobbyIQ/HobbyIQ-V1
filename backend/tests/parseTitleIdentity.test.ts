@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  detectInsertSet,
   inferIsAuto,
   isCardNumberAutoSubset,
   parseListingIdentity,
@@ -84,6 +85,59 @@ describe("isCardNumberAutoSubset — empirical prefixes", () => {
   it("pure-digit cardNumber → false", () => {
     expect(isCardNumberAutoSubset("500")).toBe(false);
     expect(isCardNumberAutoSubset("#87")).toBe(false);
+  });
+});
+
+// CF-INSERT-DETECTION (Drew, 2026-07-30). Detect insert subset from
+// cardNumber prefix; returns the insert-slug to compound into setKey.
+describe("detectInsertSet — baseball insert prefix mapping", () => {
+  it("BTP-10 → scouts-top-100 (Bowman)", () => {
+    expect(detectInsertSet("BTP-10")).toBe("scouts-top-100");
+  });
+  it("HRC-15 → home-run-challenge (Topps flagship)", () => {
+    expect(detectInsertSet("HRC-15")).toBe("home-run-challenge");
+  });
+  it("FS-42 → future-stars (Topps Chrome)", () => {
+    expect(detectInsertSet("FS-42")).toBe("future-stars");
+  });
+  it("SMLB-3 → stars-of-mlb", () => {
+    expect(detectInsertSet("SMLB-3")).toBe("stars-of-mlb");
+  });
+  it("MR-100 → mood-ring (Bowman Draft)", () => {
+    expect(detectInsertSet("MR-100")).toBe("mood-ring");
+  });
+  it("NAP-8 → new-age-performers (Heritage)", () => {
+    expect(detectInsertSet("NAP-8")).toBe("new-age-performers");
+  });
+  it("TAN-5 → then-and-now (Heritage)", () => {
+    expect(detectInsertSet("TAN-5")).toBe("then-and-now");
+  });
+  it("54F-JD → bowman-54", () => {
+    expect(detectInsertSet("54F-JD")).toBe("bowman-54");
+  });
+
+  it("89BC-15 → anniversary-bc (year-stamped, letter suffix)", () => {
+    expect(detectInsertSet("89BC-15")).toBe("anniversary-bc");
+  });
+  it("85TF-3 → anniversary-tf (year-stamped)", () => {
+    expect(detectInsertSet("85TF-3")).toBe("anniversary-tf");
+  });
+  it("87ASA-JD → anniversary-asa (year-stamped, 3-letter)", () => {
+    expect(detectInsertSet("87ASA-JD")).toBe("anniversary-asa");
+  });
+
+  it("BCP-102 → null (base Bowman Chrome Prospects, not an insert)", () => {
+    expect(detectInsertSet("BCP-102")).toBe(null);
+  });
+  it("CPA-EHA → null (auto, but not an insert — belongs to base Bowman Chrome pool with auto flag)", () => {
+    expect(detectInsertSet("CPA-EHA")).toBe(null);
+  });
+  it("pure-digit → null", () => {
+    expect(detectInsertSet("100")).toBe(null);
+  });
+  it("null/empty → null (silent-safe)", () => {
+    expect(detectInsertSet(null)).toBe(null);
+    expect(detectInsertSet("")).toBe(null);
   });
 });
 

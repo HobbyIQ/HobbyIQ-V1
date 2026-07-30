@@ -168,6 +168,88 @@ export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
   return /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/.test(cn);
 }
 
+// CF-INSERT-DETECTION (Drew, 2026-07-30). Inserts are separate card
+// sets within a product — a "Bowman BTP-10 Scouts' Top 100 Refractor"
+// is NOT the same card (or FMV pool) as a base Bowman #10 Refractor.
+// Currently the parser conflates them: cardNumber "BTP-10" gets slugged
+// as `hiq:baseball:2024:bowman:btp-10:refractor:no-auto` — same pool
+// as any BTP-10 might land in, and separate from where OTHER insert
+// numbers land.
+//
+// This function detects when a cardNumber prefix (or anniversary year
+// stamp) indicates an insert set and returns the compound insert-name
+// slug. Callers combine it with the base setKey to produce
+// setKey = `${base}-${insertSlug}` (e.g. bowman-scouts-top-100).
+//
+// Curated from Drew's baseball insert vocabulary (2026-07-30):
+//
+//   BOWMAN inserts (2013+):
+//     BTP  Scouts' Top 100
+//     BSP  Bowman Spotlights
+//     MR   Mood Ring        (also Draft variant)
+//     DPP  Draft Picks & Prospects
+//     TT   Transformative Talent
+//     54F  Bowman '54       (design-throwback)
+//   TOPPS FLAGSHIP inserts:
+//     HRC  Home Run Challenge
+//     SMLB Stars of MLB
+//     CC   City Connect
+//     GOAT Greatest of All Time  (varies by year, sometimes prefixed differently)
+//     HA   Heavy Artillery
+//   TOPPS CHROME inserts:
+//     FS   Future Stars
+//     USC  Ultraviolet (colored inserts, year-varying)
+//   TOPPS HERITAGE inserts:
+//     NF   New Age Performers (some years)
+//     TAN  Then and Now
+//     BF   Baseball Flashbacks
+//     NAP  New Age Performers (canonical prefix)
+//   ANNIVERSARY year-stamped: pattern ^\d{2}[A-Z]{1,4}-  (85TF, 87ASA,
+//     88BF, 89BC, 87TB, etc.) — design-year prefix + insert-code suffix
+//
+// Returns null when the cardNumber doesn't match any known insert
+// prefix — caller keeps the base setKey unchanged. */
+export function detectInsertSet(cardNumber: string | null): string | null {
+  if (!cardNumber) return null;
+  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
+  // Ordered longest-first for correct alternation matching.
+  const map: Array<[RegExp, string]> = [
+    // 4+ char prefixes
+    [/^SMLB-/, "stars-of-mlb"],
+    [/^GOAT-/, "greatest-of-all-time"],
+    // 3-char
+    [/^BTP-/, "scouts-top-100"],
+    [/^BSP-/, "spotlights"],
+    [/^DPP-/, "draft-picks-prospects"],
+    [/^HRC-/, "home-run-challenge"],
+    [/^USC-/, "ultraviolet"],
+    [/^NAP-/, "new-age-performers"],
+    [/^TAN-/, "then-and-now"],
+    // 2-char
+    [/^CC-/, "city-connect"],
+    [/^HA-/, "heavy-artillery"],
+    [/^FS-/, "future-stars"],
+    [/^MR-/, "mood-ring"],
+    [/^TT-/, "transformative-talent"],
+    [/^NF-/, "new-age-performers"],
+    [/^BF-/, "baseball-flashbacks"],
+    [/^54F-/, "bowman-54"],
+    // Anniversary year-stamped (85TF, 87ASA, 88BF, 89BC — 2-digit year
+    // + 1-4 letters). The letter code is variable per year/product;
+    // we route to a generic "anniversary" bucket keyed by the letters
+    // for later disambiguation. Alt: return "anniversary-{letters}" so
+    // 85TF and 89BC end up in the same "TF"/"BC" insert pool across
+    // decades. That's the safer default.
+  ];
+  for (const [re, slug] of map) {
+    if (re.test(cn)) return slug;
+  }
+  // Anniversary regex — extract the letter suffix as the insert code.
+  const anniversary = cn.match(/^(\d{2})([A-Z]{1,4})-/);
+  if (anniversary) return `anniversary-${anniversary[2].toLowerCase()}`;
+  return null;
+}
+
 // CF-UNIFIED-AUTO-INFERENCE (Drew, 2026-07-30). Sport-aware auto
 // detection that consolidates every signal:
 //   - Title text ("auto" / "autograph" / "hard signed")
