@@ -16,7 +16,11 @@ const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"
 const { parseParallelComposite } = require(path.join(backend, "dist/services/portfolioiq/parseParallelComposite.service.js"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
-const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY || "16");
+// Higher default concurrency for composite backfill — Cosmos patch
+// on 3M-row corpus needs the throughput. 32 is a reasonable balance
+// between wall-clock and 429 pressure; can bump to 64 if TPU headroom
+// is present.
+const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY || "32");
 const LIMIT = Number(process.env.BACKFILL_LIMIT || "500000");
 
 async function runInParallel(items, worker, concurrency = CONCURRENCY) {

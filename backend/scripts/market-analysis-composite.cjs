@@ -27,7 +27,9 @@ const WINDOW_DAYS = Number(process.env.ANALYSIS_WINDOW_DAYS || "30");
 
 async function fetchRecentSales(sc, sinceMs) {
   const sinceIso = new Date(sinceMs).toISOString();
-  // Broad fetch: all sales since sinceMs with a price + soldAt.
+  // Right-structure query: REQUIRE composite fields (no legacy string
+  // parsing fallback). Per Drew — analysis uses the 6-axis composite
+  // as the source of truth, not the string-blob parallel field.
   const query = `
     SELECT TOP @n
       c.id, c.soldAt, c.price, c.sport, c.isAuto, c.autoStyle, c.parallel,
@@ -36,6 +38,8 @@ async function fetchRecentSales(sc, sinceMs) {
     FROM c
     WHERE c.soldAt >= @since
       AND c.price > 0
+      AND IS_DEFINED(c.composite)
+      AND c.composite != null
   `;
   const it = sc.items.query(
     { query, parameters: [{ name: "@n", value: LIMIT }, { name: "@since", value: sinceIso }] },
@@ -53,11 +57,14 @@ async function fetchRecentSales(sc, sinceMs) {
 
 function classifyRow(r) {
   const comp = r.composite;
+  // Right-structure only: read directly from the composite fields the
+  // parser emitted. No legacy parallel-string parsing.
   return {
     sport: (r.sport || "unknown").toLowerCase(),
     edition: comp?.edition ?? null,
-    colorFamily: comp?.colorFamily ?? classifyLegacyColor(r.parallel),
-    finishModifier: comp?.finishModifier ?? classifyLegacyFinish(r.parallel),
+    colorFamily: comp?.colorFamily ?? null,
+    finishModifier: comp?.finishModifier ?? null,
+    isRefractor: comp?.isRefractor === true,
     insertSet: comp?.insertSet ?? null,
     isAuto: r.isAuto === true,
     autoStyle: r.autoStyle ?? null,
@@ -66,40 +73,6 @@ function classifyRow(r) {
     gradeValue: r.gradeValue ?? null,
     product: extractProduct(r.hobbyiqCardId),
   };
-}
-
-// Legacy color classifier — parses `parallel` string when composite is null.
-function classifyLegacyColor(parallel) {
-  if (!parallel || typeof parallel !== "string") return null;
-  const p = parallel.toLowerCase();
-  if (/superfractor/.test(p)) return "SUPERFRACTOR";
-  if (/platinum/.test(p)) return "PLATINUM";
-  if (/x-?fractor/.test(p)) return "XFRACTOR";
-  if (/rainbow foil/.test(p)) return "RAINBOW_FOIL";
-  if (/prism/.test(p)) return "PRISM";
-  if (/sepia/.test(p)) return "SEPIA";
-  if (/negative/.test(p)) return "NEGATIVE";
-  if (/speckle/.test(p)) return "SPECKLE";
-  if (/mojo/.test(p)) return "MOJO";
-  const colors = ["black","blue","red","green","gold","orange","purple","yellow","aqua","pink","silver"];
-  for (const c of colors) if (new RegExp(`\\b${c}\\b`).test(p)) return c.toUpperCase();
-  if (/refractor/.test(p)) return "REFRACTOR";
-  if (/base/.test(p) || p === "") return "BASE";
-  return null;
-}
-
-function classifyLegacyFinish(parallel) {
-  if (!parallel || typeof parallel !== "string") return null;
-  const p = parallel.toLowerCase();
-  if (/ray[\s-]?wave/.test(p)) return "RAYWAVE";
-  if (/wave/.test(p)) return "WAVE";
-  if (/shimmer/.test(p)) return "SHIMMER";
-  if (/lava/.test(p)) return "LAVA";
-  if (/vinyl/.test(p)) return "VINYL";
-  if (/prism/.test(p)) return "PRISM";
-  if (/mini[\s-]?diamond/.test(p)) return "MINI_DIAMOND";
-  if (/geometric/.test(p)) return "GEOMETRIC";
-  return null;
 }
 
 function extractProduct(slug) {
