@@ -23,7 +23,7 @@ if (!fs.existsSync(src)) {
 // Only copy the files we deliberately bundle for runtime. Adding more
 // files here is a deliberate act; grepping the runtime code for
 // require("../../../data/<name>.json") tells you what to add.
-const BUNDLED_FILES = ["bowman-parallels.json"];
+const BUNDLED_FILES = ["bowman-parallels.json", "parallel-vocabulary.json"];
 
 fs.mkdirSync(dst, { recursive: true });
 let copied = 0;

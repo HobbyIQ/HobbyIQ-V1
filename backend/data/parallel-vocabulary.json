@@ -1,0 +1,142 @@
+{
+  "$schema": "hobbyiq/parallel-vocabulary/v1",
+  "notes": "Alias normalization + ladder registry. confidence: verified | probable | unverified. Unverified entries may FLAG matches but never GATE promotion. Longest-match-first on aliases.",
+
+  "editionTokens": {
+    "sapphire": { "canonical": "SAPPHIRE", "aliases": ["sapphire", "sapphire edition"], "poolingRule": "isolate", "confidence": "verified" },
+    "megaBox": { "canonical": "MEGA_BOX", "aliases": ["mega box", "mega-box", "mojo mega"], "poolingRule": "isolate", "confidence": "verified" },
+    "firstEdition": { "canonical": "FIRST_EDITION", "aliases": ["1st edition", "first edition"], "poolingRule": "isolate", "confidence": "verified" },
+    "sonic": { "canonical": "SONIC", "aliases": ["sonic"], "poolingRule": "isolate", "confidence": "probable" },
+    "cosmic": { "canonical": "COSMIC", "aliases": ["cosmic chrome", "cosmic"], "poolingRule": "isolate", "confidence": "verified" },
+    "lite": { "canonical": "LITE", "aliases": ["bowman lite", "chrome lite", "lite"], "poolingRule": "isolate", "confidence": "probable" }
+  },
+
+  "colorFamilies": {
+    "BASE": { "aliases": ["base"], "confidence": "verified" },
+    "REFRACTOR": { "aliases": ["refractor", "ref", "silver refractor"], "confidence": "verified", "trap": "title-noise; require serial or product rule" },
+    "SPECKLE": { "aliases": ["speckle refractor", "speckle"], "confidence": "verified" },
+    "MOJO": { "aliases": ["mojo refractor", "mojo"], "confidence": "verified", "note": "mega box channel" },
+    "PURPLE": { "aliases": ["purple refractor", "purple"], "confidence": "verified" },
+    "AQUA": { "aliases": ["aqua refractor", "aqua"], "confidence": "verified" },
+    "BLUE": { "aliases": ["blue refractor", "blue"], "confidence": "verified" },
+    "GREEN": { "aliases": ["green refractor", "green"], "confidence": "verified" },
+    "YELLOW": { "aliases": ["yellow refractor", "yellow"], "confidence": "verified" },
+    "GOLD": { "aliases": ["gold refractor", "gold"], "confidence": "verified" },
+    "ORANGE": { "aliases": ["orange refractor", "orange"], "confidence": "verified" },
+    "RED": { "aliases": ["red refractor", "red"], "confidence": "verified" },
+    "PINK": { "aliases": ["pink refractor", "pink"], "confidence": "verified" },
+    "SEPIA": { "aliases": ["sepia refractor", "sepia"], "confidence": "verified" },
+    "NEGATIVE": { "aliases": ["negative refractor", "negative"], "confidence": "verified" },
+    "PRISM": { "aliases": ["prism refractor", "prism"], "confidence": "verified", "trap": "not Panini Prizm; sport+brand check" },
+    "XFRACTOR": { "aliases": ["x-fractor", "xfractor", "x fractor"], "confidence": "verified" },
+    "SKY_BLUE": { "aliases": ["sky blue"], "confidence": "verified", "note": "paper bowman" },
+    "PLATINUM": { "aliases": ["platinum"], "confidence": "verified", "note": "paper 1/1; also a bowman product name — require serial context" },
+    "SUPERFRACTOR": { "aliases": ["superfractor", "super fractor", "supe", "1/1 superfractor"], "confidence": "verified" },
+    "PRINTING_PLATE": { "aliases": ["printing plate", "plate", "1/1 plate", "cyan plate", "magenta plate", "yellow plate", "black plate"], "confidence": "verified", "note": "1/1 but prices far below superfractor" },
+    "RAINBOW_FOIL": { "aliases": ["rainbow foil"], "confidence": "verified", "trap": "flagship paper; bare 'rainbow' is noise" },
+    "VINTAGE_STOCK": { "aliases": ["vintage stock"], "confidence": "verified" },
+    "INDEPENDENCE_DAY": { "aliases": ["independence day"], "confidence": "verified" },
+    "BLACK": { "aliases": ["black"], "confidence": "verified", "trap": "flagship anniversary-numbered; also 'black label' BGS collision — grade parse first" }
+  },
+
+  "finishModifiers": {
+    "SHIMMER": { "aliases": ["shimmer"], "premium": "fotl", "confidence": "verified" },
+    "WAVE": { "aliases": ["wave"], "confidence": "verified" },
+    "RAYWAVE": { "aliases": ["raywave", "ray wave"], "confidence": "verified" },
+    "LAVA": { "aliases": ["lava", "lava lamp"], "confidence": "verified" },
+    "ATOMIC": { "aliases": ["atomic"], "confidence": "probable" },
+    "ICE": { "aliases": ["ice"], "confidence": "probable" },
+    "VINYL": { "aliases": ["vinyl"], "confidence": "verified", "note": "gold vinyl etc." },
+    "MINI_DIAMOND": { "aliases": ["mini-diamond", "mini diamond", "b&w mini-diamond"], "channel": "breaker", "confidence": "verified" },
+    "GEOMETRIC": { "aliases": ["geometric"], "confidence": "probable" }
+  },
+
+  "ladders": {
+    "bowman_chrome_hobby_2016_plus": {
+      "appliesTo": ["Bowman", "Bowman Chrome", "Bowman Draft"],
+      "eraStart": 2016,
+      "tiers": [
+        { "color": "BASE", "run": null },
+        { "color": "REFRACTOR", "run": 499, "confidence": "verified" },
+        { "color": "SPECKLE", "run": null, "confidence": "probable" },
+        { "color": "PURPLE", "run": 250, "confidence": "verified" },
+        { "color": "BLUE", "run": 150, "confidence": "verified" },
+        { "color": "AQUA", "run": 125, "confidence": "probable" },
+        { "color": "GREEN", "run": 99, "confidence": "verified" },
+        { "color": "YELLOW", "run": 75, "confidence": "probable", "note": "unnumbered retail in earlier years" },
+        { "color": "GOLD", "run": 50, "confidence": "verified" },
+        { "color": "ORANGE", "run": 25, "confidence": "verified" },
+        { "color": "RED", "run": 5, "confidence": "verified" },
+        { "color": "SUPERFRACTOR", "run": 1, "confidence": "verified" },
+        { "color": "PRINTING_PLATE", "run": 1, "priceTierOverride": "belowNumberedLow", "confidence": "verified" }
+      ]
+    },
+    "bowman_paper_2016_plus": {
+      "appliesTo": ["Bowman (paper)"],
+      "eraStart": 2016,
+      "poolingRule": "never pool with chrome",
+      "tiers": [
+        { "color": "BASE", "run": null },
+        { "color": "SKY_BLUE", "run": 499, "confidence": "probable" },
+        { "color": "PURPLE", "run": 250, "confidence": "verified" },
+        { "color": "BLUE", "run": 150, "confidence": "verified" },
+        { "color": "GREEN", "run": 99, "confidence": "verified" },
+        { "color": "GOLD", "run": 50, "confidence": "verified" },
+        { "color": "ORANGE", "run": 25, "confidence": "verified" },
+        { "color": "RED", "run": 5, "confidence": "verified" },
+        { "color": "PLATINUM", "run": 1, "confidence": "verified" }
+      ]
+    },
+    "topps_chrome_2016_plus": {
+      "appliesTo": ["Topps Chrome", "Topps Chrome Update"],
+      "eraStart": 2016,
+      "tiers": [
+        { "color": "BASE", "run": null },
+        { "color": "REFRACTOR", "run": null, "confidence": "verified", "note": "UNNUMBERED - key difference vs Bowman" },
+        { "color": "PRISM", "run": null, "confidence": "verified" },
+        { "color": "SEPIA", "run": null, "confidence": "verified" },
+        { "color": "NEGATIVE", "run": null, "confidence": "verified" },
+        { "color": "PINK", "run": null, "confidence": "probable" },
+        { "color": "PURPLE", "run": 299, "confidence": "unverified" },
+        { "color": "AQUA", "run": 199, "confidence": "probable" },
+        { "color": "BLUE", "run": 150, "confidence": "verified" },
+        { "color": "GREEN", "run": 99, "confidence": "verified" },
+        { "color": "YELLOW", "run": 75, "confidence": "probable", "note": "retail tier, autos" },
+        { "color": "GOLD", "run": 50, "confidence": "verified" },
+        { "color": "ORANGE", "run": 25, "confidence": "verified" },
+        { "color": "RED", "run": 5, "confidence": "verified" },
+        { "color": "SUPERFRACTOR", "run": 1, "confidence": "verified" }
+      ]
+    },
+    "topps_flagship_paper": {
+      "appliesTo": ["Topps Series 1", "Topps Series 2", "Topps Update"],
+      "multiplierCohort": "flagship_paper_separate",
+      "tiers": [
+        { "color": "BASE", "run": null },
+        { "color": "RAINBOW_FOIL", "run": null, "confidence": "verified" },
+        { "color": "GOLD", "run": "calendarYear", "confidence": "verified" },
+        { "color": "VINTAGE_STOCK", "run": 99, "confidence": "verified" },
+        { "color": "INDEPENDENCE_DAY", "run": 76, "confidence": "verified" },
+        { "color": "BLACK", "run": "anniversaryNumber", "confidence": "probable", "note": "changes annually - verify per year" },
+        { "color": "PLATINUM", "run": 1, "confidence": "verified" }
+      ]
+    }
+  },
+
+  "serialSemantics": {
+    "jerseyMatch": { "action": "flag", "neverAutoMultiply": true },
+    "firstSerial": { "action": "flag" },
+    "lastSerial": { "action": "flag" },
+    "oneOfOneHierarchy": ["SUPERFRACTOR", "PLATINUM", "PRINTING_PLATE"],
+    "impossibleSerialForLadder": { "action": "quarantine" }
+  },
+
+  "crossVendorVocabulary": {
+    "panini_to_topps_equivalents": {
+      "silver prizm": "REFRACTOR",
+      "holo": "REFRACTOR",
+      "mojo (panini)": "context-dependent",
+      "note": "Panini tokens on Topps-product listings = misidentification signal"
+    }
+  }
+}
