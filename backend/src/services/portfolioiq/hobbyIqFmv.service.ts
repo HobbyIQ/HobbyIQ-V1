@@ -21,6 +21,8 @@ import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulati
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 import { projectNextSaleFromComps } from "../compiq/nextSaleProjection.service.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "../compiq/playerInSetMomentum.service.js";
+import { findNeighborComps, compositeFilterFromCardId, summarizeByDistance } from "./findNeighborComps.service.js";
+import { computeAxisAdjustment, getLatestMomentum } from "./marketMomentum.service.js";
 
 // CF-HOBBYIQ-FMV-INCLUDE-USER-PURCHASE (Drew, 2026-07-27). Reverses the
 // 2026-07-24 exclusion of source="ebay-user-purchase". The rationale
@@ -100,6 +102,7 @@ export type HobbyIqFmvMethod =
   | "sibling-parallel"           // same cardNumber + auto, different parallels (all variants of the same card)
   | "family-baseline"            // same year + cardNumber, any variant (broadest same-card fallback)
   | "grade-cross-raw"            // grade requested but no graded comps at any rung; raw median × graded multiplier
+  | "composite-neighbor"         // CF-HOBBYIQFMV-COMPOSITE (Drew, 2026-07-30). Composite axis-drop pool + per-axis calibration multipliers. Runs BEFORE the legacy string-slug ladder when HOBBYIQFMV_COMPOSITE_ENABLED=true and target has enough enriched neighbors.
   | "no-basis";                  // truly nothing — should be rare after the ladder
 
 export interface HobbyIqFmvResult {
@@ -304,6 +307,19 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
 
   const parsed = parseHobbyIqCardId(slug);
   if (!parsed) return noBasis;
+
+  // CF-HOBBYIQFMV-COMPOSITE-PATH (Drew, 2026-07-30). When the flag is
+  // on AND the target has enough composite-enriched comps, take the
+  // composite axis-drop path FIRST — it produces a semantically
+  // tighter pool than the string-slug widening rungs and applies
+  // per-axis calibration multipliers to the projected next sale.
+  // Falls through to the legacy 8-rung ladder on null return.
+  if (process.env.HOBBYIQFMV_COMPOSITE_ENABLED === "true") {
+    try {
+      const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
+      if (compositeResult) return compositeResult;
+    } catch { /* silent-safe — fall through to legacy */ }
+  }
 
   // Fire the population lookup in parallel with the first ladder rung. It
   // reads OUR containers (card_catalog → card_population) so it's cheap;
@@ -840,6 +856,10 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
     case "sibling-parallel":             return Math.min(0.55, 0.30 + nBonus);
     case "family-baseline":              return Math.min(0.40, 0.20 + nBonus);
     case "grade-cross-raw":              return Math.min(0.45, 0.25 + nBonus);
+    // Composite-neighbor: ceiling 0.90 — respects direct-slug legacy
+    // hits when both are present. Confidence is also set inline in
+    // tryCompositePath based on axis distance; this is the fallback.
+    case "composite-neighbor":           return Math.min(0.90, 0.65 + nBonus);
     case "no-basis":                     return 0;
   }
 }
@@ -1204,5 +1224,173 @@ export async function computeGradeBreakdownSingleScan(
     totalCompsScanned: rows.length,
     processingMs: Date.now() - t0,
     computedAt: new Date().toISOString(),
+  };
+}
+
+// ─── CF-HOBBYIQFMV-COMPOSITE-PATH (Drew, 2026-07-30) ─────────────────
+//
+// The composite-based FMV path. When HOBBYIQFMV_COMPOSITE_ENABLED=true
+// AND the target has enough composite-enriched neighbors, we build the
+// projected next sale from a semantically-tight pool (axis-drop
+// widening via findNeighborComps) and multiply by per-axis calibration
+// multipliers (color ladder, edition premium, finish premium, autoStyle
+// premium, gradeTier multiplier). Returns null when the target pool is
+// too thin or composite fields aren't yet populated on the neighbors —
+// caller falls through to the legacy 8-rung ladder.
+//
+// Design intent:
+//   - Never HURT confidence vs legacy — if the composite pool is
+//     thinner than 5 comps we bail; legacy always fills in.
+//   - Multipliers apply MULTIPLICATIVELY to the base trend fit. Missing
+//     calibrations default to 1.0 (silent-safe).
+//   - method="composite-neighbor" in the returned result so we can
+//     A/B compare against legacy on the same target.
+//
+// Env:
+//   HOBBYIQFMV_COMPOSITE_ENABLED=true — feature flag (default off)
+//   HOBBYIQFMV_COMPOSITE_MIN_COMPS=5  — floor for using composite path
+//   HOBBYIQFMV_COMPOSITE_MAX_DIST=4   — max axis drops before bail
+async function tryCompositePath(
+  input: HobbyIqFmvInput,
+  container: Container,
+  parsed: NonNullable<ReturnType<typeof parseHobbyIqCardId>>,
+  slug: string,
+  now: Date,
+): Promise<HobbyIqFmvResult | null> {
+  const MIN_COMPS = Number(process.env.HOBBYIQFMV_COMPOSITE_MIN_COMPS ?? "5");
+  const MAX_DIST = Number(process.env.HOBBYIQFMV_COMPOSITE_MAX_DIST ?? "4");
+
+  // Step 1: Derive filter from slug. Enrich with the target's own
+  // composite (colorFamily / edition / finishModifier) when available.
+  const baseFilter = compositeFilterFromCardId(slug);
+  // Look up target row to grab its composite fields; short TOP-1 query
+  // and best-effort.
+  interface TargetCompositeShape {
+    colorFamily?: string | null;
+    edition?: string | null;
+    finishModifier?: string | null;
+    isRefractor?: boolean | null;
+  }
+  let targetComposite: TargetCompositeShape | null = null;
+  try {
+    const { resources } = await container.items.query<{ composite: TargetCompositeShape | null; autoStyle: "on-card" | "sticker" | null }>({
+      query: "SELECT TOP 1 c.composite, c.autoStyle FROM c WHERE c.hobbyiqCardId = @slug",
+      parameters: [{ name: "@slug", value: slug }],
+    }).fetchAll();
+    if (resources[0]?.composite) {
+      targetComposite = resources[0].composite;
+    }
+  } catch { /* silent */ }
+
+  const filter = {
+    ...baseFilter,
+    ...(targetComposite?.colorFamily ? { colorFamily: targetComposite.colorFamily } : {}),
+    ...(targetComposite?.edition ? { edition: targetComposite.edition } : {}),
+    ...(targetComposite?.finishModifier ? { finishModifier: targetComposite.finishModifier } : {}),
+    ...(input.gradeCompany ? { gradeCompany: input.gradeCompany } : {}),
+    ...(input.gradeValue != null ? { gradeValue: input.gradeValue } : {}),
+  };
+
+  // Step 2: Neighbor lookup with axis-drop widening.
+  const neighbors = await findNeighborComps(container, filter, {
+    maxDistance: MAX_DIST,
+    minComps: 20,
+    maxComps: 200,
+    recencyDays: input.maxAgeDays ?? 180,
+  });
+
+  if (neighbors.length < MIN_COMPS) {
+    return null; // Fall through to legacy ladder
+  }
+
+  // Step 3: Build the base trend fit from the neighbor pool. Use
+  // distance=0 (exact composite match) comps first; extend to distance 1+
+  // if the exact pool is thin.
+  const exact = neighbors.filter(n => n.distance === 0);
+  const workingComps = exact.length >= MIN_COMPS ? exact : neighbors;
+
+  // Project next sale using the same math as the legacy path.
+  const compsForProjection = workingComps.map(n => ({
+    price: Number(n.doc.price),
+    soldAt: String(n.doc.soldAt),
+  }));
+  const projection = projectNextSaleFromComps(compsForProjection, { forwardDays: 0, minNForRegression: 3 });
+  if (!projection || !Number.isFinite(projection.nextSaleValue)) return null;
+
+  // Step 4: Compute per-axis multiplier adjustment.
+  const adjustment = await computeAxisAdjustment({
+    productLine: parsed.setKey,
+    colorFamily: targetComposite?.colorFamily ?? null,
+    edition: targetComposite?.edition ?? null,
+    finishModifier: targetComposite?.finishModifier ?? null,
+    autoStyle: input.gradeCompany ? null : null, // TODO: thread autoStyle when caller provides it
+    gradeCompany: input.gradeCompany ?? null,
+    gradeValue: input.gradeValue ?? null,
+  });
+
+  const baseFmv = projection.nextSaleValue;
+  const adjustedFmv = baseFmv * adjustment.factor;
+
+  // Step 5: Build the response. Use the same shape as legacy for
+  // downstream compatibility.
+  const workingDocs = workingComps.map(n => n.doc as {
+    price: number; soldAt: string; source: string;
+    hobbyiqCardId?: string | null; parallel?: string | null;
+    autoStyle?: "on-card" | "sticker" | null; gradeQualifier?: string | null;
+  });
+  const prices = workingDocs.map(d => Number(d.price)).filter(p => Number.isFinite(p) && p > 0);
+  prices.sort((a, b) => a - b);
+  const min = prices[0] ?? null;
+  const max = prices[prices.length - 1] ?? null;
+
+  const bySource: Record<string, number> = {};
+  const byAutoStyle = { onCard: 0, sticker: 0, unknown: 0 };
+  const byGradeQualifier: Record<string, number> = {};
+  for (const d of workingDocs) {
+    const s = String(d.source ?? "unknown");
+    bySource[s] = (bySource[s] ?? 0) + 1;
+    if (d.autoStyle === "on-card") byAutoStyle.onCard++;
+    else if (d.autoStyle === "sticker") byAutoStyle.sticker++;
+    else byAutoStyle.unknown++;
+    if (d.gradeQualifier) byGradeQualifier[d.gradeQualifier] = (byGradeQualifier[d.gradeQualifier] ?? 0) + 1;
+  }
+
+  const trend = computeTrend(workingDocs.map(d => ({ price: Number(d.price), soldAt: String(d.soldAt) })));
+  const summary = summarizeByDistance(workingComps);
+  const distanceHint = summary.map(s => `d${s.distance}=${s.count}`).join(", ");
+  const adjustmentHint = Object.keys(adjustment.breakdown).length > 0
+    ? `× ${Object.entries(adjustment.breakdown).map(([k, v]) => `${k}=${v.toFixed(2)}`).join(" × ")}`
+    : "no multipliers applied";
+
+  // Confidence blend: 0.85 for exact-composite match, decays 0.10 per
+  // axis dropped. Never above 0.95 to preserve headroom for direct-slug
+  // legacy hits when they're available.
+  const meanDistance = workingComps.reduce((s, n) => s + n.distance, 0) / workingComps.length;
+  const confidence = Math.max(0.30, Math.min(0.95, 0.90 - meanDistance * 0.10));
+
+  return {
+    slug,
+    fmv: Math.round(adjustedFmv * 100) / 100,
+    compCount: workingDocs.length,
+    min,
+    max,
+    breakdown: { bySource, byAutoStyle, byGradeQualifier },
+    trend,
+    recentComps: workingDocs.slice(0, 5).map(d => ({
+      price: Number(d.price),
+      soldAt: String(d.soldAt),
+      source: String(d.source),
+      parallel: d.parallel ?? null,
+      url: null,
+      autoStyle: d.autoStyle ?? null,
+      gradeQualifier: d.gradeQualifier ?? null,
+    })),
+    method: "composite-neighbor",
+    basisNote: `Composite path: ${workingDocs.length} neighbors [${distanceHint}] ${adjustmentHint}. Base projection $${baseFmv.toFixed(2)} → adjusted $${adjustedFmv.toFixed(2)}.`,
+    confidence,
+    population: null,
+    quality: { score: confidence, flaggedCompCount: 0, sources: Object.keys(bySource) },
+    computedAt: now.toISOString(),
+    cachedFrom: "sold_comps",
   };
 }
