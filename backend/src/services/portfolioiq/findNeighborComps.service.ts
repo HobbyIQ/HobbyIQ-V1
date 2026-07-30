@@ -27,6 +27,7 @@ export interface CompositeFilter {
   cardYear?: number | null;
   playerName?: string | null;
   cardNumber?: string | null;       // CPA-BA / BCP-102 / 82 — anchor axis, never dropped
+  parallelSlug?: string | null;     // "blue-refractor" / "bowman-logo-pattern" / "reptilian-refractor" — anchor axis, never dropped; captures the variant taxonomy that composite fields can't express
   productLine?: string | null;      // setKey slot from slug
   edition?: string | null;
   insertSet?: string | null;
@@ -63,9 +64,11 @@ export interface NeighborLookupOptions {
   axisDropOrder?: Array<keyof CompositeFilter>;
 }
 
-// Anchor axes never appear here: sport, cardYear, cardNumber, isAuto
-// identify WHICH CARD. They are always kept. Only the VARIANT axes
-// (which specific parallel of that card) are progressively dropped.
+// Anchor axes never appear here: sport, cardYear, cardNumber, isAuto,
+// parallelSlug identify WHICH CARD + WHICH VARIANT. They are always
+// kept. Only the COMPOSITE variant axes (redundant classifications
+// of the parallel like colorFamily / finishModifier / edition) are
+// progressively dropped when needed.
 const DEFAULT_AXIS_DROP: Array<keyof CompositeFilter> = [
   "serialRun",
   "finishModifier",
@@ -85,6 +88,7 @@ export function compositeFilterFromCardId(cardId: string): CompositeFilter {
     cardYear: parts.year,
     productLine: parts.setKey,
     cardNumber: parts.cardNumber ?? null,   // anchor axis — never dropped
+    parallelSlug: parts.parallel ?? null,   // anchor axis — never dropped; captures Logo Pattern / Reptilian Refractor / Mini-Diamond / etc.
     isAuto: parts.isAuto,
     serialRun: parts.printRun ?? null,
     // colorFamily / edition / insertSet / finishModifier live in
@@ -116,6 +120,14 @@ function buildFilterClause(f: CompositeFilter): { where: string; parameters: Arr
     const pname = `@p${params.length}`;
     conds.push(`UPPER(c.cardNumber) = ${pname}`);
     params.push({ name: pname, value: String(f.cardNumber).toUpperCase() });
+  }
+  if (f.parallelSlug != null) {
+    // Filter on slug segment 5 (":parallelSlug:autoFlag" boundary). Using
+    // slug CONTAINS is safe: parallelSlug is well-delimited by `:`
+    // colons on both sides in the canonical form.
+    const pname = `@p${params.length}`;
+    conds.push(`CONTAINS(c.hobbyiqCardId, ${pname})`);
+    params.push({ name: pname, value: `:${f.parallelSlug}:` });
   }
   if (f.isAuto != null) add("c.isAuto", f.isAuto);
   if (f.gradeCompany != null) add("c.gradeCompany", f.gradeCompany);
