@@ -43,11 +43,21 @@ export interface FinishModifierEntry {
 }
 
 export interface LadderTier {
-  color: string;
+  // Schema variance (expanded 2026-07-30 vocab): early Bowman/Topps
+  // ladders use `color`; new basketball/football/premium ladders use
+  // `name`. Accept either — accessor `tierKey(t)` normalizes.
+  color?: string;
+  name?: string;
   run: number | null | string;   // string for calendar-year/anniversary-number etc.
   confidence?: Confidence;
   note?: string;
   priceTierOverride?: string;
+  sharesBaseNumber?: boolean;
+}
+
+/** Normalized tier key — accepts both `color` and `name` forms. */
+export function tierKey(t: LadderTier): string {
+  return String(t.color ?? t.name ?? "").toUpperCase();
 }
 
 export interface LadderEntry {
@@ -245,8 +255,8 @@ export function validateAgainstLadder(
 ): LadderVerdict {
   const ladder = findLadder(productLine, year);
   if (!ladder) return { verdict: "no-ladder" };
-  const color = colorFamily.toUpperCase();
-  const tier = ladder.tiers.find(t => t.color.toUpperCase() === color);
+  const color = String(colorFamily ?? "").toUpperCase();
+  const tier = ladder.tiers.find(t => tierKey(t) === color);
   if (!tier) return { verdict: "color-not-in-ladder" };
 
   const expected = tier.run;

@@ -187,8 +187,15 @@ describe("validateAgainstLadder — Bowman Chrome hobby ladder", () => {
     const v = validateAgainstLadder("Bowman Chrome", 2024, "REFRACTOR", null);
     expect(v.verdict).toBe("impossible-serial");
   });
-  it("Unknown product → no-ladder (don't gate)", () => {
-    const v = validateAgainstLadder("Panini Prizm", 2024, "GOLD", 10);
+  it("Truly unknown product → no-ladder (don't gate)", () => {
+    // Made-up product name that's not in the expanded vocab
+    const v = validateAgainstLadder("MadeUpProductThatDoesNotExist", 2024, "GOLD", 10);
     expect(v.verdict).toBe("no-ladder");
+  });
+  it("Panini Prizm now HAS a ladder (v2 vocab): GOLD /10 → matched-verified", () => {
+    // Expanded 2026-07-30 vocab adds 6 basketball + 8 football ladders
+    // including Panini Prizm. paniniRainbowConstants: GOLD /10 verified.
+    const v = validateAgainstLadder("Panini Prizm", 2024, "GOLD", 10);
+    expect(v.verdict).toBe("matched-verified");
   });
 });
