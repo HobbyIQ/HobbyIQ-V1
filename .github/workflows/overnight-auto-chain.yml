@@ -25,6 +25,7 @@ permissions:
   contents: read
   id-token: write
   issues: write
+  actions: write   # dispatch a fresh self-relaunching backfill after chain
 
 jobs:
   chain:
@@ -130,6 +131,25 @@ jobs:
           node backend/scripts/audit-ladder-violations.cjs 2>&1 | tee /tmp/audit.log
           echo "audit_exit=$?" >> "$GITHUB_OUTPUT"
 
+      - name: Kick off self-relaunching composite backfill (continues in background)
+        # After tonight's chain runs on whatever coverage the current
+        # backfill achieved, dispatch a fresh backfill that will
+        # self-relaunch (per backfill-runner.yml change) until the entire
+        # sold_comps corpus has composite. Signals + calibration will
+        # re-run at their normal daily/weekly crons against improving
+        # coverage. No manual intervention needed.
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=backfill-composite-fields \
+            -f apply=true \
+            -f concurrency=32 || echo "::warning::Failed to dispatch continuation backfill — manual re-dispatch needed"
+
       - name: Open review issue with morning checklist
         if: ${{ always() }}
         env:
@@ -146,10 +166,11 @@ jobs:
           Chain triggered by workflow run [$GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
 
           ## What ran overnight
-          1. ✅ Waited for composite backfill to complete
+          1. ✅ Waited for composite backfill to complete (or hit timeout)
           2. ✅ Refreshed daily market signals (30d vs prior-30d momentum, 9 dimensions)
           3. ✅ Refreshed weekly calibration multipliers (color ladder / edition / finish / autoStyle / gradeTier)
           4. ✅ Audited ladder violations (read-only report)
+          5. ✅ Kicked off self-relaunching composite backfill — will chip through remaining rows unattended until the whole corpus has composite. Daily 5:30 AM ET signals cron + Sunday 2 AM ET calibration cron pick up improving coverage automatically.
 
           ## Your morning checklist
           - [ ] Inspect the calibration multipliers written to \`market_signals\` — do color-ladder / edition / finish premiums pass smell test?

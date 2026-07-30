@@ -66,14 +66,15 @@ on:
 permissions:
   contents: read
   id-token: write   # Azure OIDC for App Service secret fetch
+  actions: write    # workflow_dispatch to self-relaunch composite backfill
 
 jobs:
   run-backfill:
     runs-on: ubuntu-latest
-    # 120 minutes: slab-ocr-auto-approve-queue at concurrency 2 processes
-    # ~500 rows in ~80 min including retry backoffs. Also covers the
-    # player-sport style scans that touch 2.5M rows.
-    timeout-minutes: 120
+    # 180 min ceiling — leaves 60+ min headroom on GH Actions' 6h max so
+    # the self-relaunch check (composite backfill only) always has room
+    # to run after the actual backfill step's own 150-min timeout.
+    timeout-minutes: 180
 
     steps:
       - name: Checkout repo at dispatched ref
@@ -165,6 +166,10 @@ jobs:
         # Both RESLUG_APPLY and APPROVE_APPLY env vars are set so this
         # single step works for both reslug-* and approve-* scripts;
         # each script only reads the one it cares about.
+        id: backfill
+        # 150 min per iteration — leaves 30 min for the self-relaunch
+        # decision inside the job's 180-min ceiling.
+        timeout-minutes: 150
         env:
           RESLUG_APPLY: ${{ inputs.apply == true && 'true' || 'false' }}
           APPROVE_APPLY: ${{ inputs.apply == true && 'true' || 'false' }}
@@ -173,3 +178,50 @@ jobs:
           APPROVE_CONCURRENCY: ${{ inputs.concurrency }}
           BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
         run: node "backend/scripts/${{ inputs.script }}.cjs"
+
+      - name: Self-relaunch until composite backfill fully drains
+        # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
+        # backfill covers ~3.27M sold_comps rows and one 150-min iteration
+        # can't drain the whole corpus. This step runs a cheap TOP-1
+        # existence query — if ANY row still lacks a composite field, it
+        # re-dispatches this workflow with the same params. Runs until the
+        # corpus is fully enriched, no manual re-dispatch needed.
+        #
+        # Only fires for the composite backfill script (other scripts are
+        # single-shot) and only in apply mode. `always()` so a timed-out
+        # backfill step still triggers a re-dispatch — resumable-by-design.
+        if: ${{ always() && inputs.script == 'backfill-composite-fields' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          REMAINING=$(node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            (async () => {
+              const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+              const container = c.database(process.env.COSMOS_DATABASE || 'hobbyiq').container('sold_comps');
+              const { resources } = await container.items.query({
+                query: 'SELECT TOP 1 c.id FROM c WHERE NOT IS_DEFINED(c.composite)'
+              }).fetchAll();
+              console.log(resources.length > 0 ? 'MORE' : 'DONE');
+            })().catch(e => { console.error('check-error:', e.message); process.exit(2); });
+          " 2>&1)
+          RC=$?
+          echo "check_output=$REMAINING (rc=$RC)"
+          if [ "$RC" -ne 0 ]; then
+            echo "::warning::Composite coverage check FAILED — skipping self-relaunch. Manual re-dispatch will be needed."
+            exit 0
+          fi
+          if [ "$REMAINING" = "MORE" ]; then
+            echo "::notice::Composite backfill still has rows — re-dispatching workflow with same params"
+            gh workflow run backfill-runner.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              -f script=backfill-composite-fields \
+              -f apply=true \
+              -f concurrency="${{ inputs.concurrency }}"
+            echo "Re-dispatch queued. This workflow exits; new run continues the drain."
+          else
+            echo "::notice::Composite backfill COMPLETE — 0 rows without composite. No re-dispatch."
+          fi
