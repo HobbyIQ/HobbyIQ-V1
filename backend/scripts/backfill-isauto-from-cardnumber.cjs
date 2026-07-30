@@ -136,13 +136,19 @@ async function main() {
   for (const r of rows) {
     // Belt-and-braces: JS-side confirm the cardNumber really matches the rule.
     if (!isCardNumberAutoSubset(r.cardNumber)) { skipped++; continue; }
+    // CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Never default to
+    // "bowman" — preserve existing slug's setKey, skip if the row has no
+    // slug at all (fresh-write path shouldn't be reached from this script).
+    const setKey = (r.hobbyiqCardId || "").split(":")[3] || null;
+    if (!setKey) { skipped++; continue; }
+
     // Recompute slug with isAuto=true.
     let newSlug;
     try {
       newSlug = computeHobbyIqCardId({
         sport: r.sport || "baseball",
         year: Number(r.cardYear),
-        setKey: (r.hobbyiqCardId || "").split(":")[3] || "bowman",
+        setKey,
         cardNumber: r.cardNumber || "",
         parallel: r.parallel || "Base",
         isAuto: true,
