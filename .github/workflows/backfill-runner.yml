@@ -43,6 +43,7 @@ on:
           - backfill-grade-from-ch-daily
           - bulk-import-ch-daily-to-sold-comps
           - audit-bulk-import-accuracy
+          - quick-check-grade-passthrough
           - approve-topps-finest-2026
           - backfill-verify-queue-grades
           - prototype-slab-ocr
