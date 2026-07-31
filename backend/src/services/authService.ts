@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { verifyAppleIdentityToken } from "./appleAuth.js";
+import { effectivePlanFor } from "../config/entitlements.js";
 
 // CF-PAYMENTS-A (2026-06-02): plan enum rev. Was "free" | "pro" | "all-star".
 // New tiers per the entitlements matrix in config/entitlements.ts. Legacy
@@ -431,6 +432,7 @@ function readSessionToken(
 }
 
 function toAuthUser(user: AuthUserRecord): AuthUser {
+  const rawPlan = normalizeLegacyPlan(user.plan);
   return {
     userId: user.userId,
     email: user.email,
@@ -438,7 +440,17 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     fullName: user.fullName ?? null,
     // CF-PAYMENTS-A: normalize legacy "pro" / "all-star" values to the new
     // enum so requireEntitlement sees a valid plan even for un-migrated rows.
-    plan: normalizeLegacyPlan(user.plan),
+    //
+    // CF-EFFECTIVE-PLAN-IN-AUTH-RESPONSE (Drew, 2026-07-31). Return the
+    // EFFECTIVE plan (override → raw plan) so every consumer of the auth
+    // shape — sidebar chip, storefront gate, iOS plan badge — sees the
+    // comped tier without having to read entitlementOverride separately.
+    // Previously the wire returned raw user.plan which meant a God-mode
+    // account (entitlementOverride=pro_seller, plan=free) rendered as
+    // "Free" everywhere except middleware that already called
+    // effectivePlanFor. Idempotent for gates that re-apply the resolver
+    // (override of override = override).
+    plan: effectivePlanFor({ plan: rawPlan, entitlementOverride: user.entitlementOverride ?? null }),
     createdAt: user.createdAt,
     // CF-PAYMENTS-B1: passthrough the usage counter doc so requireRateLimited
     // can read counts without a second Cosmos read.
