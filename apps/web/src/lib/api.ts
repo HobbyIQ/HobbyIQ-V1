@@ -183,10 +183,143 @@ export async function signOut(): Promise<void> {
 
 // ─── Portfolio ─────────────────────────────────────────────────────
 
+// ─── PricingEnvelope (canonical) ────────────────────────────────────
+//
+// CF-PRICING-ENVELOPE (Drew, 2026-07-31). Mirror of
+// backend/src/types/pricingEnvelope.ts. Kept in sync manually today;
+// TODO(monorepo-shared-types): extract into packages/types/ so backend
+// + web bind ONE source file. Until then, any change on either side
+// MUST be mirrored.
+//
+// The canonical pricing surface iOS + web both bind to. Additive to
+// the legacy flat fields on PortfolioHolding below — those flats
+// remain during migration and will be deleted in a follow-up CF once
+// both clients cut over.
+
+export interface PricingEnvelope {
+  headline: {
+    value: number | null;
+    valueSource: "observed" | "estimated" | "cost-proxy" | "unpriced";
+    perUnit: number | null;
+    quantity: number;
+  };
+  observed: {
+    fairMarketValue: number | null;
+    total: number | null;
+  };
+  estimate: {
+    value: number | null;
+    low: number | null;
+    high: number | null;
+    range: { low: number; high: number } | null;
+    confidence: "estimate" | "rough" | "ballpark" | "no-data" | null;
+    basisNote: string | null;
+  } | null;
+  method: {
+    kind:
+      | "direct-comp"
+      | "cross-parallel"
+      | "sibling"
+      | "grade-cross-raw"
+      | "composite-neighbor"
+      | "ladder-fallback"
+      | "our-pool"
+      | "legacy-engine"
+      | "cardhedge-last-sale"
+      | "resolver-fallback"
+      | "manual"
+      | "unknown";
+    label: string;
+    ladderRung: string | null;
+    compsUsed: number | null;
+  };
+  confidence: {
+    pricing: number | null;
+    liquidity: number | null;
+    timing: number | null;
+  };
+  predicted: {
+    value: number | null;
+    range: { low: number; high: number } | null;
+    mechanism: string | null;
+    attribution: Record<string, unknown> | null;
+    updatedAt: string | null;
+  } | null;
+  trend: {
+    trendIQ: unknown | null;
+    movementDirection: "up" | "down" | "flat" | null;
+    broaderTrendPctPerMonth: number | null;
+    updatedAt: string | null;
+  };
+  bands: {
+    quickSale: number | null;
+    premium: number | null;
+    suggestedList: number | null;
+    buyZone: [number, number] | null;
+    holdZone: [number, number] | null;
+    sellZone: [number, number] | null;
+  } | null;
+  provenance: {
+    vendor:
+      | "cardhedge"
+      | "cardsight"
+      | "hobbyiq-pool"
+      | "ebay"
+      | "manual"
+      | null;
+    vendorUpdatedAt: string | null;
+    pricingSource: "our-pool" | "legacy-engine" | null;
+    pricingSourceMeta:
+      | { slug: string; method: string; compsUsed: number }
+      | null;
+    nearestGradedAnchor: {
+      grade: string;
+      price: number;
+      daysOld: number;
+      sampleSize: number;
+      confidence: number;
+    } | null;
+    lastSaleSurface: {
+      price: number;
+      date: string | null;
+      compCount: number;
+    } | null;
+    modelExpectation: unknown | null;
+    modelSignal: unknown | null;
+  };
+  quality: {
+    score: number | null;
+    flaggedCompCount: number | null;
+    sources: string[];
+    freshness: "Live" | "Updated Today" | "Yesterday" | "Needs refresh";
+    lastPricedAt: string | null;
+  };
+  composite: {
+    era: string | null;
+    colorFamily: string | null;
+    finishModifier: string | null;
+    edition: string | null;
+    ladderVerdict: string | null;
+    paniniColorEquivalent: string | null;
+  } | null;
+  population: {
+    psa: { total: number; byGrade: Record<string, number> } | null;
+    bgs: { total: number; byGrade: Record<string, number> } | null;
+    sgc: { total: number; byGrade: Record<string, number> } | null;
+    cgc: { total: number; byGrade: Record<string, number> } | null;
+  } | null;
+}
+
 // Subset of the PortfolioHoldingWire shape (defined in
 // backend/src/services/portfolioiq/responseAssembly.ts) — only fields
 // the web dashboard actually reads. All money is dollars-float, per unit
 // unless the field name says "total".
+//
+// Migration in progress (CF-PRICING-ENVELOPE, 2026-07-31): the flat
+// legacy fields (fairMarketValue, estimatedValue, valuationStatus,
+// etc.) remain during the migration window. New reads should prefer
+// `pricing.*` — the flats stay populated by the backend for one
+// release, then get deleted in a follow-up CF.
 export interface PortfolioHolding {
   id: string;
   cardId?: string | null;   // canonical HobbyIQ cardId — used for the recent-comps + listing-range surfaces
@@ -255,13 +388,41 @@ export interface PortfolioHolding {
     candidateId: string;
     verifiedAt: string;
   } | null;
+  /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
+   *  Optional during the migration window — new endpoints emit it, older
+   *  endpoints may still return only the legacy flat fields above.
+   *  `holdingDisplayValue()` and any new UI should prefer `pricing.*`
+   *  and fall back to the flats when null. See backend
+   *  responseAssembly.ts for the source contract. */
+  pricing?: PricingEnvelope | null;
 }
 
-// Prefer explicit fmv → estimate → null. NEVER fall back to cost-proxy
-// for a display value; that's what caused the "$1539 value" bug where a
-// PSA 10 estimated at $1531 was rendered as its $1539 cost basis.
+// Prefer envelope headline → legacy fmv → legacy estimate → null.
+// NEVER fall back to cost-proxy for a display value; that's what caused
+// the "$1539 value" bug where a PSA 10 estimated at $1531 was rendered
+// as its $1539 cost basis.
+//
+// CF-PRICING-ENVELOPE (2026-07-31): envelope prefers unified headline
+// (observed → estimated → cost-proxy → unpriced). The cost-proxy tier is
+// SKIPPED here to preserve the "never invent value" invariant — this
+// helper returns null when the only signal is cost basis, and the UI
+// renders "$—" or the pending badge instead.
 export function holdingDisplayValue(h: PortfolioHolding): number | null {
   const qty = Math.max(1, h.quantity ?? 1);
+  const envelope = h.pricing?.headline;
+  if (envelope) {
+    if (
+      envelope.value != null
+      && envelope.valueSource !== "cost-proxy"
+      && envelope.valueSource !== "unpriced"
+    ) {
+      return envelope.value * (envelope.quantity ?? qty);
+    }
+    // Envelope present but declined to price — do not fall through to
+    // legacy fields; the envelope is authoritative when populated.
+    return null;
+  }
+  // Legacy fallback for endpoints not yet emitting the envelope.
   if (h.fairMarketValue != null) return h.fairMarketValue * qty;
   if (h.estimatedValue != null) return h.estimatedValue * qty;
   return null;
