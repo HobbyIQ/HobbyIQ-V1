@@ -784,7 +784,22 @@ struct BatchRepriceView: View {
         defer { isLoading = false }
 
         do {
-            result = try await APIService.shared.runBatchReprice()
+            let response = try await APIService.shared.runBatchReprice()
+            result = response
+            // CF-BATCH-REPRICE-VIEW-SYNC (Drew, 2026-07-30). The reprice
+            // endpoint persists new FMVs on the backend but portfolio
+            // views elsewhere in the app hold their own cached inventory
+            // state — they don't observe backend writes, so the newly-
+            // priced numbers won't show until the user drills into an
+            // individual card OR closes+reopens the app. Post a
+            // notification so MainAppView triggers portfolioVM.refresh(),
+            // which re-fetches holdings and propagates fresh values to
+            // Inventory, PortfolioIQ, and Dashboard tabs.
+            let throttled = response.throttled ?? false
+            let repriced = response.repriced ?? 0
+            if !throttled && repriced > 0 {
+                NotificationCenter.default.post(name: .portfolioBatchRepriced, object: nil)
+            }
         } catch {
             self.error = APIService.errorMessage(from: error)
         }

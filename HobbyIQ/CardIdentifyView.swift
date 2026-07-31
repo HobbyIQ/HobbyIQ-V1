@@ -26,6 +26,14 @@ extension Notification.Name {
     /// waiting for pull-to-refresh.
     static let portfolioPurchaseRecorded = Notification.Name("hobbyiq.portfolio.purchaseRecorded")
 
+    /// Posted after BatchRepriceView successfully repriced holdings.
+    /// The batch reprice endpoint writes new FMVs to the backend but
+    /// mounted portfolio views (Inventory tab, PortfolioIQ, Dashboard)
+    /// keep showing pre-reprice values until they re-fetch. MainAppView
+    /// listens and calls portfolioVM.refresh() so values update without
+    /// requiring the user to close/reopen the app.
+    static let portfolioBatchRepriced = Notification.Name("hobbyiq.portfolio.batchRepriced")
+
     /// PR #546 (2026-07-17): posted by the DailyIQ Action Plan hero when
     /// the user taps an action row. MainAppView switches to the Inventory
     /// tab so the user can drill in from familiar navigation. Deep-link

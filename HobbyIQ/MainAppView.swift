@@ -153,6 +153,15 @@ private struct AppTabShellView: View {
             selectedTab = .inventory
             Task { await portfolioVM.refresh() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .portfolioBatchRepriced)) { _ in
+            // CF-BATCH-REPRICE-VIEW-SYNC (Drew, 2026-07-30). BatchRepriceView
+            // just wrote new FMVs to the backend. Re-fetch the shared
+            // portfolio VM so Inventory, PortfolioIQ, and Dashboard tabs
+            // pick up the new numbers without needing a close+reopen. Does
+            // NOT switch tabs — the user stays where they are (probably
+            // reading the reprice result card).
+            Task { await portfolioVM.refresh() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .actionPlanRowTapped)) { _ in
             // PR #546 (2026-07-17): DailyIQ Action Plan row was tapped.
             // Switch to Inventory so the user can drill into the holding.
