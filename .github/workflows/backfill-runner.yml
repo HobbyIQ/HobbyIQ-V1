@@ -140,6 +140,29 @@ jobs:
           echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
           echo "COSMOS_CONNECTION_STRING fetched (length: ${#CS})"
 
+      # AUTH_SESSION_SECRET — required by reprice-user-holdings because
+      # the script imports the portfolioStore.service.js which pulls in
+      # the app's env validation module. Fetch from App Service so the
+      # secret matches prod exactly (never echoed to stdout).
+      # CF-REPRICE-AUTH-ENV (Drew, 2026-07-31). Prior run failed at boot
+      # with "AUTH_SESSION_SECRET is unset — refusing to start."
+      - name: Fetch AUTH_SESSION_SECRET from HobbyIQ3 App Service
+        if: inputs.script == 'reprice-user-holdings'
+        shell: bash
+        run: |
+          SEC=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='AUTH_SESSION_SECRET'].value | [0]" \
+            -o tsv)
+          if [ -z "$SEC" ]; then
+            echo "::error::FAILED to fetch AUTH_SESSION_SECRET from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$SEC"
+          echo "AUTH_SESSION_SECRET=$SEC" >> "$GITHUB_ENV"
+          echo "AUTH_SESSION_SECRET fetched (length: ${#SEC})"
+
       # Azure OpenAI env — only required by the slab-OCR prototype
       # script; always fetch (cheap read-only) so any future backfill
       # that needs LLM calls can rely on them being present.
@@ -208,18 +231,20 @@ jobs:
 
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
-        # backfill covers ~3.27M sold_comps rows and one 150-min iteration
+        # backfill covers ~3.4M sold_comps rows and one 150-min iteration
         # can't drain the whole corpus. This step runs a cheap TOP-1
-        # existence query — if ANY row still lacks a composite field, it
-        # re-dispatches this workflow with the same params. Runs until the
-        # corpus is fully enriched, no manual re-dispatch needed.
+        # existence query — if ANY row still lacks the target composite
+        # field, it re-dispatches this workflow with the same params.
+        # Runs until the corpus is fully enriched, no manual re-dispatch.
         #
-        # Only fires for the composite backfill script (other scripts are
-        # single-shot) and only in apply mode. `always()` so a timed-out
-        # backfill step still triggers a re-dispatch — resumable-by-design.
-        if: ${{ always() && inputs.script == 'backfill-composite-fields' && inputs.apply == true }}
+        # Fires for BOTH composite backfill scripts (v1 checks
+        # `c.composite`, v3 checks `c.composite.era`) and only in apply
+        # mode. `always()` so a timed-out backfill step still triggers a
+        # re-dispatch — resumable-by-design.
+        if: ${{ always() && (inputs.script == 'backfill-composite-fields' || inputs.script == 'backfill-composite-v3') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
+          COMPOSITE_SCRIPT: ${{ inputs.script }}
         shell: bash
         # CF-COMPOSITE-SELF-RELAUNCH-CWD-FIX (Drew, 2026-07-30). Run
         # from backend/ so `require('@azure/cosmos')` resolves. Earlier
@@ -229,34 +254,41 @@ jobs:
         working-directory: backend
         run: |
           set +e
+          # v3 checks composite.era (added by enrichCompositeV3); v1
+          # checks composite existence itself.
+          if [ "$COMPOSITE_SCRIPT" = "backfill-composite-v3" ]; then
+            PROBE_QUERY="SELECT TOP 1 c.id FROM c WHERE NOT IS_DEFINED(c.composite.era)"
+          else
+            PROBE_QUERY="SELECT TOP 1 c.id FROM c WHERE NOT IS_DEFINED(c.composite)"
+          fi
           REMAINING=$(node -e "
             const { CosmosClient } = require('@azure/cosmos');
             (async () => {
               const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
               const container = c.database(process.env.COSMOS_DATABASE || 'hobbyiq').container('sold_comps');
               const { resources } = await container.items.query({
-                query: 'SELECT TOP 1 c.id FROM c WHERE NOT IS_DEFINED(c.composite)'
+                query: process.env.PROBE_QUERY
               }).fetchAll();
               console.log(resources.length > 0 ? 'MORE' : 'DONE');
             })().catch(e => { console.error('check-error:', e.message); process.exit(2); });
           " 2>&1)
           RC=$?
-          echo "check_output=$REMAINING (rc=$RC)"
+          echo "check_output=$REMAINING (rc=$RC)  script=$COMPOSITE_SCRIPT"
           if [ "$RC" -ne 0 ]; then
             echo "::warning::Composite coverage check FAILED — skipping self-relaunch. Manual re-dispatch will be needed."
             exit 0
           fi
           if [ "$REMAINING" = "MORE" ]; then
-            echo "::notice::Composite backfill still has rows — re-dispatching workflow with same params"
+            echo "::notice::$COMPOSITE_SCRIPT still has rows — re-dispatching workflow with same params"
             gh workflow run backfill-runner.yml \
               --repo "$GITHUB_REPOSITORY" \
               --ref main \
-              -f script=backfill-composite-fields \
+              -f script="$COMPOSITE_SCRIPT" \
               -f apply=true \
               -f concurrency="${{ inputs.concurrency }}"
             echo "Re-dispatch queued. This workflow exits; new run continues the drain."
           else
-            echo "::notice::Composite backfill COMPLETE — 0 rows without composite. No re-dispatch."
+            echo "::notice::$COMPOSITE_SCRIPT COMPLETE — 0 rows remaining. No re-dispatch."
           fi
 
       - name: Self-relaunch bulk-import until date-window hits END_DATE
