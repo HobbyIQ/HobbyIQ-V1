@@ -250,10 +250,17 @@ export async function priceByCardsightUuid(
           ? detail.year
           : null;
       const numberVal = detail.number ?? null;
-      // isAuto inferred same way explodeParentIntoParallels does
-      const isAuto =
+      // isAuto inferred same way explodeParentIntoParallels does.
+      // NOTE: this is now a CATALOG-derived fallback only — the actual
+      // isAuto written per-row is recomputed from title-parsed
+      // cardNumber below (CF-CARDNUMBER-FROM-TITLE, 2026-07-31).
+      const _isAutoCatalogFallback =
         /(auto|autograph)/i.test(String(setName ?? "")) ||
         /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(String(numberVal ?? ""));
+      // Keep the identifier bound so future readers see it's intentionally
+      // present but retired from the write payload. Downstream `isAuto`
+      // is now `isAutoFromParsed` computed inside the per-record loop.
+      void _isAutoCatalogFallback;
       if (!playerName) return;
       // Emit one comp per raw record with a valid price
       for (const r of rawRecords) {
@@ -275,17 +282,48 @@ export async function priceByCardsightUuid(
         const { parseListingIdentity } = await import(
           "../portfolioiq/parseTitleIdentity.service.js"
         );
-        const parallelFromTitle = r.title
-          ? parseListingIdentity(String(r.title)).parallel
-          : r.parallel_name ?? "Base";
+        const parsedFromTitle = r.title
+          ? parseListingIdentity(String(r.title))
+          : { parallel: r.parallel_name ?? "Base", cardNumber: null, isAuto: undefined };
+        const parallelFromTitle = parsedFromTitle.parallel ?? "Base";
+        // CF-CARDNUMBER-FROM-TITLE (Drew, 2026-07-31). Cardsight's
+        // /v1/pricing/{cardId} endpoint returns marketplace sales its
+        // fuzzy matcher associated with the queried card+parallel — but
+        // some of those sales are for DIFFERENT physical cards whose
+        // TITLES clearly show different cardNumbers (e.g. base BCP-102
+        // sales returned for a CPA-EHA auto query). The 2026-07-28 fix
+        // (parallel-from-title) addressed the parallel field; this
+        // extends the same rule to cardNumber. Live evidence 2026-07-31
+        // on Drew's Hartman Blue Refractor CPA-EHA pool: 19 sub-$25
+        // rows had wrong cardNumbers (BCP-102 base cards) tagged as
+        // CPA-EHA autos, dragging the anchor from $1,500+ down to $550.
+        //
+        // Behavior: title-parsed cardNumber wins. When title parsing
+        // returns null (title lacks a recognizable number), fall back
+        // to the catalog's numberVal so we still ingest the sale
+        // rather than skipping it entirely.
+        //
+        // Effect: mis-associated marketplace sales still get persisted
+        // (they're REAL sales of real cards), but under their ACTUAL
+        // identity from the title — not polluting the queried card's pool.
+        const cardNumberFromTitle = parsedFromTitle.cardNumber ?? numberVal;
+        // Recompute isAuto from the title-parsed cardNumber. The pool
+        // needs consistent (parallel, cardNumber, isAuto) tuples per
+        // slug; the catalog's isAuto might not match a mis-associated
+        // sale's true identity.
+        const isAutoFromParsed =
+          parsedFromTitle.isAuto !== undefined
+            ? parsedFromTitle.isAuto
+            : /(auto|autograph)/i.test(String(setName ?? "")) ||
+              /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(String(cardNumberFromTitle ?? ""));
         await recordSoldComp({
           cardId: input.cardId,
           playerName,
           cardYear: yearNum,
           setName: releaseName ?? setName,
           parallel: parallelFromTitle,
-          cardNumber: numberVal,
-          isAuto,
+          cardNumber: cardNumberFromTitle,
+          isAuto: isAutoFromParsed,
           price: r.price,
           soldAt: r.date,
           source: "cardsight",
