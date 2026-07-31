@@ -61,9 +61,20 @@ function tierKey(grader: string, gradeValue: number): string {
 /** Which layer of the value-band ladder produced the multiplier. */
 export type ValueBandResolveScope =
   | "sport-family"
+  | "sport-family-adjacent"
   | "sport"
   | "baseline"
   | "uncovered";
+
+// CF-VALUE-BAND-ADJACENT (Drew, 2026-07-31). Sample-size floor for the
+// same-family adjacent-band rung. Bowman-chrome PSA 9 shows a stable
+// 1.10× signal across all populated bands from $250 to $999 (n=14 to
+// n=40), and NO data at $1K+. Prior lookup fell to bySport (mixed
+// families, n=12, 1.28×) for those higher bands. The adjacent-band
+// rung prefers the same-family signal even at a different price band
+// over a same-band mixed-family aggregate. n≥10 required so we're not
+// promoting a noise cell.
+const MIN_ADJACENT_BAND_SAMPLE = 10;
 
 export interface ValueBandLookupContext {
   /** Sport name lowercased ("baseball" / "football" / "basketball" / "hockey"). */
@@ -83,10 +94,19 @@ export interface ValueBandLookupResult {
 /** CF-VALUE-BAND-V2 (Drew, 2026-07-26). Walk the fall-through ladder
  *  and return the finest cell that has data. Backwards-compat with the
  *  scalar-returning v1 lookup below. Order:
- *    1. bySportFamily["sport|family"][bucket][tier]
- *    2. bySport[sport][bucket][tier]
- *    3. baseline[bucket][tier]
- *    4. null (caller falls back to hardcoded value-tier cap). */
+ *    1.   bySportFamily["sport|family"][bucket][tier]           — exact
+ *    1.5. bySportFamily["sport|family"][adjacent bucket][tier]  — same
+ *         family, nearest populated band (n ≥ MIN_ADJACENT_BAND_SAMPLE)
+ *    2.   bySport[sport][bucket][tier]
+ *    3.   baseline[bucket][tier]
+ *    4.   null (caller falls back to hardcoded value-tier cap).
+ *
+ *  Rung 1.5 added CF-VALUE-BAND-ADJACENT (Drew, 2026-07-31): rescues
+ *  the case where the exact family+band cell is empty but the same
+ *  family has a strong signal at a nearby band. Prevents a bowman-
+ *  chrome PSA 9 lookup at $2,500 raw from collapsing to bySport's
+ *  mixed-family aggregate when bowman-chrome's own $250-$999 bands
+ *  all show a consistent 1.10× (real regime for the family). */
 export function lookupValueBandMultiplierWithScope(
   rawAnchor: number,
   grader: string,
@@ -102,11 +122,21 @@ export function lookupValueBandMultiplierWithScope(
   const isValid = (cell: { medianRatio?: number } | undefined): cell is { medianRatio: number; sampleSize: number } =>
     !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0;
 
-  // 1. sport + family
+  // 1. sport + family exact band
   if (sport && family) {
     const sfKey = `${sport}|${family}`;
     const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[bucket]?.[tier];
     if (isValid(cell)) return { medianRatio: cell.medianRatio, scope: "sport-family", sampleSize: cell.sampleSize };
+
+    // 1.5 sport + family, adjacent-band interpolation. Walk in order of
+    // distance from the target bucket; take the first cell with
+    // sampleSize ≥ MIN_ADJACENT_BAND_SAMPLE.
+    for (const nearBucket of adjacentBandsFor(bucket)) {
+      const nearCell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[nearBucket]?.[tier];
+      if (isValid(nearCell) && nearCell.sampleSize >= MIN_ADJACENT_BAND_SAMPLE) {
+        return { medianRatio: nearCell.medianRatio, scope: "sport-family-adjacent", sampleSize: nearCell.sampleSize };
+      }
+    }
   }
   // 2. sport
   if (sport) {
@@ -118,6 +148,19 @@ export function lookupValueBandMultiplierWithScope(
   if (isValid(baseCell)) return { medianRatio: baseCell.medianRatio, scope: "baseline", sampleSize: baseCell.sampleSize };
 
   return null;
+}
+
+/** Return every value-band label except the target, sorted by index
+ *  distance from the target's position in VALUE_BAND_EDGES. Used by
+ *  the adjacent-band rung above. */
+function adjacentBandsFor(bucket: string): string[] {
+  const idx = VALUE_BAND_EDGES.findIndex(([,, l]) => l === bucket);
+  if (idx < 0) return [];
+  return VALUE_BAND_EDGES
+    .map(([,, l], i) => ({ label: l, dist: Math.abs(i - idx) }))
+    .filter((x) => x.dist > 0)
+    .sort((a, b) => a.dist - b.dist)
+    .map((x) => x.label);
 }
 
 /** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22). Scalar wrapper for the
@@ -275,6 +318,18 @@ export function classifyFamily(setName: string | null | undefined): string {
   }
   if (s.includes("bowman chrome draft") || s.includes("bowman draft chrome")) return "bowman-chrome-draft";
   if (s.includes("bowman chrome")) return "bowman-chrome";
+  // CF-CLASSIFY-CPA-AS-BOWMAN-CHROME (Drew, 2026-07-31). "Chrome Prospects
+  // Autographs" (CPA-* card numbers) is Topps' formal name for the Bowman
+  // Chrome auto insert set. Rows arrive in sold_comps under multiple
+  // setKey variants ("bowman", "bowman-chrome", "chrome-prospects-
+  // autographs" — CH tags them as generic "Bowman Baseball" while
+  // Cardsight uses the subset text). Cross-setkey unifies the comp pool
+  // at read time, but calibration lookups were still classifying the
+  // subset-form slug to "other" and losing the family-scoped multiplier.
+  // Rerouting to bowman-chrome here restores the CPA autos to their
+  // correct calibration family so the adjacent-band rung can rescue
+  // them when the exact price band isn't populated for bowman-chrome.
+  if (s.includes("chrome prospects autographs") || s.includes("chrome prospect autographs")) return "bowman-chrome";
   if (s.includes("bowman sterling")) return "bowman-sterling";
   if (s.includes("bowman")) return "bowman";
   if (s.includes("topps chrome update")) return "topps-chrome-update";

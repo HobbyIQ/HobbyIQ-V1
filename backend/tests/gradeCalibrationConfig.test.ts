@@ -7,11 +7,12 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-async function loadWithFixture(data: unknown, bySport: unknown) {
+async function loadWithFixture(data: unknown, bySport: unknown, valueBand?: unknown) {
   vi.resetModules();
   vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
     GRADE_CALIBRATION: data,
     GRADE_CALIBRATION_BY_SPORT: bySport,
+    GRADE_MULTIPLIER_BY_VALUE_BAND: valueBand ?? { baseline: {}, bySport: {}, bySportFamily: {} },
   }));
   return await import("../src/services/compiq/gradeCalibrationConfig.js");
 }
@@ -162,6 +163,22 @@ describe("classifyFamily", () => {
     expect(classifyFamily("2024 Bowman")).toBe("bowman");
   });
 
+  // CF-CLASSIFY-CPA-AS-BOWMAN-CHROME (Drew, 2026-07-31). CPA-* card
+  // numbers are the Bowman Chrome Prospects Autographs subset. Under
+  // ingest fragmentation the setKey can arrive as "chrome-prospects-
+  // autographs" — must classify to bowman-chrome so the calibration
+  // family lookup lands in the right cell.
+  it("routes CPA subset variants to bowman-chrome (not 'other')", async () => {
+    const { classifyFamily } = await loadWithFixture({}, {});
+    expect(classifyFamily("chrome-prospects-autographs")).toBe("bowman-chrome");
+    expect(classifyFamily("Chrome Prospects Autographs")).toBe("bowman-chrome");
+    expect(classifyFamily("2026 Chrome Prospects Autographs")).toBe("bowman-chrome");
+    // Bowman Draft still wins its own tier — CPA subset routes to
+    // bowman-chrome only when "bowman chrome draft" hasn't already caught
+    // the string.
+    expect(classifyFamily("2025 Bowman Draft Chrome Prospects Autographs")).toBe("bowman-chrome-draft");
+  });
+
   it("returns 'other' for unrecognized setName", async () => {
     const { classifyFamily } = await loadWithFixture({}, {});
     expect(classifyFamily("2025 Random Sportscard Corp Emblem")).toBe("other");
@@ -257,5 +274,113 @@ describe("Pokemon-safe fallback (lookupGradeRatio + lookupGradeRatioByTier)", ()
       { pokemon: {} },
     );
     expect(lookupGradeRatioByTier("pokemon-obscure", "PSA", 10, "pokemon")).toBeNull();
+  });
+});
+
+// CF-VALUE-BAND-ADJACENT (Drew, 2026-07-31). Rescue rung: when
+// bySportFamily has the family populated at OTHER bands but not the
+// target band, prefer the nearest same-family band (with sample floor)
+// over falling through to the bySport all-families aggregate.
+describe("lookupValueBandMultiplierWithScope adjacent-band rescue", () => {
+  beforeEach(() => vi.resetModules());
+
+  it("uses the exact bySportFamily cell when present", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {},
+      bySportFamily: {
+        "baseball|bowman-chrome": {
+          "$2,500-4,999": { "PSA 9": { medianRatio: 1.05, p25: 1.0, p75: 1.1, sampleSize: 15, rawMedian: 3000, gradedMedian: 3150 } },
+        },
+      },
+    });
+    const r = lookupValueBandMultiplierWithScope(2600, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
+    expect(r?.medianRatio).toBe(1.05);
+    expect(r?.scope).toBe("sport-family");
+  });
+
+  it("falls to same-family adjacent band when exact cell is missing (Hartman regression)", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {
+        // sport-only aggregate (mixed families) — the OLD path would use this
+        baseball: {
+          "$2,500-4,999": { "PSA 9": { medianRatio: 1.28, p25: 1.18, p75: 1.29, sampleSize: 12, rawMedian: 4108, gradedMedian: 4807 } },
+        },
+      },
+      bySportFamily: {
+        "baseball|bowman-chrome": {
+          // NO $2,500-4,999 cell (this is the real prod state)
+          "$500-999":   { "PSA 9": { medianRatio: 1.10, p25: 0.94, p75: 1.22, sampleSize: 14, rawMedian: 613, gradedMedian: 676 } },
+          "$250-499":   { "PSA 9": { medianRatio: 1.10, p25: 0.93, p75: 1.33, sampleSize: 40, rawMedian: 341, gradedMedian: 380 } },
+        },
+      },
+    });
+    const r = lookupValueBandMultiplierWithScope(2500, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
+    expect(r?.scope).toBe("sport-family-adjacent");
+    expect(r?.medianRatio).toBe(1.10);
+    // Should pick the nearest populated band, which is $1,000-2,499 if present,
+    // otherwise $5,000-9,999, otherwise $500-999. In this fixture $500-999 wins
+    // (nearest populated to $2,500-4,999 with the missing $1,000-2,499 gap).
+  });
+
+  it("skips adjacent-band cells below MIN_ADJACENT_BAND_SAMPLE (n=10)", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {
+        baseball: {
+          "$2,500-4,999": { "PSA 9": { medianRatio: 1.28, p25: 1.18, p75: 1.29, sampleSize: 12, rawMedian: 4108, gradedMedian: 4807 } },
+        },
+      },
+      bySportFamily: {
+        "baseball|bowman-chrome": {
+          // Adjacent cell exists but sample=5 (below floor of 10) — must skip
+          "$500-999": { "PSA 9": { medianRatio: 1.10, p25: 0.94, p75: 1.22, sampleSize: 5, rawMedian: 613, gradedMedian: 676 } },
+        },
+      },
+    });
+    const r = lookupValueBandMultiplierWithScope(2500, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
+    // Falls all the way through to bySport aggregate — the sample-floor guard
+    // prevents adjacent-band from promoting a noise cell.
+    expect(r?.scope).toBe("sport");
+    expect(r?.medianRatio).toBe(1.28);
+  });
+
+  it("still falls to sport aggregate when NO same-family cell exists at any band", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {
+        baseball: {
+          "$2,500-4,999": { "PSA 9": { medianRatio: 1.28, p25: 1.18, p75: 1.29, sampleSize: 12, rawMedian: 4108, gradedMedian: 4807 } },
+        },
+      },
+      bySportFamily: {
+        // bowman-chrome family entirely missing from bySportFamily
+      },
+    });
+    const r = lookupValueBandMultiplierWithScope(2500, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
+    expect(r?.scope).toBe("sport");
+    expect(r?.medianRatio).toBe(1.28);
+  });
+
+  it("adjacent-band rescue picks the nearest populated band, not just any band", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {},
+      bySportFamily: {
+        "baseball|bowman-chrome": {
+          // Target = $2,500-4,999 (index 7). Two candidates:
+          //   $1,000-2,499 (index 6, distance 1) at 1.03
+          //   Under $25    (index 0, distance 7) at 2.75
+          // Must pick the closer one.
+          "$1,000-2,499": { "PSA 9": { medianRatio: 1.03, p25: 0.87, p75: 1.26, sampleSize: 76, rawMedian: 1567, gradedMedian: 1765 } },
+          "Under $25":    { "PSA 9": { medianRatio: 2.75, p25: 1.83, p75: 4.93, sampleSize: 430, rawMedian: 6, gradedMedian: 19 } },
+        },
+      },
+    });
+    const r = lookupValueBandMultiplierWithScope(2600, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
+    expect(r?.scope).toBe("sport-family-adjacent");
+    expect(r?.medianRatio).toBe(1.03);
+    expect(r?.sampleSize).toBe(76);
   });
 });
