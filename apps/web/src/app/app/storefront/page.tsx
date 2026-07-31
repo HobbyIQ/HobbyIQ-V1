@@ -187,11 +187,17 @@ export default function StorefrontPage() {
       const notYetSelected = eligible.filter((h) => h.showOnStorefront !== true);
       // Sort highest-FMV first so we fill the last cap slots with your
       // most-premium not-yet-added cards, not by portfolio order.
-      const ranked = [...notYetSelected].sort((a, b) => {
-        const av = a.fairMarketValue ?? a.estimatedValue ?? 0;
-        const bv = b.fairMarketValue ?? b.estimatedValue ?? 0;
-        return bv - av;
-      });
+      // CF-PRICING-ENVELOPE (2026-07-31). Envelope headline is the
+      // canonical rank signal (observed → estimated), fall back to legacy
+      // flats during migration.
+      const valOf = (h: PortfolioHolding): number =>
+        h.pricing?.headline?.value
+        ?? h.pricing?.observed?.fairMarketValue
+        ?? h.pricing?.estimate?.value
+        ?? h.fairMarketValue
+        ?? h.estimatedValue
+        ?? 0;
+      const ranked = [...notYetSelected].sort((a, b) => valOf(b) - valOf(a));
       const slotsLeft = cap != null ? Math.max(0, cap - selectedCount) : ranked.length;
       const toAdd = ranked.slice(0, slotsLeft);
       if (toAdd.length === 0) {
@@ -572,7 +578,15 @@ function PickerRow({
     holding.gradeCompany && holding.gradeValue != null
       ? `${holding.gradeCompany} ${holding.gradeValue}`
       : "Raw";
-  const fmv = holding.fairMarketValue ?? holding.estimatedValue ?? null;
+  // CF-PRICING-ENVELOPE (2026-07-31). Prefer envelope headline (unified
+  // observed → estimated), fall back to legacy flats during migration.
+  const fmv =
+    holding.pricing?.headline?.value
+    ?? holding.pricing?.observed?.fairMarketValue
+    ?? holding.pricing?.estimate?.value
+    ?? holding.fairMarketValue
+    ?? holding.estimatedValue
+    ?? null;
   const photo = holding.photos?.[0] ?? null;
   const title =
     holding.cardTitle ||

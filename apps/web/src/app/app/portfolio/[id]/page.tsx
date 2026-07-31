@@ -11,6 +11,7 @@ import {
   refreshHolding,
   holdingDisplayValue,
   updateHolding,
+  valuationStatusOf,
   type PortfolioHolding,
   type HoldingPricePoint,
 } from "@/lib/api";
@@ -84,7 +85,15 @@ export default function HoldingDetailPage() {
 
   const title = formatCardTitle(h);
   const grade = formatGrade(h);
-  const fmv = h.fairMarketValue;
+  // CF-PRICING-ENVELOPE (2026-07-31). Envelope-first with legacy fallback
+  // during migration; every subsequent field read below prefers pricing.*.
+  const fmv = h.pricing?.observed?.fairMarketValue ?? h.fairMarketValue;
+  const vs = valuationStatusOf(h);
+  const estValue = h.pricing?.estimate?.value ?? h.estimatedValue;
+  const estLow = h.pricing?.estimate?.low ?? h.estimateLow;
+  const estHigh = h.pricing?.estimate?.high ?? h.estimateHigh;
+  const estConfidence = h.pricing?.estimate?.confidence ?? h.estimateConfidence;
+  const estBasis = h.pricing?.estimate?.basisNote ?? h.estimateBasis;
   const value = holdingDisplayValue(h);
   const cost = h.totalCostBasis;
   const paidPrice = h.purchasePrice;
@@ -99,7 +108,7 @@ export default function HoldingDetailPage() {
     gainPct = cost > 0 ? (gain / cost) * 100 : 0;
   }
   const gainColor = (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
-  const showEstimateBadge = fmv == null && h.estimatedValue != null;
+  const showEstimateBadge = fmv == null && estValue != null;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -128,7 +137,7 @@ export default function HoldingDetailPage() {
             <div className="text-sm text-[color:var(--color-muted)] flex items-center gap-2 flex-wrap">
               <span>{grade}</span>
               {h.quantity > 1 && <span>· qty {h.quantity}</span>}
-              {h.valuationStatus === "estimated" && (
+              {vs === "estimated" && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
                       style={{ background: "color-mix(in oklab, var(--color-accent) 15%, transparent)", color: "var(--color-accent)" }}>
                   EST
@@ -171,23 +180,23 @@ export default function HoldingDetailPage() {
               Estimate details
             </div>
             <div className="text-sm space-y-1">
-              {h.estimateLow != null && h.estimateHigh != null && (
+              {estLow != null && estHigh != null && (
                 <div className="flex justify-between">
                   <span className="text-[color:var(--color-muted)]">Range</span>
                   <span className="tabular-nums">
-                    {formatUSD(h.estimateLow, { hideCents: h.estimateLow >= 100 })} – {formatUSD(h.estimateHigh, { hideCents: h.estimateHigh >= 100 })}
+                    {formatUSD(estLow, { hideCents: estLow >= 100 })} – {formatUSD(estHigh, { hideCents: estHigh >= 100 })}
                   </span>
                 </div>
               )}
-              {h.estimateConfidence && (
+              {estConfidence && (
                 <div className="flex justify-between">
                   <span className="text-[color:var(--color-muted)]">Confidence</span>
-                  <span className="capitalize">{h.estimateConfidence}</span>
+                  <span className="capitalize">{estConfidence}</span>
                 </div>
               )}
-              {h.estimateBasis && (
+              {estBasis && (
                 <div className="mt-2 text-xs text-[color:var(--color-muted)] leading-relaxed">
-                  {h.estimateBasis}
+                  {estBasis}
                 </div>
               )}
             </div>

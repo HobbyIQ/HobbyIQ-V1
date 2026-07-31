@@ -304,7 +304,15 @@ function BulkRow({
               value={row.priceUsd}
               onChange={(e) => onChange({ priceUsd: e.target.value })}
               disabled={disabled || row.status === "loading" || row.status === "error"}
-              placeholder={h.fairMarketValue ? formatUSD(h.fairMarketValue, { hideCents: true }).replace("$", "") : "0.00"}
+              placeholder={(() => {
+                // CF-PRICING-ENVELOPE (2026-07-31). Prefer envelope observed
+                // FMV, fall back to the legacy flat during the migration
+                // window. Same value either way — the envelope is authoritative
+                // when populated; the flat is populated by the backend as a
+                // legacy alias until the follow-up delete CF ships.
+                const fmv = h.pricing?.observed?.fairMarketValue ?? h.fairMarketValue;
+                return fmv ? formatUSD(fmv, { hideCents: true }).replace("$", "") : "0.00";
+              })()}
               className={inputCls}
             />
           </div>

@@ -397,6 +397,36 @@ export interface PortfolioHolding {
   pricing?: PricingEnvelope | null;
 }
 
+// CF-PRICING-ENVELOPE (2026-07-31). Envelope-first valuation status
+// with legacy-flat fallback. Returns the canonical status the UI reads
+// to decide badge treatment ("estimated" chip, "pending" chip, etc.).
+// Envelope headline.valueSource maps: "observed"→"observed",
+// "estimated"→"estimated", "cost-proxy"/"unpriced" → legacy fallback
+// or null when neither is populated.
+export function valuationStatusOf(
+  h: PortfolioHolding,
+): "observed" | "estimated" | "pending" | null {
+  const src = h.pricing?.headline?.valueSource;
+  if (src === "observed") return "observed";
+  if (src === "estimated") return "estimated";
+  // Envelope produced no real price → fall through to legacy.
+  return h.valuationStatus ?? null;
+}
+
+// Envelope-preferred per-unit FMV. Same fallback ladder used by every
+// UI site that wants "the observed FMV, or the estimate, or nothing".
+// Returns null when the envelope declined AND legacy flats are null —
+// the UI should render "—" or a pending state.
+export function fmvPerUnitOf(h: PortfolioHolding): number | null {
+  return (
+    h.pricing?.observed?.fairMarketValue
+    ?? h.pricing?.estimate?.value
+    ?? h.fairMarketValue
+    ?? h.estimatedValue
+    ?? null
+  );
+}
+
 // Prefer envelope headline → legacy fmv → legacy estimate → null.
 // NEVER fall back to cost-proxy for a display value; that's what caused
 // the "$1539 value" bug where a PSA 10 estimated at $1531 was rendered
