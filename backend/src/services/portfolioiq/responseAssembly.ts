@@ -137,7 +137,9 @@ const DAY_MS = 24 * HOUR_MS;
 // qualify as success-only timestamps. Recipe prefers
 // predictedPriceUpdatedAt (broadest success coverage) and falls back
 // to movementUpdatedAt (set only when trendIQ is present).
-export function freshnessFromPricingTimestamp(h: PortfolioHolding | undefined | null): string {
+export type FreshnessLabel = "Live" | "Updated Today" | "Yesterday" | "Needs refresh";
+
+export function freshnessFromPricingTimestamp(h: PortfolioHolding | undefined | null): FreshnessLabel {
   if (!h) return "Needs refresh";
   const stamp = h.predictedPriceUpdatedAt ?? h.movementUpdatedAt ?? null;
   if (!stamp) return "Needs refresh";
