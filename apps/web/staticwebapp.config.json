@@ -8,6 +8,42 @@
     {
       "route": "/app/*",
       "rewrite": "/app"
+    },
+    {
+      "route": "/*.html",
+      "headers": {
+        "Cache-Control": "public, max-age=0, s-maxage=300, must-revalidate"
+      }
+    },
+    {
+      "route": "/",
+      "headers": {
+        "Cache-Control": "public, max-age=0, s-maxage=300, must-revalidate"
+      }
+    },
+    {
+      "route": "/app",
+      "headers": {
+        "Cache-Control": "public, max-age=0, s-maxage=60, must-revalidate"
+      }
+    },
+    {
+      "route": "/app/*",
+      "headers": {
+        "Cache-Control": "public, max-age=0, s-maxage=60, must-revalidate"
+      }
+    },
+    {
+      "route": "/login",
+      "headers": {
+        "Cache-Control": "public, max-age=0, s-maxage=300, must-revalidate"
+      }
+    },
+    {
+      "route": "/_next/static/*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
     }
   ],
   "responseOverrides": {
