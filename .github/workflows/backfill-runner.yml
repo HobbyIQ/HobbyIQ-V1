@@ -63,6 +63,7 @@ on:
           - refresh-calibration-multipliers
           - ingest-product-checklist
           - ingest-2026-bowman-auto-checklist
+          - reprice-user-holdings
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -197,6 +198,10 @@ jobs:
           BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
           BULK_START_DATE: ${{ inputs.bulk_start_date }}
           BULK_END_DATE: ${{ inputs.bulk_end_date }}
+          # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
+          # so the reprice writes new v2-calibrated FMVs.
+          REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
+          HOBBYIQFMV_COMPOSITE_ENABLED: "true"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
