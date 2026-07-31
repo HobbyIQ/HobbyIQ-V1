@@ -2283,6 +2283,52 @@ struct APIService {
         try await put(path: "/api/alerts/preferences", body: prefs, responseType: NotificationPreferencesResponse.self)
     }
 
+    // MARK: - BuyerIQ (Drew, 2026-07-31) — card-show buying checklist
+
+    /// GET /api/buyeriq/lists — user's lists, most recent first.
+    func fetchBuyerIqLists() async throws -> BuyerIqListsResponse {
+        try await get(path: "/api/buyeriq/lists", responseType: BuyerIqListsResponse.self)
+    }
+
+    /// POST /api/buyeriq/lists — create a new list.
+    func createBuyerIqList(_ req: BuyerIqListUpsertRequest) async throws -> BuyerIqListResponse {
+        try await post(path: "/api/buyeriq/lists", body: req, responseType: BuyerIqListResponse.self)
+    }
+
+    /// PUT /api/buyeriq/lists/:listId — update list metadata.
+    func updateBuyerIqList(listId: String, _ req: BuyerIqListUpsertRequest) async throws -> BuyerIqListResponse {
+        try await put(path: "/api/buyeriq/lists/\(listId)", body: req, responseType: BuyerIqListResponse.self)
+    }
+
+    /// DELETE /api/buyeriq/lists/:listId — delete a list (cascades targets).
+    struct BuyerIqEmptyResponse: Codable { let success: Bool }
+    func deleteBuyerIqList(listId: String) async throws -> BuyerIqEmptyResponse {
+        try await delete(path: "/api/buyeriq/lists/\(listId)", responseType: BuyerIqEmptyResponse.self)
+    }
+
+    /// GET /api/buyeriq/targets?listId=<id> — targets, optionally filtered by list.
+    func fetchBuyerIqTargets(listId: String? = nil) async throws -> BuyerIqTargetsResponse {
+        var items: [URLQueryItem] = []
+        if let listId { items.append(URLQueryItem(name: "listId", value: listId)) }
+        return try await get(path: "/api/buyeriq/targets", queryItems: items, responseType: BuyerIqTargetsResponse.self)
+    }
+
+    /// POST /api/buyeriq/targets — add a card target to a list.
+    func createBuyerIqTarget(_ req: BuyerIqTargetUpsertRequest) async throws -> BuyerIqTargetResponse {
+        try await post(path: "/api/buyeriq/targets", body: req, responseType: BuyerIqTargetResponse.self)
+    }
+
+    /// PUT /api/buyeriq/targets/:targetId — update target metadata /
+    /// status. Backend auto-stamps acquiredAt when status → acquired.
+    func updateBuyerIqTarget(targetId: String, _ req: BuyerIqTargetUpsertRequest) async throws -> BuyerIqTargetResponse {
+        try await put(path: "/api/buyeriq/targets/\(targetId)", body: req, responseType: BuyerIqTargetResponse.self)
+    }
+
+    /// DELETE /api/buyeriq/targets/:targetId — remove a target from a list.
+    func deleteBuyerIqTarget(targetId: String) async throws -> BuyerIqEmptyResponse {
+        try await delete(path: "/api/buyeriq/targets/\(targetId)", responseType: BuyerIqEmptyResponse.self)
+    }
+
     // MARK: - Portfolio Preferences (P0.7 delta, backend PR #500 + #501)
 
     /// P0.7 delta (2026-07-16, backend PR #501): GET the user's portfolio-

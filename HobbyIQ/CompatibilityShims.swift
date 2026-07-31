@@ -122,6 +122,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
     case player
     case inventory
     case portfolio
+    case buyeriq
     case erp
 
     var id: String { rawValue }
@@ -134,6 +135,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "PlayerIQ"
         case .inventory: return "Inventory"
         case .portfolio: return "Portfolio"
+        case .buyeriq: return "BuyerIQ"
         case .erp: return "Financials"
         }
     }
@@ -146,6 +148,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "person.crop.circle"
         case .inventory: return "archivebox"
         case .portfolio: return "chart.bar.xaxis"
+        case .buyeriq: return "list.bullet.clipboard"
         case .erp: return "briefcase"
         }
     }
@@ -158,6 +161,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "person.crop.circle.fill"
         case .inventory: return "archivebox.fill"
         case .portfolio: return "chart.bar.fill"
+        case .buyeriq: return "list.bullet.clipboard.fill"
         case .erp: return "briefcase.fill"
         }
     }
@@ -167,7 +171,7 @@ final class TabConfiguration: ObservableObject {
     @Published var visibleTabs: [MainTab]
     @Published var hiddenTabs: [MainTab]
 
-    init(visibleTabs: [MainTab] = [.dashboard, .portfolio, .inventory, .daily, .erp], hiddenTabs: [MainTab] = []) {
+    init(visibleTabs: [MainTab] = [.dashboard, .portfolio, .inventory, .buyeriq, .daily, .erp], hiddenTabs: [MainTab] = []) {
         self.visibleTabs = visibleTabs
         self.hiddenTabs = hiddenTabs
     }
