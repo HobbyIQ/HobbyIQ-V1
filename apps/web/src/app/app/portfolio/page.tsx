@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
@@ -40,8 +40,11 @@ function isHealthFilter(v: string | null): v is HealthFilter {
 }
 
 function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean {
-  const fmv = typeof h.fairMarketValue === "number" && Number.isFinite(h.fairMarketValue) ? h.fairMarketValue : null;
-  const vs = h.valuationStatus;
+  // CF-PRICING-ENVELOPE (2026-07-31). Read observed FMV via envelope
+  // (falls back to legacy flat). Read valuationStatus via helper.
+  const observedFmv = h.pricing?.observed?.fairMarketValue ?? h.fairMarketValue;
+  const fmv = typeof observedFmv === "number" && Number.isFinite(observedFmv) ? observedFmv : null;
+  const vs = valuationStatusOf(h);
   const updatedMs = h.lastUpdated ? Date.parse(h.lastUpdated) : NaN;
   const age = Number.isFinite(updatedMs) ? Date.now() - updatedMs : Infinity;
   switch (filter) {
@@ -552,6 +555,10 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   const grade = formatGrade(h);
   const value = holdingDisplayValue(h);
   const cost = h.totalCostBasis;
+  // CF-PRICING-ENVELOPE (2026-07-31). Derive valuation status via envelope-
+  // first helper. Used by the badge conditionals below so this row picks
+  // up envelope-computed status transitions the moment the wire ships them.
+  const vs = valuationStatusOf(h);
   // Recompute P&L against the display value we're actually rendering so the row
   // never shows a P&L that doesn't match its Value column. If the backend
   // sent a null FMV but we're displaying an estimate, its totalProfitLoss
@@ -595,7 +602,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
         <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-2">
           <span>{grade}</span>
           {h.quantity > 1 && <span>· qty {h.quantity}</span>}
-          {h.valuationStatus === "estimated" && (
+          {vs === "estimated" && (
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium"
               style={{
@@ -606,7 +613,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
               EST
             </span>
           )}
-          {h.valuationStatus === "pending" && (
+          {vs === "pending" && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]" style={{ background: "var(--color-bg)" }}>
               PENDING
             </span>
@@ -638,7 +645,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
           {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
               couldn't price at all (no observed FMV, no estimate). Fix link
               jumps to the detail page where Edit + Refresh price live. */}
-          {value == null && h.valuationStatus !== "estimated" && h.valuationStatus !== "pending" && (
+          {value == null && vs !== "estimated" && vs !== "pending" && (
             <>
               <span
                 className="px-1.5 py-0.5 rounded text-[10px] font-medium"
