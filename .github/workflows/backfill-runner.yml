@@ -83,6 +83,10 @@ on:
         description: "For bulk-import-ch-daily-to-sold-comps: stop at this date (YYYY-MM-DD). Default 2018-01-01."
         required: false
         default: ""
+      card_numbers:
+        description: "For backfill-cardsight-title-identity: comma-separated cardNumbers to scope the scan (e.g. CPA-EHA,CPA-JHA). Empty = scan all."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -223,6 +227,7 @@ jobs:
           BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
           BULK_START_DATE: ${{ inputs.bulk_start_date }}
           BULK_END_DATE: ${{ inputs.bulk_end_date }}
+          BACKFILL_CARD_NUMBERS: ${{ inputs.card_numbers }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
