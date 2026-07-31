@@ -94,20 +94,29 @@ async function main() {
       const oldParallel = String(row.parallel || "");
       const newIsAuto = Boolean(parsed.isAuto);
       const oldIsAuto = Boolean(row.isAuto);
-      // CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY-SCOPE (Drew, 2026-07-31):
-      // scoped down to CARD NUMBER mismatches only. That's the specific
-      // pool-pollution vector (stored CPA-EHA but title says BCP-102 →
-      // sale lands in wrong card's FMV pool → drags anchor). Parallel
-      // spelling differences (Blue Refractor vs blue-refractor vs null
-      // vs Base) don't cause FMV pool pollution because downstream
-      // queries normalize slugs — those are cosmetic cleanups worth
-      // their own separate backfill. Auto-flag corrections also worth
-      // fixing separately.
+      // CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY (Drew, 2026-07-31):
+      // three-way mismatch check — cardNumber, parallel, isAuto. Every
+      // one of them is a real data-quality signal worth correcting:
       //
-      // First scoped dry-run should return a much smaller count reflecting
-      // ONLY the wrong-card ingest rows that led to Drew's Blue Refractor
-      // $550 anchor.
-      const changed = newCardNumber !== oldCardNumber;
+      //   - cardNumber mismatch → sale in wrong FMV pool (Drew's Blue
+      //     Refractor $550 case: stored CPA-EHA but title BCP-102)
+      //   - parallel mismatch → sale in wrong sibling pool (Blue
+      //     Refractor vs Blue X-Fractor are different variants)
+      //   - isAuto mismatch → sale in wrong isAuto slot (base auto
+      //     comparisons broken; grade multipliers apply the wrong tier)
+      //   - null → Base parallel — legit correction that stops the
+      //     "unknown parallel" bucket from polluting cross-parallel
+      //     queries. Same physical card being labeled two ways is a bug.
+      //
+      // Normalize casing + hyphen/space for parallel comparison so
+      // "blue-refractor" and "Blue Refractor" (same identity, different
+      // spelling) don't flag; only genuine spelling differences do.
+      const normalizeParallel = (s) =>
+        String(s || "").toLowerCase().replace(/[-_\s]+/g, "-").replace(/^-|-$/g, "");
+      const changed =
+        newCardNumber !== oldCardNumber ||
+        normalizeParallel(newParallel) !== normalizeParallel(oldParallel) ||
+        newIsAuto !== oldIsAuto;
       if (!changed) {
         stats.unchanged++;
         continue;
