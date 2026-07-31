@@ -65,6 +65,7 @@ on:
           - ingest-product-checklist
           - ingest-2026-bowman-auto-checklist
           - reprice-user-holdings
+          - backfill-cardsight-title-identity
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
