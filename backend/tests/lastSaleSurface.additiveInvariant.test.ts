@@ -82,10 +82,15 @@ describe("ADDITIVE INVARIANT — composeHoldingWireShape on a normal holding (no
     expect("lastSaleSurface" in wire).toBe(false);
   });
 
-  it("the JSON-serialized wire output for a normal holding has NO 'lastSaleSurface' substring", () => {
-    const wire = composeHoldingWireShape(baseHolding());
-    const json = JSON.stringify(wire);
-    expect(json).not.toContain("lastSaleSurface");
+  it("the JSON-serialized wire output for a normal holding has NO TOP-LEVEL 'lastSaleSurface' key", () => {
+    // CF-PRICING-ENVELOPE (Drew, 2026-07-31). Substring check widened
+    // from `not.toContain("lastSaleSurface")` to top-level-only after the
+    // pricing envelope started nesting `pricing.provenance.lastSaleSurface`
+    // as a stable field (always emitted, null when absent). The additive
+    // invariant this test protects is the TOP-LEVEL wire shape — nested
+    // fields inside the envelope are outside its scope.
+    const wire = composeHoldingWireShape(baseHolding()) as Record<string, unknown>;
+    expect(Object.keys(wire)).not.toContain("lastSaleSurface");
   });
 
   it("an unpriced holding (no FMV) still does NOT carry lastSaleSurface", () => {
@@ -259,10 +264,14 @@ describe("ADDITIVE INVARIANT — composeHoldingWireShape: modelExpectation / mod
     expect("modelSignal" in wire).toBe(false);
   });
 
-  it("JSON-serialized wire has NO 'modelExpectation' or 'modelSignal' substring on normal holding", () => {
-    const json = JSON.stringify(composeHoldingWireShape(baseHolding()));
-    expect(json).not.toContain("modelExpectation");
-    expect(json).not.toContain("modelSignal");
+  it("JSON-serialized wire has NO TOP-LEVEL 'modelExpectation' or 'modelSignal' keys on normal holding", () => {
+    // CF-PRICING-ENVELOPE (Drew, 2026-07-31). Same widening as the
+    // lastSaleSurface case above — the envelope carries the fields as
+    // stable-null under pricing.provenance.*. Top-level absence is what
+    // this additive-invariant test protects.
+    const wire = composeHoldingWireShape(baseHolding()) as Record<string, unknown>;
+    expect(Object.keys(wire)).not.toContain("modelExpectation");
+    expect(Object.keys(wire)).not.toContain("modelSignal");
   });
 
   it("a holding with modelExpectation null → key OMITTED (not surfaced as null)", () => {
