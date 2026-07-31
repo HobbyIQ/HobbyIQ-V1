@@ -13,6 +13,7 @@ import dailyPublishRoutes from "./routes/dailyPublish.routes.js";
 import compiqRoutes from "./routes/compiq.routes.js";
 import portfolioiqRoutes from "./routes/portfolioiq.routes.js";
 import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
+import buyeriqRoutes from "./routes/buyeriq.routes.js";
 // CF-SELL-NOW-RADAR + CF-NOTABLE-SALES-FEED (Drew, 2026-07-17): two
 // seller-intelligence surfaces on the ch_daily_sales corpus. Kept in a
 // separate router file so PR #533 (parallel work on portfolioiq.routes)
@@ -172,6 +173,9 @@ app.use("/api/compiq", setDetailRoutes);
 app.use("/api/compiq", priceSeriesRoutes);
 app.use("/api/portfolio", opsPoolHealthRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
+// CF-BUYERIQ (Drew, 2026-07-31). Buying checklist for card shows.
+// Session-gated only; every plan gets it.
+app.use("/api/buyeriq", buyeriqRoutes);
 // CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
 // /api/portfolio so the ERP sub-router's path tree is reachable. Same
 // mount-order pattern as /api/alerts/advanced.
