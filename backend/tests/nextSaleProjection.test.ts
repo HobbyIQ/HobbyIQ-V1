@@ -163,4 +163,84 @@ describe("projectNextSaleFromComps", () => {
     expect(projection).not.toBeNull();
     expect(projection!.nextSaleValue).toBeGreaterThan(0);
   });
+
+  // CF-THIN-POOL-SLOPE-CAP (Drew, 2026-07-31). Regression on a thin
+  // (n<5), short-time-window (<14d) pool clamped to ±25% around the
+  // newest sale to prevent wild extrapolations. Discovered via Hartman
+  // Orange Shimmer PSA 10: 3 raws in 5 days ($1185 → $1531) projecting
+  // to $9,828 (× PSA 10 multiplier). The regression slope
+  // (+188.96%/month) is real but the SIGNAL is over-fit noise.
+  describe("thin-pool short-window slope cap", () => {
+    it("Hartman Orange Shimmer regression: 3 raws in 5 days clamped to ±25% of newest sale", () => {
+      const projection = projectNextSaleFromComps(
+        [
+          { price: 1185.02, soldDate: daysAgo(9) },
+          { price: 1190.26, soldDate: daysAgo(8) },
+          { price: 1531,   soldDate: daysAgo(4) },  // newest anchor
+        ],
+        { nowMs: NOW, minNForRegression: 3 },
+      );
+      expect(projection).not.toBeNull();
+      expect(projection!.method).toBe("linear-regression");
+      // Uncapped, the regression would extrapolate way past ±25% of $1531
+      // (i.e. > $1913 = 1531 × 1.25). With the cap, nextSaleValue must
+      // fall in [$1148, $1914].
+      expect(projection!.nextSaleValue).toBeLessThanOrEqual(1531 * 1.25);
+      expect(projection!.nextSaleValue).toBeGreaterThanOrEqual(1531 * 0.75);
+      // Slope signal is preserved for downstream telemetry — the cap
+      // only clamps the OUTPUT, not the reported slope.
+      expect(projection!.slopePerMonthPct).toBeGreaterThan(50);
+    });
+
+    it("does NOT clamp when time window is >= 14 days (spread apart, real signal)", () => {
+      const projection = projectNextSaleFromComps(
+        [
+          { price: 500,  soldDate: daysAgo(60) },
+          { price: 1200, soldDate: daysAgo(35) },
+          { price: 2000, soldDate: daysAgo(5) },  // newest anchor
+        ],
+        { nowMs: NOW, minNForRegression: 3 },
+      );
+      expect(projection).not.toBeNull();
+      expect(projection!.method).toBe("linear-regression");
+      // 55-day window with a steep upward slope: extrapolation 30d
+      // forward off newest $2000 lands well above the ±25% cap of
+      // $2500. The cap should NOT fire because window >= 14 days.
+      expect(projection!.nextSaleValue).toBeGreaterThan(2000 * 1.25);
+    });
+
+    it("does NOT clamp when pool has 5+ points even in short window", () => {
+      const projection = projectNextSaleFromComps(
+        [
+          { price: 1185, soldDate: daysAgo(9) },
+          { price: 1190, soldDate: daysAgo(8) },
+          { price: 1300, soldDate: daysAgo(7) },
+          { price: 1400, soldDate: daysAgo(6) },
+          { price: 1531, soldDate: daysAgo(4) },
+        ],
+        { nowMs: NOW, minNForRegression: 3 },
+      );
+      expect(projection).not.toBeNull();
+      // n=5 pool even in 5-day window is enough evidence to trust the
+      // regression — the cap only fires when BOTH conditions hold.
+      expect(projection!.nextSaleValue).toBeGreaterThan(1531 * 1.25);
+    });
+
+    it("clamps a thin downward-trending pool as well (symmetric)", () => {
+      const projection = projectNextSaleFromComps(
+        [
+          { price: 1700, soldDate: daysAgo(9) },
+          { price: 1500, soldDate: daysAgo(4) },  // newest anchor
+        ],
+        { nowMs: NOW, minNForRegression: 2 },  // allow branch 1 at n=2
+      );
+      expect(projection).not.toBeNull();
+      expect(projection!.method).toBe("linear-regression");
+      // $200 drop in 5 days = -40/day = -1200/month = -80%/month. Forward
+      // 30d off $1500 = $1500 × (1 - 0.80) = $300 uncapped. Clamp holds
+      // it above the $1500 × 0.75 = $1125 floor.
+      expect(projection!.nextSaleValue).toBeGreaterThanOrEqual(1500 * 0.75);
+      expect(projection!.slopePerMonthPct).toBeLessThan(0);
+    });
+  });
 });

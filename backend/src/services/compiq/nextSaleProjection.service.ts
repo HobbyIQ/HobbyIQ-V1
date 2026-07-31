@@ -95,6 +95,14 @@ export interface NextSaleProjection {
 
 const MS_PER_DAY = 86_400_000;
 
+// CF-THIN-POOL-SLOPE-CAP (Drew, 2026-07-31). Thresholds for the
+// regression-output clamp applied inside branch 1. Chosen from the
+// Hartman Orange Shimmer case: 3 sales in 5 days → clamp; 5 sales in
+// 30 days → don't clamp. See the extended comment at the clamp site.
+const THIN_POOL_N_THRESHOLD = 5;
+const SHORT_WINDOW_DAYS_THRESHOLD = 14;
+const THIN_POOL_CAP_PCT = 0.25;   // ±25% band around the newest sale
+
 /**
  * Project the next likely sale price from a dated comp pool.
  *
@@ -134,13 +142,56 @@ export function projectNextSaleFromComps(
   // is worse than an honest thin-market fall-through: fall through to the
   // trend-adjusted-last-sale branch when this happens.
   if (slopeVal && slopeVal.predictedPrice > 0) {
+    // CF-THIN-POOL-SLOPE-CAP (Drew, 2026-07-31). Linear regression on a
+    // thin (n<5), short-time-window (<14d) pool fits wild slopes that
+    // extrapolate wildly under a 30d forward window. Live 2026-07-31:
+    // Hartman Orange Shimmer PSA 10 — 3 raws in 5 days ($1185 → $1531)
+    // fit slope +188.96%/month → 30d projection = $3,440 raw × PSA 10
+    // multiplier = $9,828. Same card computed with median-anchored math
+    // is $2,785. The regression is mathematically fitting the data but
+    // the SIGNAL is over-fit noise.
+    //
+    // Cap the regression's projected value to a ±25% band around the
+    // pool's newest sale when BOTH conditions hold. Preserves the trend
+    // DIRECTION (still slopes up/down) and slopePerMonthPct as
+    // reported, so downstream telemetry sees the raw signal, but the
+    // OUTPUT that becomes fmv is clamped so a 5-day snapshot can't
+    // triple-guess the next sale.
+    let clampedValue = slopeVal.predictedPrice;
+    let clampedBounds = slopeVal.predictedPriceRange;
+    if (priced.length < THIN_POOL_N_THRESHOLD) {
+      const dates = priced
+        .map((c) => (c.soldDate ? Date.parse(c.soldDate) : NaN))
+        .filter((t) => Number.isFinite(t))
+        .sort((a, b) => a - b);
+      if (dates.length >= 2) {
+        const spanDays = (dates[dates.length - 1] - dates[0]) / MS_PER_DAY;
+        if (spanDays < SHORT_WINDOW_DAYS_THRESHOLD) {
+          const anchor = priced.reduce((newest, c) => {
+            const t = c.soldDate ? Date.parse(c.soldDate) : NaN;
+            const nt = newest.soldDate ? Date.parse(newest.soldDate) : NaN;
+            return Number.isFinite(t) && (!Number.isFinite(nt) || t > nt) ? c : newest;
+          }, priced[0]);
+          const anchorPrice = anchor.price;
+          const highCap = anchorPrice * (1 + THIN_POOL_CAP_PCT);
+          const lowCap = anchorPrice * (1 - THIN_POOL_CAP_PCT);
+          clampedValue = Math.min(Math.max(slopeVal.predictedPrice, lowCap), highCap);
+          if (clampedValue !== slopeVal.predictedPrice) {
+            clampedBounds = {
+              low: Math.min(clampedValue, slopeVal.predictedPriceRange.low),
+              high: Math.max(clampedValue, slopeVal.predictedPriceRange.high),
+            };
+          }
+        }
+      }
+    }
     return {
-      nextSaleValue: slopeVal.predictedPrice,
+      nextSaleValue: clampedValue,
       method: "linear-regression",
       n: slopeVal.n,
       confidence: confidenceForN(slopeVal.n),
       slopePerMonthPct: slopeVal.slopePerMonthPct,
-      bounds: slopeVal.predictedPriceRange,
+      bounds: clampedBounds,
     };
   }
 
