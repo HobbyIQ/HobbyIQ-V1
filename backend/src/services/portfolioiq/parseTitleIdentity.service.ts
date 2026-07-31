@@ -668,6 +668,43 @@ function extractParallel(title: string): string {
   // Contenders — Cracked Ice is the iconic parallel
   if (/cracked\s+ice/i.test(T)) return "Cracked Ice";
 
+  // CF-CHROME-AUTO-DEFAULT-REFRACTOR (Drew, 2026-07-31). For Bowman
+  // Chrome auto titles that reach this fallback with no color rule
+  // matched, return "Refractor" not "Base". In Bowman Chrome
+  // nomenclature the base tier of the auto ladder IS Refractor
+  // (typically /499 print run); "Base" only makes sense for paper
+  // (non-chrome) products.
+  //
+  // Live evidence 2026-07-31 on Josiah Hartshorn CPA-JHA:
+  // 304 sold_comps rows landed at parallel="Base" because titles like
+  //   "2025 Bowman Draft #CPA-JHA Josiah Hartshorn 1st Prospect Chrome Auto"
+  // don't contain the word "refractor" — but they ARE /499 Chrome
+  // Refractor autos by definition of the CPA-* subset. The Base
+  // labels polluted the sibling pool, dragging Blue Refractor FMVs down.
+  //
+  // Guarded to titles that clearly identify a Chrome product AND are
+  // autos so we don't hijack paper base cards.
+  //
+  // Auto-detection: the title either says "auto/autograph" (AUTO_RE)
+  // OR contains an auto-subset cardNumber prefix (CPA-/BCPA-/BDPA-/
+  // BCDA-/BPA-/BDA-/BCRA-/TCRA-/FCA-/etc.). The prefix rule covers
+  // titles where the seller wrote "Base" (mislabeling) instead of
+  // "Auto" but the cardNumber makes it unambiguous — a CPA-JHA card
+  // is a Chrome Prospects Autograph by definition of the subset.
+  const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BPA|BDA|BCRA|TCRA|FCA|USA-|AU-)-?[A-Z0-9]+/i;
+  const isChromeAutoTitle =
+    (AUTO_RE.test(T) || CHROME_AUTO_PREFIX_RE.test(T))
+    && (
+      /bowman\s+chrome/i.test(T)
+      || /chrome\s+prospect(s)?/i.test(T)
+      || /chrome\s+auto/i.test(T)
+      || /topps\s+chrome/i.test(T)
+      || /bowman\s+draft.*chrome/i.test(T)   // "Bowman Draft ... Chrome ..." split ordering
+    );
+  if (isChromeAutoTitle) {
+    return "Refractor";
+  }
+
   return "Base";
 }
 
