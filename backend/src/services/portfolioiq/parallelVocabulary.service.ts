@@ -86,6 +86,14 @@ export interface ParallelVocabulary {
   crossVendorVocabulary: {
     panini_to_topps_equivalents: Record<string, string>;
   };
+  // CF-COMPOSITE-V3 (Drew, 2026-07-31). Optional in the schema — vocab
+  // versions prior to v2 did not include eraRegistry. Consumers guard
+  // for absence and fall back to null era.
+  eraRegistry?: Record<string, {
+    years: [number, number];
+    parallelModel?: string;
+    pricingAxis?: string;
+  }>;
 }
 
 // ─── Loader ──────────────────────────────────────────────────────────
@@ -246,6 +254,54 @@ export type LadderVerdict =
   | { verdict: "no-ladder" }
   | { verdict: "color-not-in-ladder" }
   | { verdict: "impossible-serial"; expectedRun: number | null | string; observedRun: number | null };
+
+// CF-COMPOSITE-V3-ERA (Drew, 2026-07-31). Map a card year to its era
+// key ("E0_vintage" | "E1_factory" | ... | "E4_modern"). Returns null
+// when the vocab has no eraRegistry or the year falls outside every
+// bucket. Consumers use the era to swap pricing axis
+// (condition_grade_pop for vintage vs ladderCurves for modern) and to
+// pick era-appropriate defaults elsewhere.
+export function resolveEra(year: number | null | undefined): string | null {
+  if (year == null || !Number.isFinite(year)) return null;
+  const vocab = loadParallelVocabulary();
+  const registry = vocab.eraRegistry;
+  if (!registry) return null;
+  for (const [key, entry] of Object.entries(registry)) {
+    const [lo, hi] = entry.years;
+    if (year >= lo && year <= hi) return key;
+  }
+  return null;
+}
+
+// CF-COMPOSITE-V3-PANINI-EQUIV (Drew, 2026-07-31). For a panini-*
+// productLine, map the composite.colorFamily to the topps-side
+// equivalent for cross-vendor pooling. E.g., a Panini Silver Prizm
+// maps to REFRACTOR so it can pool with a Topps Chrome Refractor
+// under the composite-neighbor axis-drop path. Returns null when the
+// mapping is context-dependent (e.g., Panini "Mojo") or when the
+// product isn't panini-* (Topps rows don't need remapping).
+export function resolvePaniniColorEquivalent(
+  productLine: string | null | undefined,
+  colorFamily: string | null | undefined,
+): string | null {
+  if (!productLine || !colorFamily) return null;
+  if (!/^panini/i.test(productLine)) return null;
+  const vocab = loadParallelVocabulary();
+  const map = vocab.crossVendorVocabulary?.panini_to_topps_equivalents;
+  if (!map) return null;
+  // Registry keys are human strings ("silver prizm"); the composite
+  // colorFamily is uppercase canonical ("PRIZM"). Check by canonical
+  // slugify — lowercase + hyphenate.
+  const target = String(colorFamily).toLowerCase().replace(/_/g, " ");
+  for (const [alias, equivalent] of Object.entries(map)) {
+    if (String(alias).toLowerCase() === target) {
+      // Filter out non-parallel meta keys like "note".
+      if (equivalent === "context-dependent" || alias === "note") return null;
+      return equivalent;
+    }
+  }
+  return null;
+}
 
 export function validateAgainstLadder(
   productLine: string,

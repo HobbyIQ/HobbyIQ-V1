@@ -44,6 +44,7 @@ import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
+import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
 import { createHash } from "crypto";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
@@ -54,11 +55,34 @@ function computeCompositeForRow(input: {
   cardNumber?: string | null;
   sport?: string | null;
   setName?: string | null;
-}): { edition: string | null; insertSet: string | null; colorFamily: string | null; finishModifier: string | null; isRefractor: boolean; confidence: "high" | "medium" | "low" } | null {
+  // CF-COMPOSITE-V3 (Drew, 2026-07-31). year + productLine flow through
+  // from the parent write path so we can emit the v3 fields inline.
+  cardYear?: number | null;
+  productLine?: string | null;
+}): {
+  edition: string | null;
+  insertSet: string | null;
+  colorFamily: string | null;
+  finishModifier: string | null;
+  isRefractor: boolean;
+  confidence: "high" | "medium" | "low";
+  // v3
+  era: string | null;
+  ladderVerdict: string | null;
+  ladderTierColor: string | null;
+  ladderTierRun: number | null;
+  paniniColorEquivalent: string | null;
+} | null {
   try {
     const c = parseParallelComposite(input.title ?? "", input.cardNumber ?? null, {
       sport: input.sport ?? null,
       setName: input.setName ?? null,
+    });
+    const v3 = enrichCompositeV3({
+      cardYear: input.cardYear,
+      productLine: input.productLine,
+      colorFamily: c.colorFamily,
+      serialRun: c.serialRun,
     });
     return {
       edition: c.edition,
@@ -67,6 +91,11 @@ function computeCompositeForRow(input: {
       finishModifier: c.finishModifier,
       isRefractor: c.isRefractor,
       confidence: c.confidence,
+      era: v3.era,
+      ladderVerdict: v3.ladderVerdict,
+      ladderTierColor: v3.ladderTierColor,
+      ladderTierRun: v3.ladderTierRun,
+      paniniColorEquivalent: v3.paniniColorEquivalent,
     };
   } catch {
     return null;
@@ -510,6 +539,11 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       cardNumber: input.cardNumber,
       sport: input.sport,
       setName: input.setName,
+      cardYear: input.cardYear,
+      // Pull the canonical productLine from the computed slug's segment
+      // 3 so composite's ladder lookup uses the same normalized key the
+      // rest of the pipeline anchors on (never the raw setName).
+      productLine: hobbyiqCardId ? hobbyiqCardId.split(":")[3] ?? null : null,
     }),
     confidence: input.confidence ?? (input.verifiedByUser ? 1.0 : 0.5),
     contentHash,
