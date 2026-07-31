@@ -94,9 +94,21 @@ async function main() {
       const oldParallel = String(row.parallel || "");
       const newIsAuto = Boolean(parsed.isAuto);
       const oldIsAuto = Boolean(row.isAuto);
+      // CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY (Drew, 2026-07-31, dry-run
+      // sanity check): the first dry-run flagged 194K rows as mismatched
+      // because slug-form stored values (e.g. "blue-refractor") differ
+      // from Title-Case parsed values ("Blue Refractor") purely by
+      // hyphens vs spaces. Those aren't real identity mismatches —
+      // they're just spelling variants of the same card. Normalize both
+      // sides to a canonical form (uppercase for cardNumber, collapse
+      // whitespace/hyphens/underscores for parallel) before comparing.
+      // Only REAL identity differences (different color/finish word,
+      // different card number, wrong auto flag) survive the filter.
+      const normalizeParallel = (s) =>
+        String(s || "").toLowerCase().replace(/[-_\s]+/g, "-").replace(/^-|-$/g, "");
       const changed =
         newCardNumber !== oldCardNumber ||
-        newParallel.toLowerCase() !== oldParallel.toLowerCase() ||
+        normalizeParallel(newParallel) !== normalizeParallel(oldParallel) ||
         newIsAuto !== oldIsAuto;
       if (!changed) {
         stats.unchanged++;
