@@ -78,6 +78,10 @@ jobs:
       - name: Fan out major flips
         if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
+        # CF-VERDICT-FLIP-AUTH-ENV (Drew, 2026-07-31). Script transitively
+        # imports portfolioStore.service which requires AUTH_SESSION_SECRET
+        # to be set (env-validated at module load). Fetch both secrets
+        # from App Service in the same step so the script can boot.
         run: |
           COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
             --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
@@ -86,6 +90,15 @@ jobs:
             echo "COSMOS_CONNECTION_STRING empty from App Service — cannot fan out"
             exit 1
           fi
+          AUTH_SESSION_SECRET=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='AUTH_SESSION_SECRET'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$AUTH_SESSION_SECRET" ]; then
+            echo "AUTH_SESSION_SECRET empty from App Service — cannot fan out"
+            exit 1
+          fi
+          echo "::add-mask::$AUTH_SESSION_SECRET"
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          AUTH_SESSION_SECRET="$AUTH_SESSION_SECRET" \
           COSMOS_DATABASE=hobbyiq \
           node scripts/verdict-flip-push-fanout.cjs --days=1
