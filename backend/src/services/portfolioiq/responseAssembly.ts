@@ -62,6 +62,8 @@
 // semantics (cost-basis proxy vs $0) before the C/D deploy.
 
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import type { PricingEnvelope } from "../../types/pricingEnvelope.js";
+import { buildPricingEnvelope } from "./pricingEnvelope.builder.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 import {
   computePerUnitValue,
@@ -505,6 +507,12 @@ export interface PortfolioHoldingWire {
     | import("../compiq/trendIQ.types.js").TrendIQResult
     | null;
   confidence: number | null;
+  /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface —
+   *  the single shape iOS + web both bind to. Additive to the flat legacy
+   *  fields above (fairMarketValue, estimatedValue, predictedPrice, etc.),
+   *  which remain for one release while both clients migrate. Deletion
+   *  of the flats happens in a follow-up CF once both clients cut over. */
+  pricing: PricingEnvelope;
 }
 
 export function composeHoldingWireShape(
@@ -758,6 +766,16 @@ export function composeHoldingWireShape(
     ...(holding.nearestGradedAnchor
       ? { nearestGradedAnchor: holding.nearestGradedAnchor }
       : {}),
+    // CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface
+    // that iOS + web both bind to. Constructed from the same locals used
+    // above so `pricing.headline.value` matches wire.fairMarketValue etc.
+    // Additive — legacy flat fields stay for one release.
+    pricing: buildPricingEnvelope(holding, {
+      fmvPerUnit,
+      displayable,
+      quantity: qty,
+      freshness: freshnessFromPricingTimestamp(holding),
+    }),
     // CF-ACTION-RECOMMENDATION (2026-07-05, Drew): per-holding verdict.
     // Uses fmvPerUnit as currentValue and holding.predictedPrice as
     // predictedValue. signalSource is unavailable on the portfolio-
