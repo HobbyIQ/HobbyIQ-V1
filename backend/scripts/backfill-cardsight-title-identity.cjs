@@ -59,11 +59,30 @@ async function main() {
   console.log(`  limit:       ${LIMIT || "no cap"}`);
   console.log("");
 
-  // Query cardsight rows with a title. Bounded fetch — Cosmos SDK
-  // pages internally; we consume 500 at a time to keep memory bounded.
-  const query = LIMIT > 0
-    ? `SELECT TOP ${LIMIT} c.id, c.cardId, c.title, c.parallel, c.cardNumber, c.isAuto, c.playerName, c.cardYear, c.setName, c.sport, c.hobbyiqCardId, c.contentHash, c.price, c.soldAt, c.source, c.url FROM c WHERE c.source = 'cardsight' AND IS_DEFINED(c.title) AND c.title != null`
-    : `SELECT c.id, c.cardId, c.title, c.parallel, c.cardNumber, c.isAuto, c.playerName, c.cardYear, c.setName, c.sport, c.hobbyiqCardId, c.contentHash, c.price, c.soldAt, c.source, c.url FROM c WHERE c.source = 'cardsight' AND IS_DEFINED(c.title) AND c.title != null`;
+  // CF-BACKFILL-WIDEN-SOURCES (Drew, 2026-07-31). Originally scoped to
+  // cardsight-source rows only (which pre-dated the CF-CARDNUMBER-FROM-
+  // TITLE ingest fix). Widening to also cover cardhedge + ebay-user-
+  // purchase because BOTH of those paths also wrote pre-title-parsing
+  // rows to sold_comps before the parseListingIdentity call landed in
+  // persistVendorSalesToPool on 2026-07-23. Historical rows from those
+  // sources have the same wrong-parallel / wrong-cardNumber bug.
+  //
+  // Scope filter via BACKFILL_CARD_NUMBERS env var: comma-separated
+  // list of cardNumbers (e.g. "CPA-EHA,CPA-JHA,BCP-102") — restricts
+  // scan to matching rows only. Used for targeted, fast cleanup of
+  // Drew's specific holdings before firing the full corpus grind.
+  const cardNumbersFilter = String(process.env.BACKFILL_CARD_NUMBERS || "").trim();
+  const cardNumberList = cardNumbersFilter
+    ? cardNumbersFilter.split(",").map((s) => s.trim().toUpperCase()).filter((s) => s.length > 0)
+    : null;
+  const sourceClause = "c.source IN ('cardsight', 'cardhedge', 'ebay-user-purchase')";
+  const cardNumberClause = cardNumberList && cardNumberList.length > 0
+    ? ` AND UPPER(c.cardNumber) IN (${cardNumberList.map((n) => `'${n.replace(/'/g, "''")}'`).join(", ")})`
+    : "";
+  const topClause = LIMIT > 0 ? `TOP ${LIMIT} ` : "";
+  const query = `SELECT ${topClause}c.id, c.cardId, c.title, c.parallel, c.cardNumber, c.isAuto, c.playerName, c.cardYear, c.setName, c.sport, c.hobbyiqCardId, c.contentHash, c.price, c.soldAt, c.source, c.url FROM c WHERE ${sourceClause}${cardNumberClause} AND IS_DEFINED(c.title) AND c.title != null`;
+  console.log(`  sources:     cardsight, cardhedge, ebay-user-purchase`);
+  console.log(`  cardNumbers: ${cardNumberList ? cardNumberList.join(",") : "(all)"}`);
 
   const stats = {
     scanned: 0,
