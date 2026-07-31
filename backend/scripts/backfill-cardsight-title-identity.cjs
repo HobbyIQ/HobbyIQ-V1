@@ -94,22 +94,20 @@ async function main() {
       const oldParallel = String(row.parallel || "");
       const newIsAuto = Boolean(parsed.isAuto);
       const oldIsAuto = Boolean(row.isAuto);
-      // CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY (Drew, 2026-07-31, dry-run
-      // sanity check): the first dry-run flagged 194K rows as mismatched
-      // because slug-form stored values (e.g. "blue-refractor") differ
-      // from Title-Case parsed values ("Blue Refractor") purely by
-      // hyphens vs spaces. Those aren't real identity mismatches —
-      // they're just spelling variants of the same card. Normalize both
-      // sides to a canonical form (uppercase for cardNumber, collapse
-      // whitespace/hyphens/underscores for parallel) before comparing.
-      // Only REAL identity differences (different color/finish word,
-      // different card number, wrong auto flag) survive the filter.
-      const normalizeParallel = (s) =>
-        String(s || "").toLowerCase().replace(/[-_\s]+/g, "-").replace(/^-|-$/g, "");
-      const changed =
-        newCardNumber !== oldCardNumber ||
-        normalizeParallel(newParallel) !== normalizeParallel(oldParallel) ||
-        newIsAuto !== oldIsAuto;
+      // CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY-SCOPE (Drew, 2026-07-31):
+      // scoped down to CARD NUMBER mismatches only. That's the specific
+      // pool-pollution vector (stored CPA-EHA but title says BCP-102 →
+      // sale lands in wrong card's FMV pool → drags anchor). Parallel
+      // spelling differences (Blue Refractor vs blue-refractor vs null
+      // vs Base) don't cause FMV pool pollution because downstream
+      // queries normalize slugs — those are cosmetic cleanups worth
+      // their own separate backfill. Auto-flag corrections also worth
+      // fixing separately.
+      //
+      // First scoped dry-run should return a much smaller count reflecting
+      // ONLY the wrong-card ingest rows that led to Drew's Blue Refractor
+      // $550 anchor.
+      const changed = newCardNumber !== oldCardNumber;
       if (!changed) {
         stats.unchanged++;
         continue;
