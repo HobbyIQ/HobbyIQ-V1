@@ -682,16 +682,27 @@ function extractParallel(title: string): string {
   // Refractor autos by definition of the CPA-* subset. The Base
   // labels polluted the sibling pool, dragging Blue Refractor FMVs down.
   //
-  // Guarded to titles that clearly identify a Chrome product AND are
-  // autos so we don't hijack paper base cards.
+  // CF-CHROME-AUTO-REFRACTOR-DEFAULT (Drew, 2026-07-31, revised).
+  // The base TIER of the chrome auto ladder IS "Refractor" (typically
+  // /499 print run). When a title is a Chrome auto with no color rule
+  // matched, return Refractor — NOT Base ("Base" is paper terminology).
   //
-  // Auto-detection: the title either says "auto/autograph" (AUTO_RE)
-  // OR contains an auto-subset cardNumber prefix (CPA-/BCPA-/BDPA-/
-  // BCDA-/BPA-/BDA-/BCRA-/TCRA-/FCA-/etc.). The prefix rule covers
-  // titles where the seller wrote "Base" (mislabeling) instead of
-  // "Auto" but the cardNumber makes it unambiguous — a CPA-JHA card
-  // is a Chrome Prospects Autograph by definition of the subset.
-  const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BPA|BDA|BCRA|TCRA|FCA|USA-|AU-)-?[A-Z0-9]+/i;
+  // "Not all autos are refractors" (Drew, mid-turn): paper autos
+  // (BPA-/BDA-/BSPA- prefixes on paper stock) have their own base
+  // (paper Base) and their own color ladder ("Border" per CF-PAPER-
+  // AUTO-BORDERS at line 401). Non-Chrome/non-Bowman autos (Panini,
+  // Topps flagship non-Chrome, etc.) don't have Refractor at all.
+  //
+  // So this rule ONLY fires when:
+  //   1. AUTO signal present (title text OR chrome-only prefix), AND
+  //   2. Chrome PRODUCT signal present (bowman chrome / chrome
+  //      prospects / chrome auto / topps chrome / bowman draft chrome).
+  //
+  // BPA/BDA/BSPA are excluded from the prefix list here on purpose
+  // (they're paper). BCPA/BDPA/BCDA/BCRA/TCRA are chrome-only rookie/
+  // prospect autograph prefixes. CPA is the flagship Chrome Prospect
+  // Autograph prefix (baseball).
+  const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CU|CDA)-[A-Z0-9]+/i;
   const isChromeAutoTitle =
     (AUTO_RE.test(T) || CHROME_AUTO_PREFIX_RE.test(T))
     && (
@@ -699,7 +710,7 @@ function extractParallel(title: string): string {
       || /chrome\s+prospect(s)?/i.test(T)
       || /chrome\s+auto/i.test(T)
       || /topps\s+chrome/i.test(T)
-      || /bowman\s+draft.*chrome/i.test(T)   // "Bowman Draft ... Chrome ..." split ordering
+      || /bowman\s+draft.*chrome/i.test(T)
     );
   if (isChromeAutoTitle) {
     return "Refractor";
