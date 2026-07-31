@@ -188,7 +188,25 @@ async function main() {
 
         // Read the CURRENT full doc (fields not in the SELECT above),
         // then write it back with the updated identity fields.
-        const { resource: full } = await sc.item(row.id, row.cardId).read();
+        // CF-BACKFILL-429-RETRY (Drew, 2026-07-31). First apply run
+        // hit 4,374 Cosmos 429s at concurrency 32. Wrap read+write in
+        // exponential-backoff retry so throttled rows still land on
+        // this pass rather than needing another whole re-run.
+        const withRetry = async (op) => {
+          let attempt = 0;
+          while (true) {
+            try {
+              return await op();
+            } catch (e) {
+              const is429 = String((e && e.message) || "").includes("request rate is too large");
+              if (!is429 || attempt >= 4) throw e;
+              const backoffMs = 200 * Math.pow(2, attempt) + Math.floor(Math.random() * 100);
+              await new Promise((r) => setTimeout(r, backoffMs));
+              attempt++;
+            }
+          }
+        };
+        const { resource: full } = await withRetry(() => sc.item(row.id, row.cardId).read());
         if (!full) {
           stats.rewriteErr++;
           continue;
@@ -200,7 +218,7 @@ async function main() {
         full.contentHash = newContentHash;
         // Marker for retrospective audit — which rows this backfill touched.
         full.__migratedByBackfill = "CF-BACKFILL-CARDSIGHT-TITLE-IDENTITY-20260731";
-        await sc.item(row.id, row.cardId).replace(full);
+        await withRetry(() => sc.item(row.id, row.cardId).replace(full));
         stats.rewriteOk++;
         if (stats.rewriteOk % 50 === 0) {
           console.log(`  ...${stats.rewriteOk} rewrites applied`);
