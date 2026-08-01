@@ -315,6 +315,18 @@ router.post("/manual-comps/add", requireSession, async (req: Request, res: Respo
       });
       return;
     }
+    // CF-MANUAL-ENTRY-PARALLEL-REQUIRED (Drew, 2026-07-31). Silent
+    // parallel default to "base" produced wrong FMVs on high-value
+    // auction entries. Refuse the write without an explicit parallel —
+    // caller must pass it (Base is fine, but must be conscious).
+    const parallelRaw = typeof b.parallel === "string" ? b.parallel.trim() : "";
+    if (!parallelRaw) {
+      res.status(400).json({
+        success: false,
+        error: "parallel required (pass 'Base' for unnumbered matte, or the specific parallel name). Silent Base default was fragmenting comp pools.",
+      });
+      return;
+    }
     // Sanity: reject sales dated in the future (>1d clock skew guard).
     const soldAtMs = Date.parse(soldAt);
     if (!Number.isFinite(soldAtMs)) {
@@ -702,6 +714,18 @@ router.post("/admin/comps/add", requireAdmin, async (req: Request, res: Response
       res.status(400).json({
         success: false,
         error: "cardId, playerName, price (>0), and soldAt required",
+      });
+      return;
+    }
+    // CF-MANUAL-ENTRY-PARALLEL-REQUIRED (Drew, 2026-07-31). Silent
+    // parallel default to "base" produced wrong FMVs on high-value
+    // auction entries. Refuse the write without an explicit parallel —
+    // caller must pass it (Base is fine, but must be conscious).
+    const parallelRaw = typeof b.parallel === "string" ? b.parallel.trim() : "";
+    if (!parallelRaw) {
+      res.status(400).json({
+        success: false,
+        error: "parallel required (pass 'Base' for unnumbered matte, or the specific parallel name). Silent Base default was fragmenting comp pools.",
       });
       return;
     }
