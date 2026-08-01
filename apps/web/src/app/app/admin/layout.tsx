@@ -59,6 +59,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="p-4 md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm">
+          <a href="/app/admin" className="hover:underline font-semibold">Dashboard</a>
           <a href="/app/admin/cleanliness" className="hover:underline">Cleanliness</a>
           <a href="/app/admin/quarantine" className="hover:underline">Quarantine</a>
           <a href="/app/admin/data-quality" className="hover:underline">Data quality</a>
