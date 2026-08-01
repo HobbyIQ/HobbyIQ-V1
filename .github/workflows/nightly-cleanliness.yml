@@ -1,0 +1,104 @@
+name: Nightly Cleanliness Maintenance
+
+# CF-NIGHTLY-CLEANLINESS-CRON (Drew, 2026-08-01). Runs every night at
+# 3:00 UTC (10 PM Central prev day). Autonomously maintains data
+# cleanliness by re-running the incremental backfills that benefit
+# from newly-arrived data + newly-labeled catalog entries:
+#
+#   1. Catalog-driven Stage 1 re-run (picks up newly-covered
+#      cardNumber+year keys added by the catalog expansion loop).
+#      Idempotent — marker field prevents re-touching already-fixed rows.
+#   2. Trust-tier promotion (mature rows without flags → verifyStatus=confirmed).
+#   3. Baseline pool snapshot (freezes today's state — enables next-day drift comparison).
+#   4. Train confidence weights (reads last 30d of learning_events,
+#      adjusts scorer weights based on human decisions).
+#
+# Manual trigger via workflow_dispatch also supported for one-off runs.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  actions: write
+
+jobs:
+  stage1-catalog-driven:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch Stage 1 (catalog-driven canonicalization) apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=backfill-catalog-driven-canonicalize \
+            -f apply=true
+
+  trust-tier-promotion:
+    runs-on: ubuntu-latest
+    needs: stage1-catalog-driven
+    steps:
+      - name: Dispatch trust-tier promotion apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=promote-sold-comps-trust-tier \
+            -f apply=true
+
+  baseline-snapshot:
+    runs-on: ubuntu-latest
+    needs: trust-tier-promotion
+    steps:
+      - name: Dispatch baseline pool snapshot apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=baseline-pool-snapshot \
+            -f apply=true
+
+  train-confidence-weights:
+    runs-on: ubuntu-latest
+    needs: baseline-snapshot
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch ADMIN_API_TOKEN from HobbyIQ3 App Service
+        shell: bash
+        run: |
+          TOK=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='ADMIN_API_TOKEN'].value | [0]" \
+            -o tsv)
+          if [ -z "$TOK" ]; then
+            echo "::warning::ADMIN_API_TOKEN not found — skipping train-weights step"
+            exit 0
+          fi
+          echo "::add-mask::$TOK"
+          echo "ADMIN_API_TOKEN=$TOK" >> "$GITHUB_ENV"
+
+      - name: Trigger confidence weight training (last 30 days)
+        if: env.ADMIN_API_TOKEN != ''
+        shell: bash
+        run: |
+          curl -sX POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/train-weights?days=30" \
+            | head -c 500
+          echo ""
