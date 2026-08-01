@@ -374,6 +374,14 @@ function normalizeParallel(parallel: string | null | undefined): string {
   if (/(^|-)mojo$/.test(s)) {
     s = `${s}-refractor`;
   }
+  // CF-MEGA-IS-MOJO (Drew, 2026-08-01). Now that sub-channel captures
+  // the Mega Box product context separately, bare "Mega" (or
+  // "Blue Mega", "Red Mega" etc.) in the parallel field is safely
+  // treated as an alias for Mojo — same physical parallel, different
+  // card-language. Collapses to <color>-mojo-refractor.
+  if (/(^|-)mega$/.test(s)) {
+    s = s.replace(/mega$/, "mojo-refractor");
+  }
   // CF-TRUE-COLOR-IMPLIES-REFRACTOR (Drew, 2026-07-28). "True Blue"
   // (with no explicit "Refractor" suffix) is a market synonym for
   // "Blue Refractor" — same physical card, canonical form ends in

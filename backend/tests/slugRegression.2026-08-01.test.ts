@@ -249,6 +249,15 @@ describe("Mojo parallels — colors preserved, Refractor implied", () => {
   it("'Red Mega Refractor' → red-mojo-refractor (color + mega/mojo alias)", () => {
     expect(parallelOf("Red Mega Refractor")).toBe("red-mojo-refractor");
   });
+  it("Bare 'Mega' → mojo-refractor (mega + mojo are same card language)", () => {
+    expect(parallelOf("Mega")).toBe("mojo-refractor");
+  });
+  it("'Blue Mega' → blue-mojo-refractor", () => {
+    expect(parallelOf("Blue Mega")).toBe("blue-mojo-refractor");
+  });
+  it("'Gold Mega' → gold-mojo-refractor", () => {
+    expect(parallelOf("Gold Mega")).toBe("gold-mojo-refractor");
+  });
 });
 
 describe("Chrome-prefix cardNumber override (removed — too broad)", () => {
