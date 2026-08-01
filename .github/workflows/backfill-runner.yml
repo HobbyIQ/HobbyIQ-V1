@@ -66,6 +66,9 @@ on:
           - ingest-2026-bowman-auto-checklist
           - reprice-user-holdings
           - backfill-cardsight-title-identity
+          - backfill-canonicalize-chrome-slugs
+          - backfill-catalog-driven-canonicalize
+          - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true

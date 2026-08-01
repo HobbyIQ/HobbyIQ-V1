@@ -21,7 +21,9 @@
 
 const { CosmosClient } = require("@azure/cosmos");
 
-const MODE = (process.env.BACKFILL_MODE || "dry").toLowerCase();
+const MODE = (
+  process.env.BACKFILL_APPLY === "true" ? "apply" : (process.env.BACKFILL_MODE || "dry")
+).toLowerCase();
 const CONTAINER = (process.env.BACKFILL_CONTAINER || "all").toLowerCase();
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
 const LIMIT = process.env.BACKFILL_LIMIT ? Number(process.env.BACKFILL_LIMIT) : Infinity;
