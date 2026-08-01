@@ -109,6 +109,12 @@ struct RecentSalesSection: View {
 
 private struct RecentSaleRow: View {
     let sale: RecentSale
+    // CF-USER-FLAG (Drew, 2026-08-01). Local state so button reflects
+    // sent/success/error without a full re-fetch of the section.
+    @State private var flagState: FlagState = .idle
+    @State private var flagResultText: String = ""
+
+    private enum FlagState { case idle, sending, flagged, error }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -118,12 +124,16 @@ private struct RecentSaleRow: View {
                     Text(priceString)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let score = sale.confidenceScore {
+                        confidenceBadge(score: score, band: sale.confidenceBand, explain: sale.confidenceExplain)
+                    }
                     Spacer(minLength: 4)
                     if let relative = relativeSoldAt {
                         Text(relative)
                             .font(.caption2)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
+                    flagButton
                 }
                 if let title = sale.title, title.isEmpty == false {
                     Text(title)
@@ -246,6 +256,75 @@ private struct RecentSaleRow: View {
                 .font(.caption)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
+    }
+
+    @ViewBuilder
+    private var flagButton: some View {
+        if let rowId = sale.rowId, rowId.isEmpty == false,
+           let cardId = sale.cardId, cardId.isEmpty == false {
+            Button {
+                Task { await sendFlag(rowId: rowId, cardId: cardId) }
+            } label: {
+                Text(flagLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(flagColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(flagColor.opacity(0.14))
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(flagState == .sending || flagState == .flagged)
+            .help(flagResultText.isEmpty ? "Flag as suspicious" : flagResultText)
+        }
+    }
+
+    private var flagLabel: String {
+        switch flagState {
+        case .idle:    return "⚑"
+        case .sending: return "…"
+        case .flagged: return "✓"
+        case .error:   return "!"
+        }
+    }
+
+    private var flagColor: Color {
+        switch flagState {
+        case .flagged: return HobbyIQTheme.Colors.successGreen
+        case .error:   return HobbyIQTheme.Colors.danger
+        default:       return HobbyIQTheme.Colors.mutedText
+        }
+    }
+
+    private func sendFlag(rowId: String, cardId: String) async {
+        flagState = .sending
+        do {
+            let r = try await APIService.shared.flagCompRow(rowId: rowId, cardId: cardId, category: "looks-wrong")
+            flagState = .flagged
+            flagResultText = (r.autoQuarantined == true)
+                ? "Flagged (quarantined)"
+                : "Flagged (\(r.flagCount ?? 1))"
+        } catch {
+            flagState = .error
+            flagResultText = error.localizedDescription
+        }
+    }
+
+    private func confidenceBadge(score: Double, band: String?, explain: String?) -> some View {
+        let pct = Int((score * 100).rounded())
+        let color: Color =
+            score >= 0.85 ? HobbyIQTheme.Colors.successGreen :
+            score >= 0.60 ? HobbyIQTheme.Colors.warning :
+            HobbyIQTheme.Colors.danger
+        let hint = "Confidence: \(pct)%\(band.map { " (\($0))" } ?? "")\(explain.map { " — \($0)" } ?? "")"
+        return Text("\(pct)%")
+            .font(.caption2.weight(.semibold).monospacedDigit())
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule(style: .continuous))
+            .help(hint)
     }
 
     private func openSellerProfile(handle: String) {

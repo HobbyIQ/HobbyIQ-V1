@@ -56,15 +56,35 @@ struct RecentSale: Decodable, Hashable, Identifiable {
     /// Any other value is discarded — we never surface another user's id.
     let contributorUserId: String?
     let confidence: Double?
+    // CF-USER-FLAG (Drew, 2026-08-01). Server-side row id + partition
+    // key (cardId) needed so the flag button can POST /api/user/flag-comp.
+    let rowId: String?
+    let cardId: String?
+    // CF-CONFIDENCE-EXPLAIN (Drew, 2026-08-01). Persisted at ingest.
+    let confidenceScore: Double?
+    let confidenceBand: String?
+    let confidenceExplain: String?
+
+    // Backend recentSales endpoint sends `id` for row id — decode into
+    // rowId to avoid colliding with Identifiable's synthesized id.
+    enum CodingKeys: String, CodingKey {
+        case source, price, soldAt, title, parallel, gradeCompany, gradeValue
+        case cardYear, cardNumber, imageUrl, sellerHandle
+        case contributorUserId, confidence
+        case rowId = "id"
+        case cardId
+        case confidenceScore, confidenceBand, confidenceExplain
+    }
 
     /// True when contributorUserId == "self" — used for the "You" chip.
     var isSelfContribution: Bool {
         contributorUserId == "self"
     }
 
-    /// Composite id — recent-sales rows don't carry a stable server id.
+    /// Identifiable id — prefer server rowId when present, fallback to composite.
     var id: String {
-        [soldAt ?? "", price.map { String($0) } ?? "", sellerHandle ?? "", source?.rawValue ?? ""]
+        if let rowId, rowId.isEmpty == false { return rowId }
+        return [soldAt ?? "", price.map { String($0) } ?? "", sellerHandle ?? "", source?.rawValue ?? ""]
             .joined(separator: "|")
     }
 }

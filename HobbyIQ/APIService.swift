@@ -1378,6 +1378,31 @@ struct APIService {
     /// found). Any other error bubbles up to the caller, but the
     /// UI wires this as a fire-and-forget so callers can safely
     /// swallow the throw. Reason is capped to 200 chars in the UI.
+    // CF-USER-FLAG-COMP (Drew, 2026-08-01). New "flag this comp" surface
+    // wired to POST /api/user/flag-comp. Tracks distinct user flags per
+    // row; auto-quarantines after 3. Returns {flagCount, autoQuarantined}
+    // so the button can update state ("flagged 2 · flag again to
+    // quarantine").
+    struct FlagCompRowResponse: Decodable {
+        let success: Bool?
+        let flagCount: Int?
+        let autoQuarantined: Bool?
+    }
+    func flagCompRow(rowId: String, cardId: String, category: String = "looks-wrong", reasonNote: String? = nil) async throws -> FlagCompRowResponse {
+        struct FlagRequest: Encodable {
+            let rowId: String
+            let cardId: String
+            let category: String
+            let reasonNote: String?
+        }
+        return try await post(
+            path: "/api/user/flag-comp",
+            body: FlagRequest(rowId: rowId, cardId: cardId, category: category, reasonNote: reasonNote),
+            responseType: FlagCompRowResponse.self,
+            timeoutSeconds: 15
+        )
+    }
+
     func flagCompAsWrong(cardId: String, compId: String, reason: String?) async throws -> Bool {
         struct FlagRequest: Encodable {
             let cardId: String
