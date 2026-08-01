@@ -559,6 +559,26 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     ...(input.source === "cardsight" ? { __cardsightUnverified: true } : {}),
   } as SoldCompDoc;
 
+  // CF-PRICE-SANITY-INGEST-GATE (Drew, 2026-08-01). Before write, check
+  // if incoming price is a wild outlier vs the target pool's median
+  // (from confirmed-sold rows only). If yes, tag __priceOutlier=true
+  // at write. Prevents new pool contamination the same way the Stage 3
+  // backfill catches historical contamination. Cache-first — 15 min
+  // per-slug TTL, so this adds ~0-2ms to the write path on cache hit.
+  try {
+    const { checkPriceSanity } = await import("./priceSanityGate.service.js");
+    const sanity = await checkPriceSanity(c, doc.hobbyiqCardId, doc.price);
+    if (sanity.isOutlier) {
+      (doc as SoldCompDoc & Record<string, unknown>).__priceOutlier = true;
+      (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierAt = new Date().toISOString();
+      (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierBand = sanity.band ?? null;
+      (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierPoolMedian = sanity.poolMedian ?? null;
+      (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierReason = sanity.reason;
+    }
+  } catch {
+    // Sanity gate is a soft check — never fail the write on gate errors.
+  }
+
   // CF-CONTENT-HASH-PREWRITE-DEDUP (Drew, 2026-07-20). Cross-source
   // dedup at the write boundary. Query for any existing row in this
   // cardId partition with the same contentHash. If one exists, apply

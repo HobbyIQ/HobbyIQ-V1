@@ -221,3 +221,46 @@ export async function saveLabelerLabel(input: SaveLabelInput): Promise<{
     body: JSON.stringify(input),
   });
 }
+
+// ─── Cleanliness dashboard ────────────────────────────────────────
+
+export interface CleanlinessReport {
+  totalRows: number;
+  bySource: Record<string, number>;
+  slug: {
+    withValid: number;
+    missingOrInvalid: number;
+    validPct: number;
+  };
+  identity: {
+    withCardNumber: number;
+    withPlayerName: number;
+    withCardYear: number;
+    missingAny: number;
+  };
+  flags: {
+    priceOutliers: number;
+    cardsightUnverified: number;
+    catalogCanonicalized: number;
+    stage2TitleParsed: number;
+    priceOutlierBelowFloor: number;
+    priceOutlierAboveCeiling: number;
+  };
+  cleanliness: { score: number; label: string };
+  computedAt: string;
+}
+
+export async function fetchCleanlinessReport(): Promise<CleanlinessReport> {
+  const r = await adminRequest<{ success: boolean; report: CleanlinessReport }>(
+    `/api/cleanliness/report`,
+  );
+  return r.report;
+}
+
+export async function refreshCleanlinessReport(): Promise<CleanlinessReport> {
+  const r = await adminRequest<{ success: boolean; report: CleanlinessReport }>(
+    `/api/cleanliness/refresh`,
+    { method: "POST" },
+  );
+  return r.report;
+}

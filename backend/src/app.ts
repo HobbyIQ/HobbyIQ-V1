@@ -67,6 +67,10 @@ import verifyQueueRoutes from "./routes/verifyQueue.routes.js";
 // labeling admin surface. Shows CH catalog variants + images, Drew
 // inputs canonical parallel, sold_comps rewritten by title-suffix.
 import labelerRoutes from "./routes/labeler.routes.js";
+// CF-CLEANLINESS-ROUTES (2026-08-01, Drew): pool cleanliness rollup
+// dashboard. The number Drew calls when someone asks "how clean is
+// the data?".
+import cleanlinessRoutes from "./routes/cleanliness.routes.js";
 import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
@@ -238,6 +242,8 @@ app.use("/api/admin", searchAdminRoutes);
 app.use("/api", verifyQueueRoutes);
 // CF-LABELER-ROUTES (Drew, 2026-07-31): variant labeling admin surface.
 app.use("/api", labelerRoutes);
+// CF-CLEANLINESS-ROUTES (Drew, 2026-08-01): pool cleanliness dashboard.
+app.use("/api", cleanlinessRoutes);
 // CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
 // the data-clean → image-verify → promotion jobs + a live health
 // counter over staging status buckets.
