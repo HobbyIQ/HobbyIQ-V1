@@ -48,7 +48,7 @@ const CANONICAL_PARALLELS = [
   "1/1",
 ];
 
-const PRINT_RUN_PRESETS = ["none", "1", "5", "10", "25", "50", "75", "99", "100", "150", "199", "250", "299", "499", "999"];
+const PRINT_RUN_PRESETS = ["none", "1", "5", "10", "25", "50", "75", "99", "100", "125", "150", "175", "199", "200", "250", "299", "399", "499", "650", "750", "999", "custom"];
 
 export default function LabelerPage() {
   const [cardNumber, setCardNumber] = useState("CPA-JHA");
@@ -163,8 +163,12 @@ function VariantCard({
   const initial = variant.currentLabel;
   const [parallel, setParallel] = useState(initial?.parallel ?? guessParallel(variant.chVariant));
   const [isRefractor, setIsRefractor] = useState(initial?.isRefractor ?? guessIsRefractor(variant.chVariant));
-  const [printRunPreset, setPrintRunPreset] = useState<string>(
-    initial?.printRun ? String(initial.printRun) : "none",
+  const [printRunPreset, setPrintRunPreset] = useState<string>(() => {
+    if (!initial?.printRun) return "none";
+    return PRINT_RUN_PRESETS.includes(String(initial.printRun)) ? String(initial.printRun) : "custom";
+  });
+  const [customPrintRun, setCustomPrintRun] = useState<string>(
+    initial?.printRun && !PRINT_RUN_PRESETS.includes(String(initial.printRun)) ? String(initial.printRun) : "",
   );
   const [customParallel, setCustomParallel] = useState("");
   const [saving, setSaving] = useState(false);
@@ -184,7 +188,12 @@ function VariantCard({
         chVariant: variant.chVariant,
         canonicalParallel: effectiveParallel,
         isRefractor,
-        printRun: printRunPreset === "none" ? null : Number(printRunPreset),
+        printRun:
+          printRunPreset === "none"
+            ? null
+            : printRunPreset === "custom"
+              ? (customPrintRun.trim() ? Number(customPrintRun.trim()) : null)
+              : Number(printRunPreset),
         labeledBy: "drew",
         applyToSoldComps: true,
       });
@@ -243,8 +252,22 @@ function VariantCard({
             value={printRunPreset}
             onChange={(e) => setPrintRunPreset(e.target.value)}
           >
-            {PRINT_RUN_PRESETS.map((p) => (<option key={p} value={p}>{p === "none" ? "unnumbered" : `/${p}`}</option>))}
+            {PRINT_RUN_PRESETS.map((p) => (
+              <option key={p} value={p}>
+                {p === "none" ? "unnumbered" : p === "custom" ? "custom…" : `/${p}`}
+              </option>
+            ))}
           </select>
+          {printRunPreset === "custom" && (
+            <input
+              type="number"
+              min={1}
+              className="mt-1 w-full rounded border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2 py-1 text-xs"
+              placeholder="e.g. 125"
+              value={customPrintRun}
+              onChange={(e) => setCustomPrintRun(e.target.value)}
+            />
+          )}
         </div>
       </div>
 
