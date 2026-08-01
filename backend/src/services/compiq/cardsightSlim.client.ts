@@ -203,24 +203,33 @@ export async function searchCatalog(
   // CF-PERSIST-VENDOR-CATALOG (Drew, 2026-07-23, issue #722 catalog):
   // ship the returned CS catalog entries to card_catalog in background.
   // Feature-flagged: PERSIST_VENDOR_CATALOG_ENABLED.
+  //
+  // CF-CS-CATALOG-QUALITY-GATE (Drew, 2026-08-01). CS's fuzzy search
+  // returns hits without player OR number when the match is weak.
+  // Persisting those creates unusable "junk" catalog rows that pollute
+  // coverage math and can't be used for Stage 1 canonicalization.
+  // Only persist entries that carry BOTH player AND number.
   if (results.length > 0) {
-    import("../portfolioiq/persistVendorCatalog.service.js")
-      .then(({ persistVendorCatalogInBackground }) => {
-        persistVendorCatalogInBackground(
-          "cardsight",
-          results.map((c) => ({
-            cardId: c.id,
-            title: c.name,
-            player: c.player ?? null,
-            set: c.setName ?? c.releaseName ?? null,
-            year: c.year ?? null,
-            number: c.number ?? null,
-            variant: null,
-            imageUrl: null,
-          })),
-        );
-      })
-      .catch(() => { /* silent no-op */ });
+    const usable = results.filter((c) => c.player && c.number);
+    if (usable.length > 0) {
+      import("../portfolioiq/persistVendorCatalog.service.js")
+        .then(({ persistVendorCatalogInBackground }) => {
+          persistVendorCatalogInBackground(
+            "cardsight",
+            usable.map((c) => ({
+              cardId: c.id,
+              title: c.name,
+              player: c.player ?? null,
+              set: c.setName ?? c.releaseName ?? null,
+              year: c.year ?? null,
+              number: c.number ?? null,
+              variant: null,
+              imageUrl: null,
+            })),
+          );
+        })
+        .catch(() => { /* silent no-op */ });
+    }
   }
   return results;
 }

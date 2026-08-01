@@ -113,8 +113,15 @@ async function loadCatalogMap(cc) {
   // (year, cardNumber) → { canonical: string, candidates: string[] }
   //   canonical: assigned when all sets collapse to the same slug (auto-safe)
   //   candidates: list of distinct canonical slugs when they DIFFER (needs per-row disambiguation)
+  //
+  // CF-STAGE1-MULTI-SOURCE-CATALOG (Drew, 2026-08-01). Pull from BOTH
+  // cardhedge and cardsight enumerated catalog rows. CS junk rows
+  // (persistVendorCatalog side-effect with null number) are filtered
+  // by the number-required guard below.
   const rawByKey = new Map(); // (year, cn) → Set of set text strings
-  const iter = cc.items.query({ query: "SELECT * FROM c WHERE c.source = 'cardhedge'" }, { maxItemCount: 1000 });
+  const iter = cc.items.query({
+    query: "SELECT * FROM c WHERE c.source IN ('cardhedge', 'cardsight') AND (IS_DEFINED(c.cardNumber) OR IS_DEFINED(c.number))"
+  }, { maxItemCount: 1000 });
   let total = 0;
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
