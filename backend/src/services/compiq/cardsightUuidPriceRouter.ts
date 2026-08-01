@@ -262,10 +262,45 @@ export async function priceByCardsightUuid(
       // is now `isAutoFromParsed` computed inside the per-record loop.
       void _isAutoCatalogFallback;
       if (!playerName) return;
+
+      // CF-CARDSIGHT-SMART-TIER (Drew, 2026-08-01). Cardsight has good
+      // data mixed with fuzzy-matcher noise. Skip WRITE for rows that
+      // look like fuzzy-match errors — those are the ones that used to
+      // pollute pools (like the Hartman Blue Refractor $6 sub-pool that
+      // dragged FMV from $1,500 to $550). "Good" here means the title
+      // mentions EITHER the queried player OR the queried cardNumber.
+      // If neither, this row is almost certainly a mis-associated sale
+      // for a completely different card — don't ingest.
+      //
+      // We still keep title-derived identity as authoritative (so a
+      // GOOD Cardsight row that mentions the player but IS a different
+      // card's sale gets slugged to its ACTUAL identity, not the
+      // queried card's pool).
+      const playerLower = playerName.toLowerCase();
+      const numberLower = String(numberVal ?? "").toLowerCase();
+      const lastName = playerLower.split(/\s+/).slice(-1)[0] ?? "";
+      const hasLastName = lastName.length >= 4;
+
       // Emit one comp per raw record with a valid price
       for (const r of rawRecords) {
         if (typeof r.price !== "number" || r.price <= 0) continue;
         if (!r.date) continue;
+
+        // Smart-tier gate: reject rows whose title doesn't mention the
+        // queried player OR cardNumber. That's the signature of a
+        // Cardsight fuzzy-match error.
+        const titleLower = String(r.title ?? "").toLowerCase();
+        if (titleLower) {
+          const mentionsPlayer = hasLastName && titleLower.includes(lastName);
+          const mentionsNumber = numberLower && titleLower.includes(numberLower);
+          if (!mentionsPlayer && !mentionsNumber) {
+            // Skip: this row is neither about the queried player nor the
+            // queried cardNumber — safest to not persist rather than
+            // risk mis-slugging.
+            continue;
+          }
+        }
+
         // CF-PARALLEL-FROM-TITLE (Drew, 2026-07-28). Cardsight's
         // parallel_name field is unreliable — it stamps "Blue"/"Red"/etc.
         // on sale records whose eBay title has NO color word (verified
