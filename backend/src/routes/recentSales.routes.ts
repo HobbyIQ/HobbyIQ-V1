@@ -113,6 +113,11 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
         // Confidence lets iOS de-emphasize weakly-verified entries in
         // the list (lower opacity, footnote, etc.).
         confidence: typeof c.confidence === "number" ? c.confidence : null,
+        // CF-CONFIDENCE-EXPLAIN (Drew, 2026-08-01). Persisted at ingest
+        // by recordSoldComp. Includes 0-1 score, band, and top signals.
+        confidenceScore: (c as { __confidenceScore?: number }).__confidenceScore ?? null,
+        confidenceBand: (c as { __confidenceBand?: string }).__confidenceBand ?? null,
+        confidenceExplain: (c as { __confidenceExplain?: string }).__confidenceExplain ?? null,
       }));
 
     // CF-RECENT-SALES-BY-GRADE (Drew, 2026-07-19). Comp Sheet UX groups

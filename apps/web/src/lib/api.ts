@@ -1344,6 +1344,10 @@ export interface RecentCompSale {
   imageUrl?: string | null;
   sellerHandle?: string | null;
   listingUrl?: string | null;
+  // CF-CONFIDENCE-EXPLAIN (Drew, 2026-08-01)
+  confidenceScore?: number | null;
+  confidenceBand?: string | null;
+  confidenceExplain?: string | null;
 }
 
 // CF-USER-FLAG-CLIENT (Drew, 2026-08-01). Fires POST /api/user/flag-comp

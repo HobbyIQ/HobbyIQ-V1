@@ -178,6 +178,9 @@ function CompRow({ s }: { s: RecentCompSale }) {
         <div className="text-sm font-medium tabular-nums">
           {formatUSD(s.price, { hideCents: s.price >= 100 })}
         </div>
+        {typeof s.confidenceScore === "number" && (
+          <ConfidenceBadge score={s.confidenceScore} band={s.confidenceBand ?? null} explain={s.confidenceExplain ?? null} />
+        )}
       </div>
       {s.id && s.cardId && <FlagButton rowId={s.id} cardId={s.cardId} />}
     </div>
@@ -190,6 +193,19 @@ function CompRow({ s }: { s: RecentCompSale }) {
     );
   }
   return inner;
+}
+
+function ConfidenceBadge({ score, band, explain }: { score: number; band: string | null; explain: string | null }) {
+  const pct = Math.round(score * 100);
+  const color = score >= 0.85 ? "text-emerald-500"
+              : score >= 0.60 ? "text-yellow-500"
+              : "text-red-500";
+  const title = `Confidence: ${pct}%${band ? ` (${band})` : ""}${explain ? ` — ${explain}` : ""}`;
+  return (
+    <div className={`text-[10px] tabular-nums ${color}`} title={title}>
+      {pct}%
+    </div>
+  );
 }
 
 function FlagButton({ rowId, cardId }: { rowId: string; cardId: string }) {
