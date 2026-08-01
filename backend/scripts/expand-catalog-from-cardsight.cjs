@@ -26,6 +26,33 @@ const CS_API = "https://api.cardsight.ai/v1";
 const START_TIME = Date.now();
 const CS_KEY = process.env.CARDSIGHT_API_KEY;
 
+// CF-CS-IMAGE-PROBE (Drew, 2026-08-01). CS's catalog endpoint doesn't
+// ship images — they live at /v1/images/cards/{id}. Probe per card
+// and mark __hasImage explicitly so the catalog is organized (no
+// ambiguity between "not probed" and "no image exists"). Rows without
+// images stay in the catalog — search can filter/sort by __hasImage.
+const PROXY_ORIGIN = process.env.PROXY_ORIGIN || "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function probeImageExists(cardId) {
+  if (!UUID_RE.test(cardId)) return false;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(`${CS_API}/images/cards/${cardId}`, {
+      headers: { "X-API-Key": CS_KEY },
+      signal: controller.signal,
+    });
+    if (res.status === 200) {
+      const ct = res.headers.get("content-type") || "";
+      await res.arrayBuffer().catch(() => {});
+      return ct.startsWith("image/");
+    }
+    return false;
+  } catch { return false; }
+  finally { clearTimeout(t); }
+}
+
 async function csGetCatalogCards(releaseName, year, take, skip) {
   const params = new URLSearchParams({ take: String(take), skip: String(skip) });
   if (releaseName) params.set("releaseName", releaseName);
@@ -164,22 +191,35 @@ async function processTuple(cc, tuple, seenCardIds) {
       if (seenCardIds.has(cardId)) continue;
       seenCardIds.add(cardId);
       if (MODE !== "apply") { persisted++; continue; }
+      // Probe CS image endpoint — mark __hasImage explicitly so search
+      // can filter/sort. Rows without images stay (Drew: organize, not
+      // strip).
+      const hasImg = await probeImageExists(cardId);
+      const nowIso = new Date().toISOString();
       const doc = {
         id: `cardsight::${cardId}::${contentHash("cardsight", cardId)}`,
         cardId,
         source: "cardsight",
         contentHash: contentHash("cardsight", cardId),
         title: card.name ?? null,
+        // Schema unification: emit BOTH shape variants so downstream
+        // callers work whether they read `player`/`playerName` or
+        // `number`/`cardNumber` (CF-CATALOG-SCHEMA-UNIFY 2026-08-01).
         player: card.name ?? null,
+        playerName: card.name ?? null,
         set: card.setName ?? card.releaseName ?? `${tuple.year} ${tuple.product}`,
+        setName: card.setName ?? card.releaseName ?? `${tuple.year} ${tuple.product}`,
         year: card.releaseYear ? Number(card.releaseYear) : tuple.year,
         number: card.number ?? null,
+        cardNumber: card.number ?? null,
         variant: null,
-        imageUrl: card.imageUrl ?? null,
+        imageUrl: hasImg ? `${PROXY_ORIGIN}/api/compiq/card-image/${cardId}` : null,
+        __hasImage: hasImg,
+        __imageProbedAt: nowIso,
         sport: tuple.sport,
-        observedAt: new Date().toISOString(),
+        observedAt: nowIso,
         __expandedFromCardsight: true,
-        __expandedAt: new Date().toISOString(),
+        __expandedAt: nowIso,
       };
       try { await cc.items.upsert(doc); persisted++; } catch { /* skip */ }
     }
