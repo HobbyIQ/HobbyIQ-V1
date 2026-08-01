@@ -71,6 +71,10 @@ import labelerRoutes from "./routes/labeler.routes.js";
 // dashboard. The number Drew calls when someone asks "how clean is
 // the data?".
 import cleanlinessRoutes from "./routes/cleanliness.routes.js";
+// CF-FLAG-COMP-ROUTES (2026-08-01, Drew): user "this looks wrong"
+// button — flags a sold_comp row into verify_queue for admin review.
+// After N distinct users flag the same row, auto-quarantine kicks in.
+import flagCompRoutes from "./routes/flagComp.routes.js";
 import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
@@ -244,6 +248,8 @@ app.use("/api", verifyQueueRoutes);
 app.use("/api", labelerRoutes);
 // CF-CLEANLINESS-ROUTES (Drew, 2026-08-01): pool cleanliness dashboard.
 app.use("/api", cleanlinessRoutes);
+// CF-FLAG-COMP-ROUTES (Drew, 2026-08-01): user "flag this comp" endpoint.
+app.use("/api", flagCompRoutes);
 // CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
 // the data-clean → image-verify → promotion jobs + a live health
 // counter over staging status buckets.

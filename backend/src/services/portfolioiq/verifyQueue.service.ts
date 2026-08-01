@@ -37,7 +37,8 @@ export type VerifyReason =
   | "divergence-alert"    // cost-basis vs FMV divergence surfaced here for review
   | "catalog-gap"           // FMV request for a parallel with ZERO direct data at the identity (rare parallel; refuse to fabricate)
   | "parallel-price-mismatch" // ingest price fits another parallel's band better than the classified parallel
-  | "image-mismatch";       // ingest image pHash disagrees with catalog reference for the classified slug
+  | "image-mismatch"          // ingest image pHash disagrees with catalog reference for the classified slug
+  | "user-flagged";           // CF-USER-FLAG (Drew, 2026-08-01) — end-user tapped "this looks wrong" on a comp row
 
 export interface VerifyQueueDoc {
   id: string;
