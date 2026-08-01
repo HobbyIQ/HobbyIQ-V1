@@ -13,6 +13,32 @@
 import { parseListingIdentity, extractGradeFromTitle } from "./parseTitleIdentity.service.js";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
 
+// CF-SUB-CHANNEL-VOCAB (Drew, 2026-08-01). "Mega Box" and similar retail
+// channel markers pool into their parent chrome slug (buyers don't
+// distinguish for pricing) but the vocabulary is still meaningful for
+// discovery/display. Extract these tags so rows carry the language
+// even after slug collapse.
+const SUB_CHANNEL_PATTERNS: Array<[RegExp, string]> = [
+  [/\bmega\s*box\b/i,  "mega-box"],
+  [/\bblaster\b/i,     "blaster"],
+  [/\bhta\s+choice\b/i, "hta-choice"],
+  [/\bhta\b/i,         "hta"],
+  [/\bhanger\b/i,      "hanger"],
+  [/\bfat\s*pack\b/i,  "fat-pack"],
+  [/\bcello\b/i,       "cello"],
+  [/\bjumbo\b/i,       "jumbo"],
+  [/\bhobby\b/i,       "hobby"],
+  [/\bretail\b/i,      "retail"],
+];
+
+export function extractSubChannel(setName: string | null | undefined, title: string | null | undefined): string | null {
+  const combined = `${setName ?? ""} ${title ?? ""}`;
+  for (const [re, tag] of SUB_CHANNEL_PATTERNS) {
+    if (re.test(combined)) return tag;
+  }
+  return null;
+}
+
 export interface PreIngestResult {
   input?: RecordSoldCompInput;
   flags: Array<{ kind: string; detail?: string }>;
@@ -50,6 +76,15 @@ export function preIngestClean(input: RecordSoldCompInput): PreIngestResult {
     const titleGrade = title ? extractGradeFromTitle(title) : { gradeCompany: null, gradeValue: null };
     if (!refined.gradeCompany && titleGrade.gradeCompany) refined.gradeCompany = titleGrade.gradeCompany;
     if (!refined.gradeValue && titleGrade.gradeValue) refined.gradeValue = titleGrade.gradeValue;
+  }
+
+  // CF-SUB-CHANNEL-EXTRACT (Drew, 2026-08-01). Detect retail-channel
+  // vocabulary (Mega Box, Blaster, HTA, etc.) from setName/title.
+  // Persist as __subChannel — pools still unify at the slug level, but
+  // the language stays searchable/filterable/displayable.
+  const subChannel = extractSubChannel(refined.setName, refined.title);
+  if (subChannel) {
+    (refined as RecordSoldCompInput & { __subChannel?: string }).__subChannel = subChannel;
   }
 
   // Vendor-specific rules

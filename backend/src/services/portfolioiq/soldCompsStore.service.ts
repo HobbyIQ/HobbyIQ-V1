@@ -610,6 +610,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     // deleting the underlying rows. FMV pool query already excludes
     // Cardsight — this flag protects the OTHER surfaces.
     ...(input.source === "cardsight" ? { __cardsightUnverified: true } : {}),
+    // CF-SUB-CHANNEL (Drew, 2026-08-01). Retail channel vocabulary
+    // (Mega Box, Blaster, HTA, etc.) — pools unify at slug level but
+    // language stays for search/filter/display.
+    ...((input as RecordSoldCompInput & { __subChannel?: string }).__subChannel
+      ? { __subChannel: (input as RecordSoldCompInput & { __subChannel?: string }).__subChannel }
+      : {}),
   } as SoldCompDoc;
 
   // CF-PRICE-SANITY-INGEST-GATE (Drew, 2026-08-01). Before write, check
