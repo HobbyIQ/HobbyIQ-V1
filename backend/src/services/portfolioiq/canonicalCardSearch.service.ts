@@ -425,11 +425,14 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // searchTokens is computed (unique alphanum tokens from searchText,
   // hyphen-split included so "cpa" hits "cpa-eha").
   const sport = String(input.sport ?? "baseball").toLowerCase();
+  // CF-CATALOG-FIRST-SEARCH-MULTI-SOURCE (Drew, 2026-08-01). Was
+  // hardcoded to source='cardsight' which missed 371K CH-source
+  // catalog entries (95% of which have images). Include both vendor
+  // sources so the fast search covers our full 1.9M-entry catalog.
   const params: Array<{ name: string; value: string | number | boolean }> = [
     { name: "@sport", value: sport },
-    { name: "@src", value: "cardsight" },
   ];
-  const whereClauses: string[] = ["c.source = @src", "c.sport = @sport"];
+  const whereClauses: string[] = ["c.source IN ('cardhedge', 'cardsight')", "c.sport = @sport"];
   if (yearFilter !== null) {
     whereClauses.push("c.year = @year");
     params.push({ name: "@year", value: String(yearFilter) });
@@ -469,7 +472,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // (TOP 500) since fuzzy is O(N) in JS.
   if (candidates.length === 0 && searchTokens.length > 0) {
     try {
-      const sampleQ = `SELECT TOP 500 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText FROM c WHERE c.source = 'cardsight' AND c.sport = @sport${yearFilter !== null ? " AND c.year = @year" : ""} AND IS_DEFINED(c.searchText)`;
+      const sampleQ = `SELECT TOP 500 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText FROM c WHERE c.source IN ('cardhedge', 'cardsight') AND c.sport = @sport${yearFilter !== null ? " AND c.year = @year" : ""} AND IS_DEFINED(c.searchText)`;
       const sampleParams = [{ name: "@sport", value: sport }];
       if (yearFilter !== null) sampleParams.push({ name: "@year", value: String(yearFilter) });
       const { resources: sample } = await containers.catalog.items.query({ query: sampleQ, parameters: sampleParams }).fetchAll();
