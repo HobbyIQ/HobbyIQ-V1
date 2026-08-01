@@ -500,6 +500,29 @@ function scoreForCanonical(row: {
  * Silent no-op on missing cardId, non-positive price, or Cosmos absence.
  */
 export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> {
+  // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
+  // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
+  // two-pass ingest cleaning. Any of the 46 callers of this function
+  // automatically get vendor-appropriate validation + title-parse
+  // refinement without touching call-site code.
+  const { preIngestClean } = await import("./preIngestClean.service.js");
+  const preClean = preIngestClean(input);
+  if (preClean.rejected) {
+    // Log rejection sparingly (sampled) so downstream can trend
+    if (Math.random() < 0.01) {
+      console.warn(JSON.stringify({
+        event: "recordSoldComp_pre_ingest_rejected",
+        source: input.source,
+        reason: preClean.rejected.reason,
+        category: preClean.rejected.category,
+        cardId: input.cardId,
+        sampled: true,
+      }));
+    }
+    return;
+  }
+  if (preClean.input) input = preClean.input;
+
   if (!input.cardId || !input.cardId.trim()) return;
   if (!input.playerName || !input.playerName.trim()) return;
   if (typeof input.price !== "number" || input.price <= 0) return;
