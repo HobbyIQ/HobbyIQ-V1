@@ -21,13 +21,28 @@ export interface ParsedListingIdentity {
   parallel: string;
   isAuto: boolean;
   printRun: number | null;
-  /** CF-AUTO-STYLE (Drew, 2026-07-23, issue #712 option B).
-   *  Autograph style — "on-card" (signed directly on the card surface,
-   *  15-30% premium) or "sticker" (signed sticker applied to card).
-   *  Null when the title doesn't hint at style OR the row isn't an auto.
-   *  Downstream FMV path applies a multiplier when comparing on-card
-   *  vs sticker sales — that math is a follow-up PR. */
   autoStyle: "on-card" | "sticker" | null;
+  /** CF-GRADE-FROM-TITLE (Drew, 2026-08-01). "PSA 9", "BGS 9.5", "SGC 10",
+   *  "PSA 10 GEM MINT" etc. — extracted from title. Null when raw. */
+  gradeCompany: "PSA" | "BGS" | "SGC" | "CGC" | "HGA" | null;
+  gradeValue: number | null;
+}
+
+// CF-GRADE-FROM-TITLE (Drew, 2026-08-01). Matches:
+//   "PSA 9", "PSA 10", "PSA 10 GEM MINT", "PSA GEM MT 10",
+//   "BGS 9.5", "BGS 10 PRISTINE", "SGC 10", "SGC 9.5",
+//   "CGC 10", "CGC 9.5", "HGA 9"
+// Value: 1-10, half-point steps for BGS/SGC/CGC.
+const GRADE_RE = /\b(PSA|BGS|SGC|CGC|HGA)\s+(?:GEM\s+M(?:INT|T)\s+|PRISTINE\s+|MINT\s+)?(\d{1,2}(?:\.5)?)\b/i;
+
+export function extractGradeFromTitle(title: string): { gradeCompany: "PSA" | "BGS" | "SGC" | "CGC" | "HGA" | null; gradeValue: number | null } {
+  if (!title) return { gradeCompany: null, gradeValue: null };
+  const m = String(title).match(GRADE_RE);
+  if (!m) return { gradeCompany: null, gradeValue: null };
+  const company = m[1].toUpperCase() as "PSA" | "BGS" | "SGC" | "CGC" | "HGA";
+  const value = Number(m[2]);
+  if (!Number.isFinite(value) || value < 1 || value > 10) return { gradeCompany: null, gradeValue: null };
+  return { gradeCompany: company, gradeValue: value };
 }
 
 /** Default cardNumber regex — matches the common Bowman/Topps/Panini
@@ -74,12 +89,15 @@ export function parseListingIdentity(
   // omit "auto" but list a #CPA-XXX card number (very common when
   // sellers use CH's slab-derived title).
   const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber);
+  const grade = extractGradeFromTitle(t);
   return {
     cardNumber,
     parallel: extractParallel(t),
     isAuto,
     printRun: extractPrintRun(t),
     autoStyle: isAuto ? extractAutoStyle(t) : null,
+    gradeCompany: grade.gradeCompany,
+    gradeValue: grade.gradeValue,
   };
 }
 

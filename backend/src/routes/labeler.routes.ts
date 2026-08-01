@@ -28,6 +28,28 @@ router.get("/labeler/variants", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post("/labeler/ai-suggest", async (req, res, next) => {
+  try {
+    const b = req.body ?? {};
+    const required = ["chVariant", "set", "cardNumber", "cardYear", "playerName"];
+    for (const k of required) {
+      if (!b[k] && b[k] !== 0) { res.status(400).json({ success: false, error: `Missing field: ${k}` }); return; }
+    }
+    const { suggestLabelFromCatalogVariant } = await import("../services/portfolioiq/labelerAiSuggest.service.js");
+    const out = await suggestLabelFromCatalogVariant({
+      chVariant: String(b.chVariant),
+      set: String(b.set),
+      cardNumber: String(b.cardNumber),
+      cardYear: Number(b.cardYear),
+      playerName: String(b.playerName),
+      imageUrl: typeof b.imageUrl === "string" ? b.imageUrl : null,
+      currentGuess: typeof b.currentGuess === "string" ? b.currentGuess : undefined,
+    });
+    if (!out) { res.status(503).json({ success: false, error: "AI suggest unavailable (Azure OpenAI env missing or upstream failure)" }); return; }
+    res.json({ success: true, suggestion: out });
+  } catch (err) { next(err); }
+});
+
 router.post("/labeler/label", async (req, res, next) => {
   try {
     const b = req.body ?? {};

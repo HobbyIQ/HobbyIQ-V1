@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { computeHobbyIqCardId, normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { preIngestClean } from "../src/services/portfolioiq/preIngestClean.service.js";
+import { extractGradeFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 import type { RecordSoldCompInput } from "../src/services/portfolioiq/soldCompsStore.service.js";
 
 describe("Chrome subset collapse (Drew's rule: buyers don't distinguish subset)", () => {
@@ -177,6 +178,39 @@ describe("preIngestClean — Manual entry parallel required", () => {
     const result = preIngestClean(input);
     expect(result.rejected).toBeUndefined();
     expect(result.input?.parallel).toBe("Blue Refractor");
+  });
+});
+
+describe("Grade extraction from title", () => {
+  // Regression: 2026-08-01 Cardsight rows for "2024 Bowman Chrome Shohei
+  // Ohtani #85 PSA 9 Mint" ingested with gradeCompany=null (Raw).
+  it("PSA 9", () => {
+    expect(extractGradeFromTitle("2024 Bowman Chrome Shohei Ohtani #85 PSA 9 Mint")).toEqual({ gradeCompany: "PSA", gradeValue: 9 });
+  });
+  it("PSA 10 GEM MINT", () => {
+    expect(extractGradeFromTitle("2024 Bowman MEGA BOX Chrome #33 SHOHEI OHTANI PSA 10 GEM MINT 1st Year")).toEqual({ gradeCompany: "PSA", gradeValue: 10 });
+  });
+  it("BGS 9.5", () => {
+    expect(extractGradeFromTitle("Some 2020 Card BGS 9.5 slabbed")).toEqual({ gradeCompany: "BGS", gradeValue: 9.5 });
+  });
+  it("SGC 10", () => {
+    expect(extractGradeFromTitle("Card SGC 10 mint")).toEqual({ gradeCompany: "SGC", gradeValue: 10 });
+  });
+  it("Raw card returns null", () => {
+    expect(extractGradeFromTitle("2020 Bowman Chrome Refractor Auto /499")).toEqual({ gradeCompany: null, gradeValue: null });
+  });
+});
+
+describe("Bowman Mega Box distinct set slug", () => {
+  // Regression: 2026-08-01 "2026 2026 Bowman Mega Box Baseball #35 Base"
+  // slugged as generic bowman — wrong. Mega Box is retail-exclusive
+  // chrome, own product line.
+  it("Bowman Mega Box maps to bowman-mega-box (not bowman)", () => {
+    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).toBe("bowman-mega-box");
+    expect(normalizeSetKey("2024 Bowman Mega Box Chrome")).toBe("bowman-mega-box");
+  });
+  it("Plain Bowman still maps to bowman", () => {
+    expect(normalizeSetKey("2024 Bowman Baseball")).toBe("bowman");
   });
 });
 

@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchLabelerVariants,
   saveLabelerLabel,
+  aiSuggestLabel,
   type VariantView,
   type VariantsResponse,
 } from "@/lib/adminApi";
@@ -135,6 +136,7 @@ export default function LabelerPage() {
                 variant={v}
                 cardNumber={data.cardNumber}
                 cardYear={data.cardYear ?? Number(cardYear)}
+                playerName={data.player}
                 onSaved={() => void load()}
               />
             ))}
@@ -153,11 +155,13 @@ function VariantCard({
   variant,
   cardNumber,
   cardYear,
+  playerName,
   onSaved,
 }: {
   variant: VariantView;
   cardNumber: string;
   cardYear: number;
+  playerName: string;
   onSaved: () => void;
 }) {
   const initial = variant.currentLabel;
@@ -172,7 +176,39 @@ function VariantCard({
   );
   const [customParallel, setCustomParallel] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHint, setAiHint] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const requestAiSuggest = async () => {
+    setAiLoading(true);
+    setAiHint(null);
+    try {
+      const s = await aiSuggestLabel({
+        chVariant: variant.chVariant,
+        set: variant.set,
+        cardNumber,
+        cardYear,
+        playerName,
+        imageUrl: variant.imageUrl,
+        currentGuess: parallel,
+      });
+      if (CANONICAL_PARALLELS.includes(s.parallel)) setParallel(s.parallel);
+      else setCustomParallel(s.parallel);
+      if (s.printRun) {
+        setPrintRunPreset(PRINT_RUN_PRESETS.includes(String(s.printRun)) ? String(s.printRun) : "custom");
+        if (!PRINT_RUN_PRESETS.includes(String(s.printRun))) setCustomPrintRun(String(s.printRun));
+      } else {
+        setPrintRunPreset("none");
+      }
+      setIsRefractor(s.isRefractor);
+      setAiHint(`AI (${s.confidence}${s.usedImage ? " · saw image" : ""}): ${s.reasoning.slice(0, 80)}`);
+    } catch (e) {
+      setAiHint("AI error: " + ((e as Error)?.message ?? "unknown"));
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const effectiveParallel = customParallel.trim() || parallel;
 
@@ -288,6 +324,15 @@ function VariantCard({
         </label>
         <button
           type="button"
+          onClick={() => void requestAiSuggest()}
+          disabled={aiLoading}
+          className="rounded border border-[color:var(--color-border)] px-2 py-1 text-[11px] disabled:opacity-50"
+          title="Ask AI to pre-fill parallel + print run"
+        >
+          {aiLoading ? "AI…" : "✨ AI suggest"}
+        </button>
+        <button
+          type="button"
           onClick={() => void save()}
           disabled={saving || !effectiveParallel.trim()}
           className="ml-auto rounded bg-[color:var(--color-accent)] text-[color:var(--color-accent-fg)] px-3 py-1 text-xs font-medium disabled:opacity-50"
@@ -296,6 +341,7 @@ function VariantCard({
         </button>
       </div>
 
+      {aiHint && <div className="text-[11px] text-[color:var(--color-accent)] break-all">{aiHint}</div>}
       {msg && <div className="text-[11px] text-[color:var(--color-text-muted)] break-all">{msg}</div>}
     </div>
   );

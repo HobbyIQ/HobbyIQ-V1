@@ -10,7 +10,7 @@
 //
 // Returns { input, flags } on pass, or { rejected } on fail.
 
-import { parseListingIdentity } from "./parseTitleIdentity.service.js";
+import { parseListingIdentity, extractGradeFromTitle } from "./parseTitleIdentity.service.js";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
 
 export interface PreIngestResult {
@@ -41,6 +41,17 @@ export function preIngestClean(input: RecordSoldCompInput): PreIngestResult {
   const title = String(refined.title ?? "");
   const parsedFromTitle = title ? parseListingIdentity(title) : null;
 
+  // CF-STRUCTURED-FIRST-GRADE-FALLBACK (Drew, 2026-08-01). Prefer the
+  // listing's structured grade fields when present. Only parse the
+  // title as a fallback. Same rule applies universally — every source
+  // can carry a graded slab in its title even if the structured field
+  // wasn't populated.
+  if (!refined.gradeCompany || !refined.gradeValue) {
+    const titleGrade = title ? extractGradeFromTitle(title) : { gradeCompany: null, gradeValue: null };
+    if (!refined.gradeCompany && titleGrade.gradeCompany) refined.gradeCompany = titleGrade.gradeCompany;
+    if (!refined.gradeValue && titleGrade.gradeValue) refined.gradeValue = titleGrade.gradeValue;
+  }
+
   // Vendor-specific rules
   switch (refined.source) {
     case "cardsight": {
@@ -62,11 +73,17 @@ export function preIngestClean(input: RecordSoldCompInput): PreIngestResult {
           };
         }
       }
-      // Prefer title-parsed identity when available (Cardsight's parallel field unreliable)
+      // CF-STRUCTURED-FIRST (Drew, 2026-08-01). Prefer structured input
+      // fields when they carry a specific value; title-parse as
+      // fallback for anything missing. EXCEPTION: parallel — Cardsight's
+      // parallel_name is proven unreliable (Hartshorn Blue-tagging
+      // incident), so title still wins for parallel specifically when
+      // parsedFromTitle produced a non-Base value.
       if (parsedFromTitle) {
-        if (parsedFromTitle.cardNumber) refined.cardNumber = parsedFromTitle.cardNumber;
-        if (parsedFromTitle.parallel) refined.parallel = parsedFromTitle.parallel;
-        if (parsedFromTitle.isAuto !== undefined) refined.isAuto = parsedFromTitle.isAuto;
+        if (!refined.cardNumber && parsedFromTitle.cardNumber) refined.cardNumber = parsedFromTitle.cardNumber;
+        if (parsedFromTitle.parallel && parsedFromTitle.parallel !== "Base") refined.parallel = parsedFromTitle.parallel;
+        else if (!refined.parallel && parsedFromTitle.parallel) refined.parallel = parsedFromTitle.parallel;
+        if (refined.isAuto === undefined && parsedFromTitle.isAuto !== undefined) refined.isAuto = parsedFromTitle.isAuto;
       }
       flags.push({ kind: "unverified", detail: "cardsight-source" });
       break;

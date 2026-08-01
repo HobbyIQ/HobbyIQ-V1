@@ -222,6 +222,33 @@ export async function saveLabelerLabel(input: SaveLabelInput): Promise<{
   });
 }
 
+export interface AiSuggestInput {
+  chVariant: string;
+  set: string;
+  cardNumber: string;
+  cardYear: number;
+  playerName: string;
+  imageUrl: string | null;
+  currentGuess?: string;
+}
+
+export interface AiSuggestOutput {
+  parallel: string;
+  printRun: number | null;
+  isRefractor: boolean;
+  confidence: "high" | "medium" | "low";
+  reasoning: string;
+  usedImage: boolean;
+}
+
+export async function aiSuggestLabel(input: AiSuggestInput): Promise<AiSuggestOutput> {
+  const r = await adminRequest<{ success: boolean; suggestion: AiSuggestOutput }>(
+    `/api/labeler/ai-suggest`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  return r.suggestion;
+}
+
 // ─── Cleanliness dashboard ────────────────────────────────────────
 
 export interface CleanlinessReport {

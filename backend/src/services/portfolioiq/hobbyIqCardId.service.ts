@@ -129,6 +129,12 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/bowman-draft/, "bowman-draft"],
     [/bowman-paper/, "bowman-paper"],
     [/bowman-sterling/, "bowman-sterling"],
+    // CF-BOWMAN-MEGA-BOX-DISTINCT (Drew, 2026-08-01). Bowman Mega Box
+    // is a distinct retail-exclusive chrome product line with its own
+    // Mojo/Vector/Refractor parallels and price band. Must match BEFORE
+    // the generic /^bowman/ regex or Mega Box sales get pooled with
+    // paper Bowman flagship.
+    [/bowman-mega-box|bowman-mega/, "bowman-mega-box"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
     // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome

@@ -636,15 +636,59 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // is on the banned bad-actor list (≥50% historical contamination
   // across ≥10 rows), auto-tag this new row so downstream views can
   // filter it. Cached lookup — 30 min TTL, cheap.
+  let sellerBadActorScore = 0;
   if (input.sellerHandle) {
     try {
       const { isBannedSeller } = await import("./badActorDetection.service.js");
       if (await isBannedSeller(input.sellerHandle)) {
         (doc as SoldCompDoc & Record<string, unknown>).__badActorSeller = true;
         (doc as SoldCompDoc & Record<string, unknown>).__badActorSellerAt = new Date().toISOString();
+        sellerBadActorScore = 1;
       }
     } catch { /* soft check */ }
   }
+
+  // CF-CONFIDENCE-SCORE-INGEST (Drew, 2026-08-01). Compute a 0-1
+  // confidence score for this row and persist it. Downstream views
+  // and analytics can filter by band. Learned weights (once corpus is
+  // large enough) will make this dramatically more accurate; the API
+  // is unchanged when we swap rule-based → ML.
+  try {
+    const { scoreRow } = await import("./confidenceScore.service.js");
+    // Reuse pool median if the price sanity gate computed it above.
+    const pmVal = (doc as SoldCompDoc & { __priceOutlierPoolMedian?: number }).__priceOutlierPoolMedian;
+    const poolMedian = typeof pmVal === "number" && pmVal > 0 ? pmVal : null;
+    const conf = scoreRow({
+      row: input,
+      poolMedian,
+      poolSampleCount: poolMedian ? 5 : 0,
+      catalogHasCanonicalForCardnumberYear: false,   // TODO: cache lookup
+      catalogAgreesOnSet: false,
+      sellerBadActorScore,
+    });
+    (doc as SoldCompDoc & Record<string, unknown>).__confidenceScore = conf.score;
+    (doc as SoldCompDoc & Record<string, unknown>).__confidenceBand = conf.band;
+    (doc as SoldCompDoc & Record<string, unknown>).__confidenceExplain = conf.explain;
+    // Auto-reject at very low confidence — near-certain contamination
+    if (conf.band === "reject") {
+      if (Math.random() < 0.01) {
+        console.warn(JSON.stringify({
+          event: "recordSoldComp_confidence_reject",
+          score: conf.score,
+          reason: conf.explain,
+          source: input.source,
+          sampled: true,
+        }));
+      }
+      return;
+    }
+    // Quarantine band: still persist but flag it
+    if (conf.band === "quarantine") {
+      (doc as SoldCompDoc & Record<string, unknown>).__userFlagQuarantine = true;
+      (doc as SoldCompDoc & Record<string, unknown>).__userFlagQuarantineAt = new Date().toISOString();
+      (doc as SoldCompDoc & Record<string, unknown>).__autoQuarantineFromConfidence = true;
+    }
+  } catch { /* soft */ }
 
   // CF-CONTENT-HASH-PREWRITE-DEDUP (Drew, 2026-07-20). Cross-source
   // dedup at the write boundary. Query for any existing row in this
