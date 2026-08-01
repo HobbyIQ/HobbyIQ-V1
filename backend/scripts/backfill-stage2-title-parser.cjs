@@ -96,17 +96,26 @@ function extractCardNumberFromTitle(title) {
   return m ? m[1].toUpperCase() : null;
 }
 
-// Player name extraction: try to match against a dictionary of known
-// players (from card_catalog). Uses word-boundary case-insensitive
-// contains — reasonably safe for two-word full names since first+last
-// together is very rarely a coincidence.
-function extractPlayerFromTitle(title, playerDict) {
-  const t = String(title || "");
+// CF-STAGE2-FAST-PLAYER-LOOKUP (Drew, 2026-08-01). Prior implementation
+// ran one regex per player per row — 96K players × 3.4M rows = O(300B)
+// operations, timed out after 150 min without progress. Fixed: build
+// a Set of lowercased player names, then scan the title's word-window
+// pairs (last-first or first-last order) and probe the set. O(rows ×
+// title_words) — ~50M operations total, seconds not hours.
+function extractPlayerFromTitle(title, playerSet) {
+  if (!title) return null;
+  const t = title.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
   if (!t) return null;
-  // Direct lookup: any exact known full name in the title
-  for (const p of playerDict) {
-    const re = new RegExp("\\b" + p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
-    if (re.test(t)) return p;
+  const words = t.split(" ");
+  // 2-word windows: "first last"
+  for (let i = 0; i + 1 < words.length; i++) {
+    const candidate = words[i] + " " + words[i + 1];
+    if (playerSet.has(candidate)) return candidate;
+  }
+  // 3-word windows: "first middle last" (Bo Bichette Jr, etc.)
+  for (let i = 0; i + 2 < words.length; i++) {
+    const candidate = words[i] + " " + words[i + 1] + " " + words[i + 2];
+    if (playerSet.has(candidate)) return candidate;
   }
   return null;
 }
@@ -118,8 +127,7 @@ async function loadPlayerDict(cc) {
     const { resources } = await iter.fetchNext();
     if (!Array.isArray(resources)) break;
     for (const r of resources) {
-      const p = String(r.player || "").trim();
-      // Only keep multi-word names — single names are too ambiguous
+      const p = String(r.player || "").trim().toLowerCase();
       if (p && p.split(/\s+/).length >= 2 && p.length >= 5) set.add(p);
     }
   }
@@ -193,8 +201,9 @@ async function main() {
       const titleName = extractPlayerFromTitle(title, playerDict);
 
       // Count witnesses that AGREE between stored and title
+      // (titleName is already lowercased by extractPlayerFromTitle)
       let witnesses = 0;
-      if (storedName && titleName && storedName.toLowerCase() === titleName.toLowerCase()) witnesses++;
+      if (storedName && titleName && storedName.toLowerCase() === titleName) witnesses++;
       if (storedCn && titleCn && storedCn === titleCn) witnesses++;
       if (storedYear && titleYear && storedYear === titleYear) witnesses++;
       if (storedSetCanon && titleSetCanon && storedSetCanon === titleSetCanon) witnesses++;
