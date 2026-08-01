@@ -59,6 +59,10 @@ import {
   type CardSearchFilters,
 } from "../compiq/cardhedge.client.js";
 import { applyCollectorAlias } from "../compiq/parallelCollectorAliases.js";
+import {
+  canonicalCardSearch,
+  type CanonicalSearchHit,
+} from "../portfolioiq/canonicalCardSearch.service.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -396,10 +400,94 @@ async function dispatchCertMode(
   };
 }
 
+// CF-CATALOG-FIRST-SHORTCUT (Drew, 2026-08-01). Before spending a
+// CardHedge round-trip on every keystroke, try our own indexed
+// catalog. When it returns a strong result set (≥ threshold), skip
+// CH entirely — user gets fast (~50-250ms) matches from our own
+// data. Falls through to the CH path otherwise so long-tail coverage
+// is preserved.
+const CATALOG_FIRST_STRONG_THRESHOLD = 10;
+const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
+
+function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
+  const titleParts: string[] = [];
+  if (hit.player) titleParts.push(hit.player);
+  if (hit.cardYear) titleParts.push(String(hit.cardYear));
+  if (hit.releaseName) titleParts.push(hit.releaseName);
+  if (hit.cardNumber) titleParts.push(`#${hit.cardNumber}`);
+  return {
+    candidateId: `catalog:${hit.hobbyiqCardId ?? `${hit.player}::${hit.cardYear}::${hit.cardNumber}`}`,
+    source: "catalog",
+    attribution: "ranked",
+    confidence: Math.max(0.1, Math.min(1.0, hit.score / 20)),
+    player: hit.player,
+    year: hit.cardYear,
+    brand: null,
+    setName: hit.releaseName,
+    cardNumber: hit.cardNumber,
+    parallel: hit.parallels?.[0]?.name ?? null,
+    variation: null,
+    isAuto: hit.isAutographSet,
+    serialNumber: null,
+    grade: null,
+    gradeCompany: null,
+    gradeValue: null,
+    certNumber: null,
+    totalPopulation: null,
+    populationHigher: null,
+    title: titleParts.join(" ") || (hit.player ?? "Unknown card"),
+    imageUrl: hit.imageUrl,
+    parallels: hit.parallels?.map((p) => ({
+      id: p.id,
+      name: p.name,
+      numberedTo: p.numberedTo ?? undefined,
+    })),
+    attributes: [],
+  };
+}
+
+async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> {
+  try {
+    const results = await Promise.all(
+      CATALOG_FIRST_SPORTS.map((sport) =>
+        canonicalCardSearch({ q: trimmed, sport, limit: 30 }).catch(() => null),
+      ),
+    );
+    const allHits: CanonicalSearchHit[] = [];
+    for (const r of results) {
+      if (r?.hits) allHits.push(...r.hits);
+    }
+    // Dedup across sports by hobbyiqCardId — a search token might hit
+    // multiple sport pools for cross-sport words like "gold".
+    const bySlug = new Map<string, CanonicalSearchHit>();
+    for (const h of allHits) {
+      const key = h.hobbyiqCardId ?? `${h.player}::${h.cardYear}::${h.cardNumber}`;
+      if (!key) continue;
+      const existing = bySlug.get(key);
+      if (!existing || h.score > existing.score) bySlug.set(key, h);
+    }
+    const merged = [...bySlug.values()].sort((a, b) => b.score - a.score);
+    if (merged.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
+    return merged.slice(0, 100).map(catalogHitToCardIdentity);
+  } catch {
+    return null;
+  }
+}
+
 async function dispatchFreetextMode(
   input: string,
   trimmed: string,
 ): Promise<UnifiedSearchResponse> {
+  // Catalog-first shortcut — if our own indexed catalog returns a
+  // strong result set, skip the CH round-trip entirely.
+  const catalogFast = await tryCatalogFirst(trimmed);
+  if (catalogFast) {
+    return {
+      input: { raw: input, detectedMode: "freetext" },
+      candidates: catalogFast,
+      warnings: [],
+    };
+  }
   // Freetext catalog search is served by CardHedge's card-search
   // (POST /cards/card-search via cardhedge.client → searchCardsRouted).
   // The prior implementation returned zero candidates because the
