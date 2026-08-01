@@ -283,6 +283,31 @@ export interface RecordSoldCompInput {
 let _container: Container | null = null;
 let _initPromise: Promise<Container | null> | null = null;
 
+// CF-CARDSIGHT-STAGING-CONTAINER (Drew, 2026-08-01). Feature-flagged
+// route: when CARDSIGHT_TO_STAGING_ENABLED=true, Cardsight-source
+// rows go to a separate `cardsight_staging` container instead of
+// sold_comps. Keeps sold_comps as confirmed-sold only. Off by default
+// until the historical Cardsight rows have been migrated.
+let _cardsightStaging: Container | null = null;
+async function getCardsightStagingContainer(): Promise<Container | null> {
+  if (_cardsightStaging) return _cardsightStaging;
+  try {
+    const conn = process.env.COSMOS_CONNECTION_STRING;
+    if (!conn) return null;
+    const client = new CosmosClient(conn);
+    const { database } = await client.databases.createIfNotExists({
+      id: process.env.COSMOS_DATABASE ?? "hobbyiq",
+    });
+    const { container } = await database.containers.createIfNotExists({
+      id: process.env.COSMOS_CARDSIGHT_STAGING_CONTAINER ?? "cardsight_staging",
+      partitionKey: { paths: ["/cardId"] },
+      defaultTtl: -1,
+    });
+    _cardsightStaging = container;
+    return _cardsightStaging;
+  } catch { return null; }
+}
+
 async function getContainer(): Promise<Container | null> {
   if (_container) return _container;
   if (_initPromise) return _initPromise;
@@ -480,7 +505,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   if (typeof input.price !== "number" || input.price <= 0) return;
   if (!input.soldAt) return;
 
-  const c = await getContainer();
+  // CF-CARDSIGHT-STAGING-ROUTING (Drew, 2026-08-01). When feature flag
+  // is on, route Cardsight-source writes to cardsight_staging container.
+  // Sold_comps stays confirmed-sold only. Off by default.
+  const stagingRouteEnabled = process.env.CARDSIGHT_TO_STAGING_ENABLED === "true";
+  const shouldRouteToStaging = stagingRouteEnabled && input.source === "cardsight";
+  const c = shouldRouteToStaging ? await getCardsightStagingContainer() : await getContainer();
   if (!c) return;
 
   const contentHash = computeContentHash({

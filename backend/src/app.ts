@@ -75,6 +75,9 @@ import cleanlinessRoutes from "./routes/cleanliness.routes.js";
 // button — flags a sold_comp row into verify_queue for admin review.
 // After N distinct users flag the same row, auto-quarantine kicks in.
 import flagCompRoutes from "./routes/flagComp.routes.js";
+// CF-QUARANTINE-ROUTES (2026-08-01, Drew): admin browser + resolver
+// for all flagged (contaminated) sold_comp rows.
+import quarantineRoutes from "./routes/quarantine.routes.js";
 import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
@@ -250,6 +253,8 @@ app.use("/api", labelerRoutes);
 app.use("/api", cleanlinessRoutes);
 // CF-FLAG-COMP-ROUTES (Drew, 2026-08-01): user "flag this comp" endpoint.
 app.use("/api", flagCompRoutes);
+// CF-QUARANTINE-ROUTES (Drew, 2026-08-01): admin quarantine browser.
+app.use("/api", quarantineRoutes);
 // CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
 // the data-clean → image-verify → promotion jobs + a live health
 // counter over staging status buckets.

@@ -264,3 +264,56 @@ export async function refreshCleanlinessReport(): Promise<CleanlinessReport> {
   );
   return r.report;
 }
+
+// ─── Quarantine browser ───────────────────────────────────────────
+
+export type QuarantineFilter = "any" | "price-outlier" | "cardsight-unverified" | "user-flagged" | "bad-actor";
+
+export interface QuarantineRow {
+  id: string;
+  cardId: string;
+  playerName: string | null;
+  cardYear: number | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  price: number;
+  source: string;
+  soldAt: string | null;
+  title: string | null;
+  imageUrl: string | null;
+  hobbyiqCardId: string | null;
+  flags: {
+    priceOutlier: boolean;
+    priceOutlierBand?: string | null;
+    priceOutlierPoolMedian?: number | null;
+    cardsightUnverified: boolean;
+    userFlagQuarantine: boolean;
+    userFlagCount: number;
+    badActorSeller: boolean;
+  };
+  flagCount: number;
+}
+
+export async function fetchQuarantine(filter: QuarantineFilter = "any", limit = 50): Promise<{
+  items: QuarantineRow[];
+  totalReturned: number;
+  hasMore: boolean;
+  filter: string;
+}> {
+  const params = new URLSearchParams({ filter, limit: String(limit) });
+  const r = await adminRequest<{ success: boolean; items: QuarantineRow[]; totalReturned: number; hasMore: boolean; filter: string }>(
+    `/api/quarantine/list?${params.toString()}`,
+  );
+  return r;
+}
+
+export async function clearQuarantineRow(cardId: string, rowId: string): Promise<void> {
+  await adminRequest(`/api/quarantine/${encodeURIComponent(cardId)}/${encodeURIComponent(rowId)}/clear`, { method: "POST" });
+}
+
+export async function forceQuarantineRow(cardId: string, rowId: string, reason: string): Promise<void> {
+  await adminRequest(`/api/quarantine/${encodeURIComponent(cardId)}/${encodeURIComponent(rowId)}/quarantine`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
