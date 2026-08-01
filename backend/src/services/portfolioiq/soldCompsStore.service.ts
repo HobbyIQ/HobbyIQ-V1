@@ -579,6 +579,20 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     // Sanity gate is a soft check — never fail the write on gate errors.
   }
 
+  // CF-BAD-ACTOR-INGEST-CHECK (Drew, 2026-08-01). If the sellerHandle
+  // is on the banned bad-actor list (≥50% historical contamination
+  // across ≥10 rows), auto-tag this new row so downstream views can
+  // filter it. Cached lookup — 30 min TTL, cheap.
+  if (input.sellerHandle) {
+    try {
+      const { isBannedSeller } = await import("./badActorDetection.service.js");
+      if (await isBannedSeller(input.sellerHandle)) {
+        (doc as SoldCompDoc & Record<string, unknown>).__badActorSeller = true;
+        (doc as SoldCompDoc & Record<string, unknown>).__badActorSellerAt = new Date().toISOString();
+      }
+    } catch { /* soft check */ }
+  }
+
   // CF-CONTENT-HASH-PREWRITE-DEDUP (Drew, 2026-07-20). Cross-source
   // dedup at the write boundary. Query for any existing row in this
   // cardId partition with the same contentHash. If one exists, apply

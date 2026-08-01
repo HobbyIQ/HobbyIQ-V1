@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { computeCleanlinessReport } from "../services/portfolioiq/cleanliness.service.js";
+import { computeBadActorReport } from "../services/portfolioiq/badActorDetection.service.js";
 
 const router = Router();
 router.use(requireAdmin);
@@ -22,6 +23,15 @@ router.get("/cleanliness/report", async (_req, res, next) => {
 router.post("/cleanliness/refresh", async (_req, res, next) => {
   try {
     const report = await computeCleanlinessReport(true);
+    res.json({ success: true, report });
+  } catch (err) { next(err); }
+});
+
+router.get("/cleanliness/bad-actors", async (req, res, next) => {
+  try {
+    const force = req.query.force === "true";
+    const report = await computeBadActorReport(force);
+    if (!report) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
     res.json({ success: true, report });
   } catch (err) { next(err); }
 });
