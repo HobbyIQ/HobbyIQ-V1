@@ -158,3 +158,66 @@ export async function resolveVerifyItem(
     body: JSON.stringify({ action, correction, adminUserId }),
   });
 }
+
+// ─── Variant labeler ──────────────────────────────────────────────
+
+export interface CanonicalLabel {
+  parallel: string;
+  isRefractor: boolean;
+  printRun: number | null;
+  setSlug: string;
+  labeledBy: string;
+  labeledAt: string;
+}
+
+export interface VariantView {
+  cardCatalogId: string;
+  chCardId: string;
+  chVariant: string;
+  set: string;
+  imageUrl: string | null;
+  matchedSoldCompsCount: number;
+  currentLabel: CanonicalLabel | null;
+}
+
+export interface VariantsResponse {
+  cardNumber: string;
+  cardYear: number | null;
+  player: string;
+  variants: VariantView[];
+  unmatchedSoldCompsCount: number;
+}
+
+export async function fetchLabelerVariants(cardNumber: string, cardYear: number | null): Promise<VariantsResponse> {
+  const params = new URLSearchParams({ cardNumber });
+  if (cardYear != null) params.set("cardYear", String(cardYear));
+  const r = await adminRequest<{ success: boolean } & VariantsResponse>(
+    `/api/labeler/variants?${params.toString()}`,
+  );
+  return r;
+}
+
+export interface SaveLabelInput {
+  cardCatalogId: string;
+  cardNumber: string;
+  cardYear: number;
+  set: string;
+  chVariant: string;
+  canonicalParallel: string;
+  isRefractor: boolean;
+  printRun: number | null;
+  labeledBy: string;
+  applyToSoldComps?: boolean;
+  sport?: string;
+}
+
+export async function saveLabelerLabel(input: SaveLabelInput): Promise<{
+  cardCatalogUpdated: boolean;
+  soldCompsRewritten: number;
+  newSlugSample: string;
+}> {
+  return adminRequest(`/api/labeler/label`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}

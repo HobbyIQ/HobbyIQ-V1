@@ -63,6 +63,10 @@ import searchRoutes from "./routes/search.routes.js";
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
 import searchAdminRoutes from "./routes/searchAdmin.routes.js";
 import verifyQueueRoutes from "./routes/verifyQueue.routes.js";
+// CF-LABELER-ROUTES (2026-07-31, Drew): human-in-the-loop variant
+// labeling admin surface. Shows CH catalog variants + images, Drew
+// inputs canonical parallel, sold_comps rewritten by title-suffix.
+import labelerRoutes from "./routes/labeler.routes.js";
 import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
@@ -232,6 +236,8 @@ app.use("/api/admin", searchAdminRoutes);
 // CF-VERIFY-QUEUE-ROUTES (Drew, 2026-07-28): human-in-the-loop verify
 // queue + pool-level data-quality report. Both admin-gated.
 app.use("/api", verifyQueueRoutes);
+// CF-LABELER-ROUTES (Drew, 2026-07-31): variant labeling admin surface.
+app.use("/api", labelerRoutes);
 // CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
 // the data-clean → image-verify → promotion jobs + a live health
 // counter over staging status buckets.

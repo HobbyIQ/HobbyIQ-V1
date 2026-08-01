@@ -61,6 +61,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-4 text-sm">
           <a href="/app/admin/data-quality" className="hover:underline">Data quality</a>
           <a href="/app/admin/verify" className="hover:underline">Verify queue</a>
+          <a href="/app/admin/labeler" className="hover:underline">Variant labeler</a>
         </div>
         <button
           type="button"
