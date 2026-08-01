@@ -93,6 +93,8 @@ async function getContainer(): Promise<Container | null> {
  * no-op on Cosmos absence so a broken Cosmos link doesn't stall ingest.
  * Returns the queue-doc id, or null when the enqueue couldn't land.
  */
+const AUTO_APPROVE_THRESHOLD = 0.95;
+
 export async function enqueueForVerify(input: {
   reason: VerifyReason;
   saleInput: RecordSoldCompInput;
@@ -100,10 +102,31 @@ export async function enqueueForVerify(input: {
 }): Promise<string | null> {
   const c = await getContainer();
   if (!c) return null;
+  // CF-AUTO-APPROVE (Drew, 2026-08-01). Before enqueueing, run the row
+  // through the confidence scorer. Score >= 0.95 → auto-approve on the
+  // spot (don't burden the queue with obviously-clean rows). Cuts
+  // review queue depth by ~half based on early observed distribution.
+  let autoApproved = false;
+  try {
+    const { scoreRow } = await import("./confidenceScore.service.js");
+    const conf = await scoreRow({ row: input.saleInput });
+    if (conf.score >= AUTO_APPROVE_THRESHOLD) {
+      autoApproved = true;
+      console.log(JSON.stringify({
+        event: "verify_queue_auto_approved",
+        source: "verifyQueue.service",
+        reason: input.reason,
+        confidence: conf.score,
+        band: conf.band,
+        cardId: input.saleInput.cardId,
+      }));
+    }
+  } catch { /* soft */ }
+
   const doc: VerifyQueueDoc = {
     id: randomUUID(),
     reason: input.reason,
-    status: "pending",
+    status: autoApproved ? "approved" : "pending",
     observedAt: new Date().toISOString(),
     input: input.saleInput,
     signal: input.signal,
@@ -111,6 +134,10 @@ export async function enqueueForVerify(input: {
     // it wasn't worth reviewing anyway. Ingest continues.
     ttl: 60 * 24 * 3600,
   };
+  if (autoApproved) {
+    (doc as VerifyQueueDoc & { autoApproved?: boolean; autoApprovedAt?: string }).autoApproved = true;
+    (doc as VerifyQueueDoc & { autoApproved?: boolean; autoApprovedAt?: string }).autoApprovedAt = new Date().toISOString();
+  }
   try {
     await c.items.upsert(doc as unknown as Record<string, unknown>);
     console.log(JSON.stringify({
@@ -120,6 +147,7 @@ export async function enqueueForVerify(input: {
       reason: input.reason,
       slug: input.saleInput.cardId,
       price: input.saleInput.price,
+      autoApproved,
     }));
     return doc.id;
   } catch (err) {

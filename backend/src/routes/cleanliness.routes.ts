@@ -63,4 +63,14 @@ router.get("/cleanliness/current-weights", async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get("/cleanliness/slug-audit", async (req, res, next) => {
+  try {
+    const { computeSlugAuditReport } = await import("../services/portfolioiq/slugAudit.service.js");
+    const force = req.query.force === "true";
+    const report = await computeSlugAuditReport(force);
+    if (!report) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
+    res.json({ success: true, report });
+  } catch (err) { next(err); }
+});
+
 export default router;

@@ -361,3 +361,54 @@ export async function fetchLearningSummary(): Promise<LearningSummary> {
   );
   return r.summary;
 }
+
+export interface LearnedWeights {
+  computedAt: string;
+  trainingEventCount: number;
+  weights: Record<string, number>;
+  signalStats: Record<string, { positive: number; negative: number; correlation: number }>;
+  version: number;
+}
+
+export async function fetchLearnedWeights(): Promise<LearnedWeights | null> {
+  const r = await adminRequest<{ success: boolean; weights: LearnedWeights | null }>(
+    `/api/cleanliness/current-weights`,
+  );
+  return r.weights;
+}
+
+export async function trainConfidenceWeights(days = 30): Promise<{ learned: LearnedWeights | null; message?: string }> {
+  const r = await adminRequest<{ success: boolean; learned?: LearnedWeights; message?: string }>(
+    `/api/cleanliness/train-weights?days=${days}`,
+    { method: "POST" },
+  );
+  return { learned: r.learned ?? null, message: r.message };
+}
+
+export interface SlugAuditRow {
+  slug: string;
+  sampleCount: number;
+  median: number;
+  min: number;
+  max: number;
+  contaminationPct: number;
+  flaggedCount: number;
+  bySource: Record<string, number>;
+  lastActivityAt: string | null;
+}
+
+export interface SlugAuditReport {
+  totalSlugs: number;
+  topByVolume: SlugAuditRow[];
+  topByContamination: SlugAuditRow[];
+  computedAt: string;
+  minSampleFilter: number;
+}
+
+export async function fetchSlugAudit(force = false): Promise<SlugAuditReport> {
+  const params = force ? "?force=true" : "";
+  const r = await adminRequest<{ success: boolean; report: SlugAuditReport }>(
+    `/api/cleanliness/slug-audit${params}`,
+  );
+  return r.report;
+}

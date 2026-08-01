@@ -9,13 +9,19 @@ import {
   fetchCleanlinessReport,
   refreshCleanlinessReport,
   fetchLearningSummary,
+  fetchLearnedWeights,
+  trainConfidenceWeights,
   type CleanlinessReport,
   type LearningSummary,
+  type LearnedWeights,
 } from "@/lib/adminApi";
 
 export default function CleanlinessPage() {
   const [report, setReport] = useState<CleanlinessReport | null>(null);
   const [learning, setLearning] = useState<LearningSummary | null>(null);
+  const [weights, setWeights] = useState<LearnedWeights | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainMsg, setTrainMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,14 +30,31 @@ export default function CleanlinessPage() {
     setLoading(true);
     setError(null);
     try {
-      const [r, l] = await Promise.all([
+      const [r, l, w] = await Promise.all([
         fetchCleanlinessReport(),
         fetchLearningSummary().catch(() => null),
+        fetchLearnedWeights().catch(() => null),
       ]);
       setReport(r);
       setLearning(l);
+      setWeights(w);
     } catch (e) { setError((e as Error)?.message ?? "Failed to load"); }
     finally { setLoading(false); }
+  };
+
+  const onTrain = async () => {
+    setTraining(true);
+    setTrainMsg(null);
+    try {
+      const { learned, message } = await trainConfidenceWeights(30);
+      if (learned) {
+        setWeights(learned);
+        setTrainMsg(`Trained on ${learned.trainingEventCount} events · v${learned.version}`);
+      } else {
+        setTrainMsg(message ?? "not enough data yet");
+      }
+    } catch (e) { setTrainMsg("Error: " + ((e as Error)?.message ?? "unknown")); }
+    finally { setTraining(false); }
   };
   const refresh = async () => {
     setRefreshing(true);
@@ -119,9 +142,19 @@ export default function CleanlinessPage() {
 
       {learning && (
         <div className="rounded-xl border border-[color:var(--color-border)] p-4 bg-[color:var(--color-surface)]">
-          <div className="text-sm font-semibold mb-2">Learning loop</div>
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="text-sm font-semibold">Learning loop</div>
+            <button
+              type="button"
+              onClick={() => void onTrain()}
+              disabled={training}
+              className="text-xs rounded border border-[color:var(--color-border)] px-2 py-1 disabled:opacity-50"
+            >
+              {training ? "Training…" : "Train now"}
+            </button>
+          </div>
           <p className="text-xs text-[color:var(--color-text-muted)] mb-3">
-            Every human decision (label, quarantine, flag) feeds the confidence scorer + future ML classifier.
+            Every human decision (label, quarantine, flag) feeds the confidence scorer.
             More decisions → more accurate auto-classification.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -135,6 +168,24 @@ export default function CleanlinessPage() {
               By type: {Object.entries(learning.byType).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t}=${n}`).join(" · ")}
             </div>
           )}
+          {trainMsg && <div className="mt-2 text-[11px] text-[color:var(--color-accent)]">{trainMsg}</div>}
+        </div>
+      )}
+
+      {weights && (
+        <div className="rounded-xl border border-[color:var(--color-border)] p-4 bg-[color:var(--color-surface)]">
+          <div className="text-sm font-semibold mb-1">Confidence-scorer weights (v{weights.version})</div>
+          <p className="text-xs text-[color:var(--color-text-muted)] mb-3">
+            Trained on {weights.trainingEventCount.toLocaleString()} events · last updated {new Date(weights.computedAt).toLocaleString()}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {Object.entries(weights.weights).sort((a, b) => b[1] - a[1]).map(([sig, w]) => (
+              <div key={sig} className="flex items-baseline justify-between text-sm">
+                <span className="text-[color:var(--color-text-muted)] text-xs">{sig}</span>
+                <span className="tabular-nums font-medium">{(w * 100).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

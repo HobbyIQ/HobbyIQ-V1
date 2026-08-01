@@ -61,10 +61,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-4 text-sm">
           <a href="/app/admin" className="hover:underline font-semibold">Dashboard</a>
           <a href="/app/admin/cleanliness" className="hover:underline">Cleanliness</a>
+          <a href="/app/admin/slug-audit" className="hover:underline">Slug audit</a>
           <a href="/app/admin/quarantine" className="hover:underline">Quarantine</a>
-          <a href="/app/admin/data-quality" className="hover:underline">Data quality</a>
           <a href="/app/admin/verify" className="hover:underline">Verify queue</a>
           <a href="/app/admin/labeler" className="hover:underline">Variant labeler</a>
+          <a href="/app/admin/data-quality" className="hover:underline">Data quality</a>
         </div>
         <button
           type="button"
