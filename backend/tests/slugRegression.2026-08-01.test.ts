@@ -5,6 +5,15 @@
 
 import { describe, it, expect } from "vitest";
 import { computeHobbyIqCardId, normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
+
+// Helper: extract parallel segment (position 5) from a computed slug
+function parallelOf(parallel: string): string {
+  const slug = computeHobbyIqCardId({
+    sport: "baseball", year: 2026, setKey: "bowman-chrome",
+    cardNumber: "1", parallel, isAuto: false, printRun: null,
+  });
+  return slug.split(":")[5];
+}
 import { preIngestClean } from "../src/services/portfolioiq/preIngestClean.service.js";
 import { extractGradeFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 import type { RecordSoldCompInput } from "../src/services/portfolioiq/soldCompsStore.service.js";
@@ -212,6 +221,33 @@ describe("Bowman Mega Box IS Bowman Chrome (same insert)", () => {
   });
   it("Plain Bowman still maps to bowman (paper flagship)", () => {
     expect(normalizeSetKey("2024 Bowman Baseball")).toBe("bowman");
+  });
+});
+
+describe("Mojo parallels — colors preserved, Refractor implied", () => {
+  // Drew's note 2026-08-01: "Mojos have colors too". Blue Mojo /50,
+  // Green Mojo /99, Red Mojo /25 are common Mega Box parallels.
+  // Slug must preserve the color AND treat Mojo as implying Refractor.
+  it("Bare 'Mojo' → mojo-refractor", () => {
+    expect(parallelOf("Mojo")).toBe("mojo-refractor");
+  });
+  it("'Mojo Refractor' → mojo-refractor (unchanged)", () => {
+    expect(parallelOf("Mojo Refractor")).toBe("mojo-refractor");
+  });
+  it("'Mega Refractor' alias → mojo-refractor", () => {
+    expect(parallelOf("Mega Refractor")).toBe("mojo-refractor");
+  });
+  it("'Blue Mojo' → blue-mojo-refractor", () => {
+    expect(parallelOf("Blue Mojo")).toBe("blue-mojo-refractor");
+  });
+  it("'Blue Mojo Refractor' → blue-mojo-refractor", () => {
+    expect(parallelOf("Blue Mojo Refractor")).toBe("blue-mojo-refractor");
+  });
+  it("'Green Mojo' → green-mojo-refractor", () => {
+    expect(parallelOf("Green Mojo")).toBe("green-mojo-refractor");
+  });
+  it("'Red Mega Refractor' → red-mojo-refractor (color + mega/mojo alias)", () => {
+    expect(parallelOf("Red Mega Refractor")).toBe("red-mojo-refractor");
   });
 });
 

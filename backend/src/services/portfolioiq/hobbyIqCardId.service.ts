@@ -357,12 +357,22 @@ function normalizeParallel(parallel: string | null | undefined): string {
   // Refractor" are the same physical parallel (orange stock with a
   // pattern), different market vocabulary. Collapse mega-refractor →
   // mojo-refractor at the slug layer so the two aliases produce the
-  // same slug and share one FMV pool. Bare "Mega" alone is NOT
-  // collapsed here — too ambiguous (could be Bowman Mega Box product
-  // context). Only the explicit "Mega Refractor" phrase.
+  // same slug and share one FMV pool. Also handles COLORED variants:
+  // "Blue Mega Refractor" → "blue-mojo-refractor", preserving the
+  // color distinction. Bare "Mega" alone is NOT collapsed here —
+  // too ambiguous (could be Bowman Mega Box product context).
   s = s.replace(/(^|-)mega-refractor($|-)/g, "$1mojo-refractor$2");
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
+  }
+  // CF-MOJO-IMPLIES-REFRACTOR (Drew, 2026-08-01). "Mojo" alone (or
+  // "Blue Mojo", "Green Mojo", "Red Mojo" etc.) is a market shortening
+  // of "Mojo Refractor". Colored Mojos are common Mega Box parallels
+  // (Blue Mojo /50, Green Mojo /99, Red Mojo /25). Ensure any slug
+  // ending in "-mojo" (or bare "mojo") gets the "-refractor" suffix
+  // so it pools with "Mojo Refractor" and "Mega Refractor" variants.
+  if (/(^|-)mojo$/.test(s)) {
+    s = `${s}-refractor`;
   }
   // CF-TRUE-COLOR-IMPLIES-REFRACTOR (Drew, 2026-07-28). "True Blue"
   // (with no explicit "Refractor" suffix) is a market synonym for
