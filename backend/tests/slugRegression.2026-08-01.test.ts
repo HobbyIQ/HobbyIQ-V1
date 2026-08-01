@@ -201,15 +201,16 @@ describe("Grade extraction from title", () => {
   });
 });
 
-describe("Bowman Mega Box distinct set slug", () => {
-  // Regression: 2026-08-01 "2026 2026 Bowman Mega Box Baseball #35 Base"
-  // slugged as generic bowman — wrong. Mega Box is retail-exclusive
-  // chrome, own product line.
-  it("Bowman Mega Box maps to bowman-mega-box (not bowman)", () => {
-    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).toBe("bowman-mega-box");
-    expect(normalizeSetKey("2024 Bowman Mega Box Chrome")).toBe("bowman-mega-box");
+describe("Bowman Mega Box IS Bowman Chrome (same insert)", () => {
+  // Regression: 2026-08-01. Bowman Mega Box is the same physical
+  // Chrome insert set, just retail-exclusive distribution. Buyers
+  // don't distinguish. Collapse to bowman-chrome (matches Drew's
+  // subset-collapse rule).
+  it("Bowman Mega Box maps to bowman-chrome", () => {
+    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).toBe("bowman-chrome");
+    expect(normalizeSetKey("2024 Bowman Mega Box Chrome")).toBe("bowman-chrome");
   });
-  it("Plain Bowman still maps to bowman", () => {
+  it("Plain Bowman still maps to bowman (paper flagship)", () => {
     expect(normalizeSetKey("2024 Bowman Baseball")).toBe("bowman");
   });
 });

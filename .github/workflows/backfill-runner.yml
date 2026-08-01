@@ -76,6 +76,8 @@ on:
           - baseline-pool-snapshot
           - backfill-cardsight-unverified-flag
           - migrate-cardsight-to-staging
+          - backfill-grade-from-title
+          - backfill-bowman-mega-box-reslug
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
