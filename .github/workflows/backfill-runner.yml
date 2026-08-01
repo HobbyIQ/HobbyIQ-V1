@@ -74,6 +74,7 @@ on:
           - expand-catalog-full-enumeration
           - promote-sold-comps-trust-tier
           - baseline-pool-snapshot
+          - backfill-cardsight-unverified-flag
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
