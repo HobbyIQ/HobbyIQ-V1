@@ -68,6 +68,7 @@ on:
           - backfill-cardsight-title-identity
           - backfill-canonicalize-chrome-slugs
           - backfill-catalog-driven-canonicalize
+          - backfill-stage2-title-parser
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
