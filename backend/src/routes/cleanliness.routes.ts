@@ -73,4 +73,22 @@ router.get("/cleanliness/slug-audit", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get("/cleanliness/fmv-accuracy", async (_req, res, next) => {
+  try {
+    const { computeFmvAccuracySummary } = await import("../services/portfolioiq/fmvAccuracy.service.js");
+    const summary = await computeFmvAccuracySummary();
+    if (!summary) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
+    res.json({ success: true, summary });
+  } catch (err) { next(err); }
+});
+
+router.get("/cleanliness/anomalies", async (_req, res, next) => {
+  try {
+    const { detectAnomalies } = await import("../services/portfolioiq/anomalyDetection.service.js");
+    const report = await detectAnomalies();
+    if (!report) { res.status(503).json({ success: false, error: "no baseline snapshot yet — run baseline-pool-snapshot first" }); return; }
+    res.json({ success: true, report });
+  } catch (err) { next(err); }
+});
+
 export default router;
