@@ -82,7 +82,6 @@ on:
           - backfill-sub-channel-vocabulary
           - auto-quarantine-contaminated-pools
           - expand-catalog-from-tcdb
-          - purge-catalog-junk-cs-rows
           - backfill-catalog-cs-images
           - normalize-catalog-schema
           - recover-chrome-collapse-damage

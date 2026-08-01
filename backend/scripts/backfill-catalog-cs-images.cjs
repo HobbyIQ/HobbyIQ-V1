@@ -9,8 +9,14 @@
 // at /v1/images/cards/{id}, which returns 200 for ~28% of cards and
 // 404 for the rest.
 //
-// This backfill scans CS-source __expandedFromCardsight rows without
-// imageUrl and probes /v1/images/cards/{id}:
+// SCOPE (revised 2026-08-01): every CS-source row that hasn't been
+// probed yet, NOT just __expandedFromCardsight enumeration rows. The
+// 1.47M rows previously called "junk" turned out to be 99.2% real
+// catalog observations from persistVendorCatalog side-effects — they
+// deserve the same image + schema treatment.
+//
+// For each row:
+//   - probe /v1/images/cards/{id}
 //   - on 200: set imageUrl to our /api/compiq/card-image/{id} proxy,
 //             mark __hasImage=true, __imageProbedAt
 //   - on 404: mark __hasImage=false, __imageProbedAt (row stays in
@@ -85,9 +91,11 @@ async function main() {
   const cc = c.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
   console.log(`[backfill-catalog-cs-images]  apply=${APPLY}  concurrency=${CONCURRENCY}  maxMinutes=${MAX_MINUTES}`);
 
+  // Every CS-source row that hasn't been probed. Includes both the
+  // __expandedFromCardsight enumeration rows AND the older
+  // persistVendorCatalog observations (previously mis-labeled "junk").
   const query = "SELECT c.id, c.cardId FROM c " +
-                "WHERE IS_DEFINED(c.__expandedFromCardsight) " +
-                "AND (NOT IS_DEFINED(c.imageUrl) OR c.imageUrl = null OR c.imageUrl = '') " +
+                "WHERE c.source = 'cardsight' " +
                 "AND (NOT IS_DEFINED(c.__imageProbedAt))";
 
   const iter = cc.items.query({ query }, { maxItemCount: 500 });
