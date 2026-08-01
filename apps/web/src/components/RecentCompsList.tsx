@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchRecentComps, type RecentCompSale } from "@/lib/api";
+import { fetchRecentComps, flagComp, type RecentCompSale } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 
 interface Props {
@@ -179,6 +179,7 @@ function CompRow({ s }: { s: RecentCompSale }) {
           {formatUSD(s.price, { hideCents: s.price >= 100 })}
         </div>
       </div>
+      {s.id && s.cardId && <FlagButton rowId={s.id} cardId={s.cardId} />}
     </div>
   );
   if (s.listingUrl) {
@@ -189,6 +190,40 @@ function CompRow({ s }: { s: RecentCompSale }) {
     );
   }
   return inner;
+}
+
+function FlagButton({ rowId, cardId }: { rowId: string; cardId: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "flagged" | "error">("idle");
+  const [msg, setMsg] = useState<string>("");
+  const onClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (state === "sending" || state === "flagged") return;
+    setState("sending");
+    try {
+      const r = await flagComp({ rowId, cardId, category: "looks-wrong" });
+      setState("flagged");
+      setMsg(r.autoQuarantined ? "Flagged (quarantined)" : `Flagged (${r.flagCount})`);
+    } catch (err) {
+      setState("error");
+      setMsg((err as Error)?.message ?? "Error");
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`ml-2 flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+        state === "flagged" ? "bg-emerald-500/10 text-emerald-500"
+        : state === "error" ? "bg-red-500/10 text-red-500"
+        : "text-[color:var(--color-muted)] hover:bg-red-500/10 hover:text-red-500"
+      }`}
+      title={state === "flagged" ? msg : "Flag as suspicious"}
+      disabled={state === "sending" || state === "flagged"}
+    >
+      {state === "sending" ? "…" : state === "flagged" ? "✓" : state === "error" ? "!" : "⚑ flag"}
+    </button>
+  );
 }
 
 function SourcePill({ src }: { src: string }) {

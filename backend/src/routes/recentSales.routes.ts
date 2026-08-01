@@ -89,6 +89,11 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
     const sales = comps
       .slice(0, limit)
       .map((c) => ({
+        // CF-USER-FLAG-IDS (Drew, 2026-08-01). Row id + partition key
+        // (cardId) needed so a user-flag click can call
+        // POST /api/user/flag-comp with {rowId, cardId}.
+        id: (c as { id?: string }).id ?? null,
+        cardId: c.cardId ?? null,
         source: c.source,
         price: c.price,
         soldAt: c.soldAt,

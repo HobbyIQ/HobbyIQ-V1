@@ -1330,6 +1330,8 @@ export async function fetchObservedGradeCurve(cardId: string): Promise<ObservedG
 // ─── Recent sold comps for a card ─────────────────────────────────
 
 export interface RecentCompSale {
+  id?: string | null;      // needed for flag button
+  cardId?: string | null;  // partition key for flag POST
   source: string;
   price: number;
   soldAt: string;
@@ -1342,6 +1344,30 @@ export interface RecentCompSale {
   imageUrl?: string | null;
   sellerHandle?: string | null;
   listingUrl?: string | null;
+}
+
+// CF-USER-FLAG-CLIENT (Drew, 2026-08-01). Fires POST /api/user/flag-comp
+// so end users can mark a comp row as "this looks wrong". After 3
+// distinct users flag the same row, it auto-quarantines.
+export async function flagComp(input: {
+  rowId: string;
+  cardId: string;
+  reasonNote?: string;
+  category?: string;
+}): Promise<{ success: boolean; flagCount: number; autoQuarantined: boolean }> {
+  const sessionId = typeof window !== "undefined" ? window.localStorage.getItem("hobbyiq_session_id") : null;
+  const res = await fetch(`${API_BASE}/api/user/flag-comp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(sessionId ? { "x-session-id": sessionId } : {}),
+    },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? "flag failed");
+  return body;
 }
 
 export interface RecentCompsResponse {

@@ -899,6 +899,40 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
 
   try {
     await c.items.upsert(doc as any);
+    // CF-CROSS-SOURCE-CONSENSUS (Drew, 2026-08-01). Fire-and-forget
+    // post-write check: does this sale match another sale from a
+    // DIFFERENT source (matching title + price)? If yes, both rows
+    // get __consensusVerified=true — high-trust ground truth for
+    // downstream ML training + trust-tier fast-track.
+    void (async () => {
+      try {
+        const { checkCrossSourceConsensus } = await import("./crossSourceConsensus.service.js");
+        const result = await checkCrossSourceConsensus(c, {
+          id: doc.id,
+          hobbyiqCardId: doc.hobbyiqCardId ?? null,
+          price: doc.price,
+          source: doc.source,
+          title: doc.title,
+          soldAt: doc.soldAt,
+        });
+        if (result.verified) {
+          // Tag this row + all matched rows
+          const now = new Date().toISOString();
+          const toUpdate = [doc.id, ...result.matchedRows];
+          for (const id of toUpdate) {
+            try {
+              const { resource } = await c.item(id, doc.cardId).read();
+              if (resource) {
+                (resource as Record<string, unknown>).__consensusVerified = true;
+                (resource as Record<string, unknown>).__consensusVerifiedAt = now;
+                (resource as Record<string, unknown>).__consensusSampleCount = result.consensusCount;
+                await c.items.upsert(resource);
+              }
+            } catch { /* skip individual failures */ }
+          }
+        }
+      } catch { /* soft */ }
+    })();
     // CF-CANONICAL-FMV-INVALIDATION (Drew, 2026-07-18): kick the
     // Redis cache for this (cardId, parallel, grade) so the next FMV
     // read across any surface picks up the new sale. Fire-and-forget;
