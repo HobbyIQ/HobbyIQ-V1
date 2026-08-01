@@ -430,3 +430,52 @@ export async function fetchSlugAudit(force = false): Promise<SlugAuditReport> {
   );
   return r.report;
 }
+
+export interface FmvAccuracySummary {
+  totalEvents: number;
+  last7Days: number;
+  last30Days: number;
+  medianDeltaPct: number;
+  meanDeltaPct: number;
+  within5PctRate: number;
+  within10PctRate: number;
+  within20PctRate: number;
+  within50PctRate: number;
+  worstSlugs: Array<{ slug: string; sampleCount: number; medianDeltaPct: number }>;
+  bestSlugs: Array<{ slug: string; sampleCount: number; medianDeltaPct: number }>;
+  computedAt: string;
+}
+
+export async function fetchFmvAccuracy(): Promise<FmvAccuracySummary> {
+  const r = await adminRequest<{ success: boolean; summary: FmvAccuracySummary }>(
+    `/api/cleanliness/fmv-accuracy`,
+  );
+  return r.summary;
+}
+
+export interface AnomalyRow {
+  slug: string;
+  baselineMedian: number;
+  currentMedian: number;
+  driftPct: number;
+  driftDirection: "up" | "down";
+  baselineSample: number;
+  currentSample: number;
+  sampleGrowthPct: number;
+  suspiciousness: "high" | "medium" | "low";
+}
+
+export interface AnomalyReport {
+  baselineDate: string;
+  slugsWithBaseline: number;
+  slugsChanged: number;
+  anomalies: AnomalyRow[];
+  computedAt: string;
+}
+
+export async function fetchAnomalies(): Promise<AnomalyReport> {
+  const r = await adminRequest<{ success: boolean; report: AnomalyReport }>(
+    `/api/cleanliness/anomalies`,
+  );
+  return r.report;
+}

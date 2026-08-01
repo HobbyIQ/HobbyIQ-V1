@@ -899,6 +899,36 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
 
   try {
     await c.items.upsert(doc as any);
+    // CF-FMV-ACCURACY-CAPTURE (Drew, 2026-08-01). For user-verified
+    // sales (ebay-user-purchase, ebay-user-sale, manual-user-entry),
+    // capture predicted-vs-actual by looking up the pool median from
+    // BEFORE this write landed. The delta is the trust-in-cleanliness
+    // metric. Skips if pool too thin (no reliable prediction to
+    // compare against).
+    if (["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"].includes(input.source)
+        && input.contributorUserId && doc.hobbyiqCardId) {
+      void (async () => {
+        try {
+          const { checkPriceSanity } = await import("./priceSanityGate.service.js");
+          const { logFmvAccuracy } = await import("./fmvAccuracy.service.js");
+          // Reuse the pool-median cache from the sanity gate — it's the
+          // "what the model predicted" number for this slug.
+          const sanity = await checkPriceSanity(c, doc.hobbyiqCardId, input.price);
+          const predictedFmv = sanity.poolMedian ?? null;
+          if (predictedFmv && predictedFmv > 0 && doc.hobbyiqCardId && input.contributorUserId) {
+            logFmvAccuracy({
+              slug: doc.hobbyiqCardId,
+              userId: input.contributorUserId,
+              cardId: doc.cardId,
+              soldAt: doc.soldAt,
+              predictedFmv,
+              actualPrice: input.price,
+            });
+          }
+        } catch { /* soft */ }
+      })();
+    }
+
     // CF-CROSS-SOURCE-CONSENSUS (Drew, 2026-08-01). Fire-and-forget
     // post-write check: does this sale match another sale from a
     // DIFFERENT source (matching title + price)? If yes, both rows

@@ -12,8 +12,12 @@ import {
   fetchLearningSummary,
   fetchQuarantine,
   fetchVerifyQueueCount,
+  fetchFmvAccuracy,
+  fetchAnomalies,
   type CleanlinessReport,
   type LearningSummary,
+  type FmvAccuracySummary,
+  type AnomalyReport,
 } from "@/lib/adminApi";
 
 interface DashboardState {
@@ -22,6 +26,8 @@ interface DashboardState {
   quarantineTotal: number | null;
   quarantineByType: Record<string, number>;
   verifyQueueTotal: number | null;
+  fmvAccuracy: FmvAccuracySummary | null;
+  anomalies: AnomalyReport | null;
   loadedAt: string | null;
 }
 
@@ -31,6 +37,8 @@ const EMPTY: DashboardState = {
   quarantineTotal: null,
   quarantineByType: {},
   verifyQueueTotal: null,
+  fmvAccuracy: null,
+  anomalies: null,
   loadedAt: null,
 };
 
@@ -43,7 +51,7 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [c, l, qAny, qPrice, qCs, qUser, qBad, vq] = await Promise.all([
+      const [c, l, qAny, qPrice, qCs, qUser, qBad, vq, fmv, anom] = await Promise.all([
         fetchCleanlinessReport().catch(() => null),
         fetchLearningSummary().catch(() => null),
         fetchQuarantine("any", 1).catch(() => null),
@@ -52,6 +60,8 @@ export default function AdminDashboardPage() {
         fetchQuarantine("user-flagged", 1).catch(() => null),
         fetchQuarantine("bad-actor", 1).catch(() => null),
         fetchVerifyQueueCount().catch(() => null),
+        fetchFmvAccuracy().catch(() => null),
+        fetchAnomalies().catch(() => null),
       ]);
       setState({
         cleanliness: c,
@@ -64,6 +74,8 @@ export default function AdminDashboardPage() {
           "bad-actor": qBad?.totalReturned ?? 0,
         },
         verifyQueueTotal: vq,
+        fmvAccuracy: fmv,
+        anomalies: anom,
         loadedAt: new Date().toISOString(),
       });
     } catch (e) { setError((e as Error)?.message ?? "Failed to load"); }
@@ -175,6 +187,38 @@ export default function AdminDashboardPage() {
             <Row label="Distinct actors" value={Object.keys(state.learning.byActor).length.toLocaleString()} />
           </div>
         </Card>
+      )}
+
+      {/* FMV accuracy + Anomalies row */}
+      {(state.fmvAccuracy || state.anomalies) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {state.fmvAccuracy && (
+            <Card title="FMV accuracy (predicted vs actual sales)">
+              {state.fmvAccuracy.totalEvents === 0 ? (
+                <div className="text-xs text-[color:var(--color-text-muted)]">No sales captured yet — every user-purchase / manual sale entry logs one accuracy event.</div>
+              ) : (
+                <>
+                  <Row label="Total sales captured" value={state.fmvAccuracy.totalEvents.toLocaleString()} good={state.fmvAccuracy.totalEvents > 0} />
+                  <Row label="Median error" value={`${state.fmvAccuracy.medianDeltaPct}%`} />
+                  <Row label="Within 10% of actual" value={`${state.fmvAccuracy.within10PctRate}%`} good={state.fmvAccuracy.within10PctRate >= 70} />
+                  <Row label="Within 20% of actual" value={`${state.fmvAccuracy.within20PctRate}%`} good={state.fmvAccuracy.within20PctRate >= 85} />
+                  <Row label="Last 30 days" value={state.fmvAccuracy.last30Days.toLocaleString()} />
+                </>
+              )}
+            </Card>
+          )}
+          {state.anomalies && (
+            <Card title="Pool anomalies (drift vs baseline)">
+              <Row label="Slugs with baseline" value={state.anomalies.slugsWithBaseline.toLocaleString()} />
+              <Row label="Drifted ≥ 30%" value={state.anomalies.anomalies.length.toLocaleString()} accent={state.anomalies.anomalies.length > 50} />
+              <Row label=" high suspiciousness" value={state.anomalies.anomalies.filter((a) => a.suspiciousness === "high").length.toLocaleString()} accent={state.anomalies.anomalies.filter((a) => a.suspiciousness === "high").length > 5} />
+              <Row label=" medium" value={state.anomalies.anomalies.filter((a) => a.suspiciousness === "medium").length.toLocaleString()} />
+              <div className="text-[10px] text-[color:var(--color-text-muted)] mt-1">
+                baseline: {state.anomalies.baselineDate}
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Quarantine breakdown */}
