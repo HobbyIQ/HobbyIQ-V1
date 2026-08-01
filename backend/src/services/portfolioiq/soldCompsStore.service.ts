@@ -549,7 +549,15 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     contentHash,
     hobbyiqCardId,
     ttl: TTL_SEC,
-  };
+    // CF-CARDSIGHT-UNVERIFIED-FLAG (Drew, 2026-08-01). Cardsight aggregates
+    // both real sold sales and active listings; its response doesn't
+    // reliably distinguish. Tag every Cardsight-source row with a
+    // persistent flag so downstream views (recent-sales, comp detail,
+    // storefront) can filter out unverified marketplace noise without
+    // deleting the underlying rows. FMV pool query already excludes
+    // Cardsight — this flag protects the OTHER surfaces.
+    ...(input.source === "cardsight" ? { __cardsightUnverified: true } : {}),
+  } as SoldCompDoc;
 
   // CF-CONTENT-HASH-PREWRITE-DEDUP (Drew, 2026-07-20). Cross-source
   // dedup at the write boundary. Query for any existing row in this
