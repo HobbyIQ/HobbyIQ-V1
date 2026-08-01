@@ -45,4 +45,22 @@ router.get("/cleanliness/learning", async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post("/cleanliness/train-weights", async (req, res, next) => {
+  try {
+    const { trainConfidenceWeights } = await import("../services/portfolioiq/confidenceWeightsLearner.service.js");
+    const fromDaysBack = req.query.days ? Number(req.query.days) : 30;
+    const learned = await trainConfidenceWeights({ fromDaysBack });
+    if (!learned) { res.json({ success: true, message: "not enough training data yet — try again after more human decisions have accumulated" }); return; }
+    res.json({ success: true, learned });
+  } catch (err) { next(err); }
+});
+
+router.get("/cleanliness/current-weights", async (_req, res, next) => {
+  try {
+    const { loadCurrentWeights } = await import("../services/portfolioiq/confidenceWeightsLearner.service.js");
+    const w = await loadCurrentWeights();
+    res.json({ success: true, weights: w });
+  } catch (err) { next(err); }
+});
+
 export default router;

@@ -35,8 +35,12 @@ export interface ConfidenceOutput {
   explain: string;
 }
 
-// Hand-tuned weights for v1. Sum should be roughly 1.0.
-const WEIGHTS = {
+// Hand-tuned defaults for v1. Nightly `trainConfidenceWeights` job
+// adjusts these based on learning_events correlation with human
+// clear/quarantine decisions. If learned weights exist in the
+// confidence_weights container, they override the defaults —
+// otherwise these hand-tuned defaults apply.
+const DEFAULT_WEIGHTS = {
   hasValidSlug: 0.10,
   hasCardNumber: 0.08,
   hasPlayerName: 0.08,
@@ -47,6 +51,27 @@ const WEIGHTS = {
   notBadActor: 0.10,
 };
 
+let cachedWeights: Record<string, number> | null = null;
+let weightsLoadedAt = 0;
+const WEIGHTS_TTL_MS = 60 * 60 * 1000; // reload once per hour
+
+async function currentWeights(): Promise<Record<string, number>> {
+  const now = Date.now();
+  if (cachedWeights && now - weightsLoadedAt < WEIGHTS_TTL_MS) return cachedWeights;
+  try {
+    const { loadCurrentWeights } = await import("./confidenceWeightsLearner.service.js");
+    const learned = await loadCurrentWeights();
+    if (learned?.weights && Object.keys(learned.weights).length >= 4) {
+      cachedWeights = { ...DEFAULT_WEIGHTS, ...learned.weights };
+      weightsLoadedAt = now;
+      return cachedWeights;
+    }
+  } catch { /* fall through */ }
+  cachedWeights = { ...DEFAULT_WEIGHTS };
+  weightsLoadedAt = now;
+  return cachedWeights;
+}
+
 const SOURCE_TRUST: Record<string, number> = {
   "ebay-user-purchase": 1.0,
   "manual-user-entry": 0.9,
@@ -56,7 +81,8 @@ const SOURCE_TRUST: Record<string, number> = {
   "cardsight": 0.5,
 };
 
-export function scoreRow(input: ConfidenceInput): ConfidenceOutput {
+export async function scoreRow(input: ConfidenceInput): Promise<ConfidenceOutput> {
+  const WEIGHTS = await currentWeights();
   const { row } = input;
   const signals: ConfidenceOutput["signals"] = [];
   let total = 0;

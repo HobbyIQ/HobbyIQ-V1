@@ -30,7 +30,15 @@ export type LearningEventType =
   | "bad-actor-confirm"     // admin confirmed a seller is a bad actor
   | "auto-quarantine"       // system auto-quarantined at threshold (3+ user flags)
   | "safe-write-holding"    // Drew edited a holding via safeWriteHolding
-  | "holding-rollback";     // Drew rolled back a holding change
+  | "holding-rollback"      // Drew rolled back a holding change
+  // CF-INGEST-LEARNING (Drew, 2026-08-01). Every ingest decision is
+  // now a training event too. As we scrub, the system learns.
+  | "ingest-accept"         // recordSoldComp wrote the row (confidence band auto-trust or flag-review)
+  | "ingest-quarantine"     // recordSoldComp wrote with auto-quarantine flag (confidence < 0.6)
+  | "ingest-reject"         // recordSoldComp refused to persist (confidence < 0.4)
+  | "ingest-fuzzy-reject"   // pre-clean rejected as fuzzy-match error
+  | "ingest-price-outlier"  // price sanity gate flagged
+  | "backfill-decision";    // any backfill script decided to rewrite/tag a row
 
 export interface LearningEvent {
   id: string;

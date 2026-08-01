@@ -664,7 +664,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     // Reuse pool median if the price sanity gate computed it above.
     const pmVal = (doc as SoldCompDoc & { __priceOutlierPoolMedian?: number }).__priceOutlierPoolMedian;
     const poolMedian = typeof pmVal === "number" && pmVal > 0 ? pmVal : null;
-    const conf = scoreRow({
+    const conf = await scoreRow({
       row: input,
       poolMedian,
       poolSampleCount: poolMedian ? 5 : 0,
@@ -686,6 +686,22 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
           sampled: true,
         }));
       }
+      // CF-INGEST-LEARNING (Drew, 2026-08-01). Every ingest decision
+      // trains the confidence scorer. Sampled at 5% for reject band
+      // (relatively rare, worth capturing more of).
+      if (Math.random() < 0.05) {
+        try {
+          const { logLearningEvent } = await import("./learningEvents.service.js");
+          logLearningEvent({
+            eventType: "ingest-reject",
+            actor: "auto-system",
+            subjectType: "sold_comp",
+            subjectId: doc.id,
+            decision: { action: "reject", confidence: conf.score, reason: conf.explain },
+            features: { source: input.source, price: input.price, band: conf.band },
+          });
+        } catch { /* soft */ }
+      }
       return;
     }
     // Quarantine band: still persist but flag it
@@ -693,6 +709,33 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       (doc as SoldCompDoc & Record<string, unknown>).__userFlagQuarantine = true;
       (doc as SoldCompDoc & Record<string, unknown>).__userFlagQuarantineAt = new Date().toISOString();
       (doc as SoldCompDoc & Record<string, unknown>).__autoQuarantineFromConfidence = true;
+      // Log at 10% sample — these are borderline cases the scorer needs feedback on
+      if (Math.random() < 0.10) {
+        try {
+          const { logLearningEvent } = await import("./learningEvents.service.js");
+          logLearningEvent({
+            eventType: "ingest-quarantine",
+            actor: "auto-system",
+            subjectType: "sold_comp",
+            subjectId: doc.id,
+            decision: { action: "quarantine", confidence: conf.score, reason: conf.explain },
+            features: { source: input.source, price: input.price, band: conf.band },
+          });
+        } catch { /* soft */ }
+      }
+    } else if (conf.band === "auto-trust" && Math.random() < 0.001) {
+      // Sample auto-trust at 0.1% — high volume, but useful baseline
+      try {
+        const { logLearningEvent } = await import("./learningEvents.service.js");
+        logLearningEvent({
+          eventType: "ingest-accept",
+          actor: "auto-system",
+          subjectType: "sold_comp",
+          subjectId: doc.id,
+          decision: { action: "accept", confidence: conf.score },
+          features: { source: input.source, price: input.price, band: conf.band },
+        });
+      } catch { /* soft */ }
     }
   } catch { /* soft */ }
 
