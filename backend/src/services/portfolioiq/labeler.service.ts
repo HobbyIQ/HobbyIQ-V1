@@ -176,8 +176,24 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
     labeledBy: input.labeledBy,
     labeledAt: new Date().toISOString(),
   };
+  const priorLabel = catalogDoc.canonicalLabel ?? null;
   catalogDoc.canonicalLabel = label;
   await catalog.items.upsert(catalogDoc);
+  // CF-LEARNING-CAPTURE (Drew, 2026-08-01). Every label save becomes a
+  // training event. Feeds confidence scorer + future classifier.
+  try {
+    const { logLearningEvent } = await import("./learningEvents.service.js");
+    logLearningEvent({
+      eventType: "labeler-save",
+      actor: input.labeledBy,
+      subjectType: "card_catalog",
+      subjectId: input.cardCatalogId,
+      before: priorLabel ? { canonicalLabel: priorLabel } : undefined,
+      after: { canonicalLabel: label },
+      decision: { label: input.canonicalParallel, reason: `printRun=${input.printRun ?? "unnumbered"}, isRefractor=${input.isRefractor}` },
+      features: { cardNumber: input.cardNumber, cardYear: input.cardYear, chVariant: input.chVariant, set: input.set },
+    });
+  } catch { /* soft */ }
 
   let rewritten = 0;
   if (input.applyToSoldComps) {

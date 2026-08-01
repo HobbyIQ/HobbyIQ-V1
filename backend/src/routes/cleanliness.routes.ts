@@ -36,4 +36,13 @@ router.get("/cleanliness/bad-actors", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get("/cleanliness/learning", async (_req, res, next) => {
+  try {
+    const { summarizeLearning } = await import("../services/portfolioiq/learningEvents.service.js");
+    const summary = await summarizeLearning();
+    if (!summary) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
+    res.json({ success: true, summary });
+  } catch (err) { next(err); }
+});
+
 export default router;

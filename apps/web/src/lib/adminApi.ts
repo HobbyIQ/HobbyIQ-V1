@@ -317,3 +317,20 @@ export async function forceQuarantineRow(cardId: string, rowId: string, reason: 
     body: JSON.stringify({ reason }),
   });
 }
+
+// ─── Learning summary ─────────────────────────────────────────────
+
+export interface LearningSummary {
+  totalEvents: number;
+  byType: Record<string, number>;
+  byActor: Record<string, number>;
+  last7Days: number;
+  last30Days: number;
+}
+
+export async function fetchLearningSummary(): Promise<LearningSummary> {
+  const r = await adminRequest<{ success: boolean; summary: LearningSummary }>(
+    `/api/cleanliness/learning`,
+  );
+  return r.summary;
+}

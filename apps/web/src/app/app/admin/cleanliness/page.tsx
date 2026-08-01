@@ -8,11 +8,14 @@ import { useEffect, useState } from "react";
 import {
   fetchCleanlinessReport,
   refreshCleanlinessReport,
+  fetchLearningSummary,
   type CleanlinessReport,
+  type LearningSummary,
 } from "@/lib/adminApi";
 
 export default function CleanlinessPage() {
   const [report, setReport] = useState<CleanlinessReport | null>(null);
+  const [learning, setLearning] = useState<LearningSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +24,12 @@ export default function CleanlinessPage() {
     setLoading(true);
     setError(null);
     try {
-      setReport(await fetchCleanlinessReport());
+      const [r, l] = await Promise.all([
+        fetchCleanlinessReport(),
+        fetchLearningSummary().catch(() => null),
+      ]);
+      setReport(r);
+      setLearning(l);
     } catch (e) { setError((e as Error)?.message ?? "Failed to load"); }
     finally { setLoading(false); }
   };
@@ -108,6 +116,27 @@ export default function CleanlinessPage() {
           ))}
         </Card>
       </div>
+
+      {learning && (
+        <div className="rounded-xl border border-[color:var(--color-border)] p-4 bg-[color:var(--color-surface)]">
+          <div className="text-sm font-semibold mb-2">Learning loop</div>
+          <p className="text-xs text-[color:var(--color-text-muted)] mb-3">
+            Every human decision (label, quarantine, flag) feeds the confidence scorer + future ML classifier.
+            More decisions → more accurate auto-classification.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Metric label="Total events captured" value={learning.totalEvents.toLocaleString()} good={learning.totalEvents > 0} />
+            <Metric label="Last 7 days" value={learning.last7Days.toLocaleString()} />
+            <Metric label="Last 30 days" value={learning.last30Days.toLocaleString()} />
+            <Metric label="Actors" value={Object.keys(learning.byActor).length.toLocaleString()} />
+          </div>
+          {Object.keys(learning.byType).length > 0 && (
+            <div className="mt-3 text-[11px] text-[color:var(--color-text-muted)]">
+              By type: {Object.entries(learning.byType).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t}=${n}`).join(" · ")}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

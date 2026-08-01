@@ -133,6 +133,19 @@ export async function markRowClean(cardId: string, rowId: string): Promise<{ suc
     doc.__adminCleared = true;
     doc.__adminClearedAt = new Date().toISOString();
     await sc.items.upsert(doc);
+    try {
+      const { logLearningEvent } = await import("./learningEvents.service.js");
+      logLearningEvent({
+        eventType: "quarantine-clear",
+        actor: "admin-web",
+        subjectType: "sold_comp",
+        subjectId: rowId,
+        before: { flagged: true },
+        after: { adminCleared: true },
+        decision: { action: "clear" },
+        features: { source: String(doc.source ?? "?"), price: Number(doc.price ?? 0), slug: String(doc.hobbyiqCardId ?? "") },
+      });
+    } catch { /* soft */ }
     return { success: true };
   } catch { return { success: false }; }
 }
@@ -149,6 +162,18 @@ export async function markRowQuarantined(cardId: string, rowId: string, reasonNo
     doc.__adminForceQuarantine = true;
     doc.__adminForceQuarantineReason = reasonNote;
     await sc.items.upsert(doc);
+    try {
+      const { logLearningEvent } = await import("./learningEvents.service.js");
+      logLearningEvent({
+        eventType: "quarantine-force",
+        actor: "admin-web",
+        subjectType: "sold_comp",
+        subjectId: rowId,
+        after: { quarantined: true, reason: reasonNote },
+        decision: { action: "quarantine", reason: reasonNote },
+        features: { source: String(doc.source ?? "?"), price: Number(doc.price ?? 0), slug: String(doc.hobbyiqCardId ?? "") },
+      });
+    } catch { /* soft */ }
     return { success: true };
   } catch { return { success: false }; }
 }
