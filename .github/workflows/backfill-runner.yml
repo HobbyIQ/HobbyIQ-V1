@@ -70,6 +70,8 @@ on:
           - backfill-catalog-driven-canonicalize
           - backfill-stage2-title-parser
           - backfill-stage3-price-sanity
+          - expand-catalog-from-sold-comps-gaps
+          - expand-catalog-full-enumeration
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -172,6 +174,27 @@ jobs:
           echo "::add-mask::$SEC"
           echo "AUTH_SESSION_SECRET=$SEC" >> "$GITHUB_ENV"
           echo "AUTH_SESSION_SECRET fetched (length: ${#SEC})"
+
+      # CF-CH-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). The catalog
+      # expansion scripts hit CH's search API for every (year, product)
+      # tuple. Fetch CARD_HEDGE_API_KEY from App Service so the runner
+      # has authenticated access; never echoed to log.
+      - name: Fetch CARD_HEDGE_API_KEY from HobbyIQ3 App Service
+        if: startsWith(inputs.script, 'expand-catalog')
+        shell: bash
+        run: |
+          CH_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value | [0]" \
+            -o tsv)
+          if [ -z "$CH_KEY" ]; then
+            echo "::error::FAILED to fetch CARD_HEDGE_API_KEY from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$CH_KEY"
+          echo "CARD_HEDGE_API_KEY=$CH_KEY" >> "$GITHUB_ENV"
+          echo "CARD_HEDGE_API_KEY fetched (length: ${#CH_KEY})"
 
       # Azure OpenAI env — only required by the slab-OCR prototype
       # script; always fetch (cheap read-only) so any future backfill
@@ -337,4 +360,34 @@ jobs:
             echo "Re-dispatch queued. This workflow exits; new run continues walking backward."
           else
             echo "::notice::Bulk import reached END_DATE ($END_DATE). Full corpus back-import complete."
+          fi
+
+      - name: Self-relaunch catalog expansion until RELAUNCH_NEEDED=false
+        # CF-CATALOG-EXPANSION-SELF-RELAUNCH (Drew, 2026-08-01). Both
+        # catalog-expansion scripts (gap-filler and full-enumeration) print
+        # RELAUNCH_NEEDED=true when there are still tuples to process. The
+        # script self-caps to ~25 min per invocation; this step re-dispatches
+        # the workflow immediately so it continues in a fresh runner. Loops
+        # until the script emits RELAUNCH_NEEDED=false.
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration') && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          RN=$(grep -E '^RELAUNCH_NEEDED=' /tmp/backfill.log 2>/dev/null | tail -1 | cut -d'=' -f2)
+          echo "RELAUNCH_NEEDED=$RN"
+          if [ "$RN" = "true" ]; then
+            echo "::notice::${{ inputs.script }} has more tuples — re-dispatching"
+            gh workflow run backfill-runner.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              -f script="${{ inputs.script }}" \
+              -f apply=true \
+              -f concurrency="${{ inputs.concurrency }}"
+            echo "Re-dispatch queued."
+          elif [ "$RN" = "false" ]; then
+            echo "::notice::${{ inputs.script }} COMPLETE — no more tuples. Loop stops."
+          else
+            echo "::warning::Could not parse RELAUNCH_NEEDED from log (got '$RN'). No re-dispatch. Manual re-run needed."
           fi
