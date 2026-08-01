@@ -72,6 +72,7 @@ on:
           - backfill-stage3-price-sanity
           - expand-catalog-from-sold-comps-gaps
           - expand-catalog-full-enumeration
+          - expand-catalog-from-cardsight
           - promote-sold-comps-trust-tier
           - baseline-pool-snapshot
           - backfill-cardsight-unverified-flag
@@ -183,6 +184,25 @@ jobs:
           echo "::add-mask::$SEC"
           echo "AUTH_SESSION_SECRET=$SEC" >> "$GITHUB_ENV"
           echo "AUTH_SESSION_SECRET fetched (length: ${#SEC})"
+
+      # CF-CS-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). Cardsight
+      # catalog enumeration needs CARDSIGHT_API_KEY.
+      - name: Fetch CARDSIGHT_API_KEY from HobbyIQ3 App Service
+        if: inputs.script == 'expand-catalog-from-cardsight'
+        shell: bash
+        run: |
+          CS_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARDSIGHT_API_KEY'].value | [0]" \
+            -o tsv)
+          if [ -z "$CS_KEY" ]; then
+            echo "::error::FAILED to fetch CARDSIGHT_API_KEY from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$CS_KEY"
+          echo "CARDSIGHT_API_KEY=$CS_KEY" >> "$GITHUB_ENV"
+          echo "CARDSIGHT_API_KEY fetched (length: ${#CS_KEY})"
 
       # CF-CH-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). The catalog
       # expansion scripts hit CH's search API for every (year, product)
@@ -378,7 +398,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration') && inputs.apply == true }}
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
