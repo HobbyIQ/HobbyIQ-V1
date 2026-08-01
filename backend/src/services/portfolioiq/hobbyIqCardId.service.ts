@@ -131,9 +131,18 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/bowman-sterling/, "bowman-sterling"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
+    // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome
+    // Platinum is its OWN product line (different insert, different
+    // release, different price range). Must match BEFORE the generic
+    // /topps-chrome/ regex or it gets swallowed. Regression: 2026-08-01
+    // discovered that Platinum sales were being collapsed into the
+    // regular Topps Chrome pool.
+    [/topps-chrome-platinum/, "topps-chrome-platinum"],
+    [/topps-chrome-black/, "topps-chrome-black"],
     // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31). Topps Chrome Update
     // is one market with Topps Chrome — subset distinction doesn't matter
-    // for pricing. Sapphire preserved separately above.
+    // for pricing. Sapphire (matched above) + Platinum + Black are the
+    // distinct product lines we preserve; Update collapses to parent.
     [/topps-chrome-update/, "topps-chrome"],
     [/topps-chrome/, "topps-chrome"],
     [/topps-heritage/, "topps-heritage"],
