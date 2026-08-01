@@ -929,6 +929,32 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       })();
     }
 
+    // CF-IMAGE-PHASH (Drew, 2026-08-01). Fire-and-forget: fetch image,
+    // compute dHash, store on row, check for pHash duplicates in the
+    // same slug. Within-slug matches → __phashDuplicate. Different pHash
+    // between two rows claiming same physical card = mis-tag signal.
+    if (doc.imageUrl && doc.hobbyiqCardId) {
+      void (async () => {
+        try {
+          const { computeImageDHash, findPhashDuplicatesInSlug } = await import("./imagePhash.service.js");
+          const hash = await computeImageDHash(doc.imageUrl!);
+          if (!hash) return;
+          // Persist hash on the just-written row
+          const { resource } = await c.item(doc.id, doc.cardId).read();
+          if (resource) {
+            (resource as Record<string, unknown>).__imagePhash = hash;
+            (resource as Record<string, unknown>).__imagePhashAt = new Date().toISOString();
+            const dups = await findPhashDuplicatesInSlug(c, doc.hobbyiqCardId!, hash, doc.id);
+            if (dups.length > 0) {
+              (resource as Record<string, unknown>).__phashDuplicate = true;
+              (resource as Record<string, unknown>).__phashDuplicateIds = dups.slice(0, 5);
+            }
+            await c.items.upsert(resource);
+          }
+        } catch { /* soft */ }
+      })();
+    }
+
     // CF-CROSS-SOURCE-CONSENSUS (Drew, 2026-08-01). Fire-and-forget
     // post-write check: does this sale match another sale from a
     // DIFFERENT source (matching title + price)? If yes, both rows

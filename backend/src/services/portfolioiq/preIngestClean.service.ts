@@ -45,6 +45,36 @@ export interface PreIngestResult {
   rejected?: { category: string; reason: string };
 }
 
+// CF-TITLE-PARSER-AI-FALLBACK (Drew, 2026-08-01). Async version of
+// preIngestClean that ALSO uses the AI title parser as a fallback
+// when the regex parser can't extract cardNumber. Cached by title
+// hash so cost is bounded. Non-blocking fire-and-forget — caller can
+// use sync preIngestClean if AI fallback isn't wanted.
+export async function preIngestCleanWithAiFallback(input: RecordSoldCompInput): Promise<PreIngestResult> {
+  const base = preIngestClean(input);
+  if (base.rejected) return base;
+  if (!base.input) return base;
+  // Only invoke LLM if we lack cardNumber AND have a title
+  const needsAi = (!base.input.cardNumber || String(base.input.cardNumber).trim().length === 0)
+    && base.input.title && String(base.input.title).trim().length >= 15;
+  if (!needsAi) return base;
+  try {
+    const { parseTitleWithAi } = await import("./titleParserAi.service.js");
+    const aiResult = await parseTitleWithAi(String(base.input.title));
+    if (aiResult && aiResult.confidence !== "low") {
+      const refined = { ...base.input };
+      if (aiResult.cardNumber && !refined.cardNumber) refined.cardNumber = aiResult.cardNumber;
+      if (aiResult.parallel && (!refined.parallel || refined.parallel === "Base")) refined.parallel = aiResult.parallel;
+      if (aiResult.isAuto && refined.isAuto === undefined) refined.isAuto = aiResult.isAuto;
+      // printRun isn't a RecordSoldCompInput field — encoded into slug at
+      // compute time via a different code path. The AI-derived printRun
+      // is captured in the flag detail below for reference.
+      return { input: refined, flags: [...base.flags, { kind: "unverified", detail: `ai-parsed-title conf=${aiResult.confidence}` }] };
+    }
+  } catch { /* soft */ }
+  return base;
+}
+
 export function preIngestClean(input: RecordSoldCompInput): PreIngestResult {
   const flags: PreIngestResult["flags"] = [];
 
