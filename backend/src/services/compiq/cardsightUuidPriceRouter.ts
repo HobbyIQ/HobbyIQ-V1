@@ -263,116 +263,24 @@ export async function priceByCardsightUuid(
       void _isAutoCatalogFallback;
       if (!playerName) return;
 
-      // CF-CARDSIGHT-SMART-TIER (Drew, 2026-08-01). Cardsight has good
-      // data mixed with fuzzy-matcher noise. Skip WRITE for rows that
-      // look like fuzzy-match errors — those are the ones that used to
-      // pollute pools (like the Hartman Blue Refractor $6 sub-pool that
-      // dragged FMV from $1,500 to $550). "Good" here means the title
-      // mentions EITHER the queried player OR the queried cardNumber.
-      // If neither, this row is almost certainly a mis-associated sale
-      // for a completely different card — don't ingest.
-      //
-      // We still keep title-derived identity as authoritative (so a
-      // GOOD Cardsight row that mentions the player but IS a different
-      // card's sale gets slugged to its ACTUAL identity, not the
-      // queried card's pool).
-      const playerLower = playerName.toLowerCase();
-      const numberLower = String(numberVal ?? "").toLowerCase();
-      const lastName = playerLower.split(/\s+/).slice(-1)[0] ?? "";
-      const hasLastName = lastName.length >= 4;
-
-      // Emit one comp per raw record with a valid price
+      // CF-CARDSIGHT-VIA-VENDOR-CLEANER (Drew, 2026-08-01). All
+      // vendor-specific cleaning now lives in vendorCleaning/. This
+      // module just calls the Cardsight cleaner; the cleaner
+      // encapsulates fuzzy-match rejection, title-parse identity
+      // resolution, and unverified flagging.
+      const { cardsightCleaner } = await import("../vendorCleaning/index.js");
       for (const r of rawRecords) {
-        if (typeof r.price !== "number" || r.price <= 0) continue;
-        if (!r.date) continue;
-
-        // Smart-tier gate: reject rows whose title doesn't mention the
-        // queried player OR cardNumber. That's the signature of a
-        // Cardsight fuzzy-match error.
-        const titleLower = String(r.title ?? "").toLowerCase();
-        if (titleLower) {
-          const mentionsPlayer = hasLastName && titleLower.includes(lastName);
-          const mentionsNumber = numberLower && titleLower.includes(numberLower);
-          if (!mentionsPlayer && !mentionsNumber) {
-            // Skip: this row is neither about the queried player nor the
-            // queried cardNumber — safest to not persist rather than
-            // risk mis-slugging.
-            continue;
-          }
-        }
-
-        // CF-PARALLEL-FROM-TITLE (Drew, 2026-07-28). Cardsight's
-        // parallel_name field is unreliable — it stamps "Blue"/"Red"/etc.
-        // on sale records whose eBay title has NO color word (verified
-        // 2026-07-28 on Josiah Hartshorn CPA-JHA: 16 base Chrome auto
-        // sales titled "Chrome Prospect 1st Auto" arrived tagged
-        // parallel="Blue" and slugged into the Blue Refractor pool,
-        // dragging Drew's FMV from ~$600 down to $90).
-        //
-        // Fix: title is the ONLY authority for parallel. parseListingIdentity
-        // returns "Base" when no color/parallel word appears in the
-        // title — which correctly labels Cardsight's mis-tagged base
-        // sales as Base. Cardsight's parallel_name is used only when
-        // there is NO title at all (rare — kept as belt-and-suspenders).
-        const { parseListingIdentity } = await import(
-          "../portfolioiq/parseTitleIdentity.service.js"
-        );
-        const parsedFromTitle = r.title
-          ? parseListingIdentity(String(r.title))
-          : { parallel: r.parallel_name ?? "Base", cardNumber: null, isAuto: undefined };
-        const parallelFromTitle = parsedFromTitle.parallel ?? "Base";
-        // CF-CARDNUMBER-FROM-TITLE (Drew, 2026-07-31). Cardsight's
-        // /v1/pricing/{cardId} endpoint returns marketplace sales its
-        // fuzzy matcher associated with the queried card+parallel — but
-        // some of those sales are for DIFFERENT physical cards whose
-        // TITLES clearly show different cardNumbers (e.g. base BCP-102
-        // sales returned for a CPA-EHA auto query). The 2026-07-28 fix
-        // (parallel-from-title) addressed the parallel field; this
-        // extends the same rule to cardNumber. Live evidence 2026-07-31
-        // on Drew's Hartman Blue Refractor CPA-EHA pool: 19 sub-$25
-        // rows had wrong cardNumbers (BCP-102 base cards) tagged as
-        // CPA-EHA autos, dragging the anchor from $1,500+ down to $550.
-        //
-        // Behavior: title-parsed cardNumber wins. When title parsing
-        // returns null (title lacks a recognizable number), fall back
-        // to the catalog's numberVal so we still ingest the sale
-        // rather than skipping it entirely.
-        //
-        // Effect: mis-associated marketplace sales still get persisted
-        // (they're REAL sales of real cards), but under their ACTUAL
-        // identity from the title — not polluting the queried card's pool.
-        const cardNumberFromTitle = parsedFromTitle.cardNumber ?? numberVal;
-        // Recompute isAuto from the title-parsed cardNumber. The pool
-        // needs consistent (parallel, cardNumber, isAuto) tuples per
-        // slug; the catalog's isAuto might not match a mis-associated
-        // sale's true identity.
-        const isAutoFromParsed =
-          parsedFromTitle.isAuto !== undefined
-            ? parsedFromTitle.isAuto
-            : /(auto|autograph)/i.test(String(setName ?? "")) ||
-              /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(String(cardNumberFromTitle ?? ""));
-        await recordSoldComp({
+        const result = await cardsightCleaner.clean({
+          raw: r,
           cardId: input.cardId,
           playerName,
-          cardYear: yearNum,
-          setName: releaseName ?? setName,
-          parallel: parallelFromTitle,
-          cardNumber: cardNumberFromTitle,
-          isAuto: isAutoFromParsed,
-          price: r.price,
-          soldAt: r.date,
-          source: "cardsight",
-          // Prefer eBay URL as the external key (stable per listing).
-          // Falls back to composite id (cardId + date + price) inside
-          // recordSoldComp when null.
-          sourceExternalId: r.url ?? null,
-          contributorUserId: null,
-          title: r.title ?? null,
-          imageUrl: r.image_url ?? null,
-          sellerHandle: null,
-          verifiedByUser: false,
-          confidence: 0.6,
-        });
+          setName,
+          releaseName,
+          year: yearNum,
+          numberVal,
+        }, {});
+        if (result.rejected || !result.cleaned) continue;
+        await recordSoldComp(result.cleaned);
       }
     } catch (err) {
       // CF-VENDOR-EMIT-TELEMETRY (Drew, 2026-07-19). Was silent-swallow.
