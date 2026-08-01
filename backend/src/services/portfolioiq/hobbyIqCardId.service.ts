@@ -98,16 +98,15 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // BEFORE the base bowman-chrome / topps-chrome patterns.
     [/bowman-chrome-sapphire|bowman-sapphire/, "bowman-chrome-sapphire"],
     [/topps-chrome-sapphire/, "topps-chrome-sapphire"],
-    // CF-SETKEY-DRAFT-CHROME-COLLISION (Drew, 2026-07-29). The set is
-    // titled "Bowman Draft Chrome" (that word order) — slugify emits
-    // `bowman-draft-chrome`, so the /bowman-chrome-draft/ regex NEVER
-    // matched real inputs. All chrome-draft rows fell through to the
-    // paper `bowman-draft` bucket below, COLLIDING with paper Bowman
-    // Draft. Fix: accept either ordering. Chrome-draft now canonicalizes
-    // to "bowman-chrome-draft"; paper Bowman Draft (BDA-XX autos) keeps
-    // its "bowman-draft" setKey — the stock signal is preserved at the
-    // setKey layer.
-    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome-draft"],
+    // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31). Bowman Chrome Draft
+    // and Bowman Chrome are ONE market — buyers don't distinguish the
+    // subset. Collapse both orderings ("Bowman Chrome Draft" or "Bowman
+    // Draft Chrome") to canonical `bowman-chrome`. Sapphire is preserved
+    // above as its own product line. Paper Bowman Draft (BDA-XX autos)
+    // still lands at `bowman-draft` via the paper rule below — the paper
+    // vs chrome distinction is preserved by the cardNumber-prefix
+    // override in computeHobbyIqCardId.
+    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
     // the BCP-XX subset as setName="Chrome Prospects" (their own naming
@@ -132,7 +131,10 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/bowman-sterling/, "bowman-sterling"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
-    [/topps-chrome-update/, "topps-chrome-update"],
+    // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31). Topps Chrome Update
+    // is one market with Topps Chrome — subset distinction doesn't matter
+    // for pricing. Sapphire preserved separately above.
+    [/topps-chrome-update/, "topps-chrome"],
     [/topps-chrome/, "topps-chrome"],
     [/topps-heritage/, "topps-heritage"],
     [/topps-finest/, "topps-finest"],
@@ -369,14 +371,42 @@ function formatPrintRun(printRun: number | null | undefined): string {
   return `:num-${printRun}`;
 }
 
+// CF-CHROME-PREFIX-OVERRIDE (Drew, 2026-07-31). Some cardNumbers are
+// chrome-only regardless of what the title/set string says. Sellers
+// often type "2025 Bowman" or "2024 Topps" when the card is actually
+// Bowman Chrome / Topps Chrome — the cardNumber (CPA-, BCPA-, TCRA-,
+// etc.) is the definitive signal. Force the chrome set slug in that
+// case so the pool doesn't fragment across paper/chrome namespaces.
+// Sapphire slugs are preserved (they're a distinct product line, not
+// a subset).
+const BOWMAN_CHROME_ONLY_PREFIX_RE =
+  /^(CPA|BCPA|BDPA|BCDA|BCRA|BDCA|FCA|CDA|CU|BCP|BDC)-/i;
+const TOPPS_CHROME_ONLY_PREFIX_RE = /^(TCRA|TRA|TCU|TCA|TC)-/i;
+
+export function overrideSetForChromePrefix(setKey: string, cardNumber: string): string {
+  const cn = (cardNumber ?? "").trim().toUpperCase();
+  if (BOWMAN_CHROME_ONLY_PREFIX_RE.test(cn)) {
+    if (setKey === "bowman-chrome-sapphire") return setKey;
+    return "bowman-chrome";
+  }
+  if (TOPPS_CHROME_ONLY_PREFIX_RE.test(cn)) {
+    if (setKey === "topps-chrome-sapphire") return setKey;
+    return "topps-chrome";
+  }
+  return setKey;
+}
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
-  const setKey = normalizeSetKey(components.setKey);
   const cardNumber = normalizeCardNumber(components.cardNumber);
+  const setKey = overrideSetForChromePrefix(
+    normalizeSetKey(components.setKey),
+    cardNumber,
+  );
   const parallelSlug = normalizeParallel(components.parallel);
   const autoFlag = components.isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);
