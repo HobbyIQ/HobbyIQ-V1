@@ -39,20 +39,29 @@ if (!process.env.CARD_HEDGE_API_KEY) {
 const CH_API = "https://api.cardhedger.com/v1";
 const START_TIME = Date.now();
 
-async function chSearchCards(query, limit = 100, page = 1) {
-  const url = `${CH_API}/search/cards?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`;
+async function chSearchCards(query, category, limit = 50, page = 1) {
+  const url = `${CH_API}/cards/card-search`;
   const res = await fetch(url, {
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": process.env.CARD_HEDGE_API_KEY,
+      "X-API-Key": process.env.CARD_HEDGE_API_KEY,
     },
+    body: JSON.stringify({
+      search: query,
+      category,
+      page,
+      page_size: Math.max(1, Math.min(limit, 50)),
+    }),
   });
   if (!res.ok) {
     if (res.status === 429) return { _rateLimited: true };
+    if (res.status >= 500) return { _serverError: true, status: res.status };
+    console.warn(`CH HTTP ${res.status} for "${query}" (${category})`);
     return null;
   }
   const body = await res.json().catch(() => null);
-  return Array.isArray(body?.cards) ? body.cards : Array.isArray(body) ? body : null;
+  return Array.isArray(body?.cards) ? body.cards : null;
 }
 
 async function withRetry(fn, attempts = 4, baseMs = 500) {
@@ -141,14 +150,23 @@ function timeExpired() {
   return (Date.now() - START_TIME) / 60000 > MAX_MINUTES;
 }
 
+const SPORT_TO_CH_CATEGORY = {
+  baseball: "Baseball",
+  basketball: "Basketball",
+  football: "Football",
+  hockey: "Hockey",
+  soccer: "Soccer",
+};
+
 async function processTuple(cc, tuple, seenCardIds) {
   const query = `${tuple.year} ${tuple.product}`;
+  const category = SPORT_TO_CH_CATEGORY[tuple.sport] || "Baseball";
   let page = 1;
   let persisted = 0, empty = 0;
-  const MAX_PAGES = 20; // covers ~500 cards per set at 25/page
+  const MAX_PAGES = 40; // covers ~2000 cards per set at 50/page
   while (page <= MAX_PAGES && !timeExpired()) {
     let cards;
-    try { cards = await withRetry(() => chSearchCards(query, 100, page)); }
+    try { cards = await withRetry(() => chSearchCards(query, category, 50, page)); }
     catch { return { persisted, error: true, empty }; }
     if (!Array.isArray(cards) || cards.length === 0) { empty++; break; }
     let newInPage = 0;
@@ -178,7 +196,7 @@ async function processTuple(cc, tuple, seenCardIds) {
       };
       try { await cc.items.upsert(doc); persisted++; } catch { /* skip */ }
     }
-    if (newInPage < 100) break; // last page
+    if (cards.length < 50) break; // last page
     page++;
     await new Promise(r => setTimeout(r, 200)); // rate limit friendly
   }
