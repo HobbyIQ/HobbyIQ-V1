@@ -102,3 +102,21 @@ jobs:
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/train-weights?days=30" \
             | head -c 500
           echo ""
+
+      - name: Anomaly detection (drift vs baseline)
+        if: env.ADMIN_API_TOKEN != ''
+        shell: bash
+        run: |
+          echo "Running anomaly detection..."
+          RESULT=$(curl -sf -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies")
+          if [ -z "$RESULT" ]; then
+            echo "::warning::anomaly detection returned empty (may still be initializing)"
+            exit 0
+          fi
+          HIGH_COUNT=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); const highs=(r.report?.anomalies||[]).filter(a=>a.suspiciousness==='high'); console.log(highs.length); } catch { console.log('0'); } })")
+          TOTAL=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); console.log((r.report?.anomalies||[]).length); } catch { console.log('0'); } })")
+          echo "Anomalies detected: $TOTAL total, $HIGH_COUNT high-suspiciousness"
+          if [ "$HIGH_COUNT" -gt "10" ]; then
+            echo "::warning::${HIGH_COUNT} slugs with high-suspiciousness drift — review /app/admin/cleanliness"
+          fi
