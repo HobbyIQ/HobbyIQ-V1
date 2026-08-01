@@ -26,22 +26,14 @@ const CONTAINER = (process.env.BACKFILL_CONTAINER || "all").toLowerCase();
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
 const LIMIT = process.env.BACKFILL_LIMIT ? Number(process.env.BACKFILL_LIMIT) : Infinity;
 
-const BOWMAN_CHROME_ONLY_PREFIX_RE = /^(CPA|BCPA|BDPA|BCDA|BCRA|BDCA|FCA|CDA|CU|BCP|BDC)-/i;
-const TOPPS_CHROME_ONLY_PREFIX_RE = /^(TCRA|TRA|TCU|TCA|TC)-/i;
-
-function canonicalizeSetSegment(setSegment, cardNumber) {
+// CF-CHROME-PREFIX-OVERRIDE-REMOVED (Drew, 2026-07-31). Cardnumber-prefix
+// override was too broad — CPA-, FCA-, TC-, CU- all collide across product
+// families (Bowman Chrome vs Topps Chrome Platinum, Bowman vs Donruss
+// Champions, etc.). Keeping ONLY the safe set-string collapse.
+function canonicalizeSetSegment(setSegment, _cardNumber) {
   let s = setSegment;
-  // Set-string collapse
   if (s === "bowman-chrome-draft") s = "bowman-chrome";
   if (s === "topps-chrome-update") s = "topps-chrome";
-  // CardNumber override (chrome-only prefix forces chrome set)
-  const cn = String(cardNumber || "").trim().toUpperCase();
-  if (BOWMAN_CHROME_ONLY_PREFIX_RE.test(cn)) {
-    if (s !== "bowman-chrome-sapphire") s = "bowman-chrome";
-  }
-  if (TOPPS_CHROME_ONLY_PREFIX_RE.test(cn)) {
-    if (s !== "topps-chrome-sapphire") s = "topps-chrome";
-  }
   return s;
 }
 

@@ -371,30 +371,18 @@ function formatPrintRun(printRun: number | null | undefined): string {
   return `:num-${printRun}`;
 }
 
-// CF-CHROME-PREFIX-OVERRIDE (Drew, 2026-07-31). Some cardNumbers are
-// chrome-only regardless of what the title/set string says. Sellers
-// often type "2025 Bowman" or "2024 Topps" when the card is actually
-// Bowman Chrome / Topps Chrome — the cardNumber (CPA-, BCPA-, TCRA-,
-// etc.) is the definitive signal. Force the chrome set slug in that
-// case so the pool doesn't fragment across paper/chrome namespaces.
-// Sapphire slugs are preserved (they're a distinct product line, not
-// a subset).
-const BOWMAN_CHROME_ONLY_PREFIX_RE =
-  /^(CPA|BCPA|BDPA|BCDA|BCRA|BDCA|FCA|CDA|CU|BCP|BDC)-/i;
-const TOPPS_CHROME_ONLY_PREFIX_RE = /^(TCRA|TRA|TCU|TCA|TC)-/i;
-
-export function overrideSetForChromePrefix(setKey: string, cardNumber: string): string {
-  const cn = (cardNumber ?? "").trim().toUpperCase();
-  if (BOWMAN_CHROME_ONLY_PREFIX_RE.test(cn)) {
-    if (setKey === "bowman-chrome-sapphire") return setKey;
-    return "bowman-chrome";
-  }
-  if (TOPPS_CHROME_ONLY_PREFIX_RE.test(cn)) {
-    if (setKey === "topps-chrome-sapphire") return setKey;
-    return "topps-chrome";
-  }
-  return setKey;
-}
+// CF-CHROME-PREFIX-OVERRIDE-REVERTED (Drew, 2026-07-31). Prior attempt
+// to force chrome set slug based on cardNumber prefix was too broad:
+//   - CPA- is used by both Bowman Chrome Prospects AND Topps Chrome
+//     Platinum Anniversary Autographs
+//   - FCA- is used by Topps Finest Chrome Autos
+//   - TC-  is used by Donruss Champions (Panini) among others
+// Blanket overrides misclassified ~184 rows in a 2,838-row apply run
+// before we caught it. Removed the override entirely. Chrome subset
+// collapse is still applied at the normalizeSetKey layer, which uses
+// the setName text (reliable signal). Rows sitting at wrong set slugs
+// (paper "bowman" with chrome cards) will be addressed via per-card
+// hand-labeling in the admin labeler surface, not via blanket rules.
 
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
@@ -402,11 +390,8 @@ export function overrideSetForChromePrefix(setKey: string, cardNumber: string): 
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
+  const setKey = normalizeSetKey(components.setKey);
   const cardNumber = normalizeCardNumber(components.cardNumber);
-  const setKey = overrideSetForChromePrefix(
-    normalizeSetKey(components.setKey),
-    cardNumber,
-  );
   const parallelSlug = normalizeParallel(components.parallel);
   const autoFlag = components.isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);
