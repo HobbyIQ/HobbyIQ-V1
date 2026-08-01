@@ -56,6 +56,104 @@ function getSoldComps(): Container | null {
   return cachedSoldComps;
 }
 
+export interface QueueCandidate {
+  cardNumber: string;
+  cardYear: number | null;
+  playerName: string;
+  portfolioHits: number;   // how many user portfolios hold this card
+  unlabeledVariants: number;
+  totalVariants: number;
+  soldCompsCount: number;
+  priority: number;        // computed score: higher = more impactful to label
+}
+
+/** Return the top-N labeling candidates ranked by portfolio impact +
+ *  catalog gap. Cards Drew (or any user) HOLDS bubble up first;
+ *  ties broken by unlabeled variant count + sold_comps volume. */
+export async function listLabelerQueue(limit = 25): Promise<QueueCandidate[]> {
+  const catalog = getCatalog();
+  const sc = getSoldComps();
+  if (!catalog || !sc) return [];
+
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return [];
+  const { CosmosClient } = await import("@azure/cosmos");
+  const client = new CosmosClient(conn);
+  const portfolio = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("portfolio");
+
+  // Portfolio hits per (cardNumber, cardYear)
+  const portfolioHits = new Map<string, number>();
+  const { resources: docs } = await portfolio.items.query({
+    query: "SELECT c.holdings FROM c WHERE IS_DEFINED(c.holdings)"
+  }, { maxItemCount: 200 }).fetchAll();
+  for (const doc of docs) {
+    for (const h of Object.values((doc as { holdings?: Record<string, unknown> }).holdings ?? {})) {
+      const holding = h as { cardNumber?: string; cardYear?: number };
+      const cn = String(holding.cardNumber ?? "").trim().toUpperCase();
+      const yr = holding.cardYear ?? 0;
+      if (!cn) continue;
+      const key = `${yr}::${cn}`;
+      portfolioHits.set(key, (portfolioHits.get(key) ?? 0) + 1);
+    }
+  }
+
+  // Catalog per (cardNumber, cardYear) — count total + unlabeled variants
+  const catalogByKey = new Map<string, { total: number; unlabeled: number; player: string }>();
+  const { resources: catalogRows } = await catalog.items.query({
+    query: `SELECT c.number, c.cardNumber, c.year, c.player, c.canonicalLabel FROM c WHERE c.source = 'cardhedge'`
+  }, { maxItemCount: 5000 }).fetchAll();
+  for (const r of catalogRows) {
+    const cn = String(((r as { number?: string; cardNumber?: string }).number ?? (r as { number?: string; cardNumber?: string }).cardNumber) ?? "").trim().toUpperCase();
+    const yrRaw = (r as { year?: number | string }).year;
+    const yr = typeof yrRaw === "number" ? yrRaw : Number(yrRaw ?? 0);
+    if (!cn || !yr) continue;
+    const key = `${yr}::${cn}`;
+    let entry = catalogByKey.get(key);
+    if (!entry) {
+      entry = { total: 0, unlabeled: 0, player: String((r as { player?: string }).player ?? "") };
+      catalogByKey.set(key, entry);
+    }
+    entry.total++;
+    if (!(r as { canonicalLabel?: unknown }).canonicalLabel) entry.unlabeled++;
+  }
+
+  // sold_comps count per (cardNumber, cardYear) — sampled query
+  const soldCountByKey = new Map<string, number>();
+  const { resources: scRows } = await sc.items.query({
+    query: `SELECT c.cardNumber, c.cardYear FROM c WHERE IS_DEFINED(c.cardNumber) AND IS_DEFINED(c.cardYear)`
+  }, { maxItemCount: 5000 }).fetchAll();
+  for (const r of scRows) {
+    const cn = String((r as { cardNumber?: string }).cardNumber ?? "").trim().toUpperCase();
+    const yr = (r as { cardYear?: number }).cardYear ?? 0;
+    if (!cn || !yr) continue;
+    const key = `${yr}::${cn}`;
+    soldCountByKey.set(key, (soldCountByKey.get(key) ?? 0) + 1);
+  }
+
+  // Build candidates, prioritize: portfolio hits × 100 + unlabeled variants × 10 + log(soldCounts)
+  const candidates: QueueCandidate[] = [];
+  for (const [key, cat] of catalogByKey) {
+    if (cat.unlabeled === 0) continue;
+    const [yrStr, cn] = key.split("::");
+    const yr = Number(yrStr);
+    const hits = portfolioHits.get(key) ?? 0;
+    const soldN = soldCountByKey.get(key) ?? 0;
+    const priority = hits * 100 + cat.unlabeled * 10 + Math.log10(soldN + 1);
+    candidates.push({
+      cardNumber: cn,
+      cardYear: yr || null,
+      playerName: cat.player,
+      portfolioHits: hits,
+      unlabeledVariants: cat.unlabeled,
+      totalVariants: cat.total,
+      soldCompsCount: soldN,
+      priority,
+    });
+  }
+  candidates.sort((a, b) => b.priority - a.priority);
+  return candidates.slice(0, Math.min(200, Math.max(5, limit)));
+}
+
 /** Load all CH card_catalog variants for a card + count matching sold_comps. */
 export async function listVariantsForCard(cardNumber: string, cardYear: number | null): Promise<VariantsResponse | null> {
   const catalog = getCatalog();

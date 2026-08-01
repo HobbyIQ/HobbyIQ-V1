@@ -28,6 +28,16 @@ router.get("/labeler/variants", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get("/labeler/queue", async (req, res, next) => {
+  try {
+    const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 25;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(200, limitRaw) : 25;
+    const { listLabelerQueue } = await import("../services/portfolioiq/labeler.service.js");
+    const items = await listLabelerQueue(limit);
+    res.json({ success: true, items, totalReturned: items.length });
+  } catch (err) { next(err); }
+});
+
 router.post("/labeler/ai-suggest", async (req, res, next) => {
   try {
     const b = req.body ?? {};

@@ -9,10 +9,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchLabelerVariants,
+  fetchLabelerQueue,
   saveLabelerLabel,
   aiSuggestLabel,
   type VariantView,
   type VariantsResponse,
+  type LabelerQueueCandidate,
 } from "@/lib/adminApi";
 
 const CANONICAL_PARALLELS = [
@@ -55,8 +57,29 @@ export default function LabelerPage() {
   const [cardNumber, setCardNumber] = useState("CPA-JHA");
   const [cardYear, setCardYear] = useState<number | "">(2025);
   const [data, setData] = useState<VariantsResponse | null>(null);
+  const [queue, setQueue] = useState<LabelerQueueCandidate[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadQueue = async () => {
+    try { setQueue(await fetchLabelerQueue(15)); }
+    catch (e) { console.warn("queue load failed", e); }
+  };
+  useEffect(() => { void loadQueue(); }, []);
+
+  const pickFromQueue = (c: LabelerQueueCandidate) => {
+    setCardNumber(c.cardNumber);
+    setCardYear(c.cardYear ?? "");
+    void loadWithArgs(c.cardNumber, c.cardYear);
+  };
+
+  const loadWithArgs = async (cn: string, yr: number | null) => {
+    setLoading(true);
+    setError(null);
+    try { setData(await fetchLabelerVariants(cn, yr)); }
+    catch (e) { setError((e as Error)?.message ?? "Failed to load"); }
+    finally { setLoading(false); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -90,6 +113,32 @@ export default function LabelerPage() {
           Look at each CH variant image, input the canonical parallel + print run. Save rewrites all matching sold_comps rows.
         </p>
       </div>
+
+      {queue && queue.length > 0 && (
+        <div className="rounded-xl border border-[color:var(--color-border)] p-4 bg-[color:var(--color-surface)]">
+          <div className="text-sm font-semibold mb-2">Priority queue (highest-impact cards to label next)</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+            {queue.slice(0, 12).map((c) => (
+              <button
+                key={`${c.cardYear}::${c.cardNumber}`}
+                type="button"
+                onClick={() => pickFromQueue(c)}
+                className="text-left rounded border border-[color:var(--color-border)] p-2 hover:border-[color:var(--color-accent)] transition-colors"
+              >
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="font-mono text-xs">{c.cardNumber}</span>
+                  <span className="text-xs text-[color:var(--color-text-muted)]">{c.cardYear ?? "?"}</span>
+                </div>
+                <div className="text-xs mt-0.5">{c.playerName || "—"}</div>
+                <div className="text-[10px] text-[color:var(--color-text-muted)] mt-1">
+                  {c.portfolioHits > 0 && <span className="text-emerald-500 font-medium">{c.portfolioHits} portfolio · </span>}
+                  {c.unlabeledVariants} unlabeled · {c.soldCompsCount} sales
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-end gap-3 border-b border-[color:var(--color-border)] pb-4">
         <div>

@@ -249,6 +249,24 @@ export async function aiSuggestLabel(input: AiSuggestInput): Promise<AiSuggestOu
   return r.suggestion;
 }
 
+export interface LabelerQueueCandidate {
+  cardNumber: string;
+  cardYear: number | null;
+  playerName: string;
+  portfolioHits: number;
+  unlabeledVariants: number;
+  totalVariants: number;
+  soldCompsCount: number;
+  priority: number;
+}
+
+export async function fetchLabelerQueue(limit = 25): Promise<LabelerQueueCandidate[]> {
+  const r = await adminRequest<{ success: boolean; items: LabelerQueueCandidate[] }>(
+    `/api/labeler/queue?limit=${limit}`,
+  );
+  return r.items;
+}
+
 // ─── Cleanliness dashboard ────────────────────────────────────────
 
 export interface CleanlinessReport {
