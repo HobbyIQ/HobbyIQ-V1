@@ -6,10 +6,13 @@ import { useEffect, useState } from "react";
 import {
   fetchPlayerByName,
   fetchPlayerHistory,
+  fetchPlayerDetail,
   addWatchlist,
   type PlayerScore,
   type PlayerHistoryResponse,
   type PlayerHistoryPoint,
+  type PlayerDetail,
+  type PlayerGradeTier,
 } from "@/lib/api";
 import { formatPct } from "@/lib/format";
 
@@ -21,6 +24,7 @@ export default function PlayerDetailPage() {
 
   const [player, setPlayer] = useState<PlayerScore | null>(null);
   const [history, setHistory] = useState<PlayerHistoryResponse | null>(null);
+  const [detail, setDetail] = useState<PlayerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,11 +40,13 @@ export default function PlayerDetailPage() {
     Promise.all([
       fetchPlayerByName(playerName),
       fetchPlayerHistory(playerName, 60).catch(() => null),
+      fetchPlayerDetail(playerName, 30).catch(() => null),
     ])
-      .then(([p, h]) => {
+      .then(([p, h, d]) => {
         if (cancelled) return;
         setPlayer(p);
         setHistory(h);
+        setDetail(d);
         setLoading(false);
       })
       .catch((err: { status?: number; message?: string }) => {
@@ -211,6 +217,23 @@ export default function PlayerDetailPage() {
         </ScoreCard>
       </div>
 
+      {/* Grade-tier trends (Drew, 2026-08-02) */}
+      {detail && detail.gradeTiers && detail.gradeTiers.length > 0 && (
+        <div className="hiq-card p-6 mb-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="font-bold text-lg">Trending by grade tier</h2>
+            <span className="text-xs text-[color:var(--color-muted)]">
+              {detail.windowDays}d vs prior {detail.windowDays}d
+            </span>
+          </div>
+          <div className="space-y-2">
+            {detail.gradeTiers.map((tier: PlayerGradeTier) => (
+              <GradeTierRow key={tier.tier} tier={tier} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* History chart */}
       {history && history.points.length >= 2 && (
         <div className="hiq-card p-6 mb-6">
@@ -284,6 +307,40 @@ function MetaLine({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between text-sm py-1">
       <span className="text-[color:var(--color-muted)]">{label}</span>
       <span className="tabular-nums text-white truncate ml-3 max-w-[60%] text-right">{value}</span>
+    </div>
+  );
+}
+
+function GradeTierRow({ tier }: { tier: PlayerGradeTier }) {
+  const color =
+    tier.direction === "up"
+      ? "var(--color-success)"
+      : tier.direction === "down"
+        ? "var(--color-danger)"
+        : "var(--color-muted)";
+  const arrow = tier.direction === "up" ? "▲" : tier.direction === "down" ? "▼" : "—";
+  const deltaText = tier.deltaPct !== null
+    ? `${tier.deltaPct > 0 ? "+" : ""}${tier.deltaPct.toFixed(1)}%`
+    : "—";
+  const medianText = `$${tier.currentMedian.toLocaleString()}`;
+  const priorText = tier.priorMedian !== null ? ` (was $${tier.priorMedian.toLocaleString()})` : "";
+  return (
+    <div className="flex items-center justify-between py-2 border-t border-[color:var(--color-border)] first:border-t-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="font-bold text-sm w-20 flex-shrink-0">{tier.tier}</span>
+        <span className="text-xs text-[color:var(--color-muted)]">
+          n={tier.currentSampleCount}
+        </span>
+      </div>
+      <div className="flex items-baseline gap-3">
+        <span className="text-sm tabular-nums text-[color:var(--color-muted)]">
+          {medianText}
+          <span className="text-xs opacity-60">{priorText}</span>
+        </span>
+        <span className="text-sm font-bold tabular-nums w-20 text-right" style={{ color }}>
+          {arrow} {deltaText}
+        </span>
+      </div>
     </div>
   );
 }

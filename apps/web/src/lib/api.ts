@@ -2391,6 +2391,33 @@ export interface PlayerTopResponse {
   generatedAt: string;
 }
 
+// CF-PLAYER-GRADE-TIERS (Drew, 2026-08-02). Player-level momentum
+// sliced by grade tier — data from /api/players/:name (distinct from
+// /api/playeriq/:name). Complementary macro view: "Trout PSA 10 up
+// 8%, PSA 9 flat, Raw down 3%" across ALL his cards.
+export interface PlayerGradeTier {
+  tier: string;
+  currentSampleCount: number;
+  currentMedian: number;
+  priorSampleCount: number;
+  priorMedian: number | null;
+  deltaPct: number | null;
+  direction: "up" | "down" | "flat";
+}
+export interface PlayerDetail {
+  player: string;
+  sport: string;
+  windowDays: number;
+  computedAt: string;
+  summary: unknown;
+  gradeTiers?: PlayerGradeTier[];
+  topCards?: unknown;
+  byYear?: unknown;
+}
+export async function fetchPlayerDetail(name: string, days = 30): Promise<PlayerDetail> {
+  return await request<PlayerDetail>(`/api/players/${encodeURIComponent(name)}?days=${days}`);
+}
+
 export async function fetchPlayerByName(name: string): Promise<PlayerScore> {
   return await request<PlayerScore>(`/api/playeriq/${encodeURIComponent(name)}`);
 }
