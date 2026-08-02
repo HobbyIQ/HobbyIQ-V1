@@ -36,6 +36,14 @@ export function patchCardsightImageUrls(
   req: Request,
   candidates: any[],
 ): void {
+  // CF-CS-IMAGE-KILL-SWITCH (Drew, 2026-08-02). When CARDSIGHT_API_KEY
+  // is empty the upstream /v1/images/cards proxy returns 401 → our
+  // proxy returns 404 → every filled-in imageUrl gives a broken 404
+  // image on the search page. Skip fill-in entirely when CS is off;
+  // leave imageUrl null so the client renders a placeholder rather
+  // than a dead image.
+  const csDisabled = !process.env.CARDSIGHT_API_KEY || !String(process.env.CARDSIGHT_API_KEY).trim();
+  if (csDisabled) return;
   for (const c of candidates) {
     // CF-CARDSIGHT-COMPLETE-COMPS (PR #416): the dispatcher populates a
     // `cardsight-parent:{uuid}` marker on Cardsight-native rows so the

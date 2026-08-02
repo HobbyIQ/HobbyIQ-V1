@@ -473,7 +473,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     );
   }
 
-  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText, c.source
+  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText, c.source, c.imageUrl
                  FROM c WHERE ${whereClauses.join(" AND ")}`;
   let candidates: any[] = [];
   try {
@@ -651,7 +651,16 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       parallels: (c.parallels || []).map((p: any) => ({ id: p.id, name: p.name, numberedTo: p.numberedTo ?? null })),
       isAutographSet,
       sport: c.sport || "baseball",
-      imageUrl: null,
+      // CF-CARDSEARCH-IMAGE-FROM-CATALOG (Drew, 2026-08-02). Prefer the
+      // row's own imageUrl from card_catalog. For CH-source rows this
+      // is a live bubble.io CDN URL. For CS-source rows it may be a
+      // CS-proxy URL that's now dead (CS API key disabled). Leave null
+      // in the null/dead-proxy case so the client renders a placeholder
+      // instead of a broken 404 image. The old behavior overwrote null
+      // via the CS UUID patcher — dead image on every search result
+      // when skipEnrichment was set.
+      imageUrl: (typeof c.imageUrl === "string" && c.imageUrl.startsWith("http") && !c.imageUrl.includes("/api/compiq/card-image/"))
+        ? c.imageUrl : null,
       recentMedian: null,
       compCount: 0,
       matchedTokens: matched,
