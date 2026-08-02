@@ -183,13 +183,14 @@ async function main() {
     console.log(`  Already-merged canonical slugs: ${alreadyMerged.size}`);
   } catch { /* soft */ }
 
-  // Scan vendor rows only. SELECT only slug-computation columns —
-  // cuts scan cost 3-4× vs SELECT *. Skip vendor rows whose canonical
-  // slug is already merged.
-  const query = "SELECT c.id, c.cardId, c.source, c.title, c.player, c.playerName, " +
-                "c.set, c.setName, c.releaseName, c.year, c.cardYear, c.number, c.cardNumber, " +
-                "c.sport, c.isAuto, c.imageUrl, c.searchText, c.searchTokens, c.recentSaleCount " +
-                "FROM c WHERE c.source IN ('cardhedge', 'cardsight') " +
+  // CF-COSMOS-RESERVED-SET-REVERT (Drew, 2026-08-02). Reverted to
+  // SELECT * because `set` is a Cosmos SQL reserved word and any
+  // attempt to alias it in a SELECT list corrupted downstream field
+  // access (hobbyiqSlugFromRow reads row.set). SELECT * is not the
+  // bottleneck anyway — the real wins come from the MAX_MINUTES bump
+  // (25→60) and the already-merged skip filter below. Scan runs at
+  // ~68K rows/min regardless of column count.
+  const query = "SELECT * FROM c WHERE c.source IN ('cardhedge', 'cardsight') " +
                 "AND NOT STARTSWITH(c.id, 'canonical::') " +
                 "AND (IS_DEFINED(c.cardNumber) OR IS_DEFINED(c.number))";
 
