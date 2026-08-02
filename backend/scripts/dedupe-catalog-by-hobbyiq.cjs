@@ -110,6 +110,15 @@ function pickImage(rows) {
   return any?.imageUrl ?? null;
 }
 
+// CF-DEDUPE-SKIP-AMBIGUOUS-SETKEYS (Drew, 2026-08-02). Slugs that fall
+// into these "unknown" buckets collapse unrelated cards from different
+// products into one canonical row (verified 2026-08-02: 337K corrupted
+// rows in card_catalog from a prior dedupe run — "base-set" bucketed
+// every #44 across every product's #44 into one row with all
+// identifying fields dropped and a cross-player searchTokens mashup).
+// Reject before creating a canonical id.
+const AMBIGUOUS_SETKEYS = new Set(["base-set", "base", "set", "unknown", "other", ""]);
+
 function hobbyiqSlugFromRow(row) {
   const sport = row.sport ?? row.__sport ?? null;
   const year = Number(row.year ?? row.cardYear ?? 0);
@@ -117,7 +126,7 @@ function hobbyiqSlugFromRow(row) {
   const cardNumber = row.cardNumber ?? row.number ?? null;
   if (!sport || !year || !setKey || !cardNumber) return null;
   try {
-    return computeHobbyIqCardId({
+    const slug = computeHobbyIqCardId({
       sport: String(sport),
       year,
       setKey: String(setKey),
@@ -126,6 +135,13 @@ function hobbyiqSlugFromRow(row) {
       isAuto: /auto/i.test(String(setKey)) || /auto/i.test(String(row.title ?? "")),
       printRun: null,
     });
+    if (!slug) return null;
+    // Slug shape: hiq:{sport}:{year}:{setKey}:{cardNumber}:{parallel}:{autoFlag}
+    // Pull setKey segment and reject if it's in the ambiguous bucket.
+    const segments = slug.split(":");
+    const setKeySegment = segments[3] ?? "";
+    if (AMBIGUOUS_SETKEYS.has(setKeySegment.toLowerCase())) return null;
+    return slug;
   } catch { return null; }
 }
 
