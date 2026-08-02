@@ -54,11 +54,23 @@ export async function persistVendorCatalog(
       source, cardId, e.title, e.player, e.set, e.year, e.number, e.variant,
     );
     try {
-      const { resources: existing } = await container.items.query({
+      // CF-DEDUP-CHECK-CANONICAL (Drew, 2026-08-01). After the
+      // dedupe-catalog-by-hobbyiq merge, vendor rows are collapsed to
+      // one canonical row per physical card, and the vendor cardId
+      // lives in canonical.vendorMappings. If we only check the old
+      // shape (c.cardId = @c AND c.contentHash = @h), every future CS/CH
+      // search would miss the canonical row and re-insert a duplicate.
+      // Second query covers the canonical shape by vendorMappings.
+      const { resources: byLegacyKey } = await container.items.query({
         query: "SELECT c.id FROM c WHERE c.cardId = @c AND c.contentHash = @h",
         parameters: [{ name: "@c", value: cardId }, { name: "@h", value: contentHash }],
       }).fetchAll();
-      if (existing.length > 0) { result.deduped++; continue; }
+      if (byLegacyKey.length > 0) { result.deduped++; continue; }
+      const { resources: byCanonicalMapping } = await container.items.query({
+        query: "SELECT c.id FROM c WHERE c.source = 'canonical' AND EXISTS(SELECT VALUE 1 FROM m IN c.vendorMappings WHERE m.source = @s AND m.vendorCardId = @c)",
+        parameters: [{ name: "@s", value: source }, { name: "@c", value: cardId }],
+      }).fetchAll();
+      if (byCanonicalMapping.length > 0) { result.deduped++; continue; }
       // CF-SEARCH-INDEX-AT-INSERT (Drew, 2026-07-25). Compute searchText
       // + searchTokens at insert time so newly-persisted vendor rows are
       // immediately searchable via /card-search — no dependency on the
