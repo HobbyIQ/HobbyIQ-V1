@@ -62,6 +62,8 @@ interface CompRow {
   price: number;
   soldAt: string;
   imageUrl?: string | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
 }
 
 function median(sortedAsc: number[]): number {
@@ -103,8 +105,12 @@ router.get("/players/:name", requireSession, async (req: Request, res: Response,
     // form as it appears in sold_comps.playerName. Future extension:
     // fuzzy match via a name-alias resolver.
     const iter = container.items.query<CompRow>({
+      // CF-PLAYER-GRADE-TIER-TRENDS (Drew, 2026-08-02). Added
+      // gradeCompany + gradeValue so we can slice per-tier momentum
+      // (Trout PSA 10 vs PSA 9 vs Raw across ALL his cards).
       query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.cardNumber,
-                     c.cardYear, c.price, c.soldAt, c.imageUrl
+                     c.cardYear, c.price, c.soldAt, c.imageUrl,
+                     c.gradeCompany, c.gradeValue
               FROM c
               WHERE c.sport = @sport
                 AND c.playerName = @playerName
@@ -197,6 +203,54 @@ router.get("/players/:name", requireSession, async (req: Request, res: Response,
       })
       .sort((a, b) => a.cardYear - b.cardYear);
 
+    // CF-PLAYER-GRADE-TIER-TRENDS (Drew, 2026-08-02). Player-level
+    // momentum sliced by grade tier. "Trout PSA 10 up 8%, PSA 9 flat,
+    // Raw down 3%" — actionable macro-per-tier signal complementing
+    // per-card-per-grade trend on the card page.
+    function gradeKey(company: string | null | undefined, value: number | null | undefined): string {
+      if (!company || value === null || value === undefined) return "Raw";
+      return `${company} ${value}`;
+    }
+    const gradeCurrentBuckets = new Map<string, number[]>();
+    const gradePriorBuckets = new Map<string, number[]>();
+    for (const r of currentWindow) {
+      const k = gradeKey(r.gradeCompany ?? null, r.gradeValue ?? null);
+      let arr = gradeCurrentBuckets.get(k);
+      if (!arr) { arr = []; gradeCurrentBuckets.set(k, arr); }
+      arr.push(r.price);
+    }
+    for (const r of priorWindow) {
+      const k = gradeKey(r.gradeCompany ?? null, r.gradeValue ?? null);
+      let arr = gradePriorBuckets.get(k);
+      if (!arr) { arr = []; gradePriorBuckets.set(k, arr); }
+      arr.push(r.price);
+    }
+    const gradeTiers = [...gradeCurrentBuckets.entries()]
+      .map(([tier, prices]) => {
+        const sorted = [...prices].sort((a, b) => a - b);
+        const med = median(sorted);
+        const priorPrices = gradePriorBuckets.get(tier) ?? [];
+        const priorMed = priorPrices.length > 0 ? median([...priorPrices].sort((a, b) => a - b)) : null;
+        const tierDeltaPct = priorMed && priorMed > 0
+          ? Math.round(((med - priorMed) / priorMed) * 1000) / 10
+          : null;
+        return {
+          tier,
+          currentSampleCount: prices.length,
+          currentMedian: Math.round(med * 100) / 100,
+          priorSampleCount: priorPrices.length,
+          priorMedian: priorMed !== null ? Math.round(priorMed * 100) / 100 : null,
+          deltaPct: tierDeltaPct,
+          direction: tierDeltaPct === null ? "flat" : tierDeltaPct > 3 ? "up" : tierDeltaPct < -3 ? "down" : "flat",
+        };
+      })
+      // Order Raw first, then by grader (PSA/BGS/SGC/CGC) descending value
+      .sort((a, b) => {
+        if (a.tier === "Raw") return -1;
+        if (b.tier === "Raw") return 1;
+        return b.currentSampleCount - a.currentSampleCount;
+      });
+
     res.json({
       player: playerName,
       sport,
@@ -216,6 +270,7 @@ router.get("/players/:name", requireSession, async (req: Request, res: Response,
           max: Math.round(currentPricesSorted[currentPricesSorted.length - 1] * 100) / 100,
         },
       },
+      gradeTiers,
       topCards,
       byYear,
     });

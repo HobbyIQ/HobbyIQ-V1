@@ -1131,7 +1131,33 @@ async function applyTrajectory(
     // to sell for." Estimated grades still get a Predicted so the seller
     // has actionable guidance; the wider confidence band signals
     // uncertainty visually.
-    const predictedMultiplier = 1 + rate * (PREDICTED_HORIZON_DAYS / 7);
+    //
+    // CF-PER-TIER-RATE (Drew, 2026-08-02). Previously every grade tier
+    // used the SAME card-level `rate` → identical predictedPricePct on
+    // every row (Drew saw "-4.3%" across all six grades). Fix: derive
+    // a per-tier weekly rate from that grade's own newest sale price
+    // vs its weighted median, blended with the card-level rate for
+    // smoothing. Use per-tier rate when the entry has enough own-grade
+    // data (n>=4); fall back to card-level when thin.
+    let effectiveRate = rate;
+    if (
+      entry.valueSource === "observed" &&
+      entry.sampleCount >= 4 &&
+      typeof entry.newestSalePrice === "number" && entry.newestSalePrice > 0 &&
+      typeof entry.weightedMedianPrice === "number" && entry.weightedMedianPrice > 0 &&
+      typeof entry.daysSinceNewestSale === "number" && entry.daysSinceNewestSale >= 1
+    ) {
+      // Recent-vs-baseline signal: how far above/below the weighted
+      // median is the newest observed sale, scaled to a weekly rate.
+      const pctDelta = (entry.newestSalePrice / entry.weightedMedianPrice) - 1;
+      const weeks = Math.max(1, entry.daysSinceNewestSale / 7);
+      const perTierWeekly = pctDelta / weeks;
+      // Blend 65% per-tier (dominant) with 35% card-level (smoother).
+      // Cap the blended rate to ±10%/wk (same guardrail deriveWeeklyRate uses).
+      const blended = 0.65 * perTierWeekly + 0.35 * rate;
+      effectiveRate = Math.max(-0.10, Math.min(0.10, blended));
+    }
+    const predictedMultiplier = 1 + effectiveRate * (PREDICTED_HORIZON_DAYS / 7);
     const predicted =
       Math.round(marketValueForForwardAnchor * predictedMultiplier * 100) / 100;
     // CF-CONFIDENCE-TIERED-BANDS (2026-07-08, Drew: "flat ±15% band
