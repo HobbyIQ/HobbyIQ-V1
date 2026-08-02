@@ -320,6 +320,12 @@ jobs:
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
           HOBBYIQFMV_COMPOSITE_ENABLED: "true"
+          # CF-NODE-HEAP-8G (Drew, 2026-08-02). dedupe-catalog-by-hobbyiq
+          # crashed at ~2M rows scanned with "JavaScript heap out of memory"
+          # (exit 134). It builds an in-memory Map of every vendor row for
+          # slug grouping. 8GB heap easily fits 2.4M rows and gives
+          # headroom for future catalog growth.
+          NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 

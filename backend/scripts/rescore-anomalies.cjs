@@ -55,7 +55,15 @@ async function main() {
   const soldComps = db.container("sold_comps");
   console.log(`[rescore-anomalies] apply=${APPLY} concurrency=${CONCURRENCY} maxMinutes=${MAX_MINUTES} threshold=${THRESHOLD}`);
 
-  const query = "SELECT * FROM c WHERE c.status = 'anomaly' AND (NOT IS_DEFINED(c.__rescoredAt))";
+  // CF-RESCORE-SHAPE-FIX (Drew, 2026-08-02). Include rows previously
+  // rescored below 0.60 — the prior script passed wrong input shape
+  // to scoreRow (StagingClean.slug vs row.hobbyiqCardId, missing
+  // title/source), producing uniform 0.58 across all 181K anomalies.
+  // Re-scoring those with correct field mapping should show real
+  // variance and let genuinely-clean rows promote.
+  const query = "SELECT * FROM c WHERE c.status = 'anomaly' " +
+                "AND (NOT IS_DEFINED(c.__rescoredAt) OR " +
+                "     (IS_DEFINED(c.__rescoreScore) AND c.__rescoreScore < 0.60))";
   const iter = staging.items.query({ query }, { maxItemCount: 200 });
 
   const stats = { scanned: 0, rescored: 0, promoted: 0, stillLow: 0, errors: 0, distribution: { high: 0, mid: 0, low: 0, veryLow: 0 } };
@@ -84,12 +92,33 @@ async function main() {
         } catch { /* soft */ }
       }
 
+      // CF-RESCORE-SHAPE-MAP (Drew, 2026-08-02). scoreRow expects
+      // RecordSoldCompInput field names (hobbyiqCardId, title, source,
+      // playerName). StagingClean uses `slug` and doesn't carry title
+      // or source. Build a proper scoring row.
+      const scoringRow = {
+        hobbyiqCardId: clean.slug,
+        cardNumber: clean.cardNumber,
+        playerName: clean.playerName,
+        parallel: clean.parallel,
+        isAuto: clean.isAuto,
+        printRun: clean.printRun,
+        gradeCompany: clean.gradeCompany,
+        gradeValue: clean.gradeValue,
+        setName: clean.setName,
+        cardYear: clean.cardYear,
+        sport: clean.sport,
+        price: clean.price,
+        soldAt: clean.soldAt,
+        source: row.source ?? "unknown",
+        title: row.raw?.title ?? row.title ?? null,
+      };
       const result = await scoreRow({
-        row: clean,
+        row: scoringRow,
         poolMedian,
         poolSampleCount,
-        catalogHasCanonicalForCardnumberYear: !!clean.hobbyiqCardId,
-        catalogAgreesOnSet: true,   // if hobbyiqCardId exists, assume catalog agrees
+        catalogHasCanonicalForCardnumberYear: !!clean.slug,
+        catalogAgreesOnSet: true,
         sellerBadActorScore: 0,
       });
 
