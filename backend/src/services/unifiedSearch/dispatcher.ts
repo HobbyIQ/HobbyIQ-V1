@@ -406,7 +406,11 @@ async function dispatchCertMode(
 // CH entirely — user gets fast (~50-250ms) matches from our own
 // data. Falls through to the CH path otherwise so long-tail coverage
 // is preserved.
-const CATALOG_FIRST_STRONG_THRESHOLD = 10;
+// CF-CATALOG-SHORTCUT-TUNING (Drew, 2026-08-02). Threshold lowered
+// 10 → 3 so we short-circuit more aggressively. Falling through to
+// CardHedge's /card-search API costs 5-20s; taking canonical hits
+// (even a few) is still faster.
+const CATALOG_FIRST_STRONG_THRESHOLD = 3;
 const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
 
 function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
@@ -448,9 +452,12 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
 
 async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> {
   try {
+    // skipEnrichment=true: dispatcher only needs identity/candidate
+    // data, not FMV per hit. Cuts each sport's search from ~2-7s to
+    // ~200-500ms because we drop 20+ per-hit sold_comps queries.
     const results = await Promise.all(
       CATALOG_FIRST_SPORTS.map((sport) =>
-        canonicalCardSearch({ q: trimmed, sport, limit: 30 }).catch(() => null),
+        canonicalCardSearch({ q: trimmed, sport, limit: 30, skipEnrichment: true }).catch(() => null),
       ),
     );
     const allHits: CanonicalSearchHit[] = [];

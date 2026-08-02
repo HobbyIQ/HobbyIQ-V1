@@ -33,6 +33,12 @@ export interface CanonicalSearchInput {
    *  Clamped 5-100 in the resolver (out-of-range silently falls to
    *  default so a broken client can't produce nonsense signals). */
   sellThresholdPct?: number;
+  /** CF-CARDSEARCH-CANDIDATES-ONLY (Drew, 2026-08-02). Skip the per-hit
+   *  enrichment loop (pool median, momentum, sell signal, image lookup)
+   *  that fires 20+ sold_comps queries. Used by search-list surfaces
+   *  (dispatcher shortcut, typeahead) that need identity + card only —
+   *  not FMV. Drops search latency from ~2-7s to <500ms. */
+  skipEnrichment?: boolean;
 }
 
 export interface MatchedRange {
@@ -714,6 +720,14 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   const limit = Math.max(1, Math.min(50, input.limit ?? 20));
   const topHits = deduped.slice(0, limit);
 
+  // CF-CARDSEARCH-SKIP-ENRICH-GUARD (Drew, 2026-08-02). Enrichment
+  // fires 20+ sequential sold_comps queries (pool median, momentum,
+  // sell signal, grade facets). Costs 2-6s per search. Search-list
+  // callers (dispatcher shortcut, typeahead) only need the candidate
+  // list — skipEnrichment=true drops the loop entirely.
+  if (input.skipEnrichment) {
+    // Skip enrichment — still compute facets from what we have.
+  } else {
   // Enrich top hits with imageUrl + recent median from sold_comps
   // (grade-scoped when a grade filter was requested).
   const gradeSuffix = (gradeFilterCompany && gradeFilterValue !== null)
@@ -783,6 +797,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       }
     } catch { /* enrichment optional */ }
   }));
+  }   // end skipEnrichment guard
 
   // Grouped-results view: cluster hits by (player, year, cardNumber) so
   // iOS can render "Eric Hartman 2026 Bowman #CPA-EH — 14 variants" collapsed.
