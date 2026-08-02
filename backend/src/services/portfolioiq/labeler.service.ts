@@ -114,16 +114,45 @@ export async function listLabelerQueue(limit = 25): Promise<QueueCandidate[]> {
   const { resources: catalogRows } = await catalog.items.query({
     query: `SELECT c.number, c.cardNumber, c.year, c.player, c.canonicalLabel FROM c WHERE c.source = 'cardhedge'`
   }, { maxItemCount: 5000 }).fetchAll();
+  // CF-LABELER-PARALLEL-AS-PLAYER (Drew, 2026-08-02). Vendor rows
+  // sometimes come in with the parallel word stored as `player`
+  // (Superfractor, Sunflower Seeds, Pop Corn, Peanuts, Gum Ball, Red
+  // Lava, Mini Diamond, etc. — very common in 2025 Bowman Draft
+  // Chrome's snack-themed patterned refractor series). Group header
+  // showed these as if they were the player, which is wrong.
+  //
+  // Fix: when picking the group's display player, prefer any row
+  // whose player is NOT a known parallel word. Fall back to the
+  // first-seen player only when no non-parallel-word candidate
+  // exists in the group.
+  const PARALLEL_WORD_SET = new Set([
+    "superfractor", "refractor", "sapphire", "mini diamond", "x-fractor", "speckle",
+    "wave", "ray wave", "shimmer", "lava", "grass", "mojo refractor", "lazer refractor",
+    "sunflower seeds", "pop corn", "peanuts", "gum ball", "sparkle",
+    "red lava", "blue lava", "green lava", "gold lava", "orange lava",
+    "red shimmer", "blue shimmer", "green shimmer", "gold shimmer",
+    "red wave", "blue wave", "green wave", "gold wave", "orange wave", "purple wave",
+    "red ray wave", "blue ray wave", "green ray wave", "gold ray wave",
+    "blue", "red", "gold", "orange", "green", "purple", "pink", "yellow", "aqua", "black", "silver",
+    "chrome", "autograph", "base", "rookie",
+  ].map(s => s.toLowerCase()));
+  function isParallelWord(name: string): boolean {
+    return PARALLEL_WORD_SET.has(name.trim().toLowerCase());
+  }
   for (const r of catalogRows) {
     const cn = String(((r as { number?: string; cardNumber?: string }).number ?? (r as { number?: string; cardNumber?: string }).cardNumber) ?? "").trim().toUpperCase();
     const yrRaw = (r as { year?: number | string }).year;
     const yr = typeof yrRaw === "number" ? yrRaw : Number(yrRaw ?? 0);
     if (!cn || !yr) continue;
     const key = `${yr}::${cn}`;
+    const rowPlayer = String((r as { player?: string }).player ?? "");
     let entry = catalogByKey.get(key);
     if (!entry) {
-      entry = { total: 0, unlabeled: 0, player: String((r as { player?: string }).player ?? "") };
+      entry = { total: 0, unlabeled: 0, player: rowPlayer };
       catalogByKey.set(key, entry);
+    } else if (entry.player && isParallelWord(entry.player) && rowPlayer && !isParallelWord(rowPlayer)) {
+      // Upgrade the group's header player when we find a real name.
+      entry.player = rowPlayer;
     }
     entry.total++;
     if (!(r as { canonicalLabel?: unknown }).canonicalLabel) entry.unlabeled++;

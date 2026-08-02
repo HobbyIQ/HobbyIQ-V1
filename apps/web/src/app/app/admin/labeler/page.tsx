@@ -51,7 +51,12 @@ const CANONICAL_PARALLELS = [
   "1/1",
 ];
 
-const PRINT_RUN_PRESETS = ["none", "1", "5", "10", "25", "50", "75", "99", "100", "125", "150", "175", "199", "200", "250", "299", "399", "499", "650", "750", "999", "custom"];
+// CF-PRINT-RUN-PRESETS-BOWMAN (Drew, 2026-08-02). Added missing common
+// Bowman Draft Chrome + Bowman Chrome print runs: 71 (Mini Diamond),
+// 60/65/70/85 (vintage-style tiered), 350 (Wave Refractor), 550/599
+// (misc inserts), 850 (base Refractor). /71 was the specific gap
+// that surfaced when Drew tried to label a Hartshorn Mini Diamond.
+const PRINT_RUN_PRESETS = ["none", "1", "5", "10", "25", "50", "60", "65", "70", "71", "75", "85", "99", "100", "125", "150", "175", "199", "200", "250", "299", "350", "399", "499", "550", "599", "650", "750", "850", "999", "custom"];
 
 export default function LabelerPage() {
   const [cardNumber, setCardNumber] = useState("CPA-JHA");
