@@ -29,6 +29,15 @@ export function clearStoredAdminToken(): void {
   window.localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
+// CF-ADMIN-REQ-TIMEOUT (Drew, 2026-08-02). 15s hard timeout on every
+// admin API call. Prior behavior: a hung endpoint (like /cleanliness/
+// anomalies during heavy backfill load) left the dashboard's
+// Promise.all in Loading state forever because .catch(() => null)
+// only handles rejections, not hangs. AbortSignal.timeout makes the
+// fetch reject at 15s so the dashboard falls back to whatever data
+// did resolve.
+const ADMIN_REQ_TIMEOUT_MS = 15_000;
+
 async function adminRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getStoredAdminToken();
   if (!token) throw new Error("Admin token not set");
@@ -40,6 +49,7 @@ async function adminRequest<T>(path: string, init: RequestInit = {}): Promise<T>
       Authorization: `Bearer ${token}`,
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(ADMIN_REQ_TIMEOUT_MS),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
