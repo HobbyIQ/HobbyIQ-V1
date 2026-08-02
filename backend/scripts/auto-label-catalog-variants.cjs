@@ -83,8 +83,11 @@ async function main() {
   // Only cardhedge-source rows that lack a canonicalLabel AND haven't
   // been auto-labeled yet. Prefer rows with images (multimodal AI is
   // sharper).
+  // CF-COSMOS-RESERVED-SET-AVOID (Drew, 2026-08-02). `set` is a Cosmos
+  // SQL reserved word. Aliasing corrupts field access; simpler to just
+  // drop it from SELECT and rely on setName / releaseName.
   const query = "SELECT c.id, c.cardId, c.player, c.playerName, c.year, c.number, c.cardNumber, " +
-                "c.setName, c.set, c.releaseName, c.imageUrl, c.chVariant, c.variant " +
+                "c.setName, c.releaseName, c.imageUrl, c.chVariant, c.variant " +
                 "FROM c WHERE c.source = 'cardhedge' " +
                 "AND (NOT IS_DEFINED(c.canonicalLabel)) " +
                 "AND (NOT IS_DEFINED(c.__autoLabeledAt))";
