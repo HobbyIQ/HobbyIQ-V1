@@ -79,15 +79,34 @@ async function main() {
                 "AND (c.year >= @minYear OR c.year = null)";
   const iter = cc.items.query({ query, parameters: [{ name: "@minYear", value: MIN_YEAR }] }, { maxItemCount: 500 });
 
-  const stats = { scanned: 0, probed: 0, hasPopulation: 0, notFound: 0, docsUpserted: 0, errors: 0 };
+  const stats = { scanned: 0, probed: 0, hasPopulation: 0, notFound: 0, docsUpserted: 0, errors: 0, skippedNonUuid: 0 };
+  const errorReasons = new Map();   // {reason -> count}
   const inFlight = [];
 
   async function processRow(row) {
-    if (!UUID_RE.test(row.cardId)) { stats.errors++; return; }
+    if (!UUID_RE.test(row.cardId)) {
+      stats.skippedNonUuid++;
+      // Mark so we don't re-scan on next slice
+      if (APPLY) {
+        try {
+          const { resource } = await cc.item(row.id, row.cardId).read();
+          if (resource) {
+            resource.__populationProbedAt = new Date().toISOString();
+            resource.__populationSkipReason = "non-uuid-cardid";
+            await cc.items.upsert(resource);
+          }
+        } catch {}
+      }
+      return;
+    }
     stats.probed++;
     const resp = await csPopulation(row.cardId);
     const nowIso = new Date().toISOString();
-    if (resp?.error) { stats.errors++; return; }
+    if (resp?.error) {
+      stats.errors++;
+      errorReasons.set(resp.error, (errorReasons.get(resp.error) || 0) + 1);
+      return;
+    }
     if (resp?.notFound) {
       if (APPLY) {
         try {
@@ -103,7 +122,11 @@ async function main() {
       return;
     }
     stats.hasPopulation++;
-    const companies = resp?.grading_companies || [];
+    // CF-POP-RESPONSE-SHAPE-FIX (Drew, 2026-08-01). Grading companies
+    // live under resp.base.grading_companies, NOT resp.grading_companies.
+    // Confirmed via direct probe: response is
+    //   { card_id, card_name, total_population, base: { total_population, grading_companies: [...] }, parallels: [...] }
+    const companies = resp?.base?.grading_companies || resp?.grading_companies || [];
     if (!companies.length) {
       if (APPLY) {
         try {
@@ -186,11 +209,18 @@ async function main() {
 
   console.log(`\n=== Done ===`);
   console.log(`  scanned:         ${stats.scanned}`);
+  console.log(`  skippedNonUuid:  ${stats.skippedNonUuid}`);
   console.log(`  probed:          ${stats.probed}`);
   console.log(`  hasPopulation:   ${stats.hasPopulation}`);
   console.log(`  notFound:        ${stats.notFound}`);
   console.log(`  docsUpserted:    ${stats.docsUpserted}`);
   console.log(`  errors:          ${stats.errors}`);
+  if (errorReasons.size > 0) {
+    console.log(`  Top error reasons:`);
+    for (const [reason, count] of [...errorReasons.entries()].sort((a,b) => b[1] - a[1]).slice(0, 5)) {
+      console.log(`    ${count.toString().padStart(6)}  ${reason}`);
+    }
+  }
   if (!APPLY) console.log(`\n  (dry run — set BACKFILL_APPLY=true to persist)`);
   if (timeExpired()) console.log(`RELAUNCH_NEEDED=true`);
   else console.log(`RELAUNCH_NEEDED=false`);

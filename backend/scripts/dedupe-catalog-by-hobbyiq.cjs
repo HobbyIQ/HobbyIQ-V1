@@ -44,22 +44,43 @@ try {
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.BACKFILL_MAX_MINUTES || 25));
-const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
+// CF-DEDUPE-THROTTLE-FIX (Drew, 2026-08-01). Prior default of 8-16
+// concurrent workers × (1 upsert + N deletes per group) hammered
+// Cosmos into 429 storms that overwhelmed the retry loop and
+// crashed the process with an uncaught 429 error. Reduce default
+// concurrency + add per-group sleep + more retry attempts with
+// longer backoff.
+const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 4));
+const GROUP_SLEEP_MS = Math.max(0, Number(process.env.GROUP_SLEEP_MS || 100));
 
 if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
 const START = Date.now();
+let processExiting = false;
 function timeExpired() { return (Date.now() - START) / 60000 > MAX_MINUTES; }
 
-async function withRetry(fn, attempts = 5, baseMs = 250) {
+// Longer backoff + more attempts. Base 500ms, up to 8 attempts:
+// 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000 ms.
+// Total worst-case retry window per op: ~127s.
+async function withRetry(fn, attempts = 8, baseMs = 500) {
   for (let i = 0; i < attempts; i++) {
     try { return await fn(); } catch (e) {
-      const is429 = e?.code === 429 || e?.statusCode === 429;
+      const is429 = e?.code === 429 || e?.statusCode === 429 ||
+                    /Too Many Requests|request rate is too large/i.test(String(e?.message ?? ""));
       if (!is429 || i === attempts - 1) throw e;
-      await new Promise(r => setTimeout(r, baseMs * Math.pow(2, i) + Math.random() * 100));
+      const wait = baseMs * Math.pow(2, i) + Math.random() * 250;
+      await new Promise(r => setTimeout(r, wait));
     }
   }
 }
+
+// Fatal error handler — log + set flag so main loop can exit
+// gracefully with RELAUNCH_NEEDED=true instead of crashing to
+// process exit 1 (which killed self-relaunch previously).
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err?.message ?? err);
+  processExiting = true;
+});
 
 function bestOf(a, b) {
   if (a === null || a === undefined || a === "") return b;
@@ -208,7 +229,7 @@ async function main() {
 
   for (const [slug, rows] of bySlug) {
     if (rows.length < 2) continue;   // singletons don't need merge
-    if (timeExpired()) { console.log("⏰ merge-phase time cap"); break; }
+    if (timeExpired() || processExiting) { console.log("⏰ merge-phase stopping (time cap or fatal error)"); break; }
     inFlight.push(processGroup(slug, rows));
     if (inFlight.length >= CONCURRENCY) {
       await Promise.race(inFlight);
@@ -216,8 +237,11 @@ async function main() {
         const s = await Promise.race([inFlight[i], Promise.resolve("PENDING")]);
         if (s !== "PENDING") inFlight.splice(i, 1);
       }
+      // Small breather between concurrency-drains to give Cosmos
+      // room to breathe if we're brushing up against 429 limits.
+      if (GROUP_SLEEP_MS > 0) await new Promise(r => setTimeout(r, GROUP_SLEEP_MS));
     }
-    if (mergedGroups % 1000 === 0 && mergedGroups > 0) {
+    if (mergedGroups > 0 && mergedGroups % 1000 === 0) {
       console.log(`  mergedGroups=${mergedGroups}  canonicalUpserts=${canonicalUpserts}  vendorDeletes=${vendorDeletes}  errors=${errors}`);
     }
   }
@@ -228,7 +252,18 @@ async function main() {
   console.log(`  canonical upserts:  ${canonicalUpserts}`);
   console.log(`  vendor rows deleted: ${vendorDeletes}`);
   console.log(`  errors:             ${errors}`);
-  console.log(`RELAUNCH_NEEDED=${timeExpired() ? "true" : "false"}`);
+  // Relaunch when: (a) we hit time cap, (b) something crashed and we
+  // want the next slice to keep making progress, OR (c) there are
+  // more dup groups than we processed this slice (per-slice quota).
+  const stillMore = mergedGroups < dupGroups;
+  console.log(`RELAUNCH_NEEDED=${(timeExpired() || processExiting || stillMore) ? "true" : "false"}`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => {
+  console.error("[main-catch]", e?.message ?? e);
+  // Print RELAUNCH_NEEDED=true so the workflow re-dispatches instead
+  // of dropping the loop on a crash (prior bug: exit(1) killed the
+  // self-relaunch grep).
+  console.log("RELAUNCH_NEEDED=true");
+  process.exit(0);
+});
