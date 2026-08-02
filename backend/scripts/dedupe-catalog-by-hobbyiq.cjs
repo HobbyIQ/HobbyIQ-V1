@@ -43,7 +43,11 @@ try {
 }
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
-const MAX_MINUTES = Math.max(1, Number(process.env.BACKFILL_MAX_MINUTES || 25));
+// CF-DEDUPE-BIGGER-BUDGET (Drew, 2026-08-02). Bumped 25→60 min per
+// slice. Prior 25 got eaten entirely by the scan phase (1.65M rows
+// takes ~24 min), leaving 0 minutes for merge work. Job timeout is
+// 150 min so 60 is safe.
+const MAX_MINUTES = Math.max(1, Number(process.env.BACKFILL_MAX_MINUTES || 60));
 // CF-DEDUPE-THROTTLE-FIX (Drew, 2026-08-01). Prior default of 8-16
 // concurrent workers × (1 upsert + N deletes per group) hammered
 // Cosmos into 429 storms that overwhelmed the retry loop and
@@ -163,18 +167,39 @@ async function main() {
   const cc = c.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
   console.log(`[dedupe-catalog-by-hobbyiq]  apply=${APPLY}  concurrency=${CONCURRENCY}  maxMinutes=${MAX_MINUTES}`);
 
-  // Scan vendor rows only (skip existing canonical rows and rows without
-  // enough fields to compute a slug).
-  const query = "SELECT * FROM c WHERE c.source IN ('cardhedge', 'cardsight') " +
+  // CF-DEDUPE-SKIP-CANONICAL (Drew, 2026-08-02). Pre-load slugs that
+  // ALREADY have a canonical row. Any vendor row whose slug appears in
+  // this set is skipped during scan — no re-work on merged groups.
+  const alreadyMerged = new Set();
+  try {
+    const canIter = cc.items.query({
+      query: "SELECT c.cardId FROM c WHERE c.source = 'canonical'"
+    }, { maxItemCount: 1000 });
+    while (canIter.hasMoreResults()) {
+      const { resources } = await canIter.fetchNext();
+      if (!Array.isArray(resources)) break;
+      for (const r of resources) if (r.cardId) alreadyMerged.add(r.cardId);
+    }
+    console.log(`  Already-merged canonical slugs: ${alreadyMerged.size}`);
+  } catch { /* soft */ }
+
+  // Scan vendor rows only. SELECT only slug-computation columns —
+  // cuts scan cost 3-4× vs SELECT *. Skip vendor rows whose canonical
+  // slug is already merged.
+  const query = "SELECT c.id, c.cardId, c.source, c.title, c.player, c.playerName, " +
+                "c.set, c.setName, c.releaseName, c.year, c.cardYear, c.number, c.cardNumber, " +
+                "c.sport, c.isAuto, c.imageUrl, c.searchText, c.searchTokens, c.recentSaleCount " +
+                "FROM c WHERE c.source IN ('cardhedge', 'cardsight') " +
                 "AND NOT STARTSWITH(c.id, 'canonical::') " +
                 "AND (IS_DEFINED(c.cardNumber) OR IS_DEFINED(c.number))";
 
-  const iter = cc.items.query({ query }, { maxItemCount: 500 });
+  const iter = cc.items.query({ query }, { maxItemCount: 1000 });
 
-  // Group by hobbiyqCardId
+  // Group by hobbyiqCardId
   const bySlug = new Map();
   let scanned = 0;
   let noSlug = 0;
+  let skippedAlreadyMerged = 0;
 
   while (iter.hasMoreResults()) {
     if (timeExpired()) { console.log("⏰ scan-phase time cap"); break; }
@@ -184,12 +209,13 @@ async function main() {
       scanned++;
       const slug = hobbyiqSlugFromRow(row);
       if (!slug) { noSlug++; continue; }
+      if (alreadyMerged.has(slug)) { skippedAlreadyMerged++; continue; }
       if (!bySlug.has(slug)) bySlug.set(slug, []);
       bySlug.get(slug).push(row);
-      if (scanned % 100000 === 0) console.log(`  scanned=${scanned}  slugs=${bySlug.size}  noSlug=${noSlug}`);
+      if (scanned % 100000 === 0) console.log(`  scanned=${scanned}  slugs=${bySlug.size}  noSlug=${noSlug}  skippedMerged=${skippedAlreadyMerged}`);
     }
   }
-  console.log(`\n  Scan done. scanned=${scanned}  distinct-slugs=${bySlug.size}  noSlug=${noSlug}`);
+  console.log(`\n  Scan done. scanned=${scanned}  distinct-slugs=${bySlug.size}  noSlug=${noSlug}  skippedAlreadyMerged=${skippedAlreadyMerged}`);
 
   // Count singletons vs duplicates
   let singletons = 0, dupGroups = 0, dupRows = 0;
