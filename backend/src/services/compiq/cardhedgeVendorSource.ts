@@ -99,7 +99,12 @@ export const cardhedgeVendorSource: VendorSource = {
       // CF-PERSIST-VENDOR-LOOKUPS (Drew, 2026-07-23, issue #722 phase 3):
       // pass persistIdentity so the CH sales stream into sold_comps in
       // the background. Gated by PERSIST_VENDOR_LOOKUPS_ENABLED.
-      rawSales = await getCardSales(top.card_id, "Raw", 30, {
+      // CF-CH-INGEST-COUNT-100 (Drew, 2026-08-01). Bumped 30 → 100 (CH's
+       // hard max per call). Audit showed we were losing 20-70% of
+       // sales on cards under CH's cap because each ingest tick only
+       // caught 30 of the last N. 100 = maximum per call; anything more
+       // is 422 "less_than_or_equal_to_100" from CH.
+      rawSales = await getCardSales(top.card_id, "Raw", 100, {
         persistIdentity: query.playerName
           ? {
               playerName: query.playerName,

@@ -86,6 +86,8 @@ on:
           - normalize-catalog-schema
           - dedupe-catalog-by-hobbyiq
           - discover-parallels-from-pool
+          - audit-ch-ingest-completeness
+          - nightly-reingest-top-ch-cards
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -213,7 +215,7 @@ jobs:
       # tuple. Fetch CARD_HEDGE_API_KEY from App Service so the runner
       # has authenticated access; never echoed to log.
       - name: Fetch CARD_HEDGE_API_KEY from HobbyIQ3 App Service
-        if: startsWith(inputs.script, 'expand-catalog')
+        if: startsWith(inputs.script, 'expand-catalog') || inputs.script == 'audit-ch-ingest-completeness' || inputs.script == 'nightly-reingest-top-ch-cards'
         shell: bash
         run: |
           CH_KEY=$(az webapp config appsettings list \
