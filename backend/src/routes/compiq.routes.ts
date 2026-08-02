@@ -2955,6 +2955,71 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
       const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
+      // CF-PRICE-CANONICAL-FMV-FALLBACK (Drew, 2026-08-02): mirror the
+      // /price-by-id rescue. When CH pipeline is thin but the resolved
+      // cardIdentity.card_id has sold_comps in our own pool, use
+      // canonicalFmv as the anchor for zones + fair* fields. See the
+      // /price-by-id handler for the full rationale.
+      let effectiveFmv = fmv;
+      let effectiveQuick = quick;
+      let effectivePremium = premium;
+      let effectiveNoUsable = noUsableLiveFmv;
+      let canonicalFmvFallbackUsed: { fmv: number; method: string; confidence: number } | null = null;
+      const resolvedCardIdForCanonical =
+        typeof (est as { cardIdentity?: { card_id?: string } }).cardIdentity?.card_id === "string"
+          ? (est as { cardIdentity: { card_id: string } }).cardIdentity.card_id
+          : null;
+      if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
+        try {
+          const { computeCanonicalFmv } = await import(
+            "../services/compiq/canonicalFmv.service.js"
+          );
+          const identity = (est as { cardIdentity?: {
+            player?: string | null;
+            year?: number | null;
+            set?: string | null;
+            number?: string | null;
+            variant?: string | null;
+          } }).cardIdentity ?? {};
+          const canon = await computeCanonicalFmv({
+            cardId: resolvedCardIdForCanonical,
+            parallel: parsed.parallel ?? identity.variant ?? null,
+            gradeCompany: parsed.gradingCompany ?? null,
+            gradeValue: typeof parsed.grade === "number" ? parsed.grade : null,
+            cardYear: typeof identity.year === "number" ? identity.year : (typeof parsed.year === "number" ? parsed.year : null),
+            product: identity.set ?? parsed.brand ?? null,
+            player: identity.player ?? parsed.playerName ?? undefined,
+            cardNumber: identity.number ?? parsed.cardNumber ?? null,
+          });
+          if (canon && typeof canon.fmv === "number" && canon.fmv > 0) {
+            effectiveFmv = canon.fmv;
+            effectiveQuick = canon.fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+            effectivePremium = canon.fmv * PREMIUM_MULTIPLIER;
+            effectiveNoUsable = false;
+            canonicalFmvFallbackUsed = {
+              fmv: canon.fmv,
+              method: canon.method,
+              confidence: canon.confidence,
+            };
+            console.log(JSON.stringify({
+              event: "price_canonical_fmv_fallback",
+              source: "compiq.routes.price",
+              cardId: resolvedCardIdForCanonical,
+              canonicalFmv: canon.fmv,
+              canonicalMethod: canon.method,
+              estSource: source,
+            }));
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "price_canonical_fmv_fallback_error",
+            source: "compiq.routes.price",
+            cardId: resolvedCardIdForCanonical,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+      }
+
       // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
       // gradedEstimates assembly already shipping on /price-by-id so /price
       // responses carry the same rail data. parallelId=null because /price
@@ -3002,15 +3067,15 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         // (c) live path: normal fmv/quick/premium band.
         marketTier: hasSyntheticFallback
           ? { value: syntheticFmv, high: syntheticPremium }
-          : noUsableLiveFmv
+          : effectiveNoUsable
             ? { value: null, high: null }
-            : { value: fmv, high: premium },
+            : { value: effectiveFmv, high: effectivePremium },
         // CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): mirror the fix
         // shipped on /search — narrow zones ±15% around lastSale.price
         // when live FMV is thin and no synthetic exists. FMV fields stay
         // null in this branch.
         ...((): { buyZone: [number|null, number|null]; holdZone: [number|null, number|null]; sellZone: [number|null, number|null] } => {
-          const lsAnchor = !hasSyntheticFallback && noUsableLiveFmv
+          const lsAnchor = !hasSyntheticFallback && effectiveNoUsable
             ? lastSaleZoneAnchor(est as Record<string, unknown>)
             : null;
           if (hasSyntheticFallback) {
@@ -3020,7 +3085,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               sellZone: [syntheticFmv, syntheticPremium],
             };
           }
-          if (noUsableLiveFmv) {
+          if (effectiveNoUsable) {
             if (lsAnchor !== null) {
               return {
                 buyZone: [lsAnchor * 0.85, lsAnchor * 0.95],
@@ -3031,16 +3096,17 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             return { buyZone: [null, null], holdZone: [null, null], sellZone: [null, null] };
           }
           return {
-            buyZone: [quick * 0.9, quick],
-            holdZone: [quick, fmv],
-            sellZone: [fmv, premium],
+            buyZone: [effectiveQuick * 0.9, effectiveQuick],
+            holdZone: [effectiveQuick, effectiveFmv],
+            sellZone: [effectiveFmv, effectivePremium],
           };
         })(),
         // Live FMV emitted at top level for engine-emission symmetry with
         // /search (Option X). Mirrors marketTier.value's null-when-thin
         // semantic so both fields agree within a response.
-        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
-        marketValue: noUsableLiveFmv ? null : fmv,
+        fairMarketValueLive: effectiveNoUsable ? null : effectiveFmv,
+        marketValue: effectiveNoUsable ? null : effectiveFmv,
+        canonicalFmvFallback: canonicalFmvFallbackUsed,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields for /search-equivalent shape parity.
         predictedPrice: (est as any).predictedPrice ?? null,
@@ -4939,6 +5005,72 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       const syntheticQuick = syntheticFmv * QUICK_SALE_FALLBACK_MULTIPLIER;
       const syntheticPremium = syntheticFmv * PREMIUM_MULTIPLIER;
 
+      // CF-PRICE-BY-ID-CANONICAL-FMV-FALLBACK (Drew, 2026-08-02): when
+      // the CH pipeline returns thin (fetchComps can't resolve the pinned
+      // cardId to live comps) but our sold_comps pool has data for it,
+      // fall back to canonicalFmv. Trout 2011 US175 has 663 sold_comps
+      // rows in 180d yet /price-by-id was emitting "no comps on file"
+      // and null zones because fetchComps never reads sold_comps.
+      // Non-mutating: shadow the four downstream values used to build
+      // marketTier / zones / fair* — est stays untouched so corpus
+      // persistence & other consumers see the same shape as before.
+      let effectiveFmv = fmv;
+      let effectiveQuick = quick;
+      let effectivePremium = premium;
+      let effectiveNoUsable = noUsableLiveFmv;
+      let canonicalFmvFallbackUsed: { fmv: number; method: string; confidence: number } | null = null;
+      if (noUsableLiveFmv && !hasSyntheticFallback) {
+        try {
+          const { computeCanonicalFmv } = await import(
+            "../services/compiq/canonicalFmv.service.js"
+          );
+          const identity = (est as { cardIdentity?: {
+            player?: string | null;
+            year?: number | null;
+            set?: string | null;
+            number?: string | null;
+            variant?: string | null;
+          } }).cardIdentity ?? {};
+          const canon = await computeCanonicalFmv({
+            cardId: resolvedCardId,
+            parallel: resolvedParallelName ?? identity.variant ?? null,
+            gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+            gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+            cardYear: typeof identity.year === "number" ? identity.year : null,
+            product: identity.set ?? null,
+            player: identity.player ?? undefined,
+            cardNumber: identity.number ?? null,
+          });
+          if (canon && typeof canon.fmv === "number" && canon.fmv > 0) {
+            effectiveFmv = canon.fmv;
+            effectiveQuick = canon.fmv * QUICK_SALE_FALLBACK_MULTIPLIER;
+            effectivePremium = canon.fmv * PREMIUM_MULTIPLIER;
+            effectiveNoUsable = false;
+            canonicalFmvFallbackUsed = {
+              fmv: canon.fmv,
+              method: canon.method,
+              confidence: canon.confidence,
+            };
+            console.log(JSON.stringify({
+              event: "price_by_id_canonical_fmv_fallback",
+              source: "compiq.routes.price-by-id",
+              cardId: resolvedCardId,
+              canonicalFmv: canon.fmv,
+              canonicalMethod: canon.method,
+              estSource: source,
+              compsUsed: (est as { compsUsed?: number }).compsUsed ?? null,
+            }));
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "price_by_id_canonical_fmv_fallback_error",
+            source: "compiq.routes.price-by-id",
+            cardId: resolvedCardId,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+      }
+
       // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
       // the (player, release, year) tuple to the nightly compute
       // queue. The nightly fn-comps-momentum extension walks this
@@ -5133,11 +5265,14 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         cardId: resolvedCardId,
         summary: est.verdict ?? "Estimate based on available market data.",
         // CF-PRICE-BY-ID-XPA-SYNTH-FALLBACK (Finding #6): three-way band.
+        // CF-PRICE-BY-ID-CANONICAL-FMV-FALLBACK (2026-08-02): effectiveNoUsable
+        // / effectiveFmv / effectivePremium carry the canonical rung's value
+        // when the CH pipeline was thin but sold_comps had data.
         marketTier: hasSyntheticFallback
           ? { value: syntheticFmv, high: syntheticPremium }
-          : noUsableLiveFmv
+          : effectiveNoUsable
             ? { value: null, high: null }
-            : { value: fmv, high: premium },
+            : { value: effectiveFmv, high: effectivePremium },
         // CF-ZONE-LASTSALE-FALLBACK (Drew, 2026-07-17): iOS's Comp
         // Analysis surface (buyZone/holdZone/sellZone) went blank on
         // thin-market cards (Hartman LogoFractor /35: compsUsed=3,
@@ -5146,7 +5281,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // fallback. marketValue / fairMarketValueLive stay null (single-
         // sale anchor isn't FMV); zones become honest narrow bands.
         ...((): { buyZone: [number|null, number|null]; holdZone: [number|null, number|null]; sellZone: [number|null, number|null] } => {
-          const lsAnchor = !hasSyntheticFallback && noUsableLiveFmv
+          const lsAnchor = !hasSyntheticFallback && effectiveNoUsable
             ? lastSaleZoneAnchor(est as Record<string, unknown>)
             : null;
           if (hasSyntheticFallback) {
@@ -5156,7 +5291,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
               sellZone: [syntheticFmv, syntheticPremium],
             };
           }
-          if (noUsableLiveFmv) {
+          if (effectiveNoUsable) {
             if (lsAnchor !== null) {
               return {
                 buyZone: [lsAnchor * 0.85, lsAnchor * 0.95],
@@ -5167,15 +5302,16 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             return { buyZone: [null, null], holdZone: [null, null], sellZone: [null, null] };
           }
           return {
-            buyZone: [quick * 0.9, quick],
-            holdZone: [quick, fmv],
-            sellZone: [fmv, premium],
+            buyZone: [effectiveQuick * 0.9, effectiveQuick],
+            holdZone: [effectiveQuick, effectiveFmv],
+            sellZone: [effectiveFmv, effectivePremium],
           };
         })(),
         // Live FMV emitted at top level for engine-emission symmetry
         // with /search and /price (Option X). null when thin market.
-        fairMarketValueLive: noUsableLiveFmv ? null : fmv,
-        marketValue: noUsableLiveFmv ? null : fmv,
+        fairMarketValueLive: effectiveNoUsable ? null : effectiveFmv,
+        marketValue: effectiveNoUsable ? null : effectiveFmv,
+        canonicalFmvFallback: canonicalFmvFallbackUsed,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields. /price-by-id is the pinned-card analog of /price; the
         // estimate ⇒ response contract matches.
