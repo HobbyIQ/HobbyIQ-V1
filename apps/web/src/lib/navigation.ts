@@ -28,6 +28,9 @@ export interface NavItem {
 // eBay stays because it's a live-listings surface Pro Sellers hit
 // daily. Storefront stays for the same reason — active management +
 // per-card picker.
+// CF-SIDEBAR-ORDER (Drew, 2026-08-02). Explicit order: Search, Portfolio,
+// BuyerIQ, Financials, Storefront — then fill the rest. DailyIQ stays at
+// the top since it's the app home surface + brand entry point.
 export const APP_NAV: NavItem[] = [
   {
     href: "/app",
@@ -35,9 +38,9 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M4 12l1.4-1.4L11 16.2V4h2v12.2l5.6-5.6L20 12l-8 8-8-8z",
   },
   {
-    href: "/app/erp",
-    label: "Financials",
-    iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
+    href: "/app/search",
+    label: "Search",
+    iconPath: "M10 2a8 8 0 016.32 12.9l5.39 5.4-1.42 1.4-5.39-5.39A8 8 0 1110 2zm0 2a6 6 0 100 12 6 6 0 000-12z",
   },
   {
     href: "/app/portfolio",
@@ -46,9 +49,20 @@ export const APP_NAV: NavItem[] = [
     prefixMatch: true,
   },
   {
-    href: "/app/search",
-    label: "Search",
-    iconPath: "M10 2a8 8 0 016.32 12.9l5.39 5.4-1.42 1.4-5.39-5.39A8 8 0 1110 2zm0 2a6 6 0 100 12 6 6 0 000-12z",
+    href: "/app/buyeriq",
+    label: "BuyerIQ",
+    iconPath: "M7 4h10l1 3h3v2h-1l-1 12H5L4 9H3V7h3l1-3zm2 2v1h6V6H9zm-2 5v9h10v-9H7z",
+    prefixMatch: true,
+  },
+  {
+    href: "/app/erp",
+    label: "Financials",
+    iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",
+  },
+  {
+    href: "/app/storefront",
+    label: "Storefront",
+    iconPath: "M4 4h16l-1 4H5L4 4zm1 6h14l-1 10H6L5 10zm4 3v5h6v-5H9z",
   },
   {
     href: "/app/market",
@@ -65,17 +79,6 @@ export const APP_NAV: NavItem[] = [
     href: "/app/alerts",
     label: "Alerts",
     iconPath: "M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11c0-3.1-1.6-5.6-4.5-6.3V4a1.5 1.5 0 00-3 0v.7C7.6 5.4 6 7.9 6 11v5l-2 2v1h16v-1l-2-2z",
-  },
-  {
-    href: "/app/storefront",
-    label: "Storefront",
-    iconPath: "M4 4h16l-1 4H5L4 4zm1 6h14l-1 10H6L5 10zm4 3v5h6v-5H9z",
-  },
-  {
-    href: "/app/buyeriq",
-    label: "BuyerIQ",
-    iconPath: "M7 4h10l1 3h3v2h-1l-1 12H5L4 9H3V7h3l1-3zm2 2v1h6V6H9zm-2 5v9h10v-9H7z",
-    prefixMatch: true,
   },
   {
     href: "/app/ebay",
