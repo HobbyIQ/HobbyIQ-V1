@@ -122,8 +122,8 @@ jobs:
         shell: bash
         run: |
           echo "Running anomaly detection..."
-          RESULT=$(curl -sf -H "Authorization: Bearer $ADMIN_API_TOKEN" \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies")
+          RESULT=$(curl -sf --max-time 90 -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true")
           if [ -z "$RESULT" ]; then
             echo "::warning::anomaly detection returned empty (may still be initializing)"
             exit 0

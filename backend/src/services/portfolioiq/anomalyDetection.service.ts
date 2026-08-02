@@ -41,6 +41,15 @@ const CONFIRMED_SOURCES = new Set([
 let cachedSc: Container | null = null;
 let cachedBaseline: Container | null = null;
 
+// CF-ANOMALY-REPORT-CACHE (Drew, 2026-08-02). Full sold_comps scan
+// is expensive (3.5M rows, ~30s under load). Cache the report for
+// 5 minutes in-process so admin dashboard refreshes are instant.
+// Nightly cron passes { force: true } to bypass. Consumer-side
+// staleness of 5min is fine — anomaly detection is a health signal,
+// not a live indicator.
+const ANOMALY_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedAnomalyReport: { at: number; report: AnomalyReport } | null = null;
+
 function getSc(): Container | null {
   if (cachedSc) return cachedSc;
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -73,7 +82,11 @@ function median(nums: number[]): number {
   return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
 }
 
-export async function detectAnomalies(): Promise<AnomalyReport | null> {
+export async function detectAnomalies(opts: { force?: boolean } = {}): Promise<AnomalyReport | null> {
+  const now = Date.now();
+  if (!opts.force && cachedAnomalyReport && (now - cachedAnomalyReport.at) < ANOMALY_CACHE_TTL_MS) {
+    return cachedAnomalyReport.report;
+  }
   const sc = getSc();
   const baseline = await getBaselineContainer();
   if (!sc || !baseline) return null;
@@ -149,11 +162,13 @@ export async function detectAnomalies(): Promise<AnomalyReport | null> {
   }
   anomalies.sort((a, b) => b.driftPct - a.driftPct);
 
-  return {
+  const report: AnomalyReport = {
     baselineDate: latestDate,
     slugsWithBaseline: baselineMap.size,
     slugsChanged: anomalies.length,
     anomalies,
     computedAt: new Date().toISOString(),
   };
+  cachedAnomalyReport = { at: Date.now(), report };
+  return report;
 }

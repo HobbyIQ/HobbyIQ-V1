@@ -82,10 +82,13 @@ router.get("/cleanliness/fmv-accuracy", async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/cleanliness/anomalies", async (_req, res, next) => {
+router.get("/cleanliness/anomalies", async (req, res, next) => {
   try {
     const { detectAnomalies } = await import("../services/portfolioiq/anomalyDetection.service.js");
-    const report = await detectAnomalies();
+    // ?force=true bypasses the 5-min cache (used by nightly cron for
+    // fresh data; admin dashboard reads cached).
+    const force = req.query.force === "true";
+    const report = await detectAnomalies({ force });
     if (!report) { res.status(503).json({ success: false, error: "no baseline snapshot yet — run baseline-pool-snapshot first" }); return; }
     res.json({ success: true, report });
   } catch (err) { next(err); }
