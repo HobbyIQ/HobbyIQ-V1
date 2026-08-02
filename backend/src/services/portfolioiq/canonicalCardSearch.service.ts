@@ -487,6 +487,14 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     candidates = resources || [];
   } catch { candidates = []; }
 
+  // CF-DROP-JUNK-CATALOG-ROWS (Drew, 2026-08-02). Primary catalog scan
+  // sometimes returns rows with c.number === undefined + placeholder
+  // setNames ("Base Set"). These matched "gold trout" for 2011 and
+  // starved the sold_comps fallback of a trigger, so real 2011 Topps
+  // Update US175 Gold Trout comps never surfaced. Drop rows with no
+  // card number BEFORE deciding whether to fall through.
+  candidates = candidates.filter((c: any) => c && c.number && String(c.number).trim() !== "" && String(c.number).toLowerCase() !== "undefined");
+
   // Fuzzy fallback — if strict CONTAINS returned nothing, try Levenshtein
   // on the searchText field with tokens allowed 1-char typos. Sampled
   // (TOP 500) since fuzzy is O(N) in JS.
@@ -497,9 +505,22 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       if (yearFilter !== null) sampleParams.push({ name: "@year", value: String(yearFilter) });
       const { resources: sample } = await containers.catalog.items.query({ query: sampleQ, parameters: sampleParams }).fetchAll();
       candidates = (sample || []).filter((c: any) => {
+        // Same junk-row guard as primary — no card number → no click-through.
+        if (!c.number || String(c.number).toLowerCase() === "undefined") return false;
         const st = String(c.searchText || "");
         // Every token must have a fuzzy hit within edit distance 1
-        return searchTokens.every((t) => fuzzyContains(st, t));
+        if (!searchTokens.every((t) => fuzzyContains(st, t))) return false;
+        // CF-FUZZY-ISAUTO-FILTER (Drew, 2026-08-02). Fuzzy path was
+        // ignoring isAutoFilter, so "verlander auto" queries returned
+        // base rows via fuzzy even after the primary auto-branch
+        // rejected them. Apply the same auto check the primary uses.
+        if (isAutoFilter === true) {
+          const setBlob = String(c.setName ?? "") + " " + String(c.releaseName ?? "");
+          const attrs = Array.isArray(c.attributes) ? c.attributes.map((a: string) => String(a).toLowerCase()) : [];
+          const tokens = Array.isArray(c.searchTokens) ? c.searchTokens : [];
+          if (!/auto/i.test(setBlob) && !attrs.includes("auto") && !tokens.includes("auto")) return false;
+        }
+        return true;
       });
     } catch { candidates = []; }
   }
@@ -644,7 +665,15 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     const finalScore = scoreBase * (1 + popularity / 5);
     const yearNum = Number(c.year);
     const cardYear = Number.isFinite(yearNum) ? yearNum : null;
-    const isAutographSet = /auto/i.test(String(c.setName ?? "") + " " + String(c.releaseName ?? ""));
+    // CF-ISAUTO-FROM-ATTRIBUTES (Drew, 2026-08-02). Was setName-text-only,
+    // which mislabeled sold_comps-fallback rows: those carry the row's
+    // real boolean isAuto in attributes=["auto"] even when the setName is
+    // just "Bowman Chrome" (not "Bowman Chrome Autographs"). Result: auto
+    // Verlander rows displayed as isAuto=false and the hobbyiqCardId slug
+    // was computed with the wrong autoFlag, misdirecting click-through.
+    // Order: attributes wins, then set/release text.
+    const attrs = Array.isArray(c.attributes) ? c.attributes.map((a: string) => String(a).toLowerCase()) : [];
+    const isAutographSet = attrs.includes("auto") || /auto/i.test(String(c.setName ?? "") + " " + String(c.releaseName ?? ""));
     let hobbyiqCardId: string | null = null;
     try {
       if (cardYear && c.number && c.releaseName) {
