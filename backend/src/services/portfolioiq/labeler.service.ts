@@ -67,10 +67,22 @@ export interface QueueCandidate {
   priority: number;        // computed score: higher = more impactful to label
 }
 
+// CF-LABELER-QUEUE-CACHE (Drew, 2026-08-02). Queue endpoint does 3
+// heavy cross-partition Cosmos queries (catalog scan, portfolio read,
+// sold_comps aggregation). Under backfill load these can time out at
+// 20+ seconds and hang the admin dashboard's Promise.all. Cache for
+// 5 minutes — labeler queue is a review surface, not a live counter.
+const QUEUE_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedQueue: { at: number; limit: number; result: QueueCandidate[] } | null = null;
+
 /** Return the top-N labeling candidates ranked by portfolio impact +
  *  catalog gap. Cards Drew (or any user) HOLDS bubble up first;
  *  ties broken by unlabeled variant count + sold_comps volume. */
 export async function listLabelerQueue(limit = 25): Promise<QueueCandidate[]> {
+  const now = Date.now();
+  if (cachedQueue && cachedQueue.limit >= limit && (now - cachedQueue.at) < QUEUE_CACHE_TTL_MS) {
+    return cachedQueue.result.slice(0, limit);
+  }
   const catalog = getCatalog();
   const sc = getSoldComps();
   if (!catalog || !sc) return [];
@@ -151,7 +163,9 @@ export async function listLabelerQueue(limit = 25): Promise<QueueCandidate[]> {
     });
   }
   candidates.sort((a, b) => b.priority - a.priority);
-  return candidates.slice(0, Math.min(200, Math.max(5, limit)));
+  const bounded = candidates.slice(0, 200);   // cache the 200 hottest
+  cachedQueue = { at: Date.now(), limit: 200, result: bounded };
+  return bounded.slice(0, Math.min(200, Math.max(5, limit)));
 }
 
 /** Load all CH card_catalog variants for a card + count matching sold_comps. */
