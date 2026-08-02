@@ -72,7 +72,13 @@ on:
           - backfill-stage3-price-sanity
           - expand-catalog-from-sold-comps-gaps
           - expand-catalog-full-enumeration
-          - expand-catalog-from-cardsight
+          # CF-CS-KILL-SWITCH (Drew, 2026-08-02). CS API calls halted.
+          # Any script that hits Cardsight is removed from the whitelist
+          # so no dispatch can call CS. See:
+          #   - expand-catalog-from-cardsight (catalog enum)
+          #   - backfill-catalog-cs-images (image probe)
+          #   - backfill-cs-card-population (pop probe)
+          #   - reaudit-cardsight-unverified (reads sold_comps only, no CS API — kept)
           - promote-sold-comps-trust-tier
           - baseline-pool-snapshot
           - backfill-cardsight-unverified-flag
@@ -82,14 +88,15 @@ on:
           - backfill-sub-channel-vocabulary
           - auto-quarantine-contaminated-pools
           - expand-catalog-from-tcdb
-          - backfill-catalog-cs-images
+          # CS-touching scripts removed from whitelist (CF-CS-KILL-SWITCH):
+          #   - backfill-catalog-cs-images
+          #   - backfill-cs-card-population
           - normalize-catalog-schema
           - dedupe-catalog-by-hobbyiq
           - discover-parallels-from-pool
           - audit-ch-ingest-completeness
           - nightly-reingest-top-ch-cards
           - backfill-ch-catalog-additions
-          - backfill-cs-card-population
           - drain-staging-backlog
           - rescore-anomalies
           - score-all-sold-comps
