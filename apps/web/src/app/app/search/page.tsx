@@ -78,28 +78,54 @@ function SearchPageInner() {
     runSearch(q);
   }
 
-  function onSelect(c: SearchCandidate) {
+  async function onSelect(c: SearchCandidate) {
     // Stash the full candidate so the detail page can render its
     // header, meta, and parallels selector without a round-trip.
     stashCandidate(c);
     const cardsightId = candidateIdToCardsightId(c.candidateId);
-    if (!cardsightId) {
-      // Cert-only candidate (no catalog match on file) — fall back to a
-      // query-based route that shows the identity info alone.
-      setError(
-        "This card is a cert lookup without a catalog match — pricing detail isn't available yet.",
-      );
-      return;
-    }
-    // Preserve any parallel/grade the candidate already carries (cert
-    // candidates set gradeCompany/gradeValue authoritatively).
     const search = new URLSearchParams();
     if (c.parallel) search.set("parallel", c.parallel);
     if (c.attribution === "authoritative" && c.gradeCompany && c.gradeValue != null) {
       search.set("grade", `${c.gradeCompany}:${c.gradeValue}`);
     }
     const qs = search.toString();
-    router.push(`/app/card/${cardsightId}${qs ? `?${qs}` : ""}`);
+    if (cardsightId) {
+      router.push(`/app/card/${cardsightId}${qs ? `?${qs}` : ""}`);
+      return;
+    }
+    // CF-CATALOG-CANDIDATE-CLICKTHROUGH (Drew, 2026-08-02). Candidate
+    // came from the sold_comps fallback rung — no vendor cardId
+    // available. Instead of the "cert lookup" dead-end that was here,
+    // rebuild a search-quality free-text query from the candidate's
+    // identity and let /api/compiq/price resolve it via the CH AI
+    // matcher. If resolution succeeds we get a real cardId and route
+    // to the normal card page; if it fails we surface the honest
+    // "no pricing yet" state.
+    try {
+      setError(null);
+      const parts: string[] = [];
+      if (c.year) parts.push(String(c.year));
+      if (c.setName) parts.push(c.setName);
+      if (c.player) parts.push(c.player);
+      if (c.cardNumber) parts.push(`#${c.cardNumber}`);
+      if (c.parallel && c.parallel.toLowerCase() !== "base") parts.push(c.parallel);
+      if (c.isAuto) parts.push("auto");
+      const query = parts.filter(Boolean).join(" ").trim();
+      if (!query) {
+        setError("No identity to look up on this card yet.");
+        return;
+      }
+      const { fetchPriceByQuery } = await import("@/lib/api");
+      const priced = await fetchPriceByQuery(query);
+      const resolvedId = priced?.cardIdentity?.card_id;
+      if (resolvedId) {
+        router.push(`/app/card/${resolvedId}${qs ? `?${qs}` : ""}`);
+        return;
+      }
+      setError("We have sales history for this card but haven't matched it to our detail catalog yet — pricing detail will fill in once the catalog links up.");
+    } catch (err) {
+      setError((err as { message?: string })?.message ?? "Lookup failed. Try again.");
+    }
   }
 
   return (

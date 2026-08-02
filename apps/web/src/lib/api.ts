@@ -704,6 +704,30 @@ export async function fetchPriceById(input: {
   });
 }
 
+// CF-QUERY-PRICE-LOOKUP (Drew, 2026-08-02). Used by the search page's
+// catalog-fallback click-through — when a candidate has no vendor
+// cardId, we POST the constructed query text to /api/compiq/price
+// which runs the AI-matcher fallback and returns an identity block
+// with the resolved card_id (if any). We only need cardIdentity for
+// the redirect, so the rest of PriceByIdResponse is ignored here.
+export interface PriceByQueryResponse {
+  success: boolean;
+  cardIdentity?: {
+    card_id?: string | null;
+    player?: string | null;
+    year?: number | null;
+    set?: string | null;
+    number?: string | null;
+    variant?: string | null;
+  } | null;
+}
+export async function fetchPriceByQuery(query: string): Promise<PriceByQueryResponse> {
+  return await request<PriceByQueryResponse>("/api/compiq/price", {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
+
 // Strip the "cardsight:" prefix from a search candidate id to get the
 // UUID needed by price-by-id. Returns null for non-cardsight candidates.
 export function candidateIdToCardsightId(candidateId: string): string | null {

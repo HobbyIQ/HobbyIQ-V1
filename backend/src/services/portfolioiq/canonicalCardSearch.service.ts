@@ -468,8 +468,14 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     params.push({ name: p, value: t });
   });
   if (isAutoFilter === true) {
+    // CF-AUTO-FILTER-BROADEN (Drew, 2026-08-02). Prior filter only fired
+    // when 'auto' appeared in setName / releaseName. Missed rows where
+    // the auto attribution lives in searchTokens (e.g. Bowman Sterling
+    // Prospect Autographs where "auto" is a searchToken but the
+    // releaseName is just "Bowman Sterling"). Union with
+    // ARRAY_CONTAINS(searchTokens, 'auto') for full coverage.
     whereClauses.push(
-      "(CONTAINS(LOWER(c.setName), 'auto', true) OR CONTAINS(LOWER(c.releaseName), 'auto', true))",
+      "(CONTAINS(LOWER(c.setName), 'auto', true) OR CONTAINS(LOWER(c.releaseName), 'auto', true) OR ARRAY_CONTAINS(c.searchTokens, 'auto'))",
     );
   }
 
@@ -522,15 +528,28 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
         scWhere.push("c.cardYear = @y");
         scParams.push({ name: "@y", value: yearFilter });
       }
+      // CF-SOLD-COMPS-FALLBACK-AUTO-FILTER (Drew, 2026-08-02). Prior code
+      // didn't apply isAutoFilter to the sold_comps fallback so
+      // "2005 bowman verlander auto" returned base rows. sold_comps
+      // has isAuto as a proper boolean — trust it.
+      if (isAutoFilter === true) {
+        scWhere.push("c.isAuto = true");
+      } else if (isAutoFilter === false) {
+        scWhere.push("(NOT IS_DEFINED(c.isAuto) OR c.isAuto = false)");
+      }
       // Every search token must appear somewhere in (playerName, setName,
-      // cardNumber). No searchText field on sold_comps (yet) so
+      // cardNumber, parallel). No searchText field on sold_comps (yet) so
       // CONTAINS on individual fields is the honest option. This scan
       // is bounded by year+sport when year present, so cost stays in
       // proportion to the era-slice.
+      // CF-SOLD-COMPS-FALLBACK-PARALLEL-TOKEN (Drew, 2026-08-02). Added
+      // c.parallel to the OR-set so "2011 topps gold trout" matches
+      // sold_comps rows whose parallel is "Gold" — was the missing arm
+      // that turned Drew's query into 0 results.
       searchTokens.forEach((t, i) => {
         const p = `@st${i}`;
         scWhere.push(
-          `(CONTAINS(LOWER(c.playerName), ${p}, true) OR CONTAINS(LOWER(c.setName), ${p}, true) OR CONTAINS(LOWER(c.cardNumber), ${p}, true))`,
+          `(CONTAINS(LOWER(c.playerName), ${p}, true) OR CONTAINS(LOWER(c.setName), ${p}, true) OR CONTAINS(LOWER(c.cardNumber), ${p}, true) OR CONTAINS(LOWER(c.parallel), ${p}, true))`,
         );
         scParams.push({ name: p, value: t });
       });
