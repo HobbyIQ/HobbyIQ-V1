@@ -439,18 +439,20 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   }
   searchTokens.forEach((t, i) => {
     const p = `@t${i}`;
-    // Tri-tier: (1) fast ARRAY_CONTAINS on the tokenized field (best);
-    // (2) CONTAINS on searchText for rows tokenized-but-not-yet-arrayed;
-    // (3) legacy 4-field OR for rows the backfill has never touched.
-    whereClauses.push(
-      `(` +
-        `(IS_DEFINED(c.searchTokens) AND ARRAY_CONTAINS(c.searchTokens, ${p})) OR ` +
-        `(NOT IS_DEFINED(c.searchTokens) AND IS_DEFINED(c.searchText) AND CONTAINS(c.searchText, ${p})) OR ` +
-        `(NOT IS_DEFINED(c.searchTokens) AND NOT IS_DEFINED(c.searchText) AND ` +
-          `(CONTAINS(LOWER(c.player), ${p}, true) OR CONTAINS(LOWER(c.releaseName), ${p}, true) OR CONTAINS(LOWER(c.number), ${p}, true) OR ` +
-           `EXISTS(SELECT VALUE 1 FROM par IN c.parallels WHERE CONTAINS(LOWER(par.name), ${p}, true))))` +
-      `)`,
-    );
+    // CF-CARDSEARCH-FAST-ONLY (Drew, 2026-08-02). Prior 3-tier OR-branch
+    // (ARRAY_CONTAINS | CONTAINS(searchText) | 4-field OR) forced full
+    // cross-partition scans on 2M+ rows because the CONTAINS fallbacks
+    // aren't index-accelerated. Search took 17-20s per query.
+    //
+    // Fix: single ARRAY_CONTAINS on searchTokens. Any row without
+    // searchTokens is invisible to search (but present in the catalog);
+    // that's a data-backfill gap, not something to paper over with slow
+    // scans that hurt every request.
+    //
+    // 2.17M of 2.34M catalog rows already have searchTokens (93%).
+    // The ~170K unindexed rows are mostly the newest ingest wave;
+    // buildSearchIndex fires at persist time so future writes are OK.
+    whereClauses.push(`ARRAY_CONTAINS(c.searchTokens, ${p})`);
     params.push({ name: p, value: t });
   });
   if (isAutoFilter === true) {
