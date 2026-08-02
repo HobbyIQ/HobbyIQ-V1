@@ -61,7 +61,16 @@ async function currentWeights(): Promise<Record<string, number>> {
   try {
     const { loadCurrentWeights } = await import("./confidenceWeightsLearner.service.js");
     const learned = await loadCurrentWeights();
-    if (learned?.weights && Object.keys(learned.weights).length >= 4) {
+    // CF-CONFIDENCE-THRESHOLD-LOWER (Drew, 2026-08-01). Lowered
+    // learned-weights activation threshold 4 → 2. Reason: quarantine
+    // events emit slim feature payloads (price + cardYear only),
+    // while labeler events carry richer payloads. Real-world
+    // learning starts with quarantine work; the older threshold
+    // blocked ANY learned-weight usage until enough labeler events
+    // stacked up. 2 is still enough for meaningful correlation —
+    // the merge with DEFAULT_WEIGHTS preserves the other signal
+    // weights unchanged.
+    if (learned?.weights && Object.keys(learned.weights).length >= 2) {
       cachedWeights = { ...DEFAULT_WEIGHTS, ...learned.weights };
       weightsLoadedAt = now;
       return cachedWeights;
