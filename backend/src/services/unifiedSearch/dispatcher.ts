@@ -420,7 +420,16 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
   if (hit.releaseName) titleParts.push(hit.releaseName);
   if (hit.cardNumber) titleParts.push(`#${hit.cardNumber}`);
   return {
-    candidateId: `catalog:${hit.hobbyiqCardId ?? `${hit.player}::${hit.cardYear}::${hit.cardNumber}`}`,
+    // CF-CATALOG-CANDIDATE-ID-FIX (Drew, 2026-08-02). Use the vendor
+    // cardId (bubble.io id from CH, or CS UUID) when available so
+    // client-side candidateIdToCardsightId can route to the card
+    // detail page. Prior `catalog:hiq:...` shape wasn't recognized
+    // by the web app — click-through failed silently with a "cert
+    // lookup" error. Fall back to catalog: prefix only when we
+    // truly have no vendor cardId (sold_comps fallback candidates).
+    candidateId: hit.cardId
+      ? `cardsight:${hit.cardId}`
+      : `catalog:${hit.hobbyiqCardId ?? `${hit.player}::${hit.cardYear}::${hit.cardNumber}`}`,
     source: "catalog",
     attribution: "ranked",
     confidence: Math.max(0.1, Math.min(1.0, hit.score / 20)),

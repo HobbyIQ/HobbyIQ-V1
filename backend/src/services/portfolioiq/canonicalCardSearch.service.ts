@@ -50,6 +50,12 @@ export interface MatchedRange {
 
 export interface CanonicalSearchHit {
   hobbyiqCardId: string | null;   // computed if identity fields are complete
+  /** Vendor cardId from card_catalog (CH bubble.io id or CS UUID).
+   *  Present when the hit came from a vendor row (99% of cases). Null
+   *  when the hit came from the sold_comps fallback path. Used by
+   *  dispatcher.catalogHitToCardIdentity to build a `cardsight:${id}`
+   *  candidateId shape the web/iOS clients already know how to route. */
+  cardId: string | null;
   player: string | null;
   releaseName: string | null;
   cardYear: number | null;
@@ -467,7 +473,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     );
   }
 
-  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText
+  const query = `SELECT TOP 200 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText, c.source
                  FROM c WHERE ${whereClauses.join(" AND ")}`;
   let candidates: any[] = [];
   try {
@@ -637,6 +643,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
 
     return {
       hobbyiqCardId,
+      cardId: typeof c.cardId === "string" ? c.cardId : null,
       player: c.player ?? null,
       releaseName: c.releaseName ?? null,
       cardYear,
