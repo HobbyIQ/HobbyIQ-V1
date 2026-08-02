@@ -90,6 +90,7 @@ on:
           - nightly-reingest-top-ch-cards
           - backfill-ch-catalog-additions
           - backfill-cs-card-population
+          - drain-staging-backlog
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -176,6 +177,25 @@ jobs:
       # secret matches prod exactly (never echoed to stdout).
       # CF-REPRICE-AUTH-ENV (Drew, 2026-07-31). Prior run failed at boot
       # with "AUTH_SESSION_SECRET is unset — refusing to start."
+      # CF-DRAIN-ADMIN-TOKEN (Drew, 2026-08-01). drain-staging-backlog
+      # calls /api/staging/* admin endpoints; needs ADMIN_API_TOKEN.
+      - name: Fetch ADMIN_API_TOKEN from HobbyIQ3 App Service
+        if: inputs.script == 'drain-staging-backlog'
+        shell: bash
+        run: |
+          TOK=$(az webapp config appsettings list \
+            --name HobbyIQ3 \
+            --resource-group rg-hobbyiq-dev \
+            --query "[?name=='ADMIN_API_TOKEN'].value | [0]" \
+            -o tsv)
+          if [ -z "$TOK" ]; then
+            echo "::error::FAILED to fetch ADMIN_API_TOKEN from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$TOK"
+          echo "ADMIN_API_TOKEN=$TOK" >> "$GITHUB_ENV"
+          echo "ADMIN_API_TOKEN fetched (length: ${#TOK})"
+
       - name: Fetch AUTH_SESSION_SECRET from HobbyIQ3 App Service
         if: inputs.script == 'reprice-user-holdings'
         shell: bash
@@ -406,7 +426,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population') && inputs.apply == true }}
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

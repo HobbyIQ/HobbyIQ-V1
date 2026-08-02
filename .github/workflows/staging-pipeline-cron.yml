@@ -2,9 +2,16 @@ name: Staging Pipeline Cron
 
 # CF-STAGING-PIPELINE-CRON (Drew, 2026-07-28). Autonomous drain of
 # the staging pipeline every 5 minutes. Each run walks all three
-# jobs in order: data-clean (200 rows) → image-verify (50 rows)
-# → promotion (500 rows). Sizing tuned to catch up on the 3,172
-# anomaly backlog in ~5 hours, then maintain steady-state ingest.
+# jobs in order: data-clean → image-verify → promotion.
+#
+# CF-STAGING-BATCH-BUMP (Drew, 2026-08-01). Batch sizes bumped 4×
+# after audit found 416K pending rows and the old sizing (data-clean
+# 200 / promotion 500) would take 17 days to drain. Endpoints are
+# fast (~8s for 200 rows) so 4× headroom is safe within the 5-min
+# job budget.
+#   data-clean:  200 → 800   (~230K/day drain capacity)
+#   image-verify: 50 → 100
+#   promotion:   500 → 2000  (~575K/day promotion capacity)
 #
 # Rate-limit friendly:
 #   - Vision: 50 rows × 2s/call = 100s per run, well under 300s job
@@ -20,13 +27,13 @@ on:
     inputs:
       data_clean_limit:
         description: 'Data-clean batch size'
-        default: '200'
+        default: '800'
       image_verify_limit:
         description: 'Image-verify batch size'
-        default: '50'
+        default: '100'
       promotion_limit:
         description: 'Promotion batch size'
-        default: '500'
+        default: '2000'
 
 concurrency:
   group: staging-pipeline
@@ -42,7 +49,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.data_clean_limit || '200' }}
+          LIMIT: ${{ inputs.data_clean_limit || '800' }}
         run: |
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/data-clean?limit=$LIMIT" --max-time 120 2>&1)
@@ -51,7 +58,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.image_verify_limit || '50' }}
+          LIMIT: ${{ inputs.image_verify_limit || '100' }}
         run: |
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1)
@@ -60,7 +67,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: '500'
+          LIMIT: '2000'
         run: |
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/auto-triage?limit=$LIMIT" --max-time 120 2>&1)
@@ -69,7 +76,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.promotion_limit || '500' }}
+          LIMIT: ${{ inputs.promotion_limit || '2000' }}
         run: |
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/promotion?limit=$LIMIT" --max-time 120 2>&1)
