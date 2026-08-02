@@ -410,7 +410,15 @@ async function dispatchCertMode(
 // 10 → 3 so we short-circuit more aggressively. Falling through to
 // CardHedge's /card-search API costs 5-20s; taking canonical hits
 // (even a few) is still faster.
-const CATALOG_FIRST_STRONG_THRESHOLD = 3;
+// CF-CATALOG-FIRST-THRESHOLD-1 (Drew, 2026-08-02). Lowered from 3 → 1.
+// Real-world case: "2011 topps gold trout" returned exactly 1 catalog
+// hit (2011 Topps Pro Debut Materials #MM-MT — a real Trout Gold),
+// which was < 3 so dispatcher fell through to CH freetext. CH returned
+// "no_freetext_matches" and the user got 0 results. Any catalog hit is
+// strictly better than CH freetext's 0. Concurrent supplement in
+// canonicalCardSearch adds sold_comps hits too when catalog is thin,
+// so single-hit queries pick up long-tail cards from the pool.
+const CATALOG_FIRST_STRONG_THRESHOLD = 1;
 const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
 
 function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {

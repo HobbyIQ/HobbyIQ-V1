@@ -441,6 +441,14 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // hardcoded to source='cardsight' which missed 371K CH-source
   // catalog entries (95% of which have images). Include both vendor
   // sources so the fast search covers our full 1.9M-entry catalog.
+  //
+  // CF-EXCLUDE-CORRUPTED-CANONICAL (Drew, 2026-08-02). source='canonical'
+  // rows from an earlier dedupe run are corrupted — 337K rows have all
+  // of player / releaseName / number as literal undefined but retain a
+  // massive cross-player searchTokens mashup. They matched anything and
+  // starved the sold_comps fallback. Explicit source filter (rather
+  // than "everything except canonical") is defensive; if a later
+  // rebuild produces clean canonical rows, we can whitelist them.
   const params: Array<{ name: string; value: string | number | boolean }> = [
     { name: "@sport", value: sport },
   ];
@@ -536,10 +544,17 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // Groups by hobbyiqCardId in-memory + emits picker-hit shape identical
   // to the card_catalog path so iOS gets a uniform response.
   //
-  // Only fires when the primary layers returned 0 — no perf regression
-  // on common queries. Enrichment loop (recentMedian / momentum /
-  // signal) runs AS-IS since it reads sold_comps anyway.
-  if (candidates.length === 0 && searchTokens.length > 0) {
+  // CF-SEARCH-SOLD-COMPS-SUPPLEMENT (Drew, 2026-08-02). Was
+  // "candidates.length === 0" — only fired when primary + fuzzy returned
+  // nothing. Real-world case: "2011 topps gold trout" — primary
+  // returned 1 real hit (Topps Pro Debut Materials MM-MT, an obscure
+  // Gold parallel) so fallback never fired, and the 18 all-time
+  // 2011 Topps Update US175 Gold Trout sales sitting in sold_comps
+  // stayed invisible. Now fires when primary+fuzzy < 5 and UNIONs
+  // its results with the catalog hits (dedup by hobbyiqCardId /
+  // player+year+number). Long-tail cards always reach the picker.
+  const SUPPLEMENT_THRESHOLD = 5;
+  if (candidates.length < SUPPLEMENT_THRESHOLD && searchTokens.length > 0) {
     try {
       const scParams: Array<{ name: string; value: string | number | boolean }> = [
         { name: "@sport", value: sport },
@@ -580,11 +595,25 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       const { resources: scRows } = await containers.sold.items.query({ query: scQuery, parameters: scParams }).fetchAll();
       // Group by hobbyiqCardId — one picker hit per distinct slug.
       // sold_comps has MANY rows per card (each sale) so aggregation is
-      // essential.
+      // essential. Dedup against existing catalog candidates so we
+      // don't double-list the same card once from each source.
+      const existingKeys = new Set<string>();
+      for (const ec of candidates) {
+        // Prefer hobbyiqCardId when catalog rows have it; otherwise
+        // synthesize the same identity tuple the sold_comps side uses.
+        const k = String(
+          ec.hobbyiqCardId ??
+            `${ec.player ?? ""}::${ec.year ?? ""}::${ec.number ?? ""}::${(ec.parallels?.[0]?.name ?? "").toLowerCase()}`,
+        ).toLowerCase();
+        existingKeys.add(k);
+      }
       const bySlug = new Map<string, any>();
       for (const r of scRows ?? []) {
         const slug = String(r.hobbyiqCardId ?? "");
         if (!slug || bySlug.has(slug)) continue;
+        // Skip if the catalog path already produced this identity.
+        const dedupKey = `${r.playerName ?? ""}::${r.cardYear ?? ""}::${r.cardNumber ?? ""}::${String(r.parallel ?? "").toLowerCase()}`.toLowerCase();
+        if (existingKeys.has(slug.toLowerCase()) || existingKeys.has(dedupKey)) continue;
         // Reshape into the card_catalog candidate shape so the shared
         // scoring / enrichment loop below handles it uniformly.
         bySlug.set(slug, {
@@ -600,10 +629,12 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
           sport: r.sport ?? sport,
           recentSaleCount: 0,                             // no popularity boost from sold_comps path
           searchText: [r.playerName, r.setName, r.cardNumber, r.cardYear ?? "", r.parallel ?? ""].filter(Boolean).join(" ").toLowerCase(),
-          _origin: "sold-comps-fallback",                 // provenance for debugging
+          _origin: "sold-comps-supplement",               // provenance for debugging
+          hobbyiqCardId: slug,                            // preserve so scored hit inherits it
         });
       }
-      candidates = [...bySlug.values()];
+      // Union with existing catalog candidates (not replace).
+      candidates = [...candidates, ...bySlug.values()];
     } catch { candidates = []; }
   }
 
