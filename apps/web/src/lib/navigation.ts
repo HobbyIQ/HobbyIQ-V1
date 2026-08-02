@@ -72,6 +72,12 @@ export const APP_NAV: NavItem[] = [
     iconPath: "M4 4h16l-1 4H5L4 4zm1 6h14l-1 10H6L5 10zm4 3v5h6v-5H9z",
   },
   {
+    href: "/app/buyeriq",
+    label: "BuyerIQ",
+    iconPath: "M7 4h10l1 3h3v2h-1l-1 12H5L4 9H3V7h3l1-3zm2 2v1h6V6H9zm-2 5v9h10v-9H7z",
+    prefixMatch: true,
+  },
+  {
     href: "/app/ebay",
     label: "eBay",
     iconPath: "M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM12 15l-6-6h4V6h4v3h4l-6 6z",

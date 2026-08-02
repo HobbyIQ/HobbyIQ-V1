@@ -2551,3 +2551,122 @@ export async function removeWatchlist(playerId: string): Promise<{ success: bool
     method: "DELETE",
   });
 }
+
+// ─── BuyerIQ (card-show buying checklist) ──────────────────────────
+// Mirrors iOS BuyerIQ. Backend: backend/src/routes/buyeriq.routes.ts
+
+export type BuyerIqPriority = "high" | "medium" | "low";
+export type BuyerIqStatus = "wanted" | "acquired" | "passed";
+
+export interface BuyerIqList {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  showDate: string | null;
+  showLocation: string | null;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BuyerIqTarget {
+  id: string;
+  userId: string;
+  listId: string;
+  hobbyiqCardId: string | null;
+  playerName: string;
+  cardYear: number | null;
+  cardNumber: string | null;
+  setName: string | null;
+  parallel: string | null;
+  isAuto: boolean | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  imageUrl: string | null;
+  maxPrice: number | null;
+  priority: BuyerIqPriority;
+  notes: string | null;
+  status: BuyerIqStatus;
+  acquiredAt: string | null;
+  acquiredPrice: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BuyerIqListUpsert {
+  name?: string;
+  description?: string | null;
+  showDate?: string | null;
+  showLocation?: string | null;
+  archived?: boolean;
+}
+
+export interface BuyerIqTargetUpsert {
+  listId?: string;
+  hobbyiqCardId?: string | null;
+  playerName?: string;
+  cardYear?: number | null;
+  cardNumber?: string | null;
+  setName?: string | null;
+  parallel?: string | null;
+  isAuto?: boolean | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  imageUrl?: string | null;
+  maxPrice?: number | null;
+  priority?: BuyerIqPriority;
+  notes?: string | null;
+  status?: BuyerIqStatus;
+  acquiredAt?: string | null;
+  acquiredPrice?: number | null;
+}
+
+export async function fetchBuyerIqLists(): Promise<{ success: boolean; lists: BuyerIqList[] }> {
+  return await request("/api/buyeriq/lists");
+}
+
+export async function createBuyerIqList(body: BuyerIqListUpsert): Promise<{ success: boolean; list: BuyerIqList }> {
+  return await request("/api/buyeriq/lists", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateBuyerIqList(listId: string, body: BuyerIqListUpsert): Promise<{ success: boolean; list: BuyerIqList }> {
+  return await request(`/api/buyeriq/lists/${encodeURIComponent(listId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteBuyerIqList(listId: string): Promise<{ success: boolean }> {
+  return await request(`/api/buyeriq/lists/${encodeURIComponent(listId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchBuyerIqTargets(listId?: string): Promise<{ success: boolean; targets: BuyerIqTarget[] }> {
+  const qs = listId ? `?listId=${encodeURIComponent(listId)}` : "";
+  return await request(`/api/buyeriq/targets${qs}`);
+}
+
+export async function createBuyerIqTarget(body: BuyerIqTargetUpsert): Promise<{ success: boolean; target: BuyerIqTarget }> {
+  return await request("/api/buyeriq/targets", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateBuyerIqTarget(targetId: string, body: BuyerIqTargetUpsert): Promise<{ success: boolean; target: BuyerIqTarget }> {
+  return await request(`/api/buyeriq/targets/${encodeURIComponent(targetId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: boolean }> {
+  return await request(`/api/buyeriq/targets/${encodeURIComponent(targetId)}`, {
+    method: "DELETE",
+  });
+}
