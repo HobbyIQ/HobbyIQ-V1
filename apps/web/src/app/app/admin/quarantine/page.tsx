@@ -16,7 +16,7 @@ import {
 const FILTERS: Array<{ key: QuarantineFilter; label: string }> = [
   { key: "any", label: "Any flag" },
   { key: "price-outlier", label: "Price outlier" },
-  { key: "cardsight-unverified", label: "Cardsight unverified" },
+  { key: "cardsight-unverified", label: "Unverified vendor" },
   { key: "user-flagged", label: "User flagged" },
   { key: "bad-actor", label: "Bad actor seller" },
 ];
@@ -107,7 +107,7 @@ export default function QuarantinePage() {
               </div>
               <div className="flex flex-wrap gap-1 mt-2">
                 {row.flags.priceOutlier && <FlagPill color="red" text={`price outlier${row.flags.priceOutlierPoolMedian ? ` (pool $${row.flags.priceOutlierPoolMedian.toFixed(0)})` : ""}`} />}
-                {row.flags.cardsightUnverified && <FlagPill color="amber" text="cardsight unverified" />}
+                {row.flags.cardsightUnverified && <FlagPill color="amber" text="unverified vendor" />}
                 {row.flags.userFlagQuarantine && <FlagPill color="red" text={`user flagged (${row.flags.userFlagCount})`} />}
                 {row.flags.badActorSeller && <FlagPill color="red" text="bad actor" />}
               </div>

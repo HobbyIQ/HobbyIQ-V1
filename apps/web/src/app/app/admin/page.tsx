@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="text-sm text-[color:var(--color-text-muted)] mt-1">
               {c && c.flags.priceOutliers.toLocaleString()} price outliers ·{" "}
-              {c && c.flags.cardsightUnverified.toLocaleString()} cardsight-unverified
+              {c && c.flags.cardsightUnverified.toLocaleString()} vendor-unverified
             </div>
           </div>
         </Link>

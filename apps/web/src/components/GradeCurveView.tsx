@@ -125,7 +125,17 @@ function GradeRow({ e }: { e: ObservedGradeEntry }) {
       : e.predictedPricePct != null && e.predictedPricePct < -0.5
       ? "var(--hiq-danger)"
       : "var(--hiq-muted-text)";
-  const label = `${e.grader} ${e.grade}`.replace(/^Raw Raw$/, "Raw");
+  // CF-GRADE-LABEL-DEDUP (Drew, 2026-08-02). Backend's `grade` field
+  // sometimes already includes the grader ("PSA 10"), sometimes just
+  // the value ("10"). Prior code always concatenated → "PSA PSA 10".
+  // Detect and de-duplicate.
+  const gradeStr = String(e.grade ?? "");
+  const graderStr = String(e.grader ?? "");
+  const label = gradeStr === "Raw" || graderStr === "Raw"
+    ? "Raw"
+    : gradeStr.toLowerCase().startsWith(graderStr.toLowerCase() + " ")
+      ? gradeStr
+      : `${graderStr} ${gradeStr}`.trim();
 
   return (
     <div className="hiq-tile-flat">

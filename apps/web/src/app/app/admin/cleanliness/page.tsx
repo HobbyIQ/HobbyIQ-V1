@@ -128,7 +128,7 @@ export default function CleanlinessPage() {
           <Metric label="Price outliers total" value={report.flags.priceOutliers.toLocaleString()} accent={report.flags.priceOutliers > 10000} />
           <Metric label="…below floor (contamination)" value={report.flags.priceOutlierBelowFloor.toLocaleString()} />
           <Metric label="…above ceiling (usually higher-grade)" value={report.flags.priceOutlierAboveCeiling.toLocaleString()} />
-          <Metric label="Cardsight unverified" value={report.flags.cardsightUnverified.toLocaleString()} accent={report.flags.cardsightUnverified > 100000} />
+          <Metric label="Vendor unverified" value={report.flags.cardsightUnverified.toLocaleString()} accent={report.flags.cardsightUnverified > 100000} />
           <div className="mt-2 pt-2 border-t border-[color:var(--color-border)] text-xs text-[color:var(--color-text-muted)]">
             Total flagged rows: {totalConfirmedFlags.toLocaleString()}
           </div>

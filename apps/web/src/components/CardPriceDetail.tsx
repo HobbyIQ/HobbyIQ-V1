@@ -467,8 +467,11 @@ function Header({
       <div className="flex-1 min-w-0">
         <div className="font-bold text-xl mb-1">{title}</div>
         {summary && <p className="text-sm text-[color:var(--color-muted)]">{summary}</p>}
+        {/* CF-VENDOR-SCRUB (Drew, 2026-08-02). Do not expose vendor
+            name to end users. Card id kept for support/debug but
+            without the "cardsight:" prefix. */}
         <div className="text-xs text-[color:var(--color-muted)] mt-2 tabular-nums break-all">
-          cardsight:{cardsightCardId}
+          #{cardsightCardId.slice(0, 8)}
         </div>
       </div>
       <div className="flex flex-col gap-2">
