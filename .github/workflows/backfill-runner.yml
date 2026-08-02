@@ -91,6 +91,7 @@ on:
           - backfill-ch-catalog-additions
           - backfill-cs-card-population
           - drain-staging-backlog
+          - rescore-anomalies
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -426,7 +427,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog') && inputs.apply == true }}
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

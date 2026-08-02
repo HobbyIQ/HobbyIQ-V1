@@ -321,6 +321,49 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     } catch { /* silent-safe — fall through to legacy */ }
   }
 
+  // CF-RARE-CARD-ANCHOR-RUNG (Drew, 2026-08-02). Rare parallels
+  // (1-of-1s, /5, /10, deep-vintage stars) fail the standard ladder —
+  // their own pool has 0-2 comps in 180d so every rung returns thin
+  // or no-basis. This rung anchors on the LAST actual sale for the
+  // exact slug and projects forward by the parent pool's delta since
+  // that sale. Runs BEFORE the ladder as an early-return when the
+  // direct-slug pool is genuinely thin.
+  try {
+    const { computeRareCardFmv } = await import("./rareCardFmv.service.js");
+    const rare = await computeRareCardFmv({ hobbyiqCardId: slug });
+    if (rare.qualifies && rare.fmv !== null) {
+      const population = await loadPopulationForSlug(slug).catch(() => null);
+      return {
+        slug,
+        fmv: rare.fmv,
+        compCount: (rare.lastSale ? 1 : 0) + (rare.parentComps.afterCount || 0),
+        min: rare.confidenceBand?.low ?? rare.fmv,
+        max: rare.confidenceBand?.high ?? rare.fmv,
+        breakdown: {
+          bySource: rare.lastSale ? { [rare.lastSale.source]: 1 } : {},
+          byAutoStyle: { onCard: 0, sticker: 0, unknown: 1 },
+          byGradeQualifier: {},
+        },
+        trend: {
+          direction: (rare.parentDeltaPct ?? 0) > 0 ? "up" : (rare.parentDeltaPct ?? 0) < 0 ? "down" : "flat",
+          slopePerMonthPct: rare.parentDeltaPct ?? 0,
+          method: "anchor",
+        },
+        recentComps: rare.lastSale
+          ? [{ price: rare.lastSale.price, soldAt: rare.lastSale.soldAt, source: rare.lastSale.source }]
+          : [],
+        method: "no-basis",   // no dedicated ladder rung name for rare-card-anchor yet; basisNote carries the detail
+        basisNote: rare.basisNote,
+        confidence: rare.parentDeltaPct !== null ? 0.65 : 0.45,
+        population,
+        quality: { score: rare.parentDeltaPct !== null ? 0.7 : 0.5, flaggedCompCount: 0, sources: rare.lastSale ? [rare.lastSale.source] : [] },
+        computedAt: now.toISOString(),
+        cachedFrom: "sold_comps",
+      };
+    }
+    // rare.qualifies=false means the pool is NOT thin — normal ladder handles it
+  } catch { /* silent-safe — fall through to legacy ladder */ }
+
   // Fire the population lookup in parallel with the first ladder rung. It
   // reads OUR containers (card_catalog → card_population) so it's cheap;
   // running it concurrently with the pool queries hides its latency.
