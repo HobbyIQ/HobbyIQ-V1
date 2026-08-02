@@ -88,6 +88,8 @@ on:
           - discover-parallels-from-pool
           - audit-ch-ingest-completeness
           - nightly-reingest-top-ch-cards
+          - backfill-ch-catalog-additions
+          - backfill-cs-card-population
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -194,7 +196,7 @@ jobs:
       # CF-CS-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). Cardsight
       # catalog enumeration + image backfill both need CARDSIGHT_API_KEY.
       - name: Fetch CARDSIGHT_API_KEY from HobbyIQ3 App Service
-        if: inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images'
+        if: inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population'
         shell: bash
         run: |
           CS_KEY=$(az webapp config appsettings list \
@@ -215,7 +217,7 @@ jobs:
       # tuple. Fetch CARD_HEDGE_API_KEY from App Service so the runner
       # has authenticated access; never echoed to log.
       - name: Fetch CARD_HEDGE_API_KEY from HobbyIQ3 App Service
-        if: startsWith(inputs.script, 'expand-catalog') || inputs.script == 'audit-ch-ingest-completeness' || inputs.script == 'nightly-reingest-top-ch-cards'
+        if: startsWith(inputs.script, 'expand-catalog') || inputs.script == 'audit-ch-ingest-completeness' || inputs.script == 'nightly-reingest-top-ch-cards' || inputs.script == 'backfill-ch-catalog-additions'
         shell: bash
         run: |
           CH_KEY=$(az webapp config appsettings list \
@@ -404,7 +406,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq') && inputs.apply == true }}
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
