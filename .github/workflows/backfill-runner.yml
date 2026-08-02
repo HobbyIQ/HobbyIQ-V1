@@ -100,6 +100,7 @@ on:
           - drain-staging-backlog
           - backfill-searchtokens-all-sports
           - fix-catalog-parallel-as-player
+          - auto-label-catalog-variants
           - rescore-anomalies
           - score-all-sold-comps
           - reaudit-cardsight-unverified
@@ -189,6 +190,24 @@ jobs:
       # secret matches prod exactly (never echoed to stdout).
       # CF-REPRICE-AUTH-ENV (Drew, 2026-07-31). Prior run failed at boot
       # with "AUTH_SESSION_SECRET is unset — refusing to start."
+      # CF-AUTO-LABEL-AZURE-OPENAI (Drew, 2026-08-02). auto-label-
+      # catalog-variants uses labelerAiSuggest which needs Azure OpenAI.
+      - name: Fetch Azure OpenAI credentials from HobbyIQ3 App Service
+        if: inputs.script == 'auto-label-catalog-variants'
+        shell: bash
+        run: |
+          for name in AZURE_OPENAI_ENDPOINT AZURE_OPENAI_API_KEY AZURE_OPENAI_DEPLOYMENT AZURE_OPENAI_API_VERSION; do
+            v=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+              --query "[?name=='$name'].value | [0]" -o tsv)
+            if [ -z "$v" ]; then
+              echo "::warning::${name} not set in HobbyIQ3 App Service"
+              continue
+            fi
+            echo "::add-mask::$v"
+            echo "${name}=$v" >> "$GITHUB_ENV"
+            echo "${name} fetched (length: ${#v})"
+          done
+
       # CF-DRAIN-ADMIN-TOKEN (Drew, 2026-08-01). drain-staging-backlog
       # calls /api/staging/* admin endpoints; needs ADMIN_API_TOKEN.
       - name: Fetch ADMIN_API_TOKEN from HobbyIQ3 App Service
@@ -444,7 +463,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player') && inputs.apply == true }}
+        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
