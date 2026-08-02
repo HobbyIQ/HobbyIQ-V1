@@ -85,6 +85,7 @@ on:
           - backfill-catalog-cs-images
           - normalize-catalog-schema
           - dedupe-catalog-by-hobbyiq
+          - discover-parallels-from-pool
           - recover-chrome-collapse-damage
       apply:
         description: "Actually write (true) or dry-run only (false)"
