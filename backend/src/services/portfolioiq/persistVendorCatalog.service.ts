@@ -37,6 +37,33 @@ export function isPersistVendorCatalogEnabled(): boolean {
 
 /** Persist a batch of catalog entries from a vendor search response.
  *  Never throws. */
+// CF-PARALLEL-AS-PLAYER-BLOCK (Drew, 2026-08-02). Vendor rows sometimes
+// arrive with the parallel word stored as `player` (Superfractor,
+// Sunflower Seeds, Pop Corn, Peanuts, Gum Ball, Sparkle, Red Lava,
+// etc.). We can't safely accept those as player identity because they
+// pollute search, FMV, and labeler surfaces. Block at ingest — the
+// row still gets written, but with player=null so downstream code can
+// treat it as an unknown-player row instead of a fake "player named
+// Sparkle" card. The retroactive fix-catalog-parallel-as-player.cjs
+// backfill re-assigns from sibling variants when possible.
+const PARALLEL_WORDS_BLOCKLIST = new Set([
+  "superfractor", "refractor", "sapphire", "mini diamond", "x-fractor", "xfractor",
+  "speckle", "wave", "ray wave", "shimmer", "lava", "grass",
+  "mojo refractor", "mojo", "lazer refractor", "lazer",
+  "sunflower seeds", "pop corn", "popcorn", "peanuts", "gum ball", "gumball", "sparkle",
+  "red lava", "blue lava", "green lava", "gold lava", "orange lava", "purple lava",
+  "red shimmer", "blue shimmer", "green shimmer", "gold shimmer", "orange shimmer",
+  "red wave", "blue wave", "green wave", "gold wave", "orange wave", "purple wave", "aqua wave",
+  "red ray wave", "blue ray wave", "green ray wave", "gold ray wave", "orange ray wave",
+  "red speckle", "blue speckle", "green speckle", "gold speckle", "orange speckle",
+  "chrome", "autograph", "base", "rookie", "image variation", "sterling",
+]);
+
+function isParallelWord(name: string | null | undefined): boolean {
+  if (!name || typeof name !== "string") return false;
+  return PARALLEL_WORDS_BLOCKLIST.has(name.trim().toLowerCase());
+}
+
 export async function persistVendorCatalog(
   source: "cardsight" | "cardhedge",
   entries: VendorCatalogEntry[],
@@ -50,6 +77,11 @@ export async function persistVendorCatalog(
   for (const e of entries) {
     const cardId = String(e.cardId ?? "").trim();
     if (!cardId) { result.skipped++; continue; }
+    // CF-PARALLEL-AS-PLAYER-BLOCK — coerce parallel-word player field to
+    // null so downstream code doesn't treat it as identity.
+    if (isParallelWord(e.player)) {
+      e.player = null;
+    }
     const contentHash = contentHashOf(
       source, cardId, e.title, e.player, e.set, e.year, e.number, e.variant,
     );
