@@ -24,6 +24,75 @@ import {
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 
+// CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
+// can't extract a cardNumber but we have (player, year, set) triple,
+// query card_catalog to see if the checklist resolves to exactly one
+// card. Bayesian identity decoder stage 3.5.
+let cachedCatalogContainer: Container | null = null;
+async function getCatalogContainer(): Promise<Container | null> {
+  if (cachedCatalogContainer) return cachedCatalogContainer;
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return null;
+  try {
+    const client = new CosmosClient(conn);
+    const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+    cachedCatalogContainer = db.container("card_catalog");
+    return cachedCatalogContainer;
+  } catch { return null; }
+}
+
+// In-memory LRU cache for (player+year+set) -> catalog candidates.
+// Keeps hot lookups off Cosmos during high-throughput firehose ingest.
+const CATALOG_CACHE = new Map<string, Array<{ number: string; parallels: string[]; sport: string | null }>>();
+const CATALOG_CACHE_MAX = 5000;
+
+async function checklistNarrow(playerName: string, cardYear: number, setKeyHint: string | null): Promise<Array<{ number: string; parallels: string[]; sport: string | null }> | null> {
+  const key = `${playerName.toLowerCase()}|${cardYear}|${(setKeyHint ?? "").toLowerCase()}`;
+  const hit = CATALOG_CACHE.get(key);
+  if (hit) return hit;
+
+  const catalog = await getCatalogContainer();
+  if (!catalog) return null;
+
+  // Query card_catalog by (player, year). Set constraint applied in-JS
+  // to allow fuzzy matching (title has "Topps Update" but catalog stores
+  // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
+  try {
+    const q = {
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight')",
+      parameters: [
+        { name: "@p", value: playerName },
+        { name: "@y", value: String(cardYear) },
+      ],
+    };
+    const { resources } = await catalog.items.query(q).fetchAll();
+    let cands = (resources || []).filter((r: { number?: string }) => r.number);
+    // Apply setKey filter in-JS (case-insensitive contains-either-way).
+    if (setKeyHint && cands.length > 1) {
+      const sh = setKeyHint.toLowerCase();
+      const strict = cands.filter((r: { releaseName?: string; setName?: string }) => {
+        const rn = String(r.releaseName ?? "").toLowerCase();
+        const sn = String(r.setName ?? "").toLowerCase();
+        return rn.includes(sh) || sh.includes(rn) || sn.includes(sh) || sh.includes(sn);
+      });
+      if (strict.length > 0) cands = strict;
+    }
+    const shaped = cands.map((r: { number?: string; parallels?: Array<{ name?: string }>; sport?: string }) => ({
+      number: String(r.number ?? ""),
+      parallels: Array.isArray(r.parallels) ? r.parallels.map((p) => String(p?.name ?? "")).filter(Boolean) : [],
+      sport: r.sport ?? null,
+    }));
+
+    // Cache with LRU-ish eviction
+    if (CATALOG_CACHE.size >= CATALOG_CACHE_MAX) {
+      const firstKey = CATALOG_CACHE.keys().next().value;
+      if (firstKey) CATALOG_CACHE.delete(firstKey);
+    }
+    CATALOG_CACHE.set(key, shaped);
+    return shaped;
+  } catch { return null; }
+}
+
 export interface VendorSaleRow {
   title: string | null;
   price: number | null | undefined;
@@ -115,19 +184,53 @@ export async function persistVendorSalesToPool(
     // structured identity (TCA gives us these on ~17% of rows), we skip
     // the fragile parseListingIdentity call for the corresponding field.
     const parsed = parseListingIdentity(title, identity.cardNumberRe);
-    const cardNumber = identity.cardNumber ?? parsed.cardNumber;
-    if (!cardNumber) { result.skipped++; continue; }
-    // Rebind parsed so downstream code uses the hint values.
-    parsed.cardNumber = cardNumber;
-    if (identity.parallel !== undefined && identity.parallel !== null) parsed.parallel = identity.parallel;
-    if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
-    if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;
+    let cardNumber = identity.cardNumber ?? parsed.cardNumber;
     const cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
     if (!cardYear) { result.skipped++; continue; }
     const playerName = identity.playerName ?? guessPlayerFromTitle(title);
     if (!playerName) { result.skipped++; continue; }
     const setKey = identity.setName ?? inferSetKeyFromTitle(title);
     const sport = identity.sport ?? inferSportFromTitle(title);
+
+    // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). If parseListingIdentity
+    // couldn't find a cardNumber but we HAVE player+year+set, the
+    // checklist might resolve it uniquely. Bayesian identity decoder
+    // Stage 3.5. When ambiguous (multiple candidates), filter by
+    // parallel hint if we have one. Still ambiguous → skip (later
+    // iterations can add price-band scoring here).
+    let checklistConfidence = 1.0;   // 1.0 = title-parsed, 0.7 = checklist-single, 0.5 = checklist-ambiguous
+    if (!cardNumber && playerName && cardYear && setKey) {
+      const cands = await checklistNarrow(playerName, cardYear, setKey);
+      if (cands && cands.length > 0) {
+        if (cands.length === 1) {
+          cardNumber = cands[0].number;
+          checklistConfidence = 0.7;
+        } else if (parsed.parallel && parsed.parallel !== "Base") {
+          // Try to narrow by parallel match on the catalog row's parallels list.
+          const parMatch = cands.filter((c) => c.parallels.some((p) => p.toLowerCase() === String(parsed.parallel ?? "").toLowerCase()));
+          if (parMatch.length === 1) {
+            cardNumber = parMatch[0].number;
+            checklistConfidence = 0.7;
+          } else if (parMatch.length > 0) {
+            // Multiple parallel-matching candidates — pick first, mark low confidence
+            cardNumber = parMatch[0].number;
+            checklistConfidence = 0.5;
+          }
+        } else if (cands.length <= 3) {
+          // Small ambiguous set, no parallel hint — pick first, mark low confidence
+          cardNumber = cands[0].number;
+          checklistConfidence = 0.5;
+        }
+        // >3 candidates with no parallel hint → too ambiguous, stay unresolved
+      }
+    }
+
+    if (!cardNumber) { result.skipped++; continue; }
+    // Rebind parsed so downstream code uses the hint values.
+    parsed.cardNumber = cardNumber;
+    if (identity.parallel !== undefined && identity.parallel !== null) parsed.parallel = identity.parallel;
+    if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
+    if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;
     let slug: string;
     try {
       slug = computeHobbyIqCardId({
