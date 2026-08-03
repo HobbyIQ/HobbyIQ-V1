@@ -55,12 +55,12 @@ function hashTitle(title: string): string {
 }
 
 // CF-LLM-RATE-LIMIT (Drew, 2026-08-03). Azure OpenAI gpt-4o-mini
-// defaults to modest TPM/RPM on standard tier. Webhook fires ~48
-// concurrent LLM calls per batch which trips 429s (604/637 failures
-// observed 2026-08-03). Semaphore caps in-flight to 5 per app
-// instance; excess awaits. Trades throughput for success rate.
-// Longer-term fix: bump the deployment's TPM in Azure portal.
-const LLM_MAX_INFLIGHT = 5;
+// defaults to modest TPM/RPM. Semaphore caps in-flight per app
+// instance; excess awaits. Env-var overridable so we can tune without
+// redeploys. After bumping the deployment to 500K TPM / 5K RPM, 20
+// concurrent is safely under the ceiling (20 × 2/sec ≈ 40 calls/sec,
+// vs 42/sec TPM ceiling at 200 tokens/call).
+const LLM_MAX_INFLIGHT = Math.max(1, Number(process.env.LLM_MAX_INFLIGHT ?? "20"));
 let llmInflight = 0;
 const llmWaitQueue: Array<() => void> = [];
 async function acquireLlmSlot(): Promise<void> {
