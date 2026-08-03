@@ -1485,6 +1485,43 @@ router.post("/what-if", requireSession, requireRateLimited("priceChecksPerDay"),
 // iOS chart + seasonality signals. Reads sold_comps by cardId, buckets
 // by week/month/quarter, returns median + count + source breakdown per
 // bucket. Feeds off historical backfill data (PR #472) + live emissions.
+// CF-TIERED-MOMENTUM (Drew, 2026-08-03). Returns the two-tier momentum
+// signal: card-tier when we have enough cardnumber-precise comps in the
+// recent window, else player-tier drawing from the broader
+// (playerName + cardYear + setName + parallel) pool including
+// player-fallback rows. `tier: "card" | "player" | "none"` in the
+// response tells the caller which layer answered. Optional query params
+// (playerName, cardYear, setName, parallel) unblock the player-tier
+// fallback when the caller has identity but the cardId alone can't
+// resolve it.
+router.get("/cards/:cardId/tiered-momentum", requireSession, async (req, res, next) => {
+  try {
+    const cardId = String(req.params.cardId ?? "").trim();
+    if (!cardId) return res.status(400).json({ success: false, error: "cardId path param required" });
+    const playerName = typeof req.query.playerName === "string" && req.query.playerName.trim().length > 0
+      ? req.query.playerName.trim() : null;
+    const cardYearRaw = typeof req.query.cardYear === "string" ? Number(req.query.cardYear) : null;
+    const cardYear = cardYearRaw != null && Number.isFinite(cardYearRaw) && cardYearRaw > 1800 && cardYearRaw < 2100
+      ? Math.trunc(cardYearRaw) : null;
+    const setName = typeof req.query.setName === "string" && req.query.setName.trim().length > 0
+      ? req.query.setName.trim() : null;
+    const parallel = typeof req.query.parallel === "string" && req.query.parallel.trim().length > 0
+      ? req.query.parallel.trim() : null;
+    const hobbyiqCardId = typeof req.query.hobbyiqCardId === "string" && req.query.hobbyiqCardId.startsWith("hiq:")
+      ? req.query.hobbyiqCardId.trim() : null;
+    const { computeTieredMomentum } = await import(
+      "../services/compiq/tieredMomentum.service.js"
+    );
+    const result = await computeTieredMomentum(cardId, {
+      hobbyiqCardId,
+      identityHint: { playerName, cardYear, setName, parallel },
+    });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get("/cards/:cardId/price-history", requireSession, async (req, res, next) => {
   try {
     const cardId = String(req.params.cardId ?? "").trim();
