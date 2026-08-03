@@ -380,18 +380,77 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     // stripped by canonical "X-Fractor" (with hyphen). NOISE catches
     // the raw text regardless of the parallel field.
     "sapphire", "transcendent", "xfractor", "raywave", "lava",
+    // CF-TCA-EBAY-NOISE (Drew, 2026-08-02). Raw eBay titles from the TCA
+    // firehose carry additional pollution the NOISE list didn't previously
+    // catch. Observed on live batches:
+    //   "Charles Woodson Purple Speck" → speck was leaking into playerName
+    //   "Javier Baez Tigers" → team names leaking
+    //   "Elena Rybakina Purple" → color descriptors past the primary parallel
+    "speck", "speckle", "sparkle", "pulsar", "die", "cut", "diecut", "psa", "bgs", "sgc", "cgc",
+    "gem", "mint", "hof", "sharp", "premier", "premium", "series", "update",
+    "notes", "note", "logo", "logofractor", "moonfractor",
+    // MLB / NBA / NFL / NHL team names common in eBay titles' trailing
+    // "team" tokens. Kept as short list; expand as normalization surface
+    // finds more leakers. All lowercase — matched via \bWORD\b.
+    "yankees", "redsox", "sox", "orioles", "bluejays", "jays", "rays", "tigers", "royals",
+    "twins", "guardians", "indians", "astros", "athletics", "mariners", "rangers", "angels",
+    "dodgers", "giants", "padres", "diamondbacks", "rockies", "cubs", "cardinals", "brewers",
+    "pirates", "reds", "braves", "mets", "phillies", "nationals", "marlins", "yankees",
+    "lakers", "clippers", "kings", "warriors", "suns", "nuggets", "jazz", "trail", "blazers",
+    "mavericks", "spurs", "rockets", "grizzlies", "pelicans", "thunder", "timberwolves",
+    "bulls", "cavaliers", "pistons", "pacers", "bucks", "hawks", "hornets", "heat", "magic",
+    "wizards", "sixers", "76ers", "celtics", "raptors", "knicks", "nets",
+    "cowboys", "eagles", "giants", "washington", "commanders", "bears", "packers", "vikings", "lions",
+    "falcons", "panthers", "saints", "buccaneers", "cardinals", "rams", "seahawks", "49ers",
+    "bills", "dolphins", "patriots", "jets", "ravens", "bengals", "browns", "steelers",
+    "texans", "colts", "jaguars", "titans", "broncos", "chiefs", "raiders", "chargers",
+    "canadiens", "bruins", "rangers", "islanders", "flyers", "penguins", "capitals", "hurricanes",
+    "lightning", "panthers", "senators", "sabres", "devils", "leafs", "blackhawks", "wild",
+    "predators", "blues", "avalanche", "stars", "coyotes", "oilers", "flames", "canucks", "kraken",
+    // Non-sport league identifiers
+    "mlb", "nfl", "nba", "nhl", "mls", "wta", "atp",
+    // Marketplace flotsam
+    "ebay", "auction", "bin", "buy", "now", "sale", "lot", "of",
+    // Common city-name tokens (paired with team NOISE above → multi-word
+    // city+team combos like "San Antonio Spurs" all strip word-by-word).
+    "philadelphia", "los", "angeles", "new", "york", "san", "antonio", "diego",
+    "francisco", "portland", "dallas", "chicago", "detroit", "miami", "denver",
+    "seattle", "atlanta", "phoenix", "boston", "cleveland", "houston", "washington",
+    "kansas", "city", "st", "louis", "minnesota", "minneapolis", "buffalo",
+    "baltimore", "cincinnati", "pittsburgh", "tampa", "bay", "charlotte", "orlando",
+    "toronto", "montreal", "ottawa", "vancouver", "edmonton", "calgary", "winnipeg",
+    // Subset / insert / editorial names that leak into playerName
+    "unsung", "heroes", "hero", "pick", "picks", "cover", "issue", "flashback",
+    "future", "stars", "legends", "greats", "class", "throwback", "champions",
+    "playoff", "wildcard", "wc", "allstar", "all-star",
+    // Common leading punctuation is stripped by the regex below; nothing
+    // to add here for that.
   ];
   for (const noise of NOISE) {
     remaining = remaining.replace(new RegExp(`\\b${noise}\\b`, "gi"), " ");
   }
 
+  // CF-PLAYER-NAME-CLEAN (Drew, 2026-08-02). Strip standalone dashes +
+  // dangling hyphens that survived the noise pass (eBay titles use `-`
+  // as a section separator, e.g. "2003-04 Topps - Draft Pick LeBron"
+  // → residual "-" tokens after we strip year/set/etc.). Also drop
+  // single-letter garbage (residual initials from over-stripped
+  // multi-word noise like "MLB-DET" split.
   const playerName = remaining
     .replace(/[^a-zA-Z\s'-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .split(" ")
     .filter((w) => w.length > 0)
+    .filter((w) => !/^[-]+$/.test(w))            // strip standalone dashes
+    .filter((w) => w.length >= 2 || w === "&")  // drop single-char noise
+    .map((w) => w.replace(/^-+|-+$/g, ""))      // trim leading/trailing hyphens on retained words
+    .filter((w) => w.length > 0)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    // Keep at most the first 4 words — most real player names are 2-3
+    // words (Mike Trout, Jose de la Rosa). Longer strings are almost
+    // always trailing noise the NOISE list missed.
+    .slice(0, 4)
     .join(" ") || null;
 
   // --- CONFIDENCE ---
