@@ -47,6 +47,19 @@ export interface VendorPersistIdentityHint {
    *  lookups against the same CH id find these rows too — belt and
    *  suspenders alongside the hobbyiqCardId slug lookup. */
   vendorCardId?: string | null;
+  /** CF-TCA-STRUCTURED-HINT (Drew, 2026-08-02). When the vendor pre-
+   *  populates identity fields (TCA does on ~17% of rows via its own
+   *  eBay-title matcher), pass them here so we skip the fragile
+   *  parseListingIdentity title-guess step. Massively raises pass rate
+   *  on TCA webhook batches — otherwise TCA titles like
+   *  "2025 Bowman Chrome Junior Caminero Pulsar Refractor #/399 Rays"
+   *  parse to cardNumber=null even though TCA gave us card_number=BCP-XX
+   *  directly. */
+  cardNumber?: string | null;
+  parallel?: string | null;
+  isAuto?: boolean | null;
+  printRun?: number | null;
+  setName?: string | null;
 }
 
 export interface VendorPersistResult {
@@ -96,13 +109,24 @@ export async function persistVendorSalesToPool(
       result.skipped++;
       continue;
     }
+    // CF-TCA-STRUCTURED-HINT (Drew, 2026-08-02): identity hint fields
+    // (cardNumber / parallel / isAuto / printRun / setName) take priority
+    // over the title-guess fallback. When the vendor pre-populated
+    // structured identity (TCA gives us these on ~17% of rows), we skip
+    // the fragile parseListingIdentity call for the corresponding field.
     const parsed = parseListingIdentity(title, identity.cardNumberRe);
-    if (!parsed.cardNumber) { result.skipped++; continue; }
+    const cardNumber = identity.cardNumber ?? parsed.cardNumber;
+    if (!cardNumber) { result.skipped++; continue; }
+    // Rebind parsed so downstream code uses the hint values.
+    parsed.cardNumber = cardNumber;
+    if (identity.parallel !== undefined && identity.parallel !== null) parsed.parallel = identity.parallel;
+    if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
+    if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;
     const cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
     if (!cardYear) { result.skipped++; continue; }
     const playerName = identity.playerName ?? guessPlayerFromTitle(title);
     if (!playerName) { result.skipped++; continue; }
-    const setKey = inferSetKeyFromTitle(title);
+    const setKey = identity.setName ?? inferSetKeyFromTitle(title);
     const sport = identity.sport ?? inferSportFromTitle(title);
     let slug: string;
     try {

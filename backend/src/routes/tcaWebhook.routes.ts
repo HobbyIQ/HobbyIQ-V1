@@ -140,10 +140,18 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
       imageUrl: t.image_url || null,
     };
     if (!vsRow.soldAt || !(vsRow.price > 0)) { skipped++; continue; }
+    // Pass every structured field TCA gave us so persistVendorSalesToPool
+    // doesn't have to guess from the title (which fails on ~90% of raw
+    // eBay titles). See VendorPersistIdentityHint.
     const hint: Record<string, unknown> = {};
     if (t.player) hint.playerName = String(t.player);
     if (typeof t.year === "number") hint.cardYear = t.year;
     if (t.sport) hint.sport = String(t.sport).toLowerCase();
+    if (t.card_number) hint.cardNumber = String(t.card_number);
+    if (t.card_set) hint.setName = String(t.card_set);
+    // TCA payload doesn't split parallel from card_set (grade/grader are
+    // separate fields, but parallel is baked into set/features). Leave
+    // parallel + printRun + isAuto to fall through to title-parse.
     const p = persistVendorSalesToPool("tca-ebay", [vsRow], hint)
       .then((res) => { inserted += res.inserted; deduped += res.deduped; skipped += res.skipped; })
       .catch((err) => {
