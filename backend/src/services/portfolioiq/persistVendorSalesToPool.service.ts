@@ -59,7 +59,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight')",
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
       parameters: [
         { name: "@p", value: playerName },
         { name: "@y", value: String(cardYear) },

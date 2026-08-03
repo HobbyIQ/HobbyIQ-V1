@@ -10,6 +10,14 @@
 //
 // Cached at both steps because TCA's per-second rate limit is real.
 // LRU keyed by (sport|year|setNameSlug) and (set_id|playerSlug).
+//
+// CF-TCA-CATALOG-CACHEBACK (Drew, 2026-08-03). Fetched cards are
+// also upserted into our local card_catalog with source='tca-catalog'
+// so the NEXT checklistNarrow call for the same (player, year, set)
+// resolves locally and never hits TCA. Growing our own catalog from
+// their beta as ingest naturally exercises it.
+
+import { CosmosClient, type Container } from "@azure/cosmos";
 
 const TCA_BASE = "https://www.thecardapi.com/api/v1";
 
@@ -141,8 +149,74 @@ export async function tcaCatalogNarrow(
     const json = await res.json() as { data?: TcaCatalogCard[] };
     const cards = (json.data || []).filter((c) => c.card_number != null);
     lruSet(cardLookupCache, cacheKey, cards, CACHE_MAX);
+    // Fire-and-forget cache-back into local card_catalog. Never blocks
+    // the caller — if Cosmos is slow or fails, the in-memory LRU still
+    // holds the result for this process's remaining lifetime.
+    if (cards.length > 0) {
+      void cacheBackToCardCatalog(cards, playerName, cardYear, setName, sport)
+        .catch(() => { /* soft: caller already has data */ });
+    }
     return cards;
   } catch {
     return [];
+  }
+}
+
+// ── Cache-back into local card_catalog ────────────────────────────────────
+let cachedCatalogContainer: Container | null = null;
+async function getCardCatalogContainer(): Promise<Container | null> {
+  if (cachedCatalogContainer) return cachedCatalogContainer;
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return null;
+  try {
+    const client = new CosmosClient(conn);
+    cachedCatalogContainer = client
+      .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+      .container("card_catalog");
+    return cachedCatalogContainer;
+  } catch {
+    return null;
+  }
+}
+
+async function cacheBackToCardCatalog(
+  cards: TcaCatalogCard[],
+  playerName: string,
+  cardYear: number,
+  setName: string,
+  sport: string,
+): Promise<void> {
+  const cont = await getCardCatalogContainer();
+  if (!cont) return;
+  const sportLower = sport.toLowerCase();
+  for (const c of cards) {
+    // Deterministic id keyed by TCA's card id — ensures repeat cache-backs
+    // upsert into the same row instead of creating dupes.
+    const id = `tca-catalog:${c.id}`;
+    const doc = {
+      id,
+      // partition key on card_catalog is /id — id serves both.
+      player: c.subject ?? playerName,
+      year: cardYear,
+      number: String(c.card_number ?? "").trim(),
+      setKey: setName,
+      setName: setName,
+      sport: sportLower,
+      parallels: [] as Array<{ name: string }>,
+      source: "tca-catalog",
+      tca_set_id: c.set_id,
+      tca_card_id: c.id,
+      is_rookie: c.is_rookie ?? false,
+      is_auto: c.is_auto ?? false,
+      is_relic: c.is_relic ?? false,
+      is_sp: c.is_sp ?? false,
+      is_ssp: c.is_ssp ?? false,
+      print_run: c.print_run ?? null,
+      rarity: c.rarity ?? null,
+      cachedAt: new Date().toISOString(),
+    };
+    try {
+      await cont.items.upsert(doc);
+    } catch { /* per-card write is soft */ }
   }
 }
