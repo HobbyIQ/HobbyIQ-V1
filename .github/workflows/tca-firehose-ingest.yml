@@ -54,6 +54,11 @@ on:
         required: false
         type: boolean
         default: false
+      crawler_slot:
+        description: 'Distinct crawler slot ID for parallel workers (a/b/c/...). Defaults to empty — cron uses that. Manual dispatches: set to a/b/c to run in parallel without cursor collision.'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   ingest:
@@ -122,6 +127,7 @@ jobs:
           MAX_MINUTES="${{ inputs.max_minutes || '12' }}" \
           PLATFORM=eBay \
           CATEGORY=sports \
+          CRAWLER_ID="tca-ebay-sports-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
           node scripts/tca-firehose-ingest.cjs
 
   match-enricher:
