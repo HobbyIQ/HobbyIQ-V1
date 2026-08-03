@@ -94,6 +94,26 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
   }
   const rows = Array.isArray(payload?.data) ? payload.data : [];
 
+  // TEMP DIAG (Drew, 2026-08-02): log the FIRST row's field values so we
+  // can see whether TCA's actual webhook payload shape matches our
+  // /sales mapping. Remove once ingest is proven landing rows.
+  if (rows.length > 0) {
+    const first = rows[0];
+    console.log(JSON.stringify({
+      event: "tca.webhook.first_row_diag",
+      source: "tcaWebhook.routes",
+      keys: Object.keys(first || {}),
+      title: first?.title?.slice?.(0, 80),
+      price: first?.price,
+      priceType: typeof first?.price,
+      sold_at: first?.sold_at,
+      sale_date: first?.sale_date,
+      id: first?.id,
+      category: first?.category,
+      platform: first?.platform,
+    }));
+  }
+
   // 3. Process synchronously with high concurrency. TCA times out at
   //    30 sec — must finish within that. 1000 rows × ~150ms serial =
   //    150s. With concurrency 48 that's ~3s. Safely inside window.
