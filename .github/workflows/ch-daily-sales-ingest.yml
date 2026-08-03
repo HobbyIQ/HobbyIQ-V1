@@ -13,8 +13,13 @@ name: CH Daily Sales Ingest
 # default 60-min timeout.
 
 on:
-  schedule:
-    - cron: '15 5 * * *'
+  # DISABLED 2026-08-02 — CH deprecation. TCA firehose ingest is now
+  # the primary sales source (see backend/docs/design/tca-firehose-ingest-architecture.md).
+  # Cron paused; manual workflow_dispatch preserved for one-off recovery
+  # runs if TCA ever drops backfill coverage before CH subscription
+  # lapses in ~25 days.
+  # schedule:
+  #   - cron: '15 5 * * *'
   workflow_dispatch:
     inputs:
       date:

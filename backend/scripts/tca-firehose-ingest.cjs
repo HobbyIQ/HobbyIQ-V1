@@ -254,7 +254,12 @@ async function main() {
       // ~17% of rows). Called one-row-at-a-time because identity hint
       // is per-row (whereas persistVendorSalesToPool's `identity` param
       // is single-batch — designed for CH's card-scoped comps calls).
-      const CONCURRENCY = 8;
+      //
+      // CF-TCA-CONCURRENCY-BUMP (Drew, 2026-08-02). 8 → 16 to reduce
+      // wall-clock for full historical backfill. Cosmos sold_comps
+      // container throughput will need to be watched; 429s become
+      // retries via persistVendorSalesToPool's own error handling.
+      const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
       const inflight = new Set();
       for (const t of rows) {
         while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
