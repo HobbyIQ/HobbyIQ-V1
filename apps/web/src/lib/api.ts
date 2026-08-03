@@ -1731,6 +1731,78 @@ export async function importEbayPurchases(days: number): Promise<{ success: bool
   );
 }
 
+// ─── Review queue (CF-EBAY-REVIEW-QUEUE) ──────────────────────────
+
+export interface PendingReviewHolding {
+  id: string;
+  cardTitle?: string | null;
+  notes?: string | null;
+  playerName?: string | null;
+  cardYear?: number | null;
+  setName?: string | null;
+  parallel?: string | null;
+  cardNumber?: string | null;
+  gradeCompany?: string | null;
+  gradeValue?: number | string | null;
+  isAuto?: boolean | null;
+  parseConfidence?: number | null;
+  purchasePrice?: number | null;
+  totalCostBasis?: number | null;
+  purchaseDate?: string | null;
+  suggestedCardId?: string | null;
+  suggestion?: {
+    cardId?: string | null;
+    displayTitle?: string | null;
+    confidence?: number | null;
+    source?: string | null;
+  } | null;
+}
+
+export async function fetchPendingReviewHoldings(): Promise<{
+  success: boolean;
+  holdings: PendingReviewHolding[];
+}> {
+  return await request("/api/portfolio/holdings/pending-review");
+}
+
+export async function generatePendingReviewSuggestions(force = false): Promise<{
+  success: boolean;
+  suggested?: number;
+  skipped?: number;
+  errors?: number;
+}> {
+  return await request(
+    "/api/portfolio/holdings/generate-suggestions",
+    { method: "POST", body: JSON.stringify({ force }) },
+  );
+}
+
+export async function confirmPendingReviewHolding(
+  holdingId: string,
+  edits: Partial<{
+    playerName: string | null;
+    cardYear: number | null;
+    setName: string | null;
+    parallel: string | null;
+    cardNumber: string | null;
+    gradeCompany: string | null;
+    gradeValue: number | null;
+    isAuto: boolean | null;
+    team: string | null;
+    sport: string | null;
+    cardId: string | null;
+  }> = {},
+): Promise<{
+  success: boolean;
+  status: string;
+  holding?: PendingReviewHolding;
+}> {
+  return await request(
+    `/api/portfolio/erp/holdings/${encodeURIComponent(holdingId)}/confirm`,
+    { method: "POST", body: JSON.stringify(edits) },
+  );
+}
+
 export async function createPurchase(body: CreatePurchaseInput): Promise<PurchaseEntry> {
   const res = await request<{ success: boolean; purchase: PurchaseEntry }>(
     "/api/portfolio/erp/purchases",
