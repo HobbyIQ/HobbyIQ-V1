@@ -924,6 +924,19 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   const playerSport = inferSportFromPlayer(t);
   if (playerSport) return playerSport;
 
+  // CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes
+  // TCG + non-sport (Pokemon, MTG, Star Wars, etc.) alongside sports.
+  // Rather than default to "baseball" (which pollutes FMV/calibration
+  // pools), tag these with their real category so downstream filters
+  // on sport IN (baseball/basketball/football/hockey/soccer) exclude
+  // them naturally. Rows stay queryable for later dedicated
+  // categorization.
+  if (/\b(pokemon|pok[eé]?mon)\b/i.test(t)) return "pokemon";
+  if (/\b(yugioh|yu-?gi-?oh)\b/i.test(t)) return "yugioh";
+  if (/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i.test(t)) return "tcg-other";
+  if (/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i.test(t)) return "anime-tcg";
+  if (/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b)\b/i.test(t)) return "non-sport";
+
   return fallback;
 }
 

@@ -129,11 +129,25 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
     }));
   }
 
-  // 3. Process synchronously with high concurrency. TCA times out at
-  //    30 sec — must finish within that. 1000 rows × ~150ms serial =
-  //    150s. With concurrency 48 that's ~3s. Safely inside window.
-  //    persistVendorSalesToPool is idempotent (contentHash dedup) so
-  //    replayed batches are safe.
+  // 3. TCA webhook is uncategorized — pushes sports + TCG + non_sport
+  //    all in the same batch (their docs: "cannot filter subscriptions
+  //    by category"). We keep everything, but tag non-sports with a
+  //    specific sport hint (pokemon / tcg-other / non-sport) so the
+  //    existing sport IN ('baseball','basketball',...) filters
+  //    naturally exclude them from FMV/calibration pools while the
+  //    raw data stays queryable for follow-on categorization.
+  const CATEGORY_MARKERS: Array<[RegExp, string]> = [
+    [/\b(pokemon|pok[eé]?mon)\b/i, "pokemon"],
+    [/\b(yugioh|yu-?gi-?oh)\b/i, "yugioh"],
+    [/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i, "tcg-other"],
+    [/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i, "anime-tcg"],
+    [/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b)\b/i, "non-sport"],
+  ];
+  function detectCategorySport(title: string | null | undefined): string | null {
+    if (!title) return null;
+    for (const [re, tag] of CATEGORY_MARKERS) if (re.test(title)) return tag;
+    return null;
+  }
   let inserted = 0, deduped = 0, skipped = 0, errors = 0;
   const CONCURRENCY = 48;
   const inflight = new Set<Promise<unknown>>();
@@ -161,7 +175,16 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
     const hint: Record<string, unknown> = {};
     if (t.player) hint.playerName = String(t.player);
     if (typeof t.year === "number") hint.cardYear = t.year;
+    // Sport priority: TCA's explicit sport field wins; else our
+    // TCG/non-sport detector; else let persistVendorSalesToPool guess.
+    // Downstream FMV/calibration filters on sport IN (baseball, basketball,
+    // football, hockey, soccer) — non-sport values stay in the pool but
+    // don't corrupt those aggregations.
     if (t.sport) hint.sport = String(t.sport).toLowerCase();
+    else {
+      const catSport = detectCategorySport(vsRow.title);
+      if (catSport) hint.sport = catSport;
+    }
     if (t.card_number) hint.cardNumber = String(t.card_number);
     if (t.card_set) hint.setName = String(t.card_set);
     // TCA payload doesn't split parallel from card_set (grade/grader are
