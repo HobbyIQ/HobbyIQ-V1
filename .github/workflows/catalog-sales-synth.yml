@@ -1,0 +1,83 @@
+name: Catalog Sales-Derived Synth
+
+# CF-CATALOG-SALES-SYNTH (Drew, 2026-08-03). Aggregates sold_comps by
+# identity tuple and upserts each qualifying combo into card_catalog
+# with source='sales-derived'. Empirical catalog — every entry is
+# backed by real observed sales.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'true to write to card_catalog (else dry-run count)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+      min_sales:
+        description: 'Min observed sales for a tuple to become a catalog row'
+        required: false
+        type: string
+        default: '1'
+      source_filter:
+        description: 'Optional: only aggregate rows with sold_comps.source = X'
+        required: false
+        type: string
+        default: ''
+      year_from:
+        description: 'Optional: cardYear >= N'
+        required: false
+        type: string
+        default: ''
+      year_to:
+        description: 'Optional: cardYear <= N'
+        required: false
+        type: string
+        default: ''
+      max_minutes:
+        description: 'Wall-clock cap'
+        required: false
+        type: string
+        default: '45'
+
+jobs:
+  synth:
+    name: Aggregate sold_comps → card_catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Run synth
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          APPLY="${{ inputs.apply || 'false' }}" \
+          MIN_SALES="${{ inputs.min_sales || '1' }}" \
+          SOURCE_FILTER="${{ inputs.source_filter || '' }}" \
+          YEAR_FROM="${{ inputs.year_from || '' }}" \
+          YEAR_TO="${{ inputs.year_to || '' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
+          node scripts/catalog-sales-synth.cjs
