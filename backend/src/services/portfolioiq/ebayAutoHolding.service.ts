@@ -50,7 +50,8 @@ export type AutoHoldingResult =
   | { status: "created"; holding: PortfolioHolding; parsed: ParsedListingTitle; enriched: boolean }
   | { status: "needs-attribution"; parsed: ParsedListingTitle }
   | { status: "skipped-low-confidence"; parsed: ParsedListingTitle }
-  | { status: "skipped-already-linked"; parsed: ParsedListingTitle };
+  | { status: "skipped-already-linked"; parsed: ParsedListingTitle }
+  | { status: "skipped-sealed-or-break"; parsed: ParsedListingTitle };
 
 /** Object with a mutable holdings map + purchases array. Kept loose so this
  *  service doesn't depend on the private UserDoc type in portfolioStore. */
@@ -96,6 +97,27 @@ export function autoCreateHoldingForPurchase(
     }
   }
   const parsed = parseListingTitle(purchase.notes ?? "");
+
+  // CF-CARDS-ONLY-FILTER (Drew, 2026-08-03). Portfolio holdings are
+  // CARDS only — reject sealed products, box breaks, memorabilia,
+  // apparel, and supplies. Two-part filter:
+  //   1. No playerName parsed → not a card (breaks and sealed boxes)
+  //   2. Title matches a non-card word list → apparel/supplies/memorabilia
+  //      (even if a player name got parsed, e.g. "Aaron Judge signed hat")
+  // User still has the purchase record for cost tracking; nothing lands
+  // in inventory. Extend the regex when we see a new non-card pattern
+  // slip through — cheaper to be aggressive here than to clean up
+  // orphan holdings later.
+  const title = String(purchase.notes ?? "").toLowerCase();
+  const isSealedOrBreak =
+    /\bbreak\b|\brandom\s+(team|div|hit|slot|player)|\bteam\s+(spot|slot|break)|\bhobby\s+box|\bjumbo\s+box|\bmega\s+box|\bblaster|\bhanger\s+box|\bretail\s+box|\bpyt\b|\bpick\s+your\s+team|\bteam\s+random|\(b\d+\)|\bbox\s+break|\bcase\s+break|\bpersonal\s+break|\bhobby\s+case|\bfactory\s+sealed\s+box|\bwax\s+box|\bcello\s+pack|\bfat\s+pack|\bvalue\s+pack/i.test(title);
+  const isMemorabiliaOrSupply =
+    /\b(hat|cap|jersey|jerseys|t\s?-?\s?shirt|hoodie|sweatshirt|sweater|pants|shorts|shoe|shoes|sneaker|sneakers|helmet|glove|gloves|bat|ball(?!\s+(rookie|card))|puck|photo\s+print|poster|banner|flag|mug|cup|coin|patch|pin\b|button|bobblehead|figure|figurine|statue|replica|ring|chain|necklace|pendant|watch|bag|backpack|wallet|mask|towel|blanket|pillow|magnet(?!ic)|sticker|decal|keychain|keyring|lanyard|autographed\s+(jersey|hat|cap|bat|ball|helmet|photo|poster|puck))\b/i.test(title);
+  const isSupply =
+    /\b(top\s?-?loader|toploader|penny\s+sleeve|penny\s+sleeves|team\s+bag|team\s+bags|semi\s?-?rigid|semirigid|magnetic\s+(holder|case)|one\s?-?touch|screwdown|screw\s+down|card\s+saver|card\s+savers|binder|album|storage\s+box|monster\s+box|card\s+sleeve|card\s+sleeves|ultra\s+pro|ultrapro|display\s+case|display\s+stand|graded\s+slab\s+case|grading\s+kit|deck\s+box)\b/i.test(title);
+  if (!parsed.playerName || isSealedOrBreak || isMemorabiliaOrSupply || isSupply) {
+    return { status: "skipped-sealed-or-break", parsed };
+  }
 
   // CF-EBAY-IMPORT-FORCE-REVIEW (Drew, 2026-08-03). "We need to do
   // matches before going into inventory" — when

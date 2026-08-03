@@ -439,6 +439,12 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
       case "skipped-low-confidence":
         summary.skipped += 1;
         break;
+      case "skipped-sealed-or-break":
+        // Sealed products (hobby / jumbo / mega boxes, blasters) and
+        // box-break slot purchases have no card identity. Counted as
+        // skipped so the summary reflects real work-remaining.
+        summary.skipped += 1;
+        break;
       case "skipped-already-linked":
         // Not counted — this is the "no-op re-run" case, not really "skipped
         // due to low confidence." Left out of the count for shape clarity.

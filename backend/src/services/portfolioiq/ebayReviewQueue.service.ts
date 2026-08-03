@@ -232,8 +232,26 @@ export async function confirmHoldingReview(
   // or better), auto-apply the suggestion. Never overrides an explicit
   // edits.cardId — including null (user explicitly rejected the SKU).
   if (!("cardId" in edits) && !(holding as any).cardId) {
-    const suggested = String((holding as any).suggestedCardId ?? "").trim();
-    const suggestedConfidence = Number((holding as any).suggestionConfidence ?? 0);
+    let suggested = String((holding as any).suggestedCardId ?? "").trim();
+    let suggestedConfidence = Number((holding as any).suggestionConfidence ?? 0);
+    // CF-CONFIRM-SYNC-SUGGEST (Drew, 2026-08-03). If no suggestion was
+    // pre-cached on the holding (fire-and-forget suggester never ran,
+    // or ran before the fields were populated), take one synchronous
+    // shot at the suggester right now. Users approve one-at-a-time so
+    // this pays only ~1 suggester call per confirmation. Prevents the
+    // "approved but unverified with no FMV" state Drew hit.
+    if (!suggested) {
+      try {
+        const { suggestCardIdForHolding } = await import("./cardIdSuggester.service.js");
+        const suggestion = await suggestCardIdForHolding(holding);
+        if (suggestion?.cardId) {
+          suggested = String(suggestion.cardId);
+          suggestedConfidence = Number(suggestion.confidence ?? 0);
+          (holding as any).suggestedCardId = suggested;
+          (holding as any).suggestionConfidence = suggestedConfidence;
+        }
+      } catch { /* soft — proceed with legacy behavior */ }
+    }
     if (suggested && suggestedConfidence >= 0.55) {
       (holding as any).cardId = suggested;
       (holding as any).cardIdAutoAppliedFromSuggestion = true;
