@@ -148,3 +148,50 @@ export async function tcaCatalogNarrow(
     return [];
   }
 }
+
+// ── Identity verification against TCA catalog ─────────────────────────────
+// CF-TCA-CATALOG-VERIFY (Drew, 2026-08-03). Confirms our parsed
+// identity actually exists in TCA's canonical catalog. Used at
+// user-facing events (holding confirm, portfolio detail) to gate
+// data cleanliness — NOT per-ingest-row (that would hammer TCA).
+//
+// Returns a shape suitable for downstream tagging:
+//   verified: true  → exact card_number match found for (player, year, set)
+//   verified: false → catalog returned cards for the tuple but none matched
+//                     our card_number → parse likely wrong
+//   verified: null  → catalog had no data for the tuple → can't verify
+//                     either way (rare set, TCA lookup failed, etc)
+export interface TcaVerifyResult {
+  verified: boolean | null;
+  reason: string;
+  candidateNumbers?: string[];
+  matchedTcaCardId?: number;
+}
+
+export async function verifyCardAgainstTcaCatalog(input: {
+  playerName: string;
+  cardYear: number;
+  setName: string;
+  cardNumber: string;
+  sport: string;
+}): Promise<TcaVerifyResult> {
+  const apiKey = process.env.TCA_API_KEY;
+  if (!apiKey) return { verified: null, reason: "no-api-key" };
+  if (!input.playerName || !input.cardYear || !input.setName || !input.cardNumber || !input.sport) {
+    return { verified: null, reason: "insufficient-input" };
+  }
+  const cards = await tcaCatalogNarrow(input.playerName, input.cardYear, input.setName, input.sport);
+  if (cards.length === 0) {
+    return { verified: null, reason: "no-tca-candidates" };
+  }
+  const targetNum = String(input.cardNumber).trim().toUpperCase();
+  const match = cards.find((c) => String(c.card_number ?? "").trim().toUpperCase() === targetNum);
+  if (match) {
+    return { verified: true, reason: "exact-cardnumber-match", matchedTcaCardId: match.id };
+  }
+  return {
+    verified: false,
+    reason: "no-cardnumber-match-in-set",
+    candidateNumbers: cards.map((c) => String(c.card_number ?? "").trim()).filter(Boolean).slice(0, 10),
+  };
+}

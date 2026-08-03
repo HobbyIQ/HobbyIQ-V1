@@ -286,6 +286,29 @@ export async function confirmHoldingReview(
   if ((holding as any).cardId) {
     (holding as any).identityVerified = true;
     (holding as any).identityVerifiedAt = new Date().toISOString();
+    // CF-TCA-CATALOG-VERIFY-ON-CONFIRM (Drew, 2026-08-03). Cross-
+    // reference against TCA's canonical catalog to tag whether our
+    // parsed identity actually exists in a real published set.
+    // Never blocks the confirm — the tag lets downstream code know
+    // whether TCA vouches for the match. verified=true → TCA
+    // canonical, verified=false → TCA disagrees (bad parse likely),
+    // verified=null → TCA had no data.
+    if ((holding as any).playerName && (holding as any).cardYear && (holding as any).setName && (holding as any).cardNumber && (holding as any).sport && process.env.TCA_CATALOG_VERIFY_ENABLED === "true") {
+      try {
+        const { verifyCardAgainstTcaCatalog } = await import("../compiq/tcaCatalog.client.js");
+        const v = await verifyCardAgainstTcaCatalog({
+          playerName: String((holding as any).playerName),
+          cardYear: Number((holding as any).cardYear),
+          setName: String((holding as any).setName),
+          cardNumber: String((holding as any).cardNumber),
+          sport: String((holding as any).sport),
+        });
+        (holding as any).tcaCatalogVerified = v.verified;
+        (holding as any).tcaCatalogVerifiedReason = v.reason;
+        if (v.matchedTcaCardId) (holding as any).tcaCatalogCardId = v.matchedTcaCardId;
+        (holding as any).tcaCatalogVerifiedAt = new Date().toISOString();
+      } catch { /* soft: verification is nice-to-have */ }
+    }
   }
 
   // Log corrections if any were made. Every confirm gets a record — even
