@@ -139,6 +139,12 @@ app.use(compression({ threshold: 1024 }));
 // middleware chain, and the /webhook route uses express.raw() locally.
 app.use("/api/stripe", stripeRoutes);
 
+// CF-TCA-WEBHOOK-RAW-BODY (Drew, 2026-08-02). Same pattern as Stripe —
+// TCA signs the raw JSON body with HMAC-SHA256, so the route MUST see
+// the untouched Buffer. Mounted BEFORE the global express.json() so
+// the router's local express.raw() applies without contention.
+app.use("/api/tca", tcaWebhookRoutes);
+
 app.use(express.json({ limit: "12mb" }));
 // CF-FINALIZE (2026-06-03): config.CORS_ALLOWED_ORIGINS is now pre-parsed
 // to boolean | "*" | string[]. The `|| "*"` fallback was the source of
@@ -227,7 +233,7 @@ app.use("/api/catalog", catalogAdditionsRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/playeriq", playeriqRoutes);
 app.use("/api/ebay/webhook", ebayWebhookRoutes);
-app.use("/api/tca", tcaWebhookRoutes);
+// /api/tca is mounted BEFORE express.json() above — do NOT re-mount here.
 app.use("/api/ebay", ebayRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/internal/ocr", ocrRoutes);
