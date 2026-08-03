@@ -74,15 +74,24 @@ function releaseLlmSlot(): void {
   if (next) next();
 }
 
-export async function parseTitleWithAi(title: string): Promise<AiParsedTitle | null> {
+export async function parseTitleWithAi(title: string, imageUrl?: string | null): Promise<AiParsedTitle | null> {
   if (!title || typeof title !== "string" || title.trim().length < 10) return null;
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
   const apiKey = process.env.AZURE_OPENAI_API_KEY;
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
   const apiVersion = process.env.AZURE_OPENAI_API_VERSION ?? "2024-08-01-preview";
   if (!endpoint || !apiKey || !deployment) return null;
+  // Vision fallback flag — when true and imageUrl present, send the
+  // image URL as a second content part. gpt-4o-mini supports vision;
+  // the model reads the card and cross-references our text extraction.
+  const useVision = process.env.LLM_VISION_ENABLED === "true"
+    && typeof imageUrl === "string"
+    && /^https?:\/\//.test(imageUrl);
 
-  const titleHash = hashTitle(title);
+  // Cache key includes vision-mode so text-only + vision responses cache
+  // separately (they can produce different fields, especially cardYear
+  // and playerName on Pokemon/vintage titles).
+  const titleHash = useVision ? `v:${hashTitle(title)}` : hashTitle(title);
 
   // Cache hit?
   const cache = await getCacheContainer();
@@ -120,13 +129,20 @@ Rules:
 Return JSON only.`;
 
   const url = `${endpoint.replace(/\/$/, "")}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+  // Text-only user content OR mixed text+image parts when vision is on.
+  const userContent: unknown = useVision
+    ? [
+        { type: "text", text: `Title: "${title}"\n\nUse the image to disambiguate identity when the title is ambiguous. Return JSON.` },
+        { type: "image_url", image_url: { url: imageUrl!, detail: "low" } },
+      ]
+    : `Title: "${title}"\n\nReturn JSON.`;
   const body = {
     messages: [
       { role: "system", content: system },
-      { role: "user", content: `Title: "${title}"\n\nReturn JSON.` },
+      { role: "user", content: userContent },
     ],
     temperature: 0.05,
-    max_tokens: 200,
+    max_tokens: 250,
     response_format: { type: "json_object" },
   };
 

@@ -334,7 +334,37 @@ export async function persistVendorSalesToPool(
     ) {
       try {
         const { parseTitleWithAi } = await import("./titleParserAi.service.js");
+        // Text-only pass first (fast, cheap, cached).
         llmParsed = await parseTitleWithAi(title);
+        // Vision fallback (Drew, 2026-08-03): if text-only failed to
+        // yield critical fields AND we have an image URL, retry with
+        // vision. Gated on LLM_VISION_ENABLED so we can tune cost.
+        // The image often disambiguates Pokemon/vintage/typo cases
+        // where the title alone is too vague.
+        const stillMissing = (
+          (!cardNumber && !llmParsed?.cardNumber)
+          || (!cardYear && !llmParsed?.cardYear)
+          || (!playerName && !llmParsed?.playerName)
+        );
+        if (stillMissing && row.imageUrl && process.env.LLM_VISION_ENABLED === "true") {
+          const visionParsed = await parseTitleWithAi(title, row.imageUrl);
+          if (visionParsed && (visionParsed.cardNumber || visionParsed.cardYear || visionParsed.playerName)) {
+            // Merge: vision fills gaps text-only left; text-only holds where
+            // vision returned null (rare, but possible).
+            llmParsed = {
+              cardNumber: llmParsed?.cardNumber ?? visionParsed.cardNumber,
+              parallel: (llmParsed?.parallel && llmParsed.parallel !== "Base") ? llmParsed.parallel : visionParsed.parallel,
+              isAuto: llmParsed?.isAuto || visionParsed.isAuto,
+              printRun: llmParsed?.printRun ?? visionParsed.printRun,
+              confidence: visionParsed.confidence, // vision is generally higher
+              reasoning: `text+vision: ${visionParsed.reasoning}`,
+              cardYear: llmParsed?.cardYear ?? visionParsed.cardYear,
+              playerName: llmParsed?.playerName ?? visionParsed.playerName,
+              setName: llmParsed?.setName ?? visionParsed.setName,
+              sport: llmParsed?.sport ?? visionParsed.sport,
+            };
+          }
+        }
       } catch { /* LLM failure is non-fatal — fall through to existing gates */ }
       if (llmParsed) {
         if (!cardNumber && llmParsed.cardNumber) cardNumber = llmParsed.cardNumber;
