@@ -60,7 +60,14 @@ interface TcaSaleRow {
   category?: string | null;
 }
 
-router.post("/webhook", rawJson, async (req: Request, res: Response) => {
+// CF-TCA-WEBHOOK-CURSOR-TEST (Drew, 2026-08-03). Both /webhook and
+// /webhook-v2 hit the same handler. Each is registered as a distinct
+// TCA endpoint (separate id), so if TCA's cursor is per-endpoint,
+// the v2 route will receive fresh sold_at values while the original
+// keeps grinding through the May-June 2026 backlog. If both get the
+// same historical dates, the cursor is per-account/key and only
+// TCA support can reset it. Endpoint label logged for split diagnosis.
+async function webhookHandler(req: Request, res: Response, endpointLabel: string) {
   const startMs = Date.now();
   const secret = process.env.TCA_WEBHOOK_SECRET ?? "";
   const rawBody = req.body as Buffer;
@@ -111,11 +118,21 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
       if (t.title) hasTitle++;
     }
     const first = rows[0];
+    // Sample sold_at values across the batch to distinguish
+    // per-endpoint vs per-account cursor semantics.
+    const soldAtSamples = rows.slice(0, 5).map((r) => (r as TcaSaleRow).sold_at || (r as TcaSaleRow).sale_date || null);
+    const soldAtMax = rows.reduce<string | null>((mx, r) => {
+      const v = (r as TcaSaleRow).sold_at || (r as TcaSaleRow).sale_date || null;
+      return v && (!mx || v > mx) ? v : mx;
+    }, null);
     console.log(JSON.stringify({
       event: "tca.webhook.batch_coverage",
       source: "tcaWebhook.routes",
+      endpoint: endpointLabel,
       batch: rows.length,
       hasTitle, hasPrice, hasSoldAt, hasCardNumber, hasPlayer, hasYear, hasSet, hasSport,
+      soldAtSamples,
+      soldAtMax,
       firstRow: {
         title: first?.title?.slice?.(0, 100),
         card_number: first?.card_number,
@@ -230,6 +247,7 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
   console.log(JSON.stringify({
     event: "tca.webhook.batch_processed",
     source: "tcaWebhook.routes",
+    endpoint: endpointLabel,
     event_type: payload?.event ?? null,
     batch_size: rows.length,
     inserted, deduped, skipped, errors,
@@ -239,7 +257,10 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
   }));
 
   res.status(200).json({ ok: true, inserted, deduped, skipped, errors, elapsedMs });
-});
+}
+
+router.post("/webhook", rawJson, (req, res) => webhookHandler(req, res, "v1"));
+router.post("/webhook-v2", rawJson, (req, res) => webhookHandler(req, res, "v2"));
 
 // GET endpoint for TCA registration validation (some webhook systems
 // probe with a GET before allowing POST subscriptions).
