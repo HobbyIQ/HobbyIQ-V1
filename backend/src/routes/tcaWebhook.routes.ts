@@ -149,6 +149,16 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
     return null;
   }
   let inserted = 0, deduped = 0, skipped = 0, errors = 0;
+  // Skip-reason instrumentation (Drew, 2026-08-02). Track WHERE we're
+  // losing rows so we can prioritize which parser gate to fix first.
+  const skipReasons = {
+    no_price_or_date: 0,
+    persist_skipped: 0,    // persistVendorSalesToPool returned skipped>0
+  };
+  const skipSamples: Record<string, string[]> = {
+    no_price_or_date: [],
+    persist_skipped: [],
+  };
   const CONCURRENCY = 48;
   const inflight = new Set<Promise<unknown>>();
   for (const t of rows) {
@@ -168,7 +178,12 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
       externalId: t.id || null,
       imageUrl: t.image_url || null,
     };
-    if (!vsRow.soldAt || !(vsRow.price > 0)) { skipped++; continue; }
+    if (!vsRow.soldAt || !(vsRow.price > 0)) {
+      skipped++;
+      skipReasons.no_price_or_date++;
+      if (skipSamples.no_price_or_date.length < 2) skipSamples.no_price_or_date.push(vsRow.title?.slice(0, 100) || "(no title)");
+      continue;
+    }
     // Pass every structured field TCA gave us so persistVendorSalesToPool
     // doesn't have to guess from the title (which fails on ~90% of raw
     // eBay titles). See VendorPersistIdentityHint.
@@ -191,7 +206,17 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
     // separate fields, but parallel is baked into set/features). Leave
     // parallel + printRun + isAuto to fall through to title-parse.
     const p = persistVendorSalesToPool("tca-ebay", [vsRow], hint)
-      .then((res) => { inserted += res.inserted; deduped += res.deduped; skipped += res.skipped; })
+      .then((res) => {
+        inserted += res.inserted;
+        deduped += res.deduped;
+        skipped += res.skipped;
+        if (res.skipped > 0 && res.inserted === 0) {
+          skipReasons.persist_skipped++;
+          if (skipSamples.persist_skipped.length < 5) {
+            skipSamples.persist_skipped.push(vsRow.title?.slice(0, 120) || "(no title)");
+          }
+        }
+      })
       .catch((err) => {
         errors++;
         if (errors < 10) console.warn(`  webhook persist failed id=${t.id}: ${err?.code ?? err?.message ?? err}`);
@@ -208,6 +233,8 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
     event_type: payload?.event ?? null,
     batch_size: rows.length,
     inserted, deduped, skipped, errors,
+    skipReasons,
+    skipSamples,
     elapsedMs,
   }));
 
