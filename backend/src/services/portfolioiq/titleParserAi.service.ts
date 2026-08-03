@@ -54,6 +54,26 @@ function hashTitle(title: string): string {
   return createHash("sha256").update(title.trim().toLowerCase()).digest("hex").slice(0, 32);
 }
 
+// CF-LLM-RATE-LIMIT (Drew, 2026-08-03). Azure OpenAI gpt-4o-mini
+// defaults to modest TPM/RPM on standard tier. Webhook fires ~48
+// concurrent LLM calls per batch which trips 429s (604/637 failures
+// observed 2026-08-03). Semaphore caps in-flight to 5 per app
+// instance; excess awaits. Trades throughput for success rate.
+// Longer-term fix: bump the deployment's TPM in Azure portal.
+const LLM_MAX_INFLIGHT = 5;
+let llmInflight = 0;
+const llmWaitQueue: Array<() => void> = [];
+async function acquireLlmSlot(): Promise<void> {
+  if (llmInflight < LLM_MAX_INFLIGHT) { llmInflight++; return; }
+  await new Promise<void>((resolve) => llmWaitQueue.push(resolve));
+  llmInflight++;
+}
+function releaseLlmSlot(): void {
+  llmInflight--;
+  const next = llmWaitQueue.shift();
+  if (next) next();
+}
+
 export async function parseTitleWithAi(title: string): Promise<AiParsedTitle | null> {
   if (!title || typeof title !== "string" || title.trim().length < 10) return null;
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
@@ -110,13 +130,25 @@ Return JSON only.`;
     response_format: { type: "json_object" },
   };
 
+  // Acquire semaphore slot before hitting Azure OpenAI
+  await acquireLlmSlot();
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
+    // Fetch with 429 retry (Azure returns retry-after when throttled)
+    let res: Response | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": apiKey },
+        body: JSON.stringify(body),
+      });
+      if (r.status !== 429) { res = r; break; }
+      // Honor Retry-After if provided, else exp backoff (1s / 4s / 12s)
+      const retryAfter = Number(r.headers.get("retry-after") ?? "");
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * Math.pow(4, attempt - 1);
+      if (attempt === 3) { res = r; break; }
+      await new Promise((resolve) => setTimeout(resolve, Math.min(waitMs, 15_000)));
+    }
+    if (!res || !res.ok) return null;
     const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
     const content = json.choices?.[0]?.message?.content;
     if (!content) return null;
@@ -150,5 +182,7 @@ Return JSON only.`;
     return out;
   } catch {
     return null;
+  } finally {
+    releaseLlmSlot();
   }
 }
