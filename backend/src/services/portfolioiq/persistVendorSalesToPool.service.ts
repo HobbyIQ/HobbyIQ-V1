@@ -468,6 +468,7 @@ export async function persistVendorSalesToPool(
     if (!cardNumber
         && process.env.PLAYER_FALLBACK_CARDNUMBER_ENABLED === "true"
         && sport
+        && !NON_SPORTS_TAGS.has(sport.toLowerCase())
         && cardYear
         && setKey
         && playerName) {
