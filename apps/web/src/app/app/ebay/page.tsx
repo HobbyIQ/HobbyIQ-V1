@@ -15,6 +15,7 @@ import {
   fetchPendingReviewHoldings,
   generatePendingReviewSuggestions,
   confirmPendingReviewHolding,
+  backfillPurchaseHoldings,
   type EbayStatus,
   type EbayPoliciesResponse,
   type EbayOfferStatus,
@@ -578,6 +579,8 @@ function ReviewQueueSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState<Record<string, boolean>>({});
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -599,6 +602,36 @@ function ReviewQueueSection() {
     window.addEventListener("hiq:review-queue-refresh", handler);
     return () => window.removeEventListener("hiq:review-queue-refresh", handler);
   }, []);
+
+  async function onRetryMatch() {
+    setBackfilling(true);
+    setBackfillMsg(null);
+    setError(null);
+    try {
+      // 1. Run auto-holding batch pass — re-parses every orphan
+      //    purchase and creates pending-review holdings for parseable
+      //    rows. Used to recover after a parser fix ships.
+      const bf = await backfillPurchaseHoldings();
+      // 2. Fire-and-forget cardId suggester so each pending-review row
+      //    lands with a pre-filled match hint. Failure is soft.
+      generatePendingReviewSuggestions().catch(() => {});
+      const created = bf.holdingsNeedingReview ?? bf.holdingsCreated ?? 0;
+      const processed = bf.processed ?? 0;
+      setBackfillMsg(
+        created > 0
+          ? `Auto-matched ${created} purchase${created === 1 ? "" : "s"} (of ${processed} processed). Generating card suggestions…`
+          : `Processed ${processed} purchase${processed === 1 ? "" : "s"}, no new matches — parse confidence too low.`,
+      );
+      // Re-poll a few times so suggestions land in the visible list.
+      await load();
+      setTimeout(() => { void load(); }, 4000);
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message ?? "Retry match failed");
+    } finally {
+      setBackfilling(false);
+    }
+  }
 
   async function onApprove(id: string) {
     setApproving((prev) => ({ ...prev, [id]: true }));
@@ -634,14 +667,29 @@ function ReviewQueueSection() {
             Approved cards land in your portfolio.
           </p>
         </div>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          className="hiq-btn-secondary text-xs disabled:opacity-60"
-        >
-          {loading ? "…" : "Refresh"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => void onRetryMatch()}
+            disabled={backfilling || loading}
+            className="hiq-btn-primary text-xs disabled:opacity-60"
+            title="Re-parse every orphan purchase and auto-match cards"
+          >
+            {backfilling ? "Matching…" : "Auto-match now"}
+          </button>
+          <button
+            onClick={() => void load()}
+            disabled={loading}
+            className="hiq-btn-secondary text-xs disabled:opacity-60"
+          >
+            {loading ? "…" : "Refresh"}
+          </button>
+        </div>
       </div>
+      {backfillMsg && (
+        <div className="text-sm mb-3 text-[color:var(--color-muted)]">
+          {backfillMsg}
+        </div>
+      )}
       {error && (
         <div className="text-sm mb-3" style={{ color: "var(--color-danger)" }}>
           {error}

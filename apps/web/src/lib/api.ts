@@ -1765,6 +1765,24 @@ export async function fetchPendingReviewHoldings(): Promise<{
   return await request("/api/portfolio/holdings/pending-review");
 }
 
+// CF-BACKFILL-HOLDINGS-WEB (Drew, 2026-08-03). Re-runs
+// autoCreateHoldingForPurchase against every orphan purchase (no
+// linked holding). Idempotent. Used to recover after an ingest
+// parser fix ships — no eBay refetch, just re-parse locally.
+export async function backfillPurchaseHoldings(): Promise<{
+  success: boolean;
+  processed?: number;
+  holdingsCreated?: number;
+  holdingsNeedingReview?: number;
+  holdingsBrowseEnriched?: number;
+  skipped?: number;
+}> {
+  return await request(
+    "/api/portfolio/erp/purchases/backfill-holdings",
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
 export async function generatePendingReviewSuggestions(force = false): Promise<{
   success: boolean;
   suggested?: number;
