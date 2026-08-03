@@ -60,8 +60,23 @@ export function extractGradeFromTitle(title: string): { gradeCompany: "PSA" | "B
 // regex required 1-3 leading letters before digits, so #136 got no
 // match and Heritage rows shipped with cardNumber=null. Now accepts
 // 1-4 pure digits after '#' as a fallback alternative.
+// CF-CARDNUM-LOOSEN (Drew, 2026-08-02). Original regex required `#` with
+// zero whitespace before the number. Real eBay titles from the TCA
+// firehose showed 30% of skips are titles with `# NN` (space between)
+// or `NN` standalone in a card-number-shaped position. Add `\s*` after
+// the `#` and preserve the strict letter-prefix formats for high-signal
+// SKUs like BCP-102 / CPA-EH / US175.
 const DEFAULT_CARD_NUMBER_RE =
-  /#([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4})\b/i;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4})\b/i;
+
+// CF-CARDNUM-STANDALONE (Drew, 2026-08-02). Second-chance regex for when
+// the title has no `#` at all but a plausible card-number-shaped token
+// appears after the year+set+player triple. Requires the token to be
+// preceded by whitespace and followed by whitespace / EOL / PSA-style
+// grader, and to NOT be a print run (no leading `/`).
+// Example: "2023 PANINI SELECT GOLD GLITTER JALEN BRUNSON 194 PSA 10" → 194
+const STANDALONE_CARD_NUMBER_RE =
+  /(?:^|\s)(\d{1,4})(?=\s+(?:PSA|BGS|SGC|CGC|BVG|HGA|GEM|MINT|NM|RC|ROOKIE|GRADED|RAW|$))/i;
 
 // Note: `on card` alone does NOT imply auto — "On Card Display" and
 // similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
@@ -343,7 +358,26 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
 function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null {
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
   const m = title.match(re);
-  return m ? m[1].toUpperCase() : null;
+  if (m) return m[1].toUpperCase();
+  // CF-CARDNUM-STANDALONE fallback — only tried when the primary #-prefix
+  // regex didn't fire. Won't match print runs (leading `/` blocked).
+  if (!cardNumberRe) {
+    const m2 = title.match(STANDALONE_CARD_NUMBER_RE);
+    if (m2) return m2[1].toUpperCase();
+  }
+  // CF-TCG-CARDNUM (Drew, 2026-08-02). Pokemon/TCG card numbers use the
+  // format `POS/TOTAL` (e.g. "008/132", "294/217"). Note the position
+  // CAN exceed the total (secret/hyper rares are numbered above set
+  // total). Constrain both to <=400 so we don't accidentally consume
+  // sports print runs like /999 or /2011.
+  const tcg = title.match(/(?:^|\s)(\d{1,3})\/(\d{1,3})(?:\s|$)/);
+  if (tcg) {
+    const num = Number(tcg[1]); const total = Number(tcg[2]);
+    if (num > 0 && num <= 400 && total > 0 && total <= 400) {
+      return `${tcg[1]}/${tcg[2]}`;
+    }
+  }
+  return null;
 }
 
 function extractIsAuto(title: string): boolean {
