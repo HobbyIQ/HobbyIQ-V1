@@ -94,23 +94,38 @@ router.post("/webhook", rawJson, async (req: Request, res: Response) => {
   }
   const rows = Array.isArray(payload?.data) ? payload.data : [];
 
-  // TEMP DIAG (Drew, 2026-08-02): log the FIRST row's field values so we
-  // can see whether TCA's actual webhook payload shape matches our
-  // /sales mapping. Remove once ingest is proven landing rows.
+  // TEMP DIAG (Drew, 2026-08-02): count STRUCTURED identity coverage
+  // across the batch to see whether TCA is actually populating
+  // card_number / player / year on their side. Remove once ingest is
+  // healthy.
   if (rows.length > 0) {
+    let hasCardNumber = 0, hasPlayer = 0, hasYear = 0, hasSet = 0, hasSport = 0, hasPrice = 0, hasSoldAt = 0, hasTitle = 0;
+    for (const t of rows as TcaSaleRow[]) {
+      if (t.card_number) hasCardNumber++;
+      if (t.player) hasPlayer++;
+      if (typeof t.year === "number" && t.year > 1800) hasYear++;
+      if (t.card_set) hasSet++;
+      if (t.sport) hasSport++;
+      if (typeof t.price === "number" && t.price > 0) hasPrice++;
+      if (t.sold_at || t.sale_date) hasSoldAt++;
+      if (t.title) hasTitle++;
+    }
     const first = rows[0];
     console.log(JSON.stringify({
-      event: "tca.webhook.first_row_diag",
+      event: "tca.webhook.batch_coverage",
       source: "tcaWebhook.routes",
-      keys: Object.keys(first || {}),
-      title: first?.title?.slice?.(0, 80),
-      price: first?.price,
-      priceType: typeof first?.price,
-      sold_at: first?.sold_at,
-      sale_date: first?.sale_date,
-      id: first?.id,
-      category: first?.category,
-      platform: first?.platform,
+      batch: rows.length,
+      hasTitle, hasPrice, hasSoldAt, hasCardNumber, hasPlayer, hasYear, hasSet, hasSport,
+      firstRow: {
+        title: first?.title?.slice?.(0, 100),
+        card_number: first?.card_number,
+        player: first?.player,
+        year: first?.year,
+        card_set: first?.card_set,
+        sport: first?.sport,
+        category: first?.category,
+        platform: first?.platform,
+      },
     }));
   }
 
