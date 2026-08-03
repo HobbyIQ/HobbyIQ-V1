@@ -7,6 +7,7 @@ import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
+import { startWeeklyEbayPurchaseSyncJob } from "./jobs/ebayPurchaseSync.job.js";
 import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
 import { startMatchedCohortJob } from "./jobs/matchedCohortMomentum.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
@@ -80,6 +81,16 @@ app.listen(port, "0.0.0.0", () => {
     startEbayOrderPollJob();
   } catch (err: any) {
     console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
+  }
+  // CF-WEEKLY-EBAY-PURCHASE-SYNC (Drew, 2026-08-03). Sunday 06:00 UTC
+  // sweep to pull last 7 days of purchases per connected user. Gated
+  // on WEEKLY_EBAY_PURCHASE_SYNC_ENABLED — off by default at boot.
+  // Combined with EBAY_IMPORT_FORCE_REVIEW=true, imports route to
+  // the review queue instead of auto-creating holdings.
+  try {
+    startWeeklyEbayPurchaseSyncJob();
+  } catch (err: any) {
+    console.error("[server] startWeeklyEbayPurchaseSyncJob failed:", err?.message ?? err);
   }
   // CF-CH-DELTA-POLL-FOUNDATION (2026-06-30): observation-only CardHedge
   // price-updates delta poll. Dormant unless both CARD_HEDGE_CLIENT_ID
