@@ -17,13 +17,16 @@ name: TCA Firehose Ingest
 #   apply=false|true           (default false; MUST set true to write)
 
 on:
-  # ENABLED 2026-08-02 — routes through persistVendorSalesToPool so TCA
-  # rows go through the SAME pipeline as CH rows (identity parse,
-  # hobbyiqCardId compute, contentHash dedup, comps_staging landing,
-  # image mirror, verify-queue). Verified 1499 rows written from 40K
-  # fetched (~3.7% parser pass rate — sports-tuned parser filter).
+  # RETUNED 2026-08-03 — TCA webhook now handles fresh-data ingest.
+  # The /sales PULL endpoint is capped at 200K rows/day per API key.
+  # This cron runs once nightly at 00:05 UTC (5 min after quota reset)
+  # and burns through the full 200K allocation walking date_desc from
+  # the last cursor — closes the gap between webhook (which walks
+  # date_asc from May 2026) and current. sort=date_desc + APPLY=true
+  # by default. Job auto-halts on 429 after 3 retries so we never spin
+  # over the daily cap.
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '5 0 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -43,12 +46,12 @@ on:
         required: false
         type: choice
         options: ['false', 'true']
-        default: 'false'
+        default: 'true'
       max_minutes:
-        description: 'Wall-clock cap per run (default 12)'
+        description: 'Wall-clock cap per run (default 15 — burns 200K quota fast)'
         required: false
         type: string
-        default: '12'
+        default: '15'
       skip_matcher:
         description: 'Skip the match-enricher pass (only run the ingest)'
         required: false
