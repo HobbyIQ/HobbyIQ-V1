@@ -83,17 +83,18 @@ export function autoCreateHoldingForPurchase(
 
   // CF-EBAY-IMPORT-FORCE-REVIEW (Drew, 2026-08-03). "We need to do
   // matches before going into inventory" — when
-  // EBAY_IMPORT_FORCE_REVIEW=true, no purchase auto-creates a holding
-  // regardless of parseConfidence. Everything with a parseable title
-  // goes to the review queue for user confirmation FIRST.
-  // parseConfidence below NEEDS_ATTRIBUTION_MIN still skips (not
-  // reviewable — no useful identity extracted).
+  // EBAY_IMPORT_FORCE_REVIEW=true, every purchase with confidence
+  // >= NEEDS_ATTRIBUTION_MIN gets a holding CREATED with
+  // cardStatus="pending-review" (the existing review-queue lane).
+  // The user confirms via POST /erp/holdings/:id/confirm before it
+  // becomes active. The AUTO_CREATE_CONFIDENCE_THRESHOLD gate is
+  // bypassed so lower-confidence-but-parseable rows also become
+  // pending-review holdings for the user to correct.
   const forceReview = process.env.EBAY_IMPORT_FORCE_REVIEW === "true";
-  if (forceReview && parsed.parseConfidence >= NEEDS_ATTRIBUTION_MIN) {
-    return { status: "needs-attribution", parsed };
-  }
-
-  if (parsed.parseConfidence < AUTO_CREATE_CONFIDENCE_THRESHOLD) {
+  const effectiveThreshold = forceReview
+    ? NEEDS_ATTRIBUTION_MIN
+    : AUTO_CREATE_CONFIDENCE_THRESHOLD;
+  if (parsed.parseConfidence < effectiveThreshold) {
     if (parsed.parseConfidence >= NEEDS_ATTRIBUTION_MIN) {
       return { status: "needs-attribution", parsed };
     }
