@@ -35,6 +35,22 @@
 
 const { CosmosClient } = require("@azure/cosmos");
 const https = require("https");
+const path = require("path");
+const fs = require("fs");
+
+// CF-TCA-USE-CLEAN-PIPELINE (Drew, 2026-08-02). Route through
+// persistVendorSalesToPool so TCA rows get the SAME treatment as CH
+// rows: parseListingIdentity, computeHobbyIqCardId, contentHash dedup,
+// staging shim, image mirror, verify-queue sampling. Requires
+// `npm run build` in backend/ before running so dist/ exists.
+function loadPersistHelper() {
+  const distRoot = path.resolve(__dirname, "..", "dist");
+  const helperPath = path.join(distRoot, "services", "portfolioiq", "persistVendorSalesToPool.service.js");
+  if (!fs.existsSync(helperPath)) {
+    throw new Error(`persistVendorSalesToPool helper not found at ${helperPath} — run \`npm run build\` first`);
+  }
+  return require(helperPath);
+}
 
 const APPLY = process.env.APPLY === "true";
 const MODE = (process.env.INGEST_MODE || "incremental").toLowerCase();
@@ -104,55 +120,36 @@ async function fetchPageWithRetry(qs, attempt = 1) {
   }
 }
 
-// ─── Row reshaper ────────────────────────────────────────────────────
-
-// Map a TCA sale to a sold_comps row. Rows without structured
-// player+year+setName default to __pendingMatch: true so the async
-// matcher picks them up.
-function tcaToSoldComp(t) {
-  const hasIdentity = !!(t.player && t.year && (t.card_set || t.card_number));
-  const gradeCompany = t.grader || null;
-  const gradeValueRaw = t.grade || null;
-  // TCA grades come like "PSA 10" or just "9". Parse numeric value.
-  let gradeValueNum = null;
-  if (gradeValueRaw) {
-    const m = String(gradeValueRaw).match(/(\d+(?:\.\d+)?)/);
-    if (m) gradeValueNum = Number(m[1]);
-  }
-  // TCA sport enum is inconsistent ("Baseball" / "BASEBALL" / "baseball" all appear).
-  const sport = t.sport ? String(t.sport).toLowerCase() : null;
-  const cardYear = (typeof t.year === "number") ? t.year : (t.year && Number.isFinite(Number(t.year)) ? Number(t.year) : null);
-
+// ─── Row reshaper (TCA → VendorSaleRow for persistVendorSalesToPool) ─
+//
+// persistVendorSalesToPool does the heavy lifting (identity parse from
+// title, hobbyiqCardId compute, contentHash dedup, staging shim, image
+// mirror). We only need to hand it a VendorSaleRow with the four
+// fields it requires plus an optional per-row identity hint.
+//
+// TCA sport enum is inconsistent ("Baseball" / "BASEBALL" / "baseball"
+// all appear) — normalize to lowercase.
+function tcaToVendorSaleRow(t) {
   return {
-    // sold_comps schema uses cardId as partition key. When TCA identity
-    // isn't matched yet, we can't compute the CH-cardId — use a synthetic
-    // partition based on the TCA id so writes distribute evenly.
-    cardId: t.id,   // reshuffled downstream when matcher populates real cardId + slug
-    source: "tca-ebay",
-    sourceExternalId: t.id,
+    title: t.title || null,
     price: Number(t.price),
     soldAt: t.sold_at || (t.sale_date ? new Date(t.sale_date + "T12:00:00Z").toISOString() : null),
-    playerName: t.player || null,
-    setName: t.card_set || null,
-    cardNumber: t.card_number || null,
-    cardYear,
-    sport,
-    parallel: null,   // TCA doesn't split parallel from card_set — matcher will parse from title later
-    isAuto: t.has_autograph_grade === true ? true : null,
-    printRun: (typeof t.print_run === "number") ? t.print_run : null,
-    gradeCompany,
-    gradeValue: gradeValueNum,
+    url: t.listing_url || null,
+    externalId: t.id || null,
     imageUrl: t.image_url || null,
-    tcaListingUrl: t.listing_url || null,
-    tcaPlatform: t.platform || null,
-    title: t.title || null,
-    hobbyiqCardId: null,  // matcher fills in
-    confidence: 0.5,       // raw eBay listing, not vendor-authoritative
-    __pendingMatch: !hasIdentity,
-    __tcaIngestedAt: new Date().toISOString(),
-    contributorUserId: null,
-    verifiedByUser: false,
   };
+}
+
+// When TCA already gives us structured player/year/sport on a row, use
+// them as identity hints — persistVendorSalesToPool skips the title
+// guess for those and gets straight to slug compute.
+function tcaToIdentityHint(t) {
+  const hint = {};
+  if (t.player) hint.playerName = String(t.player);
+  const y = (typeof t.year === "number") ? t.year : (t.year && Number.isFinite(Number(t.year)) ? Number(t.year) : null);
+  if (y) hint.cardYear = y;
+  if (t.sport) hint.sport = String(t.sport).toLowerCase();
+  return hint;
 }
 
 // ─── Crawl state ─────────────────────────────────────────────────────
@@ -179,8 +176,18 @@ async function main() {
 
   const c = new CosmosClient(cs);
   const db = c.database(process.env.COSMOS_DATABASE || "hobbyiq");
-  const sold = db.container("sold_comps");
   const state = db.container("crawl_state");
+
+  // Ensure PERSIST_VENDOR_LOOKUPS_ENABLED is on — persistVendorSalesToPool
+  // is a no-op otherwise and we'd silently write nothing to sold_comps.
+  if (APPLY && process.env.PERSIST_VENDOR_LOOKUPS_ENABLED !== "true") {
+    console.error("PERSIST_VENDOR_LOOKUPS_ENABLED must be 'true' for APPLY=true — persistVendorSalesToPool no-ops otherwise");
+    process.exit(1);
+  }
+
+  // Lazy-load compiled helper (requires backend/dist to exist)
+  const persistHelper = APPLY ? loadPersistHelper() : null;
+  const { persistVendorSalesToPool } = persistHelper || {};
 
   const startMs = Date.now();
   const budgetMs = MAX_MINUTES * 60_000;
@@ -241,18 +248,27 @@ async function main() {
     totalFetched += rows.length;
 
     if (APPLY) {
-      // Upsert rows. Concurrency 8 keeps Cosmos happy.
+      // Route each TCA row through persistVendorSalesToPool — same
+      // pipeline CH uses. Per-row identity hint used when TCA gave us
+      // structured player/year/sport (saves the title-parse pass for
+      // ~17% of rows). Called one-row-at-a-time because identity hint
+      // is per-row (whereas persistVendorSalesToPool's `identity` param
+      // is single-batch — designed for CH's card-scoped comps calls).
       const CONCURRENCY = 8;
       const inflight = new Set();
       for (const t of rows) {
         while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
-        const doc = tcaToSoldComp(t);
-        if (!doc.soldAt || !(doc.price > 0)) { totalDedupSkipped++; continue; }
-        const p = sold.items.upsert(doc)
-          .then(() => { totalWritten++; })
+        const vsRow = tcaToVendorSaleRow(t);
+        if (!vsRow.soldAt || !(vsRow.price > 0)) { totalDedupSkipped++; continue; }
+        const hint = tcaToIdentityHint(t);
+        const p = persistVendorSalesToPool("tca-ebay", [vsRow], hint)
+          .then((res) => {
+            totalWritten += res.inserted;
+            totalDedupSkipped += res.deduped + res.skipped;
+          })
           .catch((err) => {
             totalErrors++;
-            if (totalErrors < 10) console.warn(`  upsert failed id=${t.id}: ${err?.code ?? err?.message ?? err}`);
+            if (totalErrors < 10) console.warn(`  persist failed id=${t.id}: ${err?.code ?? err?.message ?? err}`);
           })
           .finally(() => inflight.delete(p));
         inflight.add(p);

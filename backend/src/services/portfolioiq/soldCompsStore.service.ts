@@ -117,7 +117,8 @@ export type SoldCompSource =
   | "manual-user-entry"     // user added holding manually with purchase price
   | "cardhedge"             // pulled from CH sold-comps API (aggregated vendor data)
   | "cardsight"             // pulled from CS pricing API
-  | "ebay-browse-ended";    // eBay Browse listing whose endDate is in the past (auction winning bid or ended BIN) — confirmed sale, not asking price
+  | "ebay-browse-ended"     // eBay Browse listing whose endDate is in the past (auction winning bid or ended BIN) — confirmed sale, not asking price
+  | "tca-ebay";             // thecardapi.com /sales firehose (eBay + auction houses + TCGplayer). See tca-firehose-ingest-architecture.md.
 
 export interface SoldCompDoc {
   /** Composite id: `{source}::{sourceExternalId}` — collision-safe. */

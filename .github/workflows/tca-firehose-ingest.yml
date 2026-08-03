@@ -17,10 +17,11 @@ name: TCA Firehose Ingest
 #   apply=false|true           (default false; MUST set true to write)
 
 on:
-  # ENABLED 2026-08-02 — TCA_API_KEY landed in HobbyIQ3 App Service,
-  # crawl_state container created. First live run (12998 rows) succeeded
-  # at ~72 rows/sec Cosmos-bound. Every 15 min walks the incremental
-  # cursor forward.
+  # ENABLED 2026-08-02 — routes through persistVendorSalesToPool so TCA
+  # rows go through the SAME pipeline as CH rows (identity parse,
+  # hobbyiqCardId compute, contentHash dedup, comps_staging landing,
+  # image mirror, verify-queue). Verified 1499 rows written from 40K
+  # fetched (~3.7% parser pass rate — sports-tuned parser filter).
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -103,13 +104,24 @@ jobs:
             echo "Add it via: az webapp config appsettings set --name HobbyIQ3 --resource-group rg-hobbyiq-dev --settings TCA_API_KEY=<key>"
             exit 1
           fi
+          # Build TS → dist/ for persistVendorSalesToPool import
+          npm run build
+          # PLATFORM=eBay + CATEGORY=sports keeps us out of TCG (Pokemon,
+          # MTG) where parseListingIdentity's sports-tuned parser skips
+          # 99.98% of rows. Widen to all-categories once the parser
+          # handles TCG identity extraction (follow-up).
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           TCA_API_KEY="$TCA_API_KEY" \
           COSMOS_DATABASE=hobbyiq \
+          PERSIST_VENDOR_LOOKUPS_ENABLED=true \
+          COMPS_STAGING_SHIM_ENABLED=true \
+          COMPS_STAGING_MIRROR_ENABLED=true \
           INGEST_MODE="${{ inputs.mode || 'incremental' }}" \
           SORT="${{ inputs.sort || 'date_desc' }}" \
           APPLY="${{ inputs.apply || 'false' }}" \
           MAX_MINUTES="${{ inputs.max_minutes || '12' }}" \
+          PLATFORM=eBay \
+          CATEGORY=sports \
           node scripts/tca-firehose-ingest.cjs
 
   match-enricher:

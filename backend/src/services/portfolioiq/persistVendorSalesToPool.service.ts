@@ -78,7 +78,7 @@ async function getSoldCompsContainer(): Promise<Container | null> {
  *  hobbyiqCardId + contentHash dedup. Never throws — errors become
  *  warning logs and the function returns partial results. */
 export async function persistVendorSalesToPool(
-  source: "cardsight" | "cardhedge",
+  source: "cardsight" | "cardhedge" | "tca-ebay",
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
@@ -477,7 +477,7 @@ export async function persistVendorSalesToPool(
 /** Fire-and-forget wrapper. Use this from vendor client wrappers so
  *  callers don't have to await persistence. Silences errors internally. */
 export function persistVendorSalesInBackground(
-  source: "cardsight" | "cardhedge",
+  source: "cardsight" | "cardhedge" | "tca-ebay",
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): void {

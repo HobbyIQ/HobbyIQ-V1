@@ -35,7 +35,7 @@ export type StagingStatus =
   // (which applies to missing-image rows).
   | "rejected";
 
-export type StagingVendor = "cardhedge" | "cardsight" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "ebay-browse-ended";
+export type StagingVendor = "cardhedge" | "cardsight" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "ebay-browse-ended" | "tca-ebay";
 
 /** The unmodified vendor record — this half of the doc is IMMUTABLE. */
 export interface StagingRaw {
