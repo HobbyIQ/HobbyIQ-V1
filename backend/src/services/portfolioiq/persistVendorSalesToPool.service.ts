@@ -525,14 +525,28 @@ function guessCardYearFromTitle(title: string): number | null {
   return null;
 }
 
-/** Best-effort player-name guess: strip year, set words, common noise,
- *  return the first sequence that looks like a name. Returns null when
- *  no confident match. Callers should prefer passing playerName in the
- *  identity hint. */
-function guessPlayerFromTitle(_title: string): string | null {
-  // Defensive default — the ingest paths that use this will always pass
-  // playerName via identity hint (they're driven by known player queries).
-  // Free-form guessing is out of scope for this PR; return null so we
-  // skip the row rather than write bad identity.
-  return null;
+/** Best-effort player-name guess. Delegates to parseCardQuery — the
+ *  same battle-tested free-text parser the search endpoint uses. Handles
+ *  eBay-title conventions (leading year, trailing team, grade suffixes,
+ *  set-name tokens like "Bowman Chrome" that could otherwise be
+ *  mistaken for a player name).
+ *
+ *  CF-TCA-GUESS-PLAYER-REAL (Drew, 2026-08-02). Was a null-returning
+ *  stub — CH ingest always passed playerName via identity hint, but
+ *  TCA webhook rows come with player: null on 100% of rows (verified
+ *  via batch_coverage diag: 0/1000 populated). That caused a 100% skip
+ *  rate on webhook ingest. This implementation lets us extract player
+ *  from titles like "2011 Topps Update Mike Trout Rookie #US175 PSA 10". */
+function guessPlayerFromTitle(title: string): string | null {
+  try {
+    // Lazy require to avoid circular dep at module load.
+    // parseCardQuery lives in compiq/ and imports from many places.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { parseCardQuery } = require("../compiq/cardQueryParser.js");
+    const parsed = parseCardQuery(String(title || ""));
+    const player = parsed?.playerName;
+    return typeof player === "string" && player.trim().length > 0 ? player.trim() : null;
+  } catch {
+    return null;
+  }
 }
