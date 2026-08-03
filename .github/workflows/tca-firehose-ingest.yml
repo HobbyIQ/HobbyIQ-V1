@@ -17,10 +17,12 @@ name: TCA Firehose Ingest
 #   apply=false|true           (default false; MUST set true to write)
 
 on:
-  # DISABLED by default until Drew flips TCA_API_KEY on. Un-comment
-  # this once the secret is live.
-  # schedule:
-  #   - cron: '*/15 * * * *'
+  # ENABLED 2026-08-02 — TCA_API_KEY landed in HobbyIQ3 App Service,
+  # crawl_state container created. First live run (12998 rows) succeeded
+  # at ~72 rows/sec Cosmos-bound. Every 15 min walks the incremental
+  # cursor forward.
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       mode:

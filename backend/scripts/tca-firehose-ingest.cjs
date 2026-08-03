@@ -39,11 +39,13 @@ const https = require("https");
 const APPLY = process.env.APPLY === "true";
 const MODE = (process.env.INGEST_MODE || "incremental").toLowerCase();
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 12));
-const PLATFORM = process.env.PLATFORM || "eBay";
-const CATEGORY = process.env.CATEGORY || "sports";
+// PLATFORM / CATEGORY default to "" (no filter) — pull everything TCA has.
+// Set explicitly (e.g. PLATFORM=eBay CATEGORY=sports) to narrow scope.
+const PLATFORM = process.env.PLATFORM || "";
+const CATEGORY = process.env.CATEGORY || "";
 const PAGE_LIMIT = Math.min(1000, Math.max(1, Number(process.env.PAGE_LIMIT || 1000)));
 const SORT = (process.env.SORT || "date_desc").toLowerCase();
-const CRAWLER_ID = process.env.CRAWLER_ID || `tca-${PLATFORM.toLowerCase()}-${CATEGORY}-${SORT}`;
+const CRAWLER_ID = process.env.CRAWLER_ID || `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`;
 
 const TCA_HOST = "www.thecardapi.com";
 const TCA_PATH = "/api/v1/market/sales";
@@ -200,12 +202,14 @@ async function main() {
     console.log(`[tca-firehose] BACKFILL mode — ignoring stored cursor`);
   }
 
+  // Only include platform / category in the query when explicitly set.
+  // Default = no filter = pull EVERYTHING TCA has (per Drew, 2026-08-02).
   const baseQs = new URLSearchParams({
     limit: String(PAGE_LIMIT),
-    platform: PLATFORM,
-    category: CATEGORY,
     sort: SORT,
   });
+  if (PLATFORM) baseQs.set("platform", PLATFORM);
+  if (CATEGORY) baseQs.set("category", CATEGORY);
 
   let page = 0;
   let totalFetched = 0;
