@@ -69,6 +69,8 @@ export type CanonicalFmvMethod =
   | "hot-raw-same-card-anchor"
   | "family-baseline"
   | "product-tier"
+  | "tiered-momentum-card"
+  | "tiered-momentum-player"
   | "no-basis";
 
 export interface CanonicalFmvInput {
@@ -444,6 +446,45 @@ async function computeCanonicalFmvUncached(
   if (familyResult) return finalize(familyResult, input, t0);
   const tierResult = await tryProductTier(cardId, input, trendPctPerMonth);
   if (tierResult) return finalize(tierResult, input, t0);
+
+  // CF-TIERED-MOMENTUM-RUNG (Drew, 2026-08-03). Last-chance rung.
+  // When every prior rung refuses (thin comps, missing cardId slugs,
+  // no family/tier match), fall through to the tiered-momentum
+  // service. Card-tier uses cardnumber-precise sold_comps rows for
+  // the specific cardId; player-tier broadens to the same
+  // (player, year, set, parallel) bucket including player-fallback
+  // rows. Flagged so we can measure real-world lift before hard
+  // adoption.
+  if (process.env.CANONICAL_FMV_TIERED_MOMENTUM_ENABLED === "true") {
+    try {
+      const { computeTieredMomentum } = await import("./tieredMomentum.service.js");
+      const t = await computeTieredMomentum(cardId, {
+        hobbyiqCardId: cardId.startsWith("hiq:") ? cardId : null,
+        identityHint: {
+          playerName: input.player ?? null,
+          cardYear: input.cardYear ?? null,
+          setName: input.product ?? null,
+          parallel: input.parallel ?? null,
+          sport: input.sport ?? null,
+        },
+      });
+      if (t.tier !== "none" && t.projectedNextSale !== null) {
+        const tmResult: CanonicalFmvResult = {
+          fmv: t.projectedNextSale,
+          method: t.tier === "card" ? "tiered-momentum-card" : "tiered-momentum-player",
+          confidence: t.tier === "card" ? 0.4 : 0.25,
+          provenance: {
+            summary: `tiered-momentum(${t.tier}): baselineMedian=${t.baseline.medianPrice ?? "null"}, recentMedian=${t.compsWindow.medianPrice ?? "null"}, ratio=${t.momentumRatio?.toFixed(3) ?? "null"}, n_recent=${t.compsWindow.n}, n_baseline=${t.baseline.n}${t.attribution.playerFallbackRowsIncluded > 0 ? `, incl_pf=${t.attribution.playerFallbackRowsIncluded}` : ""}`,
+            comps: [],
+            trendPctPerMonth,
+            multipliers: {},
+          },
+          computedAt: new Date().toISOString(),
+        };
+        return finalize(tmResult, input, t0);
+      }
+    } catch { /* soft — fall through to no-basis */ }
+  }
 
   const nb = NULL_RESULT("no rung produced a value");
   logCompute(nb, input, t0);

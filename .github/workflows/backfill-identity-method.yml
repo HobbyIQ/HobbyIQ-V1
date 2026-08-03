@@ -1,0 +1,71 @@
+name: Backfill identityMethod
+
+# CF-IDENTITY-METHOD-BACKFILL (Drew, 2026-08-03). Tags legacy sold_comps
+# rows (~158K TCA rows from before identityMethod started being written)
+# with the inferred identityMethod so downstream code that filters on
+# identityMethod = 'cardnumber-precise' picks them up.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Set true to write patches (else dry-run)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+      vendor:
+        description: 'Source to backfill (e.g. tca-ebay, cardhedge)'
+        required: false
+        type: string
+        default: 'tca-ebay'
+      max_minutes:
+        description: 'Wall-clock cap per run'
+        required: false
+        type: string
+        default: '45'
+
+jobs:
+  backfill:
+    name: Backfill identityMethod
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run backfill
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
+          APPLY="${{ inputs.apply || 'false' }}" \
+          node scripts/backfill-identity-method.cjs

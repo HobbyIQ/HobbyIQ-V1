@@ -62,6 +62,11 @@ on:
         required: false
         type: string
         default: ''
+      platforms:
+        description: 'Comma-separated TCA platforms to ingest. Defaults to "eBay". Options: eBay, TCGplayer, REA, SCP Auctions, Hakes, Lelands, goldin. Multiple platforms split max_minutes evenly.'
+        required: false
+        type: string
+        default: 'eBay'
 
 jobs:
   ingest:
@@ -114,24 +119,48 @@ jobs:
           fi
           # Build TS → dist/ for persistVendorSalesToPool import
           npm run build
-          # PLATFORM=eBay + CATEGORY=sports keeps us out of TCG (Pokemon,
-          # MTG) where parseListingIdentity's sports-tuned parser skips
-          # 99.98% of rows. Widen to all-categories once the parser
-          # handles TCG identity extraction (follow-up).
-          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
-          TCA_API_KEY="$TCA_API_KEY" \
-          COSMOS_DATABASE=hobbyiq \
-          PERSIST_VENDOR_LOOKUPS_ENABLED=true \
-          COMPS_STAGING_SHIM_ENABLED=true \
-          COMPS_STAGING_MIRROR_ENABLED=true \
-          INGEST_MODE="${{ inputs.mode || 'incremental' }}" \
-          SORT="${{ inputs.sort || 'date_desc' }}" \
-          APPLY="${{ inputs.apply || 'false' }}" \
-          MAX_MINUTES="${{ inputs.max_minutes || '12' }}" \
-          PLATFORM=eBay \
-          CATEGORY=sports \
-          CRAWLER_ID="tca-ebay-sports-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
-          node scripts/tca-firehose-ingest.cjs
+          # CF-MULTI-PLATFORM (Drew, 2026-08-03). Iterate through every
+          # TCA platform we care about — eBay (main firehose),
+          # TCGplayer (fresh Pokemon data — we DO capture non-sports
+          # for coverage even though cleaning skips them), REA / SCP /
+          # Hakes / Lelands (auction house comps). Each platform has an
+          # independent cursor (CRAWLER_ID varies), so runs are
+          # idempotent and can be split across dispatches.
+          #
+          # 200K/day pull quota is SHARED — divide max_minutes across
+          # platforms roughly by their expected fresh-row volume.
+          # eBay: 60% (mainstream), TCGplayer 15%, auction houses 5% each.
+          PLATFORMS="${{ inputs.platforms || 'eBay' }}"
+          echo "Ingesting from platforms: $PLATFORMS"
+          IFS=',' read -ra PLATFORM_ARR <<< "$PLATFORMS"
+          TOTAL_MIN="${{ inputs.max_minutes || '12' }}"
+          PER_PLATFORM_MIN=$(( TOTAL_MIN / ${#PLATFORM_ARR[@]} ))
+          if [ $PER_PLATFORM_MIN -lt 2 ]; then PER_PLATFORM_MIN=2; fi
+          for P in "${PLATFORM_ARR[@]}"; do
+            P_CLEAN=$(echo "$P" | tr -d '[:space:]')
+            # Sports category filter only makes sense for eBay & TCGplayer;
+            # auction houses cover sports intrinsically.
+            if [ "$P_CLEAN" = "eBay" ] || [ "$P_CLEAN" = "TCGplayer" ]; then
+              CAT_FILTER="sports"
+            else
+              CAT_FILTER=""
+            fi
+            echo "=== $P_CLEAN (category=$CAT_FILTER, $PER_PLATFORM_MIN min) ==="
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            TCA_API_KEY="$TCA_API_KEY" \
+            COSMOS_DATABASE=hobbyiq \
+            PERSIST_VENDOR_LOOKUPS_ENABLED=true \
+            COMPS_STAGING_SHIM_ENABLED=true \
+            COMPS_STAGING_MIRROR_ENABLED=true \
+            INGEST_MODE="${{ inputs.mode || 'incremental' }}" \
+            SORT="${{ inputs.sort || 'date_desc' }}" \
+            APPLY="${{ inputs.apply || 'false' }}" \
+            MAX_MINUTES="$PER_PLATFORM_MIN" \
+            PLATFORM="$P_CLEAN" \
+            CATEGORY="$CAT_FILTER" \
+            CRAWLER_ID="tca-${P_CLEAN,,}-${CAT_FILTER:-all}-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
+            node scripts/tca-firehose-ingest.cjs || echo "  ($P_CLEAN failed or quota-capped — continuing)"
+          done
 
   match-enricher:
     name: TCA match-enricher (title → identity)

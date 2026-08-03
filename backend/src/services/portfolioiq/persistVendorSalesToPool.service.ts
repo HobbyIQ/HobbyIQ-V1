@@ -59,7 +59,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
       parameters: [
         { name: "@p", value: playerName },
         { name: "@y", value: String(cardYear) },
@@ -67,6 +67,45 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
     };
     const { resources } = await catalog.items.query(q).fetchAll();
     let cands = (resources || []).filter((r: { number?: string }) => r.number);
+
+    // CF-FUZZY-PLAYER-MATCH (Drew, 2026-08-03). When exact-name match
+    // returned nothing, try a broader query and filter in-JS with a
+    // small edit-distance / initial-tolerance heuristic. Catches
+    // "Mike Trout" vs "Michael Trout", "Ronald Acuna Jr." vs "Ronald
+    // Acuña Jr.", "M. Trout" vs "Mike Trout". Gated on
+    // FUZZY_PLAYER_MATCH_ENABLED so we can toggle if it introduces
+    // wrong-player matches.
+    if (cands.length === 0 && process.env.FUZZY_PLAYER_MATCH_ENABLED === "true" && playerName.length >= 4) {
+      const lastToken = playerName.trim().split(/\s+/).slice(-1)[0]?.toLowerCase() ?? "";
+      if (lastToken.length >= 3) {
+        try {
+          const fq = {
+            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
+            parameters: [
+              { name: "@y", value: String(cardYear) },
+              { name: "@last", value: lastToken },
+            ],
+          };
+          const { resources: fuzzy } = await catalog.items.query(fq).fetchAll();
+          const target = playerName.toLowerCase().replace(/[^\w\s]/g, "").trim();
+          const targetTokens = target.split(/\s+/).filter(Boolean);
+          cands = (fuzzy || []).filter((r: { number?: string; player?: string }) => {
+            if (!r.number || !r.player) return false;
+            const cand = r.player.toLowerCase().replace(/[^\w\s]/g, "").trim();
+            const candTokens = cand.split(/\s+/).filter(Boolean);
+            // Accept when: last name matches AND first-name initial matches
+            // (or one side has just the initial). Avoids "Mike Trout" grabbing
+            // "Marcus Trout" but tolerates "M Trout" ↔ "Mike Trout".
+            const targetLast = targetTokens[targetTokens.length - 1] ?? "";
+            const candLast = candTokens[candTokens.length - 1] ?? "";
+            if (targetLast !== candLast) return false;
+            const targetFirstInit = targetTokens[0]?.[0] ?? "";
+            const candFirstInit = candTokens[0]?.[0] ?? "";
+            return targetFirstInit === candFirstInit;
+          });
+        } catch { /* fuzzy failure is soft */ }
+      }
+    }
     // Apply setKey filter in-JS (case-insensitive contains-either-way).
     if (setKeyHint && cands.length > 1) {
       const sh = setKeyHint.toLowerCase();
