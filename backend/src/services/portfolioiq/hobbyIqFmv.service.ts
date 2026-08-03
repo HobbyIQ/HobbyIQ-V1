@@ -1385,11 +1385,19 @@ async function tryCompositePath(
   const workingComps = exact.length >= MIN_COMPS ? exact : neighbors;
 
   // Project next sale using the same math as the legacy path.
+  // CF-COMPOSITE-TREND-FORWARD (Drew, 2026-08-03). Was forwardDays:0
+  // which returned the pool median — VIOLATED the "FMV = projected
+  // next sale from trend, never median" golden rule. Now projects 30
+  // days forward so a rising Ohtani pool actually reads as trending
+  // up in the returned FMV, not just in the separate trend field.
+  // Thin-pool cap in projectNextSaleFromComps already clamps wild
+  // regression extrapolations, so this can't over-shoot on 3-comp
+  // pools with 5-day windows.
   const compsForProjection = workingComps.map(n => ({
     price: Number(n.doc.price),
     soldAt: String(n.doc.soldAt),
   }));
-  const projection = projectNextSaleFromComps(compsForProjection, { forwardDays: 0, minNForRegression: 3 });
+  const projection = projectNextSaleFromComps(compsForProjection, { monthsForward: 1, minNForRegression: 3 });
   if (!projection || !Number.isFinite(projection.nextSaleValue)) return null;
 
   // Step 4: Compute per-axis multiplier adjustment ONLY for axes that
