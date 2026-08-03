@@ -313,12 +313,46 @@ export async function persistVendorSalesToPool(
     // the fragile parseListingIdentity call for the corresponding field.
     const parsed = parseListingIdentity(title, identity.cardNumberRe);
     let cardNumber = identity.cardNumber ?? parsed.cardNumber;
-    const cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
+    let cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
+    let playerName = identity.playerName ?? guessPlayerFromTitle(title);
+    let setKey = identity.setName ?? inferSetKeyFromTitle(title);
+    let sport = identity.sport ?? inferSportFromTitle(title);
+
+    // CF-LLM-FALLBACK (Drew, 2026-08-03). When regex + guess helpers
+    // couldn't extract cardYear OR playerName from the title, but the
+    // title has enough content to be worth trying, ask the LLM to
+    // extract them. Feature-flagged via PERSIST_LLM_ENRICH_ENABLED so
+    // we can toggle without a redeploy. Cache prevents duplicate calls
+    // for the same title (90d TTL). Rescues Pokemon (no year in title)
+    // + non-standard sports formats + Funko/Marvel/etc. that
+    // categorization tags as non-sport.
+    let llmParsed: import("./titleParserAi.service.js").AiParsedTitle | null = null;
+    if (
+      process.env.PERSIST_LLM_ENRICH_ENABLED === "true"
+      && (!cardYear || !playerName || !cardNumber)
+      && title.length >= 15
+    ) {
+      try {
+        const { parseTitleWithAi } = await import("./titleParserAi.service.js");
+        llmParsed = await parseTitleWithAi(title);
+      } catch { /* LLM failure is non-fatal — fall through to existing gates */ }
+      if (llmParsed) {
+        if (!cardNumber && llmParsed.cardNumber) cardNumber = llmParsed.cardNumber;
+        if (!cardYear && llmParsed.cardYear) cardYear = llmParsed.cardYear;
+        if (!playerName && llmParsed.playerName) playerName = llmParsed.playerName;
+        if (!setKey && llmParsed.setName) setKey = llmParsed.setName;
+        if (!sport && llmParsed.sport) sport = llmParsed.sport;
+        // Adopt LLM's parallel/isAuto/printRun only when parser had nothing
+        if ((!parsed.parallel || parsed.parallel === "Base") && llmParsed.parallel && llmParsed.parallel !== "Base") {
+          parsed.parallel = llmParsed.parallel;
+        }
+        if (!parsed.isAuto && llmParsed.isAuto) parsed.isAuto = true;
+        if (parsed.printRun === null && llmParsed.printRun) parsed.printRun = llmParsed.printRun;
+      }
+    }
+
     if (!cardYear) { result.skipped++; continue; }
-    const playerName = identity.playerName ?? guessPlayerFromTitle(title);
     if (!playerName) { result.skipped++; continue; }
-    const setKey = identity.setName ?? inferSetKeyFromTitle(title);
-    const sport = identity.sport ?? inferSportFromTitle(title);
 
     // CF-CHECKLIST-NARROWER + PRICE-BAND-SCORER (Drew, 2026-08-02).
     // Stage 3.5 + 3.6 of the Bayesian identity decoder:

@@ -19,6 +19,14 @@ export interface AiParsedTitle {
   printRun: number | null;
   confidence: "high" | "medium" | "low";
   reasoning: string;
+  // CF-AI-FULL-IDENTITY (Drew, 2026-08-03). Extended fields for TCA
+  // firehose fallback — regex can extract these for sports, but Pokemon
+  // and non-standard titles need LLM inference. Optional so existing
+  // callers keep their contract unchanged.
+  cardYear?: number | null;
+  playerName?: string | null;
+  setName?: string | null;
+  sport?: string | null;      // baseball | basketball | football | hockey | soccer | pokemon | tcg-other | non-sport | null
 }
 
 const CACHE_CONTAINER_ID = process.env.COSMOS_TITLE_PARSE_CACHE_CONTAINER ?? "title_parse_cache";
@@ -69,10 +77,14 @@ export async function parseTitleWithAi(title: string): Promise<AiParsedTitle | n
   const system = `You extract card identity from marketplace listing titles for HobbyIQ. Return STRICT JSON.
 
 Fields:
-  cardNumber: string | null    e.g. "CPA-EHA", "BCP-102", "US100", "150". null if unknown.
+  cardNumber: string | null    e.g. "CPA-EHA", "BCP-102", "US100", "150", "37/109" (TCG format). null if unknown.
   parallel:   string           canonical parallel name (e.g. "Blue Refractor", "Refractor", "Base"). Default "Base" if unknown.
-  isAuto:     boolean          true if title indicates autograph (auto, autograph, hard-signed, or an auto-only cardNumber like CPA-*, BCPA-*, TCRA-*).
+  isAuto:     boolean          true if title indicates autograph.
   printRun:   number | null    e.g. 150 for "/150", 25 for "#/25". null if unnumbered.
+  cardYear:   number | null    e.g. 2011, 2024. For "2003-04" use 2003. For Pokemon sets: "Team Rocket Returns"=2004, "Ascended Heroes"=2025, "151"=2023, "Lost Origin"=2022, "SV"=2023+, "Neo Revelation"=2001. null if truly unknown.
+  playerName: string | null    Real name of the player OR Pokemon/character name. For "Mike Trout" return "Mike Trout". For "Dark Houndoom" return "Dark Houndoom". Strip trailing team names ("Yankees", "Lakers"). null only if no identifiable subject.
+  setName:    string | null    Brand + product line, e.g. "Topps Chrome", "Panini Prizm", "Pokemon SV", "Bowman Chrome Prospects". null if only a year+player known.
+  sport:      string | null    ONE of: baseball, basketball, football, hockey, soccer, pokemon, yugioh, tcg-other, non-sport, null.
   confidence: "high" | "medium" | "low"
   reasoning:  brief string (< 80 chars) — why you chose these values.
 
@@ -81,7 +93,9 @@ Rules:
 - "Mega Refractor" = "Mojo Refractor".
 - "Mojo" (any color) implies Refractor (Blue Mojo → Blue Mojo Refractor).
 - If title contains PSA/BGS/SGC number, ignore that (grade parsing is separate).
-- If title lacks a cardNumber pattern (#XXX-XXX or #NNN), return null for cardNumber.
+- Pokemon titles: playerName = character name (Charizard, Blastoise, etc). cardNumber uses X/Y format (37/109). sport = "pokemon".
+- Non-sports/non-TCG collectibles (Funko, Marvel, Star Wars, sealed products): sport = "non-sport".
+- Sealed boxes / product not a single card: return cardNumber=null, playerName=null (skips at ingest).
 
 Return JSON only.`;
 
@@ -115,6 +129,10 @@ Return JSON only.`;
       printRun: typeof parsed.printRun === "number" && Number.isFinite(parsed.printRun) && parsed.printRun > 0 ? parsed.printRun : null,
       confidence: parsed.confidence === "high" || parsed.confidence === "medium" ? parsed.confidence : "low",
       reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 200) : "",
+      cardYear: typeof parsed.cardYear === "number" && Number.isFinite(parsed.cardYear) && parsed.cardYear > 1800 && parsed.cardYear < 2100 ? parsed.cardYear : null,
+      playerName: typeof parsed.playerName === "string" && parsed.playerName.trim().length > 0 ? parsed.playerName.trim() : null,
+      setName: typeof parsed.setName === "string" && parsed.setName.trim().length > 0 ? parsed.setName.trim() : null,
+      sport: typeof parsed.sport === "string" && parsed.sport.trim().length > 0 ? parsed.sport.trim().toLowerCase() : null,
     };
     // Cache result
     if (cache) {
