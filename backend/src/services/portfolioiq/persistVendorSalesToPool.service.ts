@@ -21,7 +21,7 @@ import {
   inferSetKeyFromTitle,
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
-import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
@@ -450,6 +450,30 @@ export async function persistVendorSalesToPool(
       }
     }
 
+    // CF-PLAYER-FALLBACK-CARDNUMBER (Drew, 2026-08-03). Modern releases
+    // (2025-26 Topps Finest, current-year Bowman Chrome, etc.) aren't in
+    // card_catalog yet, so checklistNarrow returns nothing and cardNumber
+    // stays null. Previously these rows silently dropped. Now: when we
+    // have year+player+set+sport but no cardNumber, synthesize a
+    // "player-fallback" cardNumber (`pf-<playerSlug>`) so the row lands.
+    //
+    // The prefix `pf-` marks the row as player-precision (not
+    // cardNumber-precision). Downstream code that needs cardNumber-precise
+    // rows for FMV/calibration MUST filter these out — group them together
+    // as "unspecified card, this player + set + parallel" which is still
+    // useful for listing-price ranges but not for canonical FMV.
+    //
+    // Gated on PLAYER_FALLBACK_CARDNUMBER_ENABLED so we can toggle.
+    let identityMethod: "cardnumber-precise" | "player-fallback" = "cardnumber-precise";
+    if (!cardNumber
+        && process.env.PLAYER_FALLBACK_CARDNUMBER_ENABLED === "true"
+        && sport
+        && cardYear
+        && setKey
+        && playerName) {
+      cardNumber = `pf-${slugify(playerName)}`;
+      identityMethod = "player-fallback";
+    }
     if (!cardNumber) { result.skipped++; continue; }
     // Rebind parsed so downstream code uses the hint values.
     parsed.cardNumber = cardNumber;
@@ -803,6 +827,7 @@ export async function persistVendorSalesToPool(
         url: row.url ?? null,
         observedAt: new Date().toISOString(),
         sport,
+        identityMethod,
       };
       // CF-STAGING-CUTOVER (Drew, 2026-07-28). When cutover is on,
       // vendor ingest ONLY writes to comps_staging (the shim above
