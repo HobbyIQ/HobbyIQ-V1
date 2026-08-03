@@ -138,13 +138,14 @@ jobs:
           if [ $PER_PLATFORM_MIN -lt 2 ]; then PER_PLATFORM_MIN=2; fi
           for P in "${PLATFORM_ARR[@]}"; do
             P_CLEAN=$(echo "$P" | tr -d '[:space:]')
-            # Sports category filter only makes sense for eBay & TCGplayer;
-            # auction houses cover sports intrinsically.
-            if [ "$P_CLEAN" = "eBay" ] || [ "$P_CLEAN" = "TCGplayer" ]; then
-              CAT_FILTER="sports"
-            else
-              CAT_FILTER=""
-            fi
+            # CF-INGEST-ALL-CATEGORIES (Drew, 2026-08-03). We want ALL
+            # categories (sports + TCG + non-sport). Cleaning pipeline
+            # already skips LLM enrichment for non-sports sport tags
+            # (persistVendorSalesToPool NON_SPORTS_TAGS gate), so
+            # non-sports land raw in comps_staging without burning LLM
+            # budget. Pulling everything grows the raw archive; sports
+            # get the full cleaning treatment.
+            CAT_FILTER=""
             echo "=== $P_CLEAN (category=$CAT_FILTER, $PER_PLATFORM_MIN min) ==="
             COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
             TCA_API_KEY="$TCA_API_KEY" \
