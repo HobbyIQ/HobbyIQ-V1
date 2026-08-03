@@ -79,6 +79,22 @@ export function autoCreateHoldingForPurchase(
       parsed: parseListingTitle(purchase.notes ?? ""),
     };
   }
+  // CF-DEDUP-SOURCE-PURCHASE (Drew, 2026-08-03). Belt-and-suspenders
+  // against duplicate holdings: even if purchase.holdingIds is empty,
+  // scan doc.holdings for one already tagged sourcePurchaseId ===
+  // purchase.id. That case happens when a prior batch created the
+  // holding but the purchase.holdingIds write was lost to a partial
+  // update. Re-linking the existing holding is idempotent; creating a
+  // second one would double-book cost.
+  for (const h of Object.values(doc.holdings ?? {})) {
+    if ((h as { sourcePurchaseId?: string }).sourcePurchaseId === purchase.id) {
+      purchase.holdingIds = [...new Set([...purchase.holdingIds, (h as { id: string }).id])];
+      return {
+        status: "skipped-already-linked",
+        parsed: parseListingTitle(purchase.notes ?? ""),
+      };
+    }
+  }
   const parsed = parseListingTitle(purchase.notes ?? "");
 
   // CF-EBAY-IMPORT-FORCE-REVIEW (Drew, 2026-08-03). "We need to do
