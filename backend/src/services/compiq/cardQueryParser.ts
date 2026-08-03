@@ -423,6 +423,12 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     "unsung", "heroes", "hero", "pick", "picks", "cover", "issue", "flashback",
     "future", "stars", "legends", "greats", "class", "throwback", "champions",
     "playoff", "wildcard", "wc", "allstar", "all-star",
+    // Upper Deck rookie-subset names (hockey heavy)
+    "young", "guns", "canvas", "trilogy", "artifacts", "sp", "spx",
+    // Set-name single tokens (subsets) that survive when brand extraction misses
+    "update", "heritage", "finest", "stadium", "club", "diamond", "kings",
+    "mosaic", "phoenix", "immaculate", "absolute", "national", "treasures",
+    "gypsy", "queen", "ginter", "allen",
     // Common leading punctuation is stripped by the regex below; nothing
     // to add here for that.
   ];
@@ -434,22 +440,27 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   // dangling hyphens that survived the noise pass (eBay titles use `-`
   // as a section separator, e.g. "2003-04 Topps - Draft Pick LeBron"
   // → residual "-" tokens after we strip year/set/etc.). Also drop
-  // single-letter garbage (residual initials from over-stripped
-  // multi-word noise like "MLB-DET" split.
-  const playerName = remaining
+  // single-letter garbage.
+  //
+  // First collapse standalone dashes to spaces so tokens become clean,
+  // THEN split — otherwise "- -" tokens survive splitting even with
+  // the standalone-dash filter.
+  const cleaned = remaining
     .replace(/[^a-zA-Z\s'-]/g, " ")
+    .replace(/\s+-\s+|\s+-+$|^-+\s+/g, " ")   // strip standalone dashes surrounded by whitespace
+    .replace(/(^|\s)-+/g, "$1")               // strip leading dashes on words
+    .replace(/-+(\s|$)/g, "$1")               // strip trailing dashes on words
     .replace(/\s+/g, " ")
-    .trim()
+    .trim();
+  const playerName = cleaned
     .split(" ")
     .filter((w) => w.length > 0)
-    .filter((w) => !/^[-]+$/.test(w))            // strip standalone dashes
-    .filter((w) => w.length >= 2 || w === "&")  // drop single-char noise
-    .map((w) => w.replace(/^-+|-+$/g, ""))      // trim leading/trailing hyphens on retained words
-    .filter((w) => w.length > 0)
+    .filter((w) => !/^-+$/.test(w))              // extra guard: no dash-only survivors
+    .filter((w) => w.length >= 2 || w === "&")   // drop single-char noise (except '&')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     // Keep at most the first 4 words — most real player names are 2-3
-    // words (Mike Trout, Jose de la Rosa). Longer strings are almost
-    // always trailing noise the NOISE list missed.
+    // words (Mike Trout, Jose de la Rosa is the outlier at 4). Longer
+    // strings are almost always trailing noise the NOISE list missed.
     .slice(0, 4)
     .join(" ") || null;
 
