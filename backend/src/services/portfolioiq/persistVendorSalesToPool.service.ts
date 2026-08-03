@@ -93,6 +93,134 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   } catch { return null; }
 }
 
+// CF-PRICE-BAND-SCORER (Drew, 2026-08-02). Stage 3.6 of the Bayesian
+// identity decoder. When checklistNarrow returns 2-5 ambiguous
+// candidates, query sold_comps for each candidate's historical price
+// distribution and pick the candidate whose median is closest to the
+// sale price. Also caches per-(player,year,cardNumber) price bands.
+const PRICE_BAND_CACHE = new Map<string, Array<{ parallel: string | null; median: number; n: number }>>();
+const PRICE_BAND_CACHE_MAX = 3000;
+
+let cachedSoldCompsContainerForScoring: Container | null = null;
+async function getSoldForScoring(): Promise<Container | null> {
+  if (cachedSoldCompsContainerForScoring) return cachedSoldCompsContainerForScoring;
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return null;
+  try {
+    const client = new CosmosClient(conn);
+    const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+    cachedSoldCompsContainerForScoring = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
+    return cachedSoldCompsContainerForScoring;
+  } catch { return null; }
+}
+
+async function scoreCandidatesByPrice(
+  candidates: Array<{ cardNumber: string; parallel: string | null }>,
+  ctx: { playerName: string; cardYear: number; price: number },
+): Promise<Array<{ cardNumber: string; parallel: string | null; median: number | null; n: number; distanceRatio: number; confidence: number }> | null> {
+  if (!candidates.length) return null;
+  const sold = await getSoldForScoring();
+  if (!sold) return null;
+
+  const results: Array<{ cardNumber: string; parallel: string | null; median: number | null; n: number; distanceRatio: number; confidence: number }> = [];
+  for (const c of candidates) {
+    const key = `${ctx.playerName.toLowerCase()}|${ctx.cardYear}|${c.cardNumber.toLowerCase()}|${(c.parallel ?? "").toLowerCase()}`;
+    let bands = PRICE_BAND_CACHE.get(key);
+    if (!bands) {
+      try {
+        const q = c.parallel
+          ? {
+              query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.parallel = @par AND c.price > 0",
+              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: c.cardNumber }, { name: "@par", value: c.parallel }],
+            }
+          : {
+              query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.price > 0",
+              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: c.cardNumber }],
+            };
+        const { resources } = await sold.items.query(q).fetchAll();
+        const prices = (resources as Array<{ price: number }>).map((r) => Number(r.price)).filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+        const median = prices.length > 0 ? prices[Math.floor(prices.length / 2)] : null;
+        bands = [{ parallel: c.parallel, median: median ?? 0, n: prices.length }];
+        if (PRICE_BAND_CACHE.size >= PRICE_BAND_CACHE_MAX) {
+          const firstKey = PRICE_BAND_CACHE.keys().next().value;
+          if (firstKey) PRICE_BAND_CACHE.delete(firstKey);
+        }
+        PRICE_BAND_CACHE.set(key, bands);
+      } catch {
+        bands = [{ parallel: c.parallel, median: 0, n: 0 }];
+      }
+    }
+    const median = bands[0].median > 0 ? bands[0].median : null;
+    const distanceRatio = median ? Math.abs(ctx.price - median) / median : 999;
+    results.push({ cardNumber: c.cardNumber, parallel: c.parallel, median, n: bands[0].n, distanceRatio, confidence: 0 });
+  }
+  // Score: closest distanceRatio wins. Confidence based on margin over runner-up.
+  results.sort((a, b) => a.distanceRatio - b.distanceRatio);
+  if (results.length === 1) {
+    results[0].confidence = results[0].n >= 3 && results[0].distanceRatio < 0.5 ? 0.85 : 0.6;
+  } else {
+    const winner = results[0]; const runnerUp = results[1];
+    if (winner.n < 3) winner.confidence = 0.5;
+    else if (winner.distanceRatio < 0.3 && (runnerUp.distanceRatio - winner.distanceRatio) > 0.5) winner.confidence = 0.85;
+    else if (winner.distanceRatio < 0.5) winner.confidence = 0.7;
+    else winner.confidence = 0.5;
+  }
+  return results;
+}
+
+// CF-GRADE-TIER-RESOLVER (Drew, 2026-08-02). Same Bayesian pattern as
+// price-band scorer but for GRADE. When title doesn't specify a grade
+// tier (raw / PSA 9 / PSA 10 / BGS 9.5 / etc.), query sold_comps for
+// the resolved cardId's price distribution per grade tier and pick the
+// tier whose median is closest to the sale price. Returns null when
+// insufficient data (< 3 grade tiers observed OR winner's n < 3).
+async function resolveGradeTierByPrice(
+  ctx: { playerName: string; cardYear: number; cardNumber: string; parallel: string | null; price: number },
+): Promise<{ gradeCompany: string | null; gradeValue: number | null; confidence: number } | null> {
+  const sold = await getSoldForScoring();
+  if (!sold) return null;
+  try {
+    const q = ctx.parallel
+      ? {
+          query: "SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.parallel = @par AND c.price > 0",
+          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: ctx.cardNumber }, { name: "@par", value: ctx.parallel }],
+        }
+      : {
+          query: "SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.price > 0",
+          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: ctx.cardNumber }],
+        };
+    const { resources } = await sold.items.query(q).fetchAll();
+    const rows = resources as Array<{ gradeCompany: string | null; gradeValue: number | null; price: number }>;
+    if (rows.length < 3) return null;
+    // Group by (gradeCompany, gradeValue) tuple; null tuples = raw
+    const buckets = new Map<string, { key: string; company: string | null; value: number | null; prices: number[] }>();
+    for (const r of rows) {
+      const price = Number(r.price);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      const key = r.gradeCompany && r.gradeValue !== null ? `${r.gradeCompany.toUpperCase()}::${r.gradeValue}` : "RAW";
+      let b = buckets.get(key);
+      if (!b) { b = { key, company: r.gradeCompany, value: r.gradeValue, prices: [] }; buckets.set(key, b); }
+      b.prices.push(price);
+    }
+    if (buckets.size < 2) return null;   // need at least 2 tiers to disambiguate
+    const scored: Array<{ key: string; company: string | null; value: number | null; median: number; n: number; distanceRatio: number }> = [];
+    for (const b of buckets.values()) {
+      if (b.prices.length < 2) continue;
+      const sorted = b.prices.sort((a, b2) => a - b2);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      scored.push({ key: b.key, company: b.company, value: b.value, median, n: sorted.length, distanceRatio: Math.abs(ctx.price - median) / median });
+    }
+    if (scored.length < 2) return null;
+    scored.sort((a, b) => a.distanceRatio - b.distanceRatio);
+    const winner = scored[0]; const runnerUp = scored[1];
+    if (winner.n < 3) return null;
+    // Only assign when winner is clearly better than runner-up
+    const confidence = winner.distanceRatio < 0.3 && (runnerUp.distanceRatio - winner.distanceRatio) > 0.5 ? 0.85 : winner.distanceRatio < 0.5 ? 0.7 : 0.55;
+    if (confidence < 0.55) return null;
+    return { gradeCompany: winner.company, gradeValue: winner.value, confidence };
+  } catch { return null; }
+}
+
 export interface VendorSaleRow {
   title: string | null;
   price: number | null | undefined;
@@ -192,36 +320,47 @@ export async function persistVendorSalesToPool(
     const setKey = identity.setName ?? inferSetKeyFromTitle(title);
     const sport = identity.sport ?? inferSportFromTitle(title);
 
-    // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). If parseListingIdentity
-    // couldn't find a cardNumber but we HAVE player+year+set, the
-    // checklist might resolve it uniquely. Bayesian identity decoder
-    // Stage 3.5. When ambiguous (multiple candidates), filter by
-    // parallel hint if we have one. Still ambiguous → skip (later
-    // iterations can add price-band scoring here).
-    let checklistConfidence = 1.0;   // 1.0 = title-parsed, 0.7 = checklist-single, 0.5 = checklist-ambiguous
+    // CF-CHECKLIST-NARROWER + PRICE-BAND-SCORER (Drew, 2026-08-02).
+    // Stage 3.5 + 3.6 of the Bayesian identity decoder:
+    // 1. checklistNarrow: card_catalog candidates matching (player, year, set)
+    // 2. When ambiguous, narrow by parallel hint from title
+    // 3. When STILL ambiguous, score each candidate by sale-price
+    //    distance from that candidate's historical median (via
+    //    scoreCandidatesByPrice). Pick highest-confidence winner.
+    let checklistConfidence = 1.0;   // 1.0 = title-parsed, 0.85 = price-scored, 0.7 = checklist-single, 0.5 = ambiguous
     if (!cardNumber && playerName && cardYear && setKey) {
       const cands = await checklistNarrow(playerName, cardYear, setKey);
       if (cands && cands.length > 0) {
         if (cands.length === 1) {
           cardNumber = cands[0].number;
           checklistConfidence = 0.7;
-        } else if (parsed.parallel && parsed.parallel !== "Base") {
-          // Try to narrow by parallel match on the catalog row's parallels list.
-          const parMatch = cands.filter((c) => c.parallels.some((p) => p.toLowerCase() === String(parsed.parallel ?? "").toLowerCase()));
-          if (parMatch.length === 1) {
-            cardNumber = parMatch[0].number;
-            checklistConfidence = 0.7;
-          } else if (parMatch.length > 0) {
-            // Multiple parallel-matching candidates — pick first, mark low confidence
-            cardNumber = parMatch[0].number;
-            checklistConfidence = 0.5;
+        } else {
+          // Try parallel-filter first
+          let filtered = cands;
+          if (parsed.parallel && parsed.parallel !== "Base") {
+            const parMatch = cands.filter((c) => c.parallels.some((p) => p.toLowerCase() === String(parsed.parallel ?? "").toLowerCase()));
+            if (parMatch.length > 0) filtered = parMatch;
           }
-        } else if (cands.length <= 3) {
-          // Small ambiguous set, no parallel hint — pick first, mark low confidence
-          cardNumber = cands[0].number;
-          checklistConfidence = 0.5;
+          if (filtered.length === 1) {
+            cardNumber = filtered[0].number;
+            checklistConfidence = 0.7;
+          } else if (filtered.length <= 5) {
+            // Score remaining candidates by price band
+            const scored = await scoreCandidatesByPrice(
+              filtered.map((c) => ({ cardNumber: c.number, parallel: parsed.parallel ?? null })),
+              { playerName, cardYear, price },
+            );
+            if (scored && scored.length > 0 && scored[0].confidence >= 0.5) {
+              cardNumber = scored[0].cardNumber;
+              checklistConfidence = scored[0].confidence;
+            } else if (filtered.length <= 3) {
+              // Fallback: pick first with low confidence
+              cardNumber = filtered[0].number;
+              checklistConfidence = 0.5;
+            }
+          }
+          // filtered.length > 5 → too ambiguous, skip
         }
-        // >3 candidates with no parallel hint → too ambiguous, stay unresolved
       }
     }
 
@@ -526,7 +665,30 @@ export async function persistVendorSalesToPool(
       // parseGradeLabel returns null on unparseable titles, which we
       // treat as "raw / grade unknown" — the sold_comps schema tolerates
       // null gradeCompany.
-      const gradeParsed = parseGradeLabel(title);
+      let gradeParsed = parseGradeLabel(title);
+      // CF-GRADE-TIER-RESOLVER (Drew, 2026-08-02). If the title didn't
+      // carry a grade, ask the price-band resolver to pick the most
+      // likely tier from historical sales of the same card. Stage 3.6b
+      // of the Bayesian identity decoder. Only fires when
+      // parseGradeLabel returned nothing — never overrides an explicit
+      // title-parsed grade. When resolver returns raw (company=null),
+      // gradeParsed stays null (raw is represented as gradeCompany:
+      // null in sold_comps writes below).
+      if (!gradeParsed) {
+        const resolved = await resolveGradeTierByPrice({
+          playerName,
+          cardYear,
+          cardNumber: parsed.cardNumber,
+          parallel: parsed.parallel,
+          price,
+        });
+        if (resolved && resolved.confidence >= 0.7 && resolved.gradeCompany && resolved.gradeValue !== null) {
+          gradeParsed = {
+            gradeCompany: resolved.gradeCompany,
+            gradeValue: resolved.gradeValue,
+          };
+        }
+      }
       const doc = {
         id: `${source}::${sourceExternalId}`,
         // Prefer the vendor's real cardId when known (CH path) so the
