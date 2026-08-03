@@ -323,12 +323,19 @@ export async function persistVendorSalesToPool(
     // title has enough content to be worth trying, ask the LLM to
     // extract them. Feature-flagged via PERSIST_LLM_ENRICH_ENABLED so
     // we can toggle without a redeploy. Cache prevents duplicate calls
-    // for the same title (90d TTL). Rescues Pokemon (no year in title)
-    // + non-standard sports formats + Funko/Marvel/etc. that
-    // categorization tags as non-sport.
+    // for the same title (90d TTL). Rescues non-standard sports formats.
+    //
+    // CF-LLM-SPORTS-ONLY (Drew, 2026-08-03). We ingest Pokemon/TCG/
+    // non-sport rows so the raw data stays queryable, but we don't
+    // spend LLM budget cleaning them — they're not part of the
+    // pricing product. All LLM TPM goes to sports where value lives.
+    // Skip enrichment when sport is already tagged non-sport.
+    const NON_SPORTS_TAGS = new Set(["pokemon", "yugioh", "tcg-other", "anime-tcg", "non-sport"]);
+    const skipLlmForSport = sport ? NON_SPORTS_TAGS.has(sport.toLowerCase()) : false;
     let llmParsed: import("./titleParserAi.service.js").AiParsedTitle | null = null;
     if (
       process.env.PERSIST_LLM_ENRICH_ENABLED === "true"
+      && !skipLlmForSport
       && (!cardYear || !playerName || !cardNumber)
       && title.length >= 15
     ) {
