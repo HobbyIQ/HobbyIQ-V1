@@ -225,15 +225,27 @@ async function main() {
   let totalErrors = 0;
   let lastCursor = cursor;
 
+  // CF-TCA-PIPELINED-FETCH (Drew, 2026-08-02). Overlaps fetch of page
+  // N+1 with processing of page N. Roughly doubles wall-clock throughput.
+  const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
+  const SELF_THROTTLE_MS = Math.max(0, Number(process.env.SELF_THROTTLE_MS || 200));
+
+  // Prefetch: kick off first fetch before entering loop.
+  let nextFetch;
+  function scheduleNextFetch(cur) {
+    const qs = new URLSearchParams(baseQs);
+    if (cur) qs.set("cursor", cur);
+    return fetchPageWithRetry(qs.toString());
+  }
+  nextFetch = scheduleNextFetch(lastCursor);
+
   while (true) {
     if (Date.now() - startMs > budgetMs) {
       console.log(`[tca-firehose] wall-clock cap ${MAX_MINUTES}m reached — stopping cleanly, cursor preserved`);
       break;
     }
-    const qs = new URLSearchParams(baseQs);
-    if (lastCursor) qs.set("cursor", lastCursor);
     let resp;
-    try { resp = await fetchPageWithRetry(qs.toString()); }
+    try { resp = await nextFetch; }
     catch (err) {
       console.error(`[tca-firehose] fatal fetch error:`, err);
       totalErrors++;
@@ -246,20 +258,26 @@ async function main() {
     }
     page++;
     totalFetched += rows.length;
+    const nextCursor = resp?.pagination?.next_cursor || null;
+
+    // Pipeline: schedule NEXT fetch immediately (with self-throttle to
+    // stay well under TCA per-second rate limits) so we're not blocking
+    // Cosmos writes on TCA network round-trips.
+    if (nextCursor) {
+      if (SELF_THROTTLE_MS > 0) {
+        nextFetch = new Promise(res => setTimeout(res, SELF_THROTTLE_MS))
+          .then(() => scheduleNextFetch(nextCursor));
+      } else {
+        nextFetch = scheduleNextFetch(nextCursor);
+      }
+    } else {
+      nextFetch = Promise.resolve({ data: [] });
+    }
 
     if (APPLY) {
-      // Route each TCA row through persistVendorSalesToPool — same
-      // pipeline CH uses. Per-row identity hint used when TCA gave us
-      // structured player/year/sport (saves the title-parse pass for
-      // ~17% of rows). Called one-row-at-a-time because identity hint
-      // is per-row (whereas persistVendorSalesToPool's `identity` param
-      // is single-batch — designed for CH's card-scoped comps calls).
-      //
-      // CF-TCA-CONCURRENCY-BUMP (Drew, 2026-08-02). 8 → 16 to reduce
-      // wall-clock for full historical backfill. Cosmos sold_comps
-      // container throughput will need to be watched; 429s become
-      // retries via persistVendorSalesToPool's own error handling.
-      const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
+      // Higher concurrency now that Cosmos sold_comps is at 10K RU/s
+      // autoscale + comps_staging at 4K. persistVendorSalesToPool
+      // handles per-row parse + dedup + dual-write internally.
       const inflight = new Set();
       for (const t of rows) {
         while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
@@ -280,15 +298,15 @@ async function main() {
       }
       await Promise.all([...inflight]);
     } else {
-      // Dry-run: count only
       totalWritten += rows.length;
     }
 
-    lastCursor = resp?.pagination?.next_cursor || null;
+    lastCursor = nextCursor;
     if ((page % 5) === 0 || !lastCursor) {
       const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
       const ratePerS = (totalWritten / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
-      console.log(`[tca-firehose] page ${page}: fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} errors=${totalErrors} elapsed=${elapsedS}s rate=${ratePerS}/s`);
+      const fetchRatePerS = (totalFetched / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(0);
+      console.log(`[tca-firehose] page ${page}: fetched=${totalFetched} (${fetchRatePerS}/s) written=${totalWritten} (${ratePerS}/s) skipped=${totalDedupSkipped} errors=${totalErrors} elapsed=${elapsedS}s`);
     }
     if (!lastCursor) {
       console.log(`[tca-firehose] no next_cursor — end of feed`);
