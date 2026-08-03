@@ -1,0 +1,107 @@
+name: Promote Staging Pending
+
+# CF-STAGING-PROMOTER (Drew, 2026-08-03). Manual dispatch to re-process
+# comps_staging rows with status='pending' through the current
+# persistVendorSalesToPool cleaner. Recovers rows that were captured
+# raw but never made it to sold_comps because the cleaner at ingest
+# time couldn't resolve identity.
+#
+# TCA-ebay currently has 866K pending rows to re-process. Cardhedge
+# ~5K. Run repeatedly (each run cycles through what's still pending
+# after prior runs' successes).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Set true to write to sold_comps + flip status (else dry-run)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+      vendor:
+        description: 'Filter to a specific vendor (e.g. tca-ebay). Empty = all vendors.'
+        required: false
+        type: string
+        default: 'tca-ebay'
+      max_minutes:
+        description: 'Wall-clock cap per run (default 45)'
+        required: false
+        type: string
+        default: '45'
+      concurrency:
+        description: 'Parallel persist calls'
+        required: false
+        type: string
+        default: '32'
+
+jobs:
+  promote:
+    name: Re-process pending staging rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run staging promoter
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          # Pull all env we need from App Service (secrets never touch disk/log)
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          TCA_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='TCA_API_KEY'].value" -o tsv | tr -d '\r\n')
+          AZURE_OPENAI_ENDPOINT=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='AZURE_OPENAI_ENDPOINT'].value" -o tsv | tr -d '\r\n')
+          AZURE_OPENAI_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='AZURE_OPENAI_API_KEY'].value" -o tsv | tr -d '\r\n')
+          AZURE_OPENAI_DEPLOYMENT=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='AZURE_OPENAI_DEPLOYMENT'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          npm run build
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          TCA_API_KEY="$TCA_API_KEY" \
+          AZURE_OPENAI_ENDPOINT="$AZURE_OPENAI_ENDPOINT" \
+          AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" \
+          AZURE_OPENAI_DEPLOYMENT="$AZURE_OPENAI_DEPLOYMENT" \
+          COSMOS_DATABASE=hobbyiq \
+          PERSIST_VENDOR_LOOKUPS_ENABLED=true \
+          PERSIST_LLM_ENRICH_ENABLED=true \
+          LLM_VISION_ENABLED=false \
+          TCA_CATALOG_FALLBACK_ENABLED=true \
+          PLAYER_FALLBACK_CARDNUMBER_ENABLED=true \
+          COMPS_STAGING_SHIM_ENABLED=true \
+          LLM_MAX_INFLIGHT=20 \
+          VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
+          CONCURRENCY="${{ inputs.concurrency || '32' }}" \
+          APPLY="${{ inputs.apply || 'false' }}" \
+          node scripts/promote-staging-pending.cjs
