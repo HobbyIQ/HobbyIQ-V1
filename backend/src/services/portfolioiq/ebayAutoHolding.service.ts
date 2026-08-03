@@ -81,6 +81,18 @@ export function autoCreateHoldingForPurchase(
   }
   const parsed = parseListingTitle(purchase.notes ?? "");
 
+  // CF-EBAY-IMPORT-FORCE-REVIEW (Drew, 2026-08-03). "We need to do
+  // matches before going into inventory" — when
+  // EBAY_IMPORT_FORCE_REVIEW=true, no purchase auto-creates a holding
+  // regardless of parseConfidence. Everything with a parseable title
+  // goes to the review queue for user confirmation FIRST.
+  // parseConfidence below NEEDS_ATTRIBUTION_MIN still skips (not
+  // reviewable — no useful identity extracted).
+  const forceReview = process.env.EBAY_IMPORT_FORCE_REVIEW === "true";
+  if (forceReview && parsed.parseConfidence >= NEEDS_ATTRIBUTION_MIN) {
+    return { status: "needs-attribution", parsed };
+  }
+
   if (parsed.parseConfidence < AUTO_CREATE_CONFIDENCE_THRESHOLD) {
     if (parsed.parseConfidence >= NEEDS_ATTRIBUTION_MIN) {
       return { status: "needs-attribution", parsed };
