@@ -275,6 +275,18 @@ export async function confirmHoldingReview(
   (holding as any).needsReview = false;
   (holding as any).confirmedAt = new Date().toISOString();
   holding.lastUpdated = new Date().toISOString();
+  // CF-CONFIRM-STAMPS-VERIFIED (Drew, 2026-08-03). User approval of a
+  // review-queue holding IS a first-class identity verification — the
+  // whole flow is "match first, before inventory." Stamp
+  // identityVerified so the portfolio's Unverified filter / badge
+  // clears immediately instead of waiting for the user to open the
+  // Edit modal separately. The suggester's auto-applied cardId still
+  // gets flagged with cardIdAutoAppliedFromSuggestion so downstream
+  // can distinguish user-picked vs suggester-picked cardIds.
+  if ((holding as any).cardId) {
+    (holding as any).identityVerified = true;
+    (holding as any).identityVerifiedAt = new Date().toISOString();
+  }
 
   // Log corrections if any were made. Every confirm gets a record — even
   // if empty — so we track the review rate over time.

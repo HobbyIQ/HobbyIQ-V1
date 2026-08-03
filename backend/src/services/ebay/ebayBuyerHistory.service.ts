@@ -481,7 +481,9 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
           (h as any).suggestedCardId = String(s.cardId);
           (h as any).suggestionConfidence = Number(s.confidence ?? 0);
           (h as any).cardIdAutoAppliedFromSuggestion = true;
-          h.lastUpdated = new Date().toISOString();
+          (h as any).identityVerified = true;
+          (h as any).identityVerifiedAt = new Date().toISOString();
+          (h as any).lastUpdated = new Date().toISOString();
           unverifiedMatched++;
           mutated = true;
         }
@@ -489,6 +491,18 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
     }
   } catch { /* rescue pass is best-effort */ }
   summary.unverifiedMatched = unverifiedMatched;
+
+  // CF-RESCUE-PASS-A2 (Drew, 2026-08-03). Retro-stamp identityVerified
+  // on any active holdings that already carry a cardId but never got
+  // the flag (confirmed before the confirm handler stamped it). Cheap
+  // sweep — same batch write.
+  for (const h of Object.values(doc.holdings ?? {})) {
+    if ((h as any).cardStatus === "active" && (h as any).cardId && !(h as any).identityVerified) {
+      (h as any).identityVerified = true;
+      (h as any).identityVerifiedAt = new Date().toISOString();
+      mutated = true;
+    }
+  }
 
   // CF-RESCUE-PASS-B (Drew, 2026-08-03). Purge pending-review holdings
   // whose source purchase was a sealed / break / memorabilia / supply
