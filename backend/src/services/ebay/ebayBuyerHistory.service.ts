@@ -361,6 +361,15 @@ export interface AutoHoldingBatchSummary {
    *  images). Rest of `created` fell back to title-parse only (either
    *  Browse 404'd or the itemId couldn't be extracted). */
   browseEnriched: number;
+  /** CF-RESCUE-PASS (Drew, 2026-08-03). Retroactive fixes applied on
+   *  the same call:
+   *   - unverifiedMatched: active holdings that had no cardId and
+   *     picked one up from the suggester (>= 0.55 confidence)
+   *   - nonCardPurged: pending-review holdings whose source purchase
+   *     was a sealed / break / memorabilia / supply purchase — deleted
+   *     from the queue and unlinked from their source purchase. */
+  unverifiedMatched?: number;
+  nonCardPurged?: number;
 }
 
 /**
@@ -451,6 +460,61 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
         break;
     }
   }
+  // CF-RESCUE-PASS-A (Drew, 2026-08-03). Retroactively rescue active
+  // holdings that landed in inventory without a cardId (approved before
+  // the sync-suggester fix landed). Runs suggester per-holding, adopts
+  // cardId when confidence >= 0.55. Serialized to avoid CH rate hits.
+  let unverifiedMatched = 0;
+  try {
+    const { suggestCardIdForHolding } = await import(
+      "../portfolioiq/cardIdSuggester.service.js"
+    );
+    const activeUnmatched = Object.values(doc.holdings ?? {}).filter(
+      (h: any) => (h.cardStatus === "active" || !h.cardStatus) && !h.cardId && h.playerName,
+    );
+    for (const h of activeUnmatched) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const s = await suggestCardIdForHolding(h as any);
+        if (s?.cardId && Number(s.confidence ?? 0) >= 0.55) {
+          (h as any).cardId = String(s.cardId);
+          (h as any).suggestedCardId = String(s.cardId);
+          (h as any).suggestionConfidence = Number(s.confidence ?? 0);
+          (h as any).cardIdAutoAppliedFromSuggestion = true;
+          h.lastUpdated = new Date().toISOString();
+          unverifiedMatched++;
+          mutated = true;
+        }
+      } catch { /* per-holding failure is soft */ }
+    }
+  } catch { /* rescue pass is best-effort */ }
+  summary.unverifiedMatched = unverifiedMatched;
+
+  // CF-RESCUE-PASS-B (Drew, 2026-08-03). Purge pending-review holdings
+  // whose source purchase was a sealed / break / memorabilia / supply
+  // purchase — the non-card filter was retroactively applied and any
+  // rows that snuck through under the old code get removed here.
+  const NON_CARD_RX = /\bbreak\b|\brandom\s+(team|div|hit|slot|player)|\bteam\s+(spot|slot|break)|\bhobby\s+box|\bjumbo\s+box|\bmega\s+box|\bblaster|\bhanger\s+box|\bretail\s+box|\bpyt\b|\bpick\s+your\s+team|\bteam\s+random|\(b\d+\)|\bbox\s+break|\bcase\s+break|\bpersonal\s+break|\bhobby\s+case|\bfactory\s+sealed\s+box|\bwax\s+box|\bcello\s+pack|\bfat\s+pack|\bvalue\s+pack|\b(hat|cap|jersey|jerseys|t\s?-?\s?shirt|hoodie|sweatshirt|shoes?|sneakers?|helmet|gloves?|puck|poster|banner|flag|mug|coin|patch|pin\b|button|bobblehead|figure|figurine|statue|replica|ring|necklace|pendant|watch|backpack|wallet|mask|towel|blanket|pillow|magnet(?!ic)|sticker|decal|keychain|lanyard|autographed\s+(jersey|hat|cap|bat|ball|helmet|photo|poster|puck))\b|\b(top\s?-?loader|toploader|penny\s+sleeves?|team\s+bags?|semi\s?-?rigid|magnetic\s+(holder|case)|one\s?-?touch|screwdown|card\s+savers?|binder|album|monster\s+box|card\s+sleeves?|ultra\s?pro|display\s+(case|stand)|deck\s+box)\b/i;
+  let nonCardPurged = 0;
+  const purgeIds = new Set<string>();
+  for (const [id, h] of Object.entries(doc.holdings ?? {})) {
+    if ((h as any).cardStatus !== "pending-review") continue;
+    const src = (doc.purchases ?? []).find((pp) => pp.id === (h as any).sourcePurchaseId);
+    const title = String(src?.notes || (h as any).notes || "");
+    if (!(h as any).playerName || NON_CARD_RX.test(title)) purgeIds.add(id);
+  }
+  for (const id of purgeIds) delete (doc.holdings as any)[id];
+  if (purgeIds.size > 0) {
+    for (const pu of doc.purchases ?? []) {
+      if (Array.isArray(pu.holdingIds)) {
+        pu.holdingIds = pu.holdingIds.filter((id) => !purgeIds.has(id));
+      }
+    }
+    nonCardPurged = purgeIds.size;
+    mutated = true;
+  }
+  summary.nonCardPurged = nonCardPurged;
+
   if (mutated) {
     await writeUserDoc(userId, doc);
   }
