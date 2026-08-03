@@ -36,7 +36,10 @@ function reparseRow(title, existing) {
     parallel: parsed.parallel ?? existing.parallel,
     isAuto: parsed.isAuto ?? existing.isAuto,
     printRun: parsed.printRun ?? existing.printRun,
-    setName: inferSetKeyFromTitle(title) || existing.setName,
+    setName: (() => {
+      const inferred = inferSetKeyFromTitle(title);
+      return (inferred && inferred !== "Unknown") ? inferred : existing.setName;
+    })(),
     sport: inferSportFromTitle(title) || existing.sport,
   };
   return next;

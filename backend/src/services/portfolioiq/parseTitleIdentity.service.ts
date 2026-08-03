@@ -898,7 +898,21 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/panini\s+donruss|\bdonruss\b/i.test(t)) return "Panini Donruss";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
-  return "Bowman";
+  // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
+  // baseball default for unmatched sports titles, but TCA firehose
+  // pipes Pokemon/TCG in the same pool. Returning "Bowman" for
+  // "Terrakion White Promo Japanese" mis-tags the row's setName.
+  // For obviously non-sports contexts, return a truthful placeholder
+  // so the LLM-provided setName wins downstream (persistVendorSalesToPool
+  // uses `?? inferSetKeyFromTitle` for the fallback).
+  if (/\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/.test(t)) {
+    return "Unknown";
+  }
+  // Only default to Bowman when the title looks baseball-ish.
+  if (/\b(baseball|mlb|rookie|prospect|prospects|1st\s+bowman|topps|panini|bowman|donruss)\b/.test(t)) {
+    return "Bowman";
+  }
+  return "Unknown";
 }
 
 /** Infer sport from a title. Falls back to a caller-supplied default. */

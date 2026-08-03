@@ -341,12 +341,24 @@ export async function persistVendorSalesToPool(
         // vision. Gated on LLM_VISION_ENABLED so we can tune cost.
         // The image often disambiguates Pokemon/vintage/typo cases
         // where the title alone is too vague.
+        //
+        // CF-VISION-PRICE-GATE (Drew, 2026-08-03). Vision doubles the
+        // token cost per row. Restrict to price >= LLM_VISION_MIN_PRICE
+        // ($50 default) so we only spend vision budget on high-value
+        // rows where identity correctness matters most. Env-tunable
+        // so we can lower once TPM headroom grows.
+        const visionMinPrice = Number(process.env.LLM_VISION_MIN_PRICE ?? "50");
         const stillMissing = (
           (!cardNumber && !llmParsed?.cardNumber)
           || (!cardYear && !llmParsed?.cardYear)
           || (!playerName && !llmParsed?.playerName)
         );
-        if (stillMissing && row.imageUrl && process.env.LLM_VISION_ENABLED === "true") {
+        if (
+          stillMissing
+          && row.imageUrl
+          && process.env.LLM_VISION_ENABLED === "true"
+          && price >= visionMinPrice
+        ) {
           const visionParsed = await parseTitleWithAi(title, row.imageUrl);
           if (visionParsed && (visionParsed.cardNumber || visionParsed.cardYear || visionParsed.playerName)) {
             // Merge: vision fills gaps text-only left; text-only holds where
@@ -370,7 +382,10 @@ export async function persistVendorSalesToPool(
         if (!cardNumber && llmParsed.cardNumber) cardNumber = llmParsed.cardNumber;
         if (!cardYear && llmParsed.cardYear) cardYear = llmParsed.cardYear;
         if (!playerName && llmParsed.playerName) playerName = llmParsed.playerName;
-        if (!setKey && llmParsed.setName) setKey = llmParsed.setName;
+        // "Unknown" is the inferSetKeyFromTitle sentinel for
+        // Pokemon/TCG/non-sport titles — treat it as missing so
+        // llmParsed.setName can override.
+        if ((!setKey || setKey === "Unknown") && llmParsed.setName) setKey = llmParsed.setName;
         if (!sport && llmParsed.sport) sport = llmParsed.sport;
         // Adopt LLM's parallel/isAuto/printRun only when parser had nothing
         if ((!parsed.parallel || parsed.parallel === "Base") && llmParsed.parallel && llmParsed.parallel !== "Base") {
