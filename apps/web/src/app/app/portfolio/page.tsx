@@ -554,7 +554,12 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   const title = formatCardTitle(h);
   const grade = formatGrade(h);
   const value = holdingDisplayValue(h);
-  const cost = h.totalCostBasis;
+  // CF-COST-FALLBACK (Drew, 2026-08-03). Fall back to purchasePrice ×
+  // quantity when totalCostBasis is null so rows without fees still
+  // show the paid amount + honest P&L.
+  const cost =
+    h.totalCostBasis
+    ?? (h.purchasePrice != null ? h.purchasePrice * h.quantity : null);
   // CF-PRICING-ENVELOPE (2026-07-31). Derive valuation status via envelope-
   // first helper. Used by the badge conditionals below so this row picks
   // up envelope-computed status transitions the moment the wire ships them.

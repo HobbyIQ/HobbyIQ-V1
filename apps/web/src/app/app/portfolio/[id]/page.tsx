@@ -95,10 +95,15 @@ export default function HoldingDetailPage() {
   const estConfidence = h.pricing?.estimate?.confidence ?? h.estimateConfidence;
   const estBasis = h.pricing?.estimate?.basisNote ?? h.estimateBasis;
   const value = holdingDisplayValue(h);
-  const cost = h.totalCostBasis;
   const paidPrice = h.purchasePrice;
   const totalPaid = paidPrice != null ? paidPrice * h.quantity : null;
-  const feesAdded = cost != null && totalPaid != null ? cost - totalPaid : null;
+  // CF-COST-FALLBACK (Drew, 2026-08-03). Show purchasePrice as
+  // "Total paid" when totalCostBasis is missing — a holding with no
+  // added fees/grading legitimately has cost === purchasePrice.
+  // Previously "Total paid" showed "—" whenever totalCostBasis was
+  // null, hiding the purchase price the user actually entered.
+  const cost = h.totalCostBasis ?? totalPaid;
+  const feesAdded = h.totalCostBasis != null && totalPaid != null ? h.totalCostBasis - totalPaid : null;
   // Recompute P&L against what we're actually displaying so the number matches
   // the Value column instead of any stale server-side cost-proxy math.
   let gain: number | null = h.totalProfitLoss ?? null;
