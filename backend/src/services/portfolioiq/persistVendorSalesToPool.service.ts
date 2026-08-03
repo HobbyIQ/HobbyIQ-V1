@@ -59,7 +59,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight')",
       parameters: [
         { name: "@p", value: playerName },
         { name: "@y", value: String(cardYear) },
@@ -80,7 +80,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       if (lastToken.length >= 3) {
         try {
           const fq = {
-            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight', 'tca-catalog')",
+            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight')",
             parameters: [
               { name: "@y", value: String(cardYear) },
               { name: "@last", value: lastToken },
