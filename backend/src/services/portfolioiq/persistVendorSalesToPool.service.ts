@@ -46,8 +46,8 @@ async function getCatalogContainer(): Promise<Container | null> {
 const CATALOG_CACHE = new Map<string, Array<{ number: string; parallels: string[]; sport: string | null }>>();
 const CATALOG_CACHE_MAX = 5000;
 
-async function checklistNarrow(playerName: string, cardYear: number, setKeyHint: string | null): Promise<Array<{ number: string; parallels: string[]; sport: string | null }> | null> {
-  const key = `${playerName.toLowerCase()}|${cardYear}|${(setKeyHint ?? "").toLowerCase()}`;
+async function checklistNarrow(playerName: string, cardYear: number, setKeyHint: string | null, sportHint: string | null = null): Promise<Array<{ number: string; parallels: string[]; sport: string | null }> | null> {
+  const key = `${playerName.toLowerCase()}|${cardYear}|${(setKeyHint ?? "").toLowerCase()}|${(sportHint ?? "").toLowerCase()}`;
   const hit = CATALOG_CACHE.get(key);
   if (hit) return hit;
 
@@ -83,13 +83,35 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       sport: r.sport ?? null,
     }));
 
+    // CF-TCA-CATALOG-FALLBACK (Drew, 2026-08-03). When our local
+    // card_catalog has 0 rows for (player, year, set), fall back to
+    // TCA's /catalog beta (15M cards including modern releases we don't
+    // index yet). Turns a would-be player-fallback into a cardnumber-
+    // precise resolution. Gated on TCA_CATALOG_FALLBACK_ENABLED so we
+    // can toggle without redeploy.
+    let finalShaped = shaped;
+    if (finalShaped.length === 0
+        && process.env.TCA_CATALOG_FALLBACK_ENABLED === "true"
+        && setKeyHint
+        && sportHint) {
+      try {
+        const { tcaCatalogNarrow } = await import("../compiq/tcaCatalog.client.js");
+        const tcaCards = await tcaCatalogNarrow(playerName, cardYear, setKeyHint, sportHint);
+        finalShaped = tcaCards.map((c) => ({
+          number: String(c.card_number ?? ""),
+          parallels: [] as string[],
+          sport: sportHint.toLowerCase(),
+        })).filter((c) => c.number);
+      } catch { /* TCA fallback failure is soft */ }
+    }
+
     // Cache with LRU-ish eviction
     if (CATALOG_CACHE.size >= CATALOG_CACHE_MAX) {
       const firstKey = CATALOG_CACHE.keys().next().value;
       if (firstKey) CATALOG_CACHE.delete(firstKey);
     }
-    CATALOG_CACHE.set(key, shaped);
-    return shaped;
+    CATALOG_CACHE.set(key, finalShaped);
+    return finalShaped;
   } catch { return null; }
 }
 
@@ -415,7 +437,7 @@ export async function persistVendorSalesToPool(
     //    scoreCandidatesByPrice). Pick highest-confidence winner.
     let checklistConfidence = 1.0;   // 1.0 = title-parsed, 0.85 = price-scored, 0.7 = checklist-single, 0.5 = ambiguous
     if (!cardNumber && playerName && cardYear && setKey) {
-      const cands = await checklistNarrow(playerName, cardYear, setKey);
+      const cands = await checklistNarrow(playerName, cardYear, setKey, sport);
       if (cands && cands.length > 0) {
         if (cands.length === 1) {
           cardNumber = cands[0].number;
