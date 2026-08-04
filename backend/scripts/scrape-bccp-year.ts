@@ -32,7 +32,9 @@ interface Args {
 
 function parseArgs(): Args {
   const argv = process.argv.slice(2);
-  const args: Args = { outdir: "/tmp/bccp" };
+  // c:/tmp/bccp is a real Windows path — survives suspend/reboot unlike
+  // /tmp which Git Bash / Cygwin can wipe on system events.
+  const args: Args = { outdir: "c:/tmp/bccp" };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const val = argv[i + 1];

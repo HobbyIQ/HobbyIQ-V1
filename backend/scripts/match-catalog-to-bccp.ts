@@ -48,7 +48,7 @@ interface Args {
 }
 function parseArgs(): Args {
   const argv = process.argv.slice(2);
-  const args: Args = { sport: "baseball", indir: "/tmp/bccp" };
+  const args: Args = { sport: "baseball", indir: "c:/tmp/bccp" };
   for (let i = 0; i < argv.length; i++) {
     const f = argv[i], v = argv[i + 1];
     if (f === "--year") { args.year = Number(v); i++; }

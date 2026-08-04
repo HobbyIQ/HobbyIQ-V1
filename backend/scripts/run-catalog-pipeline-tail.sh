@@ -23,15 +23,18 @@ LOGDIR=/tmp/pipeline-tail
 mkdir -p "$LOGDIR"
 YEARS="2025 2024 2023 2022 2021 2020 2019 2018 2017 2016 2015 2014 2013 2012 2011 2010 2009 2008 2007 2006 2005 2004 2003 2002 2001 2000 1999 1998 1997 1996 1995 1994 1993 1992 1991 1990 1989 1988 1987 1986 1985 1984 1983 1982 1981 1980 1979 1978 1977 1976 1975 1974 1973 1972 1971 1970 1969 1968 1967 1966 1965 1964 1963 1962 1961 1960 1959 1958 1957 1956 1955 1954 1953 1952 1951 1950"
 
-# Wait for pool rollout to finish.
-echo "== Waiting for pool rollout (blv34o6vi) — sentinel: '=== ALL baseball bulk-build done' =="
-POOL_LOG="C:/Users/dvabu/AppData/Local/Temp/claude/c--Users-dvabu-OneDrive---Just-the-Boys-and-Cards-LLC-Desktop-HobbyIQ-V1--claude-worktrees-cf-cardsearch-firstpass/44ed1a3b-f8bb-43c5-948b-2d23cfb9d8f7/tasks/blv34o6vi.output"
-until grep -q "=== ALL baseball bulk-build done" "$POOL_LOG" 2>/dev/null; do sleep 30; done
+# Wait for pool rollout resume to finish (was be7oswgcf after battery
+# crash forced a resume).
+POOL_TASK_ID="${POOL_TASK_ID:-be7oswgcf}"
+POOL_LOG="C:/Users/dvabu/AppData/Local/Temp/claude/c--Users-dvabu-OneDrive---Just-the-Boys-and-Cards-LLC-Desktop-HobbyIQ-V1--claude-worktrees-cf-cardsearch-firstpass/44ed1a3b-f8bb-43c5-948b-2d23cfb9d8f7/tasks/${POOL_TASK_ID}.output"
+echo "== Waiting for pool rollout (${POOL_TASK_ID}) — sentinel: '==== POOL RESUME DONE' =="
+until grep -q "==== POOL RESUME DONE" "$POOL_LOG" 2>/dev/null; do sleep 30; done
 echo "== Pool rollout done $(date +%H:%M:%S) =="
 
 # Wait for BCCP scrape to finish.
-echo "== Waiting for BCCP scrape (bnwuyv0h2) — sentinel: '==== ALL YEARS DONE' =="
-SCRAPE_LOG="C:/Users/dvabu/AppData/Local/Temp/claude/c--Users-dvabu-OneDrive---Just-the-Boys-and-Cards-LLC-Desktop-HobbyIQ-V1--claude-worktrees-cf-cardsearch-firstpass/44ed1a3b-f8bb-43c5-948b-2d23cfb9d8f7/tasks/bnwuyv0h2.output"
+SCRAPE_TASK_ID="${SCRAPE_TASK_ID:-b44zvj52k}"
+SCRAPE_LOG="C:/Users/dvabu/AppData/Local/Temp/claude/c--Users-dvabu-OneDrive---Just-the-Boys-and-Cards-LLC-Desktop-HobbyIQ-V1--claude-worktrees-cf-cardsearch-firstpass/44ed1a3b-f8bb-43c5-948b-2d23cfb9d8f7/tasks/${SCRAPE_TASK_ID}.output"
+echo "== Waiting for BCCP scrape (${SCRAPE_TASK_ID}) — sentinel: '==== ALL YEARS DONE' =="
 until grep -q "==== ALL YEARS DONE" "$SCRAPE_LOG" 2>/dev/null; do sleep 60; done
 echo "== BCCP scrape done $(date +%H:%M:%S) =="
 
