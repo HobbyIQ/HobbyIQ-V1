@@ -22,6 +22,7 @@ import {
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
 import { computeHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
+import { canonicalizeParallelName } from "../catalog/catalogMatcher.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
@@ -638,6 +639,18 @@ export async function persistVendorSalesToPool(
     if (identity.parallel !== undefined && identity.parallel !== null) parsed.parallel = identity.parallel;
     if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
     if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;
+    // CF-INGEST-TIME-CANONICALIZE (Drew, 2026-08-04). Normalize the
+    // parallel via the catalog matcher's canonicalizer BEFORE computing
+    // the slug. Handles case-dedup ("Base"/"base"), market-language
+    // aliases ("True Blue" → "Blue Refractor"), and bracket variants
+    // ("[Base]" → "Base"). Zero Cosmos calls — pure in-memory
+    // transformation. Every new sale from now lands with a canonical
+    // parallel that matches other sales of the same physical card,
+    // eliminating the "639 Base + 55 base + 23 Refractor" duplicate
+    // pattern we saw in the 2024 Bowman Chrome rollup dry-run.
+    const canonicalParallel = canonicalizeParallelName(parsed.parallel);
+    parsed.parallel = canonicalParallel;
+
     let slug: string;
     try {
       slug = computeHobbyIqCardId({
@@ -645,7 +658,7 @@ export async function persistVendorSalesToPool(
         year: cardYear,
         setKey,
         cardNumber: parsed.cardNumber,
-        parallel: parsed.parallel,
+        parallel: canonicalParallel,
         isAuto: parsed.isAuto,
         printRun: parsed.printRun,
       });
