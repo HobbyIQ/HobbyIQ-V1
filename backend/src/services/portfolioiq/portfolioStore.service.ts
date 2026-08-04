@@ -6765,6 +6765,81 @@ export async function repriceHoldingsForUser(
       const estSource = String((estimate as any)?.source ?? "");
       const daysSinceNewestComp = (estimate as any)?.daysSinceNewestComp ?? null;
 
+      // CF-UNIFIED-PRICING-BATCH-REPRICE-PATH (Drew, 2026-08-04).
+      // repriceHoldingsForUser is a SEPARATE persistence site from
+      // autoPriceHolding — batch/scheduled reprice cycles bypass the
+      // unified pricing block entirely and write whatever legacy
+      // computeEstimate returned. That's why Ohtani PSA 9 kept
+      // regressing to $2,483 (legacy composite) after every reprice
+      // even though the on-demand refresh path was producing $2,596
+      // via unified pricing. Fix: mirror the autoPriceHolding unified
+      // block here so both persistence paths converge on the same math.
+      //
+      // When unified returns a valid trend-lifted marketValue with
+      // confidence >= 0.3, write it directly and skip the rest of the
+      // legacy pricing branches for this holding.
+      if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true") {
+        const bResolvedId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
+        if (bResolvedId) {
+          try {
+            const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
+            const gradeCoRaw = (holding as any).gradeCompany;
+            const gradeValRaw = (holding as any).gradeValue;
+            const gradeCo = gradeCoRaw ? String(gradeCoRaw).trim() : null;
+            const gradeVal = typeof gradeValRaw === "number" ? gradeValRaw : (gradeValRaw ? Number(gradeValRaw) : null);
+            const unified = await computeUnifiedPrice(String(bResolvedId), {
+              hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+              grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
+              excludeContributorUserId: userId ?? null,
+            });
+            const bChosen = unified.marketValue ?? unified.fmv ?? unified.predictedPrice;
+            if (bChosen !== null && bChosen > 0 && unified.confidence >= 0.3) {
+              const uNow = new Date().toISOString();
+              console.log(JSON.stringify({
+                event: "batch_reprice_unified_pricing_applied",
+                source: "portfolioStore.repriceHoldingsForUser",
+                userId, holdingId: holding.id, cardId: bResolvedId,
+                unified_median: unified.fmv,
+                unified_market_value: unified.marketValue,
+                unified_predicted: unified.predictedPrice,
+                confidence: unified.confidence,
+                window_days: unified.windowDays,
+                trend_pct_per_week: unified.trendPctPerWeek,
+                trend_direction: unified.trendDirection,
+              }));
+              doc.holdings[holding.id] = {
+                ...holding,
+                ...repriceIdentityPatch,
+                fairMarketValue: bChosen,
+                estimatedValue: null,
+                estimateLow: null,
+                estimateHigh: null,
+                estimateConfidence: null,
+                estimateBasis: `unified: window=${unified.windowDays}d median=$${unified.fmv?.toFixed(0) ?? "?"} marketValue=$${unified.marketValue?.toFixed(0) ?? "?"} predicted=$${unified.predictedPrice?.toFixed(0) ?? "?"} trend=${unified.trendDirection} ${unified.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk`,
+                isEstimate: false,
+                valuationStatus: "observed",
+                pricingSource: "unified-pricing",
+                verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
+                recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
+                lastUpdated: uNow,
+                sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
+                sourceVendorUpdatedAt: uNow,
+              };
+              repriced += 1;
+              updates.push({ id: holding.id, status: "repriced", reason: "unified-pricing" });
+              continue;
+            }
+          } catch (err) {
+            console.warn(JSON.stringify({
+              event: "batch_reprice_unified_pricing_error",
+              source: "portfolioStore.repriceHoldingsForUser",
+              holdingId: holding.id,
+              error: (err as Error)?.message ?? String(err),
+            }));
+          }
+        }
+      }
+
       // CF-IDENTITY-HYDRATION-COMPLETION (2026-06-18): compute the hydration
       // patch BEFORE the confidence gate. Engine catalog resolution +
       // cardIdentity construction happen during fetchComps regardless of
