@@ -4276,14 +4276,18 @@ export async function addHolding(req: Request, res: Response) {
   try {
     if (holding.playerName && holding.cardYear && holding.cardNumber) {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+      // holding is a permissive shape at ingest — some fields (sport,
+      // printRun) aren't on the strict PortfolioHolding type but may
+      // land here from vendor payloads. Narrow via unknown-cast.
+      const extras = holding as unknown as { sport?: unknown; printRun?: unknown };
       const matchResult = await canonicalize({
-        sport: String(holding.sport ?? "baseball"),
+        sport: typeof extras.sport === "string" && extras.sport ? extras.sport : "baseball",
         year: holding.cardYear,
         setName: String(holding.product ?? holding.setName ?? ""),
         cardNumber: String(holding.cardNumber),
         parallel: holding.parallel ?? null,
         isAuto: holding.isAuto === true,
-        printRun: typeof holding.printRun === "number" ? holding.printRun : null,
+        printRun: typeof extras.printRun === "number" ? extras.printRun : null,
         player: holding.playerName,
         source: "user-verified",
       });

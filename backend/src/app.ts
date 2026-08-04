@@ -65,6 +65,10 @@ import catalogSearchRoutes from "./routes/catalogSearch.routes.js";
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
 import searchAdminRoutes from "./routes/searchAdmin.routes.js";
 import verifyQueueRoutes from "./routes/verifyQueue.routes.js";
+// CF-CATALOG-FIRST (Drew, 2026-08-04): price-anomaly verification queue —
+// list flagged comps, reassign to a different catalog slug, or confirm as
+// real. Complements the alias-verify queue above.
+import verifyCompsRoutes from "./routes/verifyComps.routes.js";
 // CF-LABELER-ROUTES (2026-07-31, Drew): human-in-the-loop variant
 // labeling admin surface. Shows CH catalog variants + images, Drew
 // inputs canonical parallel, sold_comps rewritten by title-suffix.
@@ -261,6 +265,9 @@ app.use("/api/admin", searchAdminRoutes);
 // CF-VERIFY-QUEUE-ROUTES (Drew, 2026-07-28): human-in-the-loop verify
 // queue + pool-level data-quality report. Both admin-gated.
 app.use("/api", verifyQueueRoutes);
+// CF-CATALOG-FIRST (Drew, 2026-08-04): price-anomaly reassign queue at
+// /api/verify/comps/*. Admin-gated via ADMIN_USER_IDS.
+app.use("/api/verify", verifyCompsRoutes);
 // CF-LABELER-ROUTES (Drew, 2026-07-31): variant labeling admin surface.
 app.use("/api", labelerRoutes);
 // CF-CLEANLINESS-ROUTES (Drew, 2026-08-01): pool cleanliness dashboard.
