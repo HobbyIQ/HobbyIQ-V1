@@ -2431,6 +2431,44 @@ struct APIService {
         return try await post(path: "/api/search/cards", body: body, responseType: UnifiedSearchResponse.self)
     }
 
+    // MARK: - Catalog Product Structure (BCCP-derived)
+    //
+    // Shared wire contract with apps/web/src/lib/api.ts:getProductStructure.
+    // Product structure = every parallel / insert set / auto subset / relic
+    // subset for a given product family (e.g. "2024 Bowman Chrome").
+
+    func fetchProductStructure(productKey: String) async throws -> ProductStructure {
+        let encoded = productKey.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? productKey
+        let response = try await get(
+            path: "/api/catalog/product-structure/\(encoded)",
+            responseType: ProductStructureResponse.self
+        )
+        return response.product
+    }
+
+    func fetchProductStructure(year: Int, setKey: String) async throws -> ProductStructure {
+        let response = try await get(
+            path: "/api/catalog/product-structure",
+            queryItems: [
+                URLQueryItem(name: "year", value: String(year)),
+                URLQueryItem(name: "setKey", value: setKey),
+            ],
+            responseType: ProductStructureResponse.self
+        )
+        return response.product
+    }
+
+    func listProductStructures(year: Int, brand: String? = nil) async throws -> [ProductListItem] {
+        var queryItems = [URLQueryItem(name: "year", value: String(year))]
+        if let brand { queryItems.append(URLQueryItem(name: "brand", value: brand)) }
+        let response = try await get(
+            path: "/api/catalog/product-structure/list",
+            queryItems: queryItems,
+            responseType: ProductListResponse.self
+        )
+        return response.products
+    }
+
     // MARK: - Username Change
 
     func changeUsername(username: String) async throws -> UsernameChangeResponse {

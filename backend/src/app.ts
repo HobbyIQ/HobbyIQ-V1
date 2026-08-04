@@ -60,6 +60,11 @@ import accountRoutes from "./routes/account.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import catalogSearchRoutes from "./routes/catalogSearch.routes.js";
+// CF-CATALOG-FIRST (Drew, 2026-08-04): baseballcardpedia-derived
+// product-structure served to iOS + web. GET /product-structure/:key
+// direct read; GET /product-structure?year&setKey fallback query;
+// GET /product-structure/list?year&brand enumeration.
+import productStructureRoutes from "./routes/productStructure.routes.js";
 // CF-SEARCH-ADMIN-ROUTES (2026-07-08, Drew): admin surface for the
 // Cosmos-backed alias store — add/correct/reload aliases without a
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
@@ -259,6 +264,10 @@ app.use("/api/search", searchRoutes);
 // use this BEFORE hitting the vendor-fanout search for the "our data
 // first" experience.
 app.use("/api/catalog", catalogSearchRoutes);
+// CF-CATALOG-FIRST product-structure mount. Must come AFTER
+// catalogSearchRoutes so /search doesn't shadow it (they don't collide
+// today but keep the order stable for future path additions).
+app.use("/api/catalog/product-structure", productStructureRoutes);
 // CF-SEARCH-ADMIN (2026-07-08, Drew): mount admin surface after the
 // user-facing /api/search so path resolution can't shadow user routes.
 app.use("/api/admin", searchAdminRoutes);

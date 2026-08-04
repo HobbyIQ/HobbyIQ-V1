@@ -595,6 +595,81 @@ export async function searchCards(input: string, hint?: "cert" | "freetext"): Pr
   });
 }
 
+// CF-CATALOG-FIRST product structure (Drew, 2026-08-04). Shared shape
+// with iOS (see ProductOverviewModels.swift) — keep field names 1:1.
+// Backed by baseballcardpedia scrape imported into card_catalog.
+export interface ProductParallel {
+  section: string;
+  name: string;
+  printRun: number | null;
+}
+export interface ProductSubset {
+  name: string;
+  cardPrefix: string | null;
+  parallelCount: number;
+}
+export interface ProductRelic {
+  name: string;
+  cardPrefix: string | null;
+}
+export interface ProductStructure {
+  productKey: string;
+  productName: string;
+  sourcePage: string;
+  year: number;
+  sport: string;
+  brand: string;
+  setKey: string;
+  parentSetKey: string | null;
+  setName: string;
+  parallels: ProductParallel[];
+  inserts: ProductSubset[];
+  autos: ProductSubset[];
+  gameUsed: ProductRelic[];
+  gimmicks: ProductRelic[];
+  parallelCount: number;
+  insertCount: number;
+  autoCount: number;
+  gameUsedCount: number;
+  gimmickCount: number;
+  fetchedAt: string;
+  lastImportedAt: string;
+}
+export interface ProductListItem {
+  productKey: string;
+  productName: string;
+  year: number;
+  brand: string;
+  setKey: string;
+  parentSetKey: string | null;
+  setName: string;
+  parallelCount: number;
+  insertCount: number;
+  autoCount: number;
+  gameUsedCount: number;
+  gimmickCount: number;
+}
+export async function getProductStructure(productKey: string): Promise<ProductStructure> {
+  const r = await request<{ success: boolean; product: ProductStructure }>(
+    `/api/catalog/product-structure/${encodeURIComponent(productKey)}`,
+  );
+  return r.product;
+}
+export async function getProductStructureByYearSetKey(year: number, setKey: string): Promise<ProductStructure> {
+  const r = await request<{ success: boolean; product: ProductStructure }>(
+    `/api/catalog/product-structure?year=${year}&setKey=${encodeURIComponent(setKey)}`,
+  );
+  return r.product;
+}
+export async function listProductStructures(year: number, brand?: string): Promise<ProductListItem[]> {
+  const qs = new URLSearchParams({ year: String(year) });
+  if (brand) qs.set("brand", brand);
+  const r = await request<{ success: boolean; count: number; products: ProductListItem[] }>(
+    `/api/catalog/product-structure/list?${qs.toString()}`,
+  );
+  return r.products;
+}
+
 // CF-IDENTITY-VERIFIED (Drew, 2026-07-27). Preview FMV for a specific
 // cardId at a specific grade — used by the Edit modal's Confirm gate so
 // the user sees "PSA 10: $12,000 (24 comps)" next to a picker candidate
