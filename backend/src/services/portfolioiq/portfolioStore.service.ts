@@ -2066,13 +2066,25 @@ async function autoPriceHolding(
       // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
       // the pool has >= 1 exact-cardId sample and a positive canonical
       // number — trust the pool over sibling rescue even when old.
-      // Cam Caminiti Blue Refractor: 2 samples 17-19 months old,
-      // confidence 0.11 after recency penalty; legacy fall-through
-      // returned $18 from unrelated Bowman Draft sales. Two OLD Cam
-      // Caminiti Blue Refractor sales at $76 and $160 are more
-      // representative than 213 unrelated ones. Cost-basis floor
-      // (< 15%) still catches truly broken cases.
-      if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
+      // Cost-basis floor (< 15% of cost, > $50 cost) rejects slug-
+      // mismatch cases like Verlander PSA 10 $0.25 for a $259 card.
+      const earlyQty = Math.max(1, toNumber(holding.quantity, 1));
+      const earlyCost = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * earlyQty);
+      const earlyProposedTotal = canonical !== null ? canonical * earlyQty : 0;
+      const earlySuspiciouslyLow = earlyCost > 50 && earlyProposedTotal > 0 && (earlyProposedTotal / earlyCost) < 0.15;
+      if (earlySuspiciouslyLow) {
+        console.warn(JSON.stringify({
+          event: "portfolio_unified_early_exit_rejected_cost_basis_floor",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          costBasis: earlyCost,
+          proposedTotal: earlyProposedTotal,
+          proposedPct: Math.round((earlyProposedTotal / earlyCost) * 10000) / 100,
+          confidence: u.confidence,
+          totalSampleCount: u.totalSampleCount,
+        }));
+        // Fall through to legacy path — legacy has its own guards.
+      } else if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
         const nowIso = new Date().toISOString();
         console.log(JSON.stringify({
           event: "portfolio_unified_early_exit_applied",
@@ -6912,7 +6924,23 @@ export async function repriceHoldingsForUser(
               : null,
           });
           const bCanon = bU.marketValue ?? bU.fmv ?? bU.predictedPrice;
-          if (bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
+          // Cost-basis floor for batch reprice early-exit — same guard
+          // as autoPriceHolding to catch slug-mismatch price drops.
+          const bEarlyQty = Math.max(1, toNumber(holding.quantity, 1));
+          const bEarlyCost = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * bEarlyQty);
+          const bEarlyProposedTotal = bCanon !== null ? bCanon * bEarlyQty : 0;
+          const bEarlySuspiciouslyLow = bEarlyCost > 50 && bEarlyProposedTotal > 0 && (bEarlyProposedTotal / bEarlyCost) < 0.15;
+          if (bEarlySuspiciouslyLow) {
+            console.warn(JSON.stringify({
+              event: "batch_reprice_unified_early_exit_rejected_cost_basis_floor",
+              source: "portfolioStore.repriceHoldingsForUser",
+              holdingId: holding.id,
+              costBasis: bEarlyCost,
+              proposedTotal: bEarlyProposedTotal,
+              confidence: bU.confidence,
+            }));
+            // Fall through to legacy path.
+          } else if (bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
             const bNow = new Date().toISOString();
             console.log(JSON.stringify({
               event: "batch_reprice_unified_early_exit_applied",
