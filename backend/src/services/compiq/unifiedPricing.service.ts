@@ -57,11 +57,26 @@ export interface UnifiedGradeEntry {
   predictedPrice: number | null;
   trendPctPerWeek: number | null;   // slope × 7d as % of median
   trendDirection: "up" | "down" | "flat";
+  // CF-UNIFIED-PRICING-MARKETVALUE (Drew, 2026-08-04). Trend-lifted
+  // current market value: weightedMedian × full trend ratio. This is
+  // what a trader marks their book at — "where would the next sale
+  // clear if the current trend holds?" — and matches observedGradeCurve's
+  // trendAdjustedValue math. Distinct from predictedPrice: predictedPrice
+  // projects 7d FORWARD (sqrt of the 14d trend ratio), marketValue lifts
+  // the CURRENT median TO current-trend-implied-value (full ratio).
+  //
+  // Why full ratio not sqrt: predictedPrice is projecting forward past
+  // now; marketValue is the trend-implied clearing price AT now. For a
+  // market up 25%/month, the weighted median at $2,326 lags reality
+  // ($2,700 recent August sales). marketValue = $2,326 × 1.12 ≈ $2,600
+  // matches what a buyer will actually pay THIS WEEK.
+  marketValue: number | null;
 }
 
 export interface UnifiedPriceResult {
   cardId: string;
   fmv: number | null;            // requested-grade weighted median
+  marketValue: number | null;    // requested-grade trend-lifted current market value
   predictedPrice: number | null; // requested-grade projected next sale (7d fwd)
   trendPctPerWeek: number | null;
   trendDirection: "up" | "down" | "flat";
@@ -204,6 +219,7 @@ export async function computeUnifiedPrice(
   const empty: UnifiedPriceResult = {
     cardId,
     fmv: null,
+    marketValue: null,
     predictedPrice: null,
     trendPctPerWeek: null,
     trendDirection: "flat",
@@ -252,12 +268,13 @@ export async function computeUnifiedPrice(
   // predictedPrice = current weighted median × trend ratio (clamped
   // to ±50% to prevent thin-pool wild extrapolations).
   function computeTrendAndPrediction(rows: RawCompRow[], wMedian: number | null): {
+    marketValue: number | null;
     predictedPrice: number | null;
     trendPctPerWeek: number | null;
     trendDirection: "up" | "down" | "flat";
   } {
     if (wMedian === null || rows.length < 4) {
-      return { predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
     const cutoffMs = nowMs - 14 * 86400_000;
     const recent = rows.filter((r) => {
@@ -269,23 +286,30 @@ export async function computeUnifiedPrice(
       return Number.isFinite(t) && t < cutoffMs;
     });
     if (recent.length < 2 || prior.length < 2) {
-      return { predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
     const rMed = weightedMedian(recent, nowMs);
     const pMed = weightedMedian(prior, nowMs);
     if (!rMed || !pMed || pMed <= 0) {
-      return { predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
     const ratio = rMed / pMed;
     // Clamp to [0.5, 1.5] — anything more extreme is thin-pool noise.
     const cappedRatio = Math.max(0.5, Math.min(1.5, ratio));
-    // Project 7d forward from current weightedMedian (approx half the
-    // 14d comparison window since we compared 14d recent vs 14d prior).
-    const predicted = Math.round(wMedian * Math.pow(cappedRatio, 0.5) * 100) / 100;
+    // CF-UNIFIED-PRICING-MARKETVALUE (Drew, 2026-08-04). marketValue
+    // applies the FULL trend ratio so wMedian lifts to the current
+    // trend-implied clearing price. Fixes strong-trend under-marking:
+    // Ohtani PSA 9 wMedian $2,326 was dragged down by older July sales
+    // while August was clearing $2,700+ — marketValue $2,326 × 1.12 ≈
+    // $2,610 matches the recent 4-sale August cluster.
+    const marketValue = Math.round(wMedian * cappedRatio * 100) / 100;
+    // predictedPrice projects 7d forward from marketValue (sqrt of the
+    // 14d comparison window since we're going half a step further out).
+    const predicted = Math.round(wMedian * Math.pow(cappedRatio, 1.5) * 100) / 100;
     const pctPerWeek = Math.round((cappedRatio - 1) * 500) / 10; // ~ (ratio - 1) × 50 = %/week
     const direction: "up" | "down" | "flat" =
       Math.abs(pctPerWeek) < 1 ? "flat" : (pctPerWeek > 0 ? "up" : "down");
-    return { predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
+    return { marketValue, predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
   }
 
   const gradeCurve: UnifiedGradeEntry[] = [];
@@ -309,6 +333,7 @@ export async function computeUnifiedPrice(
       newestSaleDate: newestMs > 0 ? new Date(newestMs).toISOString() : null,
       valueSource: "observed",
       confidence: confidenceScore(rows.length, newestMs || null, nowMs),
+      marketValue: trend.marketValue,
       predictedPrice: trend.predictedPrice,
       trendPctPerWeek: trend.trendPctPerWeek,
       trendDirection: trend.trendDirection,
@@ -316,8 +341,9 @@ export async function computeUnifiedPrice(
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));
 
-  // fmv + predicted for a specific-grade lookup
+  // fmv + marketValue + predicted for a specific-grade lookup
   let fmv: number | null = null;
+  let marketValue: number | null = null;
   let predictedPrice: number | null = null;
   let trendPctPerWeek: number | null = null;
   let trendDirection: "up" | "down" | "flat" = "flat";
@@ -327,6 +353,7 @@ export async function computeUnifiedPrice(
     const matched = gradeCurve.find((e) => e.grade === target);
     if (matched) {
       fmv = matched.weightedMedian;
+      marketValue = matched.marketValue;
       predictedPrice = matched.predictedPrice;
       trendPctPerWeek = matched.trendPctPerWeek;
       trendDirection = matched.trendDirection;
@@ -337,6 +364,7 @@ export async function computeUnifiedPrice(
   return {
     cardId,
     fmv,
+    marketValue,
     predictedPrice,
     trendPctPerWeek,
     trendDirection,

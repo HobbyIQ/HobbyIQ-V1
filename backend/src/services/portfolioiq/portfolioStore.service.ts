@@ -2060,7 +2060,7 @@ async function autoPriceHolding(
   // for THAT tier. Card catalog omits grade → gets full curve. Same
   // rows, same math → same numbers.
   let unifiedResult: {
-    fmv: number | null; predictedPrice: number | null;
+    fmv: number | null; marketValue: number | null; predictedPrice: number | null;
     method: string; confidence: number;
     trendPctPerWeek: number | null; trendDirection: string;
     windowDays: number;
@@ -2098,19 +2098,27 @@ async function autoPriceHolding(
         // out leaves nothing (Victor Figueroa case).
         excludeContributorUserId: userId ?? null,
       });
-      // CF-PORTFOLIO-VALUE-IS-MARKET-NOT-PREDICTED (Drew, 2026-08-04).
-      // CURRENT VALUE in a portfolio position is the OBSERVED weighted
-      // median (what the card would actually sell for RIGHT NOW). The
-      // 7-day PREDICTED price is a forward projection — belongs on
-      // trend/action-plan surfaces, not the position mark itself.
-      // Prior code used predictedPrice first, which drifted portfolio
-      // value from what the Grade Curve shows as "MARKET VALUE" for the
-      // same card. Trader intuition: your book marks-to-market on last
-      // trade, not on tomorrow's forecast.
-      const chosen = unified.fmv ?? unified.predictedPrice;
+      // CF-PORTFOLIO-VALUE-IS-MARKETVALUE (Drew, 2026-08-04). CURRENT VALUE
+      // in a portfolio position is the TREND-LIFTED market value —
+      // weightedMedian scaled by the recent-vs-prior trend ratio. This is
+      // "where would the next sale clear if the current trend holds?"
+      // and matches Grade Curve's MARKET VALUE label.
+      //
+      // Progression: earlier this session I flipped to unified.fmv (raw
+      // weighted median = $2,326 for Ohtani PSA 9) — but that's dragged
+      // down by older sales in a hot market. August was clearing $2,700+
+      // while the 14d weighted median was still $2,326. marketValue
+      // ($2,326 × 1.12 ≈ $2,610) is what the position is actually worth
+      // this week — matches Drew's memory rule "FMV = projected next sale
+      // from pool trend; never a median".
+      //
+      // Fall-throughs: marketValue -> fmv -> predictedPrice. When the
+      // pool is too thin for a trend signal, marketValue equals fmv.
+      const chosen = unified.marketValue ?? unified.fmv ?? unified.predictedPrice;
       if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
         unifiedResult = {
           fmv: unified.fmv,
+          marketValue: unified.marketValue,
           predictedPrice: unified.predictedPrice,
           method: unified.method,
           confidence: unified.confidence,
@@ -2126,6 +2134,7 @@ async function autoPriceHolding(
           confidence: unified.confidence,
           fair_value_before: fairValue,
           unified_median: unified.fmv,
+          unified_market_value: unified.marketValue,
           unified_predicted: unified.predictedPrice,
           window_days: unified.windowDays,
           trend_pct_per_week: unified.trendPctPerWeek,

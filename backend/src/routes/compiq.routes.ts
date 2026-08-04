@@ -3581,8 +3581,14 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
             : `${entry.grader} ${entry.grade}`.trim();
         const u = byLabel.get(label);
         if (u && u.weightedMedian != null && u.sampleCount > 0) {
+          // trendAdjustedValue = the trend-lifted market value (matches
+          // Grade Curve's MARKET VALUE label semantics)
+          // value = the raw weighted median (past clearing price)
+          // Both used to fall back to trendAdjustedValue in UI reads;
+          // supplying both keeps consumers that read either one aligned.
+          const mv = u.marketValue ?? u.weightedMedian;
           (entry as { value: number | null }).value = u.weightedMedian;
-          (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = u.weightedMedian;
+          (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = mv;
           (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = u.weightedMedian;
           (entry as { sampleCount: number }).sampleCount = u.sampleCount;
           if (u.predictedPrice != null) {
