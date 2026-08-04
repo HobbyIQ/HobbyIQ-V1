@@ -176,6 +176,33 @@ async function webhookHandler(req: Request, res: Response, endpointLabel: string
     no_price_or_date: [],
     persist_skipped: [],
   };
+  // CF-LLM-BATCH-PREWARM-WEBHOOK (Drew, 2026-08-03). Pre-warm the
+  // LLM cache with ONE batched call for every eligible title in this
+  // webhook batch. Downstream per-row persistVendorSalesToPool calls
+  // then hit the cache instead of firing an LLM call per row —
+  // background path, no user-facing latency impact. Gated on
+  // PERSIST_LLM_BATCH_ENABLED (safe to toggle without redeploy).
+  if (rows.length >= 4
+      && process.env.PERSIST_LLM_BATCH_ENABLED === "true"
+      && process.env.PERSIST_LLM_ENRICH_ENABLED === "true") {
+    try {
+      const sportsSet = new Set(["baseball", "basketball", "football", "hockey", "soccer"]);
+      const candidateTitles: string[] = [];
+      for (const r of rows) {
+        const title = (r.title || "").trim();
+        if (title.length < 15) continue;
+        // Skip non-sports (matches persistVendorSalesToPool's
+        // skipLlmForSport gate) — don't waste batch tokens on Pokemon.
+        const sportHint = r.sport ? String(r.sport).toLowerCase() : detectCategorySport(title);
+        if (sportHint && !sportsSet.has(sportHint)) continue;
+        candidateTitles.push(title);
+      }
+      if (candidateTitles.length >= 2) {
+        const { parseTitlesBatchWithAi } = await import("../services/portfolioiq/titleParserAi.service.js");
+        await parseTitlesBatchWithAi(candidateTitles);
+      }
+    } catch { /* soft — per-row fallback still works */ }
+  }
   const CONCURRENCY = 48;
   const inflight = new Set<Promise<unknown>>();
   for (const t of rows) {

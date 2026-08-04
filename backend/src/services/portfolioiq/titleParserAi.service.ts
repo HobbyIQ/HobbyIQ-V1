@@ -202,3 +202,173 @@ Return JSON only.`;
     releaseLlmSlot();
   }
 }
+
+// CF-LLM-BATCH-PARSE (Drew, 2026-08-03). Bundles up to BATCH_SIZE
+// cache-miss titles into ONE LLM call to reduce per-call fixed cost.
+// Used by BACKGROUND ingest paths only — user-facing single-row
+// paths (e.g. review-queue confirm) keep using parseTitleWithAi so
+// they aren't slowed waiting for batch fill.
+//
+// Semantics:
+//   - Titles already in the cache resolve locally, no LLM call
+//   - Remaining titles are grouped into batches of up to BATCH_SIZE
+//   - Each batch is one LLM call with a numbered JSON array response
+//   - Results cached per-title so subsequent parseTitleWithAi calls
+//     for the same title are free
+//   - Returns Map<title, AiParsedTitle | null> preserving all inputs
+//
+// Never fires vision — batch mode is text-only. Vision costs too
+// much per call to bundle across cards.
+const BATCH_SIZE = Math.max(2, Math.min(20, Number(process.env.LLM_BATCH_SIZE ?? "8")));
+
+export async function parseTitlesBatchWithAi(titles: string[]): Promise<Map<string, AiParsedTitle | null>> {
+  const out = new Map<string, AiParsedTitle | null>();
+  if (!Array.isArray(titles) || titles.length === 0) return out;
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const apiKey = process.env.AZURE_OPENAI_API_KEY;
+  const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
+  const apiVersion = process.env.AZURE_OPENAI_API_VERSION ?? "2024-08-01-preview";
+  if (!endpoint || !apiKey || !deployment) {
+    for (const t of titles) out.set(t, null);
+    return out;
+  }
+
+  // Deduplicate + validate input
+  const uniqueTitles = [...new Set(titles.filter((t) => typeof t === "string" && t.trim().length >= 10))];
+  const cache = await getCacheContainer();
+
+  // Cache lookup pass
+  const cacheMisses: string[] = [];
+  for (const t of uniqueTitles) {
+    const h = hashTitle(t);
+    if (!cache) { cacheMisses.push(t); continue; }
+    try {
+      const { resource } = await cache.item(h, h).read();
+      if (resource) {
+        out.set(t, (resource as { parsed: AiParsedTitle }).parsed);
+      } else {
+        cacheMisses.push(t);
+      }
+    } catch { cacheMisses.push(t); }
+  }
+
+  if (cacheMisses.length === 0) {
+    for (const t of titles) if (!out.has(t)) out.set(t, out.get(t) ?? null);
+    return out;
+  }
+
+  const system = `You extract card identity from marketplace listing titles for HobbyIQ. Return STRICT JSON.
+
+You will receive a numbered array of titles. Respond with an object { "results": [ {index, cardNumber, parallel, isAuto, printRun, cardYear, playerName, setName, sport, confidence, reasoning}, ... ] } — one entry per input, matching input order by index (starting at 0).
+
+Fields per entry:
+  index:      number       matches the input index
+  cardNumber: string | null e.g. "CPA-EHA", "BCP-102", "150". null if unknown.
+  parallel:   string        canonical parallel name. Default "Base".
+  isAuto:     boolean
+  printRun:   number | null e.g. 150 for "/150". null if unnumbered.
+  cardYear:   number | null e.g. 2011. For "2003-04" use 2003.
+  playerName: string | null Real player/character name. Strip trailing team names.
+  setName:    string | null Brand + product line, e.g. "Topps Chrome".
+  sport:      string | null baseball, basketball, football, hockey, soccer, pokemon, yugioh, tcg-other, non-sport, or null.
+  confidence: "high" | "medium" | "low"
+  reasoning:  brief string (< 60 chars) — why.
+
+Rules:
+- "True Blue" = "Blue Refractor" (Bowman market shortening).
+- "Mega Refractor" = "Mojo Refractor".
+- "Mojo" (any color) implies Refractor.
+- Ignore PSA/BGS/SGC number (grade parsing is separate).
+- Pokemon: playerName = character name. cardNumber uses X/Y format. sport = "pokemon".
+- Non-sports (Funko, Marvel, Star Wars, sealed products): sport = "non-sport".
+- Sealed / not a single card: cardNumber=null, playerName=null.
+
+Return exactly ${BATCH_SIZE} entries max per response — never omit an input.`;
+
+  const url = `${endpoint.replace(/\/$/, "")}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+
+  for (let i = 0; i < cacheMisses.length; i += BATCH_SIZE) {
+    const chunk = cacheMisses.slice(i, i + BATCH_SIZE);
+    const userContent = "Titles:\n" + chunk.map((t, idx) => `${idx}. "${t.replace(/"/g, "\\\"")}"`).join("\n") + "\n\nReturn JSON object with a 'results' array.";
+    const body = {
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.05,
+      max_tokens: 200 * chunk.length + 100,
+      response_format: { type: "json_object" },
+    };
+    await acquireLlmSlot();
+    try {
+      let res: Response | null = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-key": apiKey },
+          body: JSON.stringify(body),
+        });
+        if (r.status !== 429) { res = r; break; }
+        const retryAfter = Number(r.headers.get("retry-after") ?? "");
+        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * Math.pow(4, attempt - 1);
+        if (attempt === 3) { res = r; break; }
+        await new Promise((resolve) => setTimeout(resolve, Math.min(waitMs, 15_000)));
+      }
+      if (!res || !res.ok) {
+        for (const t of chunk) out.set(t, null);
+        continue;
+      }
+      const json = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const content = json.choices?.[0]?.message?.content;
+      if (!content) {
+        for (const t of chunk) out.set(t, null);
+        continue;
+      }
+      let batchOut: { results?: Array<Partial<AiParsedTitle> & { index?: number }> };
+      try { batchOut = JSON.parse(content); } catch { for (const t of chunk) out.set(t, null); continue; }
+      const results = Array.isArray(batchOut.results) ? batchOut.results : [];
+      // Map results back to input titles by index; fall back to
+      // positional if index missing.
+      for (let j = 0; j < chunk.length; j++) {
+        const parsed = results.find((r) => Number(r?.index) === j) ?? results[j];
+        if (!parsed) { out.set(chunk[j], null); continue; }
+        const shaped: AiParsedTitle = {
+          cardNumber: typeof parsed.cardNumber === "string" && parsed.cardNumber.trim().length > 0 ? parsed.cardNumber.trim() : null,
+          parallel: typeof parsed.parallel === "string" && parsed.parallel.trim().length > 0 ? parsed.parallel.trim() : "Base",
+          isAuto: parsed.isAuto === true,
+          printRun: typeof parsed.printRun === "number" && Number.isFinite(parsed.printRun) && parsed.printRun > 0 ? parsed.printRun : null,
+          confidence: parsed.confidence === "high" || parsed.confidence === "medium" ? parsed.confidence : "low",
+          reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 200) : "",
+          cardYear: typeof parsed.cardYear === "number" && Number.isFinite(parsed.cardYear) && parsed.cardYear > 1800 && parsed.cardYear < 2100 ? parsed.cardYear : null,
+          playerName: typeof parsed.playerName === "string" && parsed.playerName.trim().length > 0 ? parsed.playerName.trim() : null,
+          setName: typeof parsed.setName === "string" && parsed.setName.trim().length > 0 ? parsed.setName.trim() : null,
+          sport: typeof parsed.sport === "string" && parsed.sport.trim().length > 0 ? parsed.sport.trim().toLowerCase() : null,
+        };
+        out.set(chunk[j], shaped);
+        // Cache result — subsequent single-title parseTitleWithAi
+        // calls for the same title now free.
+        if (cache) {
+          const h = hashTitle(chunk[j]);
+          try {
+            await cache.items.upsert({
+              id: h,
+              titleHash: h,
+              title: chunk[j].slice(0, 500),
+              parsed: shaped,
+              computedAt: new Date().toISOString(),
+              ttl: CACHE_TTL_SEC,
+            });
+          } catch { /* soft */ }
+        }
+      }
+    } catch {
+      for (const t of chunk) out.set(t, null);
+    } finally {
+      releaseLlmSlot();
+    }
+  }
+
+  // Ensure every input title has an entry (even if null)
+  for (const t of titles) if (!out.has(t)) out.set(t, null);
+  return out;
+}
