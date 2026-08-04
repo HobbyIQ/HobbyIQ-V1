@@ -236,6 +236,29 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
 // more-specific bare aliases first.
 function bareAliasPatterns(): Array<[RegExp, string]> {
   return [
+    // CF-CATALOG-FIRST bare-Topps unification (Drew, 2026-08-04). Vendor
+    // titles frequently drop the "Topps" brand word — bare "Finest",
+    // "Heritage", "Gypsy Queen", "Big League", etc — and without a
+    // bare-alias mapping these fall through to slugify() producing dupe
+    // setKeys ("finest" AND "topps-finest" for the same card). Dedupe
+    // script scheduled to fold existing dupe rows. See catalog-rollout-
+    // tracker.md.
+    [/(^|-)finest-flashbacks(-|$)/, "topps-finest-flashbacks"],
+    [/(^|-)finest(-|$)/, "topps-finest"],
+    [/(^|-)heritage(-|$)/, "topps-heritage"],
+    [/(^|-)gypsy-queen(-|$)/, "topps-gypsy-queen"],
+    [/(^|-)big-league(-|$)/, "topps-big-league"],
+    [/(^|-)archives(-|$)/, "topps-archives"],
+    [/(^|-)museum-collection(-|$)/, "topps-museum-collection"],
+    [/(^|-)tribute(-|$)/, "topps-tribute"],
+    [/(^|-)dynasty(-|$)/, "topps-dynasty"],
+    [/(^|-)definitive(-|$)/, "topps-definitive"],
+    [/(^|-)inception(-|$)/, "topps-inception"],
+    [/(^|-)transcendent(-|$)/, "topps-transcendent"],
+    [/(^|-)five-star(-|$)/, "topps-five-star"],
+    [/(^|-)bunt(-|$)/, "topps-bunt"],
+    [/(^|-)pristine(-|$)/, "topps-pristine"],
+    // Panini bare aliases.
     [/(^|-)court-kings(-|$)/, "panini-court-kings"],
     [/(^|-)rookies-and-stars(-|$)/, "panini-rookies-and-stars"],
     [/(^|-)crown-royale(-|$)/, "panini-crown-royale"],
@@ -269,6 +292,29 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     // rows must include the "Panini" brand word in the title to match
     // via the strict tier.
   ];
+}
+
+/** CF-CATALOG-BRAND-HIERARCHY (Drew, 2026-08-04). Roll a setKey up to
+ *  its PARENT brand. Topps and Bowman are brands; Topps Chrome, Topps
+ *  Heritage, Topps Finest, Bowman Chrome, Bowman Draft are children.
+ *  Used to tag catalog docs so callers can filter/aggregate at brand
+ *  level without listing every product family.
+ *
+ *  Returns "topps" | "bowman" | "panini" | "upper-deck" | "fleer" |
+ *  "pinnacle" | "goudey" | "flair" | "other".
+ *
+ *  Note: Bowman is manufactured by Topps Inc but marketed as its own
+ *  brand — collectors treat them as separate. Keep them separate here. */
+export function deriveBrand(setKey: string): string {
+  if (!setKey) return "other";
+  if (setKey === "bowman" || setKey.startsWith("bowman-")) return "bowman";
+  if (setKey === "topps" || setKey.startsWith("topps-")) return "topps";
+  if (setKey === "panini" || setKey.startsWith("panini-") || setKey === "national-treasures") return "panini";
+  if (setKey === "upper-deck" || setKey.startsWith("upper-deck-") || setKey === "sp-authentic" || setKey === "sp-prospects") return "upper-deck";
+  if (setKey === "fleer" || setKey.startsWith("fleer-") || setKey === "flair") return "fleer";
+  if (setKey === "pinnacle" || setKey.startsWith("pinnacle-")) return "pinnacle";
+  if (setKey === "goudey") return "goudey";
+  return "other";
 }
 
 /** Normalize setKey — accepts either an already-normalized short form

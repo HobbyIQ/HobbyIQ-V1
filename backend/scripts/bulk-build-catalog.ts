@@ -22,7 +22,7 @@
 import { CosmosClient, type JSONObject } from "@azure/cosmos";
 import { createInterface } from "readline";
 import { canonicalizeParallelName } from "../src/services/catalog/catalogMatcher.service.js";
-import { computeHobbyIqCardId, normalizeSetKey, slugify } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, deriveBrand, normalizeSetKey, slugify } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 interface Args {
   year?: number;
@@ -188,6 +188,7 @@ async function main(): Promise<void> {
       hobbyiqCardId: t.slug,
       sport: t.sport,
       year: t.year,
+      brand: deriveBrand(t.setKey),
       setKey: t.setKey,
       setName: t.setName,
       cardNumber: t.cardNumber,
@@ -205,6 +206,7 @@ async function main(): Promise<void> {
       searchTokens: Array.from(new Set([
         String(t.year),
         t.cardNumber.toLowerCase(),
+        deriveBrand(t.setKey),
         ...(t.playerName ? t.playerName.toLowerCase().split(/\s+/) : []),
         ...t.parallel.toLowerCase().split(/\s+/).filter(Boolean),
         ...t.setKey.split("-").filter(Boolean),
