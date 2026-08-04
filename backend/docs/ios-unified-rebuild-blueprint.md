@@ -132,7 +132,7 @@ Web `--color-*` CSS variables and iOS `HobbyIQTheme.Colors.*` map 1:1:
 | Muted text | `--hiq-muted-text` | `Colors.mutedText` |
 | Warning | `--hiq-warning` | `Colors.warning` |
 
-### Grade-Curve row exact layout (both platforms)
+### Grade-Curve row layout — web (always expanded)
 
 ```
 ┌─────────┬───────────────┬──────────┬────────────────┐
@@ -146,12 +146,72 @@ Web `--color-*` CSS variables and iOS `HobbyIQTheme.Colors.*` map 1:1:
 └──────────────────────────────────────────────────────┘
 ```
 
-iOS translates this using `HStack` + `VStack` with `HobbyIQTheme.Spacing.medium`
-gutters. `hiqGroupCard()` container. Same font sizes:
-- Grade label: `Typography.cardTitle` (18pt semibold rounded)
-- Market/Predicted numbers: `Typography.statNumber` (30pt bold rounded)
-- Captions ("MARKET VALUE", "n=52", "p10"): `Typography.caption` (13pt)
-- Range detail: 10pt muted
+Web renders every grade row expanded — desktop has the horizontal
+real estate to show sparkline + range detail without clutter.
+
+### Grade-Curve row layout — iOS (compact + tap-to-expand)
+
+**Drew (2026-08-04): trend graphs stay behind a disclosure on iOS.**
+Portrait screens can't afford the sparkline width web has. Default
+row is compact — grade + market + predicted + confidence bar only.
+Tap the row → expands to reveal the sparkline + p10/p90 + range
+details. Standard SwiftUI `DisclosureGroup` pattern.
+
+**Collapsed (default):**
+
+```
+┌──────────────────────────────────────────────┐
+│ PSA 9   $2,596        $2,743 ↑             ▽ │
+│ n=52    MARKET        PREDICTED (7D) 5.8%    │
+│[OBSVD]                                       │
+│ Confidence [████████████] 100%               │
+└──────────────────────────────────────────────┘
+```
+
+**Expanded (tapped):**
+
+```
+┌──────────────────────────────────────────────┐
+│ PSA 9   $2,596        $2,743 ↑             △ │
+│ n=52    MARKET        PREDICTED (7D) 5.8%    │
+│[OBSVD]                                       │
+├──────────────────────────────────────────────┤
+│   ~   ~   ~   ~   ~   ~   ~   ~   ~   ~     │  ← sparkline
+│                                              │
+│  Market range   p10 $1,750  ·  p90 $3,101   │
+│  Predicted rng  $2,350 – $2,759              │
+├──────────────────────────────────────────────┤
+│ Confidence [████████████] 100%               │
+└──────────────────────────────────────────────┘
+```
+
+**Interaction:**
+
+- Use SwiftUI `DisclosureGroup` — free chevron rotation animation.
+- `@State private var expanded: Set<String> = []` — track by
+  grade label ("PSA 9") so only tapped rows expand; state persists
+  during the panel session.
+- Tap target is the whole collapsed header (grade + numbers + chevron).
+- Sparkline component: reuse `heroSparkline` shape from the existing
+  `PortfolioHoldingHeroCard` — same rendering, smaller frame
+  (`height: 44pt` vs hero's `height: 68pt`).
+- Range detail: 11pt muted text, two-line layout under sparkline.
+- Confidence bar always visible regardless of expansion state.
+
+**Font sizes (iOS, compact header):**
+
+- Grade label ("PSA 9"): `Typography.cardTitle` (18pt semibold rounded)
+- Market/Predicted numbers: `Typography.statSubtle` (15pt semibold rounded)
+- Captions ("MARKET", "PREDICTED (7D)", "n=52"): 10pt muted
+- Trend arrow + %: 11pt semibold, colored by direction
+- Sparkline height (expanded): 44pt
+- Range detail (expanded): 11pt muted
+
+**Font sizes (iOS, hero card — always shown, no disclosure):**
+
+- MARKET VALUE headline: `Typography.hero` (40pt bold rounded)
+- PREDICTED (7D) companion: `Typography.statSubtle` (15pt semibold)
+- Sparkline height: 68pt (existing hero sparkline)
 
 ### Hero card exact layout (both platforms)
 
