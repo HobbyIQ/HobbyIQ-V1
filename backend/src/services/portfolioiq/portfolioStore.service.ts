@@ -2707,17 +2707,49 @@ async function autoPriceHolding(
   if (isPriceFromOurPoolEnabled()) {
     const ourPool = await priceHoldingFromOurPool(holding);
     if (ourPool !== null) {
-      priceSurface = {
-        fairMarketValueOverride: ourPool.fairMarketValue,
-        valuationStatus: ourPool.valuationStatus,
-        estimatedValue: ourPool.estimatedValue,
-        estimateLow: ourPool.estimateLow,
-        estimateHigh: ourPool.estimateHigh,
-        estimateConfidence: ourPool.estimateConfidence,
-        estimateBasis: ourPool.estimateBasis,
-        isEstimate: ourPool.valuationStatus === "estimated",
-      };
-      ourPoolMeta = { slug: ourPool.slug, method: ourPool.method, compsUsed: ourPool.compsUsed };
+      // CF-COST-BASIS-SANITY-FLOOR (Drew, 2026-08-04). Reject our-pool
+      // overrides that produce a wildly-suspicious drop vs cost basis.
+      // Bobby Witt Jr. BGS 9.5 auto ($1,260 paid) was getting matched
+      // to non-auto base card slugs and priced at $6.92 — a 99.5% loss
+      // that's obviously a slug/parallel mismatch, not real market
+      // signal. Guard: for holdings costing > $50, if the proposed
+      // FMV is less than 15% of cost basis, KEEP the existing FMV /
+      // estimatedValue instead. High-value cards need higher-confidence
+      // signal to move off a prior estimate.
+      const qty = Math.max(1, toNumber(holding.quantity, 1));
+      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
+      const proposed = typeof ourPool.fairMarketValue === "number" && ourPool.fairMarketValue > 0
+        ? ourPool.fairMarketValue * qty
+        : typeof ourPool.estimatedValue === "number" && ourPool.estimatedValue > 0
+          ? ourPool.estimatedValue * qty
+          : 0;
+      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      if (suspiciouslyLow) {
+        console.warn(JSON.stringify({
+          event: "our_pool_override_rejected_cost_basis_floor",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          costBasis,
+          proposed,
+          proposedPct: Math.round((proposed / costBasis) * 10000) / 100,
+          method: ourPool.method,
+          slug: ourPool.slug,
+          keepingPrior: true,
+        }));
+        // Skip the override — legacy resolved holds, no change to priceSurface.
+      } else {
+        priceSurface = {
+          fairMarketValueOverride: ourPool.fairMarketValue,
+          valuationStatus: ourPool.valuationStatus,
+          estimatedValue: ourPool.estimatedValue,
+          estimateLow: ourPool.estimateLow,
+          estimateHigh: ourPool.estimateHigh,
+          estimateConfidence: ourPool.estimateConfidence,
+          estimateBasis: ourPool.estimateBasis,
+          isEstimate: ourPool.valuationStatus === "estimated",
+        };
+        ourPoolMeta = { slug: ourPool.slug, method: ourPool.method, compsUsed: ourPool.compsUsed };
+      }
     }
   }
 
@@ -7290,6 +7322,30 @@ export async function repriceHoldingsForUser(
             const now = new Date().toISOString();
             const fmv = ourPool.fairMarketValue ?? ourPool.estimatedValue;
             if (typeof fmv === "number" && fmv > 0) {
+              // CF-COST-BASIS-SANITY-FLOOR (Drew, 2026-08-04). Same guard
+              // as autoPriceHolding — reject our-pool overrides that would
+              // wipe out a high-value holding's estimate with a suspicious
+              // slug-mismatch price. Bobby Witt Jr. BGS 9.5 auto ($1,260
+              // paid) got matched to non-auto base cards at $6.92 by the
+              // ladder's family-baseline rung. If proposed < 15% of cost
+              // basis on a > $50 holding, keep the prior estimate.
+              const qty = Math.max(1, toNumber(holding.quantity, 1));
+              const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
+              const proposedTotal = fmv * qty;
+              if (costBasis > 50 && (proposedTotal / costBasis) < 0.15) {
+                console.warn(JSON.stringify({
+                  event: "our_pool_reprice_rejected_cost_basis_floor",
+                  source: "portfolioStore.repriceHoldingsForUser",
+                  holdingId: holding.id,
+                  costBasis,
+                  proposedTotal,
+                  proposedPct: Math.round((proposedTotal / costBasis) * 10000) / 100,
+                  method: ourPool.method,
+                  slug: ourPool.slug,
+                  keepingPrior: true,
+                }));
+                // Fall through — legacy path continues.
+              } else {
               doc.holdings[holding.id] = {
                 ...holding,
                 ...repriceIdentityPatch,
@@ -7326,6 +7382,7 @@ export async function repriceHoldingsForUser(
                 valuationStatus: ourPool.valuationStatus,
               }));
               continue;
+              } // end cost-basis-floor else
             }
           }
         } catch (err) {
