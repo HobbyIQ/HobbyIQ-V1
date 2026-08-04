@@ -59,7 +59,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player, c.source, c.confidence, c.salesCount FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified')",
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player, c.source, c.confidence, c.salesCount FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
       parameters: [
         { name: "@p", value: playerName },
         { name: "@y", value: String(cardYear) },
@@ -80,7 +80,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       if (lastToken.length >= 3) {
         try {
           const fq = {
-            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified')",
+            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
             parameters: [
               { name: "@y", value: String(cardYear) },
               { name: "@last", value: lastToken },
@@ -131,6 +131,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
     //   canonical/seed/other 0.75 (bootstrap data)
     const SOURCE_BASELINE_CONF: Record<string, number> = {
       "user-verified": 0.98,
+      "ebay-browse": 0.92,   // eBay official item-specifics
       cardsight: 0.85,
       cardhedge: 0.85,
       canonical: 0.75,
@@ -973,6 +974,65 @@ export async function persistVendorSalesToPool(
       // Staging shim runs earlier (above the dedup check) so it fires
       // regardless of whether sold_comps dedups the write. See
       // CF-COMPS-STAGING-SHIM-EARLY.
+
+      // CF-CATALOG-REALTIME (Drew, 2026-08-03). Every successful
+      // sold_comps write grows the owned catalog. Fire-and-forget
+      // upsert into card_catalog with source='sales-derived' using
+      // the same deterministic id the weekly synth uses (sha256 of
+      // tupleKey) so batch synth + real-time writes converge on the
+      // same rows without duplication. Repeated writes for the same
+      // card just refresh its lastObservedSaleAt.
+      if (playerName && cardYear && setKey && parsed.cardNumber && sport) {
+        void (async () => {
+          try {
+            const { createHash } = await import("crypto");
+            const norm = (v: unknown) => String(v ?? "").toLowerCase().trim();
+            const SPORT_WORDS_RX = /\s+(baseball|basketball|football|hockey|soccer|golf)(\s|$)/gi;
+            const YEAR_PREFIX_RX = /^(19|20)\d{2}(-\d{2})?\s+/;
+            const normalizeSetKeyFn = (raw: string) => {
+              let s = String(raw ?? "").toLowerCase().trim();
+              if (!s) return "";
+              s = s.replace(YEAR_PREFIX_RX, "").trim();
+              s = s.replace(SPORT_WORDS_RX, " ").trim();
+              return s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+            };
+            const tupleKey = [
+              norm(sport),
+              cardYear,
+              normalizeSetKeyFn(setKey),
+              norm(parsed.cardNumber),
+              norm(parsed.parallel ?? "base"),
+              parsed.isAuto ? "auto" : "no-auto",
+              parsed.printRun ?? "",
+              norm(playerName),
+            ].join("|");
+            const catId = "sales-derived:" + createHash("sha256").update(tupleKey).digest("hex").slice(0, 20);
+            const conn = process.env.COSMOS_CONNECTION_STRING;
+            if (!conn) return;
+            const client = new CosmosClient(conn);
+            const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+            await cat.items.upsert({
+              id: catId,
+              player: playerName,
+              year: cardYear,
+              number: parsed.cardNumber,
+              setKey: normalizeSetKeyFn(setKey),
+              setName: setKey,
+              sport: String(sport).toLowerCase(),
+              parallels: parsed.parallel && parsed.parallel.toLowerCase() !== "base" ? [{ name: parsed.parallel }] : [],
+              parallel: parsed.parallel ?? null,
+              isAuto: parsed.isAuto ?? false,
+              printRun: parsed.printRun ?? null,
+              source: "sales-derived",
+              lastObservedSaleAt: soldAt,
+              lastObservedPrice: price,
+              lastObservedSampleCardId: identity.vendorCardId ?? slug,
+              synthesizedAt: new Date().toISOString(),
+              confidence: 0.5, // baseline for realtime — weekly synth recomputes properly
+            });
+          } catch { /* soft — catalog growth is nice-to-have */ }
+        })();
+      }
     } catch (err) {
       console.warn(JSON.stringify({
         event: "persist_vendor_sales_error",
