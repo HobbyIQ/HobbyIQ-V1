@@ -33,6 +33,26 @@ const YEAR_FROM = process.env.YEAR_FROM ? Number(process.env.YEAR_FROM) : null;
 const YEAR_TO = process.env.YEAR_TO ? Number(process.env.YEAR_TO) : null;
 const WRITE_CONCURRENCY = Math.max(1, Number(process.env.WRITE_CONCURRENCY || 16));
 
+// CF-SET-KEY-CONSOLIDATION (Drew, 2026-08-03). Different vendors label
+// the same real set differently:
+//   "2020 Bowman Chrome Baseball" (cardsight)
+//   "2020 Bowman Chrome" (cardhedge)
+//   "bowman-chrome" (canonical)
+// All three refer to the same set. Aggregating without normalization
+// creates 3× the catalog rows and splits the sale count. Normalize
+// to a canonical set-key: strip year prefix, strip sport suffix,
+// slugify. Same set → same tuple → one catalog entry.
+const SPORT_WORDS_RX = /\s+(baseball|basketball|football|hockey|soccer|golf|racing|tennis|mma|boxing)(\s|$)/gi;
+const YEAR_PREFIX_RX = /^(19|20)\d{2}(-\d{2})?\s+/;
+function normalizeSetKey(v) {
+  let s = String(v ?? "").toLowerCase().trim();
+  if (!s) return "";
+  s = s.replace(YEAR_PREFIX_RX, "").trim();
+  s = s.replace(SPORT_WORDS_RX, " ").trim();
+  s = s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+  return s;
+}
+
 function tupleKey(r) {
   // Canonicalize each axis so minor variations collapse into one
   // catalog entry. Same rules as slug-side canonicalization.
@@ -40,7 +60,7 @@ function tupleKey(r) {
   return [
     norm(r.sport),
     r.cardYear ?? "",
-    norm(r.setName),
+    normalizeSetKey(r.setName),
     norm(r.cardNumber),
     norm(r.parallel ?? "base"),
     r.isAuto ? "auto" : "no-auto",
@@ -71,6 +91,9 @@ function docFromAgg(key, agg) {
     lastObservedSaleAt: agg.maxDate,
     sampleHobbyiqCardId: agg.sampleSlug ?? null,
     sampleCardId: agg.sampleCardId ?? null,
+    // Original vendor names for this canonical set-key — helpful for
+    // display + debugging which raw labels collapsed into this row.
+    rawSetNames: agg.rawSetNames ? [...agg.rawSetNames].slice(0, 8) : [],
     // Confidence bands: 1 sale = 0.4, 5 sales = 0.7, 20+ sales = 0.95
     confidence: Math.min(0.95, 0.35 + Math.log10(Math.max(1, agg.count)) * 0.3),
     synthesizedAt: new Date().toISOString(),
@@ -112,11 +135,12 @@ async function main() {
       const key = tupleKey(r);
       let a = agg.get(key);
       if (!a) {
-        a = { count: 0, sources: new Set(), minDate: null, maxDate: null, sampleSlug: null, sampleCardId: null };
+        a = { count: 0, sources: new Set(), minDate: null, maxDate: null, sampleSlug: null, sampleCardId: null, rawSetNames: new Set() };
         agg.set(key, a);
       }
       a.count++;
       if (r.source) a.sources.add(r.source);
+      if (r.setName) a.rawSetNames.add(String(r.setName));
       if (r.soldAt) {
         if (!a.minDate || r.soldAt < a.minDate) a.minDate = r.soldAt;
         if (!a.maxDate || r.soldAt > a.maxDate) a.maxDate = r.soldAt;

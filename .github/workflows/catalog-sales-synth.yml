@@ -6,6 +6,11 @@ name: Catalog Sales-Derived Synth
 # backed by real observed sales.
 
 on:
+  # Weekly synth: Sunday 07:00 UTC (3am ET). Falls AFTER Sunday's weekly
+  # eBay purchase sync (06:00 UTC) so newly imported purchase-derived
+  # user comps roll into the same synth pass.
+  schedule:
+    - cron: '0 7 * * 0'
   workflow_dispatch:
     inputs:
       apply:
@@ -74,7 +79,7 @@ jobs:
             --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
-          APPLY="${{ inputs.apply || 'false' }}" \
+          APPLY="${{ inputs.apply || 'true' }}" \
           MIN_SALES="${{ inputs.min_sales || '1' }}" \
           SOURCE_FILTER="${{ inputs.source_filter || '' }}" \
           YEAR_FROM="${{ inputs.year_from || '' }}" \
