@@ -350,7 +350,25 @@ export async function computeUnifiedPrice(
   let selectedConfidence = 0;
   if (opts.grade?.company) {
     const target = gradeLabel(opts.grade.company, opts.grade.value);
-    const matched = gradeCurve.find((e) => e.grade === target);
+    // CF-UNIFIED-GRADE-FALLBACK-CHAIN (Drew, 2026-08-04). When the requested
+    // grade doesn't match any pool entry, fall back to the highest-sample
+    // entry so we still return real market data. Common triggers:
+    //   - Malformed grade ("PSA undefined" from a raw eBay import that
+    //     picked up "PSA" from an unrelated title field)
+    //   - Requested grade tier truly has no comps (e.g. Bobby Witt BGS 9.5
+    //     when the pool only has PSA sales)
+    //   - Rare tier lookups (SGC 10 when only PSA 10 sales exist)
+    //
+    // The fallback picks the largest-sample entry (already sorted at the
+    // top of gradeCurve). Raw is a common winner because auto rookie pools
+    // are Raw-dominated. Setting `matched` here means the top-level fmv /
+    // marketValue / predictedPrice fields carry a real number instead of
+    // null — which is what stops legacy fall-through from writing $18
+    // sibling-rescue prices for cards that HAVE real pool data.
+    let matched = gradeCurve.find((e) => e.grade === target);
+    if (!matched && gradeCurve.length > 0) {
+      matched = gradeCurve[0];
+    }
     if (matched) {
       fmv = matched.weightedMedian;
       marketValue = matched.marketValue;
