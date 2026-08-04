@@ -192,39 +192,28 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\n▸ Patching sold_comps (concurrency 8)...`);
+  console.log(`\n▸ Patching sold_comps (Cosmos patch ops, concurrency 16)...`);
   const startedAt = Date.now();
-  let patched = 0, matched = 0, errors = 0;
+  let patched = 0, errors = 0;
   let done = 0;
   const total = wouldPatch.length;
-  const CONCURRENCY = 8;
+  // CF-BACKFILL-PATCH-OPS (Drew, 2026-08-04). Use Cosmos native
+  // patchOperations for a single-op partial update instead of
+  // read+replace (which was 2 ops per row). We precomputed the canonical
+  // slug in the preview loop; no need to call canonicalize() at write
+  // time — the slug is deterministic from the identity tuple. This
+  // drops 3 Cosmos ops per row (1 canonicalize read + 1 read + 1
+  // replace) to 1 op.
+  const CONCURRENCY = 16;
   for (let i = 0; i < wouldPatch.length; i += CONCURRENCY) {
     const batch = wouldPatch.slice(i, i + CONCURRENCY);
     await Promise.all(batch.map(async (item) => {
       const row = item.row;
       try {
-        // Get the canonical slug via matcher (also creates the catalog
-        // row if it didn't exist — trusted source since it's already
-        // in the pool).
-        const match = await canonicalize({
-          sport: row.sport!,
-          year: row.cardYear ?? args.year!,
-          setName: row.setName ?? "",
-          cardNumber: row.cardNumber!,
-          parallel: item.newParallel,
-          isAuto: row.isAuto === true,
-          printRun: typeof row.printRun === "number" ? row.printRun : null,
-          player: row.playerName ?? null,
-          source: "checklist",   // trusted — pool is our authoritative signal
-        });
-        // Patch the row in place — set parallel + hobbyiqCardId to canonical.
-        // We use a partial-update via read + replace since patchOperations
-        // don't cross partitions and the pk is /cardId which we're not changing.
-        const { resource: existing } = await sold.item(row.id, row.cardId).read();
-        if (!existing) { errors++; done++; return; }
-        existing.parallel = item.newParallel;
-        existing.hobbyiqCardId = match.slug;
-        await sold.item(row.id, row.cardId).replace(existing);
+        await sold.item(row.id, row.cardId).patch([
+          { op: "set", path: "/parallel", value: item.newParallel },
+          { op: "set", path: "/hobbyiqCardId", value: item.newSlug },
+        ]);
         patched++;
       } catch (err) {
         errors++;
