@@ -204,11 +204,64 @@ function confidenceScore(sampleCount: number, newestMs: number | null, nowMs: nu
  * density is available. Returns per-grade breakdown; when `grade` is
  * passed, `fmv` is the matched entry's weightedMedian.
  */
+/**
+ * CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When the exact-cardId
+ * pool has stale samples (newest > 60 days old), fetch the wider player
+ * pool to compute a real market-movement ratio and apply it as a trend
+ * lift on the marketValue. Cam Caminiti Blue Refractor Auto: 2 exact-
+ * cardId samples 17-19 months old ($76, $160, median $118). Wider Cam
+ * Caminiti 2024 pool has 213 recent comps that DO have movement — we
+ * use their trend to project our old exact-cardId median forward.
+ *
+ * Returns a ratio to multiply the stale median by. 1.0 means no trend
+ * (thin wider pool, no signal). Clamped to [0.5, 3.0] to prevent
+ * runaway adjustments on outlier player-pool moves.
+ */
+async function computePlayerPoolTrendRatio(
+  cont: Container,
+  playerName: string,
+  cardYear: number,
+  nowMs: number,
+): Promise<number> {
+  const cutoffRecent = new Date(nowMs - 30 * 86400_000).toISOString();
+  const cutoffPrior = new Date(nowMs - 90 * 86400_000).toISOString();
+  const priorEnd = cutoffRecent;
+  try {
+    // Recent 30d
+    const { resources: recent } = await cont.items.query<{ price: number }>({
+      query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @cut AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
+      parameters: [{ name: "@p", value: playerName }, { name: "@y", value: cardYear }, { name: "@cut", value: cutoffRecent }],
+    }, { maxItemCount: 300 }).fetchAll();
+    // Prior 30d (30-90 days ago)
+    const { resources: prior } = await cont.items.query<{ price: number }>({
+      query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @from AND c.soldAt < @to AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
+      parameters: [{ name: "@p", value: playerName }, { name: "@y", value: cardYear }, { name: "@from", value: cutoffPrior }, { name: "@to", value: priorEnd }],
+    }, { maxItemCount: 300 }).fetchAll();
+    if (recent.length < 5 || prior.length < 5) return 1.0;
+    const sorted = (arr: Array<{ price: number }>) => arr.map((r) => r.price).sort((a, b) => a - b);
+    const median = (arr: number[]) => arr[Math.floor(arr.length / 2)];
+    const rMed = median(sorted(recent));
+    const pMed = median(sorted(prior));
+    if (!Number.isFinite(rMed) || !Number.isFinite(pMed) || pMed <= 0) return 1.0;
+    const ratio = rMed / pMed;
+    return Math.max(0.5, Math.min(3.0, ratio));
+  } catch {
+    return 1.0;
+  }
+}
+
 export async function computeUnifiedPrice(
   cardId: string,
   opts: {
     hobbyiqCardId?: string | null;
     grade?: { company: string | null; value: number | null } | null;
+    // CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When passed with
+    // cardYear, unified pricing applies a wider-player-pool trend
+    // ratio to marketValue if the exact-cardId newest sale is > 60d old.
+    // Turns a stale $118 exact median into $118 × 1.2 = $142 when the
+    // wider player pool is trending up 20%.
+    playerName?: string | null;
+    cardYear?: number | null;
     // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Portfolio callers pass
     // the requesting userId here so the user's own eBay-import purchases
     // don't recycle back as market comps against their own holdings.
@@ -376,6 +429,40 @@ export async function computeUnifiedPrice(
       trendPctPerWeek = matched.trendPctPerWeek;
       trendDirection = matched.trendDirection;
       selectedConfidence = matched.confidence;
+
+      // CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When the matched
+      // grade's newest sale is > 60 days old AND we have player+year
+      // context, pull a broader player-pool trend ratio and apply it
+      // to marketValue + predictedPrice. Turns "$118 from 17-month-old
+      // Cam Caminiti Blue Refractor sales" into "$118 × 1.2 = $142"
+      // if the wider Cam Caminiti 2024 pool is trending up 20%.
+      const newestMs = matched.newestSaleDate ? Date.parse(matched.newestSaleDate) : 0;
+      const daysSinceNewest = newestMs > 0 ? (nowMs - newestMs) / 86400_000 : 0;
+      if (daysSinceNewest > 60 && opts.playerName && opts.cardYear && marketValue !== null) {
+        try {
+          const playerRatio = await computePlayerPoolTrendRatio(
+            container,
+            opts.playerName,
+            opts.cardYear,
+            nowMs,
+          );
+          if (playerRatio !== 1.0) {
+            const adjustedMarket = Math.round(marketValue * playerRatio * 100) / 100;
+            const adjustedPredicted = predictedPrice !== null
+              ? Math.round(predictedPrice * playerRatio * 100) / 100
+              : null;
+            marketValue = adjustedMarket;
+            predictedPrice = adjustedPredicted;
+            const pctPerWeek = Math.round((playerRatio - 1) * 500) / 10;
+            trendPctPerWeek = pctPerWeek;
+            trendDirection = Math.abs(pctPerWeek) < 1
+              ? "flat"
+              : pctPerWeek > 0 ? "up" : "down";
+          }
+        } catch {
+          // Silent — fall back to unmodified matched values.
+        }
+      }
     }
   }
 

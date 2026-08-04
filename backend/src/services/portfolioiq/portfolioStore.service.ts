@@ -2054,6 +2054,13 @@ async function autoPriceHolding(
         hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
         grade: gCo ? { company: gCo, value: gVal } : null,
         excludeContributorUserId: userId ?? null,
+        // CF-PLAYER-TREND-ADJUSTMENT: pipe playerName + cardYear so
+        // unified pricing can lift stale exact-cardId medians by the
+        // wider player-pool trend ratio.
+        playerName: (holding as any).playerName ?? null,
+        cardYear: typeof (holding as any).cardYear === "number"
+          ? (holding as any).cardYear
+          : null,
       });
       const canonical = u.marketValue ?? u.fmv ?? u.predictedPrice;
       // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
@@ -2200,6 +2207,10 @@ async function autoPriceHolding(
         // where the user's own purchase IS the market, filtering them
         // out leaves nothing (Victor Figueroa case).
         excludeContributorUserId: userId ?? null,
+        playerName: (holding as any).playerName ?? null,
+        cardYear: typeof (holding as any).cardYear === "number"
+          ? (holding as any).cardYear
+          : null,
       });
       // CF-PORTFOLIO-VALUE-IS-MARKETVALUE (Drew, 2026-08-04). CURRENT VALUE
       // in a portfolio position is the TREND-LIFTED market value —
@@ -6895,6 +6906,10 @@ export async function repriceHoldingsForUser(
             hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
             grade: bGCo ? { company: bGCo, value: bGVal } : null,
             excludeContributorUserId: userId ?? null,
+            playerName: (holding as any).playerName ?? null,
+            cardYear: typeof (holding as any).cardYear === "number"
+              ? (holding as any).cardYear
+              : null,
           });
           const bCanon = bU.marketValue ?? bU.fmv ?? bU.predictedPrice;
           if (bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
