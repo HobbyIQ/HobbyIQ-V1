@@ -302,6 +302,55 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
 
   if (!slug || !slug.startsWith("hiq:")) return noBasis;
 
+  // CF-UNIFIED-PRICING-CONVERGE (Drew, 2026-08-04). Portfolio pricing
+  // pipeline already bypasses this function via unified early-exit,
+  // but external endpoints (/api/compiq/hobbyiq-fmv, /canonical-fmv,
+  // /card-detail) still call it. Return unified pricing's numbers so
+  // external consumers see the same fmv as portfolio + Grade Curve.
+  //
+  // fmv = unified.marketValue (trend-lifted current — the ONE number)
+  // basisNote carries the math trace. Ladder + composite + rare-card
+  // paths below only fire when unified has no data (thin pool).
+  try {
+    const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
+    const gradeCo = typeof input.gradeCompany === "string" && input.gradeCompany.trim().length > 0
+      ? input.gradeCompany.trim()
+      : null;
+    const gradeVal = typeof input.gradeValue === "number" && Number.isFinite(input.gradeValue)
+      ? input.gradeValue
+      : null;
+    const u = await computeUnifiedPrice(slug, {
+      hobbyiqCardId: slug,
+      grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
+    });
+    const canonical = u.marketValue ?? u.fmv;
+    if (canonical !== null && canonical > 0 && u.confidence >= 0.3) {
+      return {
+        slug,
+        fmv: canonical,
+        compCount: u.totalSampleCount,
+        min: u.fmv,
+        max: u.predictedPrice,
+        breakdown: { bySource: {}, byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 }, byGradeQualifier: {} },
+        trend: {
+          direction: u.trendDirection,
+          slopePerMonthPct: (u.trendPctPerWeek ?? 0) * 4,
+          method: "unified-14d-recent-vs-prior",
+        },
+        recentComps: [],
+        method: "unified-market-value" as any,
+        basisNote: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)}`,
+        confidence: u.confidence,
+        population: null,
+        quality: { score: u.confidence, flaggedCompCount: 0, sources: ["unified"] },
+        computedAt: now.toISOString(),
+        cachedFrom: "sold_comps",
+      };
+    }
+  } catch {
+    // Never fails the fmv path — legacy ladder below stays as fallback.
+  }
+
   const container = await getSoldCompsContainer();
   if (!container) return noBasis;
 

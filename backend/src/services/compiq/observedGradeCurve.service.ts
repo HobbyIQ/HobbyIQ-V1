@@ -1744,7 +1744,7 @@ export async function buildObservedGradeCurve(
     }
   }
 
-  return {
+  const curve: ObservedGradeCurve = {
     cardId,
     entries,
     totalSampleCount: entries.reduce((sum, e) => sum + e.sampleCount, 0),
@@ -1753,6 +1753,47 @@ export async function buildObservedGradeCurve(
     signalSource: derivation?.signalSource ?? null,
     siblingFallback: siblingFallbackLineage,
   };
+
+  // CF-UNIFIED-PRICING-CONVERGE (Drew, 2026-08-04). All callers of
+  // buildObservedGradeCurve get unified pricing's numbers overlaid
+  // onto their entries. Same rows, same math as the portfolio
+  // pricing pipeline — one number and one prediction per grade.
+  //
+  // Only overrides observed entries where unified has real data
+  // (weightedMedian > 0 AND sampleCount > 0). Estimated fallbacks
+  // (grades with no market data) keep their observedGradeCurve
+  // values so we don't lose fallback coverage.
+  try {
+    const { computeUnifiedPrice } = await import("./unifiedPricing.service.js");
+    const u = await computeUnifiedPrice(cardId, {});
+    const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
+    for (const entry of curve.entries) {
+      const label = entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
+        ? "Raw"
+        : `${entry.grader} ${entry.grade}`.trim();
+      const um = byLabel.get(label);
+      if (um && um.weightedMedian != null && um.sampleCount > 0) {
+        const mv = um.marketValue ?? um.weightedMedian;
+        (entry as { value: number | null }).value = um.weightedMedian;
+        (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = mv;
+        (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = um.weightedMedian;
+        (entry as { sampleCount: number }).sampleCount = um.sampleCount;
+        if (um.predictedPrice != null) {
+          (entry as { predictedPriceAt30d: number | null }).predictedPriceAt30d = um.predictedPrice;
+        }
+        if (um.trendPctPerWeek != null) {
+          (entry as { predictedPricePct: number | null }).predictedPricePct = um.trendPctPerWeek;
+        }
+      }
+    }
+    (curve as { totalSampleCount: number }).totalSampleCount = Math.max(
+      curve.totalSampleCount,
+      u.totalSampleCount,
+    );
+  } catch {
+    // Never fails the curve — legacy numbers stay as fallback.
+  }
+  return curve;
 }
 
 /**
