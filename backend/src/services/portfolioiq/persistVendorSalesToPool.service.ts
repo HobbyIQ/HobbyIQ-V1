@@ -957,6 +957,71 @@ export async function persistVendorSalesToPool(
           };
         }
       }
+      // CF-PARALLEL-PRICE-ANOMALY (Drew, 2026-08-04). Sellers routinely
+      // mis-label parallels (e.g., "Yellow Refractor" when the card is
+      // actually a Yellow X-Fractor, which sells for ~half the price).
+      // Ingesting them straight drags the true-parallel median down and
+      // starves the actual-parallel pool. Detect: sale price
+      // <60% of the declared-parallel median (with N>=5 in 90d) →
+      // flag priceAnomaly=true so downstream FMV filters exclude the row.
+      // Vision LLM re-check (Layer 2) is a follow-up.
+      let priceAnomaly: {
+        priceAnomaly: boolean;
+        priceAnomalyReason?: string;
+        expectedMedian?: number;
+        deviation?: number;
+        priceAnomalyCheckedAt: string;
+      } = { priceAnomaly: false, priceAnomalyCheckedAt: new Date().toISOString() };
+      if (process.env.PRICE_ANOMALY_DETECT_ENABLED === "true"
+          && playerName && cardYear && parsed.parallel
+          && parsed.parallel.toLowerCase() !== "base") {
+        try {
+          const anomalyContainer = container;
+          const gCo = gradeParsed?.gradeCompany ?? null;
+          const gVal = gradeParsed?.gradeValue ?? null;
+          const cutoffIso = new Date(Date.now() - 90 * 86400_000).toISOString();
+          const params: Array<{ name: string; value: string | number | boolean | null }> = [
+            { name: "@p", value: playerName },
+            { name: "@y", value: cardYear },
+            { name: "@par", value: parsed.parallel },
+            { name: "@isAuto", value: !!parsed.isAuto },
+            { name: "@since", value: cutoffIso },
+          ];
+          let where = "c.playerName = @p AND c.cardYear = @y AND c.parallel = @par AND c.isAuto = @isAuto AND c.soldAt >= @since AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)";
+          if (gCo) { where += " AND c.gradeCompany = @gCo"; params.push({ name: "@gCo", value: gCo }); }
+          if (gVal) { where += " AND c.gradeValue = @gVal"; params.push({ name: "@gVal", value: gVal }); }
+          const { resources: priceRows } = await anomalyContainer.items.query<{ price: number }>({
+            query: `SELECT c.price FROM c WHERE ${where}`,
+            parameters: params,
+          }, { maxItemCount: 200 }).fetchAll();
+          const prices = (priceRows || []).map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+          if (prices.length >= 5) {
+            const median = prices[Math.floor(prices.length / 2)];
+            const deviation = median > 0 ? (median - price) / median : 0;
+            // 40%+ below median for a parallel with 5+ recent comps is
+            // suspicious. Real market moves rarely swing 40% overnight
+            // on a mid-liquidity parallel.
+            if (price < median * 0.6) {
+              priceAnomaly = {
+                priceAnomaly: true,
+                priceAnomalyReason: "below-parallel-median",
+                expectedMedian: Math.round(median * 100) / 100,
+                deviation: Math.round(deviation * 1000) / 1000,
+                priceAnomalyCheckedAt: new Date().toISOString(),
+              };
+              console.log(JSON.stringify({
+                event: "price_anomaly_flagged",
+                source: "persistVendorSalesToPool",
+                slug, title,
+                player: playerName, year: cardYear, parallel: parsed.parallel, grade: gCo && gVal ? `${gCo} ${gVal}` : null,
+                salePrice: price, parallelMedian: median, deviationPct: (deviation * 100).toFixed(0),
+                sampleSize: prices.length,
+              }));
+            }
+          }
+        } catch { /* anomaly detection is soft — never blocks the persist */ }
+      }
+
       const doc = {
         id: `${source}::${sourceExternalId}`,
         // Prefer the vendor's real cardId when known (CH path) so the
@@ -986,6 +1051,7 @@ export async function persistVendorSalesToPool(
         observedAt: new Date().toISOString(),
         sport,
         identityMethod,
+        ...priceAnomaly,
       };
       // CF-STAGING-CUTOVER (Drew, 2026-07-28). When cutover is on,
       // vendor ingest ONLY writes to comps_staging (the shim above
