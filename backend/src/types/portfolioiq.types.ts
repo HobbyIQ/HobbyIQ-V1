@@ -169,7 +169,7 @@ export interface PortfolioHolding {
   //   "legacy-engine"  — computeEstimate / rail / ladder (pre-Our-Pool
   //                      wiring OR Our-Pool returned no data + fell back)
   // Absent → legacy pre-CF holding, treat as "legacy-engine".
-  pricingSource?: "our-pool" | "legacy-engine";
+  pricingSource?: "our-pool" | "legacy-engine" | "unified-pricing";
   /** Extra breadcrumbs when pricingSource === "our-pool": which ladder
    *  rung won, how many comps contributed, and the exact slug that got
    *  matched. Absent on legacy-engine rows. */

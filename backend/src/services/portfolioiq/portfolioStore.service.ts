@@ -6978,9 +6978,11 @@ export async function repriceHoldingsForUser(
                 trend_pct_per_week: unified.trendPctPerWeek,
                 trend_direction: unified.trendDirection,
               }));
+              // Unified early-exit runs BEFORE computeEstimate, so the
+              // identity-hydration patch isn't computed here. holding's
+              // existing identity fields flow through via `...holding`.
               doc.holdings[holding.id] = {
                 ...holding,
-                ...repriceIdentityPatch,
                 fairMarketValue: bChosen,
                 estimatedValue: null,
                 estimateLow: null,
@@ -6990,10 +6992,10 @@ export async function repriceHoldingsForUser(
                 isEstimate: false,
                 valuationStatus: "observed",
                 pricingSource: "unified-pricing",
-                verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
-                recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
+                verdict: holding.verdict ?? "Hold",
+                recommendation: holding.recommendation ?? "Hold",
                 lastUpdated: uNow,
-                sourceVendor: ((estimate as any)?.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
+                sourceVendor: (holding.sourceVendor as "cardhedge" | "cardsight" | undefined) ?? "cardhedge",
                 sourceVendorUpdatedAt: uNow,
               };
               repriced += 1;

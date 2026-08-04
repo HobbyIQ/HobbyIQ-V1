@@ -333,9 +333,9 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         max: u.predictedPrice,
         breakdown: { bySource: {}, byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 }, byGradeQualifier: {} },
         trend: {
-          direction: u.trendDirection,
+          direction: (u.trendDirection ?? "flat") as "up" | "down" | "flat",
           slopePerMonthPct: (u.trendPctPerWeek ?? 0) * 4,
-          method: "unified-14d-recent-vs-prior",
+          method: "regression",
         },
         recentComps: [],
         method: "unified-market-value" as any,
