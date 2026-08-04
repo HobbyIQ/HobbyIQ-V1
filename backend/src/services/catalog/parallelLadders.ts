@@ -89,38 +89,30 @@ const BOWMAN_CHROME_NONAUTO_2024: ParallelLadder = {
   ],
 };
 
-// ─── 2025 + 2026 Bowman Chrome ────────────────────────────────────────
-// Same ladders extend forward — Topps has kept the structure stable.
-const BOWMAN_CHROME_PROSPECT_AUTO_2025: ParallelLadder = {
-  ...BOWMAN_CHROME_PROSPECT_AUTO_2024,
-  key: "bowman-chrome:auto:2025",
-  yearMin: 2025,
-  yearMax: 2025,
-};
-const BOWMAN_CHROME_NONAUTO_2025: ParallelLadder = {
-  ...BOWMAN_CHROME_NONAUTO_2024,
-  key: "bowman-chrome:no-auto:2025",
-  yearMin: 2025,
-  yearMax: 2025,
-};
-const BOWMAN_CHROME_PROSPECT_AUTO_2026: ParallelLadder = {
-  ...BOWMAN_CHROME_PROSPECT_AUTO_2024,
-  key: "bowman-chrome:auto:2026",
-  yearMin: 2026,
-  yearMax: 2026,
-};
-const BOWMAN_CHROME_NONAUTO_2026: ParallelLadder = {
-  ...BOWMAN_CHROME_NONAUTO_2024,
-  key: "bowman-chrome:no-auto:2026",
-  yearMin: 2026,
-  yearMax: 2026,
-};
+// ─── 2025 + 2026 Bowman Chrome — INTENTIONALLY NOT DEFINED ──────────
+// Drew (2026-08-04): every year has different parallels. Copying 2024's
+// ladder forward to 2025/2026 would seed catalog rows for parallels
+// that don't exist that year (2026 dropped Reptilian and added Black &
+// White Red Ink SSP; 2025 has its own delta).
+//
+// To add: verify the year's release with beckett + topps.com, hand-
+// author a ladder with only that year's actual rungs, then register
+// below. Until then, enrich-parallel-ladder returns "no ladder" for
+// these releases and skips them — safer than seeding false parallels.
+//
+// Rollup + backfill still work for 2025/2026 — they use OBSERVED sales
+// to build catalog entries. Only the parallel-ladder enrichment
+// (which adds parallels that haven't been observed yet) is gated on a
+// verified ladder.
 
-// ─── Topps Chrome (non-auto base) ─────────────────────────────────────
-const TOPPS_CHROME_NONAUTO_2024_2026: ParallelLadder = {
-  key: "topps-chrome:no-auto:2024-2026",
+// ─── Topps Chrome 2024 — verified only ────────────────────────────────
+// Same year-specific caveat. 2025 + 2026 Topps Chrome have different
+// print runs and additional variants (2026 added "Toys R Us Purple",
+// "Prizmatic", etc.) — verify per-year before extending.
+const TOPPS_CHROME_NONAUTO_2024: ParallelLadder = {
+  key: "topps-chrome:no-auto:2024",
   yearMin: 2024,
-  yearMax: 2026,
+  yearMax: 2024,
   setKey: "topps-chrome",
   isAuto: false,
   rungs: [
@@ -137,33 +129,42 @@ const TOPPS_CHROME_NONAUTO_2024_2026: ParallelLadder = {
   ],
 };
 
-// ─── Bowman Draft (same ladder as Bowman Chrome Prospects) ────────────
-const BOWMAN_DRAFT_AUTO_2024_2026: ParallelLadder = {
+// ─── Bowman Draft — 2024 verified only ────────────────────────────────
+// 2024 Bowman Draft ships the same parallel ladder Bowman Chrome
+// Prospects uses that year. 2025 + 2026 Bowman Draft ladders NOT
+// defined for the same reason as 2025/2026 Bowman Chrome — verify
+// per-year before adding.
+const BOWMAN_DRAFT_AUTO_2024: ParallelLadder = {
   ...BOWMAN_CHROME_PROSPECT_AUTO_2024,
-  key: "bowman-draft:auto:2024-2026",
+  key: "bowman-draft:auto:2024",
   yearMin: 2024,
-  yearMax: 2026,
+  yearMax: 2024,
   setKey: "bowman-draft",
 };
-const BOWMAN_DRAFT_NONAUTO_2024_2026: ParallelLadder = {
+const BOWMAN_DRAFT_NONAUTO_2024: ParallelLadder = {
   ...BOWMAN_CHROME_NONAUTO_2024,
-  key: "bowman-draft:no-auto:2024-2026",
+  key: "bowman-draft:no-auto:2024",
   yearMin: 2024,
-  yearMax: 2026,
+  yearMax: 2024,
   setKey: "bowman-draft",
 };
 
 // ─── Registry ─────────────────────────────────────────────────────────
+// ONLY verified per-year ladders. Do NOT add a year's ladder without
+// checking that year's actual product against Beckett / Topps. Copying
+// a prior year forward has caused false catalog entries for parallels
+// that don't exist in the target year.
+//
+// Verified: 2024 Bowman Chrome (auto + non-auto), 2024 Bowman Draft
+//   (auto + non-auto), 2024 Topps Chrome (non-auto)
+// Missing:  2025 + 2026 Bowman Chrome, Bowman Draft, Topps Chrome
+//   (rollup + backfill still work — only enrichment gated)
 export const PARALLEL_LADDERS: ParallelLadder[] = [
   BOWMAN_CHROME_PROSPECT_AUTO_2024,
   BOWMAN_CHROME_NONAUTO_2024,
-  BOWMAN_CHROME_PROSPECT_AUTO_2025,
-  BOWMAN_CHROME_NONAUTO_2025,
-  BOWMAN_CHROME_PROSPECT_AUTO_2026,
-  BOWMAN_CHROME_NONAUTO_2026,
-  TOPPS_CHROME_NONAUTO_2024_2026,
-  BOWMAN_DRAFT_AUTO_2024_2026,
-  BOWMAN_DRAFT_NONAUTO_2024_2026,
+  TOPPS_CHROME_NONAUTO_2024,
+  BOWMAN_DRAFT_AUTO_2024,
+  BOWMAN_DRAFT_NONAUTO_2024,
 ];
 
 /** Lookup — returns the ladder matching (year, setKey, isAuto) or
