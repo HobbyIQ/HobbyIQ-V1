@@ -29,6 +29,7 @@
 import { CosmosClient } from "@azure/cosmos";
 import { createInterface } from "readline";
 import { canonicalize, canonicalizeParallelName } from "../src/services/catalog/catalogMatcher.service.js";
+import { computeHobbyIqCardId, normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 interface Args {
   year?: number;
@@ -116,30 +117,42 @@ async function main(): Promise<void> {
   const wouldPatch: Array<{ row: SoldCompShape; newSlug: string; newParallel: string; oldSlug: string; oldParallel: string }> = [];
   let alreadyCanonical = 0;
   let missingIdentity = 0;
+  // CF-BACKFILL-PERF-FIX (Drew, 2026-08-04). Prior preview compared the
+  // row's hobbyiqCardId against a synthetic key format that NEVER matches
+  // the real slug — so every row was flagged as a "candidate" even when
+  // fully canonical. Result: 194K row runs were touching every row when
+  // only a fraction needed patching. Now we compute the ACTUAL canonical
+  // slug locally via computeHobbyIqCardId (pure function, no Cosmos) and
+  // skip rows where BOTH parallel + hobbyiqCardId already equal canonical.
   for (const row of rows) {
     if (!row.cardNumber || !row.sport) { missingIdentity++; continue; }
     const setName = row.setName ?? "";
     const rawParallel = row.parallel ?? "Base";
     const canonParallel = canonicalizeParallelName(rawParallel);
-    // Compute canonical slug locally without a Cosmos read for the preview
-    // (canonicalize() does the read at write time to check for existing
-    // rows).
     const isAuto = row.isAuto === true;
     const printRun = typeof row.printRun === "number" ? row.printRun : null;
-    // Placeholder — we'll compute the actual canonical slug via
-    // canonicalize() when we apply changes below.
-    const key = `${row.cardYear}|${row.sport}|${setName}|${row.cardNumber}|${canonParallel}|${isAuto ? "A" : "N"}|${printRun ?? "u"}`;
-    if (row.hobbyiqCardId && row.parallel === canonParallel && key === row.hobbyiqCardId) {
+    let canonicalSlug: string;
+    try {
+      canonicalSlug = computeHobbyIqCardId({
+        sport: row.sport,
+        year: row.cardYear ?? args.year!,
+        setKey: normalizeSetKey(setName),
+        cardNumber: row.cardNumber,
+        parallel: canonParallel,
+        isAuto,
+        printRun,
+      });
+    } catch {
+      missingIdentity++;
+      continue;
+    }
+    if (row.hobbyiqCardId === canonicalSlug && row.parallel === canonParallel) {
       alreadyCanonical++;
       continue;
     }
-    // Anything that isn't obviously canonical AND has same-parallel as
-    // its hobbyiqCardId is a candidate for patch. We defer the actual
-    // slug computation to the write phase (via canonicalize()) so we
-    // apply the market-language + fuzzy-parallel logic uniformly.
     wouldPatch.push({
       row,
-      newSlug: "(computed on apply)",
+      newSlug: canonicalSlug,
       newParallel: canonParallel,
       oldSlug: row.hobbyiqCardId ?? "(none)",
       oldParallel: row.parallel ?? "(none)",
