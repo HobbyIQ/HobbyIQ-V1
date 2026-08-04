@@ -1106,6 +1106,19 @@ export function computeDisplayValue(holding: PortfolioHolding | undefined | null
   if (!holding) return 0;
   const fmvTotal = computeTotalValue(holding);
   if (fmvTotal !== null && fmvTotal > 0) return fmvTotal;
+  // CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (Drew, 2026-08-04). Estimated
+  // holdings (graded-rail estimates, ladder fallbacks, sibling-derived
+  // FMVs) carry fairMarketValue=null on disk but estimatedValue set —
+  // Drew's portfolio was showing under-counted totals because estimated
+  // rows fell straight from observed → cost proxy, skipping their real
+  // estimated dollar. Roll them in before cost fallback so total value
+  // reflects real market signal (~$5,014 including estimates vs $3,124
+  // observed-only for Drew's 14 holdings).
+  const qty = Math.max(1, toNumber(holding.quantity, 1));
+  const est = (holding as { estimatedValue?: number | null }).estimatedValue;
+  if (typeof est === "number" && Number.isFinite(est) && est > 0) {
+    return est * qty;
+  }
   const costTotal = computeCostBasisTotal(holding);
   if (costTotal > 0) return costTotal;
   return 0;
