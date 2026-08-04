@@ -6,11 +6,15 @@ name: Catalog Sales-Derived Synth
 # backed by real observed sales.
 
 on:
-  # Weekly synth: Sunday 07:00 UTC (3am ET). Falls AFTER Sunday's weekly
-  # eBay purchase sync (06:00 UTC) so newly imported purchase-derived
-  # user comps roll into the same synth pass.
+  # Nightly synth: 07:00 UTC (3am ET) every day. Real-time upserts
+  # in persistVendorSalesToPool keep the catalog fresh for new sales,
+  # but the nightly recompute is what refreshes confidence scores
+  # from accumulated sale counts + catches anything real-time missed
+  # + reconciles set-key consolidation for rows that arrived under
+  # varied vendor labels during the day. Cheap when it's just Drew;
+  # bump to weekly again if RU cost matters as users grow.
   schedule:
-    - cron: '0 7 * * 0'
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       apply:
