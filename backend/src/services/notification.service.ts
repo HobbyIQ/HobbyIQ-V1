@@ -173,6 +173,41 @@ export async function sendPriceAlertNotification(
 }
 
 /**
+ * CF-BUYERIQ-DEAL-ALERT (Drew, 2026-08-03). Push when a live listing on
+ * a BuyerIQ target lands below FMV × threshold. iOS routes on
+ * `data.type = "buyeriq.deal"` to the target detail screen.
+ */
+export async function sendBuyerIqDealNotification(
+  userId: string,
+  payload: {
+    title: string;
+    body: string;
+    targetId: string;
+    listingId: string;
+    listingUrl?: string | null;
+    listingPrice: number;
+    fmv: number;
+    dealPct: number;   // 0.15 = 15% below FMV
+  },
+): Promise<SendResult> {
+  const records = await getTokensForUser(userId);
+  if (records.length === 0) return { sent: 0, failed: 0, removedTokens: 0 };
+  return sendToTokens(records, {
+    title: payload.title,
+    body: payload.body,
+    data: {
+      type: "buyeriq.deal",
+      targetId: payload.targetId,
+      listingId: payload.listingId,
+      listingUrl: payload.listingUrl ?? null,
+      listingPrice: payload.listingPrice,
+      fmv: payload.fmv,
+      dealPct: payload.dealPct,
+    },
+  });
+}
+
+/**
  * CF-ADVANCED-ALERTS (2026-06-03): distinct push taxon for advanced-rule
  * fires. `data.type = "advanced_alert"` so iOS push-routing can land on
  * the rule-detail screen instead of the basic price-alert detail.

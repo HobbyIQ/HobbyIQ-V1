@@ -8,6 +8,7 @@ import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startWeeklyEbayPurchaseSyncJob } from "./jobs/ebayPurchaseSync.job.js";
+import { startBuyerIqDealScannerJob } from "./jobs/buyerIqDealScanner.job.js";
 import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
 import { startMatchedCohortJob } from "./jobs/matchedCohortMomentum.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
@@ -91,6 +92,16 @@ app.listen(port, "0.0.0.0", () => {
     startWeeklyEbayPurchaseSyncJob();
   } catch (err: any) {
     console.error("[server] startWeeklyEbayPurchaseSyncJob failed:", err?.message ?? err);
+  }
+  // CF-BUYERIQ-DEAL-SCANNER (Drew, 2026-08-03). Hourly scan of every
+  // BuyerIQ "wanted" target; push notifications when a live eBay
+  // listing lands below FMV × threshold (default 15%). Env-flag
+  // gated (BUYERIQ_DEAL_SCANNER_DISABLE) so we can toggle without
+  // a redeploy.
+  try {
+    startBuyerIqDealScannerJob();
+  } catch (err: any) {
+    console.error("[server] startBuyerIqDealScannerJob failed:", err?.message ?? err);
   }
   // CF-CH-DELTA-POLL-FOUNDATION (2026-06-30): observation-only CardHedge
   // price-updates delta poll. Dormant unless both CARD_HEDGE_CLIENT_ID
