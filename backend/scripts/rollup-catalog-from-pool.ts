@@ -225,39 +225,56 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\n▸ Seeding card_catalog via canonicalize()...`);
+  console.log(`\n▸ Seeding card_catalog via canonicalize() (concurrency 8)...`);
+  const startedAt = Date.now();
   let seeded = 0, matched = 0, errors = 0;
   let done = 0;
   const total = sorted.length;
-  for (const g of sorted) {
-    const topPlayer = [...g.players.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const topSetName = [...g.setNames.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? args.setKey!;
-    try {
-      const r = await canonicalize({
-        sport: args.sport!,
-        year: args.year!,
-        setName: topSetName,
-        cardNumber: g.key.cardNumber,
-        parallel: g.key.parallel,
-        isAuto: g.key.isAuto,
-        printRun: g.key.printRun,
-        player: topPlayer,
-        source: "checklist",   // "trusted" so canonicalize seeds when missing
-      });
-      if (r.matchedBy === "seeded") seeded++;
-      else if (r.found) matched++;
-      else errors++;
-    } catch (err) {
-      errors++;
-      if (errors < 10) console.warn(`  ! error on ${g.key.cardNumber}/${g.key.parallel}: ${(err as Error).message}`);
-    }
-    done++;
-    if (done % 50 === 0) {
-      process.stdout.write(`  ...seeded ${seeded}, matched ${matched}, errors ${errors} (${done}/${total})\r`);
-    }
+  const CONCURRENCY = 8;
+
+  // Chunked parallel writes. Each chunk fires 8 canonicalize() calls
+  // in parallel; the next chunk starts when the slowest finishes.
+  // Progress prints every chunk so a 20-min sequential run collapses
+  // to a ~2-min parallel run with steady visible feedback.
+  function progressLine(): string {
+    const elapsedMs = Date.now() - startedAt;
+    const rate = done > 0 ? (done / (elapsedMs / 1000)) : 0;
+    const etaSec = rate > 0 ? Math.round((total - done) / rate) : 0;
+    return `  ...seeded ${seeded}, matched ${matched}, err ${errors} (${done}/${total}) ${rate.toFixed(1)}/s eta ${etaSec}s`;
   }
 
-  console.log(`\n▸ Done:`);
+  for (let i = 0; i < sorted.length; i += CONCURRENCY) {
+    const batch = sorted.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async (g) => {
+      const topPlayer = [...g.players.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      const topSetName = [...g.setNames.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? args.setKey!;
+      try {
+        const r = await canonicalize({
+          sport: args.sport!,
+          year: args.year!,
+          setName: topSetName,
+          cardNumber: g.key.cardNumber,
+          parallel: g.key.parallel,
+          isAuto: g.key.isAuto,
+          printRun: g.key.printRun,
+          player: topPlayer,
+          source: "checklist",   // "trusted" so canonicalize seeds when missing
+        });
+        if (r.matchedBy === "seeded") seeded++;
+        else if (r.found) matched++;
+        else errors++;
+      } catch (err) {
+        errors++;
+        if (errors < 10) console.warn(`  ! error on ${g.key.cardNumber}/${g.key.parallel}: ${(err as Error).message}`);
+      }
+      done++;
+    }));
+    // One progress line per chunk of 8. Overwrites the previous.
+    process.stdout.write(`${progressLine()}\r`);
+  }
+
+  const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+  console.log(`\n▸ Done in ${elapsedSec}s:`);
   console.log(`   seeded: ${seeded}`);
   console.log(`   matched existing: ${matched}`);
   console.log(`   errors: ${errors}`);
