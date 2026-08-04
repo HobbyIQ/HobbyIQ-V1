@@ -84,6 +84,11 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
       parallel: parallel !== undefined ? parallel : undefined,
       gradeCompany: gradeCompany,
       gradeValue: gradeValue,
+      // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Don't surface the
+      // requester's own eBay purchases back to them as market "comps"
+      // — see Bobby Witt Jr. BGS 9.5 case where the sole $1,260
+      // ebay-user-purchase row was pushing median = purchase price.
+      excludeContributorUserId: requesterId,
     });
 
     const sales = comps

@@ -1933,7 +1933,19 @@ async function applyGradeLadderFallback(opts: {
     const hasGrade = gradeCompany.length > 0 && Number.isFinite(gradeValueNum) && gradeValueNum > 0;
     let finalFmv = ladder.derivedFmv;
     let finalExplanation = ladder.explanation;
-    if (hasGrade && ladder.anchorGrade === "Raw" && ladder.anchorPrice > 0) {
+    // CF-LADDER-APPLY-USER-GRADE-ALL-ANCHORS (Drew, 2026-08-04). Prior
+    // branch only converted when the ladder returned a Raw anchor —
+    // when the freshest anchor was PSA 10, ladder.derivedFmv was already
+    // a Raw estimate (anchor × 0.4× PSA-10→Raw), and the graded user's
+    // BGS 9.5 holding got that Raw number verbatim ("Estimated Raw from
+    // PSA 10 anchor..." at $902 for a $2,200-range BGS 9.5 card, Bobby
+    // Witt Jr. 2020 Bowman Chrome auto).
+    //
+    // The ladder ALWAYS returns a Raw-tier estimate (requestedGrade="Raw"
+    // on line above), regardless of which grade anchored. So the correct
+    // rule is: whenever the user has a grade, multiply the ladder's Raw
+    // estimate by the user's grade premium.
+    if (hasGrade && finalFmv > 0) {
       const productSetHint =
         (opts.holding as { setName?: string }).setName
         ?? (opts.holding as { product?: string }).product
@@ -1944,10 +1956,11 @@ async function applyGradeLadderFallback(opts: {
       const sportHint =
         (opts.holding as { sport?: string | null }).sport
         ?? inferSportFromContext(productSetHint, cardTitleHint, cardYear);
+      const rawEstimate = finalFmv;
       const multiplier = getGraderPremium(
         gradeCompany,
         String(gradeValueNum),
-        ladder.anchorPrice,
+        rawEstimate,
         cardClass,
         cardYear,
         productSetHint,
@@ -1955,9 +1968,10 @@ async function applyGradeLadderFallback(opts: {
         sportHint ?? null,
       );
       if (Number.isFinite(multiplier) && multiplier > 0 && Math.abs(multiplier - 1) > 0.01) {
-        finalFmv = ladder.anchorPrice * multiplier;
+        finalFmv = rawEstimate * multiplier;
         finalExplanation =
-          `Raw anchor $${ladder.anchorPrice} (${ladder.anchorDaysOld}d, ${ladder.anchorSampleSize} samples) `
+          `Raw-tier estimate $${Math.round(rawEstimate)} (from ${ladder.anchorGrade} anchor `
+          + `$${ladder.anchorPrice}, ${ladder.anchorDaysOld}d, ${ladder.anchorSampleSize} samples) `
           + `× ${multiplier.toFixed(2)} ${gradeCompany} ${gradeValueNum} → $${Math.round(finalFmv)}.`;
       }
     }
@@ -2062,6 +2076,12 @@ async function autoPriceHolding(
       const unified = await computeUnifiedPrice(String(holding.cardId), {
         hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
         grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
+        // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Symmetric rule: a
+        // user's OWN eBay purchase shouldn't feed their own pricing.
+        // Fixes Bobby Witt Jr. BGS 9.5 case where the sole $1,260
+        // ebay-user-purchase row made confidence stuck at ~0 forcing
+        // a fall-through to the Raw estimator ($902).
+        excludeContributorUserId: userId ?? null,
       });
       // Prefer predictedPrice as fmv (golden rule: FMV = projected next
       // sale from trend, NEVER a raw median). Fall back to weightedMedian

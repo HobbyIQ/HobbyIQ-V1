@@ -90,6 +90,7 @@ interface RawCompRow {
   gradeCompany: string | null;
   gradeValue: number | null;
   priceAnomaly?: boolean;
+  contributorUserId?: string | null;
 }
 
 async function queryComps(
@@ -97,6 +98,7 @@ async function queryComps(
   cardId: string,
   hobbyiqCardId: string | null,
   windowDays: number,
+  excludeContributorUserId?: string | null,
 ): Promise<RawCompRow[]> {
   const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString();
   const parts: string[] = ["c.soldAt >= @cutoff", "c.price > 0", "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)"];
@@ -107,10 +109,16 @@ async function queryComps(
   parts.push("(c.cardId = @cid" + (hobbyiqCardId ? " OR c.hobbyiqCardId = @hiq" : "") + ")");
   params.push({ name: "@cid", value: cardId });
   if (hobbyiqCardId) params.push({ name: "@hiq", value: hobbyiqCardId });
+  // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). See readCompsByCardId for
+  // the rule — a user's own eBay purchase must not feed their own pricing.
+  if (excludeContributorUserId) {
+    parts.push("(NOT IS_DEFINED(c.contributorUserId) OR c.contributorUserId != @excludeUid)");
+    params.push({ name: "@excludeUid", value: excludeContributorUserId });
+  }
 
   try {
     const { resources } = await cont.items.query<RawCompRow>({
-      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly FROM c WHERE ${parts.join(" AND ")}`,
+      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
     return (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
@@ -173,7 +181,14 @@ function confidenceScore(sampleCount: number, newestMs: number | null, nowMs: nu
  */
 export async function computeUnifiedPrice(
   cardId: string,
-  opts: { hobbyiqCardId?: string | null; grade?: { company: string | null; value: number | null } | null } = {},
+  opts: {
+    hobbyiqCardId?: string | null;
+    grade?: { company: string | null; value: number | null } | null;
+    // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Portfolio callers pass
+    // the requesting userId here so the user's own eBay-import purchases
+    // don't recycle back as market comps against their own holdings.
+    excludeContributorUserId?: string | null;
+  } = {},
 ): Promise<UnifiedPriceResult> {
   const nowMs = Date.now();
   const empty: UnifiedPriceResult = {
@@ -198,7 +213,7 @@ export async function computeUnifiedPrice(
   let selectedWindow = 180;
   let comps: RawCompRow[] = [];
   for (const w of WINDOWS) {
-    comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, w.days);
+    comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, w.days, opts.excludeContributorUserId ?? null);
     // If a specific grade was requested, measure density on THAT grade
     // for cascade decision. Else use overall pool density.
     let densityCount = comps.length;

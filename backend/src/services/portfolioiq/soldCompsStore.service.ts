@@ -1191,6 +1191,16 @@ export async function readCompsByCardId(input: {
   // no filter. When a number, strict-equal to that print run. When null,
   // matches only unnumbered rows (printRun === null / undefined).
   printRun?: number | null;
+  // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). When set, filters out
+  // rows contributed by THIS user. A user's own eBay purchase gets
+  // persisted as source="ebay-user-purchase" — surfacing it back as
+  // a "comp" for that user's own holding pollutes their pricing
+  // (median = purchase price = worthless self-reflection) and forces
+  // the estimator to fall through to Raw when observed-grade sample
+  // count drops to zero after the pool excludes vendor data.
+  // Symmetric rule: user-contributed data doesn't feed the contributor's
+  // OWN pricing but remains market signal for everyone else.
+  excludeContributorUserId?: string | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -1285,6 +1295,10 @@ export async function readCompsByCardId(input: {
         if (wantRaw) return docIsRaw;
         return docCompany === wantedCompany && docValue === wantedValue;
       });
+    }
+    if (typeof input.excludeContributorUserId === "string" && input.excludeContributorUserId.length > 0) {
+      const excludeId = input.excludeContributorUserId;
+      all = all.filter((d) => (d as { contributorUserId?: string }).contributorUserId !== excludeId);
     }
     return all;
   } catch (err) {
