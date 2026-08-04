@@ -309,6 +309,16 @@ struct PortfolioHoldingHeroCard: View {
                 // Fetches on task from /price-history (window=3m, bucket=weekly).
                 // Hidden entirely when < 2 usable points arrive.
                 heroSparkline
+
+                // CF-UNIFIED-PRICING-IOS-PREDICTED (Drew, 2026-08-04). Paired
+                // PREDICTED (7D) block that renders under MARKET VALUE.
+                // Companion number from the unified pricing contract — same
+                // math the web Grade Curve shows. Only renders when the pool
+                // was rich enough for the recent-vs-prior trend to compute
+                // (predictedPrice non-nil AND meaningfully different from
+                // MARKET VALUE — thin pools set predicted = market so we
+                // skip the redundant repeat).
+                predictedPriceBlock
             } else {
                 Text("Not enough data yet")
                     .font(.subheadline)
@@ -326,6 +336,55 @@ struct PortfolioHoldingHeroCard: View {
                 CanonicalFmvSheet(response: response, cardTitle: flatIdentityLine)
                     .presentationDetents([.medium, .large])
             }
+        }
+    }
+
+    /// CF-UNIFIED-PRICING-IOS-PREDICTED (Drew, 2026-08-04). The paired
+    /// "PREDICTED (7D)" companion block that renders directly under
+    /// MARKET VALUE. Comes from the unified pricing contract — the
+    /// backend's computeUnifiedPrice writes both fields to the holding
+    /// so portfolio + card panel show the same pair everywhere.
+    ///
+    /// Visibility rules:
+    ///   - Hidden when predictedPrice is nil (thin pool, no trend signal).
+    ///   - Hidden when predicted equals market to within $1 (redundant
+    ///     for flat / thin-pool cases where predicted defaults to fmv).
+    ///   - Otherwise renders the number + a chip for direction (↑/↓/flat)
+    ///     and a small % delta so at-a-glance trend reads cleanly.
+    @ViewBuilder
+    private var predictedPriceBlock: some View {
+        if let predicted = card.predictedPrice,
+           let marketValue = card.fairMarketValue,
+           predicted > 0,
+           abs(predicted - marketValue) >= 1.0 {
+            let deltaPct = ((predicted - marketValue) / marketValue) * 100
+            let isUp = deltaPct > 0.5
+            let isDown = deltaPct < -0.5
+            let deltaColor: Color = {
+                if isUp { return HobbyIQTheme.Colors.hobbyGreen }
+                if isDown { return HobbyIQTheme.Colors.danger }
+                return HobbyIQTheme.Colors.mutedText
+            }()
+            let arrow: String = {
+                if isUp { return "↑" }
+                if isDown { return "↓" }
+                return "→"
+            }()
+            VStack(spacing: 4) {
+                Text("PREDICTED (7D)")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(1.0)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                HStack(spacing: 8) {
+                    Text(wholeUSDString(predicted))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text("\(arrow) \(abs(deltaPct), specifier: "%.1f")%")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(deltaColor)
+                }
+            }
+            .padding(.top, 4)
         }
     }
 

@@ -582,16 +582,25 @@ extension InventoryCard {
         portfolioCurrencyString(currentValue)
     }
 
-    // Display-only value text matching `currentValue`'s TOTAL magnitude
-    // (FMV × quantity). Returns "—" when `fairMarketValue` is nil so the row
-    // does not render a cost-proxy dollar number for unpriced holdings.
-    // `currentValue` and every P/L derivation are untouched so the
-    // −100%-loss guard inside `currentValue`'s cost-proxy fallback still
-    // holds. `fairMarketValue == 0` is a genuine price and renders as "$0".
+    // CF-UNIFIED-PRICING-IOS-DISPLAY (Drew, 2026-08-04). Row/hero total
+    // dollar text, matching the backend's unified pricing contract:
+    //   fairMarketValue (unified marketValue) → estimatedValue → cost proxy → "—"
+    // Backend now writes unified marketValue into fairMarketValue on
+    // every reprice. When the pool is thin (no unified data), backend
+    // writes a ladder-derived estimatedValue — iOS rolls that in as a
+    // "~$X" tilde-prefixed number so the row doesn't disappear. Pure
+    // cost-proxy paths (no market signal, only purchase price) show
+    // tilde-prefixed cost with a distinct qualifier so P/L can't lie.
+    // `fairMarketValue == 0` is a genuine price and renders as "$0".
     var displayValueText: String {
-        guard let fmv = fairMarketValue else { return "—" }
         let qty = max(1.0, quantity ?? 1.0)
-        return inventoryWholeDollarString(fmv * qty)
+        if let fmv = fairMarketValue {
+            return inventoryWholeDollarString(fmv * qty)
+        }
+        if let est = estimatedValue, est > 0 {
+            return "~" + inventoryWholeDollarString(est * qty)
+        }
+        return "—"
     }
 
     /// CF-MARKET-VALUE-EVERYWHERE (2026-07-12): resolves a market value
@@ -625,10 +634,19 @@ extension InventoryCard {
         return nil
     }
 
+    // Full formatted currency (with cents) of the row's TOTAL value.
+    // Same fall-through as displayValueText — see note there for the
+    // unified pricing contract. Tilde prefix on estimated so P/L text
+    // renders adjacent honestly ("~$1,415 estimate" vs "$278.60 sale").
     var displayValueFormatted: String {
-        guard let fmv = fairMarketValue else { return "—" }
         let qty = max(1.0, quantity ?? 1.0)
-        return portfolioCurrencyString(fmv * qty)
+        if let fmv = fairMarketValue {
+            return portfolioCurrencyString(fmv * qty)
+        }
+        if let est = estimatedValue, est > 0 {
+            return "~" + portfolioCurrencyString(est * qty)
+        }
+        return "—"
     }
 
     /// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): variant of
