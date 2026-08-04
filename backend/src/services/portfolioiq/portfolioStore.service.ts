@@ -2056,13 +2056,16 @@ async function autoPriceHolding(
         excludeContributorUserId: userId ?? null,
       });
       const canonical = u.marketValue ?? u.fmv ?? u.predictedPrice;
-      // CF-UNIFIED-CONFIDENCE-FLOOR (Drew, 2026-08-04). Threshold lowered
-      // from 0.3 to 0.15 so 2-sample exact-cardId matches beat sibling
-      // rescue. Cam Caminiti Blue Refractor Auto had 3 pool comps but
-      // confidence 0.23 (2 samples after self-exclusion), and legacy
-      // fall-through then returned $18 from 213 unrelated Bowman Draft
-      // sales. Real cardId-matched data > sibling rescue even when thin.
-      if (canonical !== null && canonical > 0 && u.confidence >= 0.15) {
+      // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
+      // the pool has >= 1 exact-cardId sample and a positive canonical
+      // number — trust the pool over sibling rescue even when old.
+      // Cam Caminiti Blue Refractor: 2 samples 17-19 months old,
+      // confidence 0.11 after recency penalty; legacy fall-through
+      // returned $18 from unrelated Bowman Draft sales. Two OLD Cam
+      // Caminiti Blue Refractor sales at $76 and $160 are more
+      // representative than 213 unrelated ones. Cost-basis floor
+      // (< 15%) still catches truly broken cases.
+      if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
         const nowIso = new Date().toISOString();
         console.log(JSON.stringify({
           event: "portfolio_unified_early_exit_applied",
@@ -6894,7 +6897,7 @@ export async function repriceHoldingsForUser(
             excludeContributorUserId: userId ?? null,
           });
           const bCanon = bU.marketValue ?? bU.fmv ?? bU.predictedPrice;
-          if (bCanon !== null && bCanon > 0 && bU.confidence >= 0.15) {
+          if (bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
             const bNow = new Date().toISOString();
             console.log(JSON.stringify({
               event: "batch_reprice_unified_early_exit_applied",
