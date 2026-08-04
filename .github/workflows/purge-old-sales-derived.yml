@@ -1,0 +1,64 @@
+name: Purge Old Sales-Derived Catalog Rows
+
+# CF-PURGE-OLD-SALES-DERIVED (Drew, 2026-08-03). Deletes card_catalog
+# rows written by the pre-consolidation synth run (identified by
+# synthesizedAt < cutoff). Run AFTER a fresh synth completes so we're
+# left with the new normalized-set-key rows only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cutoff_iso:
+        description: 'Delete sales-derived rows with synthesizedAt < this ISO timestamp'
+        required: true
+        type: string
+      apply:
+        description: 'true to execute deletes (else dry-run count)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+      max_minutes:
+        description: 'Wall-clock cap'
+        required: false
+        type: string
+        default: '50'
+
+jobs:
+  purge:
+    name: Purge old sales-derived rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Run purge
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          CUTOFF_ISO="${{ inputs.cutoff_iso }}" \
+          APPLY="${{ inputs.apply || 'false' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || '50' }}" \
+          node scripts/purge-old-sales-derived.cjs
