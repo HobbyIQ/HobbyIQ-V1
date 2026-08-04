@@ -232,10 +232,10 @@ const BOWMAN_CHROME_NONAUTO_2026: ParallelLadder = {
   ],
 };
 
-// ─── Topps Chrome 2024 — verified only ────────────────────────────────
-// Same year-specific caveat. 2025 + 2026 Topps Chrome have different
-// print runs and additional variants (2026 added "Toys R Us Purple",
-// "Prizmatic", etc.) — verify per-year before extending.
+// ─── Topps Chrome per-year ladders ────────────────────────────────────
+// Each year has different rungs. 2024 sticks to the classic rainbow,
+// 2025 adds heavy Lava/Wave variants at every color tier, 2026 shifts
+// to a Pink base + White /30 tier + Prism / Negative refractors.
 const TOPPS_CHROME_NONAUTO_2024: ParallelLadder = {
   key: "topps-chrome:no-auto:2024",
   yearMin: 2024,
@@ -254,6 +254,95 @@ const TOPPS_CHROME_NONAUTO_2024: ParallelLadder = {
     { name: "Red Refractor",            slug: "red-refractor",            printRun: 5,    isSsp: false },
     { name: "Superfractor",             slug: "superfractor",             printRun: 1,    isSsp: false },
   ],
+};
+
+const TOPPS_CHROME_NONAUTO_2025: ParallelLadder = {
+  key: "topps-chrome:no-auto:2025",
+  yearMin: 2025,
+  yearMax: 2025,
+  setKey: "topps-chrome",
+  isAuto: false,
+  rungs: [
+    { name: "Base",                     slug: "base",                     printRun: null, isSsp: false },
+    { name: "Refractor",                slug: "refractor",                printRun: null, isSsp: false },
+    { name: "Prism Refractor",          slug: "prism-refractor",          printRun: null, isSsp: false },
+    { name: "Teal Refractor",           slug: "teal-refractor",           printRun: 299,  isSsp: false },
+    { name: "Purple Refractor",         slug: "purple-refractor",         printRun: 250,  isSsp: false },
+    { name: "Aqua Refractor",           slug: "aqua-refractor",           printRun: 199,  isSsp: false },
+    { name: "Aqua Lava Refractor",      slug: "aqua-lava-refractor",      printRun: 199,  isSsp: false },
+    { name: "Blue Refractor",           slug: "blue-refractor",           printRun: 150,  isSsp: false },
+    { name: "Blue Lava Refractor",      slug: "blue-lava-refractor",      printRun: 150,  isSsp: false },
+    { name: "Green Lava Refractor",     slug: "green-lava-refractor",     printRun: 99,   isSsp: false },
+    { name: "Gold Refractor",           slug: "gold-refractor",           printRun: 50,   isSsp: false },
+    { name: "Gold Wave Refractor",      slug: "gold-wave-refractor",      printRun: 50,   isSsp: false },
+    { name: "Gold Lava Refractor",      slug: "gold-lava-refractor",      printRun: 50,   isSsp: false },
+    { name: "Orange Refractor",         slug: "orange-refractor",         printRun: 25,   isSsp: false },
+    { name: "Orange Wave Refractor",    slug: "orange-wave-refractor",    printRun: 25,   isSsp: false },
+    { name: "Orange Lava Refractor",    slug: "orange-lava-refractor",    printRun: 25,   isSsp: false },
+    { name: "Black Refractor",          slug: "black-refractor",          printRun: 10,   isSsp: false },
+    { name: "Black Wave Refractor",     slug: "black-wave-refractor",     printRun: 10,   isSsp: false },
+    { name: "Black Lava Refractor",     slug: "black-lava-refractor",     printRun: 10,   isSsp: false },
+    { name: "Red Refractor",            slug: "red-refractor",            printRun: 5,    isSsp: false },
+    { name: "Red Wave Refractor",       slug: "red-wave-refractor",       printRun: 5,    isSsp: false },
+    { name: "Red Lava Refractor",       slug: "red-lava-refractor",       printRun: 5,    isSsp: false },
+    { name: "Superfractor",             slug: "superfractor",             printRun: 1,    isSsp: false },
+  ],
+};
+
+const TOPPS_CHROME_NONAUTO_2026: ParallelLadder = {
+  key: "topps-chrome:no-auto:2026",
+  yearMin: 2026,
+  yearMax: 2026,
+  setKey: "topps-chrome",
+  isAuto: false,
+  rungs: [
+    { name: "Base",                     slug: "base",                     printRun: null, isSsp: false },
+    { name: "Refractor",                slug: "refractor",                printRun: null, isSsp: false },
+    { name: "Prism Refractor",          slug: "prism-refractor",          printRun: null, isSsp: false },
+    { name: "Negative Refractor",       slug: "negative-refractor",       printRun: null, isSsp: false },
+    { name: "Pink Refractor",           slug: "pink-refractor",           printRun: 250,  isSsp: false },
+    { name: "Aqua Refractor",           slug: "aqua-refractor",           printRun: 199,  isSsp: false },
+    { name: "Blue Refractor",           slug: "blue-refractor",           printRun: 150,  isSsp: false },
+    { name: "Blue Wave Refractor",      slug: "blue-wave-refractor",      printRun: 150,  isSsp: false },
+    { name: "Green Refractor",          slug: "green-refractor",          printRun: 99,   isSsp: false },
+    { name: "Green Wave Refractor",     slug: "green-wave-refractor",     printRun: 99,   isSsp: false },
+    { name: "Purple Refractor",         slug: "purple-refractor",         printRun: 75,   isSsp: false },
+    { name: "Purple Wave Refractor",    slug: "purple-wave-refractor",    printRun: 75,   isSsp: false },
+    { name: "Gold Refractor",           slug: "gold-refractor",           printRun: 50,   isSsp: false },
+    { name: "Gold Wave Refractor",      slug: "gold-wave-refractor",      printRun: 50,   isSsp: false },
+    { name: "White Refractor",          slug: "white-refractor",          printRun: 30,   isSsp: false },
+    { name: "Orange Refractor",         slug: "orange-refractor",         printRun: 25,   isSsp: false },
+    { name: "Orange Wave Refractor",    slug: "orange-wave-refractor",    printRun: 25,   isSsp: false },
+    { name: "Black Refractor",          slug: "black-refractor",          printRun: 10,   isSsp: false },
+    { name: "Black Wave Refractor",     slug: "black-wave-refractor",     printRun: 10,   isSsp: false },
+    { name: "Red Refractor",            slug: "red-refractor",            printRun: 5,    isSsp: false },
+    { name: "Red Wave Refractor",       slug: "red-wave-refractor",       printRun: 5,    isSsp: false },
+    { name: "Superfractor",             slug: "superfractor",             printRun: 1,    isSsp: false },
+  ],
+};
+
+// ─── Bowman Draft 2025 + 2026 (share Bowman Chrome Prospect ladders) ─
+// Bowman Draft ships with the same ladder Bowman Chrome Prospects uses
+// each year — publicly documented practice.
+const BOWMAN_DRAFT_AUTO_2025: ParallelLadder = {
+  ...BOWMAN_CHROME_PROSPECT_AUTO_2025,
+  key: "bowman-draft:auto:2025",
+  setKey: "bowman-draft",
+};
+const BOWMAN_DRAFT_NONAUTO_2025: ParallelLadder = {
+  ...BOWMAN_CHROME_NONAUTO_2025,
+  key: "bowman-draft:no-auto:2025",
+  setKey: "bowman-draft",
+};
+const BOWMAN_DRAFT_AUTO_2026: ParallelLadder = {
+  ...BOWMAN_CHROME_PROSPECT_AUTO_2026,
+  key: "bowman-draft:auto:2026",
+  setKey: "bowman-draft",
+};
+const BOWMAN_DRAFT_NONAUTO_2026: ParallelLadder = {
+  ...BOWMAN_CHROME_NONAUTO_2026,
+  key: "bowman-draft:no-auto:2026",
+  setKey: "bowman-draft",
 };
 
 // ─── Bowman Draft — 2024 verified only ────────────────────────────────
@@ -302,8 +391,14 @@ export const PARALLEL_LADDERS: ParallelLadder[] = [
   BOWMAN_CHROME_PROSPECT_AUTO_2026,
   BOWMAN_CHROME_NONAUTO_2026,
   TOPPS_CHROME_NONAUTO_2024,
+  TOPPS_CHROME_NONAUTO_2025,
+  TOPPS_CHROME_NONAUTO_2026,
   BOWMAN_DRAFT_AUTO_2024,
   BOWMAN_DRAFT_NONAUTO_2024,
+  BOWMAN_DRAFT_AUTO_2025,
+  BOWMAN_DRAFT_NONAUTO_2025,
+  BOWMAN_DRAFT_AUTO_2026,
+  BOWMAN_DRAFT_NONAUTO_2026,
 ];
 
 /** Lookup — returns the ladder matching (year, setKey, isAuto) or
