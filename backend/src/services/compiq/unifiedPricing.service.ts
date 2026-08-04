@@ -179,6 +179,9 @@ export async function computeUnifiedPrice(
   const empty: UnifiedPriceResult = {
     cardId,
     fmv: null,
+    predictedPrice: null,
+    trendPctPerWeek: null,
+    trendDirection: "flat",
     gradeCurve: [],
     windowDays: 180,
     totalSampleCount: 0,
