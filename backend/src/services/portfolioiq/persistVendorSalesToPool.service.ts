@@ -59,7 +59,7 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified')",
+      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player, c.source, c.confidence, c.salesCount FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified')",
       parameters: [
         { name: "@p", value: playerName },
         { name: "@y", value: String(cardYear) },
@@ -116,11 +116,72 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       });
       if (strict.length > 0) cands = strict;
     }
-    const shaped = cands.map((r: { number?: string; parallels?: Array<{ name?: string }>; sport?: string }) => ({
-      number: String(r.number ?? ""),
-      parallels: Array.isArray(r.parallels) ? r.parallels.map((p) => String(p?.name ?? "")).filter(Boolean) : [],
-      sport: r.sport ?? null,
-    }));
+    // CF-CATALOG-XVENDOR-DEDUP (Drew, 2026-08-03). Same real card exists
+    // in multiple sources (cardsight + cardhedge + sales-derived +
+    // user-verified all point at the same Mike Trout 2011 Update Gold).
+    // Group by (number, parallel-union) and pick the highest-confidence
+    // representative per group. Union parallels + confidences.
+    //
+    // CF-CATALOG-CONFIDENCE-SORT (Drew, 2026-08-03). Sort candidates by
+    // confidence desc so downstream scoring/disambiguation sees the
+    // strongest match first. Baseline confidence:
+    //   user-verified       0.98  (human confirmed)
+    //   cardsight/cardhedge 0.85  (vendor catalog, no per-row confidence)
+    //   sales-derived       per-row (0.35–0.95 from log10 count)
+    //   canonical/seed/other 0.75 (bootstrap data)
+    const SOURCE_BASELINE_CONF: Record<string, number> = {
+      "user-verified": 0.98,
+      cardsight: 0.85,
+      cardhedge: 0.85,
+      canonical: 0.75,
+      seed: 0.70,
+      "ch-catalog": 0.80,
+    };
+    const scoreOf = (r: { source?: string; confidence?: number }) => {
+      if (typeof r.confidence === "number" && Number.isFinite(r.confidence)) return r.confidence;
+      return SOURCE_BASELINE_CONF[String(r.source ?? "")] ?? 0.60;
+    };
+    // Group by normalized number — same physical card across sources
+    // collapses. Parallel arrays merge; confidence takes the max.
+    const consolidated = new Map<string, {
+      number: string;
+      parallels: Set<string>;
+      sport: string | null;
+      confidence: number;
+      sources: Set<string>;
+    }>();
+    for (const r of cands as Array<{
+      number?: string;
+      parallels?: Array<{ name?: string }>;
+      sport?: string;
+      source?: string;
+      confidence?: number;
+    }>) {
+      const num = String(r.number ?? "").trim();
+      if (!num) continue;
+      const key = num.toLowerCase();
+      let g = consolidated.get(key);
+      if (!g) {
+        g = { number: num, parallels: new Set(), sport: r.sport ?? null, confidence: 0, sources: new Set() };
+        consolidated.set(key, g);
+      }
+      const conf = scoreOf(r);
+      if (conf > g.confidence) g.confidence = conf;
+      if (r.source) g.sources.add(r.source);
+      if (Array.isArray(r.parallels)) {
+        for (const p of r.parallels) {
+          const name = String(p?.name ?? "").trim();
+          if (name) g.parallels.add(name);
+        }
+      }
+    }
+    const shaped = [...consolidated.values()]
+      .sort((a, b) => b.confidence - a.confidence)
+      .map((g) => ({
+        number: g.number,
+        parallels: [...g.parallels],
+        sport: g.sport,
+      }));
 
     // CF-TCA-CATALOG-FALLBACK (Drew, 2026-08-03). When our local
     // card_catalog has 0 rows for (player, year, set), fall back to
