@@ -1208,9 +1208,17 @@ export async function readCompsByCardId(input: {
   const from = input.fromDate ?? new Date(now.getTime() - 180 * 86_400_000).toISOString();
   const to = input.maxDate ?? now.toISOString();
 
+  // CF-RECENT-SALES-HIQ-SLUG (Drew, 2026-08-04). Match by cardId OR
+  // hobbyiqCardId so recent-sales works for holdings that never got
+  // a vendor cardId assigned (1991 Score Griffey #396: no cardId, slug
+  // hiq:baseball:1991:1991-score-baseball:396:base:no-auto has 1 comp
+  // — inventory showed "no comps" because query filtered by cardId
+  // only). Cross-partition since we can't scope to a partition when
+  // matching on non-partition-key field. Costs a few extra RUs but
+  // consistent with the pool query in unifiedPricing.service.ts.
   const q = {
     query:
-      "SELECT * FROM c WHERE c.cardId = @cid AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC",
+      "SELECT * FROM c WHERE (c.cardId = @cid OR c.hobbyiqCardId = @cid) AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC",
     parameters: [
       { name: "@cid", value: input.cardId },
       { name: "@from", value: from },
@@ -1218,7 +1226,15 @@ export async function readCompsByCardId(input: {
     ],
   };
   try {
-    const { resources } = await c.items.query(q, { partitionKey: input.cardId }).fetchAll();
+    // CF-RECENT-SALES-HIQ-SLUG: when input.cardId is a hobbyiqCardId
+    // slug (starts with "hiq:"), we need cross-partition since the pool
+    // stores rows partitioned by the vendor cardId. When it looks like
+    // a vendor id, partition-scope for speed.
+    const looksLikeSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
+    const queryOpts = looksLikeSlug
+      ? {}
+      : { partitionKey: input.cardId };
+    const { resources } = await c.items.query(q, queryOpts).fetchAll();
     let all = resources as SoldCompDoc[];
     if (input.sources && input.sources.length > 0) {
       const set = new Set(input.sources);
