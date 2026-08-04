@@ -89,6 +89,48 @@ const BOWMAN_CHROME_NONAUTO_2024: ParallelLadder = {
   ],
 };
 
+// ─── 2018 Bowman Chrome — verified (Cardboard Connection + Beckett) ──
+// Classic rainbow — no Speckle/Wave/Reptilian tier yet. Base + auto
+// use the same 8-rung ladder except autos add Atomic Refractor /100.
+const BOWMAN_CHROME_PROSPECT_AUTO_2018: ParallelLadder = {
+  key: "bowman-chrome:auto:2018",
+  yearMin: 2018,
+  yearMax: 2018,
+  setKey: "bowman-chrome",
+  isAuto: true,
+  rungs: [
+    { name: "Base",              slug: "base",              printRun: null, isSsp: false },
+    { name: "Refractor",         slug: "refractor",         printRun: 499,  isSsp: false },
+    { name: "Purple Refractor",  slug: "purple-refractor",  printRun: 250,  isSsp: false },
+    { name: "Blue Refractor",    slug: "blue-refractor",    printRun: 150,  isSsp: false },
+    { name: "Atomic Refractor",  slug: "atomic-refractor",  printRun: 100,  isSsp: false },
+    { name: "Green Refractor",   slug: "green-refractor",   printRun: 99,   isSsp: false },
+    { name: "Gold Refractor",    slug: "gold-refractor",    printRun: 50,   isSsp: false },
+    { name: "Orange Refractor",  slug: "orange-refractor",  printRun: 25,   isSsp: false },
+    { name: "Red Refractor",     slug: "red-refractor",     printRun: 5,    isSsp: false },
+    { name: "Superfractor",      slug: "superfractor",      printRun: 1,    isSsp: false },
+  ],
+};
+
+const BOWMAN_CHROME_NONAUTO_2018: ParallelLadder = {
+  key: "bowman-chrome:no-auto:2018",
+  yearMin: 2018,
+  yearMax: 2018,
+  setKey: "bowman-chrome",
+  isAuto: false,
+  rungs: [
+    { name: "Base",              slug: "base",              printRun: null, isSsp: false },
+    { name: "Refractor",         slug: "refractor",         printRun: 499,  isSsp: false },
+    { name: "Purple Refractor",  slug: "purple-refractor",  printRun: 250,  isSsp: false },
+    { name: "Blue Refractor",    slug: "blue-refractor",    printRun: 150,  isSsp: false },
+    { name: "Green Refractor",   slug: "green-refractor",   printRun: 99,   isSsp: false },
+    { name: "Gold Refractor",    slug: "gold-refractor",    printRun: 50,   isSsp: false },
+    { name: "Orange Refractor",  slug: "orange-refractor",  printRun: 25,   isSsp: false },
+    { name: "Red Refractor",     slug: "red-refractor",     printRun: 5,    isSsp: false },
+    { name: "Superfractor",      slug: "superfractor",      printRun: 1,    isSsp: false },
+  ],
+};
+
 // ─── 2025 Bowman Chrome — verified (checklistinsider 2026-08-04) ──────
 // 2025-specific deltas vs 2024:
 //   - Added: Geometric / Wave / Shimmer / Pulsar variants at multiple tiers
@@ -384,6 +426,8 @@ const BOWMAN_DRAFT_NONAUTO_2024: ParallelLadder = {
 //   - Panini Prizm any year
 //   - Other product families (Select, Optic, Chronicles, etc.)
 export const PARALLEL_LADDERS: ParallelLadder[] = [
+  BOWMAN_CHROME_PROSPECT_AUTO_2018,
+  BOWMAN_CHROME_NONAUTO_2018,
   BOWMAN_CHROME_PROSPECT_AUTO_2024,
   BOWMAN_CHROME_NONAUTO_2024,
   BOWMAN_CHROME_PROSPECT_AUTO_2025,
