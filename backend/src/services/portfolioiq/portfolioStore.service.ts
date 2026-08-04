@@ -2030,6 +2030,87 @@ async function autoPriceHolding(
   source: string,
   userId?: string,
 ): Promise<PortfolioHolding> {
+  // CF-UNIFIED-PRICING-EARLY-EXIT (Drew, 2026-08-04). ONE function,
+  // ONE number, ONE prediction. When computeUnifiedPrice has real
+  // data (marketValue > 0 AND confidence >= 0.3) — write it directly
+  // and return. Bypass the legacy computeEstimate + graded rail +
+  // ladder + our-pool + layered overrides. Every consumer reads
+  // fairMarketValue + predictedPrice; both come from unified.
+  //
+  // Legacy path below stays as the coverage-gap fallback for holdings
+  // where unified has no data (thin pool, unknown cardId). Over time
+  // the pool fills and this early-exit fires for more holdings.
+  const earlyResolvedId = holding.cardId || (holding as any).hobbyiqCardId || null;
+  if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId) {
+    try {
+      const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
+      const gCo = (holding as any).gradeCompany
+        ? String((holding as any).gradeCompany).trim()
+        : null;
+      const gVal = typeof (holding as any).gradeValue === "number"
+        ? (holding as any).gradeValue
+        : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
+      const u = await computeUnifiedPrice(String(earlyResolvedId), {
+        hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+        grade: gCo ? { company: gCo, value: gVal } : null,
+        excludeContributorUserId: userId ?? null,
+      });
+      const canonical = u.marketValue ?? u.fmv ?? u.predictedPrice;
+      if (canonical !== null && canonical > 0 && u.confidence >= 0.3) {
+        const nowIso = new Date().toISOString();
+        console.log(JSON.stringify({
+          event: "portfolio_unified_early_exit_applied",
+          source: "portfolioStore.autoPriceHolding",
+          userId, holdingId: holding.id, cardId: earlyResolvedId,
+          fair_market_value: canonical,
+          unified_median: u.fmv,
+          unified_market_value: u.marketValue,
+          unified_predicted: u.predictedPrice,
+          confidence: u.confidence,
+          window_days: u.windowDays,
+          trend_direction: u.trendDirection,
+          trend_pct_per_week: u.trendPctPerWeek,
+        }));
+        const unified: PortfolioHolding = {
+          ...holding,
+          fairMarketValue: canonical,
+          predictedPrice: u.predictedPrice,
+          predictedPriceLow: null,
+          predictedPriceHigh: null,
+          predictedPriceMechanism: "unified-trend",
+          predictedPriceUpdatedAt: nowIso,
+          movementDirection: u.trendDirection === "up" ? "up"
+            : u.trendDirection === "down" ? "down"
+            : null,
+          movementUpdatedAt: nowIso,
+          estimatedValue: null,
+          estimateLow: null,
+          estimateHigh: null,
+          estimateConfidence: null,
+          estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)}`,
+          isEstimate: false,
+          valuationStatus: "observed",
+          pricingSource: "unified-pricing",
+          lastUpdated: nowIso,
+          sourceVendor: "cardhedge" as any,
+          sourceVendorUpdatedAt: nowIso,
+        };
+        appendPriceHistory(doc, holding.id, { at: nowIso, value: canonical, source });
+        evaluateHoldingAlerts(doc, previous, unified);
+        doc.holdings[holding.id] = unified;
+        return unified;
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "portfolio_unified_early_exit_error",
+        source: "portfolioStore.autoPriceHolding",
+        holdingId: holding.id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+      // Fall through to legacy path
+    }
+  }
+
   // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): map the legacy
   // string source ("add" / "update" / "refresh") to the closed
   // PredictionCorpusSource literal union. Defaults to add for any
@@ -6752,6 +6833,83 @@ export async function repriceHoldingsForUser(
       continue;
     }
     try {
+      // CF-UNIFIED-PRICING-BATCH-EARLY-EXIT (Drew, 2026-08-04). Same
+      // ONE-function, ONE-number, ONE-prediction contract as
+      // autoPriceHolding. Fire unified pricing FIRST. When it has
+      // real data (marketValue > 0 AND confidence >= 0.3), write
+      // directly + continue to next holding — bypass computeEstimate
+      // + graded rail + ladder + our-pool + sibling fallback + resolver
+      // fallback entirely. Cuts one CH call per holding on the hot path.
+      const bEarlyId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
+      if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId) {
+        try {
+          const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
+          const bGCo = (holding as any).gradeCompany
+            ? String((holding as any).gradeCompany).trim()
+            : null;
+          const bGVal = typeof (holding as any).gradeValue === "number"
+            ? (holding as any).gradeValue
+            : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
+          const bU = await computeUnifiedPrice(String(bEarlyId), {
+            hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+            grade: bGCo ? { company: bGCo, value: bGVal } : null,
+            excludeContributorUserId: userId ?? null,
+          });
+          const bCanon = bU.marketValue ?? bU.fmv ?? bU.predictedPrice;
+          if (bCanon !== null && bCanon > 0 && bU.confidence >= 0.3) {
+            const bNow = new Date().toISOString();
+            console.log(JSON.stringify({
+              event: "batch_reprice_unified_early_exit_applied",
+              source: "portfolioStore.repriceHoldingsForUser",
+              userId, holdingId: holding.id, cardId: bEarlyId,
+              fair_market_value: bCanon,
+              unified_median: bU.fmv,
+              unified_market_value: bU.marketValue,
+              unified_predicted: bU.predictedPrice,
+              confidence: bU.confidence,
+              window_days: bU.windowDays,
+            }));
+            const bPrev = doc.holdings[holding.id];
+            const bUpdated: PortfolioHolding = {
+              ...holding,
+              fairMarketValue: bCanon,
+              predictedPrice: bU.predictedPrice,
+              predictedPriceLow: null,
+              predictedPriceHigh: null,
+              predictedPriceMechanism: "unified-trend",
+              predictedPriceUpdatedAt: bNow,
+              movementDirection: bU.trendDirection === "up" ? "up"
+                : bU.trendDirection === "down" ? "down"
+                : null,
+              movementUpdatedAt: bNow,
+              estimatedValue: null,
+              estimateLow: null,
+              estimateHigh: null,
+              estimateConfidence: null,
+              estimateBasis: `unified: window=${bU.windowDays}d median=$${bU.fmv?.toFixed(0) ?? "?"} marketValue=$${bU.marketValue?.toFixed(0) ?? "?"} predicted=$${bU.predictedPrice?.toFixed(0) ?? "?"} trend=${bU.trendDirection} ${bU.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${bU.confidence.toFixed(2)}`,
+              isEstimate: false,
+              valuationStatus: "observed",
+              pricingSource: "unified-pricing",
+              lastUpdated: bNow,
+              sourceVendor: "cardhedge" as any,
+              sourceVendorUpdatedAt: bNow,
+            };
+            evaluateHoldingAlerts(doc, bPrev, bUpdated);
+            doc.holdings[holding.id] = bUpdated;
+            repriced += 1;
+            updates.push({ id: holding.id, status: "repriced", reason: "unified-pricing-early-exit" });
+            continue;
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "batch_reprice_unified_early_exit_error",
+            source: "portfolioStore.repriceHoldingsForUser",
+            holdingId: holding.id,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+      }
+
       // CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18): request body
       // built via buildEstimateRequestFromHolding so the holding→engine-input
       // mapping lives in ONE place. The pinned-id wiring shipped at f6fda5d
