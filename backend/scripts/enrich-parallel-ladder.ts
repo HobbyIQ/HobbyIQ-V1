@@ -93,7 +93,7 @@ async function main(): Promise<void> {
       { name: "@y", value: args.year },
       { name: "@sk", value: args.setKey },
     ],
-  }, { enableCrossPartitionQuery: true }).fetchAll();
+  }).fetchAll();
 
   console.log(`\n▸ Fetched ${resources.length} catalog rows for ${args.year} ${args.setKey}`);
 

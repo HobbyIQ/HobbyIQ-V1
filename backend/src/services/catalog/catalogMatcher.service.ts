@@ -178,7 +178,7 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
           { name: "@a", value: components.isAuto },
           { name: "@tok", value: parallelToken },
         ],
-      }, { enableCrossPartitionQuery: true }).fetchAll();
+      }).fetchAll();
       if (resources.length > 0) {
         const best = resources[0];
         return {
@@ -211,7 +211,7 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
           { name: "@a", value: components.isAuto },
           { name: "@fk", value: familyKey },
         ],
-      }, { enableCrossPartitionQuery: true }).fetchAll();
+      }).fetchAll();
       if (resources.length > 0) {
         const best = resources[0];
         return {
