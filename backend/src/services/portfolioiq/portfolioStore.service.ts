@@ -2036,48 +2036,65 @@ async function autoPriceHolding(
   // short-circuit at the next line).
   let fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
 
-  // CF-CANONICAL-FMV-OVERRIDE (Drew, 2026-08-04). Directly call
-  // canonicalFmv and prefer its result over the composite/thin-data
-  // path when it returns a real number. canonicalFmv unions cross-
-  // vendor sales via the full pricing ladder (direct-comp →
-  // cross-parallel → neighbor-parallel → family/product-tier →
-  // tiered-momentum). If it finds a positive fmv with reasonable
-  // confidence, that's the truth — use it as fairValue. Fixes Drew's
-  // Ohtani showing $1,925 composite when direct-comp = $2,469.
-  let canonicalFmvResult: { fmv: number | null; method: string; confidence: number } | null = null;
+  // CF-UNIFIED-PRICING (Drew, 2026-08-04). Portfolio + card catalog
+  // now read from ONE function so numbers match by construction.
+  // computeUnifiedPrice queries sold_comps (our owned pool), applies
+  // adaptive window (30d/60d/90d/180d based on comp density), excludes
+  // priceAnomaly=true rows, computes weighted-median per grade with
+  // recency decay, and projects next sale via 14d-recent-vs-14d-prior
+  // trend. Portfolio calls with holding's grade → gets fmv + predicted
+  // for THAT tier. Card catalog omits grade → gets full curve. Same
+  // rows, same math → same numbers.
+  let unifiedResult: {
+    fmv: number | null; predictedPrice: number | null;
+    method: string; confidence: number;
+    trendPctPerWeek: number | null; trendDirection: string;
+    windowDays: number;
+  } | null = null;
   if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
       && holding.cardId) {
     try {
-      const { computeCanonicalFmv } = await import("../compiq/canonicalFmv.service.js");
-      const canonical = await computeCanonicalFmv({
-        cardId: String(holding.cardId),
-        parallel: (holding as any).parallel ?? null,
-        gradeCompany: (holding as any).gradeCompany ?? null,
-        gradeValue: typeof (holding as any).gradeValue === "number" ? (holding as any).gradeValue : Number((holding as any).gradeValue) || null,
-        cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
-        product: (holding as any).setName ?? (holding as any).product ?? null,
-        player: (holding as any).playerName ?? null,
-        cardNumber: (holding as any).cardNumber ?? null,
-        isAuto: typeof (holding as any).isAuto === "boolean" ? (holding as any).isAuto : null,
-        sport: (holding as any).sport ?? null,
+      const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
+      const gradeCoRaw = (holding as any).gradeCompany;
+      const gradeValRaw = (holding as any).gradeValue;
+      const gradeCo = gradeCoRaw ? String(gradeCoRaw).trim() : null;
+      const gradeVal = typeof gradeValRaw === "number" ? gradeValRaw : (gradeValRaw ? Number(gradeValRaw) : null);
+      const unified = await computeUnifiedPrice(String(holding.cardId), {
+        hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+        grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
       });
-      if (canonical.fmv !== null && canonical.fmv > 0 && canonical.confidence > 0.3) {
-        canonicalFmvResult = { fmv: canonical.fmv, method: canonical.method, confidence: canonical.confidence };
+      // Prefer predictedPrice as fmv (golden rule: FMV = projected next
+      // sale from trend, NEVER a raw median). Fall back to weightedMedian
+      // when predicted couldn't compute (thin pool).
+      const chosen = unified.predictedPrice ?? unified.fmv;
+      if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
+        unifiedResult = {
+          fmv: unified.fmv,
+          predictedPrice: unified.predictedPrice,
+          method: unified.method,
+          confidence: unified.confidence,
+          trendPctPerWeek: unified.trendPctPerWeek,
+          trendDirection: unified.trendDirection,
+          windowDays: unified.windowDays,
+        };
         console.log(JSON.stringify({
-          event: "portfolio_canonical_fmv_override_applied",
+          event: "portfolio_unified_pricing_applied",
           source: "portfolioStore.autoPriceHolding",
           userId, holdingId: holding.id, cardId: holding.cardId,
-          method: canonical.method,
-          confidence: canonical.confidence,
+          method: unified.method,
+          confidence: unified.confidence,
           fair_value_before: fairValue,
-          canonical_override: canonical.fmv,
-          delta: canonical.fmv - fairValue,
+          unified_median: unified.fmv,
+          unified_predicted: unified.predictedPrice,
+          window_days: unified.windowDays,
+          trend_pct_per_week: unified.trendPctPerWeek,
+          trend_direction: unified.trendDirection,
         }));
-        fairValue = canonical.fmv;
+        fairValue = chosen;
       }
     } catch (err) {
       console.warn(JSON.stringify({
-        event: "portfolio_canonical_fmv_override_error",
+        event: "portfolio_unified_pricing_error",
         source: "portfolioStore.autoPriceHolding",
         userId, holdingId: holding.id,
         error: (err as Error)?.message ?? String(err),
@@ -2444,18 +2461,19 @@ async function autoPriceHolding(
         }
   );
 
-  // CF-CANONICAL-FMV-FORCE-OBSERVED (Drew, 2026-08-04). When
-  // canonicalFmv returned a real value with confidence >= 0.3, force
-  // fairMarketValue to that value regardless of what the graded-rail
-  // decided. Prevents the "canonical returned $2,469 but graded-rail
-  // set fairMarketValue=null" hole Drew hit on Ohtani PSA 9. Only
-  // fires when the flag is on AND canonical succeeded.
-  if (canonicalFmvResult && canonicalFmvResult.fmv !== null && canonicalFmvResult.fmv > 0) {
-    resolved.fairMarketValueOverride = canonicalFmvResult.fmv;
+  // CF-UNIFIED-PRICING-FORCE-OBSERVED (Drew, 2026-08-04). When
+  // computeUnifiedPrice returned a real value with confidence >= 0.3,
+  // force fairMarketValue to the projected-next-sale (or median
+  // fallback) regardless of what the graded-rail decided. Bypasses
+  // the graded-rail's "estimated" branch which was writing null even
+  // though unified had a real observed-based number.
+  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
+    const chosen = unifiedResult.predictedPrice ?? unifiedResult.fmv!;
+    resolved.fairMarketValueOverride = chosen;
     (resolved as any).valuationStatus = "observed";
     (resolved as any).isEstimate = false;
     (resolved as any).estimatedValue = null;
-    (resolved as any).estimateBasis = `canonicalFmv ${canonicalFmvResult.method} confidence ${canonicalFmvResult.confidence.toFixed(2)}`;
+    (resolved as any).estimateBasis = `unified: window=${unifiedResult.windowDays}d median=$${unifiedResult.fmv?.toFixed(0) ?? "?"} predicted=$${unifiedResult.predictedPrice?.toFixed(0) ?? "?"} trend=${unifiedResult.trendDirection} ${unifiedResult.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk confidence=${unifiedResult.confidence.toFixed(2)}`;
   }
 
   // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): when the engine
