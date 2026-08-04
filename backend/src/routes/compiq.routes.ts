@@ -3555,6 +3555,53 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       })(),
     ]);
 
+    // CF-CARD-PANEL-UNIFIED-CONVERGE (Drew, 2026-08-04). Portfolio and
+    // Grade Curve were showing different numbers for the same card
+    // (Ohtani PSA 9: portfolio $2,482 vs Grade Curve MARKET VALUE $2,610).
+    // observedGradeCurve computes "past anchor × trend-forward" while
+    // computeUnifiedPrice uses recency-weighted median (14d half-life).
+    // Both intend to answer "what's this card worth today" — they diverge
+    // because the math is different. Post-process each observed entry
+    // with unified pricing so both surfaces read from the same rows +
+    // the same math. Estimated entries (no observed sales for that tier)
+    // keep their observedGradeCurve values — unified would return null
+    // for those tiers and we'd lose the estimate.
+    try {
+      const { computeUnifiedPrice } = await import(
+        "../services/compiq/unifiedPricing.service.js"
+      );
+      const unified = await computeUnifiedPrice(id, {
+        hobbyiqCardId: (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null,
+      });
+      const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
+      for (const entry of gradeCurve.entries) {
+        const label =
+          entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
+            ? "Raw"
+            : `${entry.grader} ${entry.grade}`.trim();
+        const u = byLabel.get(label);
+        if (u && u.weightedMedian != null && u.sampleCount > 0) {
+          (entry as { value: number | null }).value = u.weightedMedian;
+          (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = u.weightedMedian;
+          (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = u.weightedMedian;
+          (entry as { sampleCount: number }).sampleCount = u.sampleCount;
+          if (u.predictedPrice != null) {
+            (entry as { predictedPriceAt30d: number | null }).predictedPriceAt30d = u.predictedPrice;
+          }
+          if (u.trendPctPerWeek != null) {
+            (entry as { predictedPricePct: number | null }).predictedPricePct = u.trendPctPerWeek;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "card_panel_unified_converge_error",
+        source: "compiq.card-panel",
+        cardId: id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
     void (async () => {
       try {
         console.log(JSON.stringify({
