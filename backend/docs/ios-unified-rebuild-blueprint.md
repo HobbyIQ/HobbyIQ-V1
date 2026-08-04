@@ -102,7 +102,87 @@ Replaces the current row rendering in `PortfolioInventoryCells`.
 
 ---
 
-## Design tokens — same as always
+## Cross-platform visual parity — web is the reference
+
+**Drew's ask: iOS and web should LOOK and FEEL the same.** The visual
+reference for every iOS component is the corresponding web view.
+Component-for-component parity across platforms:
+
+### Component ↔ Web reference
+
+| iOS Component | Web reference | Design contract |
+|---|---|---|
+| `MarketValueCard` | `apps/web/src/app/app/portfolio/[id]/page.tsx` hero block | Big MARKET VALUE + PREDICTED (7D) below + Range + Confidence pill + sparkline |
+| `GradeCurveView` | `apps/web/src/components/GradeCurveView.tsx` | 3-column: `[Grade label + n=52 + OBSERVED badge]` `[Market Value + trend %]` `[Sparkline]` `[Predicted + delta + range]`, confidence bar underneath |
+| `PortfolioSummaryCard` | `apps/web/src/app/app/portfolio/page.tsx` header | Total + observed / estimated split, gain/loss + return % |
+| `HoldingRowView` | Portfolio grid tile on web | Card art, title, grade chip, value right-aligned |
+
+### Tokens (already parity)
+
+Web `--color-*` CSS variables and iOS `HobbyIQTheme.Colors.*` map 1:1:
+
+| Concept | Web | iOS |
+|---|---|---|
+| Background | `--color-bg` | `Colors.appBackground` |
+| Card fill | `--color-card` | `Colors.cardNavy` |
+| Border | `--color-border` | `Colors.border` |
+| Accent | `--hiq-electric-blue` | `Colors.electricBlue` |
+| Up trend | `--hiq-hobby-green` | `Colors.hobbyGreen` |
+| Down trend | `--hiq-danger` | `Colors.danger` |
+| Muted text | `--hiq-muted-text` | `Colors.mutedText` |
+| Warning | `--hiq-warning` | `Colors.warning` |
+
+### Grade-Curve row exact layout (both platforms)
+
+```
+┌─────────┬───────────────┬──────────┬────────────────┐
+│ PSA 9   │ MARKET VALUE  │          │ PREDICTED (7D) │
+│ n=52    │ $2,596        │ ~ ~ ~    │ $2,743         │
+│[OBSVD]  │ ↑ 5.8%        │  spark   │ +6.5%          │
+│         │ p10 $1,750    │  line    │ range 2,350—   │
+│         │ p90 $3,101    │          │       2,759    │
+└─────────┴───────────────┴──────────┴────────────────┘
+│ Confidence [████████████████████████] 100%           │
+└──────────────────────────────────────────────────────┘
+```
+
+iOS translates this using `HStack` + `VStack` with `HobbyIQTheme.Spacing.medium`
+gutters. `hiqGroupCard()` container. Same font sizes:
+- Grade label: `Typography.cardTitle` (18pt semibold rounded)
+- Market/Predicted numbers: `Typography.statNumber` (30pt bold rounded)
+- Captions ("MARKET VALUE", "n=52", "p10"): `Typography.caption` (13pt)
+- Range detail: 10pt muted
+
+### Hero card exact layout (both platforms)
+
+```
+┌────────────────────────────────────────┐
+│  MARKET VALUE                          │
+│  $2,596                                │
+│  [OBSERVED · 100% confidence]          │
+│                                        │
+│  ~ ~ ~ ~ ~ ~ ~ ~ (30d sparkline)      │
+│                                        │
+│  PREDICTED (7D)                        │
+│  $2,743  ↑ 5.8%                        │
+│                                        │
+│  Range $2,350 – $2,759                 │
+└────────────────────────────────────────┘
+```
+
+iOS uses `Typography.hero` (40pt) for the market value number,
+`Typography.statSubtle` (15pt semibold) for the predicted number.
+Existing gradient overlay stays as-is.
+
+### Numbers convention (both platforms)
+
+- Whole dollars over $100 (no cents): `$2,596`
+- Cents for < $100: `$92.44`
+- Percent: `5.8%` (one decimal), `↑` up, `↓` down, no arrow when flat
+- All numeric text uses `tabular-nums` (web) / monospaced-digit (iOS)
+- `—` when truly no data (never for estimated — use `~$X` prefix)
+
+## Design tokens — same as always, all shipped
 
 - `HobbyIQTheme.Colors.electricBlue` — headline accent
 - `HobbyIQTheme.Colors.hobbyGreen` — up trend
@@ -114,9 +194,10 @@ Replaces the current row rendering in `PortfolioInventoryCells`.
 - `hiqCard()` — top-level detail tile
 - `hiqGroupCard()` — nested Grade Curve rows
 
-**No new tokens.** No new colors. No new fonts. The design language
-stays exactly as it is — the rebuild is about structural clarity and
-math correctness, not visual overhaul.
+**No new tokens.** No new colors. No new fonts. Web CSS variables and
+iOS theme constants map 1:1. The design language is already
+cross-platform — the rebuild is about structural clarity, matching
+web's information density, and math correctness. Not visual overhaul.
 
 ---
 
