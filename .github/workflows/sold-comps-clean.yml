@@ -1,0 +1,93 @@
+name: Sold Comps Cleaner
+
+# CF-SOLD-COMPS-CLEAN (Drew, 2026-08-03). Retroactive field
+# normalization + cross-source dedup on sold_comps. Two separate
+# scripts:
+#   - sold-comps-cleaner: normalizes playerName / parallel / grade /
+#     cardNumber in-place
+#   - sold-comps-cross-source-dedup: deletes duplicate rows that
+#     represent the same physical sale ingested from multiple vendors
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Which cleaner to run'
+        required: true
+        type: choice
+        options: ['normalize-fields', 'cross-source-dedup', 'both']
+        default: 'normalize-fields'
+      apply:
+        description: 'true to write / delete (else dry-run count)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+      source_filter:
+        description: 'Optional: only process c.source = X (normalize only)'
+        required: false
+        type: string
+        default: ''
+      sport_filter:
+        description: 'Optional: only process c.sport = X (normalize only)'
+        required: false
+        type: string
+        default: ''
+      max_minutes:
+        description: 'Wall-clock cap per script'
+        required: false
+        type: string
+        default: '50'
+
+jobs:
+  clean:
+    name: Sold comps clean
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Run cleaner
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          MODE="${{ inputs.mode || 'normalize-fields' }}"
+          if [ "$MODE" = "normalize-fields" ] || [ "$MODE" = "both" ]; then
+            echo "=== normalize-fields ==="
+            npm run build
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            COSMOS_DATABASE=hobbyiq \
+            APPLY="${{ inputs.apply || 'false' }}" \
+            MAX_MINUTES="${{ inputs.max_minutes || '50' }}" \
+            SOURCE_FILTER="${{ inputs.source_filter || '' }}" \
+            SPORT_FILTER="${{ inputs.sport_filter || '' }}" \
+            node scripts/sold-comps-cleaner.cjs
+          fi
+          if [ "$MODE" = "cross-source-dedup" ] || [ "$MODE" = "both" ]; then
+            echo "=== cross-source-dedup ==="
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            COSMOS_DATABASE=hobbyiq \
+            APPLY="${{ inputs.apply || 'false' }}" \
+            MAX_MINUTES="${{ inputs.max_minutes || '50' }}" \
+            node scripts/sold-comps-cross-source-dedup.cjs
+          fi
