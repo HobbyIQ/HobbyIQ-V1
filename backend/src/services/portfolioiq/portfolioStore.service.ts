@@ -2034,7 +2034,61 @@ async function autoPriceHolding(
   // already stopped its writer, so this read was dead-after-C2 (no
   // writer fed it → returned 0 → caught by the `fairValue <= 0`
   // short-circuit at the next line).
-  const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
+  let fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
+
+  // CF-OBSERVED-GRADE-CURVE-OVERRIDE (Drew, 2026-08-04). Portfolio
+  // holdings were reading FMV from the composite path, which uses
+  // strict slug matching and can return a lower baseline than the
+  // observed-grade-curve (which aggregates broader per-grade sales).
+  // Drew saw $1,925 composite vs $2,529 observed for the same PSA 9
+  // Ohtani. Fix: after computeEstimate, ALSO call buildObservedGradeCurve
+  // for the holding's cardId. If the matching grade entry is
+  // valueSource='observed' with a positive value, prefer THAT — that's
+  // the same number the card catalog page shows. Gated on flag so we
+  // can roll back if it disagrees badly.
+  if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
+      && holding.cardId
+      && (holding as any).gradeCompany
+      && (holding as any).gradeValue) {
+    try {
+      const { buildObservedGradeCurve } = await import("../compiq/observedGradeCurve.service.js");
+      const curve = await buildObservedGradeCurve(String(holding.cardId), {
+        playerName: (holding as any).playerName ?? null,
+        setName: (holding as any).setName ?? (holding as any).product ?? null,
+        sport: (holding as any).sport ?? null,
+      });
+      const targetCompany = String((holding as any).gradeCompany ?? "").trim().toUpperCase();
+      const targetValue = String((holding as any).gradeValue ?? "").trim();
+      // GradeCurveView labels: "PSA 10", "PSA 9", "BGS 9.5", "Raw", etc.
+      const targetLabel = `${targetCompany} ${targetValue}`;
+      const matched = (curve?.entries ?? []).find((e: any) =>
+        String(e?.label ?? "").toUpperCase() === targetLabel.toUpperCase() ||
+        (String(e?.company ?? "").toUpperCase() === targetCompany &&
+         String(e?.value ?? "") === targetValue),
+      );
+      if (matched && (matched as any).valueSource === "observed" && typeof (matched as any).value === "number" && (matched as any).value > 0) {
+        const overrideValue = Number((matched as any).value);
+        console.log(JSON.stringify({
+          event: "portfolio_observed_grade_override_applied",
+          source: "portfolioStore.autoPriceHolding",
+          userId, holdingId: holding.id, cardId: holding.cardId,
+          grade: targetLabel,
+          composite_fairValue: fairValue,
+          observed_override: overrideValue,
+          delta: overrideValue - fairValue,
+          sample_count: (matched as any).sampleCount ?? null,
+        }));
+        fairValue = overrideValue;
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "portfolio_observed_grade_override_error",
+        source: "portfolioStore.autoPriceHolding",
+        userId, holdingId: holding.id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail resolution.
   // Run when the holding is graded (gradeCompany + gradeValue present
