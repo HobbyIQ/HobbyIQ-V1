@@ -93,6 +93,14 @@ interface RawCompRow {
   contributorUserId?: string | null;
 }
 
+// CF-SELF-COMP-THIN-POOL (Drew, 2026-08-04). When the surviving pool
+// after excluding the user's own contributions has fewer than this many
+// other samples, we KEEP their self-comps — their own purchase IS the
+// market signal for a rare parallel (Victor Figueroa Red Ink SSP: 1
+// self-comp @ $278.60, 0 other comps). Filtering it out leaves nothing
+// and legacy engine's fuzzy fallback produces $1.89.
+const SELF_COMP_MIN_OTHER_SAMPLES = 3;
+
 async function queryComps(
   cont: Container,
   cardId: string,
@@ -109,19 +117,21 @@ async function queryComps(
   parts.push("(c.cardId = @cid" + (hobbyiqCardId ? " OR c.hobbyiqCardId = @hiq" : "") + ")");
   params.push({ name: "@cid", value: cardId });
   if (hobbyiqCardId) params.push({ name: "@hiq", value: hobbyiqCardId });
-  // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). See readCompsByCardId for
-  // the rule — a user's own eBay purchase must not feed their own pricing.
-  if (excludeContributorUserId) {
-    parts.push("(NOT IS_DEFINED(c.contributorUserId) OR c.contributorUserId != @excludeUid)");
-    params.push({ name: "@excludeUid", value: excludeContributorUserId });
-  }
 
   try {
     const { resources } = await cont.items.query<RawCompRow>({
       query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
-    return (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+    const clean = (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+    // Post-filter: exclude self-comps ONLY when the surviving other-pool
+    // is large enough to price on its own. See SELF_COMP_MIN_OTHER_SAMPLES.
+    if (excludeContributorUserId) {
+      const others = clean.filter((r) => r.contributorUserId !== excludeContributorUserId);
+      if (others.length >= SELF_COMP_MIN_OTHER_SAMPLES) return others;
+      // else: keep self-comps in — they carry the only market signal we have
+    }
+    return clean;
   } catch { return []; }
 }
 

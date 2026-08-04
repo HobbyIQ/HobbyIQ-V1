@@ -2065,28 +2065,49 @@ async function autoPriceHolding(
     trendPctPerWeek: number | null; trendDirection: string;
     windowDays: number;
   } | null = null;
+  // CF-UNIFIED-PRICING-HIQ-FALLBACK (Drew, 2026-08-04). Also fire when
+  // holding lacks a resolved cardId but HAS a canonical hobbyiqCardId
+  // slug. Rare-parallel eBay-auto imports (Victor Figueroa Black & White
+  // Red Ink SSP) land in `pending-review` with a hobbyiqCardId set but
+  // no vendor cardId — legacy engine's fuzzy fallback then produces
+  // wildly wrong numbers ($1.89 for a $278 card). Pass the hobbyiqCardId
+  // as both cardId + hobbyiqCardId to unifiedPricing so it can find
+  // seeded catalog / self-contributed comps.
+  const resolvedIdForPricing = holding.cardId
+    || (holding as any).hobbyiqCardId
+    || null;
   if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
-      && holding.cardId) {
+      && resolvedIdForPricing) {
     try {
       const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
       const gradeCoRaw = (holding as any).gradeCompany;
       const gradeValRaw = (holding as any).gradeValue;
       const gradeCo = gradeCoRaw ? String(gradeCoRaw).trim() : null;
       const gradeVal = typeof gradeValRaw === "number" ? gradeValRaw : (gradeValRaw ? Number(gradeValRaw) : null);
-      const unified = await computeUnifiedPrice(String(holding.cardId), {
+      const unified = await computeUnifiedPrice(String(resolvedIdForPricing), {
         hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
         grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
         // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Symmetric rule: a
         // user's OWN eBay purchase shouldn't feed their own pricing.
         // Fixes Bobby Witt Jr. BGS 9.5 case where the sole $1,260
         // ebay-user-purchase row made confidence stuck at ~0 forcing
-        // a fall-through to the Raw estimator ($902).
+        // a fall-through to the Raw estimator ($902). The service
+        // internally KEEPS self-comps when the surviving other-pool
+        // is < SELF_COMP_MIN_OTHER_SAMPLES — for a rare-parallel SSP
+        // where the user's own purchase IS the market, filtering them
+        // out leaves nothing (Victor Figueroa case).
         excludeContributorUserId: userId ?? null,
       });
-      // Prefer predictedPrice as fmv (golden rule: FMV = projected next
-      // sale from trend, NEVER a raw median). Fall back to weightedMedian
-      // when predicted couldn't compute (thin pool).
-      const chosen = unified.predictedPrice ?? unified.fmv;
+      // CF-PORTFOLIO-VALUE-IS-MARKET-NOT-PREDICTED (Drew, 2026-08-04).
+      // CURRENT VALUE in a portfolio position is the OBSERVED weighted
+      // median (what the card would actually sell for RIGHT NOW). The
+      // 7-day PREDICTED price is a forward projection — belongs on
+      // trend/action-plan surfaces, not the position mark itself.
+      // Prior code used predictedPrice first, which drifted portfolio
+      // value from what the Grade Curve shows as "MARKET VALUE" for the
+      // same card. Trader intuition: your book marks-to-market on last
+      // trade, not on tomorrow's forecast.
+      const chosen = unified.fmv ?? unified.predictedPrice;
       if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
         unifiedResult = {
           fmv: unified.fmv,

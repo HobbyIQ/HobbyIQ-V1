@@ -1297,8 +1297,13 @@ export async function readCompsByCardId(input: {
       });
     }
     if (typeof input.excludeContributorUserId === "string" && input.excludeContributorUserId.length > 0) {
+      // CF-SELF-COMP-THIN-POOL (Drew, 2026-08-04). Keep self-comps when
+      // the surviving other-pool is thin (< 3 samples) — for rare parallels
+      // the user's OWN purchase IS the market signal. Only strip them
+      // when the pool has enough independent samples to stand alone.
       const excludeId = input.excludeContributorUserId;
-      all = all.filter((d) => (d as { contributorUserId?: string }).contributorUserId !== excludeId);
+      const others = all.filter((d) => (d as { contributorUserId?: string }).contributorUserId !== excludeId);
+      if (others.length >= 3) all = others;
     }
     return all;
   } catch (err) {
