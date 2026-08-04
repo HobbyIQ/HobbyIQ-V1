@@ -331,9 +331,15 @@ export function AddCardModal({ onClose, onAdded }: Props) {
   );
 }
 
+// CF-INPUT-BRAND-FOCUS (Drew, 2026-08-04). Every input gets the same
+// subtle accent border at rest + stronger focus ring, so no one field
+// (like Notes) visually pops on active-state while others look flat.
 const inputCls =
-  "w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)] " +
-  "bg-[color:var(--color-bg)] border-[color:var(--color-border)] text-white disabled:opacity-50";
+  "w-full px-3 py-2 rounded-lg border text-sm outline-none transition-colors " +
+  "bg-[color:var(--color-bg)] border-[color:var(--color-border-soft)] text-white " +
+  "hover:border-[color:var(--color-accent)]/60 " +
+  "focus:border-[color:var(--color-accent)] focus:ring-2 focus:ring-[color:var(--color-accent)]/30 " +
+  "disabled:opacity-50";
 
 function FormField({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
