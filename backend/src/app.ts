@@ -59,6 +59,7 @@ import alertsAdvancedRoutes from "./routes/alerts.advanced.routes.js";
 import accountRoutes from "./routes/account.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+import catalogSearchRoutes from "./routes/catalogSearch.routes.js";
 // CF-SEARCH-ADMIN-ROUTES (2026-07-08, Drew): admin surface for the
 // Cosmos-backed alias store — add/correct/reload aliases without a
 // code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
@@ -249,6 +250,11 @@ app.use("/api/alerts/advanced", alertsAdvancedRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);
+// CF-CATALOG-FIRST-SEARCH (Drew, 2026-08-04). Direct card_catalog
+// search returning canonical entries + attached salesSummary. Callers
+// use this BEFORE hitting the vendor-fanout search for the "our data
+// first" experience.
+app.use("/api/catalog", catalogSearchRoutes);
 // CF-SEARCH-ADMIN (2026-07-08, Drew): mount admin surface after the
 // user-facing /api/search so path resolution can't shadow user routes.
 app.use("/api/admin", searchAdminRoutes);
