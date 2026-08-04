@@ -4261,6 +4261,54 @@ export async function addHolding(req: Request, res: Response) {
   // when identity is insufficient (iOS falls back to legacy tap).
   holding = withDerivedSlug(holding);
 
+  // CF-CATALOG-AUTO-SEED-ON-ADD (Drew, 2026-08-04). "When they add
+  // cards, they search within the catalog and then the comps fall
+  // into it too." — this is the seed step. Every add-card call routes
+  // through the catalog matcher with source="user-verified". If a
+  // canonical entry exists, the matcher returns "found" and we use
+  // its slug. If nothing matches, the matcher seeds a fresh row and
+  // returns "seeded". Either way the holding's cardId + hobbyiqCardId
+  // point at a canonical catalog row from that moment on.
+  //
+  // Wrapped in try/catch so a Cosmos hiccup can't block add-card.
+  // Silent-safe: on any failure the withDerivedSlug value is what
+  // sticks; user still gets their card added.
+  try {
+    if (holding.playerName && holding.cardYear && holding.cardNumber) {
+      const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+      const matchResult = await canonicalize({
+        sport: String(holding.sport ?? "baseball"),
+        year: holding.cardYear,
+        setName: String(holding.product ?? holding.setName ?? ""),
+        cardNumber: String(holding.cardNumber),
+        parallel: holding.parallel ?? null,
+        isAuto: holding.isAuto === true,
+        printRun: typeof holding.printRun === "number" ? holding.printRun : null,
+        player: holding.playerName,
+        source: "user-verified",
+      });
+      if (matchResult.found && matchResult.slug) {
+        (holding as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
+        if (!holding.cardId) (holding as { cardId?: string }).cardId = matchResult.slug;
+        console.log(JSON.stringify({
+          event: "catalog_auto_seed_on_add",
+          source: "portfolioStore.addHolding",
+          userId: auth.userId,
+          holdingId: holding.id,
+          slug: matchResult.slug,
+          matchedBy: matchResult.matchedBy,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "catalog_auto_seed_error",
+      source: "portfolioStore.addHolding",
+      userId: auth.userId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: gate must run AFTER
   // normalizeR1CardsightCardId (which can hoist cardId from
   // legacy field shapes) AND AFTER populateCardsightGradeId, so the
