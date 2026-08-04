@@ -19,7 +19,7 @@
  *     --year YYYY --sport baseball [--dry-run] [--auto-approve]
  */
 
-import { CosmosClient } from "@azure/cosmos";
+import { CosmosClient, type JSONObject } from "@azure/cosmos";
 import { createInterface } from "readline";
 import { canonicalizeParallelName } from "../src/services/catalog/catalogMatcher.service.js";
 import { computeHobbyIqCardId, normalizeSetKey, slugify } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
@@ -159,55 +159,123 @@ async function main(): Promise<void> {
   }
   if (args.dryRun) { console.log(`\n▸ DRY RUN — done.`); process.exit(0); }
 
-  console.log(`\n▸ Upserting (concurrency 32)...`);
+  // CF-CATALOG-FIRST speedup (Drew, 2026-08-04): switched from per-item
+  // upsert to Cosmos `container.items.bulk()` API. Batches 100 ops per
+  // HTTP round-trip and groups server-side by partition. Combined with
+  // 4-way parallel bulk() calls, throughput jumps from ~20/s per process
+  // to ~400-800/s per process. Same 429-retry-with-backoff pattern as
+  // referenceCatalog.repository.ts.
+  // CHUNK/PARALLEL_BULKS tuned to 50/2 after the 100/4 smoke-test threw
+  // batch-level 429s. The SDK throws on partition RU exhaustion (does
+  // NOT return per-op statuses like the referenceCatalog pattern). Fewer
+  // in-flight ops → fewer whole-batch throws. Retry logic below handles
+  // both per-op 429s AND whole-batch throws with exponential backoff.
+  const CHUNK = 50;
+  const PARALLEL_BULKS = 2;
+  const MAX_RETRIES = 12;
+  console.log(`\n▸ Upserting via bulk() (chunk ${CHUNK}, parallel ${PARALLEL_BULKS}, max ${MAX_RETRIES} retries)...`);
   const startedAt = Date.now();
   let upserted = 0, errors = 0;
   let done = 0;
   const all = [...tuples.values()];
   const total = all.length;
-  const CONCURRENCY = 32;
 
-  for (let i = 0; i < all.length; i += CONCURRENCY) {
-    const batch = all.slice(i, i + CONCURRENCY);
-    await Promise.all(batch.map(async (t) => {
-      const now = new Date().toISOString();
-      const doc: Record<string, unknown> = {
-        id: t.slug,
-        cardId: t.slug,
-        hobbyiqCardId: t.slug,
-        sport: t.sport,
-        year: t.year,
-        setKey: t.setKey,
-        setName: t.setName,
-        cardNumber: t.cardNumber,
-        parallel: t.parallel,
-        parallelSlug: t.parallelSlug,
-        isAuto: t.isAuto,
-        printRun: t.printRun,
-        playerName: t.playerName,
-        playerSlug: t.playerName ? slugify(t.playerName) : null,
-        source: "bulk-build-from-pool",
-        confidence: 0.9,
-        observedCompCount: t.compCount,
-        lastSeenAt: now,
-        searchText: [t.year, t.cardNumber, t.playerName ?? "", t.parallel].filter(Boolean).join(" ").toLowerCase(),
-        searchTokens: Array.from(new Set([
-          String(t.year),
-          t.cardNumber.toLowerCase(),
-          ...(t.playerName ? t.playerName.toLowerCase().split(/\s+/) : []),
-          ...t.parallel.toLowerCase().split(/\s+/).filter(Boolean),
-          ...t.setKey.split("-").filter(Boolean),
-        ])),
-      };
+  const buildDoc = (t: Tuple): JSONObject => {
+    const now = new Date().toISOString();
+    return {
+      id: t.slug,
+      cardId: t.slug,
+      hobbyiqCardId: t.slug,
+      sport: t.sport,
+      year: t.year,
+      setKey: t.setKey,
+      setName: t.setName,
+      cardNumber: t.cardNumber,
+      parallel: t.parallel,
+      parallelSlug: t.parallelSlug,
+      isAuto: t.isAuto,
+      printRun: t.printRun,
+      playerName: t.playerName,
+      playerSlug: t.playerName ? slugify(t.playerName) : null,
+      source: "bulk-build-from-pool",
+      confidence: 0.9,
+      observedCompCount: t.compCount,
+      lastSeenAt: now,
+      searchText: [t.year, t.cardNumber, t.playerName ?? "", t.parallel].filter(Boolean).join(" ").toLowerCase(),
+      searchTokens: Array.from(new Set([
+        String(t.year),
+        t.cardNumber.toLowerCase(),
+        ...(t.playerName ? t.playerName.toLowerCase().split(/\s+/) : []),
+        ...t.parallel.toLowerCase().split(/\s+/).filter(Boolean),
+        ...t.setKey.split("-").filter(Boolean),
+      ])),
+    } as JSONObject;
+  };
+
+  // Split the full list into chunks, then run PARALLEL_BULKS chunks at a time.
+  const chunks: Tuple[][] = [];
+  for (let i = 0; i < all.length; i += CHUNK) chunks.push(all.slice(i, i + CHUNK));
+
+  async function runChunk(chunk: Tuple[]): Promise<void> {
+    let pending: Tuple[] = chunk;
+    let attempt = 0;
+    while (pending.length > 0 && attempt <= MAX_RETRIES) {
+      const ops = pending.map((t) => ({
+        operationType: "Upsert" as const,
+        partitionKey: t.slug,
+        resourceBody: buildDoc(t),
+      }));
       try {
-        await cat.items.upsert(doc);
-        upserted++;
+        const results = await cat.items.bulk(ops);
+        const nextPending: Tuple[] = [];
+        let maxRetryAfterMs = 0;
+        for (let j = 0; j < results.length; j++) {
+          const r = results[j];
+          if (r.statusCode >= 200 && r.statusCode < 300) {
+            upserted++;
+            done++;
+          } else if (r.statusCode === 429) {
+            nextPending.push(pending[j]);
+            const ra = (r as { retryAfterMilliseconds?: number }).retryAfterMilliseconds;
+            if (typeof ra === "number" && ra > maxRetryAfterMs) maxRetryAfterMs = ra;
+          } else {
+            errors++;
+            done++;
+          }
+        }
+        pending = nextPending;
+        if (pending.length > 0) {
+          attempt++;
+          const wait = Math.max(maxRetryAfterMs, 100 * Math.pow(2, Math.min(attempt, 6)));
+          await new Promise((r) => setTimeout(r, wait));
+        }
       } catch (err) {
-        errors++;
-        if (errors < 5) console.warn(`\n  ! ${t.slug}: ${(err as Error).message}`);
+        // Cosmos JS SDK throws on batch-level 429 instead of returning
+        // per-op statuses. Detect + retry the same pending batch. Any
+        // other error → give up on this chunk.
+        const msg = (err as Error).message ?? "";
+        if (/request rate is too large/i.test(msg) && attempt < MAX_RETRIES) {
+          attempt++;
+          const wait = 200 * Math.pow(2, Math.min(attempt, 6));
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        errors += pending.length;
+        done += pending.length;
+        if (errors < 5) console.warn(`\n  ! bulk failed: ${msg}`);
+        return;
       }
-      done++;
-    }));
+    }
+    // Anything still pending after MAX_RETRIES gets marked failed.
+    if (pending.length > 0) {
+      errors += pending.length;
+      done += pending.length;
+    }
+  }
+
+  for (let i = 0; i < chunks.length; i += PARALLEL_BULKS) {
+    const batch = chunks.slice(i, i + PARALLEL_BULKS);
+    await Promise.all(batch.map(runChunk));
     const elapsedSec = (Date.now() - startedAt) / 1000;
     const rate = done / elapsedSec;
     const etaSec = rate > 0 ? Math.round((total - done) / rate) : 0;
