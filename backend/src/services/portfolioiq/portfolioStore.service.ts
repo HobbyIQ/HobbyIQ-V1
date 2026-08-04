@@ -2627,6 +2627,35 @@ async function autoPriceHolding(
     }
   }
 
+  // CF-UNIFIED-FINAL-AUTHORITY (Drew, 2026-08-04). Unified pricing runs
+  // first (line ~2054), but two later stages can overwrite its result:
+  // the graded-rail's "estimated" branch (line ~2490) and the our-pool
+  // pricer (line ~2613). Re-apply the unified override HERE so it's
+  // the final authority when it has confidence and a real market value.
+  //
+  // Rationale: unified pricing uses adaptive-window weighted-median with
+  // recency decay AND applies the current trend ratio (marketValue field).
+  // For hot markets (Ohtani PSA 9 up 20+%/month), unified's marketValue
+  // ($2,596) matches recent August clearing prices; our-pool's hobbyIqFmv
+  // walks a different ladder and can produce a stale number ($1,925 for
+  // the same holding). Both are valid pool queries but unified's math
+  // is what portfolio + Grade Curve now share.
+  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.fmv ?? unifiedResult.predictedPrice) !== null) {
+    const finalChosen = unifiedResult.marketValue ?? unifiedResult.fmv ?? unifiedResult.predictedPrice!;
+    if (finalChosen > 0 && unifiedResult.confidence >= 0.3) {
+      priceSurface = {
+        fairMarketValueOverride: finalChosen,
+        valuationStatus: "observed",
+        estimatedValue: null,
+        estimateLow: null,
+        estimateHigh: null,
+        estimateConfidence: null,
+        estimateBasis: `unified: window=${unifiedResult.windowDays}d median=$${unifiedResult.fmv?.toFixed(0) ?? "?"} marketValue=$${unifiedResult.marketValue?.toFixed(0) ?? "?"} predicted=$${unifiedResult.predictedPrice?.toFixed(0) ?? "?"} trend=${unifiedResult.trendDirection} ${unifiedResult.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk`,
+        isEstimate: false,
+      };
+    }
+  }
+
   // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18): identity
   // patch already computed above (hoisted to fire on both the success path
   // here AND the no-FMV early return). Spread is a no-op when the patch
