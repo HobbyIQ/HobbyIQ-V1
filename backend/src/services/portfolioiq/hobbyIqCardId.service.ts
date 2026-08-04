@@ -96,8 +96,14 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
   return [
     // Sapphire is a distinct product LINE, not a parallel. Must match
     // BEFORE the base bowman-chrome / topps-chrome patterns.
-    [/bowman-chrome-sapphire|bowman-sapphire/, "bowman-chrome-sapphire"],
-    [/topps-chrome-sapphire/, "topps-chrome-sapphire"],
+    // CF-CATALOG-SAPPHIRE-ORDER (Drew, 2026-08-04, per baseballcardpedia).
+    // Both "Chrome Sapphire" and "Sapphire Chrome" appear in vendor
+    // titles for the same product. Also "Bowman Draft Sapphire Chrome".
+    [/bowman-draft-(?:chrome-sapphire|sapphire-chrome)/, "bowman-draft-sapphire"],
+    [/bowman-(?:chrome-sapphire|sapphire-chrome|sapphire)/, "bowman-chrome-sapphire"],
+    [/topps-(?:chrome-sapphire|sapphire-chrome)/, "topps-chrome-sapphire"],
+    // Topps Chrome Update Sapphire — subset ordering variants.
+    [/topps-(?:chrome-update-sapphire|update-sapphire-chrome|sapphire-chrome-update)/, "topps-chrome-update-sapphire"],
     // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31). Bowman Chrome Draft
     // and Bowman Chrome are ONE market — buyers don't distinguish the
     // subset. Collapse both orderings ("Bowman Chrome Draft" or "Bowman
@@ -155,6 +161,23 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-heritage/, "topps-heritage"],
     [/topps-finest/, "topps-finest"],
     [/topps-pristine/, "topps-pristine"],
+    // CF-CATALOG-TRADED-TIFFANY (Drew, 2026-08-04, per baseball-almanac
+    // set list). Topps Traded ran annually 1974-2005 (rookies + midseason
+    // trades). Topps Tiffany (1984-1991) was the glossy premium print
+    // variant. Traded Tiffany combines both. Without these patterns,
+    // "Topps Traded" fell through to bare `topps`, collapsing Fred McGriff
+    // XRC and every Traded rookie into the flagship pool. Must match
+    // BEFORE bare `/topps/` catchall. Order: 3-word variants first.
+    [/topps-traded-tiffany/, "topps-traded-tiffany"],
+    [/topps-traded/, "topps-traded"],
+    [/topps-tiffany/, "topps-tiffany"],
+    // CF-CATALOG-UPDATE-TOTAL (Drew, 2026-08-04). Topps Update = successor
+    // to Traded (2006+). Topps Total ran 2002-2005 (990-card jumbo set).
+    [/topps-update-sapphire/, "topps-update-sapphire"],
+    [/topps-update/, "topps-update"],
+    [/topps-total/, "topps-total"],
+    [/topps-pro-debut/, "topps-pro-debut"],
+    [/o-pee-chee/, "o-pee-chee"],
     // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Full Topps taxonomy.
     [/topps-transcendent/, "topps-transcendent"],
     [/topps-dynasty/, "topps-dynasty"],
@@ -301,20 +324,82 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
  *  level without listing every product family.
  *
  *  Returns "topps" | "bowman" | "panini" | "upper-deck" | "fleer" |
- *  "pinnacle" | "goudey" | "flair" | "other".
+ *  "pinnacle" | "goudey" | "flair" | "opc" | "other".
  *
  *  Note: Bowman is manufactured by Topps Inc but marketed as its own
- *  brand — collectors treat them as separate. Keep them separate here. */
+ *  brand — collectors treat them as separate. Keep them separate here.
+ *  O-Pee-Chee is the Canadian licensee of Topps (French/English backs)
+ *  but has its own collector market — treat as its own brand. */
 export function deriveBrand(setKey: string): string {
   if (!setKey) return "other";
   if (setKey === "bowman" || setKey.startsWith("bowman-")) return "bowman";
   if (setKey === "topps" || setKey.startsWith("topps-")) return "topps";
+  if (setKey === "o-pee-chee") return "opc";
   if (setKey === "panini" || setKey.startsWith("panini-") || setKey === "national-treasures") return "panini";
   if (setKey === "upper-deck" || setKey.startsWith("upper-deck-") || setKey === "sp-authentic" || setKey === "sp-prospects") return "upper-deck";
   if (setKey === "fleer" || setKey.startsWith("fleer-") || setKey === "flair") return "fleer";
   if (setKey === "pinnacle" || setKey.startsWith("pinnacle-")) return "pinnacle";
   if (setKey === "goudey") return "goudey";
   return "other";
+}
+
+/** CF-CATALOG-PARENT-CHAIN (Drew, 2026-08-04). Returns the immediate
+ *  parent setKey — the base product this one is a variant or subset of.
+ *  Top-level products (topps, bowman) return null.
+ *
+ *  Chains (each row: setKey → parent):
+ *    topps-traded-tiffany → topps-traded
+ *    topps-traded         → topps
+ *    topps-tiffany        → topps
+ *    topps-update-sapphire → topps-update
+ *    topps-update         → topps
+ *    topps-chrome-sapphire → topps-chrome
+ *    topps-chrome-platinum → topps-chrome
+ *    topps-chrome-black    → topps-chrome
+ *    topps-chrome         → topps
+ *    bowman-chrome-sapphire → bowman-chrome
+ *    bowman-chrome        → bowman
+ *    bowman-draft-paper   → bowman-draft
+ *    bowman-draft         → bowman
+ *    every other topps-*  → topps
+ *    every other bowman-* → bowman
+ *    every panini-*       → panini
+ *
+ *  Callers use this for FMV fallback: if a Traded Tiffany card has thin
+ *  comps, walk up the chain to Traded, then to flagship Topps for a
+ *  wider comparison pool. Also useful for aggregation queries. */
+export function deriveParentSetKey(setKey: string): string | null {
+  if (!setKey) return null;
+  // Traded/Tiffany chain (Traded Tiffany is a variant of Traded).
+  if (setKey === "topps-traded-tiffany") return "topps-traded";
+  if (setKey === "topps-traded") return "topps";
+  if (setKey === "topps-tiffany") return "topps";
+  // Update chain.
+  if (setKey === "topps-update-sapphire") return "topps-update";
+  if (setKey === "topps-update") return "topps";
+  // Chrome variants under Topps Chrome.
+  if (setKey === "topps-chrome-sapphire") return "topps-chrome";
+  if (setKey === "topps-chrome-platinum") return "topps-chrome";
+  if (setKey === "topps-chrome-black") return "topps-chrome";
+  // Bowman Chrome variants.
+  if (setKey === "bowman-chrome-sapphire") return "bowman-chrome";
+  // Bowman Draft variants.
+  if (setKey === "bowman-draft-paper") return "bowman-draft";
+  if (setKey === "bowman-draft") return "bowman";
+  // Bowman paper.
+  if (setKey === "bowman-paper") return "bowman";
+  // Roots.
+  if (setKey === "topps" || setKey === "bowman" || setKey === "panini") return null;
+  if (setKey === "o-pee-chee") return null;
+  if (setKey === "upper-deck" || setKey === "fleer" || setKey === "pinnacle" || setKey === "goudey") return null;
+  // Fallback: strip last-segment for hyphenated topps-*/bowman-* → parent brand.
+  if (setKey.startsWith("topps-")) return "topps";
+  if (setKey.startsWith("bowman-")) return "bowman";
+  if (setKey.startsWith("panini-") || setKey === "national-treasures") return "panini";
+  if (setKey.startsWith("upper-deck-") || setKey === "sp-authentic" || setKey === "sp-prospects") return "upper-deck";
+  if (setKey.startsWith("fleer-") || setKey === "flair") return "fleer";
+  if (setKey.startsWith("pinnacle-")) return "pinnacle";
+  return null;
 }
 
 /** Normalize setKey — accepts either an already-normalized short form
