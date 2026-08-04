@@ -2059,12 +2059,10 @@ async function autoPriceHolding(
       });
       const targetCompany = String((holding as any).gradeCompany ?? "").trim().toUpperCase();
       const targetValue = String((holding as any).gradeValue ?? "").trim();
-      // GradeCurveView labels: "PSA 10", "PSA 9", "BGS 9.5", "Raw", etc.
-      const targetLabel = `${targetCompany} ${targetValue}`;
+      const targetGrade = `${targetCompany} ${targetValue}`;   // e.g. "PSA 9"
+      // ObservedGradeEntry uses `grade` (e.g., "PSA 10") + `grader` fields.
       const matched = (curve?.entries ?? []).find((e: any) =>
-        String(e?.label ?? "").toUpperCase() === targetLabel.toUpperCase() ||
-        (String(e?.company ?? "").toUpperCase() === targetCompany &&
-         String(e?.value ?? "") === targetValue),
+        String(e?.grade ?? "").toUpperCase() === targetGrade.toUpperCase(),
       );
       if (matched && (matched as any).valueSource === "observed" && typeof (matched as any).value === "number" && (matched as any).value > 0) {
         const overrideValue = Number((matched as any).value);
@@ -2072,7 +2070,7 @@ async function autoPriceHolding(
           event: "portfolio_observed_grade_override_applied",
           source: "portfolioStore.autoPriceHolding",
           userId, holdingId: holding.id, cardId: holding.cardId,
-          grade: targetLabel,
+          grade: targetGrade,
           composite_fairValue: fairValue,
           observed_override: overrideValue,
           delta: overrideValue - fairValue,
@@ -4018,6 +4016,16 @@ export async function addHolding(req: Request, res: Response) {
   });
 
   holding.lastUpdated = holding.lastUpdated ?? now;
+  // CF-ADD-CARD-VERIFIED (Drew, 2026-08-04). User manually adding a
+  // card via ADD CARD is a first-class identity confirmation — they
+  // typed the player, year, set, cardNumber, grade themselves. Stamp
+  // identityVerified so the "Unverified" filter/badge clears
+  // immediately (same treatment as review-queue Approve).
+  if (holding.cardId && (holding as any).identityVerified !== true) {
+    (holding as any).identityVerified = true;
+    (holding as any).identityVerifiedAt = now;
+    (holding as any).identityVerifiedBy = "add-card";
+  }
   doc.holdings[holding.id] = { ...doc.holdings[holding.id], ...holding };
 
   try {
