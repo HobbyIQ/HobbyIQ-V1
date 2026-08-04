@@ -1,0 +1,89 @@
+name: TCA Portfolio Priority Comp Pull
+
+# CF-PORTFOLIO-PRIORITY-PULL (Drew, 2026-08-04). Prioritize TCA
+# /sales quota on cards users actually own. Walks portfolios,
+# extracts (player, year) tuples, pulls TCA for each — all grades,
+# raw, all parallels. Runs at 00:00 UTC (right at quota reset) so
+# these targeted queries hit before the broad firehose burns the
+# remaining quota at 00:05 UTC.
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'true to write (else dry-run count)'
+        required: false
+        type: choice
+        options: ['false', 'true']
+        default: 'true'
+      max_minutes:
+        description: 'Wall-clock cap'
+        required: false
+        type: string
+        default: '15'
+      max_tuples:
+        description: 'Max (player,year) tuples to process'
+        required: false
+        type: string
+        default: '200'
+      max_pages_per_tuple:
+        description: 'Max /sales pages per tuple (each page=1000 rows)'
+        required: false
+        type: string
+        default: '3'
+      platforms:
+        description: 'Comma-separated TCA platforms'
+        required: false
+        type: string
+        default: 'eBay,TCGplayer'
+
+jobs:
+  pull:
+    name: Portfolio priority pull
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Run priority pull
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          TCA_API_KEY=$(az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query "[?name=='TCA_API_KEY'].value" -o tsv | tr -d '\r\n')
+          npm run build
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          TCA_API_KEY="$TCA_API_KEY" \
+          COSMOS_DATABASE=hobbyiq \
+          PERSIST_VENDOR_LOOKUPS_ENABLED=true \
+          COMPS_STAGING_SHIM_ENABLED=true \
+          TCA_CATALOG_FALLBACK_ENABLED=true \
+          PLAYER_FALLBACK_CARDNUMBER_ENABLED=true \
+          PERSIST_LLM_ENRICH_ENABLED=true \
+          PERSIST_LLM_BATCH_ENABLED=true \
+          LLM_MAX_INFLIGHT=20 \
+          APPLY="${{ inputs.apply || 'true' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || '15' }}" \
+          MAX_TUPLES="${{ inputs.max_tuples || '200' }}" \
+          MAX_PAGES_PER_TUPLE="${{ inputs.max_pages_per_tuple || '3' }}" \
+          PLATFORMS="${{ inputs.platforms || 'eBay,TCGplayer' }}" \
+          node scripts/portfolio-priority-comp-pull.cjs

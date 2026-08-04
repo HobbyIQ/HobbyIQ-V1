@@ -1366,12 +1366,42 @@ async function tryCompositePath(
   // axes (color / finish / edition / etc) widen if the tight pool is
   // thin. maxComps=MAX_POOL keeps the working pool small enough that
   // the median stays representative of THIS card, not the set cohort.
-  const neighbors = await findNeighborComps(container, filter, {
-    maxDistance: MAX_DIST,
-    minComps: MIN_COMPS,
-    maxComps: MAX_POOL,
-    recencyDays: input.maxAgeDays ?? 180,
-  });
+  //
+  // CF-ADAPTIVE-WINDOW (Drew, 2026-08-03). "Recency over past —
+  // small window on highly traded cards." Instead of always using
+  // 180d, start tight and widen only when the pool is thin.
+  // Highly-traded cards (Ohtani PSA 9, current-year rookies) run
+  // 30d = fresh median. Rare cards (BGS Black Label, /5 parallels)
+  // fall back to 180d so we don't starve.
+  const explicitWindow = input.maxAgeDays;
+  async function fetchAdaptive() {
+    if (explicitWindow) {
+      const n = await findNeighborComps(container, filter, {
+        maxDistance: MAX_DIST, minComps: MIN_COMPS, maxComps: MAX_POOL,
+        recencyDays: explicitWindow,
+      });
+      return { neighbors: n, windowDays: explicitWindow };
+    }
+    // Try 30d → 60d → 90d → 180d until we have enough comps at d=0
+    // (exact match on the anchor). Only widen when direct pool thin.
+    for (const days of [30, 60, 90, 180]) {
+      const n = await findNeighborComps(container, filter, {
+        maxDistance: MAX_DIST, minComps: MIN_COMPS, maxComps: MAX_POOL,
+        recencyDays: days,
+      });
+      const exact = n.filter((row) => row.distance === 0);
+      const usable = exact.length >= MIN_COMPS ? exact : n;
+      // Densely-traded threshold: >= 20 direct-match comps = enough
+      // depth in the shortest window to trust the current-market read.
+      // Below that, keep widening.
+      if (days === 30 && exact.length >= 20) return { neighbors: n, windowDays: 30 };
+      if (days === 60 && exact.length >= 15) return { neighbors: n, windowDays: 60 };
+      if (days === 90 && exact.length >= 10) return { neighbors: n, windowDays: 90 };
+      if (days === 180 && usable.length >= MIN_COMPS) return { neighbors: n, windowDays: 180 };
+    }
+    return { neighbors: [] as Awaited<ReturnType<typeof findNeighborComps>>, windowDays: 180 };
+  }
+  const { neighbors, windowDays } = await fetchAdaptive();
 
   if (neighbors.length < MIN_COMPS) {
     return null; // Fall through to legacy ladder
@@ -1478,7 +1508,7 @@ async function tryCompositePath(
       gradeQualifier: d.gradeQualifier ?? null,
     })),
     method: "composite-neighbor",
-    basisNote: `Composite path: ${workingDocs.length} neighbors [${distanceHint}] ${adjustmentHint}. Base projection $${baseFmv.toFixed(2)} → adjusted $${adjustedFmv.toFixed(2)}.`,
+    basisNote: `Composite path: ${workingDocs.length} neighbors [${distanceHint}] over ${windowDays}d ${adjustmentHint}. Base projection $${baseFmv.toFixed(2)} → adjusted $${adjustedFmv.toFixed(2)}.`,
     confidence,
     population: null,
     quality: { score: confidence, flaggedCompCount: 0, sources: Object.keys(bySource) },
