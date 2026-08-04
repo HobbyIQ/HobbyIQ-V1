@@ -2036,51 +2036,48 @@ async function autoPriceHolding(
   // short-circuit at the next line).
   let fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
 
-  // CF-OBSERVED-GRADE-CURVE-OVERRIDE (Drew, 2026-08-04). Portfolio
-  // holdings were reading FMV from the composite path, which uses
-  // strict slug matching and can return a lower baseline than the
-  // observed-grade-curve (which aggregates broader per-grade sales).
-  // Drew saw $1,925 composite vs $2,529 observed for the same PSA 9
-  // Ohtani. Fix: after computeEstimate, ALSO call buildObservedGradeCurve
-  // for the holding's cardId. If the matching grade entry is
-  // valueSource='observed' with a positive value, prefer THAT — that's
-  // the same number the card catalog page shows. Gated on flag so we
-  // can roll back if it disagrees badly.
+  // CF-CANONICAL-FMV-OVERRIDE (Drew, 2026-08-04). Directly call
+  // canonicalFmv and prefer its result over the composite/thin-data
+  // path when it returns a real number. canonicalFmv unions cross-
+  // vendor sales via the full pricing ladder (direct-comp →
+  // cross-parallel → neighbor-parallel → family/product-tier →
+  // tiered-momentum). If it finds a positive fmv with reasonable
+  // confidence, that's the truth — use it as fairValue. Fixes Drew's
+  // Ohtani showing $1,925 composite when direct-comp = $2,469.
+  let canonicalFmvResult: { fmv: number | null; method: string; confidence: number } | null = null;
   if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
-      && holding.cardId
-      && (holding as any).gradeCompany
-      && (holding as any).gradeValue) {
+      && holding.cardId) {
     try {
-      const { buildObservedGradeCurve } = await import("../compiq/observedGradeCurve.service.js");
-      const curve = await buildObservedGradeCurve(String(holding.cardId), {
-        playerName: (holding as any).playerName ?? null,
-        setName: (holding as any).setName ?? (holding as any).product ?? null,
+      const { computeCanonicalFmv } = await import("../compiq/canonicalFmv.service.js");
+      const canonical = await computeCanonicalFmv({
+        cardId: String(holding.cardId),
+        parallel: (holding as any).parallel ?? null,
+        gradeCompany: (holding as any).gradeCompany ?? null,
+        gradeValue: typeof (holding as any).gradeValue === "number" ? (holding as any).gradeValue : Number((holding as any).gradeValue) || null,
+        cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
+        product: (holding as any).setName ?? (holding as any).product ?? null,
+        player: (holding as any).playerName ?? null,
+        cardNumber: (holding as any).cardNumber ?? null,
+        isAuto: typeof (holding as any).isAuto === "boolean" ? (holding as any).isAuto : null,
         sport: (holding as any).sport ?? null,
       });
-      const targetCompany = String((holding as any).gradeCompany ?? "").trim().toUpperCase();
-      const targetValue = String((holding as any).gradeValue ?? "").trim();
-      const targetGrade = `${targetCompany} ${targetValue}`;   // e.g. "PSA 9"
-      // ObservedGradeEntry uses `grade` (e.g., "PSA 10") + `grader` fields.
-      const matched = (curve?.entries ?? []).find((e: any) =>
-        String(e?.grade ?? "").toUpperCase() === targetGrade.toUpperCase(),
-      );
-      if (matched && (matched as any).valueSource === "observed" && typeof (matched as any).value === "number" && (matched as any).value > 0) {
-        const overrideValue = Number((matched as any).value);
+      if (canonical.fmv !== null && canonical.fmv > 0 && canonical.confidence > 0.3) {
+        canonicalFmvResult = { fmv: canonical.fmv, method: canonical.method, confidence: canonical.confidence };
         console.log(JSON.stringify({
-          event: "portfolio_observed_grade_override_applied",
+          event: "portfolio_canonical_fmv_override_applied",
           source: "portfolioStore.autoPriceHolding",
           userId, holdingId: holding.id, cardId: holding.cardId,
-          grade: targetGrade,
-          composite_fairValue: fairValue,
-          observed_override: overrideValue,
-          delta: overrideValue - fairValue,
-          sample_count: (matched as any).sampleCount ?? null,
+          method: canonical.method,
+          confidence: canonical.confidence,
+          fair_value_before: fairValue,
+          canonical_override: canonical.fmv,
+          delta: canonical.fmv - fairValue,
         }));
-        fairValue = overrideValue;
+        fairValue = canonical.fmv;
       }
     } catch (err) {
       console.warn(JSON.stringify({
-        event: "portfolio_observed_grade_override_error",
+        event: "portfolio_canonical_fmv_override_error",
         source: "portfolioStore.autoPriceHolding",
         userId, holdingId: holding.id,
         error: (err as Error)?.message ?? String(err),
@@ -2446,6 +2443,20 @@ async function autoPriceHolding(
           isEstimate: false,
         }
   );
+
+  // CF-CANONICAL-FMV-FORCE-OBSERVED (Drew, 2026-08-04). When
+  // canonicalFmv returned a real value with confidence >= 0.3, force
+  // fairMarketValue to that value regardless of what the graded-rail
+  // decided. Prevents the "canonical returned $2,469 but graded-rail
+  // set fairMarketValue=null" hole Drew hit on Ohtani PSA 9. Only
+  // fires when the flag is on AND canonical succeeded.
+  if (canonicalFmvResult && canonicalFmvResult.fmv !== null && canonicalFmvResult.fmv > 0) {
+    resolved.fairMarketValueOverride = canonicalFmvResult.fmv;
+    (resolved as any).valuationStatus = "observed";
+    (resolved as any).isEstimate = false;
+    (resolved as any).estimatedValue = null;
+    (resolved as any).estimateBasis = `canonicalFmv ${canonicalFmvResult.method} confidence ${canonicalFmvResult.confidence.toFixed(2)}`;
+  }
 
   // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): when the engine
   // produced null/zero FMV AND we have a cardId, fall through
