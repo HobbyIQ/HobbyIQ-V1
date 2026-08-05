@@ -20,6 +20,7 @@ import {
   type SearchCandidate,
   type SearchResponse,
 } from "@/lib/api";
+import { CalendarInput } from "@/components/CalendarInput";
 
 const GRADE_COMPANIES = ["PSA", "BGS", "SGC", "CGC"];
 const GRADE_VALUES = [10, 9.5, 9, 8.5, 8, 7, 6, 5, 4, 3, 2, 1];
@@ -270,10 +271,9 @@ export function AddCardModal({ onClose, onAdded }: Props) {
                 />
               </FormField>
               <FormField label="Purchase date">
-                <input
-                  type="date"
+                <CalendarInput
                   value={purchaseDate}
-                  onChange={(e) => setPurchaseDate(e.target.value)}
+                  onChange={setPurchaseDate}
                   className={inputCls}
                 />
               </FormField>

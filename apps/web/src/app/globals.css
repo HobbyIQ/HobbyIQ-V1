@@ -448,3 +448,106 @@ body {
           mask-composite: exclude;
   pointer-events: none;
 }
+
+/* ─── Calendar picker (CF-CALENDAR-INPUT) ────────────────────
+ *
+ * Popover-style month calendar used by the purchase-date field on
+ * add / edit card modals. Design goal: feels like a real, tap-friendly
+ * calendar unfolding from the field, not the tiny OS date picker.
+ */
+.hiq-cal-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 300px;
+  padding: 12px;
+  background: var(--color-bg-card, #101b2d);
+  border: 1px solid var(--color-border, #22304a);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: var(--color-text, #e8eef6);
+  font: 14px/1.4 var(--hiq-font-rounded, system-ui);
+}
+.hiq-cal-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.hiq-cal-nav {
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text, #e8eef6);
+  font: 700 20px/1 var(--hiq-font-rounded, system-ui);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.hiq-cal-nav:hover { background: rgba(255, 255, 255, 0.06); }
+.hiq-cal-title {
+  text-align: center;
+  font: 600 14px/1 var(--hiq-font-rounded, system-ui);
+  letter-spacing: 0.02em;
+}
+.hiq-cal-weekgrid,
+.hiq-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.hiq-cal-weekhead {
+  text-align: center;
+  font: 600 10px var(--hiq-font-rounded, system-ui);
+  color: var(--color-muted, #8a97ab);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 0;
+}
+.hiq-cal-day {
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--color-text, #e8eef6);
+  font: 500 13px var(--hiq-font-rounded, system-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.hiq-cal-day:hover:not(:disabled) { background: rgba(30, 144, 255, 0.15); }
+.hiq-cal-day--dim { color: rgba(138, 151, 171, 0.55); }
+.hiq-cal-day--today {
+  outline: 1px solid var(--color-accent, #4a9eff);
+  outline-offset: -1px;
+}
+.hiq-cal-day--selected {
+  background: var(--color-accent, #4a9eff);
+  color: #0d1420;
+  font-weight: 600;
+}
+.hiq-cal-day--selected:hover:not(:disabled) { background: var(--color-accent, #4a9eff); }
+.hiq-cal-day--disabled { opacity: 0.3; cursor: not-allowed; }
+.hiq-cal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border, #22304a);
+}
+.hiq-cal-today-btn,
+.hiq-cal-clear-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-accent, #4a9eff);
+  font: 600 12px var(--hiq-font-rounded, system-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.hiq-cal-today-btn:hover,
+.hiq-cal-clear-btn:hover { background: rgba(74, 158, 255, 0.1); }
+.hiq-cal-clear-btn { color: var(--color-muted, #8a97ab); }

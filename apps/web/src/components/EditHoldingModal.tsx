@@ -11,6 +11,7 @@ import {
   type SearchCandidate,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
+import { CalendarInput } from "@/components/CalendarInput";
 
 interface Props {
   holding: PortfolioHolding;
@@ -600,10 +601,9 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
             />
           </Field>
           <Field label="Purchase date">
-            <input
-              type="date"
+            <CalendarInput
               value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
+              onChange={setPurchaseDate}
               className={inputCls}
             />
           </Field>
