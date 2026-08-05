@@ -127,13 +127,13 @@ export function LiveStatsStrip() {
   }, []);
 
   return (
-    <div className="hiq-card p-6 md:p-8">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-8">
-        <Metric value={formatCount(display.cardsWithSlug)} label="Unique cards" loading={!loaded} />
-        <Metric value={formatCount(display.productsIndexed ?? 0)} label="Products tracked" loading={!loaded} />
-        <Metric value={formatCount(display.soldCompsIndexed)} label="Sales indexed" loading={!loaded} />
-        <Metric value={String(display.categories)} label="Sports" loading={!loaded} />
-        <Metric value={String(display.dataSourceCount ?? 6)} label="Data sources" loading={!loaded} />
+    <div className="hiq-card p-6 md:p-10">
+      {/* CF-STATS-TWO (Drew, 2026-08-05). Two counters only — Sales Index
+          + Card Catalog. Products / Sports / Data sources removed per
+          user ask; less clutter, bigger numbers, more room to breathe. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-12">
+        <Metric value={formatCount(display.soldCompsIndexed)} label="Sales Index" loading={!loaded} />
+        <Metric value={formatCount(display.cardsWithSlug)} label="Card Catalog" loading={!loaded} />
       </div>
       <div className="mt-6 pt-6 border-t border-[color:var(--color-border)] flex items-center justify-center gap-3 text-xs text-[color:var(--color-muted)]">
         {isLive && (
@@ -152,11 +152,11 @@ function Metric({ value, label, loading }: { value: string; label: string; loadi
   return (
     <div className="text-center">
       <div
-        className={`hiq-count text-3xl md:text-4xl font-bold mb-1 transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
+        className={`hiq-count text-5xl md:text-7xl font-bold mb-2 tracking-tight transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
       >
         {value}
       </div>
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium">
+      <div className="text-sm uppercase tracking-[0.14em] text-[color:var(--color-muted)] font-semibold">
         {label}
       </div>
     </div>
