@@ -25,7 +25,7 @@ export default function LandingPage() {
           Multi-sport, full grade ladder, actionable sell/hold/list signals.
         </p>
         <div className="mt-10 flex items-center justify-center gap-4 flex-wrap">
-          <Link href="/login?signup=true" className="hiq-btn-primary">
+          <Link href="/register" className="hiq-btn-primary">
             Start free
           </Link>
           <Link href="/pricing" className="hiq-btn-secondary">
@@ -73,7 +73,7 @@ export default function LandingPage() {
           <WorkflowCard
             title="Search + price any card"
             body="Player name, cert number, or free text. Grade ladder, parallel picker, buy/hold/sell zones inline."
-            href="/login?signup=true"
+            href="/register"
             cta="Try search"
           />
           <WorkflowCard
@@ -121,7 +121,7 @@ export default function LandingPage() {
           Free plan gets you started. Upgrade any time.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <Link href="/login?signup=true" className="hiq-btn-primary">
+          <Link href="/register" className="hiq-btn-primary">
             Create free account
           </Link>
           <Link href="/pricing" className="hiq-btn-secondary">

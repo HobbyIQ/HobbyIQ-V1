@@ -33,7 +33,7 @@ export function PricingCheckoutButton({ plan, label, featured }: Props) {
       const e = err as { status?: number; message?: string };
       if (e.status === 401) {
         // Not signed in — route to signup carrying the plan choice
-        window.location.href = `/login?signup=true&plan=${encodeURIComponent(plan)}`;
+        window.location.href = `/register?plan=${encodeURIComponent(plan)}`;
         return;
       }
       if (e.status === 503) {

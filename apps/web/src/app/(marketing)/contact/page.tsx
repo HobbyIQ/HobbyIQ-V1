@@ -39,7 +39,7 @@ export default function ContactPage() {
         <p className="text-sm text-[color:var(--color-muted)] mb-4">
           Not ready to email? Start with the free plan.
         </p>
-        <Link href="/login?signup=true" className="hiq-btn-primary inline-block">
+        <Link href="/register" className="hiq-btn-primary inline-block">
           Create free account
         </Link>
       </div>

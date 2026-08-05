@@ -16,7 +16,7 @@ export function MarketingFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/login?signup=true" className="text-[color:var(--color-muted)] hover:text-white transition-colors">
+                <Link href="/register" className="text-[color:var(--color-muted)] hover:text-white transition-colors">
                   Get started
                 </Link>
               </li>

@@ -85,7 +85,7 @@ export default function AboutPage() {
       </div>
 
       <div className="mt-16 flex items-center gap-4 flex-wrap">
-        <Link href="/login?signup=true" className="hiq-btn-primary">
+        <Link href="/register" className="hiq-btn-primary">
           Create free account
         </Link>
         <Link href="/pricing" className="hiq-btn-secondary">

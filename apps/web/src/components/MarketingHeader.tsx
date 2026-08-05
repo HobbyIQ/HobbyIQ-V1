@@ -26,7 +26,7 @@ export function MarketingHeader() {
         >
           Sign in
         </Link>
-        <Link href="/login?signup=true" className="hiq-btn-primary text-sm">
+        <Link href="/register" className="hiq-btn-primary text-sm">
           Get started
         </Link>
       </div>

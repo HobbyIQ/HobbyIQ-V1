@@ -116,7 +116,7 @@ function LoginForm() {
           <>
             New to HobbyIQ?{" "}
             <Link
-              href="/login?signup=true"
+              href="/register"
               className="text-[color:var(--color-accent)] hover:underline"
             >
               Create an account
