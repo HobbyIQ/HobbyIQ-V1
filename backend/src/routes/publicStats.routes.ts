@@ -52,15 +52,22 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
     const cardCatalog = db.container("card_catalog");
 
     // Cross-partition COUNTs run in parallel — each is cheap on Cosmos
-    // via aggregate SQL. card_catalog contains the true unique-card
-    // count (pool-built rows, one per canonical identity).
+    // via aggregate SQL.
+    //
+    // CF-CARDSWITHSLUG-BROADEN (Drew, 2026-08-05). Now counts EVERY
+    // card_catalog row, not just pool-built + ingest-auto-seed. The
+    // filtered variant was under-reporting the true catalog depth by
+    // ~4.5x (786K of 3.53M rows visible). BCCP/CLC/TCDB product-page
+    // rows ARE canonical entries — they represent products we've
+    // scraped and structured for downstream matching. Landing page
+    // wants to show catalog breadth, not just the pool-verified slice.
     const [
       { resources: soldTotal },
       { resources: catalogTotal },
       { resources: productsTotal },
     ] = await Promise.all([
       soldComps.items.query({ query: "SELECT VALUE COUNT(1) FROM c" }).fetchAll(),
-      cardCatalog.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE c.source = 'bulk-build-from-pool' OR c.source = 'ingest-auto-seed'" }).fetchAll(),
+      cardCatalog.items.query({ query: "SELECT VALUE COUNT(1) FROM c" }).fetchAll(),
       cardCatalog.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE c.source = 'bccp-product-structure' OR c.source = 'clc-product-structure' OR c.source = 'tcdb-set-index'" }).fetchAll(),
     ]);
 
@@ -89,8 +96,8 @@ router.get("/public", async (_req: Request, res: Response) => {
   const payload: PublicStats = fresh ?? {
     // Fallback numbers — refreshed 2026-08-05 from live counts. Round
     // down slightly so we never overstate on Cosmos-unavailable.
-    soldCompsIndexed: 2_800_000,        // baseball alone is 2.85M as of 2026-08-05
-    cardsWithSlug: 550_000,             // 559K baseball pool rows in card_catalog
+    soldCompsIndexed: 3_800_000,        // ~3.88M sold_comps rows as of 2026-08-05
+    cardsWithSlug: 3_500_000,           // ~3.53M total card_catalog rows across all sources
     productsIndexed: 3_600,             // BCCP 3,075 + CLC 547 + TCDB (climbing)
     categories: 4,
     sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],

@@ -32,8 +32,8 @@ const RATE_MIN_MULT = 0.25;
 const RATE_MAX_MULT = 4.0;
 
 const FALLBACK: PublicStats = {
-  soldCompsIndexed: 2_800_000,
-  cardsWithSlug: 550_000,
+  soldCompsIndexed: 3_800_000,
+  cardsWithSlug: 3_500_000,
   productsIndexed: 3_600,
   categories: 4,
   sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
