@@ -6,6 +6,14 @@
 import SwiftUI
 
 struct MoreView: View {
+    // CF-MESSAGING-UNREAD-BADGE (2026-08-05). Poll /api/messages/unread-
+    // count every 60s (matches the web AppShell cadence) so the
+    // Messages row's badge stays fresh without a push channel.
+    // Refetches on-appear so freshly-opened tab is up-to-date without
+    // waiting for the timer.
+    @State private var unreadCount: Int = 0
+    @State private var unreadPollTask: Task<Void, Never>? = nil
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
@@ -20,6 +28,34 @@ struct MoreView: View {
         .navigationTitle("More")
         .navigationBarTitleDisplayMode(.inline)
         .accountToolbar()
+        .task { await refreshUnread() }
+        .onAppear { startUnreadPolling() }
+        .onDisappear { stopUnreadPolling() }
+    }
+
+    private func startUnreadPolling() {
+        stopUnreadPolling()
+        unreadPollTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
+                if Task.isCancelled { return }
+                await refreshUnread()
+            }
+        }
+    }
+
+    private func stopUnreadPolling() {
+        unreadPollTask?.cancel()
+        unreadPollTask = nil
+    }
+
+    private func refreshUnread() async {
+        do {
+            let n = try await APIService.shared.fetchMessageUnreadCount()
+            await MainActor.run { unreadCount = n }
+        } catch {
+            // Silent — keep the last known count. Same policy as web AppShell.
+        }
     }
 
     private var header: some View {
@@ -38,9 +74,14 @@ struct MoreView: View {
     private var linksSection: some View {
         VStack(spacing: 12) {
             // CF-MESSAGING iOS parity (2026-08-05). Buyer/seller chat +
-            // offers. Same /api/messages/* endpoints web uses.
+            // offers. Same /api/messages/* endpoints web uses. Badge
+            // count comes from the 60s poll above.
             NavigationLink { MessagesView() } label: {
-                MoreLinkRow(title: "Messages", subtitle: "Chats, offers, and completed sales")
+                MoreLinkRow(
+                    title: "Messages",
+                    subtitle: "Chats, offers, and completed sales",
+                    badgeCount: unreadCount
+                )
             }
             .buttonStyle(.plain)
 
@@ -125,6 +166,9 @@ struct MoreView: View {
 private struct MoreLinkRow: View {
     let title: String
     let subtitle: String
+    // Optional unread/notification badge shown before the chevron.
+    // 0 (default) hides it; 99+ caps.
+    var badgeCount: Int = 0
 
     var body: some View {
         HobbyIQSurfaceCard {
@@ -139,6 +183,16 @@ private struct MoreLinkRow: View {
                 }
 
                 Spacer()
+
+                if badgeCount > 0 {
+                    Text(badgeCount > 99 ? "99+" : String(badgeCount))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(HobbyIQTheme.Colors.electricBlue)
+                        .clipShape(Capsule(style: .continuous))
+                }
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
