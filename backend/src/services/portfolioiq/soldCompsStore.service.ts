@@ -395,6 +395,30 @@ const VINTAGE_BASEBALL_BRAND_CEILINGS: ReadonlyArray<{ pattern: RegExp; ceiling:
   { pattern: /\bupper\s+deck\b/,    ceiling: 1990 },
 ];
 
+/**
+ * CF-CARDNUMBER-TITLE-FALLBACK (Drew, 2026-08-05).
+ * Extract a card number from an eBay-style title as a last-resort
+ * when vendor feeds (CardHedge, Cardsight) leave cardNumber blank.
+ * Two patterns tried in order:
+ *   1. Prefixed:  "#CPA-EHA", "#136", "#BDC28", "No. 100"
+ *   2. Bare code: "CPA-EHA" (2-5 letters + dash + alphanumerics)
+ *                 or "BDC28" (2-5 letters + 2-5 digits)
+ * Matches the same regex the eBay title parser uses. Returns
+ * uppercase, or null if no plausible code is present.
+ */
+export function extractCardNumberFromTitle(title: string | null | undefined): string | null {
+  if (!title) return null;
+  const raw = title.trim();
+  if (!raw) return null;
+  const PREFIXED_RE = /(?:#|\bno\.\s*)([a-z]{0,4}-?\d{1,4}[a-z]?-?[a-z0-9]{0,6})/i;
+  const CODED_RE = /\b([A-Z]{2,5}(?:\d{2,5}|-[A-Z0-9]{1,10}))\b/i;
+  const prefixed = raw.match(PREFIXED_RE);
+  if (prefixed) return prefixed[1].toUpperCase();
+  const coded = raw.match(CODED_RE);
+  if (coded) return coded[1].toUpperCase();
+  return null;
+}
+
 export function inferSportFromContext(
   setName: string | null | undefined,
   title: string | null | undefined,
@@ -553,13 +577,25 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // primary identifier over time. Print run is extracted from the title
   // when a "/N" fragment is present (e.g. "Gold Refractor /50 Braves");
   // otherwise omitted from the slug.
+  //
+  // CF-CARDNUMBER-TITLE-FALLBACK (Drew, 2026-08-05). Vendor feeds
+  // (CardHedge, Cardsight) sometimes don't populate cardNumber for
+  // modern Bowman Chrome autos even when the title clearly contains
+  // the code (e.g. "CPA-EHA"). Without cardNumber the slug ends up
+  // malformed ("::" segment) and every downstream lookup misses. If
+  // input.cardNumber is empty, sniff the title for a known auto-code
+  // pattern and use it. Safe fallback: the same code appears in
+  // BCCP checklists, so the recovered slug lines up cleanly.
   const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
+    ? input.cardNumber.trim()
+    : extractCardNumberFromTitle(input.title);
   const hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
     ? computeHobbyIqCardId({
         sport: sportForSlug,
         year: input.cardYear,
         setKey: input.setName ?? "",
-        cardNumber: input.cardNumber ?? "",
+        cardNumber: cardNumberFinal ?? "",
         parallel: input.parallel ?? "Base",
         isAuto: input.isAuto ?? false,
         printRun: extractPrintRunFromTitle(input.title),
@@ -573,7 +609,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     cardYear: input.cardYear ?? null,
     setName: input.setName ?? null,
     parallel: input.parallel ?? null,
-    cardNumber: input.cardNumber ?? null,
+    cardNumber: cardNumberFinal ?? null,
     isAuto: input.isAuto ?? false,
     sport: input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear),
     gradeCompany: input.gradeCompany ?? null,
