@@ -177,11 +177,27 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
   const { catalog, soldComps } = conts;
 
   // Resolve variantSlug (== hobbyiqCardId for now) from the input.
+  //   1. Caller-provided hobbyiqCardId wins if present.
+  //   2. Otherwise try card_catalog by id/cardId/hobbyiqCardId — hits
+  //      slug or canonical rows.
+  //   3. Otherwise try sold_comps by cardId — catches Cardsight/vendor
+  //      IDs that the URL layer passes through. sold_comps stores both
+  //      cardId (vendor) and hobbyiqCardId, so one point lookup returns
+  //      the mapping.
   let variantSlug: string | null = input.hobbyiqCardId ?? null;
   if (!variantSlug) {
     try {
       const { resources } = await catalog.items.query<{ hobbyiqCardId?: string }>({
         query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.id = @id OR c.cardId = @id OR c.hobbyiqCardId = @id",
+        parameters: [{ name: "@id", value: input.cardIdOrSlug }],
+      }, { maxItemCount: 1 }).fetchAll();
+      variantSlug = resources[0]?.hobbyiqCardId ?? null;
+    } catch { /* try sold_comps next */ }
+  }
+  if (!variantSlug) {
+    try {
+      const { resources } = await soldComps.items.query<{ hobbyiqCardId?: string }>({
+        query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.cardId = @id AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null",
         parameters: [{ name: "@id", value: input.cardIdOrSlug }],
       }, { maxItemCount: 1 }).fetchAll();
       variantSlug = resources[0]?.hobbyiqCardId ?? null;
