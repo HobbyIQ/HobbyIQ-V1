@@ -248,6 +248,28 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // basketball's iconic debut product line (1986 Michael Jordan
     // Sticker #8) plus other sport/year Fleer sticker inserts.
     [/fleer-stickers?/, "fleer-stickers"],
+    // CF-VINTAGE-BRANDS (Drew, 2026-08-05). Vintage 90s-era brand lines
+    // that previously slugified with a year prefix ("1997 Skybox Metal
+    // Universe" → "1997-skybox-metal-universe") because no pattern
+    // caught them. Match on both prefix ("YYYY-brand") and bare brand.
+    // Fleer Metal Universe and Skybox Metal Universe are distinct
+    // products despite the shared "Metal Universe" name; keep them
+    // separate. Studio ran under Donruss from 1991-1998 — collapses
+    // to donruss-studio for pool unification.
+    [/(?:^|-)fleer-metal-universe/, "fleer-metal-universe"],
+    [/(?:^|-)skybox-metal-universe/, "skybox-metal-universe"],
+    [/(?:^|-)skybox-thunder/, "skybox-thunder"],
+    [/(?:^|-)skybox-premium/, "skybox-premium"],
+    [/(?:^|-)skybox-molten-metal/, "skybox-molten-metal"],
+    [/(?:^|-)skybox/, "skybox"],
+    [/(?:^|-)metal-universe/, "metal-universe"],
+    [/(?:^|-)donruss-studio|(?:^|-)studio/, "donruss-studio"],
+    [/(?:^|-)circa-thunder/, "circa-thunder"],
+    [/(?:^|-)score-select/, "score-select"],
+    [/(?:^|-)select-certified/, "score-select"],
+    [/(?:^|-)score/, "score"],
+    [/(?:^|-)leaf-limited/, "leaf-limited"],
+    [/(?:^|-)leaf/, "leaf"],
     [/fleer/, "fleer"],
   ];
 }
