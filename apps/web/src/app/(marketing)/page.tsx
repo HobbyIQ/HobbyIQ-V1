@@ -142,15 +142,10 @@ export default function LandingPage() {
   );
 }
 
-function FeatureCard({ iconPath, title, body }: { iconPath: string; title: string; body: string }) {
+function FeatureCard({ title, body }: { iconPath?: string; title: string; body: string }) {
   return (
-    <div className="hiq-card p-6">
-      <div className="mb-4">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--color-accent)" }}>
-          <path d={iconPath} />
-        </svg>
-      </div>
-      <h3 className="font-bold text-lg mb-2">{title}</h3>
+    <div className="hiq-card p-8 text-center">
+      <h3 className="font-bold text-2xl md:text-3xl mb-4">{title}</h3>
       <p className="text-sm text-[color:var(--color-muted)] leading-relaxed">{body}</p>
     </div>
   );
