@@ -28,6 +28,8 @@ interface DataQualityResponse {
     priceOutlier: number;
     malformedSlugs: number;
     unlinkedToTree: number;
+    structurallyBroken: number;   // no source OR no price OR no soldAt (bypasses every canonical guard)
+    structurallyBrokenLast24h: number;   // how many landed in the last day — regression alarm
   };
   flagsByReason: FlagStat[];
   perSource: Array<{ source: string; total: number; flagged: number; flaggedPct: number }>;
@@ -42,7 +44,7 @@ async function collect(): Promise<DataQualityResponse> {
   if (!conn) {
     return {
       now: now.toISOString(),
-      totals: { soldComps: 0, flaggedWrong: 0, flaggedWrongPct: 0, excludedFromFmv: 0, priceOutlier: 0, malformedSlugs: 0, unlinkedToTree: 0 },
+      totals: { soldComps: 0, flaggedWrong: 0, flaggedWrongPct: 0, excludedFromFmv: 0, priceOutlier: 0, malformedSlugs: 0, unlinkedToTree: 0, structurallyBroken: 0, structurallyBrokenLast24h: 0 },
       flagsByReason: [],
       perSource: [],
     };
@@ -55,13 +57,21 @@ async function collect(): Promise<DataQualityResponse> {
     return Number(resources[0] ?? 0);
   };
 
-  const [total, flaggedWrong, excludedFromFmv, priceOutlier, malformedSlugs, unlinkedToTree] = await Promise.all([
+  // CF-BROKEN-ROW-REGRESSION-ALARM (Drew, 2026-08-05). After the 1,964-row
+  // delete of misclassified Pokemon-as-hockey rows on 2026-08-05, watch
+  // for reccurrence. structurallyBroken = rows missing source OR price
+  // OR soldAt (bypassed every canonical guard). The _last24h variant
+  // is the regression alarm — should stay at zero.
+  const yesterdaySec = Math.floor((Date.now() - 24 * 3600_000) / 1000);
+  const [total, flaggedWrong, excludedFromFmv, priceOutlier, malformedSlugs, unlinkedToTree, structurallyBroken, structurallyBrokenLast24h] = await Promise.all([
     one("SELECT VALUE COUNT(1) FROM c"),
     one("SELECT VALUE COUNT(1) FROM c WHERE c.flaggedWrong = true"),
     one("SELECT VALUE COUNT(1) FROM c WHERE c.excludedFromFmv = true"),
     one("SELECT VALUE COUNT(1) FROM c WHERE c.__priceOutlier = true"),
     one(`SELECT VALUE COUNT(1) FROM c WHERE CONTAINS(c.hobbyiqCardId, "::")`),
     one("SELECT VALUE COUNT(1) FROM c WHERE NOT IS_DEFINED(c.cardTreeId)"),
+    one("SELECT VALUE COUNT(1) FROM c WHERE NOT IS_DEFINED(c.source) OR c.source = null OR NOT IS_DEFINED(c.price) OR c.price = null OR NOT IS_DEFINED(c.soldAt) OR c.soldAt = null"),
+    one(`SELECT VALUE COUNT(1) FROM c WHERE (NOT IS_DEFINED(c.source) OR c.source = null OR NOT IS_DEFINED(c.price) OR c.price = null OR NOT IS_DEFINED(c.soldAt) OR c.soldAt = null) AND c._ts > ${yesterdaySec}`),
   ]);
 
   // Group flag reasons — grouped in-memory to avoid the Cosmos GROUP-BY+ORDER-BY-agg limitation
@@ -98,6 +108,8 @@ async function collect(): Promise<DataQualityResponse> {
       priceOutlier,
       malformedSlugs,
       unlinkedToTree,
+      structurallyBroken,
+      structurallyBrokenLast24h,
     },
     flagsByReason,
     perSource,
