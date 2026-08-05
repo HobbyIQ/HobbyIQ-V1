@@ -210,6 +210,88 @@ export interface BuildTreeGradeCurveInput {
   hobbyiqCardId?: string | null;
 }
 
+// CF-ENRICH-HELPER (Drew, 2026-08-05). Shared enrichment used by BOTH
+// grade-curve endpoints (/card-panel wrapper AND /observed-grade-curve)
+// so the field-mapping logic doesn't drift between two copies. Mutates
+// the provided `entries` array in place: overwrites CH-derived rows
+// where a tree tier has real data, appends new rows for tree tiers the
+// CH curve didn't include. Recomputes and returns the new total sample
+// count so the header widget stays in sync.
+//
+// Returns null (and doesn't touch entries) when the tree has no data
+// for this card — CH values then flow through unmodified.
+export interface EnrichableEntry {
+  grader: string;
+  grade: number | string;
+  sampleCount: number;
+  weightedMedianPrice: number | null;
+  trendAdjustedValue: number | null;
+  predictedPriceAt30d: number | null;
+  predictedPricePct: number | null;
+  newestSaleDate: string | null;
+  value: number | null;
+  valueSource: string;
+  confidenceScore: number;
+  daysSinceNewestSale?: number | null;
+  estimatedMultiplier?: number | null;
+  estimatedFrom?: string | null;
+  predictedPriceRangeLow?: number | null;
+  predictedPriceRangeHigh?: number | null;
+  trendAdjustmentPct?: number | null;
+}
+
+export async function enrichEntriesWithTree(
+  entries: EnrichableEntry[],
+  input: BuildTreeGradeCurveInput,
+): Promise<{ totalSampleCount: number; tierCount: number } | null> {
+  const tree = await buildTreeGradeCurve(input);
+  if (!tree || tree.entries.length === 0) return null;
+  const labelOf = (e: EnrichableEntry): string =>
+    e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
+      ? "Raw" : `${e.grader} ${e.grade}`.trim();
+  const byLabel = new Map<string, EnrichableEntry>(entries.map((e) => [labelOf(e), e]));
+  for (const t of tree.entries) {
+    if (t.sampleCount === 0) continue;
+    const existing = byLabel.get(t.gradeLabel);
+    if (existing) {
+      existing.sampleCount = t.sampleCount;
+      existing.weightedMedianPrice = t.weightedMedian;
+      existing.trendAdjustedValue = t.marketValue;
+      existing.predictedPriceAt30d = t.predictedPrice;
+      existing.predictedPricePct = t.trendPctPerWeek;
+      existing.newestSaleDate = t.newestSaleAt;
+      existing.valueSource = "observed";
+      existing.confidenceScore = t.confidence;
+      existing.value = t.weightedMedian;
+      existing.trendAdjustmentPct = t.trendPctPerWeek;
+    } else {
+      entries.push({
+        grader: t.gradeCompany ?? "Raw",
+        grade: t.gradeValue ?? "Raw",
+        sampleCount: t.sampleCount,
+        weightedMedianPrice: t.weightedMedian,
+        trendAdjustedValue: t.marketValue,
+        predictedPriceAt30d: t.predictedPrice,
+        predictedPricePct: t.trendPctPerWeek,
+        newestSaleDate: t.newestSaleAt,
+        value: t.weightedMedian,
+        valueSource: "observed",
+        confidenceScore: t.confidence,
+        daysSinceNewestSale: t.newestSaleAt
+          ? Math.round((Date.now() - Date.parse(t.newestSaleAt)) / 86400_000)
+          : null,
+        estimatedMultiplier: null,
+        estimatedFrom: null,
+        predictedPriceRangeLow: null,
+        predictedPriceRangeHigh: null,
+        trendAdjustmentPct: t.trendPctPerWeek,
+      });
+    }
+  }
+  const totalSampleCount = entries.reduce((n, e) => n + (typeof e.sampleCount === "number" ? e.sampleCount : 0), 0);
+  return { totalSampleCount, tierCount: tree.entries.length };
+}
+
 export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Promise<TreeGradeCurveResult | null> {
   const conts = getContainers();
   if (!conts) return null;

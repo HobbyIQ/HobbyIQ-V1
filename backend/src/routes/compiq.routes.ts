@@ -3570,102 +3570,26 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       const { computeUnifiedPrice } = await import(
         "../services/compiq/unifiedPricing.service.js"
       );
-      // CF-GRADECURVE-HIQ-RESOLVE (Drew, 2026-08-05). Grade curve was
-      // showing N=0 for grades that had real sales because unified was
-      // called with only cardId — sales for the same card are stored
-      // under multiple cardIds (Cardsight base vs slug vs vendor-
-      // derived) and unified's query only unions when hobbyiqCardId is
-      // populated. Falls back to card_catalog lookup by id when
-      // identity metadata doesn't carry the slug. One catalog hit
-      // covers every sold_comp variant under the same canonical card.
-      let hiqSlug: string | null =
+      // Resolve hiqSlug from identity (unified pricing needs it to
+      // union sales across vendor cardIds). enrichEntriesWithTree
+      // does its own slug resolution downstream when needed.
+      const hiqSlug: string | null =
         (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null;
-      // CF-GRADECURVE-FROM-TREE (Drew, 2026-08-05). One catalog trip
-      // does two things: resolves hiqSlug when identity misses it,
-      // AND pulls the list of Grade nodes the tree knows about for
-      // this variant. If CH's observed sales returned N=0 for a tier
-      // that the tree KNOWS has real observed sales (materialized at
-      // tree-build time), we synthesize a gradeCurve entry so the UI
-      // renders it. The unified enrichment below then fills in the
-      // live prices from sold_comps.
-      const treeGrades: Array<{ label: string; company: string | null; value: number | null; observedAtBuild: number }> = [];
-      try {
-        const { CosmosClient } = await import("@azure/cosmos");
-        const conn = process.env.COSMOS_CONNECTION_STRING;
-        if (conn) {
-          const cat = new CosmosClient(conn)
-            .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-            .container("card_catalog");
-          if (!hiqSlug) {
-            const { resources } = await cat.items.query({
-              query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.id = @id OR c.cardId = @id OR c.hobbyiqCardId = @id",
-              parameters: [{ name: "@id", value: id }],
-            }, { maxItemCount: 1 }).fetchAll();
-            if (resources[0]?.hobbyiqCardId) hiqSlug = String(resources[0].hobbyiqCardId);
-          }
-          if (hiqSlug) {
-            const gradeQuery = await cat.items.query({
-              query: `SELECT c.gradeLabel, c.gradeCompany, c.gradeValue, c.observedSalesAtBuild
-                      FROM c WHERE c.kind = "grade" AND c.variantSlug = @slug`,
-              parameters: [{ name: "@slug", value: hiqSlug }],
-            }, { maxItemCount: 100 }).fetchAll();
-            for (const g of gradeQuery.resources as Array<{ gradeLabel?: string; gradeCompany?: string | null; gradeValue?: number | null; observedSalesAtBuild?: number }>) {
-              if (!g.gradeLabel) continue;
-              treeGrades.push({
-                label: g.gradeLabel,
-                company: g.gradeCompany ?? null,
-                value: g.gradeValue ?? null,
-                observedAtBuild: g.observedSalesAtBuild ?? 0,
-              });
-            }
-          }
-        }
-      } catch { /* silent — leave hiqSlug null; treeGrades empty */ }
-      const unified = await computeUnifiedPrice(id, {
-        hobbyiqCardId: hiqSlug,
-      });
-      const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
+      const unified = await computeUnifiedPrice(id, { hobbyiqCardId: hiqSlug });
 
-      // CF-TREE-PRICE-FIRST (Drew, 2026-08-05). If the tree has this
-      // card, build a tree-scoped grade curve where each Grade node
-      // is priced from sold_comps filtered by (variantSlug, gradeCompany,
-      // gradeValue). This finds per-tier data unified's global cascade
-      // misses when Cardsight/vendor IDs shard the sales pool. Merges
-      // into byLabel so the enrichment loop below picks up tree prices
-      // AND unified prices — tree wins when both exist because it's
-      // grade-scoped (tighter signal).
+      // Tree-scoped per-tier pricing wins over the CH-based curve when
+      // the tree has data for this card. Shared helper in
+      // treeGradeCurve.service.ts — used by both /card-panel and
+      // /observed-grade-curve endpoints so field mapping stays in sync.
       try {
-        const { buildTreeGradeCurve } = await import(
+        const { enrichEntriesWithTree } = await import(
           "../services/compiq/treeGradeCurve.service.js"
         );
-        const tree = await buildTreeGradeCurve({
-          cardIdOrSlug: id,
-          hobbyiqCardId: hiqSlug,
-        });
-        if (tree && tree.entries.length > 0) {
-          for (const t of tree.entries) {
-            if (t.sampleCount === 0) continue;
-            // Overwrite in byLabel — the tree-scoped signal beats unified's
-            // global cascade for per-grade accuracy.
-            byLabel.set(t.gradeLabel, {
-              grade: t.gradeLabel,
-              gradeCompany: t.gradeCompany,
-              gradeValue: t.gradeValue,
-              weightedMedian: t.weightedMedian,
-              plainMedian: t.weightedMedian,
-              sampleCount: t.sampleCount,
-              p10: null,
-              p90: null,
-              newestSaleDate: t.newestSaleAt,
-              valueSource: "observed" as const,
-              confidence: t.confidence,
-              marketValue: t.marketValue,
-              predictedPrice: t.predictedPrice,
-              trendPctPerWeek: t.trendPctPerWeek,
-              trendDirection: t.trendDirection,
-            });
-          }
-        }
+        const enriched = await enrichEntriesWithTree(
+          gradeCurve.entries as never,
+          { cardIdOrSlug: id, hobbyiqCardId: hiqSlug },
+        );
+        if (enriched) (gradeCurve as { totalSampleCount: number }).totalSampleCount = enriched.totalSampleCount;
       } catch (err) {
         console.warn(JSON.stringify({
           event: "tree_grade_curve_failed",
@@ -3674,28 +3598,7 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
           error: (err as Error)?.message ?? String(err),
         }));
       }
-      // Merge tree-known grades into the entries so labels the tree
-      // knows about always render, even when CH silently dropped them.
-      const existingLabels = new Set(gradeCurve.entries.map((e) => {
-        return e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
-          ? "Raw" : `${e.grader} ${e.grade}`.trim();
-      }));
-      for (const t of treeGrades) {
-        if (existingLabels.has(t.label)) continue;
-        (gradeCurve.entries as unknown as Array<Record<string, unknown>>).push({
-          grader: t.company ?? "Raw",
-          grade: t.value ?? "Raw",
-          value: null,
-          trendAdjustedValue: null,
-          weightedMedianPrice: null,
-          sampleCount: 0,
-          predictedPriceAt30d: null,
-          predictedPricePct: null,
-          confidence: 0,
-          valueSource: "tree" as const,
-          treeObservedAtBuild: t.observedAtBuild,
-        });
-      }
+      const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
       for (const entry of gradeCurve.entries) {
         const label =
           entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
@@ -4111,65 +4014,18 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       }
     })();
 
-    // CF-TREE-PRICE-FIRST (Drew, 2026-08-05). Mirror of the enrichment
-    // in /card-panel. Tree-scoped per-tier pricing wins over the CH-
-    // based curve when the tree has data for this card. Concrete
-    // symptom the /card-panel fix already resolved: PSA 9/10/8, BGS
-    // 9.5/9/10, SGC 10/9.5 etc. showed "Not enough sales" even when
-    // sold_comps had real recent transactions at those tiers.
+    // Tree-scoped per-tier pricing wins over the CH-based curve when
+    // the tree has data for this card. Shared enrichment helper — see
+    // treeGradeCurve.service.ts enrichEntriesWithTree for the mapping.
     try {
-      const { buildTreeGradeCurve } = await import(
+      const { enrichEntriesWithTree } = await import(
         "../services/compiq/treeGradeCurve.service.js"
       );
-      const tree = await buildTreeGradeCurve({ cardIdOrSlug: cardId.trim() });
-      if (tree && tree.entries.length > 0) {
-        const byLabel = new Map(curve.entries.map((e) => {
-          const label = e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
-            ? "Raw" : `${e.grader} ${e.grade}`.trim();
-          return [label, e];
-        }));
-        for (const t of tree.entries) {
-          if (t.sampleCount === 0) continue;
-          const existing = byLabel.get(t.gradeLabel);
-          if (existing) {
-            (existing as { sampleCount: number }).sampleCount = t.sampleCount;
-            (existing as { weightedMedianPrice: number | null }).weightedMedianPrice = t.weightedMedian;
-            (existing as { trendAdjustedValue: number | null }).trendAdjustedValue = t.marketValue;
-            (existing as { predictedPriceAt30d: number | null }).predictedPriceAt30d = t.predictedPrice;
-            (existing as { predictedPricePct: number | null }).predictedPricePct = t.trendPctPerWeek;
-            (existing as { newestSaleDate: string | null }).newestSaleDate = t.newestSaleAt;
-            (existing as { valueSource: string }).valueSource = "observed";
-            (existing as { confidenceScore: number }).confidenceScore = t.confidence;
-            (existing as { value: number | null }).value = t.weightedMedian;
-          } else {
-            (curve.entries as unknown as Array<Record<string, unknown>>).push({
-              grader: t.gradeCompany ?? "Raw",
-              grade: t.gradeValue ?? "Raw",
-              sampleCount: t.sampleCount,
-              weightedMedianPrice: t.weightedMedian,
-              trendAdjustedValue: t.marketValue,
-              predictedPriceAt30d: t.predictedPrice,
-              predictedPricePct: t.trendPctPerWeek,
-              newestSaleDate: t.newestSaleAt,
-              value: t.weightedMedian,
-              valueSource: "observed",
-              confidenceScore: t.confidence,
-              daysSinceNewestSale: t.newestSaleAt
-                ? Math.round((Date.now() - Date.parse(t.newestSaleAt)) / 86400_000)
-                : null,
-              estimatedMultiplier: null,
-              estimatedFrom: null,
-              predictedPriceRangeLow: null,
-              predictedPriceRangeHigh: null,
-              trendAdjustmentPct: t.trendPctPerWeek,
-            });
-          }
-        }
-        // Recompute totalSampleCount so header widget reflects the
-        // enriched grade curve, not just the CH-derived one.
-        (curve as { totalSampleCount: number }).totalSampleCount =
-          curve.entries.reduce((n, e) => n + (typeof e.sampleCount === "number" ? e.sampleCount : 0), 0);
-      }
+      const enriched = await enrichEntriesWithTree(
+        curve.entries as never,
+        { cardIdOrSlug: cardId.trim() },
+      );
+      if (enriched) (curve as { totalSampleCount: number }).totalSampleCount = enriched.totalSampleCount;
     } catch (err) {
       console.warn(JSON.stringify({
         event: "tree_grade_curve_enrichment_failed",
