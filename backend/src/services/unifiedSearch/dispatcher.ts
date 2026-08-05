@@ -472,9 +472,21 @@ async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> 
     // skipEnrichment=true: dispatcher only needs identity/candidate
     // data, not FMV per hit. Cuts each sport's search from ~2-7s to
     // ~200-500ms because we drop 20+ per-hit sold_comps queries.
+    //
+    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05). Per-sport timeout of
+    // 2.5s so a single slow sport can't block Promise.all. Bug: users
+    // saw 11-20s "Searching..." on common queries when one sport's
+    // Cosmos partition was cold. Each sport races its own timer; a
+    // timeout returns null (same as an error).
+    const PER_SPORT_TIMEOUT_MS = 2500;
+    const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
+      Promise.race([
+        p.catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), PER_SPORT_TIMEOUT_MS)),
+      ]);
     const results = await Promise.all(
       CATALOG_FIRST_SPORTS.map((sport) =>
-        canonicalCardSearch({ q: trimmed, sport, limit: 30, skipEnrichment: true }).catch(() => null),
+        withTimeout(canonicalCardSearch({ q: trimmed, sport, limit: 30, skipEnrichment: true })),
       ),
     );
     const allHits: CanonicalSearchHit[] = [];
