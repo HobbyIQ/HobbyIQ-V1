@@ -201,39 +201,34 @@ function classify(row: CatalogRow, index: BccpIndex): MatchResult {
   if (!products || products.length === 0) {
     return { matched: false, reason: `no-BCCP-product-for-setKey-${row.setKey}` };
   }
-  const product = products[0]; // pick first — refine later with cardNumber range matching if we need it
-  // 3. If parallel is "Base" or empty, this is a base card.
+  // 3. If parallel is "Base" or empty, this is a base card. Pick the
+  //    first product for productPage attribution.
   const parallelCanon = canonicalizeParallelName(row.parallel);
   if (!parallelCanon || parallelCanon.toLowerCase() === "base") {
     return {
       matched: true,
       matchedAs: "base",
-      productPage: product.page,
+      productPage: products[0].page,
       subsetName: null,
       subsetPrefix: null,
       parallelName: null,
       printRun: null,
     };
   }
-  // 4. Look up the parallel in the product's parallel list. Two-pass:
-  //    (a) canonicalizeParallelName strict equality (existing behavior)
-  //    (b) aggressive normalizeParallelForMatch — strips /N, (SP)/(HOB)/etc,
-  //        1-of-1 markers, and does word-bag sort so "Refractor Blue" ≡
-  //        "Blue Refractor". Restores ~15-20% of the 38% "not-in-BCCP" miss.
+  // 4. CF-MATCH-ALL-PRODUCTS (2026-08-05). Iterate EVERY product at this
+  //    setKey — not just products[0]. Multiple BCCP pages collapse to
+  //    the same setKey via product-family aliasing (e.g. Topps Chrome +
+  //    Topps Chrome Update both → topps-chrome). Previously we only
+  //    checked the first product, so ~14,500 pool rows with a plain
+  //    "Refractor" parallel that belonged to Chrome Update rather than
+  //    base Chrome were missing the match.
+  //    Two-pass per product: canonicalizeParallelName strict equality
+  //    first, aggressive normalizeParallelForMatch fallback second.
   const parallelCanonLower = parallelCanon.toLowerCase();
   const parallelAggressive = normalizeParallelForMatch(row.parallel);
-  for (const p of product.parallels) {
-    if (canonicalizeParallelName(p.name).toLowerCase() === parallelCanonLower) {
-      return {
-        matched: true, matchedAs: "parallel", productPage: product.page,
-        subsetName: null, subsetPrefix: null,
-        parallelName: p.name, printRun: p.printRun,
-      };
-    }
-  }
-  if (parallelAggressive) {
+  for (const product of products) {
     for (const p of product.parallels) {
-      if (normalizeParallelForMatch(p.name) === parallelAggressive) {
+      if (canonicalizeParallelName(p.name).toLowerCase() === parallelCanonLower) {
         return {
           matched: true, matchedAs: "parallel", productPage: product.page,
           subsetName: null, subsetPrefix: null,
@@ -242,12 +237,25 @@ function classify(row: CatalogRow, index: BccpIndex): MatchResult {
       }
     }
   }
+  if (parallelAggressive) {
+    for (const product of products) {
+      for (const p of product.parallels) {
+        if (normalizeParallelForMatch(p.name) === parallelAggressive) {
+          return {
+            matched: true, matchedAs: "parallel", productPage: product.page,
+            subsetName: null, subsetPrefix: null,
+            parallelName: p.name, printRun: p.printRun,
+          };
+        }
+      }
+    }
+  }
   // 5. Parallel not found in BCCP — still a parallel, but with no BCCP-verified name.
   return {
     matched: false,
     reason: `parallel-not-in-BCCP:${parallelCanon}`,
     matchedAs: "parallel-unverified",
-    productPage: product.page,
+    productPage: products[0].page,
   };
 }
 
