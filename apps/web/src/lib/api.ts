@@ -2766,7 +2766,8 @@ export async function addWatchlist(
 
 export interface PublicStats {
   soldCompsIndexed: number;
-  cardsWithSlug: number;
+  cardsWithSlug: number;               // unique canonical cards in card_catalog
+  productsIndexed?: number;            // distinct product structures (BCCP + CLC + TCDB) — added 2026-08-05
   categories: number;
   sportsCovered: string[];
   vendorsIngested: string[];

@@ -9,11 +9,12 @@ import { fetchPublicStats, type PublicStats } from "@/lib/api";
 // collapses.
 
 const FALLBACK: PublicStats = {
-  soldCompsIndexed: 2_400_000,
-  cardsWithSlug: 2_400_000,
+  soldCompsIndexed: 2_800_000,
+  cardsWithSlug: 550_000,
+  productsIndexed: 3_600,
   categories: 4,
   sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-  vendorsIngested: ["eBay", "PSA", "Partner data"],
+  vendorsIngested: ["CardHedge", "Cardsight", "eBay", "TCA", "baseballcardpedia", "checklistcenter"],
   generatedAt: new Date().toISOString(),
 };
 
@@ -40,18 +41,30 @@ export function LiveStatsStrip() {
 
   return (
     <div className="hiq-card p-6 md:p-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-8">
+        {/* CF-CATALOG-COUNTS (Drew, 2026-08-05). Lead with the two catalog
+            numbers that prove HobbyIQ has the deepest baseball card
+            knowledge on the internet: unique cards + distinct products. */}
+        <Metric
+          value={formatCount(stats.cardsWithSlug)}
+          label="Unique cards"
+          loading={!loaded}
+        />
+        <Metric
+          value={formatCount(stats.productsIndexed ?? 0)}
+          label="Products tracked"
+          loading={!loaded}
+        />
         <Metric
           value={formatCount(stats.soldCompsIndexed)}
           label="Sales indexed"
           loading={!loaded}
         />
         <Metric
-          value={formatCount(stats.cardsWithSlug)}
-          label="Canonical cards"
+          value={String(stats.categories)}
+          label="Sports"
           loading={!loaded}
         />
-        <Metric value={String(stats.categories)} label="Categories" loading={!loaded} />
         <Metric
           value={String(stats.vendorsIngested.length)}
           label="Data sources"

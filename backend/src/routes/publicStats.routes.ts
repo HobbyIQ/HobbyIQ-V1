@@ -14,7 +14,12 @@ const router = Router();
 
 interface PublicStats {
   soldCompsIndexed: number;
-  cardsWithSlug: number;
+  // CF-CATALOG-COUNTS (Drew, 2026-08-05). Reflects the true unique-
+  // card catalog (card_catalog container, pool-based rows). Was previously
+  // the sold_comps-with-slug count — misleading because it counted
+  // every transaction, not unique cards.
+  cardsWithSlug: number;             // unique canonical cards in card_catalog
+  productsIndexed: number;           // distinct product structures (BCCP + CLC + TCDB)
   categories: number;
   sportsCovered: string[];
   vendorsIngested: string[];
@@ -35,19 +40,28 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
     const client = new CosmosClient(conn);
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const soldComps = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
+    const cardCatalog = db.container("card_catalog");
 
-    // Cross-partition COUNT — cheap on Cosmos when using aggregate SQL.
-    const [{ resources: totalRes }, { resources: sluggedRes }] = await Promise.all([
+    // Cross-partition COUNTs run in parallel — each is cheap on Cosmos
+    // via aggregate SQL. card_catalog contains the true unique-card
+    // count (pool-built rows, one per canonical identity).
+    const [
+      { resources: soldTotal },
+      { resources: catalogTotal },
+      { resources: productsTotal },
+    ] = await Promise.all([
       soldComps.items.query({ query: "SELECT VALUE COUNT(1) FROM c" }).fetchAll(),
-      soldComps.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE STARTSWITH(c.hobbyiqCardId, 'hiq:')" }).fetchAll(),
+      cardCatalog.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE c.source = 'bulk-build-from-pool' OR c.source = 'ingest-auto-seed'" }).fetchAll(),
+      cardCatalog.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE c.source = 'bccp-product-structure' OR c.source = 'clc-product-structure' OR c.source = 'tcdb-set-index'" }).fetchAll(),
     ]);
 
     return {
-      soldCompsIndexed: Number(totalRes[0] ?? 0),
-      cardsWithSlug: Number(sluggedRes[0] ?? 0),
+      soldCompsIndexed: Number(soldTotal[0] ?? 0),
+      cardsWithSlug: Number(catalogTotal[0] ?? 0),
+      productsIndexed: Number(productsTotal[0] ?? 0),
       categories: 4,
       sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-      vendorsIngested: ["eBay", "PSA", "Partner data"],
+      vendorsIngested: ["CardHedge", "Cardsight", "eBay", "TCA", "baseballcardpedia", "checklistcenter"],
       generatedAt: new Date().toISOString(),
     };
   } catch {
@@ -64,14 +78,14 @@ router.get("/public", async (_req: Request, res: Response) => {
   }
   const fresh = await fetchLiveStats();
   const payload: PublicStats = fresh ?? {
-    // Fallback numbers — match the memory snapshot from
-    // project_hobbyiqcardid_backfilled + project_ch_ingest_multi_sport,
-    // rounded down so we never overstate on Cosmos-unavailable.
-    soldCompsIndexed: 2_400_000,
-    cardsWithSlug: 2_400_000,
+    // Fallback numbers — refreshed 2026-08-05 from live counts. Round
+    // down slightly so we never overstate on Cosmos-unavailable.
+    soldCompsIndexed: 2_800_000,        // baseball alone is 2.85M as of 2026-08-05
+    cardsWithSlug: 550_000,             // 559K baseball pool rows in card_catalog
+    productsIndexed: 3_600,             // BCCP 3,075 + CLC 547 + TCDB (climbing)
     categories: 4,
     sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-    vendorsIngested: ["CardHedge", "Cardsight", "eBay"],
+    vendorsIngested: ["CardHedge", "Cardsight", "eBay", "TCA", "baseballcardpedia", "checklistcenter"],
     generatedAt: new Date().toISOString(),
   };
   cache = { payload, expiresAt: now + TTL_MS };
