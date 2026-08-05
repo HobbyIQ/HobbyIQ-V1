@@ -2062,7 +2062,14 @@ async function autoPriceHolding(
           ? (holding as any).cardYear
           : null,
       });
-      const canonical = u.marketValue ?? u.fmv ?? u.predictedPrice;
+      // CF-FMV-IS-PROJECTED-NEXT-SALE (Drew, 2026-08-05). Grade-curve
+      // prediction wins over marketValue/fmv (both derived from
+      // medians). Per the golden rule: "FMV is the projected next sale
+      // from a comp pool's trend — NEVER a median or mean." The
+      // predictedPrice field is what the app should show as the
+      // headline market value on every holding. marketValue + fmv are
+      // fallbacks for when the pipeline can't produce a prediction.
+      const canonical = u.predictedPrice ?? u.marketValue ?? u.fmv;
       // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
       // the pool has >= 1 exact-cardId sample and a positive canonical
       // number — trust the pool over sibling rescue even when old.
@@ -2240,7 +2247,7 @@ async function autoPriceHolding(
       //
       // Fall-throughs: marketValue -> fmv -> predictedPrice. When the
       // pool is too thin for a trend signal, marketValue equals fmv.
-      const chosen = unified.marketValue ?? unified.fmv ?? unified.predictedPrice;
+      const chosen = unified.predictedPrice ?? unified.marketValue ?? unified.fmv;
       if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
         unifiedResult = {
           fmv: unified.fmv,
@@ -2798,8 +2805,8 @@ async function autoPriceHolding(
   // walks a different ladder and can produce a stale number ($1,925 for
   // the same holding). Both are valid pool queries but unified's math
   // is what portfolio + Grade Curve now share.
-  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.fmv ?? unifiedResult.predictedPrice) !== null) {
-    const finalChosen = unifiedResult.marketValue ?? unifiedResult.fmv ?? unifiedResult.predictedPrice!;
+  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv) !== null) {
+    const finalChosen = unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv!;
     if (finalChosen > 0 && unifiedResult.confidence >= 0.3) {
       priceSurface = {
         fairMarketValueOverride: finalChosen,
@@ -6975,7 +6982,7 @@ export async function repriceHoldingsForUser(
               ? (holding as any).cardYear
               : null,
           });
-          const bCanon = bU.marketValue ?? bU.fmv ?? bU.predictedPrice;
+          const bCanon = bU.predictedPrice ?? bU.marketValue ?? bU.fmv;
           // Cost-basis floor for batch reprice early-exit — same guard
           // as autoPriceHolding to catch slug-mismatch price drops.
           const bEarlyQty = Math.max(1, toNumber(holding.quantity, 1));
@@ -7099,7 +7106,7 @@ export async function repriceHoldingsForUser(
               grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
               excludeContributorUserId: userId ?? null,
             });
-            const bChosen = unified.marketValue ?? unified.fmv ?? unified.predictedPrice;
+            const bChosen = unified.predictedPrice ?? unified.marketValue ?? unified.fmv;
             if (bChosen !== null && bChosen > 0 && unified.confidence >= 0.3) {
               const uNow = new Date().toISOString();
               console.log(JSON.stringify({
