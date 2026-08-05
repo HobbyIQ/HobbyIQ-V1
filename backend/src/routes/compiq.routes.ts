@@ -3570,8 +3570,34 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       const { computeUnifiedPrice } = await import(
         "../services/compiq/unifiedPricing.service.js"
       );
+      // CF-GRADECURVE-HIQ-RESOLVE (Drew, 2026-08-05). Grade curve was
+      // showing N=0 for grades that had real sales because unified was
+      // called with only cardId — sales for the same card are stored
+      // under multiple cardIds (Cardsight base vs slug vs vendor-
+      // derived) and unified's query only unions when hobbyiqCardId is
+      // populated. Falls back to card_catalog lookup by id when
+      // identity metadata doesn't carry the slug. One catalog hit
+      // covers every sold_comp variant under the same canonical card.
+      let hiqSlug: string | null =
+        (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null;
+      if (!hiqSlug) {
+        try {
+          const { CosmosClient } = await import("@azure/cosmos");
+          const conn = process.env.COSMOS_CONNECTION_STRING;
+          if (conn) {
+            const cat = new CosmosClient(conn)
+              .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+              .container("card_catalog");
+            const { resources } = await cat.items.query({
+              query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.id = @id OR c.cardId = @id OR c.hobbyiqCardId = @id",
+              parameters: [{ name: "@id", value: id }],
+            }, { maxItemCount: 1 }).fetchAll();
+            if (resources[0]?.hobbyiqCardId) hiqSlug = String(resources[0].hobbyiqCardId);
+          }
+        } catch { /* leave hiqSlug null; unified falls back to cardId-only union */ }
+      }
       const unified = await computeUnifiedPrice(id, {
-        hobbyiqCardId: (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null,
+        hobbyiqCardId: hiqSlug,
       });
       const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
       for (const entry of gradeCurve.entries) {
