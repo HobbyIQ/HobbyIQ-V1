@@ -14,7 +14,7 @@ LOGDIR=/tmp/xlsx-match-$(date +%H%M%S)
 mkdir -p "$LOGDIR"
 XLSX_ROOT="${1:-c:/tmp/clc-xlsx-parsed}"
 
-years=$(ls "$XLSX_ROOT" 2>/dev/null | grep -E '^\d{4}$' | sort -r)
+years=$(ls "$XLSX_ROOT" 2>/dev/null | grep -E '^[0-9]{4}$' | sort -r)
 if [ -z "$years" ]; then echo "No xlsx-parsed years at $XLSX_ROOT"; exit 1; fi
 
 echo "==== xlsx identity match across $(echo $years | wc -w) years  $(date +%H:%M:%S) ===="
