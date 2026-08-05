@@ -41,13 +41,31 @@ struct CardSearchView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
-            Text("Card Search")
-                .font(HobbyIQTheme.Typography.title)
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            Text("Search by player, cert number, or card description.")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
+                Text("Card Search")
+                    .font(HobbyIQTheme.Typography.title)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text("Search by player, cert number, or card description.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 8)
+            // CF-CATALOG-BROWSE discovery (2026-08-05). Direct link into
+            // the BCCP product browser — parallels/inserts/autos by year.
+            NavigationLink { ProductBrowseView() } label: {
+                HStack(spacing: 4) {
+                    Text("Browse")
+                    Image(systemName: "chevron.right")
+                }
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
