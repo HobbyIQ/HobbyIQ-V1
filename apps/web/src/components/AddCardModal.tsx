@@ -78,8 +78,14 @@ export function AddCardModal({ onClose, onAdded }: Props) {
         cardNumber: selected.cardNumber ?? undefined,
         serialNumber: selected.serialNumber ?? undefined,
         isAuto: selected.isAuto,
-        gradeCompany: gradeCompany || null,
-        gradeValue: gradeValue ? Number(gradeValue) : null,
+        // CF-GRADE-PAIR (Drew, 2026-08-05). gradeCompany + gradeValue
+        // MUST land together or not at all — sending "PSA" without a
+        // number stored as `gradeValue: undefined` produces "PSA
+        // undefined" in every downstream renderer and confuses the
+        // grade-multiplier pricing. If either half is missing, both
+        // become null (holding treated as Raw for pricing).
+        gradeCompany: (gradeCompany && gradeValue) ? gradeCompany : null,
+        gradeValue: (gradeCompany && gradeValue) ? Number(gradeValue) : null,
         quantity,
         purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
         purchaseDate,
