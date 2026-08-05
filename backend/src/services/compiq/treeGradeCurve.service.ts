@@ -97,32 +97,71 @@ function plainMedian(rows: SaleRow[]): number | null {
   return s.length % 2 === 0 ? Math.round((s[mid - 1] + s[mid]) / 2 * 100) / 100 : s[mid];
 }
 
-function computeTrend(rows: SaleRow[], wMedian: number | null, nowMs: number): {
+function computeTrendWithBaseline(
+  selectedRows: SaleRow[],
+  priorMonthRows: SaleRow[],
+  wMedian: number | null,
+  nowMs: number,
+  selectedWindow: number,
+): {
   marketValue: number | null; predictedPrice: number | null;
   trendPctPerWeek: number | null; trendDirection: "up" | "down" | "flat";
 } {
-  if (wMedian === null || rows.length < 4) {
-    return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+  if (wMedian === null) {
+    return { marketValue: null, predictedPrice: null, trendPctPerWeek: null, trendDirection: "flat" };
   }
-  const cutoffMs = nowMs - 14 * 86400_000;
-  const recent = rows.filter((r) => Date.parse(r.soldAt) >= cutoffMs);
-  const prior = rows.filter((r) => Date.parse(r.soldAt) < cutoffMs);
-  if (recent.length < 2 || prior.length < 2) {
-    return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+
+  // Strategy A — narrow window (<=7d) uses "prior month" as baseline.
+  // Compare the tight window's median against the older-than-window
+  // portion of the 30d pool. Works even with 3-4 samples in the tight
+  // window, which is exactly when the wide-window 14d/14d split fails.
+  if (selectedWindow <= 7 && priorMonthRows.length >= 3) {
+    const cutoffMs = nowMs - selectedWindow * 86400_000;
+    const olderThanWindow = priorMonthRows.filter((r) => {
+      const t = Date.parse(r.soldAt);
+      return Number.isFinite(t) && t < cutoffMs;
+    });
+    if (olderThanWindow.length >= 2) {
+      const priorMed = weightedMedian(olderThanWindow, nowMs);
+      if (priorMed && priorMed > 0) {
+        const ratio = wMedian / priorMed;
+        const capped = Math.max(0.5, Math.min(1.5, ratio));
+        // For narrow windows: marketValue stays at wMedian (that IS the
+        // current clearing price). predictedPrice projects the trend
+        // forward 7 more days.
+        const predicted = Math.round(wMedian * capped * 100) / 100;
+        const pctPerWeek = Math.round((capped - 1) * 500) / 10;
+        const direction: "up" | "down" | "flat" =
+          Math.abs(pctPerWeek) < 1 ? "flat" : pctPerWeek > 0 ? "up" : "down";
+        return { marketValue: wMedian, predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
+      }
+    }
   }
-  const rMed = weightedMedian(recent, nowMs);
-  const pMed = weightedMedian(prior, nowMs);
-  if (!rMed || !pMed || pMed <= 0) {
-    return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+
+  // Strategy B — wider window (>=30d) does the classic 14d recent vs
+  // prior split within the window. Same math the original engine uses.
+  if (selectedRows.length >= 4) {
+    const cutoffMs = nowMs - 14 * 86400_000;
+    const recent = selectedRows.filter((r) => Date.parse(r.soldAt) >= cutoffMs);
+    const prior = selectedRows.filter((r) => Date.parse(r.soldAt) < cutoffMs);
+    if (recent.length >= 2 && prior.length >= 2) {
+      const rMed = weightedMedian(recent, nowMs);
+      const pMed = weightedMedian(prior, nowMs);
+      if (rMed && pMed && pMed > 0) {
+        const ratio = rMed / pMed;
+        const capped = Math.max(0.5, Math.min(1.5, ratio));
+        const marketValue = Math.round(wMedian * capped * 100) / 100;
+        const predicted = Math.round(wMedian * Math.pow(capped, 1.5) * 100) / 100;
+        const pctPerWeek = Math.round((capped - 1) * 500) / 10;
+        const direction: "up" | "down" | "flat" =
+          Math.abs(pctPerWeek) < 1 ? "flat" : pctPerWeek > 0 ? "up" : "down";
+        return { marketValue, predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
+      }
+    }
   }
-  const ratio = rMed / pMed;
-  const capped = Math.max(0.5, Math.min(1.5, ratio));
-  const marketValue = Math.round(wMedian * capped * 100) / 100;
-  const predicted = Math.round(wMedian * Math.pow(capped, 1.5) * 100) / 100;
-  const pctPerWeek = Math.round((capped - 1) * 500) / 10;
-  const direction: "up" | "down" | "flat" =
-    Math.abs(pctPerWeek) < 1 ? "flat" : pctPerWeek > 0 ? "up" : "down";
-  return { marketValue, predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
+
+  // Fallback — no trend signal. Both values reflect the current median.
+  return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
 }
 
 function confidenceFor(n: number, newestMs: number | null, nowMs: number): number {
@@ -230,18 +269,27 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
   for (const g of treeNodes) {
     let selectedRows: SaleRow[] = [];
     let selectedWindow = 180;
+    let priorMonthRows: SaleRow[] = [];
     for (const w of WINDOWS) {
       const rows = await fetchSalesForGrade(soldComps, variantSlug, g.gradeCompany, g.gradeValue, w);
       if (rows.length >= MIN_SAMPLES) {
         selectedRows = rows;
         selectedWindow = w;
+        // CF-7D-FORECAST-BASELINE (Drew, 2026-08-05). For narrow (<=30d)
+        // selected windows, fetch the 30d window separately so we have
+        // a "prior month" baseline for trend even when the selected
+        // window is too tight to split internally. Cheap query — same
+        // partition, wider cutoff.
+        if (w < 30) {
+          priorMonthRows = await fetchSalesForGrade(soldComps, variantSlug, g.gradeCompany, g.gradeValue, 30);
+        }
         break;
       }
       selectedRows = rows;
       selectedWindow = w;
     }
     const wMed = weightedMedian(selectedRows, nowMs);
-    const trend = computeTrend(selectedRows, wMed, nowMs);
+    const trend = computeTrendWithBaseline(selectedRows, priorMonthRows, wMed, nowMs, selectedWindow);
     const newestMs = selectedRows.reduce<number>((mx, r) => {
       const t = Date.parse(r.soldAt);
       return Number.isFinite(t) && t > mx ? t : mx;
