@@ -98,14 +98,46 @@ struct CardSearchView: View {
             }
 
             ForEach(candidates, id: \.stableId) { candidate in
-                NavigationLink {
-                    CertResolveView(candidate: candidate)
-                        .environmentObject(sessionViewModel)
-                } label: {
-                    candidateCard(candidate)
+                VStack(alignment: .trailing, spacing: 6) {
+                    NavigationLink {
+                        CertResolveView(candidate: candidate)
+                            .environmentObject(sessionViewModel)
+                    } label: {
+                        candidateCard(candidate)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens a comped pricing view for this card")
+
+                    // CF-CATALOG-FIRST drill-down (2026-08-04). When we
+                    // can derive a productKey from year+setName, offer
+                    // a secondary tap-target that pushes to the product
+                    // overview (parallels, inserts, autos, print runs).
+                    // Product page 404s gracefully if the BCCP scrape
+                    // hasn't imported this product yet.
+                    if let productKey = candidateProductKey(candidate) {
+                        NavigationLink {
+                            ProductOverviewView(
+                                productKey: productKey,
+                                seedProductName: candidate.setName,
+                                seedBrand: candidate.brand,
+                                seedYear: candidate.year.flatMap { Int($0) }
+                            )
+                            .environmentObject(sessionViewModel)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("Product family")
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens a comped pricing view for this card")
             }
         }
     }
@@ -214,6 +246,36 @@ struct CardSearchView: View {
                 }
             }
         }
+    }
+
+    // CF-CATALOG-FIRST — derive a productKey from year+setName so the
+    // "Product family" drill-down can hit
+    // /api/catalog/product-structure/:productKey. Slugification mirrors
+    // the web helper in apps/web/src/app/app/search/page.tsx. Returns
+    // nil when we don't have enough identity to route.
+    private func candidateProductKey(_ c: SearchCandidate) -> String? {
+        guard let year = c.year, !year.isEmpty else { return nil }
+        guard let setName = c.setName, !setName.isEmpty else { return nil }
+        let slug = setName
+            .lowercased()
+            .unicodeScalars
+            .map { CharacterSet.alphanumerics.contains($0) ? Character($0) : "-" }
+            .reduce(into: "") { $0.append($1) }
+        // Collapse runs of "-" and trim leading/trailing.
+        var collapsed = ""
+        var lastWasDash = false
+        for ch in slug {
+            if ch == "-" {
+                if !lastWasDash { collapsed.append(ch) }
+                lastWasDash = true
+            } else {
+                collapsed.append(ch)
+                lastWasDash = false
+            }
+        }
+        while collapsed.hasPrefix("-") { collapsed.removeFirst() }
+        while collapsed.hasSuffix("-") { collapsed.removeLast() }
+        return collapsed.isEmpty ? nil : "\(year)-\(collapsed)"
     }
 
     private func performSearch() async {

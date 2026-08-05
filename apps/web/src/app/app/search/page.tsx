@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   searchCards,
   candidateIdToCardsightId,
@@ -222,6 +223,17 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
   );
 }
 
+// CF-CATALOG-FIRST candidate → product-family drill-down (2026-08-04).
+// Derived client-side from year + setName. Product-overview page 404s
+// gracefully if the BCCP scrape hasn't imported this specific product
+// yet — no client validation needed.
+function candidateProductKey(c: SearchCandidate): string | null {
+  if (!c.year || !c.setName) return null;
+  const slug = c.setName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!slug) return null;
+  return `${c.year}-${slug}`;
+}
+
 function CandidateRow({
   c,
   onClick,
@@ -232,7 +244,9 @@ function CandidateRow({
   const meta = [c.year, c.setName ?? c.brand, c.cardNumber ? `#${c.cardNumber}` : null]
     .filter(Boolean)
     .join(" · ");
+  const productKey = candidateProductKey(c);
   return (
+    <div className="relative">
     <button
       onClick={onClick}
       className="w-full hiq-card p-4 flex items-center gap-4 text-left transition-colors hover:bg-white/[0.02]"
@@ -283,5 +297,17 @@ function CandidateRow({
         {c.attribution === "authoritative" ? "1.00" : c.confidence.toFixed(2)}
       </div>
     </button>
+    {productKey && (
+      <Link
+        href={`/app/product/${encodeURIComponent(productKey)}`}
+        className="absolute top-2 right-2 text-[10px] px-2 py-1 rounded-md font-medium hover:bg-white/[0.06]"
+        style={{ color: "var(--color-accent)", background: "color-mix(in oklab, var(--color-accent) 12%, transparent)" }}
+        onClick={(e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation()}
+        title="View product family (parallels, inserts, autos)"
+      >
+        Product family →
+      </Link>
+    )}
+    </div>
   );
 }
