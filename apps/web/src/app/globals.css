@@ -316,6 +316,95 @@ body {
   background: rgba(124,255,114,0.16);
 }
 
+/* ─── Landing hero: logo + eyebrow pill + live ticker ────
+ *
+ * Drew, 2026-08-05. Logo drops in above the pill; pill upgraded from
+ * a flat colored capsule to a subtle gradient-border + inner-glow
+ * treatment with a pulsing dot. Live ticker uses `.hiq-live-dot` +
+ * `.hiq-count` (tabular numerics, no layout jitter as digits change).
+ */
+
+.hiq-hero-logo {
+  /* Subtle glow behind the mark so the wordmark reads on the dark hero
+     background without needing a light backdrop. */
+  filter: drop-shadow(0 6px 14px rgba(30, 144, 255, 0.32));
+}
+
+.hiq-eyebrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 12px;
+  border-radius: 999px;
+  font: 600 12px var(--hiq-font-rounded);
+  letter-spacing: 0.02em;
+  color: var(--hiq-hobby-green);
+  background:
+    linear-gradient(var(--hiq-card-navy), var(--hiq-card-navy)) padding-box,
+    var(--hiq-brand-gradient) border-box;
+  border: 1.5px solid transparent;
+  box-shadow:
+    0 0 0 1px rgba(124, 255, 114, 0.08),
+    0 4px 12px rgba(124, 255, 114, 0.18),
+    0 0 22px rgba(30, 144, 255, 0.22);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.hiq-eyebrow-pill:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(124, 255, 114, 0.14),
+    0 6px 18px rgba(124, 255, 114, 0.28),
+    0 0 32px rgba(30, 144, 255, 0.32);
+}
+.hiq-eyebrow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--hiq-hobby-green);
+  box-shadow: 0 0 0 4px rgba(124, 255, 114, 0.18);
+  animation: hiq-pulse 1.8s ease-in-out infinite;
+}
+.hiq-eyebrow-text { white-space: nowrap; }
+
+@keyframes hiq-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(124, 255, 114, 0.18); }
+  50%      { box-shadow: 0 0 0 8px rgba(124, 255, 114, 0.06); }
+}
+
+/* Live-data indicator used on the stats strip footer. */
+.hiq-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 700 10px var(--hiq-font-rounded);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hiq-hobby-green);
+  background: rgba(124, 255, 114, 0.10);
+  border: 1px solid rgba(124, 255, 114, 0.28);
+}
+.hiq-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hiq-hobby-green);
+  box-shadow: 0 0 6px rgba(124, 255, 114, 0.9);
+  animation: hiq-pulse-tight 1.4s ease-in-out infinite;
+}
+@keyframes hiq-pulse-tight {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* Tabular numerics + a soft flash when a digit changes. Applied to
+   the counter <span> in LiveStatsStrip. */
+.hiq-count {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
 /* ─── Sparkline ─────────────────────────────────────────── */
 
 .hiq-sparkline-track {

@@ -5,16 +5,24 @@ export default function LandingPage() {
   return (
     <main className="w-full">
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-16 md:pt-24 pb-14 text-center">
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-8"
-          style={{
-            background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
-            color: "var(--color-accent)",
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-accent)" }} />
-          Empirical FMV · updated daily
+      <section className="max-w-5xl mx-auto px-6 pt-14 md:pt-20 pb-14 text-center">
+        {/* Logo lockup — sits above the eyebrow pill and the headline
+            so the brand is the first thing a first-time visitor sees. */}
+        <div className="flex justify-center mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hobbyiq-logo.png"
+            alt="HobbyIQ"
+            className="hiq-hero-logo h-16 md:h-20 w-auto object-contain select-none"
+            draggable={false}
+          />
+        </div>
+        {/* Eyebrow pill — gradient border + soft glow + pulsing dot.
+            CSS lives in globals.css (`.hiq-eyebrow-pill`). Kept as one
+            element so hover/focus animates the whole capsule. */}
+        <div className="hiq-eyebrow-pill mb-8">
+          <span className="hiq-eyebrow-dot" aria-hidden />
+          <span className="hiq-eyebrow-text">Empirical FMV · updated daily</span>
         </div>
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight max-w-3xl mx-auto">
           The card market,{" "}
@@ -78,7 +86,7 @@ export default function LandingPage() {
           />
           <WorkflowCard
             title="Portfolio tracking"
-            body="Real-time value, gain/loss, top movers. Import from eBay purchases or add manually."
+            body="Real-time value, gain/loss, top movers. Import via CSV or add cards manually."
             href="/pricing"
             cta="See plans"
           />

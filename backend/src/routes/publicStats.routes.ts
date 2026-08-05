@@ -19,10 +19,13 @@ interface PublicStats {
   // the sold_comps-with-slug count — misleading because it counted
   // every transaction, not unique cards.
   cardsWithSlug: number;             // unique canonical cards in card_catalog
-  productsIndexed: number;           // distinct product structures (BCCP + CLC + TCDB)
+  productsIndexed: number;           // distinct product structures
   categories: number;
   sportsCovered: string[];
-  vendorsIngested: string[];
+  // CF-NO-VENDOR-LEAK (Drew, 2026-08-05). NEVER expose data-source
+  // names on the public API — that gives away our moat. Only count
+  // is safe. The old vendorsIngested array field is removed.
+  dataSourceCount: number;
   generatedAt: string;
 }
 
@@ -31,7 +34,13 @@ interface Cache {
   expiresAt: number;
 }
 let cache: Cache | null = null;
-const TTL_MS = 15 * 60 * 1000;
+// CF-LIVE-STATS (Drew, 2026-08-05). Cache dropped from 15min → 15s so
+// the landing-page LiveStatsStrip's ~20s poll cadence sees real growth
+// deltas. Cross-partition COUNT(*) on Cosmos ~200-400 RU per counter;
+// aggregate cost with a 15s cache is negligible even at spiky launch
+// traffic. Response also carries `Cache-Control: max-age=15` so shared
+// caches / CDNs stay in step.
+const TTL_MS = 15 * 1000;
 
 async function fetchLiveStats(): Promise<PublicStats | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -61,7 +70,7 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
       productsIndexed: Number(productsTotal[0] ?? 0),
       categories: 4,
       sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-      vendorsIngested: ["CardHedge", "Cardsight", "eBay", "TCA", "baseballcardpedia", "checklistcenter"],
+      dataSourceCount: 6,
       generatedAt: new Date().toISOString(),
     };
   } catch {
@@ -72,7 +81,7 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
 router.get("/public", async (_req: Request, res: Response) => {
   const now = Date.now();
   if (cache && cache.expiresAt > now) {
-    res.set("Cache-Control", "public, max-age=300");
+    res.set("Cache-Control", "public, max-age=15");
     res.json(cache.payload);
     return;
   }
@@ -85,11 +94,11 @@ router.get("/public", async (_req: Request, res: Response) => {
     productsIndexed: 3_600,             // BCCP 3,075 + CLC 547 + TCDB (climbing)
     categories: 4,
     sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-    vendorsIngested: ["CardHedge", "Cardsight", "eBay", "TCA", "baseballcardpedia", "checklistcenter"],
+    dataSourceCount: 6,
     generatedAt: new Date().toISOString(),
   };
   cache = { payload, expiresAt: now + TTL_MS };
-  res.set("Cache-Control", "public, max-age=300");
+  res.set("Cache-Control", "public, max-age=15");
   res.json(payload);
 });
 

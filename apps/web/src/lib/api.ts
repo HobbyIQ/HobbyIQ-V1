@@ -597,7 +597,7 @@ export async function searchCards(input: string, hint?: "cert" | "freetext"): Pr
 
 // CF-CATALOG-FIRST product structure (Drew, 2026-08-04). Shared shape
 // with iOS (see ProductOverviewModels.swift) — keep field names 1:1.
-// Backed by baseballcardpedia scrape imported into card_catalog.
+// Backed by the canonical card_catalog container.
 export interface ProductParallel {
   section: string;
   name: string;
@@ -2767,10 +2767,13 @@ export async function addWatchlist(
 export interface PublicStats {
   soldCompsIndexed: number;
   cardsWithSlug: number;               // unique canonical cards in card_catalog
-  productsIndexed?: number;            // distinct product structures (BCCP + CLC + TCDB) — added 2026-08-05
+  productsIndexed?: number;            // distinct product structures — added 2026-08-05
   categories: number;
   sportsCovered: string[];
-  vendorsIngested: string[];
+  // CF-NO-VENDOR-LEAK (Drew, 2026-08-05). Vendor-name array removed — only
+  // the aggregate count crosses the network. If the backend hasn't rolled
+  // yet the field will be missing, hence optional.
+  dataSourceCount?: number;
   generatedAt: string;
 }
 
