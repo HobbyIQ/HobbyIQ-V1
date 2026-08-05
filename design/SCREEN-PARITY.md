@@ -2,9 +2,6 @@
 
 _Living doc. Every user-facing surface on iOS should have a matching web page (and vice versa) unless there's a documented reason otherwise. Update when you add/remove either side._
 
-| Feature | iOS View | Web Page | State | Notes |
-| --- | --- | --- | --- | --- |
-
 <!--
 STATE values:
   🟢 parity   — both surfaces present and functionally aligned
@@ -15,6 +12,7 @@ STATE values:
 -->
 
 ## Auth + Onboarding
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Launch / splash | `LaunchView.swift` | — | 🔵 iOS-only | Web hits marketing on cold-load; no splash needed |
@@ -26,6 +24,7 @@ STATE values:
 | Paywall / upgrade | `PaywallView.swift` | `(marketing)/pricing/page.tsx` | 🟡 partial | iOS is a modal, web is a marketing page — copy + tiers must match |
 
 ## Dashboard
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | App shell / nav | `MainAppView.swift`, `AppRootView.swift` | `app/layout.tsx`, `AppShell.tsx` | ⚪ shell | Tab bar on iOS, sidebar/topbar on web |
@@ -33,6 +32,7 @@ STATE values:
 | Root content router | `ContentView.swift` | (Next router) | ⚪ shell | |
 
 ## Cards / Pricing
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Search | `CardSearchView.swift` | `app/search/page.tsx` | 🟢 parity | Product-family drill-down wired both sides (002b903a) |
@@ -45,6 +45,7 @@ STATE values:
 | Price history | `PriceHistoryView.swift` | (inline in card detail) | 🟡 partial | Web renders chart inline; iOS is a dedicated screen |
 
 ## Portfolio
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Portfolio list | `PortfolioIQView.swift` | `app/portfolio/page.tsx` | 🟢 parity | |
@@ -55,6 +56,7 @@ STATE values:
 | Watchlist | `WatchlistView.swift` | `app/watchlist/page.tsx` | 🟢 parity | |
 
 ## Market / Insights
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Market / trends | `MarketTrendView.swift` | `app/market/page.tsx` | 🟢 parity | |
@@ -68,16 +70,19 @@ STATE values:
 | I Called It / history | `ICalledItView.swift`, `YearbookView.swift` | — | 🔵 iOS-only | Public-share receipts of past cascade calls — web could show these on `/u/[username]` |
 
 ## Pro Seller
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Inventory analytics | `InventoryIQView.swift`, `ERPInventoryAnalyticsView.swift` | `app/erp/page.tsx` | 🟢 parity | Web has subpages: `/erp/expenses`, `/purchases`, `/tax`, `/unreconciled` |
 | eBay connect | `EbayConnectView.swift` | `app/ebay/page.tsx` | 🟢 parity | |
 | eBay listing draft | `EbayListingDraftView.swift`, `EbayListingManageView.swift` | (inline in `app/ebay`) | 🟡 partial | |
-| BuyerIQ | — | `app/buyeriq/page.tsx`, `[listId]/page.tsx` | 🟣 web-only | Needs iOS build-out |
-| Storefront (public profile) | — | `app/storefront/page.tsx`, `(marketing)/u/[username]` | 🟣 web-only | Needs iOS "share my portfolio" surface |
+| BuyerIQ | `BuyerIQ/BuyerIQView.swift` + list-detail + create + target-edit | `app/buyeriq/page.tsx`, `[listId]/page.tsx` | 🟢 parity | Full CRUD on both sides; web comment even reads "Mirrors iOS BuyerIQView.swift" |
+| Storefront (public profile editor) | — | `app/storefront/page.tsx` | 🟣 web-only | Pro Seller share/edit surface — needs iOS build |
+| Public storefront page | — | `(marketing)/u/[username]/page.tsx` | 🟣 web-only | Deep-link viewer; iOS could share via Safari |
 | Messages | — | `app/messages/page.tsx`, `[otherUserId]/page.tsx` | 🟣 web-only | No iOS chat UI |
 
 ## Admin
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Pending review queue | `PendingReviewQueueView.swift` | `app/admin/verify/page.tsx` | 🟢 parity | |
@@ -85,6 +90,7 @@ STATE values:
 | Labeler / quarantine / cleanliness / slug-audit | — | `app/admin/{labeler,quarantine,cleanliness,slug-audit}/page.tsx` | 🟣 web-only | Admin only |
 
 ## Account / Settings
+
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Account | `AccountView.swift`, `AccountHeaderView.swift` | `app/settings/page.tsx` | 🟢 parity | |
