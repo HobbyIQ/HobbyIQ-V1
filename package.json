@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node server.js",
-    "start-backend": "node start-backend.js"
+    "start-backend": "node start-backend.js",
+    "gen:design-tokens": "node design/gen-tokens.mjs"
   },
   "dependencies": {
     "@azure/cosmos": "^4.9.3",

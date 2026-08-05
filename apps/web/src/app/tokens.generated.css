@@ -1,0 +1,67 @@
+/* GENERATED — DO NOT EDIT MANUALLY.
+ * Source: design/tokens.json  · Regen: node design/gen-tokens.mjs
+ *
+ * Imported by apps/web/src/app/globals.css. Every --hiq-* variable is
+ * the single source of truth — the legacy --color-* aliases in globals.css
+ * reference these tokens. Edit tokens.json, not this file. */
+
+:root {
+  /* Colors */
+  --hiq-deep-navy: #0B1424;
+  --hiq-app-background: #06101D;
+  --hiq-card-navy: #101B2D;
+  --hiq-slate-gray: #1A2333;
+  --hiq-steel-gray: #2A3344;
+  --hiq-electric-blue: #1E90FF;
+  --hiq-bright-blue: #3DA9FF;
+  --hiq-hobby-green: #7CFF72;
+  --hiq-bright-green: #B6FF4D;
+  --hiq-success-green: #41E66F;
+  --hiq-muted-text: #C4CDD9;
+  --hiq-pure-white: #FFFFFF;
+  --hiq-warning: #FFA500;
+  --hiq-danger: #FF3B30;
+
+  /* Alpha-derived colors */
+  --hiq-subtle-surface: rgba(255,255,255,0.05);
+  --hiq-border: rgba(42,51,68,0.88);
+  --hiq-soft-border: rgba(30,144,255,0.28);
+  --hiq-glow: rgba(30,144,255,0.24);
+  --hiq-success-glow: rgba(124,255,114,0.24);
+  --hiq-shadow: rgba(0,0,0,0.35);
+
+  /* Gradients */
+  --hiq-gradient-brand: linear-gradient(135deg, #2A6A9E 0%, #2C8F66 100%);
+  --hiq-brand-gradient: var(--hiq-gradient-brand);
+
+  /* Spacing */
+  --hiq-space-xxs: 4px;
+  --hiq-space-xs: 8px;
+  --hiq-space-sm: 12px;
+  --hiq-space-md: 16px;
+  --hiq-space-lg: 20px;
+  --hiq-space-xl: 24px;
+  --hiq-space-xxl: 32px;
+  --hiq-space-screen-pad: 16px;
+  --hiq-space-card-pad: 18px;
+
+  /* Radius */
+  --hiq-radius-xs: 10px;
+  --hiq-radius-sm: 14px;
+  --hiq-radius-md: 18px;
+  --hiq-radius-lg: 24px;
+  --hiq-radius-xl: 28px;
+  --hiq-radius-pill: 999px;
+}
+
+/* Typography utility classes — match HobbyIQTheme.Typography exactly. */
+.hiq-hero { font: 700 34px/1.15 var(--hiq-font-rounded); }
+.hiq-title { font: 700 28px/1.2 var(--hiq-font-rounded); }
+.hiq-section-title { font: 700 22px/1.25 var(--hiq-font-rounded); }
+.hiq-card-title { font: 600 18px/1.3 var(--hiq-font-rounded); }
+.hiq-body { font: 400 16px/1.4 var(--hiq-font-body); }
+.hiq-body-emph { font: 600 16px/1.4 var(--hiq-font-body); }
+.hiq-caption { font: 400 13px/1.35 var(--hiq-font-body); }
+.hiq-caption-emph { font: 600 13px/1.35 var(--hiq-font-body); }
+.hiq-stat-number { font: 700 30px/1.1 var(--hiq-font-rounded); }
+.hiq-stat-subtle { font: 600 15px/1.3 var(--hiq-font-rounded); }

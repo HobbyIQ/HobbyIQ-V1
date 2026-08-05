@@ -11,29 +11,15 @@ import UIKit
 enum HobbyIQTheme {
     static let heroSubtitle = "Fast answers for the Hobby."
 
-    enum Colors {
-        static let deepNavy = Color(hex: 0x0B1424)
-        static let appBackground = Color(hex: 0x06101D)
-        static let cardNavy = Color(hex: 0x101B2D)
-        static let slateGray = Color(hex: 0x1A2333)
-        static let steelGray = Color(hex: 0x2A3344)
-        static let electricBlue = Color(hex: 0x1E90FF)
-        static let brightBlue = Color(hex: 0x3DA9FF)
-        static let hobbyGreen = Color(hex: 0x7CFF72)
-        static let brightGreen = Color(hex: 0xB6FF4D)
-        static let successGreen = Color(hex: 0x41E66F)
-        static let mutedText = Color(hex: 0xC4CDD9)
-        static let pureWhite = Color(hex: 0xFFFFFF)
-        static let warning = Color.orange
-        static let danger = Color.red
-        static let subtleSurface = Color.white.opacity(0.05)
-
-        static let border = steelGray.opacity(0.88)
-        static let softBorder = electricBlue.opacity(0.28)
-        static let glow = electricBlue.opacity(0.24)
-        static let successGlow = hobbyGreen.opacity(0.24)
-        static let shadow = Color.black.opacity(0.35)
-    }
+    // Colors / Spacing / Radius / Typography are re-exported from
+    // HobbyIQTokens.generated.swift (single source of truth in
+    // design/tokens.json). All existing call-sites keep working
+    // because HobbyIQTheme.Colors.foo still resolves — it just
+    // forwards to HobbyIQTokens.Colors.foo.
+    typealias Colors = HobbyIQTokens.Colors
+    typealias Spacing = HobbyIQTokens.Spacing
+    typealias Radius = HobbyIQTokens.Radius
+    typealias Typography = HobbyIQTokens.Typography
 
     enum Gradients {
         static let background = LinearGradient(
@@ -62,47 +48,11 @@ enum HobbyIQTheme {
             endPoint: .bottomTrailing
         )
 
-        // Muted blue→green: single shared accent for hero/value cards across screens.
-        // Tune here to restyle every consumer (PortfolioIQ value hero, Movement pulse, DailyIQ header).
-        static let dashboardStroke = LinearGradient(
-            colors: [Color(hex: 0x2A6A9E), Color(hex: 0x2C8F66)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    enum Spacing {
-        static let xxSmall: CGFloat = 4
-        static let xSmall: CGFloat = 8
-        static let small: CGFloat = 12
-        static let medium: CGFloat = 16
-        static let large: CGFloat = 20
-        static let xLarge: CGFloat = 24
-        static let xxLarge: CGFloat = 32
-        static let screenPadding: CGFloat = 16
-        static let cardPadding: CGFloat = 18
-    }
-
-    enum Radius {
-        static let xSmall: CGFloat = 10
-        static let small: CGFloat = 14
-        static let medium: CGFloat = 18
-        static let large: CGFloat = 24
-        static let xLarge: CGFloat = 28
-        static let pill: CGFloat = 999
-    }
-
-    enum Typography {
-        static let hero = Font.system(size: 34, weight: .bold, design: .rounded)
-        static let title = Font.system(size: 28, weight: .bold, design: .rounded)
-        static let sectionTitle = Font.system(size: 22, weight: .bold, design: .rounded)
-        static let cardTitle = Font.system(size: 18, weight: .semibold, design: .rounded)
-        static let body = Font.system(size: 16, weight: .regular, design: .default)
-        static let bodyEmphasis = Font.system(size: 16, weight: .semibold, design: .default)
-        static let caption = Font.system(size: 13, weight: .regular, design: .default)
-        static let captionEmphasis = Font.system(size: 13, weight: .semibold, design: .default)
-        static let statNumber = Font.system(size: 30, weight: .bold, design: .rounded)
-        static let statSubtle = Font.system(size: 15, weight: .semibold, design: .rounded)
+        // Alias to the shared brand gradient (single source: tokens.json).
+        // Kept under the legacy name `dashboardStroke` so every existing
+        // consumer (PortfolioIQ value hero, Movement pulse, DailyIQ
+        // header, search bar, cards) keeps compiling.
+        static let dashboardStroke = HobbyIQTokens.Gradients.brand
     }
 
     @MainActor
