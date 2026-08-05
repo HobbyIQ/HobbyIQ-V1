@@ -122,7 +122,7 @@ function extractBulletVariants(body: string): Array<{ name: string; printRun: nu
     let m: RegExpMatchArray | null;
     // Permissive to spelling variants: "serial-numbered", "seiral-numbered"
     // (r/i transposed — seen in the wild), "seiial-numbered" (typo).
-    m = bullet.match(/\((?:s[eir]{4}l-numbered|numbered)\s+to\s+(\d[\d,]*)\s+copies?\)/i);
+    m = bullet.match(/\((?:s[eiral]{4}l-numbered|numbered)\s+to\s+(\d[\d,]*)\s+copies?\)/i);
     if (m) { printRun = Number(m[1].replace(/,/g, "")); name = bullet.replace(m[0], "").trim(); }
     if (printRun === null) {
       m = bullet.match(/\/(\d[\d,]*)\b/);
@@ -133,7 +133,7 @@ function extractBulletVariants(body: string): Array<{ name: string; printRun: nu
     if (printRun === null) {
       // Written-word small numbers ("serial-numbered to five copies").
       const wordMap: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
-      const wm = bullet.match(/\(s[eir]{4}l-numbered\s+to\s+(one|two|three|four|five|six|seven|eight|nine|ten)\)/i);
+      const wm = bullet.match(/\(s[eiral]{4}l-numbered\s+to\s+(one|two|three|four|five|six|seven|eight|nine|ten)\)/i);
       if (wm) printRun = wordMap[wm[1].toLowerCase()];
     }
     // Strip wiki-link brackets [[...]] → text.

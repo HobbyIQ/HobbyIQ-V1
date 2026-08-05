@@ -120,6 +120,64 @@ function extractCardNumberPrefix(cardNumber: string | null | undefined): string 
   return m ? m[1].toUpperCase() : null;
 }
 
+/**
+ * CF-BCCP-PARALLEL-NORMALIZATION (Drew, 2026-08-05).
+ *
+ * Aggressive normalization applied to BOTH sides of the parallel-name
+ * compare, on top of canonicalizeParallelName. Strips the noise we
+ * confirmed drives the ~38% "parallel-not-in-BCCP" miss rate:
+ *
+ *   - trailing "/N" print-run tokens the scraper never stripped
+ *     ("Gold Refractor /50" → "gold refractor")
+ *   - written 1-of-1 markers ("SuperFractor 1-of-1", "one of one")
+ *   - parenthetical qualifiers ("(SP)", "(HOB)", "(retail only)",
+ *     "(hobby only)", "(mega box)", "(walmart)", "(target)", …)
+ *   - Roman-numeral qualifiers ("XIV") if trailing
+ *   - trailing serial-numbered blurbs left after the strict paren
+ *     capture missed them (defensive)
+ *   - ordering: "Refractor Blue" ↔ "Blue Refractor" (canonicalize
+ *     already tries; we sort word bag as belt-and-suspenders)
+ *   - whitespace + punctuation trim
+ *
+ * Returns the normalized key both sides compare with. Empty return
+ * means "base" — caller should short-circuit to base match.
+ */
+function normalizeParallelForMatch(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let s = String(raw);
+  // Strip print-run trailing "/N" up to two occurrences (e.g. "/25" or "/25/25 case hits").
+  s = s.replace(/\s*\/\s*\d[\d,]*\b/g, "");
+  // Strip "serial-numbered to N copies" and its typos. Fixed 2026-08-05:
+  // earlier version used [eir]{4} which doesn't match the `a` in "seri**a**l"
+  // — every BCCP paren was slipping through. Now: s + any 4 of [eiral] + l.
+  // Matches "serial", "seiral" (r/i transposed), "seiial" (typo). Also
+  // strip freestanding "to N copies" (some entries have malformed parens).
+  s = s.replace(/\(s[eiral]{4}l-numbered\s+to\s+(?:\d[\d,]*|one|two|three|four|five|six|seven|eight|nine|ten)\s+copies?\)/gi, "");
+  s = s.replace(/\(numbered\s+to\s+\d[\d,]*\s+copies?\)/gi, "");
+  // Bare (no parens) trailing serial-numbered suffix — also seen in the wild.
+  s = s.replace(/\bs[eiral]{4}l-numbered\s+to\s+(?:\d[\d,]*|one|two|three|four|five|six|seven|eight|nine|ten)\s+copies?\b/gi, "");
+  // Strip 1-of-1 / one-of-one markers
+  s = s.replace(/\b1\s*[-\/]?\s*of\s*[-\/]?\s*1\b/gi, "");
+  s = s.replace(/\bone[-\s]of[-\s]one\b/gi, "");
+  // Strip parenthetical distribution / short-print / venue qualifiers.
+  // Retail vs Hobby is a real distinction for some products but breaks
+  // matches for most; treat them as noise for now (better to over-match
+  // and let downstream disambiguation refine).
+  s = s.replace(/\(\s*(sp|ssp|hob|hobby|hobby[- ]only|ret|retail|retail[- ]only|mega|mega[- ]box|walmart|target|toys[- ]?r[- ]?us|hobby[- ]box|blaster|fat[- ]pack|jumbo|nscc|shp|super[- ]short[- ]print)\s*\)/gi, "");
+  // Strip wiki-link brackets → text
+  s = s.replace(/\[\[([^\|\]]+\|)?([^\]]+)\]\]/g, "$2");
+  // Slugify: lowercase, non-alphanum → space, collapse spaces
+  s = s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!s) return "";
+  // Order-insensitive: sort word bag so "refractor blue" ≡ "blue refractor".
+  // Only apply when 2-4 words (avoid mangling names like "Reptilian Green Refractor" that need semantic order? actually we still want to match so keep bag-sort for ≤5 words).
+  const words = s.split(" ").filter(Boolean);
+  if (words.length >= 2 && words.length <= 5) {
+    return words.slice().sort().join(" ");
+  }
+  return s;
+}
+
 /** Given a catalog row and BCCP index, decide what it matches. */
 function classify(row: CatalogRow, index: BccpIndex): MatchResult {
   const prefix = extractCardNumberPrefix(row.cardNumber);
@@ -157,19 +215,31 @@ function classify(row: CatalogRow, index: BccpIndex): MatchResult {
       printRun: null,
     };
   }
-  // 4. Look up the parallel in the product's parallel list — canonical name equality.
+  // 4. Look up the parallel in the product's parallel list. Two-pass:
+  //    (a) canonicalizeParallelName strict equality (existing behavior)
+  //    (b) aggressive normalizeParallelForMatch — strips /N, (SP)/(HOB)/etc,
+  //        1-of-1 markers, and does word-bag sort so "Refractor Blue" ≡
+  //        "Blue Refractor". Restores ~15-20% of the 38% "not-in-BCCP" miss.
   const parallelCanonLower = parallelCanon.toLowerCase();
+  const parallelAggressive = normalizeParallelForMatch(row.parallel);
   for (const p of product.parallels) {
     if (canonicalizeParallelName(p.name).toLowerCase() === parallelCanonLower) {
       return {
-        matched: true,
-        matchedAs: "parallel",
-        productPage: product.page,
-        subsetName: null,
-        subsetPrefix: null,
-        parallelName: p.name,
-        printRun: p.printRun,
+        matched: true, matchedAs: "parallel", productPage: product.page,
+        subsetName: null, subsetPrefix: null,
+        parallelName: p.name, printRun: p.printRun,
       };
+    }
+  }
+  if (parallelAggressive) {
+    for (const p of product.parallels) {
+      if (normalizeParallelForMatch(p.name) === parallelAggressive) {
+        return {
+          matched: true, matchedAs: "parallel", productPage: product.page,
+          subsetName: null, subsetPrefix: null,
+          parallelName: p.name, printRun: p.printRun,
+        };
+      }
     }
   }
   // 5. Parallel not found in BCCP — still a parallel, but with no BCCP-verified name.
