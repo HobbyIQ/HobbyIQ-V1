@@ -44,16 +44,18 @@ interface Args {
   year?: number;
   sport?: string;
   indir?: string;
+  clcIndir?: string;
   dryRun?: boolean;
 }
 function parseArgs(): Args {
   const argv = process.argv.slice(2);
-  const args: Args = { sport: "baseball", indir: "c:/tmp/bccp" };
+  const args: Args = { sport: "baseball", indir: "c:/tmp/bccp", clcIndir: "c:/tmp/clc" };
   for (let i = 0; i < argv.length; i++) {
     const f = argv[i], v = argv[i + 1];
     if (f === "--year") { args.year = Number(v); i++; }
     else if (f === "--sport") { args.sport = v; i++; }
     else if (f === "--indir") { args.indir = v; i++; }
+    else if (f === "--clc-indir") { args.clcIndir = v; i++; }
     else if (f === "--dry-run") args.dryRun = true;
   }
   return args;
@@ -80,24 +82,73 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/** Build a fast lookup index from the scraped JSON files for a given year. */
-function buildBccpIndex(indir: string, year: number): BccpIndex {
+/** Build a fast lookup index from the scraped JSON files for a given year.
+ *  CF-CLC-MERGE (2026-08-05): also folds in checklistcenter data from
+ *  c:/tmp/clc/{year}/*.json — its products land in bySetKey alongside
+ *  BCCP's so classify() naturally picks up parallels from either source. */
+function buildBccpIndex(indir: string, year: number, clcIndir?: string): BccpIndex {
   const dir = join(indir, String(year));
-  try { statSync(dir); } catch { return { bySetKey: new Map(), byPrefix: new Map() }; }
-  const files = readdirSync(dir).filter((n) => n.endsWith(".json") && n !== "products.json");
   const bySetKey = new Map<string, BccpProduct[]>();
   const byPrefix = new Map<string, { subset: BccpSubset; product: BccpProduct; subsetType: "insert" | "auto" | "gameUsed" | "gimmick" }>();
+
+  // BCCP first
+  try {
+    statSync(dir);
+    const files = readdirSync(dir).filter((n) => n.endsWith(".json") && n !== "products.json");
+    ingestFilesInto(dir, files, bySetKey, byPrefix, "bccp");
+  } catch { /* no BCCP data for this year */ }
+
+  // CLC as secondary source — augments BCCP for the same setKey, and
+  // adds coverage for years BCCP doesn't have (e.g. 2026).
+  if (clcIndir) {
+    const clcDir = join(clcIndir, String(year));
+    try {
+      statSync(clcDir);
+      const clcFiles = readdirSync(clcDir).filter((n) => n.endsWith(".json"));
+      ingestFilesInto(clcDir, clcFiles, bySetKey, byPrefix, "clc");
+    } catch { /* no CLC data for this year */ }
+  }
+  return { bySetKey, byPrefix };
+}
+
+/** Shared file → index ingestor. Both BCCP and CLC scrapes produce
+ *  JSON with the same top-level shape (page/subsets vs parallels/inserts/
+ *  autos), so we normalize on read. */
+function ingestFilesInto(
+  dir: string,
+  files: string[],
+  bySetKey: Map<string, BccpProduct[]>,
+  byPrefix: Map<string, { subset: BccpSubset; product: BccpProduct; subsetType: "insert" | "auto" | "gameUsed" | "gimmick" }>,
+  source: "bccp" | "clc",
+): void {
   for (const f of files) {
-    let sp: BccpProduct;
-    try { sp = JSON.parse(readFileSync(join(dir, f), "utf8")) as BccpProduct; }
+    let raw: unknown;
+    try { raw = JSON.parse(readFileSync(join(dir, f), "utf8")); }
     catch { continue; }
-    // Strip year from page title, normalize to setKey.
-    const withoutYear = sp.page.replace(/^\d{4}[_ -]/, "").replace(/_/g, " ");
+
+    let sp: BccpProduct;
+    if (source === "bccp") {
+      sp = raw as BccpProduct;
+    } else {
+      // CLC → BCCP shape adapter. CLC has subsets[] each with parallels[]
+      // inside; flatten to top-level parallels[] tagged with subset title.
+      const clc = raw as { url?: string; year?: number | null; sourceSlug?: string; productName?: string; subsets?: Array<{ title: string; cardCount: number | null; parallels: Array<{ name: string; printRun: number | null }> }> };
+      const productPage = clc.productName ?? clc.sourceSlug ?? "unknown";
+      sp = {
+        page: productPage,
+        year: clc.year ?? 0,
+        parallels: (clc.subsets ?? []).flatMap((s) =>
+          s.parallels.map((p) => ({ section: s.title, name: p.name, printRun: p.printRun }))
+        ),
+        inserts: [], autos: [], gameUsed: [], gimmicks: [],
+      };
+    }
+
+    const withoutYear = (sp.page ?? "").toString().replace(/^\d{4}[_ -]/, "").replace(/_/g, " ");
     const setKey = normalizeSetKey(withoutYear);
     let arr = bySetKey.get(setKey);
     if (!arr) { arr = []; bySetKey.set(setKey, arr); }
     arr.push(sp);
-    // Prefix index — first-wins to avoid clobbering (should be rare).
     const stamp = (list: BccpSubset[], subsetType: "insert" | "auto" | "gameUsed" | "gimmick"): void => {
       for (const sub of list) {
         if (!sub.cardPrefix) continue;
@@ -110,7 +161,6 @@ function buildBccpIndex(indir: string, year: number): BccpIndex {
     stamp(sp.gameUsed, "gameUsed");
     stamp(sp.gimmicks, "gimmick");
   }
-  return { bySetKey, byPrefix };
 }
 
 /** Extract the leading alphanumeric prefix from a card number: "BCP-150" → "BCP". */
@@ -277,11 +327,12 @@ async function main(): Promise<void> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(2); }
 
-  const indir = args.indir ?? "/tmp/bccp";
-  console.log(`\n▸ Building BCCP index from ${indir}/${args.year}...`);
-  const index = buildBccpIndex(indir, args.year);
-  console.log(`  ${index.bySetKey.size} distinct BCCP setKeys, ${index.byPrefix.size} insert/auto prefixes`);
-  if (index.bySetKey.size === 0) { console.error("  ! No BCCP data for this year — run scrape-bccp-year first."); process.exit(1); }
+  const indir = args.indir ?? "c:/tmp/bccp";
+  const clcIndir = args.clcIndir ?? "c:/tmp/clc";
+  console.log(`\n▸ Building index from BCCP=${indir}/${args.year} + CLC=${clcIndir}/${args.year}...`);
+  const index = buildBccpIndex(indir, args.year, clcIndir);
+  console.log(`  ${index.bySetKey.size} distinct setKeys (BCCP+CLC), ${index.byPrefix.size} insert/auto prefixes`);
+  if (index.bySetKey.size === 0) { console.error("  ! No data for this year from either source."); process.exit(1); }
 
   const client = new CosmosClient(conn);
   const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
