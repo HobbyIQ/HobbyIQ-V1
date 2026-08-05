@@ -6,6 +6,7 @@ import { getConfig } from "./config/env.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import healthRoutes from "./routes/health.routes.js";
+import ingestHealthRoutes from "./routes/ingestHealth.routes.js";
 import publicStatsRoutes from "./routes/publicStats.routes.js";
 import publicSellerRoutes from "./routes/publicSeller.routes.js";
 import stripeRoutes from "./routes/stripe.routes.js";
@@ -180,6 +181,7 @@ app.use(requestContextMiddleware);
 app.use("/uploads", express.static(path.join(process.cwd(), ".data", "uploads")));
 
 app.use("/api/health", healthRoutes);
+app.use("/api/health", ingestHealthRoutes);
 app.use("/api/stats", publicStatsRoutes);
 app.use("/api/public", publicSellerRoutes);
 app.use("/api/daily", dailyPublishRoutes);
