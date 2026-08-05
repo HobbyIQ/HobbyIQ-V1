@@ -417,7 +417,19 @@ async function main(): Promise<void> {
   const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
   console.log(`\n▸ Scanning card_catalog for pool-based rows (year=${args.year}, sport=${args.sport}, source=bulk-build-from-pool)...`);
   const iterator = cat.items.query<CatalogRow>({
-    query: "SELECT c.id, c.cardId, c.year, c.setKey, c.cardNumber, c.parallel, c.isAuto FROM c WHERE c.sport = @sport AND c.year = @year AND c.source = 'bulk-build-from-pool'",
+    // CF-DONT-DEMOTE-VERIFIED (Drew, 2026-08-05). Never overwrite rows
+    // already trusted by the xlsx (checklist-verified) or Baseball-
+    // Almanac/Fandom (alt-verified) passes. Those match a real card in
+    // a real product by identity — stronger provenance than a BCCP
+    // product-page lookup that may drift when a setKey collapse
+    // changes. Prior bug: setKey-recovery let previously-null rows hit
+    // BCCP, but if the parallel didn't match on that page the write
+    // demoted formerly checklist-verified rows to parallel-unverified.
+    query: `SELECT c.id, c.cardId, c.year, c.setKey, c.cardNumber, c.parallel, c.isAuto
+            FROM c
+            WHERE c.sport = @sport AND c.year = @year AND c.source = 'bulk-build-from-pool'
+              AND (NOT IS_DEFINED(c.bccpMatchedAs)
+                   OR (c.bccpMatchedAs != 'checklist-verified' AND c.bccpMatchedAs != 'alt-verified'))`,
     parameters: [{ name: "@sport", value: args.sport }, { name: "@year", value: args.year }],
   }, { maxItemCount: 500 });
   const rows: CatalogRow[] = [];
