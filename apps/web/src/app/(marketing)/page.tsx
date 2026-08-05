@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <main className="w-full">
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-14 md:pt-20 pb-14 text-center">
+      <section className="max-w-5xl mx-auto px-6 pt-0 pb-14 text-center">
         {/* Logo lockup — sits above the eyebrow pill and the headline
             so the brand is the first thing a first-time visitor sees.
             Sized big-and-loud per Drew, 2026-08-05. */}

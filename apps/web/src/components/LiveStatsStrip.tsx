@@ -151,8 +151,10 @@ export function LiveStatsStrip() {
 function Metric({ value, label, loading }: { value: string; label: string; loading: boolean }) {
   return (
     <div className="text-center">
+      {/* Text size holds seven-digit comma-formatted numbers (e.g.
+          "2,800,000") without overflowing on either breakpoint. */}
       <div
-        className={`hiq-count text-5xl md:text-7xl font-bold mb-2 tracking-tight transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
+        className={`hiq-count text-4xl sm:text-5xl md:text-6xl font-bold mb-2 tracking-tight transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
       >
         {value}
       </div>
@@ -171,15 +173,10 @@ function clampRate(observed: number, seed: number): number {
 }
 
 function formatCount(n: number): string {
-  if (n >= 1_000_000) {
-    // Below 10M keep one decimal so the tenths digit ticks — that's
-    // where the eye picks up "this thing is moving." At 10M+ round
-    // to whole millions so a 10.0 → 10.1 transition doesn't look
-    // like a stopped counter.
-    if (n < 10_000_000) return `${(n / 1_000_000).toFixed(1)}M+`;
-    return `${Math.floor(n / 1_000_000)}M+`;
-  }
-  if (n >= 10_000) return `${Math.floor(n / 1_000)}K+`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K+`;
-  return n.toLocaleString("en-US");
+  // CF-LIVE-TICKER (Drew, 2026-08-05). Show the full comma-formatted
+  // integer instead of rounding to "2.8M+" — the rounded form only
+  // updates every ~100K, which at ~2.4/sec means the visible digit
+  // changes once every 11 hours. With full digits the trailing ones
+  // tick every second and the strip actually LOOKS live.
+  return Math.floor(n).toLocaleString("en-US");
 }
