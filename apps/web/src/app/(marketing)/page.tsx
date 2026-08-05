@@ -4,12 +4,9 @@ import { LiveStatsStrip } from "@/components/LiveStatsStrip";
 export default function LandingPage() {
   return (
     <main className="w-full">
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-0 pb-14 text-center">
-        {/* Logo lockup — sits above the eyebrow pill and the headline
-            so the brand is the first thing a first-time visitor sees.
-            Sized big-and-loud per Drew, 2026-08-05. */}
-        <div className="flex justify-center mb-8">
+      {/* Hero — pill removed, spacing tightened (Drew, 2026-08-05). */}
+      <section className="max-w-5xl mx-auto px-6 pt-0 pb-10 text-center">
+        <div className="flex justify-center mb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hobbyiq-logo.png"
@@ -18,22 +15,15 @@ export default function LandingPage() {
             draggable={false}
           />
         </div>
-        {/* Eyebrow pill — gradient border + soft glow + pulsing dot.
-            CSS lives in globals.css (`.hiq-eyebrow-pill`). Kept as one
-            element so hover/focus animates the whole capsule. */}
-        <div className="hiq-eyebrow-pill mb-8">
-          <span className="hiq-eyebrow-dot" aria-hidden />
-          <span className="hiq-eyebrow-text">Empirical FMV · updated daily</span>
-        </div>
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight max-w-3xl mx-auto">
           The card market,{" "}
           <span className="hiq-hero-stroke text-transparent bg-clip-text">priced honestly</span>
         </h1>
-        <p className="mt-6 text-lg md:text-xl text-[color:var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-4 text-lg md:text-xl text-[color:var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
           Every price rung sourced from real transactions. No hand-tuned matrix, no guesses.
           Multi-sport, full grade ladder, actionable sell/hold/list signals.
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4 flex-wrap">
+        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
           <Link href="/register" className="hiq-btn-primary">
             Start free
           </Link>
