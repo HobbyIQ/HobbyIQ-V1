@@ -79,7 +79,7 @@ STATE values:
 | BuyerIQ | `BuyerIQ/BuyerIQView.swift` + list-detail + create + target-edit | `app/buyeriq/page.tsx`, `[listId]/page.tsx` | 🟢 parity | Full CRUD on both sides; web comment even reads "Mirrors iOS BuyerIQView.swift" |
 | Storefront (public profile editor) | `StorefrontView.swift` | `app/storefront/page.tsx` | 🟢 parity | MVP: tier + email + username gates, whole-storefront toggle, per-card checkbox picker. Bulk select/clear, share sheet, and photo preview are followups. |
 | Public storefront page | — | `(marketing)/u/[username]/page.tsx` | 🟣 web-only | Deep-link viewer; iOS could share via Safari |
-| Messages | — | `app/messages/page.tsx`, `[otherUserId]/page.tsx` | 🟣 web-only | No iOS chat UI |
+| Messages | `MessagesView.swift` (list + thread) | `app/messages/page.tsx`, `[otherUserId]/page.tsx` | 🟢 parity | MVP: thread list with unread badges, thread view with bubbles + composer, offer/accepted/sold kinds rendered, HoldingRef preview card. Push notifications + polling are followups. |
 
 ## Admin
 

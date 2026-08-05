@@ -2431,6 +2431,49 @@ struct APIService {
         return try await post(path: "/api/search/cards", body: body, responseType: UnifiedSearchResponse.self)
     }
 
+    // MARK: - Messaging (CF-MESSAGING iOS parity, 2026-08-05)
+    //
+    // Shared endpoint set with web (apps/web/src/lib/api.ts:fetchThreads
+    // etc). Every field name mirrors 1:1.
+
+    func fetchMessageThreads() async throws -> [ThreadSummary] {
+        let resp = try await get(
+            path: "/api/messages/threads",
+            responseType: MessagesThreadsResponse.self
+        )
+        return resp.threads
+    }
+
+    func fetchMessageThread(otherUserId: String) async throws -> (messages: [Message], other: UserDisplay) {
+        let encoded = otherUserId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? otherUserId
+        let resp = try await get(
+            path: "/api/messages/threads/\(encoded)",
+            responseType: MessagesThreadResponse.self
+        )
+        return (resp.messages, resp.other)
+    }
+
+    func sendMessage(toUserId: String, text: String, kind: MessageKind? = nil, priceCents: Int? = nil, holdingRef: HoldingRef? = nil) async throws -> Message? {
+        let body = MessagesSendRequest(
+            toUserId: toUserId, text: text, kind: kind,
+            priceCents: priceCents, holdingRef: holdingRef
+        )
+        let resp = try await post(
+            path: "/api/messages/",
+            body: body,
+            responseType: MessagesSendResponse.self
+        )
+        return resp.message
+    }
+
+    func fetchMessageUnreadCount() async throws -> Int {
+        let resp = try await get(
+            path: "/api/messages/unread-count",
+            responseType: MessagesUnreadCountResponse.self
+        )
+        return resp.unread
+    }
+
     // MARK: - Storefront (public /u/<username>)
     //
     // Shared endpoint set with web (apps/web/src/app/app/storefront/page.tsx):

@@ -37,6 +37,13 @@ struct MoreView: View {
 
     private var linksSection: some View {
         VStack(spacing: 12) {
+            // CF-MESSAGING iOS parity (2026-08-05). Buyer/seller chat +
+            // offers. Same /api/messages/* endpoints web uses.
+            NavigationLink { MessagesView() } label: {
+                MoreLinkRow(title: "Messages", subtitle: "Chats, offers, and completed sales")
+            }
+            .buttonStyle(.plain)
+
             // CF-STOREFRONT iOS parity (2026-08-05). Investor/Pro-Seller
             // storefront management — screen handles its own gates for
             // sub-eligible plans so it's always safe to expose here.
