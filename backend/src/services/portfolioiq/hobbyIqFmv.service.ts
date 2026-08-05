@@ -205,12 +205,17 @@ async function queryPool(
     const sourceClause = EXCLUDED_SOURCES.length > 0
       ? ` AND c.source NOT IN (${EXCLUDED_SOURCES.map((s) => `'${s}'`).join(", ")})`
       : "";
+    // CF-FLAG-CARDSIGHT-099 (Drew, 2026-08-05). Drop rows that other
+    // subsystems have already tagged as bad-identity/bad-price. Matches
+    // findNeighborComps line 187; catches the 39K cardsight $0.99
+    // pollution and any other flaggedWrong rows across the pool.
     const { resources } = await container.items.query({
       query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
                      c.hobbyiqCardId, c.playerName, c.product, c.cardYear
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from${sourceClause}
+                AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }).fetchAll();
