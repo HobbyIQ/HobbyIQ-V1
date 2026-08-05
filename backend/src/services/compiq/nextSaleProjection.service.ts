@@ -110,7 +110,12 @@ const THIN_POOL_CAP_PCT = 0.25;   // ±25% band around the newest sale
 // the projection to ±40% of the pool median so outlier-driven fits
 // can't replace the observed clearing price. Trend direction and
 // slopePerMonthPct still reported; only the OUTPUT clamps.
-const MEDIAN_ANCHOR_CAP_PCT = 0.40;
+// CF-MEDIAN-ANCHOR-CAP-TIGHTEN (Drew, 2026-08-05). Tightened from 0.40
+// to 0.25 after Griffey LD1 Refractor case showed \xB140% still let an
+// outlier pull FMV visibly below the pool median. \xB125% keeps a real
+// price move room to project while hard-blocking outlier-driven
+// regression fits.
+const MEDIAN_ANCHOR_CAP_PCT = 0.25;
 
 /**
  * Project the next likely sale price from a dated comp pool.
