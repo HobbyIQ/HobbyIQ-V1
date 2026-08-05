@@ -102,6 +102,15 @@ const MS_PER_DAY = 86_400_000;
 const THIN_POOL_N_THRESHOLD = 5;
 const SHORT_WINDOW_DAYS_THRESHOLD = 14;
 const THIN_POOL_CAP_PCT = 0.25;   // ±25% band around the newest sale
+// CF-MEDIAN-ANCHOR-CAP (Drew, 2026-08-05). Even wide pools can have
+// outlier sales that pull the regression through wild slopes. Live
+// case: Ken Griffey 1999 Topps Chrome LD1 Refractor — 17 raw sales in
+// 60d spanning $125-$534, median $306. One $125 outlier at t=59
+// pulled the regression to slope ≈ -60%/month, projected $125. Cap
+// the projection to ±40% of the pool median so outlier-driven fits
+// can't replace the observed clearing price. Trend direction and
+// slopePerMonthPct still reported; only the OUTPUT clamps.
+const MEDIAN_ANCHOR_CAP_PCT = 0.40;
 
 /**
  * Project the next likely sale price from a dated comp pool.
@@ -183,6 +192,25 @@ export function projectNextSaleFromComps(
             };
           }
         }
+      }
+    }
+    // CF-MEDIAN-ANCHOR-CAP — always-on cap around the pool median.
+    // Applies AFTER the thin-pool cap so both bounds get their say.
+    const pricedByPrice = priced.map((c) => c.price).sort((a, b) => a - b);
+    if (pricedByPrice.length > 0) {
+      const midIdx = Math.floor(pricedByPrice.length / 2);
+      const medianPrice = pricedByPrice.length % 2 === 0
+        ? (pricedByPrice[midIdx - 1] + pricedByPrice[midIdx]) / 2
+        : pricedByPrice[midIdx];
+      const highCap = medianPrice * (1 + MEDIAN_ANCHOR_CAP_PCT);
+      const lowCap = medianPrice * (1 - MEDIAN_ANCHOR_CAP_PCT);
+      const preCap = clampedValue;
+      clampedValue = Math.min(highCap, Math.max(lowCap, clampedValue));
+      if (clampedValue !== preCap) {
+        clampedBounds = {
+          low: Math.min(clampedValue, clampedBounds.low),
+          high: Math.max(clampedValue, clampedBounds.high),
+        };
       }
     }
     return {
