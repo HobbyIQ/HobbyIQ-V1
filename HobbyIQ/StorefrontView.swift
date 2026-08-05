@@ -31,6 +31,7 @@ struct StorefrontView: View {
     @State private var filterText: String = ""
     @State private var busyHoldingIds: Set<String> = []
     @State private var bulkBusy: BulkOperation? = nil
+    @State private var showingCopiedToast: Bool = false
 
     private enum BulkOperation { case selecting, clearing }
 
@@ -177,27 +178,55 @@ struct StorefrontView: View {
 
     private func publicUrlCard(username: String) -> some View {
         let publicUrl = "https://hobby-iq.com/u/\(username)"
-        return HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Your public URL")
-                    .font(HobbyIQTheme.Typography.captionEmphasis)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                Text(publicUrl)
-                    .font(HobbyIQTheme.Typography.body)
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+        return VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your public URL")
+                        .font(HobbyIQTheme.Typography.captionEmphasis)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(publicUrl)
+                        .font(HobbyIQTheme.Typography.body)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Spacer()
+                Button {
+                    #if canImport(UIKit)
+                    UIPasteboard.general.string = publicUrl
+                    #endif
+                    showingCopiedToast = true
+                    Task {
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        await MainActor.run { showingCopiedToast = false }
+                    }
+                } label: {
+                    Image(systemName: showingCopiedToast ? "checkmark" : "doc.on.doc")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(showingCopiedToast ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.electricBlue)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showingCopiedToast ? "Copied" : "Copy public storefront URL")
             }
-            Spacer()
-            Button {
-                UIPasteboard.general.string = publicUrl
-            } label: {
-                Image(systemName: "doc.on.doc")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            #if canImport(UIKit)
+            // System share sheet — iMessage, AirDrop, Mail, Twitter, etc.
+            // Pro Sellers push their shop URL out through the channel that
+            // makes sense for their audience without leaving the app.
+            ShareLink(item: URL(string: publicUrl) ?? URL(string: "https://hobby-iq.com")!) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Share storefront")
+                        .font(HobbyIQTheme.Typography.bodyEmphasis)
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(HobbyIQTheme.Colors.electricBlue)
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Copy public storefront URL")
+            #endif
         }
         .padding(HobbyIQTheme.Spacing.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
