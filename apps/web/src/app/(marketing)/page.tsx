@@ -7,13 +7,14 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-14 md:pt-20 pb-14 text-center">
         {/* Logo lockup — sits above the eyebrow pill and the headline
-            so the brand is the first thing a first-time visitor sees. */}
+            so the brand is the first thing a first-time visitor sees.
+            Sized big-and-loud per Drew, 2026-08-05. */}
         <div className="flex justify-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hobbyiq-logo.png"
             alt="HobbyIQ"
-            className="hiq-hero-logo h-16 md:h-20 w-auto object-contain select-none"
+            className="hiq-hero-logo h-40 sm:h-52 md:h-64 lg:h-72 w-auto max-w-full object-contain select-none"
             draggable={false}
           />
         </div>
