@@ -194,32 +194,43 @@ function extract(page: string, wikitext: string): Extracted {
     }
   }
 
+  // CF-BCCP-SUBSECTION-PARALLELS (2026-08-05). Insert / auto / game-used
+  // subsections often carry their own parallel bullets — enumerate them
+  // into out.parallels tagged with the subset name so the match script
+  // can find them; still count them under inserts[].parallelCount for
+  // the product-structure UI.
   const insertsRoot = findSectionByTitle(sections, "Inserts");
   if (insertsRoot) {
     for (const sub of insertsRoot.children) {
+      const variants = extractBulletVariants(sub.body);
       out.inserts.push({
         name: sub.title,
         cardPrefix: extractCardPrefix(sub.body),
-        parallelCount: extractBulletVariants(sub.body).length,
+        parallelCount: variants.length,
       });
+      for (const v of variants) out.parallels.push({ section: sub.title, name: v.name, printRun: v.printRun });
     }
   }
 
   const autosRoot = findSectionByTitle(sections, "Autographs");
   if (autosRoot) {
     for (const sub of autosRoot.children) {
+      const variants = extractBulletVariants(sub.body);
       out.autos.push({
         name: sub.title,
         cardPrefix: extractCardPrefix(sub.body),
-        parallelCount: extractBulletVariants(sub.body).length,
+        parallelCount: variants.length,
       });
+      for (const v of variants) out.parallels.push({ section: sub.title, name: v.name, printRun: v.printRun });
     }
   }
 
   const guRoot = findSectionByTitle(sections, "Autographed Game-Used") ?? findSectionByTitle(sections, "Game-Used");
   if (guRoot) {
     for (const sub of guRoot.children) {
+      const variants = extractBulletVariants(sub.body);
       out.gameUsed.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body) });
+      for (const v of variants) out.parallels.push({ section: sub.title, name: v.name, printRun: v.printRun });
     }
   }
 

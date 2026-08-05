@@ -169,12 +169,29 @@ function extract(page: string, year: number, wikitext: string): Extracted {
     for (const sub of parallelsRoot.children) for (const v of extractBulletVariants(sub.body)) out.parallels.push({ section: sub.title, ...v });
     for (const v of extractBulletVariants(parallelsRoot.body)) out.parallels.push({ section: "(root)", ...v });
   }
+  // CF-BCCP-SUBSECTION-PARALLELS (2026-08-05). Insert / auto / game-used
+  // subsections often carry their own parallel bullets ("Ascensions Blue
+  // Refractor /150"). Previously only counted as parallelCount. Now
+  // enumerate them and PUSH into out.parallels tagged with the subset
+  // name so the match script can find them.
   const insertsRoot = findSectionByTitle(sections, "Inserts");
-  if (insertsRoot) for (const sub of insertsRoot.children) out.inserts.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body), parallelCount: extractBulletVariants(sub.body).length });
+  if (insertsRoot) for (const sub of insertsRoot.children) {
+    const variants = extractBulletVariants(sub.body);
+    out.inserts.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body), parallelCount: variants.length });
+    for (const v of variants) out.parallels.push({ section: sub.title, ...v });
+  }
   const autosRoot = findSectionByTitle(sections, "Autographs");
-  if (autosRoot) for (const sub of autosRoot.children) out.autos.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body), parallelCount: extractBulletVariants(sub.body).length });
+  if (autosRoot) for (const sub of autosRoot.children) {
+    const variants = extractBulletVariants(sub.body);
+    out.autos.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body), parallelCount: variants.length });
+    for (const v of variants) out.parallels.push({ section: sub.title, ...v });
+  }
   const guRoot = findSectionByTitle(sections, "Autographed Game-Used") ?? findSectionByTitle(sections, "Game-Used");
-  if (guRoot) for (const sub of guRoot.children) out.gameUsed.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body) });
+  if (guRoot) for (const sub of guRoot.children) {
+    const variants = extractBulletVariants(sub.body);
+    out.gameUsed.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body) });
+    for (const v of variants) out.parallels.push({ section: sub.title, ...v });
+  }
   const checklistRoot = findSectionByTitle(sections, "Checklist");
   if (checklistRoot) for (const sub of checklistRoot.children) if (/gimmick/i.test(sub.title)) out.gimmicks.push({ name: sub.title, cardPrefix: extractCardPrefix(sub.body) });
   return out;
