@@ -91,6 +91,13 @@ export function DailyIQCard() {
           );
         })}
       </div>
+      <Link
+        href="/app/daily"
+        className="mt-4 text-sm font-medium hover:underline self-start"
+        style={{ color: "var(--color-accent)" }}
+      >
+        Open full brief →
+      </Link>
     </div>
   );
 }

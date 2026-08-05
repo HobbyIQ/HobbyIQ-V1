@@ -60,7 +60,7 @@ STATE values:
 | Feature | iOS View | Web Page | State | Notes |
 | --- | --- | --- | --- | --- |
 | Market / trends | `MarketTrendView.swift` | `app/market/page.tsx` | 🟢 parity | |
-| DailyIQ (daily wrap) | `DailyIQView.swift` | `DailyIQCard.tsx` component | 🟡 partial | Web only has the dashboard card, no dedicated page |
+| DailyIQ (daily wrap) | `DailyIQView.swift` | `app/daily/page.tsx` + dashboard `DailyIQCard.tsx` component | 🟢 parity | Web page renders full brief (risers/fallers/breakouts/mlb/milb/watchlist); card links to it |
 | New releases | `NewReleasesView.swift`, `NewDropsView.swift` | (part of `app/market`) | 🟡 partial | Web rolls into market page |
 | Hot right now | `HotRightNowListView.swift` | (part of `app/market`) | 🟡 partial | |
 | Cascade alerts | `CascadeAlertsListView.swift` | `app/alerts/page.tsx` | 🟢 parity | |
@@ -98,6 +98,7 @@ STATE values:
 | Integrations | `IntegrationsView.swift` | (part of settings) | 🟡 partial | |
 
 ## Marketing site (web-only by design)
+
 | Page | Web | Notes |
 | --- | --- | --- |
 | Home | `(marketing)/page.tsx` | Public landing |
