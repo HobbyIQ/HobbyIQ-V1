@@ -655,6 +655,17 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       : {}),
   } as SoldCompDoc;
 
+  // CF-CARDSIGHT-099-INGEST-GUARD (Drew, 2026-08-05). Prevention pair
+  // to the 39,129-row historical backfill: any incoming cardsight row
+  // at exactly $0.99 is opening-bid / sentinel pollution, not a real
+  // sale. Immediately soft-exclude at write so it never anchors FMV.
+  if (input.source === "cardsight" && input.price === 0.99) {
+    (doc as SoldCompDoc & Record<string, unknown>).flaggedWrong = true;
+    (doc as SoldCompDoc & Record<string, unknown>).excludedFromFmv = true;
+    (doc as SoldCompDoc & Record<string, unknown>).flaggedReason = "cardsight_price_099_pollution";
+    (doc as SoldCompDoc & Record<string, unknown>).excludedAt = new Date().toISOString();
+  }
+
   // CF-PRICE-SANITY-INGEST-GATE (Drew, 2026-08-01). Before write, check
   // if incoming price is a wild outlier vs the target pool's median
   // (from confirmed-sold rows only). If yes, tag __priceOutlier=true
@@ -670,6 +681,19 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierBand = sanity.band ?? null;
       (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierPoolMedian = sanity.poolMedian ?? null;
       (doc as SoldCompDoc & Record<string, unknown>).__priceOutlierReason = sanity.reason;
+      // CF-CARDSIGHT-CONSENSUS-GUARD (Drew, 2026-08-05). Existing sanity
+      // gate tags __priceOutlier for every source; for cardsight
+      // specifically we treat that as a hard exclude — cardsight has
+      // been proven unreliable and outliers there are almost always
+      // pollution rather than a real steal/rip. Other sources (tca,
+      // cardhedge) still get the softer __priceOutlier label so real
+      // cheap sales don't get dropped.
+      if (input.source === "cardsight") {
+        (doc as SoldCompDoc & Record<string, unknown>).flaggedWrong = true;
+        (doc as SoldCompDoc & Record<string, unknown>).excludedFromFmv = true;
+        (doc as SoldCompDoc & Record<string, unknown>).flaggedReason = "cardsight_price_outlier_vs_consensus";
+        (doc as SoldCompDoc & Record<string, unknown>).excludedAt = new Date().toISOString();
+      }
     }
   } catch {
     // Sanity gate is a soft check — never fail the write on gate errors.
