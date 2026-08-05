@@ -68,10 +68,10 @@ export function MarketingFooter() {
             <ul className="space-y-2 text-sm">
               <li>
                 <a
-                  href="mailto:drew@justtheboysandcards.com"
+                  href="mailto:help@hobby-iq.com"
                   className="text-[color:var(--color-muted)] hover:text-white transition-colors break-all"
                 >
-                  drew@justtheboysandcards.com
+                  help@hobby-iq.com
                 </a>
               </li>
             </ul>

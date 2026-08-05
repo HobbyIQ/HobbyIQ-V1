@@ -39,8 +39,8 @@ export default function TermsPage() {
           <p>
             You are responsible for maintaining the confidentiality of your account
             credentials and for all activity under your account. Notify us immediately at{" "}
-            <a href="mailto:drew@justtheboysandcards.com" style={{ color: "var(--color-accent)" }}>
-              drew@justtheboysandcards.com
+            <a href="mailto:drew@hobby-iq.com" style={{ color: "var(--color-accent)" }}>
+              drew@hobby-iq.com
             </a>{" "}
             of any unauthorized use.
           </p>
@@ -138,8 +138,8 @@ export default function TermsPage() {
         <Section title="13. Contact">
           <p>
             Questions?{" "}
-            <a href="mailto:drew@justtheboysandcards.com" style={{ color: "var(--color-accent)" }}>
-              drew@justtheboysandcards.com
+            <a href="mailto:drew@hobby-iq.com" style={{ color: "var(--color-accent)" }}>
+              drew@hobby-iq.com
             </a>
           </p>
         </Section>

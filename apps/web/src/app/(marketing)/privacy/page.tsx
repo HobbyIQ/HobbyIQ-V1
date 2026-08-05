@@ -94,8 +94,8 @@ export default function PrivacyPage() {
           <p>
             Depending on your jurisdiction, you may have rights to access, correct, delete,
             or export your personal data. Most of these are self-service in the app; email{" "}
-            <a href="mailto:drew@justtheboysandcards.com" style={{ color: "var(--color-accent)" }}>
-              drew@justtheboysandcards.com
+            <a href="mailto:drew@hobby-iq.com" style={{ color: "var(--color-accent)" }}>
+              drew@hobby-iq.com
             </a>{" "}
             to submit a formal request. California and EU residents have additional rights
             under CCPA and GDPR respectively.
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
         <Section title="11. Contact">
           <p>
             Privacy questions or requests:{" "}
-            <a href="mailto:drew@justtheboysandcards.com" style={{ color: "var(--color-accent)" }}>
-              drew@justtheboysandcards.com
+            <a href="mailto:drew@hobby-iq.com" style={{ color: "var(--color-accent)" }}>
+              drew@hobby-iq.com
             </a>
           </p>
         </Section>

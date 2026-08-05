@@ -136,7 +136,7 @@ export default function PricingPage() {
           />
           <FaqCard
             q="What if I run a card business? Do you have team pricing?"
-            a="Pro Seller ($49.99/mo) covers most single-operator card businesses — unlimited storefront, bulk CSV, eBay drafts, priority support. For 3+ seats or a custom integration, email drew@justtheboysandcards.com."
+            a="Pro Seller ($49.99/mo) covers most single-operator card businesses — unlimited storefront, bulk CSV, eBay drafts, priority support. For 3+ seats or a custom integration, email drew@hobby-iq.com."
           />
         </div>
       </section>

@@ -75,8 +75,8 @@ export default function AboutPage() {
         <Section title="Get in touch">
           <p>
             Founder-in-your-inbox is real —{" "}
-            <a href="mailto:drew@justtheboysandcards.com" style={{ color: "var(--color-accent)" }}>
-              drew@justtheboysandcards.com
+            <a href="mailto:drew@hobby-iq.com" style={{ color: "var(--color-accent)" }}>
+              drew@hobby-iq.com
             </a>{" "}
             reaches Drew directly. Feature requests, partnership questions, or a card you
             think we&apos;re mispricing — all welcome.

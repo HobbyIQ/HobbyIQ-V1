@@ -16,22 +16,22 @@ export default function ContactPage() {
 
       <div className="space-y-6">
         <ContactRow
-          label="Email"
-          value="drew@justtheboysandcards.com"
-          href="mailto:drew@justtheboysandcards.com"
+          label="Help desk"
+          value="help@hobby-iq.com"
+          href="mailto:help@hobby-iq.com"
           body="General questions, feature requests, subscription help, or a card you think we're mispricing."
         />
         <ContactRow
           label="Ops alerts"
-          value="drew@justtheboysandcards.com"
-          href="mailto:drew@justtheboysandcards.com"
+          value="help@hobby-iq.com"
+          href="mailto:help@hobby-iq.com"
           body="Report a bug or an outage. Include your userId (Account Settings → User ID) if it's a portfolio-specific issue."
         />
         <ContactRow
-          label="Legal"
-          value="drew@justtheboysandcards.com"
-          href="mailto:drew@justtheboysandcards.com"
-          body="Privacy or terms-of-service questions, DMCA notices, business inquiries."
+          label="Legal / Founder"
+          value="drew@hobby-iq.com"
+          href="mailto:drew@hobby-iq.com"
+          body="Privacy or terms-of-service questions, DMCA notices, business inquiries. Reaches me directly."
         />
       </div>
 
