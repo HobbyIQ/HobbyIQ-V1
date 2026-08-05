@@ -4111,6 +4111,74 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       }
     })();
 
+    // CF-TREE-PRICE-FIRST (Drew, 2026-08-05). Mirror of the enrichment
+    // in /card-panel. Tree-scoped per-tier pricing wins over the CH-
+    // based curve when the tree has data for this card. Concrete
+    // symptom the /card-panel fix already resolved: PSA 9/10/8, BGS
+    // 9.5/9/10, SGC 10/9.5 etc. showed "Not enough sales" even when
+    // sold_comps had real recent transactions at those tiers.
+    try {
+      const { buildTreeGradeCurve } = await import(
+        "../services/compiq/treeGradeCurve.service.js"
+      );
+      const tree = await buildTreeGradeCurve({ cardIdOrSlug: cardId.trim() });
+      if (tree && tree.entries.length > 0) {
+        const byLabel = new Map(curve.entries.map((e) => {
+          const label = e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
+            ? "Raw" : `${e.grader} ${e.grade}`.trim();
+          return [label, e];
+        }));
+        for (const t of tree.entries) {
+          if (t.sampleCount === 0) continue;
+          const existing = byLabel.get(t.gradeLabel);
+          if (existing) {
+            (existing as { sampleCount: number }).sampleCount = t.sampleCount;
+            (existing as { weightedMedianPrice: number | null }).weightedMedianPrice = t.weightedMedian;
+            (existing as { trendAdjustedValue: number | null }).trendAdjustedValue = t.marketValue;
+            (existing as { predictedPriceAt30d: number | null }).predictedPriceAt30d = t.predictedPrice;
+            (existing as { predictedPricePct: number | null }).predictedPricePct = t.trendPctPerWeek;
+            (existing as { newestSaleDate: string | null }).newestSaleDate = t.newestSaleAt;
+            (existing as { valueSource: string }).valueSource = "observed";
+            (existing as { confidenceScore: number }).confidenceScore = t.confidence;
+            (existing as { value: number | null }).value = t.weightedMedian;
+          } else {
+            (curve.entries as unknown as Array<Record<string, unknown>>).push({
+              grader: t.gradeCompany ?? "Raw",
+              grade: t.gradeValue ?? "Raw",
+              sampleCount: t.sampleCount,
+              weightedMedianPrice: t.weightedMedian,
+              trendAdjustedValue: t.marketValue,
+              predictedPriceAt30d: t.predictedPrice,
+              predictedPricePct: t.trendPctPerWeek,
+              newestSaleDate: t.newestSaleAt,
+              value: t.weightedMedian,
+              valueSource: "observed",
+              confidenceScore: t.confidence,
+              daysSinceNewestSale: t.newestSaleAt
+                ? Math.round((Date.now() - Date.parse(t.newestSaleAt)) / 86400_000)
+                : null,
+              estimatedMultiplier: null,
+              estimatedFrom: null,
+              predictedPriceRangeLow: null,
+              predictedPriceRangeHigh: null,
+              trendAdjustmentPct: t.trendPctPerWeek,
+            });
+          }
+        }
+        // Recompute totalSampleCount so header widget reflects the
+        // enriched grade curve, not just the CH-derived one.
+        (curve as { totalSampleCount: number }).totalSampleCount =
+          curve.entries.reduce((n, e) => n + (typeof e.sampleCount === "number" ? e.sampleCount : 0), 0);
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "tree_grade_curve_enrichment_failed",
+        source: "compiq.observed-grade-curve",
+        cardId: cardId.trim(),
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
     res.json({
       success: true,
       cardId: curve.cardId,
