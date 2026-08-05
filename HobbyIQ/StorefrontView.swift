@@ -266,46 +266,49 @@ struct StorefrontView: View {
     private func row(for h: StorefrontHolding, cap: Int?, currentSelectedCount: Int) -> some View {
         let isOn = h.showOnStorefront == true
         let busy = busyHoldingIds.contains(h.id)
-        return HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(h.displayName)
-                    .font(HobbyIQTheme.Typography.body)
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .lineLimit(1)
-                let meta = [
-                    h.cardYear.map(String.init),
-                    h.setName,
-                    h.cardNumber.map { "#\($0)" },
-                    h.parallel,
-                ].compactMap { $0 }.filter { !$0.isEmpty }
-                if !meta.isEmpty {
-                    Text(meta.joined(separator: " · "))
-                        .font(HobbyIQTheme.Typography.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
-            if h.displayValue > 0 {
-                Text(String(format: "$%.0f", h.displayValue))
-                    .font(HobbyIQTheme.Typography.captionEmphasis)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            Button {
+        // Reuse the same HoldingRowView the Portfolio inventory uses so
+        // the storefront picker looks identical to what users already
+        // know. The whole row becomes the toggle target (onTap) with a
+        // selection badge overlaid on the corner of the card image.
+        return HoldingRowView(model: h.rowModel) {
+            if !busy {
                 Task { await onToggleCard(h, on: !isOn, cap: cap, currentSelectedCount: currentSelectedCount) }
-            } label: {
-                Image(systemName: busy ? "circle.dotted" : (isOn ? "checkmark.circle.fill" : "circle"))
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(isOn ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.electricBlue)
             }
-            .buttonStyle(.plain)
-            .disabled(busy)
-            .accessibilityLabel(isOn ? "Remove from storefront" : "Add to storefront")
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
-        .background(HobbyIQTheme.Colors.appBackground.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xSmall, style: .continuous))
+        .overlay(alignment: .topLeading) {
+            selectionBadge(on: isOn, busy: busy)
+                .padding(.leading, HobbyIQTheme.Spacing.medium + 32)   // sit on the top-right of the 48pt card image
+                .padding(.top, HobbyIQTheme.Spacing.small)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if isOn {
+                Text("ON STOREFRONT")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.5)
+                    .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(HobbyIQTheme.Colors.hobbyGreen.opacity(0.14))
+                    .clipShape(Capsule(style: .continuous))
+                    .padding(.trailing, HobbyIQTheme.Spacing.medium)
+                    .padding(.bottom, HobbyIQTheme.Spacing.xSmall)
+            }
+        }
+        .opacity(busy ? 0.55 : 1)
+        .accessibilityLabel(isOn ? "Remove from storefront" : "Add to storefront")
+    }
+
+    private func selectionBadge(on: Bool, busy: Bool) -> some View {
+        let symbol: String
+        if busy { symbol = "circle.dotted" }
+        else if on { symbol = "checkmark.circle.fill" }
+        else { symbol = "circle" }
+        let tint = on ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.electricBlue
+        return Image(systemName: symbol)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(tint)
+            .background(HobbyIQTheme.Colors.appBackground.opacity(0.95))
+            .clipShape(Circle())
     }
 
     // ─── actions ───────────────────────────────────────────────

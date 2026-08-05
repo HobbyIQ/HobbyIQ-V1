@@ -4534,6 +4534,40 @@ struct StorefrontHolding: Decodable, Identifiable, Hashable {
         if let p = playerName, !p.isEmpty { return p }
         return "Untitled card"
     }
+
+    /// Projection onto the shared HoldingRowView model so the storefront
+    /// picker renders each row identically to the Portfolio inventory
+    /// list. Grade chip falls back to "Raw" when the card isn't slabbed.
+    /// Prefers the first photo, then imageUrl.
+    var rowModel: HoldingRowModel {
+        let imageString = photos?.first ?? imageUrl
+        let gradeLabel: String = {
+            guard let company = gradeCompany, !company.isEmpty else { return "Raw" }
+            if let g = gradeValue, g > 0 {
+                let asInt = Int(g.rounded())
+                if Double(asInt) == g { return "\(company) \(asInt)" }
+                return String(format: "%@ %.1f", company, g)
+            }
+            return company
+        }()
+        let subtitle: String? = {
+            let bits = [cardYear.map(String.init), setName, cardNumber.map { "#\($0)" }, parallel]
+                .compactMap { $0 }.filter { !$0.isEmpty }
+            return bits.isEmpty ? nil : bits.joined(separator: " · ")
+        }()
+        return HoldingRowModel(
+            id: id,
+            title: displayName,
+            subtitle: subtitle,
+            gradeLabel: gradeLabel,
+            imageURL: imageString.flatMap { URL(string: $0) },
+            marketValue: fairMarketValue,
+            estimatedValue: estimatedValue,
+            costBasis: nil,           // storefront picker never shows P/L (cost is private)
+            quantity: 1,
+            isEstimated: fairMarketValue == nil && (estimatedValue ?? 0) > 0
+        )
+    }
 }
 
 struct StorefrontHoldingsEnvelope: Decodable {
