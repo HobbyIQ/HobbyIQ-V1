@@ -3580,26 +3580,73 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       // covers every sold_comp variant under the same canonical card.
       let hiqSlug: string | null =
         (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null;
-      if (!hiqSlug) {
-        try {
-          const { CosmosClient } = await import("@azure/cosmos");
-          const conn = process.env.COSMOS_CONNECTION_STRING;
-          if (conn) {
-            const cat = new CosmosClient(conn)
-              .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-              .container("card_catalog");
+      // CF-GRADECURVE-FROM-TREE (Drew, 2026-08-05). One catalog trip
+      // does two things: resolves hiqSlug when identity misses it,
+      // AND pulls the list of Grade nodes the tree knows about for
+      // this variant. If CH's observed sales returned N=0 for a tier
+      // that the tree KNOWS has real observed sales (materialized at
+      // tree-build time), we synthesize a gradeCurve entry so the UI
+      // renders it. The unified enrichment below then fills in the
+      // live prices from sold_comps.
+      const treeGrades: Array<{ label: string; company: string | null; value: number | null; observedAtBuild: number }> = [];
+      try {
+        const { CosmosClient } = await import("@azure/cosmos");
+        const conn = process.env.COSMOS_CONNECTION_STRING;
+        if (conn) {
+          const cat = new CosmosClient(conn)
+            .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+            .container("card_catalog");
+          if (!hiqSlug) {
             const { resources } = await cat.items.query({
               query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.id = @id OR c.cardId = @id OR c.hobbyiqCardId = @id",
               parameters: [{ name: "@id", value: id }],
             }, { maxItemCount: 1 }).fetchAll();
             if (resources[0]?.hobbyiqCardId) hiqSlug = String(resources[0].hobbyiqCardId);
           }
-        } catch { /* leave hiqSlug null; unified falls back to cardId-only union */ }
-      }
+          if (hiqSlug) {
+            const gradeQuery = await cat.items.query({
+              query: `SELECT c.gradeLabel, c.gradeCompany, c.gradeValue, c.observedSalesAtBuild
+                      FROM c WHERE c.kind = "grade" AND c.variantSlug = @slug`,
+              parameters: [{ name: "@slug", value: hiqSlug }],
+            }, { maxItemCount: 100 }).fetchAll();
+            for (const g of gradeQuery.resources as Array<{ gradeLabel?: string; gradeCompany?: string | null; gradeValue?: number | null; observedSalesAtBuild?: number }>) {
+              if (!g.gradeLabel) continue;
+              treeGrades.push({
+                label: g.gradeLabel,
+                company: g.gradeCompany ?? null,
+                value: g.gradeValue ?? null,
+                observedAtBuild: g.observedSalesAtBuild ?? 0,
+              });
+            }
+          }
+        }
+      } catch { /* silent — leave hiqSlug null; treeGrades empty */ }
       const unified = await computeUnifiedPrice(id, {
         hobbyiqCardId: hiqSlug,
       });
       const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
+      // Merge tree-known grades into the entries so labels the tree
+      // knows about always render, even when CH silently dropped them.
+      const existingLabels = new Set(gradeCurve.entries.map((e) => {
+        return e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
+          ? "Raw" : `${e.grader} ${e.grade}`.trim();
+      }));
+      for (const t of treeGrades) {
+        if (existingLabels.has(t.label)) continue;
+        (gradeCurve.entries as unknown as Array<Record<string, unknown>>).push({
+          grader: t.company ?? "Raw",
+          grade: t.value ?? "Raw",
+          value: null,
+          trendAdjustedValue: null,
+          weightedMedianPrice: null,
+          sampleCount: 0,
+          predictedPriceAt30d: null,
+          predictedPricePct: null,
+          confidence: 0,
+          valueSource: "tree" as const,
+          treeObservedAtBuild: t.observedAtBuild,
+        });
+      }
       for (const entry of gradeCurve.entries) {
         const label =
           entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
