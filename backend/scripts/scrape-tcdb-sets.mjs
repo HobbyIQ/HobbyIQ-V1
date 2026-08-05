@@ -24,10 +24,27 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const UA = "HobbyIQ-Catalog-Scraper/0.1 (contact:dvabulas@outlook.com)";
+// CF-TCDB-BROWSER-HEADERS (Drew, 2026-08-05). Cloudflare returns 200
+// to a hand-issued curl but 403 to identical-UA node fetch — the
+// difference is the browser-like header set (Accept, Accept-Language,
+// Sec-*). Sending the full set + slower delay to look like a browser.
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const BROWSER_HEADERS = {
+  "User-Agent": UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
 const OUT_ROOT = "c:/tmp/tcdb-sets";
 const YEAR_URL = (y) => `https://www.tcdb.com/ViewAll.cfm/sp/Baseball/year/${y}`;
-const POLITE_DELAY_MS = 1200;
+const POLITE_DELAY_MS = 4000;
 
 function parseSetsFromHtml(html) {
   // Every set link is /ViewSet.cfm/sid/{id}/{slug}
@@ -47,7 +64,7 @@ function parseSetsFromHtml(html) {
 async function scrapeYear(year, outDir) {
   const outPath = join(outDir, "sets.json");
   if (existsSync(outPath)) return { skipped: true };
-  const res = await fetch(YEAR_URL(year), { headers: { "User-Agent": UA } });
+  const res = await fetch(YEAR_URL(year), { headers: BROWSER_HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const html = await res.text();
   const setsRaw = parseSetsFromHtml(html);

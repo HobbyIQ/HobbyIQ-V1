@@ -164,6 +164,53 @@ function ingestFilesInto(
 }
 
 /** Extract the leading alphanumeric prefix from a card number: "BCP-150" → "BCP". */
+/** CF-SETKEY-RECOVERY (Drew, 2026-08-05). Ordered lookup chain for
+ *  a pool row's setKey. Rescues rows whose setKey was baked from
+ *  vendor-slug noise (e.g. "1990-score-baseball") or from a Canadian
+ *  parallel-print family (o-pee-chee) that shares numbering with a
+ *  known base product (topps). Order matters: literal first (never
+ *  demote a real match), then stripped, then family-fallback. */
+function deriveSetKeyLookupChain(rawSetKey: string): string[] {
+  const chain: string[] = [];
+  const push = (s: string | undefined | null) => {
+    if (s && !chain.includes(s)) chain.push(s);
+  };
+  push(rawSetKey);
+  if (!rawSetKey) return chain;
+  // Strip leading "YYYY-" prefix (TCDB-style keys like "1990-score-baseball").
+  let stripped = rawSetKey.replace(/^(?:19|20)\d{2}-/, "");
+  // Strip trailing sport tag if any ("...-baseball", "...-basketball", ...).
+  stripped = stripped.replace(/-(?:baseball|basketball|football|hockey|soccer)$/, "");
+  push(stripped);
+  // Canonical brand aliases for common vintage / low-coverage lines.
+  // If BCCP has a modern equivalent product page under a bare brand
+  // key, this lets pool rows land on it.
+  const BRAND_ALIASES: Record<string, string> = {
+    // O-Pee-Chee is Canadian-printed Topps with identical numbering.
+    // Same-year Topps checklist is the authoritative BCCP product page.
+    "o-pee-chee": "topps",
+    // Score / Fleer / Leaf / Upper Deck vintage line collapses.
+    "score": "score",
+    "select-certified": "score-select",
+    "metal-universe": "metal-universe",
+    "skybox-premium": "skybox",
+    "skybox-thunder": "skybox",
+    "skybox-molten-metal": "skybox",
+    "circa-thunder": "fleer-circa",
+    "leaf": "leaf",
+    "collectors-choice": "upper-deck-collectors-choice",
+    "collectors-choice-se": "upper-deck-collectors-choice",
+    "pacific-paramount": "pacific",
+    "batter-up": "goudey",
+    "play-ball": "gum-inc-play-ball",
+    "r318-batter-up": "goudey",
+    "base-set": "topps",
+  };
+  const alias = BRAND_ALIASES[stripped];
+  push(alias);
+  return chain;
+}
+
 function extractCardNumberPrefix(cardNumber: string | null | undefined): string | null {
   if (!cardNumber) return null;
   const m = String(cardNumber).match(/^([A-Za-z0-9]{2,6})-/);
@@ -258,14 +305,33 @@ function classify(row: CatalogRow, index: BccpIndex): MatchResult {
       };
     }
   }
-  // 2. Otherwise, look up the pool row's setKey in BCCP index.
-  const products = index.bySetKey.get(row.setKey);
+  // 2. Otherwise, look up the pool row's setKey in BCCP index. Try the
+  //    literal setKey first, then a normalized variant (strip YYYY-
+  //    prefix + trailing -baseball/-basketball/etc.), then a family
+  //    fallback for O-Pee-Chee → Topps (same numbering, Canadian
+  //    parallel print). CF-SETKEY-RECOVERY (Drew, 2026-08-05). The
+  //    2026-08-05 baseball-null diagnostic showed ~3,500 rows with
+  //    `1990-score-baseball`-style keys that never derived properly at
+  //    pool-build time, plus ~2,473 O-Pee-Chee rows for which the same
+  //    year's Topps checklist is authoritative.
+  const setKeyCandidates = deriveSetKeyLookupChain(row.setKey);
+  let products;
+  let matchedVia = row.setKey;
+  for (const candidate of setKeyCandidates) {
+    const hit = index.bySetKey.get(candidate);
+    if (hit && hit.length > 0) {
+      products = hit;
+      matchedVia = candidate;
+      break;
+    }
+  }
   if (!products || products.length === 0) {
     return { matched: false, reason: `no-BCCP-product-for-setKey-${row.setKey}` };
   }
   // 3. If parallel is "Base" or empty, this is a base card. Pick the
   //    first product for productPage attribution.
   const parallelCanon = canonicalizeParallelName(row.parallel);
+  const setKeyRecoveryNote = matchedVia !== row.setKey ? `via:${matchedVia}` : undefined;
   if (!parallelCanon || parallelCanon.toLowerCase() === "base") {
     return {
       matched: true,
@@ -275,6 +341,7 @@ function classify(row: CatalogRow, index: BccpIndex): MatchResult {
       subsetPrefix: null,
       parallelName: null,
       printRun: null,
+      reason: setKeyRecoveryNote,
     };
   }
   // 4. CF-MATCH-ALL-PRODUCTS (2026-08-05). Iterate EVERY product at this

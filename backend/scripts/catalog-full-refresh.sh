@@ -81,6 +81,15 @@ for y in $years_all; do
   echo "  y=$y  ${summary:-no-summary}"
 done
 
+step "Step 7b: Alt-source (Baseball-Almanac + Fandom) identity match"
+if skip_if "${CATALOG_SKIP_ALT:-}" "alt-source match skipped by env"; then :;
+else for y in $years_all; do
+  npx tsx backend/scripts/match-catalog-to-alt-sources.ts --year "$y" --sport baseball > "$LOGDIR/7b-alt-$y.log" 2>&1 || true
+  summary=$(grep -oE "patched=[0-9]+, errors=[0-9]+" "$LOGDIR/7b-alt-$y.log" | tail -1)
+  echo "  y=$y  ${summary:-no-summary}"
+done
+fi
+
 step "Step 8: Attach salesSummary per year"
 if skip_if "${CATALOG_SKIP_SALES:-}" "salesSummary skipped by env"; then :;
 else for y in $years_all; do
@@ -111,7 +120,7 @@ const {CosmosClient} = require('@azure/cosmos');
   const t = (await cat.items.query({query:\"SELECT VALUE COUNT(1) FROM c WHERE c.sport='baseball' AND c.source='bulk-build-from-pool'\"}).fetchAll()).resources[0];
   const b = await cat.items.query({query:\"SELECT c.bccpMatchedAs, COUNT(1) AS n FROM c WHERE c.sport='baseball' AND c.source='bulk-build-from-pool' GROUP BY c.bccpMatchedAs\"}).fetchAll();
   const rows = b.resources.map(r=>({k:r.bccpMatchedAs||'null',n:r.n})).sort((a,b)=>b.n-a.n);
-  const confirmed = rows.filter(r=>['base','parallel','insert','auto','gameUsed','gimmick'].includes(r.k)).reduce((a,r)=>a+r.n,0);
+  const confirmed = rows.filter(r=>['base','parallel','insert','auto','gameUsed','gimmick','checklist-verified','alt-verified'].includes(r.k)).reduce((a,r)=>a+r.n,0);
   console.log('POOL total: ' + t.toLocaleString());
   for (const r of rows) console.log('  ' + r.k.padEnd(22) + String(r.n).padStart(9) + '  ' + Math.round(100*r.n/t*10)/10 + '%');
   console.log('CONFIRMED: ' + confirmed.toLocaleString() + ' (' + Math.round(100*confirmed/t*10)/10 + '%)');
