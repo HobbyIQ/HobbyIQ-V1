@@ -20,13 +20,16 @@ const POLL_MS = 20_000;
 // server samples. Baseline_2026-08-05 from live ingest telemetry.
 // If observed rate diverges > seed*2 or < seed/4 we clamp to a sane
 // band so a burst-ingest spike doesn't skew the visible ticker.
+// Conservative seed — better to UNDER-tick and let the poll bump us
+// up than OVER-tick and have to visibly drop on correction. The
+// monotonic clamp in the RAF loop also guards against regressions.
 const SEED_RATE = {
-  sold: 2.4,      // sales/sec (nightly ingest + real-time enrichment)
-  cards: 0.42,    // unique-cards/sec (net-new canonical rows)
-  products: 0.01, // products/sec (rare — new set releases)
+  sold: 0.8,      // sales/sec (nightly ingest + real-time enrichment)
+  cards: 0.15,    // unique-cards/sec (net-new canonical rows)
+  products: 0.005,// products/sec (rare — new set releases)
 };
 const RATE_MIN_MULT = 0.25;
-const RATE_MAX_MULT = 3.5;
+const RATE_MAX_MULT = 4.0;
 
 const FALLBACK: PublicStats = {
   soldCompsIndexed: 2_800_000,
@@ -52,6 +55,7 @@ export function LiveStatsStrip() {
   const [isLive, setIsLive] = useState(false);
   const lastRef = useRef<Snapshot | null>(null);
   const rateRef = useRef({ ...SEED_RATE });
+  const highWaterRef = useRef<{ sold: number; cards: number; products: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +84,17 @@ export function LiveStatsStrip() {
           }
         }
         lastRef.current = snap;
-        setDisplay(s);
+        // Seed high-water from the first real fetch — otherwise the
+        // FALLBACK constants would clamp the display upward if they
+        // exceed reality (e.g. after a Cosmos re-index that reset a
+        // count temporarily).
+        if (!highWaterRef.current) {
+          highWaterRef.current = {
+            sold: s.soldCompsIndexed,
+            cards: s.cardsWithSlug,
+            products: s.productsIndexed ?? 0,
+          };
+        }
         setLoaded(true);
       } catch {
         if (!cancelled) setLoaded(true);
@@ -92,6 +106,15 @@ export function LiveStatsStrip() {
 
     // Smooth interpolation between polls — Math.floor keeps digits
     // stable within a second and produces the ticker cadence.
+    //
+    // CF-MONOTONIC (Drew, 2026-08-05). Counters MUST NOT go backwards.
+    // Bug seen on the live page: seed rate over-predicted growth, then
+    // a new poll landed with a lower true value than what we had
+    // interpolated, so the number visibly dropped every 20 seconds.
+    // Fix: track a high-water mark per counter and clamp display to
+    // max(interpolated, highWater). New polls only reset the anchor
+    // downward silently if the interpolated ceiling still exceeds them —
+    // the display keeps climbing from where the eye last saw it.
     let rafId = 0;
     let lastPaintMs = 0;
     function tick(now: number) {
@@ -100,14 +123,21 @@ export function LiveStatsStrip() {
       if (now - lastPaintMs >= 100) {
         lastPaintMs = now;
         const anchor = lastRef.current;
-        if (anchor) {
+        const hw = highWaterRef.current;
+        if (anchor && hw) {
           const dtSec = (Date.now() - anchor.fetchedAtMs) / 1000;
           const r = rateRef.current;
+          const nextSold = Math.floor(anchor.stats.soldCompsIndexed + r.sold * dtSec);
+          const nextCards = Math.floor(anchor.stats.cardsWithSlug + r.cards * dtSec);
+          const nextProducts = Math.floor((anchor.stats.productsIndexed ?? 0) + r.products * dtSec);
+          hw.sold = Math.max(hw.sold, nextSold);
+          hw.cards = Math.max(hw.cards, nextCards);
+          hw.products = Math.max(hw.products, nextProducts);
           setDisplay((prev) => ({
             ...anchor.stats,
-            soldCompsIndexed: Math.floor(anchor.stats.soldCompsIndexed + r.sold * dtSec),
-            cardsWithSlug: Math.floor(anchor.stats.cardsWithSlug + r.cards * dtSec),
-            productsIndexed: Math.floor((anchor.stats.productsIndexed ?? 0) + r.products * dtSec),
+            soldCompsIndexed: hw.sold,
+            cardsWithSlug: hw.cards,
+            productsIndexed: hw.products,
             categories: prev.categories,
             sportsCovered: prev.sportsCovered,
             dataSourceCount: prev.dataSourceCount,
