@@ -900,6 +900,29 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
 
   try {
     await c.items.upsert(doc as any);
+    // CF-INGEST-CATALOG-AUTO-SEED (Drew, 2026-08-05). Fire-and-forget:
+    // make sure a card_catalog row exists at this canonical slug so
+    // every incoming comp immediately "tracks to the catalog." Cached
+    // in-process — the first comp for a slug this run does one Cosmos
+    // read + (if missing) one upsert; subsequent comps are free.
+    if (doc.hobbyiqCardId && doc.cardYear && doc.sport) {
+      void (async () => {
+        try {
+          const { ensureCatalogRow } = await import("../catalog/ensureCatalogRow.service.js");
+          await ensureCatalogRow({
+            slug: doc.hobbyiqCardId!,
+            sport: doc.sport!,
+            year: doc.cardYear!,
+            setName: doc.setName,
+            cardNumber: doc.cardNumber,
+            parallel: doc.parallel,
+            isAuto: doc.isAuto,
+            printRun: extractPrintRunFromTitle(input.title),
+            playerName: doc.playerName,
+          });
+        } catch { /* silent — never blocks ingest */ }
+      })();
+    }
     // CF-FMV-ACCURACY-CAPTURE (Drew, 2026-08-01). For user-verified
     // sales (ebay-user-purchase, ebay-user-sale, manual-user-entry),
     // capture predicted-vs-actual by looking up the pool median from
