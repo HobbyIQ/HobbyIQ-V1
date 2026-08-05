@@ -3625,6 +3625,55 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         hobbyiqCardId: hiqSlug,
       });
       const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
+
+      // CF-TREE-PRICE-FIRST (Drew, 2026-08-05). If the tree has this
+      // card, build a tree-scoped grade curve where each Grade node
+      // is priced from sold_comps filtered by (variantSlug, gradeCompany,
+      // gradeValue). This finds per-tier data unified's global cascade
+      // misses when Cardsight/vendor IDs shard the sales pool. Merges
+      // into byLabel so the enrichment loop below picks up tree prices
+      // AND unified prices — tree wins when both exist because it's
+      // grade-scoped (tighter signal).
+      try {
+        const { buildTreeGradeCurve } = await import(
+          "../services/compiq/treeGradeCurve.service.js"
+        );
+        const tree = await buildTreeGradeCurve({
+          cardIdOrSlug: id,
+          hobbyiqCardId: hiqSlug,
+        });
+        if (tree && tree.entries.length > 0) {
+          for (const t of tree.entries) {
+            if (t.sampleCount === 0) continue;
+            // Overwrite in byLabel — the tree-scoped signal beats unified's
+            // global cascade for per-grade accuracy.
+            byLabel.set(t.gradeLabel, {
+              grade: t.gradeLabel,
+              gradeCompany: t.gradeCompany,
+              gradeValue: t.gradeValue,
+              weightedMedian: t.weightedMedian,
+              plainMedian: t.weightedMedian,
+              sampleCount: t.sampleCount,
+              p10: null,
+              p90: null,
+              newestSaleDate: t.newestSaleAt,
+              valueSource: "observed" as const,
+              confidence: t.confidence,
+              marketValue: t.marketValue,
+              predictedPrice: t.predictedPrice,
+              trendPctPerWeek: t.trendPctPerWeek,
+              trendDirection: t.trendDirection,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "tree_grade_curve_failed",
+          source: "compiq.card-panel",
+          cardId: id,
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
       // Merge tree-known grades into the entries so labels the tree
       // knows about always render, even when CH silently dropped them.
       const existingLabels = new Set(gradeCurve.entries.map((e) => {
