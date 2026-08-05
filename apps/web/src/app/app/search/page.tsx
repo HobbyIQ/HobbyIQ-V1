@@ -138,14 +138,24 @@ function SearchPageInner() {
             Player, set, cert number, or free text. Click any result for full pricing detail.
           </p>
         </div>
-        <Link
-          href="/app/products?year=2025"
-          className="shrink-0 text-sm font-medium px-3 py-2 rounded-lg hover:bg-white/[0.04]"
-          style={{ background: "color-mix(in oklab, var(--color-accent) 12%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)" }}
-          title="Browse every catalog product by year + brand"
-        >
-          Browse products →
-        </Link>
+        <div className="flex gap-2 shrink-0">
+          <Link
+            href="/app/identify"
+            className="text-sm font-medium px-3 py-2 rounded-lg hover:bg-white/[0.04]"
+            style={{ background: "color-mix(in oklab, var(--color-accent) 12%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)" }}
+            title="Upload a photo of a card to identify it"
+          >
+            Identify from photo →
+          </Link>
+          <Link
+            href="/app/products?year=2025"
+            className="text-sm font-medium px-3 py-2 rounded-lg hover:bg-white/[0.04]"
+            style={{ background: "color-mix(in oklab, var(--color-accent) 12%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)" }}
+            title="Browse every catalog product by year + brand"
+          >
+            Browse products →
+          </Link>
+        </div>
       </div>
 
       <form onSubmit={onSubmit} className="mb-8 flex gap-3">

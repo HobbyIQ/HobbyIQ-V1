@@ -40,7 +40,7 @@ STATE values:
 | Card selection (candidates) | `CompIQCardSelectionView.swift` | `app/search/page.tsx` | 🟢 parity | |
 | Card detail (priced) | `CompIQPricedCardView.swift`, `CompIQView.swift` | `app/card/[cardsightId]/page.tsx` | 🟢 parity | |
 | Cert resolve | `CertResolveView.swift`, `SlabCertLookupView.swift` | (inline in `card/[id]`) | 🟡 partial | iOS has a dedicated cert-lookup flow; web is inline |
-| Card identify (photo scan) | `CardIdentifyView.swift` | — | 🔵 iOS-only | Camera scan — needs a web upload equivalent |
+| Card identify (photo scan) | `CardIdentifyView.swift` | `app/identify/page.tsx` | 🟢 parity | iOS is camera + PhotosPicker; web is file picker / drag-drop / mobile-Safari camera. Same /api/portfolio/identify endpoint. |
 | Product overview (BCCP structure) | `ProductOverviewView.swift` | `app/product/[productKey]/page.tsx` | 🟢 parity | Shipped c3769060 |
 | Price history | `PriceHistoryView.swift` | (inline in card detail) | 🟡 partial | Web renders chart inline; iOS is a dedicated screen |
 
