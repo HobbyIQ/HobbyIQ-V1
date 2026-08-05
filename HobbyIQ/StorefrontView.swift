@@ -30,6 +30,9 @@ struct StorefrontView: View {
     @State private var togglingShare = false
     @State private var filterText: String = ""
     @State private var busyHoldingIds: Set<String> = []
+    @State private var bulkBusy: BulkOperation? = nil
+
+    private enum BulkOperation { case selecting, clearing }
 
     var body: some View {
         ScrollView {
@@ -231,6 +234,9 @@ struct StorefrontView: View {
                 .font(HobbyIQTheme.Typography.caption)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .fixedSize(horizontal: false, vertical: true)
+
+            bulkActionsRow(eligible: eligible, selected: selected, cap: cap)
+
             TextField("Filter cards…", text: $filterText)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
@@ -296,6 +302,188 @@ struct StorefrontView: View {
         }
         .opacity(busy ? 0.55 : 1)
         .accessibilityLabel(isOn ? "Remove from storefront" : "Add to storefront")
+    }
+
+    // ─── bulk actions (CF-STOREFRONT-BULK 2026-08-05) ─────────
+    // Mirrors apps/web/src/app/app/storefront/page.tsx bulkSelectAll +
+    // bulkClearAll. "Select all" fills the cap with highest-FMV
+    // not-yet-selected cards. "Clear all" removes every selected card.
+    // Optimistic UI with per-card rollback on failure.
+
+    private func bulkActionsRow(eligible: [StorefrontHolding], selected: [StorefrontHolding], cap: Int?) -> some View {
+        let hasSelectable = eligible.contains(where: { $0.showOnStorefront != true })
+        let hasSelected = !selected.isEmpty
+        let selecting = bulkBusy == .selecting
+        let clearing = bulkBusy == .clearing
+        return HStack(spacing: HobbyIQTheme.Spacing.xSmall) {
+            Button {
+                Task { await bulkSelectAll(eligible: eligible, selected: selected, cap: cap) }
+            } label: {
+                Text(selecting ? "Adding…" : "Select all (highest value)")
+                    .font(HobbyIQTheme.Typography.captionEmphasis)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(bulkBusy != nil || !hasSelectable)
+            .opacity(bulkBusy != nil || !hasSelectable ? 0.55 : 1)
+
+            Button {
+                Task { await bulkClearAll(selected: selected) }
+            } label: {
+                Text(clearing ? "Clearing…" : "Clear all")
+                    .font(HobbyIQTheme.Typography.captionEmphasis)
+                    .foregroundStyle(HobbyIQTheme.Colors.danger)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(HobbyIQTheme.Colors.danger.opacity(0.15))
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(bulkBusy != nil || !hasSelected)
+            .opacity(bulkBusy != nil || !hasSelected ? 0.55 : 1)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func bulkSelectAll(eligible: [StorefrontHolding], selected: [StorefrontHolding], cap: Int?) async {
+        guard bulkBusy == nil else { return }
+        errorMessage = nil
+        bulkBusy = .selecting
+        defer { bulkBusy = nil }
+
+        // Sort not-yet-selected by displayValue DESC (mirrors web —
+        // "highest-FMV wins the last slots"). Then trim to cap headroom.
+        let notSelected = eligible
+            .filter { $0.showOnStorefront != true }
+            .sorted { $0.displayValue > $1.displayValue }
+        let headroom = cap.map { max(0, $0 - selected.count) } ?? notSelected.count
+        let toAdd = Array(notSelected.prefix(headroom))
+        guard !toAdd.isEmpty else {
+            errorMessage = (cap != nil && selected.count >= (cap ?? 0))
+                ? "Cap reached. Remove some before selecting more."
+                : "Nothing new to add — every eligible card is already selected."
+            return
+        }
+
+        // Optimistic — flip local state for everything we're about to add.
+        let toAddIds = Set(toAdd.map(\.id))
+        holdings = holdings.map { h in
+            guard toAddIds.contains(h.id) else { return h }
+            return StorefrontHolding(
+                id: h.id, playerName: h.playerName, cardTitle: h.cardTitle,
+                cardYear: h.cardYear, setName: h.setName, cardNumber: h.cardNumber,
+                parallel: h.parallel, gradeCompany: h.gradeCompany, gradeValue: h.gradeValue,
+                imageUrl: h.imageUrl, photos: h.photos, fairMarketValue: h.fairMarketValue,
+                estimatedValue: h.estimatedValue, showOnStorefront: true
+            )
+        }
+
+        // Concurrency-capped fan-out — 6 in-flight PATCHes at a time so
+        // 200-card adds don't hammer /api/portfolio/holdings but aren't
+        // molasses-slow either. Matches the web bulkSelectAll's spirit.
+        var failedIds = Set<String>()
+        await withTaskGroup(of: (String, Bool).self) { group in
+            let chunkSize = 6
+            for chunk in stride(from: 0, to: toAdd.count, by: chunkSize) {
+                let batch = Array(toAdd[chunk..<min(chunk + chunkSize, toAdd.count)])
+                for h in batch {
+                    group.addTask {
+                        do {
+                            try await APIService.shared.updateHoldingShowOnStorefront(holdingId: h.id, show: true)
+                            return (h.id, true)
+                        } catch {
+                            return (h.id, false)
+                        }
+                    }
+                }
+                for await (id, ok) in group where !ok {
+                    failedIds.insert(id)
+                }
+            }
+        }
+
+        if !failedIds.isEmpty {
+            // Rollback failures
+            holdings = holdings.map { h in
+                guard failedIds.contains(h.id) else { return h }
+                return StorefrontHolding(
+                    id: h.id, playerName: h.playerName, cardTitle: h.cardTitle,
+                    cardYear: h.cardYear, setName: h.setName, cardNumber: h.cardNumber,
+                    parallel: h.parallel, gradeCompany: h.gradeCompany, gradeValue: h.gradeValue,
+                    imageUrl: h.imageUrl, photos: h.photos, fairMarketValue: h.fairMarketValue,
+                    estimatedValue: h.estimatedValue, showOnStorefront: false
+                )
+            }
+            let done = toAdd.count - failedIds.count
+            errorMessage = "Added \(done). \(failedIds.count) failed — try again."
+        }
+
+        if let cap, notSelected.count > headroom {
+            let leftOut = notSelected.count - headroom
+            // If we hit the cap, tell the user
+            let addedCount = toAdd.count - failedIds.count
+            errorMessage = "Added \(addedCount). \(leftOut) more eligible cards weren't added — cap of \(cap) reached."
+        }
+    }
+
+    private func bulkClearAll(selected: [StorefrontHolding]) async {
+        guard bulkBusy == nil else { return }
+        guard !selected.isEmpty else { return }
+        errorMessage = nil
+        bulkBusy = .clearing
+        defer { bulkBusy = nil }
+
+        let toClearIds = Set(selected.map(\.id))
+        // Optimistic
+        holdings = holdings.map { h in
+            guard toClearIds.contains(h.id) else { return h }
+            return StorefrontHolding(
+                id: h.id, playerName: h.playerName, cardTitle: h.cardTitle,
+                cardYear: h.cardYear, setName: h.setName, cardNumber: h.cardNumber,
+                parallel: h.parallel, gradeCompany: h.gradeCompany, gradeValue: h.gradeValue,
+                imageUrl: h.imageUrl, photos: h.photos, fairMarketValue: h.fairMarketValue,
+                estimatedValue: h.estimatedValue, showOnStorefront: false
+            )
+        }
+        var failedIds = Set<String>()
+        await withTaskGroup(of: (String, Bool).self) { group in
+            let chunkSize = 6
+            for chunk in stride(from: 0, to: selected.count, by: chunkSize) {
+                let batch = Array(selected[chunk..<min(chunk + chunkSize, selected.count)])
+                for h in batch {
+                    group.addTask {
+                        do {
+                            try await APIService.shared.updateHoldingShowOnStorefront(holdingId: h.id, show: false)
+                            return (h.id, true)
+                        } catch {
+                            return (h.id, false)
+                        }
+                    }
+                }
+                for await (id, ok) in group where !ok {
+                    failedIds.insert(id)
+                }
+            }
+        }
+        if !failedIds.isEmpty {
+            holdings = holdings.map { h in
+                guard failedIds.contains(h.id) else { return h }
+                return StorefrontHolding(
+                    id: h.id, playerName: h.playerName, cardTitle: h.cardTitle,
+                    cardYear: h.cardYear, setName: h.setName, cardNumber: h.cardNumber,
+                    parallel: h.parallel, gradeCompany: h.gradeCompany, gradeValue: h.gradeValue,
+                    imageUrl: h.imageUrl, photos: h.photos, fairMarketValue: h.fairMarketValue,
+                    estimatedValue: h.estimatedValue, showOnStorefront: true
+                )
+            }
+            let done = selected.count - failedIds.count
+            errorMessage = "Cleared \(done). \(failedIds.count) failed — try again."
+        }
     }
 
     private func selectionBadge(on: Bool, busy: Bool) -> some View {
