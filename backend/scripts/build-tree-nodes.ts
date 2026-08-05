@@ -186,25 +186,36 @@ async function enumerateBaseballCards(year: number | null, sport: string, cap: n
   return [...dedup.values()];
 }
 
-async function observeGradesForVariant(card: CardIdentity, variantSlug: string): Promise<Array<{
+// CF-BATCH-GRADES (Drew, 2026-08-05). One query per card returns every
+// (hobbyiqCardId, gradeCompany, gradeValue) triple for the card's whole
+// variant family. Callers filter the map by variantSlug locally. Cuts
+// per-card cost from ~13 queries (once per variant) to 1.
+async function observeGradesForCard(card: CardIdentity): Promise<Map<string, Array<{
   gradeCompany: string | null; gradeValue: number | null; n: number;
-}>> {
+}>>> {
+  // The variant slugs all start with the card's slug prefix — filter
+  // sold_comps by prefix match. STARTSWITH is Cosmos-native and can
+  // use the index.
+  const prefix = `hiq:${card.sport}:${card.year}:${card.setKey}:${card.cardNumber.toLowerCase()}:`;
   const { resources } = await soldComps.items.query({
-    query: `SELECT c.gradeCompany, c.gradeValue, COUNT(1) AS n
-            FROM c WHERE c.hobbyiqCardId = @slug
-              AND c.price > 0
-            GROUP BY c.gradeCompany, c.gradeValue`,
-    parameters: [{ name: "@slug", value: variantSlug }],
-  }, { maxItemCount: 200 }).fetchAll();
-  const merged = new Map<string, { gradeCompany: string | null; gradeValue: number | null; n: number }>();
-  for (const r of resources as Array<{ gradeCompany: string | null; gradeValue: number | string | null; n: number }>) {
+    query: `SELECT c.hobbyiqCardId, c.gradeCompany, c.gradeValue, COUNT(1) AS n
+            FROM c WHERE STARTSWITH(c.hobbyiqCardId, @pfx) AND c.price > 0
+            GROUP BY c.hobbyiqCardId, c.gradeCompany, c.gradeValue`,
+    parameters: [{ name: "@pfx", value: prefix }],
+  }, { maxItemCount: 500 }).fetchAll();
+  const byVariant = new Map<string, Map<string, { gradeCompany: string | null; gradeValue: number | null; n: number }>>();
+  for (const r of resources as Array<{ hobbyiqCardId: string; gradeCompany: string | null; gradeValue: number | string | null; n: number }>) {
     const gv = r.gradeValue == null ? null : Number(r.gradeValue);
     const key = r.gradeCompany ? `${r.gradeCompany.toUpperCase()}::${gv}` : "raw";
-    const acc = merged.get(key);
+    let inner = byVariant.get(r.hobbyiqCardId);
+    if (!inner) { inner = new Map(); byVariant.set(r.hobbyiqCardId, inner); }
+    const acc = inner.get(key);
     if (acc) acc.n += r.n;
-    else merged.set(key, { gradeCompany: r.gradeCompany ? r.gradeCompany.toUpperCase() : null, gradeValue: gv, n: r.n });
+    else inner.set(key, { gradeCompany: r.gradeCompany ? r.gradeCompany.toUpperCase() : null, gradeValue: gv, n: r.n });
   }
-  return [...merged.values()];
+  const out = new Map<string, Array<{ gradeCompany: string | null; gradeValue: number | null; n: number }>>();
+  for (const [slug, inner] of byVariant) out.set(slug, [...inner.values()]);
+  return out;
 }
 
 async function upsertMany(docs: Record<string, unknown>[]): Promise<{ ok: number; err: number }> {
@@ -277,6 +288,9 @@ async function main(): Promise<void> {
     const variantDocs: Record<string, unknown>[] = [];
     const gradeDocs: Record<string, unknown>[] = [];
 
+    // Batched grade lookup — one query for the whole card's variant family.
+    const gradesByVariantSlug = await observeGradesForCard(card);
+
     for (const v of variantSpecs) {
       const variantSlug = variantIdOf(card, v);
       const variantDocId = `variant::${variantSlug}`;
@@ -295,7 +309,7 @@ async function main(): Promise<void> {
         source: v.source,
         builtAt: now,
       });
-      const grades = await observeGradesForVariant(card, variantSlug);
+      const grades = gradesByVariantSlug.get(variantSlug) ?? [];
       for (const g of grades) {
         const gradeSlug = gradeIdOf(variantSlug, g.gradeCompany, g.gradeValue);
         const gradeDocId = `grade::${gradeSlug}`;
