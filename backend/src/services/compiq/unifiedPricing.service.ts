@@ -26,11 +26,27 @@ const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
 
 // Cascade windows for adaptive density-based lookback.
+//
+// CF-7-30-60 (Drew, 2026-08-05). Three-tier cascade per Drew's spec:
+//   1. Last 7d if the cluster is dense (>= 5 sales)  →  hot-week price
+//   2. Otherwise expand to 30d (>= 10 sales)         →  steady month
+//   3. Otherwise expand to 60d (>= 5 sales)          →  broader pool
+//      + the downstream playerRatio multiplier (already applied in the
+//        computation loop below) lifts stale medians by the wider
+//        player-pool trend when the exact-cardId sample is old.
+// 90d/180d retained as ultimate thin-market fallbacks so vintage
+// (1970s O-Pee-Chee etc.) still get some FMV instead of null. Anything
+// hitting the 180d tier has visible low confidence.
+//
+// Prior config was 30d/60d/90d/180d, which dragged FMV behind hot
+// cards mid-surge. Concrete case: 2018 Bowman Chrome Ohtani PSA 9
+// 7d median $2,650 vs engine's 30d median $2,400 → FMV lagged ~$250.
 const WINDOWS = [
-  { days: 30, minDirect: 20 },
-  { days: 60, minDirect: 15 },
-  { days: 90, minDirect: 10 },
-  { days: 180, minDirect: 5 },
+  { days: 7, minDirect: 5 },
+  { days: 30, minDirect: 10 },
+  { days: 60, minDirect: 5 },
+  { days: 90, minDirect: 5 },
+  { days: 180, minDirect: 3 },
 ];
 
 // Recency decay: sale weight = exp(-days_since_sale / HALF_LIFE_DAYS).
