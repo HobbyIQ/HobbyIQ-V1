@@ -2431,6 +2431,51 @@ struct APIService {
         return try await post(path: "/api/search/cards", body: body, responseType: UnifiedSearchResponse.self)
     }
 
+    // MARK: - Storefront (public /u/<username>)
+    //
+    // Shared endpoint set with web (apps/web/src/app/app/storefront/page.tsx):
+    //   POST /api/auth/public-share       — toggle whole-storefront on/off
+    //   PATCH /api/portfolio/holdings/:id — { showOnStorefront: Bool }
+    //   GET /api/portfolio                — same endpoint fetchPortfolioHoldings
+    //                                       uses; we decode a lighter
+    //                                       StorefrontHolding shape that
+    //                                       carries just what the toggle
+    //                                       grid needs + showOnStorefront.
+
+    func setPublicShareEnabled(_ enabled: Bool) async throws -> Bool {
+        struct Body: Encodable { let enabled: Bool }
+        struct Resp: Decodable { let success: Bool; let publicShareEnabled: Bool? }
+        let resp = try await post(
+            path: "/api/auth/public-share",
+            body: Body(enabled: enabled),
+            responseType: Resp.self
+        )
+        return resp.success
+    }
+
+    func updateHoldingShowOnStorefront(holdingId: String, show: Bool) async throws {
+        struct Body: Encodable { let showOnStorefront: Bool }
+        struct Resp: Decodable { let success: Bool? }
+        let encoded = holdingId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? holdingId
+        let bodyData = try encoder.encode(Body(showOnStorefront: show))
+        let request = try makeRequest(path: "/api/portfolio/holdings/\(encoded)", method: "PATCH", bodyData: bodyData)
+        _ = try await perform(request, responseType: Resp.self)
+    }
+
+    func fetchStorefrontHoldings() async throws -> [StorefrontHolding] {
+        // Same /api/portfolio endpoint the main portfolio view hits — but
+        // decoded through a lightweight shape that only carries the fields
+        // the storefront picker needs (+ showOnStorefront, which the
+        // heavier InventoryCard decoder doesn't expose today).
+        let envelope: StorefrontHoldingsEnvelope = try await get(
+            path: "/api/portfolio",
+            queryItems: nil,
+            responseType: StorefrontHoldingsEnvelope.self,
+            timeoutSeconds: 30
+        )
+        return envelope.holdings
+    }
+
     // MARK: - Catalog Product Structure (BCCP-derived)
     //
     // Shared wire contract with apps/web/src/lib/api.ts:getProductStructure.
@@ -4458,11 +4503,58 @@ struct AuthSignInResponse: Decodable {
     let error: String?
 }
 
+// CF-STOREFRONT (2026-08-05). Lightweight holding shape for the
+// storefront picker — mirrors the fields web reads (photos + identity
+// + showOnStorefront) without perturbing the larger InventoryCard
+// decoder that the main portfolio view depends on. Decoded from the
+// same /api/portfolio envelope; fields the picker doesn't care about
+// are ignored on decode.
+struct StorefrontHolding: Decodable, Identifiable, Hashable {
+    let id: String
+    let playerName: String?
+    let cardTitle: String?
+    let cardYear: Int?
+    let setName: String?
+    let cardNumber: String?
+    let parallel: String?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let imageUrl: String?
+    let photos: [String]?
+    let fairMarketValue: Double?
+    let estimatedValue: Double?
+    let showOnStorefront: Bool?
+
+    var hasPhoto: Bool { (photos?.isEmpty == false) || (imageUrl?.isEmpty == false) }
+    var hasIdentity: Bool { !(playerName?.isEmpty ?? true) || !(cardTitle?.isEmpty ?? true) }
+    var isEligible: Bool { hasPhoto && hasIdentity }
+    var displayValue: Double { fairMarketValue ?? estimatedValue ?? 0 }
+    var displayName: String {
+        if let t = cardTitle, !t.isEmpty { return t }
+        if let p = playerName, !p.isEmpty { return p }
+        return "Untitled card"
+    }
+}
+
+struct StorefrontHoldingsEnvelope: Decodable {
+    let holdings: [StorefrontHolding]
+}
+
 struct BackendAuthUser: Decodable {
     let userId: String
     let email: String
     let plan: String
     let createdAt: String
+    // CF-STOREFRONT (2026-08-05). Optional fields for the storefront
+    // management screen — silently absent on older /api/auth/session
+    // responses (decoder skips them). Web mirror:
+    // apps/web/src/lib/api.ts:AuthUser.
+    let username: String?
+    let fullName: String?
+    let publicShareEnabled: Bool?
+    let emailVerified: Bool?
+    let emailVerificationPending: Bool?
+    let entitlementOverride: String?
 }
 
 struct PortfolioIQActionResponse: Decodable {

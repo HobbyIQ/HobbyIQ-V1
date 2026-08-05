@@ -37,6 +37,14 @@ struct MoreView: View {
 
     private var linksSection: some View {
         VStack(spacing: 12) {
+            // CF-STOREFRONT iOS parity (2026-08-05). Investor/Pro-Seller
+            // storefront management — screen handles its own gates for
+            // sub-eligible plans so it's always safe to expose here.
+            NavigationLink { StorefrontView() } label: {
+                MoreLinkRow(title: "Storefront", subtitle: "Pick which cards appear on your public shop")
+            }
+            .buttonStyle(.plain)
+
             NavigationLink {
                 MoreDetailView(
                     title: "Settings",

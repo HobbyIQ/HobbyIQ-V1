@@ -77,7 +77,7 @@ STATE values:
 | eBay connect | `EbayConnectView.swift` | `app/ebay/page.tsx` | 🟢 parity | |
 | eBay listing draft | `EbayListingDraftView.swift`, `EbayListingManageView.swift` | (inline in `app/ebay`) | 🟡 partial | |
 | BuyerIQ | `BuyerIQ/BuyerIQView.swift` + list-detail + create + target-edit | `app/buyeriq/page.tsx`, `[listId]/page.tsx` | 🟢 parity | Full CRUD on both sides; web comment even reads "Mirrors iOS BuyerIQView.swift" |
-| Storefront (public profile editor) | — | `app/storefront/page.tsx` | 🟣 web-only | Pro Seller share/edit surface — needs iOS build |
+| Storefront (public profile editor) | `StorefrontView.swift` | `app/storefront/page.tsx` | 🟢 parity | MVP: tier + email + username gates, whole-storefront toggle, per-card checkbox picker. Bulk select/clear, share sheet, and photo preview are followups. |
 | Public storefront page | — | `(marketing)/u/[username]/page.tsx` | 🟣 web-only | Deep-link viewer; iOS could share via Safari |
 | Messages | — | `app/messages/page.tsx`, `[otherUserId]/page.tsx` | 🟣 web-only | No iOS chat UI |
 
