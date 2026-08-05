@@ -219,8 +219,20 @@ function normalizeParallelForMatch(raw: string | null | undefined): string {
   // Slugify: lowercase, non-alphanum → space, collapse spaces
   s = s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   if (!s) return "";
+  // CF-BCCP-PLURAL-NORM (2026-08-05). BCCP often lists parallels as
+  // plurals ("Refractors", "Gold Refractors", "Prizms"). Our pool uses
+  // singular ("Refractor", "Gold Refractor", "Prizm"). Strip trailing 's'
+  // on well-known parallel roots so they collapse to the same key. This
+  // was the #1 miss driver — "Refractor" alone was 9,989 unmatched rows
+  // solely because BCCP calls them "Refractors" and we called them
+  // "Refractor". Only 8 known parallel-noun roots — safe list.
+  const PLURAL_ROOTS = ["refractor", "prizm", "auto", "autograph", "mojo", "foil", "shimmer", "wave"];
+  const singulars = s.split(" ").map((w) => {
+    const stripped = w.endsWith("s") ? w.slice(0, -1) : w;
+    return PLURAL_ROOTS.includes(stripped) ? stripped : w;
+  });
+  s = singulars.join(" ");
   // Order-insensitive: sort word bag so "refractor blue" ≡ "blue refractor".
-  // Only apply when 2-4 words (avoid mangling names like "Reptilian Green Refractor" that need semantic order? actually we still want to match so keep bag-sort for ≤5 words).
   const words = s.split(" ").filter(Boolean);
   if (words.length >= 2 && words.length <= 5) {
     return words.slice().sort().join(" ");
