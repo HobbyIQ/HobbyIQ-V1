@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LiveStatsStrip } from "@/components/LiveStatsStrip";
+import { WaitlistCta } from "@/components/WaitlistCta";
 
 export default function LandingPage() {
   return (
@@ -23,7 +24,10 @@ export default function LandingPage() {
           Every price rung sourced from real transactions. No hand-tuned matrix, no guesses.
           Multi-sport, full grade ladder, actionable sell/hold/list signals.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+        <div className="mt-6">
+          <WaitlistCta source="homepage-hero" />
+        </div>
+        <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
           <Link href="/register" className="hiq-btn-primary">
             Start free
           </Link>
@@ -117,9 +121,10 @@ export default function LandingPage() {
       <section className="max-w-4xl mx-auto px-6 pb-24 text-center">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to see your portfolio priced right?</h2>
         <p className="text-[color:var(--color-muted)] mb-8 max-w-2xl mx-auto">
-          Free plan gets you started. Upgrade any time.
+          Join the waitlist for launch — or start free right now.
         </p>
-        <div className="flex items-center justify-center gap-4 flex-wrap">
+        <WaitlistCta source="homepage-footer" />
+        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
           <Link href="/register" className="hiq-btn-primary">
             Create free account
           </Link>
