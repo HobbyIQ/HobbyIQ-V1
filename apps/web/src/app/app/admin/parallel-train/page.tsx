@@ -52,6 +52,7 @@ export default function ParallelTrainPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setItem(json.item ?? null);
+      setError(null);   // clear stale error on success
     } catch (e) {
       setError((e as Error)?.message ?? "load failed");
     } finally {
@@ -174,7 +175,11 @@ export default function ParallelTrainPage() {
                 ))}
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+                <button disabled={submitting} onClick={() => void submitLabel("assign", item.storedParallel || item.hobbyiqCardId.split(":")[5] || "")}
+                        style={{ padding: "8px 16px", background: "#efe", border: "1px solid #8c8" }}>
+                  Current is correct
+                </button>
                 <button disabled={submitting} onClick={() => void submitLabel("skip")}
                         style={{ padding: "8px 16px", background: "#eee", border: "1px solid #ccc" }}>Skip</button>
                 <button disabled={submitting} onClick={() => void submitLabel("unknown")}

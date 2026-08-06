@@ -130,12 +130,18 @@ router.get("/verify/parallel-train/next", async (req, res, next) => {
       ? `AND (ENDSWITH(c.hobbyiqCardId, ":auto") OR CONTAINS(c.hobbyiqCardId, ":auto:num-"))`
       : `AND (ENDSWITH(c.hobbyiqCardId, ":no-auto") OR CONTAINS(c.hobbyiqCardId, ":no-auto:num-"))`;
     // Random-ish sampling: pull 20, pick one that hasn't been labeled today.
+    // Narrow to rows most likely to have parallel misclassification:
+    // status=anomaly AND at least one anomaly kind is parser-low-confidence
+    // (title vs slug disagreement on parallel/setKey/isAuto). Skip rows
+    // where the anomaly is only about price/image — those don't need
+    // this tool.
     const { resources: rows } = await stage.items.query({
       query: `SELECT TOP 20 c.id, c.hobbyiqCardId, c.raw, c.reclassifiedAt FROM c
               WHERE c.status = "anomaly"
                 AND CONTAINS(LOWER(c.raw.vendorPayload.title), @c)
                 AND IS_DEFINED(c.raw.vendorPayload.imageUrl)
                 AND c.raw.vendorPayload.imageUrl != null
+                AND EXISTS(SELECT VALUE a FROM a IN c.clean.anomalies WHERE a.kind = "parser-low-confidence")
                 ${autoFilter}`,
       parameters: [{ name: "@c", value: color }],
     }).fetchAll();
