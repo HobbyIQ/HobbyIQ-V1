@@ -65,7 +65,7 @@ function CardDetailInner() {
     if (parallel) params.set("parallel", parallel);
     if (grade) params.set("grade", `${grade.company}:${grade.value}`);
     const qs = params.toString();
-    router.replace(`/app/card/${encodeURIComponent(cardsightCardId)}${qs ? `?${qs}` : ""}`);
+    router.replace(`/app/card/${cardsightCardId}${qs ? `?${qs}` : ""}`);
   }
 
   if (!cardsightCardId) {

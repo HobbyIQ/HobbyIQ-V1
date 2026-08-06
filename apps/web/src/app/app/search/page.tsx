@@ -91,10 +91,11 @@ function SearchPageInner() {
     }
     const qs = search.toString();
     if (cardsightId) {
-      // encodeURIComponent so `hiq:baseball:2018:...` slugs get their
-      // colons safely encoded — pairs with the decode on the card page
-      // side (CF-CARD-ID-DECODE).
-      router.push(`/app/card/${encodeURIComponent(cardsightId)}${qs ? `?${qs}` : ""}`);
+      // Colons are valid in URL path segments — Next.js dynamic routes
+      // handle them natively. Pushing with encodeURIComponent double-
+      // encoded them and useParams then only decoded one layer, so
+      // "%3A" was visible in the display. Push the raw slug.
+      router.push(`/app/card/${cardsightId}${qs ? `?${qs}` : ""}`);
       return;
     }
     // CF-CATALOG-CANDIDATE-CLICKTHROUGH (Drew, 2026-08-02). Candidate
