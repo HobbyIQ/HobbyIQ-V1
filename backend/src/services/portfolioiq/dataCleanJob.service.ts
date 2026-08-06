@@ -84,8 +84,26 @@ export interface DataCleanResult {
  * Uses continuation token pagination so successive calls advance
  * through the queue without missing rows.
  */
+// CF-DRAINER-WORKER-SHARDING (Drew, 2026-08-06). When multiple
+// workers run the same pending SELECT, they all pull the SAME TOP N
+// rows (Cosmos returns deterministically) and race on updates —
+// contention makes 16 workers slower than 8. Fix: each worker takes a
+// hex-char shard of the UUID id space. Staging id = randomUUID() which
+// starts with an even distribution of 0-9,a-f. Worker i of N filters
+// `STARTSWITH(c.id, <chars>)` for its assigned char range.
+function shardChars(index: number, total: number): string[] {
+  const hex = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
+  if (total <= 1) return hex;
+  const chars: string[] = [];
+  for (let i = 0; i < hex.length; i++) {
+    if (i % total === (index % total)) chars.push(hex[i]);
+  }
+  return chars;
+}
+
 export async function runDataCleanBatch(opts: {
   limit?: number;
+  workerShard?: { index: number; total: number };
 } = {}): Promise<DataCleanResult> {
   const staging = await getStagingContainer();
   const soldComps = await getSoldCompsContainer();
@@ -148,9 +166,20 @@ export async function runDataCleanBatch(opts: {
     }
   } catch { /* sweep is best-effort — main loop still runs */ }
 
+  // CF-DRAINER-WORKER-SHARDING (Drew, 2026-08-06). Filter pending rows to
+  // this worker's id-prefix shard so N parallel workers don't compete on
+  // the same TOP N rows. See shardChars() above.
+  const shardFilter = opts.workerShard
+    ? " AND (" + shardChars(opts.workerShard.index, opts.workerShard.total)
+        .map((_, i) => `STARTSWITH(c.id, @shard${i})`).join(" OR ") + ")"
+    : "";
+  const shardParams = opts.workerShard
+    ? shardChars(opts.workerShard.index, opts.workerShard.total)
+        .map((ch, i) => ({ name: `@shard${i}`, value: ch }))
+    : [];
   const { resources: pending } = await staging.items.query<StagingDoc>({
-    query: "SELECT TOP @n * FROM c WHERE c.status = 'pending' ORDER BY c.observedAt ASC",
-    parameters: [{ name: "@n", value: limit }],
+    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending'${shardFilter} ORDER BY c.observedAt ASC`,
+    parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
 
   // CF-DATA-CLEAN-BATCH-MEDIAN (Drew, 2026-08-06). Pre-fetch rolling

@@ -46,7 +46,23 @@ export interface PromotionResult {
  * "verified"). Writes to sold_comps and flips staging to "promoted".
  * Silent-safe.
  */
-export async function runPromotionBatch(opts: { limit?: number } = {}): Promise<PromotionResult> {
+// CF-DRAINER-WORKER-SHARDING (Drew, 2026-08-06). Same pattern as
+// dataCleanJob.service.ts. Workers filter promotion candidates by
+// hex-char id prefix so N parallel workers pull disjoint sets.
+function shardChars(index: number, total: number): string[] {
+  const hex = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
+  if (total <= 1) return hex;
+  const chars: string[] = [];
+  for (let i = 0; i < hex.length; i++) {
+    if (i % total === (index % total)) chars.push(hex[i]);
+  }
+  return chars;
+}
+
+export async function runPromotionBatch(opts: {
+  limit?: number;
+  workerShard?: { index: number; total: number };
+} = {}): Promise<PromotionResult> {
   const staging = await getStagingContainer();
   const result: PromotionResult = {
     scanned: 0,
@@ -58,9 +74,17 @@ export async function runPromotionBatch(opts: { limit?: number } = {}): Promise<
   if (!staging) return result;
 
   const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+  const shardFilter = opts.workerShard
+    ? " AND (" + shardChars(opts.workerShard.index, opts.workerShard.total)
+        .map((_, i) => `STARTSWITH(c.id, @shard${i})`).join(" OR ") + ")"
+    : "";
+  const shardParams = opts.workerShard
+    ? shardChars(opts.workerShard.index, opts.workerShard.total)
+        .map((ch, i) => ({ name: `@shard${i}`, value: ch }))
+    : [];
   const { resources: ready } = await staging.items.query<StagingDoc>({
-    query: "SELECT TOP @n * FROM c WHERE c.status IN ('clean', 'verified') ORDER BY c.observedAt ASC",
-    parameters: [{ name: "@n", value: limit }],
+    query: `SELECT TOP @n * FROM c WHERE c.status IN ('clean', 'verified')${shardFilter} ORDER BY c.observedAt ASC`,
+    parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
 
   for (const row of ready) {

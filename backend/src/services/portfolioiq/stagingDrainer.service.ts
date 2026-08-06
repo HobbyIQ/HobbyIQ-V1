@@ -45,9 +45,14 @@ async function tick(w: Worker): Promise<void> {
   w.ticks++;
   w.lastTickAt = Date.now();
   try {
-    const dc = await runDataCleanBatch({ limit: DATA_CLEAN_LIMIT });
+    // CF-DRAINER-WORKER-SHARDING (Drew, 2026-08-06). Passing workerShard
+    // makes each worker pull rows from a disjoint id-prefix slice, so N
+    // workers don't fight over the same TOP N pending rows (contention
+    // was making 16 workers slower than 8).
+    const shard = { index: w.id, total: WORKER_COUNT };
+    const dc = await runDataCleanBatch({ limit: DATA_CLEAN_LIMIT, workerShard: shard });
     w.totalCleaned += (dc as { cleaned?: number }).cleaned ?? 0;
-    const pr = await runPromotionBatch({ limit: PROMOTION_LIMIT });
+    const pr = await runPromotionBatch({ limit: PROMOTION_LIMIT, workerShard: shard });
     w.totalPromoted += pr.promoted ?? 0;
     if (w.ticks % 20 === 0) {
       console.log(JSON.stringify({
