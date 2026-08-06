@@ -2936,20 +2936,45 @@ async function autoPriceHolding(
       cardId: (updated as any).cardId,
     });
     if (fallback) {
-      (updated as any).fairMarketValue = fallback.fairMarketValue;
-      (updated as any).valuationStatus = "estimated";
-      (updated as any).isEstimate = true;
-      (updated as any).estimateBasis = fallback.estimateBasis;
-      (updated as any).sourceVendor = fallback.vendor;
-      (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
-      console.log(JSON.stringify({
-        event: "catalog_resolver_fallback_hit",
-        source: "portfolioStore.autoPriceHolding",
-        holdingId: holding.id,
-        vendor: fallback.vendor,
-        fairMarketValue: fallback.fairMarketValue,
-        compCount: fallback.compCount,
-      }));
+      // CF-CATALOG-FALLBACK-COST-BASIS-FLOOR (Drew, 2026-08-06). Mirror
+      // of the same guard at ~line 2765. Devin Taylor CPA-DT Black auto
+      // ($650 cost basis) got fmv=$3.69 written via THIS path because
+      // this second write site had no cost-basis check. Any fallback
+      // FMV that lands <15% of cost basis on a >$50 holding is
+      // suspiciously low; keep the prior value instead. valuationStatus
+      // stays as-is so UI still shows a value (per Drew: "we can't show
+      // null, we have the calculation to get to its current value").
+      const qty = Math.max(1, toNumber(holding.quantity, 1));
+      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
+      const proposed = fallback.fairMarketValue * qty;
+      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      if (suspiciouslyLow) {
+        console.warn(JSON.stringify({
+          event: "catalog_fallback_rejected_cost_basis_floor",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          costBasis,
+          proposed,
+          proposedPct: Math.round((proposed / costBasis) * 10000) / 100,
+          vendor: fallback.vendor,
+          keepingPrior: true,
+        }));
+      } else {
+        (updated as any).fairMarketValue = fallback.fairMarketValue;
+        (updated as any).valuationStatus = "estimated";
+        (updated as any).isEstimate = true;
+        (updated as any).estimateBasis = fallback.estimateBasis;
+        (updated as any).sourceVendor = fallback.vendor;
+        (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
+        console.log(JSON.stringify({
+          event: "catalog_resolver_fallback_hit",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          vendor: fallback.vendor,
+          fairMarketValue: fallback.fairMarketValue,
+          compCount: fallback.compCount,
+        }));
+      }
     }
   }
 
