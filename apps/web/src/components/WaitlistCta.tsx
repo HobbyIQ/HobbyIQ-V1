@@ -92,7 +92,7 @@ export function WaitlistCta({ source = "homepage" }: { source?: string }) {
               status === "error"
                 ? "var(--color-danger)"
                 : status === "joined" || status === "already"
-                  ? "var(--color-accent)"
+                  ? "var(--hiq-hobby-green)"
                   : "var(--color-muted)",
           }}
           role="status"
