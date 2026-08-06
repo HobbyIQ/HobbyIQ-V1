@@ -553,6 +553,16 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   if (typeof input.price !== "number" || input.price <= 0) return;
   if (!input.soldAt) return;
 
+  // CF-GRADE-VALUE-NULL-REJECT (Drew, 2026-08-06). Reject rows where
+  // gradeCompany is set but gradeValue is null/undefined. These
+  // "PSA null" rows produced 1,235 ghost grade nodes in card_catalog
+  // that rendered as duplicate "PSA 10 with no data" tiles in the UI.
+  // If we don't know the numeric grade, treat as raw — safer than
+  // creating a phantom grade tier.
+  if (input.gradeCompany && (input.gradeValue === null || input.gradeValue === undefined)) {
+    input = { ...input, gradeCompany: null, gradeValue: null };
+  }
+
   // CF-CARDSIGHT-STAGING-ROUTING (Drew, 2026-08-01). When feature flag
   // is on, route Cardsight-source writes to cardsight_staging container.
   // Sold_comps stays confirmed-sold only. Off by default.
