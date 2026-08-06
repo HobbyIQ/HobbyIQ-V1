@@ -162,14 +162,44 @@ export async function searchCatalog(
     rows = resources;
   } catch { return { hits: [], totalCandidatesScanned: 0, query, tokensUsed: tokens }; }
 
-  // Score each row by fraction of query tokens covered by searchTokens.
+  // CF-CATALOG-SCORING-MULTI-FIELD (Drew, 2026-08-06). Score each row
+  // by weighted matches across ALL searchable fields (searchTokens +
+  // playerName + setKey + cardNumber + year). Tree card nodes don't
+  // have searchTokens populated, so a searchTokens-only score would
+  // drop them below the 0.5 threshold. Weights:
+  //   playerName match  → 3.0  (strongest signal — "ohtani" should
+  //                              rank Ohtani cards far above others)
+  //   searchTokens hit  → 2.0
+  //   setKey match      → 1.5
+  //   year match        → 1.5
+  //   cardNumber match  → 1.0
+  // Score = sum(weighted matches) / max possible (tokens × 3.0).
   const scored: CatalogSearchHit[] = [];
   for (const r of rows) {
     const rowTokens = new Set((r.searchTokens ?? []).map((t) => t.toLowerCase()));
-    let matched = 0;
-    for (const t of tokens) if (rowTokens.has(t)) matched++;
-    const score = matched / tokens.length;
-    if (score < 0.5 && tokens.length > 2) continue;   // require at least half the tokens for multi-word queries
+    const rowPlayer = String(r.playerName ?? "").toLowerCase();
+    const rowSet = String(r.setKey ?? "").toLowerCase();
+    const rowNumber = String(r.cardNumber ?? "").toLowerCase();
+    const rowYear = r.year != null ? String(r.year) : "";
+    let raw = 0;
+    let hitFields = 0;
+    for (const t of tokens) {
+      let tokenMax = 0;
+      if (rowPlayer && rowPlayer.includes(t)) tokenMax = Math.max(tokenMax, 3.0);
+      if (rowTokens.has(t)) tokenMax = Math.max(tokenMax, 2.0);
+      if (rowSet && rowSet.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
+      if (rowYear && rowYear === t) tokenMax = Math.max(tokenMax, 1.5);
+      if (rowNumber && rowNumber.includes(t)) tokenMax = Math.max(tokenMax, 1.0);
+      if (tokenMax > 0) hitFields++;
+      raw += tokenMax;
+    }
+    const maxPossible = tokens.length * 3.0;
+    const score = maxPossible > 0 ? raw / maxPossible : 0;
+    // Require at least half the tokens matched (any field) for
+    // multi-word queries. Prevents ranking noise where a lone
+    // "topps" match surfaces a card that has nothing to do with
+    // the query.
+    if (hitFields < Math.max(1, Math.ceil(tokens.length / 2))) continue;
     scored.push({
       slug: r.id,
       cardNumber: r.cardNumber ?? null,
