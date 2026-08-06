@@ -246,11 +246,12 @@ router.post("/verify/parallel-train/:stagingId/label", async (req, res, next) =>
       }
     }
 
-    // Log the correction (training example) regardless of action
+    // Log the correction (training example) regardless of action.
+    // verify_corrections partition key is /reason — value is what
+    // groups all parallel-train labels together for retrieval.
     await corrections.items.upsert({
       id: `parallel-train::${stagingId}::${Date.now()}`,
-      partitionKey: adminUserId,
-      kind: "parallel-train",
+      reason: "parallel-train",   // partition key value
       stagingId,
       originalSlug: row.hobbyiqCardId,
       newSlug: newSlug,
@@ -260,6 +261,7 @@ router.post("/verify/parallel-train/:stagingId/label", async (req, res, next) =>
       note: body.note ?? null,
       adminUserId,
       labeledAt: now,
+      observedAt: now,   // matches existing verify_corrections doc shape
     });
 
     if (action === "assign" && newSlug && newSlug !== row.hobbyiqCardId) {
