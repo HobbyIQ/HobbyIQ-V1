@@ -267,7 +267,7 @@ function prettySource(s: string): string {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="hiq-card p-3" style={{ background: "var(--color-bg)" }}>
+    <div className="hiq-card p-3 text-center" style={{ background: "var(--color-bg)" }}>
       <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
         {label}
       </div>

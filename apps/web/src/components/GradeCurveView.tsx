@@ -190,7 +190,7 @@ function GradeRow({ e }: { e: ObservedGradeEntry }) {
             </div>
             {e.predictedPricePct != null && (
               <div className="text-[10px] tabular-nums mt-0.5" style={{ color: predictColor }}>
-                {e.predictedPricePct > 0 ? "+" : ""}{formatPct(e.predictedPricePct)}
+                {formatPct(e.predictedPricePct)}
               </div>
             )}
             {e.predictedPriceRangeLow != null && e.predictedPriceRangeHigh != null && (
