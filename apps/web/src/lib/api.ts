@@ -807,6 +807,14 @@ export async function fetchPriceByQuery(query: string): Promise<PriceByQueryResp
 // UUID needed by price-by-id. Returns null for non-cardsight candidates.
 export function candidateIdToCardsightId(candidateId: string): string | null {
   if (candidateId.startsWith("cardsight:")) return candidateId.slice("cardsight:".length);
+  // CF-CATALOG-CANDIDATE-ROUTE (Drew, 2026-08-06). Also route `catalog:`
+  // prefixed candidates directly to the card page using the embedded
+  // hobbyiqCardId slug. The recent-sales endpoint already handles the
+  // `hiq:...` slug shape (CF-RECENT-SALES-HIQ-SLUG), and the card page
+  // just forwards its route param down to that endpoint. Before this
+  // fix, `catalog:` clicks fell through to the free-text lookup which
+  // showed the "sales history but no catalog detail" dead-end.
+  if (candidateId.startsWith("catalog:")) return candidateId.slice("catalog:".length);
   return null;
 }
 
