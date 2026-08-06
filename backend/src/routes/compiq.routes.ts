@@ -4889,12 +4889,41 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       typeof (req.body as any)?.cardsightCardId === "string" && (req.body as any).cardsightCardId.length > 0
         ? (req.body as any).cardsightCardId
         : null;
-    const resolvedCardId =
+    let resolvedCardId =
       typeof cardId === "string" && cardId.length > 0
         ? cardId
         : legacyCardId;
     if (!resolvedCardId) {
       return res.status(400).json({ success: false, error: 'Missing "cardId" field' });
+    }
+
+    // CF-PRICE-BY-ID-HIQ-SLUG (Drew, 2026-08-06). Web + iOS card pages
+    // POST here with the card's slug — which is now an `hiq:...` slug
+    // for every search click-through. Downstream Cardsight/CH pipeline
+    // doesn't recognize hiq: slugs and returns "no comps on file" for
+    // every real card. Resolve to the majority vendor cardId (same
+    // pattern as /card-panel and /observed-grade-curve) so the price
+    // fetch actually finds data.
+    if (resolvedCardId.startsWith("hiq:")) {
+      try {
+        const { CosmosClient: _CC } = await import("@azure/cosmos");
+        const cn = process.env.COSMOS_CONNECTION_STRING;
+        if (cn) {
+          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
+          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
+            query: `SELECT c.cardId as cid, COUNT(1) as n
+                    FROM c WHERE c.hobbyiqCardId = @s
+                      AND IS_DEFINED(c.cardId) AND c.cardId != null
+                      AND NOT STARTSWITH(c.cardId, "hiq:")
+                    GROUP BY c.cardId`,
+            parameters: [{ name: "@s", value: resolvedCardId }],
+          }).fetchAll();
+          if (buckets.length > 0) {
+            buckets.sort((a, b) => b.n - a.n);
+            resolvedCardId = buckets[0].cid;
+          }
+        }
+      } catch { /* fall through with slug */ }
     }
 
     // CF-PARALLEL-AWARE-VALUE (2026-06-09): UUID-shape validation on
