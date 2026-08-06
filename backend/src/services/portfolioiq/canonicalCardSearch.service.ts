@@ -495,6 +495,45 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     candidates = resources || [];
   } catch { candidates = []; }
 
+  // CF-CATALOG-TREE-NODES-INTO-SEARCH (Drew, 2026-08-06). Tree-built
+  // card+variant nodes (~1.9M docs) don't carry source='cardhedge' or
+  // 'cardsight' — they were bulk-built from BCCP + normalizer output and
+  // live under kind IN ('card','variant'). searchTokens + imageUrl are
+  // being backfilled onto them, so pulling them into the search pool is
+  // now a pure win. Remap fields (playerName→player, setKey→releaseName,
+  // cardNumber→number) so they slot into the vendor-row shape without
+  // touching the downstream mapper.
+  if (searchTokens.length > 0) {
+    try {
+      const treeWhere: string[] = ["c.kind IN ('card', 'variant')", "c.sport = @sport"];
+      if (yearFilter !== null) treeWhere.push("c.year = @year");
+      searchTokens.forEach((_, i) => treeWhere.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`));
+      const treeQ = `SELECT TOP 200 c.cardId, c.playerName, c.setKey, c.year, c.cardNumber, c.parallel, c.parallelSlug, c.isAuto, c.sport, c.imageUrl, c.searchTokens, c.kind
+                     FROM c WHERE ${treeWhere.join(" AND ")}`;
+      const { resources: treeRows } = await containers.catalog.items.query({ query: treeQ, parameters: params }).fetchAll();
+      const remapped = (treeRows || []).map((t: any) => ({
+        cardId: t.cardId,
+        player: t.playerName,
+        releaseId: null,
+        releaseName: t.setKey,
+        setName: t.setKey,
+        year: t.year,
+        number: t.cardNumber,
+        parallels: t.parallel ? [{ id: t.parallelSlug ?? t.parallel, name: t.parallel, numberedTo: null }] : [],
+        attributes: t.isAuto ? ["auto"] : [],
+        sport: t.sport,
+        recentSaleCount: 0,
+        searchText: (t.searchTokens ?? []).join(" "),
+        source: t.kind,                    // 'card' or 'variant'
+        imageUrl: t.imageUrl ?? null,
+      }));
+      // Dedup vs primary hit by cardId so the same slug doesn't appear
+      // twice (unlikely since the source filters are disjoint, but safe).
+      const seen = new Set(candidates.map((c: any) => c.cardId));
+      for (const r of remapped) if (r.cardId && !seen.has(r.cardId)) candidates.push(r);
+    } catch { /* tree query failure is non-fatal — vendor path still works */ }
+  }
+
   // CF-DROP-JUNK-CATALOG-ROWS (Drew, 2026-08-02). Primary catalog scan
   // sometimes returns rows with c.number === undefined + placeholder
   // setNames ("Base Set"). These matched "gold trout" for 2011 and

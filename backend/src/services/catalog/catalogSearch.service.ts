@@ -55,6 +55,8 @@ export interface CatalogSearchHit {
   parallel: string | null;
   isAuto: boolean;
   printRun: number | null;
+  imageUrl: string | null;    // CF-CATALOG-PHOTOS: attached from sold_comps
+  kind: string | null;        // "card" | "variant" | "grade" | "canonical"
   score: number;              // 0-1 token overlap
   salesSummary: {
     count: number;
@@ -117,6 +119,11 @@ export async function searchCatalog(
     wherePieces.push(`(IS_DEFINED(c.playerName) AND CONTAINS(LOWER(c.playerName), @t${i}))`);
     wherePieces.push(`(IS_DEFINED(c.setKey) AND CONTAINS(LOWER(c.setKey), @t${i}))`);
     wherePieces.push(`(IS_DEFINED(c.cardNumber) AND CONTAINS(LOWER(c.cardNumber), @t${i}))`);
+    // CF-CATALOG-VARIANT-MATCH (Drew, 2026-08-06). Also match variant
+    // node parallel/parallelSlug so a query with a finish token like
+    // "refractor" can surface the right variant (not just the base card).
+    wherePieces.push(`(IS_DEFINED(c.parallel) AND CONTAINS(LOWER(c.parallel), @t${i}))`);
+    wherePieces.push(`(IS_DEFINED(c.parallelSlug) AND CONTAINS(LOWER(c.parallelSlug), @t${i}))`);
     params.push({ name: `@t${i}`, value: tokens[i] });
   }
   const searchOr = wherePieces.join(" OR ");
@@ -137,7 +144,7 @@ export async function searchCatalog(
   const scopeAnd = scopes.length > 0 ? " AND " + scopes.join(" AND ") : "";
 
   const qspec = {
-    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c["set"] AS setName, c.parallel, c.isAuto, c.printRun, c.searchTokens, c.salesSummary FROM c WHERE (${searchOr})${scopeAnd}`,
+    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c["set"] AS setName, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl FROM c WHERE (${searchOr})${scopeAnd}`,
     parameters: params,
   };
 
@@ -150,10 +157,13 @@ export async function searchCatalog(
     setKey?: string;
     setName?: string;
     parallel?: string;
+    parallelSlug?: string;
     isAuto?: boolean;
     printRun?: number | null;
     searchTokens?: string[];
     salesSummary?: CatalogSearchHit["salesSummary"];
+    kind?: string;
+    imageUrl?: string | null;
   }
 
   let rows: Row[] = [];
@@ -181,6 +191,8 @@ export async function searchCatalog(
     const rowSet = String(r.setKey ?? "").toLowerCase();
     const rowNumber = String(r.cardNumber ?? "").toLowerCase();
     const rowYear = r.year != null ? String(r.year) : "";
+    const rowParallel = String(r.parallel ?? "").toLowerCase();
+    const rowParallelSlug = String(r.parallelSlug ?? "").toLowerCase();
     let raw = 0;
     let hitFields = 0;
     for (const t of tokens) {
@@ -189,6 +201,8 @@ export async function searchCatalog(
       if (rowTokens.has(t)) tokenMax = Math.max(tokenMax, 2.0);
       if (rowSet && rowSet.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
       if (rowYear && rowYear === t) tokenMax = Math.max(tokenMax, 1.5);
+      if (rowParallel && rowParallel.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
+      if (rowParallelSlug && rowParallelSlug.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
       if (rowNumber && rowNumber.includes(t)) tokenMax = Math.max(tokenMax, 1.0);
       if (tokenMax > 0) hitFields++;
       raw += tokenMax;
@@ -211,6 +225,8 @@ export async function searchCatalog(
       parallel: r.parallel ?? null,
       isAuto: r.isAuto === true,
       printRun: typeof r.printRun === "number" ? r.printRun : null,
+      imageUrl: r.imageUrl ?? null,
+      kind: r.kind ?? null,
       score,
       salesSummary: r.salesSummary ?? null,
     });
