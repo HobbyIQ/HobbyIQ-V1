@@ -62,12 +62,34 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
       ? req.query.parallel
       : undefined;
 
-    const gradeCompany: string | undefined = typeof req.query.gradeCompany === "string" && req.query.gradeCompany.trim().length > 0
-      ? req.query.gradeCompany.trim()
-      : undefined;
-    const gradeValue: number | undefined = typeof req.query.gradeValue === "string" && req.query.gradeValue.trim().length > 0
-      ? Number(req.query.gradeValue)
-      : undefined;
+    // CF-RECENT-SALES-TIER-DEFAULT-RAW (Drew, 2026-08-06). Previous
+    // behavior: when the caller didn't send gradeCompany + gradeValue,
+    // the service applied NO grade filter, so a Raw card page showed
+    // PSA 10s + PSA 9s + Raw all mixed together. The 2018 Topps Chrome
+    // Ohtani #150 Refractor recent-comps panel had a $6,500 PSA 10
+    // sale next to $3,500 Raw sales, pulling the median up.
+    //
+    // Fix: when neither param is provided AND caller didn't opt in to
+    // "?tier=all", default to Raw filter (both fields null → matches
+    // docs with null grade fields). Callers wanting a mixed-tier view
+    // can pass ?tier=all explicitly.
+    const tierParam = typeof req.query.tier === "string" ? req.query.tier.trim().toLowerCase() : "";
+    const hasExplicitCompany = typeof req.query.gradeCompany === "string" && req.query.gradeCompany.trim().length > 0;
+    const hasExplicitValue = typeof req.query.gradeValue === "string" && req.query.gradeValue.trim().length > 0;
+    let gradeCompany: string | null | undefined;
+    let gradeValue: number | null | undefined;
+    if (hasExplicitCompany || hasExplicitValue) {
+      gradeCompany = hasExplicitCompany ? (req.query.gradeCompany as string).trim() : undefined;
+      gradeValue = hasExplicitValue ? Number(req.query.gradeValue) : undefined;
+    } else if (tierParam === "all") {
+      // Explicit opt-out — no grade filter, mix all tiers.
+      gradeCompany = undefined;
+      gradeValue = undefined;
+    } else {
+      // Default: Raw only.
+      gradeCompany = null;
+      gradeValue = null;
+    }
 
     const daysRaw = typeof req.query.days === "string" ? Number(req.query.days) : NaN;
     const days = Number.isFinite(daysRaw) && daysRaw > 0 && daysRaw <= 365 ? daysRaw : 180;
