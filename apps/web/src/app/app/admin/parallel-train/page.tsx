@@ -31,6 +31,11 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 
+function slugParallel(hobbyiqCardId: string): string {
+  const parts = hobbyiqCardId.split(":");
+  return parts[5] ?? "";  // hiq:sport:year:set:cardNumber:parallelSlug:autoFlag
+}
+
 export default function ParallelTrainPage() {
   const [item, setItem] = useState<Item | null>(null);
   const [color, setColor] = useState<string>("blue");
@@ -39,6 +44,7 @@ export default function ParallelTrainPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [labeled, setLabeled] = useState<number>(0);
+  const [manualEntry, setManualEntry] = useState<string>("");
 
   const token = getStoredAdminToken();
 
@@ -74,6 +80,7 @@ export default function ParallelTrainPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setLabeled((n) => n + 1);
+      setManualEntry("");   // clear the manual input on advance
       await loadNext();
     } catch (e) {
       setError((e as Error)?.message ?? "submit failed");
@@ -149,30 +156,58 @@ export default function ParallelTrainPage() {
 
             <div>
               <div style={{ fontWeight: 600, marginBottom: 8 }}>Pick the correct parallel (nearest to ${item.price} first)</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-                {item.siblings.map((s) => (
-                  <button
-                    key={s.parallel}
-                    disabled={submitting}
-                    onClick={() => void submitLabel("assign", s.parallel)}
-                    style={{
-                      display: "grid", gridTemplateColumns: "50px 1fr auto", gap: 10,
-                      alignItems: "center", padding: 8, textAlign: "left",
-                      background: "white", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer",
-                    }}
-                  >
-                    {s.sampleImageUrl
-                      ? <img src={s.sampleImageUrl} alt="sib" style={{ width: 40, height: 55, objectFit: "cover", borderRadius: 4 }} />
-                      : <div style={{ width: 40, height: 55, background: "#eee", borderRadius: 4 }} />}
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{s.parallel}</div>
-                      <div style={{ fontSize: 12, opacity: 0.7 }}>median ${s.medianPrice} · n={s.n}</div>
-                    </div>
-                    <div style={{ fontSize: 12, opacity: 0.6 }}>
-                      Δ ${Math.abs(s.medianPrice - item.price).toFixed(2)}
-                    </div>
-                  </button>
-                ))}
+              {item.siblings.length === 0 ? (
+                <div style={{ padding: 12, background: "rgba(255,193,7,0.15)", border: "1px solid rgba(255,193,7,0.6)", borderRadius: 6, color: "var(--color-text)" }}>
+                  No sibling sales at this year/set/#cardNumber with the color match. Rare insert or thin pool.
+                  <div style={{ marginTop: 8, fontSize: 13, opacity: 0.85 }}>
+                    Slug says: <code style={{ background: "rgba(0,0,0,0.15)", padding: "2px 6px", borderRadius: 3 }}>{slugParallel(item.hobbyiqCardId)}</code> — click <strong>Current is correct</strong> if that&apos;s right.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+                  {item.siblings.map((s) => (
+                    <button
+                      key={s.parallel}
+                      disabled={submitting}
+                      onClick={() => void submitLabel("assign", s.parallel)}
+                      style={{
+                        display: "grid", gridTemplateColumns: "50px 1fr auto", gap: 10,
+                        alignItems: "center", padding: 8, textAlign: "left",
+                        background: "white", border: "1px solid #ddd", borderRadius: 6, cursor: "pointer",
+                        color: "#111",
+                      }}
+                    >
+                      {s.sampleImageUrl
+                        ? <img src={s.sampleImageUrl} alt="sib" style={{ width: 40, height: 55, objectFit: "cover", borderRadius: 4 }} />
+                        : <div style={{ width: 40, height: 55, background: "#eee", borderRadius: 4 }} />}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{s.parallel}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>median ${s.medianPrice} · n={s.n}</div>
+                      </div>
+                      <div style={{ fontSize: 12, opacity: 0.6 }}>
+                        Δ ${Math.abs(s.medianPrice - item.price).toFixed(2)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Or type the correct parallel manually (e.g. 'Blue Mojo Refractor')"
+                  value={manualEntry}
+                  onChange={(e) => setManualEntry(e.target.value)}
+                  disabled={submitting}
+                  style={{ flex: 1, padding: 8, background: "white", color: "#111", border: "1px solid #ccc", borderRadius: 6 }}
+                />
+                <button
+                  disabled={submitting || !manualEntry.trim()}
+                  onClick={() => void submitLabel("assign", manualEntry.trim())}
+                  style={{ padding: "8px 16px", background: manualEntry.trim() ? "#e0f2fe" : "#eee", border: "1px solid #0284c7", color: "#0369a1", borderRadius: 6, cursor: manualEntry.trim() ? "pointer" : "not-allowed" }}
+                >
+                  Assign manual
+                </button>
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
