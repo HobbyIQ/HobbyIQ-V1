@@ -91,7 +91,10 @@ function SearchPageInner() {
     }
     const qs = search.toString();
     if (cardsightId) {
-      router.push(`/app/card/${cardsightId}${qs ? `?${qs}` : ""}`);
+      // encodeURIComponent so `hiq:baseball:2018:...` slugs get their
+      // colons safely encoded — pairs with the decode on the card page
+      // side (CF-CARD-ID-DECODE).
+      router.push(`/app/card/${encodeURIComponent(cardsightId)}${qs ? `?${qs}` : ""}`);
       return;
     }
     // CF-CATALOG-CANDIDATE-CLICKTHROUGH (Drew, 2026-08-02). Candidate

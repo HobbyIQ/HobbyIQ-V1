@@ -31,7 +31,17 @@ function CardDetailInner() {
   const params = useParams<{ cardsightId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const cardsightCardId = String(params?.cardsightId ?? "");
+  // CF-CARD-ID-DECODE (Drew, 2026-08-06). Next.js dynamic route params
+  // arrive URL-encoded. For a slug like "hiq:baseball:2018:..." the
+  // colons come back as "%3A", producing "hiq%3Abaseball%3A..." that
+  // no backend endpoint can resolve — the page rendered with a
+  // "Insufficient recent comps" fallback + garbage "#hiq%3Aba" card
+  // number. Decode on read so the raw slug flows to every downstream
+  // fetch, and the display shows "#hiq:ba..." instead of "#hiq%3Aba".
+  const rawCardsightId = String(params?.cardsightId ?? "");
+  const cardsightCardId = (() => {
+    try { return decodeURIComponent(rawCardsightId); } catch { return rawCardsightId; }
+  })();
   const initialParallel = searchParams.get("parallel");
   const initialGradeRaw = searchParams.get("grade");
   const initialGrade: Grade | null = (() => {
@@ -55,7 +65,7 @@ function CardDetailInner() {
     if (parallel) params.set("parallel", parallel);
     if (grade) params.set("grade", `${grade.company}:${grade.value}`);
     const qs = params.toString();
-    router.replace(`/app/card/${cardsightCardId}${qs ? `?${qs}` : ""}`);
+    router.replace(`/app/card/${encodeURIComponent(cardsightCardId)}${qs ? `?${qs}` : ""}`);
   }
 
   if (!cardsightCardId) {
