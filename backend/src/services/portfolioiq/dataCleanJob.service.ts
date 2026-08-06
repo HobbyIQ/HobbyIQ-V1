@@ -153,6 +153,46 @@ export async function runDataCleanBatch(opts: {
     parameters: [{ name: "@n", value: limit }],
   }).fetchAll();
 
+  // CF-DATA-CLEAN-BATCH-MEDIAN (Drew, 2026-08-06). Pre-fetch rolling
+  // medians for every unique slug in this batch in a SINGLE
+  // cross-partition query so classifyRow doesn't fan out to N
+  // per-row queries. Before this: 500 rows × 1 query = ~5000 RU/batch,
+  // ~80s wall-clock. After: 1 query + 1 write per row.
+  const medianCache = new Map<string, number>();
+  if (soldComps) {
+    const uniqSlugs = Array.from(new Set(pending.map((r) => r.hobbyiqCardId).filter(Boolean)));
+    if (uniqSlugs.length > 0) {
+      try {
+        const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+        // Chunk to keep the SQL under the 512-param IN() limit.
+        for (let i = 0; i < uniqSlugs.length; i += 200) {
+          const chunk = uniqSlugs.slice(i, i + 200);
+          const params: Array<{ name: string; value: string }> = chunk.map((s, idx) => ({ name: `@s${idx}`, value: s }));
+          const inList = chunk.map((_, idx) => `@s${idx}`).join(",");
+          params.push({ name: "@cutoff", value: rollingCutoff });
+          const { resources: rows } = await soldComps.items.query<{ hobbyiqCardId: string; price: number }>({
+            query: `SELECT c.hobbyiqCardId, c.price FROM c WHERE c.hobbyiqCardId IN (${inList}) AND c.soldAt >= @cutoff`,
+            parameters: params,
+          }).fetchAll();
+          const bySlug = new Map<string, number[]>();
+          for (const r of rows) {
+            const p = Number(r.price);
+            if (!Number.isFinite(p) || p <= 0) continue;
+            const arr = bySlug.get(r.hobbyiqCardId) ?? [];
+            arr.push(p);
+            bySlug.set(r.hobbyiqCardId, arr);
+          }
+          for (const [slug, prices] of bySlug) {
+            if (prices.length >= 5) {
+              prices.sort((a, b) => a - b);
+              medianCache.set(slug, prices[Math.floor(prices.length / 2)]);
+            }
+          }
+        }
+      } catch { /* pre-fetch failure is non-fatal — classifyRow falls back to per-row query */ }
+    }
+  }
+
   for (const row of pending) {
     result.scanned += 1;
     try {
@@ -167,7 +207,7 @@ export async function runDataCleanBatch(opts: {
         result.zeroPriceRejected += 1;
         continue;
       }
-      const clean = await classifyRow(row, soldComps);
+      const clean = await classifyRow(row, soldComps, medianCache);
       const nextStatus = clean.anomalies.length === 0 ? "clean" : "anomaly";
       row.clean = clean;
       row.status = nextStatus;
@@ -196,7 +236,7 @@ export async function runDataCleanBatch(opts: {
  * rolling-median lookup against sold_comps (which is read-only).
  * Never throws — always returns a StagingClean.
  */
-async function classifyRow(row: StagingDoc, soldComps: Container | null): Promise<StagingClean> {
+async function classifyRow(row: StagingDoc, soldComps: Container | null, medianCache?: Map<string, number>): Promise<StagingClean> {
   const raw = row.raw;
   const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
   const cardYear = parsed?.year ?? raw.identityHint.cardYear ?? 0;
@@ -287,26 +327,32 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null): Promis
   }
 
   // Check 2: rolling-median price plausibility.
+  // CF-DATA-CLEAN-BATCH-MEDIAN (Drew, 2026-08-06). Prefer the batched
+  // pre-fetch in medianCache — falls back to a per-row query only when
+  // the caller didn't supply the cache (used by legacy call sites).
   if (soldComps && price > 0) {
     try {
-      const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-      const { resources: rollingRows } = await soldComps.items.query<{ price: number }>({
-        query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
-        parameters: [{ name: "@hiq", value: row.hobbyiqCardId }, { name: "@cutoff", value: rollingCutoff }],
-      }).fetchAll();
-      if (rollingRows.length >= 5) {
-        const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-        if (prices.length >= 5) {
-          const median = prices[Math.floor(prices.length / 2)];
-          const ratio = price / median;
-          if (ratio > 3 || ratio < (1 / 3)) {
-            anomalies.push({
-              kind: "price-outlier",
-              detail: `${(ratio * 100).toFixed(0)}% of 30d median $${median.toFixed(2)} (n=${prices.length})`,
-            });
-          } else {
-            normalizations.push("price-within-30d-band");
-          }
+      let median: number | null = medianCache?.get(row.hobbyiqCardId) ?? null;
+      if (median === null && !medianCache) {
+        const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+        const { resources: rollingRows } = await soldComps.items.query<{ price: number }>({
+          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+          parameters: [{ name: "@hiq", value: row.hobbyiqCardId }, { name: "@cutoff", value: rollingCutoff }],
+        }).fetchAll();
+        if (rollingRows.length >= 5) {
+          const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+          if (prices.length >= 5) median = prices[Math.floor(prices.length / 2)];
+        }
+      }
+      if (median !== null) {
+        const ratio = price / median;
+        if (ratio > 3 || ratio < (1 / 3)) {
+          anomalies.push({
+            kind: "price-outlier",
+            detail: `${(ratio * 100).toFixed(0)}% of 30d median $${median.toFixed(2)}`,
+          });
+        } else {
+          normalizations.push("price-within-30d-band");
         }
       }
     } catch { /* rolling median failure is non-fatal */ }
