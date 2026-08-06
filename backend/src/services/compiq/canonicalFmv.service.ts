@@ -1552,9 +1552,18 @@ async function trySiblingParallel(
     }
     if (byVariant.size < 3) return null;
 
+    // CF-SIBLING-VARIANT-MIN-N (Drew, 2026-08-06). Devin Taylor CPA-DT
+    // Black auto priced at $3.69 vs $650 cost basis because sibling-
+    // parallel accepted variants with n=1 (Blue Wave 1 sale @ $85,
+    // Purple 1 sale @ $88.77). Median-of-medians got dragged to $145,
+    // then TrendIQ's extreme trend factor from the same thin pool
+    // multiplied to $3.69. Fix: require ≥3 sales per variant before
+    // it contributes to the anchor. Thin variants get dropped.
+    const SIBLING_VARIANT_MIN_N = 3;
     // Per-variant median → median across the per-variant medians.
     const variantMedians: Array<{ variant: string; median: number; n: number }> = [];
     for (const [variant, prices] of byVariant) {
+      if (prices.length < SIBLING_VARIANT_MIN_N) continue;
       const sorted = prices.slice().sort((a, b) => a - b);
       variantMedians.push({
         variant,
@@ -1562,6 +1571,8 @@ async function trySiblingParallel(
         n: sorted.length,
       });
     }
+    // Also require ≥3 variants that passed the min-n gate.
+    if (variantMedians.length < 3) return null;
     const medians = variantMedians.map((v) => v.median).sort((a, b) => a - b);
     const anchor = medians[Math.floor(medians.length / 2)];
     if (!Number.isFinite(anchor) || anchor <= 0) return null;
