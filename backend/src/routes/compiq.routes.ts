@@ -5545,10 +5545,24 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         fairMarketValueLive: effectiveNoUsable ? null : effectiveFmv,
         marketValue: effectiveNoUsable ? null : effectiveFmv,
         canonicalFmvFallback: canonicalFmvFallbackUsed,
-        // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
-        // layer fields. /price-by-id is the pinned-card analog of /price; the
-        // estimate ⇒ response contract matches.
-        predictedPrice: (est as any).predictedPrice ?? null,
+        // CF-PREDICTED-GRADE-CONSISTENCY (Drew, 2026-08-06). When the
+        // caller selects a grade (PSA 10 etc.), effectiveFmv is
+        // grade-adjusted (raw × grade multiplier) but est.predictedPrice
+        // was computed at the RAW tier by the auto-projection stack —
+        // so the response showed FMV=$4,202 (PSA 10) with predicted=
+        // $1,914 (raw-projected). Re-anchor predictedPrice on the
+        // grade-adjusted effectiveFmv using the same forward-projection
+        // factor the estimate produced. Keeps FMV → predicted always
+        // internally consistent regardless of grade selection.
+        predictedPrice: (() => {
+          const factor = typeof (est as any).forwardProjectionFactor === "number" && Number.isFinite((est as any).forwardProjectionFactor)
+            ? (est as any).forwardProjectionFactor as number
+            : 1.0;
+          if (typeof effectiveFmv === "number" && effectiveFmv > 0) {
+            return Math.round(effectiveFmv * factor * 100) / 100;
+          }
+          return (est as any).predictedPrice ?? null;
+        })(),
         predictedPriceRange: (est as any).predictedPriceRange ?? null,
         predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,
         // TrendIQ Phase 1 — forward-looking composite score. Same shape
