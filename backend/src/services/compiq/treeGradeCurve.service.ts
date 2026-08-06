@@ -340,7 +340,15 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
               FROM c WHERE c.kind = "grade" AND c.variantSlug = @slug`,
       parameters: [{ name: "@slug", value: variantSlug }],
     }, { maxItemCount: 200 }).fetchAll();
-    treeNodes = resources;
+    // CF-GRADE-NODE-NULL-VALUE-FILTER (Drew, 2026-08-06). Skip malformed
+    // grade nodes where company is set but value is null — these come
+    // from sold_comps rows where a source tagged "PSA" without a numeric
+    // grade. They render as ghost "PSA 10 with no data" rows next to
+    // the real PSA 10 tier because the UI defaults null → 10 for display.
+    treeNodes = resources.filter((g) => {
+      if (g.gradeCompany && (g.gradeValue === null || g.gradeValue === undefined)) return false;
+      return true;
+    });
   } catch { /* leave empty */ }
   if (treeNodes.length === 0) return null;
 
