@@ -52,9 +52,19 @@ export interface PromotionResult {
 function shardChars(index: number, total: number): string[] {
   const hex = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
   if (total <= 1) return hex;
+  if (total <= 16) {
+    const chars: string[] = [];
+    for (let i = 0; i < hex.length; i++) {
+      if (i % total === (index % total)) chars.push(hex[i]);
+    }
+    return chars;
+  }
   const chars: string[] = [];
-  for (let i = 0; i < hex.length; i++) {
-    if (i % total === (index % total)) chars.push(hex[i]);
+  for (let a = 0; a < hex.length; a++) {
+    for (let b = 0; b < hex.length; b++) {
+      const twoCharIdx = a * 16 + b;
+      if (twoCharIdx % total === (index % total)) chars.push(hex[a] + hex[b]);
+    }
   }
   return chars;
 }

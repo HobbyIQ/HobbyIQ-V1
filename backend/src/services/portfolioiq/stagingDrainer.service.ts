@@ -2,32 +2,52 @@
 //
 // In-process continuous drainer for comps_staging. Runs data-clean +
 // promotion in a tight loop at TICK_MS cadence so the pipeline keeps
-// pace with webhook ingest (~80K/hr = ~22/s) instead of drifting
-// behind (as it has, hitting 5.9M pending on 2026-08-06 00:00 UTC).
+// pace with webhook ingest.
 //
-// Multiple in-process workers (STAGING_DRAINER_WORKERS) run in
-// parallel to leverage the P3v3 8-vCPU box. Each worker guards
-// against its own re-entrance, but workers can overlap because they
-// all pull TOP N from the same staging query — Cosmos handles the
-// concurrent reads/writes.
+// Multiple in-process workers (STAGING_DRAINER_WORKERS) run in parallel
+// on each App Service instance. When scaled out to N instances, each
+// worker's *global* shard index is computed from a stable hash of
+// WEBSITE_INSTANCE_ID + local worker id, so all N × WORKER_COUNT
+// workers across the fleet pull disjoint slices of the pending queue.
 //
-// Guarded by STAGING_DRAINER_ENABLED env flag. Default off so a
-// merge alone doesn't start the drainer.
+// Guarded by STAGING_DRAINER_ENABLED env flag. Default off.
 
+import { createHash } from "crypto";
 import { runDataCleanBatch } from "./dataCleanJob.service.js";
 import { runPromotionBatch } from "./promotionJob.service.js";
 
 const TICK_MS = Number(process.env.STAGING_DRAINER_TICK_MS ?? 60_000);
 const DATA_CLEAN_LIMIT = Number(process.env.STAGING_DRAINER_CLEAN_LIMIT ?? 500);
 const PROMOTION_LIMIT = Number(process.env.STAGING_DRAINER_PROMO_LIMIT ?? 500);
-// CF-STAGING-DRAINER-PARALLEL (Drew, 2026-08-06). Number of parallel
-// in-process workers. Each runs its own tick() loop and has its own
-// re-entrance guard. Set >1 on P3v3 (8 vCPU) to actually use the
-// available compute; leave 1 on smaller SKUs.
 const WORKER_COUNT = Math.max(1, Math.min(16, Number(process.env.STAGING_DRAINER_WORKERS ?? 1)));
+
+// CF-DRAINER-MULTI-INSTANCE-SHARDING (Drew, 2026-08-06). When scaled
+// out on App Service, WEBSITE_INSTANCE_ID is stable-and-unique per
+// instance. Hash it to a small int and offset the worker id by
+// (instanceIndex * WORKER_COUNT) so worker (instance=B, local=0)
+// computes a different shard than worker (instance=A, local=0).
+//
+// STAGING_DRAINER_TOTAL_INSTANCES tells the workers how many instances
+// exist so the shard math uses the right divisor. Set it to match the
+// App Service plan's number-of-workers count.
+const TOTAL_INSTANCES = Math.max(1, Math.min(16, Number(process.env.STAGING_DRAINER_TOTAL_INSTANCES ?? 1)));
+const GLOBAL_WORKER_COUNT = WORKER_COUNT * TOTAL_INSTANCES;
+
+function computeInstanceIndex(): number {
+  if (TOTAL_INSTANCES <= 1) return 0;
+  const id = process.env.WEBSITE_INSTANCE_ID ?? "";
+  if (!id) return 0;
+  // Hash to an int in [0, TOTAL_INSTANCES). SHA256 first 8 bytes → uint32 → mod.
+  const buf = createHash("sha256").update(id).digest();
+  const n = buf.readUInt32BE(0);
+  return n % TOTAL_INSTANCES;
+}
+
+const INSTANCE_INDEX = computeInstanceIndex();
 
 interface Worker {
   id: number;
+  globalId: number;
   timer: NodeJS.Timeout | null;
   running: boolean;
   ticks: number;
@@ -45,11 +65,9 @@ async function tick(w: Worker): Promise<void> {
   w.ticks++;
   w.lastTickAt = Date.now();
   try {
-    // CF-DRAINER-WORKER-SHARDING (Drew, 2026-08-06). Passing workerShard
-    // makes each worker pull rows from a disjoint id-prefix slice, so N
-    // workers don't fight over the same TOP N pending rows (contention
-    // was making 16 workers slower than 8).
-    const shard = { index: w.id, total: WORKER_COUNT };
+    // Global shard index across the entire fleet ensures no two workers
+    // (even on different instances) pull the same slice.
+    const shard = { index: w.globalId, total: GLOBAL_WORKER_COUNT };
     const dc = await runDataCleanBatch({ limit: DATA_CLEAN_LIMIT, workerShard: shard });
     w.totalCleaned += (dc as { cleaned?: number }).cleaned ?? 0;
     const pr = await runPromotionBatch({ limit: PROMOTION_LIMIT, workerShard: shard });
@@ -58,7 +76,9 @@ async function tick(w: Worker): Promise<void> {
       console.log(JSON.stringify({
         event: "staging_drainer_progress",
         source: "stagingDrainer",
+        instance: INSTANCE_INDEX,
         worker: w.id,
+        globalWorker: w.globalId,
         ticks: w.ticks,
         totalCleaned: w.totalCleaned,
         totalPromoted: w.totalPromoted,
@@ -75,7 +95,9 @@ async function tick(w: Worker): Promise<void> {
     console.warn(JSON.stringify({
       event: "staging_drainer_tick_error",
       source: "stagingDrainer",
+      instance: INSTANCE_INDEX,
       worker: w.id,
+      globalWorker: w.globalId,
       ticks: w.ticks,
       error: (err as Error)?.message ?? String(err),
     }));
@@ -98,13 +120,18 @@ export function startStagingDrainer(): void {
     event: "staging_drainer_started",
     source: "stagingDrainer",
     workerCount: WORKER_COUNT,
+    instanceIndex: INSTANCE_INDEX,
+    totalInstances: TOTAL_INSTANCES,
+    globalWorkerCount: GLOBAL_WORKER_COUNT,
     tickMs: TICK_MS,
     dataCleanLimit: DATA_CLEAN_LIMIT,
     promotionLimit: PROMOTION_LIMIT,
   }));
   for (let i = 0; i < WORKER_COUNT; i++) {
+    const globalId = INSTANCE_INDEX * WORKER_COUNT + i;
     const w: Worker = {
       id: i,
+      globalId,
       timer: null,
       running: false,
       ticks: 0,
@@ -131,6 +158,9 @@ export function stopStagingDrainer(): void {
 export function drainerStatus(): {
   enabled: boolean;
   workerCount: number;
+  instanceIndex: number;
+  totalInstances: number;
+  globalWorkerCount: number;
   ticks: number;
   totalCleaned: number;
   totalPromoted: number;
@@ -140,6 +170,9 @@ export function drainerStatus(): {
   return {
     enabled: workers.length > 0,
     workerCount: workers.length,
+    instanceIndex: INSTANCE_INDEX,
+    totalInstances: TOTAL_INSTANCES,
+    globalWorkerCount: GLOBAL_WORKER_COUNT,
     ticks: workers.reduce((a, w) => a + w.ticks, 0),
     totalCleaned: workers.reduce((a, w) => a + w.totalCleaned, 0),
     totalPromoted: workers.reduce((a, w) => a + w.totalPromoted, 0),

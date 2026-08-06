@@ -94,9 +94,22 @@ export interface DataCleanResult {
 function shardChars(index: number, total: number): string[] {
   const hex = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
   if (total <= 1) return hex;
+  // For up to 16 workers, single hex chars are enough (each worker gets
+  // ~ceil(16/N) chars). Above 16, expand to 2-char prefixes (256
+  // possibilities) so 32 or 64 workers still get disjoint slices.
+  if (total <= 16) {
+    const chars: string[] = [];
+    for (let i = 0; i < hex.length; i++) {
+      if (i % total === (index % total)) chars.push(hex[i]);
+    }
+    return chars;
+  }
   const chars: string[] = [];
-  for (let i = 0; i < hex.length; i++) {
-    if (i % total === (index % total)) chars.push(hex[i]);
+  for (let a = 0; a < hex.length; a++) {
+    for (let b = 0; b < hex.length; b++) {
+      const twoCharIdx = a * 16 + b;
+      if (twoCharIdx % total === (index % total)) chars.push(hex[a] + hex[b]);
+    }
   }
   return chars;
 }
