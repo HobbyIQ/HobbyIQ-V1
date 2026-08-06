@@ -99,7 +99,7 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
 
     const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const comps = await readCompsByCardId({
+    const rawComps = await readCompsByCardId({
       cardId,
       fromDate,
       // sources: undefined → all sources (user + CH + CS + browse-ended)
@@ -113,7 +113,49 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
       excludeContributorUserId: requesterId,
     });
 
-    const sales = comps
+    // CF-RECENT-SALES-DEDUP (Drew, 2026-08-06). CardHedge occasionally
+    // ingests the SAME eBay sale twice via two code paths (raw CH API
+    // + ch_daily_sales), producing duplicate rows with the same
+    // (source, sourceExternalId) OR the same (contentHash) OR the
+    // same (price, soldAt-day). Ohtani Refractor #150 Raw had 4 dup
+    // pairs in 30d. Dedup at display time.
+    const seenDedupKeys = new Set<string>();
+    const dedupedComps: typeof rawComps = [];
+    for (const c of rawComps) {
+      const ext = (c as { sourceExternalId?: string }).sourceExternalId ?? "";
+      const contentHash = (c as { contentHash?: string }).contentHash ?? "";
+      const priceDay = `${c.price}|${String(c.soldAt ?? "").slice(0, 10)}`;
+      const priceParDay = `${priceDay}|${String(c.parallel ?? "").toLowerCase()}`;
+      const keys = [
+        contentHash ? `hash:${contentHash}` : "",
+        ext ? `ext:${c.source}:${ext}` : "",
+        `pd:${priceParDay}`,
+      ].filter(Boolean);
+      // Skip if we've seen ANY of this row's fingerprint keys already.
+      if (keys.some((k) => seenDedupKeys.has(k))) continue;
+      keys.forEach((k) => seenDedupKeys.add(k));
+      dedupedComps.push(c);
+    }
+
+    // CF-RECENT-SALES-PRICE-GATE (Drew, 2026-08-06). Drop extreme-outlier
+    // rows (< median/3 or > median*3) from the tier's display. Prevents
+    // a stray $6,500 PSA 10 from surviving a wrong-tier bleed, and
+    // prevents "penny listings" (accidental $0.99 sale prices) from
+    // dragging the low band down. Skip the gate when we have <5 comps
+    // (median is unreliable at that size).
+    const prices = dedupedComps.map((c) => Number(c.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+    let gatedComps = dedupedComps;
+    if (prices.length >= 5) {
+      const gateMedian = prices[Math.floor(prices.length / 2)];
+      const low = gateMedian / 3;
+      const high = gateMedian * 3;
+      gatedComps = dedupedComps.filter((c) => {
+        const p = Number(c.price);
+        return Number.isFinite(p) && p >= low && p <= high;
+      });
+    }
+
+    const sales = gatedComps
       .slice(0, limit)
       .map((c) => ({
         // CF-USER-FLAG-IDS (Drew, 2026-08-01). Row id + partition key
@@ -196,7 +238,7 @@ router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, r
     });
 
     res.json({
-      count: comps.length,
+      count: gatedComps.length,
       windowDays: days,
       sales,           // backwards-compat: flat list preserved
       byGrade,         // new: grouped by grade tier for the Comp Sheet UI
