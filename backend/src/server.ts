@@ -10,6 +10,7 @@ import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startWeeklyEbayPurchaseSyncJob } from "./jobs/ebayPurchaseSync.job.js";
 import { startBuyerIqDealScannerJob } from "./jobs/buyerIqDealScanner.job.js";
 import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
+import { startStagingDrainer } from "./services/portfolioiq/stagingDrainer.service.js";
 import { startMatchedCohortJob } from "./jobs/matchedCohortMomentum.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
@@ -65,6 +66,15 @@ app.listen(port, "0.0.0.0", () => {
     startPriceAlertEvaluatorJob();
   } catch (err: any) {
     console.error("[server] startPriceAlertEvaluatorJob failed:", err?.message ?? err);
+  }
+  // CF-STAGING-DRAINER (Drew, 2026-08-06). In-process continuous
+  // drainer for comps_staging (data-clean + promotion). Gated on
+  // STAGING_DRAINER_ENABLED=true — off by default at boot; flip on
+  // via App Service settings after verifying deploy landed.
+  try {
+    startStagingDrainer();
+  } catch (err: any) {
+    console.error("[server] startStagingDrainer failed:", err?.message ?? err);
   }
   // CF-ADVANCED-ALERTS (2026-06-03): separate timer at default 4h cadence.
   // Decoupled from the 30-min basic-alert cycle so the advanced-rule fan-out
