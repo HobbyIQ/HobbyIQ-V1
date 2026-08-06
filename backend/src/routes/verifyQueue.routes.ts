@@ -206,6 +206,7 @@ router.get("/verify/parallel-train/next", async (req, res, next) => {
 });
 
 router.post("/verify/parallel-train/:stagingId/label", async (req, res, next) => {
+  const { stagingId: sid } = req.params;
   try {
     const { stagingId } = req.params;
     const body = (req.body ?? {}) as {
@@ -264,20 +265,39 @@ router.post("/verify/parallel-train/:stagingId/label", async (req, res, next) =>
       observedAt: now,   // matches existing verify_corrections doc shape
     });
 
-    if (action === "assign" && newSlug && newSlug !== row.hobbyiqCardId) {
-      // Patch the staging row: new parallel, new slug, reset status → pending
-      await stage.item(row.id, row.hobbyiqCardId).patch({
-        operations: [
-          { op: "set", path: "/raw/identityHint/parallel", value: chosenParallel },
-          { op: "set", path: "/hobbyiqCardId", value: newSlug },
-          { op: "set", path: "/status", value: "pending" },
-          { op: "set", path: "/reclassifiedAt", value: now },
-          { op: "set", path: "/reclassifyReason", value: `human-label:${adminUserId}` },
-        ],
-      } as never);
+    if (action === "assign") {
+      // Patch defensively: rebuild raw.identityHint from the existing one
+      // (with parallel set) so the patch works even if the nested path
+      // doesn't yet exist. Cosmos JSON Patch requires parent to exist
+      // for a `set` op on a nested key.
+      const existingHint = (row.raw?.identityHint ?? {}) as Record<string, unknown>;
+      const nextHint = { ...existingHint, parallel: chosenParallel };
+      const ops: Array<Record<string, unknown>> = [
+        { op: "set", path: "/raw/identityHint", value: nextHint },
+        { op: "set", path: "/reclassifiedAt", value: now },
+        { op: "set", path: "/reclassifyReason", value: `human-label:${adminUserId}` },
+      ];
+      // Only rewrite the slug + reset status if the slug actually changed.
+      // Otherwise just record the human confirmation and leave the row's
+      // state alone (drainer will re-visit if needed).
+      if (newSlug && newSlug !== row.hobbyiqCardId) {
+        ops.push({ op: "set", path: "/hobbyiqCardId", value: newSlug });
+        ops.push({ op: "set", path: "/status", value: "pending" });
+      }
+      await stage.item(row.id, row.hobbyiqCardId).patch({ operations: ops } as never);
     }
     res.json({ success: true, action, newSlug: newSlug ?? row.hobbyiqCardId });
-  } catch (err) { next(err); }
+  } catch (err) {
+    // Log the full error to App Insights so we can diagnose 500s.
+    console.error(JSON.stringify({
+      event: "parallel_train_label_error",
+      source: "verifyQueue.routes",
+      stagingId: sid,
+      error: (err as Error)?.message ?? String(err),
+      stack: (err as Error)?.stack?.slice(0, 500),
+    }));
+    return res.status(500).json({ success: false, error: (err as Error)?.message ?? "server error" });
+  }
 });
 
 router.get("/data-quality/report", async (req, res, next) => {
