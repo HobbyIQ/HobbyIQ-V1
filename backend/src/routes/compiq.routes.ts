@@ -3946,11 +3946,24 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
         const cn = process.env.COSMOS_CONNECTION_STRING;
         if (cn) {
           const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-          const { resources: sample } = await sc.items.query<{ cardId: string }>({
-            query: "SELECT TOP 1 c.cardId FROM c WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null AND NOT STARTSWITH(c.cardId, \"hiq:\")",
+          // CF-HIQ-RESOLVER-MAJORITY (Drew, 2026-08-06). Same fix as
+          // card-panel/:cardId — TOP 1 picked an arbitrary row's cardId
+          // and hit a rogue CH cardId for 3 of 567 Ohtani rows, so the
+          // grade curve came back for a completely different CH card.
+          // GROUP BY + pick the majority so 547/567 wins over the
+          // rogue 1.
+          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
+            query: `SELECT c.cardId as cid, COUNT(1) as n
+                    FROM c WHERE c.hobbyiqCardId = @s
+                      AND IS_DEFINED(c.cardId) AND c.cardId != null
+                      AND NOT STARTSWITH(c.cardId, "hiq:")
+                    GROUP BY c.cardId`,
             parameters: [{ name: "@s", value: cardId }],
           }).fetchAll();
-          if (sample.length > 0 && sample[0].cardId) cardId = sample[0].cardId;
+          if (buckets.length > 0) {
+            buckets.sort((a, b) => b.n - a.n);
+            cardId = buckets[0].cid;
+          }
         }
       } catch { /* fall through with slug */ }
     }
