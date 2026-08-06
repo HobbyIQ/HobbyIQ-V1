@@ -337,12 +337,25 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
     const titleSet = inferSetKeyFromTitle(title, parsed?.cardNumber ?? null);
     const titleSetSlug = slugify(titleSet);
     if (parsed && titleSetSlug !== parsed.setKey) {
-      anomalies.push({
-        kind: "parser-low-confidence",
-        detail: `title infers setKey "${titleSet}" (slug=${titleSetSlug}) — disagrees with slug setKey "${parsed.setKey}"`,
-      });
-      derivedSetName = titleSetSlug;    // prefer title over the frozen slug
-      normalizations.push("setKey-preferred-from-title");
+      // CF-ANOMALY-DIRECTION (Drew, 2026-08-06). Only flag as anomaly
+      // when title's setKey is MORE specific than the slug's. If the
+      // slug is more specific (e.g. slug="bowman-chrome" vs title
+      // says just "Bowman"), the slug wins per slug-recompute-only-
+      // improve doctrine — no anomaly. Heuristic: length + prefix.
+      const titleMoreSpecific =
+        titleSetSlug.length > parsed.setKey.length &&
+        titleSetSlug.startsWith(parsed.setKey);
+      if (titleMoreSpecific) {
+        anomalies.push({
+          kind: "parser-low-confidence",
+          detail: `title infers setKey "${titleSet}" (slug=${titleSetSlug}) — more specific than slug setKey "${parsed.setKey}"`,
+        });
+        derivedSetName = titleSetSlug;
+        normalizations.push("setKey-preferred-from-title");
+      } else {
+        // Slug is more specific or orthogonal — keep slug, no anomaly.
+        normalizations.push("setKey-slug-more-specific-or-neutral");
+      }
     } else {
       normalizations.push("setKey-agrees-with-title");
     }
@@ -353,18 +366,35 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
     const titleParsed = parseListingIdentity(title);
     const titleParallelSlug = slugify(titleParsed.parallel ?? "base");
     if (titleParallelSlug !== parsed.parallel) {
-      anomalies.push({
-        kind: "parser-low-confidence",
-        detail: `title parallel "${titleParsed.parallel}" (slug=${titleParallelSlug}) disagrees with staging parallel "${parsed.parallel}"`,
-      });
+      // CF-ANOMALY-DIRECTION (Drew, 2026-08-06). Suppress the false
+      // positive where title has no parallel info (defaults to "base")
+      // and slug is more specific — that's slug-more-specific, keep it.
+      // Only flag when both are specific-and-different.
+      const titleIsDefault = titleParallelSlug === "base" && parsed.parallel !== "base";
+      if (!titleIsDefault) {
+        anomalies.push({
+          kind: "parser-low-confidence",
+          detail: `title parallel "${titleParsed.parallel}" (slug=${titleParallelSlug}) disagrees with staging parallel "${parsed.parallel}"`,
+        });
+      } else {
+        normalizations.push("parallel-slug-more-specific");
+      }
     } else {
       normalizations.push("title-parallel-agrees");
     }
     if (titleParsed.isAuto !== parsed.isAuto) {
-      anomalies.push({
-        kind: "parser-low-confidence",
-        detail: `title isAuto=${titleParsed.isAuto} disagrees with staging isAuto=${parsed.isAuto}`,
-      });
+      // CF-ANOMALY-DIRECTION: title says non-auto but slug says auto →
+      // slug is more specific, keep it. Only flag the other direction
+      // (title claims auto, slug says non-auto — real disagreement).
+      const slugMoreSpecific = titleParsed.isAuto === false && parsed.isAuto === true;
+      if (!slugMoreSpecific) {
+        anomalies.push({
+          kind: "parser-low-confidence",
+          detail: `title isAuto=${titleParsed.isAuto} disagrees with staging isAuto=${parsed.isAuto}`,
+        });
+      } else {
+        normalizations.push("isAuto-slug-more-specific");
+      }
     }
   }
 
