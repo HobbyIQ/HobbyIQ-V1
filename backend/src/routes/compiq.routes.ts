@@ -3466,7 +3466,25 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
-    const id = cardId.trim();
+    let id = cardId.trim();
+    // CF-CARD-PANEL-HIQ-SLUG (Drew, 2026-08-06). Catalog-search
+    // click-throughs land here with an hiq: slug. Same resolver as
+    // /observed-grade-curve — swap to a vendor cardId that any
+    // sold_comps row is stamped with, so downstream lookups work.
+    if (id.startsWith("hiq:")) {
+      try {
+        const { CosmosClient: _CC } = await import("@azure/cosmos");
+        const cn = process.env.COSMOS_CONNECTION_STRING;
+        if (cn) {
+          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
+          const { resources: sample } = await sc.items.query<{ cardId: string }>({
+            query: "SELECT TOP 1 c.cardId FROM c WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null AND NOT STARTSWITH(c.cardId, \"hiq:\")",
+            parameters: [{ name: "@s", value: id }],
+          }).fetchAll();
+          if (sample.length > 0 && sample[0].cardId) id = sample[0].cardId;
+        }
+      } catch { /* fall through */ }
+    }
     const { buildObservedGradeCurve } = await import(
       "../services/compiq/observedGradeCurve.service.js"
     );
@@ -3895,13 +3913,33 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
 
 router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
-    const { cardId } = req.params;
-    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+    const rawCardId = req.params.cardId;
+    if (!rawCardId || typeof rawCardId !== "string" || !rawCardId.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    // CF-OBSERVED-GRADE-CURVE-HIQ-SLUG (Drew, 2026-08-06). Catalog-search
+    // click-throughs land here with an hiq:...:no-auto slug in :cardId.
+    // Resolve to a vendor cardId by pulling any sold_comps row with
+    // that hobbyiqCardId (cross-partition, cheap TOP 1). Falls through
+    // to the vendor path unchanged for vendor-shaped IDs.
+    let cardId = rawCardId.trim();
+    if (cardId.startsWith("hiq:")) {
+      try {
+        const { CosmosClient: _CC } = await import("@azure/cosmos");
+        const cn = process.env.COSMOS_CONNECTION_STRING;
+        if (cn) {
+          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
+          const { resources: sample } = await sc.items.query<{ cardId: string }>({
+            query: "SELECT TOP 1 c.cardId FROM c WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null AND NOT STARTSWITH(c.cardId, \"hiq:\")",
+            parameters: [{ name: "@s", value: cardId }],
+          }).fetchAll();
+          if (sample.length > 0 && sample[0].cardId) cardId = sample[0].cardId;
+        }
+      } catch { /* fall through with slug */ }
     }
     const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
     // Meta-cache lookup for player name so the trajectory pass fires.
-    let meta: unknown = await getCardMetaById(cardId.trim());
+    let meta: unknown = await getCardMetaById(cardId);
     // CF-COLD-META-FALLBACK (2026-07-09, Drew — Owen Carey Black): when
     // the meta cache is cold (card never surfaced through search), fall
     // back to a live CH card-details fetch so playerName /
