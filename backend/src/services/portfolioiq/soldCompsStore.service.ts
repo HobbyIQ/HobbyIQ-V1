@@ -862,26 +862,31 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // regardless of which emit path fires (eBay user + CH tracking same
   // sale + browse-ended finding same listing all collapse to one row).
   //
-  // CF-CONTENT-HASH-CROSS-SOURCE-ONLY (Drew, 2026-07-21). Only apply
-  // dedup when at least one existing row is from a DIFFERENT source
-  // than the incoming. Same-source-different-externalId is genuinely
-  // two distinct sales (two sellers with same asking price on same
-  // day) — the source's own external id is the authority, not our
-  // content hash.
+  // CF-CONTENT-HASH-DEDUP (Drew, 2026-07-21, extended 2026-08-06).
+  // Prior comment said "same-source-different-externalId is genuinely
+  // two distinct sales." That's wrong for CardHedge specifically —
+  // CH emits the same eBay listing under two different sourceExternalId
+  // shapes ("<cardId>x<listing>" AND "ch-daily::<listing>"), producing
+  // dupe rows that fool the pool. contentHash is (cardId, parallel,
+  // isAuto, grade, price, soldAt) — two sellers listing the same card
+  // at the same price at the same *second* is lottery-tier; treat any
+  // same-contentHash-within-partition as the same sale regardless of
+  // source. TCA + Cardsight rarely trip this because their externalId
+  // is the eBay item id directly (already dedup-safe on id).
   try {
     const { resources: existing } = await c.items.query<SoldCompDoc>({
       query: "SELECT * FROM c WHERE c.contentHash = @h",
       parameters: [{ name: "@h", value: contentHash }],
     }, { partitionKey: doc.cardId }).fetchAll();
 
-    const crossSourceExisting = existing.filter(e => e.source !== doc.source);
-
-    if (crossSourceExisting.length > 0) {
+    if (existing.length > 0) {
       const incomingScore = scoreForCanonical(doc);
-      const bestExistingScore = Math.max(...crossSourceExisting.map(scoreForCanonical));
+      const bestExistingScore = Math.max(...existing.map(scoreForCanonical));
+      const sameSourceDupCount = existing.filter(e => e.source === doc.source).length;
       if (incomingScore <= bestExistingScore) {
-        // Existing row is canonical → skip. Log at 1% sample so we can
-        // measure the dedup hit rate in App Insights.
+        // Existing row is canonical → skip. Sample-log so we can
+        // measure the dedup hit rate + specifically catch CH internal
+        // multi-path dupes (existingCount from same source).
         if (Math.random() < 0.01) {
           console.log(JSON.stringify({
             event: "sold_comps_prewrite_dedup_skipped",
@@ -890,15 +895,16 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
             contentHash,
             incomingSource: doc.source,
             existingCount: existing.length,
+            sameSourceDupCount,
             sampled: true,
           }));
         }
         return;
       }
-      // Incoming wins → delete cross-source existing rows before
-      // writing so we don't leave stale-canonical rows behind. Same-
-      // source rows are left in place (they're independent sales).
-      for (const e of crossSourceExisting) {
+      // Incoming wins → delete existing dupes (cross- AND same-source)
+      // before writing. Anything with the same contentHash in the
+      // partition is by construction the same sale.
+      for (const e of existing) {
         try { await c.item(e.id, doc.cardId).delete(); } catch { /* best effort */ }
       }
       console.log(JSON.stringify({
@@ -906,7 +912,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         source: "soldCompsStore.recordSoldComp",
         cardId: doc.cardId,
         contentHash,
-        replacedCount: crossSourceExisting.length,
+        replacedCount: existing.length,
         incomingSource: doc.source,
       }));
     }
