@@ -563,6 +563,35 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     input = { ...input, gradeCompany: null, gradeValue: null };
   }
 
+  // CF-GRADE-FROM-TITLE-SANITY (Drew, 2026-08-06). If the row is being
+  // ingested as raw (gradeCompany null) but the title clearly says
+  // "PSA 10" / "BGS 9.5" / "SGC 10" etc., the row is a mislabeled slab
+  // sale — CardHedge sometimes emits graded sales with gradeCompany
+  // unset. Found 5 sales at $20-192K in the raw Ohtani Bowman #1 pool
+  // (raw median $2.4K) that were slabbed grades bleeding the raw
+  // FMV up 10-80x. Extract the grade from the title so the row lands
+  // in the correct pool.
+  if (!input.gradeCompany && input.title) {
+    const t = String(input.title).toUpperCase();
+    // Match "PSA 10", "BGS 9.5", "SGC 10", "CGC 9.5", etc.
+    const m = t.match(/\b(PSA|BGS|SGC|CGC|CSG|HGA)\s+(10(?:\.0)?|9\.5|9|8\.5|8|7|6|5|4|3|2|1)\b/);
+    if (m) {
+      const company = m[1];
+      const value = Number(m[2]);
+      if (Number.isFinite(value) && value > 0 && value <= 10) {
+        input = { ...input, gradeCompany: company, gradeValue: value };
+        console.log(JSON.stringify({
+          event: "grade_extracted_from_title",
+          source: "soldCompsStore.recordSoldComp",
+          cardId: input.cardId,
+          extractedCompany: company,
+          extractedValue: value,
+          titleSnippet: String(input.title).slice(0, 100),
+        }));
+      }
+    }
+  }
+
   // CF-CARDSIGHT-STAGING-ROUTING (Drew, 2026-08-01). When feature flag
   // is on, route Cardsight-source writes to cardsight_staging container.
   // Sold_comps stays confirmed-sold only. Off by default.
