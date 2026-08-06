@@ -104,10 +104,19 @@ export async function searchCatalog(
   // Build a Cosmos query that matches candidate rows containing ANY of
   // the tokens, then score in memory. Cosmos's ARRAY_CONTAINS on the
   // searchTokens field is efficient; we OR across tokens.
+  //
+  // CF-CATALOG-TREE-CARD-COVERAGE (Drew, 2026-08-06). The tree-built
+  // card nodes (~182K docs) don't have searchTokens populated — only
+  // legacy vendor rows do. Adding named-field CONTAINS fallbacks so
+  // "2018 ohtani topps refractor" reaches the ~307 Ohtani card nodes,
+  // not just the ~13 vendor rows that happen to have tokenized.
   const wherePieces: string[] = [];
   const params: Array<{ name: string; value: string | number | boolean }> = [];
   for (let i = 0; i < tokens.length; i++) {
     wherePieces.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`);
+    wherePieces.push(`(IS_DEFINED(c.playerName) AND CONTAINS(LOWER(c.playerName), @t${i}))`);
+    wherePieces.push(`(IS_DEFINED(c.setKey) AND CONTAINS(LOWER(c.setKey), @t${i}))`);
+    wherePieces.push(`(IS_DEFINED(c.cardNumber) AND CONTAINS(LOWER(c.cardNumber), @t${i}))`);
     params.push({ name: `@t${i}`, value: tokens[i] });
   }
   const searchOr = wherePieces.join(" OR ");
