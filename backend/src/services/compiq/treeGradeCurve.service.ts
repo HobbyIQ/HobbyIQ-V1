@@ -385,7 +385,15 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
       return Number.isFinite(t) && t > mx ? t : mx;
     }, 0);
     const conf = confidenceFor(selectedRows.length, newestMs || null, nowMs);
-    totalSampleCount += selectedRows.length;
+    // CF-TOTAL-SALES-LIFETIME (Drew, 2026-08-06). Prior sum used
+    // selectedRows.length which is the tightest-window count per tier
+    // (often 5-38 for popular cards where each tier narrows to 7d/30d).
+    // Displayed as "X total sales across grades" that reads like the
+    // WHOLE pool is 60-80 sales for Ohtani when reality is 793. Use
+    // observedSalesAtBuild (the tree's lifetime count at build) when
+    // present, fall back to selectedRows.length only if the tree node
+    // didn't get counted at build time.
+    totalSampleCount += g.observedSalesAtBuild ?? selectedRows.length;
     entries.push({
       gradeLabel: g.gradeLabel,
       gradeCompany: g.gradeCompany,
