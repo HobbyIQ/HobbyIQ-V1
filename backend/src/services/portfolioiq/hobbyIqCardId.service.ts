@@ -489,7 +489,7 @@ function normalizeCardNumber(cardNumber: string): string {
  *  for now — CH's catalog and Cardsight both use the full "X Refractor"
  *  labels. Future migration might collapse further; today's rule is
  *  minimal-risk. */
-function normalizeParallel(parallel: string | null | undefined): string {
+export function normalizeParallel(parallel: string | null | undefined): string {
   const raw = String(parallel ?? "").trim();
   // Strip leading "True " (case-insensitive, whitespace-boundary).
   // Only matches when "true" is a standalone leading word, so parallels

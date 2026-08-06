@@ -43,6 +43,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
 import { createHash } from "crypto";
@@ -132,6 +133,12 @@ export interface SoldCompDoc {
   cardYear: number | null;
   setName: string | null;
   parallel: string | null;
+  /** CF-PARALLEL-CANONICAL (Drew, 2026-08-06). Slug form of `parallel`
+   *  ("blue-refractor" for "Blue Refractor"). Written by the
+   *  canonicalizer alongside `parallel`. Filter code should prefer this
+   *  over `parallel` since it survives display-form drift. Absent on
+   *  legacy docs; readers must derive from `parallel` when null. */
+  parallelSlug?: string | null;
   cardNumber: string | null;
   isAuto: boolean;
   /** CF-SOLD-COMPS-PRINTRUN (Drew, 2026-07-23). Extracted from title on
@@ -641,13 +648,21 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       })
     : null;
 
+  // CF-PARALLEL-CANONICAL (Drew, 2026-08-06). Canonicalize the display
+  // form BEFORE persist so we stop fragmenting the pool across "Blue
+  // Refractor" vs "blue-refractor" vs "[Base]" vs "base". Aliases
+  // (RayWave/Xfractor/Mojo/Mega) flow through the underlying slug
+  // normalizer so display + slug + hobbyiqCardId all agree.
+  const canonicalParallel = canonicalizeParallel(input.parallel);
+
   const doc: SoldCompDoc = {
     id: makeId(input.source, input.sourceExternalId ?? null, input.cardId, input.soldAt),
     cardId: input.cardId.trim(),
     playerName: input.playerName.trim(),
     cardYear: input.cardYear ?? null,
     setName: input.setName ?? null,
-    parallel: input.parallel ?? null,
+    parallel: canonicalParallel?.display ?? null,
+    parallelSlug: canonicalParallel?.slug ?? null,
     cardNumber: cardNumberFinal ?? null,
     isAuto: input.isAuto ?? false,
     sport: input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear),
