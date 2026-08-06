@@ -475,23 +475,20 @@ async function aggregateGrade(
   const low = computePercentile(prices, 0.10);
   const high = computePercentile(prices, 0.90);
 
-  // CF-VELOCITY-CLAMP (Drew, 2026-08-06). getSaleVelocityWeight decays
-  // 5x → 0.1x over 30 days — a 50x ratio. When a card has a burst of
-  // recent low-price sales (damaged-auction wins, seller dumps) plus a
-  // deep tail of normal-price older sales, the recency decay collapses
-  // the weighted median onto the recent-cheap cluster, producing a
-  // "market value" that sits BELOW p10 or ABOVE p90 of the pool.
-  // That's exactly what surfaced on Raw/PSA 8/BGS 9.5 tiers ($4.50 MV
-  // vs p10=$14.50, etc.). Guardrail: if the weighted median falls
-  // outside [p10, p90], the decay is distorting reality — snap to
-  // plain median, which is guaranteed to sit inside the range. Only
-  // fires when p10/p90 are both defined (requires n>=4 per the
-  // computePercentile contract).
+  // CF-VELOCITY-CLAMP (Drew, 2026-08-06, revised same day). Original
+  // clamp fired whenever weighted was outside [p10, p90] — but that
+  // erases legitimate recency lift when the last 4 sales all sit above
+  // p90 (real market drift, not contamination). Revised rule: only
+  // clamp DOWNWARD when the weighted median falls WAY below p10 — a
+  // sub-p10 median implies the recency window is dominated by damaged
+  // auction wins or seller dumps, and the pool truly is more valuable
+  // than that. Upward drift is trusted (recent sales trending high IS
+  // the signal we want to project forward). "Way below" = < p10 * 0.5
+  // so only the egregious cases (Raw MV $4.50 vs p10 $14.50) trip.
   let weighted = rawWeighted;
   if (
-    rawWeighted !== null && plain !== null &&
-    low !== null && high !== null &&
-    (rawWeighted < low || rawWeighted > high)
+    rawWeighted !== null && plain !== null && low !== null &&
+    rawWeighted < low * 0.5
   ) {
     weighted = plain;
   }
