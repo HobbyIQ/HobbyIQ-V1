@@ -27,10 +27,7 @@ export default function LandingPage() {
         <div className="mt-6">
           <WaitlistCta source="homepage-hero" />
         </div>
-        <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
-          <Link href="/register" className="hiq-btn-primary">
-            Start free
-          </Link>
+        <div className="mt-4 flex items-center justify-center">
           <Link href="/pricing" className="hiq-btn-secondary">
             See pricing
           </Link>
@@ -121,13 +118,10 @@ export default function LandingPage() {
       <section className="max-w-4xl mx-auto px-6 pb-24 text-center">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to see your portfolio priced right?</h2>
         <p className="text-[color:var(--color-muted)] mb-8 max-w-2xl mx-auto">
-          Join the waitlist for launch — or start free right now.
+          Drop your email — we'll ping you the moment we open the doors.
         </p>
         <WaitlistCta source="homepage-footer" />
-        <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
-          <Link href="/register" className="hiq-btn-primary">
-            Create free account
-          </Link>
+        <div className="mt-6 flex items-center justify-center">
           <Link href="/pricing" className="hiq-btn-secondary">
             Compare plans
           </Link>
