@@ -421,12 +421,36 @@ async function dispatchCertMode(
 const CATALOG_FIRST_STRONG_THRESHOLD = 1;
 const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
 
+// CF-SEARCH-DISPLAY-TITLE (Drew, 2026-08-06). Search results were
+// showing slug-format text ("topps-chrome", "fs-1") in the title and
+// meta because catalog docs store setName in slug form. Convert to
+// display case for the title AND expose a prettified setName so the
+// web card meta line also renders nicely.
+function slugToDisplay(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return String(raw)
+    .replace(/-/g, " ")
+    .split(" ")
+    .map((w) => (w.length === 0 ? w : w[0].toUpperCase() + w.slice(1).toLowerCase()))
+    .join(" ")
+    .trim();
+}
+function titleCaseParallel(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // Parallel names sometimes have "refractor", "chrome", etc — same
+  // slug-to-title rule works.
+  return slugToDisplay(raw);
+}
+
 function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
+  const displaySet = slugToDisplay(hit.releaseName);
+  const displayParallel = titleCaseParallel(hit.parallels?.[0]?.name ?? null);
   const titleParts: string[] = [];
   if (hit.player) titleParts.push(hit.player);
   if (hit.cardYear) titleParts.push(String(hit.cardYear));
-  if (hit.releaseName) titleParts.push(hit.releaseName);
-  if (hit.cardNumber) titleParts.push(`#${hit.cardNumber}`);
+  if (displaySet) titleParts.push(displaySet);
+  if (displayParallel) titleParts.push(displayParallel);
+  if (hit.cardNumber) titleParts.push(`#${hit.cardNumber.toUpperCase()}`);
   return {
     // CF-CATALOG-CANDIDATE-ID-FIX (Drew, 2026-08-02). Use the vendor
     // cardId (bubble.io id from CH, or CS UUID) when available so
@@ -444,9 +468,9 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
     player: hit.player,
     year: hit.cardYear,
     brand: null,
-    setName: hit.releaseName,
-    cardNumber: hit.cardNumber,
-    parallel: hit.parallels?.[0]?.name ?? null,
+    setName: displaySet || hit.releaseName,
+    cardNumber: hit.cardNumber ? hit.cardNumber.toUpperCase() : null,
+    parallel: displayParallel || hit.parallels?.[0]?.name || null,
     variation: null,
     isAuto: hit.isAutographSet,
     serialNumber: null,

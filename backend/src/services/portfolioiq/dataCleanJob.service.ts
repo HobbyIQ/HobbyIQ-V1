@@ -190,10 +190,28 @@ export async function runDataCleanBatch(opts: {
     ? shardChars(opts.workerShard.index, opts.workerShard.total)
         .map((ch, i) => ({ name: `@shard${i}`, value: ch }))
     : [];
-  const { resources: pending } = await staging.items.query<StagingDoc>({
-    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending'${shardFilter} ORDER BY c.observedAt ASC`,
+  // CF-DRAINER-NEWEST-FIRST (Drew, 2026-08-06). Flip order so drainer
+  // processes RECENT observations first. Old backlog still drains
+  // when the fresh pipe is quiet.
+  //
+  // CF-DRAINER-PRIORITIZE-TCA (Drew, 2026-08-06). Also prefer TCA-source
+  // rows (Drew: "this is the best data and a fire hose"). Try TCA-only
+  // pass first; if we get a full batch, use it. Otherwise fill the
+  // remaining slots from any-source pending. CardHedge still lands but
+  // TCA gets to sold_comps first.
+  const { resources: tcaFirst } = await staging.items.query<StagingDoc>({
+    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source = 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
     parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
+  let pending: StagingDoc[] = tcaFirst;
+  if (pending.length < limit) {
+    const remainder = limit - pending.length;
+    const { resources: fill } = await staging.items.query<StagingDoc>({
+      query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source != 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
+      parameters: [{ name: "@n", value: remainder }, ...shardParams],
+    }).fetchAll();
+    pending = [...pending, ...fill];
+  }
 
   // CF-DATA-CLEAN-BATCH-MEDIAN (Drew, 2026-08-06). Pre-fetch rolling
   // medians for every unique slug in this batch in a SINGLE

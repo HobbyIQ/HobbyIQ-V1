@@ -93,7 +93,7 @@ export async function runPromotionBatch(opts: {
         .map((ch, i) => ({ name: `@shard${i}`, value: ch }))
     : [];
   const { resources: ready } = await staging.items.query<StagingDoc>({
-    query: `SELECT TOP @n * FROM c WHERE c.status IN ('clean', 'verified')${shardFilter} ORDER BY c.observedAt ASC`,
+    query: `SELECT TOP @n * FROM c WHERE c.status IN ('clean', 'verified')${shardFilter} ORDER BY c.observedAt DESC`,
     parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
 
