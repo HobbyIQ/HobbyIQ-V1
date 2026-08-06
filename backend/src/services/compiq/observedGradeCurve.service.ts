@@ -468,12 +468,33 @@ async function aggregateGrade(
     .filter((d): d is string => typeof d === "string" && d.length > 0)
     .sort();
 
-  const weighted = computeWeightedMedian(
+  const rawWeighted = computeWeightedMedian(
     sales.map((s) => ({ price: s.price, date: s.date, saleType: s.saleType })),
   );
   const plain = computePlainMedian(prices);
   const low = computePercentile(prices, 0.10);
   const high = computePercentile(prices, 0.90);
+
+  // CF-VELOCITY-CLAMP (Drew, 2026-08-06). getSaleVelocityWeight decays
+  // 5x → 0.1x over 30 days — a 50x ratio. When a card has a burst of
+  // recent low-price sales (damaged-auction wins, seller dumps) plus a
+  // deep tail of normal-price older sales, the recency decay collapses
+  // the weighted median onto the recent-cheap cluster, producing a
+  // "market value" that sits BELOW p10 or ABOVE p90 of the pool.
+  // That's exactly what surfaced on Raw/PSA 8/BGS 9.5 tiers ($4.50 MV
+  // vs p10=$14.50, etc.). Guardrail: if the weighted median falls
+  // outside [p10, p90], the decay is distorting reality — snap to
+  // plain median, which is guaranteed to sit inside the range. Only
+  // fires when p10/p90 are both defined (requires n>=4 per the
+  // computePercentile contract).
+  let weighted = rawWeighted;
+  if (
+    rawWeighted !== null && plain !== null &&
+    low !== null && high !== null &&
+    (rawWeighted < low || rawWeighted > high)
+  ) {
+    weighted = plain;
+  }
   const newest = dates.length ? dates[dates.length - 1] : null;
   const oldest = dates.length ? dates[0] : null;
   // CF-RECENCY-LIFT (2026-07-05): find the price of the single newest

@@ -3477,11 +3477,28 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         const cn = process.env.COSMOS_CONNECTION_STRING;
         if (cn) {
           const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-          const { resources: sample } = await sc.items.query<{ cardId: string }>({
-            query: "SELECT TOP 1 c.cardId FROM c WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null AND NOT STARTSWITH(c.cardId, \"hiq:\")",
+          // CF-HIQ-RESOLVER-MAJORITY (Drew, 2026-08-06). Prior resolver
+          // picked TOP 1 by arbitrary Cosmos order — for cards with
+          // 500+ CH rows on one canonical cardId and 1-3 rows on a
+          // rogue mismatched cardId, TOP 1 could return the rogue, then
+          // the whole grade curve rendered data for a wrong CH card.
+          // (Real case on Ohtani 2018 Bowman Chrome #1 PSA 9: 547/567
+          // rows shared "1625707759165x..." but TOP 1 returned
+          // "1689201618080x..." — grade curve came back as a $150
+          // card, not the actual $2K+ Ohtani.) Now GROUP BY cardId
+          // and pick the majority.
+          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
+            query: `SELECT c.cardId as cid, COUNT(1) as n
+                    FROM c WHERE c.hobbyiqCardId = @s
+                      AND IS_DEFINED(c.cardId) AND c.cardId != null
+                      AND NOT STARTSWITH(c.cardId, "hiq:")
+                    GROUP BY c.cardId`,
             parameters: [{ name: "@s", value: id }],
           }).fetchAll();
-          if (sample.length > 0 && sample[0].cardId) id = sample[0].cardId;
+          if (buckets.length > 0) {
+            buckets.sort((a, b) => b.n - a.n);
+            id = buckets[0].cid;
+          }
         }
       } catch { /* fall through */ }
     }
