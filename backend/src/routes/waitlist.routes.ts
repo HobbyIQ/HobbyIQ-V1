@@ -17,7 +17,13 @@ import { confirmationEmailContent, ownerNotificationContent } from "../services/
 
 const router = Router();
 
-const OWNER_EMAIL = "drew@hobby-iq.com";
+// CF-WAITLIST-OWNER-EMAIL (Drew, 2026-08-07). Route notifications to
+// the mailbox Drew actually reads (Outlook, dvabulas@outlook.com).
+// Prior hardcoded drew@hobby-iq.com was either unmonitored or bounced
+// — a real signup (Scott Richards, 2026-08-07 via homepage-hero) went
+// unseen. If a proper alias mailbox is provisioned later, override via
+// WAITLIST_OWNER_EMAIL env var without redeploy.
+const OWNER_EMAIL = process.env.WAITLIST_OWNER_EMAIL || "dvabulas@outlook.com";
 
 router.post("/join", async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as { email?: unknown; source?: unknown };
