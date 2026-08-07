@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchPriceById,
+  fetchObservedGradeCurve,
+  type ObservedGradeCurveResponse,
   addHolding,
   addWatchlist,
   createPriceAlert,
@@ -46,6 +48,7 @@ export function CardPriceDetail({
   const [grade, setGrade] = useState<Grade | null>(initialGrade);
   const [parallel, setParallel] = useState<string | null>(initialParallel);
   const [detail, setDetail] = useState<PriceByIdResponse | null>(null);
+  const [gradeCurve, setGradeCurve] = useState<ObservedGradeCurveResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
@@ -54,13 +57,23 @@ export function CardPriceDetail({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchPriceById({
-        cardsightCardId,
-        gradeCompany: g?.company,
-        gradeValue: g?.value,
-        parallelName: p ?? undefined,
-      });
+      // CF-CARD-PRICE-UNIFY (Drew, 2026-08-06). Fetch price-by-id (for
+      // trading zones, confidence, comps used) AND the grade curve
+      // (source of truth for the tile market value). Top card renders
+      // FMV from the SELECTED grade tile so the top card + grade curve
+      // can never disagree by construction — they read the same
+      // underlying observed-grade-curve number.
+      const [res, curve] = await Promise.all([
+        fetchPriceById({
+          cardsightCardId,
+          gradeCompany: g?.company,
+          gradeValue: g?.value,
+          parallelName: p ?? undefined,
+        }),
+        fetchObservedGradeCurve(cardsightCardId).catch(() => null),
+      ]);
       setDetail(res);
+      setGradeCurve(curve);
     } catch (err) {
       const e = err as { status?: number; message?: string };
       if (e.status === 402) setError("You've hit your daily price-check limit. Upgrade for higher caps.");
@@ -87,8 +100,26 @@ export function CardPriceDetail({
   }
 
   const image = detail?.cardImageUrl ?? candidate?.imageUrl ?? null;
-  const fmv = detail?.fairMarketValueLive ?? detail?.marketValue ?? null;
-  const predicted = detail?.predictedPrice;
+  // CF-CARD-PRICE-UNIFY (Drew, 2026-08-06). Find the grade curve tile
+  // matching the currently-selected grade (or Raw when no grade
+  // selected). Its trendAdjustedValue → value → weightedMedianPrice
+  // hierarchy IS the tile's MARKET VALUE. Use it as the top card's
+  // FMV so they're guaranteed identical.
+  const tile = (() => {
+    if (!gradeCurve?.entries) return null;
+    const wantGrader = grade?.company ?? "Raw";
+    const wantValue = grade?.value ?? null;
+    for (const e of gradeCurve.entries) {
+      if (e.grader !== wantGrader) continue;
+      if (wantGrader === "Raw") return e;
+      if (Number(e.grade) === wantValue) return e;
+    }
+    return null;
+  })();
+  const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
+  const tilePredicted = tile?.predictedPriceAt30d ?? null;
+  const fmv = tileFmv ?? detail?.fairMarketValueLive ?? detail?.marketValue ?? null;
+  const predicted = tilePredicted ?? detail?.predictedPrice;
   const parallels = candidate?.parallels ?? [];
   const title = candidate?.title ?? detail?.summary ?? "Card detail";
 
