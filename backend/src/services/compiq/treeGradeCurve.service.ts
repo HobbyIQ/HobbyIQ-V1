@@ -419,41 +419,31 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
   };
   entries.sort((a, b) => rank(a) - rank(b));
 
-  // CF-GRADE-CURVE-MONOTONIC (Drew, 2026-08-06). Grade tiles must ascend
-  // for a given grader — PSA 8 ≤ PSA 9 ≤ PSA 10, BGS 8 ≤ BGS 9 ≤ BGS 9.5
-  // ≤ BGS 10. Also Raw ≤ every graded tier. Sample bias on thin pools
-  // can invert this (weighted median of 5 PSA 9 sales pulls below the
-  // 100+ Raw pool). Clamp any inversion by flooring the higher tier at
-  // the lower tier's value. Preserves the higher tier's trend/predicted
-  // % but pins the marketValue floor. Only touches marketValue &
-  // weightedMedian & predictedPrice; sampleCount/newestSaleAt kept as-is
-  // for confidence badging.
-  const rawEntry = entries.find((e) => !e.gradeCompany);
-  const rawFloor = rawEntry?.marketValue ?? rawEntry?.weightedMedian ?? null;
-  // Per grader, iterate ascending grade value and floor-clamp against
-  // the previous (lower) grade's value.
-  const graderOrder: Record<string, number> = { PSA: 1, BGS: 2, SGC: 3, CGC: 4, CSG: 5, HGA: 6 };
+  // CF-GRADE-CURVE-MONOTONIC (Drew, 2026-08-06, revised same day).
+  // Grade tiles must ascend WITHIN a grader. Removed the Raw-as-floor
+  // rule — Raw and graded pools are different markets, Raw's weighted
+  // median can legitimately exceed some PSA tiers when the Raw pool
+  // contains high-end sales the low PSA tier doesn't. Only enforce
+  // ascending PSA 8 ≤ PSA 9 ≤ PSA 10, BGS 8 ≤ 9 ≤ 9.5 ≤ 10 within
+  // each grader.
   const graders = new Set(entries.map((e) => e.gradeCompany).filter((g): g is string => !!g));
   for (const grader of graders) {
     const tierRows = entries
       .filter((e) => e.gradeCompany === grader && typeof e.gradeValue === "number")
       .sort((a, b) => (a.gradeValue as number) - (b.gradeValue as number));
-    let prevFloor: number | null = rawFloor;
+    let prevFloor: number | null = null;
     for (const t of tierRows) {
       const own = t.marketValue ?? t.weightedMedian ?? null;
       if (prevFloor !== null && own !== null && own < prevFloor) {
-        // Floor to previous tier's value (1.0× floor — same as previous).
         t.marketValue = prevFloor;
         t.weightedMedian = prevFloor;
         if (t.predictedPrice !== null && t.predictedPrice < prevFloor) {
           t.predictedPrice = prevFloor;
         }
-        prevFloor = prevFloor; // stays the same
       } else if (own !== null) {
-        prevFloor = own; // ascends naturally
+        prevFloor = own;
       }
     }
-    void graderOrder; // reserved for cross-grader ordering in a future pass
   }
 
   return { variantSlug, entries, totalSampleCount };

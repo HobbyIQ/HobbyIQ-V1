@@ -2030,6 +2030,98 @@ async function autoPriceHolding(
   source: string,
   userId?: string,
 ): Promise<PortfolioHolding> {
+  // CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH (Drew, 2026-08-06). Grade curve
+  // IS the canonical market value + predicted next sale per Drew's
+  // product doctrine. Portfolio holdings must display the SAME number
+  // the card page's grade curve shows for the (slug, grade) tuple —
+  // otherwise the portfolio disagrees with the card page for the same
+  // card. FIRST rung: call buildObservedGradeCurve, find the tile
+  // matching the holding's grade, use tile.trendAdjustedValue as
+  // fairMarketValue. Falls through to legacy rungs on any miss.
+  const holdingSlug = (holding as any).hobbyiqCardId ?? holding.cardId ?? null;
+  if (typeof holdingSlug === "string" && holdingSlug.length > 0) {
+    try {
+      // Resolve hiq: slug to majority CH cardId (same pattern as the
+      // observed-grade-curve route handler).
+      let curveCardId = holdingSlug;
+      if (curveCardId.startsWith("hiq:")) {
+        try {
+          const { CosmosClient: _CC } = await import("@azure/cosmos");
+          const cn = process.env.COSMOS_CONNECTION_STRING;
+          if (cn) {
+            const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
+            const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
+              query: `SELECT c.cardId as cid, COUNT(1) as n FROM c
+                      WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null
+                        AND NOT STARTSWITH(c.cardId, "hiq:")
+                      GROUP BY c.cardId`,
+              parameters: [{ name: "@s", value: curveCardId }],
+            }).fetchAll();
+            if (buckets.length > 0) {
+              buckets.sort((a, b) => b.n - a.n);
+              curveCardId = buckets[0].cid;
+            }
+          }
+        } catch { /* keep slug */ }
+      }
+      const { buildObservedGradeCurve } = await import("../compiq/observedGradeCurve.service.js");
+      const curve = await buildObservedGradeCurve(curveCardId, {
+        playerName: (holding as any).playerName ?? null,
+      });
+      if (curve?.entries?.length) {
+        const wantGrader = (holding as any).gradeCompany ? String((holding as any).gradeCompany).toUpperCase() : "Raw";
+        const wantVal = typeof (holding as any).gradeValue === "number" ? (holding as any).gradeValue
+          : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
+        const tile = curve.entries.find((e: { grader: string; grade: string }) => {
+          if (e.grader !== wantGrader) return false;
+          if (wantGrader === "Raw") return true;
+          return Number(e.grade) === wantVal;
+        }) as { trendAdjustedValue: number | null; value: number | null; weightedMedianPrice: number | null; predictedPriceAt30d: number | null } | undefined;
+        const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
+        if (tileFmv !== null && tileFmv > 0) {
+          const nowIso = new Date().toISOString();
+          const gradeCurveResult: PortfolioHolding = {
+            ...holding,
+            fairMarketValue: tileFmv,
+            predictedPrice: tile?.predictedPriceAt30d ?? tileFmv,
+            predictedPriceLow: null,
+            predictedPriceHigh: null,
+            predictedPriceMechanism: "grade-curve-tile",
+            predictedPriceUpdatedAt: nowIso,
+            estimatedValue: null,
+            estimateLow: null,
+            estimateHigh: null,
+            estimateConfidence: null,
+            estimateBasis: `Grade curve tile for ${wantGrader}${wantGrader !== "Raw" ? " " + wantVal : ""}`,
+            isEstimate: false,
+            valuationStatus: "observed",
+            pricingSource: "unified-pricing",
+            lastUpdated: nowIso,
+          } as PortfolioHolding;
+          evaluateHoldingAlerts(doc, previous, gradeCurveResult);
+          doc.holdings[holding.id] = gradeCurveResult;
+          console.log(JSON.stringify({
+            event: "portfolio_grade_curve_source_of_truth_applied",
+            source: "portfolioStore.autoPriceHolding",
+            holdingId: holding.id,
+            slug: holdingSlug,
+            resolvedCardId: curveCardId,
+            grader: wantGrader, gradeValue: wantVal,
+            tileFmv,
+          }));
+          return gradeCurveResult;
+        }
+      }
+    } catch (err) {
+      // Grade-curve lookup failed — fall through to legacy chain.
+      console.warn(JSON.stringify({
+        event: "portfolio_grade_curve_source_of_truth_error",
+        holdingId: holding.id,
+        message: (err as Error).message,
+      }));
+    }
+  }
+
   // CF-UNIFIED-PRICING-EARLY-EXIT (Drew, 2026-08-04). ONE function,
   // ONE number, ONE prediction. When computeUnifiedPrice has real
   // data (marketValue > 0 AND confidence >= 0.3) — write it directly

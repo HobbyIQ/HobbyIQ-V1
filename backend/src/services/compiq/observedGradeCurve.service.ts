@@ -1833,15 +1833,15 @@ export async function buildObservedGradeCurve(
     // Never fails the curve — legacy numbers stay as fallback.
   }
 
-  // CF-GRADE-CURVE-MONOTONIC (Drew, 2026-08-06). Grade tiles must ascend
-  // per grader: PSA 8 ≤ PSA 9 ≤ PSA 10, BGS 8 ≤ 9 ≤ 9.5 ≤ 10. Also Raw
-  // ≤ every graded tier. Sample bias on thin pools inverts this
-  // (weighted median of 5 PSA 9 sales pulls below the 100+ Raw pool).
-  // Floor any inversion at the lower tier's value. Only touches value/
-  // trendAdjustedValue/predictedPriceAt30d — sample counts + confidence
-  // stay honest.
-  const rawE = curve.entries.find((e) => e.grader === "Raw" || e.grade === "Raw");
-  const rawFloor = rawE?.trendAdjustedValue ?? rawE?.value ?? null;
+  // CF-GRADE-CURVE-MONOTONIC (Drew, 2026-08-06, revised same day).
+  // Grade tiles must ascend WITHIN a grader (PSA 8 ≤ PSA 9 ≤ PSA 10,
+  // BGS 8 ≤ 9 ≤ 9.5 ≤ 10). Original commit also floored PSA tiers to
+  // Raw's value — that back-fired when Raw pool had high-end sales
+  // inflating its weighted median. Raw $1,850 (real) → floored PSA 8
+  // (real $150), PSA 9 (real $325), AND PSA 10 (real $1,850) all to
+  // $1,850. Removed the Raw floor: Raw and graded pools are different
+  // markets, Raw can legitimately exceed some low PSA tiers in edge
+  // cases. Only enforce ascending WITHIN a grader.
   const graders = new Set(curve.entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
     const tierRows = curve.entries
@@ -1849,7 +1849,7 @@ export async function buildObservedGradeCurve(
       .map((e) => ({ e, gv: parseFloat(String(e.grade)) || 0 }))
       .sort((a, b) => a.gv - b.gv)
       .map((x) => x.e);
-    let prevFloor: number | null = rawFloor;
+    let prevFloor: number | null = null;
     for (const t of tierRows) {
       const own = t.trendAdjustedValue ?? t.value ?? null;
       if (prevFloor !== null && own !== null && own < prevFloor) {
