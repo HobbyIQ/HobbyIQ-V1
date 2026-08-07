@@ -435,8 +435,10 @@ export async function computeUnifiedPrice(
     // null — which is what stops legacy fall-through from writing $18
     // sibling-rescue prices for cards that HAVE real pool data.
     let matched = gradeCurve.find((e) => e.grade === target);
+    let requestedButFallbackMatched = false;
     if (!matched && gradeCurve.length > 0) {
       matched = gradeCurve[0];
+      requestedButFallbackMatched = true;
     }
     if (matched) {
       fmv = matched.weightedMedian;
@@ -445,6 +447,31 @@ export async function computeUnifiedPrice(
       trendPctPerWeek = matched.trendPctPerWeek;
       trendDirection = matched.trendDirection;
       selectedConfidence = matched.confidence;
+
+      // CF-UNIFIED-GRADE-MULTIPLIER-TRANSLATE (Drew, 2026-08-07). When
+      // the requested grade didn't match a pool entry AND we fell back
+      // to a different tier, apply getGraderPremium to translate that
+      // tier's value to the requested grade. Eric Hartman PSA 10 raw
+      // pool $1,713 was returning as-is for a PSA 10 request — the
+      // wire needed raw × PSA 10 multiplier (~2.5-3× for a hot
+      // prospect auto).
+      if (requestedButFallbackMatched && opts.grade?.company && opts.grade.value != null) {
+        try {
+          const fromCompany = matched.gradeCompany;
+          const fromValue = matched.gradeValue;
+          const { getGraderPremium } = await import("./compiqEstimate.service.js");
+          const fromMult = fromCompany
+            ? getGraderPremium(fromCompany, String(fromValue ?? ""), fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null)
+            : 1.0;
+          const toMult = getGraderPremium(String(opts.grade.company), String(opts.grade.value), fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null);
+          const rescale = fromMult > 0 && Number.isFinite(fromMult) ? (toMult / fromMult) : 1.0;
+          if (Number.isFinite(rescale) && rescale > 0 && rescale !== 1.0) {
+            if (fmv !== null) fmv = Math.round(fmv * rescale * 100) / 100;
+            if (marketValue !== null) marketValue = Math.round(marketValue * rescale * 100) / 100;
+            if (predictedPrice !== null) predictedPrice = Math.round(predictedPrice * rescale * 100) / 100;
+          }
+        } catch { /* keep the raw-pool number as fallback */ }
+      }
 
       // CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When the matched
       // grade's newest sale is > 60 days old AND we have player+year
