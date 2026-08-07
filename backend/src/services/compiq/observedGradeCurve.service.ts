@@ -80,7 +80,7 @@ import {
 // "is this a rare parallel?" without duplicating the parallel-name
 // mapping.
 import { inferPrintRun as inferPrintRunForParallel } from "./parallelPremiumFloors.js";
-import { lookupGradeRatio, lookupGradeRatioByTier, classifyFamily } from "./gradeCalibrationConfig.js";
+import { lookupGradeRatio, lookupGradeRatioByTier, classifyFamily, lookupValueBandMultiplierWithScope } from "./gradeCalibrationConfig.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -1430,14 +1430,35 @@ function resolveMultiplier(args: {
   sport: string | null;
   cardClass: CardClass;
   cardId?: string | null;
+  /** Raw pool anchor price. Required for the value-band lookup that
+   *  compiqEstimate's ladder runs at rung 1. Without it we skip that
+   *  rung and can pick a different multiplier than /price-by-id for
+   *  the same card, producing FMV disagreement between the top card
+   *  and the grade curve. */
+  rawPrice?: number | null;
 }): number | undefined {
-  const { entry, family, sport, cardClass, cardId } = args;
+  const { entry, family, sport, cardClass, cardId, rawPrice } = args;
   const gradeValue = parseGradeValue(entry.grade);
+  // CF-MULTIPLIER-LADDER-UNIFIED (Drew, 2026-08-06). Same ladder as
+  // compiqEstimate.applyGradeMultiplier so /price-by-id and
+  // /observed-grade-curve return the same PSA 10 estimate for the
+  // same card. Rung 1 (value-band) is the one this service was
+  // missing — it produced $8,927 vs compiqEstimate's $4,202 for
+  // Eric Hartman Orange Shimmer PSA 10 (raw anchor $1,713).
   if (family && gradeValue !== null) {
-    // Tier 1 (preferred): empirical per-grade-tier ratio.
+    // Rung 1: value-band lookup by (raw anchor bucket, grader, grade,
+    // sport, family). Falls back to null if the anchor bucket is
+    // missing or the cell is empty — next rung takes over.
+    if (typeof rawPrice === "number" && Number.isFinite(rawPrice) && rawPrice > 0) {
+      const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, entry.grader, gradeValue, { sport, family });
+      if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
+        return bandLookup.medianRatio;
+      }
+    }
+    // Rung 2: empirical per-grade-tier ratio.
     const tierRatio = lookupGradeRatioByTier(family, entry.grader, gradeValue, sport);
     if (tierRatio !== null && tierRatio > 0) return tierRatio;
-    // Tier 2: empirical company-level ratio × sub-tier scaling.
+    // Rung 3: empirical company-level ratio × sub-tier scaling.
     const empiricalRatio = lookupGradeRatio(family, entry.grader, sport);
     if (empiricalRatio !== null && empiricalRatio > 0) {
       const scaled = empiricalRatio * subTierScaling(gradeValue);
@@ -1507,6 +1528,10 @@ function fillEstimatedFallback(
           sport,
           cardClass,
           cardId,
+          // Pass Raw's observed price as the value-band anchor so the
+          // unified ladder can consult lookupValueBandMultiplierWithScope
+          // (rung 1) exactly like compiqEstimate does.
+          rawPrice: rawObserved,
         });
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
