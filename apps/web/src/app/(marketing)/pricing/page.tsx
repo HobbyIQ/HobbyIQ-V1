@@ -32,7 +32,7 @@ const FEATURES: PlanFeature[] = [
   // CF-STOREFRONT-TIER (Drew, 2026-07-27, revised 2026-08-07). Collector
   // gets a 25-card capped storefront, Investor capped at 50, Pro Seller
   // unlimited.
-  { label: "Public storefront (hobby-iq.com/u/<you>)", free: false, collector: "25 cards", investor: "50 cards", proSeller: "Unlimited" },
+  { label: "Public storefront (hobby-iq.com/u/<you>)", free: false, collector: "25 cards", investor: "75 cards", proSeller: "Unlimited" },
   { label: "Priority support", free: false, collector: false, investor: false, proSeller: true },
 ];
 
