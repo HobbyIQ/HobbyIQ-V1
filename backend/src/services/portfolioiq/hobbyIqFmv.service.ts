@@ -368,11 +368,34 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // tighter pool than the string-slug widening rungs and applies
   // per-axis calibration multipliers to the projected next sale.
   // Falls through to the legacy 8-rung ladder on null return.
+  //
+  // CF-DIRECT-SLUG-PRECEDENCE (Drew, 2026-08-06). Real case that surfaced
+  // the bug: Eric Hartman 2026 Bowman Chrome CPA-EHA Orange Shimmer
+  // Refractor Auto. Direct slug had 5 sales ($1185, $1531, $1713, ...)
+  // but composite-neighbor grabbed a wider Orange Shimmer pool of
+  // ~same-composite cards (different players) and its regression
+  // returned $1185 — the lowest single price — as the "next sale."
+  // Rule: if the direct slug's own pool has >= 3 sales in 180d,
+  // that pool IS the truth. Skip composite-neighbor entirely and let
+  // the direct-slug rung handle it. Composite still fires for genuinely
+  // thin cards (0-2 direct comps) where the wider pool is the only
+  // signal available.
   if (process.env.HOBBYIQFMV_COMPOSITE_ENABLED === "true") {
+    let directSlugCount = 0;
     try {
-      const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
-      if (compositeResult) return compositeResult;
-    } catch { /* silent-safe — fall through to legacy */ }
+      const cutoff = new Date(now.getTime() - 180 * 86_400_000).toISOString();
+      const { resources: cnt } = await container.items.query<number>({
+        query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s AND c.soldAt >= @cut AND c.price > 0 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
+        parameters: [{ name: "@s", value: slug }, { name: "@cut", value: cutoff }],
+      }).fetchAll();
+      directSlugCount = cnt[0] ?? 0;
+    } catch { /* count failure → try composite as before */ }
+    if (directSlugCount < 3) {
+      try {
+        const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
+        if (compositeResult) return compositeResult;
+      } catch { /* silent-safe — fall through to legacy */ }
+    }
   }
 
   // CF-RARE-CARD-ANCHOR-RUNG (Drew, 2026-08-02). Rare parallels
