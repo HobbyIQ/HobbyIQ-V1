@@ -1551,13 +1551,20 @@ export async function fetchRecentComps(opts: {
   parallel?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** When true, backend returns ALL grades (Raw + every PSA/BGS/SGC/CGC).
+   *  Otherwise the backend defaults to Raw when no explicit grade set. */
+  allGrades?: boolean;
   days?: number;
   limit?: number;
 }): Promise<RecentCompsResponse> {
   const q = new URLSearchParams();
   if (opts.parallel !== undefined && opts.parallel !== null) q.set("parallel", opts.parallel);
-  if (opts.gradeCompany) q.set("gradeCompany", opts.gradeCompany);
-  if (opts.gradeValue != null) q.set("gradeValue", String(opts.gradeValue));
+  if (opts.allGrades) {
+    q.set("tier", "all");
+  } else {
+    if (opts.gradeCompany) q.set("gradeCompany", opts.gradeCompany);
+    if (opts.gradeValue != null) q.set("gradeValue", String(opts.gradeValue));
+  }
   if (opts.days != null) q.set("days", String(opts.days));
   if (opts.limit != null) q.set("limit", String(opts.limit));
   const qs = q.toString();

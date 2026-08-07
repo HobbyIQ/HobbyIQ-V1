@@ -37,11 +37,16 @@ export function RecentCompsList({
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(defaultDays);
   const [sourceFilter, setSourceFilter] = useState<"all" | "user" | "ebay" | "partner">("all");
+  // CF-RECENT-COMPS-ALL-GRADES (Drew, 2026-08-07). Default: show ALL
+  // grades (Raw + PSA/BGS/SGC/CGC) for this card+parallel. Users can
+  // narrow via the grade dropdown. Prior behavior filtered to the
+  // holding's grade only, hiding the market context around the tile.
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchRecentComps({ cardId, parallel, gradeCompany, gradeValue, days, limit: 50 })
+    fetchRecentComps({ cardId, parallel, allGrades: true, days, limit: 50 })
       .then((res) => {
         if (cancelled) return;
         setSales(res.sales);
@@ -56,18 +61,29 @@ export function RecentCompsList({
     return () => {
       cancelled = true;
     };
-  }, [cardId, parallel, gradeCompany, gradeValue, days]);
+  }, [cardId, parallel, days]);
 
   const filtered = useMemo(() => {
-    if (sourceFilter === "all") return sales;
-    return sales.filter((s) => {
+    let out = sales;
+    // Client-side grade filter — cheap since the server already
+    // narrowed by parallel + window. Options built from what's in the pool.
+    if (gradeFilter !== "all") {
+      out = out.filter((s) => {
+        const label = s.gradeCompany && s.gradeValue != null
+          ? `${s.gradeCompany} ${s.gradeValue}`
+          : "Raw";
+        return label === gradeFilter;
+      });
+    }
+    if (sourceFilter === "all") return out;
+    return out.filter((s) => {
       const src = (s.source ?? "").toLowerCase();
       if (sourceFilter === "user") return src.startsWith("ebay-user") || src === "manual" || src === "user";
       if (sourceFilter === "ebay") return src === "ebay" || src.startsWith("ebay-");
       if (sourceFilter === "partner") return src === "cardhedge" || src.startsWith("ch-") || src === "ch" || src === "cardsight" || src.startsWith("cs");
       return true;
     });
-  }, [sales, sourceFilter]);
+  }, [sales, sourceFilter, gradeFilter]);
 
   const stats = useMemo(() => {
     if (filtered.length === 0) return null;
@@ -98,6 +114,20 @@ export function RecentCompsList({
             <option value="90">90 days</option>
             <option value="180">180 days</option>
             <option value="365">365 days</option>
+          </select>
+          <select
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            className={filterCls}
+          >
+            <option value="all">All grades</option>
+            {Array.from(new Set(sales.map((s) => s.gradeCompany && s.gradeValue != null ? `${s.gradeCompany} ${s.gradeValue}` : "Raw")))
+              .sort((a, b) => {
+                if (a === "Raw") return -1;
+                if (b === "Raw") return 1;
+                return a.localeCompare(b);
+              })
+              .map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
           <select
             value={sourceFilter}
