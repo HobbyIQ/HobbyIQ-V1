@@ -71,9 +71,21 @@ function tupleKey(r) {
 
 function docFromAgg(key, agg) {
   const [sport, year, setName, cardNumber, parallel, autoFlag, printRun, player] = key.split("|");
-  const id = "sales-derived:" + crypto.createHash("sha256").update(key).digest("hex").slice(0, 20);
+  // CF-CATALOG-KEYED-BY-HOBBYIQCARDID (Drew, 2026-08-07). Prefer the
+  // canonical hobbyiqCardId slug as the doc id so batch synth converges
+  // with real-time writes on ONE doc per physical card. Fall back to the
+  // legacy sales-derived:sha256 scheme only when no sample slug is
+  // available (thin aggregations from pre-slug-backfill sold_comps rows —
+  // ~0.02% of the pool). Also stamp hobbyiqCardId + cardId=slug so the
+  // doc joins to sold_comps by field-lookup.
+  const canonicalId = agg.sampleSlug && String(agg.sampleSlug).startsWith("hiq:")
+    ? agg.sampleSlug
+    : "sales-derived:" + crypto.createHash("sha256").update(key).digest("hex").slice(0, 20);
+  const hobbyiqCardId = agg.sampleSlug && String(agg.sampleSlug).startsWith("hiq:") ? agg.sampleSlug : null;
   return {
-    id,
+    id: canonicalId,
+    cardId: canonicalId, // partition key matches id for slug-keyed docs
+    hobbyiqCardId,
     player,
     year: year ? Number(year) : null,
     number: cardNumber,

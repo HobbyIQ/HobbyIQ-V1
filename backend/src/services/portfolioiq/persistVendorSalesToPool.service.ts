@@ -21,7 +21,7 @@ import {
   inferSetKeyFromTitle,
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
-import { computeHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
 import { canonicalizeParallelName } from "../catalog/catalogMatcher.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 
@@ -1089,47 +1089,41 @@ export async function persistVendorSalesToPool(
       // CF-COMPS-STAGING-SHIM-EARLY.
 
       // CF-CATALOG-REALTIME (Drew, 2026-08-03). Every successful
-      // sold_comps write grows the owned catalog. Fire-and-forget
-      // upsert into card_catalog with source='sales-derived' using
-      // the same deterministic id the weekly synth uses (sha256 of
-      // tupleKey) so batch synth + real-time writes converge on the
-      // same rows without duplication. Repeated writes for the same
-      // card just refresh its lastObservedSaleAt.
-      if (playerName && cardYear && setKey && parsed.cardNumber && sport) {
+      // CF-CATALOG-KEYED-BY-HOBBYIQCARDID (Drew, 2026-08-07). Every sold_comps
+      // write also upserts a card_catalog entry. Prior scheme keyed the doc
+      // on `sales-derived:sha256(tupleKey)` where the tuple used a LOCAL
+      // setKey normalizer that didn't do the full collapse ladder — so
+      // "2025 Bowman Chrome Draft" vs "2025 Bowman Chrome" produced
+      // different hashes → different catalog docs → fragmented "one card,
+      // many catalog entries" (2M+ sales-derived duplicates observed).
+      // Trends and FMV computed by joining sold_comps.hobbyiqCardId →
+      // catalog would miss whichever fragment(s) weren't queried, and
+      // credibility took the hit.
+      //
+      // Fix: key the doc on the CANONICAL hobbyiqCardId slug itself
+      // (already computed above as `slug`). Same physical card → same
+      // slug → same doc → single catalog entry. Also stamp `hobbyiqCardId`
+      // on the doc so downstream queries can join by field-lookup as well
+      // as by id-lookup. cardId (the container's partition key) is set to
+      // slug so PK matches id.
+      if (playerName && cardYear && setKey && parsed.cardNumber && sport && slug && slug.startsWith("hiq:")) {
         void (async () => {
           try {
-            const { createHash } = await import("crypto");
-            const norm = (v: unknown) => String(v ?? "").toLowerCase().trim();
-            const SPORT_WORDS_RX = /\s+(baseball|basketball|football|hockey|soccer|golf)(\s|$)/gi;
-            const YEAR_PREFIX_RX = /^(19|20)\d{2}(-\d{2})?\s+/;
-            const normalizeSetKeyFn = (raw: string) => {
-              let s = String(raw ?? "").toLowerCase().trim();
-              if (!s) return "";
-              s = s.replace(YEAR_PREFIX_RX, "").trim();
-              s = s.replace(SPORT_WORDS_RX, " ").trim();
-              return s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-            };
-            const tupleKey = [
-              norm(sport),
-              cardYear,
-              normalizeSetKeyFn(setKey),
-              norm(parsed.cardNumber),
-              norm(parsed.parallel ?? "base"),
-              parsed.isAuto ? "auto" : "no-auto",
-              parsed.printRun ?? "",
-              norm(playerName),
-            ].join("|");
-            const catId = "sales-derived:" + createHash("sha256").update(tupleKey).digest("hex").slice(0, 20);
             const conn = process.env.COSMOS_CONNECTION_STRING;
             if (!conn) return;
             const client = new CosmosClient(conn);
             const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
             await cat.items.upsert({
-              id: catId,
+              id: slug,
+              cardId: slug,               // matches /cardId partition key
+              hobbyiqCardId: slug,        // join key to sold_comps
               player: playerName,
+              playerName,
               year: cardYear,
+              cardYear,
               number: parsed.cardNumber,
-              setKey: normalizeSetKeyFn(setKey),
+              cardNumber: parsed.cardNumber,
+              setKey: canonicalNormalizeSetKey(setKey),
               setName: setKey,
               sport: String(sport).toLowerCase(),
               parallels: parsed.parallel && parsed.parallel.toLowerCase() !== "base" ? [{ name: parsed.parallel }] : [],
@@ -1141,7 +1135,7 @@ export async function persistVendorSalesToPool(
               lastObservedPrice: price,
               lastObservedSampleCardId: identity.vendorCardId ?? slug,
               synthesizedAt: new Date().toISOString(),
-              confidence: 0.5, // baseline for realtime — weekly synth recomputes properly
+              confidence: 0.5,
             });
           } catch { /* soft — catalog growth is nice-to-have */ }
         })();
