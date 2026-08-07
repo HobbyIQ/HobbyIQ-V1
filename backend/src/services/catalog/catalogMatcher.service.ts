@@ -226,6 +226,18 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
   }
 
   // Step 4: seed a fresh row if the source is trusted.
+  // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). When CATALOG_MATCH_ONLY_ENABLED
+  // is on, NEVER seed. Catalog is curated; ingest matches, never grows.
+  // Unmatched identities surface via the caller's own unmatched counter
+  // (persistVendorSalesToPool.result.catalogUnmatched) → admin review.
+  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
+    return {
+      slug: canonicalSlug,
+      found: false,
+      confidence: 0.3,
+      matchedBy: "not-found",
+    };
+  }
   if (TRUSTED_SOURCES.has(input.source)) {
     const now = new Date().toISOString();
     const parallelSlugField = slugify(components.parallel);

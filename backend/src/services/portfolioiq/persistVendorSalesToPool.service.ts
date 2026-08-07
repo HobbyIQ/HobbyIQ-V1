@@ -707,23 +707,78 @@ export async function persistVendorSalesToPool(
       result.skipped++;
       continue;
     }
-    const contentHash = createHash("sha256").update(
-      `${slug}|${price.toFixed(2)}|${soldAt.slice(0, 10)}|${source}|${row.url ?? ""}`,
-    ).digest("hex").slice(0, 32);
-
-    // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). The catalog is curated —
-    // ingest MATCHES against it, ingest never GROWS it. If the computed
-    // slug has no card_catalog entry, the sale gets held for admin
-    // review (via the staging shim that already captured the raw
-    // payload above) rather than silently entering sold_comps. Flag-
-    // gated so we can flip it off if the review queue backs up.
+    // CF-CATALOG-MATCH-ONLY-RESOLVE (Drew, 2026-08-08 rev 2). The
+    // catalog is curated — ingest MATCHES against it. Not just an exact-
+    // slug check: RESOLVE via the fuzzy catalog matcher (canonicalize)
+    // which handles setKey drift ("Bowman Chrome Draft Picks &
+    // Prospects" → real catalog entry at :bowman-draft:), parallel
+    // aliases, family fallback. When resolve returns found:true, we
+    // rebind `slug` to the RESOLVED slug — so sold_comps writes land
+    // under the catalog's canonical identity, not the vendor title's
+    // guess. When found:false, sale is held for admin review.
+    //
+    // MUST run BEFORE contentHash (dedup key depends on slug) so the
+    // hash matches other sales of the same physical card even when the
+    // vendor titles differ in setName.
     if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
-      const present = await catalogHasSlug(slug);
-      if (!present) {
+      try {
+        const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+        const resolved = await canonicalize({
+          sport: sport ?? "",
+          year: cardYear,
+          setName: setKey,
+          cardNumber: parsed.cardNumber,
+          parallel: parsed.parallel,
+          isAuto: parsed.isAuto ?? false,
+          printRun: parsed.printRun ?? null,
+          player: playerName,
+          source: source === "cardhedge" ? "cardhedge"
+                 : source === "cardsight" ? "cardsight"
+                 : source === "tca-ebay" ? "tca"
+                 : "ebay-title",
+          sourceExternalId: row.externalId ?? identity.vendorCardId ?? null,
+        });
+        if (!resolved.found) {
+          result.catalogUnmatched++;
+          continue;
+        }
+        // Rebind slug to the CATALOG's canonical form when it differs
+        // from what we computed. This is the fix that lets a "Bowman
+        // Chrome Draft" ebay title land its sales under the real
+        // "Bowman Draft" catalog entry.
+        if (resolved.slug && resolved.slug !== slug) {
+          console.log(JSON.stringify({
+            event: "catalog_resolve_slug_rebind",
+            source: "persistVendorSalesToPool",
+            vendorSource: source,
+            computedSlug: slug,
+            resolvedSlug: resolved.slug,
+            matchedBy: resolved.matchedBy,
+            confidence: resolved.confidence,
+          }));
+          slug = resolved.slug;
+        }
+      } catch (err) {
+        // Resolve failure = treat as unmatched (fail-closed under match-only).
         result.catalogUnmatched++;
+        console.warn(JSON.stringify({
+          event: "catalog_resolve_error",
+          source: "persistVendorSalesToPool",
+          slug,
+          error: (err as Error)?.message ?? String(err),
+        }));
         continue;
       }
     }
+
+    // ContentHash for sold_comps dedup. MUST be computed AFTER the
+    // catalog resolve above so it uses the RESOLVED slug — two vendor
+    // titles for the same physical card (different setName spellings)
+    // now produce the same slug via canonicalize, so the same
+    // contentHash, so they dedup correctly instead of double-inserting.
+    const contentHash = createHash("sha256").update(
+      `${slug}|${price.toFixed(2)}|${soldAt.slice(0, 10)}|${source}|${row.url ?? ""}`,
+    ).digest("hex").slice(0, 32);
 
     // CF-COMPS-STAGING-SHIM-EARLY (Drew, 2026-07-28). Staging is the
     // immutable landing zone — it must receive EVERY vendor record
