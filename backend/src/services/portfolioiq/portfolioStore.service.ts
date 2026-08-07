@@ -2023,6 +2023,69 @@ async function applyGradeLadderFallback(opts: {
   }
 }
 
+// CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fires from
+// addHolding + updateHolding when a user tells us they bought a card
+// on eBay. Writes one sold_comps row per holding (dedup key
+// `holding::<id>`), matching the pattern ebayImportRematch uses so
+// re-emissions from either path converge on the same doc.
+async function emitUserEbayPurchaseComp(
+  holding: PortfolioHolding,
+  userId: string,
+): Promise<void> {
+  const src = String((holding as { purchaseSource?: string }).purchaseSource ?? "").trim();
+  if (!src || !/^ebay/i.test(src)) return;
+  const price = Number((holding as { purchasePrice?: unknown }).purchasePrice ?? NaN);
+  if (!Number.isFinite(price) || price <= 0) return;
+  const purchaseDate = String((holding as { purchaseDate?: string }).purchaseDate ?? "").trim();
+  if (!purchaseDate) return;
+  const cardId = String((holding as { cardId?: string }).cardId ?? "").trim();
+  const playerName = String((holding as { playerName?: string }).playerName ?? "").trim();
+  if (!cardId || !playerName) return;
+  const soldAt = purchaseDate.includes("T") ? purchaseDate : `${purchaseDate}T00:00:00Z`;
+  try {
+    const { recordSoldComp } = await import("./soldCompsStore.service.js");
+    await recordSoldComp({
+      cardId,
+      playerName,
+      cardYear: ((holding as { cardYear?: number }).cardYear ?? null) as number | null,
+      setName: ((holding as { setName?: string }).setName ?? null) as string | null,
+      parallel: ((holding as { parallel?: string }).parallel ?? null) as string | null,
+      cardNumber: ((holding as { cardNumber?: string }).cardNumber ?? null) as string | null,
+      isAuto: (holding as { isAuto?: boolean }).isAuto === true,
+      gradeCompany: ((holding as { gradeCompany?: string }).gradeCompany ?? null) as string | null,
+      gradeValue: ((holding as { gradeValue?: number }).gradeValue ?? null) as number | null,
+      price,
+      soldAt,
+      source: "ebay-user-purchase",
+      // Dedup key across re-emissions: `holding::<id>` matches the fallback
+      // used by ebayImportRematch when no ebayItemId is available.
+      sourceExternalId: (holding as { ebayItemId?: string }).ebayItemId ?? `holding::${holding.id}`,
+      contributorUserId: userId,
+      title: ((holding as { cardTitle?: string }).cardTitle ?? null) as string | null,
+      imageUrl: ((holding as { photos?: string[] }).photos?.[0] ?? null) as string | null,
+      sellerHandle: src.includes(":") ? src.split(":").slice(1).join(":").trim() || null : null,
+      // User explicitly typed identity in the Add Card modal — treat as
+      // verified per CF-ADD-CARD-VERIFIED convention.
+      verifiedByUser: true,
+      confidence: 1.0,
+    });
+    console.log(JSON.stringify({
+      event: "user_ebay_purchase_comp_written",
+      source: "portfolioStore.emitUserEbayPurchaseComp",
+      userId,
+      holdingId: holding.id,
+      cardId,
+      price,
+      grade: (holding as { gradeCompany?: string }).gradeCompany
+        ? `${(holding as { gradeCompany?: string }).gradeCompany} ${(holding as { gradeValue?: number }).gradeValue ?? ""}`.trim()
+        : "Raw",
+    }));
+  } catch (err) {
+    // recordSoldComp is soft — never blocks the holding write.
+    throw err;
+  }
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -4525,6 +4588,28 @@ export async function addHolding(req: Request, res: Response) {
     // Keep the saved holding even if live pricing fails.
   }
 
+  // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). When a user adds a
+  // card via the Add Card modal with an eBay-sourced purchase, that
+  // transaction IS real market data — a confirmed sold-on-eBay price for
+  // that identity + grade combo. Write it to sold_comps so it shows up
+  // under the card's comps view alongside vendor-ingested sales. Prior
+  // behavior missed this: only the automated eBay bulk-import path
+  // (ebayImportRematch) called recordSoldComp; manual adds with eBay
+  // source were dropped.
+  //
+  // Gate: purchaseSource must start with "ebay" (case-insensitive) AND
+  // purchasePrice > 0 AND purchaseDate present. Silent-safe: any Cosmos
+  // failure leaves the holding intact.
+  await emitUserEbayPurchaseComp(doc.holdings[holding.id], auth.userId).catch((err) => {
+    console.warn(JSON.stringify({
+      event: "user_ebay_purchase_comp_error",
+      source: "portfolioStore.addHolding",
+      userId: auth.userId,
+      holdingId: holding.id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  });
+
   // PR #68: resolve playerId from playerName on new holdings only. Failure
   // here must never block holding creation — we just leave playerId unset.
   try {
@@ -4695,6 +4780,20 @@ export async function updateHolding(req: Request, res: Response) {
   } catch {
     evaluateHoldingAlerts(doc, previous, next);
   }
+
+  // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fire on update too:
+  // user may add / correct purchase details after the initial add. Dedup
+  // key `holding::<id>` means re-emissions upsert the same doc — no dup
+  // comps from repeated edits.
+  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId).catch((err) => {
+    console.warn(JSON.stringify({
+      event: "user_ebay_purchase_comp_error",
+      source: "portfolioStore.updateHolding",
+      userId: auth.userId,
+      holdingId: id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  });
 
   await writeUserDoc(auth.userId, doc);
 
