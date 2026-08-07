@@ -816,9 +816,45 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
     if (rows.length > 0) {
-      return buildResult(slug, rows, "sibling-parallel",
-        `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`,
-        confidenceForRung("sibling-parallel", rows.length),
+      // CF-CROSS-PARALLEL-TRANSLATION (Drew, 2026-08-06). Prior sibling-
+      // parallel rung took the median of ALL sibling rows as if every
+      // sibling was worth the same as the target. That flattens signal:
+      // for Eric Hartman Orange Refractor Auto, the sibling pool would
+      // mix Orange Shimmer ($1,713), Blue Refractor ($110), Base ($1),
+      // Reptilian ($8) — median across all was ~$110 despite the closest
+      // color-sibling being $1,713.
+      //
+      // Fix: for each sibling row, translate its price to the target
+      // parallel's tier via lookupParallelToParallelRatio. Full-pair
+      // wins first, then same-color cross-finish, then same-finish
+      // cross-color, then decomposed. Rows with no translation
+      // available drop out. Median of TRANSLATED prices is the
+      // target's estimate.
+      const { lookupParallelToParallelRatio } = await import("../compiq/parallelRatioLookup.service.js");
+      const targetParallelName = parsed.parallel ?? "";
+      let translatedCount = 0;
+      let identityCount = 0;
+      const translatedRows: typeof rows = [];
+      for (const r of rows) {
+        const srcPar = String(r.parallel ?? "");
+        if (!srcPar) continue;
+        const lookup = lookupParallelToParallelRatio(targetParallelName, srcPar);
+        if (!lookup) continue;
+        if (lookup.scope === "identity") identityCount++;
+        else translatedCount++;
+        translatedRows.push({ ...r, price: r.price * lookup.ratio });
+      }
+      // If we got at least 3 translated rows, use them. Otherwise fall
+      // back to the raw sibling median so we never REGRESS from the
+      // pre-CF behavior when the ratio table is thin or missing.
+      const useTranslated = translatedRows.length >= 3 && translatedCount > 0;
+      const chosenRows = useTranslated ? translatedRows : rows;
+      const note = useTranslated
+        ? `Estimated from ${chosenRows.length} sibling sale${chosenRows.length === 1 ? "" : "s"} of this card, each translated to the target parallel via empirical cross-parallel ratios (${translatedCount} translated, ${identityCount} exact)`
+        : `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of sibling parallels of this card`;
+      return buildResult(slug, chosenRows, "sibling-parallel",
+        note,
+        confidenceForRung("sibling-parallel", chosenRows.length),
         input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }
   }
