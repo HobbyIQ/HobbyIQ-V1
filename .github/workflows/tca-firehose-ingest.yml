@@ -155,7 +155,7 @@ jobs:
             COMPS_STAGING_MIRROR_ENABLED=true \
             INGEST_MODE="${{ inputs.mode || 'incremental' }}" \
             SORT="${{ inputs.sort || 'date_desc' }}" \
-            APPLY="${{ inputs.apply || 'false' }}" \
+            APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
             MAX_MINUTES="$PER_PLATFORM_MIN" \
             PLATFORM="$P_CLEAN" \
             CATEGORY="$CAT_FILTER" \
@@ -203,7 +203,7 @@ jobs:
             --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
-          APPLY="${{ inputs.apply || 'false' }}" \
+          APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
           MAX_MINUTES="${{ inputs.max_minutes || '12' }}" \
           BATCH=2000 \
           node scripts/tca-match-enricher.cjs
