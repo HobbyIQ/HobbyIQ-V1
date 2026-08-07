@@ -373,42 +373,103 @@ function shouldRejectSaleTitle(title: string | null): boolean {
   return false;
 }
 
+// CF-DIRECT-SOLD-COMPS-SOURCE (Drew, 2026-08-07). Grade curve now
+// reads directly from our sold_comps pool instead of CardHedge's
+// remote API. Reasons:
+//   1. CH coverage lags for new-release cards (hot rookies like Eric
+//      Hartman Orange Shimmer had 0 CH data → grade curve returned
+//      empty tiles) while we HAD 3 real sales in sold_comps.
+//   2. Own-the-data doctrine — pricing standard lives in our pool,
+//      not a vendor's aggregation.
+//   3. Latency — one Cosmos query instead of a remote CH round-trip
+//      per grade tier.
 async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
 ): Promise<Array<{ price: number; date: string | null; saleType: string | null }>> {
-  const sales = await getCardSales(cardId, grade, 50);
-  const rejected: string[] = [];
-  const kept = sales.filter((s) => {
-    if (shouldRejectSaleTitle(s.title)) {
-      rejected.push(s.title ?? "");
-      return false;
-    }
-    return true;
-  });
-  if (rejected.length > 0) {
-    // Observability — count of drops per (cardId, grade). Useful for
-    // measuring how often CH's aggregation is picking up IP contamination.
-    console.log(JSON.stringify({
-      event: "ip_ttm_sales_filtered",
-      source: "observedGradeCurve",
-      cardId,
-      grade,
-      keptCount: kept.length,
-      rejectedCount: rejected.length,
-      // First 3 sample titles for spot-checking (truncated).
-      sampleRejected: rejected.slice(0, 3).map((t) => t.slice(0, 100)),
-    }));
+  const { CosmosClient } = await import("@azure/cosmos");
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return [];
+  const container = new CosmosClient(conn)
+    .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+    .container("sold_comps");
+
+  // Grade string parse. "Raw" → gradeCompany null; "PSA 10" →
+  // gradeCompany=PSA, gradeValue=10; also handle "PSA 10 Black Label"
+  // and "BGS 10 Black Label" (BGS-only variant we treat as tier 10).
+  const gradeParts = grade.trim().split(/\s+/);
+  let wantCompany: string | null = null;
+  let wantValue: number | null = null;
+  if (gradeParts[0] && gradeParts[0].toLowerCase() !== "raw") {
+    wantCompany = gradeParts[0].toUpperCase();
+    const v = Number(gradeParts[1]);
+    if (Number.isFinite(v)) wantValue = v;
   }
-  return kept
-    .map((s) => ({
-      price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
-      date: s.date ?? null,
-      // CF-BIN-VS-AUCTION-WEIGHT (2026-07-05): thread sale_type through
-      // so computeWeightedMedian can boost BIN samples' weight.
-      saleType: s.sale_type ?? null,
-    }))
-    .filter((s) => Number.isFinite(s.price) && s.price > 0);
+
+  // Window: 180d. Same as compiqEstimate + hobbyIqFmv defaults.
+  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString();
+
+  // Query by either cardId (vendor bubble.io id) OR hobbyiqCardId
+  // (our canonical slug) so cross-vendor rows both surface.
+  const clauses: string[] = [
+    "c.soldAt >= @cut",
+    "c.price > 0",
+    "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
+    "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
+    "(c.cardId = @cid OR c.hobbyiqCardId = @cid)",
+  ];
+  const params: Array<{ name: string; value: string | number | null | boolean }> = [
+    { name: "@cut", value: cutoff },
+    { name: "@cid", value: cardId },
+  ];
+  if (wantCompany === null) {
+    // Raw: gradeCompany null or undefined
+    clauses.push("(c.gradeCompany = null OR NOT IS_DEFINED(c.gradeCompany))");
+  } else {
+    clauses.push("UPPER(c.gradeCompany) = @gc");
+    params.push({ name: "@gc", value: wantCompany });
+    if (wantValue !== null) {
+      // Handle numeric or string-serialized gradeValue.
+      clauses.push("(c.gradeValue = @gv OR c.gradeValue = @gvStr)");
+      params.push({ name: "@gv", value: wantValue });
+      params.push({ name: "@gvStr", value: String(wantValue) });
+    }
+  }
+
+  try {
+    const { resources } = await container.items.query<{
+      price: number;
+      soldAt: string;
+      source?: string | null;
+      title?: string | null;
+    }>({
+      query: `SELECT TOP 500 c.price, c.soldAt, c.source, c.title
+              FROM c WHERE ${clauses.join(" AND ")}
+              ORDER BY c.soldAt DESC`,
+      parameters: params,
+    }).fetchAll();
+
+    // Same title-based rejection as before — filters IP tokens, bulk
+    // lot listings, "read description," etc. Wraps sold_comps rows
+    // the same way we filtered CH rows.
+    const kept = (resources || []).filter((r) => {
+      if (!Number.isFinite(r.price) || r.price <= 0) return false;
+      if (shouldRejectSaleTitle(r.title ?? "")) return false;
+      return true;
+    });
+
+    return kept.map((r) => ({
+      price: r.price,
+      date: r.soldAt ?? null,
+      saleType: null,  // sold_comps doesn't carry sale_type; weightedMedian falls back to plain weight
+    }));
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "observed_grade_curve_sold_comps_query_failed",
+      cardId, grade, error: (err as Error).message,
+    }));
+    return [];
+  }
 }
 
 function computePlainMedian(prices: number[]): number | null {
