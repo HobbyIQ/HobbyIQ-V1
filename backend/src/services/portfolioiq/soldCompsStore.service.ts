@@ -636,7 +636,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
     ? input.cardNumber.trim()
     : extractCardNumberFromTitle(input.title);
-  const hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
+  const printRunFinal = extractPrintRunFromTitle(input.title);
+  let hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
     ? computeHobbyIqCardId({
         sport: sportForSlug,
         year: input.cardYear,
@@ -644,9 +645,79 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         cardNumber: cardNumberFinal ?? "",
         parallel: input.parallel ?? "Base",
         isAuto: input.isAuto ?? false,
-        printRun: extractPrintRunFromTitle(input.title),
+        printRun: printRunFinal,
       })
     : null;
+
+  // CF-CATALOG-RESOLVE-IN-RECORDCOMP (Drew, 2026-08-08). Route through the
+  // catalog matcher so the sale lands under the CATALOG's canonical slug —
+  // not a computed slug that may drift from user-typed setName. For user-
+  // flavored sources (ebay-user-purchase, ebay-user-sale, manual-user-entry),
+  // canonicalize is allowed to SEED the catalog when no match — the user
+  // owns the physical card, that's real coverage. Vendor sources still gate
+  // on match. See Drew's 2026-08-08 directive: "when we let them ingest
+  // from ebay, that is REAL comp data" + "every search and add goes
+  // THROUGH the catalog".
+  //
+  // Only fires when CATALOG_MATCH_ONLY_ENABLED=true — otherwise the pre-
+  // existing behavior stays (compute slug, write directly). Tests default
+  // OFF so mock containers don't need to also mock card_catalog.
+  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true" && hobbyiqCardId && input.cardYear && sportForSlug) {
+    try {
+      const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+      const userSourceMap: Record<string, "user-verified" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "cardhedge" | "cardsight" | "tca" | "ebay-title"> = {
+        "user-verified": "user-verified",
+        "ebay-user-purchase": "ebay-user-purchase",
+        "ebay-user-sale": "ebay-user-sale",
+        "manual-user-entry": "manual-user-entry",
+        cardhedge: "cardhedge",
+        cardsight: "cardsight",
+        "tca-ebay": "tca",
+      };
+      const matcherSource = userSourceMap[input.source] ?? "ebay-title";
+      const resolved = await canonicalize({
+        sport: sportForSlug,
+        year: input.cardYear,
+        setName: input.setName ?? "",
+        cardNumber: cardNumberFinal ?? "",
+        parallel: input.parallel ?? null,
+        isAuto: input.isAuto ?? false,
+        printRun: printRunFinal,
+        player: input.playerName,
+        source: matcherSource,
+      });
+      if (resolved.found && resolved.slug && resolved.slug !== hobbyiqCardId) {
+        console.log(JSON.stringify({
+          event: "catalog_resolve_rebind_in_recordcomp",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          computedSlug: hobbyiqCardId,
+          resolvedSlug: resolved.slug,
+          matchedBy: resolved.matchedBy,
+        }));
+        hobbyiqCardId = resolved.slug;
+      } else if (!resolved.found && process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
+        // Vendor source + no catalog match under match-only rule = skip write.
+        // User sources will have hit the seed branch and returned found:true
+        // from canonicalize, so they never reach this line.
+        console.log(JSON.stringify({
+          event: "recordcomp_catalog_unmatched_skip",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          computedSlug: hobbyiqCardId,
+        }));
+        return;
+      }
+    } catch (err) {
+      // Fail-open: keep computed slug if resolve errors, don't drop the comp.
+      console.warn(JSON.stringify({
+        event: "recordcomp_catalog_resolve_error",
+        source: "soldCompsStore.recordSoldComp",
+        vendorSource: input.source,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
 
   // CF-PARALLEL-CANONICAL (Drew, 2026-08-06). Canonicalize the display
   // form BEFORE persist so we stop fragmenting the pool across "Blue

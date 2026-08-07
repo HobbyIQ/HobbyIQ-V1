@@ -50,13 +50,16 @@ async function getContainer(): Promise<Container | null> {
  *  catalog row when no match exists. Untrusted sources return `found:
  *  false` and never create — that keeps the catalog clean. */
 export type CatalogMatchSource =
-  | "checklist"        // LLM-extracted from a published product checklist
-  | "tca"              // TCA sale with a stable identity
-  | "cardhedge"        // CardHedge sale with a resolved cardId
-  | "cardsight"        // Cardsight identity
-  | "user-verified"    // Drew approved a pending-review holding
-  | "ebay-title"       // fuzzy title parse — NEVER seeds
-  | "unknown";         // NEVER seeds
+  | "checklist"           // LLM-extracted from a published product checklist
+  | "tca"                 // TCA sale with a stable identity
+  | "cardhedge"           // CardHedge sale with a resolved cardId
+  | "cardsight"           // Cardsight identity
+  | "user-verified"       // User manually confirmed add-card identity
+  | "ebay-user-purchase"  // User imported an eBay purchase they own
+  | "ebay-user-sale"      // User sold on eBay — sale price is theirs
+  | "manual-user-entry"   // User typed the sale by hand
+  | "ebay-title"          // fuzzy title parse — NEVER seeds
+  | "unknown";            // NEVER seeds
 
 const TRUSTED_SOURCES: ReadonlySet<CatalogMatchSource> = new Set([
   "checklist",
@@ -64,6 +67,25 @@ const TRUSTED_SOURCES: ReadonlySet<CatalogMatchSource> = new Set([
   "cardhedge",
   "cardsight",
   "user-verified",
+  "ebay-user-purchase",
+  "ebay-user-sale",
+  "manual-user-entry",
+]);
+
+// CF-USER-SOURCES-SEED-EXEMPTION (Drew, 2026-08-08). Under CATALOG_MATCH_ONLY
+// vendor ingest is gated (never grows catalog), but USER-flavored sources
+// are trusted enough to seed: the user physically owns the card (add-card,
+// eBay import) or is manually contributing (flagComp entry). Their identity
+// is worth trusting to seed a low-confidence catalog entry that admin then
+// verifies against a product checklist. See project directive from
+// 2026-08-08 conversation: "every search and add goes THROUGH the catalog
+// and then we promote new ones for review and we must look at checklists
+// to confirm."
+const USER_SEED_ALLOWED_SOURCES: ReadonlySet<CatalogMatchSource> = new Set([
+  "user-verified",
+  "ebay-user-purchase",
+  "ebay-user-sale",
+  "manual-user-entry",
 ]);
 
 export interface CatalogMatchInput {
@@ -227,10 +249,13 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
 
   // Step 4: seed a fresh row if the source is trusted.
   // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). When CATALOG_MATCH_ONLY_ENABLED
-  // is on, NEVER seed. Catalog is curated; ingest matches, never grows.
-  // Unmatched identities surface via the caller's own unmatched counter
-  // (persistVendorSalesToPool.result.catalogUnmatched) → admin review.
-  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
+  // is on, VENDOR sources never seed — catalog stays curated. But user-
+  // flavored sources (add-card, eBay import, manual entry) ARE trusted to
+  // grow catalog: the user owns the physical card. Those seeds land as
+  // low-confidence with verificationStatus:'pending' so the admin review
+  // surface can filter + verify against product checklists.
+  const isUserSource = USER_SEED_ALLOWED_SOURCES.has(input.source);
+  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true" && !isUserSource) {
     return {
       slug: canonicalSlug,
       found: false,
@@ -257,7 +282,15 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
       playerSlug: input.player ? slugify(input.player) : null,
       vendorIds: input.sourceExternalId ? { [input.source]: input.sourceExternalId } : {},
       source: input.source,
-      confidence: input.source === "checklist" ? 0.95 : input.source === "user-verified" ? 0.9 : 0.85,
+      confidence: input.source === "checklist" ? 0.95 : input.source === "user-verified" ? 0.9 : isUserSource ? 0.6 : 0.85,
+      // CF-CATALOG-VERIFICATION-STATUS (Drew, 2026-08-08). User-seeded
+      // entries land as 'pending' so the admin review surface can filter
+      // to "cards users added that need checklist verification." Checklist
+      // and user-verified seeds start 'verified' since those signals are
+      // already curated.
+      verificationStatus: isUserSource && input.source !== "user-verified" && input.source !== "checklist"
+        ? "pending-review"
+        : "verified",
       observedAt: now,
       lastSeenAt: now,
       searchText: [components.year, components.cardNumber, input.player ?? "", components.parallel].filter(Boolean).join(" ").toLowerCase(),
