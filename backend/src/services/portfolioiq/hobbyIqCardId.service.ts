@@ -571,6 +571,41 @@ function formatPrintRun(printRun: number | null | undefined): string {
 // (paper "bowman" with chrome cards) will be addressed via per-card
 // hand-labeling in the admin labeler surface, not via blanket rules.
 
+// CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). On chrome stock,
+// bare colors like "Blue" and colored-pattern parallels like "Blue Shimmer"
+// are market shorthand for "<color> Refractor" / "<color> Shimmer
+// Refractor". Fragmenting the comp pool between "Blue Shimmer" and "Blue
+// Shimmer Refractor" is exactly the fragmentation the catalog-as-hub
+// backfill is meant to close. Paper products are the exception — "Blue"
+// on paper is literally a blue paper card, not a refractor.
+//
+// SCOPE: Only Topps/Bowman chrome-family products. Panini uses "Prizm"
+// as its stock indicator ("Silver Prizm" not "Silver Refractor"), so
+// applying this rule to panini-prizm would produce nonsense like
+// "silver-prizm-refractor". Same story for Panini Optic ("holo" =
+// Panini's chrome). Keep those OFF this list; they have their own
+// stock-vocab consolidation rules already in normalizeParallel.
+const CHROME_STOCK_SETKEYS: ReadonlySet<string> = new Set([
+  "bowman-chrome",
+  "bowman-chrome-sapphire",
+  "bowman-sterling",
+  "topps-chrome",
+  "topps-chrome-platinum",
+  "topps-chrome-black",
+  "topps-chrome-sapphire",
+  "topps-chrome-update-sapphire",
+  "topps-update-sapphire",
+  "topps-finest",
+  "topps-pristine",
+  "topps-transcendent",
+  "topps-dynasty",
+  "topps-tribute",
+]);
+
+function isChromeStockSetKey(setKey: string): boolean {
+  return CHROME_STOCK_SETKEYS.has(setKey);
+}
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
@@ -579,7 +614,21 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
   const setKey = normalizeSetKey(components.setKey);
   const cardNumber = normalizeCardNumber(components.cardNumber);
-  const parallelSlug = normalizeParallel(components.parallel);
+  let parallelSlug = normalizeParallel(components.parallel);
+
+  // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). See CHROME_STOCK
+  // constants above — on known chrome product lines, any non-base parallel
+  // that doesn't already carry "-refractor" gets it appended so "Blue",
+  // "Blue Shimmer", "Blue Wave", "Blue Ray Wave" all share one FMV pool
+  // with "Blue Refractor", "Blue Shimmer Refractor", etc.
+  if (
+    parallelSlug !== "base" &&
+    !/(^|-)refractor(-|$)/.test(parallelSlug) &&
+    isChromeStockSetKey(setKey)
+  ) {
+    parallelSlug = `${parallelSlug}-refractor`;
+  }
+
   const autoFlag = components.isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);
   return `hiq:${sport}:${year}:${setKey}:${cardNumber}:${parallelSlug}:${autoFlag}${printRun}`;
