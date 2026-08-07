@@ -391,10 +391,60 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       directSlugCount = cnt[0] ?? 0;
     } catch { /* count failure → try composite as before */ }
     if (directSlugCount < 3) {
+      // CF-SIBLING-PARALLEL-ANCHOR (Drew, 2026-08-06). Before falling
+      // through to composite-neighbor (cross-player), try same-card
+      // sibling parallels first. Real case: Eric Hartman CPA-EHA Orange
+      // Refractor Auto had 0 direct comps. Composite-neighbor grabbed
+      // random Orange-anything cross-player rows and projected $30.67.
+      // But Orange Shimmer Refractor Auto on the SAME card had $1,713
+      // in real sales — the sibling is a MUCH better anchor than
+      // cross-player random noise.
+      //
+      // Rule: same (playerName, cardYear, cardNumber, isAuto), DIFFERENT
+      // parallelSlug. If siblings have >=3 combined sales, we skip
+      // composite and let the direct-slug rung (which uses a
+      // sibling-parallel fallback in the legacy ladder) handle it.
       try {
-        const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
-        if (compositeResult) return compositeResult;
-      } catch { /* silent-safe — fall through to legacy */ }
+        const cutoff = new Date(now.getTime() - 180 * 86_400_000).toISOString();
+        // cardYear + cardNumber + isAuto is essentially unique per card
+        // (each player's card number is globally distinct in a given set —
+        // CPA-EHA = Eric Hartman across every year/set). Don't need
+        // playerName which isn't on parsed anyway.
+        const siblingParams: Array<{ name: string; value: string | number | boolean }> = [
+          { name: "@year", value: parsed.year ?? 0 },
+          { name: "@num", value: String(parsed.cardNumber ?? "") },
+          { name: "@auto", value: parsed.isAuto === true },
+          { name: "@slug", value: slug },
+          { name: "@cut", value: cutoff },
+        ];
+        const { resources: sibs } = await container.items.query<number>({
+          query: `SELECT VALUE COUNT(1) FROM c
+                  WHERE c.cardYear = @year AND c.cardNumber = @num AND c.isAuto = @auto
+                    AND c.hobbyiqCardId != @slug
+                    AND c.soldAt >= @cut AND c.price > 0
+                    AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,
+          parameters: siblingParams,
+        }).fetchAll();
+        const siblingCount = sibs[0] ?? 0;
+        if (siblingCount >= 3) {
+          // Siblings exist — DON'T fire composite-neighbor. Fall through
+          // to the legacy ladder, whose sibling-parallel rung will
+          // anchor on same-card sibling pools instead of cross-player
+          // composite noise.
+        } else {
+          // Truly no sibling data — composite-neighbor is our only shot.
+          try {
+            const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
+            if (compositeResult) return compositeResult;
+          } catch { /* silent-safe — fall through to legacy */ }
+        }
+      } catch {
+        // Sibling-count query failure — fall through to composite as before.
+        try {
+          const compositeResult = await tryCompositePath(input, container, parsed, slug, now);
+          if (compositeResult) return compositeResult;
+        } catch { /* silent-safe — fall through to legacy */ }
+      }
     }
   }
 
