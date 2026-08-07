@@ -101,6 +101,38 @@ async function webhookHandler(req: Request, res: Response, endpointLabel: string
   }
   const rows = Array.isArray(payload?.data) ? payload.data : [];
 
+  // CF-TCA-WEBHOOK-ACK-FIRST (Drew, 2026-08-07). Eric at TCA flagged that
+  // our handler was timing out — synchronous processing of up to 1000
+  // rows per batch (LLM enrichment + catalog match + Cosmos upsert per
+  // row) blew past TCA's 10s ack window on nearly every delivery, so
+  // TCA retried the same batch endlessly and it *looked* like the cursor
+  // was frozen. It wasn't: 68M pg_ids advanced since Aug 3, one batch
+  // per rare success.
+  //
+  // Fix: ack 200 as soon as signature verified + JSON parsed. Kick the
+  // processing loop into a detached background task. TCA sees our
+  // response in <100ms, marks the batch acked, cursor advances, next
+  // batch delivers. Idempotent semantics on our side already protect
+  // us: persistVendorSalesToPool dedups by (hobbyiqCardId, contentHash)
+  // so a retried-then-late-processed row is a no-op.
+  const ackedAtMs = Date.now();
+  res.status(200).json({ ok: true, queued: rows.length });
+  // Everything below runs after the response is sent — TCA already got
+  // its ack. Errors here are logged but never surface to TCA.
+  void processBatchAsync(rows, payload, endpointLabel, startMs, ackedAtMs).catch((err) => {
+    console.error(`[tca.webhook] async processing crashed: ${(err as Error)?.message}`);
+  });
+}
+
+async function processBatchAsync(
+  rows: TcaSaleRow[],
+  payload: { event?: string; count?: number; data?: TcaSaleRow[] },
+  endpointLabel: string,
+  startMs: number,
+  ackedAtMs: number,
+): Promise<void> {
+  const ackLatencyMs = ackedAtMs - startMs;
+
   // TEMP DIAG (Drew, 2026-08-02): count STRUCTURED identity coverage
   // across the batch to see whether TCA is actually populating
   // card_number / player / year on their side. Remove once ingest is
@@ -206,13 +238,12 @@ async function webhookHandler(req: Request, res: Response, endpointLabel: string
   const CONCURRENCY = 48;
   const inflight = new Set<Promise<unknown>>();
   for (const t of rows) {
-    if (Date.now() - startMs > 25_000) {
-      // Approach TCA's timeout — return early so they don't retry.
-      // Remaining rows will re-deliver on the next batch (cursor holds
-      // per TCA's retry semantics).
-      console.warn(`[tca.webhook] 25s budget exceeded — bailing out, ${rows.length - inserted - deduped - skipped - errors} rows unprocessed`);
-      break;
-    }
+    // CF-TCA-WEBHOOK-ACK-FIRST removed the 25s hard-bail budget that
+    // used to sit here. Rationale: the bail existed to beat TCA's 10s
+    // ack window on sync-processing batches. Now that we ack in <100ms
+    // (before this loop runs), dropping rows to "save time" would just
+    // silently lose data TCA already thinks we processed. Let the loop
+    // run to completion; idempotency protects us against future retries.
     while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
     const vsRow = {
       title: t.title || null,
@@ -281,9 +312,8 @@ async function webhookHandler(req: Request, res: Response, endpointLabel: string
     skipReasons,
     skipSamples,
     elapsedMs,
+    ackLatencyMs, // time from receipt to 200 ack (must stay <<10s)
   }));
-
-  res.status(200).json({ ok: true, inserted, deduped, skipped, errors, elapsedMs });
 }
 
 router.post("/webhook", rawJson, (req, res) => webhookHandler(req, res, "v1"));
