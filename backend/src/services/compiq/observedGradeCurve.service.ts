@@ -23,7 +23,7 @@
 
 import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
-import { computeWeightedMedian } from "./compiqEstimate.service.js";
+import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
 // medianRatio when available. Per project memory
@@ -1430,53 +1430,39 @@ function resolveMultiplier(args: {
   sport: string | null;
   cardClass: CardClass;
   cardId?: string | null;
-  /** Raw pool anchor price. Required for the value-band lookup that
-   *  compiqEstimate's ladder runs at rung 1. Without it we skip that
-   *  rung and can pick a different multiplier than /price-by-id for
-   *  the same card, producing FMV disagreement between the top card
-   *  and the grade curve. */
   rawPrice?: number | null;
+  /** Set name — feeds getGraderPremium's set-bump layer. */
+  setName?: string | null;
+  /** Card year — feeds getGraderPremium's vintage/modern branch. */
+  cardYear?: number | null;
 }): number | undefined {
-  const { entry, family, sport, cardClass, cardId, rawPrice } = args;
-  const gradeValue = parseGradeValue(entry.grade);
-  // CF-MULTIPLIER-LADDER-UNIFIED (Drew, 2026-08-06). Same ladder as
-  // compiqEstimate.applyGradeMultiplier so /price-by-id and
-  // /observed-grade-curve return the same PSA 10 estimate for the
-  // same card. Rung 1 (value-band) is the one this service was
-  // missing — it produced $8,927 vs compiqEstimate's $4,202 for
-  // Eric Hartman Orange Shimmer PSA 10 (raw anchor $1,713).
-  if (family && gradeValue !== null) {
-    // Rung 1: value-band lookup by (raw anchor bucket, grader, grade,
-    // sport, family). Falls back to null if the anchor bucket is
-    // missing or the cell is empty — next rung takes over.
-    if (typeof rawPrice === "number" && Number.isFinite(rawPrice) && rawPrice > 0) {
-      const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, entry.grader, gradeValue, { sport, family });
-      if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
-        return bandLookup.medianRatio;
-      }
-    }
-    // Rung 2: empirical per-grade-tier ratio.
-    const tierRatio = lookupGradeRatioByTier(family, entry.grader, gradeValue, sport);
-    if (tierRatio !== null && tierRatio > 0) return tierRatio;
-    // Rung 3: empirical company-level ratio × sub-tier scaling.
-    const empiricalRatio = lookupGradeRatio(family, entry.grader, sport);
-    if (empiricalRatio !== null && empiricalRatio > 0) {
-      const scaled = empiricalRatio * subTierScaling(gradeValue);
-      if (scaled > 0) return scaled;
-    }
-  }
-  // Empirical missing — log so we can spot uncalibrated families and
-  // decide whether to add a calibration entry.
-  console.log(JSON.stringify({
-    event: "grade_multiplier_uncovered",
-    source: "observedGradeCurve.resolveMultiplier",
-    family: family ?? "(no-setName)",
-    grader: entry.grader,
-    grade: entry.grade,
+  const { entry, sport, cardClass, rawPrice, setName, cardYear } = args;
+  // CF-MULTIPLIER-LADDER-SHARED (Drew, 2026-08-06). Prior local ladder
+  // duplicated ~3 of the 9 rungs compiqEstimate.getGraderPremium runs
+  // and diverged for auto cards (missed set-bump + auto-table +
+  // vintage + gem-rate branches). Real case: Eric Hartman PSA 10
+  // Orange Shimmer Auto — grade curve showed $8,927 while price-by-id
+  // showed $4,202 for the same card.
+  //
+  // Fix: DELEGATE to the same function price-by-id calls. Guaranteed
+  // agreement on every rung — no future drift possible when new
+  // multiplier layers are added to the ladder because there's only
+  // one ladder now.
+  const premium = getGraderPremium(
+    entry.grader,
+    // getGraderPremium expects the grade VALUE (e.g. "10") not the
+    // full "PSA 10" label — matches compiqEstimate's own callsites.
+    entry.grade.replace(/^[A-Z]+\s+/i, ""),
+    rawPrice ?? null,
+    cardClass === "auto" ? "autograph" : "base",
+    cardYear ?? null,
+    setName ?? null,
+    null,      // gemRateSignal — not available at grade-curve site
     sport,
-    cardClass,
-    cardId: cardId ?? null,
-  }));
+  );
+  if (Number.isFinite(premium) && premium > 0) return premium;
+  // Fallback if getGraderPremium returns invalid — shouldn't happen
+  // (function always returns a number) but belt-and-suspenders.
   return gradeMultiplierFor(cardClass, entry.grade);
 }
 
@@ -1522,16 +1508,26 @@ function fillEstimatedFallback(
         // Priority 2a (preferred): empirical medianRatio for
         // (family, grader) × sub-tier scaling by grade value.
         // Priority 2b (fallback): hardcoded class-aware matrix.
+        // Extract cardYear from hobbyiqCardId slug — segment 2 is the
+        // year in `hiq:sport:year:set:cardNumber:...`. Needed by
+        // getGraderPremium's vintage-vs-modern branch.
+        let cardYear: number | null = null;
+        if (cardId && cardId.startsWith("hiq:")) {
+          const parts = cardId.split(":");
+          if (parts.length >= 3) {
+            const y = Number(parts[2]);
+            if (Number.isFinite(y) && y >= 1900 && y <= 2100) cardYear = y;
+          }
+        }
         const multiplier = resolveMultiplier({
           entry,
           family,
           sport,
           cardClass,
           cardId,
-          // Pass Raw's observed price as the value-band anchor so the
-          // unified ladder can consult lookupValueBandMultiplierWithScope
-          // (rung 1) exactly like compiqEstimate does.
           rawPrice: rawObserved,
+          setName,
+          cardYear,
         });
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
