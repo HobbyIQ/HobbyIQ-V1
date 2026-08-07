@@ -118,6 +118,65 @@ router.post("/catalog-review/checklist-diff", async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
+// CF-CHECKLIST-FETCH-BASEBALL-ALMANAC (Drew, 2026-08-08). Admin pastes
+// a Baseball Almanac set-checklist URL; backend fetches + extracts the
+// card list in "cardNumber playerName" format ready to drop into the
+// checklist textarea. Respects the source: only fires on explicit admin
+// click, one URL at a time. No mass-scraping.
+router.post("/catalog-review/fetch-checklist-url", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const url = String(req.body?.url ?? "").trim();
+    if (!url || !/^https?:\/\//i.test(url)) { res.status(400).json({ success: false, error: "invalid url" }); return; }
+    const parsed = new URL(url);
+    if (!/(^|\.)baseball-almanac\.com$/i.test(parsed.hostname)) {
+      res.status(400).json({ success: false, error: "only baseball-almanac.com URLs supported at this time" });
+      return;
+    }
+    const r = await fetch(url, {
+      redirect: "follow",
+      headers: { "user-agent": "HobbyIQ/1.0 (admin checklist import)" },
+    });
+    if (!r.ok) { res.status(502).json({ success: false, error: `upstream ${r.status}` }); return; }
+    const html = await r.text();
+    // Strip HTML → plain text, then find "<num> <name>" lines. Baseball
+    // Almanac's card list has cardNumber in the leftmost column of a
+    // table, player name in the next. After tag strip they appear as
+    // "<num>\t<player>" or "<num> <player>".
+    const stripped = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<\/?(td|th|tr|br|p|div)[^>]*>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&#\d+;/g, "")
+      .replace(/\t+/g, " ");
+    const lines = stripped.split(/\r?\n/);
+    // Match card number in first token: 1-4 digits OR letters+digits (e.g. BDP129).
+    const lineRx = /^(\d{1,4}[a-z]?|[A-Za-z]{1,6}-?[A-Za-z0-9]+)\s+([A-Z][A-Za-z.'\- ]{2,60}?)\s*$/;
+    const checklist: Array<{ cardNumber: string; player: string }> = [];
+    const seen = new Set<string>();
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line || line.length > 100) continue;
+      const m = line.match(lineRx);
+      if (!m) continue;
+      const cn = m[1].toUpperCase();
+      const player = m[2].trim();
+      // Skip obviously-not-a-player entries (all caps, single-word words > 3 chars, etc.)
+      if (/^(RC|SP|HOF|MVP|CY|POY|ROY|BASE|CARD|SET|PLAYER|TEAM|POS|BATS|THROWS|BORN|DIED|CHECKLIST)$/i.test(player)) continue;
+      if (!/^[A-Z][a-z]/.test(player)) continue; // Must start with proper-noun casing
+      const key = `${cn}|${player.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      checklist.push({ cardNumber: cn, player });
+    }
+    // Reconstruct as a textarea-friendly string (one row per line, no header)
+    const text = checklist.map((c) => `${c.cardNumber} ${c.player}`).join("\n");
+    res.json({ success: true, url, count: checklist.length, text, checklist });
+  } catch (err) { next(err); }
+});
+
 // CF-CHECKLIST-ADD-MISSING (Drew, 2026-08-08). Bulk-create catalog
 // entries for cards on a pasted checklist that AREN'T yet in catalog.
 // Each entry lands as verificationStatus='pending-review' so the admin

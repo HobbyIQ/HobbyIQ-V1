@@ -461,6 +461,14 @@ export interface ChecklistDiffResult {
   year: number;
 }
 
+export async function fetchChecklistFromUrl(url: string): Promise<{ text: string; count: number }> {
+  const r = await adminRequest<{ success: boolean; text: string; count: number }>(
+    `/api/admin/catalog-review/fetch-checklist-url`,
+    { method: "POST", body: JSON.stringify({ url }) },
+  );
+  return { text: r.text, count: r.count };
+}
+
 export async function addMissingChecklistToCatalog(
   year: number,
   setName: string,

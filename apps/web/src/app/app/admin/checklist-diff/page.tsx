@@ -7,7 +7,7 @@
 // (likely spurious / non-canonical).
 
 import { useCallback, useState } from "react";
-import { addMissingChecklistToCatalog, fetchChecklistDiff, type ChecklistDiffResult } from "@/lib/adminApi";
+import { addMissingChecklistToCatalog, fetchChecklistDiff, fetchChecklistFromUrl, type ChecklistDiffResult } from "@/lib/adminApi";
 
 const SPORTS = ["baseball", "basketball", "football", "hockey", "soccer", "pokemon", "mtg"];
 
@@ -21,6 +21,24 @@ export default function ChecklistDiffPage() {
   const [result, setResult] = useState<ChecklistDiffResult | null>(null);
   const [addingMissing, setAddingMissing] = useState(false);
   const [addResult, setAddResult] = useState<{ written: number; skipped: number; errored: number } | null>(null);
+  const [fetchUrl, setFetchUrl] = useState<string>("");
+  const [fetching, setFetching] = useState(false);
+
+  const onFetchFromUrl = useCallback(async () => {
+    const u = fetchUrl.trim();
+    if (!u) return;
+    setFetching(true);
+    setError(null);
+    try {
+      const r = await fetchChecklistFromUrl(u);
+      if (r.count === 0) throw new Error("No cards parsed from that URL — check the URL points to a set-checklist page.");
+      setChecklistText(r.text);
+    } catch (e) {
+      setError((e as Error)?.message ?? "Fetch failed");
+    } finally {
+      setFetching(false);
+    }
+  }, [fetchUrl]);
 
   const onAddMissing = useCallback(async () => {
     if (!result || result.missingFromCatalog.length === 0) return;
@@ -105,6 +123,30 @@ export default function ChecklistDiffPage() {
             {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
+        <div className="rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg-subtle)] p-3 space-y-2">
+          <div className="text-xs text-[color:var(--color-text-muted)] uppercase tracking-wide">Fetch from Baseball Almanac URL (optional)</div>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={fetchUrl}
+              onChange={(e) => setFetchUrl(e.target.value)}
+              placeholder="https://www.baseball-almanac.com/baseball_cards/baseball_cards_oneset.php?s=2005bow01"
+              className="flex-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-1.5 text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => void onFetchFromUrl()}
+              disabled={fetching || !fetchUrl.trim()}
+              className="rounded border border-[color:var(--color-border)] px-3 py-1.5 text-xs disabled:opacity-50"
+            >
+              {fetching ? "Fetching…" : "Fetch"}
+            </button>
+          </div>
+          <div className="text-[10px] text-[color:var(--color-text-muted)]">
+            Populates the textarea below. Currently supports Baseball Almanac set-checklist URLs. Review the parsed lines before running the diff.
+          </div>
+        </div>
+
         <label className="text-sm block">
           <div className="text-xs text-[color:var(--color-text-muted)] uppercase tracking-wide mb-1">Checklist (one card per line — formats: &quot;#BDP129 Justin Verlander&quot; / &quot;BDP129 Justin Verlander RC&quot; / &quot;BDP129, Justin Verlander&quot;)</div>
           <textarea
