@@ -97,6 +97,22 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
+      - name: Assert APPLY=true on scheduled runs
+        # CF-INGEST-CRON-GUARD (Drew, 2026-08-07). Structural rule:
+        # cron ingest MUST write. If a schedule-triggered run resolves
+        # APPLY to anything but 'true', fail immediately — never
+        # burn TCA quota on a dry-run cron. Backstop for the 2026-08-03
+        # regression where the fallback was silently 'false'.
+        if: github.event_name == 'schedule'
+        run: |
+          RESOLVED_APPLY="${{ inputs.apply || 'true' }}"
+          if [ "$RESOLVED_APPLY" != "true" ]; then
+            echo "::error::Scheduled TCA ingest resolved APPLY=$RESOLVED_APPLY (must be 'true')"
+            echo "::error::A cron ingest MUST write; refusing to burn TCA quota on dry-run."
+            exit 1
+          fi
+          echo "guard OK — scheduled run with APPLY=true"
+
       - name: Run TCA firehose ingest
         working-directory: backend
         env:

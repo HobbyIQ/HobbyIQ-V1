@@ -1,0 +1,67 @@
+name: Sold Comps Freshness Canary
+
+# CF-FRESHNESS-CANARY (Drew, 2026-08-07). Alerts if the sold_comps
+# pool isn't receiving fresh writes. Backstop against silent ingest
+# failures — the 2026-08-03..07 TCA APPLY-fallback bug is the motivating
+# case (green workflow, zero writes, no alert for 5 days).
+#
+# Runs every 6h. Fails loudly (red ❌ → GitHub emails Drew) when the
+# latest observedAt on sold_comps is more than 25h old. Threshold
+# tolerates one full inter-cron window plus slop; anything stale beyond
+# that means either the nightly TCA cron didn't run, ran silent, or
+# Cosmos writes are failing.
+
+on:
+  schedule:
+    - cron: '30 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      max_staleness_hours:
+        description: 'Override threshold (hours). Default 25.'
+        required: false
+        type: string
+        default: '25'
+
+jobs:
+  check-freshness:
+    name: Check sold_comps ingest freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run freshness canary
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          MAX_STALENESS_HOURS="${{ inputs.max_staleness_hours || '25' }}" \
+          node scripts/checkSoldCompsFreshness.cjs
