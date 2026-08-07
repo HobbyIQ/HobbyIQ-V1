@@ -1,0 +1,199 @@
+name: Parallel Premiums Refresh (weekly)
+
+# CF-PARALLEL-PREMIUMS-REFRESH (Drew, 2026-08-07). Auto-refreshes
+# parallel-premiums-latest.json weekly from OUR sold_comps pool
+# (not vendor APIs — matches the calibration-from-our-pool-only
+# doctrine). Replaces the prior manual-only, CH-based pipeline that
+# went 5+ weeks stale between runs and would die when CH lapses.
+#
+# Cadence: Sundays 12 UTC (8 AM ET). Runs AFTER grade-calibration
+# (10 UTC) so we don't hit Cosmos with two heavy scans at once.
+#
+# Same branch-push pattern as grade-calibration-refresh: branch
+# protection blocks bot commits to main, so we push to a dated
+# branch and Drew merges manually (~1 min/week).
+#
+# Manual dispatch supported for ad-hoc refreshes.
+#
+# Rollback: `git revert <sha>` on the calibration commit restores
+# the previous ratios. Script is deterministic given a sold_comps
+# snapshot, so re-running post-revert reproduces the same output.
+
+on:
+  schedule:
+    - cron: "0 12 * * 0"   # Sundays 12 UTC = 8 AM ET
+  workflow_dispatch:
+    inputs:
+      window_days:
+        description: 'Comp-recency window in days (default 180)'
+        required: false
+        type: string
+        default: '180'
+      sets_only:
+        description: 'Comma-separated substrings to filter TARGETS by setName (empty = all)'
+        required: false
+        type: string
+        default: ''
+      max_combos:
+        description: 'Cap number of combos processed (0 = all — use for smoke tests)'
+        required: false
+        type: string
+        default: '0'
+      resume:
+        description: 'Keep prior entries and only recompute new/stale combos'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build backend (dist/ needed for normalizer imports)
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING (silent — never echoed)
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty — aborting"
+            exit 1
+          fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Snapshot current premiums file for delta comparison
+        run: |
+          cp backend/scripts/parallel-premiums-latest.json \
+             /tmp/parallel-premiums.previous.json || true
+
+      - name: Run calibration script
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          APPLY: "true"
+          WINDOW_DAYS: ${{ inputs.window_days || '180' }}
+          SETS_ONLY: ${{ inputs.sets_only || '' }}
+          MAX_COMBOS: ${{ inputs.max_combos || '0' }}
+          RESUME: ${{ inputs.resume || 'true' }}
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          node scripts/calibrate-parallel-premiums-from-pool.cjs 2>&1 | tee /tmp/parallel-refresh.log
+
+      - name: Detect file change
+        id: diff
+        run: |
+          if [ ! -f /tmp/parallel-premiums.previous.json ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=first-run" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if diff -q /tmp/parallel-premiums.previous.json \
+                    backend/scripts/parallel-premiums-latest.json > /dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No change — pool is stable this week."
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Delta summary (empirical count + max shift)
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.reason != 'first-run'
+        run: |
+          node -e '
+            const prev = JSON.parse(require("fs").readFileSync("/tmp/parallel-premiums.previous.json", "utf8"));
+            const next = JSON.parse(require("fs").readFileSync("backend/scripts/parallel-premiums-latest.json", "utf8"));
+            const prevMap = new Map(prev.entries.map((e) => [`${e.year}|${e.set}|${e.parallel}|${e.isAuto}`, e]));
+            let maxShiftPct = 0, shifted = 0, newEmpirical = 0;
+            for (const e of next.entries) {
+              const k = `${e.year}|${e.set}|${e.parallel}|${e.isAuto}`;
+              const p = prevMap.get(k);
+              if (!p || p.baseRelativePremium == null || e.baseRelativePremium == null) {
+                if (e.provenance === "empirical" && (!p || p.provenance !== "empirical")) newEmpirical++;
+                continue;
+              }
+              const shift = Math.abs((e.baseRelativePremium - p.baseRelativePremium) / p.baseRelativePremium) * 100;
+              if (shift > 30) shifted++;
+              if (shift > maxShiftPct) maxShiftPct = shift;
+            }
+            console.log(`MAX_SHIFT_PCT=${maxShiftPct.toFixed(1)}`);
+            console.log(`ENTRIES_SHIFTED_OVER_30PCT=${shifted}`);
+            console.log(`NEW_EMPIRICAL_ENTRIES=${newEmpirical}`);
+          ' > /tmp/delta.txt 2>&1 || echo "delta calc failed" > /tmp/delta.txt
+          cat /tmp/delta.txt
+
+      - name: Commit + push refreshed premiums to dated branch
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="parallel-premiums-refresh-$(date -u +%Y%m%d)"
+          git config user.name "parallel-premiums-bot"
+          git config user.email "bot@justtheboysandcards.com"
+          git checkout -b "$BRANCH"
+          git add backend/scripts/parallel-premiums-latest.json
+          cat > /tmp/commit-msg.txt <<EOF
+          chore(calibration): weekly refresh of parallel-premiums from sold_comps pool
+
+          Auto-generated by .github/workflows/parallel-premiums-refresh.yml.
+          Ratios computed from ${{ inputs.window_days || '180' }}d of our own sold_comps
+          pool via backend/scripts/calibrate-parallel-premiums-from-pool.cjs.
+
+          Delta summary:
+          $(cat /tmp/delta.txt || echo 'delta unavailable')
+
+          Full script tail:
+          $(tail -40 /tmp/parallel-refresh.log || echo 'no output captured')
+          EOF
+          git commit -F /tmp/commit-msg.txt
+          git push -u origin "$BRANCH" --force-with-lease
+          {
+            echo "## Parallel premiums refresh — MANUAL MERGE REQUIRED"
+            echo ""
+            echo "Branch \`$BRANCH\` pushed with a fresh \`parallel-premiums-latest.json\`."
+            echo ""
+            echo "**Next step:** review the diff and merge to main."
+            echo ""
+            echo "\`\`\`"
+            echo "gh pr create --base main --head $BRANCH --title 'chore(calibration): weekly parallel-premiums refresh' --body 'Auto-refresh from sold_comps.'"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report no-change
+        if: steps.diff.outputs.changed == 'false'
+        run: |
+          echo "No premium changes this week. Pool is stable."
