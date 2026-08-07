@@ -237,6 +237,7 @@ export default function AdminDashboardPage() {
           <NavLink href="/app/admin/cleanliness" title="Cleanliness dashboard" sub="Score, integrity, contamination" />
           <NavLink href="/app/admin/quarantine" title="Quarantine browser" sub="Review + resolve flagged rows" />
           <NavLink href="/app/admin/catalog-review" title="Catalog review" sub="Approve user-seeded + vendor-unmatched cards" />
+          <NavLink href="/app/admin/checklist-diff" title="Checklist diff" sub="Paste checklist → find gaps + spurious entries" />
           <NavLink href="/app/admin/labeler" title="Variant labeler" sub="Teach the taxonomy" />
           <NavLink href="/app/admin/verify" title="Verify queue" sub="Long-tail admin review" />
           <NavLink href="/app/admin/data-quality" title="Data quality (legacy)" sub="Older rollup view" />

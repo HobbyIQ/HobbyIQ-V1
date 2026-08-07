@@ -430,6 +430,60 @@ export async function rejectCatalogReview(
   });
 }
 
+export async function bulkCatalogReview(
+  action: "approve" | "reject",
+  items: Array<{ slug: string; type: "user-seeded" | "vendor-unmatched" }>,
+): Promise<{
+  succeeded: number;
+  failed: number;
+  total: number;
+  results: Array<{ slug: string; ok: boolean; staged?: number; error?: string }>;
+}> {
+  const r = await adminRequest<{
+    success: boolean;
+    succeeded: number;
+    failed: number;
+    total: number;
+    results: Array<{ slug: string; ok: boolean; staged?: number; error?: string }>;
+  }>(`/api/admin/catalog-review/bulk`, {
+    method: "POST",
+    body: JSON.stringify({ action, items }),
+  });
+  return { succeeded: r.succeeded, failed: r.failed, total: r.total, results: r.results };
+}
+
+export interface ChecklistDiffResult {
+  parsed: number;
+  inCatalog: Array<{ cardNumber: string; player: string; matchedSlug: string }>;
+  missingFromCatalog: Array<{ cardNumber: string; player: string }>;
+  extraInCatalog: Array<{ cardNumber: string; playerName: string | null; slug: string; verificationStatus?: string | null }>;
+  setKey: string;
+  year: number;
+}
+
+export async function fetchChecklistDiff(
+  checklistText: string,
+  year: number,
+  setName: string,
+  sport?: string,
+): Promise<ChecklistDiffResult> {
+  const r = await adminRequest<{ success: boolean } & ChecklistDiffResult>(
+    `/api/admin/catalog-review/checklist-diff`,
+    {
+      method: "POST",
+      body: JSON.stringify({ checklistText, year, setName, sport }),
+    },
+  );
+  return {
+    parsed: r.parsed,
+    inCatalog: r.inCatalog,
+    missingFromCatalog: r.missingFromCatalog,
+    extraInCatalog: r.extraInCatalog,
+    setKey: r.setKey,
+    year: r.year,
+  };
+}
+
 // ─── Learning summary ─────────────────────────────────────────────
 
 export interface LearningSummary {
