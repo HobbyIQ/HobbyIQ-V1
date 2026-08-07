@@ -92,6 +92,7 @@ import flagCompRoutes from "./routes/flagComp.routes.js";
 // CF-QUARANTINE-ROUTES (2026-08-01, Drew): admin browser + resolver
 // for all flagged (contaminated) sold_comp rows.
 import quarantineRoutes from "./routes/quarantine.routes.js";
+import catalogReviewRoutes from "./routes/catalogReview.routes.js";
 import stagingPipelineRoutes from "./routes/stagingPipeline.routes.js";
 // CF-REFERENCE-CATALOG (2026-07-10, Drew — Phase 4): read-only query
 // surface over the Cosmos reference-catalog container. Used by iOS
@@ -291,6 +292,9 @@ app.use("/api", cleanlinessRoutes);
 app.use("/api", flagCompRoutes);
 // CF-QUARANTINE-ROUTES (Drew, 2026-08-01): admin quarantine browser.
 app.use("/api", quarantineRoutes);
+// CF-CATALOG-REVIEW-ROUTES (Drew, 2026-08-08): admin review of user-
+// seeded catalog entries + vendor-unmatched staging.
+app.use("/api/admin", catalogReviewRoutes);
 // CF-STAGING-PIPELINE-ROUTES (Drew, 2026-07-28): admin triggers for
 // the data-clean → image-verify → promotion jobs + a live health
 // counter over staging status buckets.

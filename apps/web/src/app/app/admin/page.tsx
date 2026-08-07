@@ -236,6 +236,7 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
           <NavLink href="/app/admin/cleanliness" title="Cleanliness dashboard" sub="Score, integrity, contamination" />
           <NavLink href="/app/admin/quarantine" title="Quarantine browser" sub="Review + resolve flagged rows" />
+          <NavLink href="/app/admin/catalog-review" title="Catalog review" sub="Approve user-seeded + vendor-unmatched cards" />
           <NavLink href="/app/admin/labeler" title="Variant labeler" sub="Teach the taxonomy" />
           <NavLink href="/app/admin/verify" title="Verify queue" sub="Long-tail admin review" />
           <NavLink href="/app/admin/data-quality" title="Data quality (legacy)" sub="Older rollup view" />

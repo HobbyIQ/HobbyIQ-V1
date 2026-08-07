@@ -373,6 +373,63 @@ export async function forceQuarantineRow(cardId: string, rowId: string, reason: 
   });
 }
 
+// ─── Catalog review queue (Drew 2026-08-08) ───────────────────────
+
+export interface CatalogReviewItem {
+  type: "user-seeded" | "vendor-unmatched";
+  slug: string;
+  cardYear: number | null;
+  sport: string | null;
+  setName: string | null;
+  setKey: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  isAuto: boolean;
+  playerName: string | null;
+  source: string;
+  confidence: number | null;
+  sampleTitles: string[];
+  stagedCompCount: number;
+  observedAt: string | null;
+}
+
+export async function fetchCatalogReviewQueue(
+  type: "user-seeded" | "vendor-unmatched" | "all" = "all",
+  limit = 50,
+): Promise<{
+  items: CatalogReviewItem[];
+  counts: { userSeeded: number; vendorUnmatched: number; total: number };
+}> {
+  const params = new URLSearchParams({ type, limit: String(limit) });
+  const r = await adminRequest<{
+    success: boolean;
+    items: CatalogReviewItem[];
+    counts: { userSeeded: number; vendorUnmatched: number; total: number };
+  }>(`/api/admin/catalog-review/queue?${params.toString()}`);
+  return { items: r.items, counts: r.counts };
+}
+
+export async function approveCatalogReview(
+  slug: string,
+  type: "user-seeded" | "vendor-unmatched",
+  note?: string,
+): Promise<{ ok: boolean; staged?: number; error?: string }> {
+  return await adminRequest(`/api/admin/catalog-review/approve`, {
+    method: "POST",
+    body: JSON.stringify({ slug, type, note }),
+  });
+}
+
+export async function rejectCatalogReview(
+  slug: string,
+  type: "user-seeded" | "vendor-unmatched",
+): Promise<{ ok: boolean; staged?: number; error?: string }> {
+  return await adminRequest(`/api/admin/catalog-review/reject`, {
+    method: "POST",
+    body: JSON.stringify({ slug, type }),
+  });
+}
+
 // ─── Learning summary ─────────────────────────────────────────────
 
 export interface LearningSummary {
