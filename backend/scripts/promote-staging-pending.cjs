@@ -61,7 +61,7 @@ async function main() {
   };
   const iter = stg.items.query(q, { maxItemCount: BATCH_SIZE });
 
-  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, errored = 0, statusFlipped = 0;
+  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0;
   const inflight = new Set();
 
   while (iter.hasMoreResults()) {
@@ -102,12 +102,19 @@ async function main() {
           inserted += res.inserted;
           deduped += res.deduped;
           skipped += res.skipped;
-          if (res.inserted > 0 || res.deduped > 0) {
-            // Flip status so we don't re-process on next run
+          const unmatched = res.catalogUnmatched ?? 0;
+          catalogUnmatched += unmatched;
+          // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). Flip status also
+          // on catalog-unmatched so the row stops getting re-tried —
+          // it's now in the admin review pool, decision belongs there.
+          if (res.inserted > 0 || res.deduped > 0 || unmatched > 0) {
+            const newStatus = res.inserted > 0
+              ? "promoted"
+              : (unmatched > 0 ? "catalog-unmatched" : "already-in-pool");
             try {
               await stg.item(row.id, row.id).patch([
-                { op: "replace", path: "/status", value: res.inserted > 0 ? "promoted" : "already-in-pool" },
-                { op: "add", path: "/promotedAt", value: new Date().toISOString() },
+                { op: "replace", path: "/status", value: newStatus },
+                { op: "add", path: "/statusUpdatedAt", value: new Date().toISOString() },
               ]);
               statusFlipped++;
             } catch (patchErr) {
@@ -126,13 +133,13 @@ async function main() {
       if (tried % 1000 === 0) {
         const el = ((Date.now() - startMs) / 1000).toFixed(0);
         const rate = (tried / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
-        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} flipped=${statusFlipped} errored=${errored} rate=${rate}/s elapsed=${el}s`);
+        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} errored=${errored} rate=${rate}/s elapsed=${el}s`);
       }
     }
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} flipped=${statusFlipped} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
 }
 

@@ -387,6 +387,47 @@ export interface VendorPersistResult {
   inserted: number;
   deduped: number;
   skipped: number;                          // rows that couldn't be parsed to identity
+  catalogUnmatched: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
+}
+
+// CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). The catalog is CURATED.
+// Ingest matches against it; ingest never grows it. Slugs that don't
+// match a catalog entry get held for admin review (approve → add to
+// catalog, reject → drop) instead of silently minting new catalog rows.
+// This preserves catalog credibility (auto-created rows from bad vendor
+// data corrupted trends + FMV; 1.86M sales-derived duplicates were the
+// evidence).
+
+// In-process cache of "does this slug exist in card_catalog?" — avoids
+// re-querying for hot slugs within a single batch. 5min TTL is plenty
+// for batch processing; longer would risk staleness if Drew admits a
+// new catalog entry mid-batch.
+const catalogMatchCache = new Map<string, { present: boolean; expiresAt: number }>();
+const CATALOG_MATCH_CACHE_TTL_MS = 5 * 60_000;
+
+async function catalogHasSlug(slug: string): Promise<boolean> {
+  const now = Date.now();
+  const cached = catalogMatchCache.get(slug);
+  if (cached && cached.expiresAt > now) return cached.present;
+  try {
+    const conn = process.env.COSMOS_CONNECTION_STRING;
+    if (!conn) return true; // fail-open when Cosmos isn't wired (tests, local dev)
+    const client = new CosmosClient(conn);
+    const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+    // Point-lookup by field. Query returns 0 or 1+ counts; either way
+    // cheap since hobbyiqCardId is the canonical join key.
+    const { resources } = await cat.items.query<number>({
+      query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s",
+      parameters: [{ name: "@s", value: slug }],
+    }).fetchAll();
+    const present = (resources[0] ?? 0) > 0;
+    catalogMatchCache.set(slug, { present, expiresAt: now + CATALOG_MATCH_CACHE_TTL_MS });
+    return present;
+  } catch {
+    // Fail-open on Cosmos hiccup — better to over-ingest than to drop
+    // legitimate comps due to a transient lookup failure.
+    return true;
+  }
 }
 
 export function isPersistVendorLookupsEnabled(): boolean {
@@ -416,7 +457,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0 };
   if (!isPersistVendorLookupsEnabled()) return result;
   if (!Array.isArray(rows) || rows.length === 0) return result;
   const container = await getSoldCompsContainer();
@@ -669,6 +710,20 @@ export async function persistVendorSalesToPool(
     const contentHash = createHash("sha256").update(
       `${slug}|${price.toFixed(2)}|${soldAt.slice(0, 10)}|${source}|${row.url ?? ""}`,
     ).digest("hex").slice(0, 32);
+
+    // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). The catalog is curated —
+    // ingest MATCHES against it, ingest never GROWS it. If the computed
+    // slug has no card_catalog entry, the sale gets held for admin
+    // review (via the staging shim that already captured the raw
+    // payload above) rather than silently entering sold_comps. Flag-
+    // gated so we can flip it off if the review queue backs up.
+    if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
+      const present = await catalogHasSlug(slug);
+      if (!present) {
+        result.catalogUnmatched++;
+        continue;
+      }
+    }
 
     // CF-COMPS-STAGING-SHIM-EARLY (Drew, 2026-07-28). Staging is the
     // immutable landing zone — it must receive EVERY vendor record
@@ -1088,58 +1143,16 @@ export async function persistVendorSalesToPool(
       // regardless of whether sold_comps dedups the write. See
       // CF-COMPS-STAGING-SHIM-EARLY.
 
-      // CF-CATALOG-REALTIME (Drew, 2026-08-03). Every successful
-      // CF-CATALOG-KEYED-BY-HOBBYIQCARDID (Drew, 2026-08-07). Every sold_comps
-      // write also upserts a card_catalog entry. Prior scheme keyed the doc
-      // on `sales-derived:sha256(tupleKey)` where the tuple used a LOCAL
-      // setKey normalizer that didn't do the full collapse ladder — so
-      // "2025 Bowman Chrome Draft" vs "2025 Bowman Chrome" produced
-      // different hashes → different catalog docs → fragmented "one card,
-      // many catalog entries" (2M+ sales-derived duplicates observed).
-      // Trends and FMV computed by joining sold_comps.hobbyiqCardId →
-      // catalog would miss whichever fragment(s) weren't queried, and
-      // credibility took the hit.
-      //
-      // Fix: key the doc on the CANONICAL hobbyiqCardId slug itself
-      // (already computed above as `slug`). Same physical card → same
-      // slug → same doc → single catalog entry. Also stamp `hobbyiqCardId`
-      // on the doc so downstream queries can join by field-lookup as well
-      // as by id-lookup. cardId (the container's partition key) is set to
-      // slug so PK matches id.
-      if (playerName && cardYear && setKey && parsed.cardNumber && sport && slug && slug.startsWith("hiq:")) {
-        void (async () => {
-          try {
-            const conn = process.env.COSMOS_CONNECTION_STRING;
-            if (!conn) return;
-            const client = new CosmosClient(conn);
-            const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
-            await cat.items.upsert({
-              id: slug,
-              cardId: slug,               // matches /cardId partition key
-              hobbyiqCardId: slug,        // join key to sold_comps
-              player: playerName,
-              playerName,
-              year: cardYear,
-              cardYear,
-              number: parsed.cardNumber,
-              cardNumber: parsed.cardNumber,
-              setKey: canonicalNormalizeSetKey(setKey),
-              setName: setKey,
-              sport: String(sport).toLowerCase(),
-              parallels: parsed.parallel && parsed.parallel.toLowerCase() !== "base" ? [{ name: parsed.parallel }] : [],
-              parallel: parsed.parallel ?? null,
-              isAuto: parsed.isAuto ?? false,
-              printRun: parsed.printRun ?? null,
-              source: "sales-derived",
-              lastObservedSaleAt: soldAt,
-              lastObservedPrice: price,
-              lastObservedSampleCardId: identity.vendorCardId ?? slug,
-              synthesizedAt: new Date().toISOString(),
-              confidence: 0.5,
-            });
-          } catch { /* soft — catalog growth is nice-to-have */ }
-        })();
-      }
+      // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). The catalog auto-upsert
+      // that used to fire here (both the original sales-derived:sha256
+      // scheme and the later CF-CATALOG-KEYED-BY-HOBBYIQCARDID fix) has
+      // been removed. Ingest MUST NOT grow the catalog. Bad vendor data
+      // grew it into 1.86M sales-derived fragments that damaged trends
+      // and FMV credibility. Catalog is now MATCH-only via
+      // catalogHasSlug() upstream; unmatched slugs go to admin review.
+      // If a real card is missing from the catalog, add it explicitly
+      // via ingest-product-checklist / admin approval — not by silently
+      // trusting vendor-title guesses.
     } catch (err) {
       console.warn(JSON.stringify({
         event: "persist_vendor_sales_error",
@@ -1151,7 +1164,7 @@ export async function persistVendorSalesToPool(
       result.skipped++;
     }
   }
-  if (result.inserted > 0 || result.deduped > 0) {
+  if (result.inserted > 0 || result.deduped > 0 || result.catalogUnmatched > 0) {
     console.log(JSON.stringify({
       event: "persist_vendor_sales",
       source: "persistVendorSalesToPool",
@@ -1159,6 +1172,7 @@ export async function persistVendorSalesToPool(
       inserted: result.inserted,
       deduped: result.deduped,
       skipped: result.skipped,
+      catalogUnmatched: result.catalogUnmatched,
     }));
   }
   return result;

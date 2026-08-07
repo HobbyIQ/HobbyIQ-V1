@@ -24,6 +24,32 @@
 const { CosmosClient } = require("@azure/cosmos");
 const crypto = require("crypto");
 
+// CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). Catalog is CURATED — this
+// script's whole purpose (auto-mint catalog rows from sold_comps) is
+// exactly what Drew's directive forbids. The 1.86M sales-derived
+// duplicates it produced were what damaged catalog credibility and
+// FMV trends. Keeping the script for reference / admin explicit runs,
+// but require an explicit acknowledgment before it will do anything.
+if (process.env.SALES_SYNTH_I_UNDERSTAND_CATALOG_IS_CURATED !== "true") {
+  console.error(`
+[catalog-sales-synth] HALT.
+
+This script auto-creates card_catalog entries from sold_comps.
+Per Drew's 2026-08-08 directive, catalog is CURATED — ingest MATCHES
+against it, ingest never GROWS it. Silent auto-growth from vendor
+data produced 1.86M fragmented duplicates that damaged FMV trends
+and credibility.
+
+If you REALLY need to run this (admin one-off, controlled
+experiment), set:
+  SALES_SYNTH_I_UNDERSTAND_CATALOG_IS_CURATED=true
+
+Prefer instead: admin review flow for unmatched slugs surfaced from
+persistVendorSalesToPool's catalogUnmatched counter.
+`);
+  process.exit(3);
+}
+
 const APPLY = process.env.APPLY === "true";
 const MIN_SALES = Math.max(1, Number(process.env.MIN_SALES || 1));
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 45));
