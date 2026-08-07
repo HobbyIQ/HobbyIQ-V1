@@ -2978,6 +2978,55 @@ async function autoPriceHolding(
     }
   }
 
+  // CF-DIRECT-SLUG-SAFETY-NET (Drew, 2026-08-06). Last-resort: if the
+  // whole legacy chain produced a null fairMarketValue AND we have a
+  // hobbyiqCardId slug with real sales in sold_comps, use hobbyIqFmv
+  // service (direct-slug > sibling-parallel > cross-parallel-ratio
+  // ladder) so the holding never renders "no price" when we've observed
+  // its market. Real case: Eric Hartman Orange Shimmer Refractor Auto
+  // had 3 direct sales ($1,185/$1,531/$1,713) but mechanism1 returned
+  // NULL_MECHANISM1_RESULT (parallel not in curated list) so the
+  // holding wrote fairMarketValue=null.
+  const finalFmv = (updated as any).fairMarketValue;
+  const finalSlug = (updated as any).hobbyiqCardId ?? (updated as any).cardId ?? null;
+  if ((finalFmv === null || finalFmv === undefined) && typeof finalSlug === "string" && finalSlug.startsWith("hiq:")) {
+    try {
+      const { computeHobbyIqFmv } = await import("./hobbyIqFmv.service.js");
+      const gCo = (updated as any).gradeCompany ? String((updated as any).gradeCompany).trim() : null;
+      const gVal = typeof (updated as any).gradeValue === "number" ? (updated as any).gradeValue
+        : ((updated as any).gradeValue ? Number((updated as any).gradeValue) : null);
+      const hiq = await computeHobbyIqFmv({
+        hobbyiqCardId: finalSlug,
+        gradeCompany: gCo,
+        gradeValue: gVal,
+      });
+      if (hiq && hiq.fmv !== null && hiq.fmv > 0) {
+        (updated as any).fairMarketValue = hiq.fmv;
+        (updated as any).predictedPrice = hiq.fmv;
+        (updated as any).predictedPriceMechanism = `hobbyIqFmv:${hiq.method}`;
+        (updated as any).predictedPriceUpdatedAt = new Date().toISOString();
+        (updated as any).valuationStatus = "estimated";
+        (updated as any).estimateBasis = hiq.basisNote;
+        (updated as any).isEstimate = hiq.method !== "direct-slug";
+        console.log(JSON.stringify({
+          event: "portfolio_hobbyiqfmv_safety_net_hit",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          slug: finalSlug,
+          method: hiq.method,
+          fmv: hiq.fmv,
+          compCount: hiq.compCount,
+        }));
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "portfolio_hobbyiqfmv_safety_net_error",
+        holdingId: holding.id,
+        message: (err as Error).message,
+      }));
+    }
+  }
+
   evaluateHoldingAlerts(doc, previous, updated);
   doc.holdings[holding.id] = updated;
   return updated;
