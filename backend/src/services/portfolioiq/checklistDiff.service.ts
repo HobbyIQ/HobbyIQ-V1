@@ -18,7 +18,7 @@
 //   extraInCatalog: [{ cardNumber, playerName, slug }]    — catalog entries for this year+setKey that AREN'T in the pasted checklist — likely spurious / non-canonical
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 
@@ -160,4 +160,96 @@ export async function diffChecklistAgainstCatalog(opts: {
     setKey,
     year,
   };
+}
+
+// CF-CHECKLIST-ADD-MISSING (Drew, 2026-08-08). Bulk-create catalog
+// entries for every "missing from catalog" row identified by the
+// checklist diff. Each entry lands with verificationStatus='pending-
+// review' so admin still owns the final approval — this is a
+// PROPOSAL mechanism, not a silent auto-add. Source is the pasted
+// checklist (admin-curated by definition), so confidence starts high
+// (0.85) but stays pending until explicit review.
+export interface CreateFromChecklistInput {
+  year: number;
+  sport: string;
+  setName: string;
+  rows: Array<{ cardNumber: string; player: string }>;
+}
+
+export interface CreateFromChecklistResult {
+  written: number;
+  skipped: number;
+  errored: number;
+  writtenSlugs: string[];
+}
+
+// Autograph-prefix hints — if the cardNumber matches a known auto-set
+// prefix, we mark isAuto=true so downstream slug + FMV logic route
+// through the autograph tables.
+const AUTO_CARD_NUMBER_PREFIX = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV|TEK|CDA|BSPA|CPAR|CPALD|CPATWH)-/i;
+
+export async function createCatalogEntriesFromChecklist(
+  input: CreateFromChecklistInput,
+): Promise<CreateFromChecklistResult | null> {
+  const cat = getCatalog();
+  if (!cat) return null;
+
+  const setKey = normalizeSetKey(input.setName);
+  const year = Math.trunc(Number(input.year));
+  const sport = String(input.sport ?? "").toLowerCase().trim() || "baseball";
+  const isAutoSet = /autograph/i.test(input.setName);
+
+  const result: CreateFromChecklistResult = { written: 0, skipped: 0, errored: 0, writtenSlugs: [] };
+
+  for (const row of input.rows) {
+    const cardNumber = String(row.cardNumber ?? "").trim().toUpperCase();
+    const player = String(row.player ?? "").trim();
+    if (!cardNumber || !player) { result.skipped++; continue; }
+
+    const isAuto = isAutoSet || AUTO_CARD_NUMBER_PREFIX.test(cardNumber);
+    let slug: string;
+    try {
+      slug = computeHobbyIqCardId({
+        sport, year, setKey, cardNumber,
+        parallel: "Base",
+        isAuto,
+        printRun: null,
+      });
+    } catch {
+      result.errored++;
+      continue;
+    }
+
+    const now = new Date().toISOString();
+    try {
+      await cat.items.upsert({
+        id: slug,
+        cardId: slug,
+        hobbyiqCardId: slug,
+        sport,
+        year,
+        cardYear: year,
+        setKey,
+        setName: input.setName,
+        cardNumber,
+        parallel: "Base",
+        isAuto,
+        printRun: null,
+        playerName: player,
+        source: "checklist-admin-add",
+        // Pasted from an admin-sourced checklist → high confidence base
+        // but stays pending until explicit verification.
+        confidence: 0.85,
+        verificationStatus: "pending-review",
+        observedAt: now,
+        lastSeenAt: now,
+      });
+      result.written++;
+      if (result.writtenSlugs.length < 20) result.writtenSlugs.push(slug);
+    } catch {
+      result.errored++;
+    }
+  }
+
+  return result;
 }

@@ -7,7 +7,7 @@
 // (likely spurious / non-canonical).
 
 import { useCallback, useState } from "react";
-import { fetchChecklistDiff, type ChecklistDiffResult } from "@/lib/adminApi";
+import { addMissingChecklistToCatalog, fetchChecklistDiff, type ChecklistDiffResult } from "@/lib/adminApi";
 
 const SPORTS = ["baseball", "basketball", "football", "hockey", "soccer", "pokemon", "mtg"];
 
@@ -19,6 +19,29 @@ export default function ChecklistDiffPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ChecklistDiffResult | null>(null);
+  const [addingMissing, setAddingMissing] = useState(false);
+  const [addResult, setAddResult] = useState<{ written: number; skipped: number; errored: number } | null>(null);
+
+  const onAddMissing = useCallback(async () => {
+    if (!result || result.missingFromCatalog.length === 0) return;
+    const n = result.missingFromCatalog.length;
+    if (!confirm(`Create ${n} catalog entries as 'pending-review'? You'll approve each in /app/admin/catalog-review.`)) return;
+    setAddingMissing(true);
+    setAddResult(null);
+    setError(null);
+    try {
+      const y = Number(year);
+      const r = await addMissingChecklistToCatalog(y, setName, sport, result.missingFromCatalog);
+      setAddResult({ written: r.written, skipped: r.skipped, errored: r.errored });
+      // Re-run the diff to show the updated state
+      const fresh = await fetchChecklistDiff(checklistText, y, setName, sport);
+      setResult(fresh);
+    } catch (e) {
+      setError((e as Error)?.message ?? "Add-missing failed");
+    } finally {
+      setAddingMissing(false);
+    }
+  }, [result, year, setName, sport, checklistText]);
 
   const onRun = useCallback(async () => {
     setLoading(true);
@@ -115,6 +138,36 @@ export default function ChecklistDiffPage() {
           <div className="text-xs text-[color:var(--color-text-muted)]">
             Set slug used: <code>{result.setKey}</code> · Year: {result.year}
           </div>
+
+          {/* Bulk add missing to catalog (pending-review) */}
+          {result.missingFromCatalog.length > 0 && (
+            <div className="rounded-xl border border-[color:var(--color-accent)] bg-[color:var(--color-accent)]/10 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium">
+                    Add {result.missingFromCatalog.length} missing checklist entries to catalog
+                  </div>
+                  <p className="text-xs text-[color:var(--color-text-muted)] mt-1">
+                    Each entry lands as <code>pending-review</code>. You still approve each one via <a className="underline" href="/app/admin/catalog-review">/app/admin/catalog-review</a>.
+                    Autograph sets get isAuto=true automatically (based on setName + cardNumber prefix).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void onAddMissing()}
+                  disabled={addingMissing}
+                  className="rounded bg-[color:var(--color-accent)] text-white px-4 py-2 text-sm whitespace-nowrap disabled:opacity-50"
+                >
+                  {addingMissing ? "Adding…" : `Add all ${result.missingFromCatalog.length}`}
+                </button>
+              </div>
+              {addResult && (
+                <div className="text-xs text-[color:var(--color-text-muted)] mt-3">
+                  Last run: {addResult.written} written · {addResult.skipped} skipped · {addResult.errored} errored
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl border border-[color:var(--color-border)] overflow-hidden">

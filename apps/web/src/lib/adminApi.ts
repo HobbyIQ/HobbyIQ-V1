@@ -461,6 +461,30 @@ export interface ChecklistDiffResult {
   year: number;
 }
 
+export async function addMissingChecklistToCatalog(
+  year: number,
+  setName: string,
+  sport: string,
+  rows: Array<{ cardNumber: string; player: string }>,
+): Promise<{
+  written: number;
+  skipped: number;
+  errored: number;
+  writtenSlugs: string[];
+}> {
+  const r = await adminRequest<{
+    success: boolean;
+    written: number;
+    skipped: number;
+    errored: number;
+    writtenSlugs: string[];
+  }>(`/api/admin/catalog-review/checklist-add-missing`, {
+    method: "POST",
+    body: JSON.stringify({ year, setName, sport, rows }),
+  });
+  return { written: r.written, skipped: r.skipped, errored: r.errored, writtenSlugs: r.writtenSlugs };
+}
+
 export async function fetchChecklistDiff(
   checklistText: string,
   year: number,

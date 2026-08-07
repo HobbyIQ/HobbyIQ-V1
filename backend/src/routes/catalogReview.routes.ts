@@ -15,7 +15,7 @@ import {
   rejectUserSeeded,
   rejectVendorUnmatched,
 } from "../services/portfolioiq/catalogReview.service.js";
-import { diffChecklistAgainstCatalog } from "../services/portfolioiq/checklistDiff.service.js";
+import { createCatalogEntriesFromChecklist, diffChecklistAgainstCatalog } from "../services/portfolioiq/checklistDiff.service.js";
 
 const router = Router();
 router.use(requireAdmin);
@@ -113,6 +113,25 @@ router.post("/catalog-review/checklist-diff", async (req: Request, res: Response
     if (!Number.isFinite(year) || year < 1900 || year > 2100) { res.status(400).json({ success: false, error: "invalid year" }); return; }
     if (!setName) { res.status(400).json({ success: false, error: "setName required" }); return; }
     const result = await diffChecklistAgainstCatalog({ checklistText, year, setName, sport });
+    if (!result) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
+// CF-CHECKLIST-ADD-MISSING (Drew, 2026-08-08). Bulk-create catalog
+// entries for cards on a pasted checklist that AREN'T yet in catalog.
+// Each entry lands as verificationStatus='pending-review' so the admin
+// still explicitly approves before it counts as canonical.
+router.post("/catalog-review/checklist-add-missing", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const year = Number(req.body?.year);
+    const setName = String(req.body?.setName ?? "").trim();
+    const sport = String(req.body?.sport ?? "baseball").trim().toLowerCase();
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (!Number.isFinite(year) || year < 1900 || year > 2100) { res.status(400).json({ success: false, error: "invalid year" }); return; }
+    if (!setName) { res.status(400).json({ success: false, error: "setName required" }); return; }
+    if (!rows.length || rows.length > 2000) { res.status(400).json({ success: false, error: "rows length 1..2000" }); return; }
+    const result = await createCatalogEntriesFromChecklist({ year, sport, setName, rows });
     if (!result) { res.status(503).json({ success: false, error: "Cosmos not configured" }); return; }
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
