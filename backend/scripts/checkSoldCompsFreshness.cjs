@@ -1,19 +1,40 @@
 // CF-FRESHNESS-CANARY (Drew, 2026-08-07). Cron-driven canary that
-// queries MAX(observedAt) on sold_comps and fails loudly if the pool
-// isn't receiving fresh writes.
+// checks freshness of every primary sold_comps ingest source and
+// fails loudly if any of them stalls.
 //
-// Backstop against silent ingest failures — the 2026-08-03..07 TCA
-// firehose APPLY-fallback bug is the motivating case: green workflow
-// runs, zero data writes, no alert for 5 days.
+// Motivating case: 2026-08-03..07 TCA firehose APPLY-fallback bug —
+// green workflow runs, zero data writes, no alert for 5 days. First
+// version of this canary reported OK because CH runtime API calls
+// masked TCA being dead. Per-source check is the correct signal.
+//
+// Sources monitored (must all be < MAX_STALENESS_HOURS old):
+//   tca-ebay      — nightly TCA firehose cron (primary volume feed)
+//   cardhedge     — runtime CH getCardSales calls (deprecated 2026-08-02
+//                   but still active until phase 3 lands)
+//
+// Sources NOT monitored (write sporadically, no alert):
+//   holding, user-ebay, portfolio-import, ch-daily-manual, admin-*
 //
 // Env:
 //   COSMOS_CONNECTION_STRING   required
 //   MAX_STALENESS_HOURS        default 25 (tolerates one full inter-
-//                              cron window: TCA cron is 24h + slop)
+//                              cron window for nightly sources)
+//   MONITOR_SOURCES            comma-separated override; default
+//                              "tca-ebay,cardhedge"
 
 const { CosmosClient } = require("@azure/cosmos");
 
 const MAX_STALENESS_HOURS = Number(process.env.MAX_STALENESS_HOURS || 25);
+const MONITOR_SOURCES = (process.env.MONITOR_SOURCES || "tca-ebay,cardhedge")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+
+async function latestObservedAtForSource(sc, source) {
+  const q = await sc.items.query({
+    query: "SELECT TOP 1 c.observedAt FROM c WHERE c.source = @source AND IS_DEFINED(c.observedAt) ORDER BY c.observedAt DESC",
+    parameters: [{ name: "@source", value: source }],
+  }, { maxItemCount: 1 }).fetchAll();
+  return q.resources[0]?.observedAt ?? null;
+}
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -21,29 +42,39 @@ async function main() {
   const client = new CosmosClient(conn);
   const sc = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
 
-  const q = await sc.items.query({
-    query: "SELECT TOP 1 c.observedAt, c.source FROM c WHERE IS_DEFINED(c.observedAt) ORDER BY c.observedAt DESC",
-  }, { maxItemCount: 1 }).fetchAll();
+  console.log(`[freshness-canary] monitoring sources: ${MONITOR_SOURCES.join(", ")}`);
+  console.log(`[freshness-canary] threshold: ${MAX_STALENESS_HOURS}h`);
 
-  if (!q.resources.length) {
-    console.error("::error::sold_comps is EMPTY — no rows with observedAt");
-    process.exit(1);
+  const now = Date.now();
+  const results = [];
+  for (const source of MONITOR_SOURCES) {
+    const latest = await latestObservedAtForSource(sc, source);
+    const stalenessH = latest ? (now - new Date(latest).getTime()) / 3600000 : Infinity;
+    results.push({ source, latest, stalenessH });
   }
 
-  const latest = q.resources[0];
-  const stalenessH = (Date.now() - new Date(latest.observedAt).getTime()) / 3600000;
+  console.log("");
+  console.log("source              latest observedAt                staleness");
+  console.log("------------------  ---------------------------      ---------");
+  for (const r of results) {
+    const label = r.source.padEnd(18);
+    const ts = (r.latest ?? "(never)").padEnd(32);
+    const staleness = r.stalenessH === Infinity ? "∞" : `${r.stalenessH.toFixed(1)}h`;
+    console.log(`${label}  ${ts}  ${staleness}`);
+  }
+  console.log("");
 
-  console.log(`[freshness-canary] latest observedAt: ${latest.observedAt}  source=${latest.source || "(unknown)"}`);
-  console.log(`[freshness-canary] staleness:         ${stalenessH.toFixed(1)}h`);
-  console.log(`[freshness-canary] threshold:         ${MAX_STALENESS_HOURS}h`);
-
-  if (stalenessH > MAX_STALENESS_HOURS) {
-    console.error(`::error::sold_comps STALE: latest ingest ${stalenessH.toFixed(1)}h ago (threshold ${MAX_STALENESS_HOURS}h)`);
+  const stale = results.filter((r) => r.stalenessH > MAX_STALENESS_HOURS);
+  if (stale.length) {
+    for (const r of stale) {
+      const st = r.stalenessH === Infinity ? "NEVER" : `${r.stalenessH.toFixed(1)}h`;
+      console.error(`::error::sold_comps source=${r.source} STALE: last write ${st} ago (threshold ${MAX_STALENESS_HOURS}h)`);
+    }
     console.error(`::error::Check TCA Firehose Ingest workflow: https://github.com/HobbyIQ/HobbyIQ-V1/actions/workflows/tca-firehose-ingest.yml`);
     process.exit(1);
   }
 
-  console.log(`[freshness-canary] OK — sales index moving`);
+  console.log(`[freshness-canary] OK — all ${results.length} monitored sources fresh`);
 }
 
 main().catch((e) => { console.error("::error::[freshness-canary] FAILED:", e?.message || e); process.exit(1); });
