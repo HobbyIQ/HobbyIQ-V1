@@ -303,11 +303,16 @@ export default function HoldingDetailPage() {
         </div>
       )}
 
-      {/* Recent comps (backs the FMV shown up top) */}
-      {h.cardId && (
+      {/* Recent comps + grade curve — prefer hobbyiqCardId as the pricing
+          identity. Old holdings can have a diverged legacy cardId (e.g.
+          BDP129 stripped to 129 → points at wrong flagship card).
+          hobbyiqCardId is the canonical hiq: slug and is the source of
+          truth for every downstream lookup. Falls back to cardId only
+          when hobbyiqCardId is missing (pre-slug-backfill legacy). */}
+      {(h.hobbyiqCardId || h.cardId) && (
         <div className="mb-6">
           <RecentCompsList
-            cardId={h.cardId}
+            cardId={h.hobbyiqCardId || h.cardId!}
             parallel={h.parallel ?? ""}
             gradeCompany={h.gradeCompany ?? undefined}
             gradeValue={h.gradeValue ?? undefined}
@@ -316,10 +321,9 @@ export default function HoldingDetailPage() {
         </div>
       )}
 
-      {/* Grade curve — what every grade of this card is worth */}
-      {h.cardId && (
+      {(h.hobbyiqCardId || h.cardId) && (
         <div className="mb-6">
-          <GradeCurveView cardId={h.cardId} />
+          <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} />
         </div>
       )}
 

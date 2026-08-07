@@ -322,7 +322,8 @@ export interface PricingEnvelope {
 // release, then get deleted in a follow-up CF.
 export interface PortfolioHolding {
   id: string;
-  cardId?: string | null;   // canonical HobbyIQ cardId — used for the recent-comps + listing-range surfaces
+  cardId?: string | null;   // legacy vendor/cardId — may diverge from hobbyiqCardId on old holdings (e.g. cardNumber prefix stripped). Prefer hobbyiqCardId for downstream queries.
+  hobbyiqCardId?: string | null;   // canonical hiq: slug — always the source of truth for pricing/comps lookups when present.
   playerName?: string | null;
   cardTitle?: string | null;
   cardYear?: number | null;
