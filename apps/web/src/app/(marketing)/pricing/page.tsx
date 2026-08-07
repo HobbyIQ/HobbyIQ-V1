@@ -27,11 +27,12 @@ const FEATURES: PlanFeature[] = [
   { label: "Sub-raw prospect detection", free: false, collector: false, investor: true, proSeller: true },
   { label: "Weekly portfolio brief", free: false, collector: true, investor: true, proSeller: true },
   { label: "Notable-sales feed", free: false, collector: false, investor: true, proSeller: true },
-  { label: "Bulk CSV / spreadsheet inventory", free: false, collector: false, investor: false, proSeller: true },
+  { label: "Bulk CSV / spreadsheet inventory", free: false, collector: false, investor: true, proSeller: true },
   { label: "eBay listing draft integration", free: false, collector: false, investor: false, proSeller: true },
-  // CF-STOREFRONT-TIER (Drew, 2026-07-27). Collector no storefront,
-  // Investor capped at 50 cards, Pro Seller unlimited.
-  { label: "Public storefront (hobby-iq.com/u/<you>)", free: false, collector: false, investor: "50 cards", proSeller: "Unlimited" },
+  // CF-STOREFRONT-TIER (Drew, 2026-07-27, revised 2026-08-07). Collector
+  // gets a 25-card capped storefront, Investor capped at 50, Pro Seller
+  // unlimited.
+  { label: "Public storefront (hobby-iq.com/u/<you>)", free: false, collector: "25 cards", investor: "50 cards", proSeller: "Unlimited" },
   { label: "Priority support", free: false, collector: false, investor: false, proSeller: true },
 ];
 
@@ -53,14 +54,14 @@ export default function PricingPage() {
       <section className="max-w-6xl mx-auto px-6 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6">
         <PlanCard
           name="Collector"
-          price="$9.99"
+          price="$12.99"
           period="/mo"
           tagline="Casual collectors tracking a personal portfolio."
           plan="collector"
         />
         <PlanCard
           name="Investor"
-          price="$19.99"
+          price="$24.99"
           period="/mo"
           tagline="Active traders — timed sell/hold/list signals."
           plan="investor"
