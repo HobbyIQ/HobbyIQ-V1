@@ -4606,6 +4606,62 @@ export async function updateHolding(req: Request, res: Response) {
   // holding state.
   next = withDerivedSlug(next);
 
+  // CF-CATALOG-RESOLVE-ON-UPDATE (Drew, 2026-08-08). Same catalog-first
+  // resolution addHolding does — but on EDIT. Fixes the Verlander-class
+  // bug where a user's typo'd setName ("Bowman Chrome Draft Picks &
+  // Prospects", which doesn't exist) computes a slug at :bowman-chrome:
+  // even though the real catalog entry is at :bowman-draft:. Post-fix,
+  // any edit to a holding routes the identity through canonicalize()
+  // which uses fuzzy match on (year, cardNumber, isAuto, parallel-token)
+  // to find the RIGHT catalog entry regardless of setName drift, then
+  // rebinds hobbyiqCardId + cardId to the catalog's canonical slug.
+  //
+  // Wrapped in try/catch — a Cosmos hiccup shouldn't block edits.
+  // Silent-safe: on any failure the withDerivedSlug value is what
+  // sticks; user still gets their edit persisted.
+  try {
+    if (next.playerName && next.cardYear && next.cardNumber) {
+      const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+      const extras = next as unknown as { sport?: unknown; printRun?: unknown };
+      const matchResult = await canonicalize({
+        sport: typeof extras.sport === "string" && extras.sport ? extras.sport : "baseball",
+        year: next.cardYear,
+        setName: String(next.product ?? next.setName ?? ""),
+        cardNumber: String(next.cardNumber),
+        parallel: next.parallel ?? null,
+        isAuto: next.isAuto === true,
+        printRun: typeof extras.printRun === "number" ? extras.printRun : null,
+        player: next.playerName,
+        source: "user-verified",
+      });
+      if (matchResult.found && matchResult.slug) {
+        const currentSlug = (next as { hobbyiqCardId?: string }).hobbyiqCardId;
+        if (matchResult.slug !== currentSlug) {
+          (next as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
+          (next as { cardId?: string }).cardId = matchResult.slug;
+          console.log(JSON.stringify({
+            event: "catalog_resolve_on_update_rebind",
+            source: "portfolioStore.updateHolding",
+            userId: auth.userId,
+            holdingId: id,
+            previousSlug: currentSlug,
+            resolvedSlug: matchResult.slug,
+            matchedBy: matchResult.matchedBy,
+            confidence: matchResult.confidence,
+          }));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "catalog_resolve_on_update_error",
+      source: "portfolioStore.updateHolding",
+      userId: auth.userId,
+      holdingId: id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: symmetric with addHolding.
   // Validates the merged AFTER-state — an update of an existing legacy
   // null-identity row to {quantity: 5} still blocks (the merged state
