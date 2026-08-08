@@ -29,7 +29,21 @@ function cacheKey(prefix: string, ...parts: string[]): string {
   return [prefix, ...parts.map((p) => p.toLowerCase().replace(/\s+/g, " ").trim())].join(":");
 }
 
+// CF-CARDHEDGE-DECOMMISSION-3A (Drew, 2026-08-07). Explicit kill
+// switch for CH runtime API calls — set CH_RUNTIME_DISABLED=true on
+// App Service to force headers() to return null system-wide. All
+// callers already treat a null-return / empty-result from this client
+// as "no CH data for this query" (CH became secondary in commit
+// 4e823893 when sold_comps became the primary pricing source), so
+// the flip is a no-op from a code standpoint — just stops the
+// outbound API traffic.
+//
+// Reversible: unset the env var + restart to re-enable.
+//
+// Phase 3b: after prod stability confirmed, retire CARD_HEDGE_API_KEY
+// from App Service settings and cancel the CH subscription entirely.
 function headers(): Record<string, string> | null {
+  if (process.env.CH_RUNTIME_DISABLED === "true") return null;
   const key = process.env.CARD_HEDGE_API_KEY;
   if (!key) return null;
   return {
