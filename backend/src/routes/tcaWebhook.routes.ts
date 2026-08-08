@@ -210,8 +210,15 @@ async function processBatchAsync(
     // Pokemon-only parallel names — "Holofoil" / "Reverse Holofoil" /
     // "Rainbow Rare" don't appear on sports cards.
     [/\b(reverse\s+holofoil|holofoil|rainbow\s+rare|full\s+art\s+trainer|shining\s+rare)\b/i, "pokemon"],
-    // Card number formatted as ###/### is Pokemon-only convention.
-    [/\b\d{1,3}\/\d{2,3}\b/, "pokemon"],
+    // CF-SLASH-FORMAT-REMOVED (Drew, 2026-08-08). Previously used
+    // /\b\d{1,3}\/\d{2,3}\b/ to catch Pokemon "023/131"-style card
+    // numbers in-title. FALSE POSITIVE RATE was catastrophic —
+    // matched print-run notation on legit sports cards ("Auto 10/150",
+    // "Blue Refractor 008/150" on Bowman Draft baseball autos), which
+    // would have kicked ~20% of the baseball pool into Pokemon on
+    // the next re-clean. Removed. Pokemon coverage is still solid
+    // via the set-code (SV##, SWSH##), colon-set (SV:, SWSH:), and
+    // Pokemon-only-parallel (Holofoil) rules above.
     [/\b(yugioh|yu-?gi-?oh)\b/i, "yugioh"],
     [/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i, "tcg-other"],
     [/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i, "anime-tcg"],
