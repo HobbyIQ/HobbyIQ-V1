@@ -1,3 +1,38 @@
+// ⚠ DEPRECATED 2026-08-08 (Drew). DO NOT RE-RUN. This script produces
+// card_catalog rows with source='sales-derived'. Root problem: it
+// aggregates directly from sold_comps rows whose playerName field was
+// polluted by the pre-2026-08-08 title parser (leaked subset
+// descriptors like "Shohei Ohtani Pitching Jersey", "Debut Shohei
+// Ohtani", "SHOHEI OHTANI 2018 2018", etc.). The 1.86M rows this
+// script wrote over its lifetime are the primary source of the "sloppy
+// playerName" bug that surfaced 2026-08-08 when a user searched
+// "2018 topps update ohtani" and got nine mislabeled duplicates.
+//
+// Mitigation stack (all shipped 2026-08-08):
+//   1. holdingFieldNormalizer R4a/b/c/d — strips subset descriptors,
+//      trailing years, ALL-CAPS. Forward ingest is now clean.
+//   2. canonicalCardSearch source-priority dedup — hides sales-derived
+//      + tree-builder-v1 catalog rows from search when a clean sibling
+//      exists.
+//   3. backfillSoldCompsReClean.cjs — one-shot pass over 3.9M
+//      sold_comps rows re-normalizes playerName + recomputes
+//      hobbyiqCardId, migrating the fragmented slugs to canonical.
+//   4. deleteGarbageCatalogSources.cjs — retires the sales-derived +
+//      tree-builder-v1 catalog rows outright (run after backfill).
+//
+// This script COULD be safely re-run AFTER the pool is fully cleaned
+// AND the holdingFieldNormalizer catches every regression pattern (see
+// backend/tests/holdingFieldNormalizer.test.ts "R4a-d insert-subset
+// patterns" describe block for pinned regressions). Until then: leave
+// it dormant. Any run of this script re-poisons the catalog.
+//
+// If you're reading this because you want the sales-derived pattern
+// back — talk to Drew first. The right architectural move is likely to
+// fold this into the tree-builder-v2 (a follow-up to the deprecated
+// tree-builder-v1 in build-tree-nodes.ts), with cleanliness gates
+// baked into the write path.
+//
+// ORIGINAL COMMENT ────────────────────────────────────────────────────
 // CF-CATALOG-SALES-SYNTH (Drew, 2026-08-03). Builds owned catalog
 // entries by aggregating sold_comps by identity tuple. Every unique
 // (sport, year, setName, cardNumber, parallel, isAuto, printRun, player)

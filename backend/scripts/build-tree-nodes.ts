@@ -1,5 +1,27 @@
 #!/usr/bin/env -S npx tsx
 /**
+ * ⚠ DEPRECATED 2026-08-08 (Drew). DO NOT RE-RUN. This script writes
+ * card_catalog rows with source='tree-builder-v1'. It reads from
+ * sold_comps (via the "bulk-build-from-pool" seed rows), and the
+ * pre-2026-08-08 sold_comps pool carries polluted playerName strings
+ * ("Shohei Ohtani Pitching Jersey", "Debut Shohei Ohtani", "SHOHEI
+ * OHTANI 2018 2018 Topps Update An International Affair") that the
+ * old title parser leaked. Running this now propagates that garbage
+ * back into the catalog.
+ *
+ * The 2026-08-08 mitigations (holdingFieldNormalizer R4a/b/c/d +
+ * source-priority dedup in canonicalCardSearch + sold_comps re-clean
+ * backfill + deleteGarbageCatalogSources) fix this end-to-end but
+ * assume this script stays dormant.
+ *
+ * A tree-builder-v2 that runs AFTER the pool is fully re-cleaned AND
+ * validates each write against holdingFieldNormalizer output would be
+ * safe. Until that exists: don't run this.
+ *
+ * See backend/scripts/catalog-sales-synth.cjs top-of-file comment for
+ * the full mitigation stack + rationale.
+ *
+ * ORIGINAL DOC ─────────────────────────────────────────────────────
  * CF-TREE-BUILDER (Drew, 2026-08-05).
  *
  * Builds Card → Variant → Grade tree nodes in `card_catalog`.

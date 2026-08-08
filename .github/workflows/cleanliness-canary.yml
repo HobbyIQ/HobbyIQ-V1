@@ -1,0 +1,64 @@
+name: Sold Comps Cleanliness Canary
+
+# CF-CLEANLINESS-CANARY (Drew, 2026-08-08). Complements the freshness
+# canary. Detects title-parser regressions that leak subset descriptors
+# ("Shohei Ohtani Pitching Jersey") into playerName, plus slug
+# fragmentation drift where the same identity ends up written under
+# multiple hobbyiqCardId slugs.
+#
+# Cadence: every 6h. Fails if any of:
+#   - garbage-prefix playerName rate > 1% in last 12h
+#   - fragmented-slug rate > 2%
+#   - missing hobbyiqCardId rate > 5%
+#
+# Alert channel: GitHub Actions workflow failure → notification email.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"   # every 6h at :17 (offset from freshness canary)
+  workflow_dispatch:
+    inputs:
+      window_hours:
+        description: 'Window hours (default 12)'
+        required: false
+        type: string
+        default: '12'
+
+jobs:
+  cleanliness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps
+        working-directory: backend
+        run: npm ci --prefer-offline --no-audit --no-fund --omit=dev
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Fetch Cosmos connection string
+        id: env
+        run: |
+          COSMOS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$COSMOS_CS"
+          echo "cs=$COSMOS_CS" >> "$GITHUB_OUTPUT"
+      - name: Run cleanliness canary
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.env.outputs.cs }}
+          WINDOW_HOURS: ${{ inputs.window_hours || '12' }}
+        run: |
+          node scripts/checkSoldCompsCleanliness.cjs

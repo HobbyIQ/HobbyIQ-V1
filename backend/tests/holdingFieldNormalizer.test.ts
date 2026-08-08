@@ -19,7 +19,71 @@ describe("normalizer rule inventory", () => {
     expect(names).toContain("parallel_strip_subset_prefix");
     expect(names).toContain("playerName_strip_leading_noise");
     expect(names).toContain("playerName_strip_trailing_action");
+    expect(names).toContain("playerName_strip_trailing_year");
+    expect(names).toContain("playerName_title_case_all_caps");
     expect(names).toContain("cardNumber_uppercase_trim");
+  });
+});
+
+// CF-INSERT-SUBSET-PATTERNS (Drew, 2026-08-08). Regression pins for the
+// specific messy playerName patterns that surfaced on 2026-08-08 when
+// Drew's Ohtani search returned nine sloppy-titled duplicates
+// ("Debut Shohei Ohtani", "Shohei Ohtani Pitching Jersey",
+// "SHOHEI OHTANI 2018 2018 Topps Update An International Affair", etc.).
+// Every one of these must normalize to just "Shohei Ohtani" — if the
+// list of noise words in R4/R4b ever gets accidentally trimmed, these
+// tests will catch it before the polluted playerNames reach sold_comps
+// and cascade into catalog + FMV downstream.
+describe("R4a-d insert-subset patterns (2026-08-08 Ohtani regression)", () => {
+  const messyToClean: Array<[string, string]> = [
+    // R4b trailing-noise strip (jersey, checklist, etc.)
+    ["Shohei Ohtani Pitching Jersey",       "Shohei Ohtani"],
+    ["Shohei Ohtani Highlights Checklist",  "Shohei Ohtani"],
+    ["Shohei Ohtani In The",                "Shohei Ohtani"],
+    ["Shohei Ohtani Low Pop",               "Shohei Ohtani"],
+    ["Shohei Ohtani All Star Celebration",  "Shohei Ohtani"],
+    // R4a leading-noise strip (debut, complete, rookie)
+    ["Debut Shohei Ohtani",                 "Shohei Ohtani"],
+    ["Complete Set Shohei Ohtani",          "Shohei Ohtani"],
+    ["Rookie Debut Shohei Ohtani",          "Shohei Ohtani"],
+    // R4b trailing set/brand words (topps, update, chrome)
+    ["Shohei Ohtani Topps Update",          "Shohei Ohtani"],
+    ["Shohei Ohtani Topps Chrome Update",   "Shohei Ohtani"],
+    // R4c trailing 4-digit year strip
+    ["Shohei Ohtani 2018",                  "Shohei Ohtani"],
+    ["Shohei Ohtani 2018 2018",             "Shohei Ohtani"],
+    // R4d ALL-CAPS title-case
+    ["SHOHEI OHTANI",                       "Shohei Ohtani"],
+    // Composite worst-case — all rules must fire in the right order
+    ["SHOHEI OHTANI 2018 2018 Topps Update An International Affair", "Shohei Ohtani"],
+  ];
+  for (const [messy, clean] of messyToClean) {
+    it(`"${messy}" → "${clean}"`, () => {
+      const r = normalizeHoldingFields({ playerName: messy });
+      expect(r.fields.playerName).toBe(clean);
+    });
+  }
+
+  // Idempotency — running normalizer twice must not further mutate.
+  it("idempotent on all 2026-08-08 patterns", () => {
+    for (const [messy] of messyToClean) {
+      const once = normalizeHoldingFields({ playerName: messy });
+      const twice = normalizeHoldingFields({ playerName: once.fields.playerName ?? "" });
+      expect(twice.fields.playerName).toBe(once.fields.playerName);
+    }
+  });
+
+  // Guardrail: real player names must not be over-stripped by the new
+  // noise words. If a real player has "In", "Debut", "Pop" etc. as a
+  // legitimate part of their name (rare), don't drop them if it would
+  // null the whole name (R4b's "don't null the whole name" guard).
+  it("does not over-strip a name whose only tokens are noise words", () => {
+    // Pathological: playerName is literally just "Debut" (never a real
+    // player, but the leading strip must not produce empty string).
+    const r = normalizeHoldingFields({ playerName: "Debut" });
+    // R4 strips leading noise but bails if remaining is empty — the
+    // input stays as-is rather than nulling.
+    expect(r.fields.playerName).toBe("Debut");
   });
 });
 

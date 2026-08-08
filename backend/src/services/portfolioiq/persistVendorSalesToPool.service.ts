@@ -1183,6 +1183,15 @@ export async function persistVendorSalesToPool(
         identityMethod,
         ...priceAnomaly,
       };
+      // CF-INGEST-CLEANLINESS-GUARDRAIL (Drew, 2026-08-08). The write above
+      // uses the normalizer's clean playerName + a hobbyiqCardId computed
+      // from those clean fields, so this row lands in the CORRECT
+      // canonical slug bucket. Fleet-level regressions in either the
+      // normalizer OR the identity resolver are caught by the every-6h
+      // `checkSoldCompsCleanliness.cjs` canary (see .github/workflows/
+      // cleanliness-canary.yml). If you're adding new fields OR changing
+      // slug computation here, extend the canary too so drift shows up
+      // within 6h instead of after 3.9M rows accumulate.
       // CF-STAGING-CUTOVER (Drew, 2026-07-28). When cutover is on,
       // vendor ingest ONLY writes to comps_staging (the shim above
       // fires unconditionally). sold_comps writes come from the
