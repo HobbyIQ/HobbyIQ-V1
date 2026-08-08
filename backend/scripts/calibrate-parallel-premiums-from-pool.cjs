@@ -82,44 +82,49 @@ function comboKey(c) {
   return `${c.year}|${c.set}|${c.parallel}|${c.isAuto !== false}`;
 }
 
-// Query all sold_comps rows for a (year, setKey) window with playerName
-// bucketing done in-code (avoids one query per player). Returns:
-//   Map<playerName, { parallelPrices: number[], basePrices: number[] }>
-// Filters to rows with isAuto matching the combo + parallel matching
-// the combo's slug OR "base" for the base group.
+// Query all sold_comps rows for a (year, setName-slug) window and pair
+// by cardNumber. cardNumber is invariant across a card and its parallel
+// (only the parallel slug differs), so pairing by cardNumber gives
+// clean identity-matched pairs without the noise in playerName (which
+// can carry "Formula X Autographs" prefix garbage from title parses).
+// Returns: Map<cardNumber, { parallelPrices, basePrices }>
 async function fetchPairedPrices(sc, combo, parallelSlug, cutoffIso) {
-  // Grab all sold_comps rows for (year, setKey) that are either the
-  // target parallel OR base — single scan, split in-code.
+  // Schema note (from probeSoldCompsFields):
+  //   c.setName       = slug form ("topps-chrome", "bowman-chrome")
+  //   c.parallelSlug  = canonical slug ("refractor", "red-refractor", "base")
+  //   c.cardYear      = integer year
+  //   c.isAuto        = boolean
+  //   c.cardNumber    = string identifier ("ca-lin", "cpa-eha", "150")
   const q = {
     query: `
-      SELECT c.playerName, c.parallel, c.isAuto, c.price, c.soldAt
+      SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.price, c.soldAt
       FROM c
       WHERE c.cardYear = @year
-        AND c.setKey = @setKey
-        AND (c.parallel = @parallelSlug OR c.parallel = "base" OR c.parallel = "Base")
+        AND c.setName = @setNameSlug
+        AND (c.parallelSlug = @parallelSlug OR c.parallelSlug = "base")
         AND c.isAuto = @isAuto
         AND c.soldAt >= @cutoff
-        AND IS_DEFINED(c.playerName)
+        AND IS_DEFINED(c.cardNumber)
         AND c.price > 0
     `,
     parameters: [
       { name: "@year", value: combo.year },
-      { name: "@setKey", value: combo.setKey },
+      { name: "@setNameSlug", value: combo.setKey },
       { name: "@parallelSlug", value: parallelSlug },
       { name: "@isAuto", value: combo.isAuto !== false },
       { name: "@cutoff", value: cutoffIso },
     ],
   };
   const iter = sc.items.query(q, { maxItemCount: 5000 });
-  const buckets = new Map(); // playerName → { parallelPrices, basePrices }
+  const buckets = new Map(); // cardNumber → { parallelPrices, basePrices }
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
     for (const r of resources) {
-      const name = String(r.playerName || "").trim().toLowerCase();
-      if (!name) continue;
-      let b = buckets.get(name);
-      if (!b) { b = { parallelPrices: [], basePrices: [] }; buckets.set(name, b); }
-      const isBase = /^base$/i.test(String(r.parallel || ""));
+      const key = String(r.cardNumber || "").trim().toLowerCase();
+      if (!key) continue;
+      let b = buckets.get(key);
+      if (!b) { b = { parallelPrices: [], basePrices: [] }; buckets.set(key, b); }
+      const isBase = String(r.parallelSlug || "").toLowerCase() === "base";
       if (isBase) b.basePrices.push(Number(r.price));
       else b.parallelPrices.push(Number(r.price));
     }
@@ -146,7 +151,7 @@ async function calibrateCombo(sc, combo, normalize, cutoffIso) {
 
   const ratios = [];
   const pairs = [];
-  for (const [player, b] of buckets) {
+  for (const [cardNumber, b] of buckets) {
     if (!b.parallelPrices.length || !b.basePrices.length) continue;
     const pMed = median(b.parallelPrices);
     const bMed = median(b.basePrices);
@@ -154,7 +159,7 @@ async function calibrateCombo(sc, combo, normalize, cutoffIso) {
     const ratio = pMed / bMed;
     if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 100) continue;
     ratios.push(ratio);
-    pairs.push({ player, parallelPrice: pMed, basePrice: bMed, ratio: round3(ratio) });
+    pairs.push({ cardNumber, parallelPrice: pMed, basePrice: bMed, ratio: round3(ratio) });
   }
 
   const med = trimmedMedian(ratios, 0.1);
@@ -238,9 +243,12 @@ async function main() {
   if (MAX_COMBOS > 0) TARGETS = TARGETS.slice(0, MAX_COMBOS);
   console.log(`[from-pool] TARGETS: ${TARGETS.length}  window: ${WINDOW_DAYS}d  apply: ${APPLY}`);
 
-  const outPath = path.join(__dirname, APPLY
-    ? "parallel-premiums-latest.json"
-    : "parallel-premiums-latest.dry.json");
+  // CF-PATH-FIX (Drew, 2026-08-07). APPLY=true writes to backend/data/
+  // (where production reads); APPLY=false writes the dry file next to
+  // the script for isolated review.
+  const outPath = APPLY
+    ? path.resolve(__dirname, "..", "data", "parallel-premiums-latest.json")
+    : path.join(__dirname, "parallel-premiums-latest.dry.json");
   const cutoffIso = new Date(Date.now() - WINDOW_DAYS * 86400_000).toISOString();
 
   const results = [];

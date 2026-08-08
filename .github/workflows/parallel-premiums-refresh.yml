@@ -99,7 +99,7 @@ jobs:
 
       - name: Snapshot current premiums file for delta comparison
         run: |
-          cp backend/scripts/parallel-premiums-latest.json \
+          cp backend/data/parallel-premiums-latest.json \
              /tmp/parallel-premiums.previous.json || true
 
       - name: Run calibration script
@@ -124,7 +124,7 @@ jobs:
             exit 0
           fi
           if diff -q /tmp/parallel-premiums.previous.json \
-                    backend/scripts/parallel-premiums-latest.json > /dev/null; then
+                    backend/data/parallel-premiums-latest.json > /dev/null; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No change — pool is stable this week."
             exit 0
@@ -136,7 +136,7 @@ jobs:
         run: |
           node -e '
             const prev = JSON.parse(require("fs").readFileSync("/tmp/parallel-premiums.previous.json", "utf8"));
-            const next = JSON.parse(require("fs").readFileSync("backend/scripts/parallel-premiums-latest.json", "utf8"));
+            const next = JSON.parse(require("fs").readFileSync("backend/data/parallel-premiums-latest.json", "utf8"));
             const prevMap = new Map(prev.entries.map((e) => [`${e.year}|${e.set}|${e.parallel}|${e.isAuto}`, e]));
             let maxShiftPct = 0, shifted = 0, newEmpirical = 0;
             for (const e of next.entries) {
@@ -165,7 +165,7 @@ jobs:
           git config user.name "parallel-premiums-bot"
           git config user.email "bot@justtheboysandcards.com"
           git checkout -b "$BRANCH"
-          git add backend/scripts/parallel-premiums-latest.json
+          git add backend/data/parallel-premiums-latest.json
           cat > /tmp/commit-msg.txt <<EOF
           chore(calibration): weekly refresh of parallel-premiums from sold_comps pool
 
