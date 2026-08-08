@@ -2688,6 +2688,121 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       console.log(
         `[compiq.price] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
+      // CF-PRICE-CANONICAL-FIRST (Drew, 2026-08-08). Before spending
+      // the CH-dependent computeEstimate tier ladder on a freetext
+      // query, try our own canonical-fmv. If parsed has enough signal
+      // (year + brand + cardNumber + high confidence) to compute a
+      // hobbyiqCardId slug AND our own pool has real comps for that
+      // slug, we return authoritative pricing WITHOUT ever touching
+      // CH. This is what /price-by-id already does for hiq:-prefixed
+      // cardIds; adding the same pattern to /price closes the gap
+      // that made the pricing smoke-test fail every deploy under
+      // CH_RUNTIME_DISABLED=true.
+      //
+      // Falls through to computeEstimate on any of: missing parser
+      // fields, canonical-fmv threw/returned null, canonical-fmv
+      // returned fmv=0. The CH-dependent ladder is preserved as
+      // defense-in-depth.
+      if (
+        !body.cardId &&
+        parsed.confidence >= 0.5 &&
+        typeof parsed.year === "number" &&
+        typeof parsed.cardNumber === "string" && parsed.cardNumber.length > 0 &&
+        typeof parsed.brand === "string" && parsed.brand.length > 0
+      ) {
+        try {
+          const { computeHobbyIqCardId } = await import("../services/portfolioiq/hobbyIqCardId.service.js");
+          const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+          // parsed doesn't carry sport — inferred later downstream.
+          // For the canonical-first attempt, default baseball (highest
+          // pool coverage). If the slug doesn't hit in canonical, we
+          // fall through to computeEstimate which handles sport-detect.
+          const sportGuess = "baseball";
+          const slug = computeHobbyIqCardId({
+            sport: sportGuess,
+            year: parsed.year,
+            setKey: parsed.brand,
+            cardNumber: parsed.cardNumber,
+            parallel: parsed.parallel || "Base",
+            isAuto: parsed.isAuto ?? false,
+            printRun: parsed.printRun ?? null,
+          });
+          const canon = await computeCanonicalFmv({
+            cardId: slug,
+            parallel: parsed.parallel || "Base",
+            gradeCompany: null,
+            gradeValue: null,
+            cardYear: parsed.year,
+            product: parsed.brand,
+            player: parsed.playerName ?? null,
+            cardNumber: parsed.cardNumber,
+            freshCompute: false,
+          } as any);
+          const canonFmv = (canon as any)?.fmv;
+          const canonN = (canon as any)?.recentRange?.n ?? 0;
+          if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
+            const method = String((canon as any).method || "canonical-fmv");
+            const buyZone: [number, number] = [Math.round(canonFmv * 0.85), Math.round(canonFmv * 0.95)];
+            const holdZone: [number, number] = [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.10)];
+            const sellZone: [number, number] = [Math.round(canonFmv * 1.10), Math.round(canonFmv * 1.25)];
+            const provComps = ((canon as any).provenance?.comps ?? []).slice(0, 20).map((c: any) => ({
+              price: Number(c.price ?? 0),
+              soldDate: String(c.soldAt ?? ""),
+              grader: null,
+              gradeValue: null,
+              parallel: c.parallel ?? parsed.parallel ?? null,
+              marketplace: c.source ?? undefined,
+            })).filter((r: any) => r.price > 0 && r.soldDate);
+            console.log(JSON.stringify({
+              event: "price_canonical_first_hit",
+              source: "compiq.routes.price",
+              query, slug, fmv: canonFmv, method, compsUsed: canonN,
+            }));
+            return {
+              ...buildEngineMeta(),
+              success: true,
+              query: query.trim(),
+              source: method,
+              pricingTier: method,
+              summary: (canon as any).provenance?.summary ?? undefined,
+              marketTier: { value: canonFmv, high: sellZone[1] },
+              buyZone, holdZone, sellZone,
+              fairMarketValue: canonFmv,
+              marketValue: canonFmv,
+              fairMarketValueLive: canonFmv,
+              predictedPrice: canonFmv,
+              predictedPriceRange: [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.05)] as [number, number],
+              fairMarketValueLow: buyZone[0],
+              fairMarketValueHigh: sellZone[1],
+              confidence: (canon as any).confidence ?? 0.85,
+              pricingConfidence: (canon as any).confidence ?? 0.85,
+              fmvMechanism: method,
+              recentComps: provComps,
+              compsUsed: canonN,
+              compsAvailable: canonN,
+              verdict: (canon as any).provenance?.summary ?? "Canonical-FMV direct match.",
+              cardIdentity: {
+                slug,
+                sport: sportGuess,
+                year: parsed.year,
+                setKey: parsed.brand,
+                cardNumber: parsed.cardNumber,
+                parallel: parsed.parallel || "Base",
+                isAuto: parsed.isAuto ?? false,
+                playerName: parsed.playerName ?? null,
+              },
+            };
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "price_canonical_first_error",
+            source: "compiq.routes.price",
+            query, error: (err as Error)?.message ?? String(err),
+          }));
+          // Fall through to computeEstimate — canonical-first is best-effort.
+        }
+      }
+
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price
       // is the free-text alias of /search.
       let est = await computeEstimate(body, {
