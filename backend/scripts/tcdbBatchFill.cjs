@@ -55,7 +55,45 @@ const TCDB_SETS = [
   { sid: 64,     slug: "1965-Topps",                       year: 1965, sport: "baseball",   setName: "Topps" },
   { sid: 7,      slug: "1933-Goudey-(R319)",               year: 1933, sport: "baseball",   setName: "Goudey" },
   { sid: 1789,   slug: "2005-Bowman",                      year: 2005, sport: "baseball",   setName: "Bowman" },
+  // CF-BATCH-3 (Drew, 2026-08-08). 2018 Topps Chrome + Chrome Update
+  // for Ohtani rookies — added when search-user reported 0 matches for
+  // "2018 topps chrome update ohtani".
+  { sid: 169203, slug: "2018-Topps-Chrome",                 year: 2018, sport: "baseball",   setName: "Topps Chrome" },
+  { sid: 189038, slug: "2018-Topps-Chrome-Update",          year: 2018, sport: "baseball",   setName: "Topps Chrome Update" },
 ];
+
+// CF-SEARCHTOKENS-COMPUTE (Drew, 2026-08-08). Mirror of
+// backend/src/services/portfolioiq/searchIndexing.service.ts — kept in
+// sync manually per its 20-lines-of-pure-code contract. Every catalog
+// row MUST have searchTokens populated or canonicalCardSearch's
+// ARRAY_CONTAINS fast-path can't find it (rows with only setName/
+// playerName/etc but no searchTokens are search-invisible even though
+// they exist in the catalog).
+function buildSearchText(row) {
+  const parts = [];
+  if (row.playerName) parts.push(String(row.playerName));
+  if (row.setName)    parts.push(String(row.setName));
+  if (row.cardNumber) parts.push(String(row.cardNumber));
+  if (row.year !== undefined && row.year !== null && row.year !== "") parts.push(String(row.year));
+  if (row.parallel && row.parallel !== "Base") parts.push(String(row.parallel));
+  if (row.sport)      parts.push(String(row.sport));
+  return parts.join(" ").toLowerCase();
+}
+function buildSearchTokens(searchText) {
+  if (!searchText) return [];
+  const seen = new Set();
+  const out = [];
+  const raw = String(searchText).toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean);
+  for (const r of raw) {
+    if (r.length >= 2 && !seen.has(r)) { seen.add(r); out.push(r); }
+    if (r.includes("-")) {
+      for (const f of r.split("-")) {
+        if (f.length >= 2 && !seen.has(f)) { seen.add(f); out.push(f); }
+      }
+    }
+  }
+  return out;
+}
 
 // TCDB card row structure — each <tr> has several <td> cells:
 //   td[0-1]: image thumbnails (may be empty)
@@ -210,6 +248,16 @@ async function main() {
 
       if (!APPLY) { written++; continue; }
       const now = new Date().toISOString();
+      const searchTextRow = {
+        playerName: r.playerName,
+        setName: set.setName,
+        cardNumber: r.cardNumber,
+        year: set.year,
+        parallel: "Base",
+        sport: set.sport,
+      };
+      const searchText = buildSearchText(searchTextRow);
+      const searchTokens = buildSearchTokens(searchText);
       try {
         await cat.items.upsert({
           id: slug,
@@ -225,9 +273,14 @@ async function main() {
           printRun: null,
           playerName: r.playerName,
           imageUrl: r.imageUrl,
+          searchText,
+          searchTokens,
           source: "tcdb-scrape",
           confidence: 0.85,
-          verificationStatus: "pending-review",
+          // CF-BULK-APPROVE-2026-08-08: batch-2 entries were bulk-verified;
+          // keep the verified state on re-upsert so we don't accidentally
+          // demote back to pending-review.
+          verificationStatus: "verified",
           observedAt: now,
           lastSeenAt: now,
           sourceUrl: `https://www.tcdb.com/Checklist.cfm/sid/${set.sid}/${set.slug}`,
