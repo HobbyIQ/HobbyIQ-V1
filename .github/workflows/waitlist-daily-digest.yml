@@ -1,0 +1,86 @@
+name: Waitlist Daily Digest
+
+# CF-WAITLIST-DAILY-DIGEST (Drew, 2026-08-08). Emails Drew a summary of
+# waitlist signups from the last 24h via ACS. Skips silently if no new
+# signups (no "empty digest" spam).
+#
+# Cadence: daily 10 UTC = 6 AM EDT (5 AM EST in winter). Recipient
+# controllable via WAITLIST_DIGEST_TO env var on HobbyIQ3 (defaults to
+# dvabulas@outlook.com). GitHub Actions cron is UTC-only — 10 UTC
+# gives 6 AM Eastern during EDT (Mar-Nov) and 5 AM during EST
+# (Nov-Mar). If you want strict 6 AM year-round, swap cron seasonally.
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # Daily 10 UTC = 6 AM EDT
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'Window hours (default 24). Use for manual catch-up dispatches.'
+        required: false
+        type: string
+        default: '24'
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps + build dist
+        working-directory: backend
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm run build
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Fetch prod env vars (never echoed)
+        id: env
+        run: |
+          COSMOS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          ACS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='ACS_EMAIL_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          FROM_ADDR=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='EMAIL_FROM_ADDRESS'].value" -o tsv | tr -d '\r\n')
+          FROM_NAME=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='EMAIL_FROM_NAME'].value" -o tsv | tr -d '\r\n')
+          DIGEST_TO=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='WAITLIST_DIGEST_TO'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          if [ -z "$ACS_CS" ]; then echo "::error::ACS_EMAIL_CONNECTION_STRING empty"; exit 1; fi
+          if [ -z "$FROM_ADDR" ]; then echo "::error::EMAIL_FROM_ADDRESS empty"; exit 1; fi
+          echo "::add-mask::$COSMOS_CS"
+          echo "::add-mask::$ACS_CS"
+          echo "cs=$COSMOS_CS" >> "$GITHUB_OUTPUT"
+          echo "acs=$ACS_CS" >> "$GITHUB_OUTPUT"
+          echo "from_addr=$FROM_ADDR" >> "$GITHUB_OUTPUT"
+          echo "from_name=$FROM_NAME" >> "$GITHUB_OUTPUT"
+          echo "digest_to=$DIGEST_TO" >> "$GITHUB_OUTPUT"
+      - name: Run digest
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.env.outputs.cs }}
+          ACS_EMAIL_CONNECTION_STRING: ${{ steps.env.outputs.acs }}
+          EMAIL_FROM_ADDRESS: ${{ steps.env.outputs.from_addr }}
+          EMAIL_FROM_NAME: ${{ steps.env.outputs.from_name }}
+          WAITLIST_DIGEST_TO: ${{ steps.env.outputs.digest_to }}
+          WAITLIST_DIGEST_HOURS: ${{ inputs.hours || '24' }}
+        run: |
+          node scripts/emailWaitlistDigest.cjs
