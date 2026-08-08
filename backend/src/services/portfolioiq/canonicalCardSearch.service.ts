@@ -49,6 +49,11 @@ export interface MatchedRange {
 }
 
 export interface CanonicalSearchHit {
+  /** Source of the underlying catalog row (tcdb-scrape, bulk-build-from-pool,
+   *  bccp-product-structure, cardhedge, cardsight, tree-builder-v1,
+   *  sales-derived, etc). Used by the dedup step to prefer clean sources
+   *  over the two known-dirty ones (tree-builder-v1 + sales-derived). */
+  source: string | null;
   hobbyiqCardId: string | null;   // computed if identity fields are complete
   /** Vendor cardId from card_catalog (CH bubble.io id or CS UUID).
    *  Present when the hit came from a vendor row (99% of cases). Null
@@ -760,6 +765,7 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     } catch { hobbyiqCardId = null; }
 
     return {
+      source: typeof c.source === "string" ? c.source : null,
       hobbyiqCardId,
       cardId: typeof c.cardId === "string" ? c.cardId : null,
       player: c.player ?? null,
@@ -809,12 +815,38 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     filtered = filtered.filter((h) => !h.isAutographSet);
   }
 
-  // Dedup by hobbyiqCardId — keep highest-scoring per canonical identity
+  // CF-SOURCE-PRIORITY-DEDUP (Drew, 2026-08-08). Two known-dirty catalog
+  // sources produce polluted playerName strings ("Shohei Ohtani Pitching
+  // Jersey" instead of "Shohei Ohtani") because they were bulk-built
+  // from sold_comps rows before holdingFieldNormalizer got its
+  // subset-descriptor strip fix:
+  //   - sales-derived    (~1.86M rows, per persistVendorSalesToPool comment)
+  //   - tree-builder-v1  (built from same polluted pool)
+  //
+  // These rows also happen to score HIGHER on freetext queries because
+  // they have MORE searchTokens (the descriptor words match too), so
+  // the prior "keep highest score per slug" dedup consistently picked
+  // the dirty variant. Fix: within a canonical-slug bucket, prefer
+  // clean sources; only fall back to dirty if no clean row exists.
+  //
+  // Once holdingFieldNormalizer is fixed and the pool is re-cleaned
+  // (CF-NORMALIZER-SUBSET-STRIP backlog), the tree-builder can be
+  // re-run cleanly and this priority list becomes redundant.
+  const DIRTY_SOURCES = new Set(["sales-derived", "tree-builder-v1"]);
+  const isClean = (h: CanonicalSearchHit) => !h.source || !DIRTY_SOURCES.has(h.source);
+
   const byCanonical = new Map<string, CanonicalSearchHit>();
   for (const h of filtered) {
     const key = h.hobbyiqCardId ?? `${h.releaseName}::${h.cardNumber}::${h.player}`;
     const existing = byCanonical.get(key);
-    if (!existing || h.score > existing.score) byCanonical.set(key, h);
+    if (!existing) { byCanonical.set(key, h); continue; }
+    const hClean = isClean(h);
+    const eClean = isClean(existing);
+    // Prefer clean over dirty regardless of score.
+    if (hClean && !eClean) { byCanonical.set(key, h); continue; }
+    if (!hClean && eClean) continue;
+    // Both same cleanliness class — highest score wins (prior behavior).
+    if (h.score > existing.score) byCanonical.set(key, h);
   }
   const deduped = [...byCanonical.values()].sort((a, b) => b.score - a.score);
 
