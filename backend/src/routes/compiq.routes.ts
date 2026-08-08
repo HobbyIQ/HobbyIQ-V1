@@ -4934,6 +4934,100 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       } catch { /* fall through with slug */ }
     }
 
+    // CF-PRICE-BY-ID-CANONICAL-FALLBACK (Drew, 2026-08-08). If we STILL
+    // hold an hiq: slug after the vendor-cardId lookup (e.g. TCDB-scraped
+    // catalog entries have no CH/CS vendor cardId — cardId==hiq:...), the
+    // downstream CH/CS pipeline can't resolve it and returns
+    // "no-recent-comps" for cards that provably have data. Route
+    // directly to canonical-fmv (which reads our own sold_comps pool
+    // by hiq: slug) and adapt its rich response to the PriceByIdResponse
+    // shape the web/iOS card-detail component expects.
+    if (resolvedCardId.startsWith("hiq:")) {
+      // Inline parallel resolution — resolvedParallelName is declared later
+      // in this handler; recompute here for the canonical-fmv fallback.
+      const earlyParallelName: string =
+        typeof parallelName === "string" && parallelName.length > 0
+          ? parallelName
+          : typeof parallel === "string" && parallel.length > 0
+          ? parallel
+          : "Base";
+      try {
+        const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+        const canon = await computeCanonicalFmv({
+          cardId: resolvedCardId,
+          parallel: earlyParallelName,
+          gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+          gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+          cardYear: null,
+          product: null,
+          player: null,
+          cardNumber: null,
+          freshCompute: false,
+        } as any);
+        if (canon && typeof (canon as any).fmv === "number" && (canon as any).fmv > 0) {
+          const fmv = (canon as any).fmv as number;
+          const compsAvailable = (canon as any).recentRange?.n ?? 0;
+          const provComps = (canon as any).provenance?.comps ?? [];
+          const summary = (canon as any).provenance?.summary ?? "";
+          // Parse "718 same-parallel user comps" for compsAvailable if larger than recentRange.
+          const summaryMatch = /(\d+)\s+same-parallel/.exec(summary);
+          const parallelCount = summaryMatch ? Number(summaryMatch[1]) : compsAvailable;
+          const method = String((canon as any).method || "canonical-fmv");
+          const buyZone: [number, number] = [Math.round(fmv * 0.85), Math.round(fmv * 0.95)];
+          const holdZone: [number, number] = [Math.round(fmv * 0.95), Math.round(fmv * 1.10)];
+          const sellZone: [number, number] = [Math.round(fmv * 1.10), Math.round(fmv * 1.25)];
+          const recentComps = provComps.slice(0, 20).map((c: any) => ({
+            price: Number(c.price ?? 0),
+            soldDate: String(c.soldAt ?? ""),
+            grader: null,
+            gradeValue: null,
+            parallel: c.parallel ?? earlyParallelName ?? null,
+            marketplace: c.source ?? undefined,
+          })).filter((r: any) => r.price > 0 && r.soldDate);
+          const lastSale = recentComps.length > 0 ? {
+            price: recentComps[0].price,
+            soldDate: recentComps[0].soldDate,
+            grader: null,
+            gradeValue: null,
+          } : null;
+          console.log(JSON.stringify({
+            event: "price_by_id_canonical_fmv_fallback",
+            source: "compiq.routes.price-by-id",
+            cardId: resolvedCardId,
+            fmv, compsAvailable: parallelCount, compsUsed: compsAvailable,
+            method,
+          }));
+          return res.json({
+            success: true,
+            cardsightCardId: resolvedCardId,
+            summary: summary || undefined,
+            marketTier: { value: fmv, high: sellZone[1] },
+            buyZone, holdZone, sellZone,
+            fairMarketValueLive: fmv,
+            marketValue: fmv,
+            predictedPrice: fmv,
+            predictedPriceRange: [Math.round(fmv * 0.95), Math.round(fmv * 1.05)] as [number, number],
+            confidence: (canon as any).confidence ?? 0.85,
+            approximate: false,
+            source: method,
+            recentComps,
+            compsUsed: compsAvailable,
+            compsAvailable: parallelCount,
+            lastSale,
+          });
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "price_by_id_canonical_fmv_fallback_error",
+          source: "compiq.routes.price-by-id",
+          cardId: resolvedCardId,
+          error: (err as Error)?.message ?? String(err),
+        }));
+        // Fall through to CH pipeline (which will most likely still fail
+        // for hiq: slugs — but keep the option open).
+      }
+    }
+
     // CF-PARALLEL-AWARE-VALUE (2026-06-09): UUID-shape validation on
     // the optional parallelId. Reject malformed ids at the route layer
     // so downstream code can trust the shape. parallelName is purely
