@@ -4905,13 +4905,22 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       return res.status(400).json({ success: false, error: 'Missing "cardId" field' });
     }
 
-    // CF-PRICE-BY-ID-HIQ-SLUG (Drew, 2026-08-06). Web + iOS card pages
-    // POST here with the card's slug — which is now an `hiq:...` slug
-    // for every search click-through. Downstream Cardsight/CH pipeline
-    // doesn't recognize hiq: slugs and returns "no comps on file" for
-    // every real card. Resolve to the majority vendor cardId (same
-    // pattern as /card-panel and /observed-grade-curve) so the price
-    // fetch actually finds data.
+    // CF-PRICE-BY-ID-CANONICAL-FIRST (Drew, 2026-08-08, revised). Any
+    // request that arrives with an hiq: slug should try canonical-fmv
+    // FIRST. Prior behavior: convert hiq: → vendor cardId (bubble.io),
+    // then hit the CH/CS pipeline. With CH_RUNTIME_DISABLED=true, that
+    // pipeline returns "no-recent-comps" → user sees $0 despite our
+    // own pool having 700+ comps for the exact slug. Canonical-fmv
+    // reads our own sold_comps directly by hobbyiqCardId, so it always
+    // finds what we have. We keep the original hiq: slug as
+    // `originalHiqSlug` so the fallback in `if (originalHiqSlug)` below
+    // can still fire even if vendor-cardId resolution rewrote
+    // `resolvedCardId` to a bubble.io id.
+    const originalHiqSlug: string | null = resolvedCardId.startsWith("hiq:") ? resolvedCardId : null;
+
+    // CF-PRICE-BY-ID-HIQ-SLUG (Drew, 2026-08-06). Vendor-cardId lookup
+    // preserved for callers that still route to CH (rare after canonical-
+    // first — mostly a defense-in-depth path).
     if (resolvedCardId.startsWith("hiq:")) {
       try {
         const { CosmosClient: _CC } = await import("@azure/cosmos");
@@ -4934,15 +4943,15 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       } catch { /* fall through with slug */ }
     }
 
-    // CF-PRICE-BY-ID-CANONICAL-FALLBACK (Drew, 2026-08-08). If we STILL
-    // hold an hiq: slug after the vendor-cardId lookup (e.g. TCDB-scraped
-    // catalog entries have no CH/CS vendor cardId — cardId==hiq:...), the
-    // downstream CH/CS pipeline can't resolve it and returns
-    // "no-recent-comps" for cards that provably have data. Route
-    // directly to canonical-fmv (which reads our own sold_comps pool
-    // by hiq: slug) and adapt its rich response to the PriceByIdResponse
-    // shape the web/iOS card-detail component expects.
-    if (resolvedCardId.startsWith("hiq:")) {
+    // CF-PRICE-BY-ID-CANONICAL-FALLBACK (Drew, 2026-08-08). Route to
+    // canonical-fmv whenever the ORIGINAL request arrived with an hiq:
+    // slug — regardless of whether vendor-cardId lookup rewrote
+    // resolvedCardId to a bubble.io id. Canonical-fmv is authoritative:
+    // it reads our own sold_comps by hobbyiqCardId, which is what iOS
+    // and web actually want. The CH/CS path stays as unreachable
+    // fallback for legacy Cardsight-UUID callers that skip this route
+    // entirely.
+    if (originalHiqSlug) {
       // Inline parallel resolution — resolvedParallelName is declared later
       // in this handler; recompute here for the canonical-fmv fallback.
       const earlyParallelName: string =
@@ -4954,7 +4963,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       try {
         const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
         const canon = await computeCanonicalFmv({
-          cardId: resolvedCardId,
+          cardId: originalHiqSlug,
           parallel: earlyParallelName,
           gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
           gradeValue: typeof gradeValue === "number" ? gradeValue : null,
@@ -4993,13 +5002,13 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           console.log(JSON.stringify({
             event: "price_by_id_canonical_fmv_fallback",
             source: "compiq.routes.price-by-id",
-            cardId: resolvedCardId,
+            cardId: originalHiqSlug,
             fmv, compsAvailable: parallelCount, compsUsed: compsAvailable,
             method,
           }));
           return res.json({
             success: true,
-            cardsightCardId: resolvedCardId,
+            cardsightCardId: originalHiqSlug,
             summary: summary || undefined,
             marketTier: { value: fmv, high: sellZone[1] },
             buyZone, holdZone, sellZone,
@@ -5020,11 +5029,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         console.warn(JSON.stringify({
           event: "price_by_id_canonical_fmv_fallback_error",
           source: "compiq.routes.price-by-id",
-          cardId: resolvedCardId,
+          cardId: originalHiqSlug,
           error: (err as Error)?.message ?? String(err),
         }));
-        // Fall through to CH pipeline (which will most likely still fail
-        // for hiq: slugs — but keep the option open).
+        // Fall through to CH pipeline (defense-in-depth — the CH path
+        // is broken with CH_RUNTIME_DISABLED but keep the option open).
       }
     }
 
