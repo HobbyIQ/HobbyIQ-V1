@@ -185,12 +185,42 @@ async function processBatchAsync(
   //    existing sport IN ('baseball','basketball',...) filters
   //    naturally exclude them from FMV/calibration pools while the
   //    raw data stays queryable for follow-on categorization.
+  // CF-CATEGORY-MARKERS-EXPANDED (Drew, 2026-08-08). Tonight's probe
+  // caught Pokemon rows ("Snorlax - SV08: Surging Sparks") landing as
+  // sport=baseball because TCA's vendor sport field wins over our
+  // title detector, AND the title has no literal word "pokemon" in it
+  // — just the Pokemon character + set code. Extending markers to
+  // catch:
+  //   - Pokemon set-code prefixes (SV##, SWSH##, XY##, BW##, DP##,
+  //     HGSS##, PL##, EX##, TG##, obf, twm etc.)
+  //   - F1 / Formula 1 (was showing up as "Formula Arvid Lindblad
+  //     Autographs" earlier)
+  //   - WWE / WWF / AEW / wrestling
+  //   - UFC / MMA / NASCAR / Racing
+  //   - Card-number in "###/###" format is Pokemon-specific (sports
+  //     never use it — sports cardNumbers are bare integers or
+  //     letter-prefix like BCP-102, CPA-EHA)
   const CATEGORY_MARKERS: Array<[RegExp, string]> = [
     [/\b(pokemon|pok[eé]?mon)\b/i, "pokemon"],
+    // Pokemon set-code prefixes — SV##, SWSH##, XY##, BW##, etc.
+    [/\b(SV\d{1,2}|SWSH\d{1,2}|XY\d{1,3}|BW\d{1,3}|HGSS\d{1,3}|DP\d{1,3}|PL\d{1,3})\b/i, "pokemon"],
+    // Pokemon set names (colon-prefix like "SV: Scarlet & Violet",
+    // "SWSH: ...", "XY: ..." plus set-name words that only Pokemon uses)
+    [/\b(SV:|SWSH:|XY:|BW:|HGSS:|scarlet\s*&\s*violet|sword\s*&\s*shield|prismatic\s+evolutions|surging\s+sparks|obsidian\s+flames|paldea\s+evolved|fusion\s+strike)\b/i, "pokemon"],
+    // Pokemon-only parallel names — "Holofoil" / "Reverse Holofoil" /
+    // "Rainbow Rare" don't appear on sports cards.
+    [/\b(reverse\s+holofoil|holofoil|rainbow\s+rare|full\s+art\s+trainer|shining\s+rare)\b/i, "pokemon"],
+    // Card number formatted as ###/### is Pokemon-only convention.
+    [/\b\d{1,3}\/\d{2,3}\b/, "pokemon"],
     [/\b(yugioh|yu-?gi-?oh)\b/i, "yugioh"],
     [/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i, "tcg-other"],
     [/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i, "anime-tcg"],
-    [/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b)\b/i, "non-sport"],
+    // Non-sport entertainment / IP
+    [/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b|the\s+boys|skybox)\b/i, "non-sport"],
+    // Motorsport
+    [/\b(formula\s*1|formula\s*one|\bf1\b|nascar|indycar|motogp)\b/i, "motorsport"],
+    // Combat sports outside the VALID_5 sports pool
+    [/\b(\bwwe\b|\bwwf\b|\baew\b|wrestling|\bufc\b|\bmma\b|pride\s+fc|bellator)\b/i, "combat-sport"],
   ];
   function detectCategorySport(title: string | null | undefined): string | null {
     if (!title) return null;
@@ -265,15 +295,21 @@ async function processBatchAsync(
     const hint: Record<string, unknown> = {};
     if (t.player) hint.playerName = String(t.player);
     if (typeof t.year === "number") hint.cardYear = t.year;
-    // Sport priority: TCA's explicit sport field wins; else our
-    // TCG/non-sport detector; else let persistVendorSalesToPool guess.
-    // Downstream FMV/calibration filters on sport IN (baseball, basketball,
-    // football, hockey, soccer) — non-sport values stay in the pool but
-    // don't corrupt those aggregations.
-    if (t.sport) hint.sport = String(t.sport).toLowerCase();
-    else {
-      const catSport = detectCategorySport(vsRow.title);
-      if (catSport) hint.sport = catSport;
+    // CF-SPORT-PRIORITY-INVERT (Drew, 2026-08-08). Title-based
+    // non-sport detection now wins over TCA's vendor sport tag.
+    // Rationale: TCA defaults many TCG cards (Pokemon SV/SWSH sets,
+    // etc.) to sport="baseball", which poisoned baseball FMV pools
+    // for weeks. Our regex-based detector catches Pokemon/YGO/MTG/
+    // motorsport/combat-sport reliably from title text. Only when
+    // NO non-sport marker fires do we trust TCA's tag.
+    // Downstream FMV/calibration filters on sport IN (baseball,
+    // basketball, football, hockey, soccer) — non-sport tagged
+    // values stay in the pool but don't corrupt those aggregations.
+    const catSport = detectCategorySport(vsRow.title);
+    if (catSport) {
+      hint.sport = catSport;
+    } else if (t.sport) {
+      hint.sport = String(t.sport).toLowerCase();
     }
     if (t.card_number) hint.cardNumber = String(t.card_number);
     if (t.card_set) hint.setName = String(t.card_set);
