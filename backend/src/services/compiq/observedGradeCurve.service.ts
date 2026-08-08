@@ -1875,7 +1875,19 @@ export async function buildObservedGradeCurve(
     // computed from too-thin a pool then failed the sampleCount>0 gate
     // for some tiers, silently reverting to the CH-based initial-pass
     // anchor bleed.
-    const hiqOpt = String(cardId).startsWith("hiq:") ? { hobbyiqCardId: cardId } : {};
+    //
+    // CF-FIXED-WIDE-WINDOW (Drew, 2026-08-08). Also pass
+    // fixedWindowDays: 180 so unified queries the full 6-month pool
+    // instead of adaptive-cascading down to a 7-day window based on
+    // total-pool density. The grade-curve panel needs EVERY tier that
+    // has any activity in the last 6 months to receive a leading-edge
+    // MV + trend. Adaptive-tight (7d) would exclude PSA 10 for Ohtani
+    // (newest sale 9 days ago) from unified.gradeCurve entirely →
+    // no leading-edge, no trend, no MV correction. 180d catches all.
+    const hiqOpt: Parameters<typeof computeUnifiedPrice>[1] = {
+      fixedWindowDays: 180,
+    };
+    if (String(cardId).startsWith("hiq:")) hiqOpt.hobbyiqCardId = cardId;
     const u = await computeUnifiedPrice(cardId, hiqOpt);
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
     for (const entry of curve.entries) {

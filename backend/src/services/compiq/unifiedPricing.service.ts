@@ -282,6 +282,16 @@ export async function computeUnifiedPrice(
     // the requesting userId here so the user's own eBay-import purchases
     // don't recycle back as market comps against their own holdings.
     excludeContributorUserId?: string | null;
+    // CF-FIXED-WIDE-WINDOW (Drew, 2026-08-08). Grade-curve panel needs
+    // every tier that has ANY recent activity, not just the ones with
+    // sales in the adaptive-selected (usually tight) window. When
+    // fixedWindowDays is set, skip the WINDOWS cascade and query
+    // exactly that many days. buildObservedGradeCurve passes 180.
+    // Ohtani PSA 10 example: newest sale 2026-07-30 (9d old) was
+    // excluded from the 7-day window → PSA 10 wasn't in unified.gradeCurve
+    // at all → no leading-edge trend. Fixed 180 window catches every
+    // tier with sales in the last 6 months.
+    fixedWindowDays?: number;
   } = {},
 ): Promise<UnifiedPriceResult> {
   const nowMs = Date.now();
@@ -304,9 +314,14 @@ export async function computeUnifiedPrice(
   if (!container) return empty;
 
   // Adaptive window — start tight, widen until direct-grade density
-  // supports the requested read.
+  // supports the requested read. When opts.fixedWindowDays is passed
+  // (grade-curve panel), skip the cascade and use exactly that window.
   let selectedWindow = 180;
   let comps: RawCompRow[] = [];
+  if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
+    selectedWindow = opts.fixedWindowDays;
+    comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, selectedWindow, opts.excludeContributorUserId ?? null);
+  } else {
   for (const w of WINDOWS) {
     comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, w.days, opts.excludeContributorUserId ?? null);
     // If a specific grade was requested, measure density on THAT grade
@@ -320,6 +335,7 @@ export async function computeUnifiedPrice(
       selectedWindow = w.days;
       break;
     }
+  }
   }
   if (comps.length === 0) return empty;
 
