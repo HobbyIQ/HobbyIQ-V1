@@ -345,6 +345,68 @@ export async function computeUnifiedPrice(
     if (wMedian === null || rows.length < 4) {
       return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
+
+    // CF-LEADING-EDGE-MV (Drew, 2026-08-08). Tier 1 of the recency
+    // cascade: when the last 3 days have >= LEADING_EDGE_MIN sales,
+    // marketValue is the plain median of those sales — captures the
+    // "trading at $X now" reality for actively-moving cards. Weighted
+    // median over 7-180d smooths older comps that no longer reflect the
+    // current clearing price. Concrete case: Ohtani 2018 BC RC PSA 9 on
+    // 2026-08-08. Last 3d has 4 sales at $2,600 / $2,900 / $3,000 /
+    // $3,000. Plain median = $3,000. Prior form returned wMedian ~$2,700
+    // (7d weighted median including $2,432 and $2,650 from Aug 5-6).
+    // Trend signal still computed from wider window when available.
+    // CF-LEADING-EDGE-BY-COUNT (Drew, 2026-08-08). Switched from
+    // "last N days" to "last N SALES by soldAt DESC" per Drew:
+    // "use 3 4 5". Anchor MV on the freshest cluster regardless of
+    // density. Ohtani PSA 9 example — last-3 sales are all Aug 7 at
+    // $2,900/$3,000/$3,000 (median $3,000). Prior-N form using days
+    // was still averaging in Aug 5-6 sales at $2,432-$2,700 (median
+    // dropped to $2,727). Count-based leading edge picks the true
+    // current clearing price.
+    //
+    // Anchor: prefer 5-of-latest if available, else fall through to
+    // 4, then 3. Below LEADING_EDGE_MIN = 3, no leading edge — fall
+    // through to weighted median (last-resort).
+    // CF-LEADING-N-TUNE (Drew, 2026-08-08). Prefer N=3 not 5. Bias
+    // toward the FRESHEST cluster — median of last 5 pulls in older
+    // dips from within the week. Ohtani PSA 9 concrete: last-5 median
+    // $2,727 (includes an Aug-6 $2,432 low), last-3 median $2,900
+    // (Aug-7 cluster only). Latter matches "trading at $3k now".
+    const LEADING_EDGE_MIN = 3;
+    const LEADING_EDGE_PREF = 3;
+    const LEADING_PRIOR_N = 10;  // trend from next-oldest 10 sales
+    // Sort rows by soldAt DESC. Nulls / bad dates go last.
+    const timedRows = rows
+      .map((r) => ({ r, t: Date.parse(r.soldAt) }))
+      .filter((x) => Number.isFinite(x.t))
+      .sort((a, b) => b.t - a.t);
+    const leadingCount = Math.min(LEADING_EDGE_PREF, timedRows.length);
+    const leadingSales = timedRows.slice(0, leadingCount).map((x) => Number(x.r.price));
+    const leadingPriorSales = timedRows.slice(leadingCount, leadingCount + LEADING_PRIOR_N).map((x) => Number(x.r.price));
+    function medOf(arr: number[]): number | null {
+      if (!arr.length) return null;
+      const s = arr.slice().sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+    }
+    let leadingEdgeMv: number | null = null;
+    let leadingEdgeTrendPct: number | null = null;
+    let leadingEdgeDirection: "up" | "down" | "flat" = "flat";
+    if (leadingSales.length >= LEADING_EDGE_MIN) {
+      leadingEdgeMv = medOf(leadingSales);
+      const priorMed = medOf(leadingPriorSales);
+      if (leadingEdgeMv != null && priorMed != null && priorMed > 0) {
+        const ratio = Math.max(0.5, Math.min(1.5, leadingEdgeMv / priorMed));
+        // Approximate: leading N sales cover ~half a week of activity
+        // (varies by density). Normalize the ratio to per-week for the
+        // pctPerWeek signal, then let the caller project forward.
+        leadingEdgeTrendPct = Math.round(((ratio - 1) * 100) * 10) / 10;
+        leadingEdgeDirection = Math.abs(leadingEdgeTrendPct) < 1 ? "flat"
+          : leadingEdgeTrendPct > 0 ? "up" : "down";
+      }
+    }
+
     const cutoffMs = nowMs - 14 * 86400_000;
     const recent = rows.filter((r) => {
       const t = Date.parse(r.soldAt);
@@ -355,6 +417,18 @@ export async function computeUnifiedPrice(
       return Number.isFinite(t) && t < cutoffMs;
     });
     if (recent.length < 2 || prior.length < 2) {
+      // Not enough for wider trend — leading-edge stands alone.
+      if (leadingEdgeMv != null) {
+        const forwardFactor = leadingEdgeTrendPct != null
+          ? 1 + (leadingEdgeTrendPct / 100) * (7 / 7)  // project 7 days forward
+          : 1;
+        return {
+          marketValue: leadingEdgeMv,
+          predictedPrice: Math.round(leadingEdgeMv * forwardFactor * 100) / 100,
+          trendPctPerWeek: leadingEdgeTrendPct,
+          trendDirection: leadingEdgeDirection,
+        };
+      }
       return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
     const rMed = weightedMedian(recent, nowMs);
@@ -365,20 +439,42 @@ export async function computeUnifiedPrice(
     const ratio = rMed / pMed;
     // Clamp to [0.5, 1.5] — anything more extreme is thin-pool noise.
     const cappedRatio = Math.max(0.5, Math.min(1.5, ratio));
-    // CF-UNIFIED-PRICING-MARKETVALUE (Drew, 2026-08-04). marketValue
-    // applies the FULL trend ratio so wMedian lifts to the current
-    // trend-implied clearing price. Fixes strong-trend under-marking:
-    // Ohtani PSA 9 wMedian $2,326 was dragged down by older July sales
-    // while August was clearing $2,700+ — marketValue $2,326 × 1.12 ≈
-    // $2,610 matches the recent 4-sale August cluster.
+    const widerPctPerWeek = Math.round((cappedRatio - 1) * 500) / 10;
+
+    // CF-LEADING-ANCHOR-CLEAN (Drew, 2026-08-08). When leading-edge
+    // (last 3-5 sales) fired, MV is the leading median directly — no
+    // multiplication by the wider trend. The wider trend may be flat
+    // or slightly negative because it includes older comps that no
+    // longer reflect the current clearing price. Multiplying the
+    // leading anchor by that ratio drags MV DOWN when the market has
+    // clearly moved UP recently (Ohtani PSA 9: leading median $2,900
+    // × wider ratio 0.94 = $2,727 — wrong direction).
+    //
+    // Trend %: prefer leading-edge trend (last-5 vs next-10) which
+    // reflects the actual current move; fall back to wider if the
+    // leading signal wasn't computable. Predicted = MV × (1 + trend%
+    // × forward-factor).
+    if (leadingEdgeMv != null) {
+      const trendPct = leadingEdgeTrendPct ?? widerPctPerWeek;
+      const direction: "up" | "down" | "flat" = leadingEdgeTrendPct != null
+        ? leadingEdgeDirection
+        : (Math.abs(widerPctPerWeek) < 1 ? "flat" : (widerPctPerWeek > 0 ? "up" : "down"));
+      // Project 7d forward
+      const forwardFactor = 1 + (trendPct / 100);
+      return {
+        marketValue: Math.round(leadingEdgeMv * 100) / 100,
+        predictedPrice: Math.round(leadingEdgeMv * forwardFactor * 100) / 100,
+        trendPctPerWeek: trendPct,
+        trendDirection: direction,
+      };
+    }
+
+    // Leading-edge unavailable — fall back to wMedian × wider trend.
     const marketValue = Math.round(wMedian * cappedRatio * 100) / 100;
-    // predictedPrice projects 7d forward from marketValue (sqrt of the
-    // 14d comparison window since we're going half a step further out).
     const predicted = Math.round(wMedian * Math.pow(cappedRatio, 1.5) * 100) / 100;
-    const pctPerWeek = Math.round((cappedRatio - 1) * 500) / 10; // ~ (ratio - 1) × 50 = %/week
     const direction: "up" | "down" | "flat" =
-      Math.abs(pctPerWeek) < 1 ? "flat" : (pctPerWeek > 0 ? "up" : "down");
-    return { marketValue, predictedPrice: predicted, trendPctPerWeek: pctPerWeek, trendDirection: direction };
+      Math.abs(widerPctPerWeek) < 1 ? "flat" : (widerPctPerWeek > 0 ? "up" : "down");
+    return { marketValue, predictedPrice: predicted, trendPctPerWeek: widerPctPerWeek, trendDirection: direction };
   }
 
   const gradeCurve: UnifiedGradeEntry[] = [];
