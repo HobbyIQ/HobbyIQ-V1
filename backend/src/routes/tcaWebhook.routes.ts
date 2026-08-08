@@ -222,8 +222,14 @@ async function processBatchAsync(
     [/\b(yugioh|yu-?gi-?oh)\b/i, "yugioh"],
     [/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i, "tcg-other"],
     [/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i, "anime-tcg"],
-    // Non-sport entertainment / IP
-    [/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b|the\s+boys|skybox)\b/i, "non-sport"],
+    // Non-sport entertainment / IP.
+    // CF-SKYBOX-IS-NBA (Drew, 2026-08-08). Removed "skybox" from this
+    // list — Skybox is primarily an NBA brand (1990s Skybox Premium,
+    // Skybox EX). The only Skybox non-sport product I've seen is
+    // "The Boys" trading cards, which is already caught by "the boys".
+    // If Skybox has other non-sport lines they'll need explicit
+    // product-name entries here, not a brand-wide gate.
+    [/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b|the\s+boys)\b/i, "non-sport"],
     // Motorsport
     [/\b(formula\s*1|formula\s*one|\bf1\b|nascar|indycar|motogp)\b/i, "motorsport"],
     // Combat sports outside the VALID_5 sports pool
