@@ -40,6 +40,21 @@ const TCDB_SETS = [
   { sid: 2067,   slug: "1986-87-Fleer",         year: 1986, sport: "basketball", setName: "Fleer" },              // Jordan #57
   { sid: 2031,   slug: "1980-81-Topps",         year: 1980, sport: "basketball", setName: "Topps" },              // vintage
   { sid: 2701,   slug: "1997-98-Topps",         year: 1997, sport: "basketball", setName: "Topps" },
+  // CF-BATCH-2 (Drew, 2026-08-08). Second wave of sids covering the
+  // remaining top-buckets from analyzeCatalogGaps — vintage baseball
+  // (Topps 1965/1971, 1933 Goudey), 90s multi-sport (1991 Score BB/FB,
+  // 1992 Studio), 90s NBA (Metal Universe, Skybox Premium, Fleer),
+  // 2005 Bowman.
+  { sid: 2654,   slug: "1997-98-Metal-Universe",           year: 1997, sport: "basketball", setName: "Metal Universe" },
+  { sid: 2664,   slug: "1997-98-SkyBox-Premium",           year: 1997, sport: "basketball", setName: "SkyBox Premium" },
+  { sid: 2627,   slug: "1997-98-Fleer",                    year: 1997, sport: "basketball", setName: "Fleer" },
+  { sid: 210,    slug: "1992-Studio",                      year: 1992, sport: "baseball",   setName: "Studio" },
+  { sid: 160,    slug: "1991-Score",                       year: 1991, sport: "baseball",   setName: "Score" },
+  { sid: 3270,   slug: "1991-Score",                       year: 1991, sport: "football",   setName: "Score" },
+  { sid: 71,     slug: "1971-Topps",                       year: 1971, sport: "baseball",   setName: "Topps" },
+  { sid: 64,     slug: "1965-Topps",                       year: 1965, sport: "baseball",   setName: "Topps" },
+  { sid: 7,      slug: "1933-Goudey-(R319)",               year: 1933, sport: "baseball",   setName: "Goudey" },
+  { sid: 1789,   slug: "2005-Bowman",                      year: 2005, sport: "baseball",   setName: "Bowman" },
 ];
 
 // TCDB card row structure — each <tr> has several <td> cells:

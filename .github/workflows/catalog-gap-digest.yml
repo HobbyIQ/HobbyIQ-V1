@@ -1,0 +1,90 @@
+name: Catalog Gap Digest
+
+# CF-CATALOG-GAP-DIGEST (Drew, 2026-08-08). Emails Drew a ranked list of
+# the top-N catalog gap buckets — sets appearing most frequently in the
+# sold_comps unmatched pool with no card_catalog coverage. Each morning's
+# report is the day's batch-fill hit-list for tcdbBatchFill.cjs.
+#
+# Cadence: daily 10 UTC = 6 AM EDT (mirrors waitlist digest). Skips
+# silently on empty pool.
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # Daily 10 UTC = 6 AM EDT
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'Top-N buckets to report (default 20)'
+        required: false
+        type: string
+        default: '20'
+      sample_limit:
+        description: 'Pool scan cap (default 15000)'
+        required: false
+        type: string
+        default: '15000'
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps + build dist
+        working-directory: backend
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm run build
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Fetch prod env vars (never echoed)
+        id: env
+        run: |
+          COSMOS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          ACS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='ACS_EMAIL_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          FROM_ADDR=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='EMAIL_FROM_ADDRESS'].value" -o tsv | tr -d '\r\n')
+          FROM_NAME=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='EMAIL_FROM_NAME'].value" -o tsv | tr -d '\r\n')
+          DIGEST_TO=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='GAP_DIGEST_TO'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          if [ -z "$ACS_CS" ]; then echo "::error::ACS_EMAIL_CONNECTION_STRING empty"; exit 1; fi
+          if [ -z "$FROM_ADDR" ]; then echo "::error::EMAIL_FROM_ADDRESS empty"; exit 1; fi
+          echo "::add-mask::$COSMOS_CS"
+          echo "::add-mask::$ACS_CS"
+          echo "cs=$COSMOS_CS" >> "$GITHUB_OUTPUT"
+          echo "acs=$ACS_CS" >> "$GITHUB_OUTPUT"
+          echo "from_addr=$FROM_ADDR" >> "$GITHUB_OUTPUT"
+          echo "from_name=$FROM_NAME" >> "$GITHUB_OUTPUT"
+          echo "digest_to=$DIGEST_TO" >> "$GITHUB_OUTPUT"
+      - name: Run gap digest
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.env.outputs.cs }}
+          ACS_EMAIL_CONNECTION_STRING: ${{ steps.env.outputs.acs }}
+          EMAIL_FROM_ADDRESS: ${{ steps.env.outputs.from_addr }}
+          EMAIL_FROM_NAME: ${{ steps.env.outputs.from_name }}
+          GAP_DIGEST_TO: ${{ steps.env.outputs.digest_to }}
+          GAP_DIGEST_TOP_N: ${{ inputs.top_n || '20' }}
+          GAP_DIGEST_SAMPLE_LIMIT: ${{ inputs.sample_limit || '15000' }}
+        run: |
+          node scripts/emailCatalogGapDigest.cjs
