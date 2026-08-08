@@ -34,13 +34,28 @@ interface Cache {
   expiresAt: number;
 }
 let cache: Cache | null = null;
-// CF-LIVE-STATS (Drew, 2026-08-05). Cache dropped from 15min → 15s so
-// the landing-page LiveStatsStrip's ~20s poll cadence sees real growth
-// deltas. Cross-partition COUNT(*) on Cosmos ~200-400 RU per counter;
-// aggregate cost with a 15s cache is negligible even at spiky launch
-// traffic. Response also carries `Cache-Control: max-age=15` so shared
-// caches / CDNs stay in step.
-const TTL_MS = 15 * 1000;
+// CF-LIVE-STATS-STABILITY (Drew, 2026-08-08). Two-part fix:
+//
+// 1. Cache TTL bumped 15s → 5min. Prior 15s meant nearly every request
+//    could race Cosmos cross-partition COUNT queries. sold_comps at
+//    3.9M rows + card_catalog at 5.7M rows chew through RU budget on
+//    every scan — at card_catalog's 4K RU cap the query can take
+//    10-30s or 429-throttle entirely, and the endpoint returned
+//    hardcoded fallback numbers (3.8M / 3.5M), making the LiveStatsStrip
+//    counter visibly go BACKWARDS. 5min cache = ~12 Cosmos hits/hour
+//    instead of ~240, essentially eliminating throttling pressure.
+//
+// 2. Last-known-good persistence — when fetchLiveStats returns null
+//    (timeout, throttle, etc.), the cache serves the PREVIOUS cached
+//    value instead of the hardcoded fallback constants. Counter never
+//    regresses; at worst it stops advancing until the next successful
+//    query.
+//
+// 3. Single-flight inflight guard — concurrent requests during a cache
+//    miss share the same promise instead of each firing their own
+//    cross-partition scan.
+const TTL_MS = 5 * 60 * 1000;
+let inflight: Promise<PublicStats | null> | null = null;
 
 async function fetchLiveStats(): Promise<PublicStats | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -85,28 +100,53 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
   }
 }
 
+const FALLBACK_ON_COLD_START: PublicStats = {
+  // Only used when the endpoint has never had a successful Cosmos
+  // fetch AND cache is empty (first cold start after restart, before
+  // any query succeeds). Any later failure serves stale-but-real
+  // cached values instead.
+  soldCompsIndexed: 3_900_000,
+  cardsWithSlug: 5_700_000,
+  productsIndexed: 3_600,
+  categories: 4,
+  sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
+  dataSourceCount: 6,
+  generatedAt: new Date().toISOString(),
+};
+
 router.get("/public", async (_req: Request, res: Response) => {
   const now = Date.now();
+  // Fresh cache — serve immediately.
   if (cache && cache.expiresAt > now) {
-    res.set("Cache-Control", "public, max-age=15");
+    res.set("Cache-Control", "public, max-age=60");
     res.json(cache.payload);
     return;
   }
-  const fresh = await fetchLiveStats();
-  const payload: PublicStats = fresh ?? {
-    // Fallback numbers — refreshed 2026-08-05 from live counts. Round
-    // down slightly so we never overstate on Cosmos-unavailable.
-    soldCompsIndexed: 3_800_000,        // ~3.88M sold_comps rows as of 2026-08-05
-    cardsWithSlug: 3_500_000,           // ~3.53M total card_catalog rows across all sources
-    productsIndexed: 3_600,             // BCCP 3,075 + CLC 547 + TCDB (climbing)
-    categories: 4,
-    sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
-    dataSourceCount: 6,
-    generatedAt: new Date().toISOString(),
-  };
-  cache = { payload, expiresAt: now + TTL_MS };
-  res.set("Cache-Control", "public, max-age=15");
-  res.json(payload);
+  // Cache expired — single-flight: concurrent requests await the same fetch.
+  if (!inflight) {
+    inflight = fetchLiveStats().finally(() => { inflight = null; });
+  }
+  const fresh = await inflight;
+  if (fresh) {
+    // Successful fetch — advance the cache.
+    cache = { payload: fresh, expiresAt: now + TTL_MS };
+    res.set("Cache-Control", "public, max-age=60");
+    res.json(fresh);
+    return;
+  }
+  // Fetch failed — serve the LAST-KNOWN-GOOD cached value (never
+  // regress the counter). Extend the expiry a bit so we don't hammer
+  // Cosmos while it's clearly struggling.
+  if (cache) {
+    cache.expiresAt = now + 60_000;   // 1 min recheck cadence during Cosmos trouble
+    res.set("Cache-Control", "public, max-age=60");
+    res.json(cache.payload);
+    return;
+  }
+  // Truly cold start with no prior success — serve the safety-net floor.
+  cache = { payload: FALLBACK_ON_COLD_START, expiresAt: now + 60_000 };
+  res.set("Cache-Control", "public, max-age=60");
+  res.json(FALLBACK_ON_COLD_START);
 });
 
 export default router;
