@@ -129,6 +129,19 @@ const PLAYERNAME_LEADING_NOISE_EXTRA = [
   "variation",  // \"Action Variation\" trailing word
   "sp",         // \"SP\" short-print marker
   "ssp",        // \"SSP\" super short-print marker
+  // CF-INSERT-LEADING-NOISE (Drew, 2026-08-08). Observed catalog rows
+  // where insert-set descriptors leaked to the front of playerName:
+  //   "Debut Shohei Ohtani"          (2018 Topps Update US285)
+  //   "Complete Set Shohei Ohtani"   (Topps Update DRIP-30)
+  //   "Rookie Debut Shohei Ohtani"   (variant)
+  // Adding these lets R4 strip them so playerName resolves clean.
+  "debut",
+  "rookie",     // "Rookie Debut …" leading combo
+  "complete",   // "Complete Set …"
+  "set",        // when "set" leads (only after "complete" strip)
+  "the",        // "The Show …" occasionally
+  "an",         // "An International …"
+  "a",          // rare, "A Debut …"
 ];
 
 /**
@@ -311,6 +324,29 @@ const RULES: Rule[] = [
         "variation", "sp", "ssp",
         // Team-designation trailing tokens that leak in occasionally
         "rc", "rookie",
+        // CF-INSERT-TRAILING-NOISE (Drew, 2026-08-08). Insert subset
+        // descriptors that vendors concatenate into playerName:
+        //   "Shohei Ohtani Pitching Jersey"          (US1 uniform-swatch)
+        //   "Shohei Ohtani Highlights Checklist"     (US189 checklist card)
+        //   "Shohei Ohtani In The"                   (LITM-21 "In The Making")
+        //   "Shohei Ohtani An International Affair"  (IA-23 subset)
+        //   "Shohei Ohtani Low Pop"                  (holder-descriptor leak)
+        //   "Shohei Ohtani All Star Celebration"     (ASG subset)
+        // Loop-stripping so multi-word tails collapse cleanly.
+        "jersey", "highlights", "checklist", "affair",
+        "international", "national", "celebration", "making",
+        "show", "story", "moments", "moment",
+        "in", "the", "of", "an", "a", "for",  // conjunctions/articles that survive after descriptor strip
+        "low", "pop",                          // pop-report leak
+        "all", "star",                         // "All Star Celebration"
+        // Set / brand words that leak into the tail of playerName from
+        // vendor titles like "SHOHEI OHTANI 2018 Topps Update An Intl
+        // Affair". These are the same words in PLAYERNAME_LEADING_NOISE_EXTRA
+        // — safe to strip trailing too (no player's real name ends in
+        // "Topps" or "Bowman").
+        "topps", "bowman", "panini", "prizm", "chrome", "update",
+        "select", "optic", "mosaic", "sapphire", "heritage", "sterling",
+        "prospects", "prospect", "draft",
       ]);
       const tokens = name.split(/\s+/).filter((t) => t.length > 0);
       let j = tokens.length;
@@ -320,6 +356,59 @@ const RULES: Rule[] = [
       const rebuilt = tokens.slice(0, j).join(" ");
       changes.push({ rule: "playerName_strip_trailing_action", field: "playerName", before: name, after: rebuilt });
       return { ...fields, playerName: rebuilt };
+    },
+  },
+
+  // ── R4c playerName: strip trailing 4-digit years ────────────────────
+  // CF-YEAR-LEAK-IN-NAME (Drew, 2026-08-08). Vendor titles sometimes
+  // duplicate the year: "SHOHEI OHTANI 2018 2018 Topps Update An
+  // International Affair" → after subset strip playerName becomes
+  // "SHOHEI OHTANI 2018 2018". Strip any trailing 1900-2100 year
+  // tokens (loop so double-leak collapses).
+  {
+    name: "playerName_strip_trailing_year",
+    apply(fields, changes) {
+      const name = fields.playerName;
+      if (!name) return fields;
+      const tokens = name.split(/\s+/).filter((t) => t.length > 0);
+      let j = tokens.length;
+      while (j > 0) {
+        const t = tokens[j - 1];
+        if (!/^\d{4}$/.test(t)) break;
+        const n = Number(t);
+        if (n < 1900 || n > 2100) break;
+        j--;
+      }
+      if (j === tokens.length) return fields;
+      if (j === 0) return fields;
+      const rebuilt = tokens.slice(0, j).join(" ");
+      changes.push({ rule: "playerName_strip_trailing_year", field: "playerName", before: name, after: rebuilt });
+      return { ...fields, playerName: rebuilt };
+    },
+  },
+
+  // ── R4d playerName: title-case an ALL-CAPS name ─────────────────────
+  // CF-ALLCAPS-PLAYERNAME (Drew, 2026-08-08). Vendors occasionally emit
+  // "SHOHEI OHTANI" — canonical playerName is "Shohei Ohtani" per the
+  // Cardsight / TCDB convention. Only title-case when the WHOLE name
+  // is uppercase (mixed-case names like "Cal Ripken Jr" stay intact).
+  {
+    name: "playerName_title_case_all_caps",
+    apply(fields, changes) {
+      const name = fields.playerName;
+      if (!name) return fields;
+      // Only trigger when the name is entirely uppercase AND has at
+      // least one lowercase-eligible letter (skip acronym-only names).
+      const hasLetter = /[A-Z]/.test(name);
+      const hasLower = /[a-z]/.test(name);
+      if (!hasLetter || hasLower) return fields;
+      const titled = name
+        .split(/\s+/)
+        .map((t) => t.length ? t[0].toUpperCase() + t.slice(1).toLowerCase() : t)
+        .join(" ");
+      if (titled === name) return fields;
+      changes.push({ rule: "playerName_title_case_all_caps", field: "playerName", before: name, after: titled });
+      return { ...fields, playerName: titled };
     },
   },
 
