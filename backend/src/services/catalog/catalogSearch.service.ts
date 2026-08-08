@@ -118,6 +118,16 @@ export async function searchCatalog(
     wherePieces.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`);
     wherePieces.push(`(IS_DEFINED(c.playerName) AND CONTAINS(LOWER(c.playerName), @t${i}))`);
     wherePieces.push(`(IS_DEFINED(c.setKey) AND CONTAINS(LOWER(c.setKey), @t${i}))`);
+    // CF-CATALOG-SETNAME-MATCH (Drew, 2026-08-08). Some catalog rows
+    // populate setName (or the reserved-word field c["set"]) but not
+    // setKey — including all TCDB batch-fill entries and older Cardsight
+    // rows. Previously WHERE searched setKey only, so multi-word queries
+    // like "2018 topps chrome update ohtani" would fail to score high
+    // enough on catalog-first and fall through to CH freetext. That
+    // fallback broke when CH_RUNTIME_DISABLED was flipped on. Searching
+    // setName + set closes the gap so catalog-first is truly self-sufficient.
+    wherePieces.push(`(IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @t${i}))`);
+    wherePieces.push(`(IS_DEFINED(c["set"]) AND CONTAINS(LOWER(c["set"]), @t${i}))`);
     wherePieces.push(`(IS_DEFINED(c.cardNumber) AND CONTAINS(LOWER(c.cardNumber), @t${i}))`);
     // CF-CATALOG-VARIANT-MATCH (Drew, 2026-08-06). Also match variant
     // node parallel/parallelSlug so a query with a finish token like
@@ -144,7 +154,7 @@ export async function searchCatalog(
   const scopeAnd = scopes.length > 0 ? " AND " + scopes.join(" AND ") : "";
 
   const qspec = {
-    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c["set"] AS setName, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl FROM c WHERE (${searchOr})${scopeAnd}`,
+    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl FROM c WHERE (${searchOr})${scopeAnd}`,
     parameters: params,
   };
 
@@ -156,6 +166,7 @@ export async function searchCatalog(
     year?: number;
     setKey?: string;
     setName?: string;
+    setNameFromSet?: string;  // aliased from c["set"] — some legacy rows use the reserved-word field
     parallel?: string;
     parallelSlug?: string;
     isAuto?: boolean;
@@ -188,7 +199,10 @@ export async function searchCatalog(
   for (const r of rows) {
     const rowTokens = new Set((r.searchTokens ?? []).map((t) => t.toLowerCase()));
     const rowPlayer = String(r.playerName ?? "").toLowerCase();
-    const rowSet = String(r.setKey ?? "").toLowerCase();
+    // Pick whichever set field is populated: setKey → setName → c["set"].
+    // Rows differ across ingest sources (TCDB uses setName, tree cards use
+    // setKey, legacy Cardsight uses c["set"]).
+    const rowSet = String(r.setKey || r.setName || r.setNameFromSet || "").toLowerCase();
     const rowNumber = String(r.cardNumber ?? "").toLowerCase();
     const rowYear = r.year != null ? String(r.year) : "";
     const rowParallel = String(r.parallel ?? "").toLowerCase();
