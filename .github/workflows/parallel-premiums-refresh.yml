@@ -1,13 +1,14 @@
-name: Parallel Premiums Refresh (weekly)
+name: Parallel Premiums Refresh (nightly)
 
 # CF-PARALLEL-PREMIUMS-REFRESH (Drew, 2026-08-07). Auto-refreshes
-# parallel-premiums-latest.json weekly from OUR sold_comps pool
+# parallel-premiums-latest.json NIGHTLY from OUR sold_comps pool
 # (not vendor APIs — matches the calibration-from-our-pool-only
 # doctrine). Replaces the prior manual-only, CH-based pipeline that
 # went 5+ weeks stale between runs and would die when CH lapses.
 #
-# Cadence: Sundays 12 UTC (8 AM ET). Runs AFTER grade-calibration
-# (10 UTC) so we don't hit Cosmos with two heavy scans at once.
+# Cadence: nightly 12 UTC (8 AM ET). Runs AFTER grade-calibration
+# weekly (Sundays 10 UTC) so on Sundays we let grade-cal finish
+# first — 2h buffer between the two.
 #
 # Same branch-push pattern as grade-calibration-refresh: branch
 # protection blocks bot commits to main, so we push to a dated
@@ -21,7 +22,7 @@ name: Parallel Premiums Refresh (weekly)
 
 on:
   schedule:
-    - cron: "0 12 * * 0"   # Sundays 12 UTC = 8 AM ET
+    - cron: "0 12 * * *"   # Nightly 12 UTC = 8 AM ET
   workflow_dispatch:
     inputs:
       window_days:
