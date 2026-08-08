@@ -57,6 +57,35 @@ let cache: Cache | null = null;
 const TTL_MS = 5 * 60 * 1000;
 let inflight: Promise<PublicStats | null> | null = null;
 
+// CF-STATS-BACKGROUND-REFRESH (Drew, 2026-08-08). Auto-refresh cache
+// every REFRESH_INTERVAL_MS regardless of traffic. Combined with the
+// 5-min request-served TTL this means every request served has data
+// < 30s old — visible ticker movement on the landing page even when
+// traffic is low. The single-flight guard shared with request-served
+// fetches ensures we never double-scan Cosmos.
+const REFRESH_INTERVAL_MS = 30 * 1000;
+function refreshCacheInBackground(): void {
+  if (inflight) return;   // request-served fetch already in flight; skip this tick
+  inflight = fetchLiveStats().finally(() => { inflight = null; });
+  inflight.then((fresh) => {
+    if (fresh) {
+      cache = { payload: fresh, expiresAt: Date.now() + TTL_MS };
+    }
+    // On null (failure), leave existing cache alone — last-known-good
+    // wins. The next tick will retry.
+  }).catch(() => { /* swallowed to keep the timer alive */ });
+}
+// Only wire the timer in a live server (skip in unit tests / SSR at
+// build time). Node's setInterval keeps the process alive; that's
+// fine here because the API is always running.
+if (process.env.NODE_ENV !== "test" && typeof setInterval === "function") {
+  setInterval(refreshCacheInBackground, REFRESH_INTERVAL_MS);
+  // Kick a first refresh 5s after module load so the cache is warm
+  // before the first request arrives (avoids the cold-start spinner
+  // showing the hardcoded FALLBACK_ON_COLD_START numbers).
+  setTimeout(refreshCacheInBackground, 5_000);
+}
+
 async function fetchLiveStats(): Promise<PublicStats | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
