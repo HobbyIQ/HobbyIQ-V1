@@ -1868,9 +1868,20 @@ export async function buildObservedGradeCurve(
     const u = await computeUnifiedPrice(cardId, {});
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
     for (const entry of curve.entries) {
-      const label = entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
+      // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). Prior form
+      // "`${entry.grader} ${entry.grade}`.trim()" produced double-
+      // prefixed labels like "PSA PSA 10" because entry.grade already
+      // contains the grader ("PSA 10"/"BGS 9.5" etc. from CANONICAL_GRADES.label).
+      // The overlay lookup failed for every graded entry — silently —
+      // and each entry kept whatever the CH-based initial pass set,
+      // which was the top-tier value for the whole family. That's the
+      // "PSA 8 = PSA 9 = PSA 10" anchor collapse on the Grade Curve UI.
+      // Ohtani 2018 BC RC PSA 9 showed $7,200 (PSA 10's value) instead
+      // of the ~$2,300 weighted median of its own 85 sold_comps rows.
+      const gradeStr = String(entry.grade).trim();
+      const label = entry.grader === "Raw" || gradeStr.toLowerCase() === "raw"
         ? "Raw"
-        : `${entry.grader} ${entry.grade}`.trim();
+        : gradeStr;
       const um = byLabel.get(label);
       if (um && um.weightedMedian != null && um.sampleCount > 0) {
         const mv = um.marketValue ?? um.weightedMedian;

@@ -3635,10 +3635,18 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       }
       const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
       for (const entry of gradeCurve.entries) {
+        // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). Same fix as
+        // observedGradeCurve.service.ts:1871 — entry.grade already
+        // contains the grader prefix ("PSA 10"), so
+        // `${entry.grader} ${entry.grade}` produced "PSA PSA 10" and
+        // never matched unified's "PSA 10". Overlay failed silently
+        // for every graded entry, causing anchor collapse on the
+        // Grade Curve UI (PSA 8/9/10 all showed PSA 10's value).
+        const gradeStr = String(entry.grade).trim();
         const label =
-          entry.grader === "Raw" || String(entry.grade).toLowerCase() === "raw"
+          entry.grader === "Raw" || gradeStr.toLowerCase() === "raw"
             ? "Raw"
-            : `${entry.grader} ${entry.grade}`.trim();
+            : gradeStr;
         const u = byLabel.get(label);
         if (u && u.weightedMedian != null && u.sampleCount > 0) {
           // trendAdjustedValue = the trend-lifted market value (matches
