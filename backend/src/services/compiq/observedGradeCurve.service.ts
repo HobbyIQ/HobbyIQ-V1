@@ -1865,7 +1865,18 @@ export async function buildObservedGradeCurve(
   // values so we don't lose fallback coverage.
   try {
     const { computeUnifiedPrice } = await import("./unifiedPricing.service.js");
-    const u = await computeUnifiedPrice(cardId, {});
+    // CF-UNIFIED-HIQ-UNION (Drew, 2026-08-08). When cardId is a hiq
+    // slug (starts with "hiq:"), also pass it as hobbyiqCardId so
+    // queryComps' OR-union catches rows stored under vendor cardIds
+    // (CH, TCA, Cardsight) that carry the same hobbyiqCardId slug.
+    // Without this, buildObservedGradeCurve's queryComps ONLY matches
+    // rows where cardId literally equals the hiq slug — for Ohtani
+    // 2018 BC RC that was 24 PSA 9 rows instead of 85. Overlay values
+    // computed from too-thin a pool then failed the sampleCount>0 gate
+    // for some tiers, silently reverting to the CH-based initial-pass
+    // anchor bleed.
+    const hiqOpt = String(cardId).startsWith("hiq:") ? { hobbyiqCardId: cardId } : {};
+    const u = await computeUnifiedPrice(cardId, hiqOpt);
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
     for (const entry of curve.entries) {
       // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). Prior form
@@ -1914,6 +1925,17 @@ export async function buildObservedGradeCurve(
   // $1,850. Removed the Raw floor: Raw and graded pools are different
   // markets, Raw can legitimately exceed some low PSA tiers in edge
   // cases. Only enforce ascending WITHIN a grader.
+  // CF-MONOTONIC-CONFIDENCE-GUARD (Drew, 2026-08-08). Prior version
+  // used the first tier as the floor unconditionally — if PSA 8 had
+  // thin/estimated data at a bogus-high value ($9,128 from CH fallback),
+  // PSA 9 with 85 real observations at $2,300 got FLOORED UP to $9,128.
+  // Anchor collapse via monotonic pass.
+  //
+  // Fix: only tiers with observed data and sampleCount >= MONOTONIC_TRUST_MIN
+  // are trusted as floors for higher tiers. Thin-data / estimated tiers
+  // are skipped for the floor role (their own value is still enforced
+  // against a trusted-tier floor if one exists).
+  const MONOTONIC_TRUST_MIN = 5;
   const graders = new Set(curve.entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
     const tierRows = curve.entries
@@ -1924,13 +1946,19 @@ export async function buildObservedGradeCurve(
     let prevFloor: number | null = null;
     for (const t of tierRows) {
       const own = t.trendAdjustedValue ?? t.value ?? null;
+      // Enforce floor from a trusted lower tier only.
       if (prevFloor !== null && own !== null && own < prevFloor) {
         t.value = prevFloor;
         t.trendAdjustedValue = prevFloor;
         if (t.predictedPriceAt30d !== null && t.predictedPriceAt30d < prevFloor) {
           t.predictedPriceAt30d = prevFloor;
         }
-      } else if (own !== null) {
+      }
+      // Advance prevFloor ONLY when this tier itself is trustworthy —
+      // observed AND sampleCount >= MONOTONIC_TRUST_MIN. Estimated tiers
+      // and thin-observed tiers can't set a floor for the next higher
+      // tier (which may have far better data at a lower price).
+      if (own !== null && t.valueSource === "observed" && (t.sampleCount ?? 0) >= MONOTONIC_TRUST_MIN) {
         prevFloor = own;
       }
     }
