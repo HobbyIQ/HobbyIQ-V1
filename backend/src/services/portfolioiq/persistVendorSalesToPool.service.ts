@@ -1171,6 +1171,13 @@ export async function persistVendorSalesToPool(
         sourceExternalId,
         title,
         url: row.url ?? null,
+        // CF-INGEST-IMAGE-CAPTURE (Drew, 2026-08-08). row.imageUrl was
+        // being used for staging mirror + pHash verify but dropped from
+        // the pool doc — 100% of tca-ebay and cardsight sold_comps rows
+        // landed without images despite the vendor sending them.
+        // Preserving here fills images going forward at ~3,500/day for
+        // TCA alone; historical rows still need a backfill pass.
+        imageUrl: row.imageUrl ?? null,
         observedAt: new Date().toISOString(),
         sport,
         identityMethod,
