@@ -513,15 +513,16 @@ async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> 
     // data, not FMV per hit. Cuts each sport's search from ~2-7s to
     // ~200-500ms because we drop 20+ per-hit sold_comps queries.
     //
-    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05, revised 2026-08-08).
-    // Per-sport timeout. Original 2.5s was too aggressive: when
-    // card_catalog is throttled (post-batch-write RU burn), the query
-    // takes >2.5s and gets raced to null. User sees "no matches" for
-    // cards that ARE in catalog. Now catalog-only freetext (no CH
-    // safety net), a throttled miss shows as an empty result set with
-    // no fallback — so we must let cosmos actually respond. 10s
-    // accommodates 429 retry + slow partitions.
-    const PER_SPORT_TIMEOUT_MS = 10_000;
+    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05, revised twice on
+    // 2026-08-08). Per-sport timeout. Bumped from 2.5s → 10s → 20s.
+    // Root cause of intermittent 0-hits on live: the freetext path
+    // queries all 5 sports in parallel; under RU pressure (post-batch
+    // delete/patch), ONE sport can take >10s while others return
+    // quickly-empty. Promise.all waits for all, wrap-timeout returns
+    // null on the slow one, and the ONE sport with real hits is the
+    // one that got dropped. 20s gives baseline-throttled queries
+    // room to complete (Cosmos 429 retry is ~5-10s of backoff).
+    const PER_SPORT_TIMEOUT_MS = 20_000;
     const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
       Promise.race([
         p.catch(() => null),
@@ -553,6 +554,40 @@ async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> 
   }
 }
 
+// CF-FREETEXT-RESPONSE-CACHE (Drew, 2026-08-08). Small in-process LRU
+// for freetext search responses. Under RU pressure, an intermittent
+// null result on the SAME query wastes 5x sport-query cost every
+// keystroke-driven retry. Caching by normalized-query returns the
+// prior hit set instantly — no Cosmos hit at all. TTL kept short
+// (5 min) so new catalog additions surface quickly. Bounded to 200
+// entries so memory stays flat.
+interface FreetextCacheEntry {
+  candidates: CardIdentity[];
+  expiresAt: number;
+}
+const FREETEXT_CACHE_TTL_MS = 5 * 60 * 1000;
+const FREETEXT_CACHE_MAX = 200;
+const _freetextCache = new Map<string, FreetextCacheEntry>();
+function freetextCacheKey(trimmed: string): string {
+  return trimmed.toLowerCase().replace(/\s+/g, " ").trim();
+}
+function freetextCacheGet(trimmed: string): CardIdentity[] | null {
+  const key = freetextCacheKey(trimmed);
+  const entry = _freetextCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) { _freetextCache.delete(key); return null; }
+  return entry.candidates;
+}
+function freetextCachePut(trimmed: string, candidates: CardIdentity[]): void {
+  const key = freetextCacheKey(trimmed);
+  // Simple LRU: on overflow, drop the oldest inserted entry.
+  if (_freetextCache.size >= FREETEXT_CACHE_MAX) {
+    const oldestKey = _freetextCache.keys().next().value;
+    if (oldestKey !== undefined) _freetextCache.delete(oldestKey);
+  }
+  _freetextCache.set(key, { candidates, expiresAt: Date.now() + FREETEXT_CACHE_TTL_MS });
+}
+
 async function dispatchFreetextMode(
   input: string,
   trimmed: string,
@@ -565,8 +600,20 @@ async function dispatchFreetextMode(
   // pool + catalog). The old CH fallback path below is preserved
   // behind a dead branch for now — deletable once the pricing engine's
   // CH consumers are also decommissioned.
+  const cached = freetextCacheGet(trimmed);
+  if (cached && cached.length > 0) {
+    return {
+      input: { raw: input, detectedMode: "freetext" },
+      candidates: cached,
+      warnings: [],
+    };
+  }
   const catalogFast = await tryCatalogFirst(trimmed);
   const candidates = catalogFast ?? [];
+  // Only cache HITS — a transient null (Cosmos throttled) should NOT
+  // poison the cache for 5 min. If catalog genuinely has 0, next
+  // request pays the cost too but stays honest.
+  if (candidates.length > 0) freetextCachePut(trimmed, candidates);
   return {
     input: { raw: input, detectedMode: "freetext" },
     candidates,
