@@ -47,30 +47,13 @@ const PRIORITY_SETS = [
   { year: 2025, sport: "baseball", setName: "Bowman Draft",                                url: "https://cardsmithsbreaks.com/full-checklist/2025-bowman-draft-baseball-super-jumbo/" },
   { year: 2025, sport: "baseball", setName: "Topps Transcendent Collection",               url: "https://cardsmithsbreaks.com/full-checklist/2025-topps-transcendent-collection-baseball/" },
   { year: 2026, sport: "baseball", setName: "Bowman",                                      url: "https://cardsmithsbreaks.com/full-checklist/2026-bowman-baseball-hobby/" },
-  // CF-VINTAGE-NBA (Drew, 2026-08-08). Close the 1990s Skybox / Fleer /
-  // Hoops NBA gap surfaced by tonight's Michael Jordan mis-categorization.
-  // URLs are the cardsmithsbreaks / basketball-almanac equivalents where
-  // available; parser handles both static HTML shapes.
-  { year: 1990, sport: "basketball", setName: "Fleer",             url: "https://cardsmithsbreaks.com/full-checklist/1990-91-fleer-basketball/" },
-  { year: 1990, sport: "basketball", setName: "Hoops",             url: "https://cardsmithsbreaks.com/full-checklist/1990-91-hoops-basketball/" },
-  { year: 1990, sport: "basketball", setName: "Skybox",            url: "https://cardsmithsbreaks.com/full-checklist/1990-91-skybox-basketball/" },
-  { year: 1991, sport: "basketball", setName: "Fleer",             url: "https://cardsmithsbreaks.com/full-checklist/1991-92-fleer-basketball/" },
-  { year: 1991, sport: "basketball", setName: "Hoops",             url: "https://cardsmithsbreaks.com/full-checklist/1991-92-hoops-basketball/" },
-  { year: 1991, sport: "basketball", setName: "Skybox",            url: "https://cardsmithsbreaks.com/full-checklist/1991-92-skybox-basketball/" },
-  { year: 1991, sport: "basketball", setName: "Upper Deck",        url: "https://cardsmithsbreaks.com/full-checklist/1991-92-upper-deck-basketball/" },
-  { year: 1992, sport: "basketball", setName: "Fleer",             url: "https://cardsmithsbreaks.com/full-checklist/1992-93-fleer-basketball/" },
-  { year: 1992, sport: "basketball", setName: "Fleer Ultra",       url: "https://cardsmithsbreaks.com/full-checklist/1992-93-fleer-ultra-basketball/" },
-  { year: 1992, sport: "basketball", setName: "Skybox",            url: "https://cardsmithsbreaks.com/full-checklist/1992-93-skybox-basketball/" },
-  { year: 1993, sport: "basketball", setName: "Fleer Ultra",       url: "https://cardsmithsbreaks.com/full-checklist/1993-94-fleer-ultra-basketball/" },
-  { year: 1993, sport: "basketball", setName: "Skybox Premium",    url: "https://cardsmithsbreaks.com/full-checklist/1993-94-skybox-premium-basketball/" },
-  { year: 1993, sport: "basketball", setName: "Topps",             url: "https://cardsmithsbreaks.com/full-checklist/1993-94-topps-basketball/" },
-  { year: 1994, sport: "basketball", setName: "Fleer Ultra",       url: "https://cardsmithsbreaks.com/full-checklist/1994-95-fleer-ultra-basketball/" },
-  { year: 1994, sport: "basketball", setName: "Skybox Premium",    url: "https://cardsmithsbreaks.com/full-checklist/1994-95-skybox-premium-basketball/" },
-  { year: 1995, sport: "basketball", setName: "Fleer",             url: "https://cardsmithsbreaks.com/full-checklist/1995-96-fleer-basketball/" },
-  { year: 1995, sport: "basketball", setName: "Skybox Premium",    url: "https://cardsmithsbreaks.com/full-checklist/1995-96-skybox-premium-basketball/" },
-  { year: 1996, sport: "basketball", setName: "Skybox Premium",    url: "https://cardsmithsbreaks.com/full-checklist/1996-97-skybox-premium-basketball/" },
-  { year: 1996, sport: "basketball", setName: "Fleer",             url: "https://cardsmithsbreaks.com/full-checklist/1996-97-fleer-basketball/" },
-  { year: 1996, sport: "basketball", setName: "Topps Chrome",      url: "https://cardsmithsbreaks.com/full-checklist/1996-97-topps-chrome-basketball/" },
+  // NBA vintage + top-5 gap sets moved to tcdbBatchFill.cjs — the
+  // cardsmithsbreaks URLs we tried here silently return "Invalid
+  // Checklist" for slugs not in their break-shop inventory (verified
+  // 2026-08-08 with Playwright: page body reads "Invalid Checklist",
+  // parser gets 0 rows). TCDB's Checklist.cfm covers vintage cleanly
+  // with images.
+  { year: 2025, sport: "baseball", setName: "Topps Update", url: "https://cardsmithsbreaks.com/full-checklist/2025-topps-update-baseball/" }, // parses 1,255 rows — current-year MLB
 ];
 
 // Alternating pass matches pure-digit card numbers only (Baseball
