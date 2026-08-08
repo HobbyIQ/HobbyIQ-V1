@@ -81,12 +81,27 @@ async function main() {
   for (const [key, b] of buckets) {
     bidx++;
     if (bidx % 25 === 0) console.log(`  resolving bucket ${bidx}/${buckets.size}...`);
+    // CF-REPAIR-SETNAME-FUZZY (Drew, 2026-08-08). sold_comps setName
+    // often carries year prefix ("1991 Score", "1986 Fleer") while my
+    // TCDB catalog entries use bare setName ("Score", "Fleer") from
+    // the sid config. Also strip trailing sport words
+    // ("Baseball"/"Basketball") since some ingest paths append them.
+    const setLower = b.setName.toLowerCase().trim();
+    const setNoYear = setLower.replace(/^\d{4}(?:-\d{2,4})?\s+/, "").trim();
+    const setNoSport = setNoYear.replace(/\s+(baseball|basketball|football|hockey|soccer)$/i, "").trim();
     const { resources: hits } = await cat.items.query({
-      query: `SELECT c.sport FROM c WHERE c.cardYear = @y AND (LOWER(c.setName) = @s OR LOWER(c.setName) = @sAlt) AND UPPER(c.cardNumber) = @n`,
+      query: `SELECT c.sport FROM c
+              WHERE c.cardYear = @y
+                AND (LOWER(c.setName) = @s
+                     OR LOWER(c.setName) = @sNoYear
+                     OR LOWER(c.setName) = @sNoSport
+                     OR CONTAINS(LOWER(c.setName), @sNoSport, true))
+                AND UPPER(c.cardNumber) = @n`,
       parameters: [
         { name: "@y", value: b.year },
-        { name: "@s", value: b.setName.toLowerCase() },
-        { name: "@sAlt", value: b.setName.toLowerCase().replace(/^\d{4}\s+/, "") }, // some catalog rows include year prefix
+        { name: "@s", value: setLower },
+        { name: "@sNoYear", value: setNoYear },
+        { name: "@sNoSport", value: setNoSport },
         { name: "@n", value: b.cardNumber.toUpperCase() },
       ],
     }).fetchAll();
