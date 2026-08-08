@@ -497,12 +497,15 @@ async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> 
     // data, not FMV per hit. Cuts each sport's search from ~2-7s to
     // ~200-500ms because we drop 20+ per-hit sold_comps queries.
     //
-    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05). Per-sport timeout of
-    // 2.5s so a single slow sport can't block Promise.all. Bug: users
-    // saw 11-20s "Searching..." on common queries when one sport's
-    // Cosmos partition was cold. Each sport races its own timer; a
-    // timeout returns null (same as an error).
-    const PER_SPORT_TIMEOUT_MS = 2500;
+    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05, revised 2026-08-08).
+    // Per-sport timeout. Original 2.5s was too aggressive: when
+    // card_catalog is throttled (post-batch-write RU burn), the query
+    // takes >2.5s and gets raced to null. User sees "no matches" for
+    // cards that ARE in catalog. Now catalog-only freetext (no CH
+    // safety net), a throttled miss shows as an empty result set with
+    // no fallback — so we must let cosmos actually respond. 10s
+    // accommodates 429 retry + slow partitions.
+    const PER_SPORT_TIMEOUT_MS = 10_000;
     const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
       Promise.race([
         p.catch(() => null),
