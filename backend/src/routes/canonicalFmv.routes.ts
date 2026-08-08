@@ -23,6 +23,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
 import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
@@ -110,7 +111,7 @@ router.post("/compute-hobbyiq-slug", requireSession, async (req: Request, res: R
 //     maxAgeDays?: number,          // freshness cutoff (default 180)
 //     previewLimit?: number,        // recentComps preview size (default 10)
 //   }
-router.post("/hobbyiq-fmv", requireSession, async (req: Request, res: Response, next) => {
+router.post("/hobbyiq-fmv", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     const hobbyiqCardId = String(req.body?.hobbyiqCardId ?? "").trim();
     if (!hobbyiqCardId || !hobbyiqCardId.startsWith("hiq:")) {
@@ -128,7 +129,7 @@ router.post("/hobbyiq-fmv", requireSession, async (req: Request, res: Response, 
   } catch (err) { next(err); }
 });
 
-router.post("/canonical-fmv", requireSession, async (req: Request, res: Response, next) => {
+router.post("/canonical-fmv", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     if (process.env.CANONICAL_FMV_ENABLED !== "true") {
       res.status(503).json({
@@ -291,7 +292,7 @@ router.get("/autocomplete-player", requireSession, async (req: Request, res: Res
 //   previewLimit?: number,        // recentComps preview size
 //   relatedLimit?: number,        // # of related cards per bucket
 // }
-router.post("/card-detail", requireSession, async (req: Request, res: Response, next) => {
+router.post("/card-detail", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     const hobbyiqCardId = String(req.body?.hobbyiqCardId ?? "").trim();
     if (!hobbyiqCardId || !hobbyiqCardId.startsWith("hiq:")) {

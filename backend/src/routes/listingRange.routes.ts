@@ -38,6 +38,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { fetchCardActiveListings } from "../services/ebay/ebayListingSearch.service.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
 import { titleMatchesParallel } from "../services/compiq/titleParallelMatch.js";
@@ -54,7 +55,7 @@ function percentile(sorted: number[], p: number): number | null {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-router.get("/cards/:cardId/listing-range", requireSession, async (req: Request, res: Response, next) => {
+router.get("/cards/:cardId/listing-range", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     const cardId = String(req.params.cardId ?? "").trim();
     if (!cardId) {

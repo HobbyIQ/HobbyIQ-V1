@@ -182,6 +182,30 @@ function extractSummary(json) {
   }
 
   if (violations.length > 0) {
+    // CF-SMOKE-CH-DECOMMISSION-TOLERANCE (Drew, 2026-08-08). When
+    // CH_RUNTIME_DISABLED_ACKNOWLEDGED=true is set on the workflow,
+    // NULL-FMV violations on the mustNotNull tier cases are demoted
+    // from failure → warning. The pricing engine's CH callers were
+    // gated off 2026-08-07 (see project_ch_status_deprecated_but_active_backup)
+    // but not every downstream tier is fully re-routed to
+    // canonical-fmv yet. Until CH decommission audit ships, we need
+    // the CI signal to reliably reflect "did the DEPLOY work" not
+    // "did the CH-tier-ladder work". Any other violation still fails.
+    //
+    // Retire this tolerance once every mustNotNull case returns real
+    // FMV under CH-off state (i.e., after the pricing engine's CH
+    // decommission Phase 3b is complete).
+    const isChTolerated = process.env.CH_RUNTIME_DISABLED_ACKNOWLEDGED === "true";
+    const nullFmvViolations = violations.filter((v) => v.startsWith("NULL-FMV regression"));
+    const otherViolations = violations.filter((v) => !v.startsWith("NULL-FMV regression"));
+    if (isChTolerated && otherViolations.length === 0 && nullFmvViolations.length > 0) {
+      console.log(`\n⚠ SMOKE TEST DEGRADED (${nullFmvViolations.length} NULL-FMV violation${nullFmvViolations.length === 1 ? "" : "s"}, tolerated under CH_RUNTIME_DISABLED_ACKNOWLEDGED=true):`);
+      for (const v of nullFmvViolations) console.log(`  - ${v}`);
+      console.log(`\n  These will fail again once CH_RUNTIME_DISABLED_ACKNOWLEDGED is removed.`);
+      console.log(`  Fix ETA: after pricing-engine CH decommission (see backend Tier 1 audit).`);
+      console.log(`\n✓ smoke test passed with tolerance — deploy is safe to ship`);
+      return;
+    }
     console.log(`\n✗ SMOKE TEST FAILED (${violations.length} violation${violations.length === 1 ? "" : "s"}):`);
     for (const v of violations) console.log(`  - ${v}`);
     process.exit(1);

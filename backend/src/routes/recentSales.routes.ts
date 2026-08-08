@@ -32,6 +32,7 @@
 import { Router, type Request, type Response } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
 
 const router = Router();
@@ -44,7 +45,7 @@ async function resolveRequestingUserId(req: Request): Promise<string | null> {
   return user?.userId ?? null;
 }
 
-router.get("/cards/:cardId/recent-sales", requireSession, async (req: Request, res: Response, next) => {
+router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     const cardId = String(req.params.cardId ?? "").trim();
     if (!cardId) {
