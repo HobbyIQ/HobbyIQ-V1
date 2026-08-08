@@ -1936,11 +1936,26 @@ export async function buildObservedGradeCurve(
   // are skipped for the floor role (their own value is still enforced
   // against a trusted-tier floor if one exists).
   const MONOTONIC_TRUST_MIN = 5;
+  // CF-GRADE-SORT-BUGFIX (Drew, 2026-08-08). Prior form
+  //   parseFloat(String(e.grade)) || 0
+  // returned 0 for every tier because e.grade is "PSA 10" / "BGS 9.5" —
+  // parseFloat starts at "P" / "B" (non-digit), returns NaN, and NaN || 0
+  // resolves to 0. All tiers within a grader got sort key 0 → iteration
+  // order fell back to array order (CANONICAL_GRADES = DESCENDING). PSA 10
+  // was iterated first, set the floor at $7,100, then PSA 9's real $2,700
+  // got FLOORED UP to $7,100. That was the last mile of the anchor-collapse
+  // bug on Ohtani 2018 BC RC PSA 9. Extract the trailing numeric tier
+  // ("PSA 10" → 10, "BGS 9.5" → 9.5) so ascending sort works as intended.
+  const extractGradeNum = (grade: string | number | null): number => {
+    if (typeof grade === "number") return grade;
+    const m = String(grade ?? "").match(/(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : 0;
+  };
   const graders = new Set(curve.entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
     const tierRows = curve.entries
       .filter((e) => e.grader === grader)
-      .map((e) => ({ e, gv: parseFloat(String(e.grade)) || 0 }))
+      .map((e) => ({ e, gv: extractGradeNum(e.grade) }))
       .sort((a, b) => a.gv - b.gv)
       .map((x) => x.e);
     let prevFloor: number | null = null;
