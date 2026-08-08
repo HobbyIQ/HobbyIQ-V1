@@ -213,10 +213,30 @@ export default function StorefrontPage() {
       setHoldings((prev) =>
         prev.map((x) => (toAddIds.has(x.id) ? { ...x, showOnStorefront: true } : x)),
       );
-      // Fire writes in parallel (capped concurrency of 6 to stay polite
-      // to the backend but not molasses on a 200-card add).
-      const results = await Promise.allSettled(
-        toAdd.map((h) => updateHolding(h.id, { showOnStorefront: true })),
+      // CF-BULK-CONCURRENCY-CAP (Drew, 2026-08-08). The comment above
+      // said "capped concurrency of 6" but the code used raw
+      // Promise.allSettled with no cap. Adding 200 cards fired 200
+      // simultaneous PATCH writes to the SAME portfolio doc, causing
+      // cascading Cosmos etag conflicts + server-side serialization
+      // waits — "Adding…" hung forever waiting for the last-late
+      // conflict retries to settle. Real cap of 6 in-flight at a time:
+      // ~35 seconds for 200 cards (vs indefinite hang before).
+      const CONCURRENCY = 6;
+      const results: PromiseSettledResult<Awaited<ReturnType<typeof updateHolding>>>[] = new Array(toAdd.length);
+      let nextIdx = 0;
+      const worker = async (): Promise<void> => {
+        while (nextIdx < toAdd.length) {
+          const i = nextIdx++;
+          try {
+            const value = await updateHolding(toAdd[i].id, { showOnStorefront: true });
+            results[i] = { status: "fulfilled", value };
+          } catch (reason) {
+            results[i] = { status: "rejected", reason };
+          }
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, toAdd.length) }, worker),
       );
       // Roll back any per-card failures
       const failed = new Set<string>();
@@ -251,8 +271,25 @@ export default function StorefrontPage() {
       setHoldings((prev) =>
         prev.map((x) => (ids.has(x.id) ? { ...x, showOnStorefront: false } : x)),
       );
-      const results = await Promise.allSettled(
-        currentlySelected.map((h) => updateHolding(h.id, { showOnStorefront: false })),
+      // Same capped-concurrency pattern as bulkSelectAll — see
+      // CF-BULK-CONCURRENCY-CAP for why raw Promise.allSettled hangs
+      // on same-doc etag contention.
+      const CONCURRENCY = 6;
+      const results: PromiseSettledResult<Awaited<ReturnType<typeof updateHolding>>>[] = new Array(currentlySelected.length);
+      let nextIdx = 0;
+      const worker = async (): Promise<void> => {
+        while (nextIdx < currentlySelected.length) {
+          const i = nextIdx++;
+          try {
+            const value = await updateHolding(currentlySelected[i].id, { showOnStorefront: false });
+            results[i] = { status: "fulfilled", value };
+          } catch (reason) {
+            results[i] = { status: "rejected", reason };
+          }
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, currentlySelected.length) }, worker),
       );
       const failed = new Set<string>();
       results.forEach((r, i) => {
