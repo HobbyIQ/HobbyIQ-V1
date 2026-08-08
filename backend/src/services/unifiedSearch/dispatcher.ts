@@ -443,13 +443,29 @@ function titleCaseParallel(raw: string | null | undefined): string {
 }
 
 function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
-  const displaySet = slugToDisplay(hit.releaseName);
+  // CF-TITLE-DEDUP (Drew, 2026-08-08). Strip a leading year token from
+  // displaySet when it duplicates hit.cardYear. Vendor + TCDB setName
+  // conventions vary — some carry the year ("2018 Topps Chrome Update
+  // Baseball"), some don't ("Topps Chrome Update"). Prepending year
+  // + full-setName produced "Shohei Ohtani 2018 2018 Topps Chrome
+  // Update Baseball Base #HMT1" — year duplicated, "Baseball" also
+  // redundant with the sport context.
+  let displaySet = slugToDisplay(hit.releaseName);
+  if (hit.cardYear && displaySet) {
+    const yearPrefixRx = new RegExp(`^\\s*${hit.cardYear}(?:-\\d{2,4})?\\s+`);
+    displaySet = displaySet.replace(yearPrefixRx, "").trim();
+    // Also strip trailing "Baseball" / "Basketball" / etc — sport is
+    // already implicit in the search context.
+    displaySet = displaySet.replace(/\s+(Baseball|Basketball|Football|Hockey|Soccer)\s*$/i, "").trim();
+  }
   const displayParallel = titleCaseParallel(hit.parallels?.[0]?.name ?? null);
   const titleParts: string[] = [];
-  if (hit.player) titleParts.push(hit.player);
   if (hit.cardYear) titleParts.push(String(hit.cardYear));
   if (displaySet) titleParts.push(displaySet);
-  if (displayParallel) titleParts.push(displayParallel);
+  if (hit.player) titleParts.push(hit.player);
+  // Only include parallel in the title when it isn't "Base" — Base is
+  // implicit and adds visual noise on the search-result row.
+  if (displayParallel && displayParallel.toLowerCase() !== "base") titleParts.push(displayParallel);
   if (hit.cardNumber) titleParts.push(`#${hit.cardNumber.toUpperCase()}`);
   return {
     // CF-CATALOG-CANDIDATE-ID-FIX (Drew, 2026-08-02). Use the vendor
