@@ -848,17 +848,81 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   const DIRTY_SOURCES = new Set(["sales-derived", "tree-builder-v1"]);
   const isClean = (h: CanonicalSearchHit) => !h.source || !DIRTY_SOURCES.has(h.source);
 
+  // CF-CATALOG-IDENTITY-DEDUP (Drew, 2026-08-09). Prior dedup keyed on
+  // exact hobbyiqCardId, which meant every slug-shape fragment (Blue
+  // X-Fractor case variants: "blue-x-fractor", "Blue X-Fractor", the
+  // "num-150" suffix duplicate, misfiled setKey:bowman vs setKey:
+  // bowman-chrome for a CPA-prefix Chrome Prospect Auto card) survived
+  // as a separate result. 45 catalog rows for 2026 CPA-EHA Eric
+  // Hartman were surfacing as ~10 near-duplicates — 3 of them labeled
+  // "Blue Refractor."
+  //
+  // New dedup axis: canonical identity tuple
+  //   (cardYear, cardNumber, playerLower, parallelSlugNorm, isAuto).
+  // parallelSlugNorm lowercases + strips whitespace so case fragments
+  // collapse; keeps "blue-x-fractor" vs "blue-refractor" DISTINCT per
+  // Drew's clarification (they're two different cards).
+  //
+  // Winner selection prefers curated sources over bulk-derived, then
+  // score. Also drops "no-auto" phantom rows for card-number prefixes
+  // that are auto-by-definition (CPA-*, BSPA-*, CPRA-*, CPAA-*) per
+  // feedback_isauto_boundary_is_cardnumber_not_text — CPA = Chrome
+  // Prospect Auto; a row with cardNumber CPA-XXX and isAuto=false is
+  // corrupt vendor data (ch-catalog phantom).
+  const AUTO_PREFIX_RE = /^(CPA|CPRA|CPAA|BSPA|CDA|CFA|BCPA)-/i;
+  const isAutoPrefixCardNumber = (cn: string | null): boolean =>
+    typeof cn === "string" && AUTO_PREFIX_RE.test(cn.trim());
+  // Source priority for tie-break (lower index = preferred).
+  const SOURCE_PRIORITY = [
+    "checklist",
+    "bccp-product-structure",
+    "cardhedge",
+    "cardsight",
+    "checklist-batch-fill",
+    "tcdb-scrape",
+    "ingest-auto-seed",
+    "seed",
+    "bulk-build-from-pool",
+    "canonical",
+    "ch-catalog",
+  ];
+  const sourceRank = (s: string | null): number => {
+    if (!s) return 100;
+    const i = SOURCE_PRIORITY.indexOf(s);
+    return i === -1 ? 99 : i;
+  };
+  const dedupKey = (h: CanonicalSearchHit): string => {
+    const par = (h.parallels?.[0]?.id ?? h.parallels?.[0]?.name ?? "base")
+      .toString().trim().toLowerCase().replace(/\s+/g, "-");
+    return [
+      h.cardYear ?? "?",
+      String(h.cardNumber ?? "").trim().toLowerCase(),
+      String(h.player ?? "").trim().toLowerCase(),
+      par,
+      h.isAutographSet ? "auto" : "no-auto",
+    ].join("::");
+  };
+
+  const filteredNoPhantom = filtered.filter((h) => {
+    // Drop no-auto phantom rows for auto-prefix card numbers.
+    if (isAutoPrefixCardNumber(h.cardNumber) && !h.isAutographSet) return false;
+    return true;
+  });
+
   const byCanonical = new Map<string, CanonicalSearchHit>();
-  for (const h of filtered) {
-    const key = h.hobbyiqCardId ?? `${h.releaseName}::${h.cardNumber}::${h.player}`;
+  for (const h of filteredNoPhantom) {
+    const key = dedupKey(h);
     const existing = byCanonical.get(key);
     if (!existing) { byCanonical.set(key, h); continue; }
     const hClean = isClean(h);
     const eClean = isClean(existing);
-    // Prefer clean over dirty regardless of score.
     if (hClean && !eClean) { byCanonical.set(key, h); continue; }
     if (!hClean && eClean) continue;
-    // Both same cleanliness class — highest score wins (prior behavior).
+    // Both same cleanliness class — prefer canonical source, then score.
+    const hRank = sourceRank(h.source);
+    const eRank = sourceRank(existing.source);
+    if (hRank < eRank) { byCanonical.set(key, h); continue; }
+    if (hRank > eRank) continue;
     if (h.score > existing.score) byCanonical.set(key, h);
   }
   const deduped = [...byCanonical.values()].sort((a, b) => b.score - a.score);
