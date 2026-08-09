@@ -5261,17 +5261,52 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             grader: null,
             gradeValue: null,
           } : null;
+          // CF-PRICE-BY-ID-CANONICAL-IDENTITY (Drew, 2026-08-09). Enrich
+          // response with real cardIdentity by looking up the catalog
+          // entry for the hiq: slug. Without this, the frontend fell
+          // back to using provenance.summary ("428 same-parallel user
+          // comps · regression +4.3%/mo") as the card title on the
+          // detail page. Card detail needs player/setName/cardNumber
+          // to render a proper title like "2018 Topps Chrome Update
+          // Shohei Ohtani #HMT1".
+          let enrichedIdentity: Record<string, unknown> = { card_id: originalHiqSlug };
+          try {
+            const { CosmosClient: _CC2 } = await import("@azure/cosmos");
+            const cn2 = process.env.COSMOS_CONNECTION_STRING;
+            if (cn2) {
+              const cat = new _CC2(cn2).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+              const { resource: doc } = await cat.item(originalHiqSlug, originalHiqSlug).read();
+              if (doc) {
+                enrichedIdentity = {
+                  card_id: originalHiqSlug,
+                  player: doc.playerName ?? null,
+                  year: typeof doc.year === "number" ? doc.year : (typeof doc.cardYear === "number" ? doc.cardYear : null),
+                  set: doc.setName ?? doc.setKey ?? null,
+                  number: doc.cardNumber ?? null,
+                  parallel: doc.parallel ?? earlyParallelName,
+                  isAuto: doc.isAuto === true,
+                  imageUrl: doc.imageUrl ?? null,
+                  sport: doc.sport ?? null,
+                };
+              }
+            }
+          } catch { /* enrichment is best-effort — fall through with minimal identity */ }
           console.log(JSON.stringify({
             event: "price_by_id_canonical_fmv_fallback",
             source: "compiq.routes.price-by-id",
             cardId: originalHiqSlug,
             fmv, compsAvailable: parallelCount, compsUsed: compsAvailable,
             method,
+            identityEnriched: !!enrichedIdentity.player,
           }));
           return res.json({
             success: true,
             cardsightCardId: originalHiqSlug,
-            summary: summary || undefined,
+            // CF-SUMMARY-NAMESPACE (Drew, 2026-08-09). Nest provenance
+            // summary under provenance.summary so frontend can't
+            // accidentally use it as the card title. Card title should
+            // be derived from cardIdentity (player + set + year + #).
+            provenance: summary ? { summary } : undefined,
             marketTier: { value: fmv, high: sellZone[1] },
             buyZone, holdZone, sellZone,
             fairMarketValueLive: fmv,
@@ -5285,6 +5320,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             compsUsed: compsAvailable,
             compsAvailable: parallelCount,
             lastSale,
+            cardIdentity: enrichedIdentity,
+            cardImageUrl: enrichedIdentity.imageUrl ?? null,
           });
         }
       } catch (err) {
