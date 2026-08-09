@@ -510,7 +510,20 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // touching the downstream mapper.
   if (searchTokens.length > 0) {
     try {
-      const treeWhere: string[] = ["c.kind IN ('card', 'variant')", "c.sport = @sport"];
+      // CF-EXCLUDE-TREE-BUILDER-V1 (Drew, 2026-08-09). tree-builder-v1
+      // was deprecated (see MEMORY: project_catalog_dead_sources_2026_08_08).
+      // Its 182K rows have `kind:'card'` + NO parallel + NO isAuto — they
+      // materialize as duplicate "no-AUTO badge" search hits (e.g. 2024
+      // Bowman Chrome Eric Hartman #CPA-EHA base) that click into a
+      // dead-end card detail (0 comps, phantom fallback FMV). Only the
+      // GOOD variant nodes should feed search; explicitly exclude the
+      // dead source from the tree query until nukeSalesDerivedCatalog
+      // retires them from Cosmos.
+      const treeWhere: string[] = [
+        "c.kind IN ('card', 'variant')",
+        "c.sport = @sport",
+        "(NOT IS_DEFINED(c.source) OR c.source != 'tree-builder-v1')",
+      ];
       if (yearFilter !== null) treeWhere.push("c.year = @year");
       searchTokens.forEach((_, i) => treeWhere.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`));
       const treeQ = `SELECT TOP 200 c.cardId, c.playerName, c.setKey, c.year, c.cardNumber, c.parallel, c.parallelSlug, c.isAuto, c.sport, c.imageUrl, c.searchTokens, c.kind
