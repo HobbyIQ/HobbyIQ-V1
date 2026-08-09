@@ -38,10 +38,20 @@ const CASES = [
     mustNotNull: true,
   },
   {
-    tier: "3 (product-family-projection)",
+    // CF-SMOKE-CH-DEP-DEFERRED (Drew, 2026-08-08). This query has no
+    // cardNumber ("...Sapphire Padparadscha Prospects" — a subset
+    // parallel search, not a specific card). Canonical-first can't
+    // build a hobbyiqCardId slug without a cardNumber, and the
+    // CH-dependent AI matcher (which synthesized an answer from the
+    // set + parallel alone) is off. Rebuilding this synthesis path
+    // in our own pool is real engineering — deferred until
+    // post-launch. Marking mustNotNull=false so the smoke test
+    // accurately reflects "the paths we've decommissioned CH from"
+    // rather than including CH-only synthesis as a regression.
+    tier: "3 (product-family-projection) — CH-dep, deferred",
     query: "2024 Bowman Chrome Sapphire Padparadscha Prospects",
-    expect: "product-family-projection or parallel-floor",
-    mustNotNull: true,
+    expect: "null under CH-off; CH-only synthesis path",
+    mustNotNull: false,
   },
   {
     tier: "5 (scarcity-prior-floor)",
@@ -74,10 +84,17 @@ const CASES = [
     acceptEmptyForTier7Transition: true,
   },
   {
-    tier: "1 (direct-comps) recent star",
+    // CF-SMOKE-CH-DEP-DEFERRED (Drew, 2026-08-08). Same class as case
+    // 3 above — "Ohtani Base" has no cardNumber. Ohtani's 2024 Bowman
+    // Chrome base is card #150 but that mapping requires a player→card
+    // knowledge base we haven't built. CH's AI matcher previously
+    // synthesized this from player+set alone. Rebuilding in our own
+    // pool = post-launch work. mustNotNull=false so smoke test signal
+    // reflects the CH-decommissioned surfaces we actually ship.
+    tier: "1 (direct-comps) recent star — CH-dep, deferred",
     query: "2024 Bowman Chrome Ohtani Base",
-    expect: "predictedPrice with dense comps",
-    mustNotNull: true,
+    expect: "null under CH-off; player→card lookup deferred",
+    mustNotNull: false,
   },
   {
     tier: "8 (unavailable)",

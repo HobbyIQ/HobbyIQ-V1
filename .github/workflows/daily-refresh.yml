@@ -219,18 +219,6 @@ jobs:
       - name: Smoke test pricing tiers
         if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
-        env:
-          # CF-SMOKE-CH-DECOMMISSION-TOLERANCE (Drew, 2026-08-08). While
-          # CH_RUNTIME_DISABLED=true is active on HobbyIQ3, several
-          # mustNotNull tier cases return null because the pricing
-          # engine's CH decommission audit is incomplete (see backend
-          # Tier 1 launch checklist). Setting this env var tells the
-          # smoke test to demote NULL-FMV violations from failure →
-          # warning, so the CI signal accurately reflects deploy health
-          # rather than a known-incomplete decommission. REMOVE this
-          # once the pricing engine's CH callers are all routed to
-          # canonical-fmv.
-          CH_RUNTIME_DISABLED_ACKNOWLEDGED: "true"
         run: |
           TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}" \
           node scripts/smoke-test-pricing-tiers.cjs
