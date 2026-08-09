@@ -2803,6 +2803,153 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         }
       }
 
+      // CF-PRICE-CANONICAL-PLAYER-LOOKUP (Drew, 2026-08-09). Second
+      // canonical-first attempt for queries that lack cardNumber but
+      // have enough identity to look up the card in card_catalog by
+      // (year + set + player). Example queries this handles:
+      //   "2024 Bowman Chrome Ohtani Base"  → resolves via catalog to
+      //     the Ohtani base card in 2024 Bowman Chrome, then canonical-fmv
+      // Historical CH AI-matcher path handled this via server-side
+      // player→card knowledge; we replicate by querying our own catalog
+      // for the exact identity tuple.
+      //
+      // Falls through to computeEstimate if: no matching catalog entry,
+      // multiple ambiguous matches (>3), canonical-fmv returned 0. The
+      // computeEstimate ladder + CH fallback stays as defense-in-depth.
+      if (
+        !body.cardId &&
+        parsed.confidence >= 0.5 &&
+        typeof parsed.year === "number" &&
+        typeof parsed.brand === "string" && parsed.brand.length > 0 &&
+        typeof parsed.playerName === "string" && parsed.playerName.length > 0 &&
+        (!parsed.cardNumber || parsed.cardNumber.length === 0)  // this path is for cardNumber-less queries
+      ) {
+        try {
+          const { CosmosClient: _CC } = await import("@azure/cosmos");
+          const cn = process.env.COSMOS_CONNECTION_STRING;
+          if (cn) {
+            const cat = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+            const setLower = parsed.brand.toLowerCase().trim();
+            const playerLower = parsed.playerName.toLowerCase().trim();
+            const parallelLower = (parsed.parallel || "Base").toLowerCase();
+            // Query catalog for matching identity — case-insensitive
+            // CONTAINS on setName + playerName. Prefer exact-parallel
+            // match if user specified something other than Base.
+            const { resources: hits } = await cat.items.query<{
+              id: string; playerName: string; setName: string; cardNumber: string;
+              parallel: string; sport: string; recentSaleCount: number; year: number;
+            }>({
+              query: `SELECT TOP 20 c.id, c.playerName, c.setName, c.cardNumber, c.parallel, c.sport, c.recentSaleCount, c.year
+                      FROM c
+                      WHERE c.year = @y
+                        AND CONTAINS(LOWER(c.setName), @s, true)
+                        AND CONTAINS(LOWER(c.playerName), @p, true)
+                        AND LOWER(c.parallel) = @par`,
+              parameters: [
+                { name: "@y", value: parsed.year },
+                { name: "@s", value: setLower },
+                { name: "@p", value: playerLower },
+                { name: "@par", value: parallelLower },
+              ],
+            }).fetchAll();
+            // Pick best hit — highest recentSaleCount (most traded)
+            // tie-broken by lowest cardNumber (typically the base card).
+            const ranked = (hits || []).sort((a, b) => {
+              const rsA = Number(a.recentSaleCount || 0);
+              const rsB = Number(b.recentSaleCount || 0);
+              if (rsA !== rsB) return rsB - rsA;
+              // Tie: prefer numeric cardNumbers, then lowest
+              const nA = parseInt(String(a.cardNumber || "").replace(/[^0-9]/g, ""), 10) || 999999;
+              const nB = parseInt(String(b.cardNumber || "").replace(/[^0-9]/g, ""), 10) || 999999;
+              return nA - nB;
+            });
+            if (ranked.length === 0) {
+              // No match — fall through
+            } else if (ranked.length > 3) {
+              // Ambiguous — many candidates. Fall through to computeEstimate.
+              console.log(JSON.stringify({
+                event: "price_canonical_player_lookup_ambiguous",
+                source: "compiq.routes.price", query, hits: ranked.length,
+              }));
+            } else {
+              const best = ranked[0];
+              const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+              const canon = await computeCanonicalFmv({
+                cardId: best.id,
+                parallel: parsed.parallel || "Base",
+                gradeCompany: null,
+                gradeValue: null,
+                cardYear: best.year,
+                product: best.setName,
+                player: best.playerName,
+                cardNumber: best.cardNumber,
+                freshCompute: false,
+              } as any);
+              const canonFmv = (canon as any)?.fmv;
+              const canonN = (canon as any)?.recentRange?.n ?? 0;
+              if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
+                const method = String((canon as any).method || "canonical-fmv");
+                const buyZone: [number, number] = [Math.round(canonFmv * 0.85), Math.round(canonFmv * 0.95)];
+                const holdZone: [number, number] = [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.10)];
+                const sellZone: [number, number] = [Math.round(canonFmv * 1.10), Math.round(canonFmv * 1.25)];
+                const provComps = ((canon as any).provenance?.comps ?? []).slice(0, 20).map((c: any) => ({
+                  price: Number(c.price ?? 0),
+                  soldDate: String(c.soldAt ?? ""),
+                  grader: null, gradeValue: null,
+                  parallel: c.parallel ?? best.parallel ?? null,
+                  marketplace: c.source ?? undefined,
+                })).filter((r: any) => r.price > 0 && r.soldDate);
+                console.log(JSON.stringify({
+                  event: "price_canonical_player_lookup_hit",
+                  source: "compiq.routes.price",
+                  query, slug: best.id, fmv: canonFmv, method, compsUsed: canonN,
+                }));
+                return {
+                  ...buildEngineMeta(),
+                  success: true,
+                  query: query.trim(),
+                  source: method,
+                  pricingTier: method,
+                  summary: (canon as any).provenance?.summary ?? undefined,
+                  marketTier: { value: canonFmv, high: sellZone[1] },
+                  buyZone, holdZone, sellZone,
+                  fairMarketValue: canonFmv,
+                  marketValue: canonFmv,
+                  fairMarketValueLive: canonFmv,
+                  predictedPrice: canonFmv,
+                  predictedPriceRange: [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.05)] as [number, number],
+                  fairMarketValueLow: buyZone[0],
+                  fairMarketValueHigh: sellZone[1],
+                  confidence: (canon as any).confidence ?? 0.85,
+                  pricingConfidence: (canon as any).confidence ?? 0.85,
+                  fmvMechanism: method,
+                  recentComps: provComps,
+                  compsUsed: canonN,
+                  compsAvailable: canonN,
+                  verdict: (canon as any).provenance?.summary ?? "Canonical-FMV via player lookup.",
+                  cardIdentity: {
+                    slug: best.id,
+                    sport: best.sport ?? "baseball",
+                    year: best.year,
+                    setKey: best.setName,
+                    cardNumber: best.cardNumber,
+                    parallel: parsed.parallel || "Base",
+                    isAuto: false,
+                    playerName: best.playerName,
+                  },
+                };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "price_canonical_player_lookup_error",
+            source: "compiq.routes.price",
+            query, error: (err as Error)?.message ?? String(err),
+          }));
+        }
+      }
+
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price
       // is the free-text alias of /search.
       let est = await computeEstimate(body, {

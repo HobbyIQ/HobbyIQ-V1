@@ -84,17 +84,18 @@ const CASES = [
     acceptEmptyForTier7Transition: true,
   },
   {
-    // CF-SMOKE-CH-DEP-DEFERRED (Drew, 2026-08-08). Same class as case
-    // 3 above — "Ohtani Base" has no cardNumber. Ohtani's 2024 Bowman
-    // Chrome base is card #150 but that mapping requires a player→card
-    // knowledge base we haven't built. CH's AI matcher previously
-    // synthesized this from player+set alone. Rebuilding in our own
-    // pool = post-launch work. mustNotNull=false so smoke test signal
-    // reflects the CH-decommissioned surfaces we actually ship.
-    tier: "1 (direct-comps) recent star — CH-dep, deferred",
+    // CF-CANONICAL-PLAYER-LOOKUP (Drew, 2026-08-09). Restored to
+    // mustNotNull=true after the /price handler gained a
+    // player-lookup canonical-first path (compiq.routes.ts
+    // CF-PRICE-CANONICAL-PLAYER-LOOKUP). "Ohtani Base" with year +
+    // set + player is now resolvable via card_catalog identity
+    // lookup — the resolver picks the highest-comp-count match
+    // for that (year, set, player, parallel=Base) tuple and
+    // returns canonical-fmv on that slug.
+    tier: "1 (direct-comps) recent star",
     query: "2024 Bowman Chrome Ohtani Base",
-    expect: "null under CH-off; player→card lookup deferred",
-    mustNotNull: false,
+    expect: "predictedPrice via player-lookup canonical-first",
+    mustNotNull: true,
   },
   {
     tier: "8 (unavailable)",
