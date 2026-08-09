@@ -1003,8 +1003,15 @@ async function tryDirectComp(
     cardId,
     sources: [...sources] as never,
     parallel: input.parallel ?? undefined,
-    gradeCompany: input.gradeCompany ?? undefined,
-    gradeValue: input.gradeValue ?? undefined,
+    // CF-GRADE-NULL-PRESERVE (Drew, 2026-08-09). readCompsByCardId
+    // treats `null` as "Raw only" and `undefined` as "no grade
+    // filter." The prior `?? undefined` collapsed a Raw request
+    // (gradeCompany=null) into the no-filter branch, so the FMV
+    // regression fit a MIXED-tier pool (Raw + PSA 9 + PSA 10) while
+    // /recent-sales displayed Raw only — user saw FMV $525 with
+    // comps ~$1075 median on 2018 TCU Ohtani Base. Preserve null.
+    gradeCompany: input.gradeCompany === undefined ? undefined : input.gradeCompany,
+    gradeValue: input.gradeValue === undefined ? undefined : input.gradeValue,
     isAuto: typeof input.isAuto === "boolean" ? input.isAuto : undefined,
     printRun: input.printRun === null ? null
               : typeof input.printRun === "number" ? input.printRun
@@ -1200,8 +1207,11 @@ async function tryCrossParallel(
   const allComps = await readCompsByCardId({
     cardId,
     sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
-    gradeCompany: input.gradeCompany ?? undefined,
-    gradeValue: input.gradeValue ?? undefined,
+    // CF-GRADE-NULL-PRESERVE (Drew, 2026-08-09). See tryDirectComp
+    // for the full rationale — Raw is `null`, not-specified is
+    // `undefined`, and collapsing them mixes tiers.
+    gradeCompany: input.gradeCompany === undefined ? undefined : input.gradeCompany,
+    gradeValue: input.gradeValue === undefined ? undefined : input.gradeValue,
   }).catch(() => []);
 
   const nowMs = Date.now();
