@@ -516,7 +516,13 @@ function ImportPurchasesSection() {
             value={days}
             onChange={(e) => setDays(Number(e.target.value) as 7 | 30 | 60 | 90)}
             disabled={running}
-            className="hiq-input text-sm px-3 py-2"
+            className="text-sm px-3 py-2 rounded-lg border outline-none focus:border-[color:var(--color-accent)] transition-colors"
+            style={{
+              background: "var(--color-bg)",
+              borderColor: "var(--color-border)",
+              color: "white",
+              colorScheme: "dark",
+            }}
           >
             <option value={7}>7 days</option>
             <option value={30}>30 days</option>

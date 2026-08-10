@@ -65,6 +65,13 @@ html {
   background: var(--hiq-app-bg);
   color: var(--hiq-pure-white);
   min-height: 100%;
+  /* CF-DARK-COLOR-SCHEME (Drew, 2026-08-10). Tells the browser to
+   * render OS-supplied controls (select dropdown options, date pickers,
+   * scrollbars, autofill styles) in dark theme. Without this, <select>
+   * options render with light-scheme system defaults — on macOS Chrome
+   * that meant white text on white background = invisible dropdown
+   * items on pages like /app/ebay (import days selector). */
+  color-scheme: dark;
 }
 
 body {
