@@ -1,0 +1,88 @@
+name: Marketplace Listings Refresh
+
+# Rebuilds the marketplace_listings container from every eligible
+# seller's opted-in storefront cards. Runs nightly + on demand.
+#
+# Trade-off (see CF-MARKETPLACE-SYNC comment in portfolioStore.service.ts):
+# no per-toggle write hook — newly-toggled storefront cards take up to
+# 24h to appear in cross-storefront search. This job keeps the
+# materialized index converging to the truth.
+
+on:
+  # 07:30 UTC nightly (~3:30 AM ET) — after grade-explode (06:00 UTC)
+  # and before BCP sweep (08:00 UTC), off-peak for Cosmos.
+  schedule:
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'DRY_RUN=true prints plan without writing'
+        required: false
+        default: 'false'
+      fresh:
+        description: 'FRESH=true cascades a full delete before rebuild (dangerous)'
+        required: false
+        default: 'false'
+
+jobs:
+  refresh:
+    name: Rebuild marketplace_listings from eligible storefronts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install @azure/cosmos
+        run: npm install @azure/cosmos --no-save
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Run marketplace listings refresh
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          FRESH: ${{ github.event.inputs.fresh || 'false' }}
+        run: |
+          echo "Running: node backend/scripts/backfillMarketplaceListings.cjs (DRY_RUN=$DRY_RUN FRESH=$FRESH)"
+          node backend/scripts/backfillMarketplaceListings.cjs
+
+      - name: Report post-run listings count
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+            (async () => {
+              const ml = c.database('hobbyiq').container('marketplace_listings');
+              const totalQ = await ml.items.query({ query: 'SELECT VALUE COUNT(1) FROM c' }).fetchAll();
+              const sellersQ = await ml.items.query({ query: 'SELECT VALUE COUNT(1) FROM (SELECT DISTINCT c.sellerId FROM c)' }).fetchAll();
+              console.log('marketplace_listings total rows:', (totalQ.resources[0] ?? 0).toLocaleString());
+              console.log('distinct sellers with listings:', (sellersQ.resources[0] ?? 0).toLocaleString());
+            })();
+          "

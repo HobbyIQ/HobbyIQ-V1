@@ -4805,6 +4805,14 @@ export async function updateHolding(req: Request, res: Response) {
     void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
   }
 
+  // CF-MARKETPLACE-SYNC (Drew, 2026-08-10). Marketplace listings are
+  // refreshed via a nightly cron workflow (marketplace-listings-refresh),
+  // not a per-update write hook. Trade-off: newly-toggled storefront
+  // cards take up to 24h to appear in cross-storefront search. Chosen
+  // over inline hook to avoid adding a userId→record lookup helper
+  // that authService doesn't currently expose. When per-toggle
+  // reactivity is needed, promote to real-time hook here.
+
   // CF-PATCH-HOLDING-RETURN-STATE (2026-07-12): return the fully-persisted
   // holding via composeHoldingWireShape so iOS can verify the round-trip
   // matches what it sent. Prevents "I changed to Raw but it still shows
