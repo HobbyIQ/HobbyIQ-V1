@@ -1,22 +1,27 @@
 "use client";
 
-// CF-UX-CLEANUP #4 (Drew, 2026-07-27). The Add-a-card flow moved into
-// the AddCardModal (opens over the Portfolio page). This route is kept
-// as a redirect so bookmarks, iOS deep links, and the onboarding
-// checklist step "Add your first card" all still land on the correct
-// UX — the modal auto-opens when the target page reads ?add=1.
+// CF-ADD-CARD-DEDICATED-PAGE (Drew, 2026-08-10). Was a redirect to
+// /app/portfolio?add=1, but users reported the button doing nothing
+// (likely a React state / hydration issue on the main portfolio
+// page). This page now renders AddCardModal in its own isolated
+// tree — bypasses whatever might be broken on the portfolio index.
+// After add, navigate to /app/portfolio to see the new card.
+//
+// Onboarding checklist + iOS deep links + the "+ Add card" button's
+// href fallback all point here, so any broken client-side path
+// eventually hard-navigates to a page that works.
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { AddCardModal } from "@/components/AddCardModal";
 
-export default function AddCardRedirect() {
+export default function AddCardPage() {
   const router = useRouter();
-  useEffect(() => {
-    router.replace("/app/portfolio?add=1");
-  }, [router]);
   return (
-    <div className="max-w-3xl mx-auto px-6 py-16 text-center">
-      <div className="text-sm text-[color:var(--color-muted)]">Opening Add card…</div>
+    <div className="max-w-3xl mx-auto px-6 py-8">
+      <AddCardModal
+        onClose={() => router.push("/app/portfolio")}
+        onAdded={() => router.push("/app/portfolio")}
+      />
     </div>
   );
 }

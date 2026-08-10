@@ -273,20 +273,21 @@ function PortfolioPageBody() {
             {selectMode ? "Cancel select" : "Select"}
           </button>
           <div className="flex items-center gap-2">
-            {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10). Button was
-                reported broken (click did nothing) — likely React
-                hydration or state race. Rendered as an <a> now so
-                the browser hard-navigates to ?add=1, which the
-                useEffect at line 92 syncs back to addOpen=true.
-                Works even if the client-side JS has a runtime error.
-                onClick short-circuits to the SPA path when JS is
-                healthy so no full-page reload most of the time. */}
+            {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10 rev 2).
+                Report: even the <a href="?add=1"> fallback wasn't
+                reliably opening the modal — main page has a runtime
+                fragility that's blocking the modal render. Point the
+                href at /app/portfolio/add — a dedicated page that
+                renders AddCardModal in its own isolated tree, so any
+                react error on THIS page is bypassed by hard-nav. */}
             <a
-              href="/app/portfolio?add=1"
+              href="/app/portfolio/add"
               onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey) return; // let modifier-clicks pass through
+                if (e.metaKey || e.ctrlKey || e.shiftKey) return;
                 e.preventDefault();
-                setAddOpen(true);
+                // Try in-page first (fast path when JS is healthy)
+                try { setAddOpen(true); }
+                catch { window.location.href = "/app/portfolio/add"; }
               }}
               className="hiq-btn-primary text-sm inline-block"
             >
@@ -753,9 +754,10 @@ function EmptyState() {
           <MiniBullet title="Sell signals" body="Alerts when your cards cross a threshold you set." />
         </div>
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10). Plain <a> so
-              it works even under a broken client-side router. */}
-          <a href="/app/portfolio?add=1" className="hiq-btn-primary inline-block">
+          {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10 rev 2). Points
+              at the dedicated /add page so the flow doesn't depend on
+              THIS page's client-side render succeeding. */}
+          <a href="/app/portfolio/add" className="hiq-btn-primary inline-block">
             + Add your first card
           </a>
           <Link
