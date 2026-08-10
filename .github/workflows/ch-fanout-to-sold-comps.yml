@@ -1,0 +1,113 @@
+name: CH Fanout to sold_comps
+
+# CF-CH-FANOUT (Drew, 2026-08-10). Backfills the ~800K row gap between
+# ch_daily_sales (3.7M rows, 2018-04→2026-08) and sold_comps (2.9M
+# rows with source=cardhedge). The daily CH ingest writes only to
+# ch_daily_sales; sold_comps was seeded on-demand via user queries, so
+# long-tail cards are underrepresented in the unified pool.
+#
+# Idempotent — recordSoldComp dedups by contentHash. Safe to re-run
+# any range. Checkpoints via BULK_START_DATE/BULK_END_DATE so
+# multi-dispatch drains resume cleanly.
+#
+# Default: 30-day slice ending yesterday. Use workflow_dispatch inputs
+# to pick a larger window or a historical range.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Newest date to process (walks backward). YYYY-MM-DD. Default: today.'
+        required: false
+        default: ''
+      end_date:
+        description: 'Oldest date to stop at. YYYY-MM-DD. Default: 30 days back.'
+        required: false
+        default: ''
+      sport_filter:
+        description: 'Comma-separated sports (baseball,basketball,football,hockey,soccer). Blank = all sports incl. Pokemon.'
+        required: false
+        default: 'baseball,basketball,football,hockey,soccer'
+      concurrency:
+        description: 'Parallel recordSoldComp calls (default 8, max 32)'
+        required: false
+        default: '8'
+
+jobs:
+  fanout:
+    name: Backfill ch_daily_sales → sold_comps
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Run fan-out
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          BACKFILL_APPLY: 'true'
+          BACKFILL_CONCURRENCY: ${{ inputs.concurrency }}
+          BULK_START_DATE: ${{ inputs.start_date }}
+          BULK_END_DATE: ${{ inputs.end_date }}
+          BULK_SPORT_FILTER: ${{ inputs.sport_filter }}
+          BULK_SLICE_DAYS: '14'
+        run: |
+          echo "Running bulk-import-ch-daily-to-sold-comps.cjs"
+          echo "  APPLY=$BACKFILL_APPLY  CONCURRENCY=$BACKFILL_CONCURRENCY"
+          echo "  START=$BULK_START_DATE  END=$BULK_END_DATE  SPORTS=$BULK_SPORT_FILTER"
+          node scripts/bulk-import-ch-daily-to-sold-comps.cjs
+
+      - name: Report post-run counts
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+            (async () => {
+              const chd = c.database('hobbyiq').container('ch_daily_sales');
+              const sc = c.database('hobbyiq').container('sold_comps');
+              const chdCount = await chd.items.query({ query: 'SELECT VALUE COUNT(1) FROM c' }).fetchAll();
+              const scChCount = await sc.items.query({ query: \"SELECT VALUE COUNT(1) FROM c WHERE c.source = 'cardhedge'\" }).fetchAll();
+              console.log('ch_daily_sales rows        :', (chdCount.resources[0] ?? 0).toLocaleString());
+              console.log('sold_comps cardhedge rows  :', (scChCount.resources[0] ?? 0).toLocaleString());
+              console.log('gap (approx)               :', ((chdCount.resources[0] ?? 0) - (scChCount.resources[0] ?? 0)).toLocaleString());
+            })();
+          "
