@@ -1,0 +1,94 @@
+name: Catalog cardYear Backfill
+
+# Safety net for the BCP-ingest cardYear bug (CF-CATALOG-CARDYEAR-BACKFILL,
+# 2026-08-10). Ingest itself now writes cardYear — this workflow catches
+# any historical or race-with-sweep rows that landed without it.
+#
+# Extracts year from the hobbyiqCardId slug (position 2 after ':') and
+# adds `cardYear` as a top-level field. Idempotent — only patches rows
+# missing cardYear. Small enough to fit under GH's 6-hour cap even at
+# millions of rows.
+
+on:
+  # Nightly at 09:00 UTC — after BCP sweep (08:00 UTC) and grade-explode
+  # (06:00 UTC), so it picks up whatever those write. Off-peak for Cosmos.
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'DRY_RUN=true prints plan without writing'
+        required: false
+        default: 'false'
+      source_filter:
+        description: 'Restrict to one source (e.g. baseballcardpedia); blank = all'
+        required: false
+        default: ''
+
+jobs:
+  backfill:
+    name: Backfill catalog.cardYear from hobbyiqCardId slug
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install @azure/cosmos
+        run: npm install @azure/cosmos --no-save
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Run cardYear backfill
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          SOURCE_FILTER: ${{ github.event.inputs.source_filter || '' }}
+          CONCURRENCY: '128'
+        run: |
+          echo "Running: node backend/scripts/backfillCatalogCardYearFromSlug.cjs (DRY_RUN=$DRY_RUN SOURCE_FILTER=$SOURCE_FILTER)"
+          node backend/scripts/backfillCatalogCardYearFromSlug.cjs
+
+      - name: Report post-run coverage
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+            (async () => {
+              const cat = c.database('hobbyiq').container('card_catalog');
+              const missing = await cat.items.query({
+                query: 'SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.hobbyiqCardId) AND (NOT IS_DEFINED(c.cardYear) OR c.cardYear = null)'
+              }).fetchAll();
+              const withYear = await cat.items.query({
+                query: 'SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.cardYear)'
+              }).fetchAll();
+              console.log('rows still missing cardYear:', (missing.resources[0] ?? 0).toLocaleString());
+              console.log('rows with cardYear        :', (withYear.resources[0] ?? 0).toLocaleString());
+            })();
+          "

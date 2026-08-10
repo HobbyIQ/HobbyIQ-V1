@@ -148,7 +148,7 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   ].flat().filter(Boolean));
   return {
     id: slug, cardId: slug, hobbyiqCardId: slug,
-    sport: "baseball", year, setKey,
+    sport: "baseball", year, cardYear: year, setKey,
     setName: setKey.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "),
     cardNumber, playerName, team: null,
     parallel: parallel.name, parallelSlug: parallelSlug || "base",
