@@ -1,0 +1,80 @@
+name: Catalog Grade Explosion
+
+# Runs the CORE 12-tier grade explosion on card_catalog. Long-running
+# job — chunked so each invocation runs up to ~5.5 hours (under GH
+# Actions' 6-hour job timeout). Re-run on manual dispatch to continue
+# from where the last run left off (--limit=0 processes all remaining
+# identities that don't yet have gradeTier).
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max identities to explode this run (0=unlimited within timeout)'
+        required: false
+        default: '0'
+
+jobs:
+  explode:
+    name: Grade-Explode Catalog Identities
+    runs-on: ubuntu-latest
+    timeout-minutes: 350   # 5h 50m — leave buffer under 6hr GH cap
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install @azure/cosmos
+        run: npm install @azure/cosmos --no-save
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      - name: Run grade explosion
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          LIMIT_ARG=""
+          if [ "${{ github.event.inputs.limit }}" != "0" ] && [ -n "${{ github.event.inputs.limit }}" ]; then
+            LIMIT_ARG="--limit=${{ github.event.inputs.limit }}"
+          fi
+          echo "Running: node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply"
+          node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply
+
+      - name: Report post-run state
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+            (async () => {
+              const cat = c.database('hobbyiq').container('card_catalog');
+              const graded = await cat.items.query({ query: \"SELECT VALUE COUNT(1) FROM c WHERE c.catalogBatch = 'grade-explode-2026-08-10'\" }).fetchAll();
+              const remaining = await cat.items.query({ query: \"SELECT VALUE COUNT(1) FROM c WHERE c.catalogVersion = 2 AND IS_DEFINED(c.hobbyiqCardId) AND NOT IS_DEFINED(c.gradeTier)\" }).fetchAll();
+              console.log('graded rows in prod:', graded.resources[0].toLocaleString());
+              console.log('identities remaining to explode:', remaining.resources[0].toLocaleString());
+            })();
+          "
