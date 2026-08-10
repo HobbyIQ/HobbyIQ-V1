@@ -63,6 +63,12 @@ export interface InviteCode {
   claimedBy: Array<{ userId: string; at: string }>;
   notes?: string | null;
   status: InviteCodeStatus;
+  // CF-INVITE-PLAN-GRANT (Drew, 2026-08-10). When set, redemption of
+  // this code auto-applies entitlementOverride on the new user's
+  // record. Grants ride with the invite, not the account — so
+  // "founding invite = pro seller" is baked in at mint time and
+  // survives future signup-flow refactors.
+  grantsPlan?: "free" | "collector" | "investor" | "pro_seller" | null;
 }
 
 export interface MintOptions {
@@ -71,6 +77,7 @@ export interface MintOptions {
   expiresAt?: string | null;
   notes?: string | null;
   createdBy?: string;       // default "admin-cli"
+  grantsPlan?: "free" | "collector" | "investor" | "pro_seller" | null;
 }
 
 /** Generate a friendly, memorable-ish code: HOBBYIQ-<6 chars>. */
@@ -107,6 +114,7 @@ export async function mintInviteCode(opts: MintOptions = {}): Promise<InviteCode
     claimedBy: [],
     notes: opts.notes ?? null,
     status: "active",
+    grantsPlan: opts.grantsPlan ?? null,
   };
   try {
     const { resource } = await c.items.create(doc);

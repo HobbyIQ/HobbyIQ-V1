@@ -45,6 +45,14 @@ async function main() {
   const notes = arg("notes");
   const count = Math.max(1, Math.min(500, Number(arg("count", "1"))));
   const urlBase = arg("url-base");
+  // CF-INVITE-PLAN-GRANT (Drew, 2026-08-10). --grants-plan=pro_seller
+  // makes every redeemer of this code auto-land on Pro Seller via
+  // entitlementOverride. Valid: free | collector | investor | pro_seller.
+  const grantsPlan = arg("grants-plan");
+  if (grantsPlan && !["free", "collector", "investor", "pro_seller"].includes(grantsPlan)) {
+    console.error(`--grants-plan must be one of: free, collector, investor, pro_seller (got: ${grantsPlan})`);
+    process.exit(1);
+  }
 
   const expiresAt = expiresDay
     ? new Date(`${expiresDay}T23:59:59Z`).toISOString()
@@ -61,6 +69,7 @@ async function main() {
       expiresAt,
       notes,
       createdBy: "admin-cli",
+      grantsPlan: grantsPlan || null,
     });
     if (!doc) {
       console.error("mint returned null — check container permissions.");

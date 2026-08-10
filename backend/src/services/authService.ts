@@ -1123,6 +1123,12 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   // Sign-In existing users (login path) already returned above.
   const { isInviteRequired, validateInviteCode, consumeInviteCode } = await import("./auth/inviteCodes.service.js");
   let inviteCodeToConsume: string | null = null;
+  // CF-INVITE-PLAN-GRANT (Drew, 2026-08-10). Plan grants ride with the
+  // invite code — captured here so the new user's record can be stamped
+  // with entitlementOverride before writeUser. Applies BEFORE writeUser
+  // so the first record write includes the override (no separate
+  // read-modify-write later).
+  let grantsPlan: SubscriptionPlan | null = null;
   if (isInviteRequired()) {
     const raw = String(input.inviteCode ?? "").trim();
     if (!raw) {
@@ -1133,6 +1139,9 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
       return { success: false, error: check.error };
     }
     inviteCodeToConsume = check.code.code;
+    if (check.code.grantsPlan) {
+      grantsPlan = check.code.grantsPlan as SubscriptionPlan;
+    }
   }
 
   const userId = appleSub
@@ -1149,6 +1158,11 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     passwordHash,
     passwordAlgo: appleSub ? "apple-oauth" : "scrypt",
     plan: "free",
+    // CF-INVITE-PLAN-GRANT (Drew, 2026-08-10). entitlementOverride is
+    // the correct field per CF-OWNER-OVERRIDE — it beats both
+    // Apple-derived plan AND the free default at every gate
+    // (effectivePlanFor). Whatever the code granted lands here.
+    entitlementOverride: grantsPlan,
     createdAt: new Date().toISOString(),
     fullName,
     appleSub,
