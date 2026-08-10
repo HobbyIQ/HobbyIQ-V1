@@ -60,7 +60,7 @@ export interface ApiError {
 
 async function request<T>(
   path: string,
-  init: RequestInit & { auth?: boolean } = {},
+  init: RequestInit & { auth?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -70,11 +70,38 @@ async function request<T>(
     const sid = getStoredSessionId();
     if (sid) headers["x-session-id"] = sid;
   }
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-  });
+  // CF-REQUEST-TIMEOUT (Drew, 2026-08-10). fetch() has no default
+  // timeout — a hung server silently pinned every save-button to
+  // "Saving…" forever (reported on BuyerIQ Add Target). 30s default
+  // is generous for interactive routes; callers can override with
+  // { timeoutMs } for known-slow operations.
+  const timeoutMs = init.timeoutMs ?? 30_000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers,
+      cache: "no-store",
+      signal: init.signal ?? ctrl.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    // Aborted-by-timeout surfaces as AbortError; other network fails
+    // as TypeError. Rethrow as our shape so upstream catch() handles
+    // uniformly.
+    const isAbort = (err as Error)?.name === "AbortError";
+    const apiErr: ApiError = {
+      status: isAbort ? 408 : 0,
+      code: isAbort ? "timeout" : "network",
+      message: isAbort
+        ? `Request timed out after ${Math.round(timeoutMs / 1000)}s`
+        : (err as Error)?.message ?? "Network error",
+    };
+    throw apiErr;
+  }
+  clearTimeout(timer);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err: ApiError = {

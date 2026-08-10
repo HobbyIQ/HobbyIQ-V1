@@ -511,7 +511,18 @@ function TargetDialog({
       }
       onSaved();
     } catch (err) {
-      setError((err as { message?: string }).message ?? "Failed to save");
+      // CF-BUYERIQ-SAVE-ERROR-VISIBILITY (Drew, 2026-08-10). Log full
+      // error to console so the "stuck on Saving…" bug leaves evidence
+      // in DevTools. request() now enforces a 30s timeout, so infinite
+      // hangs are impossible — this will surface either a real API
+      // error or an ApiError{code:"timeout"} the user can screenshot.
+      // eslint-disable-next-line no-console
+      console.error("[BuyerIQ save] error:", err);
+      const e = err as { message?: string; status?: number; code?: string };
+      const msg = e.code === "timeout"
+        ? "Save timed out — check your connection and retry."
+        : e.message ?? "Failed to save";
+      setError(msg);
       setBusy(false);
     }
   }
