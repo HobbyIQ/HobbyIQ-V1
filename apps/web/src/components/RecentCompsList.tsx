@@ -185,10 +185,13 @@ function CompRow({ s }: { s: RecentCompSale }) {
     s.gradeCompany && s.gradeValue != null ? `${s.gradeCompany} ${s.gradeValue}` : "Raw";
   const inner = (
     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-      <div className="w-12 h-12 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-10). Slab-ratio (~3:4)
+          container + object-contain so the whole slab is visible
+          (grade banner + card + cert #). */}
+      <div className="w-12 h-16 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
         {s.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={s.imageUrl} alt="" className="w-full h-full object-contain" />
         ) : (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
             <path d="M4 6h16v12H4V6z" />

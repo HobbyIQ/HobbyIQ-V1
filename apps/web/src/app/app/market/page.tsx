@@ -286,10 +286,11 @@ function MoverRow({ m, rank, tint }: { m: MarketMover; rank: number; tint: strin
 function NotableRow({ s }: { s: NotableSale }) {
   const inner = (
     <div className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg hover:bg-white/5 transition-colors">
-      <div className="w-10 h-10 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-10). Slab-ratio + object-contain. */}
+      <div className="w-10 h-14 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
         {s.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={s.imageUrl} alt="" className="w-full h-full object-contain" />
         ) : (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
             <path d="M4 6h16v12H4V6z" />

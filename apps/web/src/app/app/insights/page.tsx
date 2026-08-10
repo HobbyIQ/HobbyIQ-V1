@@ -318,13 +318,14 @@ function NotableSalesSection() {
 function NotableSaleRow({ s }: { s: NotableSale }) {
   return (
     <div className="hiq-card p-3 flex items-center gap-4" style={{ background: "var(--color-bg)" }}>
+      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-10). Slab-ratio + object-contain. */}
       <div
-        className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+        className="w-12 h-16 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
         style={{ background: "var(--color-bg-card)" }}
       >
         {s.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+          <img src={s.imageUrl} alt="" className="w-full h-full object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
         ) : (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
             <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
