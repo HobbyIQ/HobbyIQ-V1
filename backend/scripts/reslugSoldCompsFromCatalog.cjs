@@ -1,4 +1,4 @@
-// CF-SOLDCOMPS-RESLUG-FROM-CATALOG (Drew, 2026-08-10).
+// CF-SOLDCOMPS-RESLUG-FROM-CATALOG (Drew, 2026-08-10, rev 2 setKey-safe).
 //
 // The problem: 58.3% of sold_comps have a hobbyiqCardId that doesn't
 // match any card_catalog row — not because catalog is missing the
@@ -7,20 +7,27 @@
 // row was written from a clean setKey ("topps-chrome-prospects").
 // Same card, different slug.
 //
-// The fix: for each unmapped sold_comp, look up the catalog by
-// (cardYear, cardNumberUpper, playerNameLower, parallelLower, isAuto)
-// — an unambiguous identity tuple that doesn't depend on setName
-// shape — and if we find exactly one canonical catalog row, patch
-// the sold_comp's hobbyiqCardId to match the catalog.
+// Rev-1 (removed) tried matching on (sport, year, cardNumber,
+// playerName, parallel, isAuto) — WITHOUT setKey. That produced
+// dangerous cross-set false matches (2026 Topps #136 ≠ 2026 Topps
+// Heritage #136 — same identity tuple minus setKey, totally
+// different cards, different values). Never applied.
+//
+// Rev-2 (this): REQUIRES normalizedSetKey === catalog.setKey exact
+// match in addition to the identity tuple. Skips any sold_comp that
+// doesn't have normalizedSetKey (run normalizeSoldCompSetKey.cjs
+// --apply first). This eliminates cross-set false matches by
+// definition.
 //
 // Safety:
 //   - Only patches sold_comps whose current slug is NOT in the
 //     catalog slug set (i.e., don't touch correctly-slugged rows)
+//   - REQUIRES normalizedSetKey field on sold_comp AND same setKey
+//     on catalog row (identity tuple includes setKey)
 //   - Requires exact match on cardNumber + playerName + parallel +
 //     isAuto — never guesses across parallels or across autos
 //   - If the identity tuple matches more than one distinct catalog
-//     slug (rare — cross-year re-uses, etc.), skip; ambiguous is
-//     unsafe
+//     slug (rare after setKey included), skip; ambiguous is unsafe
 //   - DRY_RUN default; only writes when explicitly enabled
 //
 // Idempotent: rows already matching a catalog slug are skipped in
@@ -60,17 +67,18 @@ async function main() {
   const sc = client.database("hobbyiq").container("sold_comps");
   const t0 = Date.now();
 
-  console.log("[phase1] loading catalog index...");
+  console.log("[phase1] loading catalog index (setKey-scoped)...");
   const catBySlug = new Set();
   const catByIdentity = new Map();
   const identityConflicts = new Set();
   const sportFilterClause = SPORT_FILTER ? `AND c.sport = "${SPORT_FILTER}"` : "";
   const catIter = cat.items.query({
     query: `SELECT c.hobbyiqCardId, c.sport, c.cardYear, c.year, c.cardNumber, c.playerName,
-                   c.parallel, c.isAuto
+                   c.parallel, c.isAuto, c.setKey
             FROM c
             WHERE c.catalogVersion = 2
               AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
+              AND IS_DEFINED(c.setKey)
               ${sportFilterClause}`,
   }, { maxItemCount: 5000 });
 
@@ -98,8 +106,8 @@ async function main() {
     for (const r of resources) {
       catBySlug.add(r.hobbyiqCardId);
       const year = r.cardYear ?? r.year;
-      if (!year || !r.cardNumber || !r.playerName) continue;
-      const key = `${norm(r.sport)}|${year}|${normCardNum(r.cardNumber)}|${norm(r.playerName)}|${normParallel(r.parallel)}|${normAuto(r.isAuto) ? 1 : 0}`;
+      if (!year || !r.cardNumber || !r.playerName || !r.setKey) continue;
+      const key = `${norm(r.sport)}|${year}|${norm(r.setKey)}|${normCardNum(r.cardNumber)}|${norm(r.playerName)}|${normParallel(r.parallel)}|${normAuto(r.isAuto) ? 1 : 0}`;
       if (catByIdentity.has(key)) {
         if (catByIdentity.get(key) !== r.hobbyiqCardId) identityConflicts.add(key);
       } else {
@@ -113,17 +121,18 @@ async function main() {
   console.log(`[phase1] catalog: ${catBySlug.size.toLocaleString()} slugs, ${indexed.toLocaleString()} identity tuples, ${identityConflicts.size.toLocaleString()} ambiguous`);
 
   console.log("");
-  console.log("[phase2] scanning sold_comps for unmapped rows...");
+  console.log("[phase2] scanning sold_comps for unmapped rows (setKey-safe)...");
   const scIter = sc.items.query({
     query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.sport, c.cardYear, c.cardNumber,
-                   c.playerName, c.parallel, c.isAuto
+                   c.playerName, c.parallel, c.isAuto, c.normalizedSetKey
             FROM c
             WHERE c.price > 0
               AND IS_DEFINED(c.cardYear) AND IS_DEFINED(c.cardNumber) AND IS_DEFINED(c.playerName)
+              AND IS_DEFINED(c.normalizedSetKey)
               ${SPORT_FILTER ? `AND c.sport = "${SPORT_FILTER}"` : ""}`,
   }, { maxItemCount: 5000 });
 
-  let scanned = 0, alreadyMatched = 0, notMatchable = 0, planned = 0, skippedAmbiguous = 0;
+  let scanned = 0, alreadyMatched = 0, notMatchable = 0, planned = 0, skippedAmbiguous = 0, skippedNoNormalizedSet = 0;
   const patchQueue = [];
   const sportUnlocked = new Map();
 
@@ -132,7 +141,8 @@ async function main() {
     for (const r of resources) {
       scanned++;
       if (r.hobbyiqCardId && catBySlug.has(r.hobbyiqCardId)) { alreadyMatched++; continue; }
-      const key = `${norm(r.sport)}|${r.cardYear}|${normCardNum(r.cardNumber)}|${norm(r.playerName)}|${normParallel(r.parallel)}|${normAuto(r.isAuto) ? 1 : 0}`;
+      if (!r.normalizedSetKey) { skippedNoNormalizedSet++; continue; }
+      const key = `${norm(r.sport)}|${r.cardYear}|${norm(r.normalizedSetKey)}|${normCardNum(r.cardNumber)}|${norm(r.playerName)}|${normParallel(r.parallel)}|${normAuto(r.isAuto) ? 1 : 0}`;
       if (identityConflicts.has(key)) { skippedAmbiguous++; continue; }
       const newSlug = catByIdentity.get(key);
       if (!newSlug) { notMatchable++; continue; }
@@ -149,11 +159,12 @@ async function main() {
 
   console.log("");
   console.log("[plan]");
-  console.log(`  sold_comps scanned          : ${scanned.toLocaleString()}`);
-  console.log(`  already correctly matched   : ${alreadyMatched.toLocaleString()}`);
-  console.log(`  patches planned (unlock)    : ${planned.toLocaleString()}`);
-  console.log(`  skipped (identity ambiguous): ${skippedAmbiguous.toLocaleString()}`);
-  console.log(`  no catalog identity match   : ${notMatchable.toLocaleString()}`);
+  console.log(`  sold_comps scanned            : ${scanned.toLocaleString()}`);
+  console.log(`  already correctly matched     : ${alreadyMatched.toLocaleString()}`);
+  console.log(`  patches planned (unlock)      : ${planned.toLocaleString()}`);
+  console.log(`  skipped (no normalizedSetKey) : ${skippedNoNormalizedSet.toLocaleString()}`);
+  console.log(`  skipped (identity ambiguous)  : ${skippedAmbiguous.toLocaleString()}`);
+  console.log(`  no catalog identity match     : ${notMatchable.toLocaleString()}`);
   console.log("");
   console.log("[unlock by sport]");
   for (const [s, n] of [...sportUnlocked.entries()].sort((a, b) => b[1] - a[1])) {
