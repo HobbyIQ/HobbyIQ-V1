@@ -31,6 +31,14 @@ struct BuyerIQTargetEditView: View {
     @State private var status: BuyerIqTargetStatus = .wanted
     @State private var acquiredPriceString: String = ""
     @State private var isSaving = false
+    // CF-BUYERIQ-CATALOG-SEARCH (Drew, 2026-08-10). When a target is
+    // added via the catalog search sheet, capture the canonical slug +
+    // image so save() can send them through to the backend — the
+    // target row lands with `hobbyiqCardId` set and pricing rails
+    // (canonical FMV, gap match, market movers) snap in immediately.
+    @State private var showCatalogSearch: Bool = false
+    @State private var pickedHobbyiqCardId: String? = nil
+    @State private var pickedImageUrl: String? = nil
 
     private var listId: String {
         switch mode {
@@ -46,6 +54,49 @@ struct BuyerIQTargetEditView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // CF-BUYERIQ-CATALOG-SEARCH (Drew, 2026-08-10). Catalog
+                // search entry point — only shown on Create (not Edit) so
+                // existing targets aren't accidentally re-slugged. Tap
+                // opens the same search sheet that Inventory add uses;
+                // picking a result prefills the Card section below and
+                // captures the canonical slug for the save payload.
+                if !isEditing {
+                    Section {
+                        Button {
+                            showCatalogSearch = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(pickedHobbyiqCardId == nil ? "Search catalog" : "Card picked from catalog")
+                                        .font(HobbyIQTheme.Typography.bodyEmphasis)
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    Text(pickedHobbyiqCardId == nil
+                                         ? "Match to canonical identity so pricing rails snap in"
+                                         : "Tap to change; or edit fields below")
+                                        .font(HobbyIQTheme.Typography.caption)
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                }
+                                Spacer(minLength: 0)
+                                if pickedHobbyiqCardId != nil {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    } header: {
+                        Text("From catalog")
+                    } footer: {
+                        Text("Or fill the fields below manually if the card isn't indexed yet.")
+                            .font(HobbyIQTheme.Typography.caption)
+                    }
+                }
                 Section("Card") {
                     TextField("Player name (required)", text: $playerName)
                         .textInputAutocapitalization(.words)
@@ -104,7 +155,27 @@ struct BuyerIQTargetEditView: View {
                 }
             }
             .onAppear { hydrate() }
+            .sheet(isPresented: $showCatalogSearch) {
+                BuyerIQCatalogSearchSheet { hit in
+                    applyCatalogPick(hit)
+                }
+            }
         }
+    }
+
+    // CF-BUYERIQ-CATALOG-SEARCH (Drew, 2026-08-10). Prefill the form
+    // fields from a picked catalog hit. Preserves the canonical slug so
+    // save() can include it in the create payload — target lands
+    // hobbyiqCardId-tagged on first insert.
+    private func applyCatalogPick(_ hit: CompIQVariantHit) {
+        pickedHobbyiqCardId = hit.cardId
+        pickedImageUrl = hit.imageUrl
+        if let p = hit.player, !p.isEmpty { playerName = p }
+        if let y = hit.year { cardYearString = String(y) }
+        if let s = hit.set, !s.isEmpty { setName = s }
+        if let n = hit.number, !n.isEmpty { cardNumber = n }
+        if let v = hit.variant, !v.isEmpty { parallel = v }
+        isAuto = hit.isAuto
     }
 
     private func hydrate() {
@@ -127,7 +198,7 @@ struct BuyerIQTargetEditView: View {
         defer { isSaving = false }
         let req = BuyerIqTargetUpsertRequest(
             listId: isEditing ? nil : listId,
-            hobbyiqCardId: nil,
+            hobbyiqCardId: pickedHobbyiqCardId,
             playerName: playerName.trimmingCharacters(in: .whitespaces),
             cardYear: Int(cardYearString.trimmingCharacters(in: .whitespaces)),
             cardNumber: cardNumber.isEmpty ? nil : cardNumber,
@@ -136,7 +207,7 @@ struct BuyerIQTargetEditView: View {
             isAuto: isAuto,
             gradeCompany: nil,
             gradeValue: nil,
-            imageUrl: nil,
+            imageUrl: pickedImageUrl,
             maxPrice: Double(maxPriceString.replacingOccurrences(of: "$", with: "")),
             priority: priority.rawValue,
             notes: notes.isEmpty ? nil : notes,
