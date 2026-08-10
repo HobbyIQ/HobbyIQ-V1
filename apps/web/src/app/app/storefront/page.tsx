@@ -648,10 +648,15 @@ function PickerRow({
       />
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element
+        // CF-PHOTO-DISPLAY (Drew, 2026-08-10). object-contain so the
+        // full slab is visible in the picker row too. Bg fills the
+        // letterboxed area with the same slate the placeholder uses,
+        // so short-aspect images don't look weird against the row.
         <img
           src={photo}
           alt=""
-          className="w-10 h-14 object-cover rounded flex-shrink-0"
+          className="w-10 h-14 object-contain rounded flex-shrink-0"
+          style={{ background: "var(--hiq-slate-gray)" }}
         />
       ) : (
         <div

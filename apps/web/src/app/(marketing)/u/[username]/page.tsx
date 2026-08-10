@@ -221,10 +221,13 @@ function StorefrontCardTile({
       >
         {card.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
+          // CF-PHOTO-DISPLAY (Drew, 2026-08-10). object-contain so the
+          // full slab (grade banner + card + cert #) is visible.
+          // Container aspect-[3/4] already matches slab shape.
           <img
             src={card.imageUrl}
             alt={card.cardTitle}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style={{ color: "var(--hiq-muted-text)" }}>
