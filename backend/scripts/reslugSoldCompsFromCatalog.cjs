@@ -73,9 +73,28 @@ async function main() {
               AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
               ${sportFilterClause}`,
   }, { maxItemCount: 5000 });
+
+  async function fetchNextWithRetry(iter, maxAttempts = 8) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try { return await iter.fetchNext(); }
+      catch (err) {
+        const code = err && (err.code ?? err.statusCode);
+        const msg = String((err && err.message) || "");
+        if ((code === 429 || msg.includes("request rate is too large")) && attempt < maxAttempts - 1) {
+          const wait = Number((err && err.retryAfterInMs) ?? 1000 * Math.pow(2, attempt));
+          console.log(`  [429 backoff ${wait}ms attempt ${attempt + 1}]`);
+          await new Promise(r => setTimeout(r, wait));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error("exhausted retries");
+  }
+
   let loaded = 0, indexed = 0;
   while (catIter.hasMoreResults()) {
-    const { resources } = await catIter.fetchNext();
+    const { resources } = await fetchNextWithRetry(catIter);
     for (const r of resources) {
       catBySlug.add(r.hobbyiqCardId);
       const year = r.cardYear ?? r.year;
@@ -109,7 +128,7 @@ async function main() {
   const sportUnlocked = new Map();
 
   while (scIter.hasMoreResults()) {
-    const { resources } = await scIter.fetchNext();
+    const { resources } = await fetchNextWithRetry(scIter);
     for (const r of resources) {
       scanned++;
       if (r.hobbyiqCardId && catBySlug.has(r.hobbyiqCardId)) { alreadyMatched++; continue; }
