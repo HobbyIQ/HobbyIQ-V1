@@ -15,6 +15,32 @@ Add new items with:
 
 ## Azure Storage CORS
 
+### card-images container = blob-level public read
+
+- **What:** 2026-08-10, enabled `allowBlobPublicAccess=true` at the
+  storage account level AND set `card-images` container to
+  `publicAccess=blob`. Before this, browser `<img>` and iOS
+  `AsyncImage` requests to blob URLs returned 401 (uploads worked but
+  photos rendered as broken-image icons).
+- **Why blob-level, not container-level:** Blob-level allows anonymous
+  GET on individual blobs (needed for `<img>` tags) but blocks
+  container listing. Container-level would additionally allow anyone
+  to enumerate all blobs — unnecessary and slightly worse posture.
+- **Why public at all:** URLs contain a UUID + timestamp
+  (unguessable), user photos are already the product surface
+  (displayed publicly on `/u/<username>` storefronts), and iOS
+  AsyncImage / web `<img>` can't send auth headers without a proxy
+  layer.
+- **Trigger to revisit:** If users start uploading sensitive content
+  we don't want indexed (e.g., cert scans with visible PII), promote
+  to a signed-read proxy on the backend and switch container back to
+  private.
+- **Verify:**
+
+  ```bash
+  az storage container show --account-name stghobbyiqdev --name card-images --query "properties.publicAccess"
+  ```
+
 ### stghobbyiqdev blob CORS = `*` (wildcard)
 
 - **What:** 2026-08-10, added a CORS rule to the `stghobbyiqdev` blob
