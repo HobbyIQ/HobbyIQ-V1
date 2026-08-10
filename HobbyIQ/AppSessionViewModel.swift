@@ -158,13 +158,13 @@ final class AppSessionViewModel: ObservableObject {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, username: String) async {
+    func signUp(email: String, password: String, username: String, inviteCode: String? = nil) async {
         isLoading = true
         errorMessage = nil
         authStatusMessage = "Creating your account..."
 
         do {
-            currentUser = try await authService.signUpWithEmail(email: email, password: password, username: username)
+            currentUser = try await authService.signUpWithEmail(email: email, password: password, username: username, inviteCode: inviteCode)
             authStatusMessage = nil
             await subscriptionManager.prepare()
             launchState = activeTier == .none ? .paywall : .ready

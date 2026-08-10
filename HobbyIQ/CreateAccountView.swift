@@ -20,6 +20,11 @@ struct CreateAccountView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Required when the
+    // backend has SIGNUP_INVITE_REQUIRED=true. Field always visible
+    // during rollout so UX matches web; server-side gate decides
+    // whether an empty value is accepted.
+    @State private var inviteCode = ""
     @State private var selectedAgeTier: AgeTier = .standard
     @State private var localErrorMessage: String?
     @FocusState private var focusedField: Field?
@@ -117,11 +122,29 @@ struct CreateAccountView: View {
                             SecureField("Confirm password", text: $confirmPassword)
                                 .focused($focusedField, equals: .confirmPassword)
                                 .textContentType(.newPassword)
-                                .submitLabel(.go)
+                                .submitLabel(.next)
                                 .onSubmit {
-                                    Task { await createAccount() }
+                                    // no explicit focus target for invite; the field is next in the form
                                 }
                                 .inputFieldStyle()
+
+                            // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Invite
+                            // code field. Server enforces required-ness when the
+                            // gate flag is on; on the app side we surface a hint
+                            // so people know to expect it.
+                            VStack(alignment: .leading, spacing: 6) {
+                                TextField("Invite code (HOBBYIQ-XXXXXX)", text: $inviteCode)
+                                    .textInputAutocapitalization(.characters)
+                                    .autocorrectionDisabled()
+                                    .submitLabel(.go)
+                                    .onSubmit {
+                                        Task { await createAccount() }
+                                    }
+                                    .inputFieldStyle()
+                                Text("HobbyIQ is invite-only. Ask Drew for a code, or use the link from your invite email.")
+                                    .font(.caption2)
+                                    .foregroundStyle(HobbyIQTheme.textSecondary)
+                            }
 
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Age Range")
@@ -197,10 +220,12 @@ struct CreateAccountView: View {
             return
         }
 
+        let trimmedInvite = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         await sessionViewModel.signUp(
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
-            username: trimmedUsername
+            username: trimmedUsername,
+            inviteCode: trimmedInvite.isEmpty ? nil : trimmedInvite
         )
 
         if sessionViewModel.isAuthenticated {

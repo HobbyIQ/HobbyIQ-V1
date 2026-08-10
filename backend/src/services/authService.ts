@@ -982,6 +982,11 @@ export interface RegisterInput {
   fullName?: string;
   username: string;
   password?: string;        // Email/password registration
+  // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). When SIGNUP_INVITE_REQUIRED
+  // env var is true, new accounts must present a valid invite code.
+  // Existing Apple Sign-In users (already-created appleSub match) skip
+  // the check because they're logging in, not creating an account.
+  inviteCode?: string | null;
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,30}$/;
@@ -1075,9 +1080,12 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
 
     const existingApple = await findUserByAppleSub(appleSub);
     if (existingApple) {
+      // Login path (existing Apple user). No invite check — they already
+      // have an account, they're just signing in through Apple again.
       const sessionId = createSessionToken(existingApple.userId);
       return { success: true, user: toAuthUser(existingApple), sessionId };
     }
+    // Falls through — NEW Apple account, invite gate applies below.
   } else {
     // Email/password path
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -1108,6 +1116,25 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     return { success: false, error: "Username already taken" };
   }
 
+  // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Gate NEW-account creation
+  // on a valid invite code when SIGNUP_INVITE_REQUIRED=true. Reached
+  // only after uniqueness checks — so an existing user retrying signup
+  // still sees "email already registered", not the invite error. Apple
+  // Sign-In existing users (login path) already returned above.
+  const { isInviteRequired, validateInviteCode, consumeInviteCode } = await import("./auth/inviteCodes.service.js");
+  let inviteCodeToConsume: string | null = null;
+  if (isInviteRequired()) {
+    const raw = String(input.inviteCode ?? "").trim();
+    if (!raw) {
+      return { success: false, error: "Invite code required to create an account" };
+    }
+    const check = await validateInviteCode(raw);
+    if (!check.ok) {
+      return { success: false, error: check.error };
+    }
+    inviteCodeToConsume = check.code.code;
+  }
+
   const userId = appleSub
     ? `apple-${crypto.createHash("sha256").update(appleSub).digest("hex").slice(0, 24)}`
     : `user-${generateId()}`;
@@ -1128,6 +1155,13 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     docType: "user",
   };
   await writeUser(record);
+
+  // Best-effort invite consume (audit trail + usesRemaining decrement).
+  // A failure here is logged inside consumeInviteCode but doesn't
+  // rollback the account — user got in, invite tracking is secondary.
+  if (inviteCodeToConsume) {
+    void consumeInviteCode(inviteCodeToConsume, userId);
+  }
 
   const sessionId = createSessionToken(userId);
   return { success: true, user: toAuthUser(record), sessionId };

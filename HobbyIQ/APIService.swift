@@ -1669,9 +1669,9 @@ struct APIService {
         return response
     }
 
-    func signUpWithEmail(email: String, password: String, username: String) async throws -> AuthSignInResponse {
+    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String? = nil) async throws -> AuthSignInResponse {
         // Try the register endpoint first
-        let signUpRequest = AuthEmailSignUpRequest(username: username, email: email, password: password)
+        let signUpRequest = AuthEmailSignUpRequest(username: username, email: email, password: password, inviteCode: inviteCode)
         do {
             let response = try await post(path: "/api/auth/register", body: signUpRequest, responseType: AuthSignInResponse.self)
             try validateAuthResponse(response)
@@ -4493,6 +4493,11 @@ private struct AuthEmailSignUpRequest: Codable {
     let username: String
     let email: String
     let password: String
+    // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Only encoded when set,
+    // so signup still works during rollout when backend has invite
+    // requirement off. Backend rejects with a clear "invite code
+    // required" error when the flag is on and this field is absent.
+    let inviteCode: String?
 }
 
 private struct AppleSignInRequest: Encodable {

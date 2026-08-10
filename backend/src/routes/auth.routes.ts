@@ -65,13 +65,14 @@ router.get("/session", requireSession, async (req: Request, res: Response) => {
 
 // Registration: supports Apple Sign-In (identityToken) or email + password.
 router.post("/register", registerLimiter, async (req: Request, res: Response) => {
-  const { identityToken, email, fullName, username, password } = req.body || {};
+  const { identityToken, email, fullName, username, password, inviteCode } = req.body || {};
   const result = await registerUser({
     identityToken,
     email,
     fullName,
     username,
     password,
+    inviteCode,
   });
 
   if (!result.success) {

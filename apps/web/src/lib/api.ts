@@ -120,14 +120,15 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
 // valid handle from the email local-part, retry with a random suffix
 // on the "Username already taken" collision. User can rename later
 // from account settings (setUsernameForSession).
-export async function signUp(email: string, password: string): Promise<AuthUser> {
+export async function signUp(email: string, password: string, inviteCode?: string): Promise<AuthUser> {
   const baseUsername = deriveUsernameFromEmail(email);
   let username = baseUsername;
+  const trimmedInvite = inviteCode?.trim() || undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const body = await request<AuthResponse>("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password, username }),
+        body: JSON.stringify({ email, password, username, inviteCode: trimmedInvite }),
         auth: false,
       });
       throwIfAuthFailed(body);

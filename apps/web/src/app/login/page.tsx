@@ -9,9 +9,14 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const isSignup = params.get("signup") === "true";
+  // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Prefill invite from URL
+  // (?invite=CODE) so shared "join HobbyIQ" links land the code in the
+  // form automatically. User can still edit if wrong / paste-corrupted.
+  const inviteFromUrl = params.get("invite") ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState(inviteFromUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +26,7 @@ function LoginForm() {
     setError(null);
     try {
       if (isSignup) {
-        await signUp(email, password);
+        await signUp(email, password, inviteCode);
       } else {
         await signIn(email, password);
       }
@@ -89,6 +94,37 @@ function LoginForm() {
             }}
           />
         </div>
+
+        {/* CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Invite code field
+            for signup path only. Value prefills from ?invite= URL param
+            for share-link flows. Required-ness enforced server-side
+            (allows the field to still submit if invites are turned
+            off; server just ignores an unused value). */}
+        {isSignup && (
+          <div>
+            <label htmlFor="invite" className="block text-sm font-medium mb-2">
+              Invite code
+            </label>
+            <input
+              id="invite"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="HOBBYIQ-XXXXXX"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              className="w-full px-4 py-3 rounded-xl border text-white outline-none focus:border-[color:var(--color-accent)] transition-colors font-mono tracking-wider"
+              style={{
+                background: "var(--color-bg)",
+                borderColor: "var(--color-border)",
+              }}
+            />
+            <p className="text-xs text-[color:var(--color-muted)] mt-2">
+              HobbyIQ is invite-only right now. Ask Drew for a code, or use the link from your invite email.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div
