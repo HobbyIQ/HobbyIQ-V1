@@ -12,7 +12,7 @@
 //   COSMOS_CONNECTION_STRING       required
 //   ACS_EMAIL_CONNECTION_STRING    required
 //   EMAIL_FROM_ADDRESS             required
-//   GAP_DIGEST_TO                  recipient (default dvabulas@outlook.com)
+//   GAP_DIGEST_TO                  recipient (default drew@hobby-iq.com)
 //   GAP_DIGEST_TOP_N               top-N buckets (default 20)
 //   GAP_DIGEST_SAMPLE_LIMIT        pool scan cap (default 15000)
 //   GAP_DIGEST_MIN_ROWS            bucket min-observation gate (default 3)
@@ -77,7 +77,7 @@ async function fetchGapBuckets(conn) {
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(2); }
-  const to = process.env.GAP_DIGEST_TO || "dvabulas@outlook.com";
+  const to = process.env.GAP_DIGEST_TO || "drew@hobby-iq.com";
 
   console.log(`[gap-digest] scanning unmatched pool...`);
   const g = await fetchGapBuckets(conn);
