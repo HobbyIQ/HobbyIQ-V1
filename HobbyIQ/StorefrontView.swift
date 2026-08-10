@@ -39,6 +39,11 @@ struct StorefrontView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
                 header
+                // CF-MARKETPLACE-SEARCH iOS (2026-08-10). Cross-storefront
+                // search sits above the manage-storefront gates so free
+                // users can browse other shops — the tab isn't Investor/
+                // Pro-Seller-only anymore.
+                StorefrontDiscoverView()
                 if loading {
                     ProgressView().padding(.top, HobbyIQTheme.Spacing.large)
                 } else if let msg = errorMessage {
