@@ -246,9 +246,18 @@ export async function enrichEntriesWithTree(
 ): Promise<{ totalSampleCount: number; tierCount: number } | null> {
   const tree = await buildTreeGradeCurve(input);
   if (!tree || tree.entries.length === 0) return null;
-  const labelOf = (e: EnrichableEntry): string =>
-    e.grader === "Raw" || String(e.grade).toLowerCase() === "raw"
-      ? "Raw" : `${e.grader} ${e.grade}`.trim();
+  // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-10). Same fix pattern as
+  // compiq.routes.ts:3900 unified overlay. ObservedGradeEntry.grade
+  // already contains the grader prefix (e.g. "PSA 10", "BGS 9.5"),
+  // so `${grader} ${grade}` produced "PSA PSA 10" that never matched
+  // tree.entries.gradeLabel="PSA 10". The map missed, the else-branch
+  // pushed a duplicate entry, and iOS rendered PSA 9 / PSA 10 twice
+  // (once from CANONICAL_GRADES, once from the appended tree row).
+  const labelOf = (e: EnrichableEntry): string => {
+    const gradeStr = String(e.grade).trim();
+    return e.grader === "Raw" || gradeStr.toLowerCase() === "raw"
+      ? "Raw" : gradeStr;
+  };
   const byLabel = new Map<string, EnrichableEntry>(entries.map((e) => [labelOf(e), e]));
   for (const t of tree.entries) {
     if (t.sampleCount === 0) continue;
