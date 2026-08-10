@@ -5,10 +5,37 @@ features are publicly promoted. Each item is parked deliberately —
 not blocking today, but must be re-evaluated when we open the doors.
 
 Add new items with:
+
 - **Item name** — the change
 - **Why parked** — the trade-off at time of parking
 - **Trigger** — the condition that promotes it to blocking
 - **Where** — file / config / workflow to touch
+
+---
+
+## Azure Storage CORS
+
+### stghobbyiqdev blob CORS = `*` (wildcard)
+
+- **What:** 2026-08-10, added a CORS rule to the `stghobbyiqdev` blob
+  service allowing `*` origins on PUT/GET/HEAD/OPTIONS/DELETE. Before
+  this, browser PUTs to `blob.core.windows.net` were CORS-blocked and
+  every web photo upload failed with "Upload failed."
+- **Why wildcard, not a whitelist:** SAS tokens are the actual write
+  authorization — 15-min expiry, scoped per-blob, only issued after
+  our backend session check on `/api/uploads/card-photo`. Blob reads
+  are already public via permanent blob URL. CORS is only a
+  browser-side mechanism; wildcard doesn't reduce the security model.
+  Whitelist would force us to update the rule for every new subdomain
+  (staging, mobile web, etc.) — wildcard scales cleanly.
+- **Trigger to revisit:** If we ever move to session-based reads
+  (require a signed URL to view an image), or add hotlink protection
+  requirements, tighten to a whitelist of hobby-iq.com + subdomains.
+- **Verify:**
+
+  ```bash
+  az storage cors list --account-name stghobbyiqdev --services b -o table
+  ```
 
 ---
 
