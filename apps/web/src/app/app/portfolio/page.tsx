@@ -273,12 +273,25 @@ function PortfolioPageBody() {
             {selectMode ? "Cancel select" : "Select"}
           </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setAddOpen(true)}
-              className="hiq-btn-primary text-sm"
+            {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10). Button was
+                reported broken (click did nothing) — likely React
+                hydration or state race. Rendered as an <a> now so
+                the browser hard-navigates to ?add=1, which the
+                useEffect at line 92 syncs back to addOpen=true.
+                Works even if the client-side JS has a runtime error.
+                onClick short-circuits to the SPA path when JS is
+                healthy so no full-page reload most of the time. */}
+            <a
+              href="/app/portfolio?add=1"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey) return; // let modifier-clicks pass through
+                e.preventDefault();
+                setAddOpen(true);
+              }}
+              className="hiq-btn-primary text-sm inline-block"
             >
               + Add card
-            </button>
+            </a>
             <Link
               href="/app/portfolio/import"
               className="text-xs hover:underline hidden sm:inline"
@@ -740,9 +753,11 @@ function EmptyState() {
           <MiniBullet title="Sell signals" body="Alerts when your cards cross a threshold you set." />
         </div>
         <div className="flex items-center justify-center gap-3 flex-wrap">
-          <Link href="/app/portfolio?add=1" className="hiq-btn-primary inline-block">
+          {/* CF-ADD-CARD-RESILIENCE (Drew, 2026-08-10). Plain <a> so
+              it works even under a broken client-side router. */}
+          <a href="/app/portfolio?add=1" className="hiq-btn-primary inline-block">
             + Add your first card
-          </Link>
+          </a>
           <Link
             href="/app/portfolio/import"
             className="text-sm hover:underline"
