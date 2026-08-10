@@ -7,6 +7,11 @@ name: Catalog Grade Explosion
 # identities that don't yet have gradeTier).
 
 on:
+  # Auto-dispatch daily at 06:00 UTC (~2 AM ET) — off-peak for Cosmos.
+  # Skips work if remaining=0 (script is a no-op then). Runs until
+  # grade explosion is fully materialized (~7 dispatches at current rate).
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       limit:
