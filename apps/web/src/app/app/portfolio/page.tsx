@@ -579,9 +579,10 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
 
   return (
     <div className="hiq-card p-4 md:p-5 flex items-center gap-4">
-      {/* Photo thumbnail */}
+      {/* Photo thumbnail — slab-ratio (~3:4) with object-contain so
+          full slab visible (label + cert + corners). */}
       <div
-        className="w-14 h-14 md:w-16 md:h-16 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+        className="w-14 h-20 md:w-16 md:h-24 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
         style={{ background: "var(--color-bg)" }}
       >
         {h.photos && h.photos[0] ? (
@@ -589,7 +590,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
           <img
             src={h.photos[0]}
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

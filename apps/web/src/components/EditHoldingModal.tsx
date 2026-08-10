@@ -611,9 +611,16 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
             <Field label="Photos">
               <div className="flex flex-wrap items-center gap-3">
                 {photos.map((url) => (
-                  <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden" style={{ background: "var(--color-bg)" }}>
+                  <div key={url} className="relative w-24 h-32 rounded-lg overflow-hidden" style={{ background: "var(--color-bg)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    {/* CF-PHOTO-DISPLAY (Drew, 2026-08-10). Slab-ratio
+                        container (w-24 h-32 = 3:4) + object-contain so the
+                        whole slab is visible — labels, cert #, corners.
+                        Wrapped in an <a> so tapping opens the full-size
+                        original in a new tab. */}
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full h-full" title="Open full size">
+                      <img src={url} alt="" className="w-full h-full object-contain" />
+                    </a>
                     <button
                       type="button"
                       onClick={() => onRemovePhoto(url)}
@@ -626,7 +633,7 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
                   </div>
                 ))}
                 <label
-                  className={`w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer text-xs text-center px-2 ${uploading ? "opacity-60 cursor-wait" : "hover:border-[color:var(--color-accent)]"}`}
+                  className={`w-24 h-32 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer text-xs text-center px-2 ${uploading ? "opacity-60 cursor-wait" : "hover:border-[color:var(--color-accent)]"}`}
                   style={{ borderColor: "var(--color-border)", color: "var(--color-muted)" }}
                 >
                   {uploading ? "Uploading…" : "+ Photo"}

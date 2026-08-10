@@ -125,12 +125,17 @@ export default function HoldingDetailPage() {
       <div className="hiq-card p-6 mb-6">
         <div className="flex items-start gap-5 mb-6">
           <div
-            className="w-24 h-24 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+            className="w-28 h-40 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
             style={{ background: "var(--color-bg)" }}
           >
             {h.photos && h.photos[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={h.photos[0]} alt="" className="w-full h-full object-cover" />
+              // CF-PHOTO-DISPLAY (Drew, 2026-08-10). Slab-ratio container +
+              // object-contain so the whole slab (grade label, cert #,
+              // corners) is visible. Tap opens full-size in new tab.
+              <a href={h.photos[0]} target="_blank" rel="noopener noreferrer" className="block w-full h-full" title="Open full size">
+                <img src={h.photos[0]} alt="" className="w-full h-full object-contain" />
+              </a>
             ) : (
               <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
                 <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
