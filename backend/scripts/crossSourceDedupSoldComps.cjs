@@ -49,6 +49,16 @@ const START_DATE = process.env.BULK_START_DATE || new Date().toISOString().slice
 const END_DATE = process.env.BULK_END_DATE || "2026-06-01";
 const CONCURRENCY = Math.min(64, Number(process.env.CONCURRENCY || 16));
 const MAX_CLUSTERS = Number(process.env.MAX_CLUSTERS || 0);
+// CF-DEDUPE-PRECISION (Drew, 2026-08-10). rev-1 keyed on soldAt day
+// only, which over-collapsed hot commons — 16 people legitimately
+// buying a $9.99 card on the same day looked like one cluster.
+// rev-2: key on soldAt minute (YYYY-MM-DDTHH:MM). Two sources
+// reporting the same eBay sale share a timestamp because both
+// scrape eBay's own soldAt. Different real sales differ by at
+// least a minute in practice.
+// TIME_PRECISION env: "minute" (default), "hour", or "day".
+const TIME_PRECISION = (process.env.TIME_PRECISION || "minute").toLowerCase();
+const TIME_SLICE_LEN = TIME_PRECISION === "day" ? 10 : TIME_PRECISION === "hour" ? 13 : 16;
 
 if (!CONN) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
@@ -115,7 +125,8 @@ async function main() {
 
   console.log("[cross-source dedupe] scanning sold_comps in overlap window");
   console.log(`  window (newest→oldest): ${START_DATE} → ${END_DATE}`);
-  console.log(`  mode: ${DRY_RUN ? "DRY_RUN" : "APPLY"}`);
+  console.log(`  mode                 : ${DRY_RUN ? "DRY_RUN" : "APPLY"}`);
+  console.log(`  time precision       : ${TIME_PRECISION} (${TIME_SLICE_LEN} chars)`);
   console.log("");
 
   const iter = sc.items.query({
@@ -156,7 +167,7 @@ async function main() {
         normGradeCo(r.gradeCompany),
         r.gradeValue ?? 0,
         Math.round(Number(r.price) * 100),
-        String(r.soldAt).slice(0, 10),
+        String(r.soldAt).slice(0, TIME_SLICE_LEN),
       ].join("|");
       const arr = clusters.get(key) || [];
       arr.push(r);
