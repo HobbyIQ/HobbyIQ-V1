@@ -2143,10 +2143,32 @@ export async function refreshHolding(id: string): Promise<{ success: boolean; ho
   };
 }
 
+// CF-WEB-SELL-PAYLOAD-FIX (Drew, 2026-08-10). Backend
+// portfolioStore.sellHolding requires:
+//   - quantity  (required, must be > 0 — was missing, causing 400
+//     INVALID_QUANTITY on every web Mark-as-sold click)
+//   - soldAt    (ISO datetime — web was sending "saleDate" which the
+//     backend ignored, silently defaulting to now)
+// iOS payload at HobbyIQ/APIService.swift:2076 sends {quantity, salePrice,
+// fees, tax, shipping, soldAt, source} — mirror that shape here so web
+// and iOS take the same code path server-side.
 export async function sellHolding(id: string, salePrice: number, saleDate?: string): Promise<{ success: boolean }> {
+  // saleDate is a YYYY-MM-DD from the <input type="date">. Backend expects
+  // ISO datetime; noon UTC is the same-day anchor iOS uses via ISO8601DateFormatter.
+  const soldAt = saleDate
+    ? new Date(`${saleDate}T12:00:00Z`).toISOString()
+    : new Date().toISOString();
   return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/sell`, {
     method: "POST",
-    body: JSON.stringify({ salePrice, saleDate: saleDate ?? new Date().toISOString().slice(0, 10) }),
+    body: JSON.stringify({
+      quantity: 1,
+      salePrice,
+      fees: 0,
+      tax: 0,
+      shipping: 0,
+      soldAt,
+      source: "manual",
+    }),
   });
 }
 
