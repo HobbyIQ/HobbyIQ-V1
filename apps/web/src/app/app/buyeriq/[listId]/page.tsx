@@ -231,10 +231,17 @@ function TargetRow({
   useEffect(() => {
     if (!target.hobbyiqCardId) return;
     let cancelled = false;
+    // Strip legacy vendor prefixes so /price-by-id sees the raw id.
+    // Targets saved before CF-BUYERIQ-PICK-ID-NORMALIZE still work.
+    const raw = target.hobbyiqCardId;
+    const cardId =
+      raw.startsWith("catalog:") ? raw.slice("catalog:".length)
+      : raw.startsWith("cardsight:") ? raw.slice("cardsight:".length)
+      : raw;
     (async () => {
       try {
         const r = await previewFmvForCard({
-          cardId: target.hobbyiqCardId!,
+          cardId,
           gradeCompany: target.gradeCompany,
           gradeValue: target.gradeValue,
           parallelName: target.parallel,
@@ -243,12 +250,14 @@ function TargetRow({
           setFmv(typeof r.fmv === "number" ? r.fmv : null);
           setFmvLoaded(true);
         }
-      } catch {
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[BuyerIQ FMV] fetch failed for", target.id, err);
         if (!cancelled) setFmvLoaded(true);
       }
     })();
     return () => { cancelled = true; };
-  }, [target.hobbyiqCardId, target.gradeCompany, target.gradeValue, target.parallel]);
+  }, [target.hobbyiqCardId, target.gradeCompany, target.gradeValue, target.parallel, target.id]);
 
   // Below/above cap coloring — helps eyeball whether it's a deal.
   const capVsMarket: "below" | "over" | "even" | null =
@@ -261,15 +270,20 @@ function TargetRow({
       className="hiq-card p-3 flex items-start gap-3"
       style={{ opacity: target.status === "passed" ? 0.6 : 1 }}
     >
+      {/* CF-BUYERIQ-CARD-IMAGE (Drew, 2026-08-10). Bigger tile,
+          object-contain so the whole slab is visible. Falls back to
+          a card icon when no image was captured on the target. */}
       <div
-        className="w-11 h-16 shrink-0 rounded flex items-center justify-center overflow-hidden"
+        className="w-16 h-24 shrink-0 rounded-lg flex items-center justify-center overflow-hidden"
         style={{ background: "var(--color-bg-card-hover)" }}
       >
         {target.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={target.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={target.imageUrl} alt="" className="w-full h-full object-contain" />
         ) : (
-          <span className="text-xs text-[color:var(--color-muted)]">—</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)] opacity-60">
+            <path d="M4 6h16v12H4V6z" />
+          </svg>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -283,33 +297,51 @@ function TargetRow({
           )}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <PriorityChip priority={target.priority} />
-            {/* CF-BUYERIQ-MARKET-VALUE (Drew, 2026-08-10). Show market
-                FMV so the user knows whether their cap is above/below
-                current comps. Green = cap below market (potential deal).
-                Amber = cap above market (overpaying). No color = even. */}
-            {fmv != null && (
+            {/* CF-BUYERIQ-MARKET-VALUE (Drew, 2026-08-10). Market
+                Value + user's Buy Target always visible so buyers
+                see both at a glance. Cap chip color-codes vs market:
+                Green = cap BELOW market (deal territory).
+                Amber = cap ABOVE market (overpaying).
+                Neutral = even / no comparison possible. */}
+            {fmv != null ? (
               <Chip
                 label={`Market $${fmv < 100 ? fmv.toFixed(2) : Math.round(fmv)}`}
                 bg="rgba(61,169,255,0.18)"
                 fg="var(--color-accent)"
               />
-            )}
-            {target.hobbyiqCardId && !fmvLoaded && (
+            ) : fmvLoaded && target.hobbyiqCardId ? (
+              <Chip label="Market —" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
+            ) : target.hobbyiqCardId ? (
               <Chip label="Market …" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
-            )}
-            {target.maxPrice !== null && (
+            ) : null}
+            <Chip
+              label={
+                target.maxPrice != null
+                  ? `Buy at $${Math.round(target.maxPrice)}`
+                  : "No target set"
+              }
+              bg={
+                capVsMarket === "below" ? "rgba(34,197,94,0.22)"
+                : capVsMarket === "over" ? "rgba(251,146,60,0.22)"
+                : "var(--color-bg-card-hover)"
+              }
+              fg={
+                capVsMarket === "below" ? "rgb(34,197,94)"
+                : capVsMarket === "over" ? "rgb(251,146,60)"
+                : target.maxPrice != null ? "white" : "var(--color-muted)"
+              }
+            />
+            {/* Delta chip — "$X below market" or "$X over" — makes the
+                decision instant at a dealer's table. */}
+            {fmv != null && target.maxPrice != null && capVsMarket !== "even" && (
               <Chip
-                label={`Cap $${Math.round(target.maxPrice)}`}
-                bg={
-                  capVsMarket === "below" ? "rgba(34,197,94,0.22)"
-                  : capVsMarket === "over" ? "rgba(251,146,60,0.22)"
-                  : "var(--color-bg-card-hover)"
+                label={
+                  capVsMarket === "below"
+                    ? `Save $${Math.round(fmv - target.maxPrice)}`
+                    : `Over $${Math.round(target.maxPrice - fmv)}`
                 }
-                fg={
-                  capVsMarket === "below" ? "rgb(34,197,94)"
-                  : capVsMarket === "over" ? "rgb(251,146,60)"
-                  : "white"
-                }
+                bg={capVsMarket === "below" ? "rgba(34,197,94,0.15)" : "rgba(251,146,60,0.15)"}
+                fg={capVsMarket === "below" ? "rgb(34,197,94)" : "rgb(251,146,60)"}
               />
             )}
             {target.status === "acquired" && target.acquiredPrice !== null && (
@@ -463,7 +495,16 @@ function TargetDialog({
     setIsAuto(c.isAuto);
     if (c.gradeCompany) setGradeCompany(c.gradeCompany);
     if (c.gradeValue != null) setGradeValue(String(c.gradeValue));
-    setPickedHobbyiqCardId(c.candidateId);
+    // CF-BUYERIQ-PICK-ID-NORMALIZE (Drew, 2026-08-10). candidateId
+    // comes back prefixed ("cardsight:uuid" / "catalog:hiq:..." /
+    // "psa:cert"). previewFmvForCard's /price-by-id endpoint expects
+    // the raw underlying id — strip the prefix so FMV lookup works.
+    // Mirrors AddCardModal's candidateIdToCardsightId helper.
+    const normalizedId =
+      c.candidateId.startsWith("catalog:") ? c.candidateId.slice("catalog:".length)
+      : c.candidateId.startsWith("cardsight:") ? c.candidateId.slice("cardsight:".length)
+      : c.candidateId;
+    setPickedHobbyiqCardId(normalizedId);
     setPickedImageUrl(c.imageUrl);
     setSearchOpen(false);
     setSearchQuery("");
