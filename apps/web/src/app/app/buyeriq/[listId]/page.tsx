@@ -13,6 +13,7 @@ import {
   updateBuyerIqTarget,
   deleteBuyerIqTarget,
   searchCards,
+  previewFmvForCard,
   type BuyerIqList,
   type BuyerIqTarget,
   type BuyerIqPriority,
@@ -219,6 +220,42 @@ function TargetRow({
   onDelete: () => void;
 }) {
   const subtitle = subtitleLine(target);
+  // CF-BUYERIQ-MARKET-VALUE (Drew, 2026-08-10). Fetch canonical FMV
+  // per row so the target chip shows "Market $X" alongside the user's
+  // Cap $Y — buyer knows immediately whether they're below/above
+  // market when they're standing at a dealer's table. Only fires
+  // when the target has a hobbyiqCardId (catalog-verified). Silent
+  // no-op for legacy free-text targets.
+  const [fmv, setFmv] = useState<number | null>(null);
+  const [fmvLoaded, setFmvLoaded] = useState(false);
+  useEffect(() => {
+    if (!target.hobbyiqCardId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await previewFmvForCard({
+          cardId: target.hobbyiqCardId!,
+          gradeCompany: target.gradeCompany,
+          gradeValue: target.gradeValue,
+          parallelName: target.parallel,
+        });
+        if (!cancelled) {
+          setFmv(typeof r.fmv === "number" ? r.fmv : null);
+          setFmvLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setFmvLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [target.hobbyiqCardId, target.gradeCompany, target.gradeValue, target.parallel]);
+
+  // Below/above cap coloring — helps eyeball whether it's a deal.
+  const capVsMarket: "below" | "over" | "even" | null =
+    fmv != null && target.maxPrice != null
+      ? target.maxPrice < fmv ? "below" : target.maxPrice > fmv ? "over" : "even"
+      : null;
+
   return (
     <div
       className="hiq-card p-3 flex items-start gap-3"
@@ -246,11 +283,33 @@ function TargetRow({
           )}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <PriorityChip priority={target.priority} />
+            {/* CF-BUYERIQ-MARKET-VALUE (Drew, 2026-08-10). Show market
+                FMV so the user knows whether their cap is above/below
+                current comps. Green = cap below market (potential deal).
+                Amber = cap above market (overpaying). No color = even. */}
+            {fmv != null && (
+              <Chip
+                label={`Market $${fmv < 100 ? fmv.toFixed(2) : Math.round(fmv)}`}
+                bg="rgba(61,169,255,0.18)"
+                fg="var(--color-accent)"
+              />
+            )}
+            {target.hobbyiqCardId && !fmvLoaded && (
+              <Chip label="Market …" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
+            )}
             {target.maxPrice !== null && (
               <Chip
                 label={`Cap $${Math.round(target.maxPrice)}`}
-                bg="var(--color-bg-card-hover)"
-                fg="white"
+                bg={
+                  capVsMarket === "below" ? "rgba(34,197,94,0.22)"
+                  : capVsMarket === "over" ? "rgba(251,146,60,0.22)"
+                  : "var(--color-bg-card-hover)"
+                }
+                fg={
+                  capVsMarket === "below" ? "rgb(34,197,94)"
+                  : capVsMarket === "over" ? "rgb(251,146,60)"
+                  : "white"
+                }
               />
             )}
             {target.status === "acquired" && target.acquiredPrice !== null && (
