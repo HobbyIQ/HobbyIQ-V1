@@ -365,7 +365,11 @@ function TargetDialog({
   // panel state — mirrors the iOS BuyerIQCatalogSearchSheet flow so
   // web + iOS "Add target" both prefill from the same canonical
   // catalog identity + capture hobbyiqCardId for pricing rails.
-  const [searchOpen, setSearchOpen] = useState(false);
+  //
+  // Open by default in create mode (skips the extra "click to expand"
+  // step) — the whole point of the modal now IS searching. Edit mode
+  // stays collapsed so the legacy-fields path isn't disrupted.
+  const [searchOpen, setSearchOpen] = useState(!initial);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchCandidate[]>([]);
