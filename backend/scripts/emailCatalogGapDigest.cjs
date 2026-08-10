@@ -63,6 +63,23 @@ async function fetchGapBuckets(conn) {
   const ranked = [...buckets.values()]
     .filter(b => b.count >= MIN_ROWS)
     .sort((a, b) => b.count - a.count);
+  // CF-HOBBYIQ-CATALOG-GAP (Drew, 2026-08-10). Roll gaps up by sport and
+  // by year so the report shows structural coverage at a glance, not
+  // just the top-N leaf buckets.
+  const bySport = new Map();
+  const byYear = new Map();
+  for (const b of ranked) {
+    const s = b.sport ?? "?";
+    const y = b.year ?? "?";
+    const sportAgg = bySport.get(s) ?? { sport: s, count: 0, buckets: 0 };
+    sportAgg.count += b.count;
+    sportAgg.buckets++;
+    bySport.set(s, sportAgg);
+    const yearAgg = byYear.get(y) ?? { year: y, count: 0, buckets: 0 };
+    yearAgg.count += b.count;
+    yearAgg.buckets++;
+    byYear.set(y, yearAgg);
+  }
   return {
     totalScanned: rows.length,
     totalUnmatched: rows.length,
@@ -71,7 +88,29 @@ async function fetchGapBuckets(conn) {
     top: ranked.slice(0, TOP_N),
     topNUnlock: ranked.slice(0, TOP_N).reduce((s, b) => s + b.count, 0),
     sumMatchable: ranked.reduce((s, b) => s + b.count, 0),
+    sportRollup: [...bySport.values()].sort((a, b) => b.count - a.count),
+    yearRollup: [...byYear.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12),
   };
+}
+
+// CF-HOBBYIQ-CATALOG-SOURCE-HINT (Drew, 2026-08-10). Suggest the
+// canonical ingest source for a gap bucket based on sport + year so
+// Drew can click straight to where the checklist lives. Baseball →
+// baseballcardpedia (BCP has the most comprehensive coverage);
+// football/basketball → checklistcenter; other sports → beckett.
+function suggestedSourceFor(bucket) {
+  const sport = String(bucket.sport ?? "").toLowerCase();
+  const year = bucket.year;
+  const setSlug = String(bucket.set ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+  if (sport === "baseball" && year) {
+    return { label: "BCP", url: `https://baseballcardpedia.com/index.php/${year}_${encodeURIComponent(setSlug)}` };
+  }
+  if (sport === "football" || sport === "basketball" || sport === "hockey") {
+    return { label: "ChecklistCenter", url: `https://www.checklistcenter.com/search?q=${encodeURIComponent(String(year ?? "") + " " + (bucket.set ?? ""))}` };
+  }
+  return { label: "Beckett", url: `https://www.beckett.com/search/?term=${encodeURIComponent(String(year ?? "") + " " + (bucket.set ?? ""))}` };
 }
 
 async function main() {
@@ -90,7 +129,9 @@ async function main() {
   const dateStr = new Date().toISOString().slice(0, 10);
   const N = g.top.length;
 
-  const rowsHtml = g.top.map((b, i) => `
+  const rowsHtml = g.top.map((b, i) => {
+    const src = suggestedSourceFor(b);
+    return `
     <tr>
       <td style="padding:12px 12px;border-bottom:1px solid #2A3344;color:#C4CDD9;font-size:13px;font-family:'SF Mono',Monaco,Consolas,monospace;text-align:right">
         ${i + 1}
@@ -107,9 +148,29 @@ async function main() {
       <td style="padding:12px 12px;border-bottom:1px solid #2A3344;color:#FFFFFF;font-size:14px;font-weight:500">
         ${escHtml(b.set ?? "?")}
       </td>
+      <td style="padding:12px 12px;border-bottom:1px solid #2A3344;font-size:12px">
+        <a href="${escHtml(src.url)}" style="color:#3DA9FF;text-decoration:none;font-weight:600">${escHtml(src.label)} ↗</a>
+      </td>
       <td style="padding:12px 12px;border-bottom:1px solid #2A3344;color:#C4CDD9;font-size:11px;font-family:'SF Mono',Monaco,Consolas,monospace;opacity:0.75">
         ${escHtml((b.samples[0] || "").slice(0, 60))}
       </td>
+    </tr>
+  `;
+  }).join("");
+
+  // Rollup HTML: sport + year summary rows before the top-N table.
+  const sportRollupHtml = (g.sportRollup ?? []).map(s => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#FFFFFF;font-size:13px;text-transform:capitalize">${escHtml(s.sport)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#7CFF72;font-size:13px;font-weight:600;text-align:right;font-family:'SF Mono',Monaco,Consolas,monospace">${s.count.toLocaleString("en-US")}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#C4CDD9;font-size:12px;text-align:right;font-family:'SF Mono',Monaco,Consolas,monospace">${s.buckets.toLocaleString("en-US")}</td>
+    </tr>
+  `).join("");
+  const yearRollupHtml = (g.yearRollup ?? []).map(y => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#FFFFFF;font-size:13px;font-family:'SF Mono',Monaco,Consolas,monospace">${escHtml(y.year)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#7CFF72;font-size:13px;font-weight:600;text-align:right;font-family:'SF Mono',Monaco,Consolas,monospace">${y.count.toLocaleString("en-US")}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #1A2332;color:#C4CDD9;font-size:12px;text-align:right;font-family:'SF Mono',Monaco,Consolas,monospace">${y.buckets.toLocaleString("en-US")}</td>
     </tr>
   `).join("");
 
@@ -126,9 +187,9 @@ async function main() {
     <table role="presentation" width="720" cellpadding="0" cellspacing="0" border="0" style="max-width:720px;background:#101B2D;border:1px solid #2A3344;border-radius:12px;overflow:hidden">
       <tr>
         <td style="background:linear-gradient(135deg,#2A6A9E,#2C8F66);padding:28px 32px;color:#FFFFFF">
-          <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;font-weight:600">Catalog Gap Digest</div>
-          <div style="font-size:28px;font-weight:700;margin-top:6px;letter-spacing:-0.5px">HobbyIQ</div>
-          <div style="font-size:13px;opacity:0.85;margin-top:4px">${dateStr} · daily 6 AM EDT</div>
+          <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;font-weight:600">Catalog Gap Report</div>
+          <div style="font-size:28px;font-weight:700;margin-top:6px;letter-spacing:-0.5px">The HobbyIQ Catalog</div>
+          <div style="font-size:13px;opacity:0.85;margin-top:4px">${dateStr} · what to ingest next, ranked by unlock volume</div>
         </td>
       </tr>
       <tr>
@@ -155,8 +216,42 @@ async function main() {
         </td>
       </tr>
       <tr>
-        <td style="padding:28px 32px 32px 32px">
-          <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#C4CDD9;opacity:0.7;font-weight:600;margin-bottom:14px">Top ${N} sets to add today</div>
+        <td style="padding:28px 32px 12px 32px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding-right:12px;vertical-align:top;width:50%">
+                <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#C4CDD9;opacity:0.7;font-weight:600;margin-bottom:10px">Gap by sport</div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background:#0B1424;border:1px solid #2A3344;border-radius:8px;overflow:hidden">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Sport</th>
+                      <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Rows</th>
+                      <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Sets</th>
+                    </tr>
+                  </thead>
+                  <tbody>${sportRollupHtml}</tbody>
+                </table>
+              </td>
+              <td style="padding-left:12px;vertical-align:top;width:50%">
+                <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#C4CDD9;opacity:0.7;font-weight:600;margin-bottom:10px">Top years to attack</div>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background:#0B1424;border:1px solid #2A3344;border-radius:8px;overflow:hidden">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Year</th>
+                      <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Rows</th>
+                      <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Sets</th>
+                    </tr>
+                  </thead>
+                  <tbody>${yearRollupHtml}</tbody>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:16px 32px 32px 32px">
+          <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#C4CDD9;opacity:0.7;font-weight:600;margin-bottom:14px">Top ${N} sets to add — click Source to jump to the checklist</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background:#0B1424;border:1px solid #2A3344;border-radius:8px;overflow:hidden">
             <thead>
               <tr>
@@ -165,6 +260,7 @@ async function main() {
                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Year</th>
                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Sport</th>
                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Set</th>
+                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Source</th>
                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid #2A3344;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C4CDD9;opacity:0.6;font-weight:600">Sample</th>
               </tr>
             </thead>
@@ -175,8 +271,8 @@ async function main() {
       <tr>
         <td style="padding:20px 32px 24px 32px;border-top:1px solid #2A3344;background:#0B1424">
           <div style="font-size:11px;color:#C4CDD9;opacity:0.55;line-height:1.5">
-            Add sids to <code style="color:#3DA9FF">backend/scripts/tcdbBatchFill.cjs</code> and run to seed the catalog.<br>
-            Sent by <span style="color:#3DA9FF">catalog-gap-digest</span> · fires 6 AM EDT daily · skips silently when pool is clean.
+            The HobbyIQ Catalog is <code style="color:#3DA9FF">card_catalog</code> in Cosmos — see <code style="color:#3DA9FF">docs/HOBBYIQ-CATALOG.md</code> for the doctrine.<br>
+            Sent by <span style="color:#3DA9FF">catalog-gap-digest</span> · fires 6 AM EDT daily · skips silently when the pool is clean.
           </div>
         </td>
       </tr>
@@ -187,21 +283,29 @@ async function main() {
 </html>`;
 
   const plainText = [
-    `HobbyIQ catalog gap digest — ${dateStr}`,
+    `The HobbyIQ Catalog · Gap Report ${dateStr}`,
     ``,
-    `Unmatched pool: ${g.totalUnmatched} rows · ${g.distinctBuckets} distinct buckets · top-${N} would unlock ${g.topNUnlock} rows`,
+    `Unmatched pool: ${g.totalUnmatched.toLocaleString()} rows · ${g.distinctBuckets.toLocaleString()} distinct buckets · top-${N} would unlock ${g.topNUnlock.toLocaleString()} rows`,
     ``,
-    `Top ${N} sets to add today:`,
+    `Gap by sport:`,
+    ...((g.sportRollup ?? []).map(s => `  ${String(s.sport).padEnd(12)} ${String(s.count).padStart(8)} rows across ${s.buckets} sets`)),
     ``,
-    ...g.top.map((b, i) => `  ${String(i + 1).padStart(2)}. ${String(b.count).padStart(4)} rows  ${b.year ?? "?"}  ${b.sport ?? "?"}  ${b.set ?? "?"}`),
+    `Top years to attack:`,
+    ...((g.yearRollup ?? []).map(y => `  ${String(y.year).padEnd(6)} ${String(y.count).padStart(8)} rows across ${y.buckets} sets`)),
     ``,
-    `Sample titles per bucket in the HTML email.`,
+    `Top ${N} sets to add today (year · sport · set → source):`,
+    ...g.top.map((b, i) => {
+      const src = suggestedSourceFor(b);
+      return `  ${String(i + 1).padStart(2)}. ${String(b.count).padStart(4)} rows  ${b.year ?? "?"}  ${b.sport ?? "?"}  ${b.set ?? "?"}  → ${src.label}: ${src.url}`;
+    }),
+    ``,
+    `Doctrine: docs/HOBBYIQ-CATALOG.md`,
   ].join("\n");
 
   const sendEmail = await loadSendEmail();
   const result = await sendEmail({
     to,
-    subject: `HobbyIQ catalog gaps — top-${N} would unlock ${g.topNUnlock} rows (${dateStr})`,
+    subject: `The HobbyIQ Catalog · Gap Report ${dateStr} — top-${N} would unlock ${g.topNUnlock.toLocaleString("en-US")} rows`,
     plainText,
     html,
   });
