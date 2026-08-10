@@ -12,6 +12,36 @@ Add new items with:
 
 ---
 
+## Cosmos throughput
+
+### sold_comps autoscale bumped 8K → 40K for backfill sprint
+
+- **What:** 2026-08-10, bumped `sold_comps` autoscale max from 8K to
+  40K RU/s to unblock concurrent CH-fanout + setName-normalizer +
+  cross-source-dedupe running against the same container.
+- **Why parked:** Autoscale means we pay only for burst; when the
+  backfill scripts finish, actual consumption should drop back to
+  the low-thousand-RU range naturally. No urgent cost pressure.
+- **Trigger:** When all these are complete:
+  - Normalizer (`bcalxbpjs`) finishes writing normalizedSetKey on
+    ~3.87M rows
+  - CH fanout GH Actions dispatch (run 31414515858) completes
+  - Cross-source dedupe apply run completes
+  - Re-slug rev 2 apply run completes
+- **Where:**
+
+  ```bash
+  az cosmosdb sql container throughput update \
+    --account-name hobbyiq-comps --database-name hobbyiq \
+    --name sold_comps --resource-group rg-hobbyiq-dev \
+    --max-throughput 8000
+  ```
+
+  Verify via App Insights sold_comps RU-consumed metric before
+  dropping — if consumption hasn't come back down, wait longer.
+
+---
+
 ## Marketplace
 
 ### Marketplace listings freshness cadence
