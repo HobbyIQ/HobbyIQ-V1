@@ -409,6 +409,13 @@ function TargetDialog({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // CF-BUYERIQ-VERIFIED-CARDS (Drew, 2026-08-10). New targets MUST
+    // come from catalog search — no manual entries allowed. Edit mode
+    // grandfather-clauses legacy rows that lack a slug.
+    if (!isEdit && !pickedHobbyiqCardId) {
+      setError("Pick a card from the catalog to add a target.");
+      return;
+    }
     if (!playerName.trim()) return;
     setBusy(true);
     setError(null);
@@ -595,76 +602,70 @@ function TargetDialog({
           </div>
         )}
 
-        <Field label="Player name" required>
-          <input
-            type="text"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            required
-            autoFocus
-            placeholder="Mike Trout"
-            className={inputCls}
-            style={inputStyle}
-          />
-        </Field>
+        {/* CF-BUYERIQ-VERIFIED-CARDS (Drew, 2026-08-10). All targets
+            must come from the catalog. Manual identity fields removed.
+            Once picked, we show a summary card (image + title + year/
+            set/#/parallel/auto). Edit mode falls back to the existing
+            legacy fields if the row was created before this change. */}
+        {isEdit && !pickedHobbyiqCardId && (
+          <div className="rounded-lg border p-3 space-y-2" style={{ background: "var(--color-bg)", borderColor: "var(--color-border)" }}>
+            <div className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">Card (legacy, not catalog-verified)</div>
+            <div className="text-sm text-white">{playerName || "—"}</div>
+            <div className="text-xs text-[color:var(--color-muted)]">
+              {[cardYear, setName, cardNumber && `#${cardNumber}`, parallel, isAuto ? "Auto" : null].filter(Boolean).join(" · ") || "no identity fields"}
+            </div>
+            <div className="text-[11px] text-[color:var(--color-muted)] opacity-80">
+              Re-pick from catalog to attach a canonical slug (unlocks pricing rails).
+            </div>
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="text-xs text-[color:var(--color-accent)] hover:underline"
+            >
+              Search catalog to attach →
+            </button>
+          </div>
+        )}
 
-        <div className="grid grid-cols-3 gap-2">
-          <Field label="Year">
-            <input
-              type="number"
-              value={cardYear}
-              onChange={(e) => setCardYear(e.target.value)}
-              placeholder="2011"
-              className={inputCls}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="Card #">
-            <input
-              type="text"
-              value={cardNumber}
-              onChange={(e) => setCardNumber(e.target.value)}
-              placeholder="US175"
-              className={inputCls}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="Auto">
-            <label className="flex items-center gap-2 text-sm pt-1.5">
-              <input
-                type="checkbox"
-                checked={isAuto}
-                onChange={(e) => setIsAuto(e.target.checked)}
-              />
-              <span>Autograph</span>
-            </label>
-          </Field>
-        </div>
-
-        <Field label="Set / product">
-          <input
-            type="text"
-            value={setName}
-            onChange={(e) => setSetName(e.target.value)}
-            placeholder="Topps Update"
-            className={inputCls}
-            style={inputStyle}
-          />
-        </Field>
-
-        <Field label="Parallel">
-          <input
-            type="text"
-            value={parallel}
-            onChange={(e) => setParallel(e.target.value)}
-            placeholder="Gold Refractor"
-            className={inputCls}
-            style={inputStyle}
-          />
-        </Field>
+        {pickedHobbyiqCardId && (
+          <div className="rounded-lg border p-3 flex items-start gap-3" style={{ background: "var(--color-bg)", borderColor: "var(--hiq-hobby-green, #7CFF72)" }}>
+            <div className="w-14 h-20 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg-card, #101B2D)" }}>
+              {pickedImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pickedImageUrl} alt="" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-[color:var(--color-muted)] text-xs">📷</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--hiq-hobby-green, #7CFF72)" }}>Catalog-verified</div>
+              <div className="text-sm font-semibold text-white truncate mt-0.5">{playerName}</div>
+              <div className="text-xs text-[color:var(--color-muted)] flex items-center gap-1.5 flex-wrap mt-0.5">
+                {cardYear && <span>{cardYear}</span>}
+                {setName && <span>· {setName}</span>}
+                {cardNumber && <span>· #{cardNumber}</span>}
+                {parallel && <span>· {parallel}</span>}
+                {isAuto && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "var(--hiq-hobby-green, #7CFF72)", color: "#0e1626" }}>AUTO</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(true);
+                  setPickedHobbyiqCardId(null);
+                  setPickedImageUrl(null);
+                }}
+                className="text-xs text-[color:var(--color-accent)] hover:underline mt-2"
+              >
+                Change card
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Grade company">
+          <Field label="Grade you want">
             <select
               value={gradeCompany}
               onChange={(e) => setGradeCompany(e.target.value)}
@@ -770,7 +771,7 @@ function TargetDialog({
           </button>
           <button
             type="submit"
-            disabled={busy || !playerName.trim()}
+            disabled={busy || !playerName.trim() || (!isEdit && !pickedHobbyiqCardId)}
             className="hiq-btn-primary"
           >
             {busy ? "Saving…" : isEdit ? "Save" : "Add target"}
