@@ -13,6 +13,70 @@ Add new items with:
 
 ---
 
+## Alerts
+
+### Verify Azure Monitor alerts + destination before launch
+
+- **What:** 6 metric alerts live in `rg-hobbyiq-dev` today (all
+  enabled), routing to the `hobbyiq-ops-alerts` action group. Before
+  we open the doors publicly, we need to (a) confirm the destination
+  is right, (b) sanity-check the thresholds, (c) test-fire that mail
+  actually lands.
+- **Why parked (2026-08-10):** Alerts are set up and enabled; the
+  work is verification + address change, not new build.
+- **Trigger:** Any of:
+  - Marketing pushes the app / web publicly
+  - >1 active seller or >5 active buyers using the platform
+  - Right before opening `hobby-iq.com` to non-invite traffic
+- **Where — action group:** currently `hobbyiq-ops-alerts` →
+  `drew@justtheboysandcards.com`. Consolidation with the digest
+  address means this should flip to `drew@hobby-iq.com` (see
+  [[reference_ops_alert_email]] memory — currently outdated).
+
+  ```bash
+  az monitor action-group update \
+    --name hobbyiq-ops-alerts --resource-group rg-hobbyiq-dev \
+    --add-action email primary drew@hobby-iq.com
+  # then remove the old address once the new one is confirmed
+  ```
+
+- **Where — alerts to review:**
+
+  | Alert | Severity | Threshold today |
+  | --- | --- | --- |
+  | `appservice-http5xx` | 1 | Any non-zero in 24h |
+  | `appservice-health-degraded` | 1 | Health <100% for 5 min |
+  | `appservice-response-time-elevated` | 2 | Avg > 2s over 15 min (baseline 270ms) |
+  | `appinsights-exception-surge` | 2 | Exceptions > 10 in 15 min (baseline 0-3/hr) |
+  | `appinsights-failure-count` | 2 | Failed requests > 5 in 15 min (baseline 0-1/hr) |
+  | `cosmos-throttle-429` | 2 | Any 429 |
+
+  Note: `cosmos-throttle-429` will spuriously fire during any RU
+  bump / backfill sprint (like today's 8K→40K bump on sold_comps).
+  Consider muting during known-sprint windows, or raising threshold
+  to `>N per hour` so a single 429 during a normal-load period still
+  pages but expected backfill noise doesn't.
+
+- **Where — coverage gaps to add before launch:**
+
+  1. **Deploy failure** — "Daily 5AM ET Refresh & Deploy" workflow
+     failure → alert. Today a failed deploy is silent.
+  2. **CH ingest freshness canary** — already exists via
+     `checkSoldCompsFreshness.cjs` per [[reference_freshness_canary]];
+     verify it's on the cron and its output routes to
+     `drew@hobby-iq.com`.
+  3. **Deal-scanner job failure** — `buyerIqDealScanner.job` runs
+     in-process on App Service; a crash today is silent.
+  4. **Storefront visibility drops to 0** — sanity canary for the
+     marketplace_listings pool.
+
+- **Test-fire before launch:** send a synthetic 5xx (curl a known
+  404-that-returns-500 route) to verify the flow actually delivers to
+  the right inbox. Alerts sit dormant until an incident; don't want
+  to discover a mis-configured MX record during a real outage.
+
+---
+
 ## Azure Storage CORS
 
 ### card-images container = blob-level public read
