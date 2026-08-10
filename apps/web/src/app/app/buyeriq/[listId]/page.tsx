@@ -12,10 +12,12 @@ import {
   createBuyerIqTarget,
   updateBuyerIqTarget,
   deleteBuyerIqTarget,
+  searchCards,
   type BuyerIqList,
   type BuyerIqTarget,
   type BuyerIqPriority,
   type BuyerIqStatus,
+  type SearchCandidate,
 } from "@/lib/api";
 
 const STATUS_TABS: BuyerIqStatus[] = ["wanted", "acquired", "passed"];
@@ -359,6 +361,51 @@ function TargetDialog({
   const [acquiredPrice, setAcquiredPrice] = useState(initial?.acquiredPrice?.toString() ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // CF-BUYERIQ-CATALOG-SEARCH web (Drew, 2026-08-10). Catalog search
+  // panel state — mirrors the iOS BuyerIQCatalogSearchSheet flow so
+  // web + iOS "Add target" both prefill from the same canonical
+  // catalog identity + capture hobbyiqCardId for pricing rails.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchCandidate[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [pickedHobbyiqCardId, setPickedHobbyiqCardId] = useState<string | null>(initial?.hobbyiqCardId ?? null);
+  const [pickedImageUrl, setPickedImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
+
+  async function runSearch() {
+    const q = searchQuery.trim();
+    if (q.length < 2) return;
+    setSearchLoading(true);
+    setSearchError(null);
+    try {
+      const res = await searchCards(q, "freetext");
+      setSearchResults(res.candidates ?? []);
+    } catch (err) {
+      setSearchError((err as { message?: string }).message ?? "Search failed");
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function applyCatalogPick(c: SearchCandidate) {
+    // Prefill every form field the catalog knows. User can still
+    // edit anything below (e.g. add a grade/parallel not captured).
+    if (c.player) setPlayerName(c.player);
+    if (c.year != null) setCardYear(String(c.year));
+    if (c.setName) setSetName(c.setName);
+    if (c.cardNumber) setCardNumber(c.cardNumber);
+    if (c.parallel) setParallel(c.parallel);
+    setIsAuto(c.isAuto);
+    if (c.gradeCompany) setGradeCompany(c.gradeCompany);
+    if (c.gradeValue != null) setGradeValue(String(c.gradeValue));
+    setPickedHobbyiqCardId(c.candidateId);
+    setPickedImageUrl(c.imageUrl);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -368,6 +415,11 @@ function TargetDialog({
     try {
       const body = {
         listId,
+        // CF-BUYERIQ-CATALOG-SEARCH web (Drew, 2026-08-10). Passing the
+        // canonical slug + image when the user picked from catalog so
+        // the target row lands slug-tagged on first insert.
+        hobbyiqCardId: pickedHobbyiqCardId,
+        imageUrl: pickedImageUrl,
         playerName: playerName.trim(),
         cardYear: cardYear.trim() ? Number(cardYear.trim()) : null,
         setName: setName.trim() || null,
@@ -409,6 +461,139 @@ function TargetDialog({
         className="hiq-card w-full max-w-lg p-6 space-y-3 max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-xl font-bold">{isEdit ? "Edit target" : "Add target"}</h2>
+
+        {/* CF-BUYERIQ-CATALOG-SEARCH web (Drew, 2026-08-10). Catalog
+            search — same identity source as iOS BuyerIQCatalogSearchSheet.
+            Create mode only; hidden in edit so existing targets don't
+            accidentally re-slug. Picking a result prefills every field
+            AND captures the canonical hobbyiqCardId + imageUrl so the
+            row lands slug-tagged for FMV / gap match / market movers. */}
+        {!isEdit && (
+          <div
+            className="rounded-lg border p-3"
+            style={{
+              background: "var(--color-bg)",
+              borderColor: pickedHobbyiqCardId ? "var(--hiq-hobby-green, #7CFF72)" : "var(--color-border)",
+            }}
+          >
+            {!searchOpen && !pickedHobbyiqCardId && (
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="w-full flex items-center gap-3 text-left"
+              >
+                <span aria-hidden style={{ color: "var(--color-accent)", fontSize: 18 }}>🔍</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-semibold text-white">Search catalog</span>
+                  <span className="block text-xs text-[color:var(--color-muted)]">
+                    Match to canonical identity so pricing rails snap in
+                  </span>
+                </span>
+                <span className="text-[color:var(--color-muted)]">›</span>
+              </button>
+            )}
+            {!searchOpen && pickedHobbyiqCardId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(true);
+                  setPickedHobbyiqCardId(null);
+                  setPickedImageUrl(null);
+                }}
+                className="w-full flex items-center gap-3 text-left"
+              >
+                <span aria-hidden style={{ color: "var(--hiq-hobby-green, #7CFF72)", fontSize: 18 }}>✓</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-semibold text-white">Card picked from catalog</span>
+                  <span className="block text-xs text-[color:var(--color-muted)]">Tap to change; or edit fields below</span>
+                </span>
+              </button>
+            )}
+            {searchOpen && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        runSearch();
+                      }
+                    }}
+                    placeholder="e.g. 2011 Topps Update Mike Trout US175"
+                    className={inputCls}
+                    style={inputStyle}
+                  />
+                  <button
+                    type="button"
+                    onClick={runSearch}
+                    disabled={searchLoading || searchQuery.trim().length < 2}
+                    className="hiq-btn-primary text-sm disabled:opacity-60 whitespace-nowrap"
+                  >
+                    {searchLoading ? "Searching…" : "Search"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setSearchError(null);
+                    }}
+                    className="text-xs text-[color:var(--color-muted)] hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+                {searchError && (
+                  <div className="text-xs" style={{ color: "var(--color-danger)" }}>{searchError}</div>
+                )}
+                {!searchLoading && searchResults.length === 0 && searchQuery.trim().length >= 2 && !searchError && (
+                  <div className="text-xs text-[color:var(--color-muted)]">
+                    No matches. Try adding the year, set name, or card number.
+                  </div>
+                )}
+                {searchResults.length > 0 && (
+                  <div className="max-h-64 overflow-y-auto -mx-1">
+                    {searchResults.slice(0, 20).map((c) => (
+                      <button
+                        key={c.candidateId}
+                        type="button"
+                        onClick={() => applyCatalogPick(c)}
+                        className="w-full flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 text-left"
+                      >
+                        <div className="w-10 h-14 rounded flex-shrink-0 overflow-hidden flex items-center justify-center" style={{ background: "var(--color-bg-card, #101B2D)" }}>
+                          {c.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.imageUrl} alt="" className="w-full h-full object-contain" />
+                          ) : (
+                            <span className="text-[color:var(--color-muted)] text-xs">📷</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-white truncate">{c.title}</div>
+                          <div className="text-xs text-[color:var(--color-muted)] flex items-center gap-1.5 flex-wrap mt-0.5">
+                            {c.year && <span>{c.year}</span>}
+                            {c.setName && <span>· {c.setName}</span>}
+                            {c.cardNumber && <span>· #{c.cardNumber}</span>}
+                            {c.parallel && <span>· {c.parallel}</span>}
+                            {c.isAuto && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: "var(--hiq-hobby-green, #7CFF72)", color: "#0e1626" }}>AUTO</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[color:var(--color-accent)] text-lg" aria-hidden>+</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <Field label="Player name" required>
           <input
