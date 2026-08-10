@@ -13,7 +13,7 @@ import {
   updateBuyerIqTarget,
   deleteBuyerIqTarget,
   searchCards,
-  previewFmvForCard,
+  fetchPriceById,
   type BuyerIqList,
   type BuyerIqTarget,
   type BuyerIqPriority,
@@ -240,14 +240,25 @@ function TargetRow({
       : raw;
     (async () => {
       try {
-        const r = await previewFmvForCard({
-          cardId,
-          gradeCompany: target.gradeCompany,
-          gradeValue: target.gradeValue,
-          parallelName: target.parallel,
+        // CF-BUYERIQ-FMV-USE-PRICE-BY-ID (Drew, 2026-08-10). Was
+        // using previewFmvForCard which reads a top-level `fmv`
+        // field that /price-by-id doesn't return — always null on
+        // the tile. Switch to fetchPriceById (same endpoint) and
+        // pick the first populated of marketValue /
+        // fairMarketValueLive / marketTier.value / predictedPrice.
+        const r = await fetchPriceById({
+          cardsightCardId: cardId,
+          gradeCompany: target.gradeCompany ?? undefined,
+          gradeValue: target.gradeValue ?? undefined,
+          parallelName: target.parallel ?? undefined,
         });
+        const val =
+          (typeof r.marketValue === "number" && r.marketValue > 0 ? r.marketValue : null) ??
+          (typeof r.fairMarketValueLive === "number" && r.fairMarketValueLive > 0 ? r.fairMarketValueLive : null) ??
+          (typeof r.marketTier?.value === "number" && r.marketTier.value > 0 ? r.marketTier.value : null) ??
+          (typeof r.predictedPrice === "number" && r.predictedPrice > 0 ? r.predictedPrice : null);
         if (!cancelled) {
-          setFmv(typeof r.fmv === "number" ? r.fmv : null);
+          setFmv(val);
           setFmvLoaded(true);
         }
       } catch (err) {
