@@ -2144,31 +2144,76 @@ export async function refreshHolding(id: string): Promise<{ success: boolean; ho
 }
 
 // CF-WEB-SELL-PAYLOAD-FIX (Drew, 2026-08-10). Backend
-// portfolioStore.sellHolding requires:
-//   - quantity  (required, must be > 0 — was missing, causing 400
-//     INVALID_QUANTITY on every web Mark-as-sold click)
-//   - soldAt    (ISO datetime — web was sending "saleDate" which the
-//     backend ignored, silently defaulting to now)
-// iOS payload at HobbyIQ/APIService.swift:2076 sends {quantity, salePrice,
-// fees, tax, shipping, soldAt, source} — mirror that shape here so web
-// and iOS take the same code path server-side.
-export async function sellHolding(id: string, salePrice: number, saleDate?: string): Promise<{ success: boolean }> {
-  // saleDate is a YYYY-MM-DD from the <input type="date">. Backend expects
-  // ISO datetime; noon UTC is the same-day anchor iOS uses via ISO8601DateFormatter.
-  const soldAt = saleDate
-    ? new Date(`${saleDate}T12:00:00Z`).toISOString()
+// portfolioStore.sellHolding requires quantity + soldAt (ISO). Web
+// was sending {salePrice, saleDate} which returned 400. Expanded to
+// carry the full expense-reconciliation payload shape iOS supports
+// (fees / tax / shipping / grading / supplies / channel / payment /
+// location / notes) so P&L per sale reconciles correctly.
+export type SellSalesChannel =
+  | "ebay" | "whatnot" | "comc" | "myslabs" | "goldin" | "pwcc"
+  | "instagram" | "facebook" | "card_show" | "in_person" | "other";
+export type SellPaymentMethod =
+  | "ebay_managed" | "paypal" | "venmo" | "zelle" | "cash" | "check"
+  | "cashapp" | "trade" | "other";
+export interface SellHoldingDetail {
+  salePrice: number;
+  saleDate?: string;              // YYYY-MM-DD from <input type="date">
+  quantity?: number;              // default 1
+  fees?: number;
+  tax?: number;
+  shipping?: number;
+  gradingCost?: number;
+  suppliesCost?: number;
+  salesChannel?: SellSalesChannel;
+  channelNote?: string;
+  paymentMethod?: SellPaymentMethod;
+  paymentNote?: string;
+  saleLocation?: { venue?: string; city?: string; state?: string };
+  notes?: string;
+}
+export async function sellHolding(
+  id: string,
+  detailOrPrice: SellHoldingDetail | number,
+  legacyDate?: string,
+): Promise<{ success: boolean }> {
+  // Back-compat: legacy call sellHolding(id, price, "YYYY-MM-DD") still works.
+  const d: SellHoldingDetail = typeof detailOrPrice === "number"
+    ? { salePrice: detailOrPrice, saleDate: legacyDate }
+    : detailOrPrice;
+
+  const soldAt = d.saleDate
+    ? new Date(`${d.saleDate}T12:00:00Z`).toISOString()
     : new Date().toISOString();
+
+  // Only include fields when set — backend validators error on nulls in some
+  // paths (e.g. salesChannel="other" requires channelNote).
+  const body: Record<string, unknown> = {
+    quantity: d.quantity ?? 1,
+    salePrice: d.salePrice,
+    fees: d.fees ?? 0,
+    tax: d.tax ?? 0,
+    shipping: d.shipping ?? 0,
+    soldAt,
+    source: "manual",
+  };
+  if (d.gradingCost != null && d.gradingCost > 0) body.gradingCost = d.gradingCost;
+  if (d.suppliesCost != null && d.suppliesCost > 0) body.suppliesCost = d.suppliesCost;
+  if (d.salesChannel) body.salesChannel = d.salesChannel;
+  if (d.channelNote?.trim()) body.channelNote = d.channelNote.trim();
+  if (d.paymentMethod) body.paymentMethod = d.paymentMethod;
+  if (d.paymentNote?.trim()) body.paymentNote = d.paymentNote.trim();
+  if (d.saleLocation) {
+    const loc: Record<string, string> = {};
+    if (d.saleLocation.venue?.trim()) loc.venue = d.saleLocation.venue.trim();
+    if (d.saleLocation.city?.trim()) loc.city = d.saleLocation.city.trim();
+    if (d.saleLocation.state?.trim()) loc.state = d.saleLocation.state.trim().toUpperCase().slice(0, 2);
+    if (Object.keys(loc).length) body.saleLocation = loc;
+  }
+  if (d.notes?.trim()) body.notes = d.notes.trim();
+
   return await request(`/api/portfolio/holdings/${encodeURIComponent(id)}/sell`, {
     method: "POST",
-    body: JSON.stringify({
-      quantity: 1,
-      salePrice,
-      fees: 0,
-      tax: 0,
-      shipping: 0,
-      soldAt,
-      source: "manual",
-    }),
+    body: JSON.stringify(body),
   });
 }
 

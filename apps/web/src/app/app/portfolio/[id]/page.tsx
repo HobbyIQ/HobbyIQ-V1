@@ -14,6 +14,9 @@ import {
   valuationStatusOf,
   type PortfolioHolding,
   type HoldingPricePoint,
+  type SellHoldingDetail,
+  type SellSalesChannel,
+  type SellPaymentMethod,
 } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { EbayListModal } from "@/components/EbayListModal";
@@ -353,8 +356,8 @@ export default function HoldingDetailPage() {
         <SellModal
           suggestedPrice={fmv ?? undefined}
           onCancel={() => setSellOpen(false)}
-          onConfirm={async (price, date) => {
-            await sellHolding(h.id, price, date);
+          onConfirm={async (detail) => {
+            await sellHolding(h.id, detail);
             router.push("/app/portfolio");
           }}
         />
@@ -472,6 +475,38 @@ function MiniChart({ points }: { points: HoldingPricePoint[] }) {
   );
 }
 
+// CF-WEB-SELL-EXPENSES (Drew, 2026-08-10). Full expense-
+// reconciliation form. Backend accepts fees / tax / shipping /
+// gradingCost / suppliesCost / salesChannel / paymentMethod /
+// saleLocation / notes — the prior 2-field form was throwing all of
+// that away so P&L per sale was inflated (net = gross, no cost
+// subtraction). Groups fields into scannable sections; shows live
+// Net Proceeds calc so user can sanity-check before Confirm.
+const SALES_CHANNELS: ReadonlyArray<{ value: SellSalesChannel; label: string }> = [
+  { value: "ebay", label: "eBay" },
+  { value: "whatnot", label: "Whatnot" },
+  { value: "comc", label: "COMC" },
+  { value: "myslabs", label: "mySlabs" },
+  { value: "goldin", label: "Goldin" },
+  { value: "pwcc", label: "PWCC" },
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "card_show", label: "Card show" },
+  { value: "in_person", label: "In person" },
+  { value: "other", label: "Other" },
+];
+const PAYMENT_METHODS: ReadonlyArray<{ value: SellPaymentMethod; label: string }> = [
+  { value: "ebay_managed", label: "eBay Managed" },
+  { value: "paypal", label: "PayPal" },
+  { value: "venmo", label: "Venmo" },
+  { value: "zelle", label: "Zelle" },
+  { value: "cashapp", label: "Cash App" },
+  { value: "cash", label: "Cash" },
+  { value: "check", label: "Check" },
+  { value: "trade", label: "Trade" },
+  { value: "other", label: "Other" },
+];
+
 function SellModal({
   suggestedPrice,
   onCancel,
@@ -479,49 +514,257 @@ function SellModal({
 }: {
   suggestedPrice?: number;
   onCancel: () => void;
-  onConfirm: (price: number, date: string) => Promise<void>;
+  onConfirm: (detail: SellHoldingDetail) => Promise<void>;
 }) {
   const [price, setPrice] = useState<string>(suggestedPrice ? suggestedPrice.toFixed(2) : "");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [fees, setFees] = useState("");
+  const [tax, setTax] = useState("");
+  const [shipping, setShipping] = useState("");
+  const [gradingCost, setGradingCost] = useState("");
+  const [suppliesCost, setSuppliesCost] = useState("");
+  const [salesChannel, setSalesChannel] = useState<SellSalesChannel | "">("");
+  const [channelNote, setChannelNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<SellPaymentMethod | "">("");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [venue, setVenue] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const inputCls =
+    "w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)] transition-colors";
+  const inputStyle = {
+    background: "var(--color-bg)",
+    borderColor: "var(--color-border)",
+    color: "white",
+  } as const;
+  const labelCls = "text-[11px] uppercase tracking-wide text-[color:var(--color-muted)] mb-1.5 block font-medium";
+  const sectionHeadCls = "text-xs uppercase tracking-wider text-[color:var(--color-accent)] mt-6 mb-3 font-semibold";
+
+  const priceNum = Number(price) || 0;
+  const feesNum = Number(fees) || 0;
+  const taxNum = Number(tax) || 0;
+  const shippingNum = Number(shipping) || 0;
+  const gradingNum = Number(gradingCost) || 0;
+  const suppliesNum = Number(suppliesCost) || 0;
+  // Net proceeds = sale - fees - shipping. Tax passes through (collected on
+  // behalf of buyer). Grading/supplies are cost basis adjustments, not
+  // deductions from proceeds.
+  const netProceeds = Math.max(0, priceNum - feesNum - shippingNum);
 
   return (
     <Modal onClose={onCancel}>
       <h2 className="text-xl font-bold mb-2">Mark as sold</h2>
-      <p className="text-sm text-[color:var(--color-muted)] mb-6">
-        This closes the position and adds the sale to your comp pool. FMV stays learned from the sale.
+      <p className="text-sm text-[color:var(--color-muted)] mb-4">
+        Closes the position, adds the sale to your comp pool, and records the
+        expense breakdown so P&amp;L per sale reconciles.
       </p>
-      <div className="space-y-4">
+
+      {/* Essentials */}
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-2 block font-medium">
-            Sale price (USD)
-          </label>
+          <label className={labelCls}>Sale price (USD)</label>
           <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
-            style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
-            autoFocus
+            type="number" min={0} step="0.01" autoFocus
+            value={price} onChange={(e) => setPrice(e.target.value)}
+            className={inputCls} style={inputStyle}
           />
         </div>
         <div>
-          <label className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-2 block font-medium">
-            Sale date
-          </label>
+          <label className={labelCls}>Sale date</label>
           <input
             type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:border-[color:var(--color-accent)]"
-            style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+            value={date} onChange={(e) => setDate(e.target.value)}
+            className={inputCls} style={inputStyle}
           />
         </div>
       </div>
+
+      {/* Fees & costs */}
+      <div className={sectionHeadCls}>Fees &amp; costs</div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className={labelCls}>Fees ($)</label>
+          <input
+            type="number" min={0} step="0.01"
+            placeholder="eBay + processing"
+            value={fees} onChange={(e) => setFees(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Shipping ($)</label>
+          <input
+            type="number" min={0} step="0.01"
+            placeholder="what you paid"
+            value={shipping} onChange={(e) => setShipping(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Tax collected ($)</label>
+          <input
+            type="number" min={0} step="0.01"
+            placeholder="pass-through"
+            value={tax} onChange={(e) => setTax(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        <div>
+          <label className={labelCls}>Grading cost ($)</label>
+          <input
+            type="number" min={0} step="0.01"
+            placeholder="PSA/BGS/SGC fee"
+            value={gradingCost} onChange={(e) => setGradingCost(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Supplies ($)</label>
+          <input
+            type="number" min={0} step="0.01"
+            placeholder="packaging, sleeves"
+            value={suppliesCost} onChange={(e) => setSuppliesCost(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+      </div>
+
+      {/* Channel + payment */}
+      <div className={sectionHeadCls}>Where &amp; how</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>Sales channel</label>
+          <select
+            value={salesChannel}
+            onChange={(e) => setSalesChannel(e.target.value as SellSalesChannel | "")}
+            className={inputCls} style={inputStyle}
+          >
+            <option value="">— select —</option>
+            {SALES_CHANNELS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Payment method</label>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as SellPaymentMethod | "")}
+            className={inputCls} style={inputStyle}
+          >
+            <option value="">— select —</option>
+            {PAYMENT_METHODS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {(salesChannel === "other" || channelNote) && (
+        <div className="mt-3">
+          <label className={labelCls}>
+            Channel detail
+            {salesChannel === "other" && <span className="text-[color:var(--color-danger)]"> (required)</span>}
+          </label>
+          <input
+            type="text" maxLength={100}
+            placeholder="e.g. Discord group, private buyer"
+            value={channelNote} onChange={(e) => setChannelNote(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+      )}
+      {(paymentMethod === "other" || paymentNote) && (
+        <div className="mt-3">
+          <label className={labelCls}>Payment detail</label>
+          <input
+            type="text" maxLength={100}
+            placeholder="e.g. wire transfer, gift card"
+            value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+      )}
+
+      {/* Sale location (useful for shows / cash sales) */}
+      <div className={sectionHeadCls}>Sale location (optional)</div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2">
+          <label className={labelCls}>Venue</label>
+          <input
+            type="text" maxLength={80}
+            placeholder="National 2026, local card shop, etc."
+            value={venue} onChange={(e) => setVenue(e.target.value)}
+            className={inputCls} style={inputStyle}
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2">
+            <label className={labelCls}>City</label>
+            <input
+              type="text" maxLength={60}
+              value={city} onChange={(e) => setCity(e.target.value)}
+              className={inputCls} style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>State</label>
+            <input
+              type="text" maxLength={2}
+              placeholder="GA"
+              value={state} onChange={(e) => setState(e.target.value.toUpperCase())}
+              className={inputCls} style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className={sectionHeadCls}>Notes (optional)</div>
+      <textarea
+        rows={2}
+        placeholder="Anything worth remembering about this sale"
+        value={notes} onChange={(e) => setNotes(e.target.value)}
+        className={`${inputCls} resize-y`} style={inputStyle}
+      />
+
+      {/* Live net proceeds summary */}
+      <div className="mt-5 p-3 rounded-lg" style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }}>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-[color:var(--color-muted)]">Gross</span>
+          <span className="tabular-nums">${priceNum.toFixed(2)}</span>
+        </div>
+        {feesNum > 0 && (
+          <div className="flex items-center justify-between text-xs mt-1 text-[color:var(--color-muted)]">
+            <span>− Fees</span>
+            <span className="tabular-nums">−${feesNum.toFixed(2)}</span>
+          </div>
+        )}
+        {shippingNum > 0 && (
+          <div className="flex items-center justify-between text-xs mt-1 text-[color:var(--color-muted)]">
+            <span>− Shipping (out)</span>
+            <span className="tabular-nums">−${shippingNum.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-base mt-2 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
+          <span className="font-semibold">Net proceeds</span>
+          <span className="tabular-nums font-bold text-[color:var(--color-accent)]">${netProceeds.toFixed(2)}</span>
+        </div>
+        {(gradingNum > 0 || suppliesNum > 0 || taxNum > 0) && (
+          <div className="text-[10px] text-[color:var(--color-muted)] mt-2 leading-relaxed">
+            {taxNum > 0 && `Tax $${taxNum.toFixed(2)} passes through (buyer collected).`}
+            {(gradingNum > 0 || suppliesNum > 0) && ` Grading + supplies (${(gradingNum + suppliesNum).toFixed(2)}) reduce cost basis, not net.`}
+          </div>
+        )}
+      </div>
+
       {error && <div className="mt-4 text-sm" style={{ color: "var(--color-danger)" }}>{error}</div>}
+
       <div className="mt-6 flex items-center justify-end gap-3">
         <button onClick={onCancel} className="hiq-btn-secondary" disabled={submitting}>Cancel</button>
         <button
@@ -531,10 +774,31 @@ function SellModal({
               setError("Enter a positive sale price.");
               return;
             }
+            if (salesChannel === "other" && !channelNote.trim()) {
+              setError("Channel detail is required when Sales channel = Other.");
+              return;
+            }
             setSubmitting(true);
             setError(null);
             try {
-              await onConfirm(n, date);
+              await onConfirm({
+                salePrice: n,
+                saleDate: date,
+                fees: feesNum,
+                tax: taxNum,
+                shipping: shippingNum,
+                gradingCost: gradingNum > 0 ? gradingNum : undefined,
+                suppliesCost: suppliesNum > 0 ? suppliesNum : undefined,
+                salesChannel: (salesChannel || undefined) as SellSalesChannel | undefined,
+                channelNote: channelNote.trim() || undefined,
+                paymentMethod: (paymentMethod || undefined) as SellPaymentMethod | undefined,
+                paymentNote: paymentNote.trim() || undefined,
+                saleLocation:
+                  venue.trim() || city.trim() || state.trim()
+                    ? { venue: venue.trim() || undefined, city: city.trim() || undefined, state: state.trim() || undefined }
+                    : undefined,
+                notes: notes.trim() || undefined,
+              });
             } catch (err) {
               const e = err as { message?: string };
               setError(e.message ?? "Failed to mark sold");
