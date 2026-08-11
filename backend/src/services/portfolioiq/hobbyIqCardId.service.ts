@@ -594,13 +594,17 @@ interface ChromePrefixRule {
   cardNumberPrefix: RegExp;
   toSetKey: string;
 }
+// Regex shape uses `(?:-|\d)` after the prefix so both BCP-102 (modern
+// dashed shape, 2020+) AND BCP150 (older no-dash shape, pre-2020) match.
+// 2018 Vlad Guerrero rookie is BCP150; pre-fix rule missed it entirely
+// because it only accepted the dashed form (found by testing, 2026-08-10).
 const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
-  { fromSetKey: "bowman",       cardNumberPrefix: /^bcp-/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",       cardNumberPrefix: /^cpa-/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",       cardNumberPrefix: /^bdc-/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft", cardNumberPrefix: /^bdc-/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "topps",        cardNumberPrefix: /^tcpa-/i, toSetKey: "topps-chrome" },
-  { fromSetKey: "topps",        cardNumberPrefix: /^cra-/i,  toSetKey: "topps-chrome" },
+  { fromSetKey: "bowman",       cardNumberPrefix: /^bcp(?:-|\d)/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",       cardNumberPrefix: /^cpa(?:-|\d)/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",       cardNumberPrefix: /^bdc(?:-|\d)/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft", cardNumberPrefix: /^bdc(?:-|\d)/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "topps",        cardNumberPrefix: /^tcpa(?:-|\d)/i, toSetKey: "topps-chrome" },
+  { fromSetKey: "topps",        cardNumberPrefix: /^cra(?:-|\d)/i,  toSetKey: "topps-chrome" },
 ];
 function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {

@@ -271,6 +271,18 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).not.toMatch(/:bowman:bcp-/);
   });
 
+  it("bowman + BCP150 (no dash, pre-2020 shape) → bowman-chrome", () => {
+    // 2018 Vladimir Guerrero Jr. rookie BCP150. Prior /^bcp-/ regex
+    // missed no-dash variants entirely, breaking data population for
+    // Vlad + every other 2018-and-earlier BCP card (found via user
+    // report 2026-08-10).
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2018, setKey: "Bowman",
+      cardNumber: "BCP150", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:2018:bowman-chrome:bcp150:base:no-auto");
+  });
+
   it("bowman + CPA- → bowman-chrome", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
