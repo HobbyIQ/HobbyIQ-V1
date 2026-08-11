@@ -397,6 +397,74 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toContain(":bowman-chrome:bcp-102:base:auto");
   });
 
+  // Expanded prefix rules 2026-08-10 — Drew: "if we know it for a fact, we should clean it"
+  it("bowman + CDA- → bowman-chrome (Chrome Draft Autographs)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2023, setKey: "Bowman",
+      cardNumber: "CDA-HWA", parallel: "Refractor", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-chrome:cda-hwa:");
+  });
+
+  it("bowman + BCPA- → bowman-chrome (older Chrome Prospect Auto shape)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2015, setKey: "Bowman",
+      cardNumber: "BCPA-CB", parallel: "Refractor", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-chrome:bcpa-cb:");
+  });
+
+  it("bowman + BDCPA- → bowman-chrome (Bowman Draft Chrome Prospect Auto)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2023, setKey: "Bowman",
+      cardNumber: "BDCPA-JJ", parallel: "Refractor", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-chrome:bdcpa-jj:");
+  });
+
+  it("bowman + BSPA- → bowman-chrome-sapphire (Bowman Sapphire Prospect Auto)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "Bowman",
+      cardNumber: "BSPA-VG", parallel: "Refractor", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-chrome-sapphire:bspa-vg:");
+  });
+
+  it("bowman + BP- → bowman-paper (Bowman Prospects paper)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2023, setKey: "Bowman",
+      cardNumber: "BP-1", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toContain(":bowman-paper:bp-1:");
+  });
+
+  it("bowman + BPA- → bowman-paper (Bowman Paper Auto)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2023, setKey: "Bowman",
+      cardNumber: "BPA-JJ", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-paper:bpa-jj:");
+  });
+
+  it("bowman + BDA- → bowman-draft-paper (Bowman Draft Paper Auto)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2023, setKey: "Bowman",
+      cardNumber: "BDA-EH", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":bowman-draft-paper:bda-eh:");
+  });
+
+  it("BDP- stays ambiguous — no auto-upgrade (Verlander BDP129 is chrome, others paper)", () => {
+    // BDP is intentionally NOT in the override table because it exists
+    // in both paper and chrome for the same year (2005 BDP129 had both
+    // paper and chrome variants). Only setName can disambiguate.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2005, setKey: "Bowman",
+      cardNumber: "BDP129", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toContain(":bowman:bdp129:"); // stays bare bowman
+  });
+
   it("skips ambiguous prefix FCA- (Topps Finest / not covered)", () => {
     // FCA- was the ambiguity that killed the prior blanket override.
     // Keep it out of our override table; setName should resolve it.

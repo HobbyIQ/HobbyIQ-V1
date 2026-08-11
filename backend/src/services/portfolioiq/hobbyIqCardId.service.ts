@@ -598,13 +598,39 @@ interface ChromePrefixRule {
 // dashed shape, 2020+) AND BCP150 (older no-dash shape, pre-2020) match.
 // 2018 Vlad Guerrero rookie is BCP150; pre-fix rule missed it entirely
 // because it only accepted the dashed form (found by testing, 2026-08-10).
+//
+// Expanded 2026-08-10 (Drew: "if we know it for a fact, we should clean it"):
+// added CDA-/BCPA-/BDCPA- (all unambiguously bowman-chrome) and BSPA-
+// (unambiguously bowman-chrome-sapphire, its own family).
 const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
-  { fromSetKey: "bowman",       cardNumberPrefix: /^bcp(?:-|\d)/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",       cardNumberPrefix: /^cpa(?:-|\d)/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",       cardNumberPrefix: /^bdc(?:-|\d)/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft", cardNumberPrefix: /^bdc(?:-|\d)/i,  toSetKey: "bowman-chrome" },
-  { fromSetKey: "topps",        cardNumberPrefix: /^tcpa(?:-|\d)/i, toSetKey: "topps-chrome" },
-  { fromSetKey: "topps",        cardNumberPrefix: /^cra(?:-|\d)/i,  toSetKey: "topps-chrome" },
+  // Sapphire — must come BEFORE the plain bowman-chrome rules so a
+  // BSPA card doesn't get pre-empted.
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bspa(?:-|\d)/i,  toSetKey: "bowman-chrome-sapphire" },
+  { fromSetKey: "bowman-chrome",      cardNumberPrefix: /^bspa(?:-|\d)/i,  toSetKey: "bowman-chrome-sapphire" },
+  // Bowman Chrome family
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bcp(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bcpa(?:-|\d)/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  // Topps Chrome family
+  { fromSetKey: "topps",              cardNumberPrefix: /^tcpa(?:-|\d)/i,  toSetKey: "topps-chrome" },
+  { fromSetKey: "topps",              cardNumberPrefix: /^cra(?:-|\d)/i,   toSetKey: "topps-chrome" },
+  // Paper family — Drew 2026-08-10: "paper is a different card number
+  // prefix". BP- (Bowman Prospects paper), BPA- (Bowman Paper Auto),
+  // BDA- (Bowman Draft paper Auto) are unambiguously paper. Anchoring
+  // these prevents paper cards from being pooled with chrome via bare-
+  // bowman ambiguity. Note: BDP- stays out because it's a legitimately
+  // ambiguous prefix (2005 Bowman DP had both paper and chrome, e.g.
+  // Verlander BDP129 is chrome per Drew).
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bpa(?:-|\d)/i,   toSetKey: "bowman-paper" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bp(?:-|\d)/i,    toSetKey: "bowman-paper" },
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
 ];
 function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {
