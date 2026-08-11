@@ -55,10 +55,27 @@ function isAfter($, a, b) {
   return html.indexOf($.html(a)) > html.indexOf($.html(b));
 }
 
-// Extract card entries from a single <ul>/<ol>/<table>
+// Extract card entries from a single <ul>/<ol>/<table>/<p>.
+// Modern BCP uses <li> or <tr>; vintage uses one <p> per card.
 function extractPlayersFromList($, list) {
   const players = [];
   const seen = new Set();
+  const tag = (list.tagName || list.name || "").toLowerCase();
+
+  // Vintage <p> path: the whole element is ONE card entry
+  if (tag === "p") {
+    const t = $(list).text().trim().replace(/\s+/g, " ");
+    // Same "N Player" regex as <li>. Guard against short/empty <p>.
+    if (t.length < 3 || t.length > 200) return players;
+    const m = /^([A-Z]{0,4}\d{1,4}[A-Za-z]?)[\.\)\s:]+([A-Za-z].{2,150})$/.exec(t);
+    if (!m) return players;
+    const num = m[1].trim();
+    const player = cleanPlayerName(m[2]);
+    if (player) players.push({ n: num, p: player });
+    return players;
+  }
+
+  // Modern <li> path
   $(list).find("li").each((_, el) => {
     const t = $(el).text().trim().replace(/\s+/g, " ");
     const m = /^([A-Z]{0,4}\d{1,4}[A-Za-z]?)[\.\)\s:]+([A-Za-z].{2,80})$/.exec(t);
@@ -152,8 +169,14 @@ async function main() {
   const rows = [];
   const sectionsReport = [];
 
-  // Walk every <ul>, <ol>, <table> in .mw-parser-output
-  const lists = $content.find("ul, ol, table").toArray();
+  // Walk every <ul>, <ol>, <table>, AND <p> in .mw-parser-output.
+  // CF-VINTAGE-P-TAGS (Drew, 2026-08-11). Vintage BCP pages (1968
+  // Topps and older era) render each checklist card as a standalone
+  // <p> paragraph ("1 N.L. Batting Leaders", "20 Brooks Robinson")
+  // instead of <li> items. Fold those into the same section-attribution
+  // walk. extractPlayersFromList understands <p> too via its fallback
+  // "single-node text" path.
+  const lists = $content.find("ul, ol, table, p").toArray();
 
   for (const list of lists) {
     // Find the nearest preceding heading anchor in document order

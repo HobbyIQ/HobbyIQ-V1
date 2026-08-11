@@ -1,26 +1,29 @@
 const https = require("https");
 const cheerio = require("cheerio");
-const URL = process.env.BCP_URL || "https://baseballcardpedia.com/index.php/1998_SPx_Finite";
+const URL = process.env.BCP_URL || "https://baseballcardpedia.com/index.php/1968_Topps";
 function fetch(url, depth = 0) {
-  return new Promise((resolve, reject) => {
-    if (depth > 3) return reject(new Error("too many redirects"));
-    const req = https.get(url, { headers: { "User-Agent": "HobbyIQ/1.0" } }, (res) => {
-      if ([301,302,307,308].includes(res.statusCode)) return resolve(fetch(new URL(res.headers.location, url).toString(), depth+1));
-      let d = ""; res.on("data", c => d+=c); res.on("end", () => resolve(d));
+  return new Promise((res, rej) => {
+    if (depth > 3) return rej(new Error("too many redirects"));
+    const req = https.get(url, { headers: { "User-Agent": "HobbyIQ/1.0" } }, (r) => {
+      if ([301,302,307,308].includes(r.statusCode)) return res(fetch(new URL(r.headers.location, url).toString(), depth+1));
+      let d = ""; r.on("data", c => d+=c); r.on("end", () => res(d));
     });
-    req.on("error", reject);
+    req.on("error", rej);
   });
 }
 async function main() {
   const html = await fetch(URL);
   const $ = cheerio.load(html);
   const $body = $(".mw-parser-output").first();
-  // Look at ul index 1 and 2 (should be Youth Movement / Power Explosion / etc)
-  const uls = $body.children("ul");
-  console.log(`total top-level <ul>: ${uls.length}`);
-  uls.slice(0, 5).each((i, ul) => {
-    console.log(`\n--- <ul> index ${i}: ${$(ul).children("li").length} li ---`);
-    console.log(`RAW: ${$.html(ul).slice(0, 800)}`);
+  console.log(`.mw-parser-output has ${$body.children().length} direct children`);
+  // Show first 30 children to identify structure
+  $body.children().slice(0, 30).each((i, el) => {
+    const tag = el.tagName || el.name;
+    const text = $(el).text().replace(/\s+/g, " ").trim();
+    const cls = $(el).attr("class") || "";
+    console.log(`  ${i} <${tag}${cls?" class='"+cls.slice(0,60)+"'":""}> ${text.slice(0, 200)}`);
   });
+  console.log(`\ntop-level <ul> count: ${$body.children("ul").length}`);
+  console.log(`top-level <table> count: ${$body.children("table").length}`);
 }
 main().catch(e => { console.error(e); process.exit(1); });

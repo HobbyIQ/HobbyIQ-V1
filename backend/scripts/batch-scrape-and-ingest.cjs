@@ -39,20 +39,52 @@ function bcpUrlFor(product) {
   const setSlug = setKey.replace(/-/g, " ");
   // Try both "1999 <setName>" and "1999 Upper Deck <setName>" style variants
   nameCandidates.push(`${year}_${setKey.replace(/-/g, "_")}`);
-  // Special renames
+  // Special renames — BCP URL name for each canonical setKey.
+  // Verified live 2026-08-11 against baseballcardpedia.com.
   const renames = {
     "upper-deck-black-diamond": ["Black_Diamond", "Upper_Deck_Black_Diamond"],
     "spx-finite": ["SPx_Finite"],
     "upper-deck-retro": ["Upper_Deck_Retro"],
     "upper-deck-choice": ["Upper_Deck_Choice"],
     "topps-chrome": ["Topps_Chrome"],
+    "topps-chrome-platinum": ["Topps_Chrome_Platinum_Anniversary"],
+    "topps-chrome-update": ["Topps_Chrome_Update", "Topps_Update"],
+    "topps-chrome-sapphire": ["Topps_Chrome_Sapphire"],
+    "topps-heritage": ["Topps_Heritage"],
+    "topps-finest": ["Finest"],
+    "topps-pristine": ["Topps_Pristine"],
+    "topps-total": ["Topps_Total"],
+    "topps-traded": ["Topps_Traded"],
+    "topps-tiffany": ["Topps_Tiffany"],
+    "topps-stadium-club": ["Stadium_Club", "Topps_Stadium_Club"],
+    "topps-allen-ginter": ["Allen_and_Ginter", "Topps_Allen_and_Ginter"],
+    "topps-gypsy-queen": ["Gypsy_Queen"],
+    "topps-big-league": ["Topps_Big_League"],
+    "topps-archives": ["Topps_Archives"],
     "bowman-chrome": ["Bowman_Chrome"],
+    "bowman-chrome-sapphire": ["Bowman_Chrome_Sapphire", "Bowman_Sapphire"],
+    "bowman-mega": ["Bowman_Mega_Box", "Bowman_Mega"],
+    "bowman-draft": ["Bowman_Draft"],
+    "bowman-heritage": ["Bowman_Heritage"],
+    "bowman-sterling": ["Bowman_Sterling"],
+    "bowman-paper": ["Bowman"],
+    "bowman-draft-paper": ["Bowman_Draft"],
     "bowman": ["Bowman"],
     "topps": ["Topps"],
     "fleer": ["Fleer"],
     "score": ["Score"],
     "leaf": ["Leaf"],
     "donruss": ["Donruss"],
+    "goudey": ["Goudey"],
+    "sp-authentic": ["SP_Authentic"],
+    "sp-prospects": ["SP_Prospects", "SP_Top_Prospects"],
+    "upper-deck": ["Upper_Deck"],
+    "flair": ["Flair", "Flair_Showcase"],
+    "pinnacle": ["Pinnacle"],
+    "skybox": ["Skybox"],
+    "skybox-premium": ["Skybox_Premium"],
+    "metal-universe": ["Metal_Universe"],
+    "o-pee-chee": ["O-Pee-Chee"],
   };
   const alt = renames[setKey];
   if (alt) for (const a of alt) nameCandidates.push(`${year}_${a}`);
