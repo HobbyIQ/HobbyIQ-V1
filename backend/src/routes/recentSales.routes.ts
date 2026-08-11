@@ -138,23 +138,45 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       dedupedComps.push(c);
     }
 
-    // CF-RECENT-SALES-PRICE-GATE (Drew, 2026-08-06). Drop extreme-outlier
-    // rows (< median/3 or > median*3) from the tier's display. Prevents
-    // a stray $6,500 PSA 10 from surviving a wrong-tier bleed, and
-    // prevents "penny listings" (accidental $0.99 sale prices) from
-    // dragging the low band down. Skip the gate when we have <5 comps
-    // (median is unreliable at that size).
-    const prices = dedupedComps.map((c) => Number(c.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-    let gatedComps = dedupedComps;
-    if (prices.length >= 5) {
+    // CF-RECENT-SALES-PRICE-GATE (Drew, 2026-08-06; per-tier fix 2026-08-10).
+    // Drop extreme-outlier rows (< median/3 or > median*3) WITHIN EACH
+    // grade tier. Prior version computed one global median across all
+    // grades, so on a card dominated by Raw comps (159 Raw + 13 graded),
+    // median≈$2.50 and every PSA 10 at $115+ got gated out as "outlier"
+    // — invisible in Recent Comps. Now: bucket by grade first, gate
+    // within bucket, re-merge. Buckets with <5 comps skip the gate (too
+    // small for a reliable median).
+    function gradeKey(c: { gradeCompany?: string | null; gradeValue?: number | null }): string {
+      if (c.gradeCompany && String(c.gradeCompany).trim().length > 0) {
+        return `${String(c.gradeCompany).toUpperCase()} ${c.gradeValue ?? ""}`.trim();
+      }
+      return "Raw";
+    }
+    const gateBuckets = new Map<string, typeof dedupedComps>();
+    for (const c of dedupedComps) {
+      const k = gradeKey(c);
+      const arr = gateBuckets.get(k) ?? [];
+      arr.push(c);
+      gateBuckets.set(k, arr);
+    }
+    const gatedComps: typeof dedupedComps = [];
+    for (const [, rows] of gateBuckets) {
+      const prices = rows.map((c) => Number(c.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+      if (prices.length < 5) {
+        gatedComps.push(...rows);
+        continue;
+      }
       const gateMedian = prices[Math.floor(prices.length / 2)];
       const low = gateMedian / 3;
       const high = gateMedian * 3;
-      gatedComps = dedupedComps.filter((c) => {
+      for (const c of rows) {
         const p = Number(c.price);
-        return Number.isFinite(p) && p >= low && p <= high;
-      });
+        if (Number.isFinite(p) && p >= low && p <= high) gatedComps.push(c);
+      }
     }
+    // Restore newest-first order (readCompsByCardId returns sorted; the
+    // bucketed re-merge above scrambles it).
+    gatedComps.sort((a, b) => String(b.soldAt ?? "").localeCompare(String(a.soldAt ?? "")));
 
     const sales = gatedComps
       .slice(0, limit)
