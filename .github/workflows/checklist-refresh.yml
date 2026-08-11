@@ -38,6 +38,9 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -53,10 +56,27 @@ jobs:
         working-directory: backend
         run: npx tsc
 
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
       - name: Discover coverage gap
         working-directory: backend
         env:
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
           MAX_PRODUCTS: "100"
           MIN_ROWS: "20"
         run: node scripts/discoverMissingCatalog.cjs
@@ -64,7 +84,7 @@ jobs:
       - name: Batch scrape + ingest
         working-directory: backend
         env:
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
           TOP_N: ${{ github.event.inputs.top_n || '20' }}
           APPLY: ${{ github.event.inputs.apply || 'true' }}
           ONLY_ZERO_CATALOG: ${{ github.event.inputs.only_zero || 'true' }}
