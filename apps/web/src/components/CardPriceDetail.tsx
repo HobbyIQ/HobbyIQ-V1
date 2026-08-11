@@ -112,11 +112,25 @@ export function CardPriceDetail({
     for (const e of gradeCurve.entries) {
       if (e.grader !== wantGrader) continue;
       if (wantGrader === "Raw") return e;
-      if (Number(e.grade) === wantValue) return e;
+      // CF-GRADE-MATCH-BUGFIX (Drew, 2026-08-10). e.grade is a
+      // label ("PSA 10", "BGS 9.5") — Number(e.grade) was NaN and
+      // never matched. Hero silently fell back to detail.marketValue
+      // for graded cards, so hero ≠ grade-curve tile. Extract the
+      // numeric suffix and compare, matching CANONICAL_GRADES.label
+      // shape "<GRADER> <N>".
+      const parts = String(e.grade).trim().split(/\s+/);
+      const suffix = parts[parts.length - 1];
+      if (Number(suffix) === wantValue) return e;
     }
     return null;
   })();
-  const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
+  // CF-CARD-PANEL-EXACT-TILE-PARITY (Drew, 2026-08-10). GradeCurveView
+  // tile's "Market value" is literally `trendAdjustedValue ?? value` —
+  // no weightedMedianPrice fallback. Mirror that expression exactly so
+  // hero ≡ tile. Prior version added ?? weightedMedianPrice, which
+  // could silently diverge from the visible tile in the null-null-set
+  // edge case.
+  const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? null;
   const tilePredicted = tile?.predictedPriceAt30d ?? null;
   const fmv = tileFmv ?? detail?.fairMarketValueLive ?? detail?.marketValue ?? null;
   const predicted = tilePredicted ?? detail?.predictedPrice;
