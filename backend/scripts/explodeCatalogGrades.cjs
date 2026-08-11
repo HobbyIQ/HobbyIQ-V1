@@ -32,7 +32,12 @@ const argOf = (name, def) => {
 const APPLY = process.argv.includes("--apply");
 const LIMIT = Number(argOf("limit", "0"));
 const SOURCE_FILTER = argOf("source-filter", "");
-const CONCURRENCY = 128;
+// CF-GRADE-EXPLODE-THROTTLE-FIX (Drew, 2026-08-11). Was hardcoded to 128
+// which tips card_catalog RU into 429 when other jobs are competing for
+// the same throughput pool (e.g. sold_comps mass-reslugs during a busy
+// day). Env-configurable + defaults to a safer 32.
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
+const SELF_THROTTLE_MS = Math.max(0, Number(process.env.SELF_THROTTLE_MS || 0));
 
 // CORE grade tier set (12 tiers) — chosen for market activity coverage
 // per Drew 2026-08-10. Reduces write scope 50% vs STANDARD 24-tier set.
@@ -113,7 +118,32 @@ function buildGradedRow(identityRow, tier) {
 
   let scanned = 0, generated = 0, upserted = 0, errors = 0, skipped = 0;
   const t0 = Date.now();
-  for await (const page of iter) {
+
+  // CF-GRADE-EXPLODE-ITER-RETRY (Drew, 2026-08-11). Wrap iterator
+  // advancement with 429-safe retry. Prior: unhandled 429 from
+  // iter.next() crashed the whole run mid-progress. Now: back off per
+  // Cosmos-supplied retryAfterInMs, resume same page.
+  async function nextPageWithRetry(iterator, tries = 5) {
+    for (let i = 0; i < tries; i++) {
+      try { return await iterator.next(); }
+      catch (err) {
+        if (err && err.code === 429) {
+          const wait = (err.retryAfterInMs || 2000 * (i + 1)) + 500;
+          console.warn(`\n  iter 429; backing off ${wait}ms (try ${i+1}/${tries})`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error("iter retries exhausted");
+  }
+
+  while (true) {
+    const step = await nextPageWithRetry(iter);
+    if (step.done) break;
+    const page = step.value;
+    {
     const rows = page.resources ?? [];
     if (rows.length === 0) continue;
     // Build all graded rows for this page
@@ -182,6 +212,8 @@ function buildGradedRow(identityRow, tier) {
       const rate = (upserted / (elapsed || 1)).toFixed(0);
       process.stdout.write(`\r  scanned ${scanned.toLocaleString()} · upserted ${upserted.toLocaleString()} (${rate}/s) · errors ${errors}`);
     }
+    } // end page-scope block
+    if (SELF_THROTTLE_MS > 0) await new Promise((r) => setTimeout(r, SELF_THROTTLE_MS));
   }
   console.log(`\n\n═══ RESULT ═══`);
   console.log(`Identities scanned:  ${scanned.toLocaleString()}`);

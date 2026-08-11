@@ -18,6 +18,10 @@ on:
         description: 'Max identities to explode this run (0=unlimited within timeout)'
         required: false
         default: '0'
+      concurrency:
+        description: 'Parallel batches per page (default 32; lower if 429s)'
+        required: false
+        default: '32'
 
 jobs:
   explode:
@@ -60,12 +64,14 @@ jobs:
       - name: Run grade explosion
         env:
           COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+          CONCURRENCY: ${{ github.event.inputs.concurrency || '32' }}
+          SELF_THROTTLE_MS: '250'
         run: |
           LIMIT_ARG=""
           if [ "${{ github.event.inputs.limit }}" != "0" ] && [ -n "${{ github.event.inputs.limit }}" ]; then
             LIMIT_ARG="--limit=${{ github.event.inputs.limit }}"
           fi
-          echo "Running: node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply"
+          echo "Running: node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply (CONCURRENCY=$CONCURRENCY)"
           node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply
 
       - name: Report post-run state

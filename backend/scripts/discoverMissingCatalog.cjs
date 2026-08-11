@@ -22,32 +22,51 @@ async function main() {
   const sold = db.container("sold_comps");
   const catalog = db.container("card_catalog");
 
-  console.log("=== step 1: enumerate sold_comps products from hobbyiqCardId ===");
-  // Cosmos SQL can't SUBSTRING-parse into GROUP BY nicely; do it JS-side
-  // by streaming distinct hobbyiqCardIds + counts, then parse.
-  const q1 = await sold.items.query({
-    query: `SELECT c.hobbyiqCardId, COUNT(1) AS n
-            FROM c
-            WHERE IS_STRING(c.hobbyiqCardId)
-            GROUP BY c.hobbyiqCardId`,
-  }, { enableCrossPartitionQuery: true }).fetchAll();
-  console.log(`  ${q1.resources.length} distinct slugs`);
-  // Group by product family (sport:year:setKey)
+  console.log("=== step 1: page through sold_comps + aggregate JS-side ===");
+  // Paginate to avoid fetchAll() burning RU on a 4M-row GROUP BY.
+  // Small page size, count per page, aggregate in-memory.
+  const q1 = sold.items.query({
+    query: `SELECT c.hobbyiqCardId FROM c WHERE IS_STRING(c.hobbyiqCardId)`,
+  }, { maxItemCount: 500 });
   const byProduct = new Map();
-  for (const r of q1.resources) {
-    const parts = r.hobbyiqCardId.split(":");
-    if (parts.length < 5 || parts[0] !== "hiq") continue;
-    const sport = parts[1], year = Number(parts[2]), setKey = parts[3];
-    if (!sport || !year || !setKey) continue;
-    const key = `${sport}:${year}:${setKey}`;
-    const cur = byProduct.get(key) ?? { sport, year, setKey, n: 0 };
-    cur.n += r.n;
-    byProduct.set(key, cur);
+  let scanned = 0;
+  const startedAt = Date.now();
+  async function fetchNextWithRetry(tries = 5) {
+    for (let i = 0; i < tries; i++) {
+      try { return await q1.fetchNext(); }
+      catch (err) {
+        if (err && err.code === 429) {
+          const wait = (err.retryAfterInMs || 1000 * (i + 1)) + 200;
+          await new Promise(r => setTimeout(r, wait));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error("fetchNext retries exhausted");
+  }
+  while (q1.hasMoreResults()) {
+    const { resources } = await fetchNextWithRetry();
+    for (const r of resources) {
+      scanned++;
+      const parts = r.hobbyiqCardId.split(":");
+      if (parts.length < 5 || parts[0] !== "hiq") continue;
+      const sport = parts[1], year = Number(parts[2]), setKey = parts[3];
+      if (!sport || !year || !setKey) continue;
+      const key = `${sport}:${year}:${setKey}`;
+      const cur = byProduct.get(key) ?? { sport, year, setKey, n: 0 };
+      cur.n += 1;
+      byProduct.set(key, cur);
+    }
+    if (scanned % 100000 === 0) {
+      const dur = ((Date.now() - startedAt)/1000).toFixed(0);
+      console.log(`  scanned ${scanned.toLocaleString()} rows, ${byProduct.size} distinct products so far  ${dur}s`);
+    }
   }
   const products = [...byProduct.values()]
     .filter((r) => r.n >= MIN_ROWS)
     .sort((a, b) => b.n - a.n);
-  console.log(`  ${products.length} product families (>= ${MIN_ROWS} rows)`);
+  console.log(`  ${products.length} product families (>= ${MIN_ROWS} rows) from ${scanned.toLocaleString()} scanned`);
 
   console.log(`\n=== step 2: check catalog coverage for each (top ${MAX_PRODUCTS}) ===`);
   const results = [];

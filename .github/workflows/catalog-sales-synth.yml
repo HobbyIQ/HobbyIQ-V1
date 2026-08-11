@@ -6,15 +6,14 @@ name: Catalog Sales-Derived Synth
 # backed by real observed sales.
 
 on:
-  # Nightly synth: 07:00 UTC (3am ET) every day. Real-time upserts
-  # in persistVendorSalesToPool keep the catalog fresh for new sales,
-  # but the nightly recompute is what refreshes confidence scores
-  # from accumulated sale counts + catches anything real-time missed
-  # + reconciles set-key consolidation for rows that arrived under
-  # varied vendor labels during the day. Cheap when it's just Drew;
-  # bump to weekly again if RU cost matters as users grow.
-  schedule:
-    - cron: '0 7 * * *'
+  # CF-SALES-SYNTH-DISABLED (Drew, 2026-08-11). Schedule removed —
+  # the underlying script is intentionally gated behind
+  # SALES_SYNTH_I_UNDERSTAND_CATALOG_IS_CURATED=true per project memory
+  # (`sales-derived` produced 1.86M fragmented duplicates that damaged
+  # FMV trends). Every scheduled run was failing with exit 3, spamming
+  # GH Actions failure alerts. Kept the workflow_dispatch so an admin
+  # can still trigger a controlled experiment manually with the guard
+  # env var — but no automatic execution.
   workflow_dispatch:
     inputs:
       apply:
