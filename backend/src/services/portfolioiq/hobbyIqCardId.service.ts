@@ -664,6 +664,25 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // rationale for why this override is narrow (only unambiguous pairs).
   const setKey = applyChromePrefixOverride(baseSetKey, cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
+  // CF-CHROME-AUTO-BASE-IS-REFRACTOR (Drew, 2026-08-10). CardHedge (and
+  // some other vendors) label the /499 baseline CPA-/TCPA-/CRA- Auto as
+  // "Base Auto" because colored refractors get their own parallel names
+  // (Blue /150, Gold /50, etc.). But in these product lines the /499
+  // baseline IS on refractor stock — collectors uniformly call it
+  // "Refractor" and "Base" implies a non-refractor variant that doesn't
+  // exist for these subsets. Fragmenting the pool between "Base Auto"
+  // and "Refractor Auto" silently splits the /499 comps in half.
+  // Confirmed by Drew 2026-08-10: "a base does not equal a refractor" —
+  // canonicalize by upgrading Base → Refractor for the chrome-auto
+  // subsets so they land in one pool.
+  if (
+    parallelSlug === "base" &&
+    components.isAuto === true &&
+    /^(cpa|tcpa|cra)(?:-|\d)/i.test(cardNumber) &&
+    (setKey === "bowman-chrome" || setKey === "topps-chrome")
+  ) {
+    parallelSlug = "refractor";
+  }
 
   // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). See CHROME_STOCK
   // constants above — on known chrome product lines, any non-base parallel

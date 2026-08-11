@@ -349,6 +349,54 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toBe("hiq:baseball:1991:topps:392:base:no-auto");
   });
 
+  // CF-CHROME-AUTO-BASE-IS-REFRACTOR (Drew, 2026-08-10). CH labels the
+  // /499 baseline CPA-/TCPA-/CRA- auto as "Base" but collectors
+  // uniformly call it "Refractor" — those product lines have no
+  // non-refractor base variant. Upgrade Base → Refractor to unify the
+  // pool.
+  it("CPA- auto + Base parallel → Refractor (chrome-auto base-is-refractor)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Base", isAuto: true, printRun: 499,
+    });
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+  });
+
+  it("TCPA- auto + Base → topps-chrome refractor", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "Topps",
+      cardNumber: "TCPA-CB", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":topps-chrome:tcpa-cb:refractor:auto");
+  });
+
+  it("CRA- auto + Base → topps-chrome refractor", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps",
+      cardNumber: "CRA-JD", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":topps-chrome:cra-jd:refractor:auto");
+  });
+
+  it("CPA- non-auto + Base parallel stays Base (rule requires isAuto)", () => {
+    // Rule only fires for autos — a base non-auto is a legitimate row.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:no-auto");
+  });
+
+  it("BCP- auto + Base stays Base (rule scoped to CPA/TCPA/CRA only)", () => {
+    // BCP is a non-auto insert subset; the base-is-refractor rule only
+    // applies to auto subsets (CPA/TCPA/CRA).
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "BCP-102", parallel: "Base", isAuto: true, printRun: 499,
+    });
+    expect(slug).toContain(":bowman-chrome:bcp-102:base:auto");
+  });
+
   it("skips ambiguous prefix FCA- (Topps Finest / not covered)", () => {
     // FCA- was the ambiguity that killed the prior blanket override.
     // Keep it out of our override table; setName should resolve it.
