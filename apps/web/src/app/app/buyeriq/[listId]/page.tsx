@@ -13,7 +13,7 @@ import {
   updateBuyerIqTarget,
   deleteBuyerIqTarget,
   searchCards,
-  fetchPriceById,
+  fetchObservedGradeCurve,
   type BuyerIqList,
   type BuyerIqTarget,
   type BuyerIqPriority,
@@ -240,23 +240,31 @@ function TargetRow({
       : raw;
     (async () => {
       try {
-        // CF-BUYERIQ-FMV-USE-PRICE-BY-ID (Drew, 2026-08-10). Was
-        // using previewFmvForCard which reads a top-level `fmv`
-        // field that /price-by-id doesn't return — always null on
-        // the tile. Switch to fetchPriceById (same endpoint) and
-        // pick the first populated of marketValue /
-        // fairMarketValueLive / marketTier.value / predictedPrice.
-        const r = await fetchPriceById({
-          cardsightCardId: cardId,
-          gradeCompany: target.gradeCompany ?? undefined,
-          gradeValue: target.gradeValue ?? undefined,
-          parallelName: target.parallel ?? undefined,
+        // CF-BUYERIQ-FMV-MATCH-GRADE-CURVE (Drew, 2026-08-10). Use
+        // the exact same endpoint the card-detail page's grade curve
+        // reads (fetchObservedGradeCurve), then pick the entry that
+        // matches the target's grade. That guarantees the Market
+        // Value chip here equals the tile on the card panel — no
+        // divergence between surfaces. Fallback ladder within the
+        // entry: trendAdjustedValue (post-unified-overlay) →
+        // weightedMedianPrice (raw pool median) → value (estimate).
+        const curve = await fetchObservedGradeCurve(cardId);
+        // Build the tier label the entries use: "Raw" or e.g. "PSA 10".
+        // Matches CANONICAL_GRADES label shape in observedGradeCurve
+        // service.
+        const wantsRaw = !target.gradeCompany || target.gradeCompany.toLowerCase() === "raw";
+        const targetLabel = wantsRaw
+          ? "Raw"
+          : `${target.gradeCompany} ${target.gradeValue ?? ""}`.trim();
+        const entry = curve.entries.find((e) => {
+          if (wantsRaw) return e.grader === "Raw" || String(e.grade).toLowerCase() === "raw";
+          return String(e.grade).trim() === targetLabel;
         });
-        const val =
-          (typeof r.marketValue === "number" && r.marketValue > 0 ? r.marketValue : null) ??
-          (typeof r.fairMarketValueLive === "number" && r.fairMarketValueLive > 0 ? r.fairMarketValueLive : null) ??
-          (typeof r.marketTier?.value === "number" && r.marketTier.value > 0 ? r.marketTier.value : null) ??
-          (typeof r.predictedPrice === "number" && r.predictedPrice > 0 ? r.predictedPrice : null);
+        const val = entry
+          ? (typeof entry.trendAdjustedValue === "number" && entry.trendAdjustedValue > 0 ? entry.trendAdjustedValue : null) ??
+            (typeof entry.weightedMedianPrice === "number" && entry.weightedMedianPrice > 0 ? entry.weightedMedianPrice : null) ??
+            (typeof entry.value === "number" && entry.value > 0 ? entry.value : null)
+          : null;
         if (!cancelled) {
           setFmv(val);
           setFmvLoaded(true);
