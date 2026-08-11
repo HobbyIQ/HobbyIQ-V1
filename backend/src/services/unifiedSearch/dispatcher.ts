@@ -786,8 +786,22 @@ function routedCardToIdentity(
     structuredYear == null ? extractYearFromSetText(card.set) : null;
   const yearNum = structuredYear ?? extractedYear;
 
-  const dedupedSetName = yearNum != null ? stripLeadingYear(card.set) : (card.set ?? null);
+  let dedupedSetName = yearNum != null ? stripLeadingYear(card.set) : (card.set ?? null);
   const dedupedVariant = stripAutoFromVariant(card.variant);
+  // CF-TITLE-DEDUP-PARALLEL (Drew, 2026-08-10). Some CH/TCA setNames
+  // already end with the parallel token — "Bowman - Chrome Prospect
+  // Autographs - Refractor" carries "Refractor" as a suffix, and the
+  // variant "Refractor" then gets appended → panel shows "Refractor
+  // Refractor Owen Carey #CPA-OC". Strip a trailing `[-\s]<variant>`
+  // from setName when it duplicates the variant we're about to append.
+  if (dedupedSetName && dedupedVariant) {
+    const v = dedupedVariant.trim().toLowerCase();
+    // Escape regex specials in variant (parens, plus, etc.)
+    const escaped = v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const trailingRe = new RegExp(`[-\\s]+${escaped}\\s*$`, "i");
+    const stripped = dedupedSetName.replace(trailingRe, "").trim();
+    if (stripped.length > 0) dedupedSetName = stripped;
+  }
   // CF-PARALLEL-COLLECTOR-ALIASES (Drew, 2026-07-13, PR #410): rewrite
   // Cardsight-canonical parallel labels to the names collectors use
   // (e.g. "Blue X-Fractor" → "Blue Refractor" for CPA-* /150 autos).

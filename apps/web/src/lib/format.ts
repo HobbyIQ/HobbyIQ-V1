@@ -53,6 +53,22 @@ export function formatCardTitle(h: {
     }
   }
 
+  // CF-TITLE-DEDUP-PARALLEL (Drew, 2026-08-10). Some vendor product
+  // names already carry the parallel as a suffix ("2026 Bowman -
+  // Chrome Prospect Autographs - Refractor"). Appending parallel
+  // "Refractor" then produces "Refractor Refractor Owen Carey" —
+  // Drew flagged this on the Owen Carey CPA-OC panel. Strip a
+  // trailing `[-\s]<parallel>` from product when it duplicates the
+  // parallel we're about to append.
+  const rawParallel = h.parallel?.trim() ?? "";
+  const parallelToAppend = rawParallel && rawParallel.toLowerCase() !== "base" ? rawParallel : "";
+  if (product && parallelToAppend) {
+    const escaped = parallelToAppend.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const trailingRe = new RegExp(`[-\\s]+${escaped}\\s*$`, "i");
+    const stripped = product.replace(trailingRe, "").trim();
+    if (stripped.length > 0) product = stripped;
+  }
+
   const parts: string[] = [];
   if (h.cardYear) parts.push(String(h.cardYear));
   if (product) parts.push(product);
@@ -60,8 +76,8 @@ export function formatCardTitle(h: {
   // the title reads like "2026 Bowman Baseball Orange Shimmer Eric
   // Hartman #CPA-EHA" — the parallel is what distinguishes similarly-
   // numbered cards and needs to be visible without a second glance.
-  if (h.parallel && h.parallel.trim().toLowerCase() !== "base") {
-    parts.push(h.parallel.trim());
+  if (parallelToAppend) {
+    parts.push(parallelToAppend);
   }
   if (h.playerName) parts.push(h.playerName);
   if (h.cardNumber) parts.push(`#${h.cardNumber}`);
