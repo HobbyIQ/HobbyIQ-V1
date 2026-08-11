@@ -1,0 +1,78 @@
+{
+  "scrapedAt": "2026-08-11T02:50:22.402Z",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1998_SPx_Finite",
+  "sport": "baseball",
+  "year": 1998,
+  "setName": "SPx Finite",
+  "productKey": "1998-spx-finite",
+  "setKey": "spx-finite",
+  "rowCount": 370,
+  "sectionsReport": [
+    {
+      "breadcrumb": "Checklist > Base Set > Series One > Youth Movement",
+      "category": "base",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series One > Power Explosion",
+      "category": "base",
+      "playerCount": 20,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series One > Commons",
+      "category": "base",
+      "playerCount": 90,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series One > Star Focus",
+      "category": "base",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series One > Heroes of the Game",
+      "category": "base",
+      "playerCount": 10,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series Two > Youth Movement",
+      "category": "base",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series Two > Power Passion",
+      "category": "base",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series Two > Commons",
+      "category": "base",
+      "playerCount": 90,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series Two > Tradewinds",
+      "category": "base",
+      "playerCount": 20,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Series Two > Cornerstones of the Game",
+      "category": "base",
+      "playerCount": 10,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Inserts > Home Run Hysteria",
+      "category": "insert-home-run-hysteria",
+      "playerCount": 10,
+      "printRun": null
+    }
+  ]
+}

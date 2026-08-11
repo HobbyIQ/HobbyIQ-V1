@@ -1,0 +1,181 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Darin Erstad
+base,2,Base,false,,Tim Salmon
+base,3,Base,false,,Jim Edmonds
+base,4,Base,false,,Matt Williams
+base,5,Base,false,,David Dellucci
+base,6,Base,false,,Jay Bell
+base,7,Base,false,,Andres Galarraga
+base,8,Base,false,,Chipper Jones
+base,9,Base,false,,Greg Maddux
+base,10,Base,false,,Andruw Jones
+base,11,Base,false,,Cal Ripken Jr.
+base,12,Base,false,,Rafael Palmeiro
+base,13,Base,false,,Brady Anderson
+base,14,Base,false,,Mike Mussina
+base,15,Base,false,,Nomar Garciaparra
+base,16,Base,false,,Mo Vaughn
+base,17,Base,false,,Pedro Martinez
+base,18,Base,false,,Sammy Sosa
+base,19,Base,false,,Henry Rodriguez
+base,20,Base,false,,Frank Thomas
+base,21,Base,false,,Magglio Ordonez
+base,22,Base,false,,Albert Belle
+base,23,Base,false,,Paul Konerko
+base,24,Base,false,,Sean Casey
+base,25,Base,false,,Jim Thome
+base,26,Base,false,,Kenny Lofton
+base,27,Base,false,,Sandy Alomar
+base,28,Base,false,,Jaret Wright
+base,29,Base,false,,Larry Walker
+base,30,Base,false,,Todd Helton
+base,31,Base,false,,Vinny Castilla
+base,32,Base,false,,Tony Clark
+base,33,Base,false,,Damion Easley
+base,34,Base,false,,Mark Kotsay
+base,35,Base,false,,Derrek Lee
+base,36,Base,false,,Moises Alou
+base,37,Base,false,,Jeff Bagwell
+base,38,Base,false,,Craig Biggio
+base,39,Base,false,,Randy Johnson
+base,40,Base,false,,Dean Palmer
+base,41,Base,false,,Johnny Damon
+base,42,Base,false,,Chan Ho Park
+base,43,Base,false,,Raul Mondesi
+base,44,Base,false,,Gary Sheffield
+base,45,Base,false,,Jeromy Burnitz
+base,46,Base,false,,Marquis Grissom
+base,47,Base,false,,Jeff Cirillo
+base,48,Base,false,,Paul Molitor
+base,49,Base,false,,Todd Walker
+base,50,Base,false,,Vladimir Guerrero
+base,51,Base,false,,Brad Fullmer
+base,52,Base,false,,Mike Piazza
+base,53,Base,false,,Hideo Nomo
+base,54,Base,false,,Carlos Baerga
+base,55,Base,false,,John Olerud
+base,56,Base,false,,Derek Jeter
+base,57,Base,false,,Hideki Irabu
+base,58,Base,false,,Tino Martinez
+base,59,Base,false,,Bernie Williams
+base,60,Base,false,,Miguel Tejada
+base,61,Base,false,,Ben Grieve
+base,62,Base,false,,Jason Giambi
+base,63,Base,false,,Scott Rolen
+base,64,Base,false,,Doug Glanville
+base,65,Base,false,,Desi Relaford
+base,66,Base,false,,Tony Womack
+base,67,Base,false,,Jason Kendall
+base,68,Base,false,,Jose Guillen
+base,69,Base,false,,Tony Gwynn
+base,70,Base,false,,Ken Caminiti
+base,71,Base,false,,Greg Vaughn
+base,72,Base,false,,Kevin Brown
+base,73,Base,false,,Barry Bonds
+base,74,Base,false,,J.T. Snow
+base,75,Base,false,,Jeff Kent
+base,76,Base,false,,Ken Griffey Jr.
+base,77,Base,false,,Alex Rodriguez
+base,78,Base,false,,Edgar Martinez
+base,79,Base,false,,Jay Buhner
+base,80,Base,false,,Mark McGwire
+base,81,Base,false,,Delino DeShields
+base,82,Base,false,,Brian Jordan
+base,83,Base,false,,Quinton McCracken
+base,84,Base,false,,Fred McGriff
+base,85,Base,false,,Juan Gonzalez
+base,86,Base,false,,Ivan Rodriguez
+base,87,Base,false,,Will Clark
+base,88,Base,false,,Roger Clemens
+base,89,Base,false,,Jose Cruz
+base,90,Base,false,,Babe Ruth
+base,91,Base,false,,Troy Glaus
+base,92,Base,false,,Jarrod Washburn
+base,93,Base,false,,Travis Lee
+base,94,Base,false,,Bruce Chen
+base,95,Base,false,,Mike Caruso
+base,96,Base,false,,Jim Parque
+base,97,Base,false,,Kerry Wood
+base,98,Base,false,,Jeremy Giambi
+base,99,Base,false,,Matt Anderson
+base,100,Base,false,,Seth Greisinger
+base,101,Base,false,,Gabe Alvarez
+base,102,Base,false,,Rafael Medina
+base,103,Base,false,,Daryle Ward
+base,104,Base,false,,Alex Cora
+base,105,Base,false,,Adrian Beltre
+base,106,Base,false,,Geoff Jenkins
+base,107,Base,false,,Eric Milton
+base,108,Base,false,,Carl Pavano
+base,109,Base,false,,Eric Chavez
+base,110,Base,false,,Orlando Hernandez
+base,111,Base,false,,A.J. Hinch
+base,112,Base,false,,Carlton Loewer
+base,113,Base,false,,Aramis Ramirez
+base,114,Base,false,,Cliff Politte
+base,115,Base,false,,Matt Clement
+base,116,Base,false,,Alex Gonzalez
+base,117,Base,false,,J.D. Drew
+base,118,Base,false,,Shane Monahan
+base,119,Base,false,,Rolando Arrojo
+base,120,Base,false,,George Lombard
+insert-diamond-dominance,D1,Base,false,,Kerry Wood
+insert-diamond-dominance,D2,Base,false,,Derek Jeter
+insert-diamond-dominance,D3,Base,false,,Alex Rodriguez
+insert-diamond-dominance,D4,Base,false,,Frank Thomas
+insert-diamond-dominance,D5,Base,false,,Jeff Bagwell
+insert-diamond-dominance,D6,Base,false,,Mo Vaughn
+insert-diamond-dominance,D7,Base,false,,Ivan Rodriguez
+insert-diamond-dominance,D8,Base,false,,Cal Ripken Jr.
+insert-diamond-dominance,D9,Base,false,,Rolando Arrojo
+insert-diamond-dominance,D10,Base,false,,Chipper Jones
+insert-diamond-dominance,D11,Base,false,,Kenny Lofton
+insert-diamond-dominance,D12,Base,false,,Paul Konerko
+insert-diamond-dominance,D13,Base,false,,Mike Piazza
+insert-diamond-dominance,D14,Base,false,,Ben Grieve
+insert-diamond-dominance,D15,Base,false,,Nomar Garciaparra
+insert-diamond-dominance,D16,Base,false,,Travis Lee
+insert-diamond-dominance,D17,Base,false,,Scott Rolen
+insert-diamond-dominance,D18,Base,false,,Juan Gonzalez
+insert-diamond-dominance,D19,Base,false,,Tony Gwynn
+insert-diamond-dominance,D20,Base,false,,Tony Clark
+insert-diamond-dominance,D21,Base,false,,Roger Clemens
+insert-diamond-dominance,D22,Base,false,,Sammy Sosa
+insert-diamond-dominance,D23,Base,false,,Larry Walker
+insert-diamond-dominance,D24,Base,false,,Ken Griffey Jr.
+insert-diamond-dominance,D25,Base,false,,Mark McGwire
+insert-diamond-dominance,D26,Base,false,,Barry Bonds
+insert-diamond-dominance,D27,Base,false,,Vladimir Guerrero
+insert-diamond-dominance,D28,Base,false,,Tino Martinez
+insert-diamond-dominance,D29,Base,false,,Greg Maddux
+insert-diamond-dominance,D30,Base,false,,Babe Ruth
+insert-mystery-numbers,M1,Base,false,,Babe Ruth 100
+insert-mystery-numbers,M2,Base,false,,Ken Griffey Jr. 200
+insert-mystery-numbers,M3,Base,false,,Kerry Wood 300
+insert-mystery-numbers,M4,Base,false,,Mark McGwire 400
+insert-mystery-numbers,M5,Base,false,,Alex Rodriguez 500
+insert-mystery-numbers,M6,Base,false,,Chipper Jones 600
+insert-mystery-numbers,M7,Base,false,,Nomar Garciaparra 700
+insert-mystery-numbers,M8,Base,false,,Derek Jeter 800
+insert-mystery-numbers,M9,Base,false,,Mike Piazza 900
+insert-mystery-numbers,M10,Base,false,,Roger Clemens 1000
+insert-mystery-numbers,M11,Base,false,,Greg Maddux 1100
+insert-mystery-numbers,M12,Base,false,,Scott Rolen 1200
+insert-mystery-numbers,M13,Base,false,,Cal Ripken Jr. 1300
+insert-mystery-numbers,M14,Base,false,,Ben Grieve 1400
+insert-mystery-numbers,M15,Base,false,,Troy Glaus 1500
+insert-mystery-numbers,M16,Base,false,,Sammy Sosa 1600
+insert-mystery-numbers,M17,Base,false,,Darin Erstad 1700
+insert-mystery-numbers,M18,Base,false,,Juan Gonzalez 1800
+insert-mystery-numbers,M19,Base,false,,Pedro Martinez 1900
+insert-mystery-numbers,M20,Base,false,,Larry Walker 2000
+insert-mystery-numbers,M21,Base,false,,Vladimir Guerrero 2100
+insert-mystery-numbers,M22,Base,false,,Jeff Bagwell 2200
+insert-mystery-numbers,M23,Base,false,,Jaret Wright 2300
+insert-mystery-numbers,M24,Base,false,,Travis Lee 2400
+insert-mystery-numbers,M25,Base,false,,Barry Bonds 2500
+insert-mystery-numbers,M26,Base,false,,Orlando Hernandez 2600
+insert-mystery-numbers,M27,Base,false,,Frank Thomas 2700
+insert-mystery-numbers,M28,Base,false,,Tony Gwynn 2800
+insert-mystery-numbers,M29,Base,false,,Andres Galarraga 2900
+insert-mystery-numbers,M30,Base,false,,Craig Biggio 3000

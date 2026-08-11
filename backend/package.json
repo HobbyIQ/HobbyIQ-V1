@@ -25,6 +25,7 @@
     "@opentelemetry/instrumentation-undici": "^0.28.0",
     "apn": "^2.2.0",
     "applicationinsights": "^3.14.0",
+    "cheerio": "^1.2.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "csv-parse": "^7.0.1",
