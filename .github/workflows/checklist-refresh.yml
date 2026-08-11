@@ -1,0 +1,83 @@
+# CF-CHECKLIST-REFRESH (Drew, 2026-08-10). Nightly cron that runs the
+# catalog-gap discovery + attempts to scrape+ingest checklists for the
+# top-N missing products. Catalog IS the moat.
+#
+# Idempotent: re-runs safely (upsert catalog rows). Skips products whose
+# checklists already fully cover their sold_comps pool.
+#
+# Manual dispatch supported for one-off runs; nightly schedule keeps
+# coverage growing as new sold_comps ingest arrives for products we
+# don't yet cover.
+
+name: Checklist Refresh (nightly)
+
+on:
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: "Products to attempt (default 20; up to 100)"
+        required: false
+        default: "20"
+      apply:
+        description: "Write to catalog (default false)"
+        type: choice
+        required: false
+        default: "false"
+        options: ["true", "false"]
+      only_zero:
+        description: "Only products with 0 catalog coverage"
+        type: choice
+        required: false
+        default: "true"
+        options: ["true", "false"]
+  schedule:
+    # 08:00 UTC daily = 3-4 AM ET, off peak
+    - cron: "0 8 * * *"
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build TS
+        working-directory: backend
+        run: npx tsc
+
+      - name: Discover coverage gap
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          MAX_PRODUCTS: "100"
+          MIN_ROWS: "20"
+        run: node scripts/discoverMissingCatalog.cjs
+
+      - name: Batch scrape + ingest
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          TOP_N: ${{ github.event.inputs.top_n || '20' }}
+          APPLY: ${{ github.event.inputs.apply || 'true' }}
+          ONLY_ZERO_CATALOG: ${{ github.event.inputs.only_zero || 'true' }}
+        run: node scripts/batch-scrape-and-ingest.cjs
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checklist-refresh-${{ github.run_id }}
+          path: |
+            backend/scripts/catalog-coverage-gap.json
+            backend/scripts/batch-scrape-results.json
+            backend/data/checklists/scraped/*.csv
+            backend/data/checklists/scraped/*.manifest.json
+          retention-days: 30
