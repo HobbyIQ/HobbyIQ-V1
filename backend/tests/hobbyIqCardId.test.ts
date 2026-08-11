@@ -465,6 +465,40 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toContain(":bowman:bdp129:"); // stays bare bowman
   });
 
+  // CF-UD-INSERT-LINES (Drew 2026-08-10). Late-90s UD insert products
+  // are distinct comp pools.
+  it("1999 Upper Deck Black Diamond → upper-deck-black-diamond (not upper-deck)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1999, setKey: "1999 Upper Deck Black Diamond",
+      cardNumber: "76", parallel: "Double", isAuto: false, printRun: 3000,
+    });
+    expect(slug).toBe("hiq:baseball:1999:upper-deck-black-diamond:76:double:no-auto:num-3000");
+  });
+
+  it("1999 Black Diamond (bare) → upper-deck-black-diamond", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1999, setKey: "Black Diamond",
+      cardNumber: "D24", parallel: "Base", isAuto: false, printRun: 1500,
+    });
+    expect(slug).toContain(":upper-deck-black-diamond:d24:");
+  });
+
+  it("1998 SPx Finite → spx-finite (not upper-deck)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1998, setKey: "1998 Upper Deck SPx Finite",
+      cardNumber: "50", parallel: "Radiance", isAuto: false, printRun: 1000,
+    });
+    expect(slug).toBe("hiq:baseball:1998:spx-finite:50:radiance:no-auto:num-1000");
+  });
+
+  it("1999 Upper Deck Retro → upper-deck-retro", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1999, setKey: "1999 Upper Deck Retro",
+      cardNumber: "S1", parallel: "Base", isAuto: false, printRun: 1000,
+    });
+    expect(slug).toBe("hiq:baseball:1999:upper-deck-retro:s1:base:no-auto:num-1000");
+  });
+
   it("skips ambiguous prefix FCA- (Topps Finest / not covered)", () => {
     // FCA- was the ambiguity that killed the prior blanket override.
     // Keep it out of our override table; setName should resolve it.

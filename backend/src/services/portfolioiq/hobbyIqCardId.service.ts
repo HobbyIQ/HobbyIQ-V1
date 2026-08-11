@@ -250,6 +250,18 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // NOTE: bare "sp" is NOT in strict tier — "SP" collides with the
     // short-print abbreviation. Only qualified sp-prospects / sp-authentic
     // land here. Bare "SP" resolves via the routingRule downstream.
+    // CF-UD-INSERT-LINES (Drew, 2026-08-10, via 4 missing Griffey holdings
+    // + baseballcardpedia checklists). Late-90s Upper Deck insert products
+    // are distinct product lines with their own comp pools — pooling them
+    // with plain "upper-deck" fragments pricing (a 1999 UD Black Diamond
+    // Double #76 Griffey is a wholly different card from a 1999 UD main-set
+    // #76). Order matters — these must match BEFORE the bare /upper-deck/
+    // catchall below.
+    [/upper-deck-black-diamond|(?:^|-)black-diamond/, "upper-deck-black-diamond"],
+    [/upper-deck-retro/, "upper-deck-retro"],
+    [/(?:^|-)spx-finite/, "spx-finite"],
+    [/(?:^|-)spx/, "spx"],
+    [/upper-deck-choice/, "upper-deck-choice"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan
