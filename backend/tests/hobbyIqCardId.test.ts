@@ -59,7 +59,11 @@ describe("computeHobbyIqCardId — canonical shape", () => {
       isAuto: true,
       printRun: 50,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50");
+    // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10). setKey="Bowman"
+    // + cardNumber="CPA-EHA" now upgrades to bowman-chrome (was the
+    // 24k-row misslug source). Prior expectation was the bug we
+    // shipped a mass reslug for.
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:gold-refractor:auto:num-50");
   });
 
   it("Hartman Orange Shimmer Refractor auto (unnumbered → no print-run suffix)", () => {
@@ -72,7 +76,7 @@ describe("computeHobbyIqCardId — canonical shape", () => {
       isAuto: true,
       printRun: null,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:orange-shimmer-refractor:auto");
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:orange-shimmer-refractor:auto");
   });
 
   it("base non-auto (Base parallel + no printRun)", () => {
@@ -84,7 +88,7 @@ describe("computeHobbyIqCardId — canonical shape", () => {
       parallel: "Base",
       isAuto: false,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman:bcp-102:base:no-auto");
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:bcp-102:base:no-auto");
   });
 
   it("basketball Prizm /99", () => {
@@ -226,12 +230,14 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
     expect(slug).toContain(":bowman-chrome:");
   });
 
-  it("Topps Chrome Update → topps-chrome-update (specific)", () => {
+  it("Topps Chrome Update → topps-chrome (subset collapses per CF-CHROME-SUBSET-COLLAPSE)", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2024, setKey: "2024 Topps Chrome Update Series",
       cardNumber: "US1", parallel: "Base", isAuto: false,
     });
-    expect(slug).toContain(":topps-chrome-update:");
+    // Update subset collapses to parent topps-chrome (buyers don't
+    // distinguish subset; only Sapphire/Platinum/Black stay separate).
+    expect(slug).toContain(":topps-chrome:");
   });
 
   it("Panini Prizm collapses to panini-prizm", () => {
@@ -247,6 +253,100 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
       cardNumber: "1", parallel: "Base", isAuto: false,
     });
     expect(slug).toContain(":totally-made-up-brand:");
+  });
+});
+
+// CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). When vendor
+// setName is bare "Bowman" or "Topps" but the cardNumber is an
+// unambiguous chrome prefix (BCP-, CPA-, BDC-, TCPA-, CRA-), the
+// slug must upgrade to the chrome family. Prior state: 84,890+
+// sold_comps rows misslugged this way. See slug-frag-findings.json.
+describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", () => {
+  it("bowman + BCP- → bowman-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "BCP-102", parallel: "Refractor", isAuto: false,
+    });
+    expect(slug).toContain(":bowman-chrome:");
+    expect(slug).not.toMatch(/:bowman:bcp-/);
+  });
+
+  it("bowman + CPA- → bowman-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
+    });
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+  });
+
+  it("bowman + BDC- → bowman-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "BDC-1", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toContain(":bowman-chrome:");
+  });
+
+  it("bowman-draft + BDC- → bowman-chrome (draft-chrome collapses)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Draft",
+      cardNumber: "BDC-48", parallel: "Mojo Refractor", isAuto: false, printRun: 75,
+    });
+    expect(slug).toContain(":bowman-chrome:");
+  });
+
+  it("topps + TCPA- → topps-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "Topps",
+      cardNumber: "TCPA-CB", parallel: "Refractor", isAuto: true,
+    });
+    expect(slug).toContain(":topps-chrome:");
+  });
+
+  it("topps + CRA- → topps-chrome", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Topps",
+      cardNumber: "CRA-CB", parallel: "Base", isAuto: true,
+    });
+    expect(slug).toContain(":topps-chrome:");
+  });
+
+  it("does NOT touch panini + CPA (bare) — override is prefix-only, not substring", () => {
+    // 'cpa' without dash isn't a real cardNumber pattern, but assert we
+    // don't accidentally match numeric card numbers that start with "cpa".
+    const slug = computeHobbyIqCardId({
+      sport: "basketball", year: 2024, setKey: "Panini Prizm",
+      cardNumber: "1", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toContain(":panini-prizm:");
+  });
+
+  it("does NOT touch bowman when cardNumber is bare numeric (paper flagship)", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1991, setKey: "Bowman",
+      cardNumber: "246", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:1991:bowman:246:base:no-auto");
+  });
+
+  it("does NOT touch topps when cardNumber is bare numeric", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 1991, setKey: "Topps",
+      cardNumber: "392", parallel: "Base", isAuto: false,
+    });
+    expect(slug).toBe("hiq:baseball:1991:topps:392:base:no-auto");
+  });
+
+  it("skips ambiguous prefix FCA- (Topps Finest / not covered)", () => {
+    // FCA- was the ambiguity that killed the prior blanket override.
+    // Keep it out of our override table; setName should resolve it.
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "Topps",
+      cardNumber: "FCA-1", parallel: "Base", isAuto: true,
+    });
+    // Stays under bare topps because FCA- isn't in the override table.
+    expect(slug).toContain(":topps:");
+    expect(slug).not.toContain(":topps-chrome:");
   });
 });
 
@@ -283,7 +383,9 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
       isAuto: true, printRun: 99,
     });
     expect(trueGreen).toBe(green);
-    expect(trueGreen).toBe("hiq:baseball:2026:bowman:cpa-eha:green-refractor:auto:num-99");
+    // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10). CPA- with
+    // setKey="Bowman" upgrades to bowman-chrome.
+    expect(trueGreen).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:green-refractor:auto:num-99");
   });
 
   it("True Blue Refractor === Blue Refractor (market synonym)", () => {

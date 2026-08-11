@@ -135,6 +135,13 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/bowman-draft/, "bowman-draft"],
     [/bowman-paper/, "bowman-paper"],
     [/bowman-sterling/, "bowman-sterling"],
+    // CF-BOWMAN-HERITAGE-DISTINCT (Drew, 2026-08-08). Bowman Heritage is
+    // its own product line (different design, different release, own
+    // print run). Without this, "Bowman Heritage" fell through to the
+    // bare /bowman/ collapse below and 2005 Bowman Heritage cards
+    // clobbered 2005 Bowman entries on upsert during the checklist
+    // batch fill. Symmetric to /topps-heritage/ below.
+    [/bowman-heritage/, "bowman-heritage"],
     // CF-BOWMAN-MEGA-BOX-IS-CHROME (Drew, 2026-08-01). Bowman Mega Box
     // IS Bowman Chrome — same insert set, just retail-exclusive
     // distribution channel. Collapses to bowman-chrome (matches your
@@ -558,18 +565,51 @@ function formatPrintRun(printRun: number | null | undefined): string {
   return `:num-${printRun}`;
 }
 
-// CF-CHROME-PREFIX-OVERRIDE-REVERTED (Drew, 2026-07-31). Prior attempt
-// to force chrome set slug based on cardNumber prefix was too broad:
-//   - CPA- is used by both Bowman Chrome Prospects AND Topps Chrome
-//     Platinum Anniversary Autographs
-//   - FCA- is used by Topps Finest Chrome Autos
-//   - TC-  is used by Donruss Champions (Panini) among others
-// Blanket overrides misclassified ~184 rows in a 2,838-row apply run
-// before we caught it. Removed the override entirely. Chrome subset
-// collapse is still applied at the normalizeSetKey layer, which uses
-// the setName text (reliable signal). Rows sitting at wrong set slugs
-// (paper "bowman" with chrome cards) will be addressed via per-card
-// hand-labeling in the admin labeler surface, not via blanket rules.
+// CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Prior attempt
+// (2026-07-31) applied a blanket cardNumber-prefix→chrome override,
+// which misclassified ~184 rows because prefixes like CPA-, FCA-, TC-
+// are shared across product families (CPA- exists in both Bowman
+// Chrome Prospects AND Topps Chrome Platinum Anniversary; FCA- is
+// Topps Finest; TC- appears in Panini Donruss Champions). Reverted.
+//
+// But *doing nothing* left 92,362 sold_comps rows misslugged across
+// 12,000+ distinct slugs — cards with BCP-XX / CPA-XX / BDC-XX
+// cardNumbers whose vendor setName was just "Bowman" (paper) instead
+// of "Bowman Chrome". Owen Carey CPA-OC pool was fragmented across 4
+// slugs because of this. See audit output at
+// backend/scripts/slug-frag-findings.json.
+//
+// Narrow fix: only override when the (bareSetKey, prefix) pair is
+// unambiguous:
+//   bowman + BCP-  → bowman-chrome     (BCP- only ever = Bowman Chrome)
+//   bowman + CPA-  → bowman-chrome     (Topps CPA- has setKey=topps, not bowman)
+//   bowman + BDC-  → bowman-chrome     (Bowman Draft Chrome; collapses per CF-CHROME-SUBSET-COLLAPSE)
+//   bowman-draft + BDC- → bowman-chrome (same collapse)
+//   topps  + TCPA- → topps-chrome      (Topps Chrome Prospect Auto)
+//   topps  + CRA-  → topps-chrome      (Topps Chrome Rookie Auto)
+// Skip ambiguous prefixes (FCA-, TC-, bare CPA/BCP without dash) —
+// those still need setName as the disambiguator.
+interface ChromePrefixRule {
+  fromSetKey: string;
+  cardNumberPrefix: RegExp;
+  toSetKey: string;
+}
+const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
+  { fromSetKey: "bowman",       cardNumberPrefix: /^bcp-/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",       cardNumberPrefix: /^cpa-/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman",       cardNumberPrefix: /^bdc-/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft", cardNumberPrefix: /^bdc-/i,  toSetKey: "bowman-chrome" },
+  { fromSetKey: "topps",        cardNumberPrefix: /^tcpa-/i, toSetKey: "topps-chrome" },
+  { fromSetKey: "topps",        cardNumberPrefix: /^cra-/i,  toSetKey: "topps-chrome" },
+];
+function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
+  for (const rule of CHROME_PREFIX_OVERRIDES) {
+    if (setKey === rule.fromSetKey && rule.cardNumberPrefix.test(cardNumber)) {
+      return rule.toSetKey;
+    }
+  }
+  return setKey;
+}
 
 // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). On chrome stock,
 // bare colors like "Blue" and colored-pattern parallels like "Blue Shimmer"
@@ -612,8 +652,13 @@ function isChromeStockSetKey(setKey: string): boolean {
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
-  const setKey = normalizeSetKey(components.setKey);
+  const baseSetKey = normalizeSetKey(components.setKey);
   const cardNumber = normalizeCardNumber(components.cardNumber);
+  // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
+  // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
+  // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +
+  // rationale for why this override is narrow (only unambiguous pairs).
+  const setKey = applyChromePrefixOverride(baseSetKey, cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
 
   // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). See CHROME_STOCK
