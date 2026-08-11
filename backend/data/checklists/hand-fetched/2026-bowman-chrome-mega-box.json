@@ -1,0 +1,34 @@
+{
+  "sport": "baseball",
+  "year": 2026,
+  "setKey": "bowman-mega",
+  "setName": "2026 Bowman Chrome Mega Box",
+  "source": "checklistinsider",
+  "sourceUrl": "https://www.checklistinsider.com/2026-bowman-chrome-mega-box-baseball",
+  "fetchedAt": "2026-08-11",
+  "baseSet": [
+    {"n":"1","p":"Konnor Griffin"},{"n":"5","p":"Bobby Witt Jr."},{"n":"6","p":"Kevin McGonigle"},{"n":"12","p":"Alex Bregman"},{"n":"16","p":"Bo Bichette"},{"n":"17","p":"Francisco Lindor"},{"n":"18","p":"Nick Kurtz"},{"n":"23","p":"Fernando Tatis Jr."},{"n":"24","p":"Chase DeLauter"},{"n":"25","p":"Cole Young"},
+    {"n":"27","p":"Chase Burns"},{"n":"28","p":"Tatsuya Imai"},{"n":"29","p":"Cam Schlittler"},{"n":"31","p":"Alex Freeland"},{"n":"37","p":"Owen Caissie"},{"n":"38","p":"Bubba Chandler"},{"n":"43","p":"Roman Anthony"},{"n":"46","p":"Kyle Tucker"},{"n":"48","p":"Sal Stewart"},{"n":"52","p":"JJ Wetherholt"},
+    {"n":"54","p":"Justin Crawford"},{"n":"55","p":"Travis Bazzana"},{"n":"56","p":"Wyatt Langford"},{"n":"57","p":"Ronald Acuña Jr."},{"n":"60","p":"Paul Skenes"},{"n":"61","p":"Samuel Basallo"},{"n":"63","p":"Bryce Harper"},{"n":"65","p":"Jacob Misiorowski"},{"n":"66","p":"Aaron Judge"},{"n":"67","p":"Juan Soto"},
+    {"n":"70","p":"Colson Montgomery"},{"n":"72","p":"Tarik Skubal"},{"n":"75","p":"Mike Trout"},{"n":"76","p":"Munetaka Murakami"},{"n":"78","p":"Bryce Eldridge"},{"n":"79","p":"Jac Caglianone"},{"n":"80","p":"Nolan McLean"},{"n":"83","p":"Corbin Carroll"},{"n":"84","p":"Yoshinobu Yamamoto"},{"n":"85","p":"Gunnar Henderson"},
+    {"n":"86","p":"Cal Raleigh"},{"n":"91","p":"Pete Crow-Armstrong"},{"n":"93","p":"Trey Yesavage"},{"n":"94","p":"Kazuma Okamoto"},{"n":"95","p":"Carter Jensen"},{"n":"96","p":"Carson Benge"},{"n":"97","p":"Elly De La Cruz"},{"n":"98","p":"Junior Caminero"},{"n":"99","p":"Pete Alonso"},{"n":"100","p":"Shohei Ohtani"}
+  ],
+  "chromeProspects": [
+    {"n":"BCP-151","p":"Slater de Brun"},{"n":"BCP-152","p":"Wandy Asigen"},{"n":"BCP-153","p":"Alex Lodise"},{"n":"BCP-155","p":"John Gil"},{"n":"BCP-160","p":"Johenssy Colome"},{"n":"BCP-161","p":"Diego Frontado"},{"n":"BCP-163","p":"Francisco Renteria"},{"n":"BCP-164","p":"JoJo Parker"},{"n":"BCP-167","p":"Ezequiel Melbourne"},{"n":"BCP-170","p":"Leo De Vries"},
+    {"n":"BCP-175","p":"Randy Santana"},{"n":"BCP-176","p":"Gregory Pio"},{"n":"BCP-178","p":"Wilton Guerrero Jr."},{"n":"BCP-179","p":"Samil Serrano"},{"n":"BCP-180","p":"Jaider Suarez"},{"n":"BCP-185","p":"Ricky Duran"},{"n":"BCP-190","p":"Sebastian Dos Santos"},{"n":"BCP-191","p":"Dawvris Brito"},{"n":"BCP-192","p":"Ricky Moneys"},{"n":"BCP-194","p":"Angeibel Gomez"},
+    {"n":"BCP-197","p":"Juan Rijo"},{"n":"BCP-199","p":"Walker Jenkins"},{"n":"BCP-200","p":"Luis Hernandez"},{"n":"BCP-201","p":"Joniel Hernandez"},{"n":"BCP-207","p":"Santiago Solarte"},{"n":"BCP-208","p":"Cleiner Ramirez"},{"n":"BCP-209","p":"Ethan Holliday"},{"n":"BCP-210","p":"Angel Salio"},{"n":"BCP-214","p":"Owen Ayers"},{"n":"BCP-216","p":"Enmanuel Merlo"},
+    {"n":"BCP-218","p":"Caleb Bonemer"},{"n":"BCP-220","p":"Angel Nunez"},{"n":"BCP-221","p":"Manuel Bolivar"},{"n":"BCP-222","p":"Jeancer Custodio"},{"n":"BCP-227","p":"Pedro Gomez"},{"n":"BCP-228","p":"Jeyson Horton"},{"n":"BCP-231","p":"Sebastian Walcott"},{"n":"BCP-233","p":"Dante Nori"},{"n":"BCP-234","p":"Kevin Alvarez"},{"n":"BCP-235","p":"Alfredo Duno"},
+    {"n":"BCP-236","p":"Max Clark"},{"n":"BCP-238","p":"Seth Hernandez"},{"n":"BCP-240","p":"Ariel Roque"},{"n":"BCP-241","p":"Elian Rosario"},{"n":"BCP-242","p":"Randy Arias"},{"n":"BCP-244","p":"Jesús Made"},{"n":"BCP-245","p":"Eli Willits"},{"n":"BCP-246","p":"Garielvin Silverio"},{"n":"BCP-248","p":"Cooper Pratt"},{"n":"BCP-249","p":"Andri Hidalgo"}
+  ],
+  "inserts": [
+    {"setName":"Spring Breakout","cards":[
+      {"n":"SB-1","p":"Konnor Griffin"},{"n":"SB-2","p":"JJ Wetherholt"},{"n":"SB-3","p":"Leo De Vries"},{"n":"SB-4","p":"Ethan Holliday"},{"n":"SB-5","p":"Max Clark"},{"n":"SB-6","p":"Seth Hernandez"},{"n":"SB-7","p":"James Tibbs III"},{"n":"SB-8","p":"Luis Hernandez"},{"n":"SB-9","p":"JoJo Parker"},{"n":"SB-10","p":"Gavin Fien"},{"n":"SB-11","p":"Zach Root"},{"n":"SB-12","p":"Ethan Salas"},{"n":"SB-13","p":"Colt Emerson"},{"n":"SB-14","p":"John Gil"},{"n":"SB-15","p":"Yorger Bautista"},{"n":"SB-16","p":"Héctor Rodríguez"},{"n":"SB-17","p":"Xavier Neyens"},{"n":"SB-18","p":"Blake Mitchell"},{"n":"SB-19","p":"Luis Peña"},{"n":"SB-20","p":"Kaelen Culpepper"},{"n":"SB-21","p":"Aroon Escobar"},{"n":"SB-22","p":"Tony Blanco Jr."},{"n":"SB-23","p":"Lazaro Montes"},{"n":"SB-24","p":"Kendry Chourio"},{"n":"SB-25","p":"Andrew Fischer"}
+    ]},
+    {"setName":"Bowman Spotlights","cards":[
+      {"n":"BS-1","p":"Konnor Griffin"},{"n":"BS-2","p":"Munetaka Murakami"},{"n":"BS-3","p":"Wandy Asigen"},{"n":"BS-4","p":"Colt Emerson"},{"n":"BS-5","p":"Andrew Fischer"},{"n":"BS-6","p":"Shohei Ohtani"},{"n":"BS-7","p":"Carson Benge"},{"n":"BS-8","p":"Aaron Judge"},{"n":"BS-9","p":"Bryce Harper"},{"n":"BS-10","p":"Max Clark"},{"n":"BS-11","p":"Kevin McGonigle"},{"n":"BS-12","p":"Kazuma Okamoto"},{"n":"BS-13","p":"Carter Jensen"},{"n":"BS-14","p":"JJ Wetherholt"},{"n":"BS-15","p":"Luis Hernandez"}
+    ]},
+    {"setName":"Crystallized","cards":[
+      {"n":"BWC-1","p":"Kevin McGonigle"},{"n":"BWC-2","p":"JJ Wetherholt"},{"n":"BWC-3","p":"Carson Benge"},{"n":"BWC-4","p":"Munetaka Murakami"},{"n":"BWC-5","p":"Kazuma Okamoto"},{"n":"BWC-6","p":"Justin Crawford"},{"n":"BWC-7","p":"Chase DeLauter"},{"n":"BWC-8","p":"Kyle Teel"},{"n":"BWC-9","p":"Carson Williams"},{"n":"BWC-10","p":"Konnor Griffin"},{"n":"BWC-11","p":"Josuar Gonzalez"},{"n":"BWC-12","p":"Wehiwa Aloy"},{"n":"BWC-13","p":"Leo De Vries"},{"n":"BWC-14","p":"Yoshinobu Yamamoto"},{"n":"BWC-15","p":"Luis Hernandez"},{"n":"BWC-16","p":"Nick Kurtz"},{"n":"BWC-17","p":"Mike Trout"},{"n":"BWC-18","p":"Fernando Tatis Jr."},{"n":"BWC-19","p":"Julio Rodríguez"},{"n":"BWC-20","p":"Elly De La Cruz"}
+    ]}
+  ]
+}
