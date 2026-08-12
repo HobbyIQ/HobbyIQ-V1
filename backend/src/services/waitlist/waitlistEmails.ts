@@ -166,7 +166,7 @@ export function launchAnnouncementContent(opts: {
     `<li>Grade ladder + confidence badges on every price</li>` +
     `</ul>` +
     `<p style="margin:24px 0"><a href="${opts.loginUrl}" style="background:#1EA75A;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Get started</a></p>` +
-    `<p style="color:#888;font-size:12px;margin-top:32px">— Drew · Just The Boys and Cards, LLC</p>` +
+    `<p style="color:#888;font-size:12px;margin-top:32px">— Drew · HobbyIQ, LLC</p>` +
     `</body></html>`;
   return { subject, plainText, html };
 }

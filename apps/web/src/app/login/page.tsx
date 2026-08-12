@@ -19,6 +19,8 @@ function LoginForm() {
   const [inviteCode, setInviteCode] = useState(inviteFromUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // CF-TERMS-ACCEPTANCE: starts false — consent must be an affirmative act.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,7 +28,13 @@ function LoginForm() {
     setError(null);
     try {
       if (isSignup) {
-        await signUp(email, password, inviteCode);
+        // Belt-and-braces: the button is disabled without consent, but a
+        // form can still be submitted by keyboard or devtools.
+        if (!acceptedTerms) {
+          setError("Please accept the Terms and Conditions to create an account.");
+          return;
+        }
+        await signUp(email, password, inviteCode, true);
       } else {
         await signIn(email, password);
       }
@@ -126,6 +134,43 @@ function LoginForm() {
           </div>
         )}
 
+        {/* CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Explicit, unchecked-by-
+            default consent on the signup path. Unchecked-by-default matters:
+            a pre-ticked box is not affirmative assent, and §20 of the Terms
+            binds the user to arbitration and a class action waiver. The
+            submit button stays disabled until it's ticked, so the account
+            cannot be created without the agreement on record. */}
+        {isSignup && (
+          <label className="flex items-start gap-3 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--color-accent)] cursor-pointer"
+            />
+            <span className="text-[color:var(--color-muted)] leading-relaxed">
+              I agree to the{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                className="text-[color:var(--color-accent)] hover:underline"
+              >
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="text-[color:var(--color-accent)] hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              . The Terms include a binding arbitration provision and class
+              action waiver.
+            </span>
+          </label>
+        )}
+
         {error && (
           <div
             className="text-sm p-3 rounded-lg"
@@ -135,7 +180,11 @@ function LoginForm() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="hiq-btn-primary w-full disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={loading || (isSignup && !acceptedTerms)}
+          className="hiq-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
+        >
           {loading ? (isSignup ? "Creating…" : "Signing in…") : isSignup ? "Create account" : "Sign in"}
         </button>
       </form>

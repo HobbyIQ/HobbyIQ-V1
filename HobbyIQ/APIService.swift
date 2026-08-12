@@ -1669,9 +1669,9 @@ struct APIService {
         return response
     }
 
-    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String? = nil) async throws -> AuthSignInResponse {
+    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String? = nil, acceptedTerms: Bool = true) async throws -> AuthSignInResponse {
         // Try the register endpoint first
-        let signUpRequest = AuthEmailSignUpRequest(username: username, email: email, password: password, inviteCode: inviteCode)
+        let signUpRequest = AuthEmailSignUpRequest(username: username, email: email, password: password, inviteCode: inviteCode, acceptedTerms: acceptedTerms)
         do {
             let response = try await post(path: "/api/auth/register", body: signUpRequest, responseType: AuthSignInResponse.self)
             try validateAuthResponse(response)
@@ -4498,6 +4498,11 @@ private struct AuthEmailSignUpRequest: Codable {
     // requirement off. Backend rejects with a clear "invite code
     // required" error when the flag is on and this field is absent.
     let inviteCode: String?
+    // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). True when the user ticked the
+    // consent toggle on CreateAccountView. The backend stamps the accepted
+    // Terms VERSION from its own constant — we send intent, not a version,
+    // so a stale app build can never claim agreement to text it didn't show.
+    let acceptedTerms: Bool?
 }
 
 private struct AppleSignInRequest: Encodable {

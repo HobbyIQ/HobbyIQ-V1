@@ -147,7 +147,17 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
 // valid handle from the email local-part, retry with a random suffix
 // on the "Username already taken" collision. User can rename later
 // from account settings (setUsernameForSession).
-export async function signUp(email: string, password: string, inviteCode?: string): Promise<AuthUser> {
+// CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). `acceptedTerms` records the
+// user's agreement at the moment the account is created. The signup form
+// will not submit without it, so it is always true here — it is an explicit
+// parameter rather than a hardcoded literal so that a future caller which
+// creates accounts some other way has to make the same decision on purpose.
+export async function signUp(
+  email: string,
+  password: string,
+  inviteCode?: string,
+  acceptedTerms = true,
+): Promise<AuthUser> {
   const baseUsername = deriveUsernameFromEmail(email);
   let username = baseUsername;
   const trimmedInvite = inviteCode?.trim() || undefined;
@@ -155,7 +165,13 @@ export async function signUp(email: string, password: string, inviteCode?: strin
     try {
       const body = await request<AuthResponse>("/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password, username, inviteCode: trimmedInvite }),
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+          inviteCode: trimmedInvite,
+          acceptedTerms,
+        }),
         auth: false,
       });
       throwIfAuthFailed(body);

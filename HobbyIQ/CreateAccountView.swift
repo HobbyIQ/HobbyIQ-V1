@@ -26,6 +26,9 @@ struct CreateAccountView: View {
     // whether an empty value is accepted.
     @State private var inviteCode = ""
     @State private var selectedAgeTier: AgeTier = .standard
+    // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Starts false — consent has to
+    // be an affirmative act, not a pre-ticked default.
+    @State private var acceptedTerms = false
     @State private var localErrorMessage: String?
     @FocusState private var focusedField: Field?
 
@@ -173,6 +176,32 @@ struct CreateAccountView: View {
                                 }
                             }
 
+                            // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Explicit
+                            // consent gate. `canSubmit` includes acceptedTerms,
+                            // so the account cannot be created without the
+                            // agreement on record. Links open in Safari rather
+                            // than a sheet so the full text is readable and
+                            // shareable.
+                            VStack(alignment: .leading, spacing: 8) {
+                                Toggle(isOn: $acceptedTerms) {
+                                    Text("I agree to the Terms and Conditions and Privacy Policy")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white)
+                                }
+                                .toggleStyle(SwitchToggleStyle(tint: HobbyIQTheme.green))
+
+                                HStack(spacing: 14) {
+                                    Link("Read the Terms", destination: LegalTerms.termsURL)
+                                    Link("Privacy Policy", destination: LegalTerms.privacyURL)
+                                }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.green)
+
+                                Text(LegalTerms.consentSummary)
+                                    .font(.caption2)
+                                    .foregroundStyle(HobbyIQTheme.textSecondary)
+                            }
+
                             Button {
                                 Task { await createAccount() }
                             } label: {
@@ -202,7 +231,7 @@ struct CreateAccountView: View {
     private var canSubmit: Bool {
         let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedUsername.isEmpty == false && trimmedEmail.isEmpty == false && password.isEmpty == false && password == confirmPassword
+        return trimmedUsername.isEmpty == false && trimmedEmail.isEmpty == false && password.isEmpty == false && password == confirmPassword && acceptedTerms
     }
 
     private func createAccount() async {
@@ -220,12 +249,20 @@ struct CreateAccountView: View {
             return
         }
 
+        // CF-TERMS-ACCEPTANCE: the button is disabled without consent, but
+        // guard here too so no future caller can bypass the gate.
+        guard acceptedTerms else {
+            localErrorMessage = "Please accept the Terms and Conditions to create an account."
+            return
+        }
+
         let trimmedInvite = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         await sessionViewModel.signUp(
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password,
             username: trimmedUsername,
-            inviteCode: trimmedInvite.isEmpty ? nil : trimmedInvite
+            inviteCode: trimmedInvite.isEmpty ? nil : trimmedInvite,
+            acceptedTerms: true
         )
 
         if sessionViewModel.isAuthenticated {

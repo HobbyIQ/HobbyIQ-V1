@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <div className="space-y-8 text-[color:var(--color-muted)] leading-relaxed">
         <Section title="1. Who we are">
           <p>
-            HobbyIQ is operated by Just The Boys And Cards LLC (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;). This
+            HobbyIQ is operated by HobbyIQ, LLC (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;). This
             Privacy Policy explains what personal data we collect, how we use it, and your
             rights.
           </p>

@@ -79,7 +79,7 @@ export function MarketingFooter() {
         </div>
 
         <div className="pt-6 border-t border-[color:var(--color-border)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs text-[color:var(--color-muted)]">
-          <div>© 2026 HobbyIQ · Just The Boys And Cards LLC</div>
+          <div>© 2026 HobbyIQ · HobbyIQ, LLC</div>
           <div>The pricing icon of the trading card industry</div>
         </div>
       </div>

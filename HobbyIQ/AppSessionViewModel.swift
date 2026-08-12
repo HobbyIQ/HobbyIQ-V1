@@ -158,13 +158,16 @@ final class AppSessionViewModel: ObservableObject {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, username: String, inviteCode: String? = nil) async {
+    // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). `acceptedTerms` carries the
+    // user's consent from CreateAccountView through to /api/auth/register,
+    // where the backend stamps the current Terms version on the new account.
+    func signUp(email: String, password: String, username: String, inviteCode: String? = nil, acceptedTerms: Bool = true) async {
         isLoading = true
         errorMessage = nil
         authStatusMessage = "Creating your account..."
 
         do {
-            currentUser = try await authService.signUpWithEmail(email: email, password: password, username: username, inviteCode: inviteCode)
+            currentUser = try await authService.signUpWithEmail(email: email, password: password, username: username, inviteCode: inviteCode, acceptedTerms: acceptedTerms)
             authStatusMessage = nil
             await subscriptionManager.prepare()
             launchState = activeTier == .none ? .paywall : .ready

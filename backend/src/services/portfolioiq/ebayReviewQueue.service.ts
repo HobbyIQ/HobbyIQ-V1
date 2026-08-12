@@ -286,27 +286,38 @@ export async function confirmHoldingReview(
   if ((holding as any).cardId) {
     (holding as any).identityVerified = true;
     (holding as any).identityVerifiedAt = new Date().toISOString();
-    // CF-TCA-CATALOG-VERIFY-ON-CONFIRM (Drew, 2026-08-03). Cross-
-    // reference against TCA's canonical catalog to tag whether our
-    // parsed identity actually exists in a real published set.
-    // Never blocks the confirm — the tag lets downstream code know
-    // whether TCA vouches for the match. verified=true → TCA
-    // canonical, verified=false → TCA disagrees (bad parse likely),
-    // verified=null → TCA had no data.
-    if ((holding as any).playerName && (holding as any).cardYear && (holding as any).setName && (holding as any).cardNumber && (holding as any).sport && process.env.TCA_CATALOG_VERIFY_ENABLED === "true") {
+    // CF-CATALOG-VERIFY-OWN-POOL (Drew, 2026-08-12). Cross-reference
+    // against OUR card_catalog to tag whether the parsed identity exists
+    // in a real published set. Never blocks the confirm.
+    //   verified=true  → our catalog vouches for the identity
+    //   verified=false → we cover this player+set and the number isn't
+    //                    on it (bad parse likely)
+    //   verified=null  → we can't answer yet; the miss has enqueued a
+    //                    checklist seed so the NEXT verify answers
+    //
+    // Was TCA-backed until 2026-08-12. That path metered out at 2,000
+    // catalog records/day and then returned "can't verify" for the rest
+    // of the day — verification quality tracked the clock instead of the
+    // data. Default-on now (opt OUT via CATALOG_VERIFY_ENABLED=false)
+    // since a single-partition read on our own container has no quota
+    // and no vendor dependency.
+    if ((holding as any).playerName && (holding as any).cardYear && (holding as any).setName && (holding as any).cardNumber && (holding as any).sport && process.env.CATALOG_VERIFY_ENABLED !== "false") {
       try {
-        const { verifyCardAgainstTcaCatalog } = await import("../compiq/tcaCatalog.client.js");
-        const v = await verifyCardAgainstTcaCatalog({
+        const { verifyCardIdentity } = await import("../catalog/catalogVerify.service.js");
+        const v = await verifyCardIdentity({
           playerName: String((holding as any).playerName),
           cardYear: Number((holding as any).cardYear),
           setName: String((holding as any).setName),
           cardNumber: String((holding as any).cardNumber),
           sport: String((holding as any).sport),
         });
-        (holding as any).tcaCatalogVerified = v.verified;
-        (holding as any).tcaCatalogVerifiedReason = v.reason;
-        if (v.matchedTcaCardId) (holding as any).tcaCatalogCardId = v.matchedTcaCardId;
-        (holding as any).tcaCatalogVerifiedAt = new Date().toISOString();
+        (holding as any).catalogVerified = v.verified;
+        (holding as any).catalogVerifiedReason = v.reason;
+        (holding as any).catalogVerifiedSource = v.source;
+        if (v.matchedSlug) (holding as any).catalogVerifiedSlug = v.matchedSlug;
+        if (v.candidateNumbers?.length) (holding as any).catalogCandidateNumbers = v.candidateNumbers;
+        if (v.seedRequested) (holding as any).catalogSeedRequested = true;
+        (holding as any).catalogVerifiedAt = new Date().toISOString();
       } catch { /* soft: verification is nice-to-have */ }
     }
     // CF-USER-VERIFIED-CATALOG-FLYWHEEL (Drew, 2026-08-03). Every user

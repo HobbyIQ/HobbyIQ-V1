@@ -4,6 +4,7 @@ import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { verifyAppleIdentityToken } from "./appleAuth.js";
 import { effectivePlanFor } from "../config/entitlements.js";
+import { TERMS_VERSION, isCurrentTermsVersion } from "./legal/termsVersion.js";
 
 // CF-PAYMENTS-A (2026-06-02): plan enum rev. Was "free" | "pro" | "all-star".
 // New tiers per the entitlements matrix in config/entitlements.ts. Legacy
@@ -79,6 +80,12 @@ interface AuthUserRecord {
   fullName?: string | null;
   appleSub?: string | null;
   docType: "user";
+  // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). The Terms version this user
+  // agreed to, stamped at account creation. Absent on every pre-2026-08-12
+  // row — those users are re-prompted on next sign-in, which is correct:
+  // we have no record of them agreeing to the current text.
+  termsAcceptedVersion?: string;
+  termsAcceptedAt?: string;
   // CF-PAYMENTS-B1: time-windowed usage counters (optional on legacy rows).
   usage?: UsageCounters;
   // CF-PAYMENTS-APPLE-1: cached Apple subscription state. Absent on rows
@@ -169,6 +176,14 @@ export interface AuthUser {
   // change in a future PR when email-change is user-facing).
   emailVerified?: boolean;
   emailVerificationPending?: boolean;
+  // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). `termsAccepted` is the gate
+  // clients read: true only when the stored version equals the CURRENT
+  // Terms version. A user who accepted an older version reads false and
+  // gets re-prompted. `termsAcceptedVersion` is surfaced for support and
+  // audit ("which text did they agree to?").
+  termsAccepted?: boolean;
+  termsAcceptedVersion?: string | null;
+  termsAcceptedAt?: string | null;
 }
 
 export interface AuthResult {
@@ -472,7 +487,33 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     stripeSubscriptionStatus: user.stripeSubscriptionStatus,
     emailVerified: Boolean(user.emailVerification?.verifiedAt),
     emailVerificationPending: Boolean(user.emailVerification?.pending?.token),
+    // CF-TERMS-ACCEPTANCE: compare against the CURRENT version, not a
+    // presence check — an old acceptance must read as not-accepted.
+    termsAccepted: isCurrentTermsVersion(user.termsAcceptedVersion),
+    termsAcceptedVersion: user.termsAcceptedVersion ?? null,
+    termsAcceptedAt: user.termsAcceptedAt ?? null,
   };
+}
+
+/** CF-TERMS-ACCEPTANCE: stamp the user's agreement to the current Terms.
+ *  Idempotent — re-accepting the same version just refreshes the timestamp.
+ *  Returns false when the user doesn't exist. */
+export async function recordTermsAcceptance(
+  userId: string,
+  version: string = TERMS_VERSION,
+): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  user.termsAcceptedVersion = version;
+  user.termsAcceptedAt = new Date().toISOString();
+  await writeUser(user);
+  return true;
+}
+
+/** CF-TERMS-ACCEPTANCE: has this user agreed to the CURRENT Terms? */
+export async function hasAcceptedCurrentTerms(userId: string): Promise<boolean> {
+  const user = await readUser(userId);
+  return isCurrentTermsVersion(user?.termsAcceptedVersion);
 }
 
 /** CF-PUBLIC-SELLER-STOREFRONT: internal helper for the public storefront
@@ -994,6 +1035,12 @@ export interface RegisterInput {
   // Existing Apple Sign-In users (already-created appleSub match) skip
   // the check because they're logging in, not creating an account.
   inviteCode?: string | null;
+  // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Clients that present the
+  // agreement before calling /register send true (or omit it — creating an
+  // account is itself agreement per §1). Send false ONLY to create an
+  // account without consent on record; that user is then gated by
+  // `termsAccepted: false` on the session until they accept.
+  acceptedTerms?: boolean;
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,30}$/;
@@ -1174,6 +1221,18 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
     fullName,
     appleSub,
     docType: "user",
+    // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Creating an account IS the
+    // act of agreement (§1 and the closing acknowledgment of the Terms),
+    // so the version is stamped here rather than left for a later prompt.
+    // The client is responsible for showing the agreement before it calls
+    // /register; `acceptedTerms: false` records nothing and the user is
+    // gated by `termsAccepted` on the session until they agree.
+    ...(input.acceptedTerms === false
+      ? {}
+      : {
+          termsAcceptedVersion: TERMS_VERSION,
+          termsAcceptedAt: new Date().toISOString(),
+        }),
   };
   await writeUser(record);
 

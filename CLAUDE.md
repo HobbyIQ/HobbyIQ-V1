@@ -1,6 +1,6 @@
 # HobbyIQ
 
-Sports card portfolio + pricing platform. iOS app (SwiftUI) + Node backend (TypeScript, Azure App Service) + Cosmos DB. Owned by Drew (Just The Boys and Cards LLC).
+Sports card portfolio + pricing platform. iOS app (SwiftUI) + Node backend (TypeScript, Azure App Service) + Cosmos DB. Owned by Drew (HobbyIQ, LLC — Georgia; formed 2026-08, replacing Just The Boys and Cards LLC).
 
 ## Working here
 
