@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2026,
+  "setKey": "bbm-genesis",
+  "setName": "2026 BBM Genesis",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/651194",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

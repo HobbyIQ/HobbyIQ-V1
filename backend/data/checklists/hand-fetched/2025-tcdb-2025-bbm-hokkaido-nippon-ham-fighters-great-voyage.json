@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2025,
+  "setKey": "bbm-hokkaido-nippon-ham-fighters-great-voyage",
+  "setName": "2025 BBM Hokkaido Nippon Ham Fighters Great Voyage",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/588010",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hokkaido",
+      "p": "Nippon Ham Fighters Great Voyage 36 Kotaro Yamashiro"
+    }
+  ]
+}

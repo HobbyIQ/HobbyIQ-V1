@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2024,
+  "setKey": "bbm-dancing-heroine-professional-baseball-cheerleaders",
+  "setName": "2024 BBM Dancing Heroine Professional Baseball Cheerleaders",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/536228",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Dancing",
+      "p": "Heroine Professional Baseball Cheerleaders V22 Nana Yoshimura"
+    }
+  ]
+}

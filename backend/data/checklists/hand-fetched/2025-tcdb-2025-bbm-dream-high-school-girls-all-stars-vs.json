@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2025,
+  "setKey": "bbm-dream-high-school-girls-all-stars-vs",
+  "setName": "2025 BBM Dream High School Girls All Stars vs",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/545601",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Dream",
+      "p": "High School Girls All Stars vs"
+    }
+  ]
+}

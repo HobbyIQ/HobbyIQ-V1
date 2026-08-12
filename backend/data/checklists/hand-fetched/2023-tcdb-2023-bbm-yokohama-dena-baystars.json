@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2023,
+  "setKey": "bbm-yokohama-dena-baystars",
+  "setName": "2023 BBM Yokohama DeNA BayStars",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/367806",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yokohama",
+      "p": "DeNA BayStars DB81 Yota Kyoda"
+    }
+  ]
+}

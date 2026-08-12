@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2023,
+  "setKey": "bbm-munetaka-murakami-shin-ka",
+  "setName": "2023 BBM Munetaka Murakami Shin Ka",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/348789",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Munetaka",
+      "p": "Murakami Shin Ka 57 Munetaka Murakami"
+    }
+  ]
+}
