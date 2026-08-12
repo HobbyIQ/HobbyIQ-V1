@@ -204,7 +204,7 @@ export function CardPriceDetail({
                 value={formatUSD(fmv, { hideCents: fmv != null && fmv >= 100 })}
               />
               <Stat
-                label="Predicted next sale"
+                label="Predicted sale"
                 value={formatUSD(predicted, { hideCents: predicted != null && predicted >= 100 })}
               />
               {detail.confidence != null && (

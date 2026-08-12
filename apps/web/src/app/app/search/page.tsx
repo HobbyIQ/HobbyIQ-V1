@@ -240,7 +240,7 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
       </div>
       <div className="mt-6 text-xs text-[color:var(--color-muted)] leading-relaxed">
         Every result page includes the full grade ladder (PSA / BGS / SGC / CGC), recent
-        comps, buy/hold/sell zones, and predicted next sale. Add to portfolio or watchlist
+        comps, buy/hold/sell zones, and predicted sale. Add to portfolio or watchlist
         with one click.
       </div>
     </div>

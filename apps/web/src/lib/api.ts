@@ -192,8 +192,17 @@ export async function fetchSessionUser(): Promise<AuthUser | null> {
       "/api/auth/session",
     );
     return res.success && res.user ? res.user : null;
-  } catch {
-    clearStoredSessionId();
+  } catch (err) {
+    // CF-SESSION-PERSIST (Drew, 2026-08-11). ONLY clear the stored
+    // token when the server explicitly rejects it as invalid (401 /
+    // 403). Prior behavior cleared on ANY error — transient 500s,
+    // 429 throttles, network blips, or timeouts all logged the user
+    // out and forced re-login. With Cosmos throttled by concurrent
+    // bg work today, sessions were dying every few minutes.
+    const status = (err as ApiError | undefined)?.status;
+    if (status === 401 || status === 403) {
+      clearStoredSessionId();
+    }
     return null;
   }
 }
