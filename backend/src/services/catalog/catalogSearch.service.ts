@@ -20,6 +20,10 @@
  */
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import {
+  verifiedCatalogSqlClause,
+  provisionalCatalogSqlClause,
+} from "./catalogVisibility.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -77,6 +81,12 @@ export interface CatalogSearchResponse {
   totalCandidatesScanned: number;
   query: string;
   tokensUsed: string[];
+  /** CF-CATALOG-SEARCH-TIERS: true when NOTHING verified matched and these
+   *  hits came from the provisional tier — cards we hold real sales for but
+   *  have no checklist for yet. Clients should label them ("no verified
+   *  checklist yet") rather than render them as ordinary results, and this
+   *  is the signal that a checklist for that release is worth building. */
+  provisional?: boolean;
 }
 
 function tokenize(input: string): string[] {
@@ -153,8 +163,27 @@ export async function searchCatalog(
   }
   const scopeAnd = scopes.length > 0 ? " AND " + scopes.join(" AND ") : "";
 
+  // CF-CATALOG-SEARCH-TIERS (Drew, 2026-08-12). Search returns VERIFIED
+  // cards. Rows created from observed sales (`sold-comps-stub-*`) exist so
+  // comps have something to roll up to — they power a card's pricing and
+  // trend — but they are not checklist-backed, so they must not be presented
+  // as ordinary results. Comp-derived rows have twice become a search-quality
+  // problem (`sales-derived` purged 2026-08-08, `tree-builder-v1` excluded
+  // 2026-08-09); this is the durable version of that exclusion.
+  //
+  // Provisional rows are still FINDABLE — see searchProvisionalCatalog()
+  // below, which the caller runs only when the verified tier came back
+  // empty, so a card we hold sales for is never simply "not found".
   const qspec = {
-    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl FROM c WHERE (${searchOr})${scopeAnd}`,
+    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus FROM c WHERE (${searchOr})${scopeAnd} AND ${verifiedCatalogSqlClause("c")}`,
+    parameters: params,
+  };
+
+  /** Same query, provisional tier only. Used as the fallback when the
+   *  verified tier is empty — these are the "we have sales but no checklist
+   *  yet" cards, and the caller flags them so they never render as equals. */
+  const provisionalQspec = {
+    query: `SELECT TOP 100 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus FROM c WHERE (${searchOr})${scopeAnd} AND ${provisionalCatalogSqlClause("c")}`,
     parameters: params,
   };
 
@@ -178,9 +207,19 @@ export async function searchCatalog(
   }
 
   let rows: Row[] = [];
+  let provisional = false;
   try {
     const { resources } = await container.items.query<Row>(qspec).fetchAll();
     rows = resources;
+    // CF-CATALOG-SEARCH-TIERS: fall back to the provisional tier ONLY when
+    // nothing verified matched. A card we hold real sales for should never
+    // read as "not found" just because its checklist hasn't landed — but a
+    // stub must never dilute a page of verified results either, so this is
+    // strictly empty-else, not a merge.
+    if (rows.length === 0) {
+      const { resources: prov } = await container.items.query<Row>(provisionalQspec).fetchAll();
+      if (prov.length > 0) { rows = prov; provisional = true; }
+    }
   } catch { return { hits: [], totalCandidatesScanned: 0, query, tokensUsed: tokens }; }
 
   // CF-CATALOG-SCORING-MULTI-FIELD (Drew, 2026-08-06). Score each row
@@ -258,5 +297,6 @@ export async function searchCatalog(
     totalCandidatesScanned: rows.length,
     query,
     tokensUsed: tokens,
+    ...(provisional ? { provisional: true } : {}),
   };
 }

@@ -93,21 +93,49 @@ async function main() {
 
     const task = (async () => {
       // Catalog check
-      const cq = await catalog.items.query({
-        query: `SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s`,
-        parameters: [{ name: "@s", value: slug }],
-      }, { enableCrossPartitionQuery: true }).fetchAll();
-      if ((cq.resources[0] || 0) > 0) { existed++; return; }
+      // CF-STUB-EXISTS-POINT-READ (Drew, 2026-08-12). Was a CROSS-PARTITION
+      // COUNT per slug. Over ~10^5 slugs that is 10^5 fan-out queries against
+      // a 25M-row container — the same shape that had the TCA webhook
+      // sustaining 145k RU/s. card_catalog keys canonical rows as
+      // id === cardId === slug, so existence is a ~1 RU point read.
+      // Measured: ~1ms vs seconds for the query form.
+      let exists = false;
+      try {
+        const { resource } = await catalog.item(slug, slug).read();
+        exists = Boolean(resource);
+      } catch { exists = false; } // 404 => absent
+      if (exists) { existed++; return; }
 
       const entry = deriveCatalogEntry({
         sport, year, setKey,
         cardNumber, parallel, isAuto: autoFlag === "auto", printRun,
         playerName: topPlayer,
         source: `sold-comps-stub-${new Date().toISOString().slice(0,10)}`,
-        confidence: "low",
+        // CF-STUB-CONFIDENCE-NUMERIC (Drew, 2026-08-12). Was the STRING
+        // "low" in a field typed as a number. upsertCatalogEntry decides
+        // winners with `entry.confidence > existing.confidence`, and any
+        // comparison against a string is false — so stubs could never lose
+        // OR win predictably, and every downstream consumer of confidence
+        // (source-priority dedup, catalog-verify boost hierarchy) saw a
+        // non-numeric value. 0.35 sits below every real source:
+        // cardhedge/cardsight 0.85, ch-catalog 0.80, user-verified 0.98.
+        confidence: 0.35,
         vendorIds: {},
       });
       if (!entry) { missingPlayer++; return; }
+
+      // CF-CATALOG-SEARCH-TIERS (Drew, 2026-08-12). These rows exist so sold
+      // comps have something to roll up to — they power a card's pricing and
+      // trend. They are NOT checklist-backed, so they must never surface as
+      // ordinary search results. Two independent markers carry that:
+      //   source: sold-comps-stub-<date>   (provenance — the primary test)
+      //   verificationStatus: pending-review
+      // catalogVisibility.ts tiers on both, and search only returns the
+      // verified tier, falling back to these when nothing verified matched.
+      // Without this stamp the sweep would repeat the `sales-derived`
+      // mistake (purged 2026-08-08) at ~10^5 rows.
+      entry.verificationStatus = "pending-review";
+
       if (!APPLY) { wrote++; return; }
       try { await upsertCatalogEntry(entry); wrote++; }
       catch (e) { failed++; if (failed < 5) console.warn(`   fail ${slug}: ${e.message||e}`); }
