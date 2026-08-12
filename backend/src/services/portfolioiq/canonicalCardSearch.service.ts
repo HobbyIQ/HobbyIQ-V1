@@ -9,6 +9,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { verifiedCatalogSqlClause } from "../catalog/catalogVisibility.js";
 
 export interface CanonicalSearchInput {
   q: string;
@@ -519,10 +520,17 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       // GOOD variant nodes should feed search; explicitly exclude the
       // dead source from the tree query until nukeSalesDerivedCatalog
       // retires them from Cosmos.
+      // CF-CATALOG-SEARCH-TIERS (Drew, 2026-08-12). The hand-rolled
+      // tree-builder-v1 exclusion above is now one case of a general rule:
+      // search returns VERIFIED catalog rows. verifiedCatalogSqlClause also
+      // covers `sales-derived` and the `sold-comps-stub-*` rows created so
+      // sold comps have something to roll up to for pricing + trending.
+      // Keeping one clause means the next comp-derived source can't quietly
+      // reappear in search the way tree-builder-v1 did.
       const treeWhere: string[] = [
         "c.kind IN ('card', 'variant')",
         "c.sport = @sport",
-        "(NOT IS_DEFINED(c.source) OR c.source != 'tree-builder-v1')",
+        verifiedCatalogSqlClause("c"),
       ];
       if (yearFilter !== null) treeWhere.push("c.year = @year");
       searchTokens.forEach((_, i) => treeWhere.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`));
