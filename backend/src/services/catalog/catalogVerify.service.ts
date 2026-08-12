@@ -20,9 +20,18 @@
 // catalog permanently, and the NEXT verify of that set answers locally.
 // Misses make the moat wider instead of burning vendor quota.
 //
-// Reads are single-partition: card_catalog partitions on /sport and we
-// always pin sport + year + setKey, so this is cheap enough to run on
-// user-facing paths (holding confirm, portfolio detail).
+// COST NOTE (corrected 2026-08-12): card_catalog partitions on **/cardId**,
+// not /sport — the "partition /sport" comment in cardCatalog.service.ts is
+// wrong, and this file previously repeated it. These reads filter on sport +
+// year + setKey + playerSlug, none of which is the partition key, so they
+// are CROSS-PARTITION fan-outs, not the cheap single-partition lookups this
+// comment used to claim.
+//
+// They stay on the holding-confirm path because that path is user-initiated
+// and low-volume (one verify per confirmed holding), and every filter is an
+// equality on an indexed field, so the fan-out is narrow. Do NOT reuse this
+// on a per-row ingest path — that is exactly how the TCA webhook ended up
+// sustaining ~145k RU/s.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import {

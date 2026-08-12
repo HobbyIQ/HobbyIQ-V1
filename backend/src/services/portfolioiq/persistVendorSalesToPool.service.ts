@@ -58,16 +58,35 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   // Query card_catalog by (player, year). Set constraint applied in-JS
   // to allow fuzzy matching (title has "Topps Update" but catalog stores
   // "2011 Topps Update Baseball" — CONTAINS is more forgiving than exact).
+  //
+  // CF-CHECKLIST-NARROW-SCHEMA-FIX (Drew, 2026-08-12). This query could
+  // never match a row. It was written against a schema card_catalog does
+  // not have, in three places at once:
+  //   c.player   -> the field is `playerName`   (c.player is undefined)
+  //   c.number   -> the field is `cardNumber`   (c.number is undefined)
+  //   @y as a STRING -> `year` is stored as a NUMBER, and Cosmos '='
+  //                     is type-strict, so '2025' never equals 2025.
+  // Zero candidates then fell through to the fuzzy branch below, which
+  // carried the same bugs plus a CONTAINS on a nonexistent field — a full
+  // cross-partition scan, per sale, structurally incapable of matching.
+  // With TCA delivering 1,000-row batches that sustained ~145k RU/s on
+  // card_catalog and 130k+ 429s per 5 minutes, all to return nothing.
+  // The narrower has resolved zero cardNumbers since it shipped 2026-08-02.
+  //
+  // NOTE: card_catalog partitions on /cardId (NOT /sport — the comment in
+  // cardCatalog.service.ts is wrong). Neither playerName nor year is the
+  // partition key, so this is inherently cross-partition; TOP bounds the
+  // blast radius.
   try {
     const q = {
-      query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player, c.source, c.confidence, c.salesCount FROM c WHERE c.player = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
+      query: "SELECT TOP 200 c.cardNumber, c.setKey, c.parallel, c.sport, c.playerName, c.source, c.confidence FROM c WHERE c.playerName = @p AND c.year = @y AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
       parameters: [
         { name: "@p", value: playerName },
-        { name: "@y", value: String(cardYear) },
+        { name: "@y", value: Number(cardYear) },
       ],
     };
     const { resources } = await catalog.items.query(q).fetchAll();
-    let cands = (resources || []).filter((r: { number?: string }) => r.number);
+    let cands = (resources || []).filter((r: { cardNumber?: string }) => r.cardNumber);
 
     // CF-FUZZY-PLAYER-MATCH (Drew, 2026-08-03). When exact-name match
     // returned nothing, try a broader query and filter in-JS with a
@@ -80,19 +99,23 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       const lastToken = playerName.trim().split(/\s+/).slice(-1)[0]?.toLowerCase() ?? "";
       if (lastToken.length >= 3) {
         try {
+          // CF-CHECKLIST-NARROW-SCHEMA-FIX: same three bugs as above, and
+          // this one is the expensive path — CONTAINS(LOWER(...)) cannot use
+          // an index, so it scans. Bounded with TOP now that it can actually
+          // return rows; it only runs when the exact-name query found none.
           const fq = {
-            query: "SELECT c.number, c.releaseName, c.setName, c.parallels, c.sport, c.player FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.player), @last) AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
+            query: "SELECT TOP 100 c.cardNumber, c.setKey, c.parallel, c.sport, c.playerName FROM c WHERE c.year = @y AND CONTAINS(LOWER(c.playerName ?? ''), @last) AND c.source IN ('cardhedge', 'cardsight', 'sales-derived', 'user-verified', 'ebay-browse')",
             parameters: [
-              { name: "@y", value: String(cardYear) },
+              { name: "@y", value: Number(cardYear) },
               { name: "@last", value: lastToken },
             ],
           };
           const { resources: fuzzy } = await catalog.items.query(fq).fetchAll();
           const target = playerName.toLowerCase().replace(/[^\w\s]/g, "").trim();
           const targetTokens = target.split(/\s+/).filter(Boolean);
-          cands = (fuzzy || []).filter((r: { number?: string; player?: string }) => {
-            if (!r.number || !r.player) return false;
-            const cand = r.player.toLowerCase().replace(/[^\w\s]/g, "").trim();
+          cands = (fuzzy || []).filter((r: { cardNumber?: string; playerName?: string }) => {
+            if (!r.cardNumber || !r.playerName) return false;
+            const cand = r.playerName.toLowerCase().replace(/[^\w\s]/g, "").trim();
             const candTokens = cand.split(/\s+/).filter(Boolean);
             // Accept when: last name matches AND first-name initial matches
             // (or one side has just the initial). Avoids "Mike Trout" grabbing
@@ -110,10 +133,13 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
     // Apply setKey filter in-JS (case-insensitive contains-either-way).
     if (setKeyHint && cands.length > 1) {
       const sh = setKeyHint.toLowerCase();
-      const strict = cands.filter((r: { releaseName?: string; setName?: string }) => {
-        const rn = String(r.releaseName ?? "").toLowerCase();
-        const sn = String(r.setName ?? "").toLowerCase();
-        return rn.includes(sh) || sh.includes(rn) || sn.includes(sh) || sh.includes(sn);
+      // CF-CHECKLIST-NARROW-SCHEMA-FIX: card_catalog stores `setKey`
+      // (a slug like "topps-update"); releaseName/setName do not exist on
+      // the row, so this filter silently kept every candidate.
+      const strict = cands.filter((r: { setKey?: string }) => {
+        const sk = String(r.setKey ?? "").toLowerCase();
+        if (!sk) return false;
+        return sk.includes(sh) || sh.includes(sk);
       });
       if (strict.length > 0) cands = strict;
     }
@@ -152,14 +178,19 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       confidence: number;
       sources: Set<string>;
     }>();
+    // CF-CHECKLIST-NARROW-SCHEMA-FIX: rows carry `cardNumber` and a single
+    // `parallel` STRING, not `number` and a `parallels` array of objects.
+    // The old shape read undefined for both, so every candidate was dropped
+    // by the `if (!num) continue` below even in the impossible case that the
+    // query had returned something.
     for (const r of cands as Array<{
-      number?: string;
-      parallels?: Array<{ name?: string }>;
+      cardNumber?: string;
+      parallel?: string;
       sport?: string;
       source?: string;
       confidence?: number;
     }>) {
-      const num = String(r.number ?? "").trim();
+      const num = String(r.cardNumber ?? "").trim();
       if (!num) continue;
       const key = num.toLowerCase();
       let g = consolidated.get(key);
@@ -170,12 +201,8 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
       const conf = scoreOf(r);
       if (conf > g.confidence) g.confidence = conf;
       if (r.source) g.sources.add(r.source);
-      if (Array.isArray(r.parallels)) {
-        for (const p of r.parallels) {
-          const name = String(p?.name ?? "").trim();
-          if (name) g.parallels.add(name);
-        }
-      }
+      const parallelName = String(r.parallel ?? "").trim();
+      if (parallelName) g.parallels.add(parallelName);
     }
     const shaped = [...consolidated.values()]
       .sort((a, b) => b.confidence - a.confidence)
