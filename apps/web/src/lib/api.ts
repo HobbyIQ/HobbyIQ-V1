@@ -794,6 +794,23 @@ export interface PriceByIdResponse {
     grader?: string | null;
     gradeValue?: number | null;
   } | null;
+  // CF-CARD-IDENTITY-FRONTEND (Drew, 2026-08-11). Backend enriches
+  // hiq: slug responses with cardIdentity so the frontend can render
+  // a proper title ("2018 Topps Update Shohei Ohtani #US285") instead
+  // of falling back to the literal string "Card detail". Was missing
+  // from the type interface, so the frontend never read it.
+  cardIdentity?: {
+    card_id?: string;
+    player?: string | null;
+    year?: number | null;
+    set?: string | null;
+    number?: string | null;
+    parallel?: string | null;
+    isAuto?: boolean;
+    imageUrl?: string | null;
+    sport?: string | null;
+  };
+  provenance?: { summary?: string };
 }
 
 export async function fetchPriceById(input: {

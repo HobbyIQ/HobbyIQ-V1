@@ -365,8 +365,16 @@ export default function HoldingDetailPage() {
       {deleteOpen && (
         <DeleteModal
           onCancel={() => setDeleteOpen(false)}
-          onConfirm={async () => {
-            await deleteHolding(h.id);
+          onConfirm={() => {
+            // CF-DELETE-OPTIMISTIC (Drew, 2026-08-11). Fire the delete
+            // in the background and navigate away immediately, so the
+            // user never sits on a spinning "Deleting…" button when
+            // the backend is throttled. If the delete fails, the
+            // holding will resurface on the portfolio list next
+            // refresh — safe to retry.
+            deleteHolding(h.id).catch((err) => {
+              console.error("deleteHolding failed:", err);
+            });
             router.push("/app/portfolio");
           }}
         />
@@ -815,9 +823,13 @@ function SellModal({
   );
 }
 
-function DeleteModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => Promise<void> }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// CF-DELETE-OPTIMISTIC (Drew, 2026-08-11). Delete fires in the
+// background — modal closes and the caller navigates away immediately.
+// No "Deleting…" spinner because the user should not sit on a spinning
+// button when the backend is throttled. onConfirm is called for its
+// side effect (kicking off the delete + navigate); the modal doesn't
+// await it.
+function DeleteModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
   return (
     <Modal onClose={onCancel}>
       <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-danger)" }}>
@@ -827,25 +839,17 @@ function DeleteModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
         This removes the card from your portfolio and its price history. Cannot be undone.
         (Use &quot;Mark as sold&quot; if you actually sold it — that keeps the sale for the comp pool.)
       </p>
-      {error && <div className="mb-4 text-sm" style={{ color: "var(--color-danger)" }}>{error}</div>}
       <div className="flex items-center justify-end gap-3">
-        <button onClick={onCancel} className="hiq-btn-secondary" disabled={submitting}>Cancel</button>
+        <button onClick={onCancel} className="hiq-btn-secondary">Cancel</button>
         <button
-          onClick={async () => {
-            setSubmitting(true);
-            try {
-              await onConfirm();
-            } catch (err) {
-              const e = err as { message?: string };
-              setError(e.message ?? "Failed to delete");
-              setSubmitting(false);
-            }
+          onClick={() => {
+            onConfirm();
+            onCancel();
           }}
-          disabled={submitting}
-          className="px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-30"
+          className="px-4 py-2.5 rounded-xl text-sm font-medium"
           style={{ background: "var(--color-danger)", color: "white" }}
         >
-          {submitting ? "Deleting…" : "Delete permanently"}
+          Delete permanently
         </button>
       </div>
     </Modal>

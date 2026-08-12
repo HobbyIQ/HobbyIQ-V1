@@ -135,7 +135,38 @@ export function CardPriceDetail({
   const fmv = tileFmv ?? detail?.fairMarketValueLive ?? detail?.marketValue ?? null;
   const predicted = tilePredicted ?? detail?.predictedPrice;
   const parallels = candidate?.parallels ?? [];
-  const title = candidate?.title ?? detail?.summary ?? "Card detail";
+  // CF-TITLE-CARD-IDENTITY (Drew, 2026-08-11). Backend enriches the
+  // response with cardIdentity (player, year, set, number) precisely
+  // so the frontend can build a proper title — "2018 Topps Update
+  // Shohei Ohtani #US285" — instead of falling back to summary text
+  // or a literal "Card detail" placeholder. The frontend was never
+  // updated to read cardIdentity, so titles kept breaking for cards
+  // that had no stashed candidate. This block builds the title from
+  // cardIdentity first, then falls back to slug-parse, then finally
+  // to the placeholder.
+  const identityTitle = (() => {
+    const id = detail?.cardIdentity;
+    if (!id) return null;
+    const parts = [
+      id.year != null ? String(id.year) : "",
+      id.set ?? "",
+      id.player ?? "",
+      id.number ? `#${id.number}` : "",
+    ].map((s) => s.trim()).filter(Boolean);
+    return parts.length > 0 ? parts.join(" ") : null;
+  })();
+  const slugTitle = (() => {
+    const parts = String(cardsightCardId).split(":");
+    if (parts[0] !== "hiq" || parts.length < 5) return null;
+    const [, , year, setKey, cardNumber] = parts;
+    const setKeyPretty = String(setKey || "")
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    const parts2 = [year, setKeyPretty, cardNumber ? `#${String(cardNumber).toUpperCase()}` : ""].filter(Boolean);
+    return parts2.join(" ") || null;
+  })();
+  const title = candidate?.title ?? identityTitle ?? slugTitle ?? "Card detail";
 
   return (
     <div className="hiq-card p-6 space-y-6">
@@ -182,9 +213,9 @@ export function CardPriceDetail({
             </div>
             <button
               onClick={() => setAlertOpen(true)}
-              className="hiq-btn-secondary text-sm whitespace-nowrap"
+              className="hiq-btn-secondary text-xs px-3 py-1.5 whitespace-nowrap"
             >
-              🔔 Set price alert
+              🔔 Price Alert
             </button>
           </div>
 
@@ -349,7 +380,7 @@ function AlertModal({
           </>
         ) : (
           <>
-            <h2 className="text-xl font-bold mb-1">Set price alert</h2>
+            <h2 className="text-xl font-bold mb-1">Price Alert</h2>
             <p className="text-sm text-[color:var(--color-muted)] mb-6">
               Push notification when {playerName} crosses your target.
               {currentPrice != null && ` Current price ${formatUSD(currentPrice, { hideCents: currentPrice >= 100 })}.`}

@@ -219,8 +219,15 @@ export default function StorefrontPage() {
       // simultaneous PATCH writes to the SAME portfolio doc, causing
       // cascading Cosmos etag conflicts + server-side serialization
       // waits — "Adding…" hung forever waiting for the last-late
-      // conflict retries to settle. Real cap of 6 in-flight at a time:
-      // ~35 seconds for 200 cards (vs indefinite hang before).
+      // conflict retries to settle. Real cap of 6 in-flight at a time.
+      //
+      // CF-BULK-FIRE-AND-FORGET (Drew, 2026-08-11). Kick off the worker
+      // chain but DON'T await it — the optimistic state above already
+      // flipped the checkboxes, so the UI is already correct. Awaiting
+      // just kept the button stuck on "Adding…" for minutes while
+      // backend Cosmos was throttled. Failures roll back
+      // asynchronously; the cap warning below moves into the same
+      // async continuation so it still fires at the right time.
       const CONCURRENCY = 6;
       const results: PromiseSettledResult<Awaited<ReturnType<typeof updateHolding>>>[] = new Array(toAdd.length);
       let nextIdx = 0;
@@ -235,26 +242,24 @@ export default function StorefrontPage() {
           }
         }
       };
-      await Promise.all(
+      Promise.all(
         Array.from({ length: Math.min(CONCURRENCY, toAdd.length) }, worker),
-      );
-      // Roll back any per-card failures
-      const failed = new Set<string>();
-      results.forEach((r, i) => {
-        if (r.status === "rejected") failed.add(toAdd[i].id);
+      ).then(() => {
+        const failed = new Set<string>();
+        results.forEach((r, i) => {
+          if (r.status === "rejected") failed.add(toAdd[i].id);
+        });
+        if (failed.size > 0) {
+          setHoldings((prev) =>
+            prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: false } : x)),
+          );
+          setError(`Added ${toAdd.length - failed.size}. ${failed.size} failed — try again.`);
+        } else if (cap != null && ranked.length > slotsLeft) {
+          setError(
+            `Added ${toAdd.length}. ${ranked.length - slotsLeft} more eligible cards weren't added — cap reached.`,
+          );
+        }
       });
-      if (failed.size > 0) {
-        setHoldings((prev) =>
-          prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: false } : x)),
-        );
-        setError(`Added ${toAdd.length - failed.size}. ${failed.size} failed — try again.`);
-      }
-      if (cap != null && ranked.length > slotsLeft) {
-        // We hit the cap. Give the user a heads-up.
-        setError(
-          `Added ${toAdd.length}. ${ranked.length - slotsLeft} more eligible cards weren't added — cap reached.`,
-        );
-      }
     } finally {
       setBulkBusy(null);
     }
@@ -288,19 +293,24 @@ export default function StorefrontPage() {
           }
         }
       };
-      await Promise.all(
+      // CF-BULK-FIRE-AND-FORGET (Drew, 2026-08-11). Match bulkSelectAll:
+      // optimistic state above already flipped the checkboxes, so don't
+      // block the button while the async PATCH batches drain. Failures
+      // roll back asynchronously.
+      Promise.all(
         Array.from({ length: Math.min(CONCURRENCY, currentlySelected.length) }, worker),
-      );
-      const failed = new Set<string>();
-      results.forEach((r, i) => {
-        if (r.status === "rejected") failed.add(currentlySelected[i].id);
+      ).then(() => {
+        const failed = new Set<string>();
+        results.forEach((r, i) => {
+          if (r.status === "rejected") failed.add(currentlySelected[i].id);
+        });
+        if (failed.size > 0) {
+          setHoldings((prev) =>
+            prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: true } : x)),
+          );
+          setError(`Cleared ${currentlySelected.length - failed.size}. ${failed.size} failed — try again.`);
+        }
       });
-      if (failed.size > 0) {
-        setHoldings((prev) =>
-          prev.map((x) => (failed.has(x.id) ? { ...x, showOnStorefront: true } : x)),
-        );
-        setError(`Cleared ${currentlySelected.length - failed.size}. ${failed.size} failed — try again.`);
-      }
     } finally {
       setBulkBusy(null);
     }
