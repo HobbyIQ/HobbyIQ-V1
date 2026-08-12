@@ -688,6 +688,15 @@ function isChromeStockSetKey(setKey: string): boolean {
   return CHROME_STOCK_SETKEYS.has(setKey);
 }
 
+// REVERTED (Drew, 2026-08-11): a PANINI_PRIZM_STOCK_SETKEYS +
+// implies-prizm rule was drafted here after seeing the cross-parallel-
+// ratios pair Silver↔Silver Prizm sitting near 1.00 (n=369). Drew
+// corrected in-turn: "no silver and silver prizm different." On Panini
+// flagship, bare "Silver" and "Silver Prizm" are distinct physical
+// parallels — the near-parity ratio is a coincidence of market
+// pricing, not a signal that they are the same card. Left this
+// pointer so future me does not re-derive the same wrong rule.
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
@@ -702,6 +711,23 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // rationale for why this override is narrow (only unambiguous pairs).
   const setKey = applyChromePrefixOverride(baseSetKey, cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
+  // CF-CHROME-STOCK-REDUNDANT-PREFIX (Drew, 2026-08-11). On chrome-family
+  // setKeys, a leading "chrome-" on the parallel is vendor noise (CH
+  // labels e.g. "Chrome Sky Blue Refractor" for what collectors call
+  // "Sky Blue Refractor"). Strip it so both spellings land in the same
+  // FMV pool. Also collapses bare "Chrome" to "base" on chrome stock —
+  // there is no meaningful non-base "chrome" variant of a chrome card.
+  // Not applied to non-chrome setKeys because "Chrome"/"Chrome Refractor"
+  // are legitimate insert-set parallel names in products like Topps
+  // Heritage. Fixes ~8% sold_comps slug fragmentation (cleanliness
+  // canary 2026-08-11).
+  if (isChromeStockSetKey(setKey)) {
+    if (parallelSlug === "chrome") {
+      parallelSlug = "base";
+    } else if (parallelSlug.startsWith("chrome-")) {
+      parallelSlug = parallelSlug.slice("chrome-".length);
+    }
+  }
   // CF-CHROME-AUTO-BASE-IS-REFRACTOR (Drew, 2026-08-10). CardHedge (and
   // some other vendors) label the /499 baseline CPA-/TCPA-/CRA- Auto as
   // "Base Auto" because colored refractors get their own parallel names
@@ -727,13 +753,29 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // that doesn't already carry "-refractor" gets it appended so "Blue",
   // "Blue Shimmer", "Blue Wave", "Blue Ray Wave" all share one FMV pool
   // with "Blue Refractor", "Blue Shimmer Refractor", etc.
+  //
+  // Also skip when the slug already ends in `-fractor` (covers `x-fractor`,
+  // `foilfractor`, `frozenfractor`, `superfractor` etc.) — those variants
+  // ARE the refractor stock and appending `-refractor` produced e.g.
+  // `x-fractor-refractor` which then fragmented against bare `x-fractor`
+  // (n=581, cleanliness canary 2026-08-11).
   if (
     parallelSlug !== "base" &&
     !/(^|-)refractor(-|$)/.test(parallelSlug) &&
+    !/fractor$/.test(parallelSlug) &&
     isChromeStockSetKey(setKey)
   ) {
     parallelSlug = `${parallelSlug}-refractor`;
   }
+
+  // NOTE (Drew, 2026-08-11): resist the temptation to add a
+  // Panini-analog "Silver → Silver Prizm" collapse. Even though the
+  // cross-parallel-ratios pair Silver↔Silver Prizm sits near 1.00,
+  // Drew confirmed on 2026-08-11 that these are DISTINCT parallels
+  // (bare "Silver" ≠ "Silver Prizm" on Panini flagship). Ratio
+  // similarity does not imply identity — some parallels legitimately
+  // trade at comparable levels. Unification requires collector
+  // confirmation, not a ratio heuristic.
 
   const autoFlag = components.isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);

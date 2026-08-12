@@ -902,3 +902,148 @@ describe("matchKnownProductLine — strict product-line detection", () => {
     expect(matchKnownProductLine("2001 SP Authentic Chirography Ken Griffey Jr")).toBe("sp-authentic");
   });
 });
+
+// CF-CHROME-STOCK-REDUNDANT-PREFIX regression suite (Drew, 2026-08-11).
+// Cleanliness canary flagged 8.28% slug-fragmentation rate on 2026-08-11
+// driven partly by CH's habit of labeling Bowman Chrome parallels with a
+// redundant "Chrome" stock prefix ("Chrome Sky Blue Refractor" vs the
+// collector-standard "Sky Blue Refractor"). Both spellings must produce
+// the same slug on chrome-family setKeys.
+describe("computeHobbyIqCardId — chrome stock prefix strip", () => {
+  it("bowman-chrome: 'Chrome Sky Blue Refractor' === 'Sky Blue Refractor'", () => {
+    const withChrome = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-185", parallel: "Chrome Sky Blue Refractor", isAuto: false,
+    });
+    const bare = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-185", parallel: "Sky Blue Refractor", isAuto: false,
+    });
+    expect(withChrome).toBe(bare);
+    expect(withChrome).toContain(":sky-blue-refractor:");
+    expect(withChrome).not.toContain(":chrome-sky-blue-refractor:");
+  });
+
+  it("bowman-chrome: 'Chrome Sparkle Refractor' → 'sparkle-refractor'", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-1", parallel: "Chrome Sparkle Refractor", isAuto: false,
+    });
+    expect(s).toContain(":sparkle-refractor:");
+  });
+
+  it("bowman-chrome: 'Chrome Refractor' → 'refractor' (base refractor)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-185", parallel: "Chrome Refractor", isAuto: false,
+    });
+    expect(s).toContain(":refractor:");
+    expect(s).not.toContain(":chrome-refractor:");
+  });
+
+  it("bowman-chrome: bare 'Chrome' collapses to base (redundant with stock)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-185", parallel: "Chrome", isAuto: false,
+    });
+    expect(s).toContain(":base:");
+  });
+
+  it("BDC- prefix routes to bowman-chrome even when vendor sends 'Bowman Draft Chrome'", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Draft Chrome",
+      cardNumber: "BDC-185", parallel: "Sky Blue Refractor", isAuto: false,
+    });
+    expect(s).toContain(":bowman-chrome:");
+    expect(s).not.toContain(":bowman-draft:");
+  });
+
+  it("topps-heritage: 'Chrome Refractor' is PRESERVED (legit insert-set parallel)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Topps Heritage",
+      cardNumber: "150", parallel: "Chrome Refractor", isAuto: false,
+    });
+    // Heritage isn't chrome-family — the "Chrome" prefix identifies the
+    // chrome INSERT within Heritage and must be preserved as a distinct
+    // slug from bare "Refractor" or "Base".
+    expect(s).toContain(":topps-heritage:");
+    expect(s).toContain(":chrome-refractor:");
+  });
+
+  it("bowman-chrome: non-chrome-prefixed parallels are unaffected", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-1", parallel: "Blue Refractor", isAuto: false, printRun: 150,
+    });
+    expect(s).toContain(":blue-refractor:");
+  });
+});
+
+// PANINI-STOCK-IMPLIES-PRIZM regression suite REMOVED (Drew, 2026-08-11):
+// Drafted an analog "Silver → Silver Prizm" rule after seeing near-parity
+// in cross-parallel-ratios (n=369, ratio=1.00). Drew corrected in-turn:
+// bare "Silver" and "Silver Prizm" are DISTINCT parallels on Panini
+// flagship; the near-parity price is coincidence, not identity. Kept
+// this note so a future test-first pass does not resurrect the wrong
+// rule. Only add unification rules when the collector taxonomy is
+// confirmed, not when the ratio looks close.
+// CF-NO-DOUBLE-FRACTOR regression (Drew, 2026-08-11). X-Fractor,
+// FoilFractor, FrozenFractor etc. ARE refractor variants — appending
+// "-refractor" produces `x-fractor-refractor` which fragmented against
+// bare `x-fractor` (n=581 in the 2026-08-11 cleanliness canary).
+describe("computeHobbyIqCardId — no double -fractor on chrome stock", () => {
+  it("X-Fractor stays x-fractor (no double refractor suffix)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "X-Fractor", isAuto: false,
+    });
+    expect(s).toContain(":x-fractor:");
+    expect(s).not.toContain(":x-fractor-refractor:");
+  });
+  it("Xfractor (compact spelling) unifies to x-fractor, no double suffix", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Topps Chrome",
+      cardNumber: "1", parallel: "Xfractor", isAuto: false,
+    });
+    expect(s).toContain(":x-fractor:");
+    expect(s).not.toContain(":x-fractor-refractor:");
+  });
+  it("SuperFractor stays superfractor", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-1", parallel: "SuperFractor", isAuto: false, printRun: 1,
+    });
+    expect(s).toContain(":superfractor:");
+    expect(s).not.toContain(":superfractor-refractor:");
+  });
+  it("Blue Refractor unchanged (already carries -refractor)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-1", parallel: "Blue Refractor", isAuto: false, printRun: 150,
+    });
+    expect(s).toContain(":blue-refractor:");
+  });
+  it("bare 'Blue' still gets -refractor appended (existing rule preserved)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman Chrome",
+      cardNumber: "BDC-1", parallel: "Blue", isAuto: false,
+    });
+    expect(s).toContain(":blue-refractor:");
+  });
+});
+
+describe("computeHobbyIqCardId — panini Silver vs Silver Prizm (must stay distinct)", () => {
+  it("'Silver' and 'Silver Prizm' produce DIFFERENT slugs on Panini Prizm", () => {
+    const bare = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Panini Prizm",
+      cardNumber: "50", parallel: "Silver", isAuto: false,
+    });
+    const withPrizm = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Panini Prizm",
+      cardNumber: "50", parallel: "Silver Prizm", isAuto: false,
+    });
+    expect(bare).not.toBe(withPrizm);
+    expect(bare).toContain(":silver:");
+    expect(withPrizm).toContain(":silver-prizm:");
+  });
+});

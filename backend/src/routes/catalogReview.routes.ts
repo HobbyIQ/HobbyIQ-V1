@@ -128,8 +128,14 @@ router.post("/catalog-review/fetch-checklist-url", async (req: Request, res: Res
     const url = String(req.body?.url ?? "").trim();
     if (!url || !/^https?:\/\//i.test(url)) { res.status(400).json({ success: false, error: "invalid url" }); return; }
     const parsed = new URL(url);
-    if (!/(^|\.)baseball-almanac\.com$/i.test(parsed.hostname)) {
-      res.status(400).json({ success: false, error: "only baseball-almanac.com URLs supported at this time" });
+    const allowedHosts = [
+      /(^|\.)baseball-almanac\.com$/i,
+      /(^|\.)checklistinsider\.com$/i,
+      /(^|\.)beckett\.com$/i,
+      /(^|\.)cardsmithsbreaks\.com$/i,
+    ];
+    if (!allowedHosts.some((rx) => rx.test(parsed.hostname))) {
+      res.status(400).json({ success: false, error: "hostname not on allowlist" });
       return;
     }
     const r = await fetch(url, {

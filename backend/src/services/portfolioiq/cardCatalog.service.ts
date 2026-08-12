@@ -171,10 +171,19 @@ export function deriveCatalogEntry(input: {
   const parsedSlug = slug.split(":");
   const parallelSlug = parsedSlug[5] ?? "base";
 
+  // CF-YEAR-CARDYEAR-DUAL-WRITE (Drew, 2026-08-11). Schema drift: some
+  // legacy code paths wrote catalog rows with field name `cardYear`
+  // (6.4M rows), others with `year` (9.26M rows). Explode + other
+  // scripts filtering on `c.cardYear` skipped the `year`-only rows —
+  // e.g., 2023 Topps Chrome Titans CT-10 Adley Rutschman never got its
+  // refractor rainbow, so a user pick of Green Refractor /99 returned
+  // no comps. Write BOTH going forward so every downstream filter
+  // works regardless of which name it checks.
   return {
     id: slug,
     sport: input.sport,
     year,
+    cardYear: year,
     setKey,
     cardNumber: cardNumber.toUpperCase(),
     parallel: String(input.parallel ?? "Base"),
@@ -186,7 +195,7 @@ export function deriveCatalogEntry(input: {
     vendorIds: input.vendorIds ?? {},
     source: input.source,
     confidence: input.confidence,
-  };
+  } as Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> & { cardYear: number };
 }
 
 function playerSlugify(name: string): string {
