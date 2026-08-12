@@ -19,6 +19,25 @@ import Foundation
 struct CompIQVariantSearchRequest: Codable {
     let input: String
     let hint: String
+    /// CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Send true from MANUAL
+    /// match surfaces — Pending Review "fix", add-card, the eBay import
+    /// reconciler — so results include PROVISIONAL cards: real cards we
+    /// hold sales for but have no verified checklist for yet.
+    ///
+    /// Ordinary search omits it and gets verified cards only, because a
+    /// provisional card's identity came from vendor text rather than a
+    /// checklist. In the fix flow the user is looking at the physical card
+    /// and telling us which one it is, so hiding those would leave them
+    /// unable to match exactly the cards our catalog is thin on.
+    ///
+    /// Optional so existing callers encode unchanged.
+    let includeProvisional: Bool?
+
+    init(input: String, hint: String, includeProvisional: Bool? = nil) {
+        self.input = input
+        self.hint = hint
+        self.includeProvisional = includeProvisional
+    }
 }
 
 /// One element of the `parallels[]` array on a Cardsight-source candidate.

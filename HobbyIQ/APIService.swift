@@ -195,8 +195,11 @@ struct APIService {
         )
     }
 
-    func searchVariantList(query: String, hint: String = "freetext") async throws -> CompIQVariantListResponse {
-        let body = CompIQVariantSearchRequest(input: query, hint: hint)
+    /// CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). `includeProvisional`
+    /// defaults to false so the main search surface is unchanged. The manual
+    /// match sheet passes true — see CatalogMatchSearchSheet.
+    func searchVariantList(query: String, hint: String = "freetext", includeProvisional: Bool = false) async throws -> CompIQVariantListResponse {
+        let body = CompIQVariantSearchRequest(input: query, hint: hint, includeProvisional: includeProvisional ? true : nil)
         // CF-UNIFIED-SEARCH-ENDPOINT (2026-07-01): switched from the legacy
         // `/api/compiq/cardsearch` to the canonical unified-search route
         // `/api/search/cards`. Per compiq.routes.ts:784, "Drew's operational

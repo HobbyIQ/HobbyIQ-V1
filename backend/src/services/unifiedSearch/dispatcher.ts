@@ -507,7 +507,13 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
   };
 }
 
-async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> {
+async function tryCatalogFirst(
+  trimmed: string,
+  // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Threaded from dispatchSearch
+  // so the manual match surfaces can see provisional (stub) cards. Defaults
+  // false — ordinary search stays verified-only.
+  includeProvisional = false,
+): Promise<CardIdentity[] | null> {
   try {
     // skipEnrichment=true: dispatcher only needs identity/candidate
     // data, not FMV per hit. Cuts each sport's search from ~2-7s to
@@ -530,7 +536,10 @@ async function tryCatalogFirst(trimmed: string): Promise<CardIdentity[] | null> 
       ]);
     const results = await Promise.all(
       CATALOG_FIRST_SPORTS.map((sport) =>
-        withTimeout(canonicalCardSearch({ q: trimmed, sport, limit: 30, skipEnrichment: true })),
+        withTimeout(canonicalCardSearch({
+          q: trimmed, sport, limit: 30, skipEnrichment: true,
+          includeProvisional,
+        })),
       ),
     );
     const allHits: CanonicalSearchHit[] = [];
@@ -591,6 +600,9 @@ function freetextCachePut(trimmed: string, candidates: CardIdentity[]): void {
 async function dispatchFreetextMode(
   input: string,
   trimmed: string,
+  // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Threaded from dispatchSearch
+  // to the catalog query so manual match surfaces see provisional cards.
+  includeProvisional = false,
 ): Promise<UnifiedSearchResponse> {
   // CF-CATALOG-ONLY-FREETEXT (Drew, 2026-08-08). "We own the data,
   // everything is within here." Freetext search is CATALOG-ONLY now —
@@ -608,7 +620,7 @@ async function dispatchFreetextMode(
       warnings: [],
     };
   }
-  const catalogFast = await tryCatalogFirst(trimmed);
+  const catalogFast = await tryCatalogFirst(trimmed, includeProvisional);
   const candidates = catalogFast ?? [];
   // Only cache HITS — a transient null (Cosmos throttled) should NOT
   // poison the cache for 5 min. If catalog genuinely has 0, next
@@ -890,6 +902,12 @@ function routedCardToIdentity(
 export async function dispatchSearch(
   input: string,
   hint?: UnifiedSearchMode,
+  // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Opt-in for the MANUAL match
+  // surfaces (Pending Review "fix", add-card, eBay import reconciler). There
+  // a human is holding the card and telling us which one it is, so they must
+  // be able to pick a provisional (stub) card — that is exactly the
+  // population whose checklist we lack. Ordinary search stays verified-only.
+  opts?: { includeProvisional?: boolean },
 ): Promise<UnifiedSearchResponse> {
   const trimmed = (input ?? "").trim();
   if (!trimmed) {
@@ -909,5 +927,5 @@ export async function dispatchSearch(
     return dispatchCertMode(input, trimmed, graders);
   }
 
-  return dispatchFreetextMode(input, trimmed);
+  return dispatchFreetextMode(input, trimmed, opts?.includeProvisional === true);
 }
