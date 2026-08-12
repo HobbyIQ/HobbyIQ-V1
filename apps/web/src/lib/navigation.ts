@@ -35,7 +35,11 @@ export const APP_NAV: NavItem[] = [
   {
     href: "/app",
     label: "DailyIQ",
-    iconPath: "M4 12l1.4-1.4L11 16.2V4h2v12.2l5.6-5.6L20 12l-8 8-8-8z",
+    // CF-DAILYIQ-SUN-ICON (Drew, 2026-08-11). Prior down-arrow icon
+    // had zero semantic connection to a "daily briefing" product.
+    // Sun-with-8-rays reads as "morning brief" — universally understood
+    // dawn iconography, matches the DailyIQ = start-of-day product.
+    iconPath: "M12 7a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm-1-7h2v3h-2V2zm0 17h2v3h-2v-3zM4.22 5.64l1.42-1.42 2.12 2.12-1.41 1.41-2.13-2.11zm12.02 12.02l1.42-1.42 2.12 2.12-1.42 1.42-2.12-2.12zM2 11h3v2H2v-2zm17 0h3v2h-3v-2zM4.22 18.36l2.13-2.11 1.41 1.41-2.12 2.12-1.42-1.42zm12.02-12.02l2.12-2.12 1.42 1.42-2.12 2.12-1.42-1.42z",
   },
   {
     href: "/app/search",
