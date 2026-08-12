@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2026,
+  "setKey": "bbm-dragons",
+  "setName": "2026 BBM Chunichi Dragons",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2026dragons_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

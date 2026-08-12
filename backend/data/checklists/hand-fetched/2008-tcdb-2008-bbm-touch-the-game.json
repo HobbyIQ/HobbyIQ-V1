@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2008,
+  "setKey": "bbm-touch-the-game",
+  "setName": "2008 BBM Touch The Game",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/68030",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Touch",
+      "p": "The Game 132 Swallows Checklist"
+    }
+  ]
+}

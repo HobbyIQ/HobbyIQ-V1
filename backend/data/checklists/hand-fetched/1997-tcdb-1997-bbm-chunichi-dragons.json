@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1997,
+  "setKey": "bbm-chunichi-dragons",
+  "setName": "1997 BBM Chunichi Dragons",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/101107",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chunichi",
+      "p": "Dragons D50 Kazuki Inoue"
+    }
+  ]
+}

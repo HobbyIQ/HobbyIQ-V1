@@ -1,0 +1,67 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2020-bowman-mega-baseball",
+    "2020-bowman-mega"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Chrome Mega Box). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": [
+    {
+      "name": "Base",
+      "printRun": null
+    },
+    {
+      "name": "Mojo Refractor",
+      "printRun": null
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    },
+    {
+      "name": "Atomic Refractor",
+      "printRun": null
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Mojo Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-hanshin-tigers-young-tigeer",
+  "setName": "2013 BBM Hanshin Tigers Young Tigeer",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338434",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

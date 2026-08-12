@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-greatest-games-10-22-73-tigers-vs-giants",
+  "setName": "2013 BBM Greatest Games 10 22 73 Tigers VS Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/633757",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

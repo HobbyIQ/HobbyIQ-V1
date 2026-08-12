@@ -1,0 +1,33 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2025_Topps_Heritage",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": ["2025-topps-heritage-baseball", "2026-topps-heritage-baseball (proxy)", "2024-topps-heritage-baseball (proxy)", "2023-topps-heritage-baseball (proxy)"],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Dark Blue","printRun":null},
+    {"name":"Dark Green","printRun":null},
+    {"name":"Dark Yellow","printRun":null},
+    {"name":"Light Purple","printRun":null},
+    {"name":"Red","printRun":null},
+    {"name":"Bicentennial","printRun":200},
+    {"name":"Color Of The Year","printRun":76},
+    {"name":"Black","printRun":50},
+    {"name":"Flip Stock","printRun":5},
+    {"name":"Chrome","printRun":null},
+    {"name":"Chrome Refractor","printRun":null},
+    {"name":"Chrome Light Blue Sparkle Refractor","printRun":null},
+    {"name":"Chrome Pink Sparkle Refractor","printRun":null},
+    {"name":"Chrome Aqua Sparkle Refractor","printRun":null},
+    {"name":"Chrome Burgundy Sparkle Refractor","printRun":null},
+    {"name":"Chrome Silver Sparkle Refractor","printRun":null},
+    {"name":"Chrome Blue Refractor","printRun":150},
+    {"name":"Chrome Green Refractor","printRun":99},
+    {"name":"Chrome Black Refractor","printRun":76},
+    {"name":"Chrome Gold Refractor","printRun":50},
+    {"name":"Chrome Orange Refractor","printRun":25},
+    {"name":"Chrome Red Refractor","printRun":5},
+    {"name":"Chrome SuperFractor","printRun":1}
+  ],
+  "autoParallels": null
+}

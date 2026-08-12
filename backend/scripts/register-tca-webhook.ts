@@ -20,7 +20,13 @@
 
 const TCA_API_KEY = process.env.TCA_API_KEY;
 const TCA_WEBHOOK_SECRET = process.env.TCA_WEBHOOK_SECRET;
-const WEBHOOK_URL = "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/tca/webhook";
+// WEBHOOK_PATH env var overrides the default /api/tca/webhook. Use
+// /api/tca/webhook-v2 to register the v2 endpoint alongside the
+// original — TCA treats each URL as an independent subscription with
+// its own cursor state, so this is how we test the per-endpoint-cursor
+// theory (see tcaWebhook.routes.ts CF-TCA-WEBHOOK-CURSOR-TEST).
+const WEBHOOK_PATH = process.env.WEBHOOK_PATH || "/api/tca/webhook";
+const WEBHOOK_URL = `https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net${WEBHOOK_PATH}`;
 
 if (!TCA_API_KEY) { console.error("TCA_API_KEY not set"); process.exit(1); }
 if (!TCA_WEBHOOK_SECRET) { console.error("TCA_WEBHOOK_SECRET not set"); process.exit(1); }

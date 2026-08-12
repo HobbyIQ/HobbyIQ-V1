@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-spirit-of-legend",
+  "setName": "2016 BBM Spirit of Legend",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/126219",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Spirit",
+      "p": "of Legend 36 Chihiro Kaneko"
+    }
+  ]
+}

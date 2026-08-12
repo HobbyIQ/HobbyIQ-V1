@@ -70,14 +70,25 @@ async function main() {
   }
 
   async function patchWithRetry(r, newSlug, tries = 3) {
+    // CF-RESLUG-ALSO-PARALLELSLUG (Drew, 2026-08-11). Extract the
+    // parallel component from the new slug so downstream aggregators
+    // (extract-cross-parallel-ratios, catalog matchers) that group by
+    // parallelSlug see the canonical value. Slug layout:
+    //   hiq:sport:year:setKey:cardNumber:parallelSlug:autoFlag[:printRunPart]
+    //   0   1     2    3      4          5             6         7
+    const parts = String(newSlug).split(":");
+    const newParallelSlug = parts.length >= 6 ? parts[5] : null;
+
     for (let i = 0; i < tries; i++) {
       try {
-        await sold.item(r.id, r.cardId).patch([
+        const ops = [
           { op: "set", path: "/hobbyiqCardId", value: newSlug },
           { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
           { op: "set", path: "/reslugedFrom", value: r.hobbyiqCardId },
           { op: "set", path: "/reslugedReason", value: "CF-RESLUG-ALL-SOLD-COMPS" },
-        ]);
+        ];
+        if (newParallelSlug) ops.push({ op: "set", path: "/parallelSlug", value: newParallelSlug });
+        await sold.item(r.id, r.cardId).patch(ops);
         return true;
       } catch (err) {
         const code = err && err.code;

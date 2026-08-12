@@ -1,0 +1,25 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2025_Stadium_Club",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": ["2025-topps-stadium-club-baseball", "2024-topps-stadium-club-baseball (proxy)", "2023-topps-stadium-club-baseball (proxy)"],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Pink","printRun":null},
+    {"name":"Light Blue","printRun":null},
+    {"name":"Lime Green","printRun":null},
+    {"name":"Red","printRun":null},
+    {"name":"Bronze","printRun":null},
+    {"name":"Sepia","printRun":null},
+    {"name":"Blue","printRun":null},
+    {"name":"Black and White","printRun":null},
+    {"name":"Green Foil","printRun":199},
+    {"name":"Turquoise Foil","printRun":99},
+    {"name":"Members Only","printRun":null},
+    {"name":"Gold Foil","printRun":50},
+    {"name":"Photographer's Proof","printRun":null},
+    {"name":"Rainbow Foil","printRun":25},
+    {"name":"Gold Rainbow Foilboard","printRun":1}
+  ],
+  "autoParallels": null
+}

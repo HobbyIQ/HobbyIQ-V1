@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-suntory-dream-match",
+  "setName": "2012 BBM Suntory Dream Match",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113103",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Suntory",
+      "p": "Dream Match 49 Tatsuya Shiokawa"
+    }
+  ]
+}

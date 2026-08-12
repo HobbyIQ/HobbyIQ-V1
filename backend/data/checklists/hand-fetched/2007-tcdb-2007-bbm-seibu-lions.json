@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-seibu-lions",
+  "setName": "2007 BBM Seibu Lions",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103859",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Seibu",
+      "p": "Lions L99 Kazuki Fukuchi"
+    }
+  ]
+}

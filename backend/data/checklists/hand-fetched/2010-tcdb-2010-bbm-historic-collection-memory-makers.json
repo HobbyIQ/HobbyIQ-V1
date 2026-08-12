@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-historic-collection-memory-makers",
+  "setName": "2010 BBM Historic Collection Memory Makers",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/351754",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Historic",
+      "p": "Collection Memory Makers 144 Yuki Yoshimura"
+    }
+  ]
+}

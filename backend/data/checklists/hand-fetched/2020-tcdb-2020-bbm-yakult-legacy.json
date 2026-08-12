@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2020,
+  "setKey": "bbm-yakult-legacy",
+  "setName": "2020 BBM Yakult Legacy",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/242770",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yakult",
+      "p": "Legacy 36 Tomotaka Sakaguchi"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1999,
+  "setKey": "bbm-fukuoka-daiei-hawks",
+  "setName": "1999 BBM Fukuoka Daiei Hawks",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102377",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "Daiei Hawks H41 Sadaharu Oh"
+    }
+  ]
+}

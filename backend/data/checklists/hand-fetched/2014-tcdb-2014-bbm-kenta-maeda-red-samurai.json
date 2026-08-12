@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-kenta-maeda-red-samurai",
+  "setName": "2014 BBM Kenta Maeda Red Samurai",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/105970",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Kenta",
+      "p": "Maeda Red Samurai 27 Kenta Maeda"
+    }
+  ]
+}

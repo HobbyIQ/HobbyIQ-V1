@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-tokyo-yakult-swallows",
+  "setName": "2010 BBM Tokyo Yakult Swallows",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/67882",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tokyo",
+      "p": "Yakult Swallows S93 Yoshinori Sato"
+    }
+  ]
+}

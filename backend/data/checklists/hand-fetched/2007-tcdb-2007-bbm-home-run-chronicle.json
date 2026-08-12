@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-home-run-chronicle",
+  "setName": "2007 BBM Home Run Chronicle",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103897",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Home",
+      "p": "Run Chronicle 45 Seung Yeop Lee"
+    }
+  ]
+}

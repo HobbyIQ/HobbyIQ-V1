@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-yokohama-dena-baystars-authentic-edition-evolution",
+  "setName": "2016 BBM Yokohama DeNA BayStars Authentic Edition EVOLUTION",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/324575",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yokohama",
+      "p": "DeNA BayStars Authentic Edition EVOLUTION 27 Taiki Sekine"
+    }
+  ]
+}

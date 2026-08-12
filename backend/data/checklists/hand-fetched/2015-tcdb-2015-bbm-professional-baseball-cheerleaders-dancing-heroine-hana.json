@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2015,
+  "setKey": "bbm-professional-baseball-cheerleaders-dancing-heroine-hana",
+  "setName": "2015 BBM Professional Baseball Cheerleaders Dancing Heroine Hana",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/231097",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Professional",
+      "p": "Baseball Cheerleaders Dancing Heroine Hana 98 SAYAKA"
+    }
+  ]
+}

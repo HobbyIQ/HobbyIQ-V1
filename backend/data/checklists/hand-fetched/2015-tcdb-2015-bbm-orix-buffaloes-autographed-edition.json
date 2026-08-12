@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2015,
+  "setKey": "bbm-orix-buffaloes-autographed-edition",
+  "setName": "2015 BBM Orix Buffaloes Autographed Edition",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/365013",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

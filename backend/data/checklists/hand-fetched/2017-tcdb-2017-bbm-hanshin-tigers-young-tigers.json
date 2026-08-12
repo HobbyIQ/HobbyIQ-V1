@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2017,
+  "setKey": "bbm-hanshin-tigers-young-tigers",
+  "setName": "2017 BBM Hanshin Tigers Young Tigers",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/231209",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers Young Tigers 25 Yutaro Itayama"
+    }
+  ]
+}

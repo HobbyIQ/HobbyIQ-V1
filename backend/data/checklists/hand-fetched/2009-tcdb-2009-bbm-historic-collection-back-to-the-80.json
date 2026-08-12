@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-historic-collection-back-to-the-80",
+  "setName": "2009 BBM Historic Collection Back to the 80",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338277",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Historic",
+      "p": "Collection Back to the 80"
+    }
+  ]
+}

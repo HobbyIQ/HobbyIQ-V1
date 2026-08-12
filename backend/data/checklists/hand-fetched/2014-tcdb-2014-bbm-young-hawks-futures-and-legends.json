@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-young-hawks-futures-and-legends",
+  "setName": "2014 BBM Young Hawks Futures and Legends",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/97123",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Young",
+      "p": "Hawks Futures and Legends 36 Hiromitsu Kadota"
+    }
+  ]
+}

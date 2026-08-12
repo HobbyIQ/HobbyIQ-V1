@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-greatest-games-10-8-1994-dragons-vs-giants",
+  "setName": "2012 BBM Greatest Games 10 8 1994 Dragons vs Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113109",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Greatest",
+      "p": "Games 10 8 1994 Dragons vs Giants 36 Shigeo Nagashima"
+    }
+  ]
+}

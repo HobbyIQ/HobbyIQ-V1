@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-tokyo-big-six-spring-version",
+  "setName": "2012 BBM Tokyo Big Six Spring Version",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113098",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tokyo",
+      "p": "Big Six Spring Version 36 Tokyo University"
+    }
+  ]
+}

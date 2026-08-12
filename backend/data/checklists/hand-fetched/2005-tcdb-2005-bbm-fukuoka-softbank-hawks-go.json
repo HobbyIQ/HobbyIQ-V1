@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-fukuoka-softbank-hawks-go",
+  "setName": "2005 BBM Fukuoka SoftBank Hawks Go",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103099",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "SoftBank Hawks Go 36 Katsuhiko Miyaji"
+    }
+  ]
+}

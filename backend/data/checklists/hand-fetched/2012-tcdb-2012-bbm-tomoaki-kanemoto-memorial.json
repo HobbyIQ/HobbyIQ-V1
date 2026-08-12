@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-tomoaki-kanemoto-memorial",
+  "setName": "2012 BBM Tomoaki Kanemoto Memorial",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113097",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tomoaki",
+      "p": "Kanemoto Memorial 27 Tomoaki Kanemoto"
+    }
+  ]
+}

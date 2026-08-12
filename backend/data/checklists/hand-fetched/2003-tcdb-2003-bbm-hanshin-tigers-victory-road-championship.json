@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2003,
+  "setKey": "bbm-hanshin-tigers-victory-road-championship",
+  "setName": "2003 BBM Hanshin Tigers Victory Road Championship",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102946",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers Victory Road Championship 60 9"
+    }
+  ]
+}

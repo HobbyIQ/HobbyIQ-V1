@@ -1,0 +1,79 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2025-bowman-chrome-sapphire-baseball",
+    "2025-bowman-chrome-sapphire"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Chrome Sapphire). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": [
+    {
+      "name": "Base",
+      "printRun": null
+    },
+    {
+      "name": "Base Sapphire",
+      "printRun": null
+    },
+    {
+      "name": "Green Sapphire",
+      "printRun": 99
+    },
+    {
+      "name": "Yellow Sapphire",
+      "printRun": 75
+    },
+    {
+      "name": "Gold Sapphire",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Sapphire",
+      "printRun": 25
+    },
+    {
+      "name": "Purple Sapphire",
+      "printRun": 10
+    },
+    {
+      "name": "Red Sapphire",
+      "printRun": 5
+    },
+    {
+      "name": "Padparadscha",
+      "printRun": 1
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Base Sapphire Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Green Sapphire",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Sapphire",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Sapphire",
+      "printRun": 25
+    },
+    {
+      "name": "Black Sapphire",
+      "printRun": 10
+    },
+    {
+      "name": "Red Sapphire",
+      "printRun": 5
+    },
+    {
+      "name": "Padparadscha",
+      "printRun": 1
+    }
+  ]
+}

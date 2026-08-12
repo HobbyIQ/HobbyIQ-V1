@@ -1,0 +1,27 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php?title=2025_Finest",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": ["2025-topps-finest-baseball", "2026-topps-finest-baseball (proxy)", "2024-topps-finest-baseball (proxy)"],
+  "printRunNote": "Finest print runs vary by tier — using null (unnumbered) for tier-varying parallels; concrete numbers only where fixed.",
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Refractor","printRun":null},
+    {"name":"Checkerboard Refractor","printRun":null},
+    {"name":"Oil Spill Refractor","printRun":null},
+    {"name":"Magenta Refractor","printRun":null},
+    {"name":"Sky Blue Refractor","printRun":null},
+    {"name":"Purple Refractor","printRun":null},
+    {"name":"Blue Refractor","printRun":null},
+    {"name":"Purple Checkerboard Refractor","printRun":null},
+    {"name":"Blue Checkerboard Refractor","printRun":null},
+    {"name":"Green Refractor","printRun":null},
+    {"name":"Pearl Checkerboard Refractor","printRun":null},
+    {"name":"Gold Refractor","printRun":null},
+    {"name":"Orange Refractor","printRun":null},
+    {"name":"Black Refractor","printRun":null},
+    {"name":"Red Refractor","printRun":null},
+    {"name":"SuperFractor","printRun":1}
+  ],
+  "autoParallels": null
+}

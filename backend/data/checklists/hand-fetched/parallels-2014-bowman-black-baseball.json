@@ -1,0 +1,18 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2014-bowman-black-baseball",
+    "2014-bowman-black"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Black). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": null,
+  "autoParallels": [
+    {
+      "name": "Bowman Black Autograph",
+      "printRun": 25
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-yomiuri-giants-80th-anniversary",
+  "setName": "2014 BBM Yomiuri Giants 80th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/245154",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants 80th Anniversary 99 Mitsuo Sumi"
+    }
+  ]
+}

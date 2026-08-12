@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2021,
+  "setKey": "bbm-chiba-lotte-marines-history-1950-2021",
+  "setName": "2021 BBM Chiba Lotte Marines History 1950 2021",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/284960",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chiba",
+      "p": "Lotte Marines History 1950 2021 90 Katsuya Kakunaka"
+    }
+  ]
+}

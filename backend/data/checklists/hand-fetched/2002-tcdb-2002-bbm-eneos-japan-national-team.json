@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2002,
+  "setKey": "bbm-eneos-japan-national-team",
+  "setName": "2002 BBM ENEOS Japan National Team",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102655",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "ENEOS",
+      "p": "Japan National Team 47 Yoshinobu Takahashi"
+    }
+  ]
+}

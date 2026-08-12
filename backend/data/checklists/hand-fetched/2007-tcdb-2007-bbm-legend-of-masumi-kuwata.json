@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-legend-of-masumi-kuwata",
+  "setName": "2007 BBM Legend of Masumi Kuwata",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103765",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Legend",
+      "p": "of Masumi Kuwata MK36 Masumi Kuwata"
+    }
+  ]
+}

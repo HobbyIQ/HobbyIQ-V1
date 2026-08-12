@@ -1,0 +1,29 @@
+{
+  "source": "beckett+checklistinsider+cardboardconnection+si",
+  "sourceUrl": "https://www.beckett.com/news/2025-topps-chrome-platinum-anniversary-baseball-cards/",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": ["2025-topps-chrome-platinum-baseball", "2023-topps-chrome-platinum-baseball (proxy)", "2026-topps-chrome-platinum-baseball (proxy)"],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Vibrations Refractor","printRun":250},
+    {"name":"Blue Vibrations Refractor","printRun":150},
+    {"name":"Green Refractor","printRun":99},
+    {"name":"Green Vibrations Refractor","printRun":99},
+    {"name":"Gold Refractor","printRun":50},
+    {"name":"Gold Vibrations Refractor","printRun":50},
+    {"name":"Orange Refractor","printRun":25},
+    {"name":"Orange Vibrations Refractor","printRun":25},
+    {"name":"Black Refractor","printRun":10},
+    {"name":"Black Vibrations Refractor","printRun":10},
+    {"name":"Red Refractor","printRun":5},
+    {"name":"Red Vibrations Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ],
+  "autoParallels": [
+    {"name":"Blue Refractor","printRun":150},
+    {"name":"Gold Refractor","printRun":50},
+    {"name":"Platinum Toile Cream Refractor","printRun":5},
+    {"name":"Platinum Toile Red Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ]
+}

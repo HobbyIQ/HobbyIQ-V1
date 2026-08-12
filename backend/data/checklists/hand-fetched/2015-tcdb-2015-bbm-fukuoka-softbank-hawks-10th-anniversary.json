@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2015,
+  "setKey": "bbm-fukuoka-softbank-hawks-10th-anniversary",
+  "setName": "2015 BBM Fukuoka SoftBank Hawks 10th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/107383",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "SoftBank Hawks 10th Anniversary 72 Yuki Yanagita"
+    }
+  ]
+}

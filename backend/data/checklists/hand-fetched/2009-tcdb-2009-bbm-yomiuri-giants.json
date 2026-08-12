@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-yomiuri-giants",
+  "setName": "2009 BBM Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102176",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants G126 Hayato Sakamoto"
+    }
+  ]
+}

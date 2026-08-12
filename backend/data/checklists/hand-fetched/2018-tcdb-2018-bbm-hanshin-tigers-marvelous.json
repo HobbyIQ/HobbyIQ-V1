@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2018,
+  "setKey": "bbm-hanshin-tigers-marvelous",
+  "setName": "2018 BBM Hanshin Tigers Marvelous",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/231144",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers Marvelous 27 Shunsuke Fujikawa"
+    }
+  ]
+}

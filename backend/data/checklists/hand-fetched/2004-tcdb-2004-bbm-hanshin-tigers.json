@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2004,
+  "setKey": "bbm-hanshin-tigers",
+  "setName": "2004 BBM Hanshin Tigers",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/87634",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers T99 Akinobu Okada"
+    }
+  ]
+}

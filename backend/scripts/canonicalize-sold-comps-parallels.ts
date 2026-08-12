@@ -47,10 +47,27 @@ async function main(): Promise<void> {
   if (MAX) console.log(`  cap: ${MAX.toLocaleString()} rows`);
 
   const params: Array<{ name: string; value: string }> = [];
-  const where: string[] = ["IS_DEFINED(c.parallel)"];
+  const where: string[] = [
+    "IS_DEFINED(c.parallel)",
+    // Skip already-canonicalized rows so re-runs don't burn RU rewalking
+    // the same set + concurrent runs never race on the same row.
+    "NOT IS_DEFINED(c.parallelCanonicalizedAt)",
+  ];
   if (SOURCE) {
     where.push("c.source = @src");
     params.push({ name: "@src", value: SOURCE });
+  }
+  // Shard filter: PARALLEL_SHARD_HEX="0,1,2,3" makes this worker only
+  // touch rows whose contentHash first char is in that set. SHA1
+  // contentHash is uniform, so 16 shards evenly split the pool. Multiple
+  // workers each holding a disjoint set means they hit disjoint Cosmos
+  // partitions and don't collide on per-partition RU throttling.
+  const shardHex = (process.env.PARALLEL_SHARD_HEX ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (shardHex.length > 0) {
+    const list = shardHex.map((_, i) => `@sh${i}`).join(",");
+    where.push(`SUBSTRING(c.contentHash, 0, 1) IN (${list})`);
+    for (let i = 0; i < shardHex.length; i++) params.push({ name: `@sh${i}`, value: shardHex[i] });
+    console.log(`  shard: contentHash first-char ∈ {${shardHex.join(",")}}`);
   }
   const q = `SELECT c.id, c.cardId, c.parallel, c.parallelSlug
              FROM c WHERE ${where.join(" AND ")}`;
@@ -61,44 +78,56 @@ async function main(): Promise<void> {
   const rewriteCounts = new Map<string, number>();
   const startedAt = Date.now();
 
+  // Skip rows already canonicalized so re-runs are cheap.
+  const CONCURRENCY = Number(process.env.PARALLEL_CONCURRENCY ?? 64);
+  const chunk = <T>(arr: T[], size: number): T[][] => {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  };
   while (it.hasMoreResults()) {
     const { resources } = await it.fetchNext();
+    // Build a work list of rows that need patches (or dry-run mutations).
+    const work: Array<{ r: Row; newDisplay: string | null; newSlug: string | null; displayChanged: boolean; slugChanged: boolean }> = [];
     for (const r of resources) {
       scanned++;
       const canonical = canonicalizeParallel(r.parallel);
       const newDisplay = canonical?.display ?? null;
       const newSlug = canonical?.slug ?? null;
-
       const displayChanged = (r.parallel ?? null) !== newDisplay;
       const slugChanged = (r.parallelSlug ?? null) !== newSlug;
       if (!displayChanged && !slugChanged) { unchanged++; continue; }
       changed++;
       if (newDisplay === null) nullOut++;
-
-      // Track top rewrites so the dry-run summary shows what actually changed.
       if (displayChanged) {
         const key = `${JSON.stringify(r.parallel)} → ${JSON.stringify(newDisplay)}`;
         rewriteCounts.set(key, (rewriteCounts.get(key) ?? 0) + 1);
       }
-
-      if (!APPLY) continue;
-      try {
-        const ops: Array<Record<string, unknown>> = [];
-        if (displayChanged) ops.push({ op: "set", path: "/parallel", value: newDisplay });
-        if (slugChanged) ops.push({ op: "set", path: "/parallelSlug", value: newSlug });
-        ops.push({ op: "set", path: "/parallelCanonicalizedAt", value: new Date().toISOString() });
-        await sc.item(r.id, r.cardId).patch({ operations: ops } as never);
-        patched++;
-      } catch (e) {
-        errors++;
-        if (errors <= 5) console.error(`  ! patch ${r.id}: ${(e as Error).message}`);
-      }
+      work.push({ r, newDisplay, newSlug, displayChanged, slugChanged });
       if (MAX > 0 && scanned >= MAX) break;
     }
-    if (scanned % 5000 < 500) {
-      const el = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-      process.stderr.write(`  scanned=${scanned.toLocaleString()} changed=${changed.toLocaleString()} patched=${patched.toLocaleString()} err=${errors}  ${Math.round(scanned / el)}/s\r`);
+    if (APPLY && work.length > 0) {
+      // Fire patches in bounded-concurrency batches — a 500-row Cosmos
+      // page at CONCURRENCY=64 lands in ~10 pipelined round-trips.
+      for (const batch of chunk(work, CONCURRENCY)) {
+        const results = await Promise.allSettled(batch.map(async ({ r, newDisplay, newSlug, displayChanged, slugChanged }) => {
+          const ops: Array<Record<string, unknown>> = [];
+          if (displayChanged) ops.push({ op: "set", path: "/parallel", value: newDisplay });
+          if (slugChanged) ops.push({ op: "set", path: "/parallelSlug", value: newSlug });
+          ops.push({ op: "set", path: "/parallelCanonicalizedAt", value: new Date().toISOString() });
+          await sc.item(r.id, r.cardId).patch({ operations: ops } as never);
+        }));
+        for (const res of results) {
+          if (res.status === "fulfilled") patched++;
+          else {
+            errors++;
+            if (errors <= 5) console.error(`  ! patch failed: ${(res.reason as Error).message}`);
+          }
+        }
+      }
     }
+    const el = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+    process.stderr.write(`  scanned=${scanned.toLocaleString()} changed=${changed.toLocaleString()} patched=${patched.toLocaleString()} err=${errors}  ${Math.round(scanned / el)}/s scan, ${Math.round(patched / el)}/s write\r`);
     if (MAX > 0 && scanned >= MAX) break;
   }
 

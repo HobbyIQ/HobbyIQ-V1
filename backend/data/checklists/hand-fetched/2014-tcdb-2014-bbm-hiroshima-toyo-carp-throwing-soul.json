@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-hiroshima-toyo-carp-throwing-soul",
+  "setName": "2014 BBM Hiroshima Toyo Carp Throwing Soul",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338480",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroshima",
+      "p": "Toyo Carp Throwing Soul 27 Kam Mickolio"
+    }
+  ]
+}

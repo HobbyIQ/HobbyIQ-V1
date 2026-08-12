@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2001,
+  "setKey": "bbm-limited-hanshin-tigers",
+  "setName": "2001 BBM Limited Hanshin Tigers",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/101078",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Limited",
+      "p": "Hanshin Tigers T99 Checklist 2"
+    }
+  ]
+}

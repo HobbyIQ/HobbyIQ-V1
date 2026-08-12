@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2003,
+  "setKey": "bbm-nippon-ham-fighters",
+  "setName": "2003 BBM Nippon Ham Fighters",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/101061",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Nippon",
+      "p": "Ham Fighters 126 Tommy Cruz"
+    }
+  ]
+}

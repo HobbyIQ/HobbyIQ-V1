@@ -1,0 +1,25 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php?title=2025_Topps_Tier_One",
+  "fetchedAt": "2026-08-11",
+  "printRunNote": "Tier One print runs vary by card tier (1/2/3); using min-tier values as conservative floor. Silver Foil ranges 75-99, Purple Foil 50-75, Blue 40-125 by tier.",
+  "appliesTo": [
+    "2025-topps-tier-one-baseball",
+    "2024-topps-tier-one-baseball (proxy)",
+    "2023-topps-tier-one-baseball (proxy)"
+  ],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Silver Foil","printRun":75},
+    {"name":"Bronze Foil","printRun":125},
+    {"name":"Purple Foil","printRun":50},
+    {"name":"Blue","printRun":40},
+    {"name":"Green","printRun":30},
+    {"name":"Red","printRun":25},
+    {"name":"Holo Gold","printRun":15},
+    {"name":"Holo Silver","printRun":10},
+    {"name":"Pink","printRun":5},
+    {"name":"Holo Platinum Blue","printRun":1}
+  ],
+  "autoParallels": null
+}

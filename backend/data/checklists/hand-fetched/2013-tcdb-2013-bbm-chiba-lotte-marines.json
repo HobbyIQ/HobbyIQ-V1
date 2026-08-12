@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-chiba-lotte-marines",
+  "setName": "2013 BBM Chiba Lotte Marines",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/97196",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chiba",
+      "p": "Lotte Marines M99 Checklist"
+    }
+  ]
+}

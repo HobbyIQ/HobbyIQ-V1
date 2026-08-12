@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-chunichi-dragons-80th-anniversary",
+  "setName": "2016 BBM Chunichi Dragons 80th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/124406",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chunichi",
+      "p": "Dragons 80th Anniversary 81 Katsuki Matayoshi"
+    }
+  ]
+}

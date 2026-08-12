@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-fukuoka-softbank-hawks-takanomai",
+  "setName": "2007 BBM Fukuoka SoftBank Hawks Takanomai",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103808",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "SoftBank Hawks Takanomai 37 Munenori Kawasaki"
+    }
+  ]
+}

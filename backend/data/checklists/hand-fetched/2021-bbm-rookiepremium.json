@@ -1,0 +1,108 @@
+{
+  "sport": "baseball",
+  "year": 2021,
+  "setKey": "bbm-rookiepremium",
+  "setName": "2021 BBM Rookiepremium",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2021rookiepremium_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": [
+    {
+      "n": "RP01",
+      "p": "井上朋也"
+    },
+    {
+      "n": "RP02",
+      "p": "笹川吉康"
+    },
+    {
+      "n": "RP03",
+      "p": "牧原巧汰"
+    },
+    {
+      "n": "RP04",
+      "p": "鈴木昭汰"
+    },
+    {
+      "n": "RP05",
+      "p": "中森俊介"
+    },
+    {
+      "n": "RP06",
+      "p": "小川龍成"
+    },
+    {
+      "n": "RP07",
+      "p": "渡部健人"
+    },
+    {
+      "n": "RP08",
+      "p": "若林楽人"
+    },
+    {
+      "n": "RP09",
+      "p": "ブランドン"
+    },
+    {
+      "n": "RP10",
+      "p": "早川隆久"
+    },
+    {
+      "n": "RP11",
+      "p": "高田孝一"
+    },
+    {
+      "n": "RP12",
+      "p": "内間拓馬"
+    },
+    {
+      "n": "RP13",
+      "p": "伊藤大海"
+    },
+    {
+      "n": "RP14",
+      "p": "五十幡亮汰"
+    },
+    {
+      "n": "RP15",
+      "p": "今川優馬"
+    },
+    {
+      "n": "RP19",
+      "p": "平内龍太"
+    },
+    {
+      "n": "RP20",
+      "p": "中山礼都"
+    },
+    {
+      "n": "RP21",
+      "p": "秋広優人"
+    },
+    {
+      "n": "RP22",
+      "p": "佐藤輝明"
+    },
+    {
+      "n": "RP23",
+      "p": "伊藤将司"
+    },
+    {
+      "n": "RP24",
+      "p": "中野拓夢"
+    },
+    {
+      "n": "RP31",
+      "p": "栗林良吏"
+    },
+    {
+      "n": "RP32",
+      "p": "森浦大輔"
+    },
+    {
+      "n": "RP33",
+      "p": "大道温貴"
+    }
+  ]
+}

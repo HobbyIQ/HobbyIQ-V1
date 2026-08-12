@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-diamond-age-1989",
+  "setName": "2012 BBM Diamond Age 1989",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113107",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Diamond",
+      "p": "Age 1989 27 Atori Ota"
+    }
+  ]
+}

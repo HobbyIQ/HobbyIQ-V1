@@ -6,36 +6,1208 @@
   "source": "checklistinsider",
   "sourceUrl": "https://www.checklistinsider.com/2025-panini-prizm-baseball",
   "fetchedAt": "2026-08-11",
+  "parallelsFile": "parallels-2025-panini-prizm-baseball.json",
   "baseSet": [
-    {"n":"1","p":"Kristian Campbell"},{"n":"2","p":"Ryan Clifford"},{"n":"3","p":"Griff O'Ferrall"},{"n":"4","p":"Jacob Misiorowski"},{"n":"5","p":"Tim Hudson"},{"n":"6","p":"Cooper Pratt"},{"n":"7","p":"Chase DeLauter"},{"n":"8","p":"Alex Gordon"},{"n":"9","p":"Kaelen Culpepper"},{"n":"10","p":"Franklin Arias"},
-    {"n":"11","p":"Pee Wee Reese"},{"n":"12","p":"Jared Thomas"},{"n":"13","p":"Chase Meidroth"},{"n":"14","p":"Hagen Smith"},{"n":"15","p":"Terry Francona"},{"n":"16","p":"Larry Walker"},{"n":"17","p":"Johnny Bench"},{"n":"18","p":"Kyle DeBarge"},{"n":"19","p":"Starlyn Caba"},{"n":"20","p":"Spencer Arrighetti"},
-    {"n":"21","p":"Tris Speaker"},{"n":"22","p":"Alex Freeland"},{"n":"23","p":"Colt Emerson"},{"n":"24","p":"Ryan Waldschmidt"},{"n":"25","p":"Yordanny Monegro"},{"n":"26","p":"Aaron Judge"},{"n":"27","p":"Bubba Chandler"},{"n":"28","p":"Johan Santana"},{"n":"29","p":"Travis Bazzana"},{"n":"30","p":"Braylon Payne"},
-    {"n":"31","p":"Bronson Arroyo"},{"n":"32","p":"Bryce Cunningham"},{"n":"33","p":"Tom Seaver"},{"n":"34","p":"Agustin Ramirez"},{"n":"35","p":"Jordan Lawlar"},{"n":"36","p":"Max Muncy"},{"n":"37","p":"Bryce Eldridge"},{"n":"38","p":"James Wood"},{"n":"39","p":"Kiki Cuyler"},{"n":"40","p":"Whitey Ford"},
-    {"n":"41","p":"Barry Larkin"},{"n":"42","p":"Jace LaViolette"},{"n":"43","p":"Randy Johnson"},{"n":"44","p":"Luke Dickerson"},{"n":"45","p":"Tre' Morgan"},{"n":"46","p":"Josuar Gonzalez"},{"n":"47","p":"Leo De Vries"},{"n":"48","p":"Kevin Alcantara"},{"n":"49","p":"Chandler Simpson"},{"n":"50","p":"Mike Schmidt"},
-    {"n":"51","p":"Vladimir Guerrero"},{"n":"52","p":"Paul Konerko"},{"n":"53","p":"Nick Yorke"},{"n":"54","p":"Ken Griffey Jr."},{"n":"55","p":"Dillon Head"},{"n":"56","p":"Billy Amick"},{"n":"57","p":"Don Drysdale"},{"n":"58","p":"Ryan Sloan"},{"n":"59","p":"Prince Fielder"},{"n":"60","p":"Jeff Bagwell"},
-    {"n":"61","p":"Cliff Lee"},{"n":"62","p":"Rogers Hornsby"},{"n":"63","p":"Robin Yount"},{"n":"64","p":"Blake Mitchell"},{"n":"65","p":"Ethan Anderson"},{"n":"66","p":"Jonny Farmelo"},{"n":"67","p":"Greg Maddux"},{"n":"68","p":"Levi Wells"},{"n":"69","p":"Connor Norby"},{"n":"70","p":"Coby Mayo"},
-    {"n":"71","p":"Andrew Walters"},{"n":"72","p":"Hye-Seong Kim"},{"n":"73","p":"Dylan Crews"},{"n":"74","p":"Nelson Cruz"},{"n":"75","p":"Kevin McGonigle"},{"n":"76","p":"Boston Bateman"},{"n":"77","p":"Carson Williams"},{"n":"78","p":"Thomas White"},{"n":"79","p":"Emilien Pitre"},{"n":"80","p":"Jesus Made"},
-    {"n":"81","p":"Trey Yesavage"},{"n":"82","p":"Ethan Holliday"},{"n":"83","p":"John Smoltz"},{"n":"84","p":"Bobby Miller"},{"n":"85","p":"Jett Williams"},{"n":"86","p":"Chase Burns"},{"n":"87","p":"Arjun Nimmala"},{"n":"88","p":"Brock Porter"},{"n":"89","p":"Owen Caissie"},{"n":"90","p":"Jacob Wilson"},
-    {"n":"91","p":"Carter Johnson"},{"n":"92","p":"Christian Scott"},{"n":"93","p":"Eddie Collins"},{"n":"94","p":"Joe Jackson"},{"n":"95","p":"Kellon Lindsey"},{"n":"96","p":"Spencer Jones"},{"n":"97","p":"Albert Pujols"},{"n":"98","p":"Jack Morris"},{"n":"99","p":"Ozzie Smith"},{"n":"100","p":"Lazaro Montes"},
-    {"n":"101","p":"Yadier Molina"},{"n":"102","p":"Grover Alexander"},{"n":"103","p":"Drew Burress"},{"n":"104","p":"Willie Stargell"},{"n":"105","p":"Brock Wilken"},{"n":"106","p":"Al Kaline"},{"n":"107","p":"Monte Irvin"},{"n":"108","p":"Jackson Chourio"},{"n":"109","p":"Billy Martin"},{"n":"110","p":"Dick Allen"},
-    {"n":"111","p":"Don Mattingly"},{"n":"112","p":"Elston Howard"},{"n":"113","p":"Johnny Mize"},{"n":"114","p":"Sebastian Walcott"},{"n":"115","p":"Justin Upton"},{"n":"116","p":"Braylon Doughty"},{"n":"117","p":"JC Escarra"},{"n":"118","p":"Ryne Sandberg"},{"n":"119","p":"Slade Caldwell"},{"n":"120","p":"Malcolm Moore"},
-    {"n":"121","p":"Drew Beam"},{"n":"122","p":"George Lombard Jr."},{"n":"123","p":"Cal Ripken"},{"n":"124","p":"Bret Saberhagen"},{"n":"125","p":"Mike Piazza"},{"n":"126","p":"Masyn Winn"},{"n":"127","p":"Homer Bush Jr."},{"n":"128","p":"Gary Sheffield"},{"n":"129","p":"Christy Mathewson"},{"n":"130","p":"Darren Baker"},
-    {"n":"131","p":"Bud Selig"},{"n":"132","p":"Braden Montgomery"},{"n":"133","p":"Hank Greenberg"},{"n":"134","p":"Sammy Sosa"},{"n":"135","p":"Joe Sewell"},{"n":"136","p":"Brandon Sproat"},{"n":"137","p":"Tom Glavine"},{"n":"138","p":"Joe Torre"},{"n":"139","p":"Paul O'Neill"},{"n":"140","p":"Tony La Russa"},
-    {"n":"141","p":"Aidan Miller"},{"n":"142","p":"Charlie Condon"},{"n":"143","p":"Tekoah Roby"},{"n":"144","p":"Josh Gibson"},{"n":"145","p":"Roger Clemens"},{"n":"146","p":"Noble Meyer"},{"n":"147","p":"Jose Canseco"},{"n":"148","p":"Thomas Harrington"},{"n":"149","p":"Ching-Hsien Ko"},{"n":"150","p":"Roy Campanella"},
-    {"n":"151","p":"Jim Rice"},{"n":"152","p":"David Ortiz"},{"n":"153","p":"Andrew Painter"},{"n":"154","p":"Dontrelle Willis"},{"n":"155","p":"Matt Shaw"},{"n":"156","p":"Edwin Encarnacion"},{"n":"157","p":"Wyatt Sanford"},{"n":"158","p":"Aroon Escobar"},{"n":"159","p":"Darryl Strawberry"},{"n":"160","p":"Bobby Witt Jr."},
-    {"n":"161","p":"Adrian Gonzalez"},{"n":"162","p":"Christian Moore"},{"n":"163","p":"Ricky Tiedemann"},{"n":"164","p":"Tommy Troy"},{"n":"165","p":"Shinnosuke Ogasawara"},{"n":"166","p":"Carter Jensen"},{"n":"167","p":"Zebby Matthews"},{"n":"168","p":"Tink Hence"},{"n":"169","p":"Tommy White"},{"n":"170","p":"Brady House"},
-    {"n":"171","p":"Will Wagner"},{"n":"172","p":"Mariano Rivera"},{"n":"173","p":"PJ Morlando"},{"n":"174","p":"Walker Janek"},{"n":"175","p":"Chris Cortez"},{"n":"176","p":"Cam Caminiti"},{"n":"177","p":"JD Dix"},{"n":"178","p":"Yu-Min Lin"},{"n":"179","p":"Harmon Killebrew"},{"n":"180","p":"Joe DiMaggio"},
-    {"n":"181","p":"Jake Arrieta"},{"n":"182","p":"Tony Oliva"},{"n":"183","p":"Junior Caminero"},{"n":"184","p":"Juan Gonzalez"},{"n":"185","p":"Thomas Saggese"},{"n":"186","p":"Ivan Rodriguez"},{"n":"187","p":"Andruw Jones"},{"n":"188","p":"Dasan Hill"},{"n":"189","p":"Blake Burke"},{"n":"190","p":"Yohandy Morales"},
-    {"n":"191","p":"Ty Cobb"},{"n":"192","p":"Enrique Bradfield Jr."},{"n":"193","p":"Kyle Teel"},{"n":"194","p":"Brady Ebel"},{"n":"195","p":"Adam Jones"},{"n":"196","p":"Hideki Matsui"},{"n":"197","p":"Rod Carew"},{"n":"198","p":"Craig Yoho"},{"n":"199","p":"Konnor Griffin"},{"n":"200","p":"James Triantos"},
-    {"n":"201","p":"Leo Durocher"},{"n":"202","p":"Reggie Jackson"},{"n":"203","p":"Mac Horvath"},{"n":"204","p":"Bryce Meccage"},{"n":"205","p":"Ryan Zimmerman"},{"n":"206","p":"Grady Sizemore"},{"n":"207","p":"Brayden Taylor"},{"n":"208","p":"Luis Baez"},{"n":"209","p":"Vance Honeycutt"},{"n":"210","p":"Robin Ventura"},
-    {"n":"211","p":"Heston Kjerstad"},{"n":"212","p":"Austin Wells"},{"n":"213","p":"Nick Kurtz"},{"n":"214","p":"Myles Naylor"},{"n":"215","p":"Juan Valera"},{"n":"216","p":"Edgar Quero"},{"n":"217","p":"Chase Dollander"},{"n":"218","p":"Frank Thomas"},{"n":"219","p":"Manny Ramirez"},{"n":"220","p":"Chipper Jones"},
-    {"n":"221","p":"Owen Hall"},{"n":"222","p":"Carson Benge"},{"n":"223","p":"Bryce Rainer"},{"n":"224","p":"Jake Peavy"},{"n":"225","p":"Deion Sanders"},{"n":"226","p":"Colin Houck"},{"n":"227","p":"Alex Rodriguez"},{"n":"228","p":"Zac Veen"},{"n":"229","p":"Caleb Lomavita"},{"n":"230","p":"Rickey Henderson"},
-    {"n":"231","p":"Bobby Richardson"},{"n":"232","p":"Mel Ott"},{"n":"233","p":"Miguel Cabrera"},{"n":"234","p":"Andy Pettitte"},{"n":"235","p":"Brody Brecht"},{"n":"236","p":"Cecil Fielder"},{"n":"237","p":"Chase Davis"},{"n":"238","p":"Jurrangelo Cijntje"},{"n":"239","p":"Bob Gibson"},{"n":"240","p":"Jace Jung"},
-    {"n":"241","p":"Matt Wieters"},{"n":"242","p":"Dante Nori"},{"n":"243","p":"Benito Santiago"},{"n":"244","p":"Michael Young"},{"n":"245","p":"Marcelo Mayer"},{"n":"246","p":"Tyson Neighbors"},{"n":"247","p":"Kumar Rocker"},{"n":"248","p":"Paul Skenes"},{"n":"249","p":"Tony Perez"},{"n":"250","p":"Luke Keaschall"},
-    {"n":"251","p":"Roberto Clemente"},{"n":"252","p":"Theo Gillen"},{"n":"253","p":"Brooks Lee"},{"n":"254","p":"Alejandro Rosario"},{"n":"255","p":"Buster Posey"},{"n":"256","p":"Ken Griffey Sr."},{"n":"257","p":"Harry Ford"},{"n":"258","p":"Hyun-Seok Jang"},{"n":"259","p":"Zyhir Hope"},{"n":"260","p":"Ben Hess"},
-    {"n":"261","p":"Ian Kinsler"},{"n":"262","p":"Colson Montgomery"},{"n":"263","p":"Cam Smith"},{"n":"264","p":"Yogi Berra"},{"n":"265","p":"Andy Van Slyke"},{"n":"266","p":"Roman Anthony"},{"n":"267","p":"Josue De Paula"},{"n":"268","p":"Rhett Lowder"},{"n":"269","p":"Jedixson Paez"},{"n":"270","p":"David Shields"},
-    {"n":"271","p":"Rintaro Sasaki"},{"n":"272","p":"Jarlin Susana"},{"n":"273","p":"Chris Davis"},{"n":"274","p":"Paul Molitor"},{"n":"275","p":"Kash Mayfield"},{"n":"276","p":"Earle Combs"},{"n":"277","p":"Gil Hodges"},{"n":"278","p":"Jack Leiter"},{"n":"279","p":"Levi Sterling"},{"n":"280","p":"Cole Young"},
-    {"n":"281","p":"Braxton Ashcraft"},{"n":"282","p":"Seaver King"},{"n":"283","p":"Dylan Dreiling"},{"n":"284","p":"Jonah Tong"},{"n":"285","p":"Brice Matthews"},{"n":"286","p":"Carter Holton"},{"n":"287","p":"Pedro Martinez"},{"n":"288","p":"Miguel Tejada"},{"n":"289","p":"Colt Keith"},{"n":"290","p":"Bert Campaneris"},
-    {"n":"291","p":"Dalton Rushing"},{"n":"292","p":"James Tibbs III"},{"n":"293","p":"Ryan Johnson"},{"n":"294","p":"Pablo Sandoval"},{"n":"295","p":"Luisangel Acuna"},{"n":"296","p":"Hurston Waldrep"},{"n":"297","p":"Nolan Ryan"},{"n":"298","p":"Kendall George"},{"n":"299","p":"Ethan Salas"},{"n":"300","p":"Lou Gehrig"}
-  ]
+    {
+      "n": "1",
+      "p": "Kristian Campbell"
+    },
+    {
+      "n": "2",
+      "p": "Ryan Clifford"
+    },
+    {
+      "n": "3",
+      "p": "Griff O'Ferrall"
+    },
+    {
+      "n": "4",
+      "p": "Jacob Misiorowski"
+    },
+    {
+      "n": "5",
+      "p": "Tim Hudson"
+    },
+    {
+      "n": "6",
+      "p": "Cooper Pratt"
+    },
+    {
+      "n": "7",
+      "p": "Chase DeLauter"
+    },
+    {
+      "n": "8",
+      "p": "Alex Gordon"
+    },
+    {
+      "n": "9",
+      "p": "Kaelen Culpepper"
+    },
+    {
+      "n": "10",
+      "p": "Franklin Arias"
+    },
+    {
+      "n": "11",
+      "p": "Pee Wee Reese"
+    },
+    {
+      "n": "12",
+      "p": "Jared Thomas"
+    },
+    {
+      "n": "13",
+      "p": "Chase Meidroth"
+    },
+    {
+      "n": "14",
+      "p": "Hagen Smith"
+    },
+    {
+      "n": "15",
+      "p": "Terry Francona"
+    },
+    {
+      "n": "16",
+      "p": "Larry Walker"
+    },
+    {
+      "n": "17",
+      "p": "Johnny Bench"
+    },
+    {
+      "n": "18",
+      "p": "Kyle DeBarge"
+    },
+    {
+      "n": "19",
+      "p": "Starlyn Caba"
+    },
+    {
+      "n": "20",
+      "p": "Spencer Arrighetti"
+    },
+    {
+      "n": "21",
+      "p": "Tris Speaker"
+    },
+    {
+      "n": "22",
+      "p": "Alex Freeland"
+    },
+    {
+      "n": "23",
+      "p": "Colt Emerson"
+    },
+    {
+      "n": "24",
+      "p": "Ryan Waldschmidt"
+    },
+    {
+      "n": "25",
+      "p": "Yordanny Monegro"
+    },
+    {
+      "n": "26",
+      "p": "Aaron Judge"
+    },
+    {
+      "n": "27",
+      "p": "Bubba Chandler"
+    },
+    {
+      "n": "28",
+      "p": "Johan Santana"
+    },
+    {
+      "n": "29",
+      "p": "Travis Bazzana"
+    },
+    {
+      "n": "30",
+      "p": "Braylon Payne"
+    },
+    {
+      "n": "31",
+      "p": "Bronson Arroyo"
+    },
+    {
+      "n": "32",
+      "p": "Bryce Cunningham"
+    },
+    {
+      "n": "33",
+      "p": "Tom Seaver"
+    },
+    {
+      "n": "34",
+      "p": "Agustin Ramirez"
+    },
+    {
+      "n": "35",
+      "p": "Jordan Lawlar"
+    },
+    {
+      "n": "36",
+      "p": "Max Muncy"
+    },
+    {
+      "n": "37",
+      "p": "Bryce Eldridge"
+    },
+    {
+      "n": "38",
+      "p": "James Wood"
+    },
+    {
+      "n": "39",
+      "p": "Kiki Cuyler"
+    },
+    {
+      "n": "40",
+      "p": "Whitey Ford"
+    },
+    {
+      "n": "41",
+      "p": "Barry Larkin"
+    },
+    {
+      "n": "42",
+      "p": "Jace LaViolette"
+    },
+    {
+      "n": "43",
+      "p": "Randy Johnson"
+    },
+    {
+      "n": "44",
+      "p": "Luke Dickerson"
+    },
+    {
+      "n": "45",
+      "p": "Tre' Morgan"
+    },
+    {
+      "n": "46",
+      "p": "Josuar Gonzalez"
+    },
+    {
+      "n": "47",
+      "p": "Leo De Vries"
+    },
+    {
+      "n": "48",
+      "p": "Kevin Alcantara"
+    },
+    {
+      "n": "49",
+      "p": "Chandler Simpson"
+    },
+    {
+      "n": "50",
+      "p": "Mike Schmidt"
+    },
+    {
+      "n": "51",
+      "p": "Vladimir Guerrero"
+    },
+    {
+      "n": "52",
+      "p": "Paul Konerko"
+    },
+    {
+      "n": "53",
+      "p": "Nick Yorke"
+    },
+    {
+      "n": "54",
+      "p": "Ken Griffey Jr."
+    },
+    {
+      "n": "55",
+      "p": "Dillon Head"
+    },
+    {
+      "n": "56",
+      "p": "Billy Amick"
+    },
+    {
+      "n": "57",
+      "p": "Don Drysdale"
+    },
+    {
+      "n": "58",
+      "p": "Ryan Sloan"
+    },
+    {
+      "n": "59",
+      "p": "Prince Fielder"
+    },
+    {
+      "n": "60",
+      "p": "Jeff Bagwell"
+    },
+    {
+      "n": "61",
+      "p": "Cliff Lee"
+    },
+    {
+      "n": "62",
+      "p": "Rogers Hornsby"
+    },
+    {
+      "n": "63",
+      "p": "Robin Yount"
+    },
+    {
+      "n": "64",
+      "p": "Blake Mitchell"
+    },
+    {
+      "n": "65",
+      "p": "Ethan Anderson"
+    },
+    {
+      "n": "66",
+      "p": "Jonny Farmelo"
+    },
+    {
+      "n": "67",
+      "p": "Greg Maddux"
+    },
+    {
+      "n": "68",
+      "p": "Levi Wells"
+    },
+    {
+      "n": "69",
+      "p": "Connor Norby"
+    },
+    {
+      "n": "70",
+      "p": "Coby Mayo"
+    },
+    {
+      "n": "71",
+      "p": "Andrew Walters"
+    },
+    {
+      "n": "72",
+      "p": "Hye-Seong Kim"
+    },
+    {
+      "n": "73",
+      "p": "Dylan Crews"
+    },
+    {
+      "n": "74",
+      "p": "Nelson Cruz"
+    },
+    {
+      "n": "75",
+      "p": "Kevin McGonigle"
+    },
+    {
+      "n": "76",
+      "p": "Boston Bateman"
+    },
+    {
+      "n": "77",
+      "p": "Carson Williams"
+    },
+    {
+      "n": "78",
+      "p": "Thomas White"
+    },
+    {
+      "n": "79",
+      "p": "Emilien Pitre"
+    },
+    {
+      "n": "80",
+      "p": "Jesus Made"
+    },
+    {
+      "n": "81",
+      "p": "Trey Yesavage"
+    },
+    {
+      "n": "82",
+      "p": "Ethan Holliday"
+    },
+    {
+      "n": "83",
+      "p": "John Smoltz"
+    },
+    {
+      "n": "84",
+      "p": "Bobby Miller"
+    },
+    {
+      "n": "85",
+      "p": "Jett Williams"
+    },
+    {
+      "n": "86",
+      "p": "Chase Burns"
+    },
+    {
+      "n": "87",
+      "p": "Arjun Nimmala"
+    },
+    {
+      "n": "88",
+      "p": "Brock Porter"
+    },
+    {
+      "n": "89",
+      "p": "Owen Caissie"
+    },
+    {
+      "n": "90",
+      "p": "Jacob Wilson"
+    },
+    {
+      "n": "91",
+      "p": "Carter Johnson"
+    },
+    {
+      "n": "92",
+      "p": "Christian Scott"
+    },
+    {
+      "n": "93",
+      "p": "Eddie Collins"
+    },
+    {
+      "n": "94",
+      "p": "Joe Jackson"
+    },
+    {
+      "n": "95",
+      "p": "Kellon Lindsey"
+    },
+    {
+      "n": "96",
+      "p": "Spencer Jones"
+    },
+    {
+      "n": "97",
+      "p": "Albert Pujols"
+    },
+    {
+      "n": "98",
+      "p": "Jack Morris"
+    },
+    {
+      "n": "99",
+      "p": "Ozzie Smith"
+    },
+    {
+      "n": "100",
+      "p": "Lazaro Montes"
+    },
+    {
+      "n": "101",
+      "p": "Yadier Molina"
+    },
+    {
+      "n": "102",
+      "p": "Grover Alexander"
+    },
+    {
+      "n": "103",
+      "p": "Drew Burress"
+    },
+    {
+      "n": "104",
+      "p": "Willie Stargell"
+    },
+    {
+      "n": "105",
+      "p": "Brock Wilken"
+    },
+    {
+      "n": "106",
+      "p": "Al Kaline"
+    },
+    {
+      "n": "107",
+      "p": "Monte Irvin"
+    },
+    {
+      "n": "108",
+      "p": "Jackson Chourio"
+    },
+    {
+      "n": "109",
+      "p": "Billy Martin"
+    },
+    {
+      "n": "110",
+      "p": "Dick Allen"
+    },
+    {
+      "n": "111",
+      "p": "Don Mattingly"
+    },
+    {
+      "n": "112",
+      "p": "Elston Howard"
+    },
+    {
+      "n": "113",
+      "p": "Johnny Mize"
+    },
+    {
+      "n": "114",
+      "p": "Sebastian Walcott"
+    },
+    {
+      "n": "115",
+      "p": "Justin Upton"
+    },
+    {
+      "n": "116",
+      "p": "Braylon Doughty"
+    },
+    {
+      "n": "117",
+      "p": "JC Escarra"
+    },
+    {
+      "n": "118",
+      "p": "Ryne Sandberg"
+    },
+    {
+      "n": "119",
+      "p": "Slade Caldwell"
+    },
+    {
+      "n": "120",
+      "p": "Malcolm Moore"
+    },
+    {
+      "n": "121",
+      "p": "Drew Beam"
+    },
+    {
+      "n": "122",
+      "p": "George Lombard Jr."
+    },
+    {
+      "n": "123",
+      "p": "Cal Ripken"
+    },
+    {
+      "n": "124",
+      "p": "Bret Saberhagen"
+    },
+    {
+      "n": "125",
+      "p": "Mike Piazza"
+    },
+    {
+      "n": "126",
+      "p": "Masyn Winn"
+    },
+    {
+      "n": "127",
+      "p": "Homer Bush Jr."
+    },
+    {
+      "n": "128",
+      "p": "Gary Sheffield"
+    },
+    {
+      "n": "129",
+      "p": "Christy Mathewson"
+    },
+    {
+      "n": "130",
+      "p": "Darren Baker"
+    },
+    {
+      "n": "131",
+      "p": "Bud Selig"
+    },
+    {
+      "n": "132",
+      "p": "Braden Montgomery"
+    },
+    {
+      "n": "133",
+      "p": "Hank Greenberg"
+    },
+    {
+      "n": "134",
+      "p": "Sammy Sosa"
+    },
+    {
+      "n": "135",
+      "p": "Joe Sewell"
+    },
+    {
+      "n": "136",
+      "p": "Brandon Sproat"
+    },
+    {
+      "n": "137",
+      "p": "Tom Glavine"
+    },
+    {
+      "n": "138",
+      "p": "Joe Torre"
+    },
+    {
+      "n": "139",
+      "p": "Paul O'Neill"
+    },
+    {
+      "n": "140",
+      "p": "Tony La Russa"
+    },
+    {
+      "n": "141",
+      "p": "Aidan Miller"
+    },
+    {
+      "n": "142",
+      "p": "Charlie Condon"
+    },
+    {
+      "n": "143",
+      "p": "Tekoah Roby"
+    },
+    {
+      "n": "144",
+      "p": "Josh Gibson"
+    },
+    {
+      "n": "145",
+      "p": "Roger Clemens"
+    },
+    {
+      "n": "146",
+      "p": "Noble Meyer"
+    },
+    {
+      "n": "147",
+      "p": "Jose Canseco"
+    },
+    {
+      "n": "148",
+      "p": "Thomas Harrington"
+    },
+    {
+      "n": "149",
+      "p": "Ching-Hsien Ko"
+    },
+    {
+      "n": "150",
+      "p": "Roy Campanella"
+    },
+    {
+      "n": "151",
+      "p": "Jim Rice"
+    },
+    {
+      "n": "152",
+      "p": "David Ortiz"
+    },
+    {
+      "n": "153",
+      "p": "Andrew Painter"
+    },
+    {
+      "n": "154",
+      "p": "Dontrelle Willis"
+    },
+    {
+      "n": "155",
+      "p": "Matt Shaw"
+    },
+    {
+      "n": "156",
+      "p": "Edwin Encarnacion"
+    },
+    {
+      "n": "157",
+      "p": "Wyatt Sanford"
+    },
+    {
+      "n": "158",
+      "p": "Aroon Escobar"
+    },
+    {
+      "n": "159",
+      "p": "Darryl Strawberry"
+    },
+    {
+      "n": "160",
+      "p": "Bobby Witt Jr."
+    },
+    {
+      "n": "161",
+      "p": "Adrian Gonzalez"
+    },
+    {
+      "n": "162",
+      "p": "Christian Moore"
+    },
+    {
+      "n": "163",
+      "p": "Ricky Tiedemann"
+    },
+    {
+      "n": "164",
+      "p": "Tommy Troy"
+    },
+    {
+      "n": "165",
+      "p": "Shinnosuke Ogasawara"
+    },
+    {
+      "n": "166",
+      "p": "Carter Jensen"
+    },
+    {
+      "n": "167",
+      "p": "Zebby Matthews"
+    },
+    {
+      "n": "168",
+      "p": "Tink Hence"
+    },
+    {
+      "n": "169",
+      "p": "Tommy White"
+    },
+    {
+      "n": "170",
+      "p": "Brady House"
+    },
+    {
+      "n": "171",
+      "p": "Will Wagner"
+    },
+    {
+      "n": "172",
+      "p": "Mariano Rivera"
+    },
+    {
+      "n": "173",
+      "p": "PJ Morlando"
+    },
+    {
+      "n": "174",
+      "p": "Walker Janek"
+    },
+    {
+      "n": "175",
+      "p": "Chris Cortez"
+    },
+    {
+      "n": "176",
+      "p": "Cam Caminiti"
+    },
+    {
+      "n": "177",
+      "p": "JD Dix"
+    },
+    {
+      "n": "178",
+      "p": "Yu-Min Lin"
+    },
+    {
+      "n": "179",
+      "p": "Harmon Killebrew"
+    },
+    {
+      "n": "180",
+      "p": "Joe DiMaggio"
+    },
+    {
+      "n": "181",
+      "p": "Jake Arrieta"
+    },
+    {
+      "n": "182",
+      "p": "Tony Oliva"
+    },
+    {
+      "n": "183",
+      "p": "Junior Caminero"
+    },
+    {
+      "n": "184",
+      "p": "Juan Gonzalez"
+    },
+    {
+      "n": "185",
+      "p": "Thomas Saggese"
+    },
+    {
+      "n": "186",
+      "p": "Ivan Rodriguez"
+    },
+    {
+      "n": "187",
+      "p": "Andruw Jones"
+    },
+    {
+      "n": "188",
+      "p": "Dasan Hill"
+    },
+    {
+      "n": "189",
+      "p": "Blake Burke"
+    },
+    {
+      "n": "190",
+      "p": "Yohandy Morales"
+    },
+    {
+      "n": "191",
+      "p": "Ty Cobb"
+    },
+    {
+      "n": "192",
+      "p": "Enrique Bradfield Jr."
+    },
+    {
+      "n": "193",
+      "p": "Kyle Teel"
+    },
+    {
+      "n": "194",
+      "p": "Brady Ebel"
+    },
+    {
+      "n": "195",
+      "p": "Adam Jones"
+    },
+    {
+      "n": "196",
+      "p": "Hideki Matsui"
+    },
+    {
+      "n": "197",
+      "p": "Rod Carew"
+    },
+    {
+      "n": "198",
+      "p": "Craig Yoho"
+    },
+    {
+      "n": "199",
+      "p": "Konnor Griffin"
+    },
+    {
+      "n": "200",
+      "p": "James Triantos"
+    },
+    {
+      "n": "201",
+      "p": "Leo Durocher"
+    },
+    {
+      "n": "202",
+      "p": "Reggie Jackson"
+    },
+    {
+      "n": "203",
+      "p": "Mac Horvath"
+    },
+    {
+      "n": "204",
+      "p": "Bryce Meccage"
+    },
+    {
+      "n": "205",
+      "p": "Ryan Zimmerman"
+    },
+    {
+      "n": "206",
+      "p": "Grady Sizemore"
+    },
+    {
+      "n": "207",
+      "p": "Brayden Taylor"
+    },
+    {
+      "n": "208",
+      "p": "Luis Baez"
+    },
+    {
+      "n": "209",
+      "p": "Vance Honeycutt"
+    },
+    {
+      "n": "210",
+      "p": "Robin Ventura"
+    },
+    {
+      "n": "211",
+      "p": "Heston Kjerstad"
+    },
+    {
+      "n": "212",
+      "p": "Austin Wells"
+    },
+    {
+      "n": "213",
+      "p": "Nick Kurtz"
+    },
+    {
+      "n": "214",
+      "p": "Myles Naylor"
+    },
+    {
+      "n": "215",
+      "p": "Juan Valera"
+    },
+    {
+      "n": "216",
+      "p": "Edgar Quero"
+    },
+    {
+      "n": "217",
+      "p": "Chase Dollander"
+    },
+    {
+      "n": "218",
+      "p": "Frank Thomas"
+    },
+    {
+      "n": "219",
+      "p": "Manny Ramirez"
+    },
+    {
+      "n": "220",
+      "p": "Chipper Jones"
+    },
+    {
+      "n": "221",
+      "p": "Owen Hall"
+    },
+    {
+      "n": "222",
+      "p": "Carson Benge"
+    },
+    {
+      "n": "223",
+      "p": "Bryce Rainer"
+    },
+    {
+      "n": "224",
+      "p": "Jake Peavy"
+    },
+    {
+      "n": "225",
+      "p": "Deion Sanders"
+    },
+    {
+      "n": "226",
+      "p": "Colin Houck"
+    },
+    {
+      "n": "227",
+      "p": "Alex Rodriguez"
+    },
+    {
+      "n": "228",
+      "p": "Zac Veen"
+    },
+    {
+      "n": "229",
+      "p": "Caleb Lomavita"
+    },
+    {
+      "n": "230",
+      "p": "Rickey Henderson"
+    },
+    {
+      "n": "231",
+      "p": "Bobby Richardson"
+    },
+    {
+      "n": "232",
+      "p": "Mel Ott"
+    },
+    {
+      "n": "233",
+      "p": "Miguel Cabrera"
+    },
+    {
+      "n": "234",
+      "p": "Andy Pettitte"
+    },
+    {
+      "n": "235",
+      "p": "Brody Brecht"
+    },
+    {
+      "n": "236",
+      "p": "Cecil Fielder"
+    },
+    {
+      "n": "237",
+      "p": "Chase Davis"
+    },
+    {
+      "n": "238",
+      "p": "Jurrangelo Cijntje"
+    },
+    {
+      "n": "239",
+      "p": "Bob Gibson"
+    },
+    {
+      "n": "240",
+      "p": "Jace Jung"
+    },
+    {
+      "n": "241",
+      "p": "Matt Wieters"
+    },
+    {
+      "n": "242",
+      "p": "Dante Nori"
+    },
+    {
+      "n": "243",
+      "p": "Benito Santiago"
+    },
+    {
+      "n": "244",
+      "p": "Michael Young"
+    },
+    {
+      "n": "245",
+      "p": "Marcelo Mayer"
+    },
+    {
+      "n": "246",
+      "p": "Tyson Neighbors"
+    },
+    {
+      "n": "247",
+      "p": "Kumar Rocker"
+    },
+    {
+      "n": "248",
+      "p": "Paul Skenes"
+    },
+    {
+      "n": "249",
+      "p": "Tony Perez"
+    },
+    {
+      "n": "250",
+      "p": "Luke Keaschall"
+    },
+    {
+      "n": "251",
+      "p": "Roberto Clemente"
+    },
+    {
+      "n": "252",
+      "p": "Theo Gillen"
+    },
+    {
+      "n": "253",
+      "p": "Brooks Lee"
+    },
+    {
+      "n": "254",
+      "p": "Alejandro Rosario"
+    },
+    {
+      "n": "255",
+      "p": "Buster Posey"
+    },
+    {
+      "n": "256",
+      "p": "Ken Griffey Sr."
+    },
+    {
+      "n": "257",
+      "p": "Harry Ford"
+    },
+    {
+      "n": "258",
+      "p": "Hyun-Seok Jang"
+    },
+    {
+      "n": "259",
+      "p": "Zyhir Hope"
+    },
+    {
+      "n": "260",
+      "p": "Ben Hess"
+    },
+    {
+      "n": "261",
+      "p": "Ian Kinsler"
+    },
+    {
+      "n": "262",
+      "p": "Colson Montgomery"
+    },
+    {
+      "n": "263",
+      "p": "Cam Smith"
+    },
+    {
+      "n": "264",
+      "p": "Yogi Berra"
+    },
+    {
+      "n": "265",
+      "p": "Andy Van Slyke"
+    },
+    {
+      "n": "266",
+      "p": "Roman Anthony"
+    },
+    {
+      "n": "267",
+      "p": "Josue De Paula"
+    },
+    {
+      "n": "268",
+      "p": "Rhett Lowder"
+    },
+    {
+      "n": "269",
+      "p": "Jedixson Paez"
+    },
+    {
+      "n": "270",
+      "p": "David Shields"
+    },
+    {
+      "n": "271",
+      "p": "Rintaro Sasaki"
+    },
+    {
+      "n": "272",
+      "p": "Jarlin Susana"
+    },
+    {
+      "n": "273",
+      "p": "Chris Davis"
+    },
+    {
+      "n": "274",
+      "p": "Paul Molitor"
+    },
+    {
+      "n": "275",
+      "p": "Kash Mayfield"
+    },
+    {
+      "n": "276",
+      "p": "Earle Combs"
+    },
+    {
+      "n": "277",
+      "p": "Gil Hodges"
+    },
+    {
+      "n": "278",
+      "p": "Jack Leiter"
+    },
+    {
+      "n": "279",
+      "p": "Levi Sterling"
+    },
+    {
+      "n": "280",
+      "p": "Cole Young"
+    },
+    {
+      "n": "281",
+      "p": "Braxton Ashcraft"
+    },
+    {
+      "n": "282",
+      "p": "Seaver King"
+    },
+    {
+      "n": "283",
+      "p": "Dylan Dreiling"
+    },
+    {
+      "n": "284",
+      "p": "Jonah Tong"
+    },
+    {
+      "n": "285",
+      "p": "Brice Matthews"
+    },
+    {
+      "n": "286",
+      "p": "Carter Holton"
+    },
+    {
+      "n": "287",
+      "p": "Pedro Martinez"
+    },
+    {
+      "n": "288",
+      "p": "Miguel Tejada"
+    },
+    {
+      "n": "289",
+      "p": "Colt Keith"
+    },
+    {
+      "n": "290",
+      "p": "Bert Campaneris"
+    },
+    {
+      "n": "291",
+      "p": "Dalton Rushing"
+    },
+    {
+      "n": "292",
+      "p": "James Tibbs III"
+    },
+    {
+      "n": "293",
+      "p": "Ryan Johnson"
+    },
+    {
+      "n": "294",
+      "p": "Pablo Sandoval"
+    },
+    {
+      "n": "295",
+      "p": "Luisangel Acuna"
+    },
+    {
+      "n": "296",
+      "p": "Hurston Waldrep"
+    },
+    {
+      "n": "297",
+      "p": "Nolan Ryan"
+    },
+    {
+      "n": "298",
+      "p": "Kendall George"
+    },
+    {
+      "n": "299",
+      "p": "Ethan Salas"
+    },
+    {
+      "n": "300",
+      "p": "Lou Gehrig"
+    }
+  ],
+  "baseTemplate": "panini-prizm-baseball"
 }

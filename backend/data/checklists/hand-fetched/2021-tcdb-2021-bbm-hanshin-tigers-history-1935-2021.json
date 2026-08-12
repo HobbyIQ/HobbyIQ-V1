@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2021,
+  "setKey": "bbm-hanshin-tigers-history-1935-2021",
+  "setName": "2021 BBM Hanshin Tigers History 1935 2021",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/287759",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers History 1935 2021 90 Yoshio Itoi"
+    }
+  ]
+}

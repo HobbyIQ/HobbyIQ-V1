@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2008,
+  "setKey": "bbm-back-to-the-70",
+  "setName": "2008 BBM Back to the 70",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/230054",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Back",
+      "p": "to the 70"
+    }
+  ]
+}

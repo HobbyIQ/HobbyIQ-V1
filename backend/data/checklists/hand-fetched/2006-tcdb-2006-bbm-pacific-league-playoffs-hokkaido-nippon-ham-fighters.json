@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2006,
+  "setKey": "bbm-pacific-league-playoffs-hokkaido-nippon-ham-fighters",
+  "setName": "2006 BBM Pacific League Playoffs Hokkaido Nippon Ham Fighters",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103734",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Pacific",
+      "p": "League Playoffs Hokkaido Nippon Ham Fighters 36 Kuniyuki Kimoto"
+    }
+  ]
+}

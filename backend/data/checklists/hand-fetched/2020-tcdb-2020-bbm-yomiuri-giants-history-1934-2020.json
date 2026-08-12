@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2020,
+  "setKey": "bbm-yomiuri-giants-history-1934-2020",
+  "setName": "2020 BBM Yomiuri Giants History 1934 2020",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/244539",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants History 1934 2020 90 Gerardo Parra"
+    }
+  ]
+}

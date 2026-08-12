@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-yokohama-dena-baystars",
+  "setName": "2014 BBM Yokohama DeNA Baystars",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/94478",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yokohama",
+      "p": "DeNA Baystars DB81 Mascots"
+    }
+  ]
+}

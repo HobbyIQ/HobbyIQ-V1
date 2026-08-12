@@ -1,0 +1,115 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2017-bowman-baseball",
+    "2017-bowman"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": [
+    {
+      "name": "Base",
+      "printRun": null
+    },
+    {
+      "name": "Refractor",
+      "printRun": 499
+    },
+    {
+      "name": "Purple Refractor",
+      "printRun": 250
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150
+    },
+    {
+      "name": "Green Refractor",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    },
+    {
+      "name": "Silver",
+      "printRun": 499
+    },
+    {
+      "name": "Purple",
+      "printRun": 250
+    },
+    {
+      "name": "Blue",
+      "printRun": 150
+    },
+    {
+      "name": "Gold",
+      "printRun": 50
+    },
+    {
+      "name": "Orange",
+      "printRun": 25
+    },
+    {
+      "name": "Red",
+      "printRun": 5
+    },
+    {
+      "name": "Platinum",
+      "printRun": 1
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Base Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Refractor",
+      "printRun": 499
+    },
+    {
+      "name": "Purple Refractor",
+      "printRun": 250
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150
+    },
+    {
+      "name": "Green Refractor",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    }
+  ]
+}

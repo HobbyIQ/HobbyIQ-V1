@@ -1,0 +1,26 @@
+{
+  "source": "beckett+checklistinsider+cardboardconnection",
+  "sourceUrl": "https://www.beckett.com/news/2024-donruss-football-cards/",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": ["2024-panini-donruss-football"],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Aqueous Test","printRun":null},
+    {"name":"Canvas","printRun":null},
+    {"name":"No Name","printRun":null},
+    {"name":"Press Proof Blue","printRun":null},
+    {"name":"Press Proof Green","printRun":null},
+    {"name":"Press Proof Purple","printRun":null},
+    {"name":"Press Proof Red","printRun":null},
+    {"name":"Press Proof Yellow","printRun":null},
+    {"name":"Season Stat Line","printRun":500},
+    {"name":"Press Proof Silver","printRun":100},
+    {"name":"Jersey Number","printRun":99},
+    {"name":"Press Proof Silver Die-Cut","printRun":75},
+    {"name":"Press Proof Gold","printRun":50},
+    {"name":"Press Proof Gold Die-Cut","printRun":25},
+    {"name":"Press Proof Black","printRun":10},
+    {"name":"Press Proof Black Die-Cut","printRun":1}
+  ],
+  "autoParallels": null
+}

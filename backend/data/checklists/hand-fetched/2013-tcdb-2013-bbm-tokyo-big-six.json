@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-tokyo-big-six",
+  "setName": "2013 BBM Tokyo Big Six",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/79784",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tokyo",
+      "p": "Big Six 36 Tokyo Univ"
+    }
+  ]
+}

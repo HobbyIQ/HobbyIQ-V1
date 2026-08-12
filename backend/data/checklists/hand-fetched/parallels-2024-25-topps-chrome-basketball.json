@@ -1,0 +1,25 @@
+{
+  "source": "beckett+checklistinsider+cardboardconnection",
+  "sourceUrl": "https://www.beckett.com/news/2024-25-topps-chrome-basketball-cards/",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": [
+    "2024-topps-chrome-basketball", "2025-topps-chrome-basketball (proxy)",
+    "2024-topps-basketball (proxy - Topps NBA flagship shares chrome rainbow)",
+    "2025-topps-basketball (proxy)"
+  ],
+  "note": "Topps returned to NBA licensing in 2024-25. Chrome rainbow covers 30+ variants; captured verified numbered tiers.",
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Refractor","printRun":null},
+    {"name":"X-Fractor","printRun":null},
+    {"name":"Blue Refractor","printRun":150},
+    {"name":"Green Refractor","printRun":99},
+    {"name":"Blue Lava Refractor","printRun":75},
+    {"name":"Gold Refractor","printRun":50},
+    {"name":"Orange Refractor","printRun":25},
+    {"name":"Black Refractor","printRun":10},
+    {"name":"Red Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ],
+  "autoParallels": null
+}

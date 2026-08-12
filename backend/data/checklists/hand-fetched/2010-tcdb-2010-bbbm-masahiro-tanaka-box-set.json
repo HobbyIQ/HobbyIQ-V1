@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-masahiro-tanaka-box-set",
+  "setName": "2010 BBBM Masahiro Tanaka Box Set",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/600482",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Masahiro",
+      "p": "Tanaka Box Set 26 Masahiro Tanaka"
+    }
+  ]
+}

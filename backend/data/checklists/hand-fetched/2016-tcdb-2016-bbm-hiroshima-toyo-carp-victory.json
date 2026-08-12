@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-hiroshima-toyo-carp-victory",
+  "setName": "2016 BBM Hiroshima Toyo Carp Victory",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/231429",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroshima",
+      "p": "Toyo Carp Victory 54 Koichi Ogata"
+    }
+  ]
+}

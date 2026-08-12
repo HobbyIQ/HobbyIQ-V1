@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-hanshin-tigers-jet-black-tiger",
+  "setName": "2016 BBM Hanshin Tigers Jet Black Tiger",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/134907",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers Jet Black Tiger 27 Keisuke Kanoh"
+    }
+  ]
+}

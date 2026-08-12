@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-yomiuri-giants-real-beginning",
+  "setName": "2010 BBM Yomiuri Giants Real Beginning",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/286873",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants Real Beginning 36 Tetsuya Matsumoto"
+    }
+  ]
+}

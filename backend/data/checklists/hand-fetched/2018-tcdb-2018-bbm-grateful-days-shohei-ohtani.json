@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2018,
+  "setKey": "bbm-grateful-days-shohei-ohtani",
+  "setName": "2018 BBM Grateful Days Shohei Ohtani",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/230758",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Grateful",
+      "p": "Days Shohei Ohtani 19 Shohei Ohtani"
+    }
+  ]
+}

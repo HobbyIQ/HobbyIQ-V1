@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-saitama-seibu-lions-king-of-beast",
+  "setName": "2016 BBM Saitama Seibu Lions King of Beast",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/134695",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Saitama",
+      "p": "Seibu Lions King of Beast 27 Ryo Sakata"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1999,
+  "setKey": "bbm-preview",
+  "setName": "1999 BBM Preview",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/86444",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Preview",
+      "p": "P122 Checklist 2"
+    }
+  ]
+}

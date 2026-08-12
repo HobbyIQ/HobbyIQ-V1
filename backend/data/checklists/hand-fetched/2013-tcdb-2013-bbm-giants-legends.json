@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-giants-legends",
+  "setName": "2013 BBM Giants Legends",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/77105",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Giants",
+      "p": "Legends 99 Shigeo Nagashima"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-orix-baseball-club-1989-2009",
+  "setName": "2009 BBM Orix Baseball Club 1989 2009",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/83374",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Orix",
+      "p": "Baseball Club 1989 2009 54 2008"
+    }
+  ]
+}

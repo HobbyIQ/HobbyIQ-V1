@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2011,
+  "setKey": "bbm-touch-the-game-10th-anniversary",
+  "setName": "2011 BBM Touch the Game 10th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338343",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Touch",
+      "p": "the Game 10th Anniversary 108 Yuki Yoshimura"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-tomonori-maeda-2000-hits",
+  "setName": "2007 BBM Tomonori Maeda 2000 Hits",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103940",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tomonori",
+      "p": "Maeda 2000 Hits NNO Tomonori Maeda"
+    }
+  ]
+}

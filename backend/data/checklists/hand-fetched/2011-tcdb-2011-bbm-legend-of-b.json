@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2011,
+  "setKey": "bbm-legend-of-b",
+  "setName": "2011 BBM Legend of B",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/142861",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Legend",
+      "p": "of B"
+    }
+  ]
+}

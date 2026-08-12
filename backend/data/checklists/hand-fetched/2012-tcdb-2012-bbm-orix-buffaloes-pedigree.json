@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2012,
+  "setKey": "bbm-orix-buffaloes-pedigree",
+  "setName": "2012 BBM Orix Buffaloes Pedigree",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113338",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Orix",
+      "p": "Buffaloes Pedigree 36 Mitsutaka Gotoh"
+    }
+  ]
+}

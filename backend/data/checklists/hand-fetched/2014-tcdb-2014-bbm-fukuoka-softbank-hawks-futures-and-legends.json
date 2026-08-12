@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-fukuoka-softbank-hawks-futures-and-legends",
+  "setName": "2014 BBM Fukuoka SoftBank Hawks Futures and Legends",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338484",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

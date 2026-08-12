@@ -134,7 +134,22 @@ async function main(): Promise<void> {
       const fp = `${String(r.playerName).toLowerCase()}|${r.cardYear}|${String(r.cardNumber).toLowerCase()}|${r.isAuto ? "auto" : "no-auto"}`;
       let bucket = cards.get(fp);
       if (!bucket) { bucket = { byParallel: new Map() }; cards.set(fp, bucket); }
-      const par = String(r.parallel).trim();
+      // CF-CROSS-PARALLEL-USE-SLUG (Drew, 2026-08-11). Group by
+      // parallelSlug when present so setKey-conditional canonicalization
+      // (chrome-color-implies-refractor, chrome-stock-strip, etc.) folds
+      // vendor-spelling variants into one bucket. Prior code grouped by
+      // raw parallel text — "Orange" and "Orange Refractor" on Bowman
+      // Chrome are the same card but were counted as separate pair
+      // members, fragmenting the ratio table (found via Drew, "these
+      // are the same card").
+      //
+      // Also slugify (lowercase + spaces/punct → dashes) so raw-parallel
+      // fallback rows ("Base", "Reverse Holo") don't fragment against
+      // slug-form rows ("base", "reverse-holo"). Two prior iterations of
+      // this fix each caught one axis: lowercase-only left `reverse-holo`
+      // vs `reverse holo` (n=1,138) as separate pairs.
+      const raw = String(r.parallelSlug || r.parallel || "").trim().toLowerCase();
+      const par = raw.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       if (!par) continue;
       let arr = bucket.byParallel.get(par);
       if (!arr) { arr = []; bucket.byParallel.set(par, arr); }
@@ -152,6 +167,19 @@ async function main(): Promise<void> {
   const finishOnlyPairRatios = new Map<string, number[]>();   // "finishA__finishB" (same color) → ratios
   const colorOnlyPairRatios = new Map<string, number[]>();    // "colorA__colorB" (same finish) → ratios
 
+  // CF-VALUE-WEIGHTED-RATIOS (Drew, 2026-08-06). Prior version median-
+  // of-ratios biased toward cool-player data (thousands of cool cards
+  // vs a few hot cards, each ratio counted equally). Fix: for each
+  // per-card ratio, weight by log(max(A_median, B_median)) so a $2K
+  // hot-prospect card contributes more signal than a $10 cool card,
+  // without letting a single monster card dominate. Aggregation switches
+  // from plain-median to weighted-median across all per-card ratios.
+  interface WeightedRatio { ratio: number; weight: number }
+  const pairWR = new Map<string, WeightedRatio[]>();
+  const cfWR = new Map<string, WeightedRatio[]>();
+  const finishWR = new Map<string, WeightedRatio[]>();
+  const colorWR = new Map<string, WeightedRatio[]>();
+
   for (const bucket of cards.values()) {
     if (bucket.byParallel.size < 2) continue;
     const perParallel = [...bucket.byParallel.entries()].map(([p, prices]) => ({
@@ -168,35 +196,76 @@ async function main(): Promise<void> {
         if (a.median <= 0 || b.median <= 0) continue;
         const ratio = a.median / b.median;
         if (!Number.isFinite(ratio) || ratio <= 0) continue;
-        // Full-parallel pair
+        // Weight = log(max price + 1) so $2000 card contributes ~7.6,
+        // $200 contributes ~5.3, $20 contributes ~3.0, $2 contributes ~1.1.
+        // Value hierarchy respected without collapsing to a single card.
+        const weight = Math.log(Math.max(a.median, b.median) + 1);
+        const wr: WeightedRatio = { ratio, weight };
         const fullKey = `${a.parallel}__${b.parallel}`;
-        (pairRatios.get(fullKey) ?? pairRatios.set(fullKey, []).get(fullKey))!.push(ratio);
-        // Color:Finish pair
+        (pairWR.get(fullKey) ?? pairWR.set(fullKey, []).get(fullKey))!.push(wr);
         const cfKey = `${a.color}:${a.finish}__${b.color}:${b.finish}`;
-        (colorFinishPairRatios.get(cfKey) ?? colorFinishPairRatios.set(cfKey, []).get(cfKey))!.push(ratio);
-        // Same-color, cross-finish
+        (cfWR.get(cfKey) ?? cfWR.set(cfKey, []).get(cfKey))!.push(wr);
         if (a.color === b.color && a.color !== "none") {
           const fKey = `${a.color}|${a.finish}__${b.finish}`;
-          (finishOnlyPairRatios.get(fKey) ?? finishOnlyPairRatios.set(fKey, []).get(fKey))!.push(ratio);
+          (finishWR.get(fKey) ?? finishWR.set(fKey, []).get(fKey))!.push(wr);
         }
-        // Same-finish, cross-color
         if (a.finish === b.finish && a.finish !== "none") {
           const cKey = `${a.finish}|${a.color}__${b.color}`;
-          (colorOnlyPairRatios.get(cKey) ?? colorOnlyPairRatios.set(cKey, []).get(cKey))!.push(ratio);
+          (colorWR.get(cKey) ?? colorWR.set(cKey, []).get(cKey))!.push(wr);
         }
       }
     }
   }
 
-  // Aggregate → median ratio per pair, filter by min sample size
-  const finalize = (m: Map<string, number[]>): Array<{ key: string; ratio: number; n: number; p25: number; p75: number }> => {
+  // Copy the value-weighted maps into the legacy pairRatios shape (just
+  // ratios, no weights) so the downstream `finalize` doesn't need to
+  // change. Weighted median is computed inline in finalize instead.
+  const _copyRatiosOnly = (src: Map<string, WeightedRatio[]>, dst: Map<string, number[]>): void => {
+    for (const [k, arr] of src) dst.set(k, arr.map((x) => x.ratio));
+  };
+  _copyRatiosOnly(pairWR, pairRatios);
+  _copyRatiosOnly(cfWR, colorFinishPairRatios);
+  _copyRatiosOnly(finishWR, finishOnlyPairRatios);
+  _copyRatiosOnly(colorWR, colorOnlyPairRatios);
+
+  // Weighted median helper — replaces plain median in the finalize step.
+  const weightedMedian = (weighted: WeightedRatio[]): number => {
+    if (weighted.length === 0) return 0;
+    const sorted = [...weighted].sort((a, b) => a.ratio - b.ratio);
+    const totalW = sorted.reduce((s, x) => s + x.weight, 0);
+    if (totalW <= 0) return sorted[Math.floor(sorted.length / 2)].ratio;
+    const half = totalW / 2;
+    let acc = 0;
+    for (const x of sorted) {
+      acc += x.weight;
+      if (acc >= half) return x.ratio;
+    }
+    return sorted[sorted.length - 1].ratio;
+  };
+
+  // Attach the weighted median to the key so finalize can use it.
+  const weightedMedianByKey = new Map<string, number>();
+  for (const [k, arr] of pairWR) weightedMedianByKey.set(`full|${k}`, weightedMedian(arr));
+  for (const [k, arr] of cfWR) weightedMedianByKey.set(`cf|${k}`, weightedMedian(arr));
+  for (const [k, arr] of finishWR) weightedMedianByKey.set(`finish|${k}`, weightedMedian(arr));
+  for (const [k, arr] of colorWR) weightedMedianByKey.set(`color|${k}`, weightedMedian(arr));
+
+  // Aggregate → WEIGHTED median ratio per pair, filter by min sample size.
+  // Value-weighting comes from weightedMedianByKey (populated above).
+  // Fall back to plain-median for keys not in the weighted map (defensive
+  // guard — every key should be present).
+  const finalize = (
+    m: Map<string, number[]>,
+    tablePrefix: "full" | "cf" | "finish" | "color",
+  ): Array<{ key: string; ratio: number; n: number; p25: number; p75: number }> => {
     const out: Array<{ key: string; ratio: number; n: number; p25: number; p75: number }> = [];
     for (const [k, ratios] of m) {
       if (ratios.length < MIN_N) continue;
       const s = [...ratios].sort((a, b) => a - b);
+      const wmed = weightedMedianByKey.get(`${tablePrefix}|${k}`) ?? median(ratios);
       out.push({
         key: k,
-        ratio: Math.round(median(ratios) * 1000) / 1000,
+        ratio: Math.round(wmed * 1000) / 1000,
         n: ratios.length,
         p25: Math.round(s[Math.floor(s.length * 0.25)] * 1000) / 1000,
         p75: Math.round(s[Math.floor(s.length * 0.75)] * 1000) / 1000,
@@ -205,10 +274,10 @@ async function main(): Promise<void> {
     return out.sort((a, b) => b.n - a.n);
   };
 
-  const fullPairs = finalize(pairRatios);
-  const cfPairs = finalize(colorFinishPairRatios);
-  const finishPairs = finalize(finishOnlyPairRatios);
-  const colorPairs = finalize(colorOnlyPairRatios);
+  const fullPairs = finalize(pairRatios, "full");
+  const cfPairs = finalize(colorFinishPairRatios, "cf");
+  const finishPairs = finalize(finishOnlyPairRatios, "finish");
+  const colorPairs = finalize(colorOnlyPairRatios, "color");
 
   console.log(`\n▸ Aggregated ratios (n>=${MIN_N})`);
   console.log(`  full-parallel pairs:         ${fullPairs.length.toLocaleString()}`);

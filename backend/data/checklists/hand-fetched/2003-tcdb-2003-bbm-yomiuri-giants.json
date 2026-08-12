@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2003,
+  "setKey": "bbm-yomiuri-giants",
+  "setName": "2003 BBM Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102179",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants 100 Giants Team"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-yomiuri-giants",
+  "setName": "2005 BBM Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102178",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants G108 Kazumasa Kono"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "sport": "baseball",
+  "year": 2018,
+  "setKey": "bbm-rookiepremium",
+  "setName": "2018 BBM Rookiepremium",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2018rookiepremium_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": [
+    {
+      "n": "RP01",
+      "p": "吉住　晴斗"
+    },
+    {
+      "n": "RP02",
+      "p": "高橋　　礼"
+    },
+    {
+      "n": "RP03",
+      "p": "増田　　珠"
+    },
+    {
+      "n": "RP04",
+      "p": "齊藤　大将"
+    },
+    {
+      "n": "RP05",
+      "p": "西川　愛也"
+    },
+    {
+      "n": "RP06",
+      "p": "伊藤　　翔"
+    },
+    {
+      "n": "RP07",
+      "p": "近藤　弘樹"
+    },
+    {
+      "n": "RP08",
+      "p": "岩見　雅紀"
+    },
+    {
+      "n": "RP09",
+      "p": "山﨑　　剛"
+    },
+    {
+      "n": "RP13",
+      "p": "清宮幸太郎"
+    },
+    {
+      "n": "RP14",
+      "p": "西村　天裕"
+    },
+    {
+      "n": "RP15",
+      "p": "田中　瑛斗"
+    },
+    {
+      "n": "RP16",
+      "p": "安田　尚憲"
+    },
+    {
+      "n": "RP17",
+      "p": "藤岡　裕大"
+    },
+    {
+      "n": "RP18",
+      "p": "山本　大貴"
+    },
+    {
+      "n": "RP19",
+      "p": "中村　奨成"
+    },
+    {
+      "n": "RP20",
+      "p": "山口　　翔"
+    },
+    {
+      "n": "RP21",
+      "p": "ケムナ　誠"
+    },
+    {
+      "n": "RP22",
+      "p": "馬場　皐輔"
+    },
+    {
+      "n": "RP23",
+      "p": "髙橋　遥人"
+    },
+    {
+      "n": "RP24",
+      "p": "熊谷　敬宥"
+    },
+    {
+      "n": "RP31",
+      "p": "鈴木　博志"
+    },
+    {
+      "n": "RP32",
+      "p": "石川　　翔"
+    },
+    {
+      "n": "RP33",
+      "p": "髙松　　渡"
+    },
+    {
+      "n": "RP34",
+      "p": "村上　宗隆"
+    },
+    {
+      "n": "RP35",
+      "p": "大下　佑馬"
+    },
+    {
+      "n": "RP36",
+      "p": "蔵本　治孝"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-tohoku-rakuten-golden-eagles",
+  "setName": "2016 BBM Tohoku Rakuten Golden Eagles",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/129267",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tohoku",
+      "p": "Rakuten Golden Eagles E81 Kazuo Matsui"
+    }
+  ]
+}

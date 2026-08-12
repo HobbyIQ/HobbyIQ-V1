@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2015,
+  "setKey": "bbm-hiroki-kuroda-homecoming",
+  "setName": "2015 BBM Hiroki Kuroda Homecoming",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/124163",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroki",
+      "p": "Kuroda Homecoming 18 Hiroki Kuroda"
+    }
+  ]
+}

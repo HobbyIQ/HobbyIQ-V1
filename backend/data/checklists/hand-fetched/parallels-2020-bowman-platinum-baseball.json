@@ -1,0 +1,87 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2020-bowman-platinum-baseball",
+    "2020-bowman-platinum"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Platinum). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": [
+    {
+      "name": "Base",
+      "printRun": null
+    },
+    {
+      "name": "Ice",
+      "printRun": null
+    },
+    {
+      "name": "Sky Blue Ice",
+      "printRun": null
+    },
+    {
+      "name": "Purple",
+      "printRun": 250
+    },
+    {
+      "name": "Blue",
+      "printRun": 150
+    },
+    {
+      "name": "Green",
+      "printRun": 99
+    },
+    {
+      "name": "Gold",
+      "printRun": 50
+    },
+    {
+      "name": "Orange",
+      "printRun": 25
+    },
+    {
+      "name": "Red",
+      "printRun": 5
+    },
+    {
+      "name": "1/1 Parallel",
+      "printRun": 1
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Base Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Purple",
+      "printRun": 250
+    },
+    {
+      "name": "Blue",
+      "printRun": 150
+    },
+    {
+      "name": "Green",
+      "printRun": 99
+    },
+    {
+      "name": "Gold",
+      "printRun": 50
+    },
+    {
+      "name": "Orange",
+      "printRun": 25
+    },
+    {
+      "name": "Red",
+      "printRun": 5
+    },
+    {
+      "name": "1/1 Parallel",
+      "printRun": 1
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2026-bowman-inception-baseball",
+    "2026-bowman-inception"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Inception). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": null,
+  "autoParallels": [
+    {
+      "name": "Base Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Green",
+      "printRun": 99
+    },
+    {
+      "name": "Blue",
+      "printRun": 75
+    },
+    {
+      "name": "Gold",
+      "printRun": 50
+    },
+    {
+      "name": "Orange",
+      "printRun": 25
+    },
+    {
+      "name": "Red",
+      "printRun": 5
+    },
+    {
+      "name": "Inception 1/1",
+      "printRun": 1
+    }
+  ]
+}

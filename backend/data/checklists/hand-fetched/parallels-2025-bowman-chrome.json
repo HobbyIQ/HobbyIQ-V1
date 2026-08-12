@@ -1,0 +1,63 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2025_Bowman_Chrome",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": [
+    "2025-bowman-chrome-baseball", "2025-bowman-chrome",
+    "2025-bowman-mega-baseball", "2025-bowman-mega",
+    "2026-bowman-chrome-baseball (proxy - 2026 TBA)", "2026-bowman-chrome (proxy)",
+    "2026-bowman-mega-baseball (proxy - 2026 TBA)", "2026-bowman-mega (proxy)"
+  ],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Refractor","printRun":499},{"name":"Geometric Refractor","printRun":499},
+    {"name":"Pulsar Refractor","printRun":399},
+    {"name":"Fuchsia Refractor","printRun":299},{"name":"Fuchsia Wave Refractor","printRun":299},
+    {"name":"Purple Geometric Refractor","printRun":250},
+    {"name":"Aqua RayWave Refractor","printRun":199},
+    {"name":"Blue Refractor","printRun":150},{"name":"Blue Wave Refractor","printRun":150},{"name":"Blue Geometric Refractor","printRun":150},
+    {"name":"Aqua Geometric Refractor","printRun":125},
+    {"name":"Wave Refractor","printRun":100},
+    {"name":"Green Refractor","printRun":99},{"name":"Green Wave Refractor","printRun":99},{"name":"Green Geometric Refractor","printRun":99},
+    {"name":"Yellow Refractor","printRun":75},{"name":"Yellow Geometric Refractor","printRun":75},
+    {"name":"Gold Refractor","printRun":50},{"name":"Gold Geometric Refractor","printRun":50},
+    {"name":"Orange Refractor","printRun":25},{"name":"Orange Geometric Refractor","printRun":25},
+    {"name":"Black Refractor","printRun":10},{"name":"Black Geometric Refractor","printRun":10},
+    {"name":"Red Refractor","printRun":5},{"name":"Red Geometric Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ],
+  "prospectParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Mini-Diamond Refractor","printRun":null},{"name":"Shimmer Refractor","printRun":null},
+    {"name":"Refractor","printRun":499},{"name":"Geometric Refractor","printRun":499},
+    {"name":"Pulsar Refractor","printRun":399},
+    {"name":"Speckle Refractor","printRun":299},{"name":"Fuchsia Shimmer Refractor","printRun":299},{"name":"Fuchsia Geometric Refractor","printRun":299},
+    {"name":"Purple Refractor","printRun":250},{"name":"Purple Pulsar Refractor","printRun":250},{"name":"Purple Wave Refractor","printRun":250},{"name":"Purple Shimmer Refractor","printRun":250},{"name":"Purple Geometric Refractor","printRun":250},
+    {"name":"Blue Refractor","printRun":150},{"name":"Reptilian Blue Refractor","printRun":150},{"name":"Blue Wave Refractor","printRun":150},{"name":"Blue Geometric Refractor","printRun":150},
+    {"name":"Aqua Refractor","printRun":125},{"name":"Aqua Pulsar Refractor","printRun":125},{"name":"Aqua Geometric Refractor","printRun":125},
+    {"name":"Wave Refractor","printRun":100},
+    {"name":"Green Refractor","printRun":99},{"name":"Reptilian Green Refractor","printRun":99},{"name":"Green Wave Refractor","printRun":99},{"name":"Green Shimmer Refractor","printRun":99},{"name":"Green Geometric Refractor","printRun":99},
+    {"name":"Yellow Refractor","printRun":75},{"name":"Yellow Wave Refractor","printRun":75},{"name":"Yellow Geometric Refractor","printRun":75},
+    {"name":"Gold Wave Refractor","printRun":50},{"name":"Gold Refractor","printRun":50},{"name":"Reptilian Gold Refractor","printRun":50},{"name":"Gold Shimmer Refractor","printRun":50},{"name":"Gold Geometric Refractor","printRun":50},
+    {"name":"Orange Wave Refractor","printRun":25},{"name":"Orange Refractor","printRun":25},{"name":"Reptilian Orange Refractor","printRun":25},{"name":"Orange Shimmer Refractor","printRun":25},{"name":"Orange Geometric Refractor","printRun":25},
+    {"name":"Black Wave Refractor","printRun":10},{"name":"Black Refractor","printRun":10},{"name":"Reptilian Black Refractor","printRun":10},{"name":"Black Geometric Refractor","printRun":10},
+    {"name":"Red Wave Refractor","printRun":5},{"name":"Red Refractor","printRun":5},{"name":"Reptilian Red Refractor","printRun":5},{"name":"Red Shimmer Refractor","printRun":5},{"name":"Red Geometric Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ],
+  "autoParallels": [
+    {"name":"Refractor","printRun":499},
+    {"name":"Speckle Refractor","printRun":299},
+    {"name":"Black & White Shimmer Refractor","printRun":null},
+    {"name":"Purple Refractor","printRun":250},
+    {"name":"Blue Refractor","printRun":150},{"name":"Blue RayWave Refractor","printRun":150},{"name":"Reptilian Blue Refractor","printRun":150},{"name":"HTA Choice Refractor","printRun":150},
+    {"name":"Mini-Diamond Refractor","printRun":100},
+    {"name":"Green Refractor","printRun":99},{"name":"Reptilian Green Refractor","printRun":99},{"name":"Green Lava Refractor","printRun":99},
+    {"name":"Yellow Refractor","printRun":75},
+    {"name":"Gold Refractor","printRun":50},{"name":"Gold Mini-Diamond Refractor","printRun":50},{"name":"Gold Shimmer Refractor","printRun":50},
+    {"name":"Orange Refractor","printRun":25},{"name":"Orange Shimmer Refractor","printRun":25},{"name":"Orange Wave Refractor","printRun":25},
+    {"name":"Black Refractor","printRun":10},{"name":"Reptilian Black Refractor","printRun":10},
+    {"name":"Red Refractor","printRun":5},{"name":"Red Shimmer Refractor","printRun":5},{"name":"Reptilian Red Refractor","printRun":5},{"name":"Red Wave Refractor","printRun":5},
+    {"name":"Gum Ball Refractor","printRun":5},{"name":"Peanut Refractor","printRun":5},{"name":"Popcorn Refractor","printRun":5},{"name":"Sunflower Seed Refractor","printRun":5},
+    {"name":"SuperFractor","printRun":1}
+  ]
+}

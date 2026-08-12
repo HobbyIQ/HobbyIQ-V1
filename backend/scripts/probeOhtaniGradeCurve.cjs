@@ -22,7 +22,7 @@ async function main() {
   console.log("  entries:", result?.entries?.length);
   console.log("");
   for (const e of (result?.entries || [])) {
-    console.log(`  ${(e.grader + ' ' + (e.grade ?? '')).trim().padEnd(10)}  n=${String(e.sampleCount).padStart(3)}  value=${e.value ?? '?'}  trendAdj=${e.trendAdjustedValue ?? '?'}  valueSource=${e.valueSource}  estFrom=${e.estimatedFrom || '-'}  estMult=${e.estimatedMultiplier ?? '-'}`);
+    console.log(`  ${(e.grader + ' ' + (e.grade ?? '')).trim().padEnd(14)}  n=${String(e.sampleCount).padStart(3)}  value=${e.value ?? '?'}  wMedPrice=${e.weightedMedianPrice ?? '?'}  trendAdj=${e.trendAdjustedValue ?? '?'}  valueSource=${e.valueSource}  estFrom=${e.estimatedFrom || '-'}`);
   }
 }
 

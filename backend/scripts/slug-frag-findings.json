@@ -1,0 +1,463 @@
+{
+  "misslugTotals": {
+    "cpa-": {
+      "rows": 24390,
+      "slugs": 2544
+    },
+    "bcp-": {
+      "rows": 43577,
+      "slugs": 9108
+    },
+    "cpa": {
+      "rows": 24391,
+      "slugs": 2545
+    },
+    "bdc-": {
+      "rows": 2,
+      "slugs": 2
+    },
+    "cra-": {
+      "rows": 2,
+      "slugs": 2
+    }
+  },
+  "bigOffenders": [
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-af:base:auto",
+      "count": 421,
+      "prefix": "cpa-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Andrew Fischer"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-jj:base:auto",
+      "count": 400,
+      "prefix": "cpa-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Jared Jones"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-hl:base:auto",
+      "count": 367,
+      "prefix": "cpa-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Henry Lalane"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-eha:base:auto",
+      "count": 352,
+      "prefix": "cpa-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Eric Hartman"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-tr:base:auto",
+      "count": 328,
+      "prefix": "cpa-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "T.J. Rumfield"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:bcp-1:base:no-auto",
+      "count": 826,
+      "prefix": "bcp-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Ethan Holliday"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:bcp-102:base:no-auto",
+      "count": 716,
+      "prefix": "bcp-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Eric Hartman"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:bcp-149:base:no-auto",
+      "count": 577,
+      "prefix": "bcp-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Andrew Fischer"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:bcp-82:base:no-auto",
+      "count": 544,
+      "prefix": "bcp-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Edward Florentino"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:bcp-92:base:no-auto",
+      "count": 523,
+      "prefix": "bcp-",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Konnor Griffin"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-af:base:auto",
+      "count": 421,
+      "prefix": "cpa",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Andrew Fischer"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-jj:base:auto",
+      "count": 400,
+      "prefix": "cpa",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Jared Jones"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-hl:base:auto",
+      "count": 367,
+      "prefix": "cpa",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Henry Lalane"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-eha:base:auto",
+      "count": 352,
+      "prefix": "cpa",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "Eric Hartman"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman:cpa-tr:base:auto",
+      "count": 328,
+      "prefix": "cpa",
+      "canonicalFrom": "bowman",
+      "family": "bowman-chrome",
+      "player": "T.J. Rumfield"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman-draft:bdc-48:mojo-refractor:no-auto:num-75",
+      "count": 1,
+      "prefix": "bdc-",
+      "canonicalFrom": "bowman-draft",
+      "family": "bowman-draft-chrome",
+      "player": "Max Clark Yellow Mojo"
+    },
+    {
+      "slug": "hiq:baseball:2026:bowman-draft:bdc-20:base:no-auto",
+      "count": 1,
+      "prefix": "bdc-",
+      "canonicalFrom": "bowman-draft",
+      "family": "bowman-draft-chrome",
+      "player": "Steele Hall Sports Trading"
+    },
+    {
+      "slug": "hiq:baseball:2026:topps:cra-cb:refractor:auto",
+      "count": 1,
+      "prefix": "cra-",
+      "canonicalFrom": "topps",
+      "family": "topps-chrome",
+      "player": "Chase Burns"
+    },
+    {
+      "slug": "hiq:baseball:2026:topps:cra-cb:base:auto",
+      "count": 1,
+      "prefix": "cra-",
+      "canonicalFrom": "topps",
+      "family": "topps-chrome",
+      "player": "Chase Burns"
+    }
+  ],
+  "dupePairs": [
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto:num-100",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:base:auto",
+      "baseCount": 4,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:base:auto:num-89",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto:num-89",
+      "numCount": 3
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:auto",
+      "baseCount": 44,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:auto:num-150",
+      "numCount": 13
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:green-shimmer-refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:green-shimmer-refractor:auto:num-99",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-jw:refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-jw:refractor:auto:num-100",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-af:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-af:refractor:auto:num-499",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ju:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ju:refractor:auto:num-75",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-tr:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-tr:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ef:refractor:auto",
+      "baseCount": 4,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ef:refractor:auto:num-35",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:no-auto",
+      "baseCount": 10,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:no-auto:num-99",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto:num-125",
+      "numCount": 3
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:no-auto",
+      "baseCount": 10,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:no-auto:num-125",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:auto",
+      "baseCount": 27,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:blue-refractor:auto:num-150",
+      "numCount": 3
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ba:base:auto",
+      "baseCount": 4,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ba:base:auto:num-125",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+      "baseCount": 6,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto:num-250",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-jj:x-fractor-refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-jj:x-fractor-refractor:auto:num-150",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-va:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-va:refractor:auto:num-499",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-dp:refractor:auto",
+      "baseCount": 6,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-dp:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+      "baseCount": 6,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto:num-75",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-csc:refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-csc:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:base:auto",
+      "baseCount": 18,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:base:auto:num-100",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:no-auto",
+      "baseCount": 15,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:no-auto:num-99",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-kmc:refractor:auto",
+      "baseCount": 4,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-kmc:refractor:auto:num-499",
+      "numCount": 3
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:auto",
+      "baseCount": 39,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:auto:num-125",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:no-auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:no-auto:num-250",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mg:blue-refractor:no-auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mg:blue-refractor:no-auto:num-299",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:speckle-refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:speckle-refractor:auto:num-299",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-la:refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-la:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-jq:refractor:auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-jq:refractor:auto:num-35",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-nt:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-nt:refractor:auto:num-499",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mc:refractor:auto",
+      "baseCount": 6,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mc:refractor:auto:num-499",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-gl:refractor:auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-gl:refractor:auto:num-150",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-gl:refractor:auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-gl:refractor:auto:num-499",
+      "numCount": 2
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mc:refractor:auto",
+      "baseCount": 6,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mc:refractor:auto:num-150",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-kh:refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-kh:refractor:auto:num-125",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-ew:purple-refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-ew:purple-refractor:auto:num-250",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-mch:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-mch:refractor:auto:num-100",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-cj:refractor:auto",
+      "baseCount": 3,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-cj:refractor:auto:num-99",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:auto",
+      "baseCount": 39,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:refractor:auto:num-250",
+      "numCount": 5
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-cc:blue-refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-cc:blue-refractor:auto:num-150",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-hl:refractor:auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-hl:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-dda:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-dda:refractor:auto:num-499",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-af:refractor:auto",
+      "baseCount": 2,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-af:refractor:auto:num-150",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eha:orange-shimmer-refractor:no-auto",
+      "baseCount": 1,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eha:orange-shimmer-refractor:no-auto:num-25",
+      "numCount": 1
+    },
+    {
+      "base": "hiq:baseball:2026:bowman-chrome:cpa-eh:refractor:auto",
+      "baseCount": 5,
+      "num": "hiq:baseball:2026:bowman-chrome:cpa-eh:refractor:auto:num-499",
+      "numCount": 1
+    }
+  ],
+  "generatedAt": "2026-08-11T00:34:17.830Z"
+}

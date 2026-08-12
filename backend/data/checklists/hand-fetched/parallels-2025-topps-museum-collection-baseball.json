@@ -1,0 +1,25 @@
+{
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php?title=2025_Topps_Museum_Collection",
+  "fetchedAt": "2026-08-11",
+  "appliesTo": [
+    "2025-topps-museum-collection-baseball",
+    "2024-topps-museum-collection-baseball (proxy)",
+    "2023-topps-museum-collection-baseball (proxy)",
+    "2015-topps-museum-collection-baseball (proxy)"
+  ],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Gold","printRun":null},
+    {"name":"Pink Sapphire","printRun":null},
+    {"name":"Sapphire","printRun":null},
+    {"name":"Amethyst","printRun":null},
+    {"name":"Ruby","printRun":50},
+    {"name":"Bronze","printRun":35},
+    {"name":"Blue Topaz","printRun":25},
+    {"name":"Black Diamond","printRun":10},
+    {"name":"Diamond","printRun":5},
+    {"name":"Emerald","printRun":1}
+  ],
+  "autoParallels": null
+}

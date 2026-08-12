@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-weekly-baseball",
+  "setName": "2005 BBM Weekly Baseball",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/411036",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Weekly",
+      "p": "Baseball WB3 Hiroyuki Nakajima"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-thank-you-sadaharu-oh-memorial-card-set",
+  "setName": "2009 BBM Thank You Sadaharu Oh Memorial Card Set",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/287945",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Thank",
+      "p": "You Sadaharu Oh Memorial Card Set 89 Sadaharu Oh"
+    }
+  ]
+}

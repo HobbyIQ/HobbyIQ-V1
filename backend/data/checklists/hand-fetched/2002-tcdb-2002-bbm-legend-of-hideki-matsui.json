@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2002,
+  "setKey": "bbm-legend-of-hideki-matsui",
+  "setName": "2002 BBM Legend of Hideki Matsui",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102709",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Legend",
+      "p": "of Hideki Matsui 55 Hideki Matsui"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "source": "cardboardconnection+checklistinsider+beckett",
+  "sourceUrl": "https://www.cardboardconnection.com/2024-topps-triple-threads-baseball-review-and-checklist",
+  "fetchedAt": "2026-08-11",
+  "note": "2024 Triple Threads used as proxy for 2018-2024 (Triple Threads rainbow changes slightly year-to-year but rarity tiers are stable).",
+  "appliesTo": [
+    "2024-topps-triple-threads-baseball",
+    "2025-topps-triple-threads-baseball (proxy - 2025 releases Dec 2025)",
+    "2023-topps-triple-threads-baseball (proxy)",
+    "2022-topps-triple-threads-baseball (proxy)",
+    "2021-topps-triple-threads-baseball (proxy)",
+    "2020-topps-triple-threads-baseball (proxy)",
+    "2019-topps-triple-threads-baseball (proxy)",
+    "2018-topps-triple-threads-baseball (proxy)"
+  ],
+  "baseParallels": [
+    {"name":"Base","printRun":null},
+    {"name":"Amber","printRun":199},
+    {"name":"Aquamarine","printRun":149},
+    {"name":"Tourmaline","printRun":125},
+    {"name":"Gold","printRun":99},
+    {"name":"Citrine","printRun":75},
+    {"name":"Onyx","printRun":50},
+    {"name":"Sapphire","printRun":25},
+    {"name":"Red White & Blue","printRun":10},
+    {"name":"Ruby","printRun":1},
+    {"name":"Wood","printRun":1}
+  ],
+  "autoParallels": null
+}

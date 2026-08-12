@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2004,
+  "setKey": "bbm-chiba-lotte-marines-toppo",
+  "setName": "2004 BBM Chiba Lotte Marines Toppo",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/200470",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chiba",
+      "p": "Lotte Marines Toppo MP10 Seung Yuop Lee"
+    }
+  ]
+}

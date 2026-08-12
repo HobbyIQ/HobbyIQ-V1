@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-georgia",
+  "setName": "2010 BBM Georgia",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/345948",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Georgia",
+      "p": "036 Tomotaka Sakaguchi"
+    }
+  ]
+}

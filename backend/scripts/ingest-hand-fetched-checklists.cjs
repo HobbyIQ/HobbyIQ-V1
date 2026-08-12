@@ -24,30 +24,72 @@ const {
 const APPLY = process.env.APPLY === "true";
 const DIR = path.resolve(__dirname, "..", "data", "checklists", "hand-fetched");
 
+// CF-INGEST-ACTUAL-PARALLELS (Drew, 2026-08-11). Manifest now supplies
+// EITHER:
+//   - baseParallels / prospectParallels / autoParallels inline (best),
+//   - OR a `parallelsFile` pointing at a parallels-{product}.json in
+//     the same dir (extracted from BCP/checklistinsider actuals).
+// The old templated approach (baseTemplate/autoTemplate) was
+// synthetic; actuals-only from here forward.
+
+function loadParallels(manifest) {
+  if (manifest.parallelsFile) {
+    const p = path.join(DIR, manifest.parallelsFile);
+    if (fs.existsSync(p)) {
+      const doc = JSON.parse(fs.readFileSync(p, "utf8"));
+      return {
+        baseParallels: doc.baseParallels || [{ name: "Base", printRun: null }],
+        prospectParallels: doc.prospectParallels || doc.baseParallels || [{ name: "Base", printRun: null }],
+        autoParallels: doc.autoParallels || [{ name: "Base", printRun: null }],
+      };
+    }
+  }
+  return {
+    baseParallels: manifest.baseParallels || [{ name: "Base", printRun: null }],
+    prospectParallels: manifest.prospectParallels || manifest.baseParallels || [{ name: "Base", printRun: null }],
+    autoParallels: manifest.autoParallels || [{ name: "Base", printRun: null }],
+  };
+}
+
 async function ingestOne(manifest) {
   const stats = { attempted: 0, wrote: 0, failed: 0, skipped: 0 };
   const source = `${manifest.source || "hand-fetched"}-${manifest.fetchedAt || new Date().toISOString().slice(0, 10)}`;
+  const parallelSet = loadParallels(manifest);
 
   const rows = [];
-  for (const c of (manifest.baseSet || [])) rows.push({ ...c, category: "base" });
-  for (const c of (manifest.chromeProspects || manifest.prospects || [])) rows.push({ ...c, category: "insert-chrome-prospects" });
+  for (const c of (manifest.baseSet || [])) rows.push({ ...c, category: "base", isAuto: false, parallels: parallelSet.baseParallels });
+  for (const c of (manifest.chromeProspects || manifest.prospects || [])) rows.push({ ...c, category: "insert-chrome-prospects", isAuto: false, parallels: parallelSet.prospectParallels });
+  for (const c of (manifest.autoSeries || [])) rows.push({ ...c, category: "auto-cpa", isAuto: true, parallels: parallelSet.autoParallels });
   for (const ins of (manifest.inserts || [])) {
-    for (const c of (ins.cards || [])) rows.push({ ...c, category: `insert-${(ins.setName || "insert").toLowerCase().replace(/[^a-z0-9]+/g, "-")}` });
+    for (const c of (ins.cards || [])) rows.push({ ...c, category: `insert-${(ins.setName || "insert").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, isAuto: false, parallels: [{ name: "Base", printRun: null }] });
   }
 
+  const exploded = [];
   for (const row of rows) {
-    stats.attempted++;
+    for (const par of row.parallels) {
+      exploded.push({
+        cardNumber: String(row.n).toUpperCase(),
+        parallel: par.name,
+        isAuto: row.isAuto,
+        printRun: par.printRun,
+        player: String(row.p).replace(/ - .+$/, "").trim(),
+      });
+    }
+  }
+  stats.attempted = exploded.length;
+
+  // Batch write with progress
+  let done = 0;
+  for (const row of exploded) {
+    // Prefer the canonical setKey from the manifest; fall back to setName
+    // for older manifests that only carried the display name.
     const entry = deriveCatalogEntry({
-      sport: manifest.sport,
-      year: manifest.year,
-      setKey: manifest.setName,
-      cardNumber: String(row.n).toUpperCase(),
-      parallel: "Base",
-      isAuto: false,
-      printRun: null,
-      playerName: String(row.p).replace(/ - .+$/, "").trim(), // strip trailing team ("Player - Team")
-      source, confidence: "high",
-      vendorIds: {},
+      sport: manifest.sport, year: manifest.year,
+      setKey: manifest.setKey || manifest.setName,
+      cardNumber: row.cardNumber, parallel: row.parallel,
+      isAuto: row.isAuto, printRun: row.printRun,
+      playerName: row.player,
+      source, confidence: 0.95, vendorIds: {},
     });
     if (!entry) { stats.skipped++; continue; }
     if (APPLY) {
@@ -56,13 +98,16 @@ async function ingestOne(manifest) {
     } else {
       stats.wrote++;
     }
+    done++;
+    if (done % 1000 === 0) process.stdout.write(`\r      ${done}/${exploded.length}`);
   }
   return stats;
 }
 
 async function main() {
   if (!fs.existsSync(DIR)) { console.error(`no dir ${DIR}`); process.exit(1); }
-  const files = fs.readdirSync(DIR).filter(f => f.endsWith(".json"));
+  // Exclude parallels-*.json — those are parallel-data files consumed by manifests, not manifests themselves.
+  const files = fs.readdirSync(DIR).filter(f => f.endsWith(".json") && !f.startsWith("parallels-"));
   console.log(`▸ ${APPLY ? "APPLY" : "DRY-RUN"}  files=${files.length}`);
   let total = 0, failed = 0;
   for (const f of files) {

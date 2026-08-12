@@ -1,0 +1,120 @@
+{
+  "sport": "baseball",
+  "year": 2024,
+  "setKey": "bbm-rookiepremium",
+  "setName": "2024 BBM Rookiepremium",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2024rookiepremium_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": [
+    {
+      "n": "RP01",
+      "p": "下村海翔"
+    },
+    {
+      "n": "RP02",
+      "p": "椎葉　剛"
+    },
+    {
+      "n": "RP03",
+      "p": "山田脩也"
+    },
+    {
+      "n": "RP10",
+      "p": "西舘勇陽"
+    },
+    {
+      "n": "RP11",
+      "p": "佐々木俊輔"
+    },
+    {
+      "n": "RP12",
+      "p": "泉口友汰"
+    },
+    {
+      "n": "RP13",
+      "p": "西舘昂汰"
+    },
+    {
+      "n": "RP14",
+      "p": "松本健吾"
+    },
+    {
+      "n": "RP15",
+      "p": "鈴木　叶"
+    },
+    {
+      "n": "RP16",
+      "p": "草加　勝"
+    },
+    {
+      "n": "RP17",
+      "p": "辻本倫太郎"
+    },
+    {
+      "n": "RP18",
+      "p": "尾田剛樹"
+    },
+    {
+      "n": "RP19",
+      "p": "横山聖哉"
+    },
+    {
+      "n": "RP20",
+      "p": "河内康介"
+    },
+    {
+      "n": "RP21",
+      "p": "古田島成龍"
+    },
+    {
+      "n": "RP22",
+      "p": "上田希由翔"
+    },
+    {
+      "n": "RP23",
+      "p": "木村優人"
+    },
+    {
+      "n": "RP24",
+      "p": "寺地隆成"
+    },
+    {
+      "n": "RP25",
+      "p": "前田悠伍"
+    },
+    {
+      "n": "RP26",
+      "p": "廣瀨隆太"
+    },
+    {
+      "n": "RP27",
+      "p": "澤柳亮太郎"
+    },
+    {
+      "n": "RP28",
+      "p": "古謝　樹"
+    },
+    {
+      "n": "RP29",
+      "p": "坂井陽翔"
+    },
+    {
+      "n": "RP30",
+      "p": "中島大輔"
+    },
+    {
+      "n": "RP31",
+      "p": "武内夏暉"
+    },
+    {
+      "n": "RP32",
+      "p": "上田大河"
+    },
+    {
+      "n": "RP33",
+      "p": "奥村光一"
+    }
+  ]
+}

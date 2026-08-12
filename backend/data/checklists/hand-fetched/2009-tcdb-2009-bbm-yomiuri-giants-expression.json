@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-yomiuri-giants-expression",
+  "setName": "2009 BBM Yomiuri Giants Expression",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/286872",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants Expression 33 Tomoya Inzen"
+    }
+  ]
+}

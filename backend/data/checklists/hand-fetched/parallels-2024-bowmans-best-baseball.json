@@ -1,0 +1,83 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2024-bowmans-best-baseball",
+    "2024-bowmans-best"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman's Best). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": [
+    {
+      "name": "Base",
+      "printRun": null
+    },
+    {
+      "name": "Refractor",
+      "printRun": null
+    },
+    {
+      "name": "Atomic Refractor",
+      "printRun": null
+    },
+    {
+      "name": "Purple Refractor",
+      "printRun": 250
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150
+    },
+    {
+      "name": "Green Refractor",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 10
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Base Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Atomic Refractor",
+      "printRun": null
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 10
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2004,
+  "setKey": "bbm-yomiuri-giants-70th-anniversary",
+  "setName": "2004 BBM Yomiuri Giants 70th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103059",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants 70th Anniversary 104 Osamu Mihara"
+    }
+  ]
+}

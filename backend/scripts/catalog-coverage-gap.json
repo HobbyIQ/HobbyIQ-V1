@@ -1,0 +1,545 @@
+{
+  "generatedAt": "2026-08-11T03:07:23.909Z",
+  "products": [
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps",
+      "soldCompsRows": 137266,
+      "catalogRows": 11924,
+      "coverageRatio": 9,
+      "gap": 125342
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "bowman-chrome",
+      "soldCompsRows": 83268,
+      "catalogRows": 1362,
+      "coverageRatio": 2,
+      "gap": 81906
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-heritage",
+      "soldCompsRows": 53064,
+      "catalogRows": 10858,
+      "coverageRatio": 20,
+      "gap": 42206
+    },
+    {
+      "sport": "baseball",
+      "year": 2023,
+      "setKey": "topps-chrome-platinum",
+      "soldCompsRows": 41790,
+      "catalogRows": 440,
+      "coverageRatio": 1,
+      "gap": 41350
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 89440,
+      "catalogRows": 48367,
+      "coverageRatio": 54,
+      "gap": 41073
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-finest",
+      "soldCompsRows": 37575,
+      "catalogRows": 5171,
+      "coverageRatio": 14,
+      "gap": 32404
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "bowman-chrome",
+      "soldCompsRows": 132764,
+      "catalogRows": 101699,
+      "coverageRatio": 77,
+      "gap": 31065
+    },
+    {
+      "sport": "baseball",
+      "year": 1975,
+      "setKey": "topps",
+      "soldCompsRows": 28372,
+      "catalogRows": 683,
+      "coverageRatio": 2,
+      "gap": 27689
+    },
+    {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "panini",
+      "soldCompsRows": 27269,
+      "catalogRows": 0,
+      "coverageRatio": 0,
+      "gap": 27269
+    },
+    {
+      "sport": "basketball",
+      "year": 2019,
+      "setKey": "panini-select",
+      "soldCompsRows": 23972,
+      "catalogRows": 129,
+      "coverageRatio": 1,
+      "gap": 23843
+    },
+    {
+      "sport": "baseball",
+      "year": 1961,
+      "setKey": "topps",
+      "soldCompsRows": 24082,
+      "catalogRows": 791,
+      "coverageRatio": 3,
+      "gap": 23291
+    },
+    {
+      "sport": "baseball",
+      "year": 1964,
+      "setKey": "topps",
+      "soldCompsRows": 24038,
+      "catalogRows": 766,
+      "coverageRatio": 3,
+      "gap": 23272
+    },
+    {
+      "sport": "baseball",
+      "year": 1972,
+      "setKey": "topps",
+      "soldCompsRows": 24015,
+      "catalogRows": 878,
+      "coverageRatio": 4,
+      "gap": 23137
+    },
+    {
+      "sport": "baseball",
+      "year": 1971,
+      "setKey": "topps",
+      "soldCompsRows": 23844,
+      "catalogRows": 1362,
+      "coverageRatio": 6,
+      "gap": 22482
+    },
+    {
+      "sport": "baseball",
+      "year": 1968,
+      "setKey": "topps",
+      "soldCompsRows": 23082,
+      "catalogRows": 635,
+      "coverageRatio": 3,
+      "gap": 22447
+    },
+    {
+      "sport": "baseball",
+      "year": 1959,
+      "setKey": "topps",
+      "soldCompsRows": 22620,
+      "catalogRows": 628,
+      "coverageRatio": 3,
+      "gap": 21992
+    },
+    {
+      "sport": "baseball",
+      "year": 1969,
+      "setKey": "topps",
+      "soldCompsRows": 21575,
+      "catalogRows": 794,
+      "coverageRatio": 4,
+      "gap": 20781
+    },
+    {
+      "sport": "baseball",
+      "year": 1965,
+      "setKey": "topps",
+      "soldCompsRows": 21948,
+      "catalogRows": 1313,
+      "coverageRatio": 6,
+      "gap": 20635
+    },
+    {
+      "sport": "baseball",
+      "year": 1973,
+      "setKey": "topps",
+      "soldCompsRows": 20801,
+      "catalogRows": 684,
+      "coverageRatio": 3,
+      "gap": 20117
+    },
+    {
+      "sport": "baseball",
+      "year": 1970,
+      "setKey": "topps",
+      "soldCompsRows": 20283,
+      "catalogRows": 750,
+      "coverageRatio": 4,
+      "gap": 19533
+    },
+    {
+      "sport": "baseball",
+      "year": 1960,
+      "setKey": "topps",
+      "soldCompsRows": 20089,
+      "catalogRows": 616,
+      "coverageRatio": 3,
+      "gap": 19473
+    },
+    {
+      "sport": "baseball",
+      "year": 1967,
+      "setKey": "topps",
+      "soldCompsRows": 19840,
+      "catalogRows": 669,
+      "coverageRatio": 3,
+      "gap": 19171
+    },
+    {
+      "sport": "baseball",
+      "year": 1956,
+      "setKey": "topps",
+      "soldCompsRows": 19463,
+      "catalogRows": 433,
+      "coverageRatio": 2,
+      "gap": 19030
+    },
+    {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "panini-donruss",
+      "soldCompsRows": 19887,
+      "catalogRows": 1757,
+      "coverageRatio": 9,
+      "gap": 18130
+    },
+    {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "panini-donruss",
+      "soldCompsRows": 18965,
+      "catalogRows": 1116,
+      "coverageRatio": 6,
+      "gap": 17849
+    },
+    {
+      "sport": "baseball",
+      "year": 1962,
+      "setKey": "topps",
+      "soldCompsRows": 19957,
+      "catalogRows": 2245,
+      "coverageRatio": 11,
+      "gap": 17712
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "bowman-mega",
+      "soldCompsRows": 17238,
+      "catalogRows": 0,
+      "coverageRatio": 0,
+      "gap": 17238
+    },
+    {
+      "sport": "baseball",
+      "year": 1974,
+      "setKey": "topps",
+      "soldCompsRows": 17796,
+      "catalogRows": 713,
+      "coverageRatio": 4,
+      "gap": 17083
+    },
+    {
+      "sport": "baseball",
+      "year": 1966,
+      "setKey": "topps",
+      "soldCompsRows": 17514,
+      "catalogRows": 734,
+      "coverageRatio": 4,
+      "gap": 16780
+    },
+    {
+      "sport": "baseball",
+      "year": 1976,
+      "setKey": "topps",
+      "soldCompsRows": 17440,
+      "catalogRows": 679,
+      "coverageRatio": 4,
+      "gap": 16761
+    },
+    {
+      "sport": "baseball",
+      "year": 1963,
+      "setKey": "topps",
+      "soldCompsRows": 16830,
+      "catalogRows": 644,
+      "coverageRatio": 4,
+      "gap": 16186
+    },
+    {
+      "sport": "baseball",
+      "year": 1954,
+      "setKey": "topps",
+      "soldCompsRows": 16164,
+      "catalogRows": 282,
+      "coverageRatio": 2,
+      "gap": 15882
+    },
+    {
+      "sport": "basketball",
+      "year": 2024,
+      "setKey": "panini-prizm",
+      "soldCompsRows": 17079,
+      "catalogRows": 1400,
+      "coverageRatio": 8,
+      "gap": 15679
+    },
+    {
+      "sport": "baseball",
+      "year": 1977,
+      "setKey": "topps",
+      "soldCompsRows": 16075,
+      "catalogRows": 682,
+      "coverageRatio": 4,
+      "gap": 15393
+    },
+    {
+      "sport": "baseball",
+      "year": 1958,
+      "setKey": "topps",
+      "soldCompsRows": 15640,
+      "catalogRows": 547,
+      "coverageRatio": 3,
+      "gap": 15093
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-allen-ginter",
+      "soldCompsRows": 31474,
+      "catalogRows": 23858,
+      "coverageRatio": 76,
+      "gap": 7616
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "panini-prizm",
+      "soldCompsRows": 43417,
+      "catalogRows": 36820,
+      "coverageRatio": 85,
+      "gap": 6597
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-pristine",
+      "soldCompsRows": 22656,
+      "catalogRows": 18854,
+      "coverageRatio": 83,
+      "gap": 3802
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-heritage",
+      "soldCompsRows": 23921,
+      "catalogRows": 20249,
+      "coverageRatio": 85,
+      "gap": 3672
+    },
+    {
+      "sport": "basketball",
+      "year": 2025,
+      "setKey": "bowman",
+      "soldCompsRows": 16264,
+      "catalogRows": 13452,
+      "coverageRatio": 83,
+      "gap": 2812
+    },
+    {
+      "sport": "baseball",
+      "year": 2023,
+      "setKey": "bowman-chrome",
+      "soldCompsRows": 36036,
+      "catalogRows": 34878,
+      "coverageRatio": 97,
+      "gap": 1158
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "bowman-chrome",
+      "soldCompsRows": 48190,
+      "catalogRows": 48417,
+      "coverageRatio": 100,
+      "gap": -227
+    },
+    {
+      "sport": "basketball",
+      "year": 2025,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 30485,
+      "catalogRows": 36669,
+      "coverageRatio": 120,
+      "gap": -6184
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "bowman",
+      "soldCompsRows": 56005,
+      "catalogRows": 62882,
+      "coverageRatio": 112,
+      "gap": -6877
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 51445,
+      "catalogRows": 59761,
+      "coverageRatio": 116,
+      "gap": -8316
+    },
+    {
+      "sport": "baseball",
+      "year": 2018,
+      "setKey": "topps",
+      "soldCompsRows": 18912,
+      "catalogRows": 27788,
+      "coverageRatio": 147,
+      "gap": -8876
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-chrome-platinum",
+      "soldCompsRows": 36220,
+      "catalogRows": 47097,
+      "coverageRatio": 130,
+      "gap": -10877
+    },
+    {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "panini-prizm",
+      "soldCompsRows": 30269,
+      "catalogRows": 48874,
+      "coverageRatio": 161,
+      "gap": -18605
+    },
+    {
+      "sport": "baseball",
+      "year": 2022,
+      "setKey": "bowman-chrome",
+      "soldCompsRows": 23478,
+      "catalogRows": 47383,
+      "coverageRatio": 202,
+      "gap": -23905
+    },
+    {
+      "sport": "basketball",
+      "year": 2025,
+      "setKey": "topps",
+      "soldCompsRows": 45985,
+      "catalogRows": 79606,
+      "coverageRatio": 173,
+      "gap": -33621
+    },
+    {
+      "sport": "baseball",
+      "year": 2022,
+      "setKey": "topps",
+      "soldCompsRows": 17776,
+      "catalogRows": 87734,
+      "coverageRatio": 494,
+      "gap": -69958
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "bowman",
+      "soldCompsRows": 54725,
+      "catalogRows": 129358,
+      "coverageRatio": 236,
+      "gap": -74633
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "bowman",
+      "soldCompsRows": 22056,
+      "catalogRows": 99020,
+      "coverageRatio": 449,
+      "gap": -76964
+    },
+    {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 35655,
+      "catalogRows": 118259,
+      "coverageRatio": 332,
+      "gap": -82604
+    },
+    {
+      "sport": "baseball",
+      "year": 2023,
+      "setKey": "topps",
+      "soldCompsRows": 41234,
+      "catalogRows": 127668,
+      "coverageRatio": 310,
+      "gap": -86434
+    },
+    {
+      "sport": "baseball",
+      "year": 2023,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 18375,
+      "catalogRows": 130647,
+      "coverageRatio": 711,
+      "gap": -112272
+    },
+    {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "topps",
+      "soldCompsRows": 38185,
+      "catalogRows": 177613,
+      "coverageRatio": 465,
+      "gap": -139428
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "topps-chrome",
+      "soldCompsRows": 33803,
+      "catalogRows": 218123,
+      "coverageRatio": 645,
+      "gap": -184320
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "topps",
+      "soldCompsRows": 46462,
+      "catalogRows": 249589,
+      "coverageRatio": 537,
+      "gap": -203127
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps",
+      "soldCompsRows": 133155,
+      "catalogRows": 1508448,
+      "coverageRatio": 1133,
+      "gap": -1375293
+    }
+  ]
+}

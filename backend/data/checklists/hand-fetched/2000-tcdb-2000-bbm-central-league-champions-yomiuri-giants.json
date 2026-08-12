@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2000,
+  "setKey": "bbm-central-league-champions-yomiuri-giants",
+  "setName": "2000 BBM Central League Champions Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102409",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Central",
+      "p": "League Champions Yomiuri Giants Y36 Hideki Matsui"
+    }
+  ]
+}

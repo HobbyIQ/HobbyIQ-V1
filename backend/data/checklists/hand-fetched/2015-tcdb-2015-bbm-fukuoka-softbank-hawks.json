@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2015,
+  "setKey": "bbm-fukuoka-softbank-hawks",
+  "setName": "2015 BBM Fukuoka Softbank Hawks",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/113654",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "Softbank Hawks H81 2014 NPB Champions"
+    }
+  ]
+}

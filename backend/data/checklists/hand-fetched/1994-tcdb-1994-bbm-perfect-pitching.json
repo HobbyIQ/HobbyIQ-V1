@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1994,
+  "setKey": "bbm-perfect-pitching",
+  "setName": "1994 BBM Perfect Pitching",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102299",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Perfect",
+      "p": "Pitching P18 Hiromi Makihara"
+    }
+  ]
+}

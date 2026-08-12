@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-hiroshima-toyo-carp",
+  "setName": "2014 BBM Hiroshima Toyo Carp",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/97055",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroshima",
+      "p": "Toyo Carp C99 Yoshihiro Maru"
+    }
+  ]
+}

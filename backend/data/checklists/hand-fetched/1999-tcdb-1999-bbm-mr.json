@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 1999,
+  "setKey": "bbm-mr",
+  "setName": "1999 BBM Mr",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102385",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2018,
+  "setKey": "bbm-time-travel-1989",
+  "setName": "2018 BBM Time Travel 1989",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/185199",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Time",
+      "p": "Travel 1989 99 Yoshinori Sato"
+    }
+  ]
+}

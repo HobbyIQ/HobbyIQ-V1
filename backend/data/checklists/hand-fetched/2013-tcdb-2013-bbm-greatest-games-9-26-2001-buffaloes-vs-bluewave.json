@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-greatest-games-9-26-2001-buffaloes-vs-bluewave",
+  "setName": "2013 BBM Greatest Games 9 26 2001 Buffaloes vs BlueWave",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/104396",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Greatest",
+      "p": "Games 9 26 2001 Buffaloes vs BlueWave 36 Masataka Nashida"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-girls-professional-baseball-league-kyoto-astro-dreams",
+  "setName": "2010 BBM Girls Professional Baseball League Kyoto Astro Dreams",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/599545",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

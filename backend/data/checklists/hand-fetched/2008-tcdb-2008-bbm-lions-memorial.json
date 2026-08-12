@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2008,
+  "setKey": "bbm-lions-memorial",
+  "setName": "2008 BBM Lions Memorial",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103973",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Lions",
+      "p": "Memorial 39 Heiwadai Stadium"
+    }
+  ]
+}

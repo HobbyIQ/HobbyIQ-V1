@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-hiroyuki-nakajima-next",
+  "setName": "2014 BBM Hiroyuki Nakajima NEXT",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/200384",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroyuki",
+      "p": "Nakajima NEXT 18 Hiroyuki Nakajima"
+    }
+  ]
+}

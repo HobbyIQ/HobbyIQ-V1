@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2021,
+  "setKey": "bbm-lions",
+  "setName": "2021 BBM Saitama Seibu Lions",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2021lions_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

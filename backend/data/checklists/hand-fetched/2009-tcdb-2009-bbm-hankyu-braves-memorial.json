@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2009,
+  "setKey": "bbm-hankyu-braves-memorial",
+  "setName": "2009 BBM Hankyu Braves Memorial",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/369988",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hankyu",
+      "p": "Braves Memorial 48 Atsuhiro Motonishi"
+    }
+  ]
+}

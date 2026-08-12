@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2004,
+  "setKey": "bbm-chunichi-dragons-central-league-champions",
+  "setName": "2004 BBM Chunichi Dragons Central League Champions",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103056",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Chunichi",
+      "p": "Dragons Central League Champions C43 Kosuke Fukudome"
+    }
+  ]
+}

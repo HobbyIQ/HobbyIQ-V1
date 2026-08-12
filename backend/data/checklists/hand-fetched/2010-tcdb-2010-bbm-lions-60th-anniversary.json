@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-lions-60th-anniversary",
+  "setName": "2010 BBM Lions 60th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338316",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

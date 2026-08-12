@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-gpbl-kyoto-asto-dreams",
+  "setName": "2010 BBM GPBL Kyoto Asto Dreams",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/434810",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "GPBL",
+      "p": "Kyoto Asto Dreams K15 Tomoko Tanaka"
+    }
+  ]
+}

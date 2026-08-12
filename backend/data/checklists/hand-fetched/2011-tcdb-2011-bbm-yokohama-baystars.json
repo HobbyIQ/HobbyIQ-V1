@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2011,
+  "setKey": "bbm-yokohama-baystars",
+  "setName": "2011 BBM Yokohama BayStars",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/68164",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yokohama",
+      "p": "BayStars YB99 Shuichi Murata"
+    }
+  ]
+}

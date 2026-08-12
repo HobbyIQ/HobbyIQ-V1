@@ -1,0 +1,1856 @@
+{
+  "sport": "baseball",
+  "year": 1991,
+  "setKey": "bbm-",
+  "setName": "1991 BBM",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/8753",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "1",
+      "p": "Yasuji Ibe"
+    },
+    {
+      "n": "2",
+      "p": "Hiroshi Nagatomi"
+    },
+    {
+      "n": "3",
+      "p": "Takanori Yamauchi"
+    },
+    {
+      "n": "4",
+      "p": "Kazutomo Miyamoto"
+    },
+    {
+      "n": "5",
+      "p": "Ken Hirano"
+    },
+    {
+      "n": "6",
+      "p": "Akinobu Okada"
+    },
+    {
+      "n": "7",
+      "p": "Hiromasa Fujita"
+    },
+    {
+      "n": "8",
+      "p": "Yoichi Okabayashi"
+    },
+    {
+      "n": "9",
+      "p": "Masato Yoshii"
+    },
+    {
+      "n": "10",
+      "p": "Tatsuo Komatsu"
+    },
+    {
+      "n": "11",
+      "p": "Mitsuo Sumi"
+    },
+    {
+      "n": "12",
+      "p": "Mitsunori Kakehata"
+    },
+    {
+      "n": "13",
+      "p": "Yoshihisa Shiratake"
+    },
+    {
+      "n": "14",
+      "p": "Tomonori Maeda"
+    },
+    {
+      "n": "15",
+      "p": "Chikafusa Ikeda"
+    },
+    {
+      "n": "16",
+      "p": "Shuji Yoshida"
+    },
+    {
+      "n": "17",
+      "p": "Osamu Abe"
+    },
+    {
+      "n": "18",
+      "p": "Toshiro Yufune"
+    },
+    {
+      "n": "19",
+      "p": "Takahide Itoh"
+    },
+    {
+      "n": "20",
+      "p": "Kenji Miyamoto"
+    },
+    {
+      "n": "21",
+      "p": "Hideaki Satoh"
+    },
+    {
+      "n": "22",
+      "p": "Tadashi Kashima"
+    },
+    {
+      "n": "23",
+      "p": "Masashi Arikura"
+    },
+    {
+      "n": "24",
+      "p": "Jim Paciorek"
+    },
+    {
+      "n": "25",
+      "p": "Kenichi Satoh"
+    },
+    {
+      "n": "26",
+      "p": "Ikuo Takayama"
+    },
+    {
+      "n": "27",
+      "p": "Koichiro Yoshinaga"
+    },
+    {
+      "n": "28",
+      "p": "Makoto Kitoh"
+    },
+    {
+      "n": "29",
+      "p": "Yoshitaka Katori"
+    },
+    {
+      "n": "30",
+      "p": "Yasuo Kubo"
+    },
+    {
+      "n": "31",
+      "p": "Satoshi Nakajima"
+    },
+    {
+      "n": "32",
+      "p": "Hiroto Katoh"
+    },
+    {
+      "n": "33",
+      "p": "Toshiya Adachi"
+    },
+    {
+      "n": "34",
+      "p": "Akira Uehara"
+    },
+    {
+      "n": "35",
+      "p": "Koichi Ogawa"
+    },
+    {
+      "n": "36",
+      "p": "Fumiki Ishida"
+    },
+    {
+      "n": "37",
+      "p": "Norihito Yamashita"
+    },
+    {
+      "n": "38",
+      "p": "Masumi Kuwata"
+    },
+    {
+      "n": "39",
+      "p": "Tadashi Sugimoto"
+    },
+    {
+      "n": "40",
+      "p": "Hiromi Makihara"
+    },
+    {
+      "n": "41",
+      "p": "Koji Akiyama"
+    },
+    {
+      "n": "42",
+      "p": "Akira Ohgi"
+    },
+    {
+      "n": "43",
+      "p": "Koichi Tabuchi"
+    },
+    {
+      "n": "44",
+      "p": "Senichi Hoshino"
+    },
+    {
+      "n": "45",
+      "p": "Yukihiro Ueda"
+    },
+    {
+      "n": "46",
+      "p": "Tim Birtsas"
+    },
+    {
+      "n": "47",
+      "p": "Norihiro Komada"
+    },
+    {
+      "n": "48",
+      "p": "Hidekazu Mitsuyama"
+    },
+    {
+      "n": "49",
+      "p": "Katsuya Nomura"
+    },
+    {
+      "n": "50",
+      "p": "Shinichi Furukawa"
+    },
+    {
+      "n": "51",
+      "p": "Ken Suzuki"
+    },
+    {
+      "n": "52",
+      "p": "Yoshiaki Ishimoto"
+    },
+    {
+      "n": "53",
+      "p": "Takashi Nishimoto"
+    },
+    {
+      "n": "54",
+      "p": "Kazuya Yano"
+    },
+    {
+      "n": "55",
+      "p": "Futoshi Miyazato"
+    },
+    {
+      "n": "56",
+      "p": "Kimiyasu Kudoh"
+    },
+    {
+      "n": "57",
+      "p": "Yutaka Sudoh"
+    },
+    {
+      "n": "58",
+      "p": "Sadao Kondoh"
+    },
+    {
+      "n": "59",
+      "p": "Seiji Kamikawa"
+    },
+    {
+      "n": "60",
+      "p": "Yasutomo Suzuki"
+    },
+    {
+      "n": "61",
+      "p": "Masaaki Mori"
+    },
+    {
+      "n": "62",
+      "p": "Meishi Ro"
+    },
+    {
+      "n": "63",
+      "p": "Johnny Ray"
+    },
+    {
+      "n": "64",
+      "p": "Masahiko Johzume"
+    },
+    {
+      "n": "65",
+      "p": "Koji Yamamoto"
+    },
+    {
+      "n": "66",
+      "p": "Masaichi Kaneda"
+    },
+    {
+      "n": "67",
+      "p": "Masahiro Yamamoto"
+    },
+    {
+      "n": "68",
+      "p": "Akinori Kobayashi"
+    },
+    {
+      "n": "69",
+      "p": "Shoji Tohyama"
+    },
+    {
+      "n": "70",
+      "p": "Toshio Choshi"
+    },
+    {
+      "n": "71",
+      "p": "Tatsunori Hara"
+    },
+    {
+      "n": "72",
+      "p": "Tadami Nakatani"
+    },
+    {
+      "n": "73",
+      "p": "Motoshi Fujita"
+    },
+    {
+      "n": "74",
+      "p": "Shozo Doi"
+    },
+    {
+      "n": "75",
+      "p": "Tadakatsu Hanyuda"
+    },
+    {
+      "n": "76",
+      "p": "Shintaro Yamasaki"
+    },
+    {
+      "n": "77",
+      "p": "Masao Teramae"
+    },
+    {
+      "n": "78",
+      "p": "Yukio Arai"
+    },
+    {
+      "n": "79",
+      "p": "Yoshiyuki Shimizu"
+    },
+    {
+      "n": "80",
+      "p": "Koichi Yanada"
+    },
+    {
+      "n": "81",
+      "p": "Katsuhiro Nakamura"
+    },
+    {
+      "n": "82",
+      "p": "Kazuyuki Shirai"
+    },
+    {
+      "n": "83",
+      "p": "Kiyoshi Yamanaka"
+    },
+    {
+      "n": "84",
+      "p": "Shinji Nishida"
+    },
+    {
+      "n": "85",
+      "p": "Yuji Inoue"
+    },
+    {
+      "n": "86",
+      "p": "Izumi Takayanagi"
+    },
+    {
+      "n": "87",
+      "p": "Tetsu Suzuki"
+    },
+    {
+      "n": "88",
+      "p": "Kiyoyuki Nagashima"
+    },
+    {
+      "n": "89",
+      "p": "Koichi Ogata"
+    },
+    {
+      "n": "90",
+      "p": "Youichi Mugikura"
+    },
+    {
+      "n": "91",
+      "p": "Yoshihiro Nakada"
+    },
+    {
+      "n": "92",
+      "p": "Koichi Morita"
+    },
+    {
+      "n": "93",
+      "p": "Kazuhiro Takeda"
+    },
+    {
+      "n": "94",
+      "p": "Kazuyoshi Ono"
+    },
+    {
+      "n": "95",
+      "p": "Yoshihiko Morita"
+    },
+    {
+      "n": "96",
+      "p": "Yoshihiko Takahashi"
+    },
+    {
+      "n": "97",
+      "p": "Tetsuro Hirose"
+    },
+    {
+      "n": "98",
+      "p": "Norifumi Nishimura"
+    },
+    {
+      "n": "99",
+      "p": "Tetsuya Katahira"
+    },
+    {
+      "n": "100",
+      "p": "Katsuhiko Kido"
+    },
+    {
+      "n": "101",
+      "p": "Ozzie Canseco"
+    },
+    {
+      "n": "102",
+      "p": "Ray Young"
+    },
+    {
+      "n": "103",
+      "p": "Kiyooki Nakanishi"
+    },
+    {
+      "n": "104",
+      "p": "Ryuzo Yamasaki"
+    },
+    {
+      "n": "105",
+      "p": "Hiroo Ishii"
+    },
+    {
+      "n": "106",
+      "p": "Takao Obana"
+    },
+    {
+      "n": "107",
+      "p": "Brian Dayett"
+    },
+    {
+      "n": "108",
+      "p": "Yutaka Ohno"
+    },
+    {
+      "n": "109",
+      "p": "Shinji Sasaoka"
+    },
+    {
+      "n": "110",
+      "p": "Kazuhiko Ushijima"
+    },
+    {
+      "n": "111",
+      "p": "Hisanobu Watanabe"
+    },
+    {
+      "n": "112",
+      "p": "Akihiro Yano"
+    },
+    {
+      "n": "113",
+      "p": "Shinji Inoue"
+    },
+    {
+      "n": "114",
+      "p": "Hiroshi Fujimoto"
+    },
+    {
+      "n": "115",
+      "p": "Shuji Fujimoto"
+    },
+    {
+      "n": "116",
+      "p": "Scott Anderson"
+    },
+    {
+      "n": "117",
+      "p": "Takeshi Yamazaki"
+    },
+    {
+      "n": "118",
+      "p": "Eiji Mizuguchi"
+    },
+    {
+      "n": "119",
+      "p": "Kozo Shohda"
+    },
+    {
+      "n": "120",
+      "p": "Hitoshi Taneda"
+    },
+    {
+      "n": "121",
+      "p": "Junichi Fukura"
+    },
+    {
+      "n": "122",
+      "p": "Yoshitaka Mizuo"
+    },
+    {
+      "n": "123",
+      "p": "Terushi Nakajima"
+    },
+    {
+      "n": "124",
+      "p": "Takashi Uchinokura"
+    },
+    {
+      "n": "125",
+      "p": "Akihito Fukuoh"
+    },
+    {
+      "n": "126",
+      "p": "Hiromu Kojima"
+    },
+    {
+      "n": "127",
+      "p": "Yutaka Wada"
+    },
+    {
+      "n": "128",
+      "p": "Minoru Ohuchi"
+    },
+    {
+      "n": "129",
+      "p": "Makoto Shimada"
+    },
+    {
+      "n": "130",
+      "p": "Terumitsu Kumano"
+    },
+    {
+      "n": "131",
+      "p": "Yasuo Fujii"
+    },
+    {
+      "n": "132",
+      "p": "Yasunori Ohshima"
+    },
+    {
+      "n": "133",
+      "p": "Hiroki Nomura"
+    },
+    {
+      "n": "134",
+      "p": "Mark Ryal"
+    },
+    {
+      "n": "135",
+      "p": "Takehiko Kobayakawa"
+    },
+    {
+      "n": "136",
+      "p": "Kazuhiro Satoh"
+    },
+    {
+      "n": "137",
+      "p": "Kiyoshi Hatsushiba"
+    },
+    {
+      "n": "138",
+      "p": "Mitsuo Tatsukawa"
+    },
+    {
+      "n": "139",
+      "p": "Yoshio Mizukami"
+    },
+    {
+      "n": "140",
+      "p": "Atsunori Itoh"
+    },
+    {
+      "n": "141",
+      "p": "Hiromitsu Ochiai"
+    },
+    {
+      "n": "142",
+      "p": "Yasushi Tao"
+    },
+    {
+      "n": "143",
+      "p": "Kohji Takagi"
+    },
+    {
+      "n": "144",
+      "p": "Keiji Kimura"
+    },
+    {
+      "n": "145",
+      "p": "Hiroyuki Maehara"
+    },
+    {
+      "n": "146",
+      "p": "Yoshiaki Kanemura"
+    },
+    {
+      "n": "147",
+      "p": "Tomio Tashiro"
+    },
+    {
+      "n": "148",
+      "p": "Toyohiko Yoshida"
+    },
+    {
+      "n": "149",
+      "p": "Shinichi Katoh"
+    },
+    {
+      "n": "150",
+      "p": "Takashi Osanai"
+    },
+    {
+      "n": "151",
+      "p": "Koji Yamawaki"
+    },
+    {
+      "n": "152",
+      "p": "Kenichi Yamazaki"
+    },
+    {
+      "n": "153",
+      "p": "Seiji Tomashino"
+    },
+    {
+      "n": "154",
+      "p": "Masao Kida"
+    },
+    {
+      "n": "155",
+      "p": "Yukihiko Yamaoki"
+    },
+    {
+      "n": "156",
+      "p": "Mitsujiro Sakai"
+    },
+    {
+      "n": "157",
+      "p": "Yukihiro Nishizaki"
+    },
+    {
+      "n": "158",
+      "p": "Tomoyoshi Ohishi"
+    },
+    {
+      "n": "159",
+      "p": "Mike Laga"
+    },
+    {
+      "n": "160",
+      "p": "Yoshiharu Wakana"
+    },
+    {
+      "n": "161",
+      "p": "Koichi Ono"
+    },
+    {
+      "n": "162",
+      "p": "Masashi Yokota"
+    },
+    {
+      "n": "163",
+      "p": "Yutaka Matsumoto"
+    },
+    {
+      "n": "164",
+      "p": "Katsuhito Mizuno"
+    },
+    {
+      "n": "165",
+      "p": "Taigen Kaku"
+    },
+    {
+      "n": "166",
+      "p": "Fujio Tamura"
+    },
+    {
+      "n": "167",
+      "p": "Guy Hoffman"
+    },
+    {
+      "n": "168",
+      "p": "Akimasa Yokotani"
+    },
+    {
+      "n": "169",
+      "p": "Haruki Yoshitake"
+    },
+    {
+      "n": "170",
+      "p": "Junji Ogawa"
+    },
+    {
+      "n": "171",
+      "p": "Tatsuji Nishimura"
+    },
+    {
+      "n": "172",
+      "p": "Naoyuki Naitoh"
+    },
+    {
+      "n": "173",
+      "p": "Katsuo Soh"
+    },
+    {
+      "n": "174",
+      "p": "Motofumi Nishimura"
+    },
+    {
+      "n": "175",
+      "p": "Manabu Saitoh"
+    },
+    {
+      "n": "176",
+      "p": "Kazushige Nagashima"
+    },
+    {
+      "n": "177",
+      "p": "Hiroshi Ogawa"
+    },
+    {
+      "n": "178",
+      "p": "Hiroshi Moriwaki"
+    },
+    {
+      "n": "179",
+      "p": "Kohsuke Yoshihara"
+    },
+    {
+      "n": "180",
+      "p": "Kazuhiko Endoh"
+    },
+    {
+      "n": "181",
+      "p": "Akimitsu Itoh"
+    },
+    {
+      "n": "182",
+      "p": "Nobuyuki Ebisu"
+    },
+    {
+      "n": "183",
+      "p": "Shinichi Igarashi"
+    },
+    {
+      "n": "184",
+      "p": "Kaoru Okazaki"
+    },
+    {
+      "n": "185",
+      "p": "Hiroshi Shibakusa"
+    },
+    {
+      "n": "186",
+      "p": "Kazuyoshi Kohyama"
+    },
+    {
+      "n": "187",
+      "p": "Akihito Igarashi"
+    },
+    {
+      "n": "188",
+      "p": "Hiroaki Hirota"
+    },
+    {
+      "n": "189",
+      "p": "Kazuaki Ueda"
+    },
+    {
+      "n": "190",
+      "p": "Yutaro Imai"
+    },
+    {
+      "n": "191",
+      "p": "Don Schulze"
+    },
+    {
+      "n": "192",
+      "p": "Koji Mori"
+    },
+    {
+      "n": "193",
+      "p": "Marvell Wynne"
+    },
+    {
+      "n": "194",
+      "p": "Hiromichi Ishige"
+    },
+    {
+      "n": "195",
+      "p": "Atsuya Furuta"
+    },
+    {
+      "n": "196",
+      "p": "Kazuhiro Sasaki"
+    },
+    {
+      "n": "197",
+      "p": "Toru Okamoto"
+    },
+    {
+      "n": "198",
+      "p": "Masahiro Uchiyama"
+    },
+    {
+      "n": "199",
+      "p": "Sadaaki Yoshimura"
+    },
+    {
+      "n": "200",
+      "p": "Motonobu Tanishige"
+    },
+    {
+      "n": "201",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "202",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "203",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "204",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "205",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "206",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "207",
+      "p": "Jim Paciorek"
+    },
+    {
+      "n": "208",
+      "p": "Orestes Destrade"
+    },
+    {
+      "n": "209",
+      "p": "Hiromitsu Ochiai"
+    },
+    {
+      "n": "210",
+      "p": "Hiromitsu Ochiai"
+    },
+    {
+      "n": "211",
+      "p": "Masaki Saitoh"
+    },
+    {
+      "n": "212",
+      "p": "Masaki Saitoh"
+    },
+    {
+      "n": "213",
+      "p": "Kazuhiko Ishimine"
+    },
+    {
+      "n": "214",
+      "p": "Orestes Destrade"
+    },
+    {
+      "n": "215",
+      "p": "Norifumi Nishimura"
+    },
+    {
+      "n": "216",
+      "p": "Masaki Saitoh"
+    },
+    {
+      "n": "217",
+      "p": "Koichi Ogata"
+    },
+    {
+      "n": "218",
+      "p": "Kenjiro Nomura"
+    },
+    {
+      "n": "219",
+      "p": "Koji Akiyama"
+    },
+    {
+      "n": "220",
+      "p": "Masao Kida"
+    },
+    {
+      "n": "221",
+      "p": "Hisanobu Watanabe"
+    },
+    {
+      "n": "222",
+      "p": "Tsuyoshi Yoda"
+    },
+    {
+      "n": "223",
+      "p": "Sadaharu Oh"
+    },
+    {
+      "n": "224",
+      "p": "Shigeo Nagashima"
+    },
+    {
+      "n": "225",
+      "p": "Minoru Murayama"
+    },
+    {
+      "n": "226",
+      "p": "Tadashi Sugiura"
+    },
+    {
+      "n": "227",
+      "p": "Futoshi Nakanishi"
+    },
+    {
+      "n": "228",
+      "p": "Kazuhisa Inao"
+    },
+    {
+      "n": "229",
+      "p": "Masaaki Koyama"
+    },
+    {
+      "n": "230",
+      "p": "Tetsuya Yoneda"
+    },
+    {
+      "n": "231",
+      "p": "Yoshio Yoshida"
+    },
+    {
+      "n": "232",
+      "p": "Isao Harimoto"
+    },
+    {
+      "n": "233",
+      "p": "Checklist"
+    },
+    {
+      "n": "234",
+      "p": "Checklist"
+    },
+    {
+      "n": "235",
+      "p": "Checklist"
+    },
+    {
+      "n": "236",
+      "p": "Checklist"
+    },
+    {
+      "n": "237",
+      "p": "Checklist"
+    },
+    {
+      "n": "238",
+      "p": "Checklist"
+    },
+    {
+      "n": "239",
+      "p": "1990 Championship Team"
+    },
+    {
+      "n": "241",
+      "p": "Takashi Yoshida"
+    },
+    {
+      "n": "242",
+      "p": "Katsumi Hirosawa"
+    },
+    {
+      "n": "243",
+      "p": "Koichi Hori"
+    },
+    {
+      "n": "244",
+      "p": "Takehiro Ishii"
+    },
+    {
+      "n": "245",
+      "p": "Nobuhiko Watanabe"
+    },
+    {
+      "n": "246",
+      "p": "Akio Saitoh"
+    },
+    {
+      "n": "247",
+      "p": "Toru Sugiura"
+    },
+    {
+      "n": "248",
+      "p": "Yoichi Fukuzawa"
+    },
+    {
+      "n": "249",
+      "p": "Katsuo Hirata"
+    },
+    {
+      "n": "250",
+      "p": "Takayuki Murakami"
+    },
+    {
+      "n": "251",
+      "p": "Kazuhiko Yamashita"
+    },
+    {
+      "n": "252",
+      "p": "Yukinaga Maeda"
+    },
+    {
+      "n": "253",
+      "p": "Manabu Kitabeppu"
+    },
+    {
+      "n": "254",
+      "p": "Kotaro Azuse"
+    },
+    {
+      "n": "255",
+      "p": "Shinichi Murata"
+    },
+    {
+      "n": "256",
+      "p": "Kenji Furukubo"
+    },
+    {
+      "n": "257",
+      "p": "Kazuhiro Kiyohara"
+    },
+    {
+      "n": "258",
+      "p": "Isao Kohda"
+    },
+    {
+      "n": "259",
+      "p": "Hiroshi Narahara"
+    },
+    {
+      "n": "260",
+      "p": "Hideyuki Awano"
+    },
+    {
+      "n": "261",
+      "p": "Osamu Sasaki"
+    },
+    {
+      "n": "262",
+      "p": "Daisuke Araki"
+    },
+    {
+      "n": "263",
+      "p": "Masahiro Takahashi"
+    },
+    {
+      "n": "264",
+      "p": "Koji Maeda"
+    },
+    {
+      "n": "265",
+      "p": "Tatsuya Shindoh"
+    },
+    {
+      "n": "266",
+      "p": "Yukio Tanaka"
+    },
+    {
+      "n": "267",
+      "p": "Shigeki Oto"
+    },
+    {
+      "n": "268",
+      "p": "Tetsuya Shiozaki"
+    },
+    {
+      "n": "269",
+      "p": "Tomio Watanabe"
+    },
+    {
+      "n": "270",
+      "p": "Masaki Saitoh"
+    },
+    {
+      "n": "271",
+      "p": "Fujio Sumi"
+    },
+    {
+      "n": "272",
+      "p": "Shinji Koh"
+    },
+    {
+      "n": "273",
+      "p": "Keijiro Yumioka"
+    },
+    {
+      "n": "274",
+      "p": "Seiichi Kaneko"
+    },
+    {
+      "n": "275",
+      "p": "Yasunaga Makishi"
+    },
+    {
+      "n": "276",
+      "p": "Satoru Komiyama"
+    },
+    {
+      "n": "277",
+      "p": "Hideki Irabu"
+    },
+    {
+      "n": "278",
+      "p": "Yuji Ohno"
+    },
+    {
+      "n": "279",
+      "p": "Kazuhito Nishimoto"
+    },
+    {
+      "n": "280",
+      "p": "Susumu Aoyagi"
+    },
+    {
+      "n": "281",
+      "p": "Toshikatsu Hikono"
+    },
+    {
+      "n": "282",
+      "p": "Makoto Sasaki"
+    },
+    {
+      "n": "283",
+      "p": "Akira Etoh"
+    },
+    {
+      "n": "284",
+      "p": "Tsuyoshi Yoda"
+    },
+    {
+      "n": "285",
+      "p": "Tsutomu Sakai"
+    },
+    {
+      "n": "286",
+      "p": "Tsutomu Itoh"
+    },
+    {
+      "n": "287",
+      "p": "Jim Traber"
+    },
+    {
+      "n": "288",
+      "p": "Kazuyoshi Tatsunami"
+    },
+    {
+      "n": "289",
+      "p": "Yoshihiro Yamagoshi"
+    },
+    {
+      "n": "290",
+      "p": "Takeshi Aikoh"
+    },
+    {
+      "n": "291",
+      "p": "Takeshi Nakamura"
+    },
+    {
+      "n": "292",
+      "p": "Shinji Hara"
+    },
+    {
+      "n": "293",
+      "p": "Motoyasu Wakai"
+    },
+    {
+      "n": "294",
+      "p": "Sadaharu Hiranuma"
+    },
+    {
+      "n": "295",
+      "p": "Orestes Destrade"
+    },
+    {
+      "n": "296",
+      "p": "Terunobu Seto"
+    },
+    {
+      "n": "297",
+      "p": "Yasutaka Furusato"
+    },
+    {
+      "n": "298",
+      "p": "Norio Tanabe"
+    },
+    {
+      "n": "299",
+      "p": "Hiroyuki Yoshida"
+    },
+    {
+      "n": "300",
+      "p": "Takashi Inomata"
+    },
+    {
+      "n": "301",
+      "p": "Yonetoshi Kawamata"
+    },
+    {
+      "n": "302",
+      "p": "Masaki Katoh"
+    },
+    {
+      "n": "303",
+      "p": "Tokitaka Minamibuchi"
+    },
+    {
+      "n": "304",
+      "p": "Tom O"
+    },
+    {
+      "n": "305",
+      "p": "Kazuhiro Yamauchi"
+    },
+    {
+      "n": "306",
+      "p": "Kaname Yashiki"
+    },
+    {
+      "n": "307",
+      "p": "Yoshinori Satoh"
+    },
+    {
+      "n": "308",
+      "p": "Koichi Sekikawa"
+    },
+    {
+      "n": "309",
+      "p": "Koji Noda"
+    },
+    {
+      "n": "310",
+      "p": "Ryohji Moriyama"
+    },
+    {
+      "n": "311",
+      "p": "Shigeki Sano"
+    },
+    {
+      "n": "312",
+      "p": "Hiromitsu Kadota"
+    },
+    {
+      "n": "313",
+      "p": "Takahiro Ikeyama"
+    },
+    {
+      "n": "314",
+      "p": "Atsuhiro Motonishi"
+    },
+    {
+      "n": "315",
+      "p": "Genji Kaku"
+    },
+    {
+      "n": "316",
+      "p": "Jun Kawabata"
+    },
+    {
+      "n": "317",
+      "p": "Katsuyoshi Murata"
+    },
+    {
+      "n": "318",
+      "p": "Kazumi Sonokawa"
+    },
+    {
+      "n": "319",
+      "p": "Hiroshi Yagi"
+    },
+    {
+      "n": "320",
+      "p": "Rod Allen"
+    },
+    {
+      "n": "321",
+      "p": "Hiroaki Matsuura"
+    },
+    {
+      "n": "322",
+      "p": "Hector de la Cruz"
+    },
+    {
+      "n": "323",
+      "p": "Hiroshi Yugamidani"
+    },
+    {
+      "n": "324",
+      "p": "Takahito Nomura"
+    },
+    {
+      "n": "325",
+      "p": "Katsuhito Osaka"
+    },
+    {
+      "n": "326",
+      "p": "Shin Nakagomi"
+    },
+    {
+      "n": "327",
+      "p": "Masaru Uno"
+    },
+    {
+      "n": "328",
+      "p": "Yasutaka Hironaga"
+    },
+    {
+      "n": "329",
+      "p": "Akihito Kaneishi"
+    },
+    {
+      "n": "330",
+      "p": "Yoshinori Sumiyoshi"
+    },
+    {
+      "n": "331",
+      "p": "Bill Bathe"
+    },
+    {
+      "n": "332",
+      "p": "Eddie Williams"
+    },
+    {
+      "n": "333",
+      "p": "Takeshi Ohmori"
+    },
+    {
+      "n": "334",
+      "p": "Hideaki Takazawa"
+    },
+    {
+      "n": "335",
+      "p": "Eiji Kanamori"
+    },
+    {
+      "n": "336",
+      "p": "Noriyuki Mori"
+    },
+    {
+      "n": "337",
+      "p": "Kazuhiko Ishimine"
+    },
+    {
+      "n": "338",
+      "p": "Koji Nakada"
+    },
+    {
+      "n": "339",
+      "p": "Yukio Yaegashi"
+    },
+    {
+      "n": "340",
+      "p": "Yasumitsu Shibata"
+    },
+    {
+      "n": "341",
+      "p": "Yoshihiro Kojima"
+    },
+    {
+      "n": "342",
+      "p": "Shinji Imanaka"
+    },
+    {
+      "n": "343",
+      "p": "Ty Van Burkleo"
+    },
+    {
+      "n": "344",
+      "p": "Shinichi Murakami"
+    },
+    {
+      "n": "345",
+      "p": "Hideki Takahashi"
+    },
+    {
+      "n": "346",
+      "p": "Mike Diaz"
+    },
+    {
+      "n": "347",
+      "p": "Katsuya Kishikawa"
+    },
+    {
+      "n": "348",
+      "p": "Shigetoshi Hasegawa"
+    },
+    {
+      "n": "349",
+      "p": "Minoru Yano"
+    },
+    {
+      "n": "350",
+      "p": "Akinobu Mayumi"
+    },
+    {
+      "n": "351",
+      "p": "Toru Nimura"
+    },
+    {
+      "n": "352",
+      "p": "Phil Bradley"
+    },
+    {
+      "n": "353",
+      "p": "Daijiro Ohishi"
+    },
+    {
+      "n": "354",
+      "p": "Hideki Hashigami"
+    },
+    {
+      "n": "355",
+      "p": "Matt Winters"
+    },
+    {
+      "n": "356",
+      "p": "Takayoshi Nakao"
+    },
+    {
+      "n": "357",
+      "p": "Tatsuo Ohmiya"
+    },
+    {
+      "n": "358",
+      "p": "Kenjiro Nomura"
+    },
+    {
+      "n": "359",
+      "p": "Boomer Wells"
+    },
+    {
+      "n": "360",
+      "p": "Masahiro Kawai"
+    },
+    {
+      "n": "361",
+      "p": "Masato Katoh"
+    },
+    {
+      "n": "362",
+      "p": "Hatsuhiko Tsuji"
+    },
+    {
+      "n": "363",
+      "p": "Kouichi Ogata"
+    },
+    {
+      "n": "364",
+      "p": "Shinji Hata"
+    },
+    {
+      "n": "365",
+      "p": "Ralph Bryant"
+    },
+    {
+      "n": "366",
+      "p": "Nobuyuki Hoshino"
+    },
+    {
+      "n": "367",
+      "p": "Tsutomu Ishimoto"
+    },
+    {
+      "n": "368",
+      "p": "Toshio Shinozuka"
+    },
+    {
+      "n": "369",
+      "p": "Hiroshi Ishige"
+    },
+    {
+      "n": "370",
+      "p": "Kazumasa Ichikawa"
+    },
+    {
+      "n": "371",
+      "p": "Hisao Niura"
+    },
+    {
+      "n": "372",
+      "p": "Yoshihiro Nishioka"
+    },
+    {
+      "n": "373",
+      "p": "Hiroyuki Mori"
+    },
+    {
+      "n": "374",
+      "p": "Kazunori Yamamoto"
+    },
+    {
+      "n": "375",
+      "p": "Mineo Fukuhara"
+    },
+    {
+      "n": "376",
+      "p": "Yutaka Takagi"
+    },
+    {
+      "n": "377",
+      "p": "Keiichi Shibui"
+    },
+    {
+      "n": "378",
+      "p": "Hiromi Matsunaga"
+    },
+    {
+      "n": "379",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "380",
+      "p": "R"
+    },
+    {
+      "n": "381",
+      "p": "Hiroaki Nakayama"
+    },
+    {
+      "n": "382",
+      "p": "Hiroshi Tsuno"
+    },
+    {
+      "n": "383",
+      "p": "Kaname Aoi"
+    },
+    {
+      "n": "384",
+      "p": "Tetsuya Iida"
+    },
+    {
+      "n": "385",
+      "p": "Hisashi Ohno"
+    },
+    {
+      "n": "386",
+      "p": "Kazuhisa Kawaguchi"
+    },
+    {
+      "n": "387",
+      "p": "Shingo Takatsu"
+    },
+    {
+      "n": "388",
+      "p": "Daisuke Motoki"
+    },
+    {
+      "n": "389",
+      "p": "Kenjiro Kawasaki"
+    },
+    {
+      "n": "390",
+      "p": "Masafumi Yamamori"
+    },
+    {
+      "n": "391",
+      "p": "Nobutoshi Shimada"
+    },
+    {
+      "n": "392",
+      "p": "Satoru Nakano"
+    },
+    {
+      "n": "393",
+      "p": "Yasuaki Taihoh"
+    },
+    {
+      "n": "394",
+      "p": "Hiromasa Arai"
+    },
+    {
+      "n": "395",
+      "p": "Kazuhiko Miyakawa"
+    },
+    {
+      "n": "396",
+      "p": "Takashi Ohta"
+    },
+    {
+      "n": "397",
+      "p": "Hirofumi Ogawa"
+    },
+    {
+      "n": "398",
+      "p": "Masaharu Motohara"
+    },
+    {
+      "n": "399",
+      "p": "Kenji Tomashino"
+    },
+    {
+      "n": "400",
+      "p": "Takahisa Suzuki"
+    },
+    {
+      "n": "401",
+      "p": "Masaaki Mori"
+    },
+    {
+      "n": "402",
+      "p": "Shozo Doi"
+    },
+    {
+      "n": "403",
+      "p": "Akira Ohgi"
+    },
+    {
+      "n": "404",
+      "p": "Hideo Nomo"
+    },
+    {
+      "n": "405",
+      "p": "Tomio Watanabe"
+    },
+    {
+      "n": "406",
+      "p": "Kimiyasu Kudoh"
+    },
+    {
+      "n": "407",
+      "p": "Nobuyuki Hoshino"
+    },
+    {
+      "n": "408",
+      "p": "Kazuyoshi Ono"
+    },
+    {
+      "n": "409",
+      "p": "Kazuhiro Takeda"
+    },
+    {
+      "n": "410",
+      "p": "Yukihiro Nishizaki"
+    },
+    {
+      "n": "411",
+      "p": "Satoru Komiyama"
+    },
+    {
+      "n": "412",
+      "p": "Katsuyoshi Murata"
+    },
+    {
+      "n": "413",
+      "p": "Tsutomu Itoh"
+    },
+    {
+      "n": "414",
+      "p": "Satoshi Nakajima"
+    },
+    {
+      "n": "415",
+      "p": "Fujio Tamura"
+    },
+    {
+      "n": "416",
+      "p": "Kazuhiro Kiyohara"
+    },
+    {
+      "n": "417",
+      "p": "Hatsuhiko Tsuji"
+    },
+    {
+      "n": "418",
+      "p": "Hiromichi Ishige"
+    },
+    {
+      "n": "419",
+      "p": "Yukio Tanaka"
+    },
+    {
+      "n": "420",
+      "p": "Hiromi Matsunaga"
+    },
+    {
+      "n": "421",
+      "p": "Hirofumi Ogawa"
+    },
+    {
+      "n": "422",
+      "p": "Jim Traber"
+    },
+    {
+      "n": "423",
+      "p": "Kazuyuki Shirai"
+    },
+    {
+      "n": "424",
+      "p": "Kohji Akiyama"
+    },
+    {
+      "n": "425",
+      "p": "Makoto Sasaki"
+    },
+    {
+      "n": "426",
+      "p": "Hiromitsu Kadota"
+    },
+    {
+      "n": "427",
+      "p": "Kazuhiko Ishimine"
+    },
+    {
+      "n": "428",
+      "p": "Takahisa Suzuki"
+    },
+    {
+      "n": "429",
+      "p": "Hiromasa Arai"
+    },
+    {
+      "n": "430",
+      "p": "Matt Winters"
+    },
+    {
+      "n": "431",
+      "p": "Takeshi Aikoh"
+    },
+    {
+      "n": "432",
+      "p": "Motoshi Fujita"
+    },
+    {
+      "n": "433",
+      "p": "Kohji Yamamoto"
+    },
+    {
+      "n": "434",
+      "p": "Yutaka Sudoh"
+    },
+    {
+      "n": "435",
+      "p": "Masumi Kuwata"
+    },
+    {
+      "n": "436",
+      "p": "Hiromi Makihara"
+    },
+    {
+      "n": "437",
+      "p": "Shinji Sasaoka"
+    },
+    {
+      "n": "438",
+      "p": "Yutaka Ohno"
+    },
+    {
+      "n": "439",
+      "p": "Hiroki Nomura"
+    },
+    {
+      "n": "440",
+      "p": "Shinji Imanaka"
+    },
+    {
+      "n": "441",
+      "p": "Genji Kaku"
+    },
+    {
+      "n": "442",
+      "p": "Kohichi Morita"
+    },
+    {
+      "n": "443",
+      "p": "Kenjiro Kawasaki"
+    },
+    {
+      "n": "444",
+      "p": "Tatsuji Nishimura"
+    },
+    {
+      "n": "445",
+      "p": "Atsuya Furuta"
+    },
+    {
+      "n": "446",
+      "p": "Mitsuo Tatsukawa"
+    },
+    {
+      "n": "447",
+      "p": "Takeshi Nakamura"
+    },
+    {
+      "n": "448",
+      "p": "Shinji Hata"
+    },
+    {
+      "n": "449",
+      "p": "Katsumi Hirosawa"
+    },
+    {
+      "n": "450",
+      "p": "Toshio Shinozuka"
+    },
+    {
+      "n": "451",
+      "p": "Kaoru Okazaki"
+    },
+    {
+      "n": "452",
+      "p": "Takahiro Ikeyama"
+    },
+    {
+      "n": "453",
+      "p": "Norihiro Komada"
+    },
+    {
+      "n": "454",
+      "p": "Kenjiro Nomura"
+    },
+    {
+      "n": "455",
+      "p": "Yutaka Takagi"
+    },
+    {
+      "n": "456",
+      "p": "Kazuyoshi Tatsunami"
+    },
+    {
+      "n": "457",
+      "p": "Hiromitsu Ochiai"
+    },
+    {
+      "n": "458",
+      "p": "Tatsunori Hara"
+    },
+    {
+      "n": "459",
+      "p": "Sadaaki Yoshimura"
+    },
+    {
+      "n": "460",
+      "p": "Akinobu Mayumi"
+    },
+    {
+      "n": "461",
+      "p": "Ryuzo Yamasaki"
+    },
+    {
+      "n": "462",
+      "p": "Yasuaki Taihoh"
+    }
+  ]
+}

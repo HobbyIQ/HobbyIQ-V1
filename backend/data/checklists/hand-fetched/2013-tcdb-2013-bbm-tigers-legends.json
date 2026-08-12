@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-tigers-legends",
+  "setName": "2013 BBM Tigers Legends",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/94239",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tigers",
+      "p": "Legends 99 Tomoaki Kanemoto"
+    }
+  ]
+}

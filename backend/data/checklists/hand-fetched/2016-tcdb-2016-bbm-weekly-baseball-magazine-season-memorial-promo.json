@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-weekly-baseball-magazine-season-memorial-promo",
+  "setName": "2016 BBM Weekly Baseball Magazine Season Memorial Promo",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/607810",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Weekly",
+      "p": "Baseball Magazine Season Memorial Promo 2 Shohei Ohtani"
+    }
+  ]
+}

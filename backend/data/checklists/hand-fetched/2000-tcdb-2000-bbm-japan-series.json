@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2000,
+  "setKey": "bbm-japan-series",
+  "setName": "2000 BBM Japan Series",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102410",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Japan",
+      "p": "Series S66 Sadaharu Oh"
+    }
+  ]
+}

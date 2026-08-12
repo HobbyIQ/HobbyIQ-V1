@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2007,
+  "setKey": "bbm-the-climax-hokkaido-nippon-ham-fighters",
+  "setName": "2007 BBM The Climax Hokkaido Nippon Ham Fighters",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103930",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "The",
+      "p": "Climax Hokkaido Nippon Ham Fighters F36 Atsunori Inaba"
+    }
+  ]
+}

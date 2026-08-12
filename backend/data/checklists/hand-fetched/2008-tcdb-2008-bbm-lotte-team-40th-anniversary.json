@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2008,
+  "setKey": "bbm-lotte-team-40th-anniversary",
+  "setName": "2008 BBM Lotte Team 40th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/230091",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Lotte",
+      "p": "Team 40th Anniversary 99 Daisuke Hayakawa"
+    }
+  ]
+}

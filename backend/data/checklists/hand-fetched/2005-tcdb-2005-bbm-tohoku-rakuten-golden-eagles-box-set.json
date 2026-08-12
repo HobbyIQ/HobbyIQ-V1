@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-tohoku-rakuten-golden-eagles-box-set",
+  "setName": "2005 BBM Tohoku Rakuten Golden Eagles Box Set",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103086",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Tohoku",
+      "p": "Rakuten Golden Eagles Box Set E47 Kenshi Kawaguchi"
+    }
+  ]
+}

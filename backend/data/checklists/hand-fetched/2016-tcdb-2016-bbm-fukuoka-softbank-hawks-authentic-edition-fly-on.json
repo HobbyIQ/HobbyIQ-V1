@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2016,
+  "setKey": "bbm-fukuoka-softbank-hawks-authentic-edition-fly-on",
+  "setName": "2016 BBM Fukuoka SoftBank Hawks Authentic Edition FLY ON",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/324577",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "SoftBank Hawks Authentic Edition FLY ON 27 Tomoaki Egawa"
+    }
+  ]
+}

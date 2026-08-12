@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2004,
+  "setKey": "bbm-kazuhiro-kiyohara-2000-hits",
+  "setName": "2004 BBM Kazuhiro Kiyohara 2000 Hits",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103028",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Kazuhiro",
+      "p": "Kiyohara 2000 Hits NNO Kazuhiro Kiyohara"
+    }
+  ]
+}

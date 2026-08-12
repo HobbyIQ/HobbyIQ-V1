@@ -1,0 +1,42 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2021-bowman-draft-sapphire-baseball",
+    "2021-bowman-draft-sapphire"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Draft Sapphire). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": null,
+  "autoParallels": [
+    {
+      "name": "Base Sapphire",
+      "printRun": null
+    },
+    {
+      "name": "Green Sapphire",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Sapphire",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Sapphire",
+      "printRun": 25
+    },
+    {
+      "name": "Purple Sapphire",
+      "printRun": 10
+    },
+    {
+      "name": "Red Sapphire",
+      "printRun": 5
+    },
+    {
+      "name": "Padparadscha",
+      "printRun": 1
+    }
+  ]
+}

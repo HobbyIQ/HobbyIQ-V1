@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2022,
+  "setKey": "bbm-roki-sasaki-perfect-game",
+  "setName": "2022 BBM Roki Sasaki Perfect Game",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/329357",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Roki",
+      "p": "Sasaki Perfect Game 18 Kou Matsukawa"
+    }
+  ]
+}

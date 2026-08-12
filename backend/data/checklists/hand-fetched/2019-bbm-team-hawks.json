@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2019,
+  "setKey": "bbm-hawks",
+  "setName": "2019 BBM Fukuoka SoftBank Hawks",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2019hawks_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

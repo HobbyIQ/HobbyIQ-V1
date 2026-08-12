@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2019,
+  "setKey": "bbm-hanshin-tigers-brilliant",
+  "setName": "2019 BBM Hanshin Tigers Brilliant",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/228661",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hanshin",
+      "p": "Tigers Brilliant 27 Masahiro Nakatani"
+    }
+  ]
+}

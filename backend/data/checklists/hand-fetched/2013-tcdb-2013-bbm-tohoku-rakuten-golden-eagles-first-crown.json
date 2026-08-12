@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2013,
+  "setKey": "bbm-tohoku-rakuten-golden-eagles-first-crown",
+  "setName": "2013 BBM Tohoku Rakuten Golden Eagles First Crown",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338449",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

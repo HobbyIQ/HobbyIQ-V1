@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2010,
+  "setKey": "bbm-hanshin-tigers-75th-anniversary",
+  "setName": "2010 BBM Hanshin Tigers 75th Anniversary",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/338312",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

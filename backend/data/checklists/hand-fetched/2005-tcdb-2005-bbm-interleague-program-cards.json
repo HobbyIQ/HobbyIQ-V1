@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-interleague-program-cards",
+  "setName": "2005 BBM Interleague Program Cards",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/441407",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Interleague",
+      "p": "Program Cards 24 Hitoshi Tamura"
+    }
+  ]
+}

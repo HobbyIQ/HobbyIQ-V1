@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2003,
+  "setKey": "bbm-young-hawks",
+  "setName": "2003 BBM Young Hawks",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102951",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Young",
+      "p": "Hawks NNO Munenori Kawasaki"
+    }
+  ]
+}

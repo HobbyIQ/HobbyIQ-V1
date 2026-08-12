@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2024,
+  "setKey": "bbm-softbank",
+  "setName": "2024 BBM Softbank",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2024softbank_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

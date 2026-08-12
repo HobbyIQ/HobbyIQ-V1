@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-nankai-hawks-hawks-achievement",
+  "setName": "2014 BBM Nankai Hawks Hawks Achievement",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/352411",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Nankai",
+      "p": "Hawks Hawks Achievement 29 Kazunori Yamamoto"
+    }
+  ]
+}

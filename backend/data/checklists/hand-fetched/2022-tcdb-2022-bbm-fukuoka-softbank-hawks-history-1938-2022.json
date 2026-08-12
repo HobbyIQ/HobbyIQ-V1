@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2022,
+  "setKey": "bbm-fukuoka-softbank-hawks-history-1938-2022",
+  "setName": "2022 BBM Fukuoka SoftBank Hawks History 1938 2022",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/329362",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Fukuoka",
+      "p": "SoftBank Hawks History 1938 2022 90 Yuki Yanagita"
+    }
+  ]
+}

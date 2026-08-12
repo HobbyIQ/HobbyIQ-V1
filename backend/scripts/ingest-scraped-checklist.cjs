@@ -61,17 +61,20 @@ async function main() {
     else { skipped++; continue; }
 
     const printRun = row.printRun && row.printRun.trim() ? Number(row.printRun) : null;
+    // Canonicalize setKey from manifest (setName is display-only; passing
+    // it as setKey stores an un-normalized value that breaks setKey
+    // filters even though the slug computation strips the year).
     const entry = deriveCatalogEntry({
       sport: manifest.sport,
       year: manifest.year,
-      setKey: manifest.setName, // let the generator canonicalize
+      setKey: manifest.setKey || manifest.setName,
       cardNumber: row.cardNumber,
       parallel,
       isAuto: isAutoRow,
       printRun: Number.isFinite(printRun) && printRun > 0 ? printRun : null,
       playerName: row.player,
       source: `baseballcardpedia-scraped-${new Date().toISOString().slice(0, 10)}`,
-      confidence: "high",
+      confidence: 0.95,
       vendorIds: {},
     });
     if (!entry) { skipped++; continue; }

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1995,
+  "setKey": "bbm-all-star-game",
+  "setName": "1995 BBM All Star Game",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/86434",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "All",
+      "p": "Star Game A62 Darrin Jackson"
+    }
+  ]
+}

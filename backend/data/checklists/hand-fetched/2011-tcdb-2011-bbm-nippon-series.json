@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2011,
+  "setKey": "bbm-nippon-series",
+  "setName": "2011 BBM Nippon Series",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/283116",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": []
+}

@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1995,
+  "setKey": "bbm-orix-team-set-ii",
+  "setName": "1995 BBM Orix Team Set II",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102302",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Orix",
+      "p": "Team Set II 040 Ichiro Suzuki"
+    }
+  ]
+}

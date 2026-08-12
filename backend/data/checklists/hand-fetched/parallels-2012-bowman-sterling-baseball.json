@@ -1,0 +1,38 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2012-bowman-sterling-baseball",
+    "2012-bowman-sterling"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman Sterling). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": null,
+  "autoParallels": [
+    {
+      "name": "Base Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Refractor",
+      "printRun": 199
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50
+    },
+    {
+      "name": "Black Refractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5
+    },
+    {
+      "name": "Superfractor",
+      "printRun": 1
+    }
+  ]
+}

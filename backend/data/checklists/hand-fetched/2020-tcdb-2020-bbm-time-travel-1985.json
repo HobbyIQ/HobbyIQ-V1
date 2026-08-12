@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2020,
+  "setKey": "bbm-time-travel-1985",
+  "setName": "2020 BBM Time Travel 1985",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/230002",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Time",
+      "p": "Travel 1985 97 1985"
+    }
+  ]
+}

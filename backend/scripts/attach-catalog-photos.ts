@@ -115,40 +115,53 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
 
   while (it.hasMoreResults()) {
-    const { resources } = await it.fetchNext();
-    for (const n of resources) {
+    let fetchedResources;
+    try {
+      const { resources } = await it.fetchNext();
+      fetchedResources = resources;
+    } catch (e) {
+      // Transient page-fetch failure (429 / socket) — log and continue.
+      errors++;
+      if (errors <= 5) console.error(`  ! fetchNext failed: ${(e as Error).message}`);
+      continue;
+    }
+    for (const n of fetchedResources) {
       scanned++;
-      // Two shapes to bridge:
-      //   card:    id="card::hiq:sport:year:set:num", cardId="hiq:..." (root)
-      //   variant: id="variant::hiq:...:parallel:autoStatus", cardId=root
-      // sold_comps.hobbyiqCardId is always the fully-decorated child slug
-      // (e.g. hiq:...:rainbow-foil:no-auto), so:
-      //   variant match: strip "variant::" from id → exact match
-      //   card match:    STARTSWITH the cardId prefix + ":" → any child
-      let img: string | null = null;
-      if (n.kind === "variant") {
-        const stripped = n.id.startsWith("variant::") ? n.id.slice("variant::".length) : n.id;
-        img = await pickImageExact(stripped);
-      } else {
-        img = await pickImageAnyChild(n.cardId);
-      }
-      if (!img) { miss++; }
-      else {
-        hit++;
-        if (APPLY) {
-          try {
-            await catalog.item(n.id, n.cardId).patch({
-              operations: [
-                { op: "set", path: "/imageUrl", value: img },
-                { op: "set", path: "/imageAttachedAt", value: new Date().toISOString() },
-              ],
-            } as never);
-            patched++;
-          } catch (e) {
-            errors++;
-            if (errors <= 3) console.error(`  ! patch ${n.id}: ${(e as Error).message}`);
+      // Wrap the whole per-node body so a single lookup or patch failure
+      // can't crash the outer while loop — prior runs died silently
+      // on Cosmos SDK transient errors partway through the pool.
+      try {
+        // Two shapes to bridge:
+        //   card:    id="card::hiq:sport:year:set:num", cardId="hiq:..." (root)
+        //   variant: id="variant::hiq:...:parallel:autoStatus", cardId=root
+        let img: string | null = null;
+        if (n.kind === "variant") {
+          const stripped = n.id.startsWith("variant::") ? n.id.slice("variant::".length) : n.id;
+          img = await pickImageExact(stripped);
+        } else {
+          img = await pickImageAnyChild(n.cardId);
+        }
+        if (!img) { miss++; }
+        else {
+          hit++;
+          if (APPLY) {
+            try {
+              await catalog.item(n.id, n.cardId).patch({
+                operations: [
+                  { op: "set", path: "/imageUrl", value: img },
+                  { op: "set", path: "/imageAttachedAt", value: new Date().toISOString() },
+                ],
+              } as never);
+              patched++;
+            } catch (e) {
+              errors++;
+              if (errors <= 3) console.error(`  ! patch ${n.id}: ${(e as Error).message}`);
+            }
           }
         }
+      } catch (e) {
+        errors++;
+        if (errors <= 5) console.error(`  ! per-node failure ${n.id}: ${(e as Error).message}`);
       }
       if (MAX > 0 && scanned >= MAX) break;
       if (scanned % 100 === 0) {

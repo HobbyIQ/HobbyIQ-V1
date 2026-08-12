@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2021,
+  "setKey": "bbm-orix-buffaloes-history-1936-2021",
+  "setName": "2021 BBM Orix Buffaloes History 1936 2021",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/289900",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Orix",
+      "p": "Buffaloes History 1936 2021 90 Yutaro Sugimoto"
+    }
+  ]
+}

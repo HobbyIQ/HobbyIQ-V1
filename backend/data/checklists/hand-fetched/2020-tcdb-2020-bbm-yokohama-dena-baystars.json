@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2020,
+  "setKey": "bbm-yokohama-dena-baystars",
+  "setName": "2020 BBM Yokohama DeNA BayStars",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/231934",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yokohama",
+      "p": "DeNA BayStars DB81 Tyler Austin"
+    }
+  ]
+}

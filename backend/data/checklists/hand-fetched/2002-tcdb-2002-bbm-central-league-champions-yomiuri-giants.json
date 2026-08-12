@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2002,
+  "setKey": "bbm-central-league-champions-yomiuri-giants",
+  "setName": "2002 BBM Central League Champions Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102706",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Central",
+      "p": "League Champions Yomiuri Giants YG40 Yoshinobu Takahashi"
+    }
+  ]
+}

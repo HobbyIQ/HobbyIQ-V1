@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1997,
+  "setKey": "bbm-yomiuri-giants",
+  "setName": "1997 BBM Yomiuri Giants",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102308",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Yomiuri",
+      "p": "Giants G98 Toshimitsu Suetsugu"
+    }
+  ]
+}

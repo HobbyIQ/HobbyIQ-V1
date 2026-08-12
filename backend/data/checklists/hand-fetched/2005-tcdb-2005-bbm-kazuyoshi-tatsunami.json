@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2005,
+  "setKey": "bbm-kazuyoshi-tatsunami",
+  "setName": "2005 BBM Kazuyoshi Tatsunami",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/103580",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Kazuyoshi",
+      "p": "Tatsunami KT34 Kazuyoshi Tatsunami"
+    }
+  ]
+}

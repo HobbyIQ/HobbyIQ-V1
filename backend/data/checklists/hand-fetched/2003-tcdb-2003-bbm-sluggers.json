@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2003,
+  "setKey": "bbm-sluggers",
+  "setName": "2003 BBM Sluggers",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102710",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Sluggers",
+      "p": "144 Makoto Kaneko"
+    }
+  ]
+}

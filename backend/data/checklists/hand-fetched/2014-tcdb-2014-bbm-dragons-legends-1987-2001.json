@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2014,
+  "setKey": "bbm-dragons-legends-1987-2001",
+  "setName": "2014 BBM Dragons Legends 1987 2001",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/102208",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Dragons",
+      "p": "Legends 1987 2001 81 Hitoki Iwase"
+    }
+  ]
+}

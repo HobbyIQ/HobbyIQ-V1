@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 2019,
+  "setKey": "bbm-hiroshima-toyo-carp-brilliant",
+  "setName": "2019 BBM Hiroshima Toyo Carp Brilliant",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/230992",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Hiroshima",
+      "p": "Toyo Carp Brilliant 27 Xavier Batista"
+    }
+  ]
+}

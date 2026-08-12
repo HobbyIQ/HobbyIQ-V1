@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2017,
+  "setKey": "bbm-tigers_fukudome",
+  "setName": "2017 BBM Tigers_fukudome",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2017tigers_fukudome.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2024,
+  "setKey": "bbm-tigers",
+  "setName": "2024 BBM Hanshin Tigers",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2024tigers_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

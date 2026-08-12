@@ -1,0 +1,38 @@
+{
+  "source": "drew-bowman-parallels-xlsx",
+  "sourceUrl": "internal: bowman parallels 2011 2026.xlsx",
+  "fetchedAt": "2026-07-09",
+  "appliesTo": [
+    "2015-bowman-high-tek-baseball",
+    "2015-bowman-high-tek"
+  ],
+  "note": "Auto-generated from bowman-parallels.json (Bowman High Tek). Do not edit by hand — re-run convertBowmanParallelsToActuals.cjs.",
+  "baseParallels": null,
+  "prospectParallels": null,
+  "autoParallels": [
+    {
+      "name": "Base Tek Autograph",
+      "printRun": null
+    },
+    {
+      "name": "Green Diffractor",
+      "printRun": 99
+    },
+    {
+      "name": "Gold Diffractor",
+      "printRun": 50
+    },
+    {
+      "name": "Orange Diffractor",
+      "printRun": 25
+    },
+    {
+      "name": "Red Diffractor",
+      "printRun": 5
+    },
+    {
+      "name": "1/1 Diffractor",
+      "printRun": 1
+    }
+  ]
+}

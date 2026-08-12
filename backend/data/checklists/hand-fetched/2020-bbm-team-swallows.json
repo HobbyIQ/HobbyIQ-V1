@@ -1,0 +1,11 @@
+{
+  "sport": "baseball",
+  "year": 2020,
+  "setKey": "bbm-swallows",
+  "setName": "2020 BBM Yakult Swallows",
+  "source": "bbm-japan-official-pdf",
+  "sourceUrl": "https://www.sportsclick.jp/user_data/signlist/2020swallows_list.pdf",
+  "fetchedAt": "2026-08-12",
+  "note": "Parsed from BBM's official checklist PDF. Player names in kanji as printed.",
+  "baseSet": []
+}

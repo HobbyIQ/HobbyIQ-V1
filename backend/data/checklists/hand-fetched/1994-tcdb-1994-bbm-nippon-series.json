@@ -1,0 +1,16 @@
+{
+  "sport": "baseball",
+  "year": 1994,
+  "setKey": "bbm-nippon-series",
+  "setName": "1994 BBM Nippon Series",
+  "source": "tcdb",
+  "sourceUrl": "https://www.tcdb.com/ViewSet.cfm/sid/86433",
+  "fetchedAt": "2026-08-12",
+  "note": "Scraped from TCDB HTML via URL-slug regex. Player names romanized/anglicized as TCDB stores them.",
+  "baseSet": [
+    {
+      "n": "Nippon",
+      "p": "Series S66 Hatsuhiko Tsuji"
+    }
+  ]
+}
