@@ -23,7 +23,17 @@ const router = Router();
 router.use(requireSession);
 
 router.post("/cards", async (req: Request, res: Response) => {
-  const body = (req.body ?? {}) as { input?: unknown; hint?: unknown };
+  const body = (req.body ?? {}) as {
+    input?: unknown;
+    hint?: unknown;
+    /** CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Manual match surfaces
+     *  (Pending Review "fix", add-card, eBay import reconciler) send true so
+     *  the user can select a PROVISIONAL card — a real card we hold sales
+     *  for but have no checklist for yet. Ordinary search omits it and gets
+     *  verified cards only. Picking a provisional card writes
+     *  source='user-verified', which upgrades that row. */
+    includeProvisional?: unknown;
+  };
   if (typeof body.input !== "string") {
     res.status(400).json({
       success: false,
@@ -44,7 +54,9 @@ router.post("/cards", async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await dispatchSearch(body.input, hint);
+    const response = await dispatchSearch(body.input, hint, {
+      includeProvisional: body.includeProvisional === true,
+    });
     // CF-CARDSIGHT-UUID-IMAGE (Drew, 2026-07-13, PR #414): Cardsight-native
     // candidates (including PR #413's exploded per-parallel rows) carry
     // imageUrl: null from the dispatcher. Patch them to route through our

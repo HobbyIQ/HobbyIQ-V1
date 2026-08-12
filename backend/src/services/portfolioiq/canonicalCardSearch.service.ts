@@ -9,7 +9,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
-import { verifiedCatalogSqlClause } from "../catalog/catalogVisibility.js";
+import { verifiedCatalogSqlClause, provisionalCatalogSqlClause } from "../catalog/catalogVisibility.js";
 
 export interface CanonicalSearchInput {
   q: string;
@@ -40,6 +40,21 @@ export interface CanonicalSearchInput {
    *  (dispatcher shortcut, typeahead) that need identity + card only —
    *  not FMV. Drops search latency from ~2-7s to <500ms. */
   skipEnrichment?: boolean;
+  /** CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Include PROVISIONAL
+   *  catalog rows (sold-comps-stub-*) alongside verified ones.
+   *
+   *  Default false: ordinary search returns verified cards only, because a
+   *  stub's identity came from vendor text rather than a checklist.
+   *
+   *  True for the manual match flow — Pending Review "fix", add-card, the
+   *  eBay import reconciler. There a human is looking at the physical card
+   *  and telling us which one it is, so hiding the stub is the wrong
+   *  trade: it would leave them unable to match precisely the cards whose
+   *  checklist we lack, which is the population the stub sweep exists for.
+   *  A user pick then writes source='user-verified' (confidence 0.98),
+   *  which upgrades the stub — so every manual fix improves the catalog
+   *  instead of being a one-off correction. */
+  includeProvisional?: boolean;
 }
 
 export interface MatchedRange {
@@ -344,6 +359,11 @@ function memoKey(input: CanonicalSearchInput): string {
     input.printRun ?? "",
     input.isAuto ?? "",
     input.year ?? "",
+    // CF-FIX-FLOW-PROVISIONAL: MUST be in the key. Without it the two tiers
+    // share a cache entry, so a fix-flow query could seed the cache with
+    // provisional hits and an ordinary search would then serve stub cards
+    // as if they were verified — the exact leak the tiering exists to stop.
+    input.includeProvisional ? "prov" : "",
   ].join("|");
 }
 
@@ -530,7 +550,12 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
       const treeWhere: string[] = [
         "c.kind IN ('card', 'variant')",
         "c.sport = @sport",
-        verifiedCatalogSqlClause("c"),
+        // CF-FIX-FLOW-PROVISIONAL: the manual match flow opts in to stubs;
+        // ordinary search stays verified-only. Excluded rows (sales-derived,
+        // tree-builder-v1, rejected) are never returned either way.
+        input.includeProvisional
+          ? `(${verifiedCatalogSqlClause("c")} OR ${provisionalCatalogSqlClause("c")})`
+          : verifiedCatalogSqlClause("c"),
       ];
       if (yearFilter !== null) treeWhere.push("c.year = @year");
       searchTokens.forEach((_, i) => treeWhere.push(`ARRAY_CONTAINS(c.searchTokens, @t${i})`));

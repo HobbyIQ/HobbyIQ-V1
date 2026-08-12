@@ -270,7 +270,12 @@ struct CatalogMatchSearchSheet: View {
             print("[CatalogSearch] POST /api/search/cards input=\(q)")
             #endif
             // 30s dispatcher — same route as the Find Cards page.
-            let response = try await APIService.shared.searchVariantList(query: q)
+            // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). This sheet IS the
+            // manual match surface — the user is holding the card and telling
+            // us which one it is. Include provisional (stub) cards so they can
+            // match the releases our catalog has no checklist for yet;
+            // selecting one writes source='user-verified' and upgrades it.
+            let response = try await APIService.shared.searchVariantList(query: q, includeProvisional: true)
             let hits = response.results ?? []
             #if DEBUG
             print("[CatalogSearch] got \(hits.count) result\(hits.count == 1 ? "" : "s")")
