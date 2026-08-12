@@ -23,7 +23,15 @@ import {
 import { computeDataQualityReport } from "../services/portfolioiq/dataQuality.service.js";
 
 const router = Router();
-router.use(requireAdmin);
+// CF-ADMIN-GATE-SCOPE (Drew, 2026-08-12). MUST stay path-scoped. This
+// router is mounted at the bare "/api" in app.ts, so an unscoped
+// router.use(requireAdmin) runs for EVERY /api/* request that reaches
+// it — and requireAdmin ends the response instead of calling next(),
+// so every route mounted after it in app.ts became unreachable
+// (401 "Invalid admin token" in prod, 503 in CI where the token is
+// unset). Two prefixes because this router serves both.
+router.use("/verify", requireAdmin);
+router.use("/data-quality", requireAdmin);
 
 const VALID_REASONS: readonly VerifyReason[] = [
   "price-outlier",
