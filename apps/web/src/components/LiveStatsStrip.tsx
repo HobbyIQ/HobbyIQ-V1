@@ -157,22 +157,20 @@ export function LiveStatsStrip() {
   }, []);
 
   return (
-    <div className="hiq-card p-6 md:p-10">
-      {/* CF-STATS-TWO (Drew, 2026-08-05). Two counters only — Sales Index
-          + Card Catalog. Products / Sports / Data sources removed per
-          user ask; less clutter, bigger numbers, more room to breathe. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-12">
+    <div className="hiq-card relative p-8 md:p-14">
+      {/* CF-STATS-UPGRADED (Drew, 2026-08-11). Stripped sports list +
+          "Ingested continuously" line — pure numbers now. LIVE pill
+          floats top-right of the card. Numbers bumped up two sizes for
+          premium hero feel. */}
+      {isLive && (
+        <span className="hiq-live-badge absolute top-4 right-4 md:top-6 md:right-6">
+          <span className="hiq-live-dot" aria-hidden />
+          Live
+        </span>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 md:gap-16">
         <Metric value={formatCount(display.soldCompsIndexed)} label="Sales Index" loading={!loaded} />
         <Metric value={formatCount(display.cardsWithSlug)} label="Card Catalog" loading={!loaded} />
-      </div>
-      <div className="mt-6 pt-6 border-t border-[color:var(--color-border)] flex items-center justify-center gap-3 text-xs text-[color:var(--color-muted)]">
-        {isLive && (
-          <span className="hiq-live-badge">
-            <span className="hiq-live-dot" aria-hidden />
-            Live
-          </span>
-        )}
-        <span>{display.sportsCovered.join(" · ")} · Ingested continuously</span>
       </div>
     </div>
   );
@@ -181,14 +179,16 @@ export function LiveStatsStrip() {
 function Metric({ value, label, loading }: { value: string; label: string; loading: boolean }) {
   return (
     <div className="text-center">
-      {/* Text size holds seven-digit comma-formatted numbers (e.g.
-          "2,800,000") without overflowing on either breakpoint. */}
+      {/* Bigger, tighter typography. text-5xl → md:text-8xl holds
+          eight-digit comma-formatted numbers (16,983,639) on desktop
+          without breaking on narrower widths. tabular-nums keeps the
+          ticker's digits aligned as they change. */}
       <div
-        className={`hiq-count text-4xl sm:text-5xl md:text-6xl font-bold mb-2 tracking-tight transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
+        className={`hiq-count text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-3 tracking-tight tabular-nums transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
       >
         {value}
       </div>
-      <div className="text-sm uppercase tracking-[0.14em] text-[color:var(--color-muted)] font-semibold">
+      <div className="text-xs md:text-sm uppercase tracking-[0.2em] text-[color:var(--color-muted)] font-semibold">
         {label}
       </div>
     </div>
