@@ -312,7 +312,14 @@ export function _resetMemStoreForTests(): void {
 
 // ─── Session helpers ─────────────────────────────────────────────────────────
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+// CF-SESSION-TTL-30D (Drew, 2026-08-11). Bumped from 7d → 30d.
+// HobbyIQ is a portfolio-tracking app users check daily/weekly; a
+// 7-day forced re-login was high friction. 30d matches SaaS industry
+// standard (Notion/Linear/most card platforms). Sliding renewal on
+// activity is a natural follow-up if we want zero-friction sessions.
+// Only affects NEW logins — existing tokens carry their original 7d
+// expiry until they naturally roll over.
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 // CF-AUTH-SESSION-SECRET-FAIL-CLOSED (Drew, 2026-07-26, prod-readiness
 // audit P0.3). The prior fallback to a hardcoded literal was a
