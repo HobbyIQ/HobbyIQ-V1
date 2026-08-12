@@ -10,7 +10,13 @@ import {
   issueEmailVerification,
   consumeEmailVerification,
   changePasswordForSession,
+  recordTermsAcceptance,
 } from "../services/authService.js";
+import {
+  TERMS_VERSION,
+  TERMS_URL,
+  PRIVACY_URL,
+} from "../services/legal/termsVersion.js";
 import { sendEmail, verificationEmailContent, welcomeEmailContent } from "../services/emailService.js";
 // CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
 // register stay PRE-auth.
@@ -63,9 +69,44 @@ router.get("/session", requireSession, async (req: Request, res: Response) => {
   return res.json({ success: true, user: req.user });
 });
 
+// CF-TERMS-ACCEPTANCE (Drew, 2026-08-12). Which Terms the clients must
+// present. PRE-auth on purpose — the signup screen needs the links and
+// version before an account exists.
+router.get("/terms", (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    version: TERMS_VERSION,
+    termsUrl: TERMS_URL,
+    privacyUrl: PRIVACY_URL,
+  });
+});
+
+// CF-TERMS-ACCEPTANCE. Records agreement to the CURRENT Terms for the
+// signed-in user. Used by (a) existing accounts created before this
+// version shipped, and (b) any client that registered with
+// acceptedTerms:false. Idempotent — re-accepting refreshes the timestamp.
+//
+// The accepted version is taken from the server constant, never from the
+// request body: a client must not be able to claim agreement to a version
+// that isn't the one currently published.
+router.post("/accept-terms", requireSession, async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not signed in" });
+
+  const ok = await recordTermsAcceptance(userId);
+  if (!ok) return res.status(404).json({ success: false, error: "User not found" });
+
+  return res.json({
+    success: true,
+    termsAccepted: true,
+    termsAcceptedVersion: TERMS_VERSION,
+  });
+});
+
 // Registration: supports Apple Sign-In (identityToken) or email + password.
 router.post("/register", registerLimiter, async (req: Request, res: Response) => {
-  const { identityToken, email, fullName, username, password, inviteCode } = req.body || {};
+  const { identityToken, email, fullName, username, password, inviteCode, acceptedTerms } =
+    req.body || {};
   const result = await registerUser({
     identityToken,
     email,
@@ -73,6 +114,7 @@ router.post("/register", registerLimiter, async (req: Request, res: Response) =>
     username,
     password,
     inviteCode,
+    acceptedTerms,
   });
 
   if (!result.success) {

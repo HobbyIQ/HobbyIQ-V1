@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "About — HobbyIQ",
   description:
-    "HobbyIQ is built by Just The Boys And Cards LLC to be the pricing standard for the trading card industry.",
+    "HobbyIQ is built by HobbyIQ, LLC to be the pricing standard for the trading card industry.",
 };
 
 export default function AboutPage() {
@@ -66,7 +66,7 @@ export default function AboutPage() {
 
         <Section title="Who's behind it">
           <p>
-            HobbyIQ is a product of Just The Boys And Cards LLC, founded by Drew Vabulas.
+            HobbyIQ is a product of HobbyIQ, LLC, founded by Drew Vabulas.
             The stack is Node/TypeScript on Azure App Service + Cosmos DB, iOS in native
             SwiftUI, web in Next.js. Small team, product-first, no VCs.
           </p>

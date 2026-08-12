@@ -21,7 +21,9 @@ protocol AuthServicing {
     func signInWithApple(identityToken: String, email: String?, fullName: String?, username: String) async throws -> AppUser
     func signInWithEmail(email: String, password: String) async throws -> AppUser
     func signInWithEmail() async throws -> AppUser
-    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String?) async throws -> AppUser
+    // CF-TERMS-ACCEPTANCE (Drew, 2026-08-12): acceptedTerms travels with the
+    // registration so consent is recorded at account creation, not after.
+    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String?, acceptedTerms: Bool) async throws -> AppUser
     func signOut() async
     /// Local-only session teardown for global 401 downgrade. Clears the
     /// in-memory `session`, the persisted session id, and the TTL timestamp
@@ -125,9 +127,9 @@ final class AuthService: ObservableObject, AuthServicing {
         throw AuthError.credentialsRequired
     }
 
-    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String? = nil) async throws -> AppUser {
+    func signUpWithEmail(email: String, password: String, username: String, inviteCode: String? = nil, acceptedTerms: Bool = true) async throws -> AppUser {
         let response = try await withTimeout(seconds: 8) {
-            try await APIService.shared.signUpWithEmail(email: email, password: password, username: username, inviteCode: inviteCode)
+            try await APIService.shared.signUpWithEmail(email: email, password: password, username: username, inviteCode: inviteCode, acceptedTerms: acceptedTerms)
         }
         return try applySession(from: response)
     }
