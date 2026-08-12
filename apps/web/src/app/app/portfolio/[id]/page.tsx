@@ -160,8 +160,8 @@ export default function HoldingDetailPage() {
           </div>
         </div>
 
-        {/* Value / cost / P&L */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 pt-4 border-t border-[color:var(--color-border)]">
+        {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
           <Stat label="Current value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
           <Stat label="Total paid" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
@@ -416,9 +416,12 @@ export default function HoldingDetailPage() {
 }
 
 function Stat({ label, value, color, badge }: { label: string; value: string; color?: string; badge?: string }) {
+  // CF-STAT-CENTERED (Drew, 2026-08-11). Center-aligned so the 4-col
+  // stat row on the holding-detail page reads as a symmetric row of
+  // KPIs instead of left-justified table cells.
   return (
-    <div>
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1 flex items-center gap-2">
+    <div className="text-center">
+      <div className="text-[11px] uppercase tracking-[0.15em] text-[color:var(--color-muted)] mb-2 font-semibold flex items-center justify-center gap-2">
         {label}
         {badge && (
           <span
@@ -432,7 +435,7 @@ function Stat({ label, value, color, badge }: { label: string; value: string; co
           </span>
         )}
       </div>
-      <div className="text-xl font-bold tabular-nums" style={color ? { color } : undefined}>
+      <div className="text-2xl font-bold tabular-nums tracking-tight" style={color ? { color } : undefined}>
         {value}
       </div>
     </div>
