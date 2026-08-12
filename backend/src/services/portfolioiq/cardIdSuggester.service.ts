@@ -19,6 +19,9 @@ import { fetchCardsightUuidNativeCandidates } from "../compiq/cardsightUuidSourc
 import type { CardIdentity } from "../../types/cardIdentity.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import { inferPrintRunFromReferenceCatalog } from "../compiq/referenceCatalogLookup.js";
+// CF-SUGGESTER-CATALOG-FIRST (Drew, 2026-08-12): match against OUR catalog
+// before any vendor. See catalogHitToCommon() for the full rationale.
+import { canonicalCardSearch, type CanonicalSearchHit } from "./canonicalCardSearch.service.js";
 
 /**
  * CF-CARDID-SUGGESTER-CATALOG-BOOST (Drew, 2026-07-14): confidence bump
@@ -99,8 +102,14 @@ export interface CardIdSuggestion {
    *  the suggestion came from. iOS can badge or route accordingly.
    *  "cardhedge"       — CH search hit (bubble.io id)
    *  "cardsight-uuid"  — CS-native UUID hit (compound {parent}::{parallel})
+   *  "hobbyiq-catalog" — OUR card_catalog (canonical hiq: slug).
+   *                      CF-SUGGESTER-CATALOG-FIRST (Drew, 2026-08-12):
+   *                      preferred source. iOS can badge these differently
+   *                      — a catalog hit is our own identity, not a vendor's
+   *                      guess, and its cardId is already the canonical slug
+   *                      so accepting it needs no translation.
    */
-  candidateSource: "cardhedge" | "cardsight-uuid";
+  candidateSource: "cardhedge" | "cardsight-uuid" | "hobbyiq-catalog";
   /** Per-field alignment score breakdown — surfaces to iOS as a
    *  transparency layer ("we matched 4 of 5 fields"). */
   matchBreakdown: {
@@ -220,9 +229,10 @@ interface FieldMatchResult {
  * source flag propagates to the caller for wire attribution.
  */
 interface CommonCandidate {
-  /** Wire cardId — either CH's bubble.io id or CS's compound "{parent}::{parallel}". */
+  /** Wire cardId — CH's bubble.io id, CS's compound "{parent}::{parallel}",
+   *  or (catalog-first) our canonical hiq: slug. */
   cardId: string;
-  source: "cardhedge" | "cardsight-uuid";
+  source: "cardhedge" | "cardsight-uuid" | "hobbyiq-catalog";
   title: string | null;
   name: string | null;
   set: string | null;
@@ -253,6 +263,52 @@ function chToCommon(c: CardHedgeCard): CommonCandidate | null {
  * the `cardsight:` prefix to get the wire cardId iOS sends back to
  * /price-by-id (the compound {parent}::{parallel} form the route parses).
  */
+// CF-SUGGESTER-CATALOG-FIRST (Drew, 2026-08-12). This suggester was written
+// 2026-07-12 against the CardHedge search endpoint, three weeks before
+// catalog-first search shipped (2026-08-01) — and it never got migrated. So
+// eBay-imported holdings were being matched against vendor APIs instead of
+// our own 25M-row card_catalog.
+//
+// That is broken twice over in prod today:
+//   CH_RUNTIME_DISABLED=true  — the PRIMARY source is switched off, so the
+//                               strict+relaxed CH paths return nothing
+//   Cardsight                 — deprecated per README, alive only on fallback
+//                               flags, and the source of the vendor-id-keyed
+//                               rows the cleanliness canary flags
+//
+// Net effect: eBay imports arrived with no suggestion at all and every card
+// had to be matched by hand. Meanwhile the catalog that actually contains
+// those cards was never consulted — the exact inversion of "catalog IS the
+// moat, not vendor APIs".
+//
+// Catalog hits are searched WITH provisional rows included: for MATCHING we
+// want the stub cards too (a stub means we hold real sales for that card but
+// have no checklist yet — precisely the ones a user is most likely importing
+// and least likely to find). Search-facing surfaces still exclude them.
+//
+// This does NOT change the commit semantics. The suggestion still lands as
+// `suggestedCardId` + confidence for the review queue to accept or reject —
+// auto-locking a wrong cardId is the "silently wrong pricing" failure mode
+// PR #386 exists to prevent.
+function catalogHitToCommon(h: CanonicalSearchHit): CommonCandidate | null {
+  const wireCardId = h.hobbyiqCardId ?? h.cardId;
+  if (!wireCardId) return null;
+  return {
+    cardId: wireCardId,
+    source: "hobbyiq-catalog",
+    title: null,
+    name: h.player ?? null,
+    set: h.releaseName ?? null,
+    year: h.cardYear ?? null,
+    number: h.cardNumber ?? null,
+    // Suggester scoring compares a single variant string; catalog hits carry
+    // a parallels[] array, so take the first (rows are already exploded
+    // per-parallel, so length is 1 for variant rows).
+    variant: h.parallels?.[0]?.name ?? null,
+    image: h.imageUrl ?? null,
+  };
+}
+
 function csIdentityToCommon(c: CardIdentity): CommonCandidate | null {
   if (!c.candidateId) return null;
   const wireCardId = c.candidateId.startsWith("cardsight:")
@@ -564,6 +620,25 @@ export async function suggestCardIdForHolding(
     return { chRaw, csRaw };
   };
 
+  // CF-SUGGESTER-CATALOG-FIRST (Drew, 2026-08-12). Ask OUR catalog before
+  // any vendor. Runs on the same hard timeout and degrades to an empty pool,
+  // so a slow or unavailable catalog can never hang or fail the batch — the
+  // vendor paths below still run exactly as before.
+  const catalogRaw: CanonicalSearchHit[] = await Promise.race([
+    canonicalCardSearch({
+      q: query,
+      sport: ((holding as any).sport ?? undefined) as string | undefined,
+      limit: 10,
+      skipEnrichment: true,   // identity only — no FMV round-trips
+      includeProvisional: true, // matching wants stubs; search surfaces don't
+    })
+      .then((r) => r.hits ?? [])
+      .catch(() => [] as CanonicalSearchHit[]),
+    new Promise<CanonicalSearchHit[]>((resolve) =>
+      setTimeout(() => resolve([] as CanonicalSearchHit[]), SUGGESTER_TIMEOUT_MS),
+    ),
+  ]).catch(() => [] as CanonicalSearchHit[]);
+
   let { chRaw, csRaw } = await runStrict();
   let usedFilterMode: "strict" | "relaxed_retry" = "strict";
 
@@ -587,7 +662,14 @@ export async function suggestCardIdForHolding(
 
   const chCommon = chRaw.map(chToCommon).filter((c): c is CommonCandidate => c !== null);
   const csCommon = csRaw.map(csIdentityToCommon).filter((c): c is CommonCandidate => c !== null);
-  const merged = [...chCommon, ...csCommon];
+  // CF-SUGGESTER-CATALOG-FIRST: catalog candidates lead the pool. Order is
+  // not scoring — scoreCandidate still decides the winner on field
+  // alignment — but it makes the catalog the default answer on ties, and
+  // crossVendorDedupKey collapses the same physical card across sources.
+  const catalogCommon = catalogRaw
+    .map(catalogHitToCommon)
+    .filter((c): c is CommonCandidate => c !== null);
+  const merged = [...catalogCommon, ...chCommon, ...csCommon];
 
   // CF-CARDID-SUGGESTER-QUERY-LOGGING (Drew, 2026-07-14): emit the
   // resolved query per holding so KQL can chart no-hit patterns and
@@ -603,6 +685,10 @@ export async function suggestCardIdForHolding(
     changesSummary: normalized.changes.map((c) => `${c.rule}:${c.field}`),
     chHits: chRaw.length,
     csHits: csRaw.length,
+    // CF-SUGGESTER-CATALOG-FIRST: logged separately so KQL can show the
+    // catalog carrying the suggester while CH_RUNTIME_DISABLED=true, and
+    // catch a regression where catalogHits silently drops to 0.
+    catalogHits: catalogRaw.length,
     totalCandidates: merged.length,
   }));
 
