@@ -697,6 +697,21 @@ function isChromeStockSetKey(setKey: string): boolean {
 // pricing, not a signal that they are the same card. Left this
 // pointer so future me does not re-derive the same wrong rule.
 
+// CF-AUTO-ONLY-PREFIXES (Drew, 2026-08-11). These cardNumber prefixes
+// are auto-only by product definition — every card with a CPA-,
+// BCPA-, BDCPA-, CDA-, TCPA-, CRA-, BSPA-, BPA-, BDA- prefix IS an
+// autograph. Yet vendors sometimes emit these sales with isAuto=false
+// (raw title parsing, CH short titles, etc.), so the SAME physical
+// sale ends up written under both `:auto` and `:no-auto` slugs. That
+// doubles the pool, corrupts medians, and breaks the contentHash
+// dedup (which includes the slug in its hash). Force isAuto=true
+// whenever the cardNumber matches an auto-only prefix so the sale
+// always lands on the correct :auto slug regardless of vendor label.
+// Discovered on CPA-EHA Eric Hartman Orange Shimmer /25 — 4 unique
+// sales stored as 7 rows across :auto/:no-auto variants (Drew,
+// 2026-08-11).
+const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)(?:-|\d)/i;
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
@@ -710,6 +725,11 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +
   // rationale for why this override is narrow (only unambiguous pairs).
   const setKey = applyChromePrefixOverride(baseSetKey, cardNumber);
+  // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
+  // produce autograph cards — force isAuto=true so vendor label drift
+  // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.
+  const isAuto = components.isAuto === true
+    || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
   // CF-CHROME-STOCK-REDUNDANT-PREFIX (Drew, 2026-08-11). On chrome-family
   // setKeys, a leading "chrome-" on the parallel is vendor noise (CH
@@ -741,7 +761,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // subsets so they land in one pool.
   if (
     parallelSlug === "base" &&
-    components.isAuto === true &&
+    isAuto === true &&
     /^(cpa|tcpa|cra)(?:-|\d)/i.test(cardNumber) &&
     (setKey === "bowman-chrome" || setKey === "topps-chrome")
   ) {
@@ -777,7 +797,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // trade at comparable levels. Unification requires collector
   // confirmation, not a ratio heuristic.
 
-  const autoFlag = components.isAuto ? "auto" : "no-auto";
+  const autoFlag = isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);
   return `hiq:${sport}:${year}:${setKey}:${cardNumber}:${parallelSlug}:${autoFlag}${printRun}`;
 }

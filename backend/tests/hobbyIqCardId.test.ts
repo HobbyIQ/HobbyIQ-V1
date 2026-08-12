@@ -378,13 +378,18 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toContain(":topps-chrome:cra-jd:refractor:auto");
   });
 
-  it("CPA- non-auto + Base parallel stays Base (rule requires isAuto)", () => {
-    // Rule only fires for autos — a base non-auto is a legitimate row.
+  it("CPA- with vendor isAuto=false is force-corrected to :auto (CF-AUTO-ONLY-FORCE)", () => {
+    // Prior behavior tested by this suite: honored vendor isAuto=false
+    // and produced :no-auto. That was the bug — CPA- is auto-only by
+    // product definition, so the pool was fragmenting between :auto
+    // (correct) and :no-auto (bad vendor label) for the same sale.
+    // New behavior: force isAuto=true, and since it's now auto the
+    // Base→Refractor upgrade for chrome-auto subsets also fires.
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Base", isAuto: false,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:no-auto");
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto");
   });
 
   it("BCP- auto + Base stays Base (rule scoped to CPA/TCPA/CRA only)", () => {
@@ -1029,6 +1034,56 @@ describe("computeHobbyIqCardId — no double -fractor on chrome stock", () => {
       cardNumber: "BDC-1", parallel: "Blue", isAuto: false,
     });
     expect(s).toContain(":blue-refractor:");
+  });
+});
+
+// CF-AUTO-ONLY-PREFIXES regression suite (Drew, 2026-08-11).
+// CPA-/BCPA-/BDCPA-/CDA-/TCPA-/CRA-/BSPA-/BPA-/BDA- cardNumbers are
+// auto-only by product definition. Vendors sometimes ship these
+// sales with isAuto=false (raw title parsing, short CH titles); prior
+// slug generator honored that and produced :no-auto slugs alongside
+// the correct :auto slugs, doubling the pool. Force isAuto=true.
+describe("computeHobbyIqCardId — auto-only prefix forces isAuto=true", () => {
+  it("CPA-EHA with vendor isAuto=false still produces :auto slug", () => {
+    const withFalse = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome",
+      cardNumber: "CPA-EHA", parallel: "Orange Shimmer Refractor",
+      isAuto: false, printRun: 25,
+    });
+    const withTrue = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome",
+      cardNumber: "CPA-EHA", parallel: "Orange Shimmer Refractor",
+      isAuto: true, printRun: 25,
+    });
+    expect(withFalse).toBe(withTrue);
+    expect(withFalse).toContain(":auto:num-25");
+    expect(withFalse).not.toContain(":no-auto");
+  });
+
+  it("BCPA-, BDCPA-, CDA-, TCPA-, CRA-, BSPA-, BPA-, BDA- all force auto", () => {
+    for (const prefix of ["BCPA-JR", "BDCPA-EH", "CDA-EH", "TCPA-SO", "CRA-BW", "BSPA-EH", "BPA-EH", "BDA-EH"]) {
+      const s = computeHobbyIqCardId({
+        sport: "baseball", year: 2025, setKey: "Bowman",
+        cardNumber: prefix, parallel: "Base", isAuto: false,
+      });
+      expect(s, `${prefix} should force :auto`).toContain(":auto");
+      expect(s).not.toContain(":no-auto");
+    }
+  });
+
+  it("Non-auto prefix (BCP-, plain number) still respects vendor isAuto=false", () => {
+    // BCP- is Chrome Prospect (not-auto insert). Should NOT force auto.
+    const bcp = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Bowman",
+      cardNumber: "BCP-102", parallel: "Base", isAuto: false,
+    });
+    expect(bcp).toContain(":no-auto");
+    // Plain number (100) is a flagship card — no auto forcing.
+    const plain = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Topps",
+      cardNumber: "150", parallel: "Base", isAuto: false,
+    });
+    expect(plain).toContain(":no-auto");
   });
 });
 
