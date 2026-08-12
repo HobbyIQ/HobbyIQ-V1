@@ -61,15 +61,15 @@ export default function LandingPage() {
       </section>
 
       {/* Workflow overview */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="text-center mb-10">
-          <div className="text-xs uppercase tracking-wide font-bold mb-2" style={{ color: "var(--color-accent)" }}>
+      <section className="max-w-5xl mx-auto px-6 pb-20">
+        <div className="text-center mb-12">
+          <div className="text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ color: "var(--color-accent)" }}>
             Everything in one place
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold">Built for how you actually trade</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for how you actually trade</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <WorkflowCard
             title="Search + price any card"
             body="Player name, cert number, or free text. Grade ladder, parallel picker, buy/hold/sell zones inline."
@@ -141,13 +141,20 @@ function FeatureCard({ title, body }: { iconPath?: string; title: string; body: 
 }
 
 function WorkflowCard({ title, body, href, cta }: { title: string; body: string; href: string; cta: string }) {
+  // CF-WORKFLOW-CARD-CLEAN (Drew, 2026-08-11). Center-aligned content
+  // with looser padding + max-width on body so lines wrap consistently
+  // across all 4 cards. Prior version was left-aligned inside a wide
+  // card, so line lengths varied by content length and the grid looked
+  // uneven.
   return (
-    <div className="hiq-card p-6 flex flex-col">
-      <h3 className="font-bold text-lg mb-2">{title}</h3>
-      <p className="text-sm text-[color:var(--color-muted)] flex-1 leading-relaxed">{body}</p>
+    <div className="hiq-card p-8 flex flex-col items-center text-center">
+      <h3 className="font-bold text-lg mb-3">{title}</h3>
+      <p className="text-sm text-[color:var(--color-muted)] flex-1 leading-relaxed max-w-xs mx-auto">
+        {body}
+      </p>
       <Link
         href={href}
-        className="mt-4 text-sm font-medium hover:underline self-start"
+        className="mt-5 text-sm font-medium hover:underline"
         style={{ color: "var(--color-accent)" }}
       >
         {cta} →
