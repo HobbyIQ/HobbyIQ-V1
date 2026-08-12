@@ -116,20 +116,60 @@ async function main() {
       if (MAX_ROWS && scanned >= MAX_ROWS) break;
       scanned++;
       // Skip when we can't build inputs (setKey OR setName required)
-      const inputSetKey = r.setKey || r.setName;
-      if (!inputSetKey) { skipped++; continue; }
-      let newSlug;
-      try {
-        newSlug = computeHobbyIqCardId({
-          sport: r.sport,
-          year: Number(r.cardYear),
-          setKey: inputSetKey,
-          cardNumber: String(r.cardNumber),
-          parallel: r.parallel ?? "Base",
-          isAuto: Boolean(r.isAuto),
-          printRun: r.printRun ?? null,
-        });
-      } catch (err) { skipped++; continue; }
+      if (!r.setKey && !r.setName) { skipped++; continue; }
+
+      // CF-RESLUG-PREFER-SPECIFIC-INPUT (Drew, 2026-08-12). Was
+      // `r.setKey || r.setName` — the stored setKey always won. That
+      // PERPETUATES a vaguer setKey when the vendor's setName carries the
+      // real product, and it fragments a single card across pools:
+      //
+      //   setKey="bowman"        + P-21 -> bowman:p-21:lava-refractor
+      //   setName="Bowman Draft Chrome" + P-21 -> bowman-chrome:p-21:green-refractor
+      //
+      // Same physical product, two FMV pools, purely because two vendors
+      // populated different fields. Cleanliness canary 2026-08-12 measured
+      // 8.68% slug fragmentation with cases exactly like this.
+      //
+      // Fix: compute BOTH candidates and keep the more SPECIFIC one — the
+      // same only-improve principle as the demotion guard below, applied at
+      // input selection instead of output. "More specific" means one setKey
+      // is a strict descendant of the other (bowman-chrome starts with
+      // "bowman-"), which is the only case where the ranking is unambiguous.
+      // Unrelated setKeys (a genuine reclassification) keep the stored
+      // setKey's answer — we do NOT let free-text setName override a
+      // deliberate key with something merely different.
+      //
+      // Deliberately NOT solved with a cardNumber-prefix rule: the
+      // 2026-07-31 blanket prefix override misclassified ~184 rows because
+      // prefixes like CPA-/FCA-/TC- are shared across product families, and
+      // was reverted. P- has the same shape. This uses only evidence already
+      // on the row.
+      const compute = (setKeyInput) => {
+        try {
+          return computeHobbyIqCardId({
+            sport: r.sport,
+            year: Number(r.cardYear),
+            setKey: setKeyInput,
+            cardNumber: String(r.cardNumber),
+            parallel: r.parallel ?? "Base",
+            isAuto: Boolean(r.isAuto),
+            printRun: r.printRun ?? null,
+          });
+        } catch { return null; }
+      };
+      const setOf = (slug) => (String(slug || "").split(":")[3] || "");
+
+      const fromKey = r.setKey ? compute(r.setKey) : null;
+      const fromName = r.setName ? compute(r.setName) : null;
+
+      let newSlug = fromKey || fromName;
+      if (fromKey && fromName && fromKey !== fromName) {
+        const a = setOf(fromKey), b = setOf(fromName);
+        // Keep the strict descendant; otherwise stay with the stored setKey.
+        if (b && a && b.startsWith(a + "-")) newSlug = fromName;
+        else newSlug = fromKey;
+      }
+      if (!newSlug) { skipped++; continue; }
       computed++;
       if (newSlug === r.hobbyiqCardId) { skipped++; continue; }
 
