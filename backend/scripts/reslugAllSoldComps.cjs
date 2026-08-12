@@ -103,10 +103,11 @@ async function main() {
     return false;
   }
 
-  let scanned = 0, computed = 0, changed = 0, touched = 0, failed = 0, skipped = 0;
+  let scanned = 0, computed = 0, changed = 0, touched = 0, failed = 0, skipped = 0, demoted = 0;
   const startedAt = Date.now();
   const inflight = [];
   const rewriteCounts = new Map();
+  const demoteCounts = new Map();
 
   while (it.hasMoreResults()) {
     if (MAX_ROWS && scanned >= MAX_ROWS) break;
@@ -131,6 +132,28 @@ async function main() {
       } catch (err) { skipped++; continue; }
       computed++;
       if (newSlug === r.hobbyiqCardId) { skipped++; continue; }
+
+      // CF-RESLUG-NO-DEMOTE (Drew, 2026-08-12). Memory rule: re-canonicalize
+      // only when the new slug is strictly MORE specific — never demote.
+      // The 2026-08-12 dry-run surfaced rewrites like
+      //   topps-chrome-sapphire -> topps
+      // which throw away product specificity we already had. That happens
+      // when the row's stored setKey is richer than what the generator can
+      // recover from its setName input, so "recompute" would lose information.
+      //
+      // A demotion is when the stored setKey is a DESCENDANT of the new one
+      // (stored starts with new + "-"): topps-chrome-sapphire vs topps,
+      // bowman-chrome vs bowman. Lateral moves between different families
+      // are left alone — those are real reclassifications, not information loss.
+      const oldSet = String(r.hobbyiqCardId).split(":")[3] || "";
+      const newSet = newSlug.split(":")[3] || "";
+      if (oldSet && newSet && oldSet !== newSet && oldSet.startsWith(newSet + "-")) {
+        demoted++;
+        demoteCounts.set(`${oldSet}→${newSet}`, (demoteCounts.get(`${oldSet}→${newSet}`) || 0) + 1);
+        skipped++;
+        continue;
+      }
+
       changed++;
       // Audit: bucket by (fromFamily, toFamily) style so we can see
       // what's actually shifting.
@@ -158,7 +181,13 @@ async function main() {
   await Promise.all(inflight);
 
   const dur = ((Date.now() - startedAt)/1000).toFixed(0);
-  console.log(`\n[done ${dur}s] scanned=${scanned} computed=${computed} changed=${changed} touched=${touched} failed=${failed} skipped=${skipped}`);
+  console.log(`\n[done ${dur}s] scanned=${scanned} computed=${computed} changed=${changed} touched=${touched} failed=${failed} skipped=${skipped} demoted-skipped=${demoted}`);
+  if (demoted) {
+    console.log(`\n  SKIPPED as demotions (only-improve rule):`);
+    for (const [k, n] of [...demoteCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) {
+      console.log(`    ${k}: ${n}`);
+    }
+  }
   console.log("\ntop rewrite patterns:");
   const top = [...rewriteCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 30);
   for (const [k, v] of top) console.log(`  ${k}: ${v}`);
