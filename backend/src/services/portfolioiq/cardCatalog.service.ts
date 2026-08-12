@@ -15,8 +15,14 @@
 //   - "99.9% catalog-matched" is a metric Drew can call out — it's the
 //     substrate for the whole trust story.
 //
-// Container: `card_catalog`, partition /sport (small cardinality;
-// baseball + basketball + football + hockey + soccer).
+// Container: `card_catalog`, partition **/cardId**.
+//
+// CORRECTION (2026-08-12): this comment previously said "partition /sport
+// (small cardinality)". It is not. Verified against the live container:
+// partitionKey.paths = ["/cardId"]. The wrong value was trusted and copied
+// into other services, where it justified treating catalog reads as cheap
+// single-partition lookups — they are cross-partition fan-outs unless the
+// query pins cardId. Check the container, not this file, before relying on it.
 //
 // Doc id = hobbyiqCardId slug. Same slug is same catalog entry —
 // upserts are deterministic + no dup risk.
