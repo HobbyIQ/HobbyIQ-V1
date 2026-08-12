@@ -1,0 +1,730 @@
+{
+  "source": "baseballcardpedia+observed-sold-comps",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2026_Bowman_Chrome",
+  "fetchedAt": "2026-08-12",
+  "note": "Checklist parallels are authoritative and emitted unchanged. Entries with provenance='observed-sold-comps' were added only where the checklist had no entry, each backed by >= 3 completed sales. Supersede them when a real checklist for this product lands.",
+  "appliesTo": [
+    "2026-bowman-chrome-baseball",
+    "2026-bowman-chrome"
+  ],
+  "baseParallels": [
+    {
+      "name": "Base",
+      "printRun": null,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Refractor",
+      "printRun": 499,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Geometric Refractor",
+      "printRun": 499,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Pulsar Refractor",
+      "printRun": 399,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Fuchsia Refractor",
+      "printRun": 299,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Fuchsia Wave Refractor",
+      "printRun": 299,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Purple Geometric Refractor",
+      "printRun": 250,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue Geometric Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue Wave Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Aqua Geometric Refractor",
+      "printRun": 125,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Wave Refractor",
+      "printRun": 100,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Green Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Green Wave Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Green Geometric Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Yellow Refractor",
+      "printRun": 75,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Yellow Geometric Refractor",
+      "printRun": 75,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Gold Geometric Refractor",
+      "printRun": 50,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Orange Geometric Refractor",
+      "printRun": 25,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Black Refractor",
+      "printRun": 10,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Black Geometric Refractor",
+      "printRun": 10,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5,
+      "provenance": "checklist"
+    },
+    {
+      "name": "SuperFractor",
+      "printRun": 1,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Reptilian Refractor",
+      "printRun": 199,
+      "provenance": "observed-sold-comps",
+      "observedSales": 11324
+    },
+    {
+      "name": "Mojo Refractor",
+      "printRun": 399,
+      "provenance": "observed-sold-comps",
+      "observedSales": 7118
+    },
+    {
+      "name": "Lazer Refractor",
+      "printRun": 125,
+      "provenance": "observed-sold-comps",
+      "observedSales": 2449
+    },
+    {
+      "name": "Purple Mojo Refractor",
+      "printRun": 250,
+      "provenance": "observed-sold-comps",
+      "observedSales": 1046
+    },
+    {
+      "name": "Blue Shimmer Refractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 802
+    },
+    {
+      "name": "Purple Ray Wave Refractor",
+      "printRun": 250,
+      "provenance": "observed-sold-comps",
+      "observedSales": 799
+    },
+    {
+      "name": "Sky Blue Mojo Refractor",
+      "printRun": 99,
+      "provenance": "observed-sold-comps",
+      "observedSales": 651
+    },
+    {
+      "name": "Blue Ray Wave Refractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 616
+    },
+    {
+      "name": "Green Grass Refractor",
+      "printRun": 99,
+      "provenance": "observed-sold-comps",
+      "observedSales": 613
+    },
+    {
+      "name": "Aqua Shimmer Refractor",
+      "printRun": 125,
+      "provenance": "observed-sold-comps",
+      "observedSales": 607
+    },
+    {
+      "name": "Burgundy Mojo Refractor",
+      "printRun": 275,
+      "provenance": "observed-sold-comps",
+      "observedSales": 560
+    },
+    {
+      "name": "Green Shimmer Refractor",
+      "printRun": 99,
+      "provenance": "observed-sold-comps",
+      "observedSales": 509
+    },
+    {
+      "name": "X-Fractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 491
+    },
+    {
+      "name": "Blue Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 466
+    },
+    {
+      "name": "Pink Mojo Refractor",
+      "printRun": 199,
+      "provenance": "observed-sold-comps",
+      "observedSales": 457
+    },
+    {
+      "name": "Green Reptilian Refractor",
+      "printRun": 99,
+      "provenance": "observed-sold-comps",
+      "observedSales": 451
+    },
+    {
+      "name": "Aqua Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 426
+    },
+    {
+      "name": "Neon Green Mojo Refractor",
+      "printRun": 399,
+      "provenance": "observed-sold-comps",
+      "observedSales": 420
+    },
+    {
+      "name": "Reptilian Fuchsia Refractor",
+      "printRun": 199,
+      "provenance": "observed-sold-comps",
+      "observedSales": 419
+    },
+    {
+      "name": "Aqua X-Fractor Refractor",
+      "printRun": 125,
+      "provenance": "observed-sold-comps",
+      "observedSales": 371
+    },
+    {
+      "name": "Yellow X-Fractor",
+      "printRun": 75,
+      "provenance": "observed-sold-comps",
+      "observedSales": 357
+    },
+    {
+      "name": "Fuchsia Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 347
+    },
+    {
+      "name": "League Logofractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 339
+    },
+    {
+      "name": "Yellow Wave Refractor",
+      "printRun": 75,
+      "provenance": "observed-sold-comps",
+      "observedSales": 308
+    },
+    {
+      "name": "Steel Metal Refractor",
+      "printRun": 100,
+      "provenance": "observed-sold-comps",
+      "observedSales": 303
+    },
+    {
+      "name": "Green Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 274
+    },
+    {
+      "name": "Reptilian Gold Refractor",
+      "printRun": 50,
+      "provenance": "observed-sold-comps",
+      "observedSales": 271
+    },
+    {
+      "name": "Red Rookie Refractor",
+      "printRun": 75,
+      "provenance": "observed-sold-comps",
+      "observedSales": 244
+    },
+    {
+      "name": "Yellow Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 214
+    },
+    {
+      "name": "Orange Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 187
+    },
+    {
+      "name": "Reptilian Orange Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 152
+    },
+    {
+      "name": "Navy Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 148
+    },
+    {
+      "name": "Aqua X-Fractor",
+      "printRun": 125,
+      "provenance": "observed-sold-comps",
+      "observedSales": 117
+    },
+    {
+      "name": "Rose Gold Refractor",
+      "printRun": 15,
+      "provenance": "observed-sold-comps",
+      "observedSales": 103
+    },
+    {
+      "name": "Sterling Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 91
+    },
+    {
+      "name": "Black X-Fractor",
+      "printRun": 10,
+      "provenance": "observed-sold-comps",
+      "observedSales": 80
+    },
+    {
+      "name": "Rose Gold X-Fractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 71
+    },
+    {
+      "name": "Red Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 67
+    },
+    {
+      "name": "Sunflower Seeds Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 66
+    },
+    {
+      "name": "Green Sapphire Refractor",
+      "printRun": 99,
+      "provenance": "observed-sold-comps",
+      "observedSales": 59
+    },
+    {
+      "name": "Lava Refractor",
+      "printRun": 399,
+      "provenance": "observed-sold-comps",
+      "observedSales": 58
+    },
+    {
+      "name": "Red Lava Refractor",
+      "printRun": 5,
+      "provenance": "observed-sold-comps",
+      "observedSales": 42
+    },
+    {
+      "name": "Black White Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 39
+    },
+    {
+      "name": "Peanuts Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 38
+    },
+    {
+      "name": "Gold Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 38
+    },
+    {
+      "name": "Red Geometric Refractor",
+      "printRun": 5,
+      "provenance": "observed-sold-comps",
+      "observedSales": 35
+    },
+    {
+      "name": "Popcorn Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 34
+    },
+    {
+      "name": "Yellow Sapphire Refractor",
+      "printRun": 75,
+      "provenance": "observed-sold-comps",
+      "observedSales": 34
+    },
+    {
+      "name": "Sky Blue Refractor",
+      "printRun": 499,
+      "provenance": "observed-sold-comps",
+      "observedSales": 31
+    },
+    {
+      "name": "Black Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 25
+    },
+    {
+      "name": "Image Variation Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 21
+    },
+    {
+      "name": "Firefractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 20
+    },
+    {
+      "name": "Purple Wave Refractor",
+      "printRun": 250,
+      "provenance": "observed-sold-comps",
+      "observedSales": 20
+    },
+    {
+      "name": "Printing Plates Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 18
+    },
+    {
+      "name": "Pink Refractor",
+      "printRun": 199,
+      "provenance": "observed-sold-comps",
+      "observedSales": 18
+    },
+    {
+      "name": "Gold X-Fractor",
+      "printRun": 15,
+      "provenance": "observed-sold-comps",
+      "observedSales": 18
+    },
+    {
+      "name": "Orange Sapphire Refractor",
+      "printRun": 25,
+      "provenance": "observed-sold-comps",
+      "observedSales": 17
+    },
+    {
+      "name": "Gum Ball Refractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 14
+    },
+    {
+      "name": "Blue",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 11
+    },
+    {
+      "name": "Blue Lava Refractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 10
+    },
+    {
+      "name": "Purple Lava Refractor",
+      "printRun": 250,
+      "provenance": "observed-sold-comps",
+      "observedSales": 10
+    },
+    {
+      "name": "Gumball Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 8
+    },
+    {
+      "name": "Rose Gold Mojo Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 5
+    },
+    {
+      "name": "Black White Red Ink Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 5
+    },
+    {
+      "name": "Black Border Refractor",
+      "printRun": 10,
+      "provenance": "observed-sold-comps",
+      "observedSales": 4
+    },
+    {
+      "name": "Ray Wave Refractor",
+      "printRun": 399,
+      "provenance": "observed-sold-comps",
+      "observedSales": 4
+    },
+    {
+      "name": "Packfractor",
+      "printRun": 89,
+      "provenance": "observed-sold-comps",
+      "observedSales": 3
+    },
+    {
+      "name": "Bowman Logo Pattern Refractor",
+      "printRun": null,
+      "provenance": "observed-sold-comps",
+      "observedSales": 3
+    }
+  ],
+  "autoParallels": [
+    {
+      "name": "Base",
+      "printRun": null,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Refractor",
+      "printRun": 499,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Speckle Refractor",
+      "printRun": 299,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Purple Refractor",
+      "printRun": 250,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue RayWave Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Reptilian Blue Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "HTA Choice Refractor",
+      "printRun": 150,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Mini-Diamond Refractor",
+      "printRun": 100,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Green Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Reptilian Green Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Green Lava Refractor",
+      "printRun": 99,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Yellow Refractor",
+      "printRun": 75,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Gold Refractor",
+      "printRun": 50,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Gold Mini-Diamond Refractor",
+      "printRun": 50,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Gold Shimmer Refractor",
+      "printRun": 50,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Orange Refractor",
+      "printRun": 25,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Orange Shimmer Refractor",
+      "printRun": 25,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Orange Wave Refractor",
+      "printRun": 25,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Black Refractor",
+      "printRun": 10,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Reptilian Black Refractor",
+      "printRun": 10,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Red Refractor",
+      "printRun": 5,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Red Shimmer Refractor",
+      "printRun": 5,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Reptilian Red Refractor",
+      "printRun": 5,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Red Wave Refractor",
+      "printRun": 5,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Black & White Shimmer Refractor",
+      "printRun": null,
+      "provenance": "checklist"
+    },
+    {
+      "name": "SuperFractor",
+      "printRun": 1,
+      "provenance": "checklist"
+    },
+    {
+      "name": "Blue X-Fractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 443
+    },
+    {
+      "name": "Aqua Refractor",
+      "printRun": 125,
+      "provenance": "observed-sold-comps",
+      "observedSales": 411
+    },
+    {
+      "name": "Gold Lava Refractor",
+      "printRun": 50,
+      "provenance": "observed-sold-comps",
+      "observedSales": 222
+    },
+    {
+      "name": "Orange X-Fractor",
+      "printRun": 25,
+      "provenance": "observed-sold-comps",
+      "observedSales": 116
+    },
+    {
+      "name": "Bowman Logofractor",
+      "printRun": 35,
+      "provenance": "observed-sold-comps",
+      "observedSales": 113
+    },
+    {
+      "name": "Red X-Fractor",
+      "printRun": 5,
+      "provenance": "observed-sold-comps",
+      "observedSales": 13
+    },
+    {
+      "name": "Gold Ink Refractor",
+      "printRun": 15,
+      "provenance": "observed-sold-comps",
+      "observedSales": 8
+    },
+    {
+      "name": "Choice Red Optic Refractor",
+      "printRun": 150,
+      "provenance": "observed-sold-comps",
+      "observedSales": 4
+    }
+  ]
+}

@@ -547,7 +547,24 @@ function crossVendorDedupKey(c: CommonCandidate): string {
   return `${yr}::${num}::${par}`;
 }
 
-const CS_SUGGESTER_ENABLED = true;
+// CF-SUGGESTER-CATALOG-ONLY (Drew, 2026-08-12). "i dont want matching with
+// cardhedge, all i want is sold data that is matched to our catalog."
+//
+// Vendor candidate pools are OFF by default. The catalog is the matcher; CH
+// and CS are no longer consulted for identity. Reasons this is right rather
+// than merely requested:
+//   - CH_RUNTIME_DISABLED=true in prod, so the CH pool returns [] anyway and
+//     every call is latency we pay for nothing.
+//   - Cardsight is deprecated per its README and is the origin of the
+//     vendor-id-keyed rows the cleanliness canary flags — matching against it
+//     reintroduces identities our own slug space cannot address.
+//   - A vendor match yields a vendor cardId that then has to be translated;
+//     a catalog match yields the canonical hiq: slug directly.
+//
+// Flags left in place so a single env var restores either pool if the
+// catalog ever regresses — deleting the code would make that a redeploy.
+const CH_SUGGESTER_ENABLED = process.env.SUGGESTER_CARDHEDGE_ENABLED === "true";
+const CS_SUGGESTER_ENABLED = process.env.SUGGESTER_CARDSIGHT_ENABLED === "true";
 const ALTERNATIVE_MIN_SCORE = 0.4;
 const ALTERNATIVE_MAX_COUNT = 2;
 const SUGGESTER_TIMEOUT_MS = 8_000;
@@ -602,12 +619,14 @@ export async function suggestCardIdForHolding(
   // so a slow vendor can never hang the batch. Vendor errors resolve to
   // empty pools — never fatal to the batch.
   const runStrict = async (): Promise<{ chRaw: CardHedgeCard[]; csRaw: CardIdentity[] }> => {
-    const chPromise = Promise.race([
+    const chPromise: Promise<CardHedgeCard[]> = CH_SUGGESTER_ENABLED
+      ? Promise.race([
       searchCards(query, 5, strictFilters).catch(() => [] as CardHedgeCard[]),
       new Promise<CardHedgeCard[]>((_, reject) =>
         setTimeout(() => reject(new Error("ch suggester timeout")), SUGGESTER_TIMEOUT_MS),
       ),
-    ]).catch(() => [] as CardHedgeCard[]);
+    ]).catch(() => [] as CardHedgeCard[])
+      : Promise.resolve([] as CardHedgeCard[]);
     const csPromise: Promise<CardIdentity[]> = CS_SUGGESTER_ENABLED
       ? Promise.race([
           fetchCardsightUuidNativeCandidates(query).catch(() => [] as CardIdentity[]),
@@ -647,7 +666,7 @@ export async function suggestCardIdForHolding(
   // never uses `filters` (its fetch is free-text only) so this only
   // helps the CH path — but that's exactly where the set-format
   // mismatch bites.
-  if (chRaw.length === 0 && csRaw.length === 0 && strictFilters.set) {
+  if (CH_SUGGESTER_ENABLED && chRaw.length === 0 && csRaw.length === 0 && strictFilters.set) {
     const chRelaxed = await Promise.race([
       searchCards(query, 5, relaxedFilters).catch(() => [] as CardHedgeCard[]),
       new Promise<CardHedgeCard[]>((_, reject) =>
