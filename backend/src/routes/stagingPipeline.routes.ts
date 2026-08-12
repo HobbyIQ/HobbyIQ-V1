@@ -18,7 +18,15 @@ import { runAutoTriageBatch } from "../services/portfolioiq/autoTriageJob.servic
 import { CosmosClient } from "@azure/cosmos";
 
 const router = Router();
-router.use(requireAdmin);
+// CF-ADMIN-GATE-SCOPE (Drew, 2026-08-12). MUST stay path-scoped. This
+// router is mounted at the bare "/api" in app.ts, so an unscoped
+// router.use(requireAdmin) runs for EVERY /api/* request that reaches
+// it — and requireAdmin ends the response instead of calling next(),
+// so every route mounted after it in app.ts became unreachable
+// (401 "Invalid admin token" in prod, 503 in CI where the token is
+// unset). That shadowed /api/account, /api/entitlements,
+// /api/subscriptions and /api/reference from 2026-07-31 until this fix.
+router.use("/staging", requireAdmin);
 
 function parseLimit(raw: unknown, def: number, max: number): number {
   const n = typeof raw === "string" ? Number(raw) : def;
