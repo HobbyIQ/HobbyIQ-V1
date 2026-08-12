@@ -157,21 +157,24 @@ export function LiveStatsStrip() {
   }, []);
 
   return (
-    <div className="hiq-card relative p-8 md:p-14">
-      {/* CF-STATS-UPGRADED (Drew, 2026-08-11). Stripped sports list +
-          "Ingested continuously" line — pure numbers now. LIVE pill
-          floats top-right of the card. Numbers bumped up two sizes for
-          premium hero feel. */}
-      {isLive && (
-        <span className="hiq-live-badge absolute top-4 right-4 md:top-6 md:right-6">
-          <span className="hiq-live-dot" aria-hidden />
-          Live
-        </span>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 md:gap-16">
+    <div className="hiq-card p-8 md:p-12">
+      {/* CF-STATS-UPGRADED (Drew, 2026-08-11 rev). Numbers were too
+          overwhelming at md:text-7xl/lg:text-8xl — dropped one step.
+          LIVE pill moved from top-right float to bottom-center below
+          the numbers so it reads as a footer credential, not visual
+          competition with the numbers themselves. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-12">
         <Metric value={formatCount(display.soldCompsIndexed)} label="Sales Index" loading={!loaded} />
         <Metric value={formatCount(display.cardsWithSlug)} label="Card Catalog" loading={!loaded} />
       </div>
+      {isLive && (
+        <div className="mt-6 md:mt-8 flex justify-center">
+          <span className="hiq-live-badge">
+            <span className="hiq-live-dot" aria-hidden />
+            Live
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -179,12 +182,12 @@ export function LiveStatsStrip() {
 function Metric({ value, label, loading }: { value: string; label: string; loading: boolean }) {
   return (
     <div className="text-center">
-      {/* Bigger, tighter typography. text-5xl → md:text-8xl holds
-          eight-digit comma-formatted numbers (16,983,639) on desktop
-          without breaking on narrower widths. tabular-nums keeps the
-          ticker's digits aligned as they change. */}
+      {/* Sizes: mobile text-4xl → desktop md:text-6xl. Prior revision
+          bumped to md:text-7xl/lg:text-8xl which Drew flagged as
+          overwhelming. tabular-nums keeps ticker digits aligned as
+          they change. */}
       <div
-        className={`hiq-count text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-3 tracking-tight tabular-nums transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
+        className={`hiq-count text-4xl sm:text-5xl md:text-6xl font-bold mb-3 tracking-tight tabular-nums transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}
       >
         {value}
       </div>
