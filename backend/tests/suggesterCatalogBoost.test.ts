@@ -27,6 +27,15 @@ import { fetchCardsightUuidNativeCandidates } from "../src/services/compiq/cards
 import { inferPrintRunFromReferenceCatalog } from "../src/services/compiq/referenceCatalogLookup.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
+// CF-SUGGESTER-CATALOG-ONLY (2026-08-12): vendor pools are OFF by default —
+// matching now runs against our own catalog. This suite exercises the CH/CS
+// pools to validate SCORING + confidence tiering, so it opts them back in.
+// The flags are read at CALL time, so setting them here is sufficient.
+// Follow-up: add catalog-sourced cases so the DEFAULT path is covered too.
+process.env.SUGGESTER_CARDHEDGE_ENABLED = "true";
+process.env.SUGGESTER_CARDSIGHT_ENABLED = "true";
+
+
 function makeHolding(overrides: Partial<PortfolioHolding> = {}): PortfolioHolding {
   return {
     id: "h-1", playerName: "Eric Hartman", cardYear: 2026,
