@@ -112,6 +112,31 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // still lands at `bowman-draft` via the paper rule below — the paper
     // vs chrome distinction is preserved by the cardNumber-prefix
     // override in computeHobbyIqCardId.
+    // CF-BOWMAN-MEGA-BOX-DISTINCT (Drew, 2026-08-12). SUPERSEDES
+    // CF-BOWMAN-MEGA-BOX-IS-CHROME (Drew, 2026-08-01), which collapsed Mega
+    // Box into bowman-chrome as "same insert set, retail-exclusive channel".
+    //
+    // That held only while Mega Box was the ONLY source of 2026 Bowman Chrome
+    // cards. Standalone 2026 Bowman Chrome released 2026-08-12 with its own
+    // 100-card base checklist, and the two numbering schemes collide head-on:
+    //
+    //     Mega Box      #52 = Shohei Ohtani      #9 = Munetaka Murakami
+    //     Bowman Chrome #52 = JJ Wetherholt RC   #9 = Cody Bellinger
+    //
+    // The collapse put 695 Mega Box comps onto Bowman Chrome base cards, so
+    // Ohtani's sales were valuing Wetherholt's rookie. Drew: "Mega box is
+    // different from 2026 bowman and 2026 bowman is a different product".
+    //
+    // Ordering is load-bearing: this MUST precede /bowman-chrome/ below, or
+    // "Bowman Chrome Mega Box" — the canonical name parseTitleIdentity returns
+    // — is swallowed as plain bowman-chrome. The regex stays Bowman-scoped so
+    // it cannot capture Topps Holiday Mega Box.
+    //
+    // NOTE: this re-pools prior years too. 2024/2025 Mega Box comps previously
+    // scored as bowman-chrome now route to their own product. That is the
+    // intended correction — distinct checklists, distinct prices — but it does
+    // move existing comps out of the Bowman Chrome pool for those years.
+    [/bowman-(?:chrome-)?mega(?:-box)?/, "bowman-chrome-mega-box"],
     [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
@@ -142,13 +167,26 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // clobbered 2005 Bowman entries on upsert during the checklist
     // batch fill. Symmetric to /topps-heritage/ below.
     [/bowman-heritage/, "bowman-heritage"],
-    // CF-BOWMAN-MEGA-BOX-IS-CHROME (Drew, 2026-08-01). Bowman Mega Box
-    // IS Bowman Chrome — same insert set, just retail-exclusive
-    // distribution channel. Collapses to bowman-chrome (matches your
-    // "buyers don't distinguish subset" rule from chrome-draft/chrome
-    // collapse). Must match BEFORE the generic /^bowman/ regex or Mega
-    // Box sales get mis-pooled with paper Bowman flagship.
-    [/bowman-mega-box|bowman-mega/, "bowman-chrome"],
+    // CF-BOWMAN-MEGA-BOX-DISTINCT (Drew, 2026-08-12). SUPERSEDES
+    // CF-BOWMAN-MEGA-BOX-IS-CHROME (Drew, 2026-08-01), which collapsed Mega
+    // Box into bowman-chrome as "same insert set, retail-exclusive channel".
+    //
+    // That held only while Mega Box was the ONLY source of 2026 Bowman Chrome
+    // cards. Standalone 2026 Bowman Chrome released 2026-08-12 with its own
+    // 100-card base checklist, and the two numbering schemes collide head-on:
+    //
+    //     Mega Box     #52 = Shohei Ohtani      #9 = Munetaka Murakami
+    //     Bowman Chrome #52 = JJ Wetherholt RC  #9 = Cody Bellinger
+    //
+    // Collapsing them made 695 Mega Box comps price Bowman Chrome base cards
+    // — Ohtani's sales valuing Wetherholt's rookie. Drew: "Mega box is
+    // different from 2026 bowman and 2026 bowman is a different product".
+    //
+    // Routes to bowman-chrome-mega-box, the canonical name parseTitleIdentity
+    // already returns for "Bowman Mega Box" and the key the 2024/2025 catalog
+    // rows already carry. Still matches BEFORE the generic /^bowman/ or Mega
+    // Box sales would land in the paper Bowman flagship pool.
+    //
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
     // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome

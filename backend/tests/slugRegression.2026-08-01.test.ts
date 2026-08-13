@@ -210,15 +210,44 @@ describe("Grade extraction from title", () => {
   });
 });
 
-describe("Bowman Mega Box IS Bowman Chrome (same insert)", () => {
-  // Regression: 2026-08-01. Bowman Mega Box is the same physical
-  // Chrome insert set, just retail-exclusive distribution. Buyers
-  // don't distinguish. Collapse to bowman-chrome (matches Drew's
-  // subset-collapse rule).
-  it("Bowman Mega Box maps to bowman-chrome", () => {
-    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).toBe("bowman-chrome");
-    expect(normalizeSetKey("2024 Bowman Mega Box Chrome")).toBe("bowman-chrome");
+describe("Bowman Mega Box is its OWN product (supersedes the 2026-08-01 collapse)", () => {
+  // The 2026-08-01 rule collapsed Mega Box into bowman-chrome: "same physical
+  // Chrome insert set, just retail-exclusive distribution, buyers don't
+  // distinguish". That held only while Mega Box was the ONLY source of 2026
+  // Bowman Chrome cards.
+  //
+  // Standalone 2026 Bowman Chrome released 2026-08-12 with its own 100-card
+  // base checklist, and the numbering collides head-on:
+  //     Mega Box      #52 = Shohei Ohtani      #9 = Munetaka Murakami
+  //     Bowman Chrome #52 = JJ Wetherholt RC   #9 = Cody Bellinger
+  // The collapse put 695 Mega Box comps on Bowman Chrome base cards, so
+  // Ohtani's sales were valuing Wetherholt's rookie. Drew, 2026-08-12:
+  // "Mega box is different from 2026 bowman and 2026 bowman is a different
+  // product" / "fix the rule".
+  it("Bowman Mega Box maps to its own key, NOT bowman-chrome", () => {
+    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).toBe("bowman-chrome-mega-box");
+    expect(normalizeSetKey("2024 Bowman Mega Box Chrome")).toBe("bowman-chrome-mega-box");
   });
+
+  it("does not collide with standalone Bowman Chrome", () => {
+    // The whole point: these two must never resolve to the same pool again.
+    expect(normalizeSetKey("2026 Bowman Chrome Baseball")).toBe("bowman-chrome");
+    expect(normalizeSetKey("2026 Bowman Mega Box Baseball"))
+      .not.toBe(normalizeSetKey("2026 Bowman Chrome Baseball"));
+  });
+
+  it("matches the name parseTitleIdentity already canonicalizes to", () => {
+    // parseTitleIdentity maps "Bowman Mega Box" -> "Bowman Chrome Mega Box";
+    // the setKey must agree or titles and slugs disagree about the product.
+    expect(normalizeSetKey("Bowman Chrome Mega Box")).toBe("bowman-chrome-mega-box");
+  });
+
+  it("still beats the generic /^bowman/ collapse", () => {
+    // If the bare Bowman rule won, Mega Box would land in the paper flagship
+    // pool — the failure the original 2026-08-01 rule was written to prevent.
+    expect(normalizeSetKey("2026 Bowman Mega Box Baseball")).not.toBe("bowman");
+  });
+
   it("Plain Bowman still maps to bowman (paper flagship)", () => {
     expect(normalizeSetKey("2024 Bowman Baseball")).toBe("bowman");
   });
