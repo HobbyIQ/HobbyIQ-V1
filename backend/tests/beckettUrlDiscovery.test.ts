@@ -14,6 +14,7 @@ import {
   BRAND_VARIANTS,
   enumerateCandidateUrls,
   discoverBeckettChecklistUrl,
+  yearTokensFor,
 } from "../src/agents/beckett/beckettUrlDiscovery.js";
 
 describe("enumerateCandidateUrls", () => {
@@ -164,5 +165,53 @@ describe("discoverBeckettChecklistUrl", () => {
     });
     expect(result.success).toBe(false);
     expect(result.attempts.every((a) => a.status === "network-error")).toBe(true);
+  });
+});
+
+// CF-BECKETT-SEASON-YEAR (Drew, 2026-08-13: "check for basketball football and
+// hocket, we need it").
+//
+// Basketball and hockey are season-dated products and Beckett names the file to
+// match. Rendering only a single year meant those URLs were never enumerated,
+// so every basketball/hockey seed reported "no checklist published" — ~15,300
+// of the seed queue's demand, written off while the files existed.
+describe("season-year tokens", () => {
+  it("emits only the plain year for single-year sports", () => {
+    // Baseball and football really are single-year: the live
+    // 2024-Panini-Prizm-Football checklist resolves. Adding season tokens here
+    // would triple every probe for nothing and eat the probe cap.
+    expect(yearTokensFor(2024, "baseball")).toEqual(["2024"]);
+    expect(yearTokensFor(2025, "football")).toEqual(["2025"]);
+  });
+
+  it("adds both adjacent seasons for basketball and hockey", () => {
+    // A seed's `year` can be either half of the season it came from, so both
+    // are tried. Plain year stays FIRST so a single-year product still
+    // resolves in one probe.
+    expect(yearTokensFor(2025, "basketball")).toEqual(["2025", "2024-25", "2025-26"]);
+    expect(yearTokensFor(2024, "hockey")).toEqual(["2024", "2023-24", "2024-25"]);
+  });
+
+  it("pads the two-digit half across a century boundary", () => {
+    expect(yearTokensFor(2000, "basketball")).toEqual(["2000", "1999-00", "2000-01"]);
+  });
+
+  it("is case-insensitive on sport", () => {
+    expect(yearTokensFor(2025, "Basketball")).toEqual(["2025", "2024-25", "2025-26"]);
+  });
+
+  it("enumerates the season filename that actually exists", () => {
+    // Verified live 2026-08-13:
+    //   2024-Panini-Prizm-Basketball-Checklist.xlsx     not found
+    //   2024-25-Panini-Prizm-Basketball-Checklist.xlsx  FOUND
+    const urls = enumerateCandidateUrls({ year: 2025, brand: "Panini Prizm", sport: "basketball" })
+      .map((a) => a.url);
+    expect(urls.some((u) => u.includes("2024-25-Panini-Prizm-Basketball-Checklist.xlsx"))).toBe(true);
+  });
+
+  it("still enumerates the single-year baseball filename", () => {
+    const urls = enumerateCandidateUrls({ year: 2024, brand: "Bowman Chrome", sport: "baseball" })
+      .map((a) => a.url);
+    expect(urls.some((u) => u.includes("2024-Bowman-Chrome-Baseball-Checklist.xlsx"))).toBe(true);
   });
 });
