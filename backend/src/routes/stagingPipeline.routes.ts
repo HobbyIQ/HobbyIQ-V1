@@ -47,9 +47,14 @@ function parseLimit(raw: unknown, def: number, max: number): number {
 // Nothing logged this: the workflow passed 800, got a 200 back, and reported
 // success. Green workflow, capped data flow.
 //
-// Ceiling raised to MAX_BATCH. It is a guard against a typo'd query param, not
-// a throughput policy — the real limiters are the job's own wall-clock and the
-// caller's curl --max-time.
+// The ceiling was also DUPLICATED: runDataCleanBatch, runPromotionBatch and
+// runAutoTriageBatch each clamped to 500 internally too. Raising only this one
+// changed nothing — a live limit=2500 call still came back scanned=500, which
+// is how the second cap surfaced. Both layers now agree at 5000; if you raise
+// one, raise MAX_JOB_BATCH in the job as well or nothing happens.
+//
+// It is a guard against a typo'd query param, not a throughput policy — the
+// real limiters are the job's own wall-clock and the caller's curl --max-time.
 const MAX_BATCH = 5000;
 
 /** Optional worker shard, so the cron can fan out disjoint slices in parallel.
@@ -72,7 +77,7 @@ router.post("/staging/data-clean", async (req, res, next) => {
 
 router.post("/staging/image-verify", async (req, res, next) => {
   try {
-    const limit = parseLimit(req.query.limit, 25, 500);
+    const limit = parseLimit(req.query.limit, 25, 200);  // vision-rate-limited; matches imageVerifyJob's own ceiling
     const result = await runImageVerifyBatch({ limit });
     res.json({ success: true, ...result });
   } catch (err) { next(err); }
