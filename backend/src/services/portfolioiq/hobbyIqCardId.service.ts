@@ -46,6 +46,10 @@ export interface HobbyIqCardIdComponents {
   parallel: string;           // e.g. "Gold Refractor" (SPECIFIC variant, not lossy)
   isAuto: boolean;
   printRun?: number | null;   // e.g. 50 for /50 numbered; null/undefined for unnumbered
+  /** Caller knows the product for certain (a published checklist), so the
+   *  cardNumber-prefix repair for untrusted vendor text must NOT fire. See
+   *  CF-AUTHORITATIVE-SETKEY. Vendor paths leave this unset. */
+  authoritativeSetKey?: boolean;
 }
 
 /** Turn an arbitrary label into a URL-safe slug fragment.
@@ -762,7 +766,30 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
   // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +
   // rationale for why this override is narrow (only unambiguous pairs).
-  const setKey = applyChromePrefixOverride(baseSetKey, cardNumber);
+  // CF-AUTHORITATIVE-SETKEY (Drew, 2026-08-13). The chrome-prefix override
+  // exists to repair UNTRUSTED vendor text: sale titles say "Bowman" for cards
+  // that are really Bowman Chrome, and mapping bowman + CPA- → bowman-chrome
+  // fixed 92,362 mis-slugged sold_comps rows across 12,000+ slugs.
+  //
+  // A published checklist is the opposite of untrusted — it IS the ground
+  // truth for which product a card belongs to, and applying the override to it
+  // actively destroys identity. 2026 Bowman and 2026 Bowman Chrome BOTH carry
+  // Chrome Prospect Autos with overlapping numbers and different players:
+  //
+  //     CPA-AG in 2026 Bowman        = Adrian Gil      (173 CPA autos)
+  //     CPA-AG in 2026 Bowman Chrome = Angeibel Gomez  (259 CPA autos)
+  //
+  // Forcing both to bowman-chrome collapses two different players onto one
+  // slug and pools their comps — the same failure as the Mega Box collision.
+  // Drew, asked which product a CPA pulled from a Bowman pack belongs to:
+  // "bowman — it came out of Bowman".
+  //
+  // So a caller that KNOWS the product (checklist ingest) passes
+  // authoritativeSetKey and keeps its setKey verbatim. Vendor paths pass
+  // nothing and keep the repair behaviour unchanged.
+  const setKey = components.authoritativeSetKey === true
+    ? baseSetKey
+    : applyChromePrefixOverride(baseSetKey, cardNumber);
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.

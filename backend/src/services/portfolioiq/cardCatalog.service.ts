@@ -160,6 +160,12 @@ export function deriveCatalogEntry(input: {
   source: CardCatalogEntry["source"];
   confidence: number;
   vendorIds?: Record<string, string>;
+  /** Set when the caller knows the product for certain — a published
+   *  checklist. Suppresses the cardNumber-prefix repair meant for untrusted
+   *  vendor text, which would otherwise collapse 2026 Bowman CPA-AG
+   *  (Adrian Gil) onto 2026 Bowman Chrome CPA-AG (Angeibel Gomez).
+   *  See CF-AUTHORITATIVE-SETKEY. */
+  authoritativeSetKey?: boolean;
 }): Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> | null {
   const year = typeof input.year === "number" && Number.isFinite(input.year) ? input.year : null;
   const setKey = String(input.setKey ?? "").trim();
@@ -175,6 +181,7 @@ export function deriveCatalogEntry(input: {
     parallel: input.parallel ?? "Base",
     isAuto: input.isAuto,
     printRun: input.printRun ?? null,
+    authoritativeSetKey: input.authoritativeSetKey === true,
   });
   if (!slug || !slug.startsWith("hiq:")) return null;
 
