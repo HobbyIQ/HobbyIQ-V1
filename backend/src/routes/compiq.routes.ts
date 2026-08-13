@@ -2839,15 +2839,36 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               id: string; playerName: string; setName: string; cardNumber: string;
               parallel: string; sport: string; recentSaleCount: number; year: number;
             }>({
-              query: `SELECT TOP 20 c.id, c.playerName, c.setName, c.cardNumber, c.parallel, c.sport, c.recentSaleCount, c.year
+              // CF-PRICE-LOOKUP-SETKEY-FIX (Drew, 2026-08-12). This matched on
+              // c.setName ONLY, which is the sparse field. CardCatalogEntry
+              // carries `setKey`; deriveCatalogEntry never writes setName, so
+              // every row created by the checklist ingest, the stub sweep and
+              // the 2026 full-matrix ingest (160,317 rows) was INVISIBLE here.
+              // The query returned 0 hits, fell through, and the user got a
+              // null FMV — the NULL-FMV smoke-test violation on
+              // "2024 Bowman Chrome Ohtani Base".
+              //
+              // Same failure family as the checklistNarrow bug (#999): query a
+              // field the rows do not have, get zero rows, and zero is
+              // indistinguishable from "no such card".
+              //
+              // Matching setKey too. `parsed.brand` is spaced ("bowman chrome")
+              // while setKey is slugged ("bowman-chrome"), so the slug form is
+              // compared as well — a CONTAINS on the spaced form could never
+              // match the hyphenated key even where setName exists.
+              query: `SELECT TOP 20 c.id, c.playerName, c.setName, c.setKey, c.cardNumber, c.parallel, c.sport, c.recentSaleCount, c.year
                       FROM c
                       WHERE c.year = @y
-                        AND CONTAINS(LOWER(c.setName), @s, true)
+                        AND (
+                          (IS_DEFINED(c.setKey) AND (LOWER(c.setKey) = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
+                          OR (IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @s, true))
+                        )
                         AND CONTAINS(LOWER(c.playerName), @p, true)
                         AND LOWER(c.parallel) = @par`,
               parameters: [
                 { name: "@y", value: parsed.year },
                 { name: "@s", value: setLower },
+                { name: "@sk", value: setLower.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") },
                 { name: "@p", value: playerLower },
                 { name: "@par", value: parallelLower },
               ],
