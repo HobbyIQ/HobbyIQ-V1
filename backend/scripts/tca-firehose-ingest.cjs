@@ -62,13 +62,21 @@ const CATEGORY = process.env.CATEGORY || "";
 const PAGE_LIMIT = Math.min(1000, Math.max(1, Number(process.env.PAGE_LIMIT || 1000)));
 const SORT = (process.env.SORT || "date_desc").toLowerCase();
 // A daily-feed run is a different query shape (date-scoped, one day) from the
-// open-ended incremental crawl, so it gets its OWN cursor state. Sharing one
-// would have each run resume from the other's cursor and skip records.
-const CRAWLER_ID = process.env.CRAWLER_ID
-  || (process.env.DAILY_FEED === "true"
-    ? `tca-daily-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${
-        process.env.FEED_DATE || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)}`
-    : `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`);
+// open-ended incremental crawl, so it needs its OWN cursor state. Sharing one
+// has each run resume from the other's position: the first scheduled daily-feed
+// run resumed the incremental crawler's cursor — already parked at the end of
+// the consumed feed — and returned pages=0 fetched=0 with NO error, which reads
+// exactly like "nothing new to fetch".
+//
+// The suffix is applied even when CRAWLER_ID is passed in, because the workflow
+// always sets it explicitly; making this a `||` fallback (the first attempt)
+// meant the separation silently never applied in CI.
+const BASE_CRAWLER_ID = process.env.CRAWLER_ID
+  || `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`;
+const CRAWLER_ID = process.env.DAILY_FEED === "true"
+  ? `${BASE_CRAWLER_ID}-daily-${process.env.FEED_DATE
+      || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)}`
+  : BASE_CRAWLER_ID;
 
 const TCA_HOST = "www.thecardapi.com";
 const TCA_PATH = "/api/v1/market/sales";
@@ -364,6 +372,18 @@ async function main() {
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
   console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} errors=${totalErrors} elapsed=${elapsedS}s`);
+
+  // A daily-feed run that started with NO stored cursor asked the unlimited
+  // window for a whole day of sales. Zero rows back is an anomaly — a real day
+  // has tens of thousands — not "nothing new". Exiting non-zero keeps it out of
+  // the silent-success class that hid this pipeline stalling in the first
+  // place. A resumed cursor legitimately returns 0 once the day is drained, so
+  // that case is excluded.
+  if (DAILY_FEED && !existing && totalFetched === 0) {
+    console.error(`[tca-firehose] ERROR: daily feed for ${FEED_DATE} returned 0 rows on a fresh cursor.`);
+    console.error(`[tca-firehose] Expected tens of thousands. Check date_from/date_to are honoured and the Full Daily Feed add-on is active.`);
+    process.exitCode = 1;
+  }
   if (!APPLY) console.log(`(dry-run — no sold_comps writes, no state persisted)`);
 }
 
