@@ -164,15 +164,35 @@ export async function runPromotionBatch(opts: {
       //
       // A catalog miss is RETRYABLE: the sale is real, we simply have no
       // checklist for its card yet, and recordSoldComp has already filed a seed
-      // asking for one. Leave the row in its current promotable state so the
-      // next run retries it, and stamp why it is waiting. Once the checklist
-      // exists, the same row promotes with no re-ingest from the vendor.
+      // asking for one. Once the checklist exists, the same row promotes with
+      // no re-ingest from the vendor.
+      //
+      // CF-AWAITING-CATALOG-LIVELOCK (Drew, 2026-08-13). The first version of
+      // this left the row at status="clean" so "the next run retries it". That
+      // deadlocked the entire pipeline. The query above is
+      //
+      //   SELECT TOP @n * ... WHERE c.status IN ('clean','verified')
+      //   ORDER BY c.observedAt DESC
+      //
+      // which is DETERMINISTIC — so every run re-selected the same newest N
+      // unmatched rows, re-stamped them, and promoted nothing. Worse, DESC
+      // pins promotion to the newest sales, i.e. today's vendor firehose, which
+      // are precisely the rows least likely to have a catalog entry yet.
+      //
+      // Measured on prod before this fix: scanned=60, promoted=0,
+      // awaitingCatalog=60. Not a slow pipeline — a stalled one.
+      //
+      // So move them OUT of the promotable set into their own status. The sale
+      // is preserved, the wait is visible in /api/staging/health, and
+      // requeueAwaitingCatalog.cjs flips them back to "clean" after new
+      // checklists land. Nothing is dropped; it just stops blocking the queue.
       if (!wrote.written) {
         if (wrote.reason === "catalog-unmatched") {
           (row as unknown as Record<string, unknown>).awaitingCatalogSince =
             (row as unknown as Record<string, unknown>).awaitingCatalogSince
             ?? new Date().toISOString();
           (row as unknown as Record<string, unknown>).lastPromotionSkipReason = wrote.reason;
+          row.status = "awaiting-catalog";
           await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
           result.awaitingCatalog = (result.awaitingCatalog ?? 0) + 1;
           continue;
