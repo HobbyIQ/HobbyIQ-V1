@@ -69,11 +69,14 @@ export interface AutoHoldingDocShape {
  * is merged AUTHORITATIVELY over the title-parse for grader/grade/aspects/
  * images. Absent `details` → title-parse only (current-day behavior).
  */
-export function autoCreateHoldingForPurchase(
+// Async since CF-EBAY-MATCH-CATALOG-AT-INGEST: the catalog match is a Cosmos
+// read, so matching at import time makes this awaitable. Sole caller is
+// ebayBuyerHistory.service, already inside an async loop.
+export async function autoCreateHoldingForPurchase(
   doc: AutoHoldingDocShape,
   purchase: PortfolioPurchaseEntry,
   details?: EbayItemDetails | null,
-): AutoHoldingResult {
+): Promise<AutoHoldingResult> {
   if (purchase.holdingIds.length > 0) {
     return {
       status: "skipped-already-linked",
@@ -141,6 +144,64 @@ export function autoCreateHoldingForPurchase(
 
   const holding = buildHoldingFromParse(purchase, parsed);
   if (details) applyBrowseEnrichment(holding, details);
+
+  // CF-EBAY-MATCH-CATALOG-AT-INGEST (Drew, 2026-08-13: "I want ebay to match to
+  // the card catalog immediately... and we can approve it once ingested in the
+  // ebay tab").
+  //
+  // This path built a holding from the parsed title and seeded a NEW catalog
+  // row from eBay's aspects, but never asked whether we ALREADY hold that card
+  // in the checklist. Nothing looked, so every imported holding rendered
+  // "MISSING / VALUE —" with a Fix-identity link, even for cards whose
+  // checklist row and comps we have.
+  //
+  // Match against the catalog here, at ingest. The holding still lands as
+  // pending-review under EBAY_IMPORT_FORCE_REVIEW — the match is a PROPOSAL
+  // the user approves in the eBay tab, not an auto-commit. That distinction
+  // matters: title parsing is lossy, and a loose match is confidently wrong in
+  // a way the user cannot see. Probed against prod on 2026-08-13, free-text
+  // matching returned "2018 Topps Chrome Update Ohtani" as topps-HERITAGE #20
+  // and "2017 Bowman ROYF-9 Judge" as bowman #1 — right player, wrong card.
+  //
+  // canonicalize() is the strict matcher (exact identity → 0.98, degrading to
+  // 0.3 for speculative), so the confidence it returns is what the review UI
+  // should sort and colour by. Only a strong match pins cardId; a weak one is
+  // recorded for the reviewer without steering pricing.
+  try {
+    const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+    const h = holding as Record<string, unknown>;
+    const match = await canonicalize({
+      sport: String(h.sport ?? "baseball"),
+      year: typeof h.cardYear === "number" ? h.cardYear : null,
+      setName: String(h.setName ?? h.product ?? ""),
+      cardNumber: String(h.cardNumber ?? ""),
+      parallel: String(h.parallel ?? "") || null,
+      isAuto: Boolean(h.isAuto),
+      playerName: String(h.playerName ?? ""),
+      source: "ebay-title",
+    } as never);
+
+    if (match) {
+      h.catalogMatchConfidence = match.confidence;
+      h.catalogMatchedBy = match.matchedBy ?? null;
+      h.catalogMatchSlug = match.slug ?? null;
+      // Pin the identity only when the matcher is confident. Below that the
+      // slug is a suggestion for the reviewer — pinning it would send pricing
+      // to the wrong card while still showing a value, which reads as correct.
+      if (match.found && match.slug && match.confidence >= 0.9) {
+        h.cardId = match.slug;
+      }
+    }
+  } catch (err) {
+    // Never block an import on the matcher — the holding still lands for
+    // review, exactly as before.
+    console.warn(JSON.stringify({
+      event: "ebay_import_catalog_match_failed",
+      source: "ebayAutoHolding.service",
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
   doc.holdings[holding.id] = holding;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
   const merged = new Set([...purchase.holdingIds, holding.id]);
