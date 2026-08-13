@@ -43,6 +43,28 @@ const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] 
 const MAX = Number(val("--max", "3"));
 const SPORT_DEFAULT = val("--sport", "baseball");
 
+/**
+ * Seed rows store the product inconsistently — "2024 Bowman Chrome Baseball",
+ * "topps-chrome", "topps-tier-one". Beckett S3 keys are cased display names
+ * ("2024-Bowman-Chrome-Baseball-Checklist.xlsx") and the keys are
+ * case-sensitive, so a slug-form brand can never match. Normalise to display
+ * form: drop a leading year and a trailing sport, split on hyphens/underscores,
+ * Title Case.
+ *
+ *   "topps-chrome"                  -> "Topps Chrome"
+ *   "2024 Bowman Chrome Baseball"   -> "Bowman Chrome"
+ *   "topps-tier-one"                -> "Topps Tier One"
+ */
+function deslugBrand(raw) {
+  return String(raw || "")
+    .replace(/^(19|20)\d{2}(-\d{2})?[\s_-]+/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+(baseball|basketball|football|hockey|soccer)\s*$/i, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
 const cn = process.env.COSMOS_CONNECTION_STRING;
 if (!cn) { console.error("COSMOS_CONNECTION_STRING is unset."); process.exit(1); }
 const db = new CosmosClient(cn).database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -122,15 +144,31 @@ async function markSeed(seed, status, extra) {
   for (const seed of batch) {
     const year = Number(seed.year);
     const sport = String(seed.sport || SPORT_DEFAULT);
-    // setName is the display product ("2026 Bowman Chrome"); strip the year so
-    // discovery gets the brand it probes on.
-    const brand = String(seed.setName || seed.setKey || "")
-      .replace(/^(19|20)\d{2}(-\d{2})?\s+/, "")
-      .replace(/\s+(baseball|basketball|football|hockey|soccer)\s*$/i, "")
-      .trim();
+    // CF-SEED-BRAND-CANDIDATES (Drew, 2026-08-13: "let's find the catalog and
+    // build it. The checklist is important").
+    //
+    // brand used to be `setName || setKey` passed through verbatim, and seeds
+    // store that inconsistently — sometimes a display product ("2024 Bowman
+    // Chrome Baseball"), sometimes a raw slug ("topps-chrome", "topps-tier-one").
+    // Beckett S3 keys are cased display names, so a slug-form brand could never
+    // match: of the top 5 seeds by demand, only the one whose setName happened
+    // to be properly cased was found, and the other four burned 240 probes each
+    // and were written off as "no checklist published" when the checklist
+    // exists and we simply asked for the wrong filename.
+    //
+    // So: de-slugify to display form, and probe BOTH the setName and setKey
+    // derivations. They disagree usefully — seed:baseball:2025:topps carries
+    // setName "topps-tier-one", so the setName probe finds Tier One while the
+    // setKey probe finds base Topps. Trying both costs one extra discovery pass
+    // on a miss and turns several dead seeds into acquisitions.
+    const candidates = [];
+    for (const raw of [seed.setName, seed.setKey]) {
+      const b = deslugBrand(raw);
+      if (b && !candidates.includes(b)) candidates.push(b);
+    }
     console.log(`── ${seed.id}  (demand ${seed.requestCount})`);
-    console.log(`   brand="${brand}" year=${year} sport=${sport}`);
-    if (!brand || !Number.isFinite(year)) {
+    console.log(`   brand candidates=${JSON.stringify(candidates)} year=${year} sport=${sport}`);
+    if (candidates.length === 0 || !Number.isFinite(year)) {
       console.log(`   SKIP — cannot derive a brand/year to probe`);
       await markSeed(seed, "unavailable", { drainReason: "no-brand-or-year" });
       summary.unavailable++;
@@ -138,10 +176,18 @@ async function markSeed(seed, status, extra) {
     }
 
     let found;
-    try {
-      found = await discoverUrl(year, brand, sport);
-    } catch (e) {
-      console.log(`   discovery ERROR ${e.message}`);
+    let probeErr = null;
+    for (const brand of candidates) {
+      try {
+        const attempt = await discoverUrl(year, brand, sport);
+        if (attempt && attempt.success && attempt.url) { found = attempt; break; }
+        found = found ?? attempt;   // keep the first result for its probe count
+      } catch (e) {
+        probeErr = e;
+      }
+    }
+    if (probeErr && (!found || !found.success)) {
+      console.log(`   discovery ERROR ${probeErr.message}`);
       summary.failed++;
       continue;
     }
