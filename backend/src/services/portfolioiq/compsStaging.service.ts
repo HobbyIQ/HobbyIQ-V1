@@ -28,6 +28,15 @@ export type StagingStatus =
   | "verified"
   | "pending-manual"
   | "promoted"
+  // CF-AWAITING-CATALOG-LIVELOCK (Drew, 2026-08-13). A clean row whose card has
+  // no catalog match yet. The sale is real and a checklist seed has been filed;
+  // it promotes unchanged once the checklist lands.
+  //
+  // It needs its OWN status rather than staying "clean": promotion selects
+  // `status IN ('clean','verified') ORDER BY observedAt DESC`, which is
+  // deterministic, so leaving these in the promotable set made every run
+  // re-select the same unmatched rows and promote nothing at all.
+  | "awaiting-catalog"
   // CF-STAGING-REJECT-ZERO-PRICE (Drew, 2026-07-29). "There is no sales
   // at 0 dollars." Rows with price <= 0 are rejected outright and stay
   // out of the manual queue. Distinct from `promoted` so we can audit
