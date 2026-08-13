@@ -6,12 +6,17 @@ name: Staging Pipeline Cron
 #
 # CF-STAGING-BATCH-BUMP (Drew, 2026-08-01). Batch sizes bumped 4×
 # after audit found 416K pending rows and the old sizing (data-clean
-# 200 / promotion 500) would take 17 days to drain. Endpoints are
-# fast (~8s for 200 rows) so 4× headroom is safe within the 5-min
-# job budget.
-#   data-clean:  200 → 800   (~230K/day drain capacity)
+# 200 / promotion 500) would take 17 days to drain.
+#   data-clean:  200 → 800   (intended ~230K/day drain capacity)
 #   image-verify: 50 → 100
-#   promotion:   500 → 2000  (~575K/day promotion capacity)
+#   promotion:   500 → 2000  (intended ~575K/day promotion capacity)
+#
+# CORRECTION (2026-08-13): that bump never took effect. The route clamped
+# `limit` with Math.min(500, ...), so 800 and 2000 both became 500 and the
+# real capacity stayed 144K/day per stage — under the ~300K/day inbound,
+# which is why the backlog grew to 3.5M instead of draining. Nothing
+# surfaced it: the workflow passed 800, got HTTP 200, and reported success.
+# Cap is now MAX_BATCH=5000 and the numbers above are finally reachable.
 #
 # Rate-limit friendly:
 #   - Vision: 50 rows × 2s/call = 100s per run, well under 300s job
@@ -26,14 +31,17 @@ on:
   workflow_dispatch:
     inputs:
       data_clean_limit:
-        description: 'Data-clean batch size'
-        default: '800'
+        description: 'Data-clean batch size PER SHARD'
+        default: '2000'
       image_verify_limit:
         description: 'Image-verify batch size'
         default: '100'
       promotion_limit:
-        description: 'Promotion batch size'
+        description: 'Promotion batch size PER SHARD'
         default: '2000'
+      shards:
+        description: 'Parallel worker shards for data-clean + promotion'
+        default: '4'
 
 concurrency:
   group: staging-pipeline
@@ -43,17 +51,50 @@ jobs:
   drain:
     name: Drain staging pipeline
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Raised from 5: shards run concurrently, but data-clean and promotion are
+    # still sequential steps, each allowed ~200-240s. A tick that overruns the
+    # 5-minute cron cadence is fine — the concurrency group serialises runs, and
+    # one run now moves ~8,000 rows per stage instead of 500.
+    timeout-minutes: 12
     steps:
-      - name: Data-clean
+      # CF-STAGING-FANOUT (Drew, 2026-08-13: "how can we speed it up? ... go
+      # live date is 9/14").
+      #
+      # Two compounding problems, both silent:
+      #
+      #   1. The route capped `limit` at 500 via Math.min, so the 800 below was
+      #      clamped and the 2026-08-01 batch bump never took effect. Real
+      #      capacity was 144K/day against ~300K/day inbound — the backlog could
+      #      only grow. Cap is now MAX_BATCH=5000.
+      #   2. Both jobs already supported worker sharding, but the routes never
+      #      exposed it, so every tick was one serial batch.
+      #
+      # Now: SHARDS parallel calls over disjoint id-prefix slices. Wall-clock is
+      # one shard, not the sum. Each shard gets its own --max-time; a slow shard
+      # cannot stall the others because they run concurrently.
+      #
+      # `wait` without an argument returns the highest exit status among the
+      # jobs, so a failing shard still fails the step.
+      - name: Data-clean (sharded)
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.data_clean_limit || '800' }}
+          LIMIT: ${{ inputs.data_clean_limit || '2500' }}
+          SHARDS: ${{ inputs.shards || '4' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/data-clean?limit=$LIMIT" --max-time 120 2>&1)
-          echo "$RESULT" | jq .
+          pids=""
+          for i in $(seq 0 $((SHARDS - 1))); do
+            (
+              R=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+                "$BASE/api/staging/data-clean?limit=$LIMIT&shard=$i&shards=$SHARDS" \
+                --max-time 240) || { echo "::warning::data-clean shard $i failed"; exit 1; }
+              echo "shard $i: $(echo "$R" | jq -c '{scanned,cleaned,anomalies,zeroPriceRejected}')"
+            ) &
+            pids="$pids $!"
+          done
+          rc=0
+          for p in $pids; do wait "$p" || rc=1; done
+          exit $rc
       # CF-STAGING-IMAGE-VERIFY-NONBLOCKING (Drew, 2026-08-13). Image-verify is
       # ENRICHMENT; promotion is the data path. This step is a separate job
       # step, so when its curl exceeded --max-time 240 the job aborted and
@@ -96,15 +137,28 @@ jobs:
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/auto-triage?limit=$LIMIT" --max-time 120 2>&1)
           echo "$RESULT" | jq .
-      - name: Promotion
+      # Sharded for the same reason as data-clean. Promotion stays FATAL — it is
+      # the data path, and if it breaks the run should go red.
+      - name: Promotion (sharded)
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.promotion_limit || '2000' }}
+          SHARDS: ${{ inputs.shards || '4' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/promotion?limit=$LIMIT" --max-time 120 2>&1)
-          echo "$RESULT" | jq .
+          pids=""
+          for i in $(seq 0 $((SHARDS - 1))); do
+            (
+              R=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+                "$BASE/api/staging/promotion?limit=$LIMIT&shard=$i&shards=$SHARDS" \
+                --max-time 200) || { echo "promotion shard $i FAILED"; exit 1; }
+              echo "shard $i: $(echo "$R" | jq -c '{scanned,promoted,awaitingCatalog,errors}')"
+            ) &
+            pids="$pids $!"
+          done
+          rc=0
+          for p in $pids; do wait "$p" || rc=1; done
+          exit $rc
       - name: Health snapshot
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
