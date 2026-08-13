@@ -29,6 +29,16 @@ on:
     - cron: '5 0 * * *'
   workflow_dispatch:
     inputs:
+      daily_feed:
+        description: 'Scope the pull to sale_date = yesterday, which our Full Daily Feed add-on serves UNLIMITED. Scheduled runs default to true. Set false only for historical backfills, which draw on the 200K/day cap.'
+        required: false
+        type: choice
+        options: ['true', 'false']
+        default: 'true'
+      feed_date:
+        description: 'Override the daily-feed date (YYYY-MM-DD). Blank = yesterday. Only the yesterday window is unlimited.'
+        required: false
+        default: ''
       mode:
         description: 'incremental (walk from cursor) or backfill (ignore cursor)'
         required: false
@@ -149,6 +159,7 @@ jobs:
           PLATFORMS="${{ inputs.platforms || 'eBay' }}"
           echo "Ingesting from platforms: $PLATFORMS"
           IFS=',' read -ra PLATFORM_ARR <<< "$PLATFORMS"
+          PLATFORMS_OK=0
           TOTAL_MIN="${{ inputs.max_minutes || '12' }}"
           PER_PLATFORM_MIN=$(( TOTAL_MIN / ${#PLATFORM_ARR[@]} ))
           if [ $PER_PLATFORM_MIN -lt 2 ]; then PER_PLATFORM_MIN=2; fi
@@ -169,6 +180,8 @@ jobs:
             PERSIST_VENDOR_LOOKUPS_ENABLED=true \
             COMPS_STAGING_SHIM_ENABLED=true \
             COMPS_STAGING_MIRROR_ENABLED=true \
+            DAILY_FEED="${{ inputs.daily_feed || 'true' }}" \
+            FEED_DATE="${{ inputs.feed_date }}" \
             INGEST_MODE="${{ inputs.mode || 'incremental' }}" \
             SORT="${{ inputs.sort || 'date_desc' }}" \
             APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
@@ -176,8 +189,33 @@ jobs:
             PLATFORM="$P_CLEAN" \
             CATEGORY="$CAT_FILTER" \
             CRAWLER_ID="tca-${P_CLEAN,,}-${CAT_FILTER:-all}-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
-            node scripts/tca-firehose-ingest.cjs || echo "  ($P_CLEAN failed or quota-capped — continuing)"
+            node scripts/tca-firehose-ingest.cjs && PLATFORMS_OK=$((PLATFORMS_OK+1)) || echo "  ($P_CLEAN failed or quota-capped — continuing)"
           done
+
+          # CF-TCA-QUOTA-VISIBILITY (Drew, 2026-08-13: "It isn't moving.").
+          #
+          # `|| echo ... continuing` swallowed every failure, so a run that
+          # fetched nothing at all still reported success. 2026-08-13 02:06 UTC:
+          #   [tca] 429 throttled — waiting 60s then retry 1/3 .. 2/3 .. 3/3
+          #   [tca-firehose] done — pages=0 fetched=0 written=0 errors=1
+          # and the workflow went green. Nobody had a reason to look, and the
+          # TCA half of the pool quietly stopped growing.
+          #
+          # Keep the per-platform continue — one bad platform should not abort
+          # the others — but a scheduled run where EVERY platform failed is a
+          # real outage and must go red. Same rule as the freshness canary:
+          # verify the write, not the run.
+          if [ "$PLATFORMS_OK" -eq 0 ]; then
+            REMAIN=$(curl -s -o /dev/null -D - -H "x-market-api-key: $TCA_API_KEY" \
+              "https://www.thecardapi.com/api/v1/market/sales?limit=1" 2>/dev/null \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="x-ratelimit-remaining"{print $2}')
+            echo "::error::TCA ingest wrote nothing on every platform. x-ratelimit-remaining=${REMAIN:-unknown}"
+            if [ "${REMAIN:-1}" = "0" ]; then
+              echo "::error::Daily TCA sales quota is exhausted. The firehose is the intended consumer but is arriving to an empty budget — something else is draining the 200K/day cap before this cron runs."
+            fi
+            exit 1
+          fi
+          echo "platforms with a successful pull: $PLATFORMS_OK"
 
   match-enricher:
     name: TCA match-enricher (title → identity)

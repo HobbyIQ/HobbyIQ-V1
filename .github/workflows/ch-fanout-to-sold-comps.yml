@@ -14,6 +14,23 @@ name: CH Fanout to sold_comps
 # to pick a larger window or a historical range.
 
 on:
+  # CF-CH-FANOUT-NIGHTLY (Drew, 2026-08-13: "we need to be ingesting data from
+  # CH and TCA. It isn't moving.").
+  #
+  # This workflow was dispatch-only, so nothing routinely promoted CH data into
+  # the unified pool. The daily CH ingest lands ~81K rows/day in ch_daily_sales
+  # (verified working: 81,605 upserted 2026-08-12, 0 failed) but sold_comps was
+  # only ever seeded on demand. Result: the newest `source=cardhedge` sale in
+  # sold_comps was dated 2026-07-17 — nearly a month stale — while the raw rows
+  # sat there unused.
+  #
+  # 07:40 UTC runs after CH Daily Sales Ingest (~06:00 UTC, took 45m on its last
+  # run) so each night's file is present before the fan-out walks back over it.
+  # The default 30-day window plus contentHash dedup in recordSoldComp makes an
+  # overlapping re-run a no-op, so a late or missed CH ingest self-heals the
+  # next night instead of leaving a permanent hole.
+  schedule:
+    - cron: '40 7 * * *'
   workflow_dispatch:
     inputs:
       start_date:
@@ -94,7 +111,13 @@ jobs:
           echo "  START=$BULK_START_DATE  END=$BULK_END_DATE  SPORTS=$BULK_SPORT_FILTER"
           node scripts/bulk-import-ch-daily-to-sold-comps.cjs
 
+      # Runs from `backend` because it require()s @azure/cosmos, which is
+      # installed there. Without this the step died on MODULE_NOT_FOUND and
+      # failed the whole run — the 2026-08-10 dispatch shows the fan-out itself
+      # completing slices of 219K / 142K / 60K rows and then the run going red
+      # on the report, which read as "CH fan-out is broken" when it had worked.
       - name: Report post-run counts
+        working-directory: backend
         env:
           COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
         run: |
