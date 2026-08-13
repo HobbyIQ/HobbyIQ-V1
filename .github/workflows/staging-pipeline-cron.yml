@@ -54,15 +54,39 @@ jobs:
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/data-clean?limit=$LIMIT" --max-time 120 2>&1)
           echo "$RESULT" | jq .
+      # CF-STAGING-IMAGE-VERIFY-NONBLOCKING (Drew, 2026-08-13). Image-verify is
+      # ENRICHMENT; promotion is the data path. This step is a separate job
+      # step, so when its curl exceeded --max-time 240 the job aborted and
+      # Auto-triage + Promotion never ran at all — staged comps stopped
+      # reaching sold_comps because a picture took too long to fetch.
+      #
+      # Observed 2026-08-13 at 16:09 and 17:12 UTC, both exit code 28 (curl
+      # timeout) at exactly 240s, each between successful runs. The runs either
+      # side promoted normally, so the effect was intermittent stalling of
+      # ingestion rather than an outage — the kind that hides in a mostly-green
+      # run list.
+      #
+      # continue-on-error keeps the pipeline moving. The failure is NOT
+      # swallowed: the explicit ::warning:: makes it visible in the run
+      # summary, so a persistently slow image-verify is still noticeable
+      # instead of silently passing. Promotion stays fatal — if THAT breaks,
+      # the run should go red.
       - name: Image-verify
+        id: image_verify
+        continue-on-error: true
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.image_verify_limit || '100' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1)
-          echo "$RESULT" | jq .
+          if RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1); then
+            echo "$RESULT" | jq .
+          else
+            CODE=$?
+            echo "::warning::image-verify failed (curl exit $CODE — 28 means it exceeded --max-time 240s at limit=$LIMIT). Continuing so promotion still runs; lower image_verify_limit if this persists."
+            exit 0
+          fi
       - name: Auto-triage
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
