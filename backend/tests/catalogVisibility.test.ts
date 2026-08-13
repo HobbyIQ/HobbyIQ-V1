@@ -22,9 +22,28 @@ import {
 
 describe("catalogTier", () => {
   it("treats checklist-backed and human-confirmed rows as verified", () => {
-    for (const s of ["checklist", "user-verified", "ch-catalog", "cs-catalog", "cardhedge", "cardsight"]) {
+    for (const s of ["checklist", "user-verified", "ch-catalog", "cs-catalog", "cardsight"]) {
       expect(catalogTier({ source: s }), `${s}`).toBe("verified");
     }
+  });
+
+  it("excludes CardHedge rows — they are a vendor's copy, not our card", () => {
+    // CF-RETIRE-CARDHEDGE-ROWS (Drew, 2026-08-13: "clean up cardhege please
+    // that is the problem"). CH is off at runtime but its rows kept surfacing
+    // as if they were cards we own: four cardhedge:: rows above the real card
+    // in search (all comps=0, because sales hang off the canonical slug), and
+    // vendor bubble.io ids offered as the options in the review picker.
+    expect(catalogTier({ source: "cardhedge" })).toBe("excluded");
+    expect(catalogTier({ source: "cardhedge-graded" })).toBe("excluded");
+  });
+
+  it("excludes them by SOURCE, so the underlying rows survive", () => {
+    // Deliberately not a delete: sold_comps rows reference vendor cardIds, and
+    // removing the catalog rows would orphan real sales with no way back.
+    // Reversible by removing two strings from EXCLUDED_SOURCES.
+    const sql = verifiedCatalogSqlClause();
+    expect(sql).toContain("c.source != 'cardhedge'");
+    expect(sql).toContain("c.source != 'cardhedge-graded'");
   });
 
   it("treats a row with no provenance as legacy-authoritative", () => {
