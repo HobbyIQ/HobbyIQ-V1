@@ -9,9 +9,9 @@
 //   1. Parser sanity — parseListingIdentity on the title should agree
 //      with the derived slug's parallel + cardNumber + isAuto. Disagree
 //      → parser-low-confidence anomaly.
-//   2. Rolling-median price plausibility — is the price within
-//      [median/3, median*3] of the last 30d at this slug? Outside →
-//      price-outlier anomaly.
+//   2. Rolling price plausibility — is the price within the last 30d
+//      dispersion band at this (slug, gradeTier), i.e. [p10/3, p90*3]?
+//      Outside → price-outlier anomaly. Fewer than 8 comps → no verdict.
 //   3. Cross-grade sanity — if graded, does the price exceed the p75
 //      of a HIGHER tier at this family × value-band? Above → cross-
 //      grade-band anomaly.
@@ -42,6 +42,59 @@ function gradeTierKey(company?: string | null, value?: number | null): string {
   if (!c) return "raw";
   const v = typeof value === "number" && Number.isFinite(value) ? value : null;
   return v === null ? c : `${c}${v}`;
+}
+
+// CF-PRICE-BAND-FROM-DISPERSION (Drew, 2026-08-13: "lets check the anomaly out
+// and fix").
+//
+// The band was median/3 .. median*3, which assumes every pool is tightly
+// clustered. Bucketing by grade tier (CF-DATA-CLEAN-MEDIAN-BY-GRADE) fixed the
+// graded-vs-raw comparison, but it cannot fix RAW: gradeTierKey collapses every
+// ungraded copy into one "raw" bucket, and a raw pool has no condition
+// dimension at all. A 1969 Topps common trades from a $3 beater to a $600
+// near-mint copy — genuine 100x dispersion, in one bucket, by design.
+//
+// So a fixed ±3x brands ordinary condition variance as bad data. Measured
+// 2026-08-13 on a 30,000-row anomaly sample: price-outlier was 46.6%, and the
+// examples are exactly this — "1969 Topps #100 Base, 2287% of 30d median
+// $44.95", "1955 Bowman #110 Base, 27% of $3.54". Those are sales, not errors,
+// and status=anomaly means they never reach sold_comps.
+//
+// Band from the pool's OWN spread instead: p10..p90, widened by OUTLIER_FACTOR.
+// Self-calibrating — a tight pool (modern graded) keeps a tight band, a
+// dispersed pool (vintage raw) earns a wide one. What still trips are the
+// failures worth catching: lot listings, typos, wrong-card matches, which sit
+// orders of magnitude outside the observed range rather than inside its tail.
+export interface PriceBand {
+  median: number;
+  /** 10th percentile of the 30d pool. */
+  lo: number;
+  /** 90th percentile of the 30d pool. */
+  hi: number;
+  n: number;
+}
+
+// Quantiles need more support than a median does. Below this we return NO
+// verdict rather than guessing — extending the rule this file already applies
+// to thin grade tiers: an unjudgeable row must not be branded an anomaly.
+const MIN_BAND_SAMPLES = 8;
+const OUTLIER_FACTOR = 3;
+
+/** Build a dispersion band from an ASCENDING-sorted price array. */
+export function priceBandFromSorted(sorted: number[]): PriceBand | null {
+  const n = sorted.length;
+  if (n < MIN_BAND_SAMPLES) return null;
+  const q = (f: number) => sorted[Math.min(n - 1, Math.max(0, Math.floor(f * (n - 1))))];
+  return { median: q(0.5), lo: q(0.1), hi: q(0.9), n };
+}
+
+/** Verdict for one price against a band. `null` detail means "in band". */
+export function priceOutlierDetail(price: number, band: PriceBand): string | null {
+  const ceiling = band.hi * OUTLIER_FACTOR;
+  const floor = band.lo / OUTLIER_FACTOR;
+  if (price <= ceiling && price >= floor) return null;
+  return `$${price.toFixed(2)} outside 30d p10-p90 $${band.lo.toFixed(2)}-$${band.hi.toFixed(2)} ` +
+    `(x${OUTLIER_FACTOR} → $${floor.toFixed(2)}-$${ceiling.toFixed(2)}, n=${band.n}, median $${band.median.toFixed(2)})`;
 }
 
 let _cached: Container | null = null;
@@ -242,7 +295,7 @@ export async function runDataCleanBatch(opts: {
   // cross-partition query so classifyRow doesn't fan out to N
   // per-row queries. Before this: 500 rows × 1 query = ~5000 RU/batch,
   // ~80s wall-clock. After: 1 query + 1 write per row.
-  const medianCache = new Map<string, number>();
+  const medianCache = new Map<string, PriceBand>();
   if (soldComps) {
     const uniqSlugs = Array.from(new Set(pending.map((r) => r.hobbyiqCardId).filter(Boolean)));
     if (uniqSlugs.length > 0) {
@@ -282,10 +335,9 @@ export async function runDataCleanBatch(opts: {
             bySlug.set(key, arr);
           }
           for (const [slug, prices] of bySlug) {
-            if (prices.length >= 5) {
-              prices.sort((a, b) => a - b);
-              medianCache.set(slug, prices[Math.floor(prices.length / 2)]);
-            }
+            prices.sort((a, b) => a - b);
+            const band = priceBandFromSorted(prices);
+            if (band) medianCache.set(slug, band);
           }
         }
       } catch { /* pre-fetch failure is non-fatal — classifyRow falls back to per-row query */ }
@@ -335,7 +387,7 @@ export async function runDataCleanBatch(opts: {
  * rolling-median lookup against sold_comps (which is read-only).
  * Never throws — always returns a StagingClean.
  */
-async function classifyRow(row: StagingDoc, soldComps: Container | null, medianCache?: Map<string, number>): Promise<StagingClean> {
+async function classifyRow(row: StagingDoc, soldComps: Container | null, medianCache?: Map<string, PriceBand>): Promise<StagingClean> {
   const raw = row.raw;
   const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
   const cardYear = parsed?.year ?? raw.identityHint.cardYear ?? 0;
@@ -403,10 +455,23 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
         titleSetSlug.length > parsed.setKey.length &&
         titleSetSlug.startsWith(parsed.setKey);
       if (titleMoreSpecific) {
-        anomalies.push({
-          kind: "parser-low-confidence",
-          detail: `title infers setKey "${titleSet}" (slug=${titleSetSlug}) — more specific than slug setKey "${parsed.setKey}"`,
-        });
+        // CF-SETKEY-UPGRADE-IS-NOT-AN-ANOMALY (Drew, 2026-08-13: "lets check
+        // the anomaly out and fix").
+        //
+        // This branch RESOLVES the discrepancy — it adopts the more specific
+        // setKey on the next line — and then used to raise an anomaly anyway,
+        // which parks the row in `anomaly` where promotion (status IN
+        // ('clean','verified')) never picks it up. Same shape as the no-image
+        // bug: intent "record that we improved this", effect "never promote".
+        //
+        // Adopting a strictly-more-specific setKey is the sanctioned operation
+        // under slug-recompute-only-improve, not a low-confidence parse. The
+        // guard above already establishes strictness (longer AND prefixed), so
+        // bowman → bowman-chrome and topps → topps-transcendent upgrade, while
+        // an orthogonal disagreement falls to the else branch untouched.
+        //
+        // Measured 2026-08-13: parser-low-confidence was 53% of a 30,000-row
+        // anomaly sample, dominated by exactly this verdict.
         derivedSetName = titleSetSlug;
         normalizations.push("setKey-preferred-from-title");
       } else {
@@ -470,8 +535,8 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
       // before it exists. parseGradeLabel is pure and cheap.
       const rowGrade = title ? parseGradeLabel(title) : null;
       const rowGradeKey = gradeTierKey(rowGrade?.gradeCompany, rowGrade?.gradeValue);
-      let median: number | null = medianCache?.get(`${row.hobbyiqCardId}||${rowGradeKey}`) ?? null;
-      if (median === null && !medianCache) {
+      let band: PriceBand | null = medianCache?.get(`${row.hobbyiqCardId}||${rowGradeKey}`) ?? null;
+      if (band === null && !medianCache) {
         const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
         const { resources: rollingRows } = await soldComps.items.query<{
           price: number; gradeCompany?: string | null; gradeValue?: number | null;
@@ -479,23 +544,15 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
           query: "SELECT c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
           parameters: [{ name: "@hiq", value: row.hobbyiqCardId }, { name: "@cutoff", value: rollingCutoff }],
         }).fetchAll();
-        if (rollingRows.length >= 5) {
-          const prices = rollingRows
-            .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === rowGradeKey)
-            .map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-          if (prices.length >= 5) median = prices[Math.floor(prices.length / 2)];
-        }
+        const prices = rollingRows
+          .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === rowGradeKey)
+          .map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+        band = priceBandFromSorted(prices);
       }
-      if (median !== null) {
-        const ratio = price / median;
-        if (ratio > 3 || ratio < (1 / 3)) {
-          anomalies.push({
-            kind: "price-outlier",
-            detail: `${(ratio * 100).toFixed(0)}% of 30d median $${median.toFixed(2)}`,
-          });
-        } else {
-          normalizations.push("price-within-30d-band");
-        }
+      if (band !== null) {
+        const detail = priceOutlierDetail(price, band);
+        if (detail) anomalies.push({ kind: "price-outlier", detail });
+        else normalizations.push("price-within-30d-band");
       }
     } catch { /* rolling median failure is non-fatal */ }
   }

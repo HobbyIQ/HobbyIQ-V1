@@ -1,22 +1,37 @@
 #!/usr/bin/env node
-// CF-REQUEUE-NO-IMAGE-ANOMALIES (Drew, 2026-08-13: "do it").
+// CF-REQUEUE-STALE-ANOMALY-VERDICTS (Drew, 2026-08-13: "do it" →
+// "lets check the anomaly out and fix").
 //
-// Companion to CF-NO-IMAGE-IS-NOT-AN-ANOMALY. Rows were routed to `anomaly`
-// because our blob mirror write is denied account-wide ("This request is not
-// authorized to perform this operation using this permission"), which
-// data-clean read as no-image. A sale without a photo is still a valid price
-// point, so that rule is gone — but ~897K rows are already parked under it and
-// nothing re-examines an anomaly row.
+// Nothing in the pipeline ever re-examines an `anomaly` row, and promotion
+// reads status IN ('clean','verified') — so a row parked under a rule that has
+// since been corrected stays parked forever, and its sale never reaches
+// sold_comps. This flips those back to `pending` for a fresh verdict.
 //
-// This flips those back to `pending` so data-clean reconsiders them under the
-// corrected rules (no-image is now a note, and the price-outlier median is
-// grade-aware).
+// Three rules have changed under it, so three classes of verdict are stale:
 //
-// SAFETY — the whole point of the filter: only rows whose anomalies are ALL
-// image-related get requeued. A row that also tripped price-outlier or
-// parser-low-confidence stays put, because those verdicts are still valid and
-// re-pending them would re-litigate a real finding. Verified per row from
-// clean.anomalies, not assumed from the aggregate counts.
+//   no-image        — no longer an anomaly at all. A sale without a photo is
+//                     still a valid price point (CF-NO-IMAGE-IS-NOT-AN-ANOMALY).
+//   price-outlier   — band was median/3..median*3, now the pool's own
+//                     p10..p90 widened 3x (CF-PRICE-BAND-FROM-DISPERSION),
+//                     bucketed per (slug, gradeTier).
+//   parser-low-confidence, setKey emitter ONLY — the job adopted the more
+//                     specific setKey and flagged the row anyway
+//                     (CF-SETKEY-UPGRADE-IS-NOT-AN-ANOMALY).
+//
+// SAFETY — the whole point of the filter: a row is requeued only when EVERY
+// one of its anomalies is stale. Anything carrying a still-valid verdict stays
+// put, because re-pending it would re-litigate a real finding. Note this is
+// finer-grained than a kind check: parser-low-confidence has three emitters and
+// only the setKey one changed, so the predicate reads the detail text. Verified
+// per row from clean.anomalies, never assumed from aggregate counts.
+//
+// A genuine outlier simply gets re-flagged on the next pass — idempotent, it
+// just costs a scan.
+//
+// Correction worth recording: the anomaly backlog is NOT mostly no-image. An
+// earlier 3,000-row sample found only 5 image-only rows. Measured properly on
+// 30,000 rows: parser-low-confidence 53.0%, price-outlier 46.6%, no-image
+// 11.7% (kinds overlap; a row can carry several).
 //
 // Dry-run by default.
 //
@@ -38,26 +53,35 @@ const st = new CosmosClient(cn)
   .database(process.env.COSMOS_DATABASE || "hobbyiq")
   .container("comps_staging");
 
+/** Kinds that are stale outright, whatever their detail says. */
+const STALE_KINDS = new Set(["no-image", "price-outlier"]);
+
 /**
- * Anomaly kinds whose RULE CHANGED, so a past verdict is no longer evidence:
+ * CF-SETKEY-UPGRADE-IS-NOT-AN-ANOMALY / CF-PRICE-BAND-FROM-DISPERSION
+ * (Drew, 2026-08-13: "lets check the anomaly out and fix").
  *
- *   no-image      — no longer an anomaly at all (CF-NO-IMAGE-IS-NOT-AN-ANOMALY)
- *   price-outlier — the 30d median is now bucketed per (slug, gradeTier)
- *                   (CF-DATA-CLEAN-MEDIAN-BY-GRADE), so graded sales that were
- *                   compared against a raw median get a fresh, fair verdict
+ * parser-low-confidence is no longer uniformly "unchanged". It has three
+ * emitters and only ONE of them changed:
  *
- * parser-low-confidence is deliberately NOT here — that rule is unchanged, so
- * requeueing those would re-litigate a still-valid finding for no reason.
+ *   setKey specificity  — the job adopted the more specific setKey and then
+ *                         flagged the row anyway. That anomaly is gone, so
+ *                         these rows deserve a fresh verdict.
+ *   parallel / isAuto   — rules untouched. Requeueing those would re-litigate
+ *                         a still-valid finding.
  *
- * A genuine outlier simply gets re-flagged on the next pass; this is idempotent,
- * it just costs a scan.
- *
- * Correction worth recording: the historical anomaly backlog is NOT mostly
- * no-image. A 3,000-row sample found only 5 image-only rows — those 897K
- * predate the mirror outage and are mostly parser-low-confidence (3,136) and
- * price-outlier (536).
+ * So the predicate has to read the DETAIL, not just the kind. Measured on a
+ * 30,000-row sample: 9,429 setKey verdicts vs 6,475 parallel/isAuto, freeing
+ * 6,725 rows (22.4% of all anomalies) once no other anomaly remains.
  */
-const IMAGE_KINDS = new Set(["no-image", "price-outlier"]);
+function isStaleVerdict(a) {
+  const kind = String(a && a.kind);
+  if (STALE_KINDS.has(kind)) return true;
+  if (kind !== "parser-low-confidence") return false;
+  const d = String((a && a.detail) || "");
+  // Matches both the current wording and the pre-2026-08-06 deployed wording
+  // ("disagrees with slug setKey"), which is what most historical rows carry.
+  return /infers setKey/.test(d) && /more specific than|disagrees with slug setKey/.test(d);
+}
 
 async function mapLimit(items, limit, fn) {
   let cursor = 0;
@@ -74,10 +98,10 @@ async function handle(row) {
   const anomalies = row?.clean?.anomalies ?? [];
   if (anomalies.length === 0) { stats.noAnomalyBlock++; return; }
 
-  const nonImage = anomalies.filter((a) => !IMAGE_KINDS.has(String(a?.kind)));
-  if (nonImage.length > 0) {
+  const stillValid = anomalies.filter((a) => !isStaleVerdict(a));
+  if (stillValid.length > 0) {
     stats.keptRealAnomaly++;
-    for (const a of nonImage) keptReasons[a.kind] = (keptReasons[a.kind] ?? 0) + 1;
+    for (const a of stillValid) keptReasons[a.kind] = (keptReasons[a.kind] ?? 0) + 1;
     return;
   }
 
@@ -85,14 +109,14 @@ async function handle(row) {
   try {
     row.status = "pending";
     row.requeuedAt = new Date().toISOString();
-    row.requeuedReason = "CF-NO-IMAGE-IS-NOT-AN-ANOMALY";
+    row.requeuedReason = "CF-STALE-ANOMALY-VERDICT-2026-08-13";
     await st.item(row.id, row.hobbyiqCardId).replace(row);
     stats.requeued++;
   } catch { stats.errors++; }
 }
 
 (async () => {
-  console.log(`requeue image-only anomalies — ${APPLY ? "APPLY" : "DRY RUN"}  max=${MAX}\n`);
+  console.log(`requeue stale-verdict anomalies — ${APPLY ? "APPLY" : "DRY RUN"}  max=${MAX}\n`);
 
   const iter = st.items.query({
     query: "SELECT * FROM c WHERE c.status = 'anomaly'",
