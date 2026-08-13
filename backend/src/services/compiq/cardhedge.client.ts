@@ -42,6 +42,25 @@ function cacheKey(prefix: string, ...parts: string[]): string {
 //
 // Phase 3b: after prod stability confirmed, retire CARD_HEDGE_API_KEY
 // from App Service settings and cancel the CH subscription entirely.
+/**
+ * CF-CH-DISABLED-VS-MISSING (Drew, 2026-08-13). Distinguishes the two reasons
+ * this returns null. They are operationally opposite — one is a deliberate
+ * wind-down, the other is a broken credential — and they were reported with
+ * the same "CARD_HEDGE_API_KEY missing" line.
+ *
+ * That cost real time: CH_RUNTIME_DISABLED was set as Phase 3a of retiring CH,
+ * and the resulting ~340 log lines on 2026-08-12 (zero in the prior 14 days,
+ * escalating 41/hr → 301/hr) read as a credentials outage. The key was present
+ * and well-formed the whole time — 40 chars, plain value, no KeyVault ref.
+ */
+export type ChDisabledReason = "runtime-disabled" | "key-missing" | null;
+
+export function chDisabledReason(): ChDisabledReason {
+  if (process.env.CH_RUNTIME_DISABLED === "true") return "runtime-disabled";
+  if (!process.env.CARD_HEDGE_API_KEY) return "key-missing";
+  return null;
+}
+
 function headers(): Record<string, string> | null {
   if (process.env.CH_RUNTIME_DISABLED === "true") return null;
   const key = process.env.CARD_HEDGE_API_KEY;
@@ -195,7 +214,23 @@ export async function searchCards(
 ): Promise<CardHedgeCard[]> {
   const h = headers();
   if (!h) {
-    console.warn("[cardhedge.client] CARD_HEDGE_API_KEY missing");
+    const reason = chDisabledReason();
+    if (reason === "runtime-disabled") {
+      // Expected while CH is wound down — not an incident. Logged at debug
+      // volume so it cannot masquerade as an outage in the warning stream.
+      console.debug(JSON.stringify({
+        event: "ch_call_skipped",
+        source: "cardhedge.client",
+        reason: "CH_RUNTIME_DISABLED",
+        note: "deliberate kill switch; unset the env var + restart to re-enable",
+      }));
+    } else {
+      console.warn(JSON.stringify({
+        event: "ch_credential_missing",
+        source: "cardhedge.client",
+        reason: "CARD_HEDGE_API_KEY absent",
+      }));
+    }
     return [];
   }
   // Filter values folded into the cache key so the same `query` with
