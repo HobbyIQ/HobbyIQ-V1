@@ -700,6 +700,37 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         // Vendor source + no catalog match under match-only rule = skip write.
         // User sources will have hit the seed branch and returned found:true
         // from canonicalize, so they never reach this line.
+        //
+        // CF-UNMATCHED-SALE-SEEDS-CHECKLIST (Drew, 2026-08-13: "this is where
+        // sold data pushes us to get more checklists to create catalogs").
+        //
+        // A real sale we cannot match is the market telling us a card exists
+        // that our catalog does not know. Dropping it silently discarded BOTH
+        // the sale and the signal — the set never got a checklist, so the next
+        // sale of the same card was dropped too, forever. Record the gap as a
+        // work order first; the queue counts demand per release, so the sets
+        // the market actually trades rise to the top on their own.
+        //
+        // Deduped per release by checklistSeedQueue, so a firehose of unmatched
+        // sales files one order per set rather than one per sale. Best-effort:
+        // a seed failure must never change the skip behaviour.
+        try {
+          const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
+          const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
+          const seedSetName = String(input.setName ?? "").trim();
+          if (seedSetName && input.cardYear && sportForSlug) {
+            await requestChecklistSeed({
+              sport: sportForSlug,
+              year: Number(input.cardYear),
+              setName: seedSetName,
+              setKey: normalizeSetKey(seedSetName),
+              reason: "unmatched-sale",
+              missingPlayer: String(input.playerName ?? "") || undefined,
+              missingCardNumber: String(input.cardNumber ?? "") || undefined,
+            });
+          }
+        } catch { /* never block the skip path on the queue */ }
+
         console.log(JSON.stringify({
           event: "recordcomp_catalog_unmatched_skip",
           source: "soldCompsStore.recordSoldComp",

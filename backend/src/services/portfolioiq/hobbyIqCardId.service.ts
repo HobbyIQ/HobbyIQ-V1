@@ -208,6 +208,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-chrome-update/, "topps-chrome"],
     [/topps-chrome/, "topps-chrome"],
     [/topps-heritage/, "topps-heritage"],
+    // CF-TOPPS-GOLD-LABEL-DISTINCT (Drew, 2026-08-13). Topps Gold Label is its
+    // own premium line — Class 1/2/3, its own design, its own price tier — but
+    // it fell through to the generic /topps/ rule below and normalized to
+    // "topps", pooling it with flagship. Two consequences, both seen in prod:
+    //
+    //   - Matching: a 2017 Gold Label #86 "Blue" passed the same-set check
+    //     against flagship Topps and matched
+    //     topps:86:father-s-day-powder-blue, because both sides read "topps".
+    //   - Pricing: Gold Label comps pool with flagship comps for the same
+    //     card number, which are different cards at different prices.
+    //
+    // Must precede the generic /topps/ rule. Symmetric with
+    // topps-chrome-platinum and topps-heritage above.
+    [/topps-gold-label/, "topps-gold-label"],
     [/topps-finest/, "topps-finest"],
     [/topps-pristine/, "topps-pristine"],
     // CF-CATALOG-TRADED-TIFFANY (Drew, 2026-08-04, per baseball-almanac
