@@ -42,6 +42,7 @@ const APPLY = args.includes("--apply");
 const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 const MAX = Number(val("--max", "3"));
 const SPORT_DEFAULT = val("--sport", "baseball");
+const DISC_CONC = Number(val("--discovery-concurrency", "12"));
 
 /**
  * Seed rows store the product inconsistently — "2024 Bowman Chrome Baseball",
@@ -137,104 +138,137 @@ async function markSeed(seed, status, extra) {
   }
 
   const batch = seeds.slice(0, MAX);
-  console.log(`\ndraining ${batch.length} highest-demand seed(s)…\n`);
+  console.log(`\ndraining ${batch.length} highest-demand seed(s)  discovery-concurrency=${DISC_CONC}\n`);
 
   const summary = { acquired: 0, ingested: 0, unavailable: 0, failed: 0 };
 
-  for (const seed of batch) {
-    const year = Number(seed.year);
-    const sport = String(seed.sport || SPORT_DEFAULT);
-    // CF-SEED-BRAND-CANDIDATES (Drew, 2026-08-13: "let's find the catalog and
-    // build it. The checklist is important").
-    //
-    // brand used to be `setName || setKey` passed through verbatim, and seeds
-    // store that inconsistently — sometimes a display product ("2024 Bowman
-    // Chrome Baseball"), sometimes a raw slug ("topps-chrome", "topps-tier-one").
-    // Beckett S3 keys are cased display names, so a slug-form brand could never
-    // match: of the top 5 seeds by demand, only the one whose setName happened
-    // to be properly cased was found, and the other four burned 240 probes each
-    // and were written off as "no checklist published" when the checklist
-    // exists and we simply asked for the wrong filename.
-    //
-    // So: de-slugify to display form, and probe BOTH the setName and setKey
-    // derivations. They disagree usefully — seed:baseball:2025:topps carries
-    // setName "topps-tier-one", so the setName probe finds Tier One while the
-    // setKey probe finds base Topps. Trying both costs one extra discovery pass
-    // on a miss and turns several dead seeds into acquisitions.
-    const candidates = [];
-    for (const raw of [seed.setName, seed.setKey]) {
-      const b = deslugBrand(raw);
-      if (b && !candidates.includes(b)) candidates.push(b);
-    }
-    console.log(`── ${seed.id}  (demand ${seed.requestCount})`);
-    console.log(`   brand candidates=${JSON.stringify(candidates)} year=${year} sport=${sport}`);
-    if (candidates.length === 0 || !Number.isFinite(year)) {
-      console.log(`   SKIP — cannot derive a brand/year to probe`);
-      await markSeed(seed, "unavailable", { drainReason: "no-brand-or-year" });
-      summary.unavailable++;
-      continue;
-    }
-
-    let found;
-    let probeErr = null;
-    for (const brand of candidates) {
-      try {
-        const attempt = await discoverUrl(year, brand, sport);
-        if (attempt && attempt.success && attempt.url) { found = attempt; break; }
-        found = found ?? attempt;   // keep the first result for its probe count
-      } catch (e) {
-        probeErr = e;
+  // CF-SEED-BRAND-CANDIDATES (Drew, 2026-08-13: "let's find the catalog and
+  // build it. The checklist is important").
+  //
+  // brand used to be `setName || setKey` verbatim, and seeds store that
+  // inconsistently — sometimes a display product ("2024 Bowman Chrome
+  // Baseball"), sometimes a raw slug ("topps-chrome", "topps-tier-one").
+  // Beckett S3 keys are cased display names and case-sensitive, so a slug-form
+  // brand could never match; those misses were then recorded as
+  // "no-checklist-published", i.e. we wrote off coverage that was free.
+  //
+  // Probe BOTH derivations. They disagree usefully: seed:baseball:2025:topps
+  // carries setName "topps-tier-one", so setName finds Tier One and setKey
+  // finds base Topps. We ingest EVERY distinct checklist a seed resolves to —
+  // those are genuinely different products and both have demand, and taking
+  // only the first hit left the other unserved.
+  function brandCandidates(seed) {
+    const out = [];
+    const add = (b) => { if (b && !out.includes(b)) out.push(b); };
+    add(deslugBrand(seed.setName));
+    add(deslugBrand(seed.setKey));
+    // Flagship Topps baseball never ships a bare "Topps" checklist — it is
+    // Series One / Series Two (Drew: "2026 topps is series one or series two").
+    // That is why 2026 Topps, the highest-demand miss at 92, failed 240 probes
+    // even with correct casing.
+    for (const b of [...out]) {
+      if (/^topps$/i.test(b)) {
+        add("Topps Series One"); add("Topps Series Two");
+        add("Topps Series 1");   add("Topps Series 2");
       }
     }
-    if (probeErr && (!found || !found.success)) {
-      console.log(`   discovery ERROR ${probeErr.message}`);
-      summary.failed++;
-      continue;
-    }
-    if (!found || !found.success || !found.url) {
-      const probes = found ? found.attempts.length : 0;
-      console.log(`   no Beckett checklist found (${probes} probes) — leaving as real unserved demand`);
-      await markSeed(seed, "unavailable", { drainReason: "no-checklist-published", probes });
-      summary.unavailable++;
-      continue;
-    }
-    console.log(`   found: ${found.url}`);
-    summary.acquired++;
-    if (!APPLY) { console.log(`   (dry run — not downloading/ingesting)\n`); continue; }
+    return out;
+  }
 
-    const tmp = path.join(os.tmpdir(), `seed-${seed.id.replace(/[^a-z0-9]+/gi, "-")}.xlsx`);
-    const csv = path.join(BACKEND, "data/checklists/scraped", `${year}-${String(seed.setKey)}.csv`);
-    try {
-      await download(found.url, tmp);
-    } catch (e) {
-      console.log(`   download failed: ${e.message}`);
-      summary.failed++;
-      continue;
+  // PHASE 1 — discovery, in parallel. This is where the time goes: a miss costs
+  // 240 sequential HEAD probes, so running seeds serially made a full drain of
+  // 2,282 seeds take days. Download/convert/ingest stay serial below because
+  // they spawn child processes and write Cosmos.
+  const found = [];
+  let cursor = 0;
+  await Promise.all(Array.from({ length: DISC_CONC }, async () => {
+    while (cursor < batch.length) {
+      const seed = batch[cursor++];
+      const year = Number(seed.year);
+      const sport = String(seed.sport || SPORT_DEFAULT);
+      const candidates = brandCandidates(seed);
+      if (candidates.length === 0 || !Number.isFinite(year)) {
+        console.log(`── ${seed.id}  SKIP — no brand/year`);
+        await markSeed(seed, "unavailable", { drainReason: "no-brand-or-year" });
+        summary.unavailable++;
+        continue;
+      }
+      const hits = [];
+      let probes = 0;
+      for (const brand of candidates) {
+        try {
+          const a = await discoverUrl(year, brand, sport);
+          probes += a && a.attempts ? a.attempts.length : 0;
+          if (a && a.success && a.url && !hits.some((h) => h.url === a.url)) {
+            hits.push({ url: a.url, brand });
+          }
+        } catch { /* try the next candidate */ }
+      }
+      if (hits.length === 0) {
+        console.log(`── ${seed.id}  (dmd ${seed.requestCount})  no checklist  [${probes} probes: ${candidates.join(" | ")}]`);
+        await markSeed(seed, "unavailable", { drainReason: "no-checklist-published", probes });
+        summary.unavailable++;
+        continue;
+      }
+      console.log(`── ${seed.id}  (dmd ${seed.requestCount})  ${hits.length} checklist(s)`);
+      for (const h of hits) console.log(`     ${h.brand} → ${h.url}`);
+      summary.acquired += hits.length;
+      found.push({ seed, hits });
     }
+  }));
 
-    const conv = run("node", ["scripts/convertBeckettChecklistXlsx.cjs",
-      "--xlsx", tmp, "--year", String(year), "--set-key", String(seed.setKey),
-      "--set-name", String(seed.setName || seed.setKey), "--out", csv,
-      "--source-url", found.url, "--sport", sport]);
-    if (conv.code !== 0) {
-      console.log(`   convert failed:\n${conv.out.split("\n").slice(-4).join("\n")}`);
-      summary.failed++;
-      continue;
-    }
-    console.log(`   ${conv.out.split("\n").find((l) => l.includes("rows=")) || "converted"}`);
+  if (!APPLY) {
+    console.log(`\nacquired=${summary.acquired} unavailable=${summary.unavailable}`);
+    console.log("\nDRY RUN — nothing downloaded or ingested. Re-run with --apply.");
+    return;
+  }
 
-    const ing = run("node", ["scripts/ingest-scraped-checklist.cjs"],
-      { CSV_PATH: csv, SOURCE_LABEL: "beckett", APPLY: "true" });
-    if (ing.code !== 0) {
-      console.log(`   ingest failed:\n${ing.out.split("\n").slice(-4).join("\n")}`);
-      summary.failed++;
-      continue;
+  // PHASE 2 — download + convert + ingest, serial.
+  for (const entry of found) {
+    const seed = entry.seed;
+    const year = Number(seed.year);
+    const sport = String(seed.sport || SPORT_DEFAULT);
+    let anyIngested = false;
+    for (const hit of entry.hits) {
+      const brandKey = hit.brand.toLowerCase().replace(/\s+/g, "-");
+      const tag = `${year}-${brandKey}-${sport}`.replace(/[^a-z0-9-]+/gi, "-").toLowerCase();
+      const tmp = path.join(os.tmpdir(), `seed-${tag}.xlsx`);
+      const csv = path.join(BACKEND, "data/checklists/scraped", `${tag}.csv`);
+      try {
+        await download(hit.url, tmp);
+      } catch (e) {
+        console.log(`   [${tag}] download failed: ${e.message}`);
+        summary.failed++;
+        continue;
+      }
+      // set-key/set-name come from the BRAND THAT MATCHED, not the seed's key.
+      // Otherwise a Tier One checklist gets ingested under setKey "topps" and
+      // silently impersonates the flagship — which is exactly how the earlier
+      // run "served" seed:baseball:2025:topps without serving base Topps.
+      const conv = run("node", ["scripts/convertBeckettChecklistXlsx.cjs",
+        "--xlsx", tmp, "--year", String(year), "--set-key", brandKey,
+        "--set-name", hit.brand, "--out", csv,
+        "--source-url", hit.url, "--sport", sport]);
+      if (conv.code !== 0) {
+        console.log(`   [${tag}] convert failed:\n${conv.out.split("\n").slice(-3).join("\n")}`);
+        summary.failed++;
+        continue;
+      }
+      const ing = run("node", ["scripts/ingest-scraped-checklist.cjs"],
+        { CSV_PATH: csv, SOURCE_LABEL: "beckett", APPLY: "true" });
+      if (ing.code !== 0) {
+        console.log(`   [${tag}] ingest failed:\n${ing.out.split("\n").slice(-3).join("\n")}`);
+        summary.failed++;
+        continue;
+      }
+      const wrote = (ing.out.split("\n").find((l) => l.includes("wrote=")) || "").trim();
+      console.log(`   [${tag}] ingested: ${wrote}`);
+      summary.ingested++;
+      anyIngested = true;
     }
-    const wrote = ing.out.split("\n").find((l) => l.includes("wrote=")) || "";
-    console.log(`   ingested: ${wrote.trim()}`);
-    summary.ingested++;
-    await markSeed(seed, "done", { drainReason: "ingested", sourceUrl: found.url });
-    console.log("");
+    if (anyIngested) {
+      await markSeed(seed, "done", { drainReason: "ingested", sourceUrl: entry.hits[0].url });
+    }
   }
 
   console.log(`\nacquired=${summary.acquired} ingested=${summary.ingested} unavailable=${summary.unavailable} failed=${summary.failed}`);
@@ -246,7 +280,7 @@ async function markSeed(seed, status, extra) {
     const promo = run("node", ["-e", `
       (async () => {
         const { runPromotionBatch } = require("./dist/services/portfolioiq/promotionJob.service.js");
-        const r = await runPromotionBatch(200);
+        const r = await runPromotionBatch({ limit: 2000 });
         console.log(JSON.stringify(r));
       })().catch(e => { console.error(e.message); process.exit(1); });
     `]);
