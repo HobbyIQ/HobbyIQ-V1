@@ -26,7 +26,21 @@ on:
   # by default. Job auto-halts on 429 after 3 retries so we never spin
   # over the daily cap.
   schedule:
+    # CF-TCA-PLATFORM-LAG (Drew, 2026-08-13). Runs several times a day rather
+    # than once at 00:05.
+    #
+    # The Full Daily Feed window is STRICTLY yesterday, and TCA's platforms
+    # publish on different schedules — eBay lands a day behind TCGplayer. A
+    # single 00:05 run therefore asks eBay for a day it has not published yet,
+    # gets a legitimate 0 rows, and the free window closes before the data
+    # appears; pulling eBay's newest day instead would leave the free window and
+    # burn the 200K cap. Re-pulling yesterday costs nothing and contentHash
+    # dedup makes the overlap a no-op, so spreading the runs picks each platform
+    # up on the first pass after TCA publishes it.
     - cron: '5 0 * * *'
+    - cron: '5 6 * * *'
+    - cron: '5 12 * * *'
+    - cron: '5 18 * * *'
   workflow_dispatch:
     inputs:
       daily_feed:
