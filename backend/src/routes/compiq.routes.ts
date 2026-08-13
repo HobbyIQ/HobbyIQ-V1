@@ -2829,16 +2829,55 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           const cn = process.env.COSMOS_CONNECTION_STRING;
           if (cn) {
             const cat = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
-            const setLower = parsed.brand.toLowerCase().trim();
+            // CF-PRICE-LOOKUP-USE-SET-NOT-BRAND (Drew, 2026-08-12). This used
+            // parsed.brand, which is the FAMILY, not the product. The parser
+            // splits "2024 Bowman Chrome Ohtani Base" into:
+            //     brand = "Bowman"        set = "Bowman Chrome"
+            // so the lookup searched for `bowman` while the card lives under
+            // `bowman-chrome` — it either matched nothing or matched the wrong
+            // product (actual Bowman paper). That is the real cause of the
+            // NULL-FMV smoke-test violation; #1006 correctly added setKey
+            // matching but bound it to the same wrong string, so nothing moved.
+            //
+            // Prefer parsed.set and route it through normalizeSetKey so the
+            // product-family rules apply (e.g. "Bowman Draft Chrome" collapses
+            // to bowman-chrome per CF-CHROME-SUBSET-COLLAPSE) rather than a
+            // naive slugify. Falls back to brand when the parser found no set.
+            const { normalizeSetKey: _nsk } = await import("../services/portfolioiq/hobbyIqCardId.service.js");
+            const setSource = String((parsed as { set?: string | null }).set || parsed.brand || "");
+            const setLower = setSource.toLowerCase().trim();
+            const setKeyForLookup = _nsk(setSource);
             const playerLower = parsed.playerName.toLowerCase().trim();
             const parallelLower = (parsed.parallel || "Base").toLowerCase();
+            const hasExplicitCardNumber =
+              parsed.cardNumber != null && String(parsed.cardNumber).trim() !== "";
+
+            // CF-PRICE-LOOKUP-BASE-SET-FIRST (Drew, 2026-08-12). TOP N with no
+            // ORDER BY returns an ARBITRARY N, and a star player owns hundreds
+            // of catalog rows. Prod probes resolved "2023 Topps Chrome Acuna
+            // Base" to insert C-13 and "2018 Topps Chrome Acuna Base" to insert
+            // auto IA-RA — not because the ranking chose wrongly, but because
+            // his base card was never in the 60 rows fetched. Confidently
+            // pricing the wrong card is worse than returning nothing.
+            //
+            // So the base-set preference belongs in the QUERY, not only in the
+            // post-filter. Flagship base sets number 1..N; inserts carry alpha
+            // prefixes (C-13, IA-RA, 89CU-1, USC27). StringToNumber yields
+            // undefined for those, so IS_NUMBER keeps the sample on base cards.
+            // Prospect products are entirely alpha-numbered, so an empty result
+            // falls back to the unrestricted query rather than losing the card.
+            const runLookup = async (baseSetOnly: boolean) => {
+              const { resources } = await cat.items.query<{
+                id: string; playerName: string; setName: string; cardNumber: string;
+                parallel: string; sport: string; recentSaleCount: number; year: number;
+              }>(buildLookupSpec(baseSetOnly)).fetchAll();
+              return resources;
+            };
+
             // Query catalog for matching identity — case-insensitive
             // CONTAINS on setName + playerName. Prefer exact-parallel
             // match if user specified something other than Base.
-            const { resources: hits } = await cat.items.query<{
-              id: string; playerName: string; setName: string; cardNumber: string;
-              parallel: string; sport: string; recentSaleCount: number; year: number;
-            }>({
+            const buildLookupSpec = (baseSetOnly: boolean) => ({
               // CF-PRICE-LOOKUP-SETKEY-FIX (Drew, 2026-08-12). This matched on
               // c.setName ONLY, which is the sparse field. CardCatalogEntry
               // carries `setKey`; deriveCatalogEntry never writes setName, so
@@ -2852,11 +2891,13 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               // field the rows do not have, get zero rows, and zero is
               // indistinguishable from "no such card".
               //
-              // Matching setKey too. `parsed.brand` is spaced ("bowman chrome")
-              // while setKey is slugged ("bowman-chrome"), so the slug form is
-              // compared as well — a CONTAINS on the spaced form could never
-              // match the hyphenated key even where setName exists.
-              query: `SELECT TOP 20 c.id, c.playerName, c.setName, c.setKey, c.cardNumber, c.parallel, c.sport, c.recentSaleCount, c.year
+              // Matching setKey too, since setName is the sparse field. @sk is
+              // now the NORMALIZED key of parsed.set — see the note above. It
+              // was previously a naive slug of parsed.brand ("bowman"), which
+              // CONTAINS-matched bowman, bowman-chrome AND bowman-draft at
+              // once, blew past the >3 ambiguity guard below, and discarded the
+              // very rows it had found.
+              query: `SELECT TOP 60 c.id, c.cardId, c.playerName, c.setName, c.setKey, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.sport, c.recentSaleCount, c.year
                       FROM c
                       WHERE c.year = @y
                         AND (
@@ -2864,18 +2905,58 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                           OR (IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @s, true))
                         )
                         AND CONTAINS(LOWER(c.playerName), @p, true)
-                        AND LOWER(c.parallel) = @par`,
+                        AND LOWER(c.parallel) = @par
+                        ${baseSetOnly ? "AND IS_NUMBER(StringToNumber(c.cardNumber))" : ""}`,
               parameters: [
                 { name: "@y", value: parsed.year },
                 { name: "@s", value: setLower },
-                { name: "@sk", value: setLower.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") },
+                { name: "@sk", value: setKeyForLookup },
                 { name: "@p", value: playerLower },
                 { name: "@par", value: parallelLower },
               ],
-            }).fetchAll();
+            });
+
+            // Base-set pass first; fall back to the full pool only if it is
+            // empty. A caller who named a card number skips straight to the
+            // full pool — they may well be asking for an insert.
+            let hits = hasExplicitCardNumber ? [] : await runLookup(true);
+            if (hits.length === 0) hits = await runLookup(false);
+            // CF-PRICE-LOOKUP-COLLAPSE-GRADES (Drew, 2026-08-12: "a graded card
+            // IS an identity"). Graded rows are real, separately-traded assets
+            // and they belong in the catalog — a PSA 10 is not a raw copy. But
+            // they are all the SAME PHYSICAL CARD, and the ambiguity guard
+            // below counts ROWS. One 2024 Bowman Chrome Ohtani carries 13 rows
+            // (raw + psa-8/9/9.5/10 + bgs-9/9.5/10/10-black + sgc-10 +
+            // cgc-9.5/10), so a perfectly unambiguous card read as 13 candidates
+            // and got discarded. Eight vendor-keyed `cardhedge::` rows for card
+            // #85 stack on top of that.
+            //
+            // Collapse to distinct physical cards FIRST, then judge ambiguity.
+            // The key is built from identity FIELDS, not from the id, because
+            // that is the only thing that merges a vendor-keyed row
+            // (cardId "1727053918585x...") with its canonical `hiq:` twin.
+            // Within a card, the representative row is the one this request
+            // actually prices: this call passes gradeCompany/gradeValue null,
+            // i.e. the UNGRADED asset. See collapseCatalogHits.ts.
+            const { collapseCatalogHitsToCards, narrowToRequestedVariants } =
+              await import("../services/catalog/collapseCatalogHits.js");
+            // Then drop variants the query never asked for. "Ohtani Base" in
+            // 2024 Bowman Chrome still matches the II-OY insert auto at /1, /25
+            // and /50 — real cards, but not readings of THIS query.
+            const distinctCards = narrowToRequestedVariants(
+              collapseCatalogHitsToCards(hits || []),
+              {
+                exactSetKey: setKeyForLookup,
+                hasExplicitCardNumber,
+                wantsAuto: /\bauto(graph)?\b/i.test(query),
+                wantsPrintRun: (parsed as { printRun?: number | null }).printRun != null
+                  || /\/\s*\d+\b|\bnumbered\b|\bssp\b/i.test(query),
+              },
+            );
+
             // Pick best hit — highest recentSaleCount (most traded)
             // tie-broken by lowest cardNumber (typically the base card).
-            const ranked = (hits || []).sort((a, b) => {
+            const ranked = distinctCards.sort((a, b) => {
               const rsA = Number(a.recentSaleCount || 0);
               const rsB = Number(b.recentSaleCount || 0);
               if (rsA !== rsB) return rsB - rsA;
@@ -2885,21 +2966,58 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               return nA - nB;
             });
             if (ranked.length === 0) {
-              // No match — fall through
+              // No match — fall through to computeEstimate. But a miss here is
+              // evidence of a catalog gap, not just a bad query: the set
+              // matched, the player matched, and no card came back. Drew's
+              // rule for exactly this case is "no fallback, we kick off a seed
+              // to build that checklist" — so record the gap on the way past.
+              try {
+                const { requestChecklistSeed } =
+                  await import("../services/catalog/checklistSeedQueue.service.js");
+                await requestChecklistSeed({
+                  sport: "baseball",
+                  year: Number(parsed.year),
+                  setName: setSource,
+                  setKey: setKeyForLookup,
+                  reason: (hits || []).length > 0
+                    ? "set-matched-no-card"   // rows existed, none was this card
+                    : "set-not-in-catalog",
+                  missingPlayer: parsed.playerName,
+                  missingCardNumber: parsed.cardNumber ?? undefined,
+                });
+              } catch { /* a lost seed must never break a price request */ }
             } else if (ranked.length > 3) {
               // Ambiguous — many candidates. Fall through to computeEstimate.
               console.log(JSON.stringify({
                 event: "price_canonical_player_lookup_ambiguous",
-                source: "compiq.routes.price", query, hits: ranked.length,
+                source: "compiq.routes.price", query,
+                // Log both: rows-vs-cards is the signal that told us grade
+                // variants were being miscounted as rival candidates.
+                hits: ranked.length, rawRows: (hits || []).length,
+                candidates: ranked.slice(0, 5).map((r: any) => r.id),
               }));
             } else {
               const best = ranked[0];
+              // CF-PRICE-LOOKUP-CARRY-GRADE (Drew, 2026-08-12: "making sure a
+              // psa 9 and psa 10 are separate in pricing and market values").
+              // The engine already prices tiers separately — it keys its cache
+              // per grade, filters comps by grader+value, and applies the
+              // GRADE_CALIBRATION tier multiplier. But this route hardcoded
+              // null/null, so a "PSA 10" query was silently answered with the
+              // RAW price. The parser has carried grade + gradingCompany all
+              // along; nothing here was passing them on.
+              const gradeCompany = parsed.gradingCompany || null;
+              const gradeRaw = parsed.grade && parsed.grade !== "raw" ? Number(parsed.grade) : null;
+              const gradeValue = Number.isFinite(gradeRaw) ? gradeRaw : null;
               const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
               const canon = await computeCanonicalFmv({
                 cardId: best.id,
                 parallel: parsed.parallel || "Base",
-                gradeCompany: null,
-                gradeValue: null,
+                // Both must be present to name a tier; a bare "10" with no
+                // grader is not PSA 10, and the engine reads a company with no
+                // value as an incomplete tier.
+                gradeCompany: gradeValue != null ? gradeCompany : null,
+                gradeValue: gradeCompany ? gradeValue : null,
                 cardYear: best.year,
                 product: best.setName,
                 player: best.playerName,
