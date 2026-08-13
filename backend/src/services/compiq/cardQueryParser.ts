@@ -147,6 +147,23 @@ export function parseCardQuery(input: string): ParsedCardQuery {
 
   // --- PARALLEL --- (multi-word first so "blue" doesn't beat "sky blue")
   const PARALLEL_PATTERNS: [RegExp, string][] = [
+    // CF-IMAGE-VARIATION-SEARCH (Drew, 2026-08-12). "Image Variation" sat in
+    // the NOISE list but NOT here, so both words were stripped as noise and
+    // the parallel was LOST — an image variation could never be searched for,
+    // despite 862 of them trading in 2026 Topps Chrome alone (/10 /25 /50).
+    // These must precede the generic colour/refractor patterns below, since
+    // first match wins and "…Image Variation Refractor" would otherwise
+    // resolve to plain "Refractor".
+    //
+    // "IV" is the collector shorthand, but it is ALSO a generational name
+    // suffix (Jr / Sr / II / III / IV — cf. GENERATIONAL_SUFFIX_RE in
+    // cardsight.router.ts). The lookbehind rejects it when it follows a
+    // capitalised name token, so "Ken Griffey IV" stays a player name.
+    // Case-sensitive on purpose: lowercase "iv" occurs inside ordinary words.
+    [/\bimage\s+variation\s+refractor\b/i, "Image Variation Refractor"],
+    [/\bimage\s+variation\s+(?:ssp|sp)\b/i, "Image Variation SSP"],
+    [/\bimage\s+var(?:iation)?\b/i, "Image Variation"],
+    [/(?<![A-Za-z][a-z]{1,20}\s)\bIV\b(?!\s*[.)])/, "Image Variation"],
     [/black\s+label/i, "Black Label"],
     [/sky\s+blue/i, "Sky Blue"],
     [/dark\s+blue/i, "Dark Blue"],
