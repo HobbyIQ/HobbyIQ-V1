@@ -4975,6 +4975,88 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
     })();
 
     if (!card || !certInfo) {
+      // CF-CERT-READ-THROUGH (Drew, 2026-08-13). Both branches above are
+      // CardHedge calls, and CH_RUNTIME_DISABLED=true in prod makes
+      // headers() return null so getFmvByCert/getPricesByCert BOTH return
+      // null — this endpoint has been answering "cert not found" for every
+      // cert, regardless of the cert. It was not slow; it was dead.
+      //
+      // Fall back to the grader registry (PSA today, BGS/SGC/CGC as adapters
+      // land) fronted by the graded_cert store: a repeat lookup is a ~1 RU
+      // point read instead of a 400-800ms vendor round trip, and pricing comes
+      // from our own pool via the linked cardId rather than from CH.
+      //
+      // Placed HERE rather than replacing the CH path so behaviour is
+      // unchanged wherever CH still answers — this only fills the hole.
+      try {
+        const { resolveCert } = await import("../services/certGraders/resolveCert.service.js");
+        const resolved = await resolveCert(graderNorm, cert.trim());
+        if (resolved) {
+          // Price from OUR pool when the cert is linked to a catalog card.
+          let canonical: unknown = null;
+          if (resolved.cardId) {
+            try {
+              const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+              const gradeNum = resolved.grade ? Number(resolved.grade) : null;
+              canonical = await computeCanonicalFmv({
+                cardId: resolved.cardId,
+                parallel: resolved.parallel || "Base",
+                gradeCompany: resolved.grader,
+                gradeValue: Number.isFinite(gradeNum) ? gradeNum : null,
+                cardYear: resolved.year,
+                product: resolved.setName,
+                player: resolved.playerName,
+                cardNumber: resolved.cardNumber,
+                freshCompute: false,
+              } as never);
+            } catch { /* identity still answers without a price */ }
+          }
+          return res.json({
+            success: true,
+            cert: resolved.certNumber,
+            grader: resolved.grader,
+            grade: resolved.grade,
+            card: {
+              cardId: resolved.cardId,
+              description: [resolved.playerName, resolved.year, resolved.setName, resolved.cardNumber]
+                .filter(Boolean).join(" ") || null,
+              player: resolved.playerName,
+              set: resolved.setName,
+              number: resolved.cardNumber,
+              variant: resolved.parallel,
+              imageUrl: null,
+              descriptionRebuilt: true,
+            },
+            canonicalFmv: canonical,
+            readyToAdd: {
+              cardId: resolved.cardId,
+              playerName: resolved.playerName,
+              cardYear: resolved.year,
+              product: resolved.setName,
+              setName: resolved.setName,
+              cardNumber: resolved.cardNumber,
+              parallel: resolved.parallel,
+              isAuto: resolved.isAuto ?? false,
+              gradingCompany: resolved.grader,
+              gradeValue: resolved.grade ? Number(resolved.grade) : null,
+            },
+            population: {
+              total: resolved.totalPopulation,
+              higher: resolved.populationHigher,
+            },
+            // Which path answered, and how fast. "store" is the ~1 RU read.
+            servedFrom: resolved.servedFrom,
+            elapsedMs: resolved.elapsedMs,
+          });
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "cert_readthrough_failed",
+          source: "compiq.lookup-by-cert",
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+
       return res.json({
         success: false,
         error: "Cert not found or card could not be resolved",

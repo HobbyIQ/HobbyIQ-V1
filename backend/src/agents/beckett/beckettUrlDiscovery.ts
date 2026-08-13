@@ -143,23 +143,52 @@ export function enumerateCandidateUrls(input: UrlDiscoveryInput): DiscoveryAttem
   for (const variant of brandVariants) {
     for (const month of months) {
       for (const placement of SPORT_PLACEMENTS) {
-        for (const suffix of suffixes) {
-          const filename = renderFilename(input.year, variant, input.sport, placement, suffix);
-          const url = `${S3_HOST}${S3_PATH_PREFIX}/${input.year}/${month}/${filename}`;
-          out.push({
-            url,
-            brandVariant: variant,
-            month,
-            suffix,
-            sportPlacement: placement,
-            withSport: placement !== "omitted",
-            status: 0,
-          });
+        // "omitted" does not interpolate the sport, so casing is irrelevant —
+        // emitting both would just duplicate every probe and eat the cap.
+        const casings = placement === "omitted" ? [input.sport] : sportCasings(input.sport);
+        for (const sportCasing of casings) {
+          for (const suffix of suffixes) {
+            const filename = renderFilename(input.year, variant, sportCasing, placement, suffix);
+            const url = `${S3_HOST}${S3_PATH_PREFIX}/${input.year}/${month}/${filename}`;
+            out.push({
+              url,
+              brandVariant: variant,
+              month,
+              suffix,
+              sportPlacement: placement,
+              withSport: placement !== "omitted",
+              status: 0,
+            });
+          }
         }
       }
     }
   }
   return out;
+}
+
+/**
+ * CF-BECKETT-SPORT-CASE (Drew, 2026-08-13). S3 object keys are CASE-SENSITIVE,
+ * and callers pass the sport in our canonical lowercase form ("baseball").
+ * Beckett capitalises it in the filename, so every candidate was rendered as
+ *
+ *   2024-Bowman-Chrome-baseball-Checklist.xlsx     (probed, always 403/404)
+ *   2024-Bowman-Chrome-Baseball-Checklist.xlsx     (the file that exists)
+ *
+ * and the real URL was never even enumerated — 432 candidates, 72 probes, zero
+ * hits, for a file sitting at the first month the sweep would have tried.
+ * Discovery could not succeed for ANY tuple, which is why the seed drainer
+ * reported every release as "no checklist published".
+ *
+ * Both capitalisations are emitted rather than just the fixed one: the sweep is
+ * cheap HEAD probes, and Beckett has not been perfectly consistent across
+ * years. Capitalised goes first so the common case resolves in one probe.
+ */
+function sportCasings(sport: string): readonly string[] {
+  const raw = String(sport ?? "").trim();
+  if (!raw) return [""];
+  const capitalised = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  return capitalised === raw ? [raw] : [capitalised, raw];
 }
 
 function renderFilename(

@@ -191,6 +191,34 @@ export async function autoCreateHoldingForPurchase(
       if (match.found && match.slug && match.confidence >= 0.9) {
         h.cardId = match.slug;
       }
+
+      // CF-EBAY-MISS-SEEDS-CHECKLIST (Drew, 2026-08-13: "we should get those
+      // checklists if we are missing them").
+      //
+      // A miss on a card the user demonstrably owns is the strongest possible
+      // signal that a checklist is worth building — they paid for it. Record it
+      // so the gap becomes a work order instead of a permanently unmatched
+      // holding. Deduped per release by checklistSeedQueue, so a 200-card
+      // import files one order per set, not 200.
+      //
+      // Real misses this fires on, from Drew's own portfolio: 2017 Topps Gold
+      // Label, 2020 Bowman Draft (BD152), 2022 Topps Chrome image variations.
+      if (!match.found) {
+        const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
+        const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
+        const setNameForSeed = String(h.setName ?? h.product ?? "").trim();
+        if (setNameForSeed && typeof h.cardYear === "number") {
+          await requestChecklistSeed({
+            sport: String(h.sport ?? "baseball"),
+            year: h.cardYear,
+            setName: setNameForSeed,
+            setKey: normalizeSetKey(setNameForSeed),
+            reason: "ebay-import-unmatched",
+            missingPlayer: String(h.playerName ?? "") || undefined,
+            missingCardNumber: String(h.cardNumber ?? "") || undefined,
+          });
+        }
+      }
     }
   } catch (err) {
     // Never block an import on the matcher — the holding still lands for

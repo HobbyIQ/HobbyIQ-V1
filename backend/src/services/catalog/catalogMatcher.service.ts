@@ -189,20 +189,49 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
   // any parallel that shares a token with our canonical parallel.
   const parallelSlug = slugify(components.parallel);
   const parallelToken = parallelSlug.split("-").filter(Boolean).slice(-1)[0]; // last token — usually the color
-  if (parallelToken) {
+  if (parallelToken && components.cardNumber) {
     try {
+      // CF-FUZZY-PARALLEL-SAME-SET (Drew, 2026-08-13). This step's own comment
+      // promises "same year/set/cardNumber", but the query never constrained
+      // setKey — so a shared parallel TOKEN was enough to jump products. Real
+      // results against prod, from Drew's MISSING holdings:
+      //
+      //   2017 Topps Gold Label #86 "Blue"        -> topps:86:father-s-day-powder-blue
+      //   2022 Topps Chrome #221 "Image Variation"-> topps-chrome-sonic-lite:221:image-variations
+      //
+      // Right year, right number, wrong PRODUCT — "blue" and "variation" are
+      // generic tokens that appear in every set's parallel vocabulary. Matching
+      // a related set is legitimate, but that is Step 3's job (family-fallback,
+      // 0.55), where the relationship is explicit and scored lower. Step 2 must
+      // stay within the set it was given.
+      //
+      // Vendor-keyed and variant rows are also excluded: they are mirrors of
+      // cards we hold canonically, and proposing `cardhedge::…` as a holding's
+      // identity points pricing at a vendor's copy instead of the card. That is
+      // how "2020 Bowman Witt #BD152" resolved to a cardhedge:: slug.
       const { resources } = await container.items.query({
-        query: "SELECT TOP 5 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND CONTAINS(LOWER(c.parallelSlug ?? c.parallel ?? ''), @tok)",
+        query: "SELECT TOP 10 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @sk AND CONTAINS(LOWER(c.parallelSlug ?? c.parallel ?? ''), @tok)",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
           { name: "@n", value: components.cardNumber },
           { name: "@a", value: components.isAuto },
+          { name: "@sk", value: components.setKey },
           { name: "@tok", value: parallelToken },
         ],
       }).fetchAll();
-      if (resources.length > 0) {
-        const best = resources[0];
+
+      // Prefer a canonical row, then an ungraded one — grade variants share the
+      // card's identity fields and would otherwise win arbitrarily on TOP order.
+      const ranked = (resources as Array<{ id: string }>)
+        .filter((r) => typeof r?.id === "string")
+        .sort((a, b) => {
+          const canon = (x: { id: string }) => (x.id.startsWith("hiq:") ? 0 : 1);
+          const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
+          return canon(a) - canon(b) || graded(a) - graded(b);
+        });
+      const best = ranked.find((r) => r.id.startsWith("hiq:")) ?? null;
+      if (best) {
         return {
           slug: best.id,
           found: true,
