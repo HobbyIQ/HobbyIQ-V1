@@ -429,7 +429,7 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
     if (p.source !== "ebay") continue;
     summary.processed += 1;
     const details = detailsByPurchaseIdx.get(i) ?? null;
-    const result = autoCreateHoldingForPurchase(doc, p, details);
+    const result = await autoCreateHoldingForPurchase(doc, p, details);
     switch (result.status) {
       case "created":
         summary.created += 1;

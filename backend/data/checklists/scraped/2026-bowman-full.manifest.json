@@ -1,0 +1,142 @@
+{
+  "scrapedAt": "2026-08-13T12:42:21.708Z",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/04/2026-Bowman-Baseball-Checklist.xlsx",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman",
+  "productKey": "2026-bowman",
+  "setKey": "bowman",
+  "rowCount": 1211,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "cards": 100
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Etched In Glass Variations",
+      "cards": 12
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Red RC Variations",
+      "cards": 40
+    },
+    {
+      "sheet": "Prospects",
+      "section": "Base Prospects",
+      "cards": 150
+    },
+    {
+      "sheet": "Prospects",
+      "section": "Chrome Prospects",
+      "cards": 150
+    },
+    {
+      "sheet": "Prospects",
+      "section": "Chrome Prospects Packfractor Variation",
+      "cards": 150
+    },
+    {
+      "sheet": "Prospects",
+      "section": "Chrome Prospects - Etched In Glass Variations",
+      "cards": 11
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Autographs",
+      "cards": 87
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Gold Ink Autographs",
+      "cards": 47
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Packfractor Autographs",
+      "cards": 39
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Rookie Autographs",
+      "cards": 13
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Draft Pick Pairings",
+      "cards": 16
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Prospect Retail Autographs",
+      "cards": 31
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Rookie and Veteran Retail Autographs",
+      "cards": 35
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Ultimate Autograph Booklet",
+      "cards": 24
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bowman Scouts Top 100",
+      "cards": 100
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bowman Sterling",
+      "cards": 15
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Patchwork",
+      "cards": 30
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Electric Sluggers",
+      "cards": 25
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Under The Radar",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Power Chords",
+      "cards": 25
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Anime",
+      "cards": 29
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Anime - Kanji Variations",
+      "cards": 7
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Final  Draft",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Crystallized",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bowman Spotlights",
+      "cards": 15
+    }
+  ]
+}

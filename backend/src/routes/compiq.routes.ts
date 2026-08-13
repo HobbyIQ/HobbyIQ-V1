@@ -2641,7 +2641,47 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         cardId: (result as any).cardIdentity?.card_id ?? undefined,
       });
     }
-    res.json(result);
+
+    // CF-SEARCH-CHECKLIST-OPTIONS (Drew, 2026-08-13: "we want to show all the
+    // potential options in that checklist with auto" / "the checklist feeds
+    // the search").
+    //
+    // This endpoint PRICES one card — it parses the text and runs
+    // computeEstimate — so its recentComps were the only list a client could
+    // render, which is why a search surfaced sold-comp rows and duplicates
+    // instead of the checklist. Attach the catalog options so a client can
+    // show "here are every parallel/auto of this card we have a checklist
+    // for", and let the user pick rather than guessing from comps.
+    //
+    // ADDITIVE on purpose. iOS decodes this response as CompIQSearchResponse
+    // and Swift's Codable ignores unknown keys, so shipping a new field cannot
+    // break the existing client; the priced fields are untouched. Replacing
+    // the response shape outright is the follow-up, once a client renders the
+    // picker.
+    //
+    // Best-effort: a catalog failure must never take down a working price.
+    //
+    // `result` came from cacheWrap, so it is a CACHED object — mutating it
+    // would write the options into the cache entry and serve one query's
+    // checklist to another. Merge into a copy instead, and compute the options
+    // outside the cache so a newly-ingested checklist row and its fresh comps
+    // appear immediately rather than after the 6h TTL.
+    let catalogOptions: unknown[] = [];
+    let catalogProvisional = false;
+    try {
+      const { searchCatalog } = await import("../services/catalog/catalogSearch.service.js");
+      const catalog = await searchCatalog({ query: query.trim(), limit: 25 });
+      catalogOptions = catalog.hits;
+      catalogProvisional = catalog.provisional === true;
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "compiq_search_catalog_options_failed",
+        source: "compiq.routes.search",
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
+    res.json({ ...(result as Record<string, unknown>), catalogOptions, catalogProvisional });
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
     // single capture. Each writer self-gates on its own env vars
