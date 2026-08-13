@@ -531,7 +531,27 @@ function scoreForCanonical(row: {
  * trust decision — this store never fabricates the cardId.
  * Silent no-op on missing cardId, non-positive price, or Cosmos absence.
  */
-export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> {
+/**
+ * CF-RECORDCOMP-REPORTS-SKIP (Drew, 2026-08-13). recordSoldComp returned void
+ * and skipped silently, so callers could not tell a write from a drop.
+ *
+ * That silence broke the loop-back. promotionJob awaited this and then
+ * unconditionally set status="promoted" — so a staging row whose card had no
+ * checklist yet was marked done forever and never retried, and the audit record
+ * claimed a promotion that never happened. Once the checklist landed, nothing
+ * went back for it.
+ *
+ * `written: false` with a reason lets the caller keep the row retryable.
+ * Additive: the 46 existing callers ignore the return and are unaffected.
+ */
+export interface RecordSoldCompResult {
+  written: boolean;
+  /** Present when written is false. "catalog-unmatched" is the retryable one —
+   *  the sale is real, we just have no checklist for its card yet. */
+  reason?: "catalog-unmatched" | "invalid-input" | "error";
+}
+
+export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {
   // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
   // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
   // two-pass ingest cleaning. Any of the 46 callers of this function
@@ -551,14 +571,14 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         sampled: true,
       }));
     }
-    return;
+    return { written: false, reason: "invalid-input" };
   }
   if (preClean.input) input = preClean.input;
 
-  if (!input.cardId || !input.cardId.trim()) return;
-  if (!input.playerName || !input.playerName.trim()) return;
-  if (typeof input.price !== "number" || input.price <= 0) return;
-  if (!input.soldAt) return;
+  if (!input.cardId || !input.cardId.trim()) return { written: false, reason: "invalid-input" };
+  if (!input.playerName || !input.playerName.trim()) return { written: false, reason: "invalid-input" };
+  if (typeof input.price !== "number" || input.price <= 0) return { written: false, reason: "invalid-input" };
+  if (!input.soldAt) return { written: false, reason: "invalid-input" };
 
   // CF-GRADE-VALUE-NULL-REJECT (Drew, 2026-08-06). Reject rows where
   // gradeCompany is set but gradeValue is null/undefined. These
@@ -605,7 +625,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   const stagingRouteEnabled = process.env.CARDSIGHT_TO_STAGING_ENABLED === "true";
   const shouldRouteToStaging = stagingRouteEnabled && input.source === "cardsight";
   const c = shouldRouteToStaging ? await getCardsightStagingContainer() : await getContainer();
-  if (!c) return;
+  if (!c) return { written: false, reason: "error" };
 
   const contentHash = computeContentHash({
     cardId: input.cardId,
@@ -737,7 +757,10 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
           vendorSource: input.source,
           computedSlug: hobbyiqCardId,
         }));
-        return;
+        // Retryable: the sale is real, we simply have no checklist for its card
+        // yet. The seed above asks for one; the caller keeps the row so the
+        // loop-back can promote it once that checklist lands.
+        return { written: false, reason: "catalog-unmatched" };
       }
     } catch (err) {
       // Fail-open: keep computed slug if resolve errors, don't drop the comp.
@@ -919,7 +942,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
           });
         } catch { /* soft */ }
       }
-      return;
+      return { written: false, reason: "invalid-input" };
     }
     // Quarantine band: still persist but flag it
     if (conf.band === "quarantine") {
@@ -1001,7 +1024,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
             sampled: true,
           }));
         }
-        return;
+        return { written: true };
       }
       // Incoming wins → delete existing dupes (cross- AND same-source)
       // before writing. Anything with the same contentHash in the
@@ -1090,7 +1113,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
             existingCardIds: crossPartitionExisting.map(e => e.cardId),
             bestExistingScore,
           }));
-          return;
+          return { written: true };
         }
         // Incoming beats existing — delete the losers so we don't leave
         // stale duplicates under the other cardId partitions.
@@ -1286,6 +1309,9 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       cumulativeEmitFailures: _emitFailureCounter,
     }));
   }
+
+  // Reached only after the upsert succeeded — the sale is in the pool.
+  return { written: true };
 }
 
 /** Monotonic counter of upsert failures across the process lifetime.

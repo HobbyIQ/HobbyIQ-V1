@@ -39,6 +39,11 @@ export interface PromotionResult {
   skippedInsufficientData: number;
   errors: number;
   byVerification: Record<string, number>;
+  /** CF-PROMOTION-RESPECTS-SKIP: rows held back because their card has no
+   *  catalog checklist yet. Retryable — they promote once it lands. A rising
+   *  number here is the queue of sales the catalog cannot yet describe, and
+   *  should track the seed queue's demand counts. */
+  awaitingCatalog?: number;
 }
 
 /**
@@ -118,7 +123,7 @@ export async function runPromotionBatch(opts: {
       // dedup + upsert semantics apply the same way. Passes the
       // mirrored blob URL as the imageUrl so downstream renders our
       // permanent copy, not the vendor's expiring one.
-      await recordSoldComp({
+      const wrote = await recordSoldComp({
         cardId: row.raw.identityHint.vendorCardId ?? `hiq:${row.hobbyiqCardId.slice(4)}`,
         playerName: clean.playerName,
         cardYear: clean.cardYear,
@@ -139,6 +144,35 @@ export async function runPromotionBatch(opts: {
         verifiedByUser: verificationLabel === "user-verified",
         confidence,
       });
+
+      // CF-PROMOTION-RESPECTS-SKIP (Drew, 2026-08-13). This used to set
+      // status="promoted" unconditionally, even though recordSoldComp returns
+      // early when the card has no catalog match. The row was marked done
+      // forever, the sale never reached sold_comps, and the audit record
+      // claimed a promotion that never happened — so when the checklist finally
+      // landed, nothing came back for it. That is the loop-back, broken at its
+      // last step.
+      //
+      // A catalog miss is RETRYABLE: the sale is real, we simply have no
+      // checklist for its card yet, and recordSoldComp has already filed a seed
+      // asking for one. Leave the row in its current promotable state so the
+      // next run retries it, and stamp why it is waiting. Once the checklist
+      // exists, the same row promotes with no re-ingest from the vendor.
+      if (!wrote.written) {
+        if (wrote.reason === "catalog-unmatched") {
+          (row as unknown as Record<string, unknown>).awaitingCatalogSince =
+            (row as unknown as Record<string, unknown>).awaitingCatalogSince
+            ?? new Date().toISOString();
+          (row as unknown as Record<string, unknown>).lastPromotionSkipReason = wrote.reason;
+          await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
+          result.awaitingCatalog = (result.awaitingCatalog ?? 0) + 1;
+          continue;
+        }
+        // invalid-input / error: not retryable by waiting on a checklist.
+        // Count it and leave the row alone rather than marking it promoted.
+        result.errors += 1;
+        continue;
+      }
 
       row.status = "promoted";
       row.promoted = {
