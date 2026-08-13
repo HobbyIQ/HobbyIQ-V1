@@ -134,14 +134,22 @@ const slug = (s) => String(s || "").toLowerCase()
   .normalize("NFKD").replace(/[^\w\s-]/g, "")
   .replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
-// 'Full Checklist' and 'Team Sets' repeat everything else — including them
-// would ingest every card two or three times.
-const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets"]);
+// Roster sheets repeat every card already listed elsewhere, grouped a second
+// way. Including them ingests each card two or three times. Beckett names this
+// sheet inconsistently across products ('Team Sets' in Bowman Chrome, 'Teams'
+// in Mega Box), so match on shape rather than one literal.
+const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets", "Teams", "Checklist"]);
 
 // Sheet -> category prefix. Chrome Prospects are part of the base set's own
 // numbering (BCP-###), so they are base cards, not inserts.
 function categoryFor(sheetName, section) {
   const s = slug(section) || "unsectioned";
+  // Image / photo variations are DISTINCT cards that reuse the base card's
+  // number and player — Mega Box files list them inside the Base sheet. Left
+  // as category "base" they collide with the very cards they vary and get
+  // dropped by the dedup below (10 lost on the first 2026 Mega Box parse).
+  // They also need to stay findable as variations for the IV search (#1007).
+  if (/variation/i.test(section)) return `insert-${s}`;
   if (sheetName === "Base" || sheetName === "Prospects") return "base";
   if (sheetName === "Autographs") return `auto-${s}`;
   return `insert-${s}`;   // Inserts + Variations
