@@ -16,6 +16,14 @@ const PARALLEL_SYNONYMS: Record<string, string[]> = {
   // CH-friendly downstream — the cardTitle constructor uses this
   // string directly against CH's fuzzy search.
   "gum ball": ["gum ball", "bubblegum", "bubble gum", "snackpack", "snack pack"],
+  // CF-IMAGE-VARIATION-SEARCH (Drew, 2026-08-12). Collectors write these as
+  // "Image Variation", "Image Var", or "IV". They are real, traded cards —
+  // 862 sales in 2026 Topps Chrome alone, print runs /10 /25 /50 — and the
+  // catalog carries them, but no alias existed so the shorthand missed.
+  // "iv" is included here because this function receives a PARALLEL value,
+  // not free text, so the generational-suffix collision does not arise; the
+  // query-parser guard handles that case.
+  "image variation": ["image variation", "image var", "img variation", "iv"],
 };
 
 const GRADE_COMPANY_SYNONYMS: Record<string, string[]> = {
