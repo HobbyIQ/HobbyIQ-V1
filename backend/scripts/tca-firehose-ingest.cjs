@@ -259,6 +259,53 @@ async function main() {
     baseQs.set("date_from", FEED_DATE);
     baseQs.set("date_to", FEED_DATE);
     console.log(`[tca-firehose] DAILY FEED mode — date_from=date_to=${FEED_DATE} (unlimited window)`);
+
+    // CF-TCA-PLATFORM-LAG (Drew, 2026-08-13). The free window is STRICTLY
+    // yesterday — 08-11 and 08-10 both 429 while 08-12 is served — and TCA's
+    // platforms publish on different schedules:
+    //
+    //     eBay       last_sale_date 2026-08-11   (a day behind)
+    //     TCGplayer  last_sale_date 2026-08-13   (current)
+    //
+    // so a run asking eBay for yesterday gets a legitimate 0 rows: the data
+    // simply is not published yet. Asking for eBay's newest available day
+    // instead would leave the free window and burn the 200K cap.
+    //
+    // Check the platform's published watermark first (this endpoint is served
+    // even at remaining=0) and skip cleanly when it has not caught up. The job
+    // runs several times a day; repeat pulls of yesterday cost nothing and
+    // contentHash dedup makes the overlap a no-op, so eBay is picked up on the
+    // first run after TCA publishes it.
+    if (PLATFORM) {
+      try {
+        const platforms = await new Promise((resolve, reject) => {
+          const r = https.request({
+            hostname: TCA_HOST, port: 443, path: "/api/v1/market/platforms",
+            method: "GET",
+            headers: { "x-market-api-key": process.env.TCA_API_KEY, Accept: "application/json" },
+            timeout: 30_000,
+          }, (res) => {
+            let d = ""; res.on("data", (c) => (d += c));
+            res.on("end", () => { try { resolve(JSON.parse(d)); } catch (e) { reject(e); } });
+          });
+          r.on("timeout", () => { r.destroy(); reject(new Error("timeout")); });
+          r.on("error", reject);
+          r.end();
+        });
+        const row = (Array.isArray(platforms) ? platforms : []).find(
+          (p) => String(p.platform || "").toLowerCase() === PLATFORM.toLowerCase());
+        const watermark = row && row.last_sale_date;
+        if (watermark && watermark < FEED_DATE) {
+          console.log(`[tca-firehose] ${PLATFORM} has only published through ${watermark}; ${FEED_DATE} is not available yet — skipping (not an error).`);
+          console.log(`[tca-firehose] done — pages=0 fetched=0 written=0 skipped=0 errors=0 elapsed=0s (platform behind)`);
+          return;
+        }
+        if (watermark) console.log(`[tca-firehose] ${PLATFORM} published through ${watermark} — ${FEED_DATE} available`);
+      } catch (e) {
+        // Never block the pull on the watermark check.
+        console.warn(`[tca-firehose] platform watermark check failed (${e.message}) — proceeding`);
+      }
+    }
   }
 
   let page = 0;
