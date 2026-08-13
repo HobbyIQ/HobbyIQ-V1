@@ -61,7 +61,14 @@ const PLATFORM = process.env.PLATFORM || "";
 const CATEGORY = process.env.CATEGORY || "";
 const PAGE_LIMIT = Math.min(1000, Math.max(1, Number(process.env.PAGE_LIMIT || 1000)));
 const SORT = (process.env.SORT || "date_desc").toLowerCase();
-const CRAWLER_ID = process.env.CRAWLER_ID || `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`;
+// A daily-feed run is a different query shape (date-scoped, one day) from the
+// open-ended incremental crawl, so it gets its OWN cursor state. Sharing one
+// would have each run resume from the other's cursor and skip records.
+const CRAWLER_ID = process.env.CRAWLER_ID
+  || (process.env.DAILY_FEED === "true"
+    ? `tca-daily-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${
+        process.env.FEED_DATE || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)}`
+    : `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`);
 
 const TCA_HOST = "www.thecardapi.com";
 const TCA_PATH = "/api/v1/market/sales";
@@ -217,6 +224,34 @@ async function main() {
   });
   if (PLATFORM) baseQs.set("platform", PLATFORM);
   if (CATEGORY) baseQs.set("category", CATEGORY);
+
+  // CF-TCA-DAILY-FEED (Drew, 2026-08-13: "we have access to the full daily
+  // sold comps too with tca").
+  //
+  // Our plan carries the Full Daily Feed add-on: pulls scoped to
+  // sale_date = yesterday are UNLIMITED, while every other range draws on the
+  // 200K/day cap. This script never used it — it pulled cursor-paginated with
+  // no date filter, which is the capped path — so once the cap was spent the
+  // nightly cron fetched nothing at all. Verified against prod on 2026-08-13
+  // with the cap already at remaining=0:
+  //
+  //   200  date_from=2026-08-12&date_to=2026-08-12   (yesterday — served)
+  //   429  date_from=2026-08-13&date_to=2026-08-13   (today — capped)
+  //   200  /sales/export/csv?date_from=2026-08-12&date_to=2026-08-12
+  //        x-ratelimit-limit: "unlimited"  x-ratelimit-remaining: "unlimited"
+  //
+  // DAILY_FEED=true scopes the run to that unlimited window, so the nightly
+  // ingest stops competing with on-demand app traffic for the shared cap. The
+  // date params are date_from / date_to per TCA's docs — sale_date, sold_date
+  // and date are NOT recognised and silently fall back to the capped path.
+  const DAILY_FEED = process.env.DAILY_FEED === "true";
+  const FEED_DATE = process.env.FEED_DATE
+    || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  if (DAILY_FEED) {
+    baseQs.set("date_from", FEED_DATE);
+    baseQs.set("date_to", FEED_DATE);
+    console.log(`[tca-firehose] DAILY FEED mode — date_from=date_to=${FEED_DATE} (unlimited window)`);
+  }
 
   let page = 0;
   let totalFetched = 0;
