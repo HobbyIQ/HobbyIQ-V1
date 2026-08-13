@@ -200,14 +200,28 @@ export async function runDataCleanBatch(opts: {
   // remaining slots from any-source pending. CardHedge still lands but
   // TCA gets to sold_comps first.
   const { resources: tcaFirst } = await staging.items.query<StagingDoc>({
-    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source = 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
+    // CF-DATACLEAN-VENDOR-FIELD-PATH (Drew, 2026-08-13). This filtered on
+    // c.raw.vendorPayload.source, which exists on ZERO staging rows — the
+    // vendor lives at c.raw.vendor (promotionJob already reads it there).
+    //
+    // Both passes therefore matched nothing, and the fallback below could not
+    // rescue it: in Cosmos `undefined != 'tca-ebay'` evaluates to undefined,
+    // not true, so the "any other source" query returned 0 as well. The job
+    // reported {"scanned":0,"cleaned":0} every run and looked healthy while
+    // 3,513,701 rows sat in `pending` — nothing was ever cleaned, so promotion
+    // (which reads status IN ('clean','verified')) had nothing to promote and
+    // scanned 2 rows against a 3.5M backlog.
+    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendor = 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
     parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
   let pending: StagingDoc[] = tcaFirst;
   if (pending.length < limit) {
     const remainder = limit - pending.length;
     const { resources: fill } = await staging.items.query<StagingDoc>({
-      query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source != 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
+      // Same field-path correction. IS_DEFINED guards the not-equals so a row
+      // with no vendor at all still qualifies for the any-source fill rather
+      // than silently evaluating to undefined.
+      query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND (NOT IS_DEFINED(c.raw.vendor) OR c.raw.vendor != 'tca-ebay')${shardFilter} ORDER BY c.observedAt DESC`,
       parameters: [{ name: "@n", value: remainder }, ...shardParams],
     }).fetchAll();
     pending = [...pending, ...fill];

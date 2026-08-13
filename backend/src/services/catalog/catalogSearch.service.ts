@@ -520,11 +520,31 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
   await Promise.all(hits.map(async (h) => {
     if (h.salesSummary && h.salesSummary.count > 0) return;   // batch value wins
     try {
-      const { resources } = await comps.items.query<{ price: number; soldAt: string }>({
-        query: "SELECT c.price, c.soldAt FROM c WHERE c.cardId = @id",
+      const { resources } = await comps.items.query<{
+        price: number; soldAt: string; imageUrl?: string | null; blobUrl?: string | null;
+      }>({
+        // CF-SEARCH-ATTACH-IMAGE (Drew, 2026-08-13: "Images should show here,
+        // we have them"). CatalogSearchHit.imageUrl is documented as "attached
+        // from sold_comps", but that attachment is a batch job — so every
+        // freshly-ingested checklist row had imageUrl=null and the UI rendered
+        // a broken placeholder for each result. Measured: 0 of 8 2018 Ohtani
+        // catalog rows carried an image, while their comps carried several.
+        //
+        // We are already reading this card's comps for the sales summary, so
+        // the picture costs nothing extra — same single-partition query.
+        query: "SELECT c.price, c.soldAt, c.imageUrl, c.blobUrl FROM c WHERE c.cardId = @id",
         parameters: [{ name: "@id", value: h.slug }],
       }, { partitionKey: h.slug }).fetchAll();
       if (!resources || resources.length === 0) return;
+
+      // Prefer OUR blob copy over the vendor URL: eBay image links expire and
+      // are hotlink-restricted, so a vendor URL is a placeholder waiting to
+      // happen. Falls back to the vendor URL when we have not mirrored one yet.
+      if (!h.imageUrl) {
+        const withBlob = resources.find((r) => typeof r.blobUrl === "string" && r.blobUrl);
+        const withImg = resources.find((r) => typeof r.imageUrl === "string" && r.imageUrl);
+        h.imageUrl = (withBlob?.blobUrl ?? withImg?.imageUrl) ?? null;
+      }
 
       const dated = resources
         .filter((r) => typeof r.price === "number" && r.price > 0 && r.soldAt)
