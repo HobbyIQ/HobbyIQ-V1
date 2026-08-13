@@ -160,6 +160,33 @@ function fuzzyIncludes(haystack: string, token: string): boolean {
   return false;
 }
 
+/** Identity of the physical card, from FIELDS rather than the id — the only
+ *  thing that merges a vendor-keyed row with its canonical twin. */
+function dedupeKey(h: CatalogSearchHit): string {
+  return [
+    h.year ?? "",
+    String(h.setKey || h.setName || "").toLowerCase(),
+    String(h.cardNumber ?? "").toLowerCase(),
+    String(h.parallel ?? "").toLowerCase(),
+    h.isAuto ? "auto" : "no-auto",
+    h.printRun ?? "",
+  ].join("|");
+}
+
+/** True when `a` should represent the card instead of `b`. Ungraded first
+ *  (comps hang off the ungraded slug), then canonical over vendor-keyed, then
+ *  score. */
+function preferHit(a: CatalogSearchHit, b: CatalogSearchHit): boolean {
+  const graded = (x: CatalogSearchHit) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.slug) ? 1 : 0);
+  const vendor = (x: CatalogSearchHit) => (x.slug.startsWith("hiq:") ? 0 : 1);
+  if (graded(a) !== graded(b)) return graded(a) < graded(b);
+  if (vendor(a) !== vendor(b)) return vendor(a) < vendor(b);
+  return a.score > b.score;
+}
+
+/** Pure helpers, exported for tests only. */
+export const __testables = { fold, editDistance, fuzzyIncludes, dedupeKey, preferHit };
+
 function tokenize(input: string): string[] {
   return String(input ?? "")
     .toLowerCase()
@@ -426,13 +453,7 @@ export async function searchCatalog(
   // of it.
   const byCard = new Map<string, CatalogSearchHit>();
   for (const h of scored) {
-    const key = [
-      h.year ?? "", String(h.setKey || h.setName || "").toLowerCase(),
-      String(h.cardNumber ?? "").toLowerCase(),
-      String(h.parallel ?? "").toLowerCase(),
-      h.isAuto ? "auto" : "no-auto",
-      h.printRun ?? "",
-    ].join("|");
+    const key = dedupeKey(h);
     const cur = byCard.get(key);
     if (!cur) { byCard.set(key, h); continue; }
     // Grade variants carry the SAME identity fields as the ungraded card —
@@ -443,14 +464,7 @@ export async function searchCatalog(
     // then score. (Grade is still a real identity — see
     // CF-PRICE-LOOKUP-COLLAPSE-GRADES — it is just not what a checklist
     // search result should collapse to.)
-    const graded = (x: CatalogSearchHit) =>
-      /:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.slug) ? 1 : 0;
-    const canonical = (x: CatalogSearchHit) => (x.slug.startsWith("hiq:") ? 0 : 1);
-    const better =
-      graded(h) !== graded(cur) ? graded(h) < graded(cur)
-        : canonical(h) !== canonical(cur) ? canonical(h) < canonical(cur)
-          : h.score > cur.score;
-    if (better) byCard.set(key, h);
+    if (preferHit(h, cur)) byCard.set(key, h);
   }
   let collapsed = [...byCard.values()];
 
