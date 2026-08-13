@@ -44,8 +44,31 @@ const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
 const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 const MAX = Number(val("--max", "50000"));
-const PAGE = Number(val("--page", "500"));
-const CONCURRENCY = Number(val("--concurrency", "16"));
+const PAGE = Number(val("--page", "1000"));
+const CONCURRENCY = Number(val("--concurrency", "64"));
+const SHARD = Number(val("--shard", "-1"));
+const SHARDS = Number(val("--shards", "1"));
+
+// CF-REQUEUE-THROUGHPUT (Drew, 2026-08-13: "how can we speed it up? ... go
+// live date is 9/14"). First pass ran ~1,800 rows/min, ~8h for the pile.
+// comps_staging autoscales to 40,000 RU, so we were never throttled — the
+// bottleneck was entirely client-side, and it was two things:
+//
+//   SELECT *  — staging docs carry the whole raw vendor payload. We were
+//               pulling megabytes to read three fields.
+//   replace() — sends the ENTIRE document back to flip one string.
+//
+// Now: project the three fields we actually read, and patch the three we
+// actually write. Plus optional id-prefix sharding so N processes cover
+// disjoint slices without racing (same trick as dataCleanJob's shardChars —
+// staging ids are randomUUID(), so hex prefixes distribute evenly).
+const HEX = "0123456789abcdef".split("");
+function shardClause() {
+  if (SHARD < 0 || SHARDS <= 1) return "";
+  const mine = HEX.filter((_, i) => i % SHARDS === SHARD % SHARDS);
+  if (mine.length === 0) return "";
+  return ` AND (${mine.map((c) => `STARTSWITH(c.id, '${c}')`).join(" OR ")})`;
+}
 
 const cn = process.env.COSMOS_CONNECTION_STRING;
 if (!cn) { console.error("COSMOS_CONNECTION_STRING is unset."); process.exit(1); }
@@ -95,7 +118,10 @@ const keptReasons = {};
 
 async function handle(row) {
   stats.scanned++;
-  const anomalies = row?.clean?.anomalies ?? [];
+  // `_anoms` is the projected alias for c.clean.anomalies (see the query).
+  // Falls back to the nested path so the function still works if someone
+  // hands it a full document.
+  const anomalies = row?._anoms ?? row?.clean?.anomalies ?? [];
   if (anomalies.length === 0) { stats.noAnomalyBlock++; return; }
 
   const stillValid = anomalies.filter((a) => !isStaleVerdict(a));
@@ -107,21 +133,30 @@ async function handle(row) {
 
   if (!APPLY) { stats.requeued++; return; }
   try {
-    row.status = "pending";
-    row.requeuedAt = new Date().toISOString();
-    row.requeuedReason = "CF-STALE-ANOMALY-VERDICT-2026-08-13";
-    await st.item(row.id, row.hobbyiqCardId).replace(row);
+    // Patch, not replace: three fields instead of the whole document.
+    await st.item(row.id, row.hobbyiqCardId).patch([
+      { op: "set", path: "/status", value: "pending" },
+      { op: "set", path: "/requeuedAt", value: new Date().toISOString() },
+      { op: "set", path: "/requeuedReason", value: "CF-STALE-ANOMALY-VERDICT-2026-08-13" },
+    ]);
     stats.requeued++;
-  } catch { stats.errors++; }
+  } catch (e) {
+    stats.errors++;
+    if (stats.errors <= 3) console.error("  write error:", String(e && e.message).slice(0, 140));
+  }
 }
 
 (async () => {
-  console.log(`requeue stale-verdict anomalies — ${APPLY ? "APPLY" : "DRY RUN"}  max=${MAX}\n`);
+  const shardLabel = SHARD >= 0 && SHARDS > 1 ? `  shard ${SHARD}/${SHARDS}` : "";
+  console.log(`requeue stale-verdict anomalies — ${APPLY ? "APPLY" : "DRY RUN"}  max=${MAX}  conc=${CONCURRENCY}${shardLabel}\n`);
 
+  // Project only what handle() reads. `SELECT *` pulled the entire raw vendor
+  // payload for every row — the single biggest cost in the first pass.
   const iter = st.items.query({
-    query: "SELECT * FROM c WHERE c.status = 'anomaly'",
+    query: `SELECT c.id, c.hobbyiqCardId, c.clean.anomalies AS _anoms FROM c WHERE c.status = 'anomaly'${shardClause()}`,
   }, { maxItemCount: PAGE });
 
+  const started = Date.now();
   let batch = 0;
   while (iter.hasMoreResults() && stats.scanned < MAX) {
     const { resources } = await iter.fetchNext();
@@ -130,7 +165,9 @@ async function handle(row) {
     if (!resources || resources.length === 0) continue;
     await mapLimit(resources, CONCURRENCY, handle);
     if (++batch % 10 === 0) {
-      console.log(`   ...${stats.scanned} scanned, ${stats.requeued} ${APPLY ? "requeued" : "would requeue"}, ${stats.keptRealAnomaly} kept`);
+      const mins = (Date.now() - started) / 60000;
+      const rate = Math.round(stats.scanned / Math.max(mins, 0.001));
+      console.log(`   ...${stats.scanned} scanned, ${stats.requeued} ${APPLY ? "requeued" : "would requeue"}, ${stats.keptRealAnomaly} kept  [${rate}/min]`);
     }
   }
 
