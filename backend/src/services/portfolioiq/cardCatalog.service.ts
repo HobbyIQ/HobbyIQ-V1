@@ -32,7 +32,13 @@ import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
 export interface CardCatalogEntry {
   id: string;                        // hobbyiqCardId slug (also the doc id)
-  sport: string;                     // partition key
+  // PARTITION KEY. card_catalog partitions on /cardId — the comment here used
+  // to say `sport`, and rows written without cardId went to the undefined
+  // partition where point reads cannot reach them. Always equals `id` for
+  // canonical rows. See CF-CATALOG-CARDID-PARTITION-KEY below.
+  cardId: string;
+  hobbyiqCardId: string;             // same slug; what downstream readers expect
+  sport: string;
   year: number;
   setKey: string;                    // normalized set slug
   cardNumber: string;
@@ -185,8 +191,24 @@ export function deriveCatalogEntry(input: {
   // refractor rainbow, so a user pick of Green Refractor /99 returned
   // no comps. Write BOTH going forward so every downstream filter
   // works regardless of which name it checks.
+  // CF-CATALOG-CARDID-PARTITION-KEY (Drew, 2026-08-12). card_catalog
+  // partitions on /cardId — NOT /sport, whatever the interface comment used to
+  // claim. Entries built here carried no cardId at all, so every row this path
+  // wrote landed in the UNDEFINED partition. Cosmos allows the same `id` in a
+  // different partition, so a checklist ingest silently created a SECOND doc
+  // beside the canonical one instead of updating it:
+  //
+  //   id=hiq:baseball:2026:bowman-chrome:1:base:no-auto cardId=undefined Konnor Griffin
+  //   id=hiq:baseball:2026:bowman-chrome:1:base:no-auto cardId=<set>     Aaron Judge
+  //
+  // Both "wrote" successfully. Neither point read could see the new one, and
+  // catalogVerify — which reads by partition — never found it. Setting cardId
+  // puts canonical rows back in their own single-document partition, which is
+  // what makes the ~1 RU point read work.
   return {
     id: slug,
+    cardId: slug,
+    hobbyiqCardId: slug,
     sport: input.sport,
     year,
     cardYear: year,

@@ -1,0 +1,67 @@
+{
+  "scrapedAt": "2026-08-13T03:07:51.341Z",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/04/2026-Bowman-Mega-Box-Baseball-Checklist.xlsx",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Chrome Mega Box",
+  "productKey": "2026-bowman-chrome-mega-box",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 268,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Mega Chrome Base Cards",
+      "cards": 50
+    },
+    {
+      "sheet": "Base",
+      "section": "Mega Chrome Prospects",
+      "cards": 50
+    },
+    {
+      "sheet": "Base",
+      "section": "Mega Chrome Prospects - Image Variations",
+      "cards": 10
+    },
+    {
+      "sheet": "Base",
+      "section": "Mega Chrome Base Cards - Image Variations",
+      "cards": 10
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Prospect Mega Autographs",
+      "cards": 60
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Prospect Mega Autographs - Image Variations",
+      "cards": 7
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Mega Autographs",
+      "cards": 10
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Mega Autographs - Image Variations",
+      "cards": 6
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Mega Bowman Sterling",
+      "cards": 15
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Mega Electric Sluggers",
+      "cards": 25
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Mega Futures",
+      "cards": 25
+    }
+  ]
+}

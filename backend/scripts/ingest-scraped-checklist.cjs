@@ -73,7 +73,11 @@ async function main() {
       isAuto: isAutoRow,
       printRun: Number.isFinite(printRun) && printRun > 0 ? printRun : null,
       playerName: row.player,
-      source: `baseballcardpedia-scraped-${new Date().toISOString().slice(0, 10)}`,
+      // Provenance must name the real source. catalogVisibility tiers search
+      // results by `source`, and stamping a Beckett checklist as
+      // baseballcardpedia would make the row's origin unauditable. Defaults to
+      // the historical label so existing callers are unchanged.
+      source: `${process.env.SOURCE_LABEL || "baseballcardpedia"}-scraped-${new Date().toISOString().slice(0, 10)}`,
       confidence: 0.95,
       vendorIds: {},
     });

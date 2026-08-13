@@ -1,0 +1,172 @@
+{
+  "scrapedAt": "2026-08-13T02:38:58.445Z",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/08/2026-Bowman-Chrome-Baseball-Checklist.xlsx",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Chrome",
+  "productKey": "2026-bowman-chrome",
+  "setKey": "bowman-chrome",
+  "rowCount": 1197,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "cards": 100
+    },
+    {
+      "sheet": "Prospects",
+      "section": "Chrome Prospects",
+      "cards": 100
+    },
+    {
+      "sheet": "Variations",
+      "section": "WBC Flag Variations",
+      "cards": 100
+    },
+    {
+      "sheet": "Variations",
+      "section": "Red RC Variations",
+      "cards": 33
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Rookie Image Variations",
+      "cards": 15
+    },
+    {
+      "sheet": "Variations",
+      "section": "Retrofractors",
+      "cards": 2
+    },
+    {
+      "sheet": "Variations",
+      "section": "International Refractors",
+      "cards": 49
+    },
+    {
+      "sheet": "Variations",
+      "section": "Packfractors",
+      "cards": 100
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Autographs",
+      "cards": 104
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Autographs - Gold Ink",
+      "cards": 59
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect International Refractor Autographs",
+      "cards": 36
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Prospect Packfractor Autographs",
+      "cards": 60
+    },
+    {
+      "sheet": "Autographs",
+      "section": "WBC Flag Variation Autographs",
+      "cards": 55
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Rookie Autographs",
+      "cards": 28
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Bowman GPK Autographs",
+      "cards": 40
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Big Break Autographs",
+      "cards": 13
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2026 MLB Spring Breakout Autographs",
+      "cards": 11
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Travel Tags Autographs",
+      "cards": 10
+    },
+    {
+      "sheet": "Autographs",
+      "section": "It Came To The League Autographs",
+      "cards": 10
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Across The Seams",
+      "cards": 22
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Retrofractor Autographs",
+      "cards": 1
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Image Variation Autographs",
+      "cards": 14
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Jumbo Chrome Autograph Relics",
+      "cards": 35
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Big Break",
+      "cards": 25
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars Of The Future",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Travel Tags",
+      "cards": 15
+    },
+    {
+      "sheet": "Inserts",
+      "section": "It Came To The League",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bowman GPK",
+      "cards": 50
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Final Draft",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Crystallized",
+      "cards": 20
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bowman Spotlights",
+      "cards": 15
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2026 MLB Spring Breakout",
+      "cards": 15
+    }
+  ]
+}
