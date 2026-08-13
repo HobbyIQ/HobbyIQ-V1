@@ -59,6 +59,15 @@ export interface AutoTriageResult {
  * Process a bounded batch of pending-manual rows where the anomaly
  * is parser-low-confidence. Silent-safe.
  */
+// CF-STAGING-LIMIT-CAP-WAS-THE-BOTTLENECK (Drew, 2026-08-13). The batch ceiling
+// was duplicated: the route clamped `limit` to 500 AND so did this job. Raising
+// only the route changed nothing — a limit=2500 call still reported
+// scanned=500, which is how the second cap was found. Both now agree at 5000.
+//
+// This is a guard against a typo'd query param, not a throughput policy: the
+// real limiters are this job's wall-clock and the caller's curl --max-time.
+const MAX_JOB_BATCH = 5000;
+
 export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise<AutoTriageResult> {
   const staging = await getStagingContainer();
   const result: AutoTriageResult = {
@@ -72,7 +81,7 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
   };
   if (!staging) return result;
 
-  const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+  const limit = Math.max(1, Math.min(MAX_JOB_BATCH, opts.limit ?? 100));
   const { resources: pending } = await staging.items.query<StagingDoc>({
     query: "SELECT TOP @n * FROM c WHERE c.status = 'pending-manual' ORDER BY c.observedAt ASC",
     parameters: [{ name: "@n", value: limit }],
