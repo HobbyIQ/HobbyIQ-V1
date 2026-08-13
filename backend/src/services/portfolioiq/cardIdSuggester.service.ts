@@ -563,8 +563,11 @@ function crossVendorDedupKey(c: CommonCandidate): string {
 //
 // Flags left in place so a single env var restores either pool if the
 // catalog ever regresses — deleting the code would make that a redeploy.
-const CH_SUGGESTER_ENABLED = process.env.SUGGESTER_CARDHEDGE_ENABLED === "true";
-const CS_SUGGESTER_ENABLED = process.env.SUGGESTER_CARDSIGHT_ENABLED === "true";
+// Read at CALL time, not module load. Module-level consts made these
+// untestable (a test cannot set the env before ESM import hoisting runs) and
+// meant flipping the env var in prod needed a restart to take effect.
+const chSuggesterEnabled = () => process.env.SUGGESTER_CARDHEDGE_ENABLED === "true";
+const csSuggesterEnabled = () => process.env.SUGGESTER_CARDSIGHT_ENABLED === "true";
 const ALTERNATIVE_MIN_SCORE = 0.4;
 const ALTERNATIVE_MAX_COUNT = 2;
 const SUGGESTER_TIMEOUT_MS = 8_000;
@@ -619,7 +622,7 @@ export async function suggestCardIdForHolding(
   // so a slow vendor can never hang the batch. Vendor errors resolve to
   // empty pools — never fatal to the batch.
   const runStrict = async (): Promise<{ chRaw: CardHedgeCard[]; csRaw: CardIdentity[] }> => {
-    const chPromise: Promise<CardHedgeCard[]> = CH_SUGGESTER_ENABLED
+    const chPromise: Promise<CardHedgeCard[]> = chSuggesterEnabled()
       ? Promise.race([
       searchCards(query, 5, strictFilters).catch(() => [] as CardHedgeCard[]),
       new Promise<CardHedgeCard[]>((_, reject) =>
@@ -627,7 +630,7 @@ export async function suggestCardIdForHolding(
       ),
     ]).catch(() => [] as CardHedgeCard[])
       : Promise.resolve([] as CardHedgeCard[]);
-    const csPromise: Promise<CardIdentity[]> = CS_SUGGESTER_ENABLED
+    const csPromise: Promise<CardIdentity[]> = csSuggesterEnabled()
       ? Promise.race([
           fetchCardsightUuidNativeCandidates(query).catch(() => [] as CardIdentity[]),
           new Promise<CardIdentity[]>((_, reject) =>
@@ -666,7 +669,7 @@ export async function suggestCardIdForHolding(
   // never uses `filters` (its fetch is free-text only) so this only
   // helps the CH path — but that's exactly where the set-format
   // mismatch bites.
-  if (CH_SUGGESTER_ENABLED && chRaw.length === 0 && csRaw.length === 0 && strictFilters.set) {
+  if (chSuggesterEnabled() && chRaw.length === 0 && csRaw.length === 0 && strictFilters.set) {
     const chRelaxed = await Promise.race([
       searchCards(query, 5, relaxedFilters).catch(() => [] as CardHedgeCard[]),
       new Promise<CardHedgeCard[]>((_, reject) =>

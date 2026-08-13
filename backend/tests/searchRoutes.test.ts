@@ -115,7 +115,7 @@ describe("POST /api/search/cards — input validation", () => {
       .set("x-session-id", "s")
       .send({ input: "12345678", hint: "cert" });
     expect(res.status).toBe(200);
-    expect(mockedDispatchSearch).toHaveBeenCalledWith("12345678", "cert");
+    expect(mockedDispatchSearch).toHaveBeenCalledWith("12345678", "cert", { includeProvisional: false });
   });
 
   it("accepts hint='freetext'", async () => {
@@ -129,7 +129,7 @@ describe("POST /api/search/cards — input validation", () => {
       .set("x-session-id", "s")
       .send({ input: "Witt", hint: "freetext" });
     expect(res.status).toBe(200);
-    expect(mockedDispatchSearch).toHaveBeenCalledWith("Witt", "freetext");
+    expect(mockedDispatchSearch).toHaveBeenCalledWith("Witt", "freetext", { includeProvisional: false });
   });
 
   it("accepts undefined hint (auto-detect)", async () => {
@@ -143,7 +143,7 @@ describe("POST /api/search/cards — input validation", () => {
       .set("x-session-id", "s")
       .send({ input: "Witt" });
     expect(res.status).toBe(200);
-    expect(mockedDispatchSearch).toHaveBeenCalledWith("Witt", undefined);
+    expect(mockedDispatchSearch).toHaveBeenCalledWith("Witt", undefined, { includeProvisional: false });
   });
 });
 
