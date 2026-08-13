@@ -2843,7 +2843,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // product-family rules apply (e.g. "Bowman Draft Chrome" collapses
             // to bowman-chrome per CF-CHROME-SUBSET-COLLAPSE) rather than a
             // naive slugify. Falls back to brand when the parser found no set.
-            const { normalizeSetKey: _nsk } = await import("../services/portfolioiq/hobbyIqCardId.service.js");
+            const { normalizeSetKey: _nsk, slugify: _slugify } =
+              await import("../services/portfolioiq/hobbyIqCardId.service.js");
             const setSource = String((parsed as { set?: string | null }).set || parsed.brand || "");
             const setLower = setSource.toLowerCase().trim();
             const setKeyForLookup = _nsk(setSource);
@@ -2904,7 +2905,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                           (IS_DEFINED(c.setKey) AND (LOWER(c.setKey) = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
                           OR (IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @s, true))
                         )
-                        AND CONTAINS(LOWER(c.playerName), @p, true)
+                        AND (
+                          CONTAINS(LOWER(c.playerName), @p, true)
+                          OR (IS_DEFINED(c.playerSlug) AND CONTAINS(c.playerSlug, @pslug))
+                        )
                         AND LOWER(c.parallel) = @par
                         ${baseSetOnly ? "AND IS_NUMBER(StringToNumber(c.cardNumber))" : ""}`,
               parameters: [
@@ -2912,6 +2916,12 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                 { name: "@s", value: setLower },
                 { name: "@sk", value: setKeyForLookup },
                 { name: "@p", value: playerLower },
+                // CF-PLAYER-NAME-FOLDING. The catalog stores accented names
+                // ("Ronald Acuña, Jr."), users type ASCII ("Acuna"), and
+                // CONTAINS is byte-exact — so 5.5% of base rows, concentrated
+                // in the most-traded players, were unreachable. Matching the
+                // folded slug as well fixes that for every row carrying one.
+                { name: "@pslug", value: _slugify(parsed.playerName ?? "") },
                 { name: "@par", value: parallelLower },
               ],
             });
