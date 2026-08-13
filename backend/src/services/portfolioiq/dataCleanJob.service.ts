@@ -34,6 +34,16 @@ import { parseGradeLabel } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 
+/** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
+ *  plausibility. Raw and PSA 10 are different markets for the same card, so
+ *  they must not share a median. */
+function gradeTierKey(company?: string | null, value?: number | null): string {
+  const c = String(company ?? "").trim().toUpperCase();
+  if (!c) return "raw";
+  const v = typeof value === "number" && Number.isFinite(value) ? value : null;
+  return v === null ? c : `${c}${v}`;
+}
+
 let _cached: Container | null = null;
 async function getStagingContainer(): Promise<Container | null> {
   if (_cached) return _cached;
@@ -244,17 +254,32 @@ export async function runDataCleanBatch(opts: {
           const params: Array<{ name: string; value: string }> = chunk.map((s, idx) => ({ name: `@s${idx}`, value: s }));
           const inList = chunk.map((_, idx) => `@s${idx}`).join(",");
           params.push({ name: "@cutoff", value: rollingCutoff });
-          const { resources: rows } = await soldComps.items.query<{ hobbyiqCardId: string; price: number }>({
-            query: `SELECT c.hobbyiqCardId, c.price FROM c WHERE c.hobbyiqCardId IN (${inList}) AND c.soldAt >= @cutoff`,
+          // CF-DATA-CLEAN-MEDIAN-BY-GRADE (Drew, 2026-08-13). The median was
+          // GRADE-BLIND — bucketed by slug alone — so on a card that mostly
+          // trades raw, every graded sale read as a huge outlier. Real example
+          // from the backlog: a PSA 10 1968 Topps #573 at $153.50 flagged as
+          // "4723% of 30d median $3.25", where $3.25 is the raw-commons median.
+          //
+          // price-outlier was 68% of all anomalies and 23% of them carried a
+          // grade, so a large share of the anomaly bucket is legitimate graded
+          // sales being compared against raw prices. This is the "Check 3:
+          // cross-grade sanity" the file below notes as deferred.
+          //
+          // Bucket per (slug, gradeTier) so like compares with like.
+          const { resources: rows } = await soldComps.items.query<{
+            hobbyiqCardId: string; price: number; gradeCompany?: string | null; gradeValue?: number | null;
+          }>({
+            query: `SELECT c.hobbyiqCardId, c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId IN (${inList}) AND c.soldAt >= @cutoff`,
             parameters: params,
           }).fetchAll();
           const bySlug = new Map<string, number[]>();
           for (const r of rows) {
             const p = Number(r.price);
             if (!Number.isFinite(p) || p <= 0) continue;
-            const arr = bySlug.get(r.hobbyiqCardId) ?? [];
+            const key = `${r.hobbyiqCardId}||${gradeTierKey(r.gradeCompany, r.gradeValue)}`;
+            const arr = bySlug.get(key) ?? [];
             arr.push(p);
-            bySlug.set(r.hobbyiqCardId, arr);
+            bySlug.set(key, arr);
           }
           for (const [slug, prices] of bySlug) {
             if (prices.length >= 5) {
@@ -436,15 +461,28 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // the caller didn't supply the cache (used by legacy call sites).
   if (soldComps && price > 0) {
     try {
-      let median: number | null = medianCache?.get(row.hobbyiqCardId) ?? null;
+      // Compare against this row's OWN grade tier. When that tier has too few
+      // sales we deliberately return NO verdict rather than falling back to the
+      // mixed-grade median — an unjudgeable row should not be branded an
+      // anomaly, which is exactly how legitimate graded sales ended up here.
+      // Parse the grade here rather than reusing `gradeParsed`, which is
+      // declared further down this function (line ~529) — the price check runs
+      // before it exists. parseGradeLabel is pure and cheap.
+      const rowGrade = title ? parseGradeLabel(title) : null;
+      const rowGradeKey = gradeTierKey(rowGrade?.gradeCompany, rowGrade?.gradeValue);
+      let median: number | null = medianCache?.get(`${row.hobbyiqCardId}||${rowGradeKey}`) ?? null;
       if (median === null && !medianCache) {
         const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-        const { resources: rollingRows } = await soldComps.items.query<{ price: number }>({
-          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+        const { resources: rollingRows } = await soldComps.items.query<{
+          price: number; gradeCompany?: string | null; gradeValue?: number | null;
+        }>({
+          query: "SELECT c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
           parameters: [{ name: "@hiq", value: row.hobbyiqCardId }, { name: "@cutoff", value: rollingCutoff }],
         }).fetchAll();
         if (rollingRows.length >= 5) {
-          const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+          const prices = rollingRows
+            .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === rowGradeKey)
+            .map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
           if (prices.length >= 5) median = prices[Math.floor(prices.length / 2)];
         }
       }
@@ -470,19 +508,32 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // Check 4: slug conflict against card_catalog — deferred until
   // catalog seed reaches meaningful coverage.
 
-  // Check 5: no-image anomaly.
+  // Check 5: image presence.
+  //
+  // CF-NO-IMAGE-IS-NOT-AN-ANOMALY (Drew, 2026-08-13: "if no image, then no
+  // need to do it"). A sale without a picture is still a valid PRICE POINT.
+  // The photo is enrichment; the sale is the data.
+  //
+  // This used to push an anomaly, which contradicted this check's own stated
+  // rule ("still routed downstream, not rejected"): status=anomaly means
+  // promotion — which reads status IN ('clean','verified') — never picks the
+  // row up. Intent was "do not reject", effect was "never promote".
+  //
+  // It mattered enormously. Blob mirroring is currently failing account-wide
+  // with "This request is not authorized to perform this operation using this
+  // permission", so EVERY row got mirrorError and therefore no-image. Measured
+  // 2026-08-13: 1,498 of 1,500 freshly-cleaned rows were anomalies, 1,498 of
+  // them for no-image — i.e. a storage permission was holding 3.5M sales out
+  // of the pool. price-outlier was only 89 of that 1,500.
+  //
+  // Recorded either way so image-verify can still enrich later and so the
+  // mirror failure stays visible — it just no longer blocks the price.
   const hasIngestImageUrl = Boolean(raw.vendorPayload.imageUrl);
   const hasMirrorSuccess = Boolean(row.mirroredImage?.blobUrl) && !row.mirroredImage?.mirrorError;
-  if (!hasIngestImageUrl && !hasMirrorSuccess) {
-    anomalies.push({
-      kind: "no-image",
-      detail: "vendor sent no imageUrl and no successful mirror on file — image-verify cannot fire",
-    });
-  } else if (row.mirroredImage?.mirrorError) {
-    anomalies.push({
-      kind: "no-image",
-      detail: `mirror failed: ${row.mirroredImage.mirrorError.reason} ${row.mirroredImage.mirrorError.detail ?? ""}`,
-    });
+  if (row.mirroredImage?.mirrorError) {
+    normalizations.push(`image-mirror-failed:${row.mirroredImage.mirrorError.reason}`);
+  } else if (!hasIngestImageUrl && !hasMirrorSuccess) {
+    normalizations.push("no-image");
   } else {
     normalizations.push("image-mirrored");
   }
