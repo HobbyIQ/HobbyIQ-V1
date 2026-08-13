@@ -74,6 +74,15 @@ function shardChars(index: number, total: number): string[] {
   return chars;
 }
 
+// CF-STAGING-LIMIT-CAP-WAS-THE-BOTTLENECK (Drew, 2026-08-13). The batch ceiling
+// was duplicated: the route clamped `limit` to 500 AND so did this job. Raising
+// only the route changed nothing — a limit=2500 call still reported
+// scanned=500, which is how the second cap was found. Both now agree at 5000.
+//
+// This is a guard against a typo'd query param, not a throughput policy: the
+// real limiters are this job's wall-clock and the caller's curl --max-time.
+const MAX_JOB_BATCH = 5000;
+
 export async function runPromotionBatch(opts: {
   limit?: number;
   workerShard?: { index: number; total: number };
@@ -88,7 +97,7 @@ export async function runPromotionBatch(opts: {
   };
   if (!staging) return result;
 
-  const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+  const limit = Math.max(1, Math.min(MAX_JOB_BATCH, opts.limit ?? 100));
   const shardFilter = opts.workerShard
     ? " AND (" + shardChars(opts.workerShard.index, opts.workerShard.total)
         .map((_, i) => `STARTSWITH(c.id, @shard${i})`).join(" OR ") + ")"
