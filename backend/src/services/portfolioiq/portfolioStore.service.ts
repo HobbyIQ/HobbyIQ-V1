@@ -1247,6 +1247,34 @@ export function buildEstimateRequestFromHolding(
   };
 }
 
+/**
+ * CF-PHOTO-PATCH-LATENCY (Drew, 2026-08-12): true when `next` differs from
+ * `previous` in any field the pricing engine actually reads.
+ *
+ * Derived by diffing buildEstimateRequestFromHolding's own output rather than
+ * a hand-listed field set, so it cannot drift out of sync with the engine
+ * input above: the day a new field starts feeding computeEstimate, it starts
+ * gating here too. Both sides come from the same object literal, so key order
+ * is stable and a JSON compare is sound.
+ *
+ * Fails OPEN. An absent `previous` or a throwing comparison returns true — we
+ * never skip pricing because the check itself failed.
+ */
+export function estimateInputChanged(
+  previous: PortfolioHolding | undefined,
+  next: PortfolioHolding,
+): boolean {
+  if (!previous) return true;
+  try {
+    return (
+      JSON.stringify(buildEstimateRequestFromHolding(previous)) !==
+      JSON.stringify(buildEstimateRequestFromHolding(next))
+    );
+  } catch {
+    return true;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CF-IDENTITY-HYDRATION (2026-06-18): backfill identity fields on a holding
 // from the engine's resolved Cardsight catalog identity.
@@ -4775,10 +4803,33 @@ export async function updateHolding(req: Request, res: Response) {
 
   doc.holdings[id] = next;
 
-  try {
-    await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
-  } catch {
-    evaluateHoldingAlerts(doc, previous, next);
+  // CF-PHOTO-PATCH-LATENCY (Drew, 2026-08-12). autoPriceHolding runs a full
+  // computeEstimate — ~900 Cosmos queries and 5-16s on a thin-data card — and
+  // the PATCH response waits on it. Edits that touch only photos / notes /
+  // quantity cannot change the estimate, so that work is pure latency and
+  // wasted RUs.
+  //
+  // Observed in prod 2026-08-12: attaching a photo to a 2026 Bowman Chrome
+  // prospect (0 comps, so the slowest engine path) issued 911 Cosmos deps and
+  // took 15.64s; the web client aborted before the PATCH reached the server,
+  // so the photo looked like it failed even though the blob upload had already
+  // succeeded. The same flow on a well-comped card was 260 deps / 1.76s —
+  // nothing about the request differed, only the card.
+  //
+  // Gate on the engine input, not on a "was it a photo?" test: any patch that
+  // leaves every computeEstimate input identical is equally safe to skip, and
+  // identity / grade edits still reprice exactly as before.
+  if (estimateInputChanged(previous, next)) {
+    try {
+      await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
+    } catch {
+      evaluateHoldingAlerts(doc, previous, next);
+    }
+  } else {
+    // autoPriceHolding calls evaluateHoldingAlerts on its way out, so the skip
+    // path must call it directly — otherwise skipping the reprice would
+    // silently skip alert evaluation too.
+    evaluateHoldingAlerts(doc, previous, doc.holdings[id]!);
   }
 
   // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fire on update too:
