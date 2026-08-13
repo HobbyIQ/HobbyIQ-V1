@@ -39,6 +39,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { requestChecklistSeed } from "./checklistSeedQueue.service.js";
+import { slugify } from "../portfolioiq/hobbyIqCardId.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -96,12 +97,21 @@ interface CatalogRow {
   playerSlug?: string | null;
 }
 
-function slug(raw: string): string {
-  return String(raw ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+// CF-PLAYER-NAME-FOLDING (Drew, 2026-08-12). This used to be a local slug that
+// stripped [^a-z0-9] with no Unicode normalization first — so it MANGLED
+// accented names instead of folding them:
+//
+//     "Ronald Acuña, Jr."  ->  ronald-acu-a-jr   (n~ became a hyphen)
+//     "José Ramírez"       ->  jos-ram-rez
+//
+// while a user typing "Ronald Acuna Jr" produces ronald-acuna-jr. They could
+// never match. 5.5% of sampled base rows carry non-ASCII names, concentrated in
+// exactly the players who trade most (Acuña, José Ramírez, Báez, Peña).
+//
+// The canonical slugify in hobbyIqCardId.service NFKD-normalizes first, so the
+// combining mark is stripped and n~ folds to n. Use it rather than keeping a
+// third, subtly different implementation in this file.
+const slug = slugify;
 
 function tally(rows: CatalogRow[]): Array<{ setKey: string; count: number }> {
   const counts = new Map<string, number>();
