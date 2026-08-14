@@ -128,3 +128,42 @@ describe("candidate validation uses the id, not the field", () => {
     expect(sameParallelTokens(parallelTokenSet(parallelSegmentOf(candidateId)!), want)).toBe(false);
   });
 });
+
+// CF-PARALLEL-INVARIANT-AT-THE-BOUNDARY (Drew, 2026-08-14: "should we clean the
+// code so it doesn't do it again?").
+//
+// The rule took THREE edits to stamp out — Step 2, Step 3, then the
+// candidate-id check — because it lived in each step instead of in the
+// function's contract. canonicalize() now enforces it once over all 8 exit
+// points, so a Step 5 added later cannot reintroduce it silently.
+//
+// These tests pin the DECISION the wrapper makes, without needing Cosmos:
+// given a slug a step wants to return, does the invariant accept it?
+describe("parallel invariant (boundary contract)", () => {
+  /** Mirrors the wrapper's check. */
+  const accepts = (asked: string, returned: string) => {
+    const seg = parallelSegmentOf(returned);
+    if (seg === null) return true;   // non-canonical id — nothing to compare
+    return sameParallelTokens(parallelTokenSet(seg), parallelTokenSet(slug(asked)));
+  };
+
+  it("accepts a slug whose parallel matches what was asked", () => {
+    expect(accepts("mojo-refractor", "hiq:baseball:2026:bowman-chrome:bcp-41:mojo-refractor:no-auto")).toBe(true);
+  });
+
+  it("accepts a SET change — the family ladder is allowed to cross products", () => {
+    // sapphire -> chrome is family-fallback doing its job; only the parallel
+    // is protected.
+    expect(accepts("speckle-refractor", "hiq:baseball:2026:bowman-chrome:bcp-69:speckle-refractor:no-auto")).toBe(true);
+  });
+
+  it("REJECTS a slug whose parallel differs, whatever step produced it", () => {
+    expect(accepts("speckle-refractor", "hiq:baseball:2026:bowman-chrome-sapphire:bcp-69:base-sapphire-refractor:no-auto")).toBe(false);
+    expect(accepts("mojo-refractor", "hiq:baseball:2026:bowman-chrome:bcp-41:refractor:no-auto")).toBe(false);
+    expect(accepts("purple-prizm", "hiq:baseball:2025:panini-select:122:set-premier-level-black-finite-prizms:no-auto")).toBe(false);
+  });
+
+  it("lets non-canonical vendor ids through — they carry no parallel to check", () => {
+    expect(accepts("mojo-refractor", "cardhedge::1758294615661x386339860558292160::fb2c3e0c")).toBe(true);
+  });
+});
