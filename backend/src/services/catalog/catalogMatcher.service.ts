@@ -252,8 +252,64 @@ export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponen
 // request. A wrong match corrupts the pool permanently; no match is
 // recoverable and asks for the checklist that fixes it. The violation is
 // logged loudly because it means a matcher step has a bug.
+// CF-CATALOG-LOOKUP-CACHE (Drew, 2026-08-14: "we cant wait 18 days for data").
+//
+// Promotion runs ~1s per row, and that cost is NOT HTTP overhead — a local
+// runner with no App Service ceiling was just as slow. It is the catalog
+// lookups: canonicalize issues cross-partition queries against a 25.5M-row
+// container, once per row.
+//
+// Staging rows repeat cards heavily — measured 5.4 rows per distinct card
+// across the pending backlog (150,000 rows touching 27,934 cards). So most of
+// those queries re-ask a question already answered, and memoising turns an
+// 18-day drain into roughly 3.4 days; sharded 6 ways, ~14 hours.
+//
+// TTLs, not permanent memory, because checklists are being INGESTED WHILE THIS
+// RUNS. A cached "not-found" that outlived the checklist that would satisfy it
+// is the failure mode to avoid — it would silently pin a card as unmatchable
+// for the length of the run. So negatives expire fast; positives are safe to
+// hold longer, since a card that exists keeps existing.
+const POSITIVE_TTL_MS = 10 * 60_000;
+const NEGATIVE_TTL_MS = 60_000;
+const CACHE_MAX = 200_000;
+
+interface CacheEntry { result: CatalogMatchResult; expires: number; }
+const _matchCache = new Map<string, CacheEntry>();
+
+function cacheKey(c: HobbyIqCardIdComponents): string {
+  return [c.sport, c.year, c.setKey, c.cardNumber.toUpperCase(), c.parallel.toLowerCase(),
+    c.isAuto ? "1" : "0", c.printRun ?? ""].join("|");
+}
+
+/** Exposed so a long-running drain can reclaim memory between phases. */
+export function clearCatalogMatchCache(): void { _matchCache.clear(); }
+
 export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMatchResult> {
+  // Seeding sources MUST bypass the cache: canonicalize can CREATE a row for
+  // them, and a cache hit would skip that side effect.
+  const seeds = TRUSTED_SOURCES.has(input.source) && process.env.CATALOG_MATCH_ONLY_ENABLED !== "true";
+  const key = seeds ? null : cacheKey(buildComponents(input));
+
+  if (key) {
+    const hit = _matchCache.get(key);
+    if (hit && hit.expires > Date.now()) return hit.result;
+    if (hit) _matchCache.delete(key);
+  }
+
   const result = await canonicalizeImpl(input);
+
+  if (key) {
+    // Cheap bound: drop the oldest insertion when full rather than track LRU.
+    if (_matchCache.size >= CACHE_MAX) {
+      const oldest = _matchCache.keys().next().value;
+      if (oldest !== undefined) _matchCache.delete(oldest);
+    }
+    _matchCache.set(key, {
+      result,
+      expires: Date.now() + (result.found ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS),
+    });
+  }
+
   if (!result.found) return result;
 
   const seg = parallelSegmentOf(result.slug);
@@ -375,12 +431,28 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // A sale whose parallel we cannot find is NOT forced onto a neighbour: it
       // keeps its computed slug and seeds a checklist request, which is real
       // coverage demand and exactly what the seed queue exists to collect.
+      // CF-MATCHER-QUERY-COST (Drew, 2026-08-14: "we need to do it faster").
+      // Profiled at 2,666ms/row — 95.4% of promotion's entire cost. Fixing the
+      // parallel bug I rewrote this as `SELECT TOP 300 * … ORDER BY c.id`,
+      // which does three expensive things against a 25.5M-row container:
+      // pulls FULL documents, fetches 30x the rows, and forces a
+      // CROSS-PARTITION SORT. The ORDER BY existed only for determinism.
+      //
+      // Determinism does not require the database to sort. Project the three
+      // fields actually read, drop the ORDER BY, and sort in memory — a card
+      // has far fewer than 300 parallels, so we still receive the complete
+      // candidate set and the in-memory sort is exactly as deterministic.
       const { resources } = await container.items.query({
-        query: "SELECT TOP 300 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @sk ORDER BY c.id",
+        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          { name: "@n", value: components.cardNumber },
+          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
+          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
+          // identical 49-row result set. card_catalog stores cardNumber
+          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
+          // this is the same comparison at 6.5x lower cost.
+          { name: "@n", value: components.cardNumber.toUpperCase() },
           { name: "@a", value: components.isAuto },
           { name: "@sk", value: components.setKey },
         ],
@@ -443,12 +515,18 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // 0.55 guess rewrote a sale's identity exactly as authoritatively as a
       // 0.98 exact match. Crossing the family ladder is defensible; silently
       // changing which card it is, is not.
+      // Same projection + no cross-partition sort as Step 2 (CF-MATCHER-QUERY-COST).
       const { resources } = await container.items.query({
-        query: "SELECT TOP 300 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @fk ORDER BY c.id",
+        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @fk OFFSET 0 LIMIT 300",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          { name: "@n", value: components.cardNumber },
+          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
+          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
+          // identical 49-row result set. card_catalog stores cardNumber
+          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
+          // this is the same comparison at 6.5x lower cost.
+          { name: "@n", value: components.cardNumber.toUpperCase() },
           { name: "@a", value: components.isAuto },
           { name: "@fk", value: familyKey },
         ],
