@@ -139,32 +139,93 @@ export function enumerateCandidateUrls(input: UrlDiscoveryInput): DiscoveryAttem
   const months = input.months ?? ALL_MONTHS;
   const suffixes = input.suffixes ?? SUFFIX_TRY_ORDER;
 
+  const yearTokens = yearTokensFor(input.year, input.sport);
+
   const out: DiscoveryAttempt[] = [];
   for (const variant of brandVariants) {
-    for (const month of months) {
-      for (const placement of SPORT_PLACEMENTS) {
-        // "omitted" does not interpolate the sport, so casing is irrelevant —
-        // emitting both would just duplicate every probe and eat the cap.
-        const casings = placement === "omitted" ? [input.sport] : sportCasings(input.sport);
-        for (const sportCasing of casings) {
-          for (const suffix of suffixes) {
-            const filename = renderFilename(input.year, variant, sportCasing, placement, suffix);
-            const url = `${S3_HOST}${S3_PATH_PREFIX}/${input.year}/${month}/${filename}`;
-            out.push({
-              url,
-              brandVariant: variant,
-              month,
-              suffix,
-              sportPlacement: placement,
-              withSport: placement !== "omitted",
-              status: 0,
-            });
+    for (const yearToken of yearTokens) {
+      for (const month of months) {
+        for (const placement of SPORT_PLACEMENTS) {
+          // "omitted" does not interpolate the sport, so casing is irrelevant —
+          // emitting both would just duplicate every probe and eat the cap.
+          const casings = placement === "omitted" ? [input.sport] : sportCasings(input.sport);
+          for (const sportCasing of casings) {
+            for (const suffix of suffixes) {
+              const filename = renderFilename(yearToken, variant, sportCasing, placement, suffix);
+              const url = `${S3_HOST}${S3_PATH_PREFIX}/${input.year}/${month}/${filename}`;
+              out.push({
+                url,
+                brandVariant: variant,
+                month,
+                suffix,
+                sportPlacement: placement,
+                withSport: placement !== "omitted",
+                status: 0,
+              });
+            }
           }
         }
       }
     }
   }
-  return out;
+
+  // CF-BECKETT-PROBE-ORDER (Drew, 2026-08-13). Adding season tokens tripled the
+  // candidate space to ~1,700 per tuple, and the nested loops walk the EXOTIC
+  // dimensions (suffix -2/-3/-4, sport placement, lowercase sport) before
+  // finishing the months — so a real file in a late month sat past the probe
+  // cap and was reported missing. Live example: 2024-25 Panini Prizm Basketball
+  // exists at /2025/02/ and was still "not found" after 400 probes.
+  //
+  // Order by how Beckett actually names things instead: no suffix, sport as
+  // prefix, capitalised sport. That shape covers essentially every observed
+  // hit, so the common case now resolves within (yearTokens × months) probes —
+  // ~36 — and the odd shapes remain reachable behind it rather than crowding
+  // it out. Stable sort, so month/variant/season order is preserved inside a
+  // tier.
+  const tier = (a: DiscoveryAttempt): number =>
+    (a.suffix === "" ? 0 : 4) +
+    (a.sportPlacement === "prefix" ? 0 : a.sportPlacement === "suffix" ? 1 : 2);
+  return out
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => tier(x.a) - tier(y.a) || x.i - y.i)
+    .map(({ a }) => a);
+}
+
+/**
+ * CF-BECKETT-SEASON-YEAR (Drew, 2026-08-13: "check for basketball football and
+ * hocket, we need it").
+ *
+ * Basketball and hockey are SEASON-dated products — "2023-24 Panini Prizm
+ * Basketball", "2024-25 O-Pee-Chee Hockey" — and Beckett names the file to
+ * match. We only ever rendered a single year, so those files were never
+ * enumerated and every basketball/hockey seed came back "no checklist
+ * published". That is ~15,300 of the queue's demand written off as unservable
+ * while the checklists were sitting there.
+ *
+ * Probed 2026-08-13, single-year vs season for the same product:
+ *
+ *   2024-Panini-Prizm-Basketball-Checklist.xlsx      not found
+ *   2023-24-Panini-Prizm-Basketball-Checklist.xlsx   FOUND
+ *   2024-25-Panini-Prizm-Basketball-Checklist.xlsx   FOUND
+ *   2024-25-Topps-Chrome-Basketball-Checklist.xlsx   FOUND
+ *   2024-25-O-Pee-Chee-Hockey-Checklist.xlsx         FOUND
+ *
+ * Baseball and football stay single-year (2024-Panini-Prizm-Football resolves),
+ * so season tokens are added only for the season sports — otherwise every
+ * baseball probe would triple for nothing and eat the probe cap.
+ *
+ * The plain year is emitted FIRST so single-year products still resolve in one
+ * probe, and BOTH adjacent seasons are tried because a seed's `year` may be
+ * either half of the season it came from. The upload-year folder stays
+ * `input.year`, which is what actually hosts these: 2024-25 lives under /2025/.
+ */
+const SEASON_SPORTS = new Set(["basketball", "hockey"]);
+
+export function yearTokensFor(year: number, sport: string): readonly string[] {
+  const plain = String(year);
+  if (!SEASON_SPORTS.has(String(sport ?? "").trim().toLowerCase())) return [plain];
+  const yy = (y: number) => String(y % 100).padStart(2, "0");
+  return [plain, `${year - 1}-${yy(year)}`, `${year}-${yy(year + 1)}`];
 }
 
 /**
@@ -192,7 +253,7 @@ function sportCasings(sport: string): readonly string[] {
 }
 
 function renderFilename(
-  year: number,
+  year: number | string,
   variant: string,
   sport: string,
   placement: SportPlacement,
@@ -213,7 +274,21 @@ function resolveBrandVariants(brand: string): readonly string[] {
   if (registryEntry && registryEntry.urlVariants.length > 0) {
     return registryEntry.urlVariants;
   }
-  return BRAND_VARIANTS[brand] ?? [brand];
+  const known = BRAND_VARIANTS[brand];
+  if (known) return known;
+  // CF-BECKETT-BRAND-SPACES (Drew, 2026-08-13). The fallback returned the brand
+  // VERBATIM, so any brand absent from both the registry and BRAND_VARIANTS —
+  // which is every Panini product — rendered a filename containing spaces:
+  //
+  //   2024-25-Panini Prizm-Basketball-Checklist.xlsx   (probed, never exists)
+  //   2024-25-Panini-Prizm-Basketball-Checklist.xlsx   (the file that exists)
+  //
+  // BRAND_VARIANTS only covers the Bowman family, so the Bowman/Topps brands
+  // resolved via the registry and hid this. Beckett hyphenates spaces in every
+  // observed filename; emit that form first, and keep the raw string as a
+  // fallback in case a brand genuinely contains no separator.
+  const hyphenated = brand.trim().replace(/\s+/g, "-");
+  return hyphenated === brand ? [brand] : [hyphenated, brand];
 }
 
 /**
