@@ -1,0 +1,33 @@
+{
+  "source": "cardboard-connection",
+  "sourceUrl": "https://www.cardboardconnection.com/2003-topps-baseball-cards",
+  "year": 2003,
+  "setKey": "topps",
+  "setName": "2003 Topps",
+  "sport": "baseball",
+  "rows": 1154,
+  "deduped": 1,
+  "sections": {
+    "Base": 718,
+    "Base Variations": 45,
+    "All-Stars": 20,
+    "Autographs": 6,
+    "Blue Backs": 40,
+    "Box Bottoms": 32,
+    "Draft Picks Bonus": 10,
+    "First Year Player Bonus": 10,
+    "Hit Parade": 30,
+    "Hobby Masters": 20,
+    "Own the Game": 30,
+    "Prime Cuts Pine Tar Relics": 19,
+    "Prime Cuts Relics": 9,
+    "Prime Cuts Trademark Relics": 19,
+    "Record Breakers": 44,
+    "Record Breakers Relics": 13,
+    "Record Breakers Nolan Ryan": 7,
+    "Red Backs": 40,
+    "Team Topps Legends Autographs": 28,
+    "Turn Back the Clock Autographs": 14
+  },
+  "fetchedAt": "2026-08-14T00:11:19.530Z"
+}
