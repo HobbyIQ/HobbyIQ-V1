@@ -1052,6 +1052,23 @@ describe("serial is not a card number", () => {
     expect(r.printRun).toBeNull();
   });
 
+  // CF-TCG-NUMBER-BEFORE-HASH. The VERBATIM listing title — the version above
+  // had its "#" removed when the test was written, which is exactly why it
+  // passed while the real input failed. Sellers write both forms, and on the
+  // "#" form the generic #-prefix rule used to win and return "044",
+  // silently dropping "/193" — a different card number, matching nothing.
+  it("keeps the TCG card number when it is written with a # prefix", () => {
+    const r = parseListingIdentity("PIKACHU EX 2025 POKEMON JAPANESE MEGA DREAM EX HOLO DOUBLE RARE #044/193 CGC 10");
+    expect(r.cardNumber).toBe("044/193");
+    expect(r.printRun).toBeNull();
+  });
+
+  it("a bare #NNN TCG number with no set total is still read as-is", () => {
+    // "#072" with no "/total" is a real card number, not a truncated one.
+    const r = parseListingIdentity("2021 POKEMON SWORD & SHIELD SHINING FATES #072 FULL ART/SKYLA PSA 10");
+    expect(r.cardNumber).toBe("072");
+  });
+
   it("a secret rare numbered above set size still parses", () => {
     const r = parseListingIdentity("Charizard VMAX 294/217 Pokemon Secret Rare");
     expect(r.cardNumber).toBe("294/217");

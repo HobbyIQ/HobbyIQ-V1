@@ -44,11 +44,16 @@ import { classifyTcg } from "./tcgVertical.service.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
- *  is enforced, not num <= total. */
-const TCG_NUMBER_RE = /(?:^|\s)(\d{1,3})\/(\d{1,3})(?:\s|$)/;
+ *  is enforced, not num <= total.
+ *
+ *  The `#` in the leading class matters: sellers write BOTH "40/147" and
+ *  "#044/193". Without it the generic #-prefix rule wins on the second form,
+ *  returns "044", and silently drops the set half — which is a different card
+ *  number and matches nothing. */
+const TCG_NUMBER_RE = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?:\s|$)/;
 /** Global twin of the above, used to REMOVE the token before print-run
  *  extraction so a set size is never mistaken for a print run. */
-const TCG_NUMBER_RE_G = /(?:^|\s)(\d{1,3})\/(\d{1,3})(?=\s|$)/g;
+const TCG_NUMBER_RE_G = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?=\s|$)/g;
 
 export interface ParseListingIdentityOptions {
   /** Vertical when the caller already knows it (vendor feed field, resolved
@@ -411,6 +416,24 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
 }
 
 function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false): string | null {
+  // CF-TCG-NUMBER-BEFORE-HASH (Drew, 2026-08-14). In TCG the POS/TOTAL rule
+  // must run FIRST. Sellers write the number both ways — "40/147" and
+  // "#044/193" — and on the second form the generic #-prefix rule below
+  // matches "044" and returns early, dropping "/193". That is not a smaller
+  // answer, it is a DIFFERENT card number, and it matches no catalog row.
+  //
+  // Caught only by running the verbatim listing title through the compiled
+  // parser: the unit test had been written against the same title with the
+  // "#" removed, so it passed while the real input failed.
+  if (isTcg && !cardNumberRe) {
+    const tcg = title.match(TCG_NUMBER_RE);
+    if (tcg) {
+      const num = Number(tcg[1]); const total = Number(tcg[2]);
+      if (num > 0 && num <= 400 && total > 0 && total <= 400) {
+        return `${tcg[1]}/${tcg[2]}`;
+      }
+    }
+  }
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
   const m = title.match(re);
   if (m) return m[1].toUpperCase();
@@ -435,15 +458,9 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
   // The bound was never the right discriminator, because `N/M` is not
   // ambiguous once you know the vertical: in TCG it is the card number, in
   // sports it is a serial. Gate on the vertical, not on the magnitude.
-  if (isTcg) {
-    const tcg = title.match(TCG_NUMBER_RE);
-    if (tcg) {
-      const num = Number(tcg[1]); const total = Number(tcg[2]);
-      if (num > 0 && num <= 400 && total > 0 && total <= 400) {
-        return `${tcg[1]}/${tcg[2]}`;
-      }
-    }
-  }
+  //
+  // The TCG branch itself now runs at the TOP of this function — see
+  // CF-TCG-NUMBER-BEFORE-HASH — because it has to beat the #-prefix rule.
   return null;
 }
 
