@@ -916,6 +916,23 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
 }
 
 /** Infer sport from a title. Falls back to a caller-supplied default. */
+/**
+ * @deprecated Use `resolveVertical()` from resolveVertical.service.ts.
+ *
+ * CF-VERTICAL-NOT-SPORT (Drew, 2026-08-13: "so maybe calling it sport is
+ * wrong?"). Two problems, both caused by the name:
+ *
+ *   1. It resolves a VERTICAL, not a sport. Pokemon, Yu-Gi-Oh and One Piece are
+ *      not sports, and modelling them as one is why they had nowhere to go.
+ *   2. `fallback = "baseball"` means an unidentifiable card silently BECOMES a
+ *      baseball card, and the return type cannot express the difference between
+ *      "this is baseball" and "I could not tell". That produced slugs like
+ *      hiq:baseball:2003:ex-sandstorm:87100 which can never match anything, and
+ *      left card_catalog 93.6% sport=baseball.
+ *
+ * Kept as-is because 800 references read this field; resolveVertical() wraps it
+ * and reports confidence. Do not add new callers.
+ */
 export function inferSportFromTitle(title: string, fallback = "baseball"): string {
   const t = String(title ?? "").toLowerCase();
   if (/football|nfl\b/.test(t)) return "football";

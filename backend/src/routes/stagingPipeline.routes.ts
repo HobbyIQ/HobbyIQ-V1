@@ -116,7 +116,7 @@ router.get("/staging/health", async (_req, res, next) => {
     if (!conn) return res.json({ success: true, counts: {}, note: "cosmos not configured" });
     const client = new CosmosClient(conn);
     const staging = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container(process.env.COSMOS_COMPS_STAGING_CONTAINER ?? "comps_staging");
-    const statuses = ["pending", "clean", "anomaly", "verified", "pending-manual", "promoted", "awaiting-catalog"] as const;
+    const statuses = ["pending", "clean", "anomaly", "verified", "pending-manual", "promoted", "awaiting-catalog", "holding-tcg"] as const;
     const counts: Record<string, number> = {};
     await Promise.all(statuses.map(async (s) => {
       const { resources } = await staging.items.query<number>({
