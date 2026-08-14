@@ -45,9 +45,19 @@ on:
         # complete. Measured on f5cbed54 after the RU fix:
         #   limit=200 -> 132s (90 rows/min)
         #   limit=400 -> 195s (123 rows/min)   <- completes, with headroom
-        # 400 is the largest size that reliably returns inside the ceiling.
-        description: 'Promotion batch size PER SHARD (must finish inside 240s)'
-        default: '400'
+        # CORRECTION (2026-08-14, same day): 400 was sized from a 195s
+        # measurement against a --max-time of 200s. A five-second margin is not
+        # a margin. Measured on the cron itself, shards 1/3/5 returned in
+        # 114-121s while shards 0/2/4 hit the timeout exactly — same batch size,
+        # ~2x spread, because per-row matcher cost varies by set.
+        #
+        # "Largest size that completes" was the wrong target; it has to be the
+        # largest that completes on the SLOWEST shard, on a bad day. 250 lands
+        # around 120s at the observed rate, leaving real headroom, and the
+        # curl timeout below is raised to the App Service ceiling so a slow
+        # shard is killed by the server rather than by us at 200s.
+        description: 'Promotion batch size PER SHARD (must finish well inside 240s)'
+        default: '250'
       shards:
         # Throughput is per-worker (123 rows/min), so shards are the multiplier.
         # 4 shards = ~708K rows/day against ~300K/day inbound — enough to stay
@@ -157,7 +167,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.promotion_limit || '400' }}
+          LIMIT: ${{ inputs.promotion_limit || '250' }}
           SHARDS: ${{ inputs.shards || '6' }}
         run: |
           pids=""
@@ -165,7 +175,7 @@ jobs:
             (
               R=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
                 "$BASE/api/staging/promotion?limit=$LIMIT&shard=$i&shards=$SHARDS" \
-                --max-time 200) || { echo "promotion shard $i FAILED"; exit 1; }
+                --max-time 240) || { echo "promotion shard $i FAILED"; exit 1; }
               echo "shard $i: $(echo "$R" | jq -c '{scanned,promoted,awaitingCatalog,errors}')"
             ) &
             pids="$pids $!"
