@@ -156,6 +156,57 @@ export function parallelSegmentOf(id: string): string | null {
   return p.length >= 7 && p[0] === "hiq" ? (p[5] ?? "") : null;
 }
 
+// CF-CONFIDENCE-MUST-BE-HONOURED (Drew, 2026-08-14: "lets fix it").
+//
+// canonicalize() has always returned a confidence, and BOTH rebind sites
+// ignored it:
+//
+//   if (resolved.found) slug = resolved.slug;
+//
+// So a 0.55 family-fallback guess rewrote a sale's identity exactly as
+// authoritatively as a 0.98 exact match. That is worse than having no score at
+// all, because the score's existence implies a check that was never performed.
+//
+// The threshold sits above family-fallback (0.55) and below fuzzy-parallel
+// (0.72). Rationale: since CF-PARALLEL-IS-IDENTITY, a fuzzy-parallel match is
+// parallel-verified — it can only differ in token ORDER — so adopting it is
+// safe. family-fallback is the one that changes the PRODUCT
+// (bowman-chrome-sapphire -> bowman-chrome), and Sapphire is not Chrome: those
+// are different cards at different prices, so collapsing one into the other
+// corrupts both pools exactly like the parallel bug did.
+//
+// A rejected rebind is not a dropped sale. The caller keeps its computed slug
+// and seeds a checklist request — recoverable, and it asks for the checklist
+// that would make the match exact next time.
+export const MIN_REBIND_CONFIDENCE = 0.7;
+
+export interface SlugAdoption {
+  slug: string;
+  rebound: boolean;
+  /** Set when a match existed but was refused, so callers can log it. */
+  refusedReason?: string;
+}
+
+/**
+ * The ONE place a resolved slug may replace a computed one.
+ *
+ * Both ingest paths (recordSoldComp, persistVendorSalesToPool) had their own
+ * copy of this decision, which is how the same invariant needed fixing twice.
+ * Route every adoption through here so they cannot diverge again.
+ */
+export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchResult): SlugAdoption {
+  if (!resolved.found || !resolved.slug) return { slug: computedSlug, rebound: false };
+  if (resolved.slug === computedSlug) return { slug: computedSlug, rebound: false };
+  if (resolved.confidence < MIN_REBIND_CONFIDENCE) {
+    return {
+      slug: computedSlug,
+      rebound: false,
+      refusedReason: `confidence ${resolved.confidence} < ${MIN_REBIND_CONFIDENCE} (${resolved.matchedBy})`,
+    };
+  }
+  return { slug: resolved.slug, rebound: true };
+}
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
@@ -180,7 +231,56 @@ export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponen
 
 /** The main entry point — resolve an identity claim to a canonical
  *  catalog slug. */
+// CF-PARALLEL-INVARIANT-AT-THE-BOUNDARY (Drew, 2026-08-14: "should we clean
+// the code so it doesn't do it again?").
+//
+// The parallel-identity bug took THREE edits to stamp out — Step 2, then Step
+// 3, then the candidate-id check — because the rule lived in each step rather
+// than in the function's contract. A Step 5 added later would reintroduce it,
+// and nothing would notice until pools were already corrupted.
+//
+// So the rule is enforced ONCE, here, over every exit point (there are 8):
+//
+//   canonicalize() MUST NOT return a slug whose parallel differs from the
+//   parallel it was asked about.
+//
+// Crossing SETS is still allowed — that is the product-family ladder's job.
+// Changing WHICH CARD it is, is not.
+//
+// On violation we do not silently correct: the resolution is rejected
+// (found:false), so the caller keeps its computed slug and seeds a checklist
+// request. A wrong match corrupts the pool permanently; no match is
+// recoverable and asks for the checklist that fixes it. The violation is
+// logged loudly because it means a matcher step has a bug.
 export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMatchResult> {
+  const result = await canonicalizeImpl(input);
+  if (!result.found) return result;
+
+  const seg = parallelSegmentOf(result.slug);
+  // Non-canonical ids (cardhedge::…) carry no parallel segment to check.
+  if (seg === null) return result;
+
+  const want = parallelTokenSet(slugify(canonicalizeParallelName(input.parallel)));
+  if (sameParallelTokens(parallelTokenSet(seg), want)) return result;
+
+  console.warn(JSON.stringify({
+    event: "catalog_match_parallel_invariant_violated",
+    source: "catalogMatcher.canonicalize",
+    matchedBy: result.matchedBy,
+    confidence: result.confidence,
+    askedParallel: input.parallel,
+    returnedSlug: result.slug,
+    detail: "a matcher step returned a different parallel; rejecting the match",
+  }));
+  return {
+    slug: computeHobbyIqCardId(buildComponents(input)),
+    found: false,
+    confidence: 0.3,
+    matchedBy: "not-found",
+  };
+}
+
+async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchResult> {
   const components = buildComponents(input);
   const canonicalSlug = computeHobbyIqCardId(components);
   const container = await getContainer();

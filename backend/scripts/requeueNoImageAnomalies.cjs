@@ -42,6 +42,20 @@ const { CosmosClient } = require("@azure/cosmos");
 
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
+// CF-REJUDGE-ALL (Drew, 2026-08-13: "what about fixing the anamoly?").
+//
+// The selective predicate below frees a row only when EVERY verdict on it is
+// stale, which is right when one rule changed. But the rules have now changed
+// repeatedly (no-image, price band, setKey upgrade, and the 2026-08-06
+// parallel-direction guard), and the pile is full of verdicts recorded before
+// those fixes — e.g. "title parallel Base disagrees with staging parallel gold"
+// on a title that literally ends in "Gold", which current code already
+// suppresses. Those rows will never be freed selectively because the predicate
+// cannot tell a stale verdict from a live one for that emitter.
+//
+// --all requeues every anomaly row for a fresh verdict under current rules.
+// Idempotent: a genuinely anomalous row is simply re-flagged. Costs a scan.
+const ALL = args.includes("--all");
 const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 const MAX = Number(val("--max", "50000"));
 const PAGE = Number(val("--page", "1000"));
@@ -124,7 +138,7 @@ async function handle(row) {
   const anomalies = row?._anoms ?? row?.clean?.anomalies ?? [];
   if (anomalies.length === 0) { stats.noAnomalyBlock++; return; }
 
-  const stillValid = anomalies.filter((a) => !isStaleVerdict(a));
+  const stillValid = ALL ? [] : anomalies.filter((a) => !isStaleVerdict(a));
   if (stillValid.length > 0) {
     stats.keptRealAnomaly++;
     for (const a of stillValid) keptReasons[a.kind] = (keptReasons[a.kind] ?? 0) + 1;
