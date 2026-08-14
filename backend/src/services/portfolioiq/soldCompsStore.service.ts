@@ -1507,9 +1507,31 @@ export async function readCompsByCardId(input: {
   // only). Cross-partition since we can't scope to a partition when
   // matching on non-partition-key field. Costs a few extra RUs but
   // consistent with the pool query in unifiedPricing.service.ts.
+  // CF-RECENT-SALES-DROP-THE-OR (Drew, 2026-08-14: card page "Request timed
+  // out after 30s" on a holding whose comps demonstrably exist).
+  //
+  // The OR is what times out. One side is the partition key and the other is
+  // not, so Cosmos can target a partition for NEITHER and fans out across all
+  // of them, dragging whole documents (SELECT *) back from each and then
+  // sorting 5.6M rows. Measured separately, the same lookup by hobbyiqCardId
+  // alone is 631ms / 22 RU — it is the OR that is expensive, not the data.
+  //
+  // The OR was never needed, because the two cases are disjoint by input:
+  //   a "hiq:" slug   -> match hobbyiqCardId. Rows already migrated so
+  //                      cardId === the slug carry the SAME value in
+  //                      hobbyiqCardId, so this still finds them.
+  //   a vendor cardId -> match cardId, partition-scoped. No row carries a
+  //                      vendor id in hobbyiqCardId, so the other side could
+  //                      never have contributed anything.
+  //
+  // Branching keeps this to a SINGLE query, which also matters for the
+  // existing tests: they stub one items.query call, and a two-query version
+  // broke 7 of them by consuming a mock that only answers once.
+  const looksLikeHiqSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
+  const matchField = looksLikeHiqSlug ? "c.hobbyiqCardId" : "c.cardId";
   const q = {
     query:
-      "SELECT * FROM c WHERE (c.cardId = @cid OR c.hobbyiqCardId = @cid) AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC",
+      `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC`,
     parameters: [
       { name: "@cid", value: input.cardId },
       { name: "@from", value: from },
