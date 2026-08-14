@@ -16,6 +16,49 @@
 //   whitelist when the target card is known (e.g. "only accept CPA-EHA
 //   for Eric Hartman queries") via the optional cardNumberRe.
 
+// CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14: "fix it").
+//
+// The TCG `POS/TOTAL` card-number rule below had no vertical guard, so it fired
+// on SPORTS titles too, where `N/M` means something completely different:
+//
+//   "Macklin Celebrini OL 22/30"
+//     cardNumber "22/30" -> slug ...:2230:...  + printRun 30
+//
+// 22/30 is a SERIAL. The real card number is "OL", sitting in the same title,
+// discarded. One token consumed twice, and the resulting slug can never match —
+// no checklist contains card #2230. Verified against raw titles: 206 of 208
+// decided cases were this bug (99%), covering ~6,500 slugs and ~32,000 stuck
+// sales, with ~5,600 phantom cards already in sold_comps.
+//
+// The Pokemon half is the mirror image. There, "40/147" really IS the card
+// number (card 40 of a 147-card set) — but extractPrintRun ALSO read 147 as a
+// print run, so the slug carried `:num-147` and matched nothing. A set size is
+// not a print run.
+//
+// Both halves are the same root cause: the `N/M` token was interpreted without
+// asking what it means in this vertical. So the vertical now decides. It is
+// taken from the caller when known, and otherwise detected from the title by
+// classifyTcg — the same pure classifier the ingest path already uses, so the
+// two cannot disagree.
+import { classifyTcg } from "./tcgVertical.service.js";
+
+/** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
+ *  (secret/hyper rares are numbered above set size), so only the <=400 bound
+ *  is enforced, not num <= total. */
+const TCG_NUMBER_RE = /(?:^|\s)(\d{1,3})\/(\d{1,3})(?:\s|$)/;
+/** Global twin of the above, used to REMOVE the token before print-run
+ *  extraction so a set size is never mistaken for a print run. */
+const TCG_NUMBER_RE_G = /(?:^|\s)(\d{1,3})\/(\d{1,3})(?=\s|$)/g;
+
+export interface ParseListingIdentityOptions {
+  /** Vertical when the caller already knows it (vendor feed field, resolved
+   *  slug, etc). Authoritative — checked before title detection. */
+  vertical?: string | null;
+  /** Canonical slug when available. Carries the setKey, which survives in
+   *  cases where the title is too terse to classify. */
+  hobbyiqCardId?: string | null;
+}
+
 export interface ParsedListingIdentity {
   cardNumber: string | null;
   parallel: string;
@@ -93,9 +136,21 @@ const AUTO_NEGATIVE_RE = /auto\s+relic|auto\s+patch/i;
 export function parseListingIdentity(
   title: string,
   cardNumberRe?: RegExp,
+  opts?: ParseListingIdentityOptions,
 ): ParsedListingIdentity {
   const t = String(title ?? "");
-  const cardNumber = extractCardNumber(t, cardNumberRe);
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER. Decide the vertical ONCE, then let it govern
+  // both readings of the `N/M` token. Callers that know the vertical should say
+  // so — title detection is a fallback, and a Pokemon listing too terse to
+  // classify will now yield cardNumber=null rather than a confidently wrong
+  // number. Null is recoverable; a wrong identity silently files a real sale
+  // against a card that does not exist.
+  const isTcg = classifyTcg({
+    sport: opts?.vertical ?? null,
+    title: t,
+    hobbyiqCardId: opts?.hobbyiqCardId ?? null,
+  }).isTcg;
+  const cardNumber = extractCardNumber(t, cardNumberRe, isTcg);
   // CF-CARDNUMBER-IMPLIES-AUTO (Drew, 2026-07-30). Auto-subset card
   // numbers carry a fixed prefix on ALL products — CPA-, BCPA-, BSPA-,
   // BDA-, BPA-, BCRA-, TCRA-, CA-, SPA-, CPALD-, etc. If the title
@@ -109,7 +164,7 @@ export function parseListingIdentity(
     cardNumber,
     parallel: extractParallel(t),
     isAuto,
-    printRun: extractPrintRun(t),
+    printRun: extractPrintRun(t, isTcg),
     autoStyle: isAuto ? extractAutoStyle(t) : null,
     gradeCompany: grade.gradeCompany,
     gradeValue: grade.gradeValue,
@@ -355,7 +410,7 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
   return false;
 }
 
-function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null {
+function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false): string | null {
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
   const m = title.match(re);
   if (m) return m[1].toUpperCase();
@@ -370,11 +425,23 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null 
   // CAN exceed the total (secret/hyper rares are numbered above set
   // total). Constrain both to <=400 so we don't accidentally consume
   // sports print runs like /999 or /2011.
-  const tcg = title.match(/(?:^|\s)(\d{1,3})\/(\d{1,3})(?:\s|$)/);
-  if (tcg) {
-    const num = Number(tcg[1]); const total = Number(tcg[2]);
-    if (num > 0 && num <= 400 && total > 0 && total <= 400) {
-      return `${tcg[1]}/${tcg[2]}`;
+  //
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14). The <=400 bound was the
+  // ONLY guard, and it does not separate the two meanings at all: a sports
+  // serial like "22/30" or "49/75" sits comfortably inside it. So this rule
+  // fired on sports titles and turned serials into card numbers — 99% wrong
+  // where it fired, and it reached sold_comps as phantom cards.
+  //
+  // The bound was never the right discriminator, because `N/M` is not
+  // ambiguous once you know the vertical: in TCG it is the card number, in
+  // sports it is a serial. Gate on the vertical, not on the magnitude.
+  if (isTcg) {
+    const tcg = title.match(TCG_NUMBER_RE);
+    if (tcg) {
+      const num = Number(tcg[1]); const total = Number(tcg[2]);
+      if (num > 0 && num <= 400 && total > 0 && total <= 400) {
+        return `${tcg[1]}/${tcg[2]}`;
+      }
     }
   }
   return null;
@@ -405,12 +472,21 @@ function extractAutoStyle(title: string): "on-card" | "sticker" | null {
  *  - "77/199"
  *  - "/199" (unnumbered format when only the denominator appears)
  *  - "#/50 Braves" (numerator absent) */
-function extractPrintRun(title: string): number | null {
+function extractPrintRun(title: string, isTcg = false): number | null {
+  let t = title;
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14). In TCG, "40/147" is
+  // card-40-of-a-147-card-set. 147 is the SET SIZE, not a print run — Burning
+  // Shadows was not a 147-copy print. Both branches below would have claimed
+  // it (the serial branch reads the denominator; the standalone branch matches
+  // the "/147" substring), so the token is removed rather than skipped. That
+  // leaves a genuinely numbered TCG parallel — "... 40/147 ... /25" — still
+  // able to report /25 correctly.
+  if (isTcg) t = t.replace(TCG_NUMBER_RE_G, " ");
   // First look for X/Y serial style — denominator is the print run
-  const serial = title.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,3})(?:\D|$)/);
+  const serial = t.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,3})(?:\D|$)/);
   if (serial) return Number(serial[2]);
   // Fall back to /N standalone
-  const slash = title.match(/\/(\d{1,4})(?:\D|$)/);
+  const slash = t.match(/\/(\d{1,4})(?:\D|$)/);
   if (slash) {
     const n = Number(slash[1]);
     // Guard against grabbing a random number (e.g. "/2024") — cap
