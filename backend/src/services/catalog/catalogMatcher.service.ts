@@ -130,6 +130,25 @@ const PARALLEL_ALIAS_MAP: Record<string, string> = {
   "base refractor": "Refractor",
 };
 
+/** CF-PARALLEL-IS-IDENTITY. Tokens of a parallel slug, as an order-independent
+ *  set. Empty and "base" collapse to the same thing so an absent parallel and
+ *  an explicit "Base" compare equal. */
+export function parallelTokenSet(slug: string): Set<string> {
+  const toks = String(slug ?? "").split("-").map((t) => t.trim()).filter(Boolean);
+  const meaningful = toks.filter((t) => t !== "base");
+  return new Set(meaningful.length ? meaningful : ["base"]);
+}
+
+/** True only when two parallels carry exactly the same tokens. Deliberately
+ *  NOT a subset test: "refractor" ⊂ "green-refractor", but a sale that says
+ *  only "Refractor" is not evidence of a Green Refractor, and treating it as
+ *  such is how a plain Refractor became a `common-green-refractor /75`. */
+export function sameParallelTokens(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const t of a) if (!b.has(t)) return false;
+  return true;
+}
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
@@ -185,11 +204,10 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     // Non-fatal — item not found → try fuzzy paths below.
   }
 
-  // Step 2: fuzzy-parallel match — same year/set/cardNumber/isAuto,
-  // any parallel that shares a token with our canonical parallel.
+  // Step 2: parallel match — same year/set/cardNumber/isAuto, and the SAME
+  // parallel, allowing only for token order and alias differences.
   const parallelSlug = slugify(components.parallel);
-  const parallelToken = parallelSlug.split("-").filter(Boolean).slice(-1)[0]; // last token — usually the color
-  if (parallelToken && components.cardNumber) {
+  if (parallelSlug && components.cardNumber) {
     try {
       // CF-FUZZY-PARALLEL-SAME-SET (Drew, 2026-08-13). This step's own comment
       // promises "same year/set/cardNumber", but the query never constrained
@@ -209,28 +227,70 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
       // cards we hold canonically, and proposing `cardhedge::…` as a holding's
       // identity points pricing at a vendor's copy instead of the card. That is
       // how "2020 Bowman Witt #BD152" resolved to a cardhedge:: slug.
+      // CF-PARALLEL-IS-IDENTITY (Drew, 2026-08-13: "why is it getting written
+      // to the wrong card when it is clear what it is").
+      //
+      // This step used to reduce the parallel to ONE token and search on it:
+      //
+      //   parallelSlug.split("-").slice(-1)[0]   // "last token — usually the color"
+      //   ... CONTAINS(LOWER(c.parallelSlug), @tok)
+      //
+      // The comment had it backwards. Real parallels are "<Color> <Family>", so
+      // the LAST token is the generic family word every parallel in the set
+      // shares, and the discarded prefix is the only part that identifies the
+      // card:
+      //
+      //   mojo-refractor         -> "refractor"
+      //   purple-prizm           -> "prizm"
+      //   blue-pulsar-prizm      -> "prizm"
+      //   mini-diamond-refractor -> "refractor"
+      //
+      // CONTAINS(parallelSlug,'refractor') then matches EVERY refractor in the
+      // set, and `TOP 10` with no ORDER BY handed back an arbitrary sample from
+      // which .find() took the first canonical row. Measured on prod: 41 of 300
+      // promoted sales (13.7%) were rebound onto a DIFFERENT parallel —
+      //
+      //   mojo-refractor            -> refractor
+      //   purple-prizm /149         -> premier-level-black-finite-prizms /1
+      //   mini-diamond-refractor /99-> negative-refractor
+      //   mojo-prizm /36            -> prizm-blue /199
+      //
+      // — each one a collector-distinct card at a different value, corrupting
+      // both pools and the FMV computed from them, while reporting confidence
+      // 0.72 so nothing downstream questioned it.
+      //
+      // Now: fetch the card's parallels deterministically and require the
+      // candidate's parallel TOKEN SET to equal ours. That still absorbs what
+      // this step is for — token order ("blue-refractor" vs "refractor-blue")
+      // and printRun-suffix differences, which do not appear in parallelSlug —
+      // while making it impossible to swap one specific parallel for another.
+      //
+      // A sale whose parallel we cannot find is NOT forced onto a neighbour: it
+      // keeps its computed slug and seeds a checklist request, which is real
+      // coverage demand and exactly what the seed queue exists to collect.
       const { resources } = await container.items.query({
-        query: "SELECT TOP 10 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @sk AND CONTAINS(LOWER(c.parallelSlug ?? c.parallel ?? ''), @tok)",
+        query: "SELECT TOP 300 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @sk ORDER BY c.id",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
           { name: "@n", value: components.cardNumber },
           { name: "@a", value: components.isAuto },
           { name: "@sk", value: components.setKey },
-          { name: "@tok", value: parallelToken },
         ],
       }).fetchAll();
 
-      // Prefer a canonical row, then an ungraded one — grade variants share the
-      // card's identity fields and would otherwise win arbitrarily on TOP order.
-      const ranked = (resources as Array<{ id: string }>)
-        .filter((r) => typeof r?.id === "string")
+      const want = parallelTokenSet(parallelSlug);
+      const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
+        .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
+        .filter((r) => sameParallelTokens(parallelTokenSet(slugify(r.parallelSlug ?? r.parallel ?? "")), want))
+        // Prefer an ungraded row — grade variants share the card's identity
+        // fields and would otherwise win arbitrarily. `id` breaks ties so the
+        // choice is deterministic rather than dependent on scan order.
         .sort((a, b) => {
-          const canon = (x: { id: string }) => (x.id.startsWith("hiq:") ? 0 : 1);
           const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
-          return canon(a) - canon(b) || graded(a) - graded(b);
+          return graded(a) - graded(b) || a.id.localeCompare(b.id);
         });
-      const best = ranked.find((r) => r.id.startsWith("hiq:")) ?? null;
+      const best = ranked[0] ?? null;
       if (best) {
         return {
           slug: best.id,
@@ -253,8 +313,20 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     : components.setKey;
   if (familyKey && familyKey !== components.setKey) {
     try {
+      // CF-PARALLEL-IS-IDENTITY (Drew, 2026-08-13). This step legitimately
+      // crosses SETS along the product-family ladder (bowman-chrome-updates ->
+      // bowman-chrome), but it did not constrain the PARALLEL at all, and took
+      // resources[0] from an unordered TOP 5. So a Mojo Refractor could land on
+      // whichever parallel of that card number the scan happened to return
+      // first — a set change and a parallel change at once.
+      //
+      // It is also the more dangerous of the two steps, because recordSoldComp
+      // rebinds on `resolved.found` and never reads `confidence` — so this
+      // 0.55 guess rewrote a sale's identity exactly as authoritatively as a
+      // 0.98 exact match. Crossing the family ladder is defensible; silently
+      // changing which card it is, is not.
       const { resources } = await container.items.query({
-        query: "SELECT TOP 5 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @fk",
+        query: "SELECT TOP 300 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @fk ORDER BY c.id",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
@@ -263,8 +335,13 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
           { name: "@fk", value: familyKey },
         ],
       }).fetchAll();
-      if (resources.length > 0) {
-        const best = resources[0];
+      const wantFamily = parallelTokenSet(slugify(components.parallel));
+      const familyRanked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
+        .filter((r) => typeof r?.id === "string")
+        .filter((r) => sameParallelTokens(parallelTokenSet(slugify(r.parallelSlug ?? r.parallel ?? "")), wantFamily))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      if (familyRanked.length > 0) {
+        const best = familyRanked[0];
         return {
           slug: best.id,
           found: true,
