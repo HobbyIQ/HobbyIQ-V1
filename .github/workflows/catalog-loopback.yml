@@ -1,0 +1,67 @@
+name: Catalog Loop-back (requeue matchable)
+
+# CF-CATALOG-LOOPBACK-CRON (Drew, 2026-08-14: "how can we fix the matching?").
+#
+# The loop was open. A staged row lands in `awaiting-catalog` when its sale is
+# real but no checklist describes the card, and recordSoldComp files a seed
+# asking for that checklist. When the checklist finally lands, NOTHING wakes the
+# rows that were waiting on it — requeueAwaitingCatalog.cjs was the only path
+# back to `clean`, it is manual, and it appeared in no workflow.
+#
+# So ingesting checklists did not convert into promoted sales. Measured while
+# diagnosing the matcher: 12% of blocked slugs ALREADY match the catalog
+# completely — they are stale, not blocked, and nothing was ever going to
+# requeue them.
+#
+# This runs the TARGETED requeue, which asks the catalog first and only flips
+# rows whose slug it can now resolve. The blunt version flips all of them, so
+# most churn through the expensive matcher, fail again, and land right back —
+# a full promotion pass per row to learn nothing.
+#
+# Cheap enough to run often: card_catalog stores id = cardId = slug, so the
+# check is a point read, done once per DISTINCT slug rather than per row.
+#
+# Deliberately NOT chained to checklist ingestion. Checklists arrive from
+# several places (checklist-refresh, MCP fetches, manual ingests, auto-seed),
+# and a hook on one of them would silently miss the others — which is how the
+# loop came to be open in the first place.
+
+on:
+  schedule:
+    - cron: '25 */6 * * *'   # every 6 hours, offset off the hour
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write (true) or dry-run (false)'
+        default: 'true'
+
+concurrency:
+  group: catalog-loopback
+  cancel-in-progress: false   # never cancel mid-write; the next tick resumes
+
+jobs:
+  requeue:
+    name: Requeue rows whose checklist has landed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps + build dist
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc -p tsconfig.json
+      - name: Requeue matchable awaiting-catalog rows
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE: hobbyiq
+        run: |
+          if [ "${{ inputs.apply || 'true' }}" = "true" ]; then
+            node scripts/requeueMatchableAwaitingCatalog.cjs --apply --top 25
+          else
+            node scripts/requeueMatchableAwaitingCatalog.cjs --top 25
+          fi
