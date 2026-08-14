@@ -113,7 +113,17 @@ function categoryFor(type, subset) {
   const t = String(type ?? "").toLowerCase();
   const sub = slugify(subset);
   if (t.includes("autograph")) return sub ? `auto-${sub}` : "auto-autographs";
-  if (t === "base" || t === "") return sub ? `insert-${sub}` : "base";
+  // CF-SUBSET-IS-NOT-A-PARALLEL (Drew, 2026-08-14). A BASE card is base, full
+  // stop. This previously returned `insert-<subset>` whenever the section had
+  // a name, and the ingest derives the parallel from the category — so
+  // "Base Cards Refractor" became parallel `base-cards-refractor` and the dry
+  // run reported base=0 on every checklist. Sales carry `:base:`, so those
+  // rows would have matched nothing while looking like coverage.
+  //
+  // The section name is dropped here deliberately: for Finest/Pristine it
+  // describes the stock the whole base set is printed on, not a distinction
+  // between cards, so it carries no per-card information worth keeping.
+  if (t === "base" || t === "") return "base";
   return sub ? `insert-${sub}` : `insert-${slugify(type) || "insert"}`;
 }
 
@@ -151,14 +161,40 @@ function categoryFor(type, subset) {
   const q = (s) => (/[",]/.test(String(s)) ? `"${String(s).replace(/"/g, '""')}"` : String(s));
   const rows = [];
   const byCat = {};
+  // CF-SUBSET-IS-NOT-A-PARALLEL (Drew, 2026-08-14: "do it").
+  //
+  // `parallel: c.subset` was wrong, and it made this whole source unusable.
+  // The MCP `subset` field is a checklist SECTION name — "Base Cards
+  // Refractor", "Base Uncommon Refractor", "Common Refractor" — describing
+  // which part of the checklist a card sits in, and for Finest/Pristine what
+  // stock the base set is printed on. It is not the card's parallel.
+  //
+  // Emitting it as one produced:
+  //
+  //   hiq:baseball:2026:topps-pristine:1:base-cards-refractor:no-auto
+  //   hiq:baseball:2025:topps-finest:1:common-refractor:no-auto
+  //
+  // and a dry run reporting `base=0` on all three fetched checklists — every
+  // base card given a parallel no sale will ever carry. The incoming sales
+  // carry `:base:`, so ingesting these would have added thousands of rows that
+  // match nothing, while looking like coverage.
+  //
+  // A base card's parallel is "Base". The section name is already carried by
+  // `category`, which is where the ingest reads insert/subset structure from,
+  // so nothing is lost by keeping it out of the parallel slot.
+  //
+  // Non-base types keep the subset, because for an insert or autograph section
+  // the subset IS the distinguishing product name the sale will name too.
   for (const c of cards) {
     const category = categoryFor(c.type, c.subset);
     byCat[category] = (byCat[category] ?? 0) + 1;
+    const type = String(c.type ?? "").toLowerCase();
+    const isBaseCard = type === "base" || type === "";
     rows.push({
       category,
       cardNumber: String(c.cardNumber ?? "").trim(),
-      parallel: c.subset ?? "Base",
-      isAuto: String(c.type ?? "").toLowerCase().includes("autograph") ? "true" : "false",
+      parallel: isBaseCard ? "Base" : (c.subset ?? "Base"),
+      isAuto: type.includes("autograph") ? "true" : "false",
       printRun: "",
       player: c.player ?? "",
     });
