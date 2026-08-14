@@ -41,6 +41,72 @@ const TCG_VERTICALS: ReadonlySet<string> = new Set([
  * false positive would pull a real sports sale out of the pool. "Prizm",
  * "Chrome" and colour words are absent for that reason.
  */
+/**
+ * Pokemon SET names, which are usually the only TCG signal present.
+ *
+ * CF-TCG-SET-NAMES (Drew, 2026-08-13). The brand-word patterns below miss most
+ * real rows, because vendor titles are "<card> - <set> - <finish>":
+ *
+ *   "Mewtwo - Base Set 2 - Holofoil"        -> hiq:baseball:2000:base-set-2:…
+ *   "Feraligatr (5) - Neo Genesis"          -> hiq:baseball:2000:neo-genesis:…
+ *   "Gulpin (40) - Arceus - Normal"         -> hiq:baseball:2009:arceus:…
+ *
+ * Not one contains "Pokemon". Measured over 680 promotable slugs, rows like
+ * these were landing in `genuinely-absent` (31.2%) and `setkey-drift` (17.8%)
+ * and being read as a checklist gap, when they are a vertical gap — Pokemon
+ * already matches (402,809 comps against 48,094 catalog rows).
+ *
+ * DELIBERATELY OMITTED, because they collide with sports products and a false
+ * positive silently removes a real sale from pricing:
+ *   "platinum"  — Bowman Platinum, Panini Platinum
+ *   "base set"  — generic across every sport
+ *   "dragon", "emerald", "crystal", "expedition", "legends"
+ * Era prefixes (sv-, swsh, sm-, xy-, bw-) carry no such risk and do the heavy
+ * lifting for modern sets.
+ */
+const POKEMON_SET_NAMES: readonly string[] = [
+  // WotC era
+  "neo genesis", "neo discovery", "neo revelation", "neo destiny",
+  "gym heroes", "gym challenge", "team rocket", "jungle", "fossil",
+  "wotc promo", "legendary collection",
+  // EX era
+  "holon phantoms", "power keepers", "sandstorm", "unseen forces",
+  "delta species", "legend maker", "crystal guardians", "dragon frontiers",
+  "team magma", "hidden legends", "firered leafgreen", "ruby sapphire",
+  // DP / Platinum / HGSS
+  "mysterious treasures", "secret wonders", "great encounters",
+  "legends awakened", "majestic dawn", "stormfront", "rising rivals",
+  "supreme victors", "arceus", "heartgold soulsilver", "call of legends",
+  "unleashed", "undaunted", "triumphant",
+  // BW / XY
+  "emerging powers", "noble victories", "next destinies", "dark explorers",
+  "dragons exalted", "boundaries crossed", "plasma storm", "plasma freeze",
+  "plasma blast", "legendary treasures", "flashfire", "furious fists",
+  "phantom forces", "primal clash", "roaring skies", "ancient origins",
+  "breakthrough", "breakpoint", "fates collide", "steam siege", "evolutions",
+  "kalos starter set",
+  // SM
+  "guardians rising", "burning shadows", "crimson invasion", "ultra prism",
+  "forbidden light", "celestial storm", "lost thunder", "team up",
+  "unbroken bonds", "unified minds", "cosmic eclipse", "hidden fates",
+  "dragon majesty",
+  // SWSH
+  "rebel clash", "darkness ablaze", "vivid voltage", "shining fates",
+  "battle styles", "chilling reign", "evolving skies", "fusion strike",
+  "brilliant stars", "astral radiance", "lost origin", "silver tempest",
+  "celebrations",
+  // SV
+  "scarlet violet", "paldea evolved", "obsidian flames", "paradox rift",
+  "temporal forces", "twilight masquerade", "shrouded fable",
+  "stellar crown", "surging sparks", "prismatic evolutions",
+  "phantasmal flames",
+  // structural
+  "pop series", "trainer gallery",
+];
+
+/** Era prefixes that appear in slugs and cannot collide with sports setKeys. */
+const POKEMON_SET_PREFIXES: readonly string[] = ["sv ", "swsh", "sm ", "xy ", "bw ", "hgss"];
+
 const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bpokemon\b/i,
   /\bpikachu\b/i,
@@ -59,7 +125,7 @@ const TCG_TITLE_PATTERNS: readonly RegExp[] = [
 export interface TcgClassification {
   isTcg: boolean;
   /** Why it was classified — recorded on the row so the call is auditable. */
-  reason?: "vertical-field" | "title-pattern";
+  reason?: "vertical-field" | "title-pattern" | "set-name";
   /** The vertical when known from the sport field. */
   vertical?: string;
 }
@@ -91,6 +157,16 @@ export function classifyTcg(input: {
   const hay = `${input.title ?? ""} ${input.hobbyiqCardId ?? ""}`.replace(/-/g, " ");
   if (TCG_TITLE_PATTERNS.some((re) => re.test(hay))) {
     return { isTcg: true, reason: "title-pattern" };
+  }
+
+  // Set-name match. Lowercased and hyphen-flattened above, so "Base Set 2" in a
+  // title and "base-set-2" in a slug both normalise to the same haystack.
+  const flat = hay.toLowerCase();
+  if (POKEMON_SET_NAMES.some((s) => flat.includes(s))) {
+    return { isTcg: true, reason: "set-name" };
+  }
+  if (POKEMON_SET_PREFIXES.some((p) => flat.includes(p))) {
+    return { isTcg: true, reason: "set-name" };
   }
   return { isTcg: false };
 }
