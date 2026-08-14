@@ -106,8 +106,75 @@ const POKEMON_SET_NAMES: readonly string[] = [
   "pop series", "trainer gallery",
 ];
 
-/** Era prefixes that appear in slugs and cannot collide with sports setKeys. */
-const POKEMON_SET_PREFIXES: readonly string[] = ["sv ", "swsh", "sm ", "xy ", "bw ", "hgss"];
+/**
+ * Era prefixes that appear in slugs.
+ *
+ * CF-TCG-ERA-PREFIX-COLLISION (Drew, 2026-08-14). These were plain substrings
+ * — "sv ", "sm ", "xy ", "bw " — and the haystack flattens hyphens to spaces,
+ * so a SPORTS card number "SV-12" became "sv 12" and matched "sv ". Every
+ * Topps Chrome Sapphire "SV-NN" card has therefore been classified as Pokemon.
+ * The comment above claimed these "cannot collide with sports setKeys"; the
+ * hyphen flattening, added later for slug matching, quietly made that false.
+ *
+ * Not a new bug, but #1035 raised its cost: an incorrect isTcg now also decides
+ * how the N/M token is read, so a misfired prefix corrupts the card number too.
+ *
+ * The distinguishing rule is what FOLLOWS the prefix. Pokemon writes a set
+ * ordinal glued on ("sv1", "sv8a") or a set name ("sv scarlet violet"). The
+ * flattened sports form is always prefix-space-DIGITS ("sv 12"), so requiring
+ * either a glued ordinal or a following letter separates them cleanly.
+ */
+const POKEMON_SET_PREFIXES: readonly string[] = ["swsh", "hgss"];
+const POKEMON_ERA_PREFIX_RE = /\b(?:sv|sm|xy|bw)(?:\d{1,2}[a-z]?\b|\s+(?=[a-z]))/i;
+
+/**
+ * CF-TCG-DETECTION-WIDEN (Drew, 2026-08-14).
+ *
+ * #1035 made an undetected vertical COSTLY. Before it, a Pokemon title that no
+ * pattern here recognised still got a card number out of the POS/TOTAL rule;
+ * after it, that rule is gated on this classifier, so a miss yields
+ * cardNumber=null. Measured on real blocked rows:
+ *
+ *   "CGC 10 Terapagos ex 136/187 SV8a Terastal Fest ex Holo Japanese 2024"
+ *     before: cardNumber 136187 (right convention) + printRun 187 (wrong)
+ *     after:  cardNumber null                                   <- regression
+ *
+ * So the classifier has to carry the weight the old fallback used to. The two
+ * misses are Japanese-market product and the "<character> - <set> - <finish>"
+ * title shape, where the set name is one of the ones deliberately omitted above
+ * for colliding with sports ("crystal guardians", "base set").
+ *
+ * Character names close that gap without touching the collision list: a title
+ * naming a Pokemon is Pokemon regardless of which set it came from. Every name
+ * below is checked for a sports homonym — which is why "Ace", "Rocket", "Star",
+ * "Champion" and "Shadow" are NOT here.
+ */
+const POKEMON_CHARACTERS: readonly string[] = [
+  // Kanto starters + evolutions (dominant in vintage listings)
+  "bulbasaur", "ivysaur", "venusaur", "charmander", "charmeleon",
+  "squirtle", "wartortle", "blastoise",
+  // Most-listed by sales volume
+  "mewtwo", "eevee", "snorlax", "gengar", "gyarados", "dragonite",
+  "umbreon", "espeon", "sylveon", "vaporeon", "jolteon", "flareon",
+  "glaceon", "leafeon", "articuno", "zapdos", "moltres", "lugia",
+  "ho-oh", "rayquaza", "groudon", "kyogre", "lucario", "greninja",
+  "garchomp", "tyranitar", "machamp", "alakazam", "gardevoir",
+  "metagross", "salamence", "arcanine", "ninetales", "lapras",
+  // Modern chase
+  "terapagos", "miraidon", "koraidon", "chien-pao", "iron valiant",
+  "roaring moon", "flutter mane", "cinderace", "victini", "zacian",
+  "zamazenta", "calyrex", "giratina", "palkia", "dialga", "darkrai",
+  "arceus", "genesect", "volcarona", "mimikyu", "grimmsnarl",
+];
+
+/**
+ * Japanese-market set codes ("SV8a", "S12a"). The trailing LETTER is what makes
+ * these safe: sports card numbers use "SV-10" or "SV10" shapes, not "SV8a", so
+ * requiring a letter suffix avoids the collision that a bare \bsv\d\b would
+ * introduce. A false positive here would pull a real sports sale into the TCG
+ * vertical, which is the exact harm this module exists to prevent.
+ */
+const JAPANESE_SET_CODE_RE = /\bs[vm]?\d{1,2}[a-z]\b/i;
 
 const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bpokemon\b/i,
@@ -122,12 +189,20 @@ const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bone piece\b/i,
   /\blorcana\b/i,
   /\bmagic:? the gathering\b/i,
+  // CF-TCG-DETECTION-WIDEN (Drew, 2026-08-14). Modern/Japanese product that the
+  // list above missed, taken from titles measured as still-unmatchable.
+  /\bterastal\b/i,
+  /\bshiny treasure\b|\bvstar universe\b|\bhigh class pack\b/i,
+  /\bbattle academy\b|\bdeck exclusives\b|\btrainer kit\b/i,
+  /\bjourney together\b|\bdestined rivals\b|\bblack bolt\b|\bwhite flare\b/i,
+  /\bpaldean fates\b|\bcrown zenith\b|\bpokemon center\b/i,
+  /\bex holo\b|\bhalf deck\b/i,
 ];
 
 export interface TcgClassification {
   isTcg: boolean;
   /** Why it was classified — recorded on the row so the call is auditable. */
-  reason?: "vertical-field" | "title-pattern" | "set-name";
+  reason?: "vertical-field" | "title-pattern" | "set-name" | "character-name" | "set-code";
   /** The vertical when known from the sport field. */
   vertical?: string;
 }
@@ -167,8 +242,27 @@ export function classifyTcg(input: {
   if (POKEMON_SET_NAMES.some((s) => flat.includes(s))) {
     return { isTcg: true, reason: "set-name" };
   }
-  if (POKEMON_SET_PREFIXES.some((p) => flat.includes(p))) {
+  if (POKEMON_SET_PREFIXES.some((p) => flat.includes(p)) || POKEMON_ERA_PREFIX_RE.test(flat)) {
     return { isTcg: true, reason: "set-name" };
+  }
+
+  // CF-TCG-DETECTION-WIDEN (Drew, 2026-08-14). Character name, checked LAST so
+  // the cheaper and more specific signals win and keep their own `reason`.
+  //
+  // This is what rescues the "<character> - <set> - <finish>" title shape when
+  // the set is one of the ones omitted from POKEMON_SET_NAMES for colliding
+  // with sports — "Ivysaur - 035/100 - EX Crystal Guardians" is unambiguous
+  // from the character alone, while "crystal guardians" on its own is not.
+  //
+  // Word-boundary matched: a substring test would fire "mew" inside "mewtwo"
+  // harmlessly but also inside unrelated words.
+  if (POKEMON_CHARACTERS.some((c) => new RegExp(`\\b${c}\\b`, "i").test(flat))) {
+    return { isTcg: true, reason: "character-name" };
+  }
+
+  // Japanese-market set code ("SV8a"). Last because it is the loosest signal.
+  if (JAPANESE_SET_CODE_RE.test(flat)) {
+    return { isTcg: true, reason: "set-code" };
   }
   return { isTcg: false };
 }
