@@ -18,6 +18,7 @@ import {
   parallelTokenSet,
   sameParallelTokens,
   canonicalizeParallelName,
+  parallelSegmentOf,
 } from "../src/services/catalog/catalogMatcher.service.js";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -92,5 +93,38 @@ describe("legitimate matches still resolve", () => {
     // printRun and isAuto are separate slug segments, so they never enter the
     // parallel comparison — which is why token equality is safe here.
     expect(same("blue-refractor", "blue-refractor")).toBe(true);
+  });
+});
+
+// CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (Drew, 2026-08-14).
+//
+// The first fix validated a candidate's `parallelSlug` FIELD but returned
+// `best.id`. Catalog rows can disagree with themselves — field says
+// "speckle-refractor", id encodes "base-sapphire-refractor" — so a mismatched
+// id sailed through the guard. Measured post-deploy on prod: "Speckle
+// Refractor" still resolving to base-sapphire-refractor at
+// matchedBy=fuzzy-parallel, 1.88% of new comps.
+//
+// Validate the half that is actually adopted.
+describe("candidate validation uses the id, not the field", () => {
+  it("extracts the parallel segment from a canonical slug", () => {
+    expect(parallelSegmentOf("hiq:baseball:2026:bowman-chrome:bcp-69:speckle-refractor:no-auto"))
+      .toBe("speckle-refractor");
+    expect(parallelSegmentOf("hiq:baseball:2026:bowman-chrome-sapphire:bcp-69:base-sapphire-refractor:no-auto"))
+      .toBe("base-sapphire-refractor");
+  });
+
+  it("returns null for a non-canonical id so the field can be the fallback", () => {
+    expect(parallelSegmentOf("cardhedge::1758294615661x386339860558292160::fb2c3e0c")).toBeNull();
+    expect(parallelSegmentOf("")).toBeNull();
+  });
+
+  it("rejects the real prod case where field and id disagree", () => {
+    // The sale is a Speckle Refractor. A candidate whose FIELD says
+    // speckle-refractor but whose ID says base-sapphire-refractor must not
+    // match, because the id is what would be adopted.
+    const want = parallelTokenSet("speckle-refractor");
+    const candidateId = "hiq:baseball:2026:bowman-chrome-sapphire:bcp-69:base-sapphire-refractor:no-auto";
+    expect(sameParallelTokens(parallelTokenSet(parallelSegmentOf(candidateId)!), want)).toBe(false);
   });
 });
