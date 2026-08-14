@@ -37,11 +37,25 @@ on:
         description: 'Image-verify batch size'
         default: '100'
       promotion_limit:
-        description: 'Promotion batch size PER SHARD'
-        default: '2000'
+        # CF-PROMOTION-SIZED-TO-THE-CEILING (Drew, 2026-08-14: "we need to
+        # really work on the ingestion and matching to catch up and stay
+        # ahead"). 2000 could NEVER finish: promotion is bounded by App
+        # Service's 240s request ceiling, so an oversized batch times out and
+        # accomplishes nothing — the cron was asking for work it could not
+        # complete. Measured on f5cbed54 after the RU fix:
+        #   limit=200 -> 132s (90 rows/min)
+        #   limit=400 -> 195s (123 rows/min)   <- completes, with headroom
+        # 400 is the largest size that reliably returns inside the ceiling.
+        description: 'Promotion batch size PER SHARD (must finish inside 240s)'
+        default: '400'
       shards:
+        # Throughput is per-worker (123 rows/min), so shards are the multiplier.
+        # 4 shards = ~708K rows/day against ~300K/day inbound — enough to stay
+        # ahead AND draw down the 3.2M backlog in roughly 8 days. 6 shards is
+        # ~1.06M/day. Raise if RU headroom allows; comps_staging autoscales to
+        # 40,000 RU and the matcher queries are now ~6.5x cheaper.
         description: 'Parallel worker shards for data-clean + promotion'
-        default: '4'
+        default: '6'
 
 concurrency:
   group: staging-pipeline
@@ -80,7 +94,7 @@ jobs:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.data_clean_limit || '2500' }}
-          SHARDS: ${{ inputs.shards || '4' }}
+          SHARDS: ${{ inputs.shards || '6' }}
         run: |
           pids=""
           for i in $(seq 0 $((SHARDS - 1))); do
@@ -143,8 +157,8 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.promotion_limit || '2000' }}
-          SHARDS: ${{ inputs.shards || '4' }}
+          LIMIT: ${{ inputs.promotion_limit || '400' }}
+          SHARDS: ${{ inputs.shards || '6' }}
         run: |
           pids=""
           for i in $(seq 0 $((SHARDS - 1))); do
