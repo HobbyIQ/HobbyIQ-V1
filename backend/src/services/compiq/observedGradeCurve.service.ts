@@ -409,14 +409,34 @@ async function fetchRawSalesForGrade(
   // Window: 180d. Same as compiqEstimate + hobbyIqFmv defaults.
   const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString();
 
-  // Query by either cardId (vendor bubble.io id) OR hobbyiqCardId
-  // (our canonical slug) so cross-vendor rows both surface.
+  // CF-GRADE-CURVE-DROP-THE-OR (Drew, 2026-08-14: "they have to match").
+  //
+  // Was: "(c.cardId = @cid OR c.hobbyiqCardId = @cid)". Same defect as #1043
+  // in readCompsByCardId — one side is the partition key and the other is not,
+  // so Cosmos can target a partition for NEITHER and fans out across all of
+  // them. That is the Grade curve's 30s timeout.
+  //
+  // It also made the numbers disagree, which is the reason this matters beyond
+  // latency. unifiedPricing (behind the card's value) unions TWO DIFFERENT
+  // identifiers, "(c.cardId = @cid OR c.hobbyiqCardId = @hiq)", while this
+  // unioned ONE identifier against itself. On a card whose cardId and
+  // hobbyiqCardId differ — 455,954 rows, 26% of migrated rows — those resolve
+  // to different row sets. Two valuations anchored on different raw bases
+  // cannot agree, so the card value and the grade-10 curve entry showed
+  // different numbers for the same card at the same grade.
+  //
+  // Both cases are disjoint by input, exactly as in #1043: a "hiq:" slug is
+  // the canonical tag (populated on 5,612,173 of 5,613,135 rows), and a vendor
+  // id never appears in hobbyiqCardId. Branching keeps this to a SINGLE query,
+  // which also preserves the existing test mocks — a two-query version of this
+  // same fix broke 7 tests by consuming a mock that only answers once.
+  const looksLikeHiqSlug = typeof cardId === "string" && cardId.startsWith("hiq:");
   const clauses: string[] = [
     "c.soldAt >= @cut",
     "c.price > 0",
     "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
     "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
-    "(c.cardId = @cid OR c.hobbyiqCardId = @cid)",
+    looksLikeHiqSlug ? "c.hobbyiqCardId = @cid" : "c.cardId = @cid",
   ];
   const params: Array<{ name: string; value: string | number | null | boolean }> = [
     { name: "@cut", value: cutoff },
