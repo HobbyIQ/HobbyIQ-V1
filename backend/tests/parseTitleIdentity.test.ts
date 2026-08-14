@@ -1003,3 +1003,78 @@ describe("inferSportFromTitle", () => {
     expect(inferSportFromTitle("Eric Hartman 2026 Bowman Chrome", "baseball")).toBe("baseball");
   });
 });
+
+// CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14: "fix it").
+//
+// The TCG `POS/TOTAL` rule had no vertical guard, so it fired on sports titles
+// and turned SERIALS into card numbers. Every title below is a real one taken
+// from comps_staging rows that were stuck in awaiting-catalog because of it.
+//
+// Verified before the fix: 206 of 208 decided cases were this bug, ~6,500
+// distinct slugs, ~32,000 stuck sales, ~5,600 phantom cards in sold_comps.
+describe("serial is not a card number", () => {
+  // ─── sports: N/M is a SERIAL, never the card number ──────────────────────
+  it("does not take a sports serial as the card number", () => {
+    const r = parseListingIdentity("2025-26 Fleer Ultra Outlining Macklin Celebrini OL 22/30 Color Match Sharks");
+    // Was "22/30" -> slug ...:2230:... which no checklist can contain.
+    expect(r.cardNumber).not.toBe("22/30");
+    expect(r.printRun).toBe(30);
+  });
+
+  it("reads the serial as print run only, on a real blocked title", () => {
+    const r = parseListingIdentity("Josue De Paula 2025 Topps Pro Debut Gold AUTO 25/50 LA Dodgers");
+    expect(r.cardNumber).not.toBe("25/50");
+    expect(r.printRun).toBe(50);
+  });
+
+  it("prefers an explicit #cardNumber over the serial in the same title", () => {
+    const r = parseListingIdentity("Tai PEETE 2024 Topps Pro Debut GREEN FOIL #TP-9 #'d 88/99 RC");
+    expect(r.cardNumber).toBe("TP-9");
+    expect(r.printRun).toBe(99);
+  });
+
+  it("an explicit vertical suppresses the TCG rule even when TCG-ish", () => {
+    const r = parseListingIdentity("Some Player 40/147", undefined, { vertical: "baseball" });
+    expect(r.cardNumber).not.toBe("40/147");
+  });
+
+  // ─── TCG: N/M IS the card number, and M is a SET SIZE not a print run ────
+  it("keeps the TCG card number when the title names the vertical", () => {
+    const r = parseListingIdentity("Pikachu Common SM - Burning Shadows 40/147 NM Pokemon");
+    expect(r.cardNumber).toBe("40/147");
+    // 147 is the set size. Burning Shadows was not a 147-copy print run.
+    expect(r.printRun).toBeNull();
+  });
+
+  it("keeps the TCG card number via an explicit vertical", () => {
+    const r = parseListingIdentity("PIKACHU EX MEGA DREAM EX HOLO DOUBLE RARE 044/193 CGC 10", undefined, { vertical: "pokemon" });
+    expect(r.cardNumber).toBe("044/193");
+    expect(r.printRun).toBeNull();
+  });
+
+  it("a secret rare numbered above set size still parses", () => {
+    const r = parseListingIdentity("Charizard VMAX 294/217 Pokemon Secret Rare");
+    expect(r.cardNumber).toBe("294/217");
+    expect(r.printRun).toBeNull();
+  });
+
+  it("a genuinely numbered TCG parallel still reports its print run", () => {
+    // The set-size token is removed, not the whole print-run search — so an
+    // actual serial elsewhere in the title survives.
+    const r = parseListingIdentity("Pokemon Burning Shadows Pikachu 40/147 Gold Parallel /25", undefined, { vertical: "pokemon" });
+    expect(r.cardNumber).toBe("40/147");
+    expect(r.printRun).toBe(25);
+  });
+
+  // ─── the existing contract must not move ─────────────────────────────────
+  it("sports print-run extraction is unchanged", () => {
+    expect(parseListingIdentity("2026 Bowman Chrome Sapphire Owen Carey 77/199 Braves").printRun).toBe(199);
+    expect(parseListingIdentity("Owen Carey 2026 Red Sapphire Auto 3/5 Atlanta Braves").printRun).toBe(5);
+    expect(parseListingIdentity("2026 Bowman Chrome Eric Hartman Gold Refractor /50 Braves").printRun).toBe(50);
+  });
+
+  it("sports card numbers are unchanged", () => {
+    expect(parseListingIdentity("2026 Bowman Eric Hartman Base Auto #CPA-EHA").cardNumber).toBe("CPA-EHA");
+    expect(parseListingIdentity("2025 Topps Black & White - Freddie Freeman #020").cardNumber).toBe("020");
+  });
+});
