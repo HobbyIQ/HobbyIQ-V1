@@ -31,8 +31,17 @@ on:
   workflow_dispatch:
     inputs:
       data_clean_limit:
-        description: 'Data-clean batch size PER SHARD'
-        default: '2000'
+        # CF-DATACLEAN-HEADROOM (Drew, 2026-08-14). Same failure as promotion,
+        # one step earlier: shards 0/2/4 hit --max-time 240 while 1/3/5 returned
+        # fine. Verified NOT contention — it still failed with the local drain
+        # stopped, which was my first (wrong) theory.
+        #
+        # Cost per row is not uniform: data-clean does per-slug rolling-median
+        # lookups for the price band, so a shard whose slice lands on
+        # high-volume slugs does far more work at the same batch size. Sizing
+        # for the average shard guarantees the slow ones fail.
+        description: 'Data-clean batch size PER SHARD (must finish inside 240s)'
+        default: '750'
       image_verify_limit:
         description: 'Image-verify batch size'
         default: '100'
@@ -103,7 +112,7 @@ jobs:
         env:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.data_clean_limit || '2500' }}
+          LIMIT: ${{ inputs.data_clean_limit || '750' }}
           SHARDS: ${{ inputs.shards || '6' }}
         run: |
           pids=""
