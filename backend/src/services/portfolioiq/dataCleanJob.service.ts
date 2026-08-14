@@ -33,6 +33,7 @@ import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
+import { classifyTcg } from "./tcgVertical.service.js";
 
 /** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
  *  plausibility. Raw and PSA 10 are different markets for the same card, so
@@ -368,7 +369,36 @@ export async function runDataCleanBatch(opts: {
         continue;
       }
       const clean = await classifyRow(row, soldComps, medianCache);
-      const nextStatus = clean.anomalies.length === 0 ? "clean" : "anomaly";
+
+      // CF-TCG-IS-NOT-BLOCKED (Drew, 2026-08-13). An earlier revision of this
+      // routed every TCG row to a `holding-tcg` park, on the theory that TCG
+      // "can never match a sports catalog". That was WRONG and would have
+      // pulled working data out of the pipeline:
+      //
+      //   sold_comps with hiq:pokemon:*   402,809 comps — matched and promoted
+      //   card_catalog sport=pokemon       48,094 rows
+      //
+      // The vertical is live. Slugs are `hiq:{vertical}:…` and `sport` is just a
+      // namespace string, so Pokemon matches exactly like baseball does. The
+      // conclusion came from a biased sample: the 8 unmatched slugs I inspected
+      // happened to all be `hiq:baseball:<pokemon-set>`, which is the
+      // MISCLASSIFIED tail (~0.6%), not TCG as a category (7.7%).
+      //
+      // So there is no park here. Rows whose vertical is wrong need their sport
+      // CORRECTED so they compute a matching slug — see resolveVertical.service
+      // — which makes them promotable rather than shelved. Tagging is recorded
+      // for visibility only.
+      const tcg = classifyTcg({
+        sport: clean.sport ?? row.raw.identityHint.sport,
+        title: row.raw.vendorPayload.title,
+        hobbyiqCardId: row.hobbyiqCardId,
+      });
+      if (tcg.isTcg && !parseHobbyIqCardId(row.hobbyiqCardId)?.sport?.match(/pokemon|yugioh|tcg|mtg|lorcana/)) {
+        // TCG content wearing a SPORT slug — the population that cannot match.
+        clean.normalizations.push(`tcg-vertical-mismatch:${tcg.reason}`);
+      }
+      const nextStatus: StagingDoc["status"] =
+        clean.anomalies.length === 0 ? "clean" : "anomaly";
       row.clean = clean;
       row.status = nextStatus;
       await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);

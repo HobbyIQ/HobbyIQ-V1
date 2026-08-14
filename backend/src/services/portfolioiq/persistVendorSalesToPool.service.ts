@@ -773,17 +773,31 @@ export async function persistVendorSalesToPool(
         // from what we computed. This is the fix that lets a "Bowman
         // Chrome Draft" ebay title land its sales under the real
         // "Bowman Draft" catalog entry.
-        if (resolved.slug && resolved.slug !== slug) {
+        // CF-CONFIDENCE-MUST-BE-HONOURED (Drew, 2026-08-14). Shares one
+        // decision with recordSoldComp — these two had separate copies, which
+        // is why the same invariant needed fixing twice.
+        const { adoptResolvedSlug } = await import("../catalog/catalogMatcher.service.js");
+        const adoption = adoptResolvedSlug(slug, resolved);
+        if (adoption.rebound) {
           console.log(JSON.stringify({
             event: "catalog_resolve_slug_rebind",
             source: "persistVendorSalesToPool",
             vendorSource: source,
             computedSlug: slug,
-            resolvedSlug: resolved.slug,
+            resolvedSlug: adoption.slug,
             matchedBy: resolved.matchedBy,
             confidence: resolved.confidence,
           }));
-          slug = resolved.slug;
+          slug = adoption.slug;
+        } else if (adoption.refusedReason) {
+          console.log(JSON.stringify({
+            event: "catalog_resolve_rebind_refused",
+            source: "persistVendorSalesToPool",
+            vendorSource: source,
+            computedSlug: slug,
+            candidateSlug: resolved.slug,
+            reason: adoption.refusedReason,
+          }));
         }
       } catch (err) {
         // Resolve failure = treat as unmatched (fail-closed under match-only).

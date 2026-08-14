@@ -706,16 +706,36 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
         player: input.playerName,
         source: matcherSource,
       });
-      if (resolved.found && resolved.slug && resolved.slug !== hobbyiqCardId) {
+      // CF-CONFIDENCE-MUST-BE-HONOURED (Drew, 2026-08-14). This used to rebind
+      // on `resolved.found` alone, ignoring the confidence canonicalize had
+      // just computed — so a 0.55 family-fallback guess rewrote identity as
+      // authoritatively as a 0.98 exact match. adoptResolvedSlug is now the
+      // single place that decision is made, shared with
+      // persistVendorSalesToPool so the two cannot drift apart again.
+      const { adoptResolvedSlug } = await import("../catalog/catalogMatcher.service.js");
+      const adoption = adoptResolvedSlug(hobbyiqCardId, resolved);
+      if (adoption.rebound) {
         console.log(JSON.stringify({
           event: "catalog_resolve_rebind_in_recordcomp",
           source: "soldCompsStore.recordSoldComp",
           vendorSource: input.source,
           computedSlug: hobbyiqCardId,
-          resolvedSlug: resolved.slug,
+          resolvedSlug: adoption.slug,
           matchedBy: resolved.matchedBy,
+          confidence: resolved.confidence,
         }));
-        hobbyiqCardId = resolved.slug;
+        hobbyiqCardId = adoption.slug;
+      } else if (adoption.refusedReason) {
+        // Kept the computed slug. The sale is still recorded — it just is not
+        // moved onto a card we are not confident it is.
+        console.log(JSON.stringify({
+          event: "catalog_resolve_rebind_refused",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          computedSlug: hobbyiqCardId,
+          candidateSlug: resolved.slug,
+          reason: adoption.refusedReason,
+        }));
       } else if (!resolved.found && process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
         // Vendor source + no catalog match under match-only rule = skip write.
         // User sources will have hit the seed branch and returned found:true
