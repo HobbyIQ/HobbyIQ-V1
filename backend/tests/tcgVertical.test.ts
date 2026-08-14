@@ -77,3 +77,51 @@ describe("classifyTcg — must NOT pull real sports cards out of the pool", () =
     expect(classifyTcg({ sport: "", title: "", hobbyiqCardId: "" }).isTcg).toBe(false);
   });
 });
+
+// CF-TCG-DETECTION-WIDEN + CF-TCG-ERA-PREFIX-COLLISION (Drew, 2026-08-14).
+//
+// #1035 gated the TCG POS/TOTAL card-number rule on this classifier, which
+// turned a detection miss from cosmetic into costly: an undetected Pokemon
+// title now yields cardNumber=null instead of a usable number. These pin the
+// misses found in real blocked staging rows.
+describe("TCG detection — widened coverage", () => {
+  it("detects Japanese-market product by set code and product name", () => {
+    // Was a MISS, and #1035 turned that miss into cardNumber=null.
+    const r = classifyTcg({ title: "CGC 10 Terapagos ex 136/187 SV8a Terastal Fest ex Holo Japanese 2024" });
+    expect(r.isTcg).toBe(true);
+  });
+
+  it("detects by character name when the set name collides with sports", () => {
+    // "crystal guardians" is deliberately absent from POKEMON_SET_NAMES because
+    // it collides; the character is unambiguous.
+    expect(classifyTcg({ title: "Ivysaur - 035/100 - EX Crystal Guardians - Reverse Holofoil" }).isTcg).toBe(true);
+    expect(classifyTcg({ title: "Umbreon VMAX 215/203 Evolving Skies Alt Art" }).isTcg).toBe(true);
+  });
+
+  it("still detects the era prefixes it always did", () => {
+    expect(classifyTcg({ title: "Mewtwo - SV1 Scarlet Violet Base" }).isTcg).toBe(true);
+    expect(classifyTcg({ title: "Gengar - XY Roaring Skies - Holofoil" }).isTcg).toBe(true);
+    expect(classifyTcg({ hobbyiqCardId: "hiq:pokemon:2021:swsh-sword-shield-promo:1:base:no-auto" }).isTcg).toBe(true);
+  });
+
+  // ─── the collision that mattered ─────────────────────────────────────────
+  it("does NOT classify a sports card numbered SV-NN as Pokemon", () => {
+    // The haystack flattens hyphens, so "SV-12" became "sv 12" and matched the
+    // bare "sv " era prefix. Every Topps Chrome Sapphire SV-NN card was being
+    // classified as Pokemon — and after #1035 that also corrupts its card
+    // number, because isTcg decides how the N/M token is read.
+    expect(classifyTcg({ title: "2024 Topps Chrome Sapphire Edition Paul Skenes SV-12 Rookie" }).isTcg).toBe(false);
+    expect(classifyTcg({ title: "2025 Topps Chrome Update Sapphire Jackson Merrill SV-3 SP" }).isTcg).toBe(false);
+  });
+
+  it("does not classify serial-numbered sports parallels as TCG", () => {
+    const sports = [
+      "2025-26 Fleer Ultra Outlining Macklin Celebrini OL 22/30 Color Match Sharks",
+      "DON MATTINGLY 2026 DONRUSS ELITE 28 11/299 RED STATUS SP YANKEES!",
+      "2025-26 Bowman Chrome AJ Dybantsa Aqua X-Fractor 1st Prospect 079/125",
+      "1998 Fleer Tradition Ken Griffey Jr #198 Platinum Medallion /98",
+      "2021 Bowman Platinum Base Set Wander Franco #12",
+    ];
+    for (const t of sports) expect(classifyTcg({ title: t }).isTcg).toBe(false);
+  });
+});
