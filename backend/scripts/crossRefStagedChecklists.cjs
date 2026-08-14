@@ -75,6 +75,23 @@ function parseCsv(text) {
     const picks = [];
     for (let i = 0; i < rows.length && picks.length < SAMPLE; i += step) picks.push(rows[i]);
 
+    // ONE query per set, not one per card. hobbyiqCardId is NOT the partition
+    // key (cardId is), so every point read was a cross-partition query — 104
+    // sets x 20 reads blew past 10 minutes. Pull the set's existing slugs once
+    // and test membership in memory.
+    let held = new Set();
+    try {
+      const { resources } = await cat.items.query({
+        query: "SELECT VALUE c.hobbyiqCardId FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @sk",
+        parameters: [
+          { name: "@sp", value: m.sport },
+          { name: "@y", value: m.year },
+          { name: "@sk", value: m.setKey },
+        ],
+      }).fetchAll();
+      held = new Set(resources.filter(Boolean));
+    } catch { /* treat as empty */ }
+
     let hit = 0;
     for (const r of picks) {
       let slug;
@@ -85,14 +102,7 @@ function parseCsv(text) {
           isAuto: r.isAuto, printRun: null,
         });
       } catch { continue; }
-      if (!slug) continue;
-      try {
-        const { resources } = await cat.items.query({
-          query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s",
-          parameters: [{ name: "@s", value: slug }],
-        }).fetchAll();
-        if ((resources[0] ?? 0) > 0) hit++;
-      } catch { /* count as miss */ }
+      if (slug && held.has(slug)) hit++;
     }
     const pct = picks.length ? hit / picks.length : 0;
     const newRows = Math.round(rows.length * (1 - pct));

@@ -34,6 +34,7 @@ import { parseGradeLabel } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 import { classifyTcg } from "./tcgVertical.service.js";
+import { resolveVertical } from "./resolveVertical.service.js";
 
 /** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
  *  plausibility. Raw and PSA 10 are different markets for the same card, so
@@ -440,10 +441,22 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // from title-visible product signals (Fleer Sticker → basketball)
   // and prefer the title-derived sport when it disagrees. Fall back
   // to slug sport / identity hint / baseball default.
+  // CF-VERTICAL-NOT-SPORT wired in (Drew, 2026-08-14). resolveVertical checks
+  // TCG before any sport keyword, because a Pokemon title contains none — it
+  // would otherwise fall through to the "baseball" default and compute a slug
+  // (hiq:baseball:2000:neo-genesis:…) that no catalog can ever hold.
+  //
+  // The slug's own sport is the fallback rather than a hardcoded default, so a
+  // row that was already correctly verticalled keeps its value.
   let sport = parsed?.sport ?? raw.identityHint.sport ?? "baseball";
   if (title) {
-    const titleSport = inferSportFromTitle(title, sport);
-    if (titleSport !== sport) sport = titleSport;
+    const res = resolveVertical({
+      declared: parsed?.sport ?? raw.identityHint.sport ?? null,
+      title,
+      hobbyiqCardId: row.hobbyiqCardId,
+      fallback: sport,
+    });
+    if (res.vertical !== sport) sport = res.vertical;
   }
 
   const normalizations: string[] = [];
