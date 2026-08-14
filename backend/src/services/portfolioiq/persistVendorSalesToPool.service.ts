@@ -21,6 +21,7 @@ import {
   inferSetKeyFromTitle,
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
+import { resolveVertical } from "./resolveVertical.service.js";
 import { computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
 import { canonicalizeParallelName } from "../catalog/catalogMatcher.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
@@ -542,7 +543,21 @@ export async function persistVendorSalesToPool(
     let cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
     let playerName = identity.playerName ?? guessPlayerFromTitle(title);
     let setKey = identity.setName ?? inferSetKeyFromTitle(title);
-    let sport = identity.sport ?? inferSportFromTitle(title);
+    // CF-VERTICAL-NOT-SPORT wired in (Drew, 2026-08-14: "if tcg is done then
+    // those pending should flow quickly in backfill"). They will not, unless
+    // the vertical is resolved here — inferSportFromTitle defaults to
+    // "baseball", so a Pokemon sale computed hiq:baseball:… and could never
+    // meet the 68,926 rows just ingested at hiq:pokemon:….
+    //
+    // resolveVertical checks TCG FIRST (a Pokemon title contains no sport
+    // keyword, so it would otherwise fall straight through to the default) and
+    // reports whether it was confident, which the caller records below.
+    const verticalRes = resolveVertical({
+      declared: identity.sport,
+      title,
+      fallback: "baseball",
+    });
+    let sport = verticalRes.vertical;
 
     // CF-LLM-FALLBACK (Drew, 2026-08-03). When regex + guess helpers
     // couldn't extract cardYear OR playerName from the title, but the

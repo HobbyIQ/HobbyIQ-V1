@@ -69,6 +69,8 @@ const POKEMON_SET_NAMES: readonly string[] = [
   "neo genesis", "neo discovery", "neo revelation", "neo destiny",
   "gym heroes", "gym challenge", "team rocket", "jungle", "fossil",
   "wotc promo", "legendary collection",
+  // "base set" alone collides with sports; the NUMERAL does not.
+  "base set 2",
   // EX era
   "holon phantoms", "power keepers", "sandstorm", "unseen forces",
   "delta species", "legend maker", "crystal guardians", "dragon frontiers",
