@@ -149,6 +149,13 @@ export function sameParallelTokens(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
+/** Parallel segment of a canonical `hiq:` slug, or null if not one.
+ *  Used to validate a catalog candidate by the id we would actually adopt. */
+export function parallelSegmentOf(id: string): string | null {
+  const p = String(id ?? "").split(":");
+  return p.length >= 7 && p[0] === "hiq" ? (p[5] ?? "") : null;
+}
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
@@ -282,7 +289,18 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
       const want = parallelTokenSet(parallelSlug);
       const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
         .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
-        .filter((r) => sameParallelTokens(parallelTokenSet(slugify(r.parallelSlug ?? r.parallel ?? "")), want))
+        // CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (Drew, 2026-08-14). Check the
+        // candidate's ID, not its parallel field. Catalog rows can disagree
+        // with themselves — one has parallelSlug "speckle-refractor" while its
+        // id encodes "base-sapphire-refractor" — and since we RETURN best.id,
+        // validating the field let a mismatched id through anyway. Observed
+        // post-fix on prod: "Speckle Refractor" still resolving to
+        // base-sapphire-refractor at matchedBy=fuzzy-parallel, because the
+        // field matched even though the slug we adopted did not.
+        //
+        // The id is authoritative here precisely because it is the thing being
+        // adopted. The field is kept only as a fallback for non-slug ids.
+        .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want))
         // Prefer an ungraded row — grade variants share the card's identity
         // fields and would otherwise win arbitrarily. `id` breaks ties so the
         // choice is deterministic rather than dependent on scan order.
@@ -338,7 +356,7 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
       const wantFamily = parallelTokenSet(slugify(components.parallel));
       const familyRanked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
         .filter((r) => typeof r?.id === "string")
-        .filter((r) => sameParallelTokens(parallelTokenSet(slugify(r.parallelSlug ?? r.parallel ?? "")), wantFamily))
+        .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), wantFamily))
         .sort((a, b) => a.id.localeCompare(b.id));
       if (familyRanked.length > 0) {
         const best = familyRanked[0];
