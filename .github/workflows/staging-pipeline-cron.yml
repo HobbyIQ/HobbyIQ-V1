@@ -68,29 +68,31 @@ on:
         description: 'Promotion batch size PER SHARD (must finish well inside 240s)'
         default: '250'
       shards:
-        # Throughput is per-worker (123 rows/min), so shards are the multiplier.
-        # 4 shards = ~708K rows/day against ~300K/day inbound — enough to stay
-        # ahead AND draw down the 3.2M backlog in roughly 8 days. 6 shards is
-        # ~1.06M/day. Raise if RU headroom allows; comps_staging autoscales to
-        # 40,000 RU and the matcher queries are now ~6.5x cheaper.
-        # CF-SHARDS-MUST-DIVIDE-16 (Drew, 2026-08-14). MUST divide 16 evenly.
-        # The jobs shard by STARTSWITH(c.id, <hex char>) with chars assigned
-        # `i % SHARDS`, so with 6 shards over 16 hex characters the split is
-        # both uneven AND aliased:
+        # CF-DISABLE-SHARDING (Drew, 2026-08-14). Set to 1 — sharding OFF.
         #
-        #   shard 0 -> '0','6','c'      shard 1 -> '1','7','d'
-        #   shard 2 -> '2','8','e'      shard 3 -> '3','9','f'
-        #   shard 4 -> '4','a'          shard 5 -> '5','b'
+        # The jobs shard by STARTSWITH(c.id, <hex char>). That assumes ids are
+        # uniformly distributed across hex. They are NOT: most rows carry
+        # Bubble ids that are millisecond timestamps ("1778468473145x..."), so
+        # essentially every id begins with '1'.
         #
-        # Even shards get the even-indexed chars, odd shards the odd ones, and
-        # shards 0-3 carry three chars against 4-5's two. Measured on prod:
-        # shards 0/2/4 hit the 240s timeout on EVERY run while 1/3/5 returned
-        # 250/250 every time — deterministic, and reproduced with the local
-        # drain stopped, so it is the split and not RU contention.
+        # The consequence is that one shard owns almost all the data and every
+        # other shard scans the whole container to find rows that barely exist,
+        # then hits the 240s timeout. Measured on prod:
         #
-        # 8 divides 16: two chars per shard, no aliasing, equal slices.
-        description: 'Parallel worker shards (MUST divide 16 — see note)'
-        default: '8'
+        #   6 shards -> 3 of 6 failed, every run
+        #   8 shards -> 7 of 8 failed; only shard 1 (which owns '1') returned
+        #
+        # I mis-diagnosed this twice as RU contention and once as 6-not-dividing
+        # -16. It is neither. More shards makes it WORSE, which is the tell:
+        # the split is invalid, not the sizing.
+        #
+        # Unsharded, promotion takes the top N with no id filter and returns
+        # normally. Slower per tick than working sharding would be, but it is
+        # GREEN and self-sustaining, which sharding never was. Restoring
+        # parallelism needs a shard key that matches the id distribution —
+        # a hash of the id, not its first character.
+        description: 'Worker shards. 1 = OFF. Do NOT raise without a hash-based shard key.'
+        default: '1'
 
 concurrency:
   group: staging-pipeline
@@ -129,7 +131,7 @@ jobs:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.data_clean_limit || '750' }}
-          SHARDS: ${{ inputs.shards || '8' }}
+          SHARDS: ${{ inputs.shards || '1' }}
         run: |
           pids=""
           for i in $(seq 0 $((SHARDS - 1))); do
@@ -193,7 +195,7 @@ jobs:
           BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.promotion_limit || '250' }}
-          SHARDS: ${{ inputs.shards || '8' }}
+          SHARDS: ${{ inputs.shards || '1' }}
         run: |
           pids=""
           for i in $(seq 0 $((SHARDS - 1))); do
