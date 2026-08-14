@@ -58,6 +58,11 @@ export interface VerticalResolution {
  *  probe below rather than duplicated: we ask it with two different fallbacks
  *  and only trust an answer it gives consistently. */
 function provenSport(title: string): string | null {
+  // inferSportFromTitle has NO explicit baseball branch — baseball is only its
+  // FALLBACK. So the two-probe trick below can never confirm baseball, and a
+  // title literally reading "1969 Topps Baseball" came back reason="defaulted".
+  // That understates confidence badly, since baseball is the largest vertical.
+  if (/(baseball|mlb)/i.test(title)) return "baseball";
   // Ask twice with different fallbacks. A real keyword match returns the same
   // sport both times; a fallback returns whatever we passed in. This avoids
   // duplicating the keyword table and drifting from it.
@@ -95,6 +100,16 @@ export function resolveVertical(input: {
   }
 
   if (declared) return { vertical: declared, confident: true, reason: "explicit" };
+
+  // Baseball is checked HERE rather than inside provenSport. inferSportFromTitle
+  // has no explicit baseball branch — baseball is only its FALLBACK — so the
+  // two-probe trick can never confirm it, and a title literally reading
+  // "1969 Topps Baseball" reported reason="defaulted". That understates
+  // confidence on the largest vertical, which is exactly the signal we added
+  // this function to expose.
+  if (/(baseball|mlb)/i.test(title)) {
+    return { vertical: "baseball", confident: true, reason: "sport-keyword" };
+  }
 
   const sport = provenSport(title);
   if (sport) return { vertical: sport, confident: true, reason: "sport-keyword" };
