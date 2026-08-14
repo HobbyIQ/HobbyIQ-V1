@@ -18,17 +18,28 @@ const { CosmosClient } = require("@azure/cosmos");
 const args = process.argv.slice(2);
 const val = (f, d) => { const i = args.indexOf(f); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
 const MINUTES = Number(val("--minutes", "30"));
-// runDataCleanBatch caps its own limit at 500 (Math.min(500, opts.limit ?? 100)).
 // Both jobs take an OPTIONS OBJECT — passing a bare number silently falls back
 // to the default 100, which is what limited the first calibration run to
 // scanned=100 per cycle and ~160 rows/min.
-const CLEAN = Math.min(500, Number(val("--clean", "500")));
+//
+// The Math.min(500, ...) that used to live here mirrored runDataCleanBatch's own
+// old ceiling. #1023 raised that to MAX_BATCH=5000, but this copy stayed at 500
+// and silently kept the drain at the old rate — the same duplicated-cap bug as
+// the route, one layer down. Clamp to the job's real cap so raising it in one
+// place is enough.
+const MAX_BATCH = 5000;
+const CLEAN = Math.min(MAX_BATCH, Number(val("--clean", "2500")));
 const PROMOTE = Number(val("--promote", "2000"));
 // CF-DRAINER-WORKER-SHARDING exists precisely for this: N workers each take a
 // disjoint id-prefix slice, so they do not compete for the same TOP N rows.
 // Running the shards concurrently in-process multiplies throughput without
 // duplicating work.
 const SHARDS = Number(val("--shards", "8"));
+// The before/after `pending` counts are a cross-partition COUNT(1) over 8.5M
+// documents. That is minutes of wall clock during which the drain does NO work,
+// and because it runs before the loop it looks exactly like a hung process.
+// /api/staging/health already reports these counts, so make them opt-out.
+const NO_COUNT = args.includes("--no-count");
 
 (async () => {
   const { runDataCleanBatch } = require(path.join(__dirname, "..", "dist/services/portfolioiq/dataCleanJob.service.js"));
@@ -37,16 +48,18 @@ const SHARDS = Number(val("--shards", "8"));
     .database(process.env.COSMOS_DATABASE || "hobbyiq").container("comps_staging");
 
   const pendingCount = async () => {
+    if (NO_COUNT) return null;
     const { resources } = await st.items.query({
       query: "SELECT VALUE COUNT(1) FROM c WHERE c.status='pending'",
     }).fetchAll();
     return resources[0] ?? 0;
   };
+  const fmt = (n) => (n === null ? "(not counted)" : n.toLocaleString());
 
   const start = Date.now();
   const deadline = start + MINUTES * 60_000;
   const before = await pendingCount();
-  console.log(`pending at start: ${before.toLocaleString()}   budget ${MINUTES}m   clean=${CLEAN} promote=${PROMOTE}\n`);
+  console.log(`pending at start: ${fmt(before)}   budget ${MINUTES}m   clean=${CLEAN} promote=${PROMOTE} shards=${SHARDS}\n`);
 
   let cycle = 0, totalCleaned = 0, totalPromoted = 0, idle = 0;
   while (Date.now() < deadline) {
@@ -88,5 +101,6 @@ const SHARDS = Number(val("--shards", "8"));
 
   const after = await pendingCount();
   console.log(`\ncycles=${cycle}  cleaned=${totalCleaned.toLocaleString()}  promoted=${totalPromoted.toLocaleString()}`);
-  console.log(`pending: ${before.toLocaleString()} -> ${after.toLocaleString()}  (${(before - after).toLocaleString()} drained)`);
+  console.log(`pending: ${fmt(before)} -> ${fmt(after)}` +
+    (before !== null && after !== null ? `  (${(before - after).toLocaleString()} drained)` : ""));
 })().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
