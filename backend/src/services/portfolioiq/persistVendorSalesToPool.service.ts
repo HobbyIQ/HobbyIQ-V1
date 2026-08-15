@@ -525,6 +525,34 @@ export async function persistVendorSalesToPool(
     } catch { /* soft — main loop still works without pre-warm */ }
   }
 
+  // CF-PERSIST-PER-SALE-FANOUT (Drew, 2026-08-15: "let's fix the 289 call
+  // it will save money and time"). This loop issued THREE cross-partition
+  // Cosmos queries for every single sale — the dedup existence check, the
+  // rolling-30d median, and the price-anomaly cohort. A search that
+  // persists a few hundred comps therefore fired several hundred queries.
+  //
+  // Measured against prod: POST /api/compiq/search runs p50 1.91s but p90
+  // 10.29s, and latency tracks query count almost exactly — 289 Cosmos
+  // calls on searches under 2s, 618 on searches over 10s, peak 5,663. The
+  // same queries are also the bulk of the App Insights bill: 156M
+  // dependency records in two days, ~88% of ingested telemetry volume.
+  //
+  // The two OUTLIER-CONTEXT reads are memoised per call below. Both are
+  // keyed on values that repeat heavily inside one batch — every comp of
+  // the same card shares a slug, and a cohort is shared by every sale of
+  // the same player/year/parallel/grade — so the repeat queries were
+  // re-asking a question already answered.
+  //
+  // Batch-scoped on purpose, NOT a module-level cache: these reads are
+  // "what did the pool look like before this batch", and holding them
+  // across calls would serve stale context to a later ingest.
+  //
+  // The dedup check is deliberately NOT memoised. It is the one query
+  // here that decides whether a row is written, and a stale answer would
+  // either duplicate a sale or silently drop one. It stays a live read.
+  const rollingPricesBySlug = new Map<string, number[]>();
+  const anomalyCohortByKey = new Map<string, number[]>();
+
   for (const row of rows) {
     const title = String(row.title ?? "").trim();
     const price = Number(row.price);
@@ -1003,13 +1031,20 @@ export async function persistVendorSalesToPool(
       // divert to verify_queue instead of poisoning the pool. Cheap:
       // single indexed query on hobbyiqCardId.
       try {
-        const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-        const { resources: rollingRows } = await container.items.query<{ price: number }>({
-          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
-          parameters: [{ name: "@hiq", value: slug }, { name: "@cutoff", value: rollingCutoff }],
-        }).fetchAll();
-        if (rollingRows.length >= 5) {
-          const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+        // Memoised per batch — every comp of this card asks for the same
+        // 30d window, so this was the single most repeated query here.
+        let rollingPrices = rollingPricesBySlug.get(slug);
+        if (!rollingPrices) {
+          const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+          const { resources: rollingRows } = await container.items.query<{ price: number }>({
+            query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+            parameters: [{ name: "@hiq", value: slug }, { name: "@cutoff", value: rollingCutoff }],
+          }).fetchAll();
+          rollingPrices = (rollingRows ?? []).map((r) => Number(r.price));
+          rollingPricesBySlug.set(slug, rollingPrices);
+        }
+        if (rollingPrices.length >= 5) {
+          const prices = rollingPrices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
           if (prices.length >= 5) {
             const rollingMedian = prices[Math.floor(prices.length / 2)];
             const ratio = price / rollingMedian;
@@ -1169,11 +1204,19 @@ export async function persistVendorSalesToPool(
           let where = "c.playerName = @p AND c.cardYear = @y AND c.parallel = @par AND c.isAuto = @isAuto AND c.soldAt >= @since AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)";
           if (gCo) { where += " AND c.gradeCompany = @gCo"; params.push({ name: "@gCo", value: gCo }); }
           if (gVal) { where += " AND c.gradeValue = @gVal"; params.push({ name: "@gVal", value: gVal }); }
-          const { resources: priceRows } = await anomalyContainer.items.query<{ price: number }>({
-            query: `SELECT c.price FROM c WHERE ${where}`,
-            parameters: params,
-          }, { maxItemCount: 200 }).fetchAll();
-          const prices = (priceRows || []).map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+          // Memoised per batch on the cohort's own identity — every sale
+          // of the same player/year/parallel/grade asked for the same set.
+          const cohortKey = [playerName, cardYear, parsed.parallel, !!parsed.isAuto, gCo ?? "", gVal ?? ""].join("|");
+          let cohortPrices = anomalyCohortByKey.get(cohortKey);
+          if (!cohortPrices) {
+            const { resources: priceRows } = await anomalyContainer.items.query<{ price: number }>({
+              query: `SELECT c.price FROM c WHERE ${where}`,
+              parameters: params,
+            }, { maxItemCount: 200 }).fetchAll();
+            cohortPrices = (priceRows || []).map((r) => Number(r.price));
+            anomalyCohortByKey.set(cohortKey, cohortPrices);
+          }
+          const prices = cohortPrices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
           if (prices.length >= 5) {
             const median = prices[Math.floor(prices.length / 2)];
             const deviation = median > 0 ? (median - price) / median : 0;
