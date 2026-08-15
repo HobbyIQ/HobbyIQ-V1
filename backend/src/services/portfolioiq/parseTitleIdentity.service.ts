@@ -1093,6 +1093,27 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   if (/\b(soccer|f[uú]tbol|fifa|uefa|champions\s+league|europa\s+league|premier\s+league|la\s+liga|serie\s+a|bundesliga|ligue\s+1|eredivisie|copa\s+(?:america|libertadores|del\s+rey)|world\s+cup|\bucl\b|\bucc\b|\bmls\b|euro\s+20\d\d|concacaf|conmebol)\b/.test(t)) {
     return "soccer";
   }
+  // CF-WWE-UFC-NEVER-DETECTED (Drew, 2026-08-15: "This is marvel wwe cards").
+  // Neither wrestling nor MMA had any detection, so both fell through to the
+  // `baseball` fallback and polluted the pool that feeds baseball FMV and
+  // calibration — the same failure soccer had.
+  //
+  // Measured in sold_comps: of 7,071 titles containing "WWE", 6,134 (87%)
+  // were tagged baseball; of 5,573 containing "UFC", 4,715 (85%) were. The
+  // backlog holds another 22,602 pending WWE rows.
+  //
+  // "wrestling" and "mma" are already in CANONICAL_SPORTS in slugGuard, and
+  // ufc->mma is already an alias there, so nothing downstream needs teaching.
+  //
+  // NOTE the deliberate absence of "raw": it is the ungraded marker ending
+  // thousands of titles in every sport ("... #CPA-BG - Raw"), and matching it
+  // would drag the entire pool into wrestling. WWE's brand is "NXT"; "RAW" is
+  // unusable as a signal here.
+  if (/\b(wwe|wwf|aew|njpw|wrestlemania|smackdown|royal\s+rumble|nxt|wrestling)\b/.test(t)) {
+    return "wrestling";
+  }
+  if (/\b(ufc|mma|bellator|octagon)\b/.test(t)) return "mma";
+  if (/\bboxing\b/.test(t)) return "boxing";
   if (/football|nfl\b/.test(t)) return "football";
   if (/basketball|nba\b/.test(t)) return "basketball";
   if (/hockey|nhl\b/.test(t)) return "hockey";

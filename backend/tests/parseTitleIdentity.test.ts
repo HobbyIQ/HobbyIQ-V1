@@ -934,6 +934,34 @@ describe("inferSetKeyFromTitle — sub-products that had no rule", () => {
   });
 });
 
+// CF-WWE-UFC-NEVER-DETECTED (Drew, 2026-08-15: "This is marvel wwe cards").
+// Neither wrestling nor MMA had detection, so both fell to the baseball
+// fallback. Measured: of 7,071 sold_comps titles containing "WWE", 6,134
+// (87%) were tagged baseball; of 5,573 containing "UFC", 4,715 (85%) were.
+describe("inferSportFromTitle — wrestling / MMA / boxing", () => {
+  it.each([
+    ["2023 Panini Prizm WWE Roman Reigns #1", "wrestling"],
+    ["2022 Topps WWE Slam Attax Liv Morgan", "wrestling"],
+    ["2024 Panini AEW Chrome Adam Cole Auto", "wrestling"],
+    ["WrestleMania 40 Topps Chrome Cody Rhodes", "wrestling"],
+    ["2023 Panini Prizm UFC Conor McGregor #12", "mma"],
+    ["2024 Topps UFC Bellator Auto", "mma"],
+    ["2023 Topps Boxing Muhammad Ali #5", "boxing"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSportFromTitle(title)).toBe(want);
+  });
+
+  // "RAW" is the ungraded marker, not WWE Raw. It ends thousands of titles
+  // in every sport, so matching it would drag the whole pool into wrestling.
+  it.each([
+    "2025 Bowman Chrome Eric Hartman #CPA-EH - Raw",
+    "2026 Bowman - Chrome Prospect Autographs Breyson Guedez #CPA-BG (AU, RC) - Raw",
+    "Shohei Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars #SLAD - Raw",
+  ])("the ungraded marker '- Raw' stays baseball: %s", (title) => {
+    expect(inferSportFromTitle(title)).toBe("baseball");
+  });
+});
+
 // CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). inferSportFromTitle had no
 // soccer branch at all, so every soccer card fell through to the baseball
 // fallback and polluted the pool that feeds baseball FMV + calibration.

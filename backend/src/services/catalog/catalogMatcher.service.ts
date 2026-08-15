@@ -318,6 +318,68 @@ function cacheKey(c: HobbyIqCardIdComponents): string {
 /** Exposed so a long-running drain can reclaim memory between phases. */
 export function clearCatalogMatchCache(): void { _matchCache.clear(); }
 
+/**
+ * CF-MATCH-WITHOUT-CARDNUMBER (Drew, 2026-08-15: "not everyone is going to
+ * put card numbers so we should be able to match too").
+ *
+ * Resolve a card number from the identity a seller DOES give:
+ *   player + set + year + parallel + auto yes/no
+ *
+ * Returns the card number only when the catalog holds exactly ONE candidate.
+ * Several candidates means we cannot tell which card this is, and picking one
+ * would attach a sale — or a user's holding — to the wrong card. Absent beats
+ * wrong, so ambiguity returns null.
+ *
+ * Ambiguity is real and worth the refusal. Within a single 2026 "bowman"
+ * setKey a prospect can hold a Chrome auto, a Paper auto and a Mega-box auto:
+ *
+ *   Coy James 2026 bowman auto Base       -> CPA-CJ, BPA-CJ          (refuse)
+ *   Coy James 2026 bowman auto Refractor  -> CPA-CJ                  (resolve)
+ *   Marek Houston 2026 bowman auto Base   -> CPA-MHO, BPA-MH, BMA-MH (refuse)
+ *   Owen Carey 2026 bowman auto Base      -> CPA-OC                  (resolve)
+ *
+ * The parallel is what usually breaks the tie, which is why it is part of the
+ * key rather than an afterthought.
+ */
+export async function resolveCardNumberByPlayer(input: {
+  year: number;
+  setKey: string;
+  player: string;
+  isAuto: boolean;
+  parallel?: string | null;
+}): Promise<{ cardNumber: string | null; candidates: string[] }> {
+  const container = await getContainer();
+  if (!container) return { cardNumber: null, candidates: [] };
+  const year = Number(input.year);
+  const setKey = normalizeSetKey(input.setKey ?? "");
+  const player = String(input.player ?? "").trim();
+  if (!year || !setKey || !player) return { cardNumber: null, candidates: [] };
+
+  const parallel = canonicalizeParallelName(input.parallel ?? null);
+  try {
+    const { resources } = await container.items.query<string>({
+      query: `SELECT DISTINCT VALUE c.cardNumber FROM c
+              WHERE c.year = @y AND c.setKey = @s AND c.playerName = @p
+                AND c.isAuto = @a AND c.parallel = @par
+                AND IS_DEFINED(c.cardNumber) AND NOT IS_NULL(c.cardNumber)`,
+      parameters: [
+        { name: "@y", value: year },
+        { name: "@s", value: setKey },
+        { name: "@p", value: player },
+        { name: "@a", value: !!input.isAuto },
+        { name: "@par", value: parallel },
+      ],
+    }).fetchAll();
+    const candidates = (resources ?? []).filter(Boolean).map(String);
+    return {
+      cardNumber: candidates.length === 1 ? candidates[0] : null,
+      candidates,
+    };
+  } catch {
+    return { cardNumber: null, candidates: [] };
+  }
+}
+
 export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMatchResult> {
   // Seeding sources MUST bypass the cache: canonicalize can CREATE a row for
   // them, and a cache hit would skip that side effect.
