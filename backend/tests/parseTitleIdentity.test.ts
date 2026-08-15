@@ -888,6 +888,109 @@ describe("inferSportFromTitle — team-name fallback", () => {
   });
 });
 
+// CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). A slug sweep over 2026-07
+// stamped 4,589 rows sport='hockey'; ~91.6% were wrong. Team words that
+// are also ordinary English ("Stars", "Flames", "Wild") were matching
+// product and insert names, and a GUESSED team outranked the product
+// line sitting in the same title. Every title below is verbatim from
+// the damaged set.
+describe("inferSportFromTitle — CF-SPORT-TEAM-OVERMATCH", () => {
+  describe("named product lines outrank guessed team names", () => {
+    it("Pokemon 'Phantasmal Flames' is not Calgary (2,822 rows)", () => {
+      expect(inferSportFromTitle("2025 2025 Pokemon Mega Evolution Phantasmal Flames #102 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Brilliant Stars' is not Dallas", () => {
+      expect(inferSportFromTitle("2022 2022 Pokemon Brilliant Stars #48 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Wild Force' is not Minnesota (195 rows)", () => {
+      expect(inferSportFromTitle("2024 2024 Pokemon Japanese Scarlet & Violet Wild Force #53 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Lightning' type is not Tampa Bay", () => {
+      expect(inferSportFromTitle("Morpeko Promo SWSH: Sword & Shield Promo Cards SWSH012 Lightning Holo Pokemon Ca - Raw"))
+        .toBe("pokemon");
+    });
+  });
+
+  describe("full player names outrank guessed team names", () => {
+    it("Ohtani 'Hobby Stars' → baseball, not Dallas Stars", () => {
+      expect(inferSportFromTitle("Shohei Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars #SLAD - Raw"))
+        .toBe("baseball");
+    });
+    it("Hoops 'Frequent Flyers' → basketball, not Philadelphia Flyers", () => {
+      expect(inferSportFromTitle("2024-25 Hoops #1 Damian Lillard Frequent Flyers - Raw"))
+        .toBe("basketball");
+    });
+    it("Panini 'Rookies & Stars' is a FOOTBALL product", () => {
+      expect(inferSportFromTitle("2025 Panini Rookies & Stars - Thrillers Chris Olave #14 Orange Prizm /25 - Raw"))
+        .toBe("football");
+    });
+  });
+
+  describe("weak team words need their city; strong names stand alone", () => {
+    it.each([
+      ["Calgary Flames", "2023-24 Upper Deck Calgary Flames Jonathan Huberdeau #77"],
+      ["Dallas Stars", "2022-23 Dallas Stars Jason Robertson #12 Series 2"],
+      ["Minnesota Wild", "2021-22 Minnesota Wild Kirill Kaprizov Series One"],
+      ["San Jose Sharks", "24/25 UD Extended - MACKLIN CELEBRINI Rc #BH-24 Beehive Insert San Jose Sharks"],
+      ["Anaheim Ducks", "2021-22 Upper Deck Series 1   Jamie Drysdale young guns #205 RC Anaheim Ducks"],
+      ["Carolina Hurricanes", "Upper Deck 2024-25 Series 2 Jalen Chatfield #278 Deluxe Carolina Hurricanes /250"],
+    ])("city-qualified '%s' still resolves to hockey", (_label, title) => {
+      expect(inferSportFromTitle(title, "")).toBe("hockey");
+    });
+
+    it.each([
+      ["Blackhawks", "2024 Colton Dach #102 Chicago Blackhawks Upper Deck SPX Rookie Card"],
+      ["Bruins", "2013-14 Dougie Hamilton Rookie Card #646 Boston Bruins"],
+      ["Islanders", "MATHEW BARZAL 2016-17 ROOKIE  CARD #689  New York Islanders"],
+      ["Canadiens", "1986-87 Patrick Roy Rookie O-Pee-Chee OPC RC #53 PSA 7 NM Canadiens"],
+    ])("distinctive '%s' matches bare", (_label, title) => {
+      expect(inferSportFromTitle(title, "")).toBe("hockey");
+    });
+
+    it("an UNQUALIFIED weak word refuses rather than guessing", () => {
+      // Doctrine: absent beats wrong. Nothing in this title proves a
+      // sport, so the caller's default is what should decide it.
+      expect(inferSportFromTitle("2024 Some Set Flames Insert #12", "")).toBe("");
+      expect(inferSportFromTitle("2024 Some Set Wild Insert #12", "")).toBe("");
+    });
+
+    it("MLB Washington Senators are not the Ottawa Senators", () => {
+      expect(inferSportFromTitle("1940 Play Ball #22 Sammy West - Washington Senators (vA1) RARE & VINTAGE! - Raw", ""))
+        .not.toBe("hockey");
+    });
+    it("NFL Houston Oilers are not the Edmonton Oilers", () => {
+      expect(inferSportFromTitle("1990 Pro Set #352 Bruce Matthews PB Oilers - Raw", ""))
+        .not.toBe("hockey");
+    });
+    it("'Name in All Caps' is not the Washington Capitals", () => {
+      expect(inferSportFromTitle("1939 Play Ball - Joe DiMaggio #26 Name in All Caps PSA Graded 1.5 PSA 1.5"))
+        .toBe("baseball");
+    });
+  });
+
+  describe("non-sport detector: card-title words removed", () => {
+    it("'WOW' seller hype is not World of Warcraft", () => {
+      expect(inferSportFromTitle("1997 Bowman's Best REFRACTOR #73 Barry Bonds SF Giants RARE ICONIC PARALLEL WOW - Raw"))
+        .toBe("baseball");
+    });
+    it("'Halo' foil treatment is not the Halo franchise", () => {
+      expect(inferSportFromTitle("2025 Topps Stadium Club Mike Trout #32 Los Angeles Angles Star Power Halo Photo", ""))
+        .not.toBe("non-sport");
+    });
+    it("spelled-out 'World of Warcraft' still detected", () => {
+      expect(inferSportFromTitle("2007 World of Warcraft TCG Landro Longshot Loot Card"))
+        .toBe("non-sport");
+    });
+    it("'Diamond Marvels' (Donruss baseball insert) is not Marvel", () => {
+      expect(inferSportFromTitle("2026 Panini Donruss Nick Kurtz Diamond Marvels #6 A's", ""))
+        .not.toBe("non-sport");
+    });
+  });
+});
+
 // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Last-resort player→sport
 // disambiguation: title carries neither team nor league keyword —
 // only the player name. Full-name matches only.
