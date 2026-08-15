@@ -1059,32 +1059,16 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // a strong basketball signal by product convention.
   if (/fleer\s+sticker/i.test(t)) return "basketball";
 
-  // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). When the title carries
-  // no explicit sport keyword, look for UNAMBIGUOUS team names as a
-  // fallback signal. NFL/NBA/NHL each have some names that also exist
-  // in another league (Panthers/Kings/Jets); those are excluded to
-  // avoid false positives. OBSERVED: Justin Herbert 2020 Panini Prizm
-  // / Mosaic rows landed at sport=baseball because the title says
-  // neither "football" nor "NFL" — but "Chargers" / "Bolts" would
-  // disambiguate.
-  //
-  // Order: check most-specific franchise names first.
-  //
-  // NFL — 32 teams (dropping ambiguous: Cardinals[MLB], Rangers[NHL],
-  // Panthers[NHL], Jets[NHL], Giants[MLB]).
-  if (/\b(chargers|bolts|cowboys|eagles|ravens|steelers|packers|bears|49ers|niners|rams|chiefs|bills|patriots|pats|broncos|raiders|vikings|lions|falcons|buccaneers|bucs|saints|seahawks|bengals|titans|colts|texans|jaguars|jags|dolphins|commanders|redskins)\b/i.test(t)) return "football";
-  // NBA — 30 teams (dropping ambiguous: Kings[NHL], Jazz→OK, Suns→OK,
-  // Hawks→OK, Nets→OK. Bruins→NHL, Hornets→OK).
-  if (/\b(lakers|celtics|warriors|dubs|heat|knicks|nets|bucks|nuggets|suns|mavericks|mavs|rockets|spurs|pelicans|pels|grizzlies|timberwolves|wolves|thunder|okc|trail\s+blazers|blazers|clippers|jazz|hawks|hornets|magic|pistons|cavaliers|cavs|wizards|pacers|76ers|sixers|raptors)\b/i.test(t)) return "basketball";
-  // NHL — 32 teams (dropping ambiguous: Kings[NBA], Jets[NFL],
-  // Panthers[NFL], Rangers→MLB).
-  if (/\b(bruins|islanders|isles|devils|flyers|penguins|pens|capitals|caps|blue\s+jackets|red\s+wings|blackhawks|hawks|wild|blues|predators|preds|stars|avalanche|avs|kraken|ducks|sharks|golden\s+knights|coyotes|canucks|flames|oilers|canadiens|habs|maple\s+leafs|leafs|senators|sens|sabres|hurricanes|canes|lightning|bolts)\b/i.test(t)) {
-    // "Bolts" overlaps NFL Chargers ("Bolts") and NHL Lightning
-    // ("Bolts"). If the football-team check above already fired, we
-    // won't reach here. Skip Hawks (matched both NBA Atlanta and NHL
-    // Chicago — but NHL bruins/leafs are unique enough).
-    return "hockey";
-  }
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). TCG/non-sport detection
+  // used to sit BELOW the team-name heuristics. A title literally
+  // reading "2025 Pokemon Mega Evolution Phantasmal Flames" therefore
+  // reached the NHL alternation, matched "flames" (Calgary), and was
+  // stamped sport=hockey — 3,436 Pokemon rows in a single month's slug
+  // sweep. The check was never missing; it was merely unreachable.
+  // A named product line is a STATED vertical, not a guessed one, so it
+  // belongs with the other keyword checks above the team fallbacks.
+  const nonSport = inferNonSportVertical(t);
+  if (nonSport) return nonSport;
 
   // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Some Herbert / Mahomes /
   // Wembanyama-style titles carry ONLY the player name — no team, no
@@ -1097,24 +1081,179 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // OBSERVED: Justin Herbert 2020 Panini Prizm / Mosaic rows landed at
   // sport=baseball because the title carries neither team nor "NFL";
   // full-name "Justin Herbert" is the only signal.
+  //
+  // CF-SPORT-TEAM-OVERMATCH moved this ABOVE the team checks. An
+  // unambiguous full name is strictly more specific than a bare team
+  // word, and the table already excludes two-sport players. "Shohei
+  // Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars"
+  // resolves on "shohei ohtani" instead of colliding with "Stars".
   const playerSport = inferSportFromPlayer(t);
   if (playerSport) return playerSport;
 
-  // CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes
-  // TCG + non-sport (Pokemon, MTG, Star Wars, etc.) alongside sports.
-  // Rather than default to "baseball" (which pollutes FMV/calibration
-  // pools), tag these with their real category so downstream filters
-  // on sport IN (baseball/basketball/football/hockey/soccer) exclude
-  // them naturally. Rows stay queryable for later dedicated
-  // categorization.
+  // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). When the title carries
+  // no explicit sport keyword, look for UNAMBIGUOUS team names as a
+  // fallback signal. NFL/NBA/NHL each have some names that also exist
+  // in another league (Panthers/Kings/Jets); those are excluded to
+  // avoid false positives.
+  //
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). The single alternation
+  // per league was too blunt: it mixed distinctive franchise nouns
+  // ("Blackhawks", "Canadiens") with ordinary English words that are
+  // ALSO team names ("Stars", "Flames", "Wild", "Blues", "Heat",
+  // "Magic", "Bills"). Card titles are dense with product, insert and
+  // parallel names, so the plain words collided constantly and a
+  // GUESSED team outranked the product name sitting in the same title:
+  //
+  //   "...Sho-Time Showcase Hobby Stars #SLAD"     -> Dallas Stars
+  //   "2025 Pokemon ... Phantasmal Flames #102"    -> Calgary Flames
+  //   "...Scarlet & Violet Wild Force #53"         -> Minnesota Wild
+  //   "2024-25 Hoops #1 Lillard Frequent Flyers"   -> Philadelphia Flyers
+  //   "1940 Play Ball #22 Sammy West - Senators"   -> Ottawa Senators
+  //                                                  (it's the MLB Senators)
+  //   "1990 Pro Set #352 Bruce Matthews PB Oilers" -> Edmonton Oilers
+  //                                                  (it's the NFL Oilers)
+  //
+  // So the tokens are split into two tiers. STRONG names are
+  // distinctive enough to stand alone. WEAK names are ordinary words
+  // and only count when the franchise's CITY sits next to them. That
+  // discriminator was not invented — of the 4,589 damaged rows, every
+  // genuinely-hockey one carried its city ("San Jose Sharks", "Anaheim
+  // Ducks", "Carolina Hurricanes", "Boston Bruins", "Toronto Maple
+  // Leafs") while none of the product-name collisions did.
+  //
+  // Team names are now a TRUE last resort: stated sport, named product
+  // line and full player name all outrank them. Consistent with
+  // slugGuard's doctrine that refusing beats defaulting, an unqualified
+  // weak word yields NOTHING rather than a guess.
+  if (NFL_TEAMS_STRONG.test(t) || NFL_TEAMS_CITY_QUALIFIED.test(t)) return "football";
+  if (NBA_TEAMS_STRONG.test(t) || NBA_TEAMS_CITY_QUALIFIED.test(t)) return "basketball";
+  // "Bolts" overlaps NFL Chargers and NHL Lightning. If the football
+  // check above already fired, we won't reach here.
+  if (NHL_TEAMS_STRONG.test(t) || NHL_TEAMS_CITY_QUALIFIED.test(t)) return "hockey";
+
+  return fallback;
+}
+
+/**
+ * CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes TCG +
+ * non-sport (Pokemon, MTG, Star Wars, etc.) alongside sports. Rather
+ * than default to "baseball" (which pollutes FMV/calibration pools),
+ * tag these with their real category so downstream filters on sport IN
+ * (baseball/basketball/football/hockey/soccer) exclude them naturally.
+ * Rows stay queryable for later dedicated categorization.
+ *
+ * Extracted from inferSportFromTitle by CF-SPORT-TEAM-OVERMATCH so the
+ * check can run above the team-name fallbacks. Returns null when the
+ * title names no known non-sport product line.
+ */
+export function inferNonSportVertical(title: string): string | null {
+  const t = String(title ?? "").toLowerCase();
   if (/\b(pokemon|pok[eé]?mon)\b/i.test(t)) return "pokemon";
   if (/\b(yugioh|yu-?gi-?oh)\b/i.test(t)) return "yugioh";
   if (/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i.test(t)) return "tcg-other";
   if (/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i.test(t)) return "anime-tcg";
-  if (/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b)\b/i.test(t)) return "non-sport";
-
-  return fallback;
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). "halo" and "wow" were
+  // dropped from this alternation. Both are ordinary card-title words,
+  // not product signals, and promoting this check above the team
+  // fallbacks would have made them fire far more often. Measured over
+  // 2026-07: all 13 "halo" hits are foil/parallel treatments ("Halo
+  // Foil", "Star Power Halo Photo", "Light Blue Halo /49") and all 61
+  // "wow" hits are seller hype on real sports cards ("RARE ICONIC
+  // PARALLEL WOW", "PSA 10 gem mint WOW !!"). Neither had a single
+  // genuine Halo / World of Warcraft row. The spelled-out "world of
+  // warcraft" still matches, which is what actually identifies those.
+  // "marvel" is KEPT: its 948 hits are Donruss "Diamond Marvels", and
+  // the trailing \b means the plural never matches.
+  if (/\b(star\s+wars|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft)\b/i.test(t)) return "non-sport";
+  return null;
 }
+
+/**
+ * CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). Build a pattern that
+ * matches a weak team word ONLY when its franchise city sits directly
+ * in front of it — "calgary flames" counts, a bare "Flames" does not.
+ */
+function cityQualifiedTeams(pairs: Array<[city: string, team: string]>): RegExp {
+  return new RegExp(
+    pairs.map(([city, team]) => `\\b(?:${city})\\s+(?:${team})\\b`).join("|"),
+    "i",
+  );
+}
+
+// NFL — dropping names shared with another league: Cardinals[MLB],
+// Rangers[NHL], Panthers[NHL], Jets[NHL], Giants[MLB].
+const NFL_TEAMS_STRONG =
+  /\b(chargers|bolts|steelers|packers|ravens|49ers|niners|seahawks|buccaneers|redskins|bengals|broncos)\b/i;
+const NFL_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["dallas", "cowboys"],
+  ["philadelphia|philly", "eagles"],
+  ["chicago", "bears"],
+  ["detroit", "lions"],
+  ["los\\s+angeles|la|st\\.?\\s+louis", "rams"],
+  ["kansas\\s+city|kc", "chiefs"],
+  ["buffalo", "bills"],
+  ["new\\s+england", "patriots|pats"],
+  ["las\\s+vegas|oakland|los\\s+angeles|la", "raiders"],
+  ["minnesota", "vikings"],
+  ["atlanta", "falcons"],
+  ["tampa\\s+bay|tampa", "bucs"],
+  ["new\\s+orleans|nola", "saints"],
+  ["tennessee|houston", "titans"],
+  ["indianapolis|indy|baltimore", "colts"],
+  ["houston", "texans"],
+  ["jacksonville", "jaguars|jags"],
+  ["miami", "dolphins"],
+  ["washington", "commanders"],
+]);
+
+// NBA — dropping Kings[NHL].
+const NBA_TEAMS_STRONG =
+  /\b(lakers|celtics|warriors|knicks|nuggets|mavericks|mavs|pelicans|pels|grizzlies|timberwolves|clippers|cavaliers|cavs|76ers|sixers|raptors|trail\s+blazers|okc)\b/i;
+const NBA_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["miami", "heat"],
+  ["orlando", "magic"],
+  ["oklahoma\\s+city|okc", "thunder"],
+  ["washington", "wizards"],
+  ["houston", "rockets"],
+  ["brooklyn|new\\s+jersey", "nets"],
+  ["milwaukee", "bucks"],
+  ["phoenix", "suns"],
+  ["utah", "jazz"],
+  ["minnesota", "wolves"],
+  ["san\\s+antonio", "spurs"],
+  ["charlotte|new\\s+orleans", "hornets"],
+  ["detroit", "pistons"],
+  ["indiana", "pacers"],
+  ["portland", "blazers"],
+  ["atlanta", "hawks"],
+  ["golden\\s+state", "dubs"],
+]);
+
+// NHL — dropping names shared with another league: Kings[NBA],
+// Jets[NFL], Panthers[NFL], Rangers[MLB].
+const NHL_TEAMS_STRONG =
+  /\b(bruins|islanders|blackhawks|blue\s+jackets|red\s+wings|canadiens|habs|maple\s+leafs|canucks|kraken|golden\s+knights|coyotes|sabres|penguins|capitals)\b/i;
+const NHL_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["calgary", "flames"],
+  ["dallas|minnesota\\s+north|north", "stars"],
+  ["minnesota", "wild"],
+  ["tampa\\s+bay|tampa", "lightning"],
+  ["philadelphia|philly", "flyers"],
+  ["ottawa", "senators|sens"],
+  ["edmonton", "oilers"],
+  ["san\\s+jose", "sharks"],
+  ["anaheim|mighty", "ducks"],
+  ["carolina", "hurricanes|canes"],
+  ["st\\.?\\s+louis|saint\\s+louis", "blues"],
+  ["colorado", "avalanche|avs"],
+  ["nashville", "predators|preds"],
+  ["new\\s+jersey|jersey", "devils"],
+  ["washington", "caps"],
+  ["toronto", "leafs"],
+  ["pittsburgh", "pens"],
+  ["new\\s+york|ny", "isles"],
+  ["chicago", "hawks"],
+]);
 
 // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Full-name → sport table,
 // grouped by sport for maintainability. Only include names that are
