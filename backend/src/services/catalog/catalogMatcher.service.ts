@@ -239,6 +239,29 @@ export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchRe
 const COLOUR_BORDER_RE =
   /^(gold|black|blue|red|green|orange|purple|yellow|pink|white|silver|platinum|aqua|fuchsia)\s+border(ed)?$/i;
 
+/**
+ * CF-PRIZMS-WORD-ORDER (Drew, 2026-08-15: "now can we match it with what we
+ * have?"). Yes — the parallels are already catalogued, under two word orders
+ * from two scrapers:
+ *
+ *   Green Pulsar Prizm  /25   baseballcardpedia, bccp
+ *   Prizms Green Pulsar /25   checklistcenter
+ *   Glitter Prizm       /-    baseballcardpedia, bccp
+ *   Prizms Glitter      /-    checklistcenter
+ *
+ * Same card, same print run, one source writing the family name first. The
+ * matcher requires exact parallel-token equality, so a sale matched one form
+ * and missed the other, and the catalog carries both as if they were separate
+ * parallels: 51,335 rows in "Prizms X" against 444,219 in "X Prizm".
+ *
+ * Normalizing to the majority form ("X Prizm") collapses that split.
+ *
+ * NOT a general token strip. Bare "Prizm" is a real parallel in its own right
+ * (2,360 rows), so treating "prizm" as droppable would collapse it into Base.
+ * This only reorders; it never removes.
+ */
+const PRIZMS_PREFIX_RE = /^prizms\s+(.+)$/i;
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
@@ -247,6 +270,14 @@ export function canonicalizeParallelName(raw: string | null): string {
   if (PARALLEL_ALIAS_MAP[lower]) return PARALLEL_ALIAS_MAP[lower];
   const border = lower.match(COLOUR_BORDER_RE);
   if (border) return border[1].charAt(0).toUpperCase() + border[1].slice(1);
+  // "Prizms Green Pulsar" -> "Green Pulsar Prizm". Reorder only; the family
+  // word is preserved because bare "Prizm" is itself a distinct parallel.
+  const prizms = trimmed.match(PRIZMS_PREFIX_RE);
+  if (prizms) {
+    const rest = prizms[1].trim();
+    if (rest && !/prizm$/i.test(rest)) return `${rest} Prizm`;
+    if (rest) return rest;
+  }
   return trimmed;
 }
 
