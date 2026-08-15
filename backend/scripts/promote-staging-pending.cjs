@@ -66,7 +66,7 @@ async function main() {
   };
   const iter = stg.items.query(q, { maxItemCount: BATCH_SIZE });
 
-  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0;
+  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0, divertedToVerify = 0;
   const inflight = new Set();
 
   while (iter.hasMoreResults()) {
@@ -109,13 +109,35 @@ async function main() {
           skipped += res.skipped;
           const unmatched = res.catalogUnmatched ?? 0;
           catalogUnmatched += unmatched;
+          const diverted = res.divertedToVerify ?? 0;
+          divertedToVerify += diverted;
           // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). Flip status also
           // on catalog-unmatched so the row stops getting re-tried —
           // it's now in the admin review pool, decision belongs there.
-          if (res.inserted > 0 || res.deduped > 0 || unmatched > 0) {
+          //
+          // CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Same rule, same
+          // reason, for rows diverted to verify_queue — and this one was
+          // missing, which is why the backlog never fell.
+          //
+          // persistVendorSalesToPool reports a diverted row as `skipped`,
+          // and `skipped` was not in this condition. So the row stayed
+          // pending, got re-scanned on the next hourly run, and was
+          // RE-ENQUEUED to verify_queue every single time. Measured
+          // before this fix: 1,839,312 rows stuck pending for 5-14 days,
+          // verify_queue at 1,333,299 entries (828,699 price-outlier +
+          // 457,801 parser-low-confidence), and a continuous Cosmos 429
+          // storm from the repeated writes. Run 31902272869 scanned
+          // 276,500 rows and skipped 274,860 — 99.4% of a 45-minute
+          // budget spent re-doing work it had already done.
+          //
+          // A diverted row is not lost: it is in verify_queue and a human
+          // owns the decision, exactly like catalog-unmatched. Flipping it
+          // is what lets the promoter's budget reach rows it has not seen.
+          if (res.inserted > 0 || res.deduped > 0 || unmatched > 0 || diverted > 0) {
             const newStatus = res.inserted > 0
               ? "promoted"
-              : (unmatched > 0 ? "catalog-unmatched" : "already-in-pool");
+              : (unmatched > 0 ? "catalog-unmatched"
+              : (diverted > 0 ? "awaiting-verify" : "already-in-pool"));
             // CF-STAGING-FLIP-PARTITION-KEY (Drew, 2026-08-14). The
             // partition key is hobbyiqCardId, NOT id. Passing row.id
             // addressed a partition that does not exist, so every patch
@@ -155,13 +177,13 @@ async function main() {
       if (tried % 1000 === 0) {
         const el = ((Date.now() - startMs) / 1000).toFixed(0);
         const rate = (tried / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
-        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} rate=${rate}/s elapsed=${el}s`);
+        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} rate=${rate}/s elapsed=${el}s`);
       }
     }
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
 }
 

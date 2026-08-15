@@ -416,6 +416,23 @@ export interface VendorPersistResult {
   deduped: number;
   skipped: number;                          // rows that couldn't be parsed to identity
   catalogUnmatched: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
+  /**
+   * CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Rows diverted to
+   * verify_queue rather than written to the pool. These are a SUBSET of
+   * `skipped`, reported separately because the caller must be able to
+   * tell "I could not read this row" from "a human now owns this row".
+   *
+   * The staging promoter only flips a row off `pending` when it sees
+   * inserted/deduped/catalogUnmatched. A diverted row reported only
+   * `skipped`, so it stayed pending, was re-scanned on the next hourly
+   * run, and was RE-ENQUEUED to verify_queue every time. Measured
+   * 2026-08-15: 1,839,312 staging rows stuck pending for 5-14 days,
+   * 1,333,299 verify_queue rows (828,699 price-outlier + 457,801
+   * parser-low-confidence), and a continuous Cosmos 429 storm from the
+   * repeated writes. One promoter run scanned 276,500 rows and skipped
+   * 274,860 of them — 99.4% of its 45-minute budget spent re-doing work.
+   */
+  divertedToVerify: number;
 }
 
 // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). The catalog is CURATED.
@@ -485,7 +502,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, divertedToVerify: 0 };
   if (!isPersistVendorLookupsEnabled()) return result;
   if (!Array.isArray(rows) || rows.length === 0) return result;
   const container = await getSoldCompsContainer();
@@ -976,6 +993,7 @@ export async function persistVendorSalesToPool(
             },
           });
           result.skipped++;
+          result.divertedToVerify++;
           continue;
         } catch {
           // Non-fatal — fall through and persist as Base.
@@ -1076,6 +1094,7 @@ export async function persistVendorSalesToPool(
                 signal: { rollingMedian, ratio, note: `${ratio > 3 ? "high" : "low"}-outlier vs 30d median ($${rollingMedian.toFixed(2)}, n=${prices.length})` },
               });
               result.skipped++;
+              result.divertedToVerify++;
               continue;
             }
           }
