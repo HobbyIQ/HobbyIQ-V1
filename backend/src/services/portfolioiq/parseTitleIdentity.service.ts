@@ -1031,6 +1031,24 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   if (/football|nfl\b/.test(t)) return "football";
   if (/basketball|nba\b/.test(t)) return "basketball";
   if (/hockey|nhl\b/.test(t)) return "hockey";
+  // CF-BASEBALL-KEYWORD-MISSING (Drew, 2026-08-14). There was no
+  // baseball keyword check at all — baseball was reachable ONLY via the
+  // `fallback` parameter. So a title that says "Baseball" in plain text
+  // fell through every explicit check and landed on the team-name
+  // heuristics below, where the NHL alternation contains "stars"
+  // (Dallas Stars):
+  //
+  //   "1978 Kellogg's 3-D Super Stars Baseball #8"  -> "hockey"
+  //   "2025 Topps Stars of MLB #SMLB10 Ohtani"      -> "hockey"
+  //
+  // "Stars" is everywhere in baseball product names (Super Stars, Stars
+  // of MLB, All-Stars), so this quietly mis-sported a large slice of the
+  // pool — sport='hockey' in sold_comps was dominated by baseball rows.
+  // Placed AFTER the other three so an explicitly multi-sport title
+  // keeps its existing precedence, and BEFORE the team-name fallbacks so
+  // a stated sport always beats a guessed one. "basketball" does not
+  // contain "baseball", so there is no overlap with the check above.
+  if (/baseball|mlb\b/.test(t)) return "baseball";
   // CF-BASKETBALL-BY-PRODUCT (Drew, 2026-07-29). Some famous basketball
   // products don't carry "basketball"/"nba" in the title but their
   // product line is basketball-exclusive:
