@@ -77,7 +77,7 @@ async function main() {
   const MIN_CONF = Number(arg("min-confidence", "0.7"));
 
   const { normalizeHoldingFields } = require(path.join(backend, "dist/services/portfolioiq/holdingFieldNormalizer.service.js"));
-  const { canonicalize } = require(path.join(backend, "dist/services/catalog/catalogMatcher.service.js"));
+  const { canonicalize, resolveCardNumberByPlayer } = require(path.join(backend, "dist/services/catalog/catalogMatcher.service.js"));
 
   const db = new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
     .database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -113,10 +113,35 @@ async function main() {
       } catch { /* fall back to raw on normalizer failure */ }
 
       const setName = clean.setName ?? productLine(h) ?? "";
-      const cardNumber = clean.cardNumber ?? h.cardNumber ?? "";
+      let cardNumber = clean.cardNumber ?? h.cardNumber ?? "";
       const year = Number(clean.cardYear ?? h.cardYear);
       const label = `${String(clean.playerName ?? h.playerName ?? "?").slice(0, 22).padEnd(22)} ${year} ${String(cardNumber || "-").padEnd(9)} ${String(setName).slice(0, 26)}`;
 
+      // CF-MATCH-WITHOUT-CARDNUMBER (Drew, 2026-08-15: "not everyone is going
+      // to put card numbers so we should be able to match too"). Recover the
+      // number from what the seller DID give — player + set + year + parallel
+      // + auto — and only when the catalog holds exactly one candidate.
+      let resolvedFrom = "";
+      if (year && setName && !cardNumber) {
+        const player = clean.playerName ?? h.playerName ?? null;
+        if (player) {
+          const r = await resolveCardNumberByPlayer({
+            year,
+            setKey: setName,
+            player,
+            isAuto: h.isAuto === true,
+            parallel: clean.parallel ?? h.parallel ?? null,
+          });
+          if (r.cardNumber) {
+            cardNumber = r.cardNumber;
+            resolvedFrom = ` (number resolved from player+set+parallel: #${r.cardNumber})`;
+          } else if (r.candidates.length > 1) {
+            tot.unmatched++;
+            proposals.push({ hid, label, verdict: `AMBIGUOUS — ${r.candidates.length} candidates: ${r.candidates.slice(0, 4).join(", ")}`, slug: null });
+            continue;
+          }
+        }
+      }
       if (!year || !cardNumber || !setName) {
         tot.unmatched++;
         proposals.push({ hid, label, verdict: "SKIP — missing year/number/set", slug: null });
@@ -156,7 +181,7 @@ async function main() {
       }
 
       tot.matched++;
-      proposals.push({ hid, label, verdict: `match conf=${res.confidence}`, slug: res.slug });
+      proposals.push({ hid, label, verdict: `match conf=${res.confidence}${resolvedFrom}`, slug: res.slug });
       // Keep the vendor id. It is the only record of which Cardsight /
       // CardHedge row this holding came from, and overwriting cardId in
       // place would erase that provenance with no way to reconstruct it.
