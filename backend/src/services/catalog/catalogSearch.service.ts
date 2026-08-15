@@ -518,7 +518,26 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
   if (!comps) return;
 
   await Promise.all(hits.map(async (h) => {
-    if (h.salesSummary && h.salesSummary.count > 0) return;   // batch value wins
+    // CF-SEARCH-IMAGE-SHORT-CIRCUIT (Drew, 2026-08-15). This used to be
+    // `if (h.salesSummary?.count > 0) return;` — a guard written when the
+    // function only filled salesSummary. CF-SEARCH-ATTACH-IMAGE later added
+    // the imageUrl attach INSIDE the same block, so the early return started
+    // skipping it too.
+    //
+    // The effect was the exact opposite of what the guard intended: a card
+    // with a batch-computed summary is a card with lots of comps, i.e. a
+    // popular card, i.e. precisely what people search for. Those cards
+    // returned before the picture was ever attached, so the ones users
+    // actually look at were the ones guaranteed to render a placeholder.
+    // "2018 Topps Chrome Update Ohtani #HMT1" has 23 comps and ALL 23 carry
+    // an image; the search still returned imageUrl: null every time.
+    //
+    // Split the two needs. The batch summary still wins when it exists —
+    // that part of the guard was correct — but a missing picture is now
+    // reason enough to look.
+    const needsSummary = !(h.salesSummary && h.salesSummary.count > 0);
+    const needsImage = !h.imageUrl;
+    if (!needsSummary && !needsImage) return;
     try {
       const { resources } = await comps.items.query<{
         price: number; soldAt: string; imageUrl?: string | null; blobUrl?: string | null;
@@ -545,6 +564,9 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
         const withImg = resources.find((r) => typeof r.imageUrl === "string" && r.imageUrl);
         h.imageUrl = (withBlob?.blobUrl ?? withImg?.imageUrl) ?? null;
       }
+
+      // Only the SUMMARY is gated on the batch value; the image above is not.
+      if (!needsSummary) return;
 
       const dated = resources
         .filter((r) => typeof r.price === "number" && r.price > 0 && r.soldAt)
