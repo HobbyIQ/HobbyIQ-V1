@@ -922,6 +922,45 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+archives/i.test(t)) return "Topps Archives";
   if (/topps\s+big\s+league|big\s+league/i.test(t)) return "Topps Big League";
   if (/topps\s+bunt/i.test(t)) return "Topps Bunt";
+  // CF-SUBPRODUCT-SETKEY (Drew, 2026-08-15). These product lines existed in
+  // card_catalog but had no parser rule, so every sale of them collapsed to
+  // the parent brand ("topps"/"bowman"/"fleer") and then failed to match a
+  // catalog row that was sitting right there.
+  //
+  // Measured over 30,000 awaiting-catalog staging rows: 19,900 (66%)
+  // inferred a GENERIC setKey. All 17 product lines below were confirmed
+  // present in card_catalog FIRST — the point is to route to rows we
+  // already hold, not to invent new ones:
+  //
+  //   leaf-metal 108,608 · topps-tier-one 92,677 · bowman-platinum 87,074
+  //   topps-triple-threads 83,910 · topps-pro-debut 65,989
+  //   topps-cosmic-chrome 34,144 · bowman-inception 18,029
+  //   topps-now 14,221 · topps-shoebox-treasures 4,038 · fleer-update 2,504
+  //   topps-signature-class 1,191 · fleer-ultra 598 · etopps 304
+  //   panini-totally-certified 284 · topps-resurgence 86 · panini-noir 76
+  //   fleer-metal 17
+  //
+  // Two were not merely generic but WRONG: "Panini Totally Certified" and
+  // "Panini Noir" both returned "Bowman".
+  //
+  // ORDER MATTERS. Each must precede its parent brand's bare rule, and
+  // eTopps must precede /topps/ since the brand name is a substring of it.
+  if (/\betopps\b/i.test(t)) return "eTopps";
+  if (/topps\s+pro\s+debut/i.test(t)) return "Topps Pro Debut";
+  if (/topps\s+signature\s+class/i.test(t)) return "Topps Signature Class";
+  if (/topps\s+cosmic\s+chrome|cosmic\s+chrome/i.test(t)) return "Topps Cosmic Chrome";
+  if (/topps\s+triple\s+threads|triple\s+threads/i.test(t)) return "Topps Triple Threads";
+  if (/topps\s+tier\s+one|tier\s+one/i.test(t)) return "Topps Tier One";
+  if (/topps\s+shoebox\s+treasures|shoebox\s+treasures/i.test(t)) return "Topps Shoebox Treasures";
+  if (/topps\s+resurgence/i.test(t)) return "Topps Resurgence";
+  // "Topps Now" is a dated print-to-order line. Anchor on the brand so a
+  // stray "now" elsewhere in a title cannot claim it.
+  if (/topps\s+now\b/i.test(t)) return "Topps Now";
+  // Panini sub-products — both of these previously returned "Bowman".
+  if (/panini\s+totally\s+certified|totally\s+certified/i.test(t)) return "Panini Totally Certified";
+  if (/panini\s+noir\b/i.test(t)) return "Panini Noir";
+  if (/leaf\s+metal/i.test(t)) return "Leaf Metal";
+
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
@@ -930,7 +969,12 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // fallback. Applies to any year — Fleer produced sticker inserts across
   // multiple sports/years, all distinct products.
   if (/fleer\s+stickers?/i.test(t)) return "Fleer Stickers";
+  if (/fleer\s+ultra|\bultra\s+fleer\b/i.test(t)) return "Fleer Ultra";
+  if (/fleer\s+metal|metal\s+universe/i.test(t)) return "Fleer Metal";
+  if (/fleer\s+update/i.test(t)) return "Fleer Update";
   if (/\bfleer\b/i.test(t)) return "Fleer";
+  if (/bowman\s+platinum/i.test(t)) return "Bowman Platinum";
+  if (/bowman\s+inception/i.test(t)) return "Bowman Inception";
   if (/bowman\s+draft\s+chrome/.test(t)) return "Bowman Draft Chrome";
   if (/bowman\s+draft/.test(t)) return "Bowman Draft";
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";

@@ -888,6 +888,52 @@ describe("inferSportFromTitle — team-name fallback", () => {
   });
 });
 
+// CF-SUBPRODUCT-SETKEY (Drew, 2026-08-15). 17 product lines existed in
+// card_catalog with no parser rule, so their sales collapsed to the parent
+// brand and then failed to match a catalog row that was already there.
+describe("inferSetKeyFromTitle — sub-products that had no rule", () => {
+  it.each([
+    ["2024 Topps Pro Debut #PD-100 Jackson Holliday", "Topps Pro Debut"],
+    ["2023 Topps Signature Class Auto #SC-JD", "Topps Signature Class"],
+    ["2024 Topps Cosmic Chrome #55 Refractor", "Topps Cosmic Chrome"],
+    ["2022 Topps Triple Threads Relic #TTR-1", "Topps Triple Threads"],
+    ["2023 Topps Tier One Auto #TOA-BW", "Topps Tier One"],
+    ["2025 Topps Now #35 Shohei Ohtani", "Topps Now"],
+    ["2024 Topps Resurgence #R-12", "Topps Resurgence"],
+    ["2003 eTopps #45 Albert Pujols", "eTopps"],
+    ["Don Mattingly 2025 Topps Shoebox Treasures #14", "Topps Shoebox Treasures"],
+    ["2024 Bowman Platinum Top Prospects #TP-5", "Bowman Platinum"],
+    ["2023 Bowman Inception Auto #BI-JD", "Bowman Inception"],
+    ["1994 Fleer Ultra #200 Griffey", "Fleer Ultra"],
+    ["1996 Fleer Metal Universe #2 Barry Bonds", "Fleer Metal"],
+    ["1990 Fleer Update #U-87", "Fleer Update"],
+    ["2023 Leaf Metal Sports Heroes Auto #5", "Leaf Metal"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  // Both of these previously returned "Bowman" — not merely generic, wrong.
+  it.each([
+    ["2013 Panini Totally Certified Red #12", "Panini Totally Certified"],
+    ["2024 Panini Noir USMNT #12", "Panini Noir"],
+  ])("was mis-routed to Bowman: %s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  describe("guardrails — parent products must not be stolen", () => {
+    it.each([
+      ["2025 Topps Series 1 Baseball #100", "Topps"],
+      ["2025 Topps Update Baseball #US140", "Topps Update"],
+      ["2025 Topps Chrome #150 Refractor", "Topps Chrome"],
+      ["2024 Bowman Chrome Prospect Auto #CPA-AB", "Bowman Chrome"],
+      ["2024 Bowman Draft Chrome #BDC-1", "Bowman Draft Chrome"],
+      ["1986 Fleer #57 Michael Jordan Rookie", "Fleer"],
+    ])("%s -> %s", (title, want) => {
+      expect(inferSetKeyFromTitle(title)).toBe(want);
+    });
+  });
+});
+
 // CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). inferSportFromTitle had no
 // soccer branch at all, so every soccer card fell through to the baseball
 // fallback and polluted the pool that feeds baseball FMV + calibration.
