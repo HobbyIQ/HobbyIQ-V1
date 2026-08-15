@@ -55,13 +55,18 @@ async function main() {
   const parameters = [];
   let filter = "c.status = 'pending'";
   if (VENDOR) { filter += " AND c.raw.vendor = @vendor"; parameters.push({ name: "@vendor", value: VENDOR }); }
+  // CF-STAGING-FLIP-PARTITION-KEY (Drew, 2026-08-14). hobbyiqCardId is
+  // the PARTITION KEY of comps_staging and must be projected here — the
+  // status flip below is a point-write and cannot address the document
+  // without it. It was previously absent, which is why the flip fell
+  // back to row.id and silently 404'd on every row.
   const q = {
-    query: `SELECT c.id, c.raw, c._ts FROM c WHERE ${filter}`,
+    query: `SELECT c.id, c.hobbyiqCardId, c.raw, c._ts FROM c WHERE ${filter}`,
     parameters,
   };
   const iter = stg.items.query(q, { maxItemCount: BATCH_SIZE });
 
-  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0;
+  let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0;
   const inflight = new Set();
 
   while (iter.hasMoreResults()) {
@@ -111,15 +116,32 @@ async function main() {
             const newStatus = res.inserted > 0
               ? "promoted"
               : (unmatched > 0 ? "catalog-unmatched" : "already-in-pool");
+            // CF-STAGING-FLIP-PARTITION-KEY (Drew, 2026-08-14). The
+            // partition key is hobbyiqCardId, NOT id. Passing row.id
+            // addressed a partition that does not exist, so every patch
+            // 404'd and no row was ever flipped out of 'pending'.
+            //
+            // Measured on run 31861919160 before this fix:
+            //   inserted=4725  flipped=0  "patch failed ... 404" x15,170
+            //
+            // The rows were written to sold_comps correctly and then
+            // left pending, so every subsequent run re-scanned the same
+            // rows from the top — which is what the 48.6% dedupe rate in
+            // that run actually was. The backlog could never fall, and
+            // nothing alarmed because the job exits 0 either way.
             try {
-              await stg.item(row.id, row.id).patch([
+              await stg.item(row.id, row.hobbyiqCardId).patch([
                 { op: "replace", path: "/status", value: newStatus },
                 { op: "add", path: "/statusUpdatedAt", value: new Date().toISOString() },
               ]);
               statusFlipped++;
             } catch (patchErr) {
-              // Non-fatal — row stays pending, next run will re-try
-              if (errored < 10) console.warn(`  patch failed id=${row.id}: ${patchErr?.code ?? patchErr?.message ?? patchErr}`);
+              // A failed flip is NOT cosmetic: the row is already in
+              // sold_comps, so leaving it pending guarantees it is
+              // re-processed forever. Count it so a broken flip shows up
+              // in the summary line instead of hiding behind inserted>0.
+              patchFailed++;
+              if (patchFailed <= 10) console.warn(`  patch failed id=${row.id}: ${patchErr?.code ?? patchErr?.message ?? patchErr}`);
             }
           }
         })
@@ -133,13 +155,13 @@ async function main() {
       if (tried % 1000 === 0) {
         const el = ((Date.now() - startMs) / 1000).toFixed(0);
         const rate = (tried / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
-        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} errored=${errored} rate=${rate}/s elapsed=${el}s`);
+        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} rate=${rate}/s elapsed=${el}s`);
       }
     }
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
 }
 
