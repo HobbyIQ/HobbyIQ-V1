@@ -207,12 +207,46 @@ export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchRe
   return { slug: resolved.slug, rebound: true };
 }
 
+/**
+ * CF-BORDER-IS-THE-SAME-CARD (Drew, 2026-08-15: "bingo! just someone using
+ * different words"). Checklist sources disagree on whether the colour
+ * parallel is called "Gold" or "Gold Border" — it is one card either way.
+ *
+ * Proven on 2024 Bowman #9, where the SAME card carries both:
+ *   Gold Border /50   source=checklistcenter
+ *   Gold        /50   source=bccp
+ * Same print run, same card, two vocabularies. Across a sample of cards
+ * holding both forms, 77 agreed on print run; the 20 that "differed" were
+ * a null print run on one side, i.e. missing data rather than a second
+ * parallel.
+ *
+ * DELIBERATELY NARROW — matches only the exact form "{Colour} Border" or
+ * "{Colour} Bordered". The word "border" is NOT generally droppable, and a
+ * blanket strip would corrupt real identities:
+ *
+ *   "Borderless", "Borderless Refractor"   opposite meaning
+ *   "Gap in Border", "No Gap in Border"    printing varieties
+ *   "Team Color Border Variation"          not a colour parallel
+ *   "222 Pat Border", "Pat Borders / Ted Power"
+ *                                          a PLAYER NAME sitting in the
+ *                                          parallel field — ~4,900 rows of a
+ *                                          separate data defect, untouched
+ *   "Mini Black Border"                    qualified form, left alone
+ *
+ * Colour still distinguishes, so vintage "Black Border" and "White Border"
+ * stay distinct from each other — they normalize to "Black" and "White".
+ */
+const COLOUR_BORDER_RE =
+  /^(gold|black|blue|red|green|orange|purple|yellow|pink|white|silver|platinum|aqua|fuchsia)\s+border(ed)?$/i;
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
   if (!trimmed) return "Base";
   const lower = trimmed.toLowerCase();
   if (PARALLEL_ALIAS_MAP[lower]) return PARALLEL_ALIAS_MAP[lower];
+  const border = lower.match(COLOUR_BORDER_RE);
+  if (border) return border[1].charAt(0).toUpperCase() + border[1].slice(1);
   return trimmed;
 }
 
