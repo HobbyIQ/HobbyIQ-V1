@@ -21,9 +21,16 @@
  * would trade a wrong slug for a broken one. Refusals are reported so
  * they can be picked up by a later, better parser.
  *
+ * SCOPE. Defaults to the sweep-written cohort (rederivedAt). Pass --all to
+ * cover every sport='hockey' row instead. The wider scope is needed because
+ * the mis-sporting PREDATES the sweep — the original ingest path used the
+ * same parser, so rows that were never swept carry the same damage. Measured
+ * 2026-08-15 over all 92,720 hockey rows: 35,727 confirm hockey, 6,616 have a
+ * positive non-hockey answer, and 50,377 decline and stay put.
+ *
  * Usage:
  *   COSMOS_CONNECTION_STRING="..." \
- *   node backend/scripts/repair-mis-sported-hockey.cjs [--apply] [--concurrency=16]
+ *   node backend/scripts/repair-mis-sported-hockey.cjs [--apply] [--all] [--concurrency=16]
  *
  * Defaults to DRY-RUN. Nothing is written without --apply.
  */
@@ -48,13 +55,15 @@ async function main() {
   const sold = db.container("sold_comps");
 
   const APPLY = has("apply");
+  const ALL = has("all");
   const CONCURRENCY = Math.max(1, Number(arg("concurrency", "16")));
-  console.log(`[repair-hockey] mode=${APPLY ? "APPLY" : "DRY-RUN"} concurrency=${CONCURRENCY}`);
+  const scope = ALL ? "all sport='hockey'" : "sweep-written only (rederivedAt)";
+  console.log(`[repair-hockey] mode=${APPLY ? "APPLY" : "DRY-RUN"} scope=${scope} concurrency=${CONCURRENCY}`);
 
   const iter = sold.items.query({
     query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.sport, c.cardYear, c.setName,
                    c.cardNumber, c.parallel, c.isAuto, c.title
-            FROM c WHERE IS_DEFINED(c.rederivedAt) AND c.sport = 'hockey'`,
+            FROM c WHERE ${ALL ? "" : "IS_DEFINED(c.rederivedAt) AND "}c.sport = 'hockey'`,
   }, { maxItemCount: 500 });
 
   const tot = { scanned: 0, repaired: 0, stillHockey: 0, refused: 0, unrecoverable: 0, written: 0, failed: 0 };
