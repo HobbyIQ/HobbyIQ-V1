@@ -1,0 +1,181 @@
+name: CH Historical Backfill
+
+# CF-CH-HISTORICAL-BACKFILL (Drew, 2026-08-14). Walks CardHedge's
+# per-day CSV export forward from the retention cutoff into sold_comps.
+#
+# MEASURED 2026-08-14 (live probes, not assumptions):
+#   - Retention cutoff is 2025-01-01. 2024-12-31 and every older date
+#     tested returns HTTP 500, back to 2018. Boundary verified monotonic
+#     3 days each side, so it is a policy line, not a data hole.
+#   - The cutoff sits exactly on a calendar-year boundary. If CH's rule
+#     is "current + prior calendar year", the 2025 window ages out on
+#     2027-01-01. This backfill is time-boxed, not evergreen.
+#   - Coverage today: sold_comps holds 200,194 CH rows for all of 2025
+#     against roughly 11M rows available across the 365 daily files.
+#     2025 is ~2% covered. 2026 is already handled by the daily cron.
+#   - A daily file is ~75% its own day plus a decaying tail of late-
+#     arriving sales going back ~3 years, so files overlap heavily.
+#     Dedup (contentHash + `ch-daily::{price_history_id}`) is what makes
+#     overlapping runs a no-op rather than a duplicate storm.
+#
+# MEASURED THROUGHPUT (2026-08-14, live applied days):
+#   2025-01-01 and 2025-01-02 written end-to-end. 30,562 rows in 512.7s
+#   = ~60 rows/sec, 0 failed, 0 catalog-unmatched. Concurrency 24 and
+#   concurrency 8 performed the same, so the ceiling is server-side
+#   (Cosmos RU + per-row catalog matching inside recordSoldComp), NOT
+#   client parallelism. Concurrency stays at 8: raising it buys nothing
+#   and this pool serves live traffic.
+#
+#   Budget: ~8.5 min/day → 363 remaining days of 2025 ≈ 51 hours, or
+#   ~35 days per 5-hour run ≈ 11 nightly runs. Adds ~11M rows, taking
+#   sold_comps from 5.69M to roughly 16M.
+#
+# ARMED 2026-08-14 (Drew) to drain 2025 and then stop.
+#
+# END DATE IS 2025-12-31 ON PURPOSE. 2026 is already covered by CH Daily
+# Sales Ingest + CH Fanout (4.09M rows in ch_daily_sales, 3.84M in
+# sold_comps). Walking the CSVs across 2026 would mostly re-dedupe rows
+# we already hold and burn quota for nothing. Once the cursor passes
+# 2025-12-31 every subsequent run is a clean no-op (range-exhausted,
+# zero days processed) — the schedule can be removed at that point.
+
+on:
+  schedule:
+    - cron: '20 8 * * *'   # after CH Daily Sales Ingest (~06:00 UTC)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run (parse + map, write nothing). Default true.'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+      days:
+        description: 'Max days to process this run. ~8.5 min/day, so 40 fills a 5h budget.'
+        required: false
+        type: string
+        default: '40'
+      start_date:
+        description: 'Override start (YYYY-MM-DD). Blank = resume from cursor.'
+        required: false
+        type: string
+        default: ''
+      end_date:
+        description: 'Last date inclusive. Defaults to 2025-12-31 — 2026 is already covered.'
+        required: false
+        type: string
+        default: '2025-12-31'
+      sports:
+        description: 'Comma-separated sports to keep. Blank = ALL groups incl. Pokemon/TCG (the default; Drew 2026-08-14).'
+        required: false
+        type: string
+        default: ''
+      concurrency:
+        description: 'Parallel recordSoldComp calls (default 8, max 32).'
+        required: false
+        type: string
+        default: '8'
+      time_budget_min:
+        description: 'Stop starting new days after N minutes. 0 = no limit.'
+        required: false
+        type: string
+        default: '300'
+      status_only:
+        description: 'Just print the cursor and exit. Writes nothing.'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+
+jobs:
+  backfill:
+    name: Backfill CH historical days
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run historical backfill
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          CARD_HEDGE_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot run"
+            exit 1
+          fi
+          if [ -z "$CARD_HEDGE_API_KEY" ]; then
+            echo "CARD_HEDGE_API_KEY empty from App Service — cannot run"
+            exit 1
+          fi
+
+          # On a `schedule` trigger EVERY `inputs.*` is empty — the
+          # workflow_dispatch defaults do NOT apply. Without these
+          # explicit fallbacks a nightly run would silently take the
+          # script's own defaults (7 days, no time budget, end=yesterday)
+          # instead of the intended 40 / 300min / 2025-12-31.
+          DAYS="${{ inputs.days || '40' }}"
+          END_DATE="${{ inputs.end_date || '2025-12-31' }}"
+          BUDGET="${{ inputs.time_budget_min || '300' }}"
+          CONCURRENCY="${{ inputs.concurrency || '8' }}"
+          # Blank sports = ALL groups incl. Pokemon/TCG (Drew, 2026-08-14).
+          SPORTS="${{ inputs.sports }}"
+          # Dispatch defaults to dry-run; a scheduled run applies.
+          DRY_RUN="${{ inputs.dry_run || 'false' }}"
+
+          FLAGS=""
+          if [ "${{ inputs.status_only }}" = "true" ]; then
+            FLAGS="--status"
+          else
+            if [ "$DRY_RUN" != "true" ]; then
+              FLAGS="$FLAGS --apply"
+            fi
+            # Explicit `if` rather than `[ -n x ] && ...` — under the
+            # default `bash -e` shell a false test at the end of a step
+            # fails the whole step. Cheap to avoid, expensive to debug.
+            FLAGS="$FLAGS --days=$DAYS --end=$END_DATE"
+            FLAGS="$FLAGS --concurrency=$CONCURRENCY --time-budget-min=$BUDGET"
+            FLAGS="$FLAGS --sports=$SPORTS"
+            # start_date has no fallback on purpose: blank means "resume
+            # from the persisted cursor", which is what every scheduled
+            # run must do.
+            if [ -n "${{ inputs.start_date }}" ]; then
+              FLAGS="$FLAGS --start=${{ inputs.start_date }}"
+            fi
+          fi
+
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/backfill-ch-historical.cjs $FLAGS
