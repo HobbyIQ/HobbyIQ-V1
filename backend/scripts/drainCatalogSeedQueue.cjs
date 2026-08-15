@@ -93,6 +93,55 @@ function download(url, dest) {
 
 /** Beckett discovery lives in TS; use the built dist so the drainer stays a
  *  plain script. Requires `npm run build` (the workflow does it). */
+// CF-CBC-FALLBACK (Drew, 2026-08-15: "we can search cardboard checklist too").
+//
+// Beckett publishes Topps/Bowman XLSX checklists and essentially no Panini,
+// so seeds for panini-prizm / mosaic / select / donruss / optic were being
+// written off as "no-checklist-published" — ~3,000 requests of real demand
+// marked unservable.
+//
+// cardboardchecklist.com exposes an MCP endpoint with 359 checklists /
+// 288,173 cards, and fetchCardboardChecklistMcp.cjs already emits the SAME
+// CSV contract ingest-scraped-checklist consumes. So this is source
+// selection, not new parsing.
+//
+// MATCH ON YEAR + PRODUCT + SPORT. A looser key is actively dangerous here:
+// matching on a slug prefix paired seed "2025 topps" with
+// "2025-topps-chrome-black-FOOTBALL", and "2025 topps-chrome" with
+// "...-TENNIS". Ingesting either would have written another sport's cards
+// into a baseball set. Requiring the sport to match takes the candidate list
+// from an inflated 427 down to a real 82.
+/** Last few lines of a child process's output, for one-line error logs. */
+function tailOf(out) {
+  return String(out ?? "").split(String.fromCharCode(10)).slice(-3).join(" | ").trim();
+}
+
+let _cbcIndex = null;
+async function cbcIndex() {
+  if (_cbcIndex) return _cbcIndex;
+  _cbcIndex = new Map();
+  try {
+    const r = run("node", ["scripts/fetchCardboardChecklistMcp.cjs", "--list"]);
+    if (r.code !== 0) return _cbcIndex;
+    const txt = r.out.slice(r.out.indexOf("["));
+    for (const c of JSON.parse(txt)) {
+      const sp = String(c.sport || "").toLowerCase();
+      let base = String(c.slug || "").toLowerCase();
+      if (sp && base.endsWith(`-${sp}`)) base = base.slice(0, -(sp.length + 1));
+      _cbcIndex.set(`${base}::${sp}`, c);
+    }
+  } catch { /* leave the index empty — Beckett-only behaviour is unchanged */ }
+  return _cbcIndex;
+}
+
+/** Look up a seed in Cardboard Checklist. Exact year+product+sport only. */
+async function cbcLookup(seed) {
+  const idx = await cbcIndex();
+  if (!idx.size) return null;
+  const key = `${seed.year}-${String(seed.setKey || "").toLowerCase()}::${String(seed.sport || "baseball").toLowerCase()}`;
+  return idx.get(key) || null;
+}
+
 async function discoverUrl(year, brand, sport) {
   const mod = require(path.join(BACKEND, "dist/agents/beckett/beckettUrlDiscovery.js"));
   // The default 72-probe cap is tuned for a bulk sweep across thousands of
@@ -205,8 +254,17 @@ async function markSeed(seed, status, extra) {
         } catch { /* try the next candidate */ }
       }
       if (hits.length === 0) {
+        // Beckett had nothing — try Cardboard Checklist before writing the
+        // seed off. This is where the Panini demand was dying.
+        const cbc = await cbcLookup(seed);
+        if (cbc) {
+          console.log(`── ${seed.id}  (dmd ${seed.requestCount})  beckett:none → cardboardchecklist ${cbc.slug} (${cbc.cardCount} cards)`);
+          summary.acquired += 1;
+          found.push({ seed, hits: [], cbc });
+          continue;
+        }
         console.log(`── ${seed.id}  (dmd ${seed.requestCount})  no checklist  [${probes} probes: ${candidates.join(" | ")}]`);
-        await markSeed(seed, "unavailable", { drainReason: "no-checklist-published", probes });
+        await markSeed(seed, "unavailable", { drainReason: "no-checklist-published-any-source", probes });
         summary.unavailable++;
         continue;
       }
@@ -229,6 +287,36 @@ async function markSeed(seed, status, extra) {
     const year = Number(seed.year);
     const sport = String(seed.sport || SPORT_DEFAULT);
     let anyIngested = false;
+
+    // CBC path — the fetcher writes the CSV directly, so there is no XLSX
+    // download or Beckett conversion step.
+    if (entry.cbc) {
+      const tag = `${year}-${entry.cbc.slug}`.replace(/[^a-z0-9-]+/gi, "-").toLowerCase();
+      const csv = path.join(BACKEND, "data/checklists/scraped", `${tag}.csv`);
+      const fetched = run("node", ["scripts/fetchCardboardChecklistMcp.cjs",
+        "--slug", entry.cbc.slug, "--out", csv]);
+      if (fetched.code !== 0) {
+        console.log(`   [${tag}] cardboardchecklist fetch failed: ${tailOf(fetched.out)}`);
+        summary.failed++;
+      } else {
+        const ing = run("node", ["scripts/ingest-scraped-checklist.cjs"],
+          { CSV_PATH: csv, SOURCE_LABEL: "cardboardchecklist", APPLY: "true" });
+        if (ing.code !== 0) {
+          console.log(`   [${tag}] ingest failed: ${tailOf(ing.out)}`);
+          summary.failed++;
+        } else {
+          const wrote = (String(ing.out).split(String.fromCharCode(10)).find((l) => l.includes("wrote=")) || "").trim();
+          console.log(`   [${tag}] ingested from cardboardchecklist: ${wrote}`);
+          summary.ingested++;
+          anyIngested = true;
+        }
+      }
+      if (anyIngested) {
+        await markSeed(seed, "done", { drainReason: "ingested-cardboardchecklist", sourceUrl: `cardboardchecklist:${entry.cbc.slug}` });
+      }
+      continue;
+    }
+
     for (const hit of entry.hits) {
       const brandKey = hit.brand.toLowerCase().replace(/\s+/g, "-");
       const tag = `${year}-${brandKey}-${sport}`.replace(/[^a-z0-9-]+/gi, "-").toLowerCase();
