@@ -9,8 +9,38 @@ name: Promote Staging Pending
 # TCA-ebay currently has 866K pending rows to re-process. Cardhedge
 # ~5K. Run repeatedly (each run cycles through what's still pending
 # after prior runs' successes).
+#
+# CF-STAGING-DRAIN-SCHEDULE (Drew, 2026-08-14). "Run repeatedly" was
+# the whole design and there was nothing to run it — this workflow was
+# dispatch-only, and its last run was 2026-08-03. Measured 2026-08-15,
+# twelve days later:
+#
+#     comps_staging total      8,662,466
+#     status=pending           2,102,167   (2,081,074 of them tca-ebay)
+#     status=clean                94,803   cleaned, never promoted
+#     never promoted           2,668,528   = 30.8% of the container
+#
+# The backlog grew from the 866K in the note above to 2.08M purely
+# because nothing dispatched this.
+#
+# The every-5-minute staging-pipeline-cron does NOT cover this. It is
+# green and it works, but it promotes ~87 rows per tick and GitHub
+# throttles a */5 schedule to roughly one run per 45 minutes, so it
+# clears ~2,800 rows/day. Against 2.1M that is ~750 days — it cannot
+# catch up, and it is not failing, which is why nothing alarmed. A
+# green cron that moves 0.1% of its backlog per day looks identical to
+# a healthy one on the Actions page.
+#
+# APPLY defaults differ by trigger ON PURPOSE: a hand dispatch stays
+# dry-run so nobody writes 2M rows by reflex, while a scheduled run
+# applies. Without that split a schedule would dry-run forever and the
+# backlog would keep growing behind a wall of green checkmarks.
 
 on:
+  schedule:
+    # Hourly. The job caps itself at max_minutes (45) inside a 55-minute
+    # timeout, so consecutive runs cannot overlap.
+    - cron: '25 * * * *'
   workflow_dispatch:
     inputs:
       apply:
@@ -103,5 +133,5 @@ jobs:
           VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
           MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
           CONCURRENCY="${{ inputs.concurrency || '32' }}" \
-          APPLY="${{ inputs.apply || 'false' }}" \
+          APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
           node scripts/promote-staging-pending.cjs
