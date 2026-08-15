@@ -888,6 +888,45 @@ describe("inferSportFromTitle — team-name fallback", () => {
   });
 });
 
+// CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). inferSportFromTitle had no
+// soccer branch at all, so every soccer card fell through to the baseball
+// fallback and polluted the pool that feeds baseball FMV + calibration.
+// Measured in sold_comps: 14,826 baseball-slugged rows saying "WORLD CUP",
+// 13,678 "FIFA", 8,293 "UEFA", against only 7,034 correctly tagged soccer.
+describe("inferSportFromTitle — soccer", () => {
+  it.each([
+    ["Topps Chrome UCC", "2022-23 Topps Chrome UCC Julian Alvarez Aqua Wave Refractor RC /199 PSA 10"],
+    ["UEFA", "JULIAN ALVAREZ 2025-26 TOPPS CHROME UEFA PURPLE GEOMETRIC AUTO /75 #CA-AL"],
+    ["World Cup", "2026 PANINI PRIZM WORLD CUP #25 SCORERS CLUB SILVER ARGENTINA"],
+    ["Panini Select FIFA", "2022-23 Panini Select FIFA - Gold Prizm Julian Alvarez #202"],
+    ["MLS", "Lionel Messi 2023 Inter Miami MLS Debut"],
+  ])("competition/league '%s' resolves to soccer", (_l, title) => {
+    expect(inferSportFromTitle(title)).toBe("soccer");
+  });
+
+  it("a named competition beats the bare word 'football' (which means soccer abroad)", () => {
+    expect(inferSportFromTitle("2024 Topps Merlin Football UEFA Champions League Haaland"))
+      .toBe("soccer");
+  });
+
+  it("club name alone still resolves when no competition is named", () => {
+    expect(inferSportFromTitle("Erling Haaland Manchester City 2023 Topps")).toBe("soccer");
+  });
+
+  describe("guardrails — must NOT be stolen by soccer", () => {
+    it.each([
+      ["2024 Panini Prizm Football Ladd McConkey", "football"],
+      ["JUSTIN HERBERT 2020 PANINI PRIZM ROOKIE Chargers", "football"],
+      ["2023 Panini Prizm Basketball Wembanyama", "basketball"],
+      ["Auston Matthews Maple Leafs Rookie", "hockey"],
+      ["2025 Bowman Chrome Eric Hartman #CPA-EH", "baseball"],
+      ["2025 Pokemon Mega Evolution Phantasmal Flames #102 Base", "pokemon"],
+    ])("%s -> %s", (title, want) => {
+      expect(inferSportFromTitle(title)).toBe(want);
+    });
+  });
+});
+
 // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). A slug sweep over 2026-07
 // stamped 4,589 rows sport='hockey'; ~91.6% were wrong. Team words that
 // are also ordinary English ("Stars", "Flames", "Wild") were matching

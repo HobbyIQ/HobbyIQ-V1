@@ -1028,6 +1028,27 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
  */
 export function inferSportFromTitle(title: string, fallback = "baseball"): string {
   const t = String(title ?? "").toLowerCase();
+  // CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). There was no soccer
+  // branch at all, so every soccer card fell through to the `baseball`
+  // fallback and landed in the pool that feeds baseball FMV and
+  // calibration. Measured in sold_comps: 14,826 baseball-slugged rows
+  // whose title says "WORLD CUP", 13,678 "FIFA", 8,293 "UEFA", 3,139
+  // "PREMIER LEAGUE", 2,486 "UCC" — against only 7,034 rows correctly
+  // tagged sport='soccer'. The mislabelled population is several times
+  // the correctly-labelled one.
+  //
+  // Placed ABOVE the football check on purpose. Outside the US "football"
+  // MEANS soccer, so "2024 Topps Merlin Football UEFA" would otherwise
+  // match /football/ and return NFL. A named competition is a far
+  // stronger signal than the bare word, so competitions win.
+  //
+  // Competition and league names only — no bare club names here. "Arsenal",
+  // "City", "United", "Inter" and "Milan" are ordinary words or personal
+  // names, and CF-SPORT-TEAM-OVERMATCH is the standing lesson about what
+  // happens when an ordinary word is treated as a team.
+  if (/\b(soccer|f[uú]tbol|fifa|uefa|champions\s+league|europa\s+league|premier\s+league|la\s+liga|serie\s+a|bundesliga|ligue\s+1|eredivisie|copa\s+(?:america|libertadores|del\s+rey)|world\s+cup|\bucl\b|\bucc\b|\bmls\b|euro\s+20\d\d|concacaf|conmebol)\b/.test(t)) {
+    return "soccer";
+  }
   if (/football|nfl\b/.test(t)) return "football";
   if (/basketball|nba\b/.test(t)) return "basketball";
   if (/hockey|nhl\b/.test(t)) return "hockey";
@@ -1131,8 +1152,22 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // check above already fired, we won't reach here.
   if (NHL_TEAMS_STRONG.test(t) || NHL_TEAMS_CITY_QUALIFIED.test(t)) return "hockey";
 
+  // CF-SOCCER-NEVER-DETECTED, last resort. Some soccer titles name only a
+  // club or a player — "Julian Alvarez ... Atletico Madrid" carries no
+  // competition word. Runs AFTER the US-league team checks so a shared
+  // city never steals a card from them, and every entry is a full club
+  // name or an unambiguous player. Bare "Arsenal", "City", "United",
+  // "Inter" and "Milan" are deliberately absent: they are ordinary words
+  // or personal names, which is exactly what made "Stars" and "Flames"
+  // mis-sport 4,589 rows.
+  if (SOCCER_CLUBS_AND_PLAYERS.test(t)) return "soccer";
+
   return fallback;
 }
+
+/** Full club names and unambiguous players — never bare one-word clubs. */
+const SOCCER_CLUBS_AND_PLAYERS =
+  /\b(real\s+madrid|barcelona|fc\s+barcelona|manchester\s+(?:united|city)|man\s+(?:utd|city)|liverpool\s+fc|chelsea\s+fc|arsenal\s+fc|tottenham|bayern\s+munich|borussia\s+dortmund|paris\s+saint-?germain|\bpsg\b|juventus|ac\s+milan|inter\s+milan|atl[eé]tico\s+madrid|napoli|ajax\s+amsterdam|benfica|boca\s+juniors|river\s+plate|flamengo|lionel\s+messi|cristiano\s+ronaldo|kylian\s+mbapp[eé]|erling\s+haaland|neymar|vin[ií]cius\s+j[uú]nior|jude\s+bellingham|lamine\s+yamal|mohamed\s+salah|kevin\s+de\s+bruyne|robert\s+lewandowski|luka\s+modri[cć]|antoine\s+griezmann|julian\s+[aá]lvarez)\b/i;
 
 /**
  * CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes TCG +
