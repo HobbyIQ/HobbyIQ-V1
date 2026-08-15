@@ -365,7 +365,22 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
   const entries: TreeGradeEntry[] = [];
   let totalSampleCount = 0;
 
-  for (const g of treeNodes) {
+  // CF-GRADE-CURVE-SERIAL-FANOUT (Drew, 2026-08-15: "the search takes
+  // easily 10 seconds"). This was `for (const g of treeNodes)` with an
+  // `await` inside, so every grade node waited for the one before it. Each
+  // node then walks WINDOWS = [7,30,60,90,180] until it finds MIN_SAMPLES,
+  // so a card with 15 grade tiers could serialize ~75 Cosmos round trips
+  // into one request. Measured against prod: search p50 1.91s but p90
+  // 10.29s, and latency tracked the number of Cosmos calls almost exactly
+  // (289 calls per search under 2s, 618 per search over 10s).
+  //
+  // The grades are independent — the body only accumulates a commutative
+  // sum and pushes an entry, and `entries` is explicitly sorted by grader
+  // and tier immediately afterwards — so ordering never depended on the
+  // loop order. Fan the nodes out and keep the WINDOWS walk serial inside
+  // each, since that one is a deliberate widening search that breaks as
+  // soon as it has enough samples.
+  const perGrade = await Promise.all(treeNodes.map(async (g) => {
     let selectedRows: SaleRow[] = [];
     let selectedWindow = 180;
     let priorMonthRows: SaleRow[] = [];
@@ -402,22 +417,29 @@ export async function buildTreeGradeCurve(input: BuildTreeGradeCurveInput): Prom
     // observedSalesAtBuild (the tree's lifetime count at build) when
     // present, fall back to selectedRows.length only if the tree node
     // didn't get counted at build time.
-    totalSampleCount += g.observedSalesAtBuild ?? selectedRows.length;
-    entries.push({
-      gradeLabel: g.gradeLabel,
-      gradeCompany: g.gradeCompany,
-      gradeValue: g.gradeValue,
-      windowDays: selectedWindow,
-      sampleCount: selectedRows.length,
-      weightedMedian: wMed,
-      marketValue: trend.marketValue,
-      predictedPrice: trend.predictedPrice,
-      trendDirection: trend.trendDirection,
-      trendPctPerWeek: trend.trendPctPerWeek,
-      confidence: conf,
-      newestSaleAt: newestMs > 0 ? new Date(newestMs).toISOString() : null,
-      observedAtBuild: g.observedSalesAtBuild ?? 0,
-    });
+    return {
+      sampleContribution: g.observedSalesAtBuild ?? selectedRows.length,
+      entry: {
+        gradeLabel: g.gradeLabel,
+        gradeCompany: g.gradeCompany,
+        gradeValue: g.gradeValue,
+        windowDays: selectedWindow,
+        sampleCount: selectedRows.length,
+        weightedMedian: wMed,
+        marketValue: trend.marketValue,
+        predictedPrice: trend.predictedPrice,
+        trendDirection: trend.trendDirection,
+        trendPctPerWeek: trend.trendPctPerWeek,
+        confidence: conf,
+        newestSaleAt: newestMs > 0 ? new Date(newestMs).toISOString() : null,
+        observedAtBuild: g.observedSalesAtBuild ?? 0,
+      } satisfies TreeGradeEntry,
+    };
+  }));
+
+  for (const r of perGrade) {
+    totalSampleCount += r.sampleContribution;
+    entries.push(r.entry);
   }
 
   // Sort: Raw first, then PSA descending, then BGS, SGC, CGC descending.
