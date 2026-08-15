@@ -262,6 +262,45 @@ const COLOUR_BORDER_RE =
  */
 const PRIZMS_PREFIX_RE = /^prizms\s+(.+)$/i;
 
+/**
+ * CF-PARALLEL-DESLUG (Drew, 2026-08-15: "normalize it and add it to vocab").
+ *
+ * 1,588 distinct parallel values are stored in slug form — "optic-red",
+ * "1992-nba-mvp", "1st-day-issue" — and 1,455 of them (91.6%) have a
+ * properly spaced twin elsewhere in the catalog. They come from the
+ * sold-comps-stub seeding path, which wrote the SLUG into the display field
+ * where a human-readable name belongs.
+ *
+ * SCOPE, honestly: this does NOT fix matching. The matcher compares
+ * parallelSlug, and "optic-red" and "Optic Red" both slugify to "optic-red",
+ * so they already match today. This is vocabulary hygiene — it stops the
+ * catalog presenting two spellings of one parallel, and it means anything
+ * grouping or displaying by `parallel` sees one value.
+ *
+ * Because the output re-slugifies to exactly what it came from, the change
+ * is display-only and cannot move a card to a different slug.
+ *
+ * Acronyms are preserved deliberately: naive title-casing turns
+ * "1992-nba-mvp" into "1992 Nba Mvp", which matches neither the twin
+ * "1992 NBA MVP" nor how anyone writes it.
+ */
+const PARALLEL_ACRONYMS = new Set([
+  "nba", "nfl", "mlb", "nhl", "mvp", "rc", "sp", "ssp", "gu", "usa", "hof",
+  "rpa", "fotl", "1of1", "uk", "us", "au", "opc", "tv", "ud", "wbc", "asg",
+]);
+
+/** True only for an all-lowercase hyphenated token run, e.g. "optic-red". */
+const SLUG_FORM_RE = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+
+function deslugParallel(v: string): string {
+  return v.split("-").filter(Boolean).map((w) => {
+    if (PARALLEL_ACRONYMS.has(w)) return w.toUpperCase();
+    // Ordinals and year-like tokens keep their own shape: 1st, 2026.
+    if (/^\d+(?:st|nd|rd|th)?$/.test(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
@@ -278,6 +317,9 @@ export function canonicalizeParallelName(raw: string | null): string {
     if (rest && !/prizm$/i.test(rest)) return `${rest} Prizm`;
     if (rest) return rest;
   }
+  // Slug-form display values get spelled back out. Re-slugifies identically,
+  // so this can never move a card onto a different slug.
+  if (SLUG_FORM_RE.test(trimmed)) return deslugParallel(trimmed);
   return trimmed;
 }
 
