@@ -27,10 +27,29 @@ name: CH Historical Backfill
 #   and this pool serves live traffic.
 #
 #   Budget: ~8.5 min/day → 363 remaining days of 2025 ≈ 51 hours, or
-#   ~35 days per 5-hour run ≈ 11 nightly runs. Adds ~11M rows, taking
-#   sold_comps from 5.69M to roughly 16M.
+#   ~35 days per 5-hour run. Adds ~11M rows, taking sold_comps from
+#   5.69M to roughly 16M.
+#
+# RE-MEASURED ON A REAL RUNNER (run 31861157061, 2026-08-15). The local
+# numbers above hold in CI — GitHub runners are NOT slower here:
+#
+#     started 03:11:18, day 4 done 03:47:03
+#     = ~5 min build + ~7.7 min/day, ~67 rows/sec
+#
+# So a 300-minute budget completes ~39 days per run, which is what the
+# days=40 default is sized against. Recorded because the cursor only
+# advances on WHOLE-day completion, so it sits still for ~8 minutes at a
+# time and reads as a stall; that lag was briefly mistaken for a 35
+# min/day rate and a six-week drain. Measure the rate from cursor
+# timestamps, not from whether it moved since you last looked.
 #
 # ARMED 2026-08-14 (Drew) to drain 2025 and then stop.
+#
+# TWICE DAILY (Drew, 2026-08-14). At ~39 days/run, 08:20 + 20:20 clears
+# the remaining ~360 days of 2025 in roughly 5 days. Deliberately NOT
+# 4x/day: the staging promoter went hourly in #1049 and both jobs write
+# to sold_comps, which serves live traffic before the 9/14 go-live. Two
+# runs is the throughput/pressure trade; raise it once staging is drained.
 #
 # END DATE IS 2025-12-31 ON PURPOSE. 2026 is already covered by CH Daily
 # Sales Ingest + CH Fanout (4.09M rows in ch_daily_sales, 3.84M in
@@ -41,7 +60,9 @@ name: CH Historical Backfill
 
 on:
   schedule:
-    - cron: '20 8 * * *'   # after CH Daily Sales Ingest (~06:00 UTC)
+    # CF-CH-BACKFILL-TWICE-DAILY (Drew, 2026-08-14). 08:20 stays after CH
+    # Daily Sales Ingest (~06:00 UTC); 20:20 is the second bite.
+    - cron: '20 8,20 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
