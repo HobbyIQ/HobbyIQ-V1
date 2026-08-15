@@ -21,6 +21,11 @@
  * would trade a wrong slug for a broken one. Refusals are reported so
  * they can be picked up by a later, better parser.
  *
+ * SPORT. Defaults to hockey (the cohort this was written for). Pass
+ * --sport=baseball to remediate a different mislabelled bucket — used
+ * 2026-08-15 for CF-SOCCER-NEVER-DETECTED, where soccer cards had been
+ * falling through to the baseball fallback for want of a soccer branch.
+ *
  * SCOPE. Defaults to the sweep-written cohort (rederivedAt). Pass --all to
  * cover every sport='hockey' row instead. The wider scope is needed because
  * the mis-sporting PREDATES the sweep — the original ingest path used the
@@ -57,13 +62,27 @@ async function main() {
   const APPLY = has("apply");
   const ALL = has("all");
   const CONCURRENCY = Math.max(1, Number(arg("concurrency", "16")));
-  const scope = ALL ? "all sport='hockey'" : "sweep-written only (rederivedAt)";
+  const SPORT = arg("sport", "hockey");
+  // Narrow the scan. The baseball bucket is millions of rows and a full
+  // pass does not finish; --title-any restricts it to rows whose title
+  // carries at least one of the given markers, which is how the soccer
+  // remediation stays tractable.
+  const TITLE_ANY = String(arg("title-any", "")).split(",").map((x) => x.trim()).filter(Boolean);
+  const scope = ALL ? `all sport='${SPORT}'` : "sweep-written only (rederivedAt)";
   console.log(`[repair-hockey] mode=${APPLY ? "APPLY" : "DRY-RUN"} scope=${scope} concurrency=${CONCURRENCY}`);
 
   const iter = sold.items.query({
     query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.sport, c.cardYear, c.setName,
                    c.cardNumber, c.parallel, c.isAuto, c.title
-            FROM c WHERE ${ALL ? "" : "IS_DEFINED(c.rederivedAt) AND "}c.sport = 'hockey'`,
+            FROM c WHERE ${ALL ? "" : "IS_DEFINED(c.rederivedAt) AND "}c.sport = @sport${
+              TITLE_ANY.length
+                ? ` AND (${TITLE_ANY.map((_, i) => `CONTAINS(UPPER(c.title), @m${i})`).join(" OR ")})`
+                : ""
+            }`,
+    parameters: [
+      { name: "@sport", value: SPORT },
+      ...TITLE_ANY.map((m, i) => ({ name: `@m${i}`, value: m.toUpperCase() })),
+    ],
   }, { maxItemCount: 500 });
 
   const tot = { scanned: 0, repaired: 0, stillHockey: 0, refused: 0, unrecoverable: 0, written: 0, failed: 0 };
@@ -91,7 +110,7 @@ async function main() {
         for (const r of res.reasons || []) reasonTally[r] = (reasonTally[r] || 0) + 1;
         continue;
       }
-      if (res.sport === "hockey") { tot.stillHockey++; continue; }
+      if (res.sport === SPORT) { tot.stillHockey++; continue; }
 
       tot.repaired++;
       newSportTally[res.sport] = (newSportTally[res.sport] || 0) + 1;
@@ -125,7 +144,7 @@ async function main() {
 
   console.log(`\n  scanned          ${tot.scanned}`);
   console.log(`  repaired         ${tot.repaired}${APPLY ? ` (written ${tot.written}, failed ${tot.failed})` : " (dry-run)"}`);
-  console.log(`  still hockey     ${tot.stillHockey}   <- genuine, left as-is`);
+  console.log(`  still ${SPORT.padEnd(10)} ${tot.stillHockey}   <- genuine, left as-is`);
   console.log(`  refused          ${tot.refused}       <- parser declined; row untouched`);
   console.log(`  unrecoverable    ${tot.unrecoverable} <- guard declined; row untouched`);
   console.log("\n  new sport distribution:");
