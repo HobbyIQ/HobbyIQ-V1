@@ -42,7 +42,8 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { guardSlugInputs } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -657,10 +658,48 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     ? input.cardNumber.trim()
     : extractCardNumberFromTitle(input.title);
   const printRunFinal = extractPrintRunFromTitle(input.title);
-  let hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
-    ? computeHobbyIqCardId({
+
+  // CF-SLUG-REFUSE-FALLBACKS (Drew, 2026-08-14). Gate the slug inputs.
+  // computeHobbyIqCardId is total — it will happily return
+  // `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's baseball
+  // card, and that slug is indistinguishable from a real one downstream
+  // while quietly pooling a baseball card against hockey Bowman comps.
+  //
+  // When the inputs don't hold up we write the row with NO slug rather
+  // than a confident wrong one. An unkeyed row is visibly incomplete and
+  // can be re-derived from its title later; a wrong slug corrupts a comp
+  // pool and looks healthy. See slugGuard.service.ts for the measurements
+  // behind each check.
+  const guard = guardSlugInputs({
+    sport: sportForSlug,
+    year: input.cardYear,
+    normalizedSetKey: normalizeSetKey(input.setName ?? ""),
+    cardNumber: cardNumberFinal ?? "",
+  });
+  if (!guard.ok) {
+    // Sampled — this fires on a meaningful slice of vendor rows and must
+    // not drown the log. The counts are what tell us which defect leads.
+    if (Math.random() < 0.01) {
+      console.warn(JSON.stringify({
+        event: "slug_refused",
+        source: "soldCompsStore.recordSoldComp",
+        reasons: guard.reasons,
+        compSource: input.source,
         sport: sportForSlug,
-        year: input.cardYear,
+        cardYear: input.cardYear,
+        setName: input.setName,
+        cardNumber: cardNumberFinal,
+        titleSnippet: String(input.title ?? "").slice(0, 100),
+        sampled: true,
+      }));
+    }
+  }
+  let hobbyiqCardId = guard.ok
+    ? computeHobbyIqCardId({
+        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
+        // so the slug namespace stays in the controlled vocabulary.
+        sport: guard.sport as string,
+        year: input.cardYear as number,
         setKey: input.setName ?? "",
         cardNumber: cardNumberFinal ?? "",
         parallel: input.parallel ?? "Base",
