@@ -162,6 +162,8 @@ export interface SoldCompDoc {
   // emit paths from PortfolioHolding.gradeCompany / gradeValue.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   /** CF-GRADE-QUALIFIER (Drew, 2026-07-23, issue #713 phase 2). PSA
    *  qualifier flag on the sale — "OC" (off-center), "MK" (marks),
    *  "ST" (stain), "PD" (print defect), "MC" (miscut), "OF" (out of
@@ -271,6 +273,8 @@ export interface RecordSoldCompInput {
   sport?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   price: number;
   soldAt: string;
   source: SoldCompSource;
@@ -486,6 +490,8 @@ function computeContentHash(input: {
   isAuto?: boolean;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   price: number;
   soldAt: string;
 }): string {
@@ -587,6 +593,35 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // that rendered as duplicate "PSA 10 with no data" tiles in the UI.
   // If we don't know the numeric grade, treat as raw — safer than
   // creating a phantom grade tier.
+  // CF-GRADE-VALUE-STRING (Drew, 2026-08-15: "fix those"). gradeValue is
+  // typed number|null, but callers reach this through untyped vendor payloads
+  // and 68,410 rows landed with a STRING — 68,284 of them from cardsight.
+  //
+  // Cosmos does not coerce, so `WHERE c.gradeValue = 10` never matches "10".
+  // 24,444 PSA 10 sales were therefore invisible to the PSA 10 comp pool
+  // while 514,015 numeric ones were visible: a silent, uneven hole in the
+  // tier rather than an obvious failure.
+  //
+  // Coerced HERE because this is the single write boundary every source
+  // funnels through, so one guard covers cardsight, tca-ebay and anything
+  // added later.
+  //
+  // "AU" / "A" / "Authentic" are not grades — they are the authentication
+  // designation, and they route to the Authentic bucket (gradeValue 0) so a
+  // slab that was never numerically graded is not silently discarded.
+  if (typeof (input.gradeValue as unknown) === "string") {
+    const rawGrade = String(input.gradeValue).trim();
+    if (/^(?:au|a|authentic)$/i.test(rawGrade)) {
+      input = { ...input, gradeValue: 0, isAuthentic: true } as typeof input;
+    } else {
+      const asNumber = Number(rawGrade);
+      input = {
+        ...input,
+        gradeValue: Number.isFinite(asNumber) && asNumber > 0 && asNumber <= 10 ? asNumber : null,
+      };
+    }
+  }
+
   if (input.gradeCompany && (input.gradeValue === null || input.gradeValue === undefined)) {
     input = { ...input, gradeCompany: null, gradeValue: null };
   }
@@ -634,6 +669,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     isAuto: input.isAuto,
     gradeCompany: input.gradeCompany,
     gradeValue: input.gradeValue,
+    isAuthentic: input.isAuthentic ?? null,
     price: input.price,
     soldAt: input.soldAt,
   });
@@ -1507,6 +1543,8 @@ export async function readCompsByCardId(input: {
   // for raw). Case-insensitive on company.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   // CF-USER-COMPS-AUTO-FILTER (Drew, 2026-07-23). Strict isAuto equality.
   // CH cardIds routinely bucket the base rookie + autograph variants under
   // one id (e.g. Owen Carey Blue Refractor /150 Auto shares a cardId with
@@ -1820,6 +1858,8 @@ export async function readCompsByHobbyIqCardId(input: {
   sources?: SoldCompSource[];
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   limit?: number;
   // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
   // 2026-07-23). Even though the slug already encodes both, callers
@@ -1905,6 +1945,8 @@ export async function readCompsByIdentity(input: {
   fromDate?: string;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   limit?: number;
   // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
   // 2026-07-23). Same rationale as readCompsByCardId — identity fallback

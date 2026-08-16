@@ -195,12 +195,15 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
       .replace(/\b(?:19|20)\d{2}\b/g, " ")
       .replace(/#\s*[\w-]+/g, " ");
     const hasNumericGrade = /\b(?:10|[1-9](?:\.5)?)\b/.test(withoutNoise);
-    if (!hasNumericGrade) {
-      return {
-        gradeCompany: detectedCompanyOf(trimmed) ?? "UNKNOWN",
-        gradeValue: 0,
-        isAuthentic: true,
-      };
+    // A GRADING COMPANY IS REQUIRED. Without one, "Authentic" is far more
+    // often a product or marketing word than an authentication:
+    // "SP Authentic" is an Upper Deck product line, and a dry run over the
+    // pool tagged 6,450 rows — mostly "2001 SP Authentic Baseball" — as
+    // authenticated slabs on the strength of the word alone. That is a worse
+    // error than the bug being fixed, so no company means no bucket.
+    const company = detectedCompanyOf(trimmed);
+    if (!hasNumericGrade && company) {
+      return { gradeCompany: company, gradeValue: 0, isAuthentic: true };
     }
   }
 
