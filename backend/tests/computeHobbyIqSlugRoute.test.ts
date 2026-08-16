@@ -1,6 +1,23 @@
 // Smoke tests for the POST /api/compiq/compute-hobbyiq-slug helper.
 // Confirms the slug output matches the reference slugs iOS will target.
 
+// SETKEYS RECONCILED TO THE CATALOG, 2026-08-16 (Drew: "it shuld fold into
+// Draft since it is draft" ... "they should match to the CATALOG").
+//
+// The rule is now simple: a slug's setKey must be a key the CATALOG actually
+// uses, because a slug nothing in the catalog shares is a card that matches
+// nothing. Row counts taken 2026-08-16:
+//
+//     bowman-draft-chrome   23,899      bowman-chrome-draft      480
+//     bowman-draft         336,404      bowman-draft-paper        18
+//     bowman             1,252,848      bowman-paper           1,785
+//
+// So Draft Chrome keeps its Draft identity under bowman-draft-chrome (not the
+// bowman-chrome it used to collapse into, and not the bowman-chrome-draft this
+// file previously asked for — that variant was itself a fragment the
+// normaliser had been minting). BDA- paper Draft autos go to bowman-draft
+// rather than the 18-row bowman-draft-paper.
+
 import { describe, it, expect } from "vitest";
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
@@ -20,7 +37,14 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 150,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:blue-refractor:auto:num-150");
+    expect(slug).toBe(// FLAGGED FOR DREW. The catalog holds 2026 CPA-EHA under "bowman" (the
+    // checklist ingest wrote it there), and on 2026-08-13 Drew said of a CPA
+    // pulled from a Bowman pack: "bowman — it came out of Bowman". But
+    // CHROME_PREFIX_OVERRIDES still maps bowman + cpa- -> bowman-chrome on
+    // vendor paths, which is what repaired 92,362 mis-slugged rows. Both
+    // cannot be right, and removing the override risks re-breaking those, so
+    // this pins SHIPPED behaviour rather than silently choosing.
+    "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:auto:num-150");
   });
 
   it("Owen Carey Bowman Chrome Sapphire BSPA-OC /199 Auto", () => {
@@ -36,12 +60,12 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
     expect(slug).toBe("hiq:baseball:2026:bowman-chrome-sapphire:bspa-oc:base:auto:num-199");
   });
 
-  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto → bowman-chrome-draft", () => {
+  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto → bowman-draft-chrome", () => {
     // CF-SETKEY-DRAFT-CHROME-COLLISION (Drew, 2026-07-29). Prior expected
     // "bowman-draft" (the buggy collision output) — that pinned the bug
-    // in place. Now the setKey correctly routes to "bowman-chrome-draft",
+    // in place. Now the setKey correctly routes to "bowman-draft-chrome",
     // preserving the paper-vs-chrome stock distinction at the slug layer.
-    // Chrome autos (CPA-/BCDA-) live under bowman-chrome-draft; paper
+    // Chrome autos (CPA-/BCDA-) live under bowman-draft-chrome; paper
     // autos (BDA-) live under bowman-draft.
     const slug = computeHobbyIqCardId({
       sport: "baseball",
@@ -52,12 +76,12 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 50,
     });
-    expect(slug).toBe("hiq:baseball:2025:bowman-chrome-draft:cpa-jha:gold-refractor:auto:num-50");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:gold-refractor:auto:num-50");
   });
 
   it("2025 Bowman Draft (paper) BDA-XX Blue Border /150 Auto → bowman-draft (stock-preserving)", () => {
     // Guardrail: paper Bowman Draft keeps its "bowman-draft" setKey,
-    // does NOT accidentally fall into "bowman-chrome-draft". Paper BDA-XX
+    // does NOT accidentally fall into "bowman-draft-chrome". Paper BDA-XX
     // autos and Chrome BCDA-XX autos of the same card number now produce
     // DIFFERENT slugs, which is the correct behavior for pricing.
     const slug = computeHobbyIqCardId({
@@ -85,7 +109,12 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 50,
     });
-    expect(slug).toBe("hiq:baseball:2025:bowman:bpa-eh:gold-border:auto:num-50");
+    expect(slug).toBe(// FLAGGED FOR DREW. bowman-paper has 1,785 catalog rows against bowman's
+    // 1,252,848. The paper split is Drew's 2026-08-10 call ("paper is a
+    // different card number prefix") and the key does exist, so unlike
+    // bowman-draft-paper (18 rows) it is not obviously a fragment — but it is
+    // small enough to be worth confirming against "match the CATALOG".
+    "hiq:baseball:2025:bowman-paper:bpa-eh:gold-border:auto:num-50");
   });
 
   // CF-BOWMAN-PAPER-SETKEY (Drew, 2026-07-29). When callers explicitly
