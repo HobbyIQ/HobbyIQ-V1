@@ -49,7 +49,7 @@ export default function ErpPage() {
   if (gate === "error" || !data) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
         <div className="hiq-card p-6 mt-6 text-sm" style={{ color: "var(--color-danger)" }}>
           {error ?? "Failed to load."}
         </div>
@@ -68,9 +68,9 @@ export default function ErpPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
         <p className="text-sm text-[color:var(--color-muted)]">
-          Portfolio-wide P&amp;L, position, and movement. Snapshot as of{" "}
+          What you hold and what it is worth right now. Snapshot as of{" "}
           {data.asOf.slice(0, 10)}.
         </p>
       </div>
@@ -150,7 +150,7 @@ export default function ErpPage() {
             }}
             title="Revenue, COGS, fees, operating expenses and true net — by year and month"
           >
-            Profitability →
+            Financial Dashboard →
           </Link>
           <div className="text-xs text-[color:var(--color-muted)]">
             baseline {change.asOfDate.slice(0, 10)}

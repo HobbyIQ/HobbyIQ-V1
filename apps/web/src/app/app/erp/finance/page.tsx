@@ -95,7 +95,7 @@ export default function FinancePage() {
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Profitability</h1>
+          <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
           <p className="text-sm text-[color:var(--color-muted)]">
             What the business earned, what it cost, and what was left.
             {data?.window.from && ` ${data.window.from} → ${data.window.to}`}
