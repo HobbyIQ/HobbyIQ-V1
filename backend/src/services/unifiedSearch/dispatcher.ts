@@ -423,6 +423,16 @@ async function dispatchCertMode(
 // canonicalCardSearch adds sold_comps hits too when catalog is thin,
 // so single-hit queries pick up long-tail cards from the pool.
 const CATALOG_FIRST_STRONG_THRESHOLD = 1;
+/**
+ * CF-SEARCH-WHOLE-PRODUCT-FAMILY (Drew, 2026-08-15: "the entire product family
+ * should show up. It is important even if we don't have comp data in there").
+ *
+ * A modern prospect carries far more than the old 100-candidate cap: Owen
+ * Carey's 2026 Bowman alone spans BCP-69, BP-69, CPA-OC, BCP-PURPLE and
+ * PF-OWEN-CAREY-TRUE across the chrome, paper and auto ladders. The cap is the
+ * page size the user sees, so it is what decides whether the family is whole.
+ */
+const CATALOG_FIRST_MAX_HITS = 250;
 const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
 
 // CF-SEARCH-DISPLAY-TITLE (Drew, 2026-08-06). Search results were
@@ -594,68 +604,49 @@ async function tryCatalogFirst(
   includeProvisional = false,
 ): Promise<CardIdentity[] | null> {
   try {
-    // skipEnrichment=true: dispatcher only needs identity/candidate
-    // data, not FMV per hit. Cuts each sport's search from ~2-7s to
-    // ~200-500ms because we drop 20+ per-hit sold_comps queries.
+    // CF-SEARCH-OUR-DATABASE-ONLY (Drew, 2026-08-15: "i don't want it
+    // searching cardhedge at all. I want it searching OUR database. That is a
+    // mandate").
     //
-    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05, revised twice on
-    // 2026-08-08). Per-sport timeout. Bumped from 2.5s → 10s → 20s.
-    // Root cause of intermittent 0-hits on live: the freetext path
-    // queries all 5 sports in parallel; under RU pressure (post-batch
-    // delete/patch), ONE sport can take >10s while others return
-    // quickly-empty. Promise.all waits for all, wrap-timeout returns
-    // null on the slow one, and the ONE sport with real hits is the
-    // one that got dropped. 20s gives baseline-throttled queries
-    // room to complete (Cosmos 429 retry is ~5-10s of backoff).
-    const PER_SPORT_TIMEOUT_MS = 20_000;
+    // This used to fan out to canonicalCardSearch across five sports, whose
+    // candidate query is `c.source IN ('cardhedge','cardsight')`. Two things
+    // were wrong with that, and the mandate settles both:
+    //
+    //   1. `cardhedge` and `cardhedge-graded` are EXCLUDED_SOURCES in
+    //      catalogVisibility (CF-RETIRE-CARDHEDGE-ROWS). The search was
+    //      spending its time fetching rows the visibility layer already says
+    //      never to show, then dropping them.
+    //   2. It cost the user the wait. One sport measured 16.9s against 3.5s
+    //      for the whole checklist pass, which is where "20+ seconds" came
+    //      from.
+    //
+    // searchCatalog IS our database: it reads card_catalog, applies the
+    // verified/provisional tiering (so excluded vendor rows cannot come
+    // back), matches named fields as well as searchTokens, collapses grade
+    // and vendor duplicates, and prefers canonical slugs.
+    //
+    // "the entire product family should show up ... even if we don't have
+    // comp data in there" — selection is on the CHECKLIST. salesSummary is
+    // attached to the result afterwards and is never a filter, so a card with
+    // zero comps ranks and returns exactly like any other.
+    const CATALOG_TIMEOUT_MS = 20_000;
     const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
       Promise.race([
         p.catch(() => null),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), PER_SPORT_TIMEOUT_MS)),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), CATALOG_TIMEOUT_MS)),
       ]);
-    // CF-SEARCH-CHECKLIST-REACHES-THE-USER: the checklist pass runs alongside
-    // the vendor passes, under the same timeout, and is sport-agnostic (one
-    // query, not five — searchCatalog scores across the whole catalog).
-    const [results, checklistResult] = await Promise.all([
-      Promise.all(
-        CATALOG_FIRST_SPORTS.map((sport) =>
-          withTimeout(canonicalCardSearch({
-            q: trimmed, sport, limit: 30, skipEnrichment: true,
-            includeProvisional,
-          })),
-        ),
-      ),
-      withTimeout(searchCatalog({ query: trimmed, limit: 60 })),
-    ]);
-    const allHits: CanonicalSearchHit[] = [];
-    for (const r of results) {
-      if (r?.hits) allHits.push(...r.hits);
-    }
-    // Dedup across sports by hobbyiqCardId — a search token might hit
-    // multiple sport pools for cross-sport words like "gold".
-    const bySlug = new Map<string, CanonicalSearchHit>();
-    for (const h of allHits) {
-      const key = h.hobbyiqCardId ?? `${h.player}::${h.cardYear}::${h.cardNumber}`;
-      if (!key) continue;
-      const existing = bySlug.get(key);
-      if (!existing || h.score > existing.score) bySlug.set(key, h);
-    }
-    const merged = [...bySlug.values()].sort((a, b) => b.score - a.score);
-    const vendorIdentities = merged.map(catalogHitToCardIdentity);
 
-    // Merge the checklist hits in, keyed on the canonical slug so a card both
-    // passes found appears once. The vendor row wins that tie: it carries the
-    // vendor cardId, and its `cardsight:` candidateId is the click-through the
-    // card page has always been able to route.
-    const seenSlugs = new Set<string>();
-    for (const h of merged) if (h.hobbyiqCardId) seenSlugs.add(h.hobbyiqCardId);
-    const checklistIdentities = (checklistResult?.hits ?? [])
-      .filter((h) => !seenSlugs.has(h.slug))
-      .map(catalogSearchHitToCardIdentity);
-
-    const out = [...vendorIdentities, ...checklistIdentities];
-    if (out.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
-    return out.slice(0, 100);
+    // searchCatalog handles the provisional tier itself: it falls back to the
+    // stub rows only when NOTHING verified matched, and flags the response.
+    // The caller's includeProvisional is therefore not threaded here.
+    void includeProvisional;
+    const result = await withTimeout(searchCatalog({
+      query: trimmed,
+      limit: CATALOG_FIRST_MAX_HITS,
+    }));
+    const hits = result?.hits ?? [];
+    if (hits.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
+    return hits.map(catalogSearchHitToCardIdentity);
   } catch {
     return null;
   }
