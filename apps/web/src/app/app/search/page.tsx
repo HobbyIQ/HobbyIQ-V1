@@ -281,7 +281,7 @@ function CandidateRow({
           card, hundreds of sales fetched to find one picture. It was also
           mostly a placeholder: only 2.8% of canonical catalog rows carry an
           imageUrl today. The card DETAIL page still shows the full image,
-          which is where the user confirms they picked the right card. */
+          which is where the user confirms they picked the right card. */}
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{c.title}</div>
         <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
