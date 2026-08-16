@@ -96,7 +96,7 @@ function normalizeSport(sport: string): string {
 //      returns nothing.
 //
 // Order matters WITHIN each tier: more-specific patterns first so
-// "bowman-chrome-draft" doesn't collapse to "bowman".
+// "bowman-draft" doesn't collapse to "bowman".
 function knownSetKeyPatterns(): Array<[RegExp, string]> {
   return [
     // Sapphire is a distinct product LINE, not a parallel. Must match
@@ -142,7 +142,25 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // intended correction — distinct checklists, distinct prices — but it does
     // move existing comps out of the Bowman Chrome pool for those years.
     [/bowman-(?:chrome-)?mega(?:-box)?/, "bowman-chrome-mega-box"],
-    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome"],
+    // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "it shuld fold into Draft since
+    // it is draft" ... "they should match to the CATALOG"). This mapped Bowman Draft Chrome onto plain bowman-chrome,
+    // which pools a Draft card with the standalone Bowman Chrome product —
+    // different checklists, different players, different prices. Draft Chrome
+    // is the chrome half OF Bowman Draft, so it keeps the draft identity in
+    // its own key: the PRODUCT the checklist names (Drew, 2026-08-16: "we
+    // match the PRODUCT from bowman in the checklist!!").
+    //
+    // Counted by SOURCE on 2026-08-16, which is the count that matters —
+    // total rows flatter a key that only vendors use:
+    //
+    //     bowman-draft          336,463 rows, 277,616 CHECKLIST-backed
+    //     bowman-draft-chrome    23,899 rows,       0 CHECKLIST-backed
+    //                                              (23,892 cardhedge-graded,
+    //                                               an EXCLUDED source)
+    //
+    // So bowman-draft-chrome is a vendor artifact, not a product. Draft chrome
+    // cards belong to bowman-draft, where the checklist actually is.
+    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
     // the BCP-XX subset as setName="Chrome Prospects" (their own naming
@@ -683,9 +701,12 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  // CPA- on a Draft product is a Draft chrome prospect auto, not a Bowman
+  // Chrome one. Without this it fell through to bare bowman-draft.
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-draft" },
   // Topps Chrome family
   { fromSetKey: "topps",              cardNumberPrefix: /^tcpa(?:-|\d)/i,  toSetKey: "topps-chrome" },
   { fromSetKey: "topps",              cardNumberPrefix: /^cra(?:-|\d)/i,   toSetKey: "topps-chrome" },
@@ -698,8 +719,14 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   // Verlander BDP129 is chrome per Drew).
   { fromSetKey: "bowman",             cardNumberPrefix: /^bpa(?:-|\d)/i,   toSetKey: "bowman-paper" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bp(?:-|\d)/i,    toSetKey: "bowman-paper" },
-  { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
+  // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "they should match to the
+  // CATALOG"). BDA- used to route to "bowman-draft-paper", a key the catalog
+  // barely has — 18 rows against bowman-draft's 336,404, counted 2026-08-16.
+  // A slug nothing in the catalog shares is a card that matches nothing, so
+  // the paper distinction is kept as intent but expressed with the key that
+  // actually exists.
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
 ];
 function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {

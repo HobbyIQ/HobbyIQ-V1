@@ -265,7 +265,7 @@ describe("dispatchSearch — cert mode", () => {
 // Freetext mode — now backed by CardHedge via searchCardsRouted (the
 // Cardsight catalog seam is gone). With no CARD_HEDGE_API_KEY in the test
 // environment the CH client returns zero hits, so dispatchFreetextMode
-// yields zero candidates plus a "no_freetext_matches" warning
+// yields zero candidates plus a "catalog_no_matches" warning
 // (dispatcher.ts:163). Cert-mode lookups (PSA, etc.) remain the only
 // candidate-producing path under test.
 // ──────────────────────────────────────────────────────────────────
@@ -275,7 +275,11 @@ describe("dispatchSearch — freetext mode", () => {
     const r = await dispatchSearch("Bobby Witt Jr");
     expect(r.input.detectedMode).toBe("freetext");
     expect(r.candidates).toEqual([]);
-    expect(r.warnings).toEqual(["no_freetext_matches"]);
+    // CF-CATALOG-ONLY-FREETEXT (2026-08-08) renamed this warning when the
+    // CardHedge fallback was removed: an empty result now means OUR catalog
+    // had nothing, not that a vendor's freetext search came back empty. The
+    // distinction matters — the old wording blamed a system we no longer call.
+    expect(r.warnings).toEqual(["catalog_no_matches"]);
   });
 
   it("never queries searchCatalog in freetext mode", async () => {
