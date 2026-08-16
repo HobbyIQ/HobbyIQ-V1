@@ -261,7 +261,37 @@ export async function searchCatalog(
   //
   // Skipped when no token is long enough to be a name, leaving the old
   // any-token behaviour for short queries like "topps 1989".
-  const alphaTokens = tokens.filter((t) => /^[a-z]+$/.test(t) && t.length >= 6);
+  // CF-SEARCH-ANCHOR-IS-THE-NAME (Drew, 2026-08-15: "when we search for say a
+  // 2026 bowman owen carey, we want ALL potential matches to show up that
+  // could fit that card for owen carey").
+  //
+  // "Longest alphabetic token of 6+ characters" is a proxy for the surname
+  // that breaks on two counts, and "2026 bowman owen carey" trips both:
+  // "carey" is five letters so it never qualified, and "bowman" is six so it
+  // won the anchor instead. Since the anchor clause also matches
+  // c.parallel, anchoring on "bowm" pulled in every card whose PARALLEL is
+  // named Bowman-something — Bowman Logofractor, Bowman Logo Pattern
+  // Refractor — for players nobody searched for. The page came back holding
+  // Eric Hartman, CPA-BA, CPA-VF and dozens of bare card numbers.
+  //
+  // So: drop to four characters, and never anchor on a product or finish
+  // word. Every token here is a word that names a BRAND, PRODUCT LINE or
+  // FINISH, which is exactly the class that matches thousands of rows and
+  // identifies no card. Real surnames of four-plus letters ("carey", "witt",
+  // "soto") are what is left, which is what the anchor was always for.
+  const ANCHOR_STOPWORDS = new Set([
+    "bowman", "topps", "panini", "leaf", "upper", "deck", "fleer", "donruss", "score",
+    "chrome", "prizm", "select", "optic", "mosaic", "heritage", "sapphire", "finest",
+    "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
+    "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
+    "refractor", "fractor", "prizms", "auto", "autograph", "autographs", "rookie",
+    "prospect", "prospects", "paper", "update", "series", "draft", "mega", "jumbo",
+    "base", "insert", "parallel", "variation", "numbered", "card", "cards",
+    "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
+  ]);
+  const alphaTokens = tokens.filter(
+    (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !ANCHOR_STOPWORDS.has(t),
+  );
   const anchor = alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null;
   let anchorAnd = "";
   if (anchor) {
@@ -517,67 +547,92 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
   const comps = await getCompsContainer();
   if (!comps) return;
 
-  await Promise.all(hits.map(async (h) => {
-    // CF-SEARCH-IMAGE-SHORT-CIRCUIT (Drew, 2026-08-15). This used to be
-    // `if (h.salesSummary?.count > 0) return;` — a guard written when the
-    // function only filled salesSummary. CF-SEARCH-ATTACH-IMAGE later added
-    // the imageUrl attach INSIDE the same block, so the early return started
-    // skipping it too.
-    //
-    // The effect was the exact opposite of what the guard intended: a card
-    // with a batch-computed summary is a card with lots of comps, i.e. a
-    // popular card, i.e. precisely what people search for. Those cards
-    // returned before the picture was ever attached, so the ones users
-    // actually look at were the ones guaranteed to render a placeholder.
-    // "2018 Topps Chrome Update Ohtani #HMT1" has 23 comps and ALL 23 carry
-    // an image; the search still returned imageUrl: null every time.
-    //
-    // Split the two needs. The batch summary still wins when it exists —
-    // that part of the guard was correct — but a missing picture is now
-    // reason enough to look.
-    const needsSummary = !(h.salesSummary && h.salesSummary.count > 0);
-    const needsImage = !h.imageUrl;
-    if (!needsSummary && !needsImage) return;
+  // CF-SEARCH-COMPS-BATCHED (Drew, 2026-08-15: "the search taking 20+ seconds
+  // is bad"). This was one query PER HIT. That was survivable while the query
+  // was partition-scoped and the page was 25 rows; it is not once the lookup
+  // has to match hobbyiqCardId (CF-SEARCH-COMPS-MATCH-BOTH-IDS, necessarily
+  // cross-partition) and the page grows to show a whole product family. At 250
+  // hits it was 250 cross-partition round trips and blew the 20s budget
+  // outright — search returned nothing at all.
+  //
+  // Batch instead: one query per CHUNK of slugs, chunks in parallel, then fan
+  // the rows back out in memory. 250 round trips becomes 5.
+  //
+  // ENRICHMENT IS CAPPED, THE PAGE IS NOT. Cost scales with the number of
+  // COMPS behind the page, not the number of hits: a Shohei Ohtani page is 100
+  // cards each holding hundreds of sales, and pulling all of them — often just
+  // to find one image — measured 18.9s. Hits past the cap still return, still
+  // rank, and still carry whatever the batch job wrote; they only miss the
+  // live top-up. That keeps the whole product family on the page (Drew,
+  // 2026-08-15: "the entire product family should show up ... even if we don't
+  // have comp data in there") while bounding the tail.
+  //
+  // NO IMAGE LOOKUP (Drew, 2026-08-15: "let's remove the image in the search.
+  // That will speed things up"). Chasing a picture was the expensive half:
+  // popular cards already carry a batch-computed salesSummary, so the ONLY
+  // reason to open their comps was to find a thumbnail — and a Shohei Ohtani
+  // page is 100 cards holding hundreds of sales each. Measured 18.9s, almost
+  // all of it spent fetching sales we then threw away.
+  //
+  // Search results no longer show a thumbnail. The card DETAIL page still
+  // does, where one card is being confirmed and one lookup is cheap.
+  //
+  // What is left is the genuinely cheap case: cards the batch job has not
+  // reached, which are by definition the ones with few comps.
+  const ENRICH_MAX = 60;
+  const needs = hits
+    .filter((h) => !(h.salesSummary && h.salesSummary.count > 0))
+    .slice(0, ENRICH_MAX);
+  if (needs.length === 0) return;
+
+  const CHUNK = 50;
+  const chunks: CatalogSearchHit[][] = [];
+  for (let i = 0; i < needs.length; i += CHUNK) chunks.push(needs.slice(i, i + CHUNK));
+
+  await Promise.all(chunks.map(async (chunk) => {
+    const ids = chunk.map((h) => h.slug);
+    let rows: Array<{
+      cardId?: string | null; hobbyiqCardId?: string | null;
+      price: number; soldAt: string;
+    }> = [];
     try {
-      const { resources } = await comps.items.query<{
-        price: number; soldAt: string; imageUrl?: string | null; blobUrl?: string | null;
-      }>({
-        // CF-SEARCH-ATTACH-IMAGE (Drew, 2026-08-13: "Images should show here,
-        // we have them"). CatalogSearchHit.imageUrl is documented as "attached
-        // from sold_comps", but that attachment is a batch job — so every
-        // freshly-ingested checklist row had imageUrl=null and the UI rendered
-        // a broken placeholder for each result. Measured: 0 of 8 2018 Ohtani
-        // catalog rows carried an image, while their comps carried several.
-        //
-        // We are already reading this card's comps for the sales summary, so
-        // the picture costs nothing extra — same single-partition query.
-        query: "SELECT c.price, c.soldAt, c.imageUrl, c.blobUrl FROM c WHERE c.cardId = @id",
-        parameters: [{ name: "@id", value: h.slug }],
-      }, { partitionKey: h.slug }).fetchAll();
-      if (!resources || resources.length === 0) return;
+      const { resources } = await comps.items.query<typeof rows[number]>({
+        // Matches BOTH ids: /cardId is the partition key and usually holds a
+        // vendor id, while the canonical slug lives in hobbyiqCardId. See
+        // CF-SEARCH-COMPS-MATCH-BOTH-IDS — 83.5% of canonically-identified
+        // comps are reachable only via hobbyiqCardId, and a small set (2018
+        // Ohtani #HMT1) only via cardId.
+        query: "SELECT c.cardId, c.hobbyiqCardId, c.price, c.soldAt "
+             + "FROM c WHERE ARRAY_CONTAINS(@ids, c.cardId) OR ARRAY_CONTAINS(@ids, c.hobbyiqCardId)",
+        parameters: [{ name: "@ids", value: ids }],
+      }).fetchAll();
+      rows = resources ?? [];
+    } catch { return; }   // best-effort: leave whatever the batch job wrote
+    if (rows.length === 0) return;
 
-      // Prefer OUR blob copy over the vendor URL: eBay image links expire and
-      // are hotlink-restricted, so a vendor URL is a placeholder waiting to
-      // happen. Falls back to the vendor URL when we have not mirrored one yet.
-      if (!h.imageUrl) {
-        const withBlob = resources.find((r) => typeof r.blobUrl === "string" && r.blobUrl);
-        const withImg = resources.find((r) => typeof r.imageUrl === "string" && r.imageUrl);
-        h.imageUrl = (withBlob?.blobUrl ?? withImg?.imageUrl) ?? null;
+    const byId = new Map<string, typeof rows>();
+    for (const r of rows) {
+      for (const key of [r.cardId, r.hobbyiqCardId]) {
+        if (typeof key !== "string" || !key) continue;
+        const cur = byId.get(key);
+        if (cur) cur.push(r); else byId.set(key, [r]);
       }
+    }
 
-      // Only the SUMMARY is gated on the batch value; the image above is not.
-      if (!needsSummary) return;
+    for (const h of chunk) {
+      const mine = byId.get(h.slug);
+      if (!mine || mine.length === 0) continue;
 
-      const dated = resources
+      const dated = mine
         .filter((r) => typeof r.price === "number" && r.price > 0 && r.soldAt)
         .sort((a, b) => String(a.soldAt).localeCompare(String(b.soldAt)));
-      if (dated.length === 0) return;
+      if (dated.length === 0) continue;
 
       const median = (xs: number[]) => {
         if (xs.length === 0) return null;
-        const s = [...xs].sort((a, b) => a - b);
-        const m = Math.floor(s.length / 2);
-        return s.length % 2 ? s[m] : Math.round(((s[m - 1] + s[m]) / 2) * 100) / 100;
+        const srt = [...xs].sort((a, b) => a - b);
+        const m = Math.floor(srt.length / 2);
+        return srt.length % 2 ? srt[m] : Math.round(((srt[m - 1] + srt[m]) / 2) * 100) / 100;
       };
       const since = (days: number) => {
         const cut = new Date(Date.now() - days * 86_400_000).toISOString();
@@ -602,6 +657,6 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
           : null,
         updatedAt: new Date().toISOString(),
       };
-    } catch { /* best-effort — leave whatever the batch job wrote */ }
+    }
   }));
 }

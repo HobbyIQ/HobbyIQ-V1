@@ -63,6 +63,10 @@ import {
   canonicalCardSearch,
   type CanonicalSearchHit,
 } from "../portfolioiq/canonicalCardSearch.service.js";
+import {
+  searchCatalog,
+  type CatalogSearchHit,
+} from "../catalog/catalogSearch.service.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -419,6 +423,16 @@ async function dispatchCertMode(
 // canonicalCardSearch adds sold_comps hits too when catalog is thin,
 // so single-hit queries pick up long-tail cards from the pool.
 const CATALOG_FIRST_STRONG_THRESHOLD = 1;
+/**
+ * CF-SEARCH-WHOLE-PRODUCT-FAMILY (Drew, 2026-08-15: "the entire product family
+ * should show up. It is important even if we don't have comp data in there").
+ *
+ * A modern prospect carries far more than the old 100-candidate cap: Owen
+ * Carey's 2026 Bowman alone spans BCP-69, BP-69, CPA-OC, BCP-PURPLE and
+ * PF-OWEN-CAREY-TRUE across the chrome, paper and auto ladders. The cap is the
+ * page size the user sees, so it is what decides whether the family is whole.
+ */
+const CATALOG_FIRST_MAX_HITS = 250;
 const CATALOG_FIRST_SPORTS = ["baseball", "basketball", "football", "hockey", "soccer"];
 
 // CF-SEARCH-DISPLAY-TITLE (Drew, 2026-08-06). Search results were
@@ -507,6 +521,81 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
   };
 }
 
+/**
+ * CF-SEARCH-CHECKLIST-REACHES-THE-USER (Drew, 2026-08-15, on a search for
+ * "2026 bowman eric hartman": "this is not the full chcklist of eric. why
+ * does it not ALL show up").
+ *
+ * Measured that day, Eric Hartman held 1,699 card_catalog rows. The search
+ * returned seven. The cause was not scoring or a limit — the checklist rows
+ * were never queried:
+ *
+ *     canonicalCardSearch pass 1   c.source IN ('cardhedge','cardsight')
+ *     canonicalCardSearch pass 2   c.kind   IN ('card','variant')
+ *
+ * Eric Hartman's rows by source: 47 matched pass 1, exactly 1 matched pass 2
+ * (a tree-builder-v1 row, itself an excluded source). The 285 rows from
+ * `checklist` / `checklistcenter` / `beckett-scraped-*` /
+ * `cardboardchecklist-scraped-*` — every parallel we have scraped, which is
+ * the thing the search is supposed to be an index OF — matched neither, and
+ * no limit was ever reached. Nor is it fixable by widening the source list
+ * alone: pass 1 is `ARRAY_CONTAINS(c.searchTokens, …)` per token, and only
+ * 41 of Eric Hartman's 93 `checklist` rows carry searchTokens at all.
+ *
+ * searchCatalog was written for exactly this on 2026-08-13
+ * (CF-SEARCH-CHECKLIST-IS-THE-INDEX). It matches named fields as well as
+ * searchTokens so the backfill gap cannot hide a row, applies the verified/
+ * provisional tiering, collapses grade and vendor duplicates, and prefers
+ * canonical slugs. Nothing routed the web to it. Run against the same query
+ * it returns the full ladder — Bowman Logofractor, Black Refractor, Purple
+ * Ray Wave Refractor, Speckle, Mini-Diamond and the rest.
+ *
+ * ADDITIVE, NOT A REPLACEMENT. The vendor passes still run and still merge;
+ * a card we only know through a vendor stays findable. Checklist hits are
+ * simply no longer absent.
+ */
+function catalogSearchHitToCardIdentity(hit: CatalogSearchHit): CardIdentity {
+  let displaySet = slugToDisplay(hit.setKey ?? hit.setName ?? null);
+  if (hit.year && displaySet) {
+    const yearPrefixRx = new RegExp(`^\\s*${hit.year}(?:-\\d{2,4})?\\s+`);
+    displaySet = displaySet.replace(yearPrefixRx, "").trim();
+    displaySet = displaySet.replace(/\s+(Baseball|Basketball|Football|Hockey|Soccer)\s*$/i, "").trim();
+  }
+  const displayParallel = titleCaseParallel(hit.parallel);
+  const titleParts: string[] = [];
+  if (hit.year) titleParts.push(String(hit.year));
+  if (displaySet) titleParts.push(displaySet);
+  if (hit.playerName) titleParts.push(hit.playerName);
+  if (displayParallel && displayParallel.toLowerCase() !== "base") titleParts.push(displayParallel);
+  if (hit.cardNumber) titleParts.push(`#${hit.cardNumber.toUpperCase()}`);
+  return {
+    // `catalog:` + the canonical slug. candidateIdToCardsightId on the web
+    // routes this straight to the card page (CF-CATALOG-CANDIDATE-ROUTE).
+    candidateId: `catalog:${hit.slug}`,
+    source: "catalog",
+    attribution: "ranked",
+    confidence: Math.max(0.1, Math.min(1.0, hit.score)),
+    player: hit.playerName,
+    year: hit.year,
+    brand: null,
+    setName: displaySet || hit.setName || hit.setKey,
+    cardNumber: hit.cardNumber ? hit.cardNumber.toUpperCase() : null,
+    parallel: displayParallel || hit.parallel,
+    variation: null,
+    isAuto: hit.isAuto,
+    serialNumber: null,
+    grade: null,
+    gradeCompany: null,
+    gradeValue: null,
+    certNumber: null,
+    totalPopulation: null,
+    populationHigher: null,
+    title: titleParts.join(" ") || (hit.playerName ?? "Unknown card"),
+    imageUrl: hit.imageUrl,
+    attributes: [],
+  };
+}
+
 async function tryCatalogFirst(
   trimmed: string,
   // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Threaded from dispatchSearch
@@ -515,49 +604,49 @@ async function tryCatalogFirst(
   includeProvisional = false,
 ): Promise<CardIdentity[] | null> {
   try {
-    // skipEnrichment=true: dispatcher only needs identity/candidate
-    // data, not FMV per hit. Cuts each sport's search from ~2-7s to
-    // ~200-500ms because we drop 20+ per-hit sold_comps queries.
+    // CF-SEARCH-OUR-DATABASE-ONLY (Drew, 2026-08-15: "i don't want it
+    // searching cardhedge at all. I want it searching OUR database. That is a
+    // mandate").
     //
-    // CF-CATALOG-FIRST-TIMEOUT (Drew, 2026-08-05, revised twice on
-    // 2026-08-08). Per-sport timeout. Bumped from 2.5s → 10s → 20s.
-    // Root cause of intermittent 0-hits on live: the freetext path
-    // queries all 5 sports in parallel; under RU pressure (post-batch
-    // delete/patch), ONE sport can take >10s while others return
-    // quickly-empty. Promise.all waits for all, wrap-timeout returns
-    // null on the slow one, and the ONE sport with real hits is the
-    // one that got dropped. 20s gives baseline-throttled queries
-    // room to complete (Cosmos 429 retry is ~5-10s of backoff).
-    const PER_SPORT_TIMEOUT_MS = 20_000;
+    // This used to fan out to canonicalCardSearch across five sports, whose
+    // candidate query is `c.source IN ('cardhedge','cardsight')`. Two things
+    // were wrong with that, and the mandate settles both:
+    //
+    //   1. `cardhedge` and `cardhedge-graded` are EXCLUDED_SOURCES in
+    //      catalogVisibility (CF-RETIRE-CARDHEDGE-ROWS). The search was
+    //      spending its time fetching rows the visibility layer already says
+    //      never to show, then dropping them.
+    //   2. It cost the user the wait. One sport measured 16.9s against 3.5s
+    //      for the whole checklist pass, which is where "20+ seconds" came
+    //      from.
+    //
+    // searchCatalog IS our database: it reads card_catalog, applies the
+    // verified/provisional tiering (so excluded vendor rows cannot come
+    // back), matches named fields as well as searchTokens, collapses grade
+    // and vendor duplicates, and prefers canonical slugs.
+    //
+    // "the entire product family should show up ... even if we don't have
+    // comp data in there" — selection is on the CHECKLIST. salesSummary is
+    // attached to the result afterwards and is never a filter, so a card with
+    // zero comps ranks and returns exactly like any other.
+    const CATALOG_TIMEOUT_MS = 20_000;
     const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
       Promise.race([
         p.catch(() => null),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), PER_SPORT_TIMEOUT_MS)),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), CATALOG_TIMEOUT_MS)),
       ]);
-    const results = await Promise.all(
-      CATALOG_FIRST_SPORTS.map((sport) =>
-        withTimeout(canonicalCardSearch({
-          q: trimmed, sport, limit: 30, skipEnrichment: true,
-          includeProvisional,
-        })),
-      ),
-    );
-    const allHits: CanonicalSearchHit[] = [];
-    for (const r of results) {
-      if (r?.hits) allHits.push(...r.hits);
-    }
-    // Dedup across sports by hobbyiqCardId — a search token might hit
-    // multiple sport pools for cross-sport words like "gold".
-    const bySlug = new Map<string, CanonicalSearchHit>();
-    for (const h of allHits) {
-      const key = h.hobbyiqCardId ?? `${h.player}::${h.cardYear}::${h.cardNumber}`;
-      if (!key) continue;
-      const existing = bySlug.get(key);
-      if (!existing || h.score > existing.score) bySlug.set(key, h);
-    }
-    const merged = [...bySlug.values()].sort((a, b) => b.score - a.score);
-    if (merged.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
-    return merged.slice(0, 100).map(catalogHitToCardIdentity);
+
+    // searchCatalog handles the provisional tier itself: it falls back to the
+    // stub rows only when NOTHING verified matched, and flags the response.
+    // The caller's includeProvisional is therefore not threaded here.
+    void includeProvisional;
+    const result = await withTimeout(searchCatalog({
+      query: trimmed,
+      limit: CATALOG_FIRST_MAX_HITS,
+    }));
+    const hits = result?.hits ?? [];
+    if (hits.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
+    return hits.map(catalogSearchHitToCardIdentity);
   } catch {
     return null;
   }
