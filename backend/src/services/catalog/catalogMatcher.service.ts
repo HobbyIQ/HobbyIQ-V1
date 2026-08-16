@@ -329,7 +329,26 @@ export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponen
     sport: String(input.sport ?? "").trim().toLowerCase(),
     year: input.year,
     setKey: normalizeSetKey(input.setName ?? ""),
-    cardNumber: String(input.cardNumber ?? "").trim(),
+    // CF-CARD-NUMBER-IS-CASE-INSENSITIVE (Drew, 2026-08-16: "yea, we should
+    // see if it does").
+    //
+    // The catalog lookup compares `c.cardNumber = @n` — an exact, CASE-SENSITIVE
+    // equality — and every checklist writes card numbers uppercase (4,000
+    // sampled canonical rows: 4,000 uppercase, 0 with any lowercase). Vendors
+    // do not. A sale arriving as "uk-4" could never match the catalog's "UK-4",
+    // so it was recorded as unmatched and filed a seed asking for a checklist
+    // we already had.
+    //
+    // Measured over the 241 unmatched sales whose card demonstrably IS in the
+    // catalog: 61 of them — 25.3% — failed on nothing but letter case.
+    //
+    // Uppercasing the INPUT rather than wrapping the column in UPPER() keeps
+    // the predicate index-accelerated; a function on the indexed column is what
+    // made search scan 35.7M rows earlier today. A card number is a
+    // case-insensitive identifier by nature — UK-4 and uk-4 are one card — and
+    // the slug is unaffected because computeHobbyIqCardId lowercases it again
+    // through normalizeCardNumber.
+    cardNumber: String(input.cardNumber ?? "").trim().toUpperCase(),
     parallel: canonicalizeParallelName(input.parallel),
     isAuto: !!input.isAuto,
     printRun: typeof input.printRun === "number" ? input.printRun : null,
