@@ -1753,6 +1753,65 @@ export async function fetchErpSummary(): Promise<ErpSummaryResponse> {
   return await request<ErpSummaryResponse>("/api/portfolio/erp/summary");
 }
 
+// CF-CEO-DASHBOARD (Drew, 2026-08-16: "a true dashboard for a CEO to see
+// profitability, drill down by year, months, purchases and all that").
+//
+// The backend has carried a full P&L since CF-ERP — gross proceeds, fees,
+// shipping, COGS, realized P&L, operating expenses and true net, groupable
+// seven ways. Nothing on the web ever called it; /erp/summary only returns a
+// portfolio snapshot, which is position, not profitability.
+export type PnlGroupBy =
+  | "month" | "player" | "set" | "grade" | "source" | "salesChannel" | "paymentMethod";
+
+export interface PnlTotals {
+  grossProceeds: number;
+  feesTotal: number;
+  shipping: number;
+  netProceeds: number;
+  costBasisSold: number;
+  realizedProfitLoss: number;
+  entryCount: number;
+}
+
+export interface PnlGroup {
+  key: string;
+  label: string;
+  totals: PnlTotals;
+}
+
+export interface ErpPnlResponse {
+  success: boolean;
+  window: { from: string | null; to: string | null };
+  groupBy: PnlGroupBy;
+  totals: PnlTotals;
+  groups: PnlGroup[];
+  excluded: {
+    unreconciledCount: number;
+    unreconciledOldestSoldAt: string | null;
+    unreconciledNewestSoldAt: string | null;
+  };
+  cogs?: Record<string, number> | null;
+  operatingExpenses?: number;
+  trueNet?: number;
+}
+
+export async function fetchErpPnl(opts: {
+  from?: string;
+  to?: string;
+  groupBy?: PnlGroupBy;
+  includeExpenses?: boolean;
+} = {}): Promise<ErpPnlResponse> {
+  const qs = new URLSearchParams();
+  if (opts.from) qs.set("from", opts.from);
+  if (opts.to) qs.set("to", opts.to);
+  qs.set("groupBy", opts.groupBy ?? "month");
+  // Always ask for expenses: a profitability view that ignores operating cost
+  // is not profitability. The backend defaults this OFF only to preserve the
+  // older iOS response shape.
+  if (opts.includeExpenses !== false) qs.set("includeExpenses", "1");
+  return await request<ErpPnlResponse>(`/api/portfolio/erp/pnl?${qs.toString()}`);
+}
+
 export type ExpenseCategory =
   | "store_subscription"
   | "show_booth"
