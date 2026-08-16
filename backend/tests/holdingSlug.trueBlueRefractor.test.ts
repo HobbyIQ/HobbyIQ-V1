@@ -12,12 +12,12 @@
 // uses, because a slug nothing in the catalog shares is a card that matches
 // nothing. Row counts taken 2026-08-16:
 //
-//     bowman-draft-chrome   23,899      bowman-chrome-draft      480
+//     bowman-draft   23,899      bowman-draft      480
 //     bowman-draft         336,404      bowman-draft-paper        18
 //     bowman             1,252,848      bowman-paper           1,785
 //
-// So Draft Chrome keeps its Draft identity under bowman-draft-chrome (not the
-// bowman-chrome it used to collapse into, and not the bowman-chrome-draft this
+// So Draft Chrome keeps its Draft identity under bowman-draft (not the
+// bowman-chrome it used to collapse into, and not the bowman-draft this
 // file previously asked for — that variant was itself a fragment the
 // normaliser had been minting). BDA- paper Draft autos go to bowman-draft
 // rather than the 18-row bowman-draft-paper.
@@ -44,7 +44,7 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: "2025 Bowman Chrome Refractor Draft Josiah Hartshorn True",
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:blue-refractor:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto");
   });
 
   it("bare 'Blue' + title with 'True Blue' → :blue-refractor:auto", () => {
@@ -54,7 +54,7 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: "2025 Bowman Draft True Blue Josiah Hartshorn Auto",
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:blue-refractor:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto");
   });
 
   it("bare 'Blue' + title WITHOUT refractor/true signal → :blue:auto (no upgrade)", () => {
@@ -67,7 +67,7 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: "2025 Bowman Draft Josiah Hartshorn Blue Ice",
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:blue:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue:auto");
   });
 
   it("existing 'Blue Refractor' parallel is unaffected", () => {
@@ -77,7 +77,7 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: "2025 Bowman Draft Chrome Refractor Josiah Hartshorn",
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:blue-refractor:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto");
   });
 
   it("non-color parallel (Base) + Refractor in title → not upgraded", () => {
@@ -90,7 +90,7 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: "2025 Bowman Draft Chrome Base Auto Refractor family",
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:base:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:base:auto");
   });
 
   it("null title → no upgrade (parallel stays bare)", () => {
@@ -100,6 +100,6 @@ describe("deriveHoldingSlug — bare color + title Refractor upgrade", () => {
       cardTitle: null,
     } as unknown as PortfolioHolding;
     const slug = deriveHoldingSlug(holding);
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:blue:auto");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue:auto");
   });
 });

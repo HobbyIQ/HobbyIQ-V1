@@ -96,7 +96,7 @@ function normalizeSport(sport: string): string {
 //      returns nothing.
 //
 // Order matters WITHIN each tier: more-specific patterns first so
-// "bowman-draft-chrome" doesn't collapse to "bowman".
+// "bowman-draft" doesn't collapse to "bowman".
 function knownSetKeyPatterns(): Array<[RegExp, string]> {
   return [
     // Sapphire is a distinct product LINE, not a parallel. Must match
@@ -147,10 +147,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // which pools a Draft card with the standalone Bowman Chrome product —
     // different checklists, different players, different prices. Draft Chrome
     // is the chrome half OF Bowman Draft, so it keeps the draft identity in
-    // its own key. The key is the one the CATALOG already uses — counted
-    // 2026-08-16: bowman-draft-chrome 23,899 rows against bowman-chrome-draft's
-    // 480, which was itself a fragment this normaliser had been minting.
-    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-draft-chrome"],
+    // its own key: the PRODUCT the checklist names (Drew, 2026-08-16: "we
+    // match the PRODUCT from bowman in the checklist!!").
+    //
+    // Counted by SOURCE on 2026-08-16, which is the count that matters —
+    // total rows flatter a key that only vendors use:
+    //
+    //     bowman-draft          336,463 rows, 277,616 CHECKLIST-backed
+    //     bowman-draft-chrome    23,899 rows,       0 CHECKLIST-backed
+    //                                              (23,892 cardhedge-graded,
+    //                                               an EXCLUDED source)
+    //
+    // So bowman-draft-chrome is a vendor artifact, not a product. Draft chrome
+    // cards belong to bowman-draft, where the checklist actually is.
+    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
     // the BCP-XX subset as setName="Chrome Prospects" (their own naming
@@ -691,12 +701,12 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-draft-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-draft-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-draft-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-draft" },
   // CPA- on a Draft product is a Draft chrome prospect auto, not a Bowman
   // Chrome one. Without this it fell through to bare bowman-draft.
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-draft-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-draft" },
   // Topps Chrome family
   { fromSetKey: "topps",              cardNumberPrefix: /^tcpa(?:-|\d)/i,  toSetKey: "topps-chrome" },
   { fromSetKey: "topps",              cardNumberPrefix: /^cra(?:-|\d)/i,   toSetKey: "topps-chrome" },

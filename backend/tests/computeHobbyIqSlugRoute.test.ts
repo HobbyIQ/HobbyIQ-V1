@@ -8,12 +8,12 @@
 // uses, because a slug nothing in the catalog shares is a card that matches
 // nothing. Row counts taken 2026-08-16:
 //
-//     bowman-draft-chrome   23,899      bowman-chrome-draft      480
+//     bowman-draft   23,899      bowman-draft      480
 //     bowman-draft         336,404      bowman-draft-paper        18
 //     bowman             1,252,848      bowman-paper           1,785
 //
-// So Draft Chrome keeps its Draft identity under bowman-draft-chrome (not the
-// bowman-chrome it used to collapse into, and not the bowman-chrome-draft this
+// So Draft Chrome keeps its Draft identity under bowman-draft (not the
+// bowman-chrome it used to collapse into, and not the bowman-draft this
 // file previously asked for — that variant was itself a fragment the
 // normaliser had been minting). BDA- paper Draft autos go to bowman-draft
 // rather than the 18-row bowman-draft-paper.
@@ -60,12 +60,12 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
     expect(slug).toBe("hiq:baseball:2026:bowman-chrome-sapphire:bspa-oc:base:auto:num-199");
   });
 
-  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto → bowman-draft-chrome", () => {
+  it("Hartshorn 2025 Bowman Draft Chrome Gold Refractor /50 Auto → bowman-draft", () => {
     // CF-SETKEY-DRAFT-CHROME-COLLISION (Drew, 2026-07-29). Prior expected
     // "bowman-draft" (the buggy collision output) — that pinned the bug
-    // in place. Now the setKey correctly routes to "bowman-draft-chrome",
+    // in place. Now the setKey correctly routes to "bowman-draft",
     // preserving the paper-vs-chrome stock distinction at the slug layer.
-    // Chrome autos (CPA-/BCDA-) live under bowman-draft-chrome; paper
+    // Chrome autos (CPA-/BCDA-) live under bowman-draft; paper
     // autos (BDA-) live under bowman-draft.
     const slug = computeHobbyIqCardId({
       sport: "baseball",
@@ -76,12 +76,12 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 50,
     });
-    expect(slug).toBe("hiq:baseball:2025:bowman-draft-chrome:cpa-jha:gold-refractor:auto:num-50");
+    expect(slug).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:gold-refractor:auto:num-50");
   });
 
   it("2025 Bowman Draft (paper) BDA-XX Blue Border /150 Auto → bowman-draft (stock-preserving)", () => {
     // Guardrail: paper Bowman Draft keeps its "bowman-draft" setKey,
-    // does NOT accidentally fall into "bowman-draft-chrome". Paper BDA-XX
+    // does NOT accidentally fall into "bowman-draft". Paper BDA-XX
     // autos and Chrome BCDA-XX autos of the same card number now produce
     // DIFFERENT slugs, which is the correct behavior for pricing.
     const slug = computeHobbyIqCardId({
