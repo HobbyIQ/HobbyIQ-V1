@@ -457,6 +457,22 @@ function AlertModal({
 
 // ─── Header (title + image + action buttons) ─────────────────────────
 
+/**
+ * Short support/debug reference under the title.
+ *
+ * The `.slice(0, 8)` this replaces was written for a vendor UUID. Canonical
+ * ids are `hiq:<sport>:<year>:<setKey>:<cardNumber>:<parallel>:<auto>`, and
+ * the first eight characters of that are "hiq:base" — which rendered as
+ * "#hiq:base" under EVERY canonically-identified card and reads as a
+ * parallel, not an id. Show the card number, which is the reference a
+ * collector actually uses.
+ */
+function shortCardRef(id: string): string {
+  const parts = String(id).split(":");
+  if (parts[0] === "hiq" && parts.length >= 5 && parts[4]) return parts[4].toUpperCase();
+  return String(id).slice(0, 8);
+}
+
 function Header({
   title, image, summary, candidate, grade, parallel, cardsightCardId,
 }: {
@@ -527,13 +543,19 @@ function Header({
 
   return (
     <div className="flex items-start gap-5 flex-wrap">
+      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-15: "we want the full image to show
+          in the rectangular shape so it shows the full image").
+          Was w-24 h-24 + object-cover — a square box center-cropping a 2.5x3.5
+          card, so the top and bottom of every card were cut off. The card
+          detail page is where the user confirms they picked the right card, so
+          the whole card has to be visible. */}
       <div
-        className="w-24 h-24 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+        className="w-28 aspect-[3/4] rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
         style={{ background: "var(--color-bg)" }}
       >
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="w-full h-full object-cover" />
+          <img src={image} alt="" className="w-full h-full object-contain" />
         ) : (
           <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
             <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
@@ -547,7 +569,7 @@ function Header({
             name to end users. Card id kept for support/debug but
             without the "cardsight:" prefix. */}
         <div className="text-xs text-[color:var(--color-muted)] mt-2 tabular-nums break-all">
-          #{cardsightCardId.slice(0, 8)}
+          #{shortCardRef(cardsightCardId)}
         </div>
       </div>
       <div className="flex flex-col gap-2">
