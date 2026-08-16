@@ -275,13 +275,19 @@ function CandidateRow({
       onClick={onClick}
       className="w-full hiq-card p-4 flex items-center gap-4 text-left transition-colors hover:bg-white/[0.02]"
     >
+      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-15: "we want the full image to show
+          in the rectangular shape so it shows the full image").
+          A card is 2.5x3.5 — a SQUARE box plus object-cover center-crops it,
+          which is what cut the top and bottom off every search thumbnail.
+          Slab-ratio container + object-contain, matching every other surface
+          in the app (market, insights, portfolio, buyeriq). */}
       <div
-        className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+        className="w-14 aspect-[3/4] rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
         style={{ background: "var(--color-bg)" }}
       >
         {c.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />
+          <img src={c.imageUrl} alt="" className="w-full h-full object-contain" />
         ) : (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
             <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
