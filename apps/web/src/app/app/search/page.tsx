@@ -275,25 +275,13 @@ function CandidateRow({
       onClick={onClick}
       className="w-full hiq-card p-4 flex items-center gap-4 text-left transition-colors hover:bg-white/[0.02]"
     >
-      {/* CF-PHOTO-DISPLAY (Drew, 2026-08-15: "we want the full image to show
-          in the rectangular shape so it shows the full image").
-          A card is 2.5x3.5 — a SQUARE box plus object-cover center-crops it,
-          which is what cut the top and bottom off every search thumbnail.
-          Slab-ratio container + object-contain, matching every other surface
-          in the app (market, insights, portfolio, buyeriq). */}
-      <div
-        className="w-14 aspect-[3/4] rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
-        style={{ background: "var(--color-bg)" }}
-      >
-        {c.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.imageUrl} alt="" className="w-full h-full object-contain" />
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
-            <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
-          </svg>
-        )}
-      </div>
+      {/* CF-SEARCH-NO-THUMBNAIL (Drew, 2026-08-15: "let's remove the image
+          in the search. That will speed things up").
+          The thumbnail cost a sold_comps lookup per result — on a popular
+          card, hundreds of sales fetched to find one picture. It was also
+          mostly a placeholder: only 2.8% of canonical catalog rows carry an
+          imageUrl today. The card DETAIL page still shows the full image,
+          which is where the user confirms they picked the right card. */
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{c.title}</div>
         <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
