@@ -31,10 +31,17 @@ describe("parseGradeLabel — Authentic bucket", () => {
     expect(r!.gradeValue).toBe(0);
   });
 
-  it("an unbranded authentication still gets the bucket", () => {
-    const r = parseGradeLabel("1955 Topps Roberto Clemente #164 Authentic Altered");
-    expect(r!.isAuthentic).toBe(true);
-    expect(r!.gradeCompany).toBe("UNKNOWN");
+  // A GRADING COMPANY IS REQUIRED. "SP Authentic" is an Upper Deck PRODUCT,
+  // and a dry run over the pool tagged 6,450 rows — mostly "2001 SP Authentic
+  // Baseball" — as authenticated slabs on the word alone. Worse than the bug
+  // being fixed, so no company means no bucket.
+  it.each([
+    "2001 SP Authentic Baseball #AR Base",
+    "2009 SP Authentic Baseball #93 Base",
+    "1955 Topps Roberto Clemente #164 Authentic Altered",
+  ])("no grading company -> no bucket: %s", (title) => {
+    const r = parseGradeLabel(title);
+    expect(r?.isAuthentic ?? false).toBe(false);
   });
 
   it("the card number is not mistaken for a grade", () => {
