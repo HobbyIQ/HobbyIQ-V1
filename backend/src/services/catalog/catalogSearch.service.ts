@@ -551,9 +551,27 @@ async function attachLiveComps(hits: CatalogSearchHit[]): Promise<void> {
         //
         // We are already reading this card's comps for the sales summary, so
         // the picture costs nothing extra — same single-partition query.
-        query: "SELECT c.price, c.soldAt, c.imageUrl, c.blobUrl FROM c WHERE c.cardId = @id",
+        // CF-SEARCH-COMPS-MATCH-BOTH-IDS (Drew, 2026-08-15, on missing search
+        // images). This matched `c.cardId` only, partition-scoped to the slug.
+        // But /cardId is the PARTITION KEY and it usually holds a VENDOR id —
+        // `backstop:eric hartman|2026|cpa-eha|1st bowman`, a CardHedge bubble
+        // id, a Cardsight UUID. The canonical slug lives in `hobbyiqCardId`,
+        // which is what readCompsByCardId matches on for `hiq:` ids and what
+        // canonical FMV is computed from. Measured 2026-08-15:
+        //
+        //   hiq:baseball:2026:bowman:cpa-eha:refractor:auto
+        //        by cardId            5 comps
+        //        by hobbyiqCardId   517 comps, 484 of them carrying an image
+        //
+        // So search rendered a placeholder and "0 comps" for a card holding
+        // 484 pictures. Neither field alone is sufficient, either — the 2018
+        // Ohtani #HMT1 row is the mirror case (23 by cardId, 0 by
+        // hobbyiqCardId) — so this ORs them. Dropping the partitionKey hint
+        // is required: the slug does not identify the partition the comps
+        // actually live in, which is the whole reason they were invisible.
+        query: "SELECT c.price, c.soldAt, c.imageUrl, c.blobUrl FROM c WHERE c.cardId = @id OR c.hobbyiqCardId = @id",
         parameters: [{ name: "@id", value: h.slug }],
-      }, { partitionKey: h.slug }).fetchAll();
+      }).fetchAll();
       if (!resources || resources.length === 0) return;
 
       // Prefer OUR blob copy over the vendor URL: eBay image links expire and

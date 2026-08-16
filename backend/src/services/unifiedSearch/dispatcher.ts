@@ -63,6 +63,10 @@ import {
   canonicalCardSearch,
   type CanonicalSearchHit,
 } from "../portfolioiq/canonicalCardSearch.service.js";
+import {
+  searchCatalog,
+  type CatalogSearchHit,
+} from "../catalog/catalogSearch.service.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -507,6 +511,81 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
   };
 }
 
+/**
+ * CF-SEARCH-CHECKLIST-REACHES-THE-USER (Drew, 2026-08-15, on a search for
+ * "2026 bowman eric hartman": "this is not the full chcklist of eric. why
+ * does it not ALL show up").
+ *
+ * Measured that day, Eric Hartman held 1,699 card_catalog rows. The search
+ * returned seven. The cause was not scoring or a limit — the checklist rows
+ * were never queried:
+ *
+ *     canonicalCardSearch pass 1   c.source IN ('cardhedge','cardsight')
+ *     canonicalCardSearch pass 2   c.kind   IN ('card','variant')
+ *
+ * Eric Hartman's rows by source: 47 matched pass 1, exactly 1 matched pass 2
+ * (a tree-builder-v1 row, itself an excluded source). The 285 rows from
+ * `checklist` / `checklistcenter` / `beckett-scraped-*` /
+ * `cardboardchecklist-scraped-*` — every parallel we have scraped, which is
+ * the thing the search is supposed to be an index OF — matched neither, and
+ * no limit was ever reached. Nor is it fixable by widening the source list
+ * alone: pass 1 is `ARRAY_CONTAINS(c.searchTokens, …)` per token, and only
+ * 41 of Eric Hartman's 93 `checklist` rows carry searchTokens at all.
+ *
+ * searchCatalog was written for exactly this on 2026-08-13
+ * (CF-SEARCH-CHECKLIST-IS-THE-INDEX). It matches named fields as well as
+ * searchTokens so the backfill gap cannot hide a row, applies the verified/
+ * provisional tiering, collapses grade and vendor duplicates, and prefers
+ * canonical slugs. Nothing routed the web to it. Run against the same query
+ * it returns the full ladder — Bowman Logofractor, Black Refractor, Purple
+ * Ray Wave Refractor, Speckle, Mini-Diamond and the rest.
+ *
+ * ADDITIVE, NOT A REPLACEMENT. The vendor passes still run and still merge;
+ * a card we only know through a vendor stays findable. Checklist hits are
+ * simply no longer absent.
+ */
+function catalogSearchHitToCardIdentity(hit: CatalogSearchHit): CardIdentity {
+  let displaySet = slugToDisplay(hit.setKey ?? hit.setName ?? null);
+  if (hit.year && displaySet) {
+    const yearPrefixRx = new RegExp(`^\\s*${hit.year}(?:-\\d{2,4})?\\s+`);
+    displaySet = displaySet.replace(yearPrefixRx, "").trim();
+    displaySet = displaySet.replace(/\s+(Baseball|Basketball|Football|Hockey|Soccer)\s*$/i, "").trim();
+  }
+  const displayParallel = titleCaseParallel(hit.parallel);
+  const titleParts: string[] = [];
+  if (hit.year) titleParts.push(String(hit.year));
+  if (displaySet) titleParts.push(displaySet);
+  if (hit.playerName) titleParts.push(hit.playerName);
+  if (displayParallel && displayParallel.toLowerCase() !== "base") titleParts.push(displayParallel);
+  if (hit.cardNumber) titleParts.push(`#${hit.cardNumber.toUpperCase()}`);
+  return {
+    // `catalog:` + the canonical slug. candidateIdToCardsightId on the web
+    // routes this straight to the card page (CF-CATALOG-CANDIDATE-ROUTE).
+    candidateId: `catalog:${hit.slug}`,
+    source: "catalog",
+    attribution: "ranked",
+    confidence: Math.max(0.1, Math.min(1.0, hit.score)),
+    player: hit.playerName,
+    year: hit.year,
+    brand: null,
+    setName: displaySet || hit.setName || hit.setKey,
+    cardNumber: hit.cardNumber ? hit.cardNumber.toUpperCase() : null,
+    parallel: displayParallel || hit.parallel,
+    variation: null,
+    isAuto: hit.isAuto,
+    serialNumber: null,
+    grade: null,
+    gradeCompany: null,
+    gradeValue: null,
+    certNumber: null,
+    totalPopulation: null,
+    populationHigher: null,
+    title: titleParts.join(" ") || (hit.playerName ?? "Unknown card"),
+    imageUrl: hit.imageUrl,
+    attributes: [],
+  };
+}
+
 async function tryCatalogFirst(
   trimmed: string,
   // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). Threaded from dispatchSearch
@@ -534,14 +613,20 @@ async function tryCatalogFirst(
         p.catch(() => null),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), PER_SPORT_TIMEOUT_MS)),
       ]);
-    const results = await Promise.all(
-      CATALOG_FIRST_SPORTS.map((sport) =>
-        withTimeout(canonicalCardSearch({
-          q: trimmed, sport, limit: 30, skipEnrichment: true,
-          includeProvisional,
-        })),
+    // CF-SEARCH-CHECKLIST-REACHES-THE-USER: the checklist pass runs alongside
+    // the vendor passes, under the same timeout, and is sport-agnostic (one
+    // query, not five — searchCatalog scores across the whole catalog).
+    const [results, checklistResult] = await Promise.all([
+      Promise.all(
+        CATALOG_FIRST_SPORTS.map((sport) =>
+          withTimeout(canonicalCardSearch({
+            q: trimmed, sport, limit: 30, skipEnrichment: true,
+            includeProvisional,
+          })),
+        ),
       ),
-    );
+      withTimeout(searchCatalog({ query: trimmed, limit: 60 })),
+    ]);
     const allHits: CanonicalSearchHit[] = [];
     for (const r of results) {
       if (r?.hits) allHits.push(...r.hits);
@@ -556,8 +641,21 @@ async function tryCatalogFirst(
       if (!existing || h.score > existing.score) bySlug.set(key, h);
     }
     const merged = [...bySlug.values()].sort((a, b) => b.score - a.score);
-    if (merged.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
-    return merged.slice(0, 100).map(catalogHitToCardIdentity);
+    const vendorIdentities = merged.map(catalogHitToCardIdentity);
+
+    // Merge the checklist hits in, keyed on the canonical slug so a card both
+    // passes found appears once. The vendor row wins that tie: it carries the
+    // vendor cardId, and its `cardsight:` candidateId is the click-through the
+    // card page has always been able to route.
+    const seenSlugs = new Set<string>();
+    for (const h of merged) if (h.hobbyiqCardId) seenSlugs.add(h.hobbyiqCardId);
+    const checklistIdentities = (checklistResult?.hits ?? [])
+      .filter((h) => !seenSlugs.has(h.slug))
+      .map(catalogSearchHitToCardIdentity);
+
+    const out = [...vendorIdentities, ...checklistIdentities];
+    if (out.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;
+    return out.slice(0, 100);
   } catch {
     return null;
   }
