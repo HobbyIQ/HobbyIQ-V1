@@ -906,6 +906,43 @@ function extractParallel(title: string): string {
     return "Refractor";
   }
 
+  // CF-SCARCITY-IS-NOT-BASE (Drew, 2026-08-16, on "2018 Topps Ohtani Warm-Up
+  // Shirt SSP": "are we handling SSP of players? ... we need to add these
+  // things to the catalog and find others in the data like that").
+  //
+  // We were not. A super-short-print photo variation parsed to parallel="Base"
+  // and therefore produced the SAME SLUG as the common base card:
+  //
+  //   "2018 Topps Shohei Ohtani Warm-Up Shirt SSP #150" -> Base, #150
+  //   "2018 Topps Shohei Ohtani #150 Base"              -> Base, #150
+  //
+  // So an SSP trading at a large multiple averaged into the base pool,
+  // inflating the base FMV and deflating its own at the same time. Counting
+  // sold_comps titles filed as parallel="Base" on 2026-08-16:
+  //
+  //     SSP        48,034 of 75,822      SHORT PRINT  6,355 of  7,475
+  //     CASE HIT   27,915 of 33,900      PHOTO VAR.     826 of  1,465
+  //
+  // (IMAGE VARIATION was already handled — 10 of 11,839.)
+  //
+  // THIS FIRES ONLY AT THE FALLBACK, never over a colour rule. Scarcity and
+  // colour are different axes: a "Blue Refractor SSP" is still the Blue
+  // Refractor, and every colour/pattern rule above has already returned. What
+  // reaches here is a card with no parallel of its own — exactly the set that
+  // was collapsing into Base.
+  //
+  // SP IS A BRAND AS OFTEN AS IT IS A SHORT PRINT. Discovery over 20,000
+  // Base-filed titles returned "upper deck sp" as the single most common
+  // descriptor preceding an SP marker (1,857), ahead of every genuine scarcity
+  // term. "SP Authentic" (11,146 rows) and "Upper Deck SP" (10,808) are
+  // PRODUCT LINES; a bare "SP" rule would have mislabelled ~22,000 sales into
+  // a tier that does not exist. Only unambiguous forms are matched.
+  const isSpBrand = /\b(?:sp\s+authentic|upper\s+deck\s+sp|sp\s+legendary|sp\s+game\s+used|sp\s+signature)\b/i.test(T);
+  if (/\bssp\b/i.test(T) && !isSpBrand) return "SSP";
+  if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
+  if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";
+  if (/\bphoto\s+variation\b/i.test(T)) return "Photo Variation";
+
   return "Base";
 }
 
