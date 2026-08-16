@@ -23,6 +23,7 @@
 
 import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
+import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
 import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
@@ -387,109 +388,30 @@ async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
 ): Promise<Array<{ price: number; date: string | null; saleType: string | null }>> {
-  const { CosmosClient } = await import("@azure/cosmos");
-  const conn = process.env.COSMOS_CONNECTION_STRING;
-  if (!conn) return [];
-  const container = new CosmosClient(conn)
-    .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-    .container("sold_comps");
+  // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The Cosmos read moved to
+  // soldCompsGradeReader so tests can mock a seam of our own instead of
+  // "@azure/cosmos" — mocking that module hits every other Cosmos consumer in
+  // the graph and took the suite from 89 to 107 failures. Filtering stays HERE
+  // so mocking the reader still exercises the real title rules below.
+  const resources = await readSoldCompsForGrade(cardId, grade);
 
-  // Grade string parse. "Raw" → gradeCompany null; "PSA 10" →
-  // gradeCompany=PSA, gradeValue=10; also handle "PSA 10 Black Label"
-  // and "BGS 10 Black Label" (BGS-only variant we treat as tier 10).
-  const gradeParts = grade.trim().split(/\s+/);
-  let wantCompany: string | null = null;
-  let wantValue: number | null = null;
-  if (gradeParts[0] && gradeParts[0].toLowerCase() !== "raw") {
-    wantCompany = gradeParts[0].toUpperCase();
-    const v = Number(gradeParts[1]);
-    if (Number.isFinite(v)) wantValue = v;
-  }
+  // Title-based rejection — filters IP/TTM tokens, bulk lot listings,
+  // "read description", etc.
+  const kept = resources.filter((r) => {
+    if (!Number.isFinite(r.price) || r.price <= 0) return false;
+    if (shouldRejectSaleTitle(r.title ?? "")) return false;
+    return true;
+  });
 
-  // Window: 180d. Same as compiqEstimate + hobbyIqFmv defaults.
-  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString();
-
-  // CF-GRADE-CURVE-DROP-THE-OR (Drew, 2026-08-14: "they have to match").
-  //
-  // Was: "(c.cardId = @cid OR c.hobbyiqCardId = @cid)". Same defect as #1043
-  // in readCompsByCardId — one side is the partition key and the other is not,
-  // so Cosmos can target a partition for NEITHER and fans out across all of
-  // them. That is the Grade curve's 30s timeout.
-  //
-  // It also made the numbers disagree, which is the reason this matters beyond
-  // latency. unifiedPricing (behind the card's value) unions TWO DIFFERENT
-  // identifiers, "(c.cardId = @cid OR c.hobbyiqCardId = @hiq)", while this
-  // unioned ONE identifier against itself. On a card whose cardId and
-  // hobbyiqCardId differ — 455,954 rows, 26% of migrated rows — those resolve
-  // to different row sets. Two valuations anchored on different raw bases
-  // cannot agree, so the card value and the grade-10 curve entry showed
-  // different numbers for the same card at the same grade.
-  //
-  // Both cases are disjoint by input, exactly as in #1043: a "hiq:" slug is
-  // the canonical tag (populated on 5,612,173 of 5,613,135 rows), and a vendor
-  // id never appears in hobbyiqCardId. Branching keeps this to a SINGLE query,
-  // which also preserves the existing test mocks — a two-query version of this
-  // same fix broke 7 tests by consuming a mock that only answers once.
-  const looksLikeHiqSlug = typeof cardId === "string" && cardId.startsWith("hiq:");
-  const clauses: string[] = [
-    "c.soldAt >= @cut",
-    "c.price > 0",
-    "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
-    "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
-    looksLikeHiqSlug ? "c.hobbyiqCardId = @cid" : "c.cardId = @cid",
-  ];
-  const params: Array<{ name: string; value: string | number | null | boolean }> = [
-    { name: "@cut", value: cutoff },
-    { name: "@cid", value: cardId },
-  ];
-  if (wantCompany === null) {
-    // Raw: gradeCompany null or undefined
-    clauses.push("(c.gradeCompany = null OR NOT IS_DEFINED(c.gradeCompany))");
-  } else {
-    clauses.push("UPPER(c.gradeCompany) = @gc");
-    params.push({ name: "@gc", value: wantCompany });
-    if (wantValue !== null) {
-      // Handle numeric or string-serialized gradeValue.
-      clauses.push("(c.gradeValue = @gv OR c.gradeValue = @gvStr)");
-      params.push({ name: "@gv", value: wantValue });
-      params.push({ name: "@gvStr", value: String(wantValue) });
-    }
-  }
-
-  try {
-    const { resources } = await container.items.query<{
-      price: number;
-      soldAt: string;
-      source?: string | null;
-      title?: string | null;
-    }>({
-      query: `SELECT TOP 500 c.price, c.soldAt, c.source, c.title
-              FROM c WHERE ${clauses.join(" AND ")}
-              ORDER BY c.soldAt DESC`,
-      parameters: params,
-    }).fetchAll();
-
-    // Same title-based rejection as before — filters IP tokens, bulk
-    // lot listings, "read description," etc. Wraps sold_comps rows
-    // the same way we filtered CH rows.
-    const kept = (resources || []).filter((r) => {
-      if (!Number.isFinite(r.price) || r.price <= 0) return false;
-      if (shouldRejectSaleTitle(r.title ?? "")) return false;
-      return true;
-    });
-
-    return kept.map((r) => ({
-      price: r.price,
-      date: r.soldAt ?? null,
-      saleType: null,  // sold_comps doesn't carry sale_type; weightedMedian falls back to plain weight
-    }));
-  } catch (err) {
-    console.warn(JSON.stringify({
-      event: "observed_grade_curve_sold_comps_query_failed",
-      cardId, grade, error: (err as Error).message,
-    }));
-    return [];
-  }
+  return kept.map((r) => ({
+    price: r.price,
+    date: r.soldAt ?? null,
+    // CF-BIN-WEIGHT-FIELD-RENAME (2026-08-16). Was hardcoded null on the
+    // belief that sold_comps carries no sale type. It does — under
+    // `listingType`, populated on 518,595 rows — so computeWeightedMedian's
+    // BIN lift had been disabled by a field rename rather than by design.
+    saleType: r.listingType ?? null,
+  }));
 }
 
 function computePlainMedian(prices: number[]): number | null {
