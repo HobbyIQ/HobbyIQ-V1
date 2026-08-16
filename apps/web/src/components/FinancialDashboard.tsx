@@ -88,7 +88,6 @@ export function FinancialDashboard() {
   const t = data?.totals;
   const margin = t ? marginPct(t) : null;
   const priorMargin = prior?.totals ? marginPct(prior.totals) : null;
-  const trueNet = data?.trueNet ?? null;
   const opex = data?.operatingExpenses ?? null;
 
   const yoy = useMemo(() => {
@@ -131,42 +130,43 @@ export function FinancialDashboard() {
       {t && (
         <>
           <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">
-            What you sold for, minus what you were all-in for, minus fees,
-            shipping, grading and supplies, is your profit on the flip. Take
-            overhead off that and you have what you actually kept.
+            Revenue less what the cards cost you, fees, shipping, grading and
+            supplies is your net profit. Operating costs sit alongside it.
           </p>
-          {/* The P&L walk, in the order an operator reads it: what came in,
-              what was taken out, what it cost, what is actually left. */}
+          {/* CF-TILES-READ-AS-A-P&L (Drew, 2026-08-16: "change Profit on Flips
+              to Net Profit and reorgaize the tile to make more sense. Maybe
+              update the tiles titles to be slight more business like and not
+              childish").
+              Row one is the walk itself, top to bottom, each line a deduction
+              from the one before it and Net Profit as the result. Row two is
+              performance ABOUT that result rather than part of it — which is
+              why Overhead sat awkwardly beside a total it is not inside. */}
           <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Stat label="Sold for" value={formatUSD(t.grossProceeds)}
+            <Stat label="Revenue" value={formatUSD(t.grossProceeds)}
               sub={yoy != null ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% vs ${year === "all" ? "prior" : Number(year) - 1}` : `${t.entryCount} sales`} />
-            <Stat label="All-in cost" value={formatUSD(t.costBasisSold)}
-              sub="what you had into the ones that sold" />
-            <Stat label="Fees and shipping" value={formatUSD(t.feesTotal + t.shipping)}
+            <Stat label="All-In Cost" value={formatUSD(t.costBasisSold)}
+              sub="cost basis of cards sold" />
+            <Stat label="Fees & Shipping" value={formatUSD(t.feesTotal + t.shipping)}
               sub={`${formatUSD(t.feesTotal)} fees · ${formatUSD(t.shipping)} shipping`} />
-            {/* CF-PNL-SHOW-GRADING (Drew, 2026-08-16: "the financial dashboard
-                is missing the grading costs within the eric hartman orange
-                shimmer"). It was deducted from profit but shown nowhere, so
-                the walk lost money between "sold for" and "profit". */}
-            <Stat label="Grading and supplies" value={formatUSD((t.gradingCost ?? 0) + (t.suppliesCost ?? 0))}
+            {/* CF-PNL-SHOW-GRADING (Drew, 2026-08-16). Deducted from profit but
+                previously shown nowhere, so the walk lost money between revenue
+                and profit. */}
+            <Stat label="Grading & Supplies" value={formatUSD((t.gradingCost ?? 0) + (t.suppliesCost ?? 0))}
               sub={`${formatUSD(t.gradingCost ?? 0)} grading · ${formatUSD(t.suppliesCost ?? 0)} supplies`} />
-            <Stat label="Profit on flips" value={formatUSD(t.realizedProfitLoss)}
+            <Stat label="Net Profit" value={formatUSD(t.realizedProfitLoss)}
               tone={t.realizedProfitLoss >= 0 ? "good" : "bad"}
-              sub={margin != null ? `you kept ${margin.toFixed(0)}% of each sale` : "nothing flipped yet"} />
+              sub={margin != null ? `${margin.toFixed(1)}% margin` : "no sales yet"} />
           </div>
 
           <div className="grid gap-4 mb-8" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Stat label="Overhead" value={opex != null ? formatUSD(opex) : "—"}
-              sub="tables, supplies, grading, subs" />
-            <Stat label="What you actually kept" value={trueNet != null ? formatUSD(trueNet) : "—"}
-              tone={trueNet != null ? (trueNet >= 0 ? "good" : "bad") : undefined}
-              sub="profit after overhead — the real number" />
-            <Stat label="Profit margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
+            <Stat label="Margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
               sub={priorMargin != null && margin != null
-                ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} points on last year`
-                : "share of each sale you keep"} />
-            <Stat label="Typical flip" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
-              sub={`across ${t.entryCount} flips`} />
+                ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} pts on last year`
+                : "share of revenue retained"} />
+            <Stat label="Average Sale" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
+              sub={`${t.entryCount} sales`} />
+            <Stat label="Operating Costs" value={opex != null ? formatUSD(opex) : "—"}
+              sub="shows, supplies, software" />
           </div>
 
           {/* CF-ERP-PNL-EXCLUSIONS. Unreconciled sales are NOT in these numbers.
