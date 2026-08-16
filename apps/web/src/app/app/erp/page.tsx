@@ -78,16 +78,17 @@ export default function ErpPage() {
       {/* Top numbers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <BigStat
-          label="Snapshot value"
+          label="What it's worth today"
           value={formatUSD(data.totals.snapshotValue, { hideCents: true })}
           sub={`${data.totals.holdingCount} cards`}
         />
         <BigStat
-          label="Total paid"
+          label="What you paid"
           value={formatUSD(data.totals.costBasis, { hideCents: true })}
+          sub="all-in cost of these cards"
         />
         <BigStat
-          label="Unrealized P&L"
+          label="Profit on paper"
           value={formatUSDCompact(data.totals.unrealizedGainLoss)}
           color={
             data.totals.unrealizedGainLoss > 0
@@ -96,12 +97,12 @@ export default function ErpPage() {
               ? "var(--color-danger)"
               : undefined
           }
-          sub={formatPct(data.totals.unrealizedPct)}
+          sub={`${formatPct(data.totals.unrealizedPct)} — only real if you sell`}
         />
         <BigStat
-          label="Full position"
+          label="Profit all-in"
           value={formatUSDCompact(data.fullPosition.total)}
-          sub={`realized ${formatUSDCompact(data.fullPosition.realizedYtd)} YTD`}
+          sub={`incl. ${formatUSDCompact(data.fullPosition.realizedYtd)} already banked this year`}
         />
       </div>
 
@@ -119,7 +120,7 @@ export default function ErpPage() {
                 Labelling it honestly costs nothing and stops it being read as
                 performance. Real performance lives on /app/erp/finance. */}
             <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium">
-              30-day change in tracked value
+              Tracked value, last 30 days
             </div>
             <div className="text-2xl font-bold tabular-nums mt-1" style={changeColor ? { color: changeColor } : undefined}>
               {formatUSDCompact(change.absolute)}
@@ -152,34 +153,37 @@ export default function ErpPage() {
           >
             Financial Dashboard →
           </Link>
-          <div className="text-xs text-[color:var(--color-muted)]">
-            baseline {change.asOfDate.slice(0, 10)}
+          <div className="text-xs text-[color:var(--color-muted)] basis-full">
+            Counts cards you <em>added</em> as well as prices going up, so it can
+            jump when you add to the collection. For money actually made, see the
+            Financial Dashboard. Compared against {change.asOfDate.slice(0, 10)}
           </div>
         </div>
       )}
 
       {/* Top movers */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <MoversCard title="Top gainers" movers={data.topGainers} tint="var(--color-success)" />
-        <MoversCard title="Top losers" movers={data.topLosers} tint="var(--color-danger)" />
+        <MoversCard title="Going up" movers={data.topGainers} tint="var(--color-success)" />
+        <MoversCard title="Going down" movers={data.topLosers} tint="var(--color-danger)" />
       </div>
 
       {/* Health */}
       <div className="hiq-card p-5 mb-6">
-        <h2 className="font-bold text-lg mb-3">Data health</h2>
+        <h2 className="font-bold text-lg mb-1">How current are these prices?</h2>
+        <p className="text-sm text-[color:var(--color-muted)] mb-3">Click any number to see those cards.</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-          <HealthPill label="Fresh" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
-          <HealthPill label="Stale" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
-          <HealthPill label="Estimated" n={data.totals.estimatedCount} filter="estimated" />
-          <HealthPill label="Pending" n={data.totals.pendingCount} filter="pending" />
-          <HealthPill label="Missing" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
+          <HealthPill label="Up to date" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
+          <HealthPill label="Over 3 days old" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
+          <HealthPill label="Best guess" n={data.totals.estimatedCount} filter="estimated" />
+          <HealthPill label="Still checking" n={data.totals.pendingCount} filter="pending" />
+          <HealthPill label="No price yet" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
         </div>
         {(data.totals.staleCount > 0 || data.totals.missingCount > 0) && (
           <p className="text-xs text-[color:var(--color-muted)] mt-3">
-            Click <strong>Missing</strong> to see cards with no FMV (usually
-            insufficient identity — pick a real card in Edit, or run Refresh
-            price). <strong>Stale</strong> = FMV over 72h old. <strong>Estimated</strong> =
-            engine gave a ballpark, not a real comp match.
+            <strong>No price yet</strong> usually means we could not tell which exact
+            card you have — open it and pick the right one.{" "}
+            <strong>Best guess</strong> means we priced it from similar cards rather
+            than real sales of that exact card, so treat it as a ballpark.
           </p>
         )}
       </div>
