@@ -261,7 +261,37 @@ export async function searchCatalog(
   //
   // Skipped when no token is long enough to be a name, leaving the old
   // any-token behaviour for short queries like "topps 1989".
-  const alphaTokens = tokens.filter((t) => /^[a-z]+$/.test(t) && t.length >= 6);
+  // CF-SEARCH-ANCHOR-IS-THE-NAME (Drew, 2026-08-15: "when we search for say a
+  // 2026 bowman owen carey, we want ALL potential matches to show up that
+  // could fit that card for owen carey").
+  //
+  // "Longest alphabetic token of 6+ characters" is a proxy for the surname
+  // that breaks on two counts, and "2026 bowman owen carey" trips both:
+  // "carey" is five letters so it never qualified, and "bowman" is six so it
+  // won the anchor instead. Since the anchor clause also matches
+  // c.parallel, anchoring on "bowm" pulled in every card whose PARALLEL is
+  // named Bowman-something — Bowman Logofractor, Bowman Logo Pattern
+  // Refractor — for players nobody searched for. The page came back holding
+  // Eric Hartman, CPA-BA, CPA-VF and dozens of bare card numbers.
+  //
+  // So: drop to four characters, and never anchor on a product or finish
+  // word. Every token here is a word that names a BRAND, PRODUCT LINE or
+  // FINISH, which is exactly the class that matches thousands of rows and
+  // identifies no card. Real surnames of four-plus letters ("carey", "witt",
+  // "soto") are what is left, which is what the anchor was always for.
+  const ANCHOR_STOPWORDS = new Set([
+    "bowman", "topps", "panini", "leaf", "upper", "deck", "fleer", "donruss", "score",
+    "chrome", "prizm", "select", "optic", "mosaic", "heritage", "sapphire", "finest",
+    "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
+    "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
+    "refractor", "fractor", "prizms", "auto", "autograph", "autographs", "rookie",
+    "prospect", "prospects", "paper", "update", "series", "draft", "mega", "jumbo",
+    "base", "insert", "parallel", "variation", "numbered", "card", "cards",
+    "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
+  ]);
+  const alphaTokens = tokens.filter(
+    (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !ANCHOR_STOPWORDS.has(t),
+  );
   const anchor = alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null;
   let anchorAnd = "";
   if (anchor) {
