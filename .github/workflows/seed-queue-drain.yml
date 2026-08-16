@@ -1,0 +1,117 @@
+name: Seed Queue Drain
+
+# CF-SEED-QUEUE-CRON (Drew, 2026-08-16: "yes do it we need to clear it").
+#
+# catalog_seed_queue had NO scheduled drainer. drainCatalogSeedQueue.cjs only
+# ran when somebody ran it by hand, capped at --max 3, so the queue only ever
+# grew. Measured 2026-08-16:
+#
+#     06:xx   6,138 pending
+#     21:xx   8,051 pending      (+1,913 in a day; one manual run took 48)
+#
+# Every row is a card a user searched for, or a sale we ingested, that had no
+# checklist behind it. The queue is literally a ranked list of which checklists
+# to build next — it is a demand signal, and it was accumulating unread.
+#
+# CADENCE. Hourly, not every 5 minutes like staging-pipeline-cron. Each seed
+# fetches a real checklist from an external publisher (Beckett, Cardboard
+# Checklist, Hobby Monitor, TCGdex) and ingests it, so a run is minutes of
+# network work against sites we do not own. Hourly at 25/run is ~600/day —
+# enough to clear the current backlog inside a fortnight and then keep pace
+# with inbound, without hammering anyone.
+#
+# WHY 25 AND NOT 200. The manual run on 2026-08-16 took 48 seeds and produced
+# 11 `download failed: write ECONNABORTED` — transient aborts that scale with
+# how hard we pull. A larger batch would raise the failure rate rather than the
+# throughput, and failed seeds stay pending anyway, so nothing is lost by going
+# steadily. Tune via workflow_dispatch once we can see the failure rate hold.
+#
+# SILENT-SAFE. A failed run corrupts nothing: seeds it did not reach stay
+# pending and the next tick picks them up. Concurrency group prevents two runs
+# fetching the same seed at once.
+
+on:
+  schedule:
+    - cron: '20 * * * *'   # hourly, at :20 — off the 5-minute staging tick
+  workflow_dispatch:
+    inputs:
+      max_seeds:
+        description: 'Seeds to drain this run'
+        required: false
+        default: '25'
+      apply:
+        description: 'Write to the catalog (false = dry run)'
+        required: false
+        default: 'true'
+
+concurrency:
+  group: seed-queue-drain
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    name: Drain catalog seed queue
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Drain seed queue
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          APPLY_FLAG=""
+          if [ "${{ inputs.apply || 'true' }}" = "true" ]; then APPLY_FLAG="--apply"; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/drainCatalogSeedQueue.cjs $APPLY_FLAG --max "${{ inputs.max_seeds || '25' }}"
+
+      - name: Report remaining depth
+        if: always()
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          # Depth after the run, so the trend is visible in the run log without
+          # anyone opening Cosmos. A drain that reports success while the queue
+          # grows is exactly how this went unnoticed for weeks.
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" node -e '
+            const {CosmosClient}=require("@azure/cosmos");
+            const c=new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
+              .database("hobbyiq").container("catalog_seed_queue");
+            c.items.query({query:"SELECT c.status, COUNT(1) AS n FROM c GROUP BY c.status"})
+              .fetchAll()
+              .then(({resources})=>{
+                for (const r of resources.sort((a,b)=>b.n-a.n)) {
+                  console.log(String(r.n).padStart(8) + "  " + (r.status ?? "(none)"));
+                }
+              })
+              .catch((e)=>{ console.log("depth check failed: " + e.message); });
+          '
