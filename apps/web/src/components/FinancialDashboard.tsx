@@ -49,9 +49,48 @@ function marginPct(t: PnlTotals): number | null {
 
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - i);
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Last calendar day of a month, so the window closes on 28/29/30/31 correctly
+ *  rather than assuming 31 and quietly spilling into the next month. */
+function lastDayOf(year: number, month1: number): number {
+  return new Date(year, month1, 0).getDate();
+}
+
+/**
+ * CF-PERIOD-DROPDOWNS (Drew, 2026-08-16: "I want a month drop down and a year
+ * drop down instead of the year tiles broken out").
+ *
+ * The window the P&L is asked for, plus the SAME window shifted back one year
+ * so every headline can be stated as a change. Shifting by year rather than by
+ * period keeps the comparison like-for-like: August against last August, not
+ * against July, which would compare a strong show month to a quiet one.
+ */
+function windowFor(year: number | "all", month: number | "all"):
+  { current: { from?: string; to?: string }; prior: { from: string; to: string } | null } {
+  if (year === "all") return { current: {}, prior: null };
+  if (month === "all") {
+    return {
+      current: { from: `${year}-01-01`, to: `${year}-12-31` },
+      prior: { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` },
+    };
+  }
+  const mm = String(month).padStart(2, "0");
+  return {
+    current: { from: `${year}-${mm}-01`, to: `${year}-${mm}-${lastDayOf(year, month)}` },
+    prior: {
+      from: `${year - 1}-${mm}-01`,
+      to: `${year - 1}-${mm}-${lastDayOf(year - 1, month)}`,
+    },
+  };
+}
 
 export function FinancialDashboard() {
   const [year, setYear] = useState<number | "all">(currentYear);
+  const [month, setMonth] = useState<number | "all">("all");
   const [groupBy, setGroupBy] = useState<PnlGroupBy>("month");
   const [data, setData] = useState<ErpPnlResponse | null>(null);
   const [prior, setPrior] = useState<ErpPnlResponse | null>(null);
@@ -62,17 +101,14 @@ export function FinancialDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const window = year === "all"
-        ? {}
-        : { from: `${year}-01-01`, to: `${year}-12-31` };
-      // Prior year is fetched alongside so every headline can be stated as a
-      // CHANGE. A number with nothing to compare it to is not a dashboard.
+      const { current, prior: priorWindow } = windowFor(year, month);
+      // The prior period is fetched alongside so every headline can be stated
+      // as a CHANGE. A number with nothing to compare it to is not a dashboard.
       const [cur, prev] = await Promise.all([
-        fetchErpPnl({ ...window, groupBy }),
-        year === "all"
-          ? Promise.resolve(null)
-          : fetchErpPnl({ from: `${year - 1}-01-01`, to: `${year - 1}-12-31`, groupBy: "month" })
-            .catch(() => null),
+        fetchErpPnl({ ...current, groupBy }),
+        priorWindow
+          ? fetchErpPnl({ ...priorWindow, groupBy: "month" }).catch(() => null)
+          : Promise.resolve(null),
       ]);
       setData(cur);
       setPrior(prev);
@@ -81,7 +117,7 @@ export function FinancialDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [year, groupBy]);
+  }, [year, month, groupBy]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -105,19 +141,34 @@ export function FinancialDashboard() {
         </p>
       </div>
 
-      <div className="flex gap-2 flex-wrap mb-6 justify-center">
-        {(["all", ...YEARS] as Array<number | "all">).map((y) => (
-          <button
-            key={String(y)}
-            onClick={() => setYear(y)}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            style={y === year
-              ? { background: "var(--color-accent)", color: "white" }
-              : { background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
-          >
-            {y === "all" ? "All time" : y}
-          </button>
-        ))}
+      {/* CF-PERIOD-DROPDOWNS (Drew, 2026-08-16: "I want a month drop down and a
+          year drop down instead of the year tiles broken out"). Seven year
+          buttons took a full row to express one choice and had no room to add
+          months; two selects say the same thing in less space and make the
+          period a single readable statement. Month is disabled on All time,
+          because a month without a year is not a period. */}
+      <div className="flex gap-3 flex-wrap mb-6 justify-center items-center">
+        <select
+          value={String(year)}
+          onChange={(e) => setYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+          className="px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)]"
+          style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+          aria-label="Year"
+        >
+          <option value="all">All time</option>
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
+          value={String(month)}
+          onChange={(e) => setMonth(e.target.value === "all" ? "all" : Number(e.target.value))}
+          disabled={year === "all"}
+          className="px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)] disabled:opacity-40"
+          style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+          aria-label="Month"
+        >
+          <option value="all">All months</option>
+          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
       </div>
 
       {error && (
@@ -141,7 +192,7 @@ export function FinancialDashboard() {
               from the one before it and Net Profit as the result. Row two is
               performance ABOUT that result rather than part of it — which is
               why Overhead sat awkwardly beside a total it is not inside. */}
-          <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             <Stat label="Revenue" value={formatUSD(t.grossProceeds)}
               sub={yoy != null ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% vs ${year === "all" ? "prior" : Number(year) - 1}` : `${t.entryCount} sales`} />
             <Stat label="All-In Cost" value={formatUSD(t.costBasisSold)}
@@ -158,7 +209,7 @@ export function FinancialDashboard() {
               sub={margin != null ? `${margin.toFixed(1)}% margin` : "no sales yet"} />
           </div>
 
-          <div className="grid gap-4 mb-8" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
             <Stat label="Margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
               sub={priorMargin != null && margin != null
                 ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} pts on last year`
@@ -257,10 +308,10 @@ function Stat({ label, value, sub, tone }: {
   const color = tone === "good" ? "var(--color-success)"
     : tone === "bad" ? "var(--color-danger)" : undefined;
   return (
-    <div className="hiq-card p-4 text-center">
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">{label}</div>
-      <div className="text-2xl font-bold mt-1 tabular-nums" style={color ? { color } : undefined}>{value}</div>
-      {sub && <div className="text-xs text-[color:var(--color-muted)] mt-1">{sub}</div>}
+    <div className="hiq-card p-3 text-center">
+      <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-muted)] leading-tight">{label}</div>
+      <div className="text-xl font-bold mt-1 tabular-nums" style={color ? { color } : undefined}>{value}</div>
+      {sub && <div className="text-[11px] text-[color:var(--color-muted)] mt-1 leading-tight">{sub}</div>}
     </div>
   );
 }
