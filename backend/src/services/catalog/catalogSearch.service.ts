@@ -380,9 +380,28 @@ export async function searchCatalog(
     scopes.push("c.sport = @sport");
     params.push({ name: "@sport", value: input.sport });
   }
-  if (input.year) {
+  // CF-SEARCH-YEAR-IS-A-FILTER (Drew, 2026-08-16, on searching "2018 bowman
+  // chrome ohtani": "I want the search to show only that match what the data
+  // gives them. So any 2018 bowman chrome ohtani, NOT other years").
+  //
+  // A year in the query was only ever a SCORING signal, worth 1.5 against
+  // playerName's 3.0. So "2018 bowman chrome ohtani" returned 2025 #MR-12,
+  // 2025 #BGP-24, 2020 #58, 2022 #71 and 2023 #67 — every Bowman Chrome Ohtani
+  // ever printed, because matching the player and the set outweighed missing
+  // the year entirely. A year is not a hint about relevance; it is part of the
+  // card's identity, and a card from another year is not a worse match, it is
+  // the wrong card.
+  //
+  // Taken from the query when the caller did not supply one explicitly. Only a
+  // plausible card year counts (1900-2035) so a print run like "/2024" or a
+  // stray number cannot silently empty the page.
+  const queryYear = tokens
+    .map((t) => Number(t))
+    .find((n) => Number.isInteger(n) && n >= 1900 && n <= 2035) ?? null;
+  const effectiveYear = input.year ?? queryYear;
+  if (effectiveYear) {
     scopes.push("c.year = @year");
-    params.push({ name: "@year", value: input.year });
+    params.push({ name: "@year", value: effectiveYear });
   }
   if (typeof input.isAuto === "boolean") {
     scopes.push("c.isAuto = @isAuto");
@@ -498,7 +517,14 @@ export async function searchCatalog(
   // the pair measured 20-28s together; run apart, each stays on its index. TOP
   // is per-arm and modest for the same reason — the cost here is dominated by
   // materialising wide documents, not by matching them.
-  const ANCHOR_TOP = 400;
+  // Raised once the year became a SQL filter. "2018 bowman chrome ohtani"
+  // returned 5 cards and was missing the Refractor parallels outright, because
+  // TOP 400 truncated the candidate set BEFORE the product narrowing ran —
+  // Ohtani has more than 400 rows in 2018 alone across every product. A year
+  // filter cuts the pool by roughly the number of years we hold, so a much
+  // larger cap costs little and is what "show ALL of them" requires. Queries
+  // with no year keep a smaller cap, since there the anchor is all we have.
+  const ANCHOR_TOP = effectiveYear ? 2000 : 600;
   const buildArm = (where: string, extra: Array<{ name: string; value: string | number | boolean }> = []) => ({
     query: `SELECT TOP ${ANCHOR_TOP} ${anchorSelectFields} FROM c`
          + ` WHERE STARTSWITH(c.id, 'hiq:') AND ${where}`
@@ -717,6 +743,35 @@ export async function searchCatalog(
   // vendor should still be findable rather than silently absent.
   const canonicalHits = collapsed.filter((h) => h.slug.startsWith("hiq:"));
   if (canonicalHits.length > 0) collapsed = canonicalHits;
+
+  // CF-SEARCH-PRODUCT-NARROWS (Drew, 2026-08-16: "any 2018 bowman chrome
+  // ohtani, NOT other years"). Year is filtered in SQL above; the PRODUCT has
+  // to narrow too, or the page still fills with the wrong card. With the year
+  // pinned, "2018 bowman chrome ohtani" came back topps=18, bowman=12,
+  // bowmans-best=9, donruss-optic=8 — right player, right year, wrong product.
+  //
+  // The product words in a query are exactly the ANCHOR_STOPWORDS: the tokens
+  // that name a brand or product line rather than identify a card. Require the
+  // row's setKey to account for ALL of them, so "bowman chrome" keeps
+  // bowman-chrome (and bowman-chrome-sapphire, a real sub-product) while
+  // dropping bare bowman and topps-chrome — different products that trade at
+  // their own prices.
+  //
+  // Narrowing applies ONLY when it leaves something behind, the same rule
+  // narrowToRequestedVariants follows. A product we have not indexed under
+  // that name must not empty the page; it falls back to matching ANY product
+  // word, then to no narrowing at all.
+  const productTokens = tokens.filter((t) => /^[a-z]+$/.test(t) && ANCHOR_STOPWORDS.has(t));
+  if (productTokens.length > 0) {
+    const setTextOf = (h: CatalogSearchHit) =>
+      `${h.setKey ?? ""} ${h.setName ?? ""}`.toLowerCase();
+    const all = collapsed.filter((h) => productTokens.every((t) => setTextOf(h).includes(t)));
+    if (all.length > 0) collapsed = all;
+    else {
+      const any = collapsed.filter((h) => productTokens.some((t) => setTextOf(h).includes(t)));
+      if (any.length > 0) collapsed = any;
+    }
+  }
 
   const deduped = collapsed.slice(0, limit);
 
