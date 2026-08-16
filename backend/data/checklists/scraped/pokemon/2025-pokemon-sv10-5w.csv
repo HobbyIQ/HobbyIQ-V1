@@ -1,0 +1,174 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Sewaddle
+base,002,Base,false,,Swadloon
+base,003,Base,false,,Leavanny
+base,004,Base,false,,Cottonee
+base,005,Base,false,,Whimsicott ex
+base,006,Base,false,,Deerling
+base,007,Base,false,,Sawsbuck
+base,008,Base,false,,Shelmet
+base,009,Base,false,,Accelgor
+base,010,Base,false,,Virizion
+base,011,Base,false,,Tepig
+base,012,Base,false,,Pignite
+base,013,Base,false,,Emboar
+base,014,Base,false,,Pansear
+base,015,Base,false,,Simisear
+base,016,Base,false,,Litwick
+base,017,Base,false,,Lampent
+base,018,Base,false,,Chandelure
+base,019,Base,false,,Heatmor
+base,020,Base,false,,Reshiram ex
+base,021,Base,false,,Oshawott
+base,022,Base,false,,Dewott
+base,023,Base,false,,Samurott
+base,024,Base,false,,Basculin
+base,025,Base,false,,Ducklett
+base,026,Base,false,,Swanna
+base,027,Base,false,,Vanillite
+base,028,Base,false,,Vanillish
+base,029,Base,false,,Vanilluxe
+base,030,Base,false,,Keldeo ex
+base,031,Base,false,,Blitzle
+base,032,Base,false,,Zebstrika
+base,033,Base,false,,Joltik
+base,034,Base,false,,Galvantula
+base,035,Base,false,,Stunfisk
+base,036,Base,false,,Woobat
+base,037,Base,false,,Swoobat
+base,038,Base,false,,Sigilyph
+base,039,Base,false,,Yamask
+base,040,Base,false,,Cofagrigus
+base,041,Base,false,,Gothita
+base,042,Base,false,,Gothorita
+base,043,Base,false,,Gothitelle
+base,044,Base,false,,Frillish
+base,045,Base,false,,Jellicent ex
+base,046,Base,false,,Roggenrola
+base,047,Base,false,,Boldore
+base,048,Base,false,,Gigalith
+base,049,Base,false,,Sawk
+base,050,Base,false,,Archen
+base,051,Base,false,,Archeops
+base,052,Base,false,,Mienfoo
+base,053,Base,false,,Mienshao
+base,054,Base,false,,Terrakion
+base,055,Base,false,,Purrloin
+base,056,Base,false,,Liepard
+base,057,Base,false,,Scraggy
+base,058,Base,false,,Scrafty
+base,059,Base,false,,Trubbish
+base,060,Base,false,,Garbodor
+base,061,Base,false,,Zorua
+base,062,Base,false,,Zoroark
+base,063,Base,false,,Vullaby
+base,064,Base,false,,Mandibuzz
+base,065,Base,false,,Deino
+base,066,Base,false,,Zweilous
+base,067,Base,false,,Hydreigon ex
+base,068,Base,false,,Ferroseed
+base,069,Base,false,,Ferrothorn
+base,070,Base,false,,Durant
+base,071,Base,false,,Druddigon
+base,072,Base,false,,Patrat
+base,073,Base,false,,Watchog
+base,074,Base,false,,Lillipup
+base,075,Base,false,,Herdier
+base,076,Base,false,,Stoutland
+base,077,Base,false,,Bouffalant ex
+base,078,Base,false,,Tornadus
+base,079,Base,false,,Antique Plume Fossil
+base,080,Base,false,,Brave Bangle
+base,081,Base,false,,Cheren
+base,082,Base,false,,Energy Retrieval
+base,083,Base,false,,Harlequin
+base,084,Base,false,,Hilda
+base,085,Base,false,,Tool Scrapper
+base,086,Base,false,,Ignition Energy
+base,087,Base,false,,Sewaddle
+base,088,Base,false,,Swadloon
+base,089,Base,false,,Leavanny
+base,090,Base,false,,Cottonee
+base,091,Base,false,,Deerling
+base,092,Base,false,,Sawsbuck
+base,093,Base,false,,Shelmet
+base,094,Base,false,,Accelgor
+base,095,Base,false,,Virizion
+base,096,Base,false,,Tepig
+base,097,Base,false,,Pignite
+base,098,Base,false,,Emboar
+base,099,Base,false,,Pansear
+base,100,Base,false,,Simisear
+base,101,Base,false,,Litwick
+base,102,Base,false,,Lampent
+base,103,Base,false,,Chandelure
+base,104,Base,false,,Heatmor
+base,105,Base,false,,Oshawott
+base,106,Base,false,,Dewott
+base,107,Base,false,,Samurott
+base,108,Base,false,,Basculin
+base,109,Base,false,,Ducklett
+base,110,Base,false,,Swanna
+base,111,Base,false,,Vanillite
+base,112,Base,false,,Vanillish
+base,113,Base,false,,Vanilluxe
+base,114,Base,false,,Blitzle
+base,115,Base,false,,Zebstrika
+base,116,Base,false,,Joltik
+base,117,Base,false,,Galvantula
+base,118,Base,false,,Stunfisk
+base,119,Base,false,,Woobat
+base,120,Base,false,,Swoobat
+base,121,Base,false,,Sigilyph
+base,122,Base,false,,Yamask
+base,123,Base,false,,Cofagrigus
+base,124,Base,false,,Gothita
+base,125,Base,false,,Gothorita
+base,126,Base,false,,Frillish
+base,127,Base,false,,Roggenrola
+base,128,Base,false,,Boldore
+base,129,Base,false,,Gigalith
+base,130,Base,false,,Sawk
+base,131,Base,false,,Archen
+base,132,Base,false,,Archeops
+base,133,Base,false,,Mienfoo
+base,134,Base,false,,Mienshao
+base,135,Base,false,,Terrakion
+base,136,Base,false,,Purrloin
+base,137,Base,false,,Liepard
+base,138,Base,false,,Scraggy
+base,139,Base,false,,Scrafty
+base,140,Base,false,,Trubbish
+base,141,Base,false,,Garbodor
+base,142,Base,false,,Zorua
+base,143,Base,false,,Zoroark
+base,144,Base,false,,Vullaby
+base,145,Base,false,,Mandibuzz
+base,146,Base,false,,Deino
+base,147,Base,false,,Zweilous
+base,148,Base,false,,Ferroseed
+base,149,Base,false,,Ferrothorn
+base,150,Base,false,,Durant
+base,151,Base,false,,Druddigon
+base,152,Base,false,,Patrat
+base,153,Base,false,,Watchog
+base,154,Base,false,,Lillipup
+base,155,Base,false,,Herdier
+base,156,Base,false,,Stoutland
+base,157,Base,false,,Whimsicott ex
+base,158,Base,false,,Reshiram ex
+base,159,Base,false,,Keldeo ex
+base,160,Base,false,,Jellicent ex
+base,161,Base,false,,Hydreigon ex
+base,162,Base,false,,Bouffalant ex
+base,163,Base,false,,Harlequin
+base,164,Base,false,,Hilda
+base,165,Base,false,,Whimsicott ex
+base,166,Base,false,,Reshiram ex
+base,167,Base,false,,Keldeo ex
+base,168,Base,false,,Jellicent ex
+base,169,Base,false,,Hydreigon ex
+base,170,Base,false,,Bouffalant ex
+base,171,Base,false,,Hilda
+base,172,Base,false,,Victini
+base,173,Base,false,,Reshiram ex

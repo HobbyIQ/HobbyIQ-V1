@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.618Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ecard2",
+ "sport": "pokemon",
+ "year": 2003,
+ "setName": "Aquapolis",
+ "productKey": "2003-ecard2",
+ "setKey": "ecard2",
+ "rowCount": 185,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Aquapolis",
+   "category": "base",
+   "playerCount": 185,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.700Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xya",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "Yellow A Alternate",
+ "productKey": "2014-xya",
+ "setKey": "xya",
+ "rowCount": 6,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Yellow A Alternate",
+   "category": "base",
+   "playerCount": 6,
+   "printRun": null
+  }
+ ]
+}

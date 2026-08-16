@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.912Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgss2",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "Unleashed",
+ "productKey": "2010-hgss2",
+ "setKey": "hgss2",
+ "rowCount": 96,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Unleashed",
+   "category": "base",
+   "playerCount": 96,
+   "printRun": null
+  }
+ ]
+}

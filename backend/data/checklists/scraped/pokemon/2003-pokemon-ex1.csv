@@ -1,0 +1,110 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Aggron
+base,2,Base,false,,Beautifly
+base,3,Base,false,,Blaziken
+base,4,Base,false,,Camerupt
+base,5,Base,false,,Delcatty
+base,6,Base,false,,Dustox
+base,7,Base,false,,Gardevoir
+base,8,Base,false,,Hariyama
+base,9,Base,false,,Manectric
+base,10,Base,false,,Mightyena
+base,11,Base,false,,Sceptile
+base,12,Base,false,,Slaking
+base,13,Base,false,,Swampert
+base,14,Base,false,,Wailord
+base,15,Base,false,,Blaziken
+base,16,Base,false,,Breloom
+base,17,Base,false,,Donphan
+base,18,Base,false,,Nosepass
+base,19,Base,false,,Pelipper
+base,20,Base,false,,Sceptile
+base,21,Base,false,,Seaking
+base,22,Base,false,,Sharpedo
+base,23,Base,false,,Swampert
+base,24,Base,false,,Weezing
+base,25,Base,false,,Aron
+base,26,Base,false,,Cascoon
+base,27,Base,false,,Combusken
+base,28,Base,false,,Combusken
+base,29,Base,false,,Delcatty
+base,30,Base,false,,Electrike
+base,31,Base,false,,Grovyle
+base,32,Base,false,,Grovyle
+base,33,Base,false,,Hariyama
+base,34,Base,false,,Kirlia
+base,35,Base,false,,Kirlia
+base,36,Base,false,,Lairon
+base,37,Base,false,,Lairon
+base,38,Base,false,,Linoone
+base,39,Base,false,,Manectric
+base,40,Base,false,,Marshtomp
+base,41,Base,false,,Marshtomp
+base,42,Base,false,,Mightyena
+base,43,Base,false,,Silcoon
+base,44,Base,false,,Skitty
+base,45,Base,false,,Slakoth
+base,46,Base,false,,Swellow
+base,47,Base,false,,Vigoroth
+base,48,Base,false,,Wailmer
+base,49,Base,false,,Aron
+base,50,Base,false,,Aron
+base,51,Base,false,,Carvanha
+base,52,Base,false,,Electrike
+base,53,Base,false,,Electrike
+base,54,Base,false,,Koffing
+base,55,Base,false,,Goldeen
+base,56,Base,false,,Makuhita
+base,57,Base,false,,Makuhita
+base,58,Base,false,,Makuhita
+base,59,Base,false,,Mudkip
+base,60,Base,false,,Mudkip
+base,61,Base,false,,Numel
+base,62,Base,false,,Phanpy
+base,63,Base,false,,Poochyena
+base,64,Base,false,,Poochyena
+base,65,Base,false,,Poochyena
+base,66,Base,false,,Ralts
+base,67,Base,false,,Ralts
+base,68,Base,false,,Ralts
+base,69,Base,false,,Shroomish
+base,70,Base,false,,Skitty
+base,71,Base,false,,Skitty
+base,72,Base,false,,Taillow
+base,73,Base,false,,Torchic
+base,74,Base,false,,Torchic
+base,75,Base,false,,Treecko
+base,76,Base,false,,Treecko
+base,77,Base,false,,Wingull
+base,78,Base,false,,Wurmple
+base,79,Base,false,,Zigzagoon
+base,80,Base,false,,Energy Removal 2
+base,81,Base,false,,Energy Restore
+base,82,Base,false,,Energy Switch
+base,83,Base,false,,Lady Outing
+base,84,Base,false,,Lum Berry
+base,85,Base,false,,Oran Berry
+base,86,Base,false,,Poké Ball
+base,87,Base,false,,Pokémon Reversal
+base,88,Base,false,,PokéNav
+base,89,Base,false,,Professor Birch
+base,90,Base,false,,Energy Search
+base,91,Base,false,,Potion
+base,92,Base,false,,Switch
+base,93,Base,false,,Darkness Energy
+base,94,Base,false,,Metal Energy
+base,95,Base,false,,Rainbow Energy
+base,96,Base,false,,Chansey ex
+base,97,Base,false,,Electabuzz ex
+base,98,Base,false,,Hitmonchan ex
+base,99,Base,false,,Lapras ex
+base,100,Base,false,,Magmar ex
+base,101,Base,false,,Mewtwo ex
+base,102,Base,false,,Scyther ex
+base,103,Base,false,,Sneasel ex
+base,104,Base,false,,Grass Energy
+base,105,Base,false,,Fighting Energy
+base,106,Base,false,,Water Energy
+base,107,Base,false,,Psychic Energy
+base,108,Base,false,,Fire Energy
+base,109,Base,false,,Lightning Energy

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.126Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm2",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "Guardians Rising",
+ "productKey": "2017-sm2",
+ "setKey": "sm2",
+ "rowCount": 169,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Guardians Rising",
+   "category": "base",
+   "playerCount": 169,
+   "printRun": null
+  }
+ ]
+}

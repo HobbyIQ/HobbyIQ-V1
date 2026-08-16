@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.640Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh9",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Brilliant Stars",
+ "productKey": "2022-swsh9",
+ "setKey": "swsh9",
+ "rowCount": 186,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Brilliant Stars",
+   "category": "base",
+   "playerCount": 186,
+   "printRun": null
+  }
+ ]
+}

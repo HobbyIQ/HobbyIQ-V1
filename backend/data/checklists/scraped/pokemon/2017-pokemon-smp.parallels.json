@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/smp",
+ "setId": "smp",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 2,
+  "normal": 2,
+  "official": 248,
+  "reverse": 0,
+  "total": 248
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

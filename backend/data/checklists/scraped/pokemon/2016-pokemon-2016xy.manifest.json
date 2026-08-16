@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.880Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2016xy",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "McDonald's Collection 2016",
+ "productKey": "2016-2016xy",
+ "setKey": "2016xy",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2016",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

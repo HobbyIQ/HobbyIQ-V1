@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.913Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-sy",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "XY trainer Kit (Sylveon)",
+ "productKey": "2014-tk-xy-sy",
+ "setKey": "tk-xy-sy",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Sylveon)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

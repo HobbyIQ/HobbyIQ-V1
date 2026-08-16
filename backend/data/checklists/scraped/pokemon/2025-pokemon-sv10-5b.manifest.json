@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.425Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv10.5b",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Black Bolt",
+ "productKey": "2025-sv10-5b",
+ "setKey": "sv10-5b",
+ "rowCount": 172,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Black Bolt",
+   "category": "base",
+   "playerCount": 172,
+   "printRun": null
+  }
+ ]
+}

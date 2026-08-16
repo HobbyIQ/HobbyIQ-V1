@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.763Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh10",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Astral Radiance",
+ "productKey": "2022-swsh10",
+ "setKey": "swsh10",
+ "rowCount": 216,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Astral Radiance",
+   "category": "base",
+   "playerCount": 216,
+   "printRun": null
+  }
+ ]
+}

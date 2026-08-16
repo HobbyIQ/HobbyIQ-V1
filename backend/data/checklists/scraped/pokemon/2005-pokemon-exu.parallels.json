@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/exu",
+ "setId": "exu",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 28,
+  "normal": 0,
+  "official": 28,
+  "reverse": 0,
+  "total": 28
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

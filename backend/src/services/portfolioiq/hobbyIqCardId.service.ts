@@ -38,6 +38,7 @@
 //
 // This module has ZERO side effects. Import + call is safe anywhere.
 
+import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -774,7 +775,25 @@ const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
-  const baseSetKey = normalizeSetKey(components.setKey);
+  // CF-POKEMON-CHECKLISTS (Drew, 2026-08-16: "get the checklists to match").
+  //
+  // Pokemon set names arrive in as many shapes as sellers can type — "Base
+  // Set", "Pokemon Base Set", "1999 Pokemon Base Set" — and normalizeSetKey
+  // slugifies each one differently, so a single product fragments across every
+  // spelling AND embeds the year that the slug already carries in its own
+  // segment. That is how 564,103 of 766,677 Pokemon comps ended up on
+  // `setKey: unknown` or a year-prefixed one-off, unable to join any checklist.
+  //
+  // The convention this file documents at the top is the stable TCG set id
+  // (`hiq:pokemon:2023:sv1:151:full-art:no-auto`). POKEMON_SET_ALIASES maps
+  // every observed name form onto that id.
+  //
+  // GATED ON SPORT, deliberately. The alias table contains keys like "151"
+  // (Scarlet & Violet 151) that would be actively dangerous applied to a
+  // baseball set name. A non-Pokemon card can never reach this branch.
+  const baseSetKey = sport === "pokemon"
+    ? (POKEMON_SET_ALIASES[slugify(components.setKey)] ?? normalizeSetKey(components.setKey))
+    : normalizeSetKey(components.setKey);
   const cardNumber = normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to

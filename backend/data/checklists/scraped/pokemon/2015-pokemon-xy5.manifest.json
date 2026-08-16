@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.311Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy5",
+ "sport": "pokemon",
+ "year": 2015,
+ "setName": "Primal Clash",
+ "productKey": "2015-xy5",
+ "setKey": "xy5",
+ "rowCount": 164,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Primal Clash",
+   "category": "base",
+   "playerCount": 164,
+   "printRun": null
+  }
+ ]
+}

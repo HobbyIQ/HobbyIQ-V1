@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.888Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp1",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "Diamond & Pearl",
+ "productKey": "2007-dp1",
+ "setKey": "dp1",
+ "rowCount": 130,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Diamond & Pearl",
+   "category": "base",
+   "playerCount": 130,
+   "printRun": null
+  }
+ ]
+}

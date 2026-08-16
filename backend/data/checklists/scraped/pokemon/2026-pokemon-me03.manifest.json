@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.957Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me03",
+ "sport": "pokemon",
+ "year": 2026,
+ "setName": "Perfect Order",
+ "productKey": "2026-me03",
+ "setKey": "me03",
+ "rowCount": 124,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Perfect Order",
+   "category": "base",
+   "playerCount": 124,
+   "printRun": null
+  }
+ ]
+}

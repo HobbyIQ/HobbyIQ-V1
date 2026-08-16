@@ -1,0 +1,249 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,SM01,Base,false,,Rowlet
+base,SM02,Base,false,,Litten
+base,SM03,Base,false,,Popplio
+base,SM04,Base,false,,Pikachu
+base,SM05,Base,false,,Snorlax GX
+base,SM06,Base,false,,Rockruff
+base,SM07,Base,false,,Pikipek
+base,SM08,Base,false,,Litten
+base,SM09,Base,false,,Togedemaru
+base,SM10,Base,false,,Shiinotic
+base,SM100,Base,false,,Lucario GX
+base,SM101,Base,false,,Dawn Wings Necrozma GX
+base,SM102,Base,false,,Dusk Mane Necrozma GX
+base,SM103,Base,false,,Lunala GX
+base,SM104,Base,false,,Solgaleo GX
+base,SM105,Base,false,,Lycanroc
+base,SM106,Base,false,,Dawn Wings Necrozma
+base,SM107,Base,false,,Dusk Mane Necrozma
+base,SM108,Base,false,,Ash's Pikachu
+base,SM109,Base,false,,Ash's Pikachu
+base,SM11,Base,false,,Bruxish
+base,SM110,Base,false,,Ash's Pikachu
+base,SM111,Base,false,,Ash's Pikachu
+base,SM112,Base,false,,Ash's Pikachu
+base,SM113,Base,false,,Ash's Pikachu
+base,SM114,Base,false,,Ash's Pikachu
+base,SM115,Base,false,,Pheromosa
+base,SM116,Base,false,,Xurkitree
+base,SM117,Base,false,,Malamar
+base,SM118,Base,false,,Lycanroc
+base,SM119,Base,false,,Exeggcute
+base,SM12,Base,false,,Passimian
+base,SM120,Base,false,,Rockruff
+base,SM121,Base,false,,Raikou GX
+base,SM122,Base,false,,Zygarde GX
+base,SM123,Base,false,,Dawn Wings Necrozma
+base,SM124,Base,false,,Dusk Mane Necrozma
+base,SM125,Base,false,,Naganadel GX
+base,SM126,Base,false,,Ultra Necrozma GX
+base,SM127,Base,false,,Alolan Sandslash
+base,SM128,Base,false,,Alolan Ninetales
+base,SM129,Base,false,,Kyogre
+base,SM13,Base,false,,Oranguru
+base,SM130,Base,false,,Manectric
+base,SM131,Base,false,,Celesteela
+base,SM132,Base,false,,Delcatty
+base,SM133,Base,false,,Thundurus GX
+base,SM134,Base,false,,Tornadus GX
+base,SM135,Base,false,,Latias
+base,SM136,Base,false,,Latios
+base,SM137,Base,false,,Reshiram GX
+base,SM138,Base,false,,Zekrom GX
+base,SM139,Base,false,,Salamence GX
+base,SM14,Base,false,,Lycanroc GX
+base,SM140,Base,false,,Salamence
+base,SM141,Base,false,,White Kyurem GX
+base,SM142,Base,false,,Kyurem
+base,SM143,Base,false,,Moltres
+base,SM144,Base,false,,Articuno
+base,SM145,Base,false,,Zapdos
+base,SM146,Base,false,,Leafeon GX
+base,SM147,Base,false,,Glaceon GX
+base,SM148,Base,false,,Champions Festival
+base,SM149,Base,false,,Suicune
+base,SM15,Base,false,,Zygarde
+base,SM150,Base,false,,Raikou
+base,SM151,Base,false,,Giratina
+base,SM152,Base,false,,Tapu Lele
+base,SM153,Base,false,,Rowlet
+base,SM154,Base,false,,Salandit
+base,SM155,Base,false,,Kingdra GX
+base,SM156,Base,false,,Dragonite GX
+base,SM157,Base,false,,Pikachu
+base,SM158,Base,false,,Charizard
+base,SM159,Base,false,,Zapdos
+base,SM16,Base,false,,Solgaleo GX
+base,SM160,Base,false,,Nidoqueen
+base,SM161,Base,false,,Jirachi
+base,SM162,Base,false,,Pikachu
+base,SM163,Base,false,,Mimikyu
+base,SM164,Base,false,,Deoxys
+base,SM165,Base,false,,Ultra Necrozma
+base,SM166,Base,false,,Magikarp & Wailord GX
+base,SM167,Base,false,,Celebi & Venusaur GX
+base,SM168,Base,false,,Pikachu & Zekrom GX
+base,SM169,Base,false,,Eevee & Snorlax GX
+base,SM17,Base,false,,Lunala GX
+base,SM170,Base,false,,Detective Pikachu
+base,SM171,Base,false,,Flareon GX
+base,SM172,Base,false,,Vaporeon GX
+base,SM173,Base,false,,Jolteon GX
+base,SM174,Base,false,,Eevee GX
+base,SM175,Base,false,,Eevee GX
+base,SM176,Base,false,,Eevee GX
+base,SM177,Base,false,,Meltan
+base,SM178,Base,false,,Melmetal GX
+base,SM179,Base,false,,Volcanion
+base,SM18,Base,false,,Alolan Sandslash
+base,SM180,Base,false,,Stakataka
+base,SM181,Base,false,,Melmetal
+base,SM182,Base,false,,Persian
+base,SM183,Base,false,,Pikachu
+base,SM184,Base,false,,Eevee
+base,SM185,Base,false,,Typhlosion
+base,SM186,Base,false,,Flareon
+base,SM187,Base,false,,Alolan Marowak GX
+base,SM188,Base,false,,Kangaskhan GX
+base,SM189,Base,false,,Blastoise GX
+base,SM19,Base,false,,Oricorio
+base,SM190,Base,false,,Detective Pikachu
+base,SM191,Base,false,,Mewtwo & Mew GX
+base,SM192,Base,false,,Lucario & Melmetal GX
+base,SM193,Base,false,,Garchomp & Giratina GX
+base,SM194,Base,false,,Detective Pikachu
+base,SM195,Base,false,,Charizard GX
+base,SM196,Base,false,,Mewtwo GX
+base,SM197,Base,false,,Greninja GX
+base,SM198,Base,false,,Bulbasaur
+base,SM199,Base,false,,Psyduck
+base,SM20,Base,false,,Mudsdale
+base,SM200,Base,false,,Snubbull
+base,SM201,Base,false,,Reshiram & Charizard GX
+base,SM202,Base,false,,Amoonguss
+base,SM203,Base,false,,Tapu Fini
+base,SM204,Base,false,,Necrozma
+base,SM205,Base,false,,Terrakion
+base,SM206,Base,false,,Pikachu
+base,SM207,Base,false,,Sudowoodo
+base,SM208,Base,false,,Vikavolt
+base,SM209,Base,false,,Stakataka
+base,SM21,Base,false,,Drampa
+base,SM210,Base,false,,Moltres & Zapdos & Articuno GX
+base,SM211,Base,false,,Charizard GX
+base,SM212,Base,false,,Gyarados GX
+base,SM213,Base,false,,Raichu GX
+base,SM214,Base,false,,Mewtwo
+base,SM215,Base,false,,Mew
+base,SM216,Base,false,,Porygon-Z GX
+base,SM217,Base,false,,Trevenant & Dusknoir GX
+base,SM218,Base,false,,Buzzwole
+base,SM219,Base,false,,Entei
+base,SM22,Base,false,,Rowlet
+base,SM220,Base,false,,Phione
+base,SM221,Base,false,,Blacephalon
+base,SM222,Base,false,,Mismagius
+base,SM223,Base,false,,Terrakion
+base,SM224,Base,false,,Celebi
+base,SM225,Base,false,,Victini
+base,SM226,Base,false,,Charizard
+base,SM227,Base,false,,Pikachu
+base,SM228,Base,false,,Armored Mewtwo
+base,SM229,Base,false,,Venusaur & Snivy GX
+base,SM23,Base,false,,Litten
+base,SM230,Base,false,,Charizard & Braixen GX
+base,SM231,Base,false,,Champions Festival
+base,SM232,Base,false,,Pikachu GX
+base,SM233,Base,false,,Eevee GX
+base,SM234,Base,false,,Pikachu
+base,SM235,Base,false,,Eevee
+base,SM236,Base,false,,Alolan Sandslash GX
+base,SM237,Base,false,,Leafeon
+base,SM238,Base,false,,Glaceon
+base,SM239,Base,false,,Carracosta GX
+base,SM24,Base,false,,Popplio
+base,SM240,Base,false,,Espeon & Deoxys GX
+base,SM241,Base,false,,Umbreon & Darkrai GX
+base,SM242,Base,false,,Eevee GX
+base,SM243,Base,false,,Regigigas
+base,SM244,Base,false,,Aipom
+base,SM245,Base,false,,Mismagius
+base,SM246,Base,false,,Sabrina & Brycen
+base,SM247,Base,false,,Reshiram & Charizard GX
+base,SM248,Base,false,,Pikachu & Zekrom GX
+base,SM25,Base,false,,Lurantis
+base,SM26,Base,false,,Tsareena
+base,SM27,Base,false,,Turtonator
+base,SM28,Base,false,,Vikavolt
+base,SM29,Base,false,,Mimikyu
+base,SM30,Base,false,,Tapu Koko
+base,SM31,Base,false,,Tapu Koko
+base,SM32,Base,false,,Tapu Bulu GX
+base,SM33,Base,false,,Tapu Koko GX
+base,SM34,Base,false,,Bewear GX
+base,SM35,Base,false,,Espeon GX
+base,SM36,Base,false,,Umbreon GX
+base,SM37,Base,false,,Decidueye GX
+base,SM38,Base,false,,Incineroar GX
+base,SM39,Base,false,,Primarina GX
+base,SM40,Base,false,,Jangmo-o
+base,SM41,Base,false,,Komala
+base,SM42,Base,false,,Cosmog
+base,SM43,Base,false,,Alolan Meowth
+base,SM44,Base,false,,Togedemaru
+base,SM45,Base,false,,Tapu Lele
+base,SM46,Base,false,,Seviper
+base,SM47,Base,false,,Crabominable
+base,SM48,Base,false,,Zygarde
+base,SM49,Base,false,,Bewear
+base,SM50,Base,false,,Tapu Koko GX
+base,SM51,Base,false,,Alolan Meowth
+base,SM52,Base,false,,Golisopod
+base,SM53,Base,false,,Dhelmise
+base,SM54,Base,false,,Lucario
+base,SM55,Base,false,,Decidueye
+base,SM56,Base,false,,Tsareena GX
+base,SM57,Base,false,,Ho-Oh GX
+base,SM58,Base,false,,Necrozma GX
+base,SM59,Base,false,,Marshadow GX
+base,SM60,Base,false,,Charizard GX
+base,SM61,Base,false,,Tapu Bulu
+base,SM62,Base,false,,Golisopod GX
+base,SM63,Base,false,,Salazzle GX
+base,SM64,Base,false,,Silvally
+base,SM65,Base,false,,Alolan Raichu
+base,SM66,Base,false,,Pheromosa GX
+base,SM67,Base,false,,Celesteela GX
+base,SM68,Base,false,,Xurkitree GX
+base,SM69,Base,false,,Buzzwole GX
+base,SM70,Base,false,,Shining Ho-Oh
+base,SM71,Base,false,,Kommo-o GX
+base,SM72,Base,false,,Alolan Raichu
+base,SM73,Base,false,,Salazzle
+base,SM74,Base,false,,Regirock
+base,SM75,Base,false,,Registeel
+base,SM76,Base,false,,Pikachu
+base,SM77,Base,false,,Mewtwo
+base,SM78,Base,false,,Champions Festival
+base,SM79,Base,false,,Shining Celebi
+base,SM80,Base,false,,Ho-Oh GX
+base,SM81,Base,false,,Pikachu
+base,SM82,Base,false,,Shining Lugia
+base,SM83,Base,false,,Zorua
+base,SM84,Base,false,,Zoroark GX
+base,SM85,Base,false,,Marshadow
+base,SM86,Base,false,,Pikachu
+base,SM87,Base,false,,Latias
+base,SM88,Base,false,,Latios
+base,SM89,Base,false,,Zoroark
+base,SM90,Base,false,,Raichu GX
+base,SM91,Base,false,,Silvally GX
+base,SM92,Base,false,,Tapu Fini
+base,SM93,Base,false,,Marshadow
+base,SM94,Base,false,,Wash Rotom
+base,SM95,Base,false,,Lucario
+base,SM96,Base,false,,Heatran
+base,SM97,Base,false,,Gumshoos
+base,SM98,Base,false,,Pikachu
+base,SM99,Base,false,,Mimikyu

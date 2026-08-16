@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp6",
+ "setId": "dp6",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 36,
+  "normal": 152,
+  "official": 146,
+  "reverse": 139,
+  "total": 146
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

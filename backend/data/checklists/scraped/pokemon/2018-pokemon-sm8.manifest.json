@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.549Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm8",
+ "sport": "pokemon",
+ "year": 2018,
+ "setName": "Lost Thunder",
+ "productKey": "2018-sm8",
+ "setKey": "sm8",
+ "rowCount": 236,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Lost Thunder",
+   "category": "base",
+   "playerCount": 236,
+   "printRun": null
+  }
+ ]
+}

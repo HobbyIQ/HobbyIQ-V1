@@ -1,0 +1,35 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Bulbasaur
+base,2,Base,false,,Ivysaur
+base,3,Base,false,,Oddish
+base,4,Base,false,,Gloom
+base,5,Base,false,,Exeggcute
+base,6,Base,false,,Exeggutor
+base,7,Base,false,,Scyther
+base,8,Base,false,,Grass Energy
+base,9,Base,false,,Charmander
+base,10,Base,false,,Charmeleon
+base,11,Base,false,,Vulpix
+base,12,Base,false,,Ninetales
+base,13,Base,false,,Growlithe
+base,14,Base,false,,Arcanine
+base,15,Base,false,,Magmar
+base,16,Base,false,,Fire Energy
+base,17,Base,false,,Pikachu
+base,18,Base,false,,Raichu
+base,19,Base,false,,Magnemite
+base,20,Base,false,,Magneton
+base,21,Base,false,,Voltorb
+base,22,Base,false,,Electrode
+base,23,Base,false,,Electabuzz
+base,24,Base,false,,Lightning Energy
+base,25,Base,false,,Squirtle
+base,26,Base,false,,Wartortle
+base,27,Base,false,,Poliwag
+base,28,Base,false,,Poliwhirl
+base,29,Base,false,,Magikarp
+base,30,Base,false,,Gyarados
+base,31,Base,false,,Lapras
+base,32,Base,false,,Water Energy
+base,33,Base,false,,Potion
+base,34,Base,false,,Switch

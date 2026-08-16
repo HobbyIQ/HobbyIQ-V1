@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.848Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2022swsh",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "McDonald's Collection 2022",
+ "productKey": "2022-2022swsh",
+ "setKey": "2022swsh",
+ "rowCount": 15,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2022",
+   "category": "base",
+   "playerCount": 15,
+   "printRun": null
+  }
+ ]
+}

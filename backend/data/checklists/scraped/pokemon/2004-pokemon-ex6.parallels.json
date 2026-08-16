@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex6",
+ "setId": "ex6",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 138,
+  "normal": 113,
+  "official": 112,
+  "reverse": 0,
+  "total": 116
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

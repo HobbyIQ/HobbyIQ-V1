@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.592Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me01",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Mega Evolution",
+ "productKey": "2025-me01",
+ "setKey": "me01",
+ "rowCount": 188,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Mega Evolution",
+   "category": "base",
+   "playerCount": 188,
+   "printRun": null
+  }
+ ]
+}

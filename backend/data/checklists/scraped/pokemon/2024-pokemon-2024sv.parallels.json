@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2024sv",
+ "setId": "2024sv",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 7,
+  "normal": 8,
+  "official": 15,
+  "reverse": 0,
+  "total": 15
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

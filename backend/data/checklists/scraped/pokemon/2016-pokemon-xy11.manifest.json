@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.842Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy11",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "Steam Siege",
+ "productKey": "2016-xy11",
+ "setKey": "xy11",
+ "rowCount": 116,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Steam Siege",
+   "category": "base",
+   "playerCount": 116,
+   "printRun": null
+  }
+ ]
+}

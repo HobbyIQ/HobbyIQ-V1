@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.305Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pop7",
+ "sport": "pokemon",
+ "year": 2008,
+ "setName": "POP Series 7",
+ "productKey": "2008-pop7",
+ "setKey": "pop7",
+ "rowCount": 17,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > POP Series 7",
+   "category": "base",
+   "playerCount": 17,
+   "printRun": null
+  }
+ ]
+}

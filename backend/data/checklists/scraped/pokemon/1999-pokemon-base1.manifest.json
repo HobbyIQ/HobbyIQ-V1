@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:03.837Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/base1",
+ "sport": "pokemon",
+ "year": 1999,
+ "setName": "Base Set",
+ "productKey": "1999-base1",
+ "setKey": "base1",
+ "rowCount": 102,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Base Set",
+   "category": "base",
+   "playerCount": 102,
+   "printRun": null
+  }
+ ]
+}

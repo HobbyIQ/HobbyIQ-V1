@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/gym2",
+ "setId": "gym2",
+ "cardCount": {
+  "firstEd": 132,
+  "holo": 42,
+  "normal": 226,
+  "official": 132,
+  "reverse": 0,
+  "total": 132
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

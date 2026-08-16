@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:03.791Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/miscp",
+ "sport": "pokemon",
+ "year": 1996,
+ "setName": "Miscellaneous Promos",
+ "productKey": "1996-miscp",
+ "setKey": "miscp",
+ "rowCount": 1,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Miscellaneous Promos",
+   "category": "base",
+   "playerCount": 1,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.719Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw3",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "Noble Victories",
+ "productKey": "2011-bw3",
+ "setKey": "bw3",
+ "rowCount": 102,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Noble Victories",
+   "category": "base",
+   "playerCount": 102,
+   "printRun": null
+  }
+ ]
+}

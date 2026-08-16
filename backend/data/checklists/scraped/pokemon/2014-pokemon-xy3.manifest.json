@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.102Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy3",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "Furious Fists",
+ "productKey": "2014-xy3",
+ "setKey": "xy3",
+ "rowCount": 114,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Furious Fists",
+   "category": "base",
+   "playerCount": 114,
+   "printRun": null
+  }
+ ]
+}

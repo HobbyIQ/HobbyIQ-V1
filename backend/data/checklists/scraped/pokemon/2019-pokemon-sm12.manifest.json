@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.875Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm12",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Cosmic Eclipse",
+ "productKey": "2019-sm12",
+ "setKey": "sm12",
+ "rowCount": 271,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Cosmic Eclipse",
+   "category": "base",
+   "playerCount": 271,
+   "printRun": null
+  }
+ ]
+}

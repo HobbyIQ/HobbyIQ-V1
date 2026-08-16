@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.657Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ecard3",
+ "sport": "pokemon",
+ "year": 2003,
+ "setName": "Skyridge",
+ "productKey": "2003-ecard3",
+ "setKey": "ecard3",
+ "rowCount": 182,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Skyridge",
+   "category": "base",
+   "playerCount": 182,
+   "printRun": null
+  }
+ ]
+}

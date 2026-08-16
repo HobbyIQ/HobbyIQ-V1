@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.848Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dpp",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "DP Black Star Promos",
+ "productKey": "2007-dpp",
+ "setKey": "dpp",
+ "rowCount": 56,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > DP Black Star Promos",
+   "category": "base",
+   "playerCount": 56,
+   "printRun": null
+  }
+ ]
+}

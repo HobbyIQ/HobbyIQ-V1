@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.143Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/svp",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "SVP Black Star Promos",
+ "productKey": "2023-svp",
+ "setKey": "svp",
+ "rowCount": 226,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > SVP Black Star Promos",
+   "category": "base",
+   "playerCount": 226,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.636Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/mep",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "MEP Black Star Promos",
+ "productKey": "2025-mep",
+ "setKey": "mep",
+ "rowCount": 60,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > MEP Black Star Promos",
+   "category": "base",
+   "playerCount": 60,
+   "printRun": null
+  }
+ ]
+}

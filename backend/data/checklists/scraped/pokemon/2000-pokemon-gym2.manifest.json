@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.209Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/gym2",
+ "sport": "pokemon",
+ "year": 2000,
+ "setName": "Gym Challenge",
+ "productKey": "2000-gym2",
+ "setKey": "gym2",
+ "rowCount": 132,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Gym Challenge",
+   "category": "base",
+   "playerCount": 132,
+   "printRun": null
+  }
+ ]
+}

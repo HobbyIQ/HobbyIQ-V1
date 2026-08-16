@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.314Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh4.5sv",
+ "sport": "pokemon",
+ "year": 2021,
+ "setName": "Shining Fates Shiny Vault",
+ "productKey": "2021-swsh4-5sv",
+ "setKey": "swsh4-5sv",
+ "rowCount": 122,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Shining Fates Shiny Vault",
+   "category": "base",
+   "playerCount": 122,
+   "printRun": null
+  }
+ ]
+}

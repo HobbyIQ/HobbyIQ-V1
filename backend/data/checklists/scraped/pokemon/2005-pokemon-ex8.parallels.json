@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex8",
+ "setId": "ex8",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 128,
+  "normal": 108,
+  "official": 107,
+  "reverse": 0,
+  "total": 108
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

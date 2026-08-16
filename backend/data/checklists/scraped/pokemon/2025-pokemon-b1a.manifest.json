@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.788Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/B1a",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Crimson Blaze",
+ "productKey": "2025-b1a",
+ "setKey": "b1a",
+ "rowCount": 103,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Crimson Blaze",
+   "category": "base",
+   "playerCount": 103,
+   "printRun": null
+  }
+ ]
+}

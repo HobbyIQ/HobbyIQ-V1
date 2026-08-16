@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.890Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh11",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Lost Origin",
+ "productKey": "2022-swsh11",
+ "setKey": "swsh11",
+ "rowCount": 217,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Lost Origin",
+   "category": "base",
+   "playerCount": 217,
+   "printRun": null
+  }
+ ]
+}

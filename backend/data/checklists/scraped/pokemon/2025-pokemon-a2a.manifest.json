@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.078Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A2a",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Triumphant Light",
+ "productKey": "2025-a2a",
+ "setKey": "a2a",
+ "rowCount": 96,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Triumphant Light",
+   "category": "base",
+   "playerCount": 96,
+   "printRun": null
+  }
+ ]
+}

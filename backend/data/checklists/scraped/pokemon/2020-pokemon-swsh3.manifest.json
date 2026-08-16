@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.046Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh3",
+ "sport": "pokemon",
+ "year": 2020,
+ "setName": "Darkness Ablaze",
+ "productKey": "2020-swsh3",
+ "setKey": "swsh3",
+ "rowCount": 201,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Darkness Ablaze",
+   "category": "base",
+   "playerCount": 201,
+   "printRun": null
+  }
+ ]
+}

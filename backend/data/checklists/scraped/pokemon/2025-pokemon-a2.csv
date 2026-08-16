@@ -1,0 +1,208 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Oddish
+base,002,Base,false,,Gloom
+base,003,Base,false,,Bellossom
+base,004,Base,false,,Tangela
+base,005,Base,false,,Tangrowth
+base,006,Base,false,,Yanma
+base,007,Base,false,,Yanmega ex
+base,008,Base,false,,Roselia
+base,009,Base,false,,Roserade
+base,010,Base,false,,Turtwig
+base,011,Base,false,,Grotle
+base,012,Base,false,,Torterra
+base,013,Base,false,,Kricketot
+base,014,Base,false,,Kricketune
+base,015,Base,false,,Burmy
+base,016,Base,false,,Wormadam
+base,017,Base,false,,Combee
+base,018,Base,false,,Vespiquen
+base,019,Base,false,,Carnivine
+base,020,Base,false,,Leafeon
+base,021,Base,false,,Mow Rotom
+base,022,Base,false,,Shaymin
+base,023,Base,false,,Magmar
+base,024,Base,false,,Magmortar
+base,025,Base,false,,Slugma
+base,026,Base,false,,Magcargo
+base,027,Base,false,,Chimchar
+base,028,Base,false,,Monferno
+base,029,Base,false,,Infernape ex
+base,030,Base,false,,Heat Rotom
+base,031,Base,false,,Swinub
+base,032,Base,false,,Piloswine
+base,033,Base,false,,Mamoswine
+base,034,Base,false,,Regice
+base,035,Base,false,,Piplup
+base,036,Base,false,,Prinplup
+base,037,Base,false,,Empoleon
+base,038,Base,false,,Buizel
+base,039,Base,false,,Floatzel
+base,040,Base,false,,Shellos
+base,041,Base,false,,Gastrodon
+base,042,Base,false,,Finneon
+base,043,Base,false,,Lumineon
+base,044,Base,false,,Snover
+base,045,Base,false,,Abomasnow
+base,046,Base,false,,Glaceon
+base,047,Base,false,,Wash Rotom
+base,048,Base,false,,Frost Rotom
+base,049,Base,false,,Palkia ex
+base,050,Base,false,,Manaphy
+base,051,Base,false,,Magnemite
+base,052,Base,false,,Magneton
+base,053,Base,false,,Magnezone
+base,054,Base,false,,Voltorb
+base,055,Base,false,,Electrode
+base,056,Base,false,,Electabuzz
+base,057,Base,false,,Electivire
+base,058,Base,false,,Shinx
+base,059,Base,false,,Luxio
+base,060,Base,false,,Luxray
+base,061,Base,false,,Pachirisu ex
+base,062,Base,false,,Rotom
+base,063,Base,false,,Togepi
+base,064,Base,false,,Togetic
+base,065,Base,false,,Togekiss
+base,066,Base,false,,Misdreavus
+base,067,Base,false,,Mismagius ex
+base,068,Base,false,,Ralts
+base,069,Base,false,,Kirlia
+base,070,Base,false,,Duskull
+base,071,Base,false,,Dusclops
+base,072,Base,false,,Dusknoir
+base,073,Base,false,,Drifloon
+base,074,Base,false,,Drifblim
+base,075,Base,false,,Uxie
+base,076,Base,false,,Mesprit
+base,077,Base,false,,Azelf
+base,078,Base,false,,Giratina
+base,079,Base,false,,Cresselia
+base,080,Base,false,,Rhyhorn
+base,081,Base,false,,Rhydon
+base,082,Base,false,,Rhyperior
+base,083,Base,false,,Gligar
+base,084,Base,false,,Gliscor
+base,085,Base,false,,Hitmontop
+base,086,Base,false,,Nosepass
+base,087,Base,false,,Regirock
+base,088,Base,false,,Cranidos
+base,089,Base,false,,Rampardos
+base,090,Base,false,,Wormadam
+base,091,Base,false,,Riolu
+base,092,Base,false,,Lucario
+base,093,Base,false,,Hippopotas
+base,094,Base,false,,Hippowdon
+base,095,Base,false,,Gallade ex
+base,096,Base,false,,Murkrow
+base,097,Base,false,,Honchkrow
+base,098,Base,false,,Sneasel
+base,099,Base,false,,Weavile ex
+base,100,Base,false,,Poochyena
+base,101,Base,false,,Mightyena
+base,102,Base,false,,Stunky
+base,103,Base,false,,Skuntank
+base,104,Base,false,,Spiritomb
+base,105,Base,false,,Skorupi
+base,106,Base,false,,Drapion
+base,107,Base,false,,Croagunk
+base,108,Base,false,,Toxicroak
+base,109,Base,false,,Darkrai
+base,110,Base,false,,Darkrai ex
+base,111,Base,false,,Skarmory
+base,112,Base,false,,Registeel
+base,113,Base,false,,Shieldon
+base,114,Base,false,,Bastiodon
+base,115,Base,false,,Wormadam
+base,116,Base,false,,Bronzor
+base,117,Base,false,,Bronzong
+base,118,Base,false,,Probopass
+base,119,Base,false,,Dialga ex
+base,120,Base,false,,Heatran
+base,121,Base,false,,Gible
+base,122,Base,false,,Gabite
+base,123,Base,false,,Garchomp
+base,124,Base,false,,Lickitung
+base,125,Base,false,,Lickilicky ex
+base,126,Base,false,,Eevee
+base,127,Base,false,,Porygon
+base,128,Base,false,,Porygon2
+base,129,Base,false,,Porygon-Z
+base,130,Base,false,,Aipom
+base,131,Base,false,,Ambipom
+base,132,Base,false,,Starly
+base,133,Base,false,,Staravia
+base,134,Base,false,,Staraptor
+base,135,Base,false,,Bidoof
+base,136,Base,false,,Bibarel
+base,137,Base,false,,Buneary
+base,138,Base,false,,Lopunny
+base,139,Base,false,,Glameow
+base,140,Base,false,,Purugly
+base,141,Base,false,,Chatot
+base,142,Base,false,,Fan Rotom
+base,143,Base,false,,Regigigas
+base,144,Base,false,,Skull Fossil
+base,145,Base,false,,Armor Fossil
+base,146,Base,false,,Pokémon Communication
+base,147,Base,false,,Giant Cape
+base,148,Base,false,,Rocky Helmet
+base,149,Base,false,,Lum Berry
+base,150,Base,false,,Cyrus
+base,151,Base,false,,Team Galactic Grunt
+base,152,Base,false,,Cynthia
+base,153,Base,false,,Volkner
+base,154,Base,false,,Dawn
+base,155,Base,false,,Mars
+base,156,Base,false,,Tangrowth
+base,157,Base,false,,Combee
+base,158,Base,false,,Carnivine
+base,159,Base,false,,Shaymin
+base,160,Base,false,,Mamoswine
+base,161,Base,false,,Gastrodon
+base,162,Base,false,,Manaphy
+base,163,Base,false,,Shinx
+base,164,Base,false,,Rotom
+base,165,Base,false,,Drifloon
+base,166,Base,false,,Mesprit
+base,167,Base,false,,Giratina
+base,168,Base,false,,Cresselia
+base,169,Base,false,,Rhyperior
+base,170,Base,false,,Lucario
+base,171,Base,false,,Hippopotas
+base,172,Base,false,,Spiritomb
+base,173,Base,false,,Croagunk
+base,174,Base,false,,Heatran
+base,175,Base,false,,Garchomp
+base,176,Base,false,,Staraptor
+base,177,Base,false,,Bidoof
+base,178,Base,false,,Glameow
+base,179,Base,false,,Regigigas
+base,180,Base,false,,Yanmega ex
+base,181,Base,false,,Infernape ex
+base,182,Base,false,,Palkia ex
+base,183,Base,false,,Pachirisu ex
+base,184,Base,false,,Mismagius ex
+base,185,Base,false,,Gallade ex
+base,186,Base,false,,Weavile ex
+base,187,Base,false,,Darkrai ex
+base,188,Base,false,,Dialga ex
+base,189,Base,false,,Lickilicky ex
+base,190,Base,false,,Cyrus
+base,191,Base,false,,Team Galactic Grunt
+base,192,Base,false,,Cynthia
+base,193,Base,false,,Volkner
+base,194,Base,false,,Dawn
+base,195,Base,false,,Mars
+base,196,Base,false,,Yanmega ex
+base,197,Base,false,,Infernape ex
+base,198,Base,false,,Pachirisu ex
+base,199,Base,false,,Mismagius ex
+base,200,Base,false,,Gallade ex
+base,201,Base,false,,Weavile ex
+base,202,Base,false,,Darkrai ex
+base,203,Base,false,,Lickilicky ex
+base,204,Base,false,,Palkia ex
+base,205,Base,false,,Dialga ex
+base,206,Base,false,,Palkia ex
+base,207,Base,false,,Dialga ex

@@ -1,0 +1,9 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Grass Energy
+base,002,Base,false,,Fire Energy
+base,003,Base,false,,Water Energy
+base,004,Base,false,,Lightning Energy
+base,005,Base,false,,Psychic Energy
+base,006,Base,false,,Fighting Energy
+base,007,Base,false,,Darkness Energy
+base,008,Base,false,,Metal Energy

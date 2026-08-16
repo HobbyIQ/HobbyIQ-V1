@@ -1,0 +1,217 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,XY01,Base,false,,Chespin
+base,XY02,Base,false,,Fennekin
+base,XY03,Base,false,,Froakie
+base,XY04,Base,false,,Sylveon
+base,XY05,Base,false,,Xerneas
+base,XY06,Base,false,,Yveltal
+base,XY07,Base,false,,Xerneas EX
+base,XY08,Base,false,,Yveltal EX
+base,XY09,Base,false,,Garchomp EX
+base,XY10,Base,false,,Dragalge
+base,XY100,Base,false,,Mewtwo
+base,XY101,Base,false,,Mewtwo
+base,XY102,Base,false,,Aurorus EX
+base,XY103,Base,false,,Mawile EX
+base,XY104,Base,false,,M Mawile EX
+base,XY105,Base,false,,Mawile Spirit Link
+base,XY106,Base,false,,Gyarados EX
+base,XY107,Base,false,,Mewtwo EX
+base,XY108,Base,false,,Machamp EX
+base,XY109,Base,false,,Gyarados
+base,XY11,Base,false,,Skiddo
+base,XY110,Base,false,,Mew
+base,XY111,Base,false,,Celebi
+base,XY112,Base,false,,Jirachi
+base,XY113,Base,false,,Manaphy
+base,XY114,Base,false,,Darkrai
+base,XY115,Base,false,,Shaymin
+base,XY116,Base,false,,Arceus
+base,XY117,Base,false,,Victini
+base,XY118,Base,false,,Keldeo
+base,XY119,Base,false,,Genesect
+base,XY12,Base,false,,Honedge
+base,XY120,Base,false,,Meloetta
+base,XY121,Base,false,,Charizard EX
+base,XY122,Base,false,,Blastoise EX
+base,XY123,Base,false,,Venusaur EX
+base,XY124,Base,false,,Pikachu EX
+base,XY125,Base,false,,Mewtwo EX
+base,XY126,Base,false,,Mew EX
+base,XY127,Base,false,,Moltres
+base,XY128,Base,false,,White Kyurem
+base,XY129,Base,false,,Zygarde
+base,XY13,Base,false,,Machamp
+base,XY130,Base,false,,Tyranitar
+base,XY131,Base,false,,Pansear
+base,XY132,Base,false,,Gastly
+base,XY133,Base,false,,Ash Greninja EX
+base,XY134,Base,false,,Empoleon BREAK
+base,XY135,Base,false,,Beheeyem BREAK
+base,XY136,Base,false,,Noctowl BREAK
+base,XY137,Base,false,,Vivillon
+base,XY138,Base,false,,Froakie
+base,XY139,Base,false,,Floette
+base,XY14,Base,false,,Trevenant
+base,XY140,Base,false,,Lucario
+base,XY141,Base,false,,Rayquaza
+base,XY142,Base,false,,Azelf
+base,XY143,Base,false,,Magikarp
+base,XY144,Base,false,,Yanmega
+base,XY145,Base,false,,Volcanion
+base,XY146,Base,false,,Clawitzer
+base,XY147,Base,false,,Hoopa
+base,XY148,Base,false,,Shaymin EX
+base,XY149,Base,false,,Xerneas EX
+base,XY15,Base,false,,Slurpuff
+base,XY150,Base,false,,Yveltal EX
+base,XY150a,Base,false,,Yveltal-EX
+base,XY151,Base,false,,Zygarde EX
+base,XY152,Base,false,,Zygarde
+base,XY153,Base,false,,Ho Oh
+base,XY154,Base,false,,Ho-Oh BREAK
+base,XY155,Base,false,,Wobbuffet BREAK
+base,XY156,Base,false,,Lugia
+base,XY157,Base,false,,Beedrill EX
+base,XY158,Base,false,,M Beedrill-EX
+base,XY159,Base,false,,Beedrill Spirit Link
+base,XY16,Base,false,,Gogoat
+base,XY160,Base,false,,Black Kyurem
+base,XY161,Base,false,,Braixen
+base,XY162,Base,false,,Greninja
+base,XY163,Base,false,,Weezing
+base,XY164,Base,false,,Volcanion
+base,XY165,Base,false,,Magearna
+base,XY166,Base,false,,M Gengar-EX
+base,XY167,Base,false,,Garchomp-EX
+base,XY168,Base,false,,M Garchomp-EX
+base,XY169,Base,false,,Garchomp Spirit Link
+base,XY17,Base,false,,Charizard EX
+base,XY170,Base,false,,Salamence EX
+base,XY171,Base,false,,M Salamence-EX
+base,XY172,Base,false,,Salamence Spirit Link
+base,XY173,Base,false,,Volcanion EX
+base,XY174,Base,false,,Pikachu-EX
+base,XY175,Base,false,,Magearna-EX
+base,XY176,Base,false,,Champions Festival
+base,XY177,Base,false,,Karen
+base,XY177a,Base,false,,Karen
+base,XY178,Base,false,,Absol
+base,XY179,Base,false,,Snorlax
+base,XY18,Base,false,,Chesnaught EX
+base,XY180,Base,false,,Arcanine BREAK
+base,XY181,Base,false,,Crobat BREAK
+base,XY182,Base,false,,Mandibuzz BREAK
+base,XY183,Base,false,,Mewtwo-EX
+base,XY184,Base,false,,Giratina
+base,XY185,Base,false,,Volcanion
+base,XY186,Base,false,,Magearna
+base,XY187,Base,false,,Celebi
+base,XY188,Base,false,,Shaymin
+base,XY189,Base,false,,Victini
+base,XY19,Base,false,,Delphox EX
+base,XY190,Base,false,,Manaphy
+base,XY191,Base,false,,Keldeo
+base,XY192,Base,false,,Mew
+base,XY193,Base,false,,Meloetta
+base,XY194,Base,false,,Darkrai
+base,XY195,Base,false,,Jirachi
+base,XY196,Base,false,,Genesect
+base,XY197,Base,false,,Arceus
+base,XY198,Base,false,,M Camerupt-EX
+base,XY198a,Base,false,,M Camerupt-EX
+base,XY199,Base,false,,Camerupt Spirit Link
+base,XY20,Base,false,,Greninja EX
+base,XY200,Base,false,,M Sharpedo-EX
+base,XY200a,Base,false,,M Sharpedo-EX
+base,XY201,Base,false,,Sharpedo Spirit Link
+base,XY202,Base,false,,Pikachu
+base,XY203,Base,false,,Gym Badge
+base,XY204,Base,false,,Gym Badge
+base,XY205,Base,false,,Gym Badge
+base,XY206,Base,false,,Gym Badge
+base,XY207,Base,false,,Gym Badge
+base,XY208,Base,false,,Gym Badge
+base,XY209,Base,false,,Gym Badge
+base,XY21,Base,false,,Bronzong
+base,XY210,Base,false,,Gym Badge
+base,XY211,Base,false,,Lucario Spirit Link
+base,XY22,Base,false,,Darkrai
+base,XY23,Base,false,,Shiftry
+base,XY24,Base,false,,Greninja
+base,XY25,Base,false,,Krookodile EX
+base,XY26,Base,false,,Pyroar
+base,XY27,Base,false,,Champions Festival
+base,XY28,Base,false,,Venusaur EX
+base,XY29,Base,false,,Charizard EX
+base,XY30,Base,false,,Blastoise EX
+base,XY31,Base,false,,Xerneas
+base,XY32,Base,false,,Yveltal
+base,XY33,Base,false,,Trevor
+base,XY34,Base,false,,Metagross EX
+base,XY35,Base,false,,M Metagross EX
+base,XY36,Base,false,,Treecko
+base,XY37,Base,false,,Torchic
+base,XY38,Base,false,,Mudkip
+base,XY39,Base,false,,Kingdra
+base,XY40,Base,false,,Ditto
+base,XY41,Base,false,,Kyogre EX
+base,XY42,Base,false,,Groudon EX
+base,XY43,Base,false,,Diancie EX
+base,XY44,Base,false,,M Diancie EX
+base,XY45,Base,false,,Gallade EX
+base,XY46,Base,false,,Altaria
+base,XY47,Base,false,,Heliolisk
+base,XY48,Base,false,,Meowstic
+base,XY49,Base,false,,Regirock
+base,XY50,Base,false,,Pangoro
+base,XY51,Base,false,,Kyogre
+base,XY52,Base,false,,Groudon
+base,XY53,Base,false,,Sceptile EX
+base,XY54,Base,false,,Blaziken EX
+base,XY55,Base,false,,Swampert EX
+base,XY56,Base,false,,Blissey
+base,XY57,Base,false,,Fearow
+base,XY58,Base,false,,Malamar
+base,XY59,Base,false,,Salamence
+base,XY60,Base,false,,Gyarados
+base,XY61,Base,false,,Flygon EX
+base,XY62,Base,false,,Absol EX
+base,XY63,Base,false,,M Absol EX
+base,XY64,Base,false,,Rayquaza
+base,XY65,Base,false,,Latios
+base,XY66,Base,false,,Rayquaza EX
+base,XY67,Base,false,,Jirachi
+base,XY67a,Base,false,,Jirachi
+base,XY68,Base,false,,Chesnaught
+base,XY69,Base,false,,Rayquaza EX
+base,XY70,Base,false,,Tyrantrum EX
+base,XY71,Base,false,,Hoopa EX
+base,XY72,Base,false,,Latios EX
+base,XY73,Base,false,,Rayquaza EX
+base,XY74,Base,false,,Reshiram
+base,XY75,Base,false,,Palkia
+base,XY76,Base,false,,Zekrom
+base,XY77,Base,false,,Dialga
+base,XY78,Base,false,,Latias
+base,XY79,Base,false,,Latios
+base,XY80,Base,false,,Black Kyurem
+base,XY81,Base,false,,White Kyurem
+base,XY82,Base,false,,Regigigas
+base,XY83,Base,false,,Arceus
+base,XY84,Base,false,,Pikachu EX
+base,XY85,Base,false,,Hoopa EX
+base,XY86,Base,false,,M Blaziken EX
+base,XY87,Base,false,,M Swampert EX
+base,XY88,Base,false,,Chespin
+base,XY89,Base,false,,Pikachu
+base,XY90,Base,false,,Hoopa
+base,XY91,Base,false,,Champions Festival
+base,XY92,Base,false,,Sableye
+base,XY93,Base,false,,Celebi
+base,XY94,Base,false,,Trevenant
+base,XY95,Base,false,,Pikachu
+base,XY96,Base,false,,Umbreon
+base,XY97,Base,false,,Aerodactyl EX
+base,XY98,Base,false,,M Aerodactyl EX
+base,XY99,Base,false,,Aerodactyl Spirit Link

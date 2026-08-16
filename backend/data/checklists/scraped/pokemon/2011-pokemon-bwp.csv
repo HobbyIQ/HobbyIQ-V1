@@ -1,0 +1,102 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,BW01,Base,false,,Snivy
+base,BW02,Base,false,,Tepig
+base,BW03,Base,false,,Oshawott
+base,BW04,Base,false,,Reshiram
+base,BW05,Base,false,,Zekrom
+base,BW06,Base,false,,Snivy
+base,BW07,Base,false,,Tepig
+base,BW08,Base,false,,Oshawott
+base,BW09,Base,false,,Zoroark
+base,BW10,Base,false,,Axew
+base,BW100,Base,false,,N
+base,BW101,Base,false,,Genesect
+base,BW11,Base,false,,Pansage
+base,BW12,Base,false,,Zorua
+base,BW13,Base,false,,Minccino
+base,BW14,Base,false,,Pansage
+base,BW15,Base,false,,Pidove
+base,BW16,Base,false,,Axew
+base,BW17,Base,false,,Ducklett
+base,BW18,Base,false,,Darumaka
+base,BW19,Base,false,,Zoroark
+base,BW20,Base,false,,Serperior
+base,BW21,Base,false,,Emboar
+base,BW22,Base,false,,Samurott
+base,BW23,Base,false,,Reshiram
+base,BW24,Base,false,,Zekrom
+base,BW25,Base,false,,Scraggy
+base,BW26,Base,false,,Axew
+base,BW27,Base,false,,Litwick
+base,BW28,Base,false,,Tropical Beach
+base,BW29,Base,false,,Victory Cup
+base,BW30,Base,false,,Victory Cup
+base,BW31,Base,false,,Victory Cup
+base,BW32,Base,false,,Victini
+base,BW33,Base,false,,Riolu
+base,BW34,Base,false,,Luxio
+base,BW35,Base,false,,Meowth
+base,BW36,Base,false,,Reshiram-EX
+base,BW37,Base,false,,Kyurem-EX
+base,BW38,Base,false,,Zekrom-EX
+base,BW39,Base,false,,Battle City
+base,BW40,Base,false,,Volcarona
+base,BW41,Base,false,,Thundurus
+base,BW42,Base,false,,Tornadus
+base,BW43,Base,false,,Landorus
+base,BW44,Base,false,,Kyurem
+base,BW45,Base,false,,Mewtwo-EX
+base,BW46,Base,false,,Darkrai-EX
+base,BW47,Base,false,,Rayquaza-EX
+base,BW48,Base,false,,Altaria
+base,BW49,Base,false,,Lilligant
+base,BW50,Base,false,,Tropical Beach
+base,BW51,Base,false,,Crobat
+base,BW52,Base,false,,Lillipup
+base,BW53,Base,false,,Flygon
+base,BW54,Base,false,,Pikachu
+base,BW55,Base,false,,Elgyem
+base,BW56,Base,false,,Empoleon
+base,BW57,Base,false,,Haxorus
+base,BW58,Base,false,,Black Kyurem
+base,BW59,Base,false,,White Kyurem
+base,BW60,Base,false,,Keldeo
+base,BW61,Base,false,,Keldeo-EX
+base,BW62,Base,false,,Black Kyurem-EX
+base,BW63,Base,false,,White Kyurem-EX
+base,BW64,Base,false,,Drifblim
+base,BW65,Base,false,,Jigglypuff
+base,BW66,Base,false,,Ninetales
+base,BW67,Base,false,,Ampharos
+base,BW68,Base,false,,Meloetta
+base,BW69,Base,false,,Meloetta
+base,BW70,Base,false,,Virizion
+base,BW71,Base,false,,Terrakion
+base,BW72,Base,false,,Cobalion
+base,BW73,Base,false,,Darkrai
+base,BW74,Base,false,,Giratina
+base,BW75,Base,false,,Metagross
+base,BW76,Base,false,,Electrode
+base,BW77,Base,false,,Pikachu
+base,BW78,Base,false,,Raichu
+base,BW79,Base,false,,Landorus
+base,BW80,Base,false,,Druddigon
+base,BW81,Base,false,,Thundurus-EX
+base,BW82,Base,false,,Deoxys-EX
+base,BW83,Base,false,,Lugia-EX
+base,BW84,Base,false,,Porygon-Z
+base,BW85,Base,false,,Lucario
+base,BW86,Base,false,,Genesect
+base,BW87,Base,false,,Leafeon
+base,BW88,Base,false,,Flareon
+base,BW89,Base,false,,Vaporeon
+base,BW90,Base,false,,Glaceon
+base,BW91,Base,false,,Jolteon
+base,BW92,Base,false,,Espeon
+base,BW93,Base,false,,Umbreon
+base,BW94,Base,false,,Eevee
+base,BW95,Base,false,,Champions Festival
+base,BW96,Base,false,,Tornadus-EX
+base,BW97,Base,false,,Eevee
+base,BW98,Base,false,,Mew
+base,BW99,Base,false,,Genesect

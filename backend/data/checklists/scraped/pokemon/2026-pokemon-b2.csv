@@ -1,0 +1,235 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Ledyba
+base,002,Base,false,,Ledian
+base,003,Base,false,,Shuckle
+base,004,Base,false,,Roselia
+base,005,Base,false,,Roserade
+base,006,Base,false,,Cacnea
+base,007,Base,false,,Cacturne
+base,008,Base,false,,Chespin
+base,009,Base,false,,Quilladin
+base,010,Base,false,,Chesnaught
+base,011,Base,false,,Scatterbug
+base,012,Base,false,,Spewpa
+base,013,Base,false,,Vivillon
+base,014,Base,false,,Buzzwole
+base,015,Base,false,,Gossifleur
+base,016,Base,false,,Eldegoss
+base,017,Base,false,,Teal Mask Ogerpon ex
+base,018,Base,false,,Alolan Marowak
+base,019,Base,false,,Reshiram
+base,020,Base,false,,Litleo
+base,021,Base,false,,Pyroar
+base,022,Base,false,,Oricorio
+base,023,Base,false,,Blacephalon ex
+base,024,Base,false,,Scorbunny
+base,025,Base,false,,Raboot
+base,026,Base,false,,Cinderace
+base,027,Base,false,,Hearthflame Mask Ogerpon
+base,028,Base,false,,Alolan Vulpix
+base,029,Base,false,,Alolan Ninetales ex
+base,030,Base,false,,Galarian Mr. Mime
+base,031,Base,false,,Galarian Mr. Rime
+base,032,Base,false,,Delibird
+base,033,Base,false,,Mudkip
+base,034,Base,false,,Marshtomp
+base,035,Base,false,,Swampert
+base,036,Base,false,,Mega Swampert ex
+base,037,Base,false,,Vanillite
+base,038,Base,false,,Vanillish
+base,039,Base,false,,Vanilluxe
+base,040,Base,false,,Cryogonal
+base,041,Base,false,,Amaura
+base,042,Base,false,,Aurorus
+base,043,Base,false,,Chewtle
+base,044,Base,false,,Drednaw
+base,045,Base,false,,Cramorant
+base,046,Base,false,,Arrokuda
+base,047,Base,false,,Barraskewda
+base,048,Base,false,,Wellspring Mask Ogerpon
+base,049,Base,false,,Pikachu
+base,050,Base,false,,Alolan Raichu
+base,051,Base,false,,Zapdos
+base,052,Base,false,,Plusle
+base,053,Base,false,,Minun
+base,054,Base,false,,Toxel
+base,055,Base,false,,Toxtricity ex
+base,056,Base,false,,Tadbulb
+base,057,Base,false,,Bellibolt
+base,058,Base,false,,Galarian Ponyta
+base,059,Base,false,,Galarian Rapidash
+base,060,Base,false,,Wobbuffet
+base,061,Base,false,,Snubbull
+base,062,Base,false,,Granbull
+base,063,Base,false,,Ralts
+base,064,Base,false,,Kirlia
+base,065,Base,false,,Gardevoir
+base,066,Base,false,,Mega Gardevoir ex
+base,067,Base,false,,Litwick
+base,068,Base,false,,Lampent
+base,069,Base,false,,Chandelure
+base,070,Base,false,,Meloetta
+base,071,Base,false,,Pumpkaboo
+base,072,Base,false,,Gourgeist
+base,073,Base,false,,Mimikyu ex
+base,074,Base,false,,Sinistea
+base,075,Base,false,,Polteageist
+base,076,Base,false,,Indeedee
+base,077,Base,false,,Sandshrew
+base,078,Base,false,,Sandslash
+base,079,Base,false,,Machop
+base,080,Base,false,,Machoke
+base,081,Base,false,,Machamp
+base,082,Base,false,,Cubone
+base,083,Base,false,,Meditite
+base,084,Base,false,,Medicham
+base,085,Base,false,,Roggenrola
+base,086,Base,false,,Boldore
+base,087,Base,false,,Gigalith ex
+base,088,Base,false,,Drilbur
+base,089,Base,false,,Tyrunt
+base,090,Base,false,,Tyrantrum
+base,091,Base,false,,Passimian
+base,092,Base,false,,Falinks
+base,093,Base,false,,Cornerstone Mask Ogerpon
+base,094,Base,false,,Alolan Meowth
+base,095,Base,false,,Alolan Persian
+base,096,Base,false,,Alolan Grimer
+base,097,Base,false,,Alolan Muk
+base,098,Base,false,,Galarian Zigzagoon
+base,099,Base,false,,Galarian Linoone
+base,100,Base,false,,Galarian Obstagoon
+base,101,Base,false,,Stunky
+base,102,Base,false,,Skuntank
+base,103,Base,false,,Spiritomb
+base,104,Base,false,,Purrloin
+base,105,Base,false,,Liepard
+base,106,Base,false,,Scraggy
+base,107,Base,false,,Scrafty
+base,108,Base,false,,Yveltal
+base,109,Base,false,,Guzzlord
+base,110,Base,false,,Galarian Meowth
+base,111,Base,false,,Galarian Perrserker
+base,112,Base,false,,Mawile
+base,113,Base,false,,Mega Mawile ex
+base,114,Base,false,,Excadrill
+base,115,Base,false,,Ferroseed
+base,116,Base,false,,Ferrothorn
+base,117,Base,false,,Galarian Stunfisk
+base,118,Base,false,,Honedge
+base,119,Base,false,,Doublade
+base,120,Base,false,,Aegislash
+base,121,Base,false,,Bagon
+base,122,Base,false,,Shelgon
+base,123,Base,false,,Salamence
+base,124,Base,false,,Meowth
+base,125,Base,false,,Persian
+base,126,Base,false,,Kangaskhan
+base,127,Base,false,,Mega Kangaskhan ex
+base,128,Base,false,,Sentret
+base,129,Base,false,,Furret
+base,130,Base,false,,Smeargle
+base,131,Base,false,,Lugia
+base,132,Base,false,,Taillow
+base,133,Base,false,,Swellow
+base,134,Base,false,,Slakoth
+base,135,Base,false,,Vigoroth
+base,136,Base,false,,Slaking
+base,137,Base,false,,Spinda
+base,138,Base,false,,Tornadus
+base,139,Base,false,,Bunnelby
+base,140,Base,false,,Diggersby
+base,141,Base,false,,Furfrou
+base,142,Base,false,,Tandemaus
+base,143,Base,false,,Maushold
+base,144,Base,false,,Jaw Fossil
+base,145,Base,false,,Lucky Ice Pop
+base,146,Base,false,,Sail Fossil
+base,147,Base,false,,Protective Poncho
+base,148,Base,false,,Metal Core Barrier
+base,149,Base,false,,Diantha
+base,150,Base,false,,Sightseer
+base,151,Base,false,,Juggler
+base,152,Base,false,,Piers
+base,153,Base,false,,Training Area
+base,154,Base,false,,Starting Plains
+base,155,Base,false,,Peculiar Plaza
+base,156,Base,false,,Cacnea
+base,157,Base,false,,Roserade
+base,158,Base,false,,Vivillon
+base,159,Base,false,,Buzzwole
+base,160,Base,false,,Reshiram
+base,161,Base,false,,Oricorio
+base,162,Base,false,,Scorbunny
+base,163,Base,false,,Aurorus
+base,164,Base,false,,Cramorant
+base,165,Base,false,,Minun
+base,166,Base,false,,Toxel
+base,167,Base,false,,Galarian Ponyta
+base,168,Base,false,,Snubbull
+base,169,Base,false,,Indeedee
+base,170,Base,false,,Sandshrew
+base,171,Base,false,,Tyrantrum
+base,172,Base,false,,Falinks
+base,173,Base,false,,Alolan Muk
+base,174,Base,false,,Purrloin
+base,175,Base,false,,Yveltal
+base,176,Base,false,,Galarian Obstagoon
+base,177,Base,false,,Galarian Perrserker
+base,178,Base,false,,Salamence
+base,179,Base,false,,Slakoth
+base,180,Base,false,,Teal Mask Ogerpon ex
+base,181,Base,false,,Blacephalon ex
+base,182,Base,false,,Alolan Ninetales ex
+base,183,Base,false,,Mega Swampert ex
+base,184,Base,false,,Toxtricity ex
+base,185,Base,false,,Mega Gardevoir ex
+base,186,Base,false,,Mimikyu ex
+base,187,Base,false,,Gigalith ex
+base,188,Base,false,,Mega Mawile ex
+base,189,Base,false,,Mega Kangaskhan ex
+base,190,Base,false,,Diantha
+base,191,Base,false,,Sightseer
+base,192,Base,false,,Juggler
+base,193,Base,false,,Piers
+base,194,Base,false,,Teal Mask Ogerpon ex
+base,195,Base,false,,Blacephalon ex
+base,196,Base,false,,Alolan Ninetales ex
+base,197,Base,false,,Mega Swampert ex
+base,198,Base,false,,Toxtricity ex
+base,199,Base,false,,Mimikyu ex
+base,200,Base,false,,Gigalith ex
+base,201,Base,false,,Mega Mawile ex
+base,202,Base,false,,Mega Kangaskhan ex
+base,203,Base,false,,Mega Gardevoir ex
+base,204,Base,false,,Meowth
+base,205,Base,false,,Tangela
+base,206,Base,false,,Magby
+base,207,Base,false,,Magmar
+base,208,Base,false,,Horsea
+base,209,Base,false,,Seadra
+base,210,Base,false,,Mantyke
+base,211,Base,false,,Omanyte
+base,212,Base,false,,Omastar
+base,213,Base,false,,Pichu
+base,214,Base,false,,Clefairy
+base,215,Base,false,,Clefable
+base,216,Base,false,,Latias
+base,217,Base,false,,Latios
+base,218,Base,false,,Hitmonlee
+base,219,Base,false,,Hitmonchan
+base,220,Base,false,,Kabuto
+base,221,Base,false,,Kabutops
+base,222,Base,false,,Phanpy
+base,223,Base,false,,Tyrogue
+base,224,Base,false,,Tauros
+base,225,Base,false,,Flareon ex
+base,226,Base,false,,Ho-Oh ex
+base,227,Base,false,,Kingdra ex
+base,228,Base,false,,Espeon ex
+base,229,Base,false,,Sylveon ex
+base,230,Base,false,,Donphan ex
+base,231,Base,false,,Umbreon ex
+base,232,Base,false,,Lugia ex
+base,233,Base,false,,Meloetta
+base,234,Base,false,,Protective Poncho

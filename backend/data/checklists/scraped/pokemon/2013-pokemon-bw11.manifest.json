@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.530Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw11",
+ "sport": "pokemon",
+ "year": 2013,
+ "setName": "Legendary Treasures",
+ "productKey": "2013-bw11",
+ "setKey": "bw11",
+ "rowCount": 140,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Legendary Treasures",
+   "category": "base",
+   "playerCount": 140,
+   "printRun": null
+  }
+ ]
+}

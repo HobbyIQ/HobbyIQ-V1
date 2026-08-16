@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.724Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-su",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "XY trainer Kit (Suicune)",
+ "productKey": "2016-tk-xy-su",
+ "setKey": "tk-xy-su",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Suicune)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

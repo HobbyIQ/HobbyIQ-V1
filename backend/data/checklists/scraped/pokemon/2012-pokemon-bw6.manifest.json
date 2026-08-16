@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.076Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw6",
+ "sport": "pokemon",
+ "year": 2012,
+ "setName": "Dragons Exalted",
+ "productKey": "2012-bw6",
+ "setKey": "bw6",
+ "rowCount": 128,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Dragons Exalted",
+   "category": "base",
+   "playerCount": 128,
+   "printRun": null
+  }
+ ]
+}

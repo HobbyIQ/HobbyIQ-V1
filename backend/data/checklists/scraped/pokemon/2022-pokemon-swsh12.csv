@@ -1,0 +1,216 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Venonat
+base,002,Base,false,,Venomoth
+base,003,Base,false,,Spinarak
+base,004,Base,false,,Ariados
+base,005,Base,false,,Sunkern
+base,006,Base,false,,Sunflora
+base,007,Base,false,,Serperior V
+base,008,Base,false,,Serperior VSTAR
+base,009,Base,false,,Petilil
+base,010,Base,false,,Hisuian Lilligant
+base,011,Base,false,,Foongus
+base,012,Base,false,,Amoonguss
+base,013,Base,false,,Durant
+base,014,Base,false,,Virizion
+base,015,Base,false,,Chesnaught V
+base,016,Base,false,,Radiant Tsareena
+base,017,Base,false,,Vulpix
+base,018,Base,false,,Ninetales
+base,019,Base,false,,Growlithe
+base,020,Base,false,,Arcanine
+base,021,Base,false,,Ponyta
+base,022,Base,false,,Rapidash
+base,023,Base,false,,Victini
+base,024,Base,false,,Reshiram V
+base,025,Base,false,,Fennekin
+base,026,Base,false,,Braixen
+base,027,Base,false,,Delphox
+base,028,Base,false,,Fletchinder
+base,029,Base,false,,Talonflame
+base,030,Base,false,,Litten
+base,031,Base,false,,Torracat
+base,032,Base,false,,Incineroar
+base,033,Base,false,,Alolan Vulpix V
+base,034,Base,false,,Alolan Vulpix VSTAR
+base,035,Base,false,,Omastar V
+base,036,Base,false,,Articuno
+base,037,Base,false,,Wailmer
+base,038,Base,false,,Wailord
+base,039,Base,false,,Feebas
+base,040,Base,false,,Milotic
+base,041,Base,false,,Snorunt
+base,042,Base,false,,Glalie
+base,043,Base,false,,Froslass
+base,044,Base,false,,Relicanth
+base,045,Base,false,,Phione
+base,046,Base,false,,Keldeo
+base,047,Base,false,,Dewpider
+base,048,Base,false,,Araquanid
+base,049,Base,false,,Pikachu
+base,050,Base,false,,Raichu
+base,051,Base,false,,Chinchou
+base,052,Base,false,,Lanturn
+base,053,Base,false,,Rotom
+base,054,Base,false,,Emolga
+base,055,Base,false,,Stunfisk
+base,056,Base,false,,Zeraora
+base,057,Base,false,,Regieleki V
+base,058,Base,false,,Regieleki VMAX
+base,059,Base,false,,Radiant Alakazam
+base,060,Base,false,,Drowzee
+base,061,Base,false,,Hypno
+base,062,Base,false,,Jynx
+base,063,Base,false,,Misdreavus
+base,064,Base,false,,Mismagius
+base,065,Base,false,,Unown V
+base,066,Base,false,,Unown VSTAR
+base,067,Base,false,,Ralts
+base,068,Base,false,,Kirlia
+base,069,Base,false,,Gardevoir
+base,070,Base,false,,Mawile V
+base,071,Base,false,,Mawile VSTAR
+base,072,Base,false,,Meditite
+base,073,Base,false,,Medicham
+base,074,Base,false,,Chimecho
+base,075,Base,false,,Sigilyph
+base,076,Base,false,,Solosis
+base,077,Base,false,,Duosion
+base,078,Base,false,,Reuniclus
+base,079,Base,false,,Elgyem
+base,080,Base,false,,Beheeyem
+base,081,Base,false,,Espurr
+base,082,Base,false,,Meowstic
+base,083,Base,false,,Swirlix
+base,084,Base,false,,Slurpuff
+base,085,Base,false,,Dedenne
+base,086,Base,false,,Indeedee
+base,087,Base,false,,Dreepy
+base,088,Base,false,,Drakloak
+base,089,Base,false,,Dragapult
+base,090,Base,false,,Hisuian Arcanine V
+base,091,Base,false,,Phanpy
+base,092,Base,false,,Donphan
+base,093,Base,false,,Baltoy
+base,094,Base,false,,Claydol
+base,095,Base,false,,Anorith
+base,096,Base,false,,Armaldo
+base,097,Base,false,,Terrakion
+base,098,Base,false,,Hawlucha
+base,099,Base,false,,Sandygast
+base,100,Base,false,,Palossand
+base,101,Base,false,,Stonjourner
+base,102,Base,false,,Ursaluna V
+base,103,Base,false,,Zubat
+base,104,Base,false,,Golbat
+base,105,Base,false,,Crobat
+base,106,Base,false,,Murkrow
+base,107,Base,false,,Honchkrow
+base,108,Base,false,,Skuntank V
+base,109,Base,false,,Croagunk
+base,110,Base,false,,Toxicroak
+base,111,Base,false,,Sandile
+base,112,Base,false,,Krokorok
+base,113,Base,false,,Krookodile
+base,114,Base,false,,Mareanie
+base,115,Base,false,,Toxapex
+base,116,Base,false,,Morpeko
+base,117,Base,false,,Beldum
+base,118,Base,false,,Metang
+base,119,Base,false,,Metagross
+base,120,Base,false,,Radiant Jirachi
+base,121,Base,false,,Ferroseed
+base,122,Base,false,,Ferrothorn
+base,123,Base,false,,Klink
+base,124,Base,false,,Klang
+base,125,Base,false,,Klinklang
+base,126,Base,false,,Cobalion
+base,127,Base,false,,Togedemaru
+base,128,Base,false,,Magearna V
+base,129,Base,false,,Dratini
+base,130,Base,false,,Dragonair
+base,131,Base,false,,Dragonite
+base,132,Base,false,,Noibat
+base,133,Base,false,,Noivern
+base,134,Base,false,,Zygarde
+base,135,Base,false,,Regidrago V
+base,136,Base,false,,Regidrago VSTAR
+base,137,Base,false,,Smeargle
+base,138,Base,false,,Lugia V
+base,139,Base,false,,Lugia VSTAR
+base,140,Base,false,,Ho-Oh V
+base,141,Base,false,,Spinda
+base,142,Base,false,,Swablu
+base,143,Base,false,,Altaria
+base,144,Base,false,,Buneary
+base,145,Base,false,,Lopunny
+base,146,Base,false,,Archen
+base,147,Base,false,,Archeops
+base,148,Base,false,,Rufflet
+base,149,Base,false,,Hisuian Braviary
+base,150,Base,false,,Fletchling
+base,151,Base,false,,Brandon
+base,152,Base,false,,Candice
+base,153,Base,false,,Capturing Aroma
+base,154,Base,false,,Earthen Seal Stone
+base,155,Base,false,,Emergency Jelly
+base,156,Base,false,,Forest Seal Stone
+base,157,Base,false,,Furisode Girl
+base,158,Base,false,,Gym Trainer
+base,159,Base,false,,Lance
+base,160,Base,false,,Leafy Camo Poncho
+base,161,Base,false,,Primordial Altar
+base,162,Base,false,,Professor Laventon
+base,163,Base,false,,Quad Stone
+base,164,Base,false,,Serena
+base,165,Base,false,,Unidentified Fossil
+base,166,Base,false,,Wallace
+base,167,Base,false,,Worker
+base,168,Base,false,,Regenerative Energy
+base,169,Base,false,,V Guard Energy
+base,170,Base,false,,Serperior V
+base,171,Base,false,,Chesnaught V
+base,172,Base,false,,Reshiram V
+base,173,Base,false,,Alolan Vulpix V
+base,174,Base,false,,Omastar V
+base,175,Base,false,,Regieleki V
+base,176,Base,false,,Unown V
+base,177,Base,false,,Unown V
+base,178,Base,false,,Mawile V
+base,179,Base,false,,Hisuian Arcanine V
+base,180,Base,false,,Skuntank V
+base,181,Base,false,,Skuntank V
+base,182,Base,false,,Magearna V
+base,183,Base,false,,Regidrago V
+base,184,Base,false,,Regidrago V
+base,185,Base,false,,Lugia V
+base,186,Base,false,,Lugia V
+base,187,Base,false,,Ho-Oh V
+base,188,Base,false,,Brandon
+base,189,Base,false,,Candice
+base,190,Base,false,,Furisode Girl
+base,191,Base,false,,Gym Trainer
+base,192,Base,false,,Lance
+base,193,Base,false,,Serena
+base,194,Base,false,,Wallace
+base,195,Base,false,,Worker
+base,196,Base,false,,Serperior VSTAR
+base,197,Base,false,,Alolan Vulpix VSTAR
+base,198,Base,false,,Regieleki VMAX
+base,199,Base,false,,Unown VSTAR
+base,200,Base,false,,Mawile VSTAR
+base,201,Base,false,,Regidrago VSTAR
+base,202,Base,false,,Lugia VSTAR
+base,203,Base,false,,Brandon
+base,204,Base,false,,Candice
+base,205,Base,false,,Furisode Girl
+base,206,Base,false,,Lance
+base,207,Base,false,,Serena
+base,208,Base,false,,Wallace
+base,209,Base,false,,Worker
+base,210,Base,false,,Serperior VSTAR
+base,211,Base,false,,Lugia VSTAR
+base,212,Base,false,,Energy Switch
+base,213,Base,false,,Gapejaw Bog
+base,214,Base,false,,Leafy Camo Poncho
+base,215,Base,false,,V Guard Energy

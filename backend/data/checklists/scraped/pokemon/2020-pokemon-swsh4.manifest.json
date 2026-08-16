@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.183Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh4",
+ "sport": "pokemon",
+ "year": 2020,
+ "setName": "Vivid Voltage",
+ "productKey": "2020-swsh4",
+ "setKey": "swsh4",
+ "rowCount": 203,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Vivid Voltage",
+   "category": "base",
+   "playerCount": 203,
+   "printRun": null
+  }
+ ]
+}

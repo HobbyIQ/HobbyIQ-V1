@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv08.5",
+ "setId": "sv08.5",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 127,
+  "normal": 81,
+  "official": 131,
+  "reverse": 268,
+  "total": 180
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

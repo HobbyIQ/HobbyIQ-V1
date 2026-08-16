@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.788Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgssp",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "HGSS Black Star Promos",
+ "productKey": "2010-hgssp",
+ "setKey": "hgssp",
+ "rowCount": 25,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > HGSS Black Star Promos",
+   "category": "base",
+   "playerCount": 25,
+   "printRun": null
+  }
+ ]
+}

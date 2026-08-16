@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.268Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp4",
+ "sport": "pokemon",
+ "year": 2008,
+ "setName": "Great Encounters",
+ "productKey": "2008-dp4",
+ "setKey": "dp4",
+ "rowCount": 106,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Great Encounters",
+   "category": "base",
+   "playerCount": 106,
+   "printRun": null
+  }
+ ]
+}

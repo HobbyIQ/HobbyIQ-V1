@@ -1,0 +1,184 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Bellsprout
+base,2,Base,false,,Weepinbell
+base,3,Base,false,,Victreebel
+base,4,Base,false,,Cacnea
+base,5,Base,false,,Cacturne
+base,6,Base,false,,Kricketune V
+base,7,Base,false,,Cherubi
+base,8,Base,false,,Cherrim
+base,9,Base,false,,Carnivine
+base,10,Base,false,,Durant
+base,11,Base,false,,Scatterbug
+base,12,Base,false,,Spewpa
+base,13,Base,false,,Vivillon
+base,14,Base,false,,Fomantis
+base,15,Base,false,,Lurantis
+base,16,Base,false,,Tapu Bulu
+base,17,Base,false,,Blipbug
+base,18,Base,false,,Flapple V
+base,19,Base,false,,Flapple VMAX
+base,20,Base,false,,Entei
+base,21,Base,false,,Victini V
+base,22,Base,false,,Victini VMAX
+base,23,Base,false,,Tepig
+base,24,Base,false,,Pignite
+base,25,Base,false,,Emboar
+base,26,Base,false,,Heatmor
+base,27,Base,false,,Salandit
+base,28,Base,false,,Salazzle
+base,29,Base,false,,Sizzlipede
+base,30,Base,false,,Centiskorch
+base,31,Base,false,,Horsea
+base,32,Base,false,,Seadra
+base,33,Base,false,,Kingdra
+base,34,Base,false,,Galarian Mr. Mime
+base,35,Base,false,,Galarian Mr. Rime
+base,36,Base,false,,Remoraid
+base,37,Base,false,,Octillery
+base,38,Base,false,,Corphish
+base,39,Base,false,,Crawdaunt
+base,40,Base,false,,Empoleon V
+base,41,Base,false,,Frillish
+base,42,Base,false,,Jellicent
+base,43,Base,false,,Bruxish
+base,44,Base,false,,Electabuzz
+base,45,Base,false,,Electivire
+base,46,Base,false,,Shinx
+base,47,Base,false,,Luxio
+base,48,Base,false,,Luxray
+base,49,Base,false,,Pachirisu
+base,50,Base,false,,Tapu Koko V
+base,51,Base,false,,Tapu Koko VMAX
+base,52,Base,false,,Yamper
+base,53,Base,false,,Boltund
+base,54,Base,false,,Galarian Slowpoke
+base,55,Base,false,,Spoink
+base,56,Base,false,,Grumpig
+base,57,Base,false,,Baltoy
+base,58,Base,false,,Claydol
+base,59,Base,false,,Chimecho
+base,60,Base,false,,Espurr
+base,61,Base,false,,Meowstic
+base,62,Base,false,,Mimikyu V
+base,63,Base,false,,Necrozma V
+base,64,Base,false,,Dottler
+base,65,Base,false,,Orbeetle
+base,66,Base,false,,Mankey
+base,67,Base,false,,Primeape
+base,68,Base,false,,Onix
+base,69,Base,false,,Cubone
+base,70,Base,false,,Marowak
+base,71,Base,false,,Gligar
+base,72,Base,false,,Gliscor
+base,73,Base,false,,Timburr
+base,74,Base,false,,Gurdurr
+base,75,Base,false,,Conkeldurr
+base,76,Base,false,,Mienfoo
+base,77,Base,false,,Mienshao
+base,78,Base,false,,Rolycoly
+base,79,Base,false,,Carkol
+base,80,Base,false,,Coalossal
+base,81,Base,false,,Silicobra
+base,82,Base,false,,Sandaconda
+base,83,Base,false,,Falinks
+base,84,Base,false,,Stonjourner
+base,85,Base,false,,Single Strike Urshifu V
+base,86,Base,false,,Single Strike Urshifu VMAX
+base,87,Base,false,,Rapid Strike Urshifu V
+base,88,Base,false,,Rapid Strike Urshifu VMAX
+base,89,Base,false,,Zubat
+base,90,Base,false,,Golbat
+base,91,Base,false,,Crobat
+base,92,Base,false,,Galarian Slowbro
+base,93,Base,false,,Murkrow
+base,94,Base,false,,Honchkrow
+base,95,Base,false,,Houndour
+base,96,Base,false,,Houndoom
+base,97,Base,false,,Tyranitar V
+base,98,Base,false,,Morpeko
+base,99,Base,false,,Steelix
+base,100,Base,false,,Mawile
+base,101,Base,false,,Bronzor
+base,102,Base,false,,Bronzong
+base,103,Base,false,,Pawniard
+base,104,Base,false,,Bisharp
+base,105,Base,false,,Honedge
+base,106,Base,false,,Doublade
+base,107,Base,false,,Aegislash
+base,108,Base,false,,Aegislash
+base,109,Base,false,,Corviknight V
+base,110,Base,false,,Corviknight VMAX
+base,111,Base,false,,Spearow
+base,112,Base,false,,Fearow
+base,113,Base,false,,Lickitung
+base,114,Base,false,,Lickilicky
+base,115,Base,false,,Glameow
+base,116,Base,false,,Purugly
+base,117,Base,false,,Stoutland V
+base,118,Base,false,,Bouffalant
+base,119,Base,false,,Drampa
+base,120,Base,false,,Indeedee
+base,121,Base,false,,Bruno
+base,122,Base,false,,Camping Gear
+base,123,Base,false,,Cheryl
+base,124,Base,false,,Energy Recycler
+base,125,Base,false,,Escape Rope
+base,126,Base,false,,Exp. Share
+base,127,Base,false,,Fan of Waves
+base,128,Base,false,,Korrina's Focus
+base,129,Base,false,,Level Ball
+base,130,Base,false,,Phoebe
+base,131,Base,false,,Rapid Strike Scroll of Swirls
+base,132,Base,false,,Rapid Strike Style Mustard
+base,133,Base,false,,Single Strike Scroll of Scorn
+base,134,Base,false,,Single Strike Style Mustard
+base,135,Base,false,,Sordward & Shielbert
+base,136,Base,false,,Tool Jammer
+base,137,Base,false,,Tower of Darkness
+base,138,Base,false,,Tower of Waters
+base,139,Base,false,,Urn of Vitality
+base,140,Base,false,,Rapid Strike Energy
+base,141,Base,false,,Single Strike Energy
+base,142,Base,false,,Kricketune V
+base,143,Base,false,,Flapple V
+base,144,Base,false,,Victini V
+base,145,Base,false,,Empoleon V
+base,146,Base,false,,Empoleon V
+base,147,Base,false,,Tapu Koko V
+base,148,Base,false,,Mimikyu V
+base,149,Base,false,,Necrozma V
+base,150,Base,false,,Single Strike Urshifu V
+base,151,Base,false,,Single Strike Urshifu V
+base,152,Base,false,,Rapid Strike Urshifu V
+base,153,Base,false,,Rapid Strike Urshifu V
+base,154,Base,false,,Tyranitar V
+base,155,Base,false,,Tyranitar V
+base,156,Base,false,,Corviknight V
+base,157,Base,false,,Stoutland V
+base,158,Base,false,,Bruno
+base,159,Base,false,,Cheryl
+base,160,Base,false,,Korrina's Focus
+base,161,Base,false,,Phoebe
+base,162,Base,false,,Rapid Strike Style Mustard
+base,163,Base,false,,Single Strike Style Mustard
+base,164,Base,false,,Flapple VMAX
+base,165,Base,false,,Victini VMAX
+base,166,Base,false,,Tapu Koko VMAX
+base,167,Base,false,,Single Strike Urshifu VMAX
+base,168,Base,false,,Single Strike Urshifu VMAX
+base,169,Base,false,,Rapid Strike Urshifu VMAX
+base,170,Base,false,,Rapid Strike Urshifu VMAX
+base,171,Base,false,,Corviknight VMAX
+base,172,Base,false,,Bruno
+base,173,Base,false,,Cheryl
+base,174,Base,false,,Korrina's Focus
+base,175,Base,false,,Phoebe
+base,176,Base,false,,Rapid Strike Style Mustard
+base,177,Base,false,,Single Strike Style Mustard
+base,178,Base,false,,Octillery
+base,179,Base,false,,Houndoom
+base,180,Base,false,,Exp. Share
+base,181,Base,false,,Level Ball
+base,182,Base,false,,Rapid Strike Energy
+base,183,Base,false,,Single Strike Energy

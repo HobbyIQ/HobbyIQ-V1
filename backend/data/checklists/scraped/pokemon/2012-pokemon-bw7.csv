@@ -1,0 +1,154 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Oddish
+base,2,Base,false,,Gloom
+base,3,Base,false,,Vileplume
+base,4,Base,false,,Bellossom
+base,5,Base,false,,Tangela
+base,6,Base,false,,Tangrowth
+base,7,Base,false,,Scyther
+base,8,Base,false,,Heracross
+base,9,Base,false,,Celebi-EX
+base,10,Base,false,,Shaymin
+base,11,Base,false,,Snivy
+base,12,Base,false,,Servine
+base,13,Base,false,,Serperior
+base,14,Base,false,,Cottonee
+base,15,Base,false,,Whimsicott
+base,16,Base,false,,Petilil
+base,17,Base,false,,Lilligant
+base,18,Base,false,,Charmander
+base,19,Base,false,,Charmeleon
+base,20,Base,false,,Charizard
+base,21,Base,false,,Numel
+base,22,Base,false,,Camerupt
+base,23,Base,false,,Victini
+base,24,Base,false,,Tepig
+base,25,Base,false,,Pignite
+base,26,Base,false,,Emboar
+base,27,Base,false,,Darumaka
+base,28,Base,false,,Darmanitan
+base,29,Base,false,,Squirtle
+base,30,Base,false,,Wartortle
+base,31,Base,false,,Blastoise
+base,32,Base,false,,Psyduck
+base,33,Base,false,,Psyduck
+base,34,Base,false,,Golduck
+base,35,Base,false,,Golduck
+base,36,Base,false,,Marill
+base,37,Base,false,,Azumarill
+base,38,Base,false,,Delibird
+base,39,Base,false,,Oshawott
+base,40,Base,false,,Dewott
+base,41,Base,false,,Samurott
+base,42,Base,false,,Ducklett
+base,43,Base,false,,Swanna
+base,44,Base,false,,Frillish
+base,45,Base,false,,Jellicent
+base,46,Base,false,,Cryogonal
+base,47,Base,false,,Keldeo
+base,48,Base,false,,Keldeo
+base,49,Base,false,,Keldeo-EX
+base,50,Base,false,,Pikachu
+base,51,Base,false,,Voltorb
+base,52,Base,false,,Electrode
+base,53,Base,false,,Electabuzz
+base,54,Base,false,,Electivire
+base,55,Base,false,,Chinchou
+base,56,Base,false,,Blitzle
+base,57,Base,false,,Zebstrika
+base,58,Base,false,,Wobbuffet
+base,59,Base,false,,Spoink
+base,60,Base,false,,Grumpig
+base,61,Base,false,,Duskull
+base,62,Base,false,,Dusclops
+base,63,Base,false,,Dusknoir
+base,64,Base,false,,Croagunk
+base,65,Base,false,,Croagunk
+base,66,Base,false,,Toxicroak
+base,67,Base,false,,Cresselia-EX
+base,68,Base,false,,Munna
+base,69,Base,false,,Musharna
+base,70,Base,false,,Woobat
+base,71,Base,false,,Swoobat
+base,72,Base,false,,Venipede
+base,73,Base,false,,Whirlipede
+base,74,Base,false,,Scolipede
+base,75,Base,false,,Gothita
+base,76,Base,false,,Gothorita
+base,77,Base,false,,Meloetta
+base,78,Base,false,,Sandshrew
+base,79,Base,false,,Sandslash
+base,80,Base,false,,Gligar
+base,81,Base,false,,Gliscor
+base,82,Base,false,,Makuhita
+base,83,Base,false,,Trapinch
+base,84,Base,false,,Dwebble
+base,85,Base,false,,Crustle
+base,86,Base,false,,Mienfoo
+base,87,Base,false,,Mienfoo
+base,88,Base,false,,Mienshao
+base,89,Base,false,,Landorus-EX
+base,90,Base,false,,Purrloin
+base,91,Base,false,,Liepard
+base,92,Base,false,,Vullaby
+base,93,Base,false,,Mandibuzz
+base,94,Base,false,,Scizor
+base,95,Base,false,,Skarmory
+base,96,Base,false,,Skarmory
+base,97,Base,false,,Klink
+base,98,Base,false,,Vibrava
+base,99,Base,false,,Flygon
+base,100,Base,false,,Black Kyurem
+base,101,Base,false,,Black Kyurem-EX
+base,102,Base,false,,White Kyurem
+base,103,Base,false,,White Kyurem-EX
+base,104,Base,false,,Rattata
+base,105,Base,false,,Raticate
+base,106,Base,false,,Meowth
+base,107,Base,false,,Farfetch’d
+base,108,Base,false,,Ditto
+base,109,Base,false,,Snorlax
+base,110,Base,false,,Togepi
+base,111,Base,false,,Dunsparce
+base,112,Base,false,,Taillow
+base,113,Base,false,,Skitty
+base,114,Base,false,,Delcatty
+base,115,Base,false,,Spinda
+base,116,Base,false,,Buneary
+base,117,Base,false,,Lopunny
+base,118,Base,false,,Patrat
+base,119,Base,false,,Watchog
+base,120,Base,false,,Lillipup
+base,121,Base,false,,Herdier
+base,122,Base,false,,Stoutland
+base,123,Base,false,,Pidove
+base,124,Base,false,,Tranquill
+base,125,Base,false,,Unfezant
+base,126,Base,false,,Audino
+base,127,Base,false,,Aspertia City Gym
+base,128,Base,false,,Energy Search
+base,129,Base,false,,Great Ball
+base,130,Base,false,,Hugh
+base,131,Base,false,,Poké Ball
+base,132,Base,false,,Potion
+base,133,Base,false,,Rocky Helmet
+base,134,Base,false,,Skyla
+base,135,Base,false,,Switch
+base,136,Base,false,,Town Map
+base,137,Base,false,,Computer Search
+base,138,Base,false,,Crystal Edge
+base,139,Base,false,,Crystal Wall
+base,140,Base,false,,Gold Potion
+base,141,Base,false,,Celebi-EX
+base,142,Base,false,,Keldeo-EX
+base,143,Base,false,,Cresselia-EX
+base,144,Base,false,,Landorus-EX
+base,145,Base,false,,Black Kyurem-EX
+base,146,Base,false,,White Kyurem-EX
+base,147,Base,false,,Bianca
+base,148,Base,false,,Cheren
+base,149,Base,false,,Skyla
+base,150,Base,false,,Golurk
+base,151,Base,false,,Terrakion
+base,152,Base,false,,Altaria
+base,153,Base,false,,Rocky Helmet

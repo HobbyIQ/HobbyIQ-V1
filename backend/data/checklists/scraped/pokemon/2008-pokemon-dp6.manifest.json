@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.384Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp6",
+ "sport": "pokemon",
+ "year": 2008,
+ "setName": "Legends Awakened",
+ "productKey": "2008-dp6",
+ "setKey": "dp6",
+ "rowCount": 146,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Legends Awakened",
+   "category": "base",
+   "playerCount": 146,
+   "printRun": null
+  }
+ ]
+}

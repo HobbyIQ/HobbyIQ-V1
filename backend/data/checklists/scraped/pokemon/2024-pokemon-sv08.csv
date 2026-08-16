@@ -1,0 +1,253 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Exeggcute
+base,002,Base,false,,Exeggcute
+base,003,Base,false,,Exeggutor
+base,004,Base,false,,Durant ex
+base,005,Base,false,,Scatterbug
+base,006,Base,false,,Spewpa
+base,007,Base,false,,Vivillon
+base,008,Base,false,,Morelull
+base,009,Base,false,,Shiinotic
+base,010,Base,false,,Dhelmise
+base,011,Base,false,,Zarude
+base,012,Base,false,,Capsakid
+base,013,Base,false,,Rellor
+base,014,Base,false,,Rabsca
+base,015,Base,false,,Wo-Chien
+base,016,Base,false,,Vulpix
+base,017,Base,false,,Ninetales
+base,018,Base,false,,Paldean Tauros
+base,019,Base,false,,Ho-Oh
+base,020,Base,false,,Castform Sunny Form
+base,021,Base,false,,Victini
+base,022,Base,false,,Pansear
+base,023,Base,false,,Simisear
+base,024,Base,false,,Larvesta
+base,025,Base,false,,Volcarona
+base,026,Base,false,,Oricorio
+base,027,Base,false,,Sizzlipede
+base,028,Base,false,,Centiskorch
+base,029,Base,false,,Fuecoco
+base,030,Base,false,,Crocalor
+base,031,Base,false,,Skeledirge
+base,032,Base,false,,Charcadet
+base,033,Base,false,,Charcadet
+base,034,Base,false,,Armarouge
+base,035,Base,false,,Ceruledge
+base,036,Base,false,,Ceruledge ex
+base,037,Base,false,,Scovillain ex
+base,038,Base,false,,Gouging Fire
+base,039,Base,false,,Paldean Tauros
+base,040,Base,false,,Mantine
+base,041,Base,false,,Feebas
+base,042,Base,false,,Milotic ex
+base,043,Base,false,,Spheal
+base,044,Base,false,,Sealeo
+base,045,Base,false,,Walrein
+base,046,Base,false,,Shellos
+base,047,Base,false,,Cryogonal
+base,048,Base,false,,Black Kyurem ex
+base,049,Base,false,,Bruxish
+base,050,Base,false,,Quaxly
+base,051,Base,false,,Quaxwell
+base,052,Base,false,,Quaquaval
+base,053,Base,false,,Cetoddle
+base,054,Base,false,,Cetitan
+base,055,Base,false,,Iron Bundle
+base,056,Base,false,,Chien-Pao
+base,057,Base,false,,Pikachu ex
+base,058,Base,false,,Magnemite
+base,059,Base,false,,Magneton
+base,060,Base,false,,Magnezone
+base,061,Base,false,,Rotom
+base,062,Base,false,,Blitzle
+base,063,Base,false,,Zebstrika
+base,064,Base,false,,Stunfisk
+base,065,Base,false,,Tapu Koko
+base,066,Base,false,,Wattrel
+base,067,Base,false,,Kilowattrel
+base,068,Base,false,,Kilowattrel ex
+base,069,Base,false,,Miraidon
+base,070,Base,false,,Togepi
+base,071,Base,false,,Togetic
+base,072,Base,false,,Togekiss
+base,073,Base,false,,Marill
+base,074,Base,false,,Azumarill
+base,075,Base,false,,Smoochum
+base,076,Base,false,,Latias ex
+base,077,Base,false,,Latios
+base,078,Base,false,,Uxie
+base,079,Base,false,,Mesprit
+base,080,Base,false,,Azelf
+base,081,Base,false,,Sigilyph
+base,082,Base,false,,Yamask
+base,083,Base,false,,Cofagrigus
+base,084,Base,false,,Espurr
+base,085,Base,false,,Meowstic
+base,086,Base,false,,Sylveon ex
+base,087,Base,false,,Dedenne
+base,088,Base,false,,Xerneas
+base,089,Base,false,,Oricorio
+base,090,Base,false,,Sandygast
+base,091,Base,false,,Palossand ex
+base,092,Base,false,,Tapu Lele
+base,093,Base,false,,Indeedee
+base,094,Base,false,,Flittle
+base,095,Base,false,,Espathra
+base,096,Base,false,,Flutter Mane
+base,097,Base,false,,Gimmighoul
+base,098,Base,false,,Mankey
+base,099,Base,false,,Primeape
+base,100,Base,false,,Annihilape
+base,101,Base,false,,Paldean Tauros
+base,102,Base,false,,Phanpy
+base,103,Base,false,,Donphan
+base,104,Base,false,,Trapinch
+base,105,Base,false,,Vibrava
+base,106,Base,false,,Flygon ex
+base,107,Base,false,,Gastrodon
+base,108,Base,false,,Drilbur
+base,109,Base,false,,Excadrill
+base,110,Base,false,,Landorus
+base,111,Base,false,,Passimian
+base,112,Base,false,,Clobbopus
+base,113,Base,false,,Grapploct
+base,114,Base,false,,Glimmet
+base,115,Base,false,,Glimmora
+base,116,Base,false,,Koraidon
+base,117,Base,false,,Deino
+base,118,Base,false,,Zweilous
+base,119,Base,false,,Hydreigon ex
+base,120,Base,false,,Shroodle
+base,121,Base,false,,Grafaiai
+base,122,Base,false,,Alolan Diglett
+base,123,Base,false,,Alolan Dugtrio
+base,124,Base,false,,Skarmory
+base,125,Base,false,,Registeel
+base,126,Base,false,,Bronzor
+base,127,Base,false,,Bronzong
+base,128,Base,false,,Klefki
+base,129,Base,false,,Duraludon
+base,130,Base,false,,Archaludon ex
+base,131,Base,false,,Gholdengo
+base,132,Base,false,,Iron Crown
+base,133,Base,false,,Alolan Exeggutor ex
+base,134,Base,false,,Altaria
+base,135,Base,false,,Dialga
+base,136,Base,false,,Palkia
+base,137,Base,false,,Turtonator
+base,138,Base,false,,Applin
+base,139,Base,false,,Flapple
+base,140,Base,false,,Appletun
+base,141,Base,false,,Eternatus
+base,142,Base,false,,Tatsugiri ex
+base,143,Base,false,,Eevee
+base,144,Base,false,,Snorlax
+base,145,Base,false,,Slakoth
+base,146,Base,false,,Vigoroth
+base,147,Base,false,,Slaking ex
+base,148,Base,false,,Swablu
+base,149,Base,false,,Zangoose
+base,150,Base,false,,Kecleon
+base,151,Base,false,,Bouffalant
+base,152,Base,false,,Rufflet
+base,153,Base,false,,Braviary
+base,154,Base,false,,Helioptile
+base,155,Base,false,,Heliolisk
+base,156,Base,false,,Oranguru
+base,157,Base,false,,Tandemaus
+base,158,Base,false,,Maushold
+base,159,Base,false,,Cyclizar ex
+base,160,Base,false,,Flamigo ex
+base,161,Base,false,,Terapagos
+base,162,Base,false,,Amulet of Hope
+base,163,Base,false,,Babiri Berry
+base,164,Base,false,,Brilliant Blender
+base,165,Base,false,,Call Bell
+base,166,Base,false,,Chill Teaser Toy
+base,167,Base,false,,Clemont's Quick Wit
+base,168,Base,false,,Colbur Berry
+base,169,Base,false,,Counter Gain
+base,170,Base,false,,Cyrano
+base,171,Base,false,,Deduction Kit
+base,172,Base,false,,Dragon Elixir
+base,173,Base,false,,Drasna
+base,174,Base,false,,Drayton
+base,175,Base,false,,Dusk Ball
+base,176,Base,false,,Energy Search Pro
+base,177,Base,false,,Gravity Mountain
+base,178,Base,false,,Jasmine's Gaze
+base,179,Base,false,,Lisia's Appeal
+base,180,Base,false,,Lively Stadium
+base,181,Base,false,,Meddling Memo
+base,182,Base,false,,Megaton Blower
+base,183,Base,false,,Miracle Headset
+base,184,Base,false,,Passho Berry
+base,185,Base,false,,Precious Trolley
+base,186,Base,false,,Scramble Switch
+base,187,Base,false,,Surfer
+base,188,Base,false,,Technical Machine: Fluorite
+base,189,Base,false,,Tera Orb
+base,190,Base,false,,Tyme
+base,191,Base,false,,Enriching Energy
+base,192,Base,false,,Exeggcute
+base,193,Base,false,,Vivillon
+base,194,Base,false,,Shiinotic
+base,195,Base,false,,Castform Sunny Form
+base,196,Base,false,,Larvesta
+base,197,Base,false,,Ceruledge
+base,198,Base,false,,Feebas
+base,199,Base,false,,Spheal
+base,200,Base,false,,Bruxish
+base,201,Base,false,,Cetitan
+base,202,Base,false,,Stunfisk
+base,203,Base,false,,Latios
+base,204,Base,false,,Mesprit
+base,205,Base,false,,Phanpy
+base,206,Base,false,,Vibrava
+base,207,Base,false,,Clobbopus
+base,208,Base,false,,Alolan Dugtrio
+base,209,Base,false,,Skarmory
+base,210,Base,false,,Flapple
+base,211,Base,false,,Appletun
+base,212,Base,false,,Slakoth
+base,213,Base,false,,Kecleon
+base,214,Base,false,,Braviary
+base,215,Base,false,,Durant ex
+base,216,Base,false,,Scovillain ex
+base,217,Base,false,,Milotic ex
+base,218,Base,false,,Black Kyurem ex
+base,219,Base,false,,Pikachu ex
+base,220,Base,false,,Latias ex
+base,221,Base,false,,Palossand ex
+base,222,Base,false,,Flygon ex
+base,223,Base,false,,Hydreigon ex
+base,224,Base,false,,Archaludon ex
+base,225,Base,false,,Alolan Exeggutor ex
+base,226,Base,false,,Tatsugiri ex
+base,227,Base,false,,Slaking ex
+base,228,Base,false,,Cyclizar ex
+base,229,Base,false,,Clemont's Quick Wit
+base,230,Base,false,,Cyrano
+base,231,Base,false,,Drasna
+base,232,Base,false,,Drayton
+base,233,Base,false,,Jasmine's Gaze
+base,234,Base,false,,Lisia's Appeal
+base,235,Base,false,,Surfer
+base,236,Base,false,,Durant ex
+base,237,Base,false,,Milotic ex
+base,238,Base,false,,Pikachu ex
+base,239,Base,false,,Latias ex
+base,240,Base,false,,Hydreigon ex
+base,241,Base,false,,Archaludon ex
+base,242,Base,false,,Alolan Exeggutor ex
+base,243,Base,false,,Clemont's Quick Wit
+base,244,Base,false,,Drayton
+base,245,Base,false,,Jasmine's Gaze
+base,246,Base,false,,Lisia's Appeal
+base,247,Base,false,,Pikachu ex
+base,248,Base,false,,Alolan Exeggutor ex
+base,249,Base,false,,Counter Gain
+base,250,Base,false,,Gravity Mountain
+base,251,Base,false,,Night Stretcher
+base,252,Base,false,,Jet Energy

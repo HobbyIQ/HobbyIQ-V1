@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.867Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv08",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Surging Sparks",
+ "productKey": "2024-sv08",
+ "setKey": "sv08",
+ "rowCount": 252,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Surging Sparks",
+   "category": "base",
+   "playerCount": 252,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.062Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2014xy",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "McDonald's Collection 2014",
+ "productKey": "2014-2014xy",
+ "setKey": "2014xy",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2014",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

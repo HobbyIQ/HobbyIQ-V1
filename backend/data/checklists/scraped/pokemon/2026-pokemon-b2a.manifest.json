@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.914Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/B2a",
+ "sport": "pokemon",
+ "year": 2026,
+ "setName": "Paldean Wonders",
+ "productKey": "2026-b2a",
+ "setKey": "b2a",
+ "rowCount": 131,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Paldean Wonders",
+   "category": "base",
+   "playerCount": 131,
+   "printRun": null
+  }
+ ]
+}

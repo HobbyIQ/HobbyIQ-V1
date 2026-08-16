@@ -1,0 +1,208 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Bulbasaur
+base,002,Base,false,,Ivysaur
+base,003,Base,false,,Venusaur ex
+base,004,Base,false,,Charmander
+base,005,Base,false,,Charmeleon
+base,006,Base,false,,Charizard ex
+base,007,Base,false,,Squirtle
+base,008,Base,false,,Wartortle
+base,009,Base,false,,Blastoise ex
+base,010,Base,false,,Caterpie
+base,011,Base,false,,Metapod
+base,012,Base,false,,Butterfree
+base,013,Base,false,,Weedle
+base,014,Base,false,,Kakuna
+base,015,Base,false,,Beedrill
+base,016,Base,false,,Pidgey
+base,017,Base,false,,Pidgeotto
+base,018,Base,false,,Pidgeot
+base,019,Base,false,,Rattata
+base,020,Base,false,,Raticate
+base,021,Base,false,,Spearow
+base,022,Base,false,,Fearow
+base,023,Base,false,,Ekans
+base,024,Base,false,,Arbok ex
+base,025,Base,false,,Pikachu
+base,026,Base,false,,Raichu
+base,027,Base,false,,Sandshrew
+base,028,Base,false,,Sandslash
+base,029,Base,false,,Nidoran♀
+base,030,Base,false,,Nidorina
+base,031,Base,false,,Nidoqueen
+base,032,Base,false,,Nidoran♂
+base,033,Base,false,,Nidorino
+base,034,Base,false,,Nidoking
+base,035,Base,false,,Clefairy
+base,036,Base,false,,Clefable
+base,037,Base,false,,Vulpix
+base,038,Base,false,,Ninetales ex
+base,039,Base,false,,Jigglypuff
+base,040,Base,false,,Wigglytuff ex
+base,041,Base,false,,Zubat
+base,042,Base,false,,Golbat
+base,043,Base,false,,Oddish
+base,044,Base,false,,Gloom
+base,045,Base,false,,Vileplume
+base,046,Base,false,,Paras
+base,047,Base,false,,Parasect
+base,048,Base,false,,Venonat
+base,049,Base,false,,Venomoth
+base,050,Base,false,,Diglett
+base,051,Base,false,,Dugtrio
+base,052,Base,false,,Meowth
+base,053,Base,false,,Persian
+base,054,Base,false,,Psyduck
+base,055,Base,false,,Golduck
+base,056,Base,false,,Mankey
+base,057,Base,false,,Primeape
+base,058,Base,false,,Growlithe
+base,059,Base,false,,Arcanine
+base,060,Base,false,,Poliwag
+base,061,Base,false,,Poliwhirl
+base,062,Base,false,,Poliwrath
+base,063,Base,false,,Abra
+base,064,Base,false,,Kadabra
+base,065,Base,false,,Alakazam ex
+base,066,Base,false,,Machop
+base,067,Base,false,,Machoke
+base,068,Base,false,,Machamp
+base,069,Base,false,,Bellsprout
+base,070,Base,false,,Weepinbell
+base,071,Base,false,,Victreebel
+base,072,Base,false,,Tentacool
+base,073,Base,false,,Tentacruel
+base,074,Base,false,,Geodude
+base,075,Base,false,,Graveler
+base,076,Base,false,,Golem ex
+base,077,Base,false,,Ponyta
+base,078,Base,false,,Rapidash
+base,079,Base,false,,Slowpoke
+base,080,Base,false,,Slowbro
+base,081,Base,false,,Magnemite
+base,082,Base,false,,Magneton
+base,083,Base,false,,Farfetch'd
+base,084,Base,false,,Doduo
+base,085,Base,false,,Dodrio
+base,086,Base,false,,Seel
+base,087,Base,false,,Dewgong
+base,088,Base,false,,Grimer
+base,089,Base,false,,Muk
+base,090,Base,false,,Shellder
+base,091,Base,false,,Cloyster
+base,092,Base,false,,Gastly
+base,093,Base,false,,Haunter
+base,094,Base,false,,Gengar
+base,095,Base,false,,Onix
+base,096,Base,false,,Drowzee
+base,097,Base,false,,Hypno
+base,098,Base,false,,Krabby
+base,099,Base,false,,Kingler
+base,100,Base,false,,Voltorb
+base,101,Base,false,,Electrode
+base,102,Base,false,,Exeggcute
+base,103,Base,false,,Exeggutor
+base,104,Base,false,,Cubone
+base,105,Base,false,,Marowak
+base,106,Base,false,,Hitmonlee
+base,107,Base,false,,Hitmonchan
+base,108,Base,false,,Lickitung
+base,109,Base,false,,Koffing
+base,110,Base,false,,Weezing
+base,111,Base,false,,Rhyhorn
+base,112,Base,false,,Rhydon
+base,113,Base,false,,Chansey
+base,114,Base,false,,Tangela
+base,115,Base,false,,Kangaskhan ex
+base,116,Base,false,,Horsea
+base,117,Base,false,,Seadra
+base,118,Base,false,,Goldeen
+base,119,Base,false,,Seaking
+base,120,Base,false,,Staryu
+base,121,Base,false,,Starmie
+base,122,Base,false,,Mr. Mime
+base,123,Base,false,,Scyther
+base,124,Base,false,,Jynx ex
+base,125,Base,false,,Electabuzz
+base,126,Base,false,,Magmar
+base,127,Base,false,,Pinsir
+base,128,Base,false,,Tauros
+base,129,Base,false,,Magikarp
+base,130,Base,false,,Gyarados
+base,131,Base,false,,Lapras
+base,132,Base,false,,Ditto
+base,133,Base,false,,Eevee
+base,134,Base,false,,Vaporeon
+base,135,Base,false,,Jolteon
+base,136,Base,false,,Flareon
+base,137,Base,false,,Porygon
+base,138,Base,false,,Omanyte
+base,139,Base,false,,Omastar
+base,140,Base,false,,Kabuto
+base,141,Base,false,,Kabutops
+base,142,Base,false,,Aerodactyl
+base,143,Base,false,,Snorlax
+base,144,Base,false,,Articuno
+base,145,Base,false,,Zapdos ex
+base,146,Base,false,,Moltres
+base,147,Base,false,,Dratini
+base,148,Base,false,,Dragonair
+base,149,Base,false,,Dragonite
+base,150,Base,false,,Mewtwo
+base,151,Base,false,,Mew ex
+base,152,Base,false,,Antique Dome Fossil
+base,153,Base,false,,Antique Helix Fossil
+base,154,Base,false,,Antique Old Amber
+base,155,Base,false,,Big Air Balloon
+base,156,Base,false,,Bill's Transfer
+base,157,Base,false,,Cycling Road
+base,158,Base,false,,Daisy's Help
+base,159,Base,false,,Energy Sticker
+base,160,Base,false,,Erika's Invitation
+base,161,Base,false,,Giovanni's Charisma
+base,162,Base,false,,Grabber
+base,163,Base,false,,Leftovers
+base,164,Base,false,,Protective Goggles
+base,165,Base,false,,Rigid Band
+base,166,Base,false,,Bulbasaur
+base,167,Base,false,,Ivysaur
+base,168,Base,false,,Charmander
+base,169,Base,false,,Charmeleon
+base,170,Base,false,,Squirtle
+base,171,Base,false,,Wartortle
+base,172,Base,false,,Caterpie
+base,173,Base,false,,Pikachu
+base,174,Base,false,,Nidoking
+base,175,Base,false,,Psyduck
+base,176,Base,false,,Poliwhirl
+base,177,Base,false,,Machoke
+base,178,Base,false,,Tangela
+base,179,Base,false,,Mr. Mime
+base,180,Base,false,,Omanyte
+base,181,Base,false,,Dragonair
+base,182,Base,false,,Venusaur ex
+base,183,Base,false,,Charizard ex
+base,184,Base,false,,Blastoise ex
+base,185,Base,false,,Arbok ex
+base,186,Base,false,,Ninetales ex
+base,187,Base,false,,Wigglytuff ex
+base,188,Base,false,,Alakazam ex
+base,189,Base,false,,Golem ex
+base,190,Base,false,,Kangaskhan ex
+base,191,Base,false,,Jynx ex
+base,192,Base,false,,Zapdos ex
+base,193,Base,false,,Mew ex
+base,194,Base,false,,Bill's Transfer
+base,195,Base,false,,Daisy's Help
+base,196,Base,false,,Erika's Invitation
+base,197,Base,false,,Giovanni's Charisma
+base,198,Base,false,,Venusaur ex
+base,199,Base,false,,Charizard ex
+base,200,Base,false,,Blastoise ex
+base,201,Base,false,,Alakazam ex
+base,202,Base,false,,Zapdos ex
+base,203,Base,false,,Erika's Invitation
+base,204,Base,false,,Giovanni's Charisma
+base,205,Base,false,,Mew ex
+base,206,Base,false,,Switch
+base,207,Base,false,,Basic Psychic Energy

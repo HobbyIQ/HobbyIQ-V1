@@ -1,0 +1,296 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Erika's Oddish
+base,002,Base,false,,Erika's Gloom
+base,003,Base,false,,Erika's Vileplume ex
+base,004,Base,false,,Erika's Bellsprout
+base,005,Base,false,,Erika's Weepinbell
+base,006,Base,false,,Erika's Victreebel
+base,007,Base,false,,Erika's Tangela
+base,008,Base,false,,Chikorita
+base,009,Base,false,,Bayleef
+base,010,Base,false,,Mega Meganium ex
+base,011,Base,false,,Wurmple
+base,012,Base,false,,Silcoon
+base,013,Base,false,,Beautifly
+base,014,Base,false,,Cascoon
+base,015,Base,false,,Dustox
+base,016,Base,false,,Budew
+base,017,Base,false,,Grubbin
+base,018,Base,false,,Team Rocket's Tarountula
+base,019,Base,false,,Team Rocket's Spidops
+base,020,Base,false,,Charmander
+base,021,Base,false,,Charmeleon
+base,022,Base,false,,Mega Charizard Y ex
+base,023,Base,false,,Ethan's Slugma
+base,024,Base,false,,Ethan's Magcargo
+base,025,Base,false,,Entei
+base,026,Base,false,,Ethan's Ho-Oh ex
+base,027,Base,false,,Numel
+base,028,Base,false,,Camerupt
+base,029,Base,false,,Tepig
+base,030,Base,false,,Pignite
+base,031,Base,false,,Mega Emboar ex
+base,032,Base,false,,N's Darumaka
+base,033,Base,false,,N's Darmanitan
+base,034,Base,false,,Salandit
+base,035,Base,false,,Salazzle
+base,036,Base,false,,Scorbunny
+base,037,Base,false,,Raboot
+base,038,Base,false,,Cinderace ex
+base,039,Base,false,,Psyduck
+base,040,Base,false,,Golduck
+base,041,Base,false,,Totodile
+base,042,Base,false,,Croconaw
+base,043,Base,false,,Mega Feraligatr ex
+base,044,Base,false,,Sneasel
+base,045,Base,false,,Weavile
+base,046,Base,false,,Snorunt
+base,047,Base,false,,Mega Froslass ex
+base,048,Base,false,,Regice ex
+base,049,Base,false,,N's Vanillite
+base,050,Base,false,,N's Vanillish
+base,051,Base,false,,N's Vanilluxe
+base,052,Base,false,,Snom
+base,053,Base,false,,Frosmoth
+base,054,Base,false,,Glastrier
+base,055,Base,false,,Pikachu
+base,056,Base,false,,Raichu
+base,057,Base,false,,Pikachu ex
+base,058,Base,false,,Voltorb ex
+base,059,Base,false,,Tynamo
+base,060,Base,false,,Eelektrik
+base,061,Base,false,,Mega Eelektross ex
+base,062,Base,false,,Stunfisk
+base,063,Base,false,,Helioptile
+base,064,Base,false,,Heliolisk
+base,065,Base,false,,Charjabug
+base,066,Base,false,,Vikavolt
+base,067,Base,false,,Tapu Koko
+base,068,Base,false,,Hop's Pincurchin ex
+base,069,Base,false,,Iono's Tadbulb
+base,070,Base,false,,Iono's Bellibolt ex
+base,071,Base,false,,Iono's Wattrel
+base,072,Base,false,,Iono's Kilowattrel
+base,073,Base,false,,Miraidon ex
+base,074,Base,false,,Clefairy
+base,075,Base,false,,Clefable
+base,076,Base,false,,Lillie's Clefairy ex
+base,077,Base,false,,Team Rocket's Exeggcute
+base,078,Base,false,,Team Rocket's Exeggutor
+base,079,Base,false,,Team Rocket's Mewtwo ex
+base,080,Base,false,,Togepi
+base,081,Base,false,,Togetic
+base,082,Base,false,,Togekiss
+base,083,Base,false,,Marill
+base,084,Base,false,,Azumarill ex
+base,085,Base,false,,Misdreavus
+base,086,Base,false,,Mismagius
+base,087,Base,false,,Ralts
+base,088,Base,false,,Kirlia
+base,089,Base,false,,Mega Gardevoir ex
+base,090,Base,false,,Shuppet
+base,091,Base,false,,Banette
+base,092,Base,false,,Rotom
+base,093,Base,false,,Swirlix
+base,094,Base,false,,Slurpuff
+base,095,Base,false,,Hop's Phantump
+base,096,Base,false,,Hop's Trevenant
+base,097,Base,false,,Team Rocket's Mimikyu
+base,098,Base,false,,Spectrier
+base,099,Base,false,,Munkidori
+base,100,Base,false,,Team Rocket's Diglett
+base,101,Base,false,,Team Rocket's Dugtrio
+base,102,Base,false,,Hitmontop
+base,103,Base,false,,Meditite
+base,104,Base,false,,Medicham
+base,105,Base,false,,Lunatone
+base,106,Base,false,,Solrock
+base,107,Base,false,,Regirock ex
+base,108,Base,false,,Groudon
+base,109,Base,false,,Cynthia's Gible
+base,110,Base,false,,Cynthia's Gabite
+base,111,Base,false,,Cynthia's Garchomp ex
+base,112,Base,false,,Riolu
+base,113,Base,false,,Mega Lucario ex
+base,114,Base,false,,Stunfisk ex
+base,115,Base,false,,Pancham
+base,116,Base,false,,Mega Hawlucha ex
+base,117,Base,false,,Carbink
+base,118,Base,false,,Rolycoly
+base,119,Base,false,,Carkol
+base,120,Base,false,,Coalossal
+base,121,Base,false,,Koraidon ex
+base,122,Base,false,,Okidogi
+base,123,Base,false,,Gastly
+base,124,Base,false,,Haunter
+base,125,Base,false,,Mega Gengar ex
+base,126,Base,false,,Team Rocket's Murkrow
+base,127,Base,false,,Team Rocket's Honchkrow
+base,128,Base,false,,Poochyena
+base,129,Base,false,,Mightyena
+base,130,Base,false,,Galarian Zigzagoon
+base,131,Base,false,,Galarian Linoone
+base,132,Base,false,,Galarian Obstagoon
+base,133,Base,false,,Cynthia's Spiritomb
+base,134,Base,false,,Scraggy
+base,135,Base,false,,Mega Scrafty ex
+base,136,Base,false,,N's Zorua
+base,137,Base,false,,N's Zoroark ex
+base,138,Base,false,,Vullaby
+base,139,Base,false,,Mandibuzz ex
+base,140,Base,false,,Pangoro
+base,141,Base,false,,Hoopa
+base,142,Base,false,,Fezandipiti ex
+base,143,Base,false,,Pecharunt
+base,144,Base,false,,Mawile
+base,145,Base,false,,Registeel ex
+base,146,Base,false,,Pawniard
+base,147,Base,false,,Bisharp
+base,148,Base,false,,Kingambit
+base,149,Base,false,,Togedemaru ex
+base,150,Base,false,,Dratini
+base,151,Base,false,,Dragonair
+base,152,Base,false,,Mega Dragonite ex
+base,153,Base,false,,Rayquaza
+base,154,Base,false,,N's Reshiram
+base,155,Base,false,,N's Zekrom
+base,156,Base,false,,Noibat
+base,157,Base,false,,Noivern
+base,158,Base,false,,Dreepy
+base,159,Base,false,,Drakloak
+base,160,Base,false,,Dragapult ex
+base,161,Base,false,,Team Rocket's Meowth
+base,162,Base,false,,Team Rocket's Kangaskhan ex
+base,163,Base,false,,Larry's Dunsparce
+base,164,Base,false,,Larry's Dudunsparce ex
+base,165,Base,false,,Skitty
+base,166,Base,false,,Delcatty
+base,167,Base,false,,Zangoose ex
+base,168,Base,false,,Larry's Starly
+base,169,Base,false,,Larry's Staravia
+base,170,Base,false,,Larry's Staraptor
+base,171,Base,false,,Fan Rotom
+base,172,Base,false,,Mega Audino ex
+base,173,Base,false,,Larry's Rufflet
+base,174,Base,false,,Larry's Braviary
+base,175,Base,false,,Larry's Komala
+base,176,Base,false,,Drampa
+base,177,Base,false,,Hop's Cramorant
+base,178,Base,false,,Terapagos
+base,179,Base,false,,Terapagos ex
+base,180,Base,false,,Acerola's Mischief
+base,181,Base,false,,Air Balloon
+base,182,Base,false,,Anthea & Concordia
+base,183,Base,false,,Boss's Orders
+base,184,Base,false,,Buddy-Buddy Poffin
+base,185,Base,false,,Canari
+base,186,Base,false,,Counter Gain
+base,187,Base,false,,Fighting Gong
+base,188,Base,false,,Forest of Vitality
+base,189,Base,false,,Glass Trumpet
+base,190,Base,false,,Iris's Fighting Spirit
+base,191,Base,false,,Light Ball
+base,192,Base,false,,Lillie's Determination
+base,193,Base,false,,Mega Signal
+base,194,Base,false,,Mystery Garden
+base,195,Base,false,,N's PP Up
+base,196,Base,false,,Night Stretcher
+base,197,Base,false,,Nighttime Mine
+base,198,Base,false,,Poké Pad
+base,199,Base,false,,Premium Power Pro
+base,200,Base,false,,Surfer
+base,201,Base,false,,Team Rocket's Archer
+base,202,Base,false,,Team Rocket's Ariana
+base,203,Base,false,,Team Rocket's Factory
+base,204,Base,false,,Team Rocket's Giovanni
+base,205,Base,false,,Team Rocket's Great Ball
+base,206,Base,false,,Team Rocket's Hypnotizer
+base,207,Base,false,,Team Rocket's Petrel
+base,208,Base,false,,Team Rocket's Proton
+base,209,Base,false,,Team Rocket's Transceiver
+base,210,Base,false,,Team Rocket's Watchtower
+base,211,Base,false,,Thick Scale
+base,212,Base,false,,Tool Scrapper
+base,213,Base,false,,Ultra Ball
+base,214,Base,false,,Urbain
+base,215,Base,false,,Waitress
+base,216,Base,false,,Prism Energy
+base,217,Base,false,,Team Rocket's Energy
+base,218,Base,false,,Erika's Tangela
+base,219,Base,false,,Beautifly
+base,220,Base,false,,Dustox
+base,221,Base,false,,Budew
+base,222,Base,false,,Ethan's Magcargo
+base,223,Base,false,,Numel
+base,224,Base,false,,Salazzle
+base,225,Base,false,,Scorbunny
+base,226,Base,false,,Psyduck
+base,227,Base,false,,Snorunt
+base,228,Base,false,,Weavile
+base,229,Base,false,,Heliolisk
+base,230,Base,false,,Vikavolt
+base,231,Base,false,,Iono's Wattrel
+base,232,Base,false,,Marill
+base,233,Base,false,,Misdreavus
+base,234,Base,false,,Banette
+base,235,Base,false,,Togekiss
+base,236,Base,false,,Slurpuff
+base,237,Base,false,,Hop's Trevenant
+base,238,Base,false,,Team Rocket's Mimikyu
+base,239,Base,false,,Team Rocket's Dugtrio
+base,240,Base,false,,Hitmontop
+base,241,Base,false,,Medicham
+base,242,Base,false,,Carbink
+base,243,Base,false,,Mightyena
+base,244,Base,false,,Cynthia's Spiritomb
+base,245,Base,false,,Galarian Obstagoon
+base,246,Base,false,,Mawile
+base,247,Base,false,,Dreepy
+base,248,Base,false,,Drakloak
+base,249,Base,false,,Larry's Staraptor
+base,250,Base,false,,Fan Rotom
+base,251,Base,false,,Sprigatito ex
+base,252,Base,false,,Stunfisk ex
+base,253,Base,false,,Mega Audino ex
+base,254,Base,false,,Anthea & Concordia
+base,255,Base,false,,Black Belt's Training
+base,256,Base,false,,Boss's Orders
+base,257,Base,false,,Canari
+base,258,Base,false,,Cheren
+base,259,Base,false,,Counter Gain
+base,260,Base,false,,Glass Trumpet
+base,261,Base,false,,Jamming Tower
+base,262,Base,false,,N's PP Up
+base,263,Base,false,,Team Rocket's Transceiver
+base,264,Base,false,,Ultra Ball
+base,265,Base,false,,Mega Froslass ex
+base,266,Base,false,,Mega Eelektross ex
+base,267,Base,false,,Mega Diancie ex
+base,268,Base,false,,Mega Hawlucha ex
+base,269,Base,false,,Mega Gengar ex
+base,270,Base,false,,Mega Scrafty ex
+base,271,Base,false,,Mega Dragonite ex
+base,272,Base,false,,Mega Meganium ex
+base,273,Base,false,,Mega Emboar ex
+base,274,Base,false,,Mega Feraligatr ex
+base,275,Base,false,,Mega Froslass ex
+base,276,Base,false,,Pikachu ex
+base,277,Base,false,,Pikachu ex
+base,278,Base,false,,Mega Eelektross ex
+base,279,Base,false,,Iono's Bellibolt ex
+base,280,Base,false,,Lillie's Clefairy ex
+base,281,Base,false,,Team Rocket's Mewtwo ex
+base,282,Base,false,,Mega Diancie ex
+base,283,Base,false,,Mega Hawlucha ex
+base,284,Base,false,,Mega Gengar ex
+base,285,Base,false,,Mega Scrafty ex
+base,286,Base,false,,N's Zoroark ex
+base,287,Base,false,,Marnie's Grimmsnarl ex
+base,288,Base,false,,Fezandipiti ex
+base,289,Base,false,,Steven's Metagross ex
+base,290,Base,false,,Mega Dragonite ex
+base,291,Base,false,,Canari
+base,292,Base,false,,Iris's Fighting Spirit
+base,293,Base,false,,Surfer
+base,294,Base,false,,Mega Charizard Y ex
+base,295,Base,false,,Mega Dragonite ex

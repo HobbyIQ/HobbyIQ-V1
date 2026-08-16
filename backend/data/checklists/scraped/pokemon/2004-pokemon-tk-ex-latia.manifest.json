@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.948Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-ex-latia",
+ "sport": "pokemon",
+ "year": 2004,
+ "setName": "EX trainer Kit (Latias)",
+ "productKey": "2004-tk-ex-latia",
+ "setKey": "tk-ex-latia",
+ "rowCount": 10,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > EX trainer Kit (Latias)",
+   "category": "base",
+   "playerCount": 10,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.639Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/det1",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Detective Pikachu",
+ "productKey": "2019-det1",
+ "setKey": "det1",
+ "rowCount": 18,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Detective Pikachu",
+   "category": "base",
+   "playerCount": 18,
+   "printRun": null
+  }
+ ]
+}

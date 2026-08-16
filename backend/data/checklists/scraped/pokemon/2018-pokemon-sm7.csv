@@ -1,0 +1,184 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Bellsprout
+base,2,Base,false,,Weepinbell
+base,3,Base,false,,Victreebel
+base,4,Base,false,,Scyther
+base,5,Base,false,,Spinarak
+base,6,Base,false,,Ariados
+base,7,Base,false,,Treecko
+base,8,Base,false,,Treecko
+base,9,Base,false,,Grovyle
+base,10,Base,false,,Sceptile
+base,11,Base,false,,Seedot
+base,12,Base,false,,Seedot
+base,13,Base,false,,Nuzleaf
+base,14,Base,false,,Shiftry GX
+base,15,Base,false,,Surskit
+base,16,Base,false,,Masquerain
+base,17,Base,false,,Volbeat
+base,18,Base,false,,Illumise
+base,19,Base,false,,Cacnea
+base,20,Base,false,,Cacturne
+base,21,Base,false,,Tropius
+base,22,Base,false,,Dhelmise
+base,23,Base,false,,Slugma
+base,24,Base,false,,Magcargo
+base,25,Base,false,,Torchic
+base,26,Base,false,,Torchic
+base,27,Base,false,,Combusken
+base,28,Base,false,,Blaziken GX
+base,29,Base,false,,Torkoal
+base,30,Base,false,,Oricorio
+base,31,Base,false,,Articuno GX
+base,32,Base,false,,Mudkip
+base,33,Base,false,,Mudkip
+base,34,Base,false,,Marshtomp
+base,35,Base,false,,Swampert
+base,36,Base,false,,Lotad
+base,37,Base,false,,Lombre
+base,38,Base,false,,Ludicolo
+base,39,Base,false,,Wailmer
+base,40,Base,false,,Wailord
+base,41,Base,false,,Clamperl
+base,42,Base,false,,Huntail
+base,43,Base,false,,Gorebyss
+base,44,Base,false,,Luvdisc
+base,45,Base,false,,Regice
+base,46,Base,false,,Kyogre
+base,47,Base,false,,Voltorb
+base,48,Base,false,,Electrode GX
+base,49,Base,false,,Chinchou
+base,50,Base,false,,Lanturn
+base,51,Base,false,,Electrike
+base,52,Base,false,,Manectric
+base,53,Base,false,,Plusle
+base,54,Base,false,,Minun
+base,55,Base,false,,Oricorio
+base,56,Base,false,,Mr. Mime GX
+base,57,Base,false,,Gulpin
+base,58,Base,false,,Swalot
+base,59,Base,false,,Spoink
+base,60,Base,false,,Grumpig
+base,61,Base,false,,Lunatone
+base,62,Base,false,,Solrock
+base,63,Base,false,,Shuppet
+base,64,Base,false,,Shuppet
+base,65,Base,false,,Banette
+base,66,Base,false,,Banette GX
+base,67,Base,false,,Deoxys
+base,68,Base,false,,Deoxys
+base,69,Base,false,,Deoxys
+base,70,Base,false,,Lunala
+base,71,Base,false,,Onix
+base,72,Base,false,,Phanpy
+base,73,Base,false,,Donphan
+base,74,Base,false,,Larvitar
+base,75,Base,false,,Pupitar
+base,76,Base,false,,Meditite
+base,77,Base,false,,Medicham
+base,78,Base,false,,Baltoy
+base,79,Base,false,,Claydol
+base,80,Base,false,,Regirock
+base,81,Base,false,,Groudon
+base,82,Base,false,,Palossand GX
+base,83,Base,false,,Minior
+base,84,Base,false,,Alolan Rattata
+base,85,Base,false,,Alolan Raticate GX
+base,86,Base,false,,Sneasel
+base,87,Base,false,,Tyranitar
+base,88,Base,false,,Sableye
+base,89,Base,false,,Steelix
+base,90,Base,false,,Scizor GX
+base,91,Base,false,,Mawile
+base,92,Base,false,,Beldum
+base,93,Base,false,,Beldum
+base,94,Base,false,,Metang
+base,95,Base,false,,Metagross
+base,96,Base,false,,Registeel
+base,97,Base,false,,Jirachi ◇
+base,98,Base,false,,Heatran
+base,99,Base,false,,Solgaleo
+base,100,Base,false,,Celesteela
+base,101,Base,false,,Kartana
+base,102,Base,false,,Stakataka GX
+base,103,Base,false,,Bagon
+base,104,Base,false,,Bagon
+base,105,Base,false,,Shelgon
+base,106,Base,false,,Salamence
+base,107,Base,false,,Latias ◇
+base,108,Base,false,,Latios ◇
+base,109,Base,false,,Rayquaza GX
+base,110,Base,false,,Dunsparce
+base,111,Base,false,,Wingull
+base,112,Base,false,,Pelipper
+base,113,Base,false,,Slakoth
+base,114,Base,false,,Vigoroth
+base,115,Base,false,,Slaking
+base,116,Base,false,,Whismur
+base,117,Base,false,,Whismur
+base,118,Base,false,,Loudred
+base,119,Base,false,,Exploud
+base,120,Base,false,,Skitty
+base,121,Base,false,,Delcatty
+base,122,Base,false,,Kecleon
+base,123,Base,false,,Acro Bike
+base,124,Base,false,,Apricorn Maker
+base,125,Base,false,,Beast Ball
+base,126,Base,false,,Bill’s Maintenance
+base,127,Base,false,,Copycat
+base,128,Base,false,,Energy Recycle System
+base,129,Base,false,,Energy Switch
+base,130,Base,false,,Fisherman
+base,131,Base,false,,Friend Ball
+base,132,Base,false,,Hau
+base,133,Base,false,,Hiker
+base,134,Base,false,,Hustle Belt
+base,135,Base,false,,Last Chance Potion
+base,136,Base,false,,Life Herb
+base,137,Base,false,,Lisia
+base,138,Base,false,,Lure Ball
+base,139,Base,false,,The Masked Royal
+base,140,Base,false,,PokéNav
+base,141,Base,false,,Rainbow Brush
+base,142,Base,false,,Rare Candy
+base,143,Base,false,,Shrine of Punishment
+base,144,Base,false,,Sky Pillar
+base,145,Base,false,,Steven’s Resolve
+base,146,Base,false,,Super Scoop Up
+base,147,Base,false,,Switch
+base,148,Base,false,,Tate & Liza
+base,149,Base,false,,TV Reporter
+base,150,Base,false,,Underground Expedition
+base,151,Base,false,,Rainbow Energy
+base,152,Base,false,,Shiftry GX
+base,153,Base,false,,Blaziken GX
+base,154,Base,false,,Articuno GX
+base,155,Base,false,,Electrode GX
+base,156,Base,false,,Mr. Mime GX
+base,157,Base,false,,Banette GX
+base,158,Base,false,,Scizor GX
+base,159,Base,false,,Stakataka GX
+base,160,Base,false,,Rayquaza GX
+base,161,Base,false,,Apricorn Maker
+base,162,Base,false,,Bill’s Maintenance
+base,163,Base,false,,Copycat
+base,164,Base,false,,Lisia
+base,165,Base,false,,Steven’s Resolve
+base,166,Base,false,,Tate & Liza
+base,167,Base,false,,TV Reporter
+base,168,Base,false,,Underground Expedition
+base,169,Base,false,,Shiftry GX
+base,170,Base,false,,Blaziken GX
+base,171,Base,false,,Articuno GX
+base,172,Base,false,,Electrode GX
+base,173,Base,false,,Mr. Mime GX
+base,174,Base,false,,Banette GX
+base,175,Base,false,,Scizor GX
+base,176,Base,false,,Stakataka GX
+base,177,Base,false,,Rayquaza GX
+base,178,Base,false,,Acro Bike
+base,179,Base,false,,Hustle Belt
+base,180,Base,false,,Life Herb
+base,181,Base,false,,PokéNav
+base,182,Base,false,,Rainbow Brush
+base,183,Base,false,,Rainbow Energy

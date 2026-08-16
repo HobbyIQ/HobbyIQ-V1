@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.949Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgss3",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "Undaunted",
+ "productKey": "2010-hgss3",
+ "setKey": "hgss3",
+ "rowCount": 91,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Undaunted",
+   "category": "base",
+   "playerCount": 91,
+   "printRun": null
+  }
+ ]
+}

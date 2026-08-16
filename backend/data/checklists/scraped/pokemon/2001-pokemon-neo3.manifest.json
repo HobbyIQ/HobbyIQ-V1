@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.378Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo3",
+ "sport": "pokemon",
+ "year": 2001,
+ "setName": "Neo Revelation",
+ "productKey": "2001-neo3",
+ "setKey": "neo3",
+ "rowCount": 66,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Neo Revelation",
+   "category": "base",
+   "playerCount": 66,
+   "printRun": null
+  }
+ ]
+}

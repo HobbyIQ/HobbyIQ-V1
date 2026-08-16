@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2022swsh",
+ "setId": "2022swsh",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 15,
+  "normal": 0,
+  "official": 15,
+  "reverse": 0,
+  "total": 15
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}
