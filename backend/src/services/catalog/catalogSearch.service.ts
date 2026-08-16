@@ -184,6 +184,41 @@ function preferHit(a: CatalogSearchHit, b: CatalogSearchHit): boolean {
   return a.score > b.score;
 }
 
+/**
+ * Did the cheap exact-token arm actually find the PERSON being asked for?
+ *
+ * This is the escalation decision, and getting the signal right matters more
+ * than the threshold. A first attempt used overall token-overlap score with a
+ * 0.70 floor; that misroutes on query LENGTH, not on quality. "2018 topps
+ * chrome update ohtani" is a perfect match yet scores 9.0/15.0 = 0.60, because
+ * the four set/year tokens are only worth 1.5 each — so it escalated to the
+ * expensive fuzzy scan for no reason and took 28.8s.
+ *
+ * What actually distinguishes the two situations is whether one row's
+ * playerName accounts for ALL the name-ish tokens in the query:
+ *
+ *   "2026 bowman owen carey"     -> Owen Carey covers owen + carey     confident
+ *   "2018 topps ... ohtani"      -> Shohei Ohtani covers ohtani        confident
+ *   "2026 bowman justin gonzalez"-> Josuar Gonzalez covers gonzalez,
+ *                                   NOT justin                         escalate
+ *
+ * That last case is exactly the misspelling trap: "gonzalez" is a real token
+ * owned by other players, so the exact arm succeeds while answering the wrong
+ * question. Matching is fuzzy per token (CF-SEARCH-FUZZY-PLAYER), so "erik"
+ * still covers Eric without escalating.
+ */
+function nameTokensCovered(
+  rows: Array<{ playerName?: string }>,
+  nameTokens: readonly string[],
+): boolean {
+  if (nameTokens.length === 0) return rows.length > 0;
+  return rows.some((r) => {
+    const player = String(r.playerName ?? "");
+    if (!player) return false;
+    return nameTokens.every((t) => fuzzyIncludes(player, t));
+  });
+}
+
 /** Pure helpers, exported for tests only. */
 export const __testables = { fold, editDistance, fuzzyIncludes, dedupeKey, preferHit };
 
@@ -289,10 +324,29 @@ export async function searchCatalog(
     "base", "insert", "parallel", "variation", "numbered", "card", "cards",
     "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
   ]);
+  // A MISSPELLED product word is still a product word. "2026 bowmen owen carey"
+  // put "bowmen" (6) ahead of "carey" (5) on length, anchored the whole search
+  // on the brand, and returned nothing at all. Stopwords are therefore matched
+  // by bounded edit distance, the same tolerance the player scorer uses. Only
+  // for tokens of 5+ so short words are never absorbed by a longer stopword.
+  const isStopword = (t: string) =>
+    ANCHOR_STOPWORDS.has(t)
+    || (t.length >= 5 && [...ANCHOR_STOPWORDS].some((w) =>
+      Math.abs(w.length - t.length) <= 1 && editDistance(w, t, 1) <= 1));
   const alphaTokens = tokens.filter(
-    (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !ANCHOR_STOPWORDS.has(t),
+    (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !isStopword(t),
   );
   const anchor = alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null;
+
+  // A token that looks like a CARD NUMBER: alphanumeric with a digit, and not a
+  // bare year. "hmt1", "bcp-69", "cpa-eha", "us285". Used to guarantee the
+  // named card is among the candidates — see CF-SEARCH-ANCHOR-SELECTS-THE-
+  // CANDIDATES. Purely additive: a query with no such token is unaffected.
+  const cardNumberToken = tokens.find((t) =>
+    /\d/.test(t)
+    && /^[a-z0-9-]+$/.test(t)
+    && !/^(?:19|20)\d{2}$/.test(t)
+    && !/^\d{1,2}$/.test(t)) ?? null;
   let anchorAnd = "";
   // CF-SEARCH-ANCHOR-INDEXED-FAST-PATH (Drew, 2026-08-15: "the search taking
   // 20+ seconds is bad").
@@ -395,23 +449,113 @@ export async function searchCatalog(
     parameters: params,
   };
 
-  /** Indexed fast path: same query, exact-token anchor instead of the
-   *  substring prefix. Only built when there is an anchor to be exact about. */
-  const canonicalFastQspec = anchorFastAnd
-    ? {
-      query: qspec.query
-        .replace(" FROM c WHERE (", " FROM c WHERE STARTSWITH(c.id, 'hiq:') AND (")
-        .replace(anchorAnd, anchorFastAnd),
-      parameters: params,
-    }
+  /**
+   * CF-SEARCH-ANCHOR-SELECTS-THE-CANDIDATES (Drew, 2026-08-16: "fix it so when
+   * it gives a card year name, it shows all cards, but it also works with fuzzy
+   * but when it is a full card it picks the right one").
+   *
+   * Three behaviours, one query path, and all three were limited by the same
+   * thing: `searchOr` ORs EIGHT field predicates per token, six of them
+   * CONTAINS — 40 branches on a five-token query, none index-accelerated. So it
+   * scans, gets capped at TOP 500, and the 500 are an ARBITRARY sample of
+   * everything matching a common word like "topps". Measured on 2026-08-16, the
+   * two failures were not mis-ranking but rank=none — the right card was never
+   * in the candidate set at all:
+   *
+   *     "2026 bowman justin gonzalez"          -> Josuar Gonzalez, 14.3s
+   *     "2018 topps chrome update ohtani hmt1" -> HMT32 not HMT1, 16.0s
+   *
+   * Fix: let Cosmos SELECT cheaply on an index and let the scorer MATCH in
+   * memory, where fuzzy player matching already lives (CF-SEARCH-FUZZY-PLAYER).
+   *
+   *   - PREFIX match on the token array via EXISTS + STARTSWITH. STARTSWITH
+   *     inside EXISTS is index-accelerated where a bare CONTAINS is not, and
+   *     the prefix is what carries misspellings: "gonzalez" anchors on
+   *     "gonzal", which reaches GonzalES. One predicate serves as both the fast
+   *     arm and the fuzzy arm, so no exact-match arm can short-circuit a
+   *     misspelling before it is reached — the bug this replaces.
+   *   - A CARD NUMBER arm, so a query naming a specific card always has that
+   *     card among the candidates. This is what "when it is a full card it
+   *     picks the right one" needs; ranking cannot pick what selection dropped.
+   *
+   * The projection deliberately omits c.searchTokens. Fetching 800 rows each
+   * carrying its full token array is what blew the 20s budget on a first
+   * attempt (several queries returned NOTHING). The scorer falls back to the
+   * named fields, which are strictly more precise anyway — playerName is
+   * weighted 3.0 against searchTokens' 2.0.
+   */
+  // NARROW ON PURPOSE. Cosmos has no covering index here, so every projected
+  // field means loading more of each document, and that — not the row count —
+  // is what costs. Measured on card_catalog: the same TOP 800 anchor query
+  // returns in 453ms selecting c.id alone and ~15s selecting seventeen fields.
+  // This is the minimum CatalogSearchHit needs; imageUrl is gone because search
+  // no longer renders a thumbnail, and source/verificationStatus are used in
+  // the WHERE clause but never read back.
+  const anchorSelectFields = `c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c.parallel, c.isAuto, c.printRun, c.salesSummary`;
+  //
+  // The two arms run as SEPARATE queries, not as one OR. An OR that mixes an
+  // EXISTS subquery with a scalar equality makes Cosmos fall back to a scan and
+  // the pair measured 20-28s together; run apart, each stays on its index. TOP
+  // is per-arm and modest for the same reason — the cost here is dominated by
+  // materialising wide documents, not by matching them.
+  const ANCHOR_TOP = 400;
+  const buildArm = (where: string, extra: Array<{ name: string; value: string | number | boolean }> = []) => ({
+    query: `SELECT TOP ${ANCHOR_TOP} ${anchorSelectFields} FROM c`
+         + ` WHERE STARTSWITH(c.id, 'hiq:') AND ${where}`
+         + `${scopeAnd} AND ${verifiedCatalogSqlClause("c")}`,
+    parameters: [...params, ...extra],
+  });
+  //
+  // EXACT FIRST, FUZZY ONLY IF NEEDED. ARRAY_CONTAINS on the whole token is an
+  // index point-lookup; EXISTS + STARTSWITH is an index RANGE scan, and the
+  // range is far wider than it looks — the prefix for "carey" is "care", which
+  // also pulls Careaga, Carela and every other token starting that way. Same
+  // query, measured: exact "carey" 1.5s, prefix "care" 16.6s.
+  //
+  // But exact alone is what broke misspellings, because "gonzalez" IS a real
+  // token owned by OTHER players: it matched, short-circuited, and Justin
+  // GonzalES was never reached. So the fallback cannot be triggered by
+  // emptiness — it has to be triggered by QUALITY. A correctly spelled name
+  // scores high on the exact arm; a misspelling scores poorly because the rows
+  // it found belong to someone else. Below the floor, pay for the fuzzy arm.
+  const armExact = anchor ? buildArm(`ARRAY_CONTAINS(c.searchTokens, @anchorExact)`) : null;
+  const armFuzzy = anchor ? buildArm(`EXISTS(SELECT VALUE t FROM t IN c.searchTokens WHERE STARTSWITH(t, @anchor))`) : null;
+  // Card numbers are compared WITHOUT wrapping the column in LOWER(). A
+  // function on the indexed column defeats the index, and this one cost 15.7s
+  // on "…blue refractor bcp-69" and 18.3s on "…ohtani hmt1" — the arm meant to
+  // guarantee the exact card was the slowest thing in the query. The catalog
+  // stores card numbers uppercase ("BCP-69", "HMT1", "CPA-EHA"), so comparing
+  // against both the uppercased token and the raw one keeps it an indexable
+  // equality while still matching either casing.
+  const armNumber = cardNumberToken
+    ? buildArm(`(c.cardNumber = @cardNumUpper OR c.cardNumber = @cardNum)`,
+      [
+        { name: "@cardNumUpper", value: cardNumberToken.toUpperCase() },
+        { name: "@cardNum", value: cardNumberToken },
+      ])
     : null;
 
   let rows: Row[] = [];
   let provisional = false;
   try {
-    const fast = canonicalFastQspec
-      ? (await container.items.query<Row>(canonicalFastQspec).fetchAll()).resources
-      : [];
+    const runArm = (qs: { query: string; parameters: typeof params } | null) =>
+      qs
+        ? container.items.query<Row>(qs).fetchAll()
+          .then((r) => r.resources ?? [])
+          .catch(() => [] as Row[])
+        : Promise.resolve([] as Row[]);
+
+    const fastById = new Map<string, Row>();
+    const absorb = (rows: Row[]) => { for (const r of rows) if (r?.id) fastById.set(r.id, r); };
+
+    // The exact arm and the card-number arm are both cheap point lookups.
+    absorb((await Promise.all([runArm(armExact), runArm(armNumber)])).flat());
+    // Escalate to the fuzzy prefix scan only when the cheap arms did not
+    // produce a confident answer for this query.
+    if (armFuzzy && !nameTokensCovered([...fastById.values()], alphaTokens)) {
+      absorb(await runArm(armFuzzy));
+    }
+    const fast = [...fastById.values()];
     const { resources: canon } = fast.length > 0
       ? { resources: fast }
       : await container.items.query<Row>(canonicalQspec).fetchAll();
@@ -472,7 +616,31 @@ export async function searchCatalog(
       raw += tokenMax;
     }
     const maxPossible = tokens.length * 3.0;
-    const score = maxPossible > 0 ? raw / maxPossible : 0;
+    let score = maxPossible > 0 ? raw / maxPossible : 0;
+
+    // CF-SEARCH-EXACT-CARD-WINS (Drew, 2026-08-16: "when it is a full card it
+    // picks the right one").
+    //
+    // Token overlap alone cannot express this. Every 2018 Topps Chrome Update
+    // Ohtani shares the year, the set and the player, so a query naming
+    // "hmt1" differs from its rivals by ONE token out of six — and #HMT32 beat
+    // #HMT1 on the remaining noise. Same for "blue refractor bcp-69", where
+    // Black Refractor outranked Blue.
+    //
+    // A card NUMBER is an exact identifier, not a keyword: when the query names
+    // one and the row IS it, that row is the answer and nothing that merely
+    // shares a set should outrank it. Substring is not enough either — "hmt1"
+    // is a substring of nothing useful, but "1" would be a substring of
+    // everything, which is why this is equality on the whole token.
+    //
+    // Parallel gets a smaller, non-decisive bump: naming "blue" should beat
+    // Black on a tie, but must not overrule the card number.
+    const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber);
+    if (numberIsExact) score += 1.0;
+    if (rowParallel) {
+      const parallelWords = new Set(rowParallel.split(/[\s-]+/).filter(Boolean));
+      if (tokens.some((t) => parallelWords.has(t))) score += 0.15;
+    }
     // Require at least half the tokens matched (any field) for
     // multi-word queries. Prevents ranking noise where a lone
     // "topps" match surfaces a card that has nothing to do with
