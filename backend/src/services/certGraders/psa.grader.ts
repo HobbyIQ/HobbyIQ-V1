@@ -127,7 +127,13 @@ export function parseGradeValue(
   }
   if (typeof gradeDescription === "string" && gradeDescription.trim().length > 0) {
     const parsed = parseGradeLabel(gradeDescription);
-    if (parsed && Number.isFinite(parsed.gradeValue)) {
+    // CF-AUTHENTIC-BUCKET (Drew, 2026-08-15). parseGradeLabel now returns a
+    // row for an authenticated-but-ungraded slab, carrying gradeValue 0. This
+    // function wants a NUMERIC grade, and 0 is not one — returning it would
+    // make buildPsaTitle render "— PSA 0" for a card whose label says
+    // "Authentic". Authentic stays null here; the bucket lives on the comp.
+    if (parsed?.isAuthentic) return null;
+    if (parsed && Number.isFinite(parsed.gradeValue) && parsed.gradeValue > 0) {
       return parsed.gradeValue;
     }
   }

@@ -1283,6 +1283,12 @@ export async function persistVendorSalesToPool(
         gradeCompany: gradeParsed?.gradeCompany ?? null,
         gradeValue: gradeParsed?.gradeValue ?? null,
         gradeQualifier: gradeParsed?.qualifier ?? null,
+        // CF-AUTHENTIC-BUCKET (Drew, 2026-08-15). Persisted so downstream can
+        // separate an authenticated-but-ungraded slab from both raw and from
+        // a numeric tier. gradeValue is 0 for these, which keeps them out of
+        // the raw bucket (`gradeValue !== null`) without colliding with a
+        // real grade (0.5-10).
+        isAuthentic: gradeParsed?.isAuthentic === true ? true : null,
         price,
         soldAt: new Date(soldAt).toISOString(),
         source,
