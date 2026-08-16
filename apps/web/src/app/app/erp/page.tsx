@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchErpSummary, type ErpSummaryResponse, type ErpTopMover } from "@/lib/api";
+import { fetchErpSummary, type ErpSummaryResponse } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 
 export default function ErpPage() {
@@ -161,12 +161,11 @@ export default function ErpPage() {
         </div>
       )}
 
-      {/* Top movers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <MoversCard title="Heaters" movers={data.topGainers} tint="var(--color-success)" />
-        <MoversCard title="Cooling off" movers={data.topLosers} tint="var(--color-danger)" />
-      </div>
-
+      {/* CF-MOVERS-LIVE-IN-INVENTORY (Drew, 2026-08-16: "top gainers and top
+          losers can go. that is easy in the inventory tab"). Removed rather
+          than moved — the inventory list already sorts by change, so this was
+          a second, smaller copy of a view that exists in a better form, taking
+          up the space where the business numbers belong. */}
       {/* Health */}
       <div className="hiq-card p-5 mb-6">
         <h2 className="font-bold text-lg mb-1">Comp freshness</h2>
@@ -270,43 +269,6 @@ function BigStat({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
-function MoversCard({ title, movers, tint }: { title: string; movers: ErpTopMover[]; tint: string }) {
-  return (
-    <div className="hiq-card p-5">
-      <h2 className="font-bold text-lg mb-3">{title}</h2>
-      {movers.length === 0 ? (
-        <p className="text-sm text-[color:var(--color-muted)]">No priced holdings yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {movers.map((m) => (
-            <Link
-              key={m.holdingId}
-              href={`/app/portfolio/${encodeURIComponent(m.holdingId)}`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="text-sm truncate">{m.title}</div>
-                <div className="text-xs text-[color:var(--color-muted)] truncate">{m.playerName}</div>
-              </div>
-              <div className="text-right flex-shrink-0 ml-3">
-                <div className="text-sm font-medium tabular-nums" style={{ color: tint }}>
-                  {formatUSDCompact(m.unrealizedGainLoss)}
-                </div>
-                <div className="text-xs tabular-nums" style={{ color: tint }}>
-                  {formatPct(m.unrealizedPct)}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// CF-DATA-HEALTH-DRILLDOWN (Drew, 2026-07-27): each pill deep-links into
-// /app/portfolio?filter=<label>. Zero-count pills stay static (no filter
-// gets applied to an empty set — clicking would just show "no matches").
 function HealthPill({
   label,
   n,
