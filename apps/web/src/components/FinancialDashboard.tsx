@@ -100,7 +100,7 @@ export function FinancialDashboard() {
       <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold mb-1">Financials</h1>
         <p className="text-sm text-[color:var(--color-muted)]">
-          What you sold, what you were in for, and what you actually kept.
+          Revenue, costs, and what the business earned.
           {data?.window.from && ` ${data.window.from} → ${data.window.to}`}
         </p>
       </div>
