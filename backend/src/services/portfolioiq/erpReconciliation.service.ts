@@ -355,6 +355,23 @@ export interface PnlTotals {
   costBasisSold: number;
   realizedProfitLoss: number;
   entryCount: number;
+  /**
+   * CF-PNL-SHOW-GRADING (Drew, 2026-08-16: "the financial dashboard is missing
+   * the grading costs within the eric hartman orange shimmer").
+   *
+   * These were captured per sale and carried into the tax export, but never
+   * aggregated — so the P&L reported gross, fees, shipping, cost basis and
+   * profit, and those five numbers did not reconcile. computeLedgerFinancials
+   * subtracts grading and supplies from NET PROCEEDS:
+   *
+   *     netProceeds = gross - fees - tax - shipping - grading - supplies
+   *     realizedProfitLoss = netProceeds - costBasisSold
+   *
+   * so the money was correctly out of profit but invisible on the way there.
+   * A grading fee you paid simply vanished between "sold for" and "profit".
+   */
+  gradingCost: number;
+  suppliesCost: number;
 }
 
 export interface PnlGroup {
@@ -384,6 +401,8 @@ function zeroTotals(): PnlTotals {
     costBasisSold: 0,
     realizedProfitLoss: 0,
     entryCount: 0,
+    gradingCost: 0,
+    suppliesCost: 0,
   };
 }
 
@@ -418,6 +437,10 @@ function accumulate(acc: PnlTotals, e: LedgerEntryForErp): void {
   acc.costBasisSold += e.costBasisSold ?? 0;
   acc.realizedProfitLoss += e.realizedProfitLoss ?? 0;
   acc.entryCount += 1;
+  // CF-PNL-SHOW-GRADING: already deducted inside netProceeds; summed here so
+  // the reported walk adds up instead of losing the money silently.
+  acc.gradingCost += e.gradingCost ?? 0;
+  acc.suppliesCost += e.suppliesCost ?? 0;
 }
 
 // ─── CF-PNL-COGS-INTEGRATION (2026-07-12) ──────────────────────────────────
@@ -552,6 +575,8 @@ function roundTotals(t: PnlTotals): PnlTotals {
     costBasisSold: r2(t.costBasisSold),
     realizedProfitLoss: r2(t.realizedProfitLoss),
     entryCount: t.entryCount,
+    gradingCost: r2(t.gradingCost),
+    suppliesCost: r2(t.suppliesCost),
   };
 }
 
