@@ -78,17 +78,17 @@ export default function ErpPage() {
       {/* Top numbers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <BigStat
-          label="What it's worth today"
+          label="Comp value"
           value={formatUSD(data.totals.snapshotValue, { hideCents: true })}
-          sub={`${data.totals.holdingCount} cards`}
+          sub={`${data.totals.holdingCount} cards · what comps say today`}
         />
         <BigStat
-          label="What you paid"
+          label="All-in cost"
           value={formatUSD(data.totals.costBasis, { hideCents: true })}
-          sub="all-in cost of these cards"
+          sub="what you have into them"
         />
         <BigStat
-          label="Profit on paper"
+          label="Up on paper"
           value={formatUSDCompact(data.totals.unrealizedGainLoss)}
           color={
             data.totals.unrealizedGainLoss > 0
@@ -97,12 +97,12 @@ export default function ErpPage() {
               ? "var(--color-danger)"
               : undefined
           }
-          sub={`${formatPct(data.totals.unrealizedPct)} — only real if you sell`}
+          sub={`${formatPct(data.totals.unrealizedPct)} — not real until you sell`}
         />
         <BigStat
-          label="Profit all-in"
+          label="Total profit"
           value={formatUSDCompact(data.fullPosition.total)}
-          sub={`incl. ${formatUSDCompact(data.fullPosition.realizedYtd)} already banked this year`}
+          sub={`incl. ${formatUSDCompact(data.fullPosition.realizedYtd)} already flipped this year`}
         />
       </div>
 
@@ -163,27 +163,27 @@ export default function ErpPage() {
 
       {/* Top movers */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <MoversCard title="Going up" movers={data.topGainers} tint="var(--color-success)" />
-        <MoversCard title="Going down" movers={data.topLosers} tint="var(--color-danger)" />
+        <MoversCard title="Heaters" movers={data.topGainers} tint="var(--color-success)" />
+        <MoversCard title="Cooling off" movers={data.topLosers} tint="var(--color-danger)" />
       </div>
 
       {/* Health */}
       <div className="hiq-card p-5 mb-6">
-        <h2 className="font-bold text-lg mb-1">How current are these prices?</h2>
-        <p className="text-sm text-[color:var(--color-muted)] mb-3">Click any number to see those cards.</p>
+        <h2 className="font-bold text-lg mb-1">Comp freshness</h2>
+        <p className="text-sm text-[color:var(--color-muted)] mb-3">How recently we saw a real sale for each card. Click a number to see them.</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-          <HealthPill label="Up to date" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
-          <HealthPill label="Over 3 days old" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
-          <HealthPill label="Best guess" n={data.totals.estimatedCount} filter="estimated" />
+          <HealthPill label="Fresh comps" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
+          <HealthPill label="Stale comps" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
+          <HealthPill label="No direct comps" n={data.totals.estimatedCount} filter="estimated" />
           <HealthPill label="Still checking" n={data.totals.pendingCount} filter="pending" />
-          <HealthPill label="No price yet" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
+          <HealthPill label="No comps" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
         </div>
         {(data.totals.staleCount > 0 || data.totals.missingCount > 0) && (
           <p className="text-xs text-[color:var(--color-muted)] mt-3">
-            <strong>No price yet</strong> usually means we could not tell which exact
-            card you have — open it and pick the right one.{" "}
-            <strong>Best guess</strong> means we priced it from similar cards rather
-            than real sales of that exact card, so treat it as a ballpark.
+            <strong>No comps</strong> usually means we could not tell which exact card
+            you have — open it and pick the right one.{" "}
+            <strong>No direct comps</strong> means we priced it off similar cards
+            instead of real sales of that exact card, so treat it as a ballpark.
           </p>
         )}
       </div>

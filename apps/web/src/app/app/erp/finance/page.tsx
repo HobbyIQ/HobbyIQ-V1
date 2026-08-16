@@ -97,7 +97,7 @@ export default function FinancePage() {
         <div>
           <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
           <p className="text-sm text-[color:var(--color-muted)]">
-            Money in, money out, and what you actually kept.
+            What you sold, what you were in for, and what you actually kept.
             {data?.window.from && ` ${data.window.from} → ${data.window.to}`}
           </p>
         </div>
@@ -131,36 +131,36 @@ export default function FinancePage() {
       {t && (
         <>
           <p className="text-sm text-[color:var(--color-muted)] mb-3">
-            Money in, minus what the cards cost you, minus fees and shipping,
-            leaves your profit. Take running costs off that and you have what
-            you actually kept.
+            What you sold for, minus what you were all-in for, minus fees and
+            shipping, is your profit on the flip. Take overhead off that and you
+            have what you actually kept.
           </p>
           {/* The P&L walk, in the order an operator reads it: what came in,
               what was taken out, what it cost, what is actually left. */}
           <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Stat label="Money in" value={formatUSD(t.grossProceeds)}
+            <Stat label="Sold for" value={formatUSD(t.grossProceeds)}
               sub={yoy != null ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% vs ${year === "all" ? "prior" : Number(year) - 1}` : `${t.entryCount} sales`} />
-            <Stat label="What those cards cost you" value={formatUSD(t.costBasisSold)}
-              sub="what you originally paid for the ones that sold" />
+            <Stat label="All-in cost" value={formatUSD(t.costBasisSold)}
+              sub="what you had into the ones that sold" />
             <Stat label="Fees and shipping" value={formatUSD(t.feesTotal + t.shipping)}
               sub={`${formatUSD(t.feesTotal)} fees · ${formatUSD(t.shipping)} shipping`} />
-            <Stat label="Profit from sales" value={formatUSD(t.realizedProfitLoss)}
+            <Stat label="Profit on flips" value={formatUSD(t.realizedProfitLoss)}
               tone={t.realizedProfitLoss >= 0 ? "good" : "bad"}
-              sub={margin != null ? `you kept ${margin.toFixed(0)}% of each sale` : "nothing sold yet"} />
+              sub={margin != null ? `you kept ${margin.toFixed(0)}% of each sale` : "nothing flipped yet"} />
           </div>
 
           <div className="grid gap-4 mb-8" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))" }}>
-            <Stat label="Running costs" value={opex != null ? formatUSD(opex) : "—"}
-              sub="tables, supplies, grading, subscriptions" />
+            <Stat label="Overhead" value={opex != null ? formatUSD(opex) : "—"}
+              sub="tables, supplies, grading, subs" />
             <Stat label="What you actually kept" value={trueNet != null ? formatUSD(trueNet) : "—"}
               tone={trueNet != null ? (trueNet >= 0 ? "good" : "bad") : undefined}
-              sub="profit after running costs — the real number" />
+              sub="profit after overhead — the real number" />
             <Stat label="Profit margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
               sub={priorMargin != null && margin != null
                 ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} points on last year`
                 : "share of each sale you keep"} />
-            <Stat label="Typical sale" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
-              sub={`across ${t.entryCount} sales`} />
+            <Stat label="Typical flip" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
+              sub={`across ${t.entryCount} flips`} />
           </div>
 
           {/* CF-ERP-PNL-EXCLUSIONS. Unreconciled sales are NOT in these numbers.
@@ -169,9 +169,9 @@ export default function FinancePage() {
           {data.excluded.unreconciledCount > 0 && (
             <div className="hiq-card p-4 mb-8 text-sm">
               <strong>{data.excluded.unreconciledCount}</strong> sale
-              {data.excluded.unreconciledCount === 1 ? " is" : "s are"} missing its cost or
-              fees, so {data.excluded.unreconciledCount === 1 ? "it is" : "they are"} left
-              out of every number above
+              {data.excluded.unreconciledCount === 1 ? " is" : "s are"} missing what you
+              were all-in for, so {data.excluded.unreconciledCount === 1 ? "it is" : "they are"}
+              left out of every number above
               {data.excluded.unreconciledOldestSoldAt
                 ? ` (oldest ${data.excluded.unreconciledOldestSoldAt.slice(0, 10)})`
                 : ""}.{" "}
@@ -205,9 +205,9 @@ export default function FinancePage() {
               <thead>
                 <tr className="text-left text-[color:var(--color-muted)]">
                   <Th>{GROUPINGS.find((g) => g.key === groupBy)?.label}</Th>
-                  <Th right>Sold</Th>
-                  <Th right>Money in</Th>
-                  <Th right>Card cost</Th>
+                  <Th right>Flips</Th>
+                  <Th right>Sold for</Th>
+                  <Th right>All-in</Th>
                   <Th right>Fees + ship</Th>
                   <Th right>Profit</Th>
                   <Th right>Margin</Th>
