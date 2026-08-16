@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.678Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh9.5tg",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Brilliant Stars Trainer Gallery",
+ "productKey": "2022-swsh9-5tg",
+ "setKey": "swsh9-5tg",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Brilliant Stars Trainer Gallery",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

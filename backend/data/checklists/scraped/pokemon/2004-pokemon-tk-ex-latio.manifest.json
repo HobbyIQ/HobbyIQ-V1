@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.990Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-ex-latio",
+ "sport": "pokemon",
+ "year": 2004,
+ "setName": "EX trainer Kit (Latios)",
+ "productKey": "2004-tk-ex-latio",
+ "setKey": "tk-ex-latio",
+ "rowCount": 10,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > EX trainer Kit (Latios)",
+   "category": "base",
+   "playerCount": 10,
+   "printRun": null
+  }
+ ]
+}

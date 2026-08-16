@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.920Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy12",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "Evolutions",
+ "productKey": "2016-xy12",
+ "setKey": "xy12",
+ "rowCount": 113,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Evolutions",
+   "category": "base",
+   "playerCount": 113,
+   "printRun": null
+  }
+ ]
+}

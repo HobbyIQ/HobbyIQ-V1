@@ -1,0 +1,131 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Alakazam
+base,2,Base,false,,Blastoise
+base,3,Base,false,,Chansey
+base,4,Base,false,,Charizard
+base,5,Base,false,,Clefable
+base,6,Base,false,,Clefairy
+base,7,Base,false,,Gyarados
+base,8,Base,false,,Hitmonchan
+base,9,Base,false,,Magneton
+base,10,Base,false,,Mewtwo
+base,11,Base,false,,Nidoking
+base,12,Base,false,,Nidoqueen
+base,13,Base,false,,Ninetales
+base,14,Base,false,,Pidgeot
+base,15,Base,false,,Poliwrath
+base,16,Base,false,,Raichu
+base,17,Base,false,,Scyther
+base,18,Base,false,,Venusaur
+base,19,Base,false,,Wigglytuff
+base,20,Base,false,,Zapdos
+base,21,Base,false,,Beedrill
+base,22,Base,false,,Dragonair
+base,23,Base,false,,Dugtrio
+base,24,Base,false,,Electabuzz
+base,25,Base,false,,Electrode
+base,26,Base,false,,Kangaskhan
+base,27,Base,false,,Mr. Mime
+base,28,Base,false,,Pidgeotto
+base,29,Base,false,,Pinsir
+base,30,Base,false,,Snorlax
+base,31,Base,false,,Venomoth
+base,32,Base,false,,Victreebel
+base,33,Base,false,,Arcanine
+base,34,Base,false,,Butterfree
+base,35,Base,false,,Charmeleon
+base,36,Base,false,,Dewgong
+base,37,Base,false,,Dodrio
+base,38,Base,false,,Dratini
+base,39,Base,false,,Exeggutor
+base,40,Base,false,,Farfetch'd
+base,41,Base,false,,Fearow
+base,42,Base,false,,Growlithe
+base,43,Base,false,,Haunter
+base,44,Base,false,,Ivysaur
+base,45,Base,false,,Jynx
+base,46,Base,false,,Kadabra
+base,47,Base,false,,Kakuna
+base,48,Base,false,,Lickitung
+base,49,Base,false,,Machoke
+base,50,Base,false,,Magikarp
+base,51,Base,false,,Magmar
+base,52,Base,false,,Marowak
+base,53,Base,false,,Nidorina
+base,54,Base,false,,Nidorino
+base,55,Base,false,,Parasect
+base,56,Base,false,,Persian
+base,57,Base,false,,Poliwhirl
+base,58,Base,false,,Raticate
+base,59,Base,false,,Rhydon
+base,60,Base,false,,Seaking
+base,61,Base,false,,Seel
+base,62,Base,false,,Tauros
+base,63,Base,false,,Wartortle
+base,64,Base,false,,Weepinbell
+base,65,Base,false,,Abra
+base,66,Base,false,,Bellsprout
+base,67,Base,false,,Bulbasaur
+base,68,Base,false,,Caterpie
+base,69,Base,false,,Charmander
+base,70,Base,false,,Cubone
+base,71,Base,false,,Diglett
+base,72,Base,false,,Doduo
+base,73,Base,false,,Drowzee
+base,74,Base,false,,Exeggcute
+base,75,Base,false,,Gastly
+base,76,Base,false,,Goldeen
+base,77,Base,false,,Jigglypuff
+base,78,Base,false,,Machop
+base,79,Base,false,,Magnemite
+base,80,Base,false,,Meowth
+base,81,Base,false,,Metapod
+base,82,Base,false,,Nidoran♀
+base,83,Base,false,,Nidoran♂
+base,84,Base,false,,Onix
+base,85,Base,false,,Paras
+base,86,Base,false,,Pidgey
+base,87,Base,false,,Pikachu
+base,88,Base,false,,Poliwag
+base,89,Base,false,,Rattata
+base,90,Base,false,,Rhyhorn
+base,91,Base,false,,Sandshrew
+base,92,Base,false,,Spearow
+base,93,Base,false,,Squirtle
+base,94,Base,false,,Starmie
+base,95,Base,false,,Staryu
+base,96,Base,false,,Tangela
+base,97,Base,false,,Venonat
+base,98,Base,false,,Voltorb
+base,99,Base,false,,Vulpix
+base,100,Base,false,,Weedle
+base,101,Base,false,,Computer Search
+base,102,Base,false,,Impostor Professor Oak
+base,103,Base,false,,Item Finder
+base,104,Base,false,,Lass
+base,105,Base,false,,Pokémon Breeder
+base,106,Base,false,,Pokémon Trader
+base,107,Base,false,,Scoop Up
+base,108,Base,false,,Super Energy Removal
+base,109,Base,false,,Defender
+base,110,Base,false,,Energy Retrieval
+base,111,Base,false,,Full Heal
+base,112,Base,false,,Maintenance
+base,113,Base,false,,PlusPower
+base,114,Base,false,,Pokémon Center
+base,115,Base,false,,Pokédex
+base,116,Base,false,,Professor Oak
+base,117,Base,false,,Super Potion
+base,118,Base,false,,Bill
+base,119,Base,false,,Energy Removal
+base,120,Base,false,,Gust of Wind
+base,121,Base,false,,Poké Ball
+base,122,Base,false,,Potion
+base,123,Base,false,,Switch
+base,124,Base,false,,Double Colorless Energy
+base,125,Base,false,,Fighting Energy
+base,126,Base,false,,Fire Energy
+base,127,Base,false,,Grass Energy
+base,128,Base,false,,Lightning Energy
+base,129,Base,false,,Psychic Energy
+base,130,Base,false,,Water Energy

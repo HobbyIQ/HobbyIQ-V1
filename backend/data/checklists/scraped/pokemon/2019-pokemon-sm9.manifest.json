@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.595Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm9",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Team Up",
+ "productKey": "2019-sm9",
+ "setKey": "sm9",
+ "rowCount": 196,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Team Up",
+   "category": "base",
+   "playerCount": 196,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.866Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me02.5",
+ "sport": "pokemon",
+ "year": 2026,
+ "setName": "Ascended Heroes",
+ "productKey": "2026-me02-5",
+ "setKey": "me02-5",
+ "rowCount": 295,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Ascended Heroes",
+   "category": "base",
+   "playerCount": 295,
+   "printRun": null
+  }
+ ]
+}

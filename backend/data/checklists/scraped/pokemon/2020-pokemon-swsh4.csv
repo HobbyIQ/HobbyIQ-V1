@@ -1,0 +1,204 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Weedle
+base,2,Base,false,,Kakuna
+base,3,Base,false,,Beedrill
+base,4,Base,false,,Exeggcute
+base,5,Base,false,,Exeggutor
+base,6,Base,false,,Yanma
+base,7,Base,false,,Yanmega
+base,8,Base,false,,Pineco
+base,9,Base,false,,Celebi
+base,10,Base,false,,Seedot
+base,11,Base,false,,Nuzleaf
+base,12,Base,false,,Shiftry
+base,13,Base,false,,Nincada
+base,14,Base,false,,Ninjask
+base,15,Base,false,,Shaymin
+base,16,Base,false,,Genesect
+base,17,Base,false,,Skiddo
+base,18,Base,false,,Gogoat
+base,19,Base,false,,Dhelmise
+base,20,Base,false,,Orbeetle V
+base,21,Base,false,,Orbeetle VMAX
+base,22,Base,false,,Zarude V
+base,23,Base,false,,Charmander
+base,24,Base,false,,Charmeleon
+base,25,Base,false,,Charizard
+base,26,Base,false,,Flareon
+base,27,Base,false,,Slugma
+base,28,Base,false,,Magcargo
+base,29,Base,false,,Talonflame V
+base,30,Base,false,,Vaporeon
+base,31,Base,false,,Wailmer
+base,32,Base,false,,Wailord
+base,33,Base,false,,Oshawott
+base,34,Base,false,,Dewott
+base,35,Base,false,,Samurott
+base,36,Base,false,,Galarian Darmanitan V
+base,37,Base,false,,Galarian Darmanitan VMAX
+base,38,Base,false,,Chewtle
+base,39,Base,false,,Drednaw
+base,40,Base,false,,Cramorant
+base,41,Base,false,,Arrokuda
+base,42,Base,false,,Barraskewda
+base,43,Base,false,,Pikachu V
+base,44,Base,false,,Pikachu VMAX
+base,45,Base,false,,Voltorb
+base,46,Base,false,,Electrode
+base,47,Base,false,,Jolteon
+base,48,Base,false,,Zapdos
+base,49,Base,false,,Ampharos V
+base,50,Base,false,,Raikou
+base,51,Base,false,,Electrike
+base,52,Base,false,,Manectric
+base,53,Base,false,,Blitzle
+base,54,Base,false,,Zebstrika
+base,55,Base,false,,Joltik
+base,56,Base,false,,Galvantula
+base,57,Base,false,,Tynamo
+base,58,Base,false,,Eelektrik
+base,59,Base,false,,Eelektross
+base,60,Base,false,,Zekrom
+base,61,Base,false,,Zeraora
+base,62,Base,false,,Pincurchin
+base,63,Base,false,,Clefairy
+base,64,Base,false,,Clefable
+base,65,Base,false,,Girafarig
+base,66,Base,false,,Shedinja
+base,67,Base,false,,Shuppet
+base,68,Base,false,,Banette
+base,69,Base,false,,Duskull
+base,70,Base,false,,Dusclops
+base,71,Base,false,,Dusknoir
+base,72,Base,false,,Chimecho
+base,73,Base,false,,Woobat
+base,74,Base,false,,Swoobat
+base,75,Base,false,,Cottonee
+base,76,Base,false,,Whimsicott
+base,77,Base,false,,Dedenne
+base,78,Base,false,,Xerneas
+base,79,Base,false,,Diancie
+base,80,Base,false,,Milcery
+base,81,Base,false,,Alcremie
+base,82,Base,false,,Zacian
+base,83,Base,false,,Wooper
+base,84,Base,false,,Quagsire
+base,85,Base,false,,Shuckle
+base,86,Base,false,,Phanpy
+base,87,Base,false,,Donphan
+base,88,Base,false,,Hitmontop
+base,89,Base,false,,Regirock
+base,90,Base,false,,Riolu
+base,91,Base,false,,Drilbur
+base,92,Base,false,,Terrakion
+base,93,Base,false,,Zygarde
+base,94,Base,false,,Rockruff
+base,95,Base,false,,Lycanroc
+base,96,Base,false,,Mudbray
+base,97,Base,false,,Mudsdale
+base,98,Base,false,,Coalossal V
+base,99,Base,false,,Coalossal VMAX
+base,100,Base,false,,Clobbopus
+base,101,Base,false,,Grapploct
+base,102,Base,false,,Zamazenta
+base,103,Base,false,,Poochyena
+base,104,Base,false,,Mightyena
+base,105,Base,false,,Sableye
+base,106,Base,false,,Drapion V
+base,107,Base,false,,Sandile
+base,108,Base,false,,Krokorok
+base,109,Base,false,,Krookodile
+base,110,Base,false,,Trubbish
+base,111,Base,false,,Garbodor
+base,112,Base,false,,Galarian Meowth
+base,113,Base,false,,Galarian Perrserker
+base,114,Base,false,,Forretress
+base,115,Base,false,,Steelix V
+base,116,Base,false,,Beldum
+base,117,Base,false,,Metang
+base,118,Base,false,,Metagross
+base,119,Base,false,,Jirachi
+base,120,Base,false,,Lucario
+base,121,Base,false,,Dialga
+base,122,Base,false,,Excadrill
+base,123,Base,false,,Ferroseed
+base,124,Base,false,,Ferrothorn
+base,125,Base,false,,Galarian Stunfisk
+base,126,Base,false,,Aegislash V
+base,127,Base,false,,Aegislash VMAX
+base,128,Base,false,,Magearna
+base,129,Base,false,,Duraludon
+base,130,Base,false,,Eevee
+base,131,Base,false,,Snorlax
+base,132,Base,false,,Lugia
+base,133,Base,false,,Taillow
+base,134,Base,false,,Swellow
+base,135,Base,false,,Whismur
+base,136,Base,false,,Loudred
+base,137,Base,false,,Exploud
+base,138,Base,false,,Rayquaza
+base,139,Base,false,,Chatot
+base,140,Base,false,,Togekiss V
+base,141,Base,false,,Togekiss VMAX
+base,142,Base,false,,Tornadus
+base,143,Base,false,,Pikipek
+base,144,Base,false,,Trumbeak
+base,145,Base,false,,Toucannon
+base,146,Base,false,,Allister
+base,147,Base,false,,Bea
+base,148,Base,false,,Beauty
+base,149,Base,false,,Cara Liss
+base,150,Base,false,,Circhester Bath
+base,151,Base,false,,Drone Rotom
+base,152,Base,false,,Hero's Medal
+base,153,Base,false,,League Staff
+base,154,Base,false,,Leon
+base,155,Base,false,,Memory Capsule
+base,156,Base,false,,Moomoo Cheese
+base,157,Base,false,,Nessa
+base,158,Base,false,,Opal
+base,159,Base,false,,Rocky Helmet
+base,160,Base,false,,Telescopic Sight
+base,161,Base,false,,Wyndon Stadium
+base,162,Base,false,,Aromatic Grass Energy
+base,163,Base,false,,Coating Metal Energy
+base,164,Base,false,,Stone Fighting Energy
+base,165,Base,false,,Wash Water Energy
+base,166,Base,false,,Orbeetle V
+base,167,Base,false,,Zarude V
+base,168,Base,false,,Talonflame V
+base,169,Base,false,,Galarian Darmanitan V
+base,170,Base,false,,Pikachu V
+base,171,Base,false,,Ampharos V
+base,172,Base,false,,Alakazam V
+base,173,Base,false,,Coalossal V
+base,174,Base,false,,Galarian Sirfetch'd V
+base,175,Base,false,,Drapion V
+base,176,Base,false,,Steelix V
+base,177,Base,false,,Aegislash V
+base,178,Base,false,,Togekiss V
+base,179,Base,false,,Allister
+base,180,Base,false,,Bea
+base,181,Base,false,,Beauty
+base,182,Base,false,,Leon
+base,183,Base,false,,Nessa
+base,184,Base,false,,Opal
+base,185,Base,false,,Pokémon Center Lady
+base,186,Base,false,,Orbeetle VMAX
+base,187,Base,false,,Galarian Darmanitan VMAX
+base,188,Base,false,,Pikachu VMAX
+base,189,Base,false,,Coalossal VMAX
+base,190,Base,false,,Aegislash VMAX
+base,191,Base,false,,Togekiss VMAX
+base,192,Base,false,,Allister
+base,193,Base,false,,Bea
+base,194,Base,false,,Beauty
+base,195,Base,false,,Leon
+base,196,Base,false,,Nessa
+base,197,Base,false,,Opal
+base,198,Base,false,,Galarian Obstagoon
+base,199,Base,false,,Oranguru
+base,200,Base,false,,Cape of Toughness
+base,201,Base,false,,Hero's Medal
+base,202,Base,false,,Memory Capsule
+base,203,Base,false,,Telescopic Sight

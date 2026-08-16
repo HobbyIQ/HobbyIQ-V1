@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:14.000Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me04",
+ "sport": "pokemon",
+ "year": 2026,
+ "setName": "Chaos Rising",
+ "productKey": "2026-me04",
+ "setKey": "me04",
+ "rowCount": 122,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Chaos Rising",
+   "category": "base",
+   "playerCount": 122,
+   "printRun": null
+  }
+ ]
+}

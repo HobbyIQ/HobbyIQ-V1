@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.920Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swshp",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "SWSH Black Star Promos",
+ "productKey": "2019-swshp",
+ "setKey": "swshp",
+ "rowCount": 302,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > SWSH Black Star Promos",
+   "category": "base",
+   "playerCount": 302,
+   "printRun": null
+  }
+ ]
+}

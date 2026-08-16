@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.028Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex5.5",
+ "sport": "pokemon",
+ "year": 2004,
+ "setName": "Poké Card Creator Pack",
+ "productKey": "2004-ex5-5",
+ "setKey": "ex5-5",
+ "rowCount": 5,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Poké Card Creator Pack",
+   "category": "base",
+   "playerCount": 5,
+   "printRun": null
+  }
+ ]
+}

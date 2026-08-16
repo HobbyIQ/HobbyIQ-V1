@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.233Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex9",
+ "sport": "pokemon",
+ "year": 2005,
+ "setName": "Emerald",
+ "productKey": "2005-ex9",
+ "setKey": "ex9",
+ "rowCount": 107,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Emerald",
+   "category": "base",
+   "playerCount": 107,
+   "printRun": null
+  }
+ ]
+}

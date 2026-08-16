@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.504Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pl1",
+ "sport": "pokemon",
+ "year": 2009,
+ "setName": "Platinum",
+ "productKey": "2009-pl1",
+ "setKey": "pl1",
+ "rowCount": 133,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Platinum",
+   "category": "base",
+   "playerCount": 133,
+   "printRun": null
+  }
+ ]
+}

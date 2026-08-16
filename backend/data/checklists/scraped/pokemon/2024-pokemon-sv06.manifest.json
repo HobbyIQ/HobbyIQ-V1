@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.637Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv06",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Twilight Masquerade",
+ "productKey": "2024-sv06",
+ "setKey": "sv06",
+ "rowCount": 226,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Twilight Masquerade",
+   "category": "base",
+   "playerCount": 226,
+   "printRun": null
+  }
+ ]
+}

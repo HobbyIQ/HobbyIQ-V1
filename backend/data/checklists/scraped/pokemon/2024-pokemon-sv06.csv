@@ -1,0 +1,227 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Tangela
+base,002,Base,false,,Tangrowth
+base,003,Base,false,,Pinsir
+base,004,Base,false,,Spinarak
+base,005,Base,false,,Ariados
+base,006,Base,false,,Sunkern
+base,007,Base,false,,Sunflora
+base,008,Base,false,,Heracross
+base,009,Base,false,,Volbeat
+base,010,Base,false,,Illumise
+base,011,Base,false,,Leafeon
+base,012,Base,false,,Phantump
+base,013,Base,false,,Trevenant
+base,014,Base,false,,Grookey
+base,015,Base,false,,Thwackey
+base,016,Base,false,,Rillaboom
+base,017,Base,false,,Applin
+base,018,Base,false,,Dipplin
+base,019,Base,false,,Iron Leaves
+base,020,Base,false,,Poltchageist
+base,021,Base,false,,Poltchageist
+base,022,Base,false,,Sinistcha
+base,023,Base,false,,Sinistcha ex
+base,024,Base,false,,Teal Mask Ogerpon
+base,025,Base,false,,Teal Mask Ogerpon ex
+base,026,Base,false,,Vulpix
+base,027,Base,false,,Ninetales
+base,028,Base,false,,Slugma
+base,029,Base,false,,Magcargo ex
+base,030,Base,false,,Torkoal
+base,031,Base,false,,Chimchar
+base,032,Base,false,,Monferno
+base,033,Base,false,,Infernape
+base,034,Base,false,,Darumaka
+base,035,Base,false,,Darmanitan
+base,036,Base,false,,Litwick
+base,037,Base,false,,Lampent
+base,038,Base,false,,Chandelure
+base,039,Base,false,,Chi-Yu
+base,040,Base,false,,Hearthflame Mask Ogerpon ex
+base,041,Base,false,,Poliwag
+base,042,Base,false,,Poliwhirl
+base,043,Base,false,,Poliwrath
+base,044,Base,false,,Goldeen
+base,045,Base,false,,Seaking
+base,046,Base,false,,Jynx
+base,047,Base,false,,Corphish
+base,048,Base,false,,Crawdaunt
+base,049,Base,false,,Feebas
+base,050,Base,false,,Milotic
+base,051,Base,false,,Snorunt
+base,052,Base,false,,Glalie
+base,053,Base,false,,Froslass
+base,054,Base,false,,Glaceon
+base,055,Base,false,,Phione
+base,056,Base,false,,Froakie
+base,057,Base,false,,Frogadier
+base,058,Base,false,,Cramorant
+base,059,Base,false,,Finizen
+base,060,Base,false,,Palafin
+base,061,Base,false,,Palafin ex
+base,062,Base,false,,Iron Bundle
+base,063,Base,false,,Walking Wake
+base,064,Base,false,,Wellspring Mask Ogerpon ex
+base,065,Base,false,,Zapdos
+base,066,Base,false,,Shinx
+base,067,Base,false,,Luxio
+base,068,Base,false,,Luxray ex
+base,069,Base,false,,Emolga
+base,070,Base,false,,Helioptile
+base,071,Base,false,,Heliolisk
+base,072,Base,false,,Morpeko
+base,073,Base,false,,Tadbulb
+base,074,Base,false,,Bellibolt
+base,075,Base,false,,Wattrel
+base,076,Base,false,,Kilowattrel
+base,077,Base,false,,Iron Thorns ex
+base,078,Base,false,,Clefairy
+base,079,Base,false,,Clefable
+base,080,Base,false,,Abra
+base,081,Base,false,,Kadabra
+base,082,Base,false,,Alakazam
+base,083,Base,false,,Girafarig
+base,084,Base,false,,Farigiraf
+base,085,Base,false,,Chimecho
+base,086,Base,false,,Flabébé
+base,087,Base,false,,Floette
+base,088,Base,false,,Florges
+base,089,Base,false,,Swirlix
+base,090,Base,false,,Slurpuff
+base,091,Base,false,,Sandygast
+base,092,Base,false,,Palossand
+base,093,Base,false,,Enamorus
+base,094,Base,false,,Scream Tail ex
+base,095,Base,false,,Munkidori
+base,096,Base,false,,Fezandipiti
+base,097,Base,false,,Sandshrew
+base,098,Base,false,,Sandslash
+base,099,Base,false,,Hisuian Growlithe
+base,100,Base,false,,Hisuian Arcanine
+base,101,Base,false,,Nosepass
+base,102,Base,false,,Probopass
+base,103,Base,false,,Timburr
+base,104,Base,false,,Gurdurr
+base,105,Base,false,,Conkeldurr
+base,106,Base,false,,Greninja ex
+base,107,Base,false,,Hawlucha
+base,108,Base,false,,Glimmet
+base,109,Base,false,,Glimmora
+base,110,Base,false,,Ting-Lu
+base,111,Base,false,,Okidogi
+base,112,Base,false,,Cornerstone Mask Ogerpon ex
+base,113,Base,false,,Poochyena
+base,114,Base,false,,Mightyena
+base,115,Base,false,,Venipede
+base,116,Base,false,,Whirlipede
+base,117,Base,false,,Scolipede
+base,118,Base,false,,Brute Bonnet
+base,119,Base,false,,Skarmory
+base,120,Base,false,,Aron
+base,121,Base,false,,Lairon
+base,122,Base,false,,Aggron
+base,123,Base,false,,Heatran
+base,124,Base,false,,Varoom
+base,125,Base,false,,Revavroom
+base,126,Base,false,,Applin
+base,127,Base,false,,Dipplin
+base,128,Base,false,,Dreepy
+base,129,Base,false,,Drakloak
+base,130,Base,false,,Dragapult ex
+base,131,Base,false,,Tatsugiri
+base,132,Base,false,,Farfetch'd
+base,133,Base,false,,Chansey
+base,134,Base,false,,Blissey ex
+base,135,Base,false,,Eevee
+base,136,Base,false,,Snorlax
+base,137,Base,false,,Aipom
+base,138,Base,false,,Ambipom
+base,139,Base,false,,Ducklett
+base,140,Base,false,,Swanna
+base,141,Base,false,,Bloodmoon Ursaluna ex
+base,142,Base,false,,Accompanying Flute
+base,143,Base,false,,Bug Catching Set
+base,144,Base,false,,Caretaker
+base,145,Base,false,,Carmine
+base,146,Base,false,,Community Center
+base,147,Base,false,,Cook
+base,148,Base,false,,Enhanced Hammer
+base,149,Base,false,,Festival Grounds
+base,150,Base,false,,Handheld Fan
+base,151,Base,false,,Hassel
+base,152,Base,false,,Hyper Aroma
+base,153,Base,false,,Jamming Tower
+base,154,Base,false,,Kieran
+base,155,Base,false,,Lana's Aid
+base,156,Base,false,,Love Ball
+base,157,Base,false,,Lucian
+base,158,Base,false,,Lucky Helmet
+base,159,Base,false,,Ogre's Mask
+base,160,Base,false,,Perrin
+base,161,Base,false,,Raifort
+base,162,Base,false,,Scoop Up Cyclone
+base,163,Base,false,,Secret Box
+base,164,Base,false,,Survival Brace
+base,165,Base,false,,Unfair Stamp
+base,166,Base,false,,Boomerang Energy
+base,167,Base,false,,Legacy Energy
+base,168,Base,false,,Pinsir
+base,169,Base,false,,Sunflora
+base,170,Base,false,,Dipplin
+base,171,Base,false,,Poltchageist
+base,172,Base,false,,Torkoal
+base,173,Base,false,,Infernape
+base,174,Base,false,,Froslass
+base,175,Base,false,,Phione
+base,176,Base,false,,Cramorant
+base,177,Base,false,,Heliolisk
+base,178,Base,false,,Wattrel
+base,179,Base,false,,Chimecho
+base,180,Base,false,,Enamorus
+base,181,Base,false,,Hisuian Growlithe
+base,182,Base,false,,Probopass
+base,183,Base,false,,Timburr
+base,184,Base,false,,Lairon
+base,185,Base,false,,Applin
+base,186,Base,false,,Tatsugiri
+base,187,Base,false,,Chansey
+base,188,Base,false,,Eevee
+base,189,Base,false,,Sinistcha ex
+base,190,Base,false,,Teal Mask Ogerpon ex
+base,191,Base,false,,Magcargo ex
+base,192,Base,false,,Hearthflame Mask Ogerpon ex
+base,193,Base,false,,Palafin ex
+base,194,Base,false,,Wellspring Mask Ogerpon ex
+base,195,Base,false,,Luxray ex
+base,196,Base,false,,Iron Thorns ex
+base,197,Base,false,,Scream Tail ex
+base,198,Base,false,,Greninja ex
+base,199,Base,false,,Cornerstone Mask Ogerpon ex
+base,200,Base,false,,Dragapult ex
+base,201,Base,false,,Blissey ex
+base,202,Base,false,,Bloodmoon Ursaluna ex
+base,203,Base,false,,Caretaker
+base,204,Base,false,,Carmine
+base,205,Base,false,,Hassel
+base,206,Base,false,,Kieran
+base,207,Base,false,,Lana's Aid
+base,208,Base,false,,Lucian
+base,209,Base,false,,Perrin
+base,210,Base,false,,Sinistcha ex
+base,211,Base,false,,Teal Mask Ogerpon ex
+base,212,Base,false,,Hearthflame Mask Ogerpon ex
+base,213,Base,false,,Wellspring Mask Ogerpon ex
+base,214,Base,false,,Greninja ex
+base,215,Base,false,,Cornerstone Mask Ogerpon ex
+base,216,Base,false,,Bloodmoon Ursaluna ex
+base,217,Base,false,,Carmine
+base,218,Base,false,,Kieran
+base,219,Base,false,,Lana's Aid
+base,220,Base,false,,Perrin
+base,221,Base,false,,Teal Mask Ogerpon ex
+base,222,Base,false,,Bloodmoon Ursaluna ex
+base,223,Base,false,,Buddy-Buddy Poffin
+base,224,Base,false,,Enhanced Hammer
+base,225,Base,false,,Rescue Board
+base,226,Base,false,,Luminous Energy

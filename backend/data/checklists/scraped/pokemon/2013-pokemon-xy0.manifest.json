@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.569Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy0",
+ "sport": "pokemon",
+ "year": 2013,
+ "setName": "Kalos Starter Set",
+ "productKey": "2013-xy0",
+ "setKey": "xy0",
+ "rowCount": 39,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Kalos Starter Set",
+   "category": "base",
+   "playerCount": 39,
+   "printRun": null
+  }
+ ]
+}

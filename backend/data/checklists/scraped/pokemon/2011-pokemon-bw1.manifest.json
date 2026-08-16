@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.064Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw1",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "Black & White",
+ "productKey": "2011-bw1",
+ "setKey": "bw1",
+ "rowCount": 115,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Black & White",
+   "category": "base",
+   "playerCount": 115,
+   "printRun": null
+  }
+ ]
+}

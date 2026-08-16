@@ -1,0 +1,202 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Butterfree V
+base,2,Base,false,,Butterfree VMAX
+base,3,Base,false,,Paras
+base,4,Base,false,,Parasect
+base,5,Base,false,,Carnivine
+base,6,Base,false,,Pansage
+base,7,Base,false,,Simisage
+base,8,Base,false,,Karrablast
+base,9,Base,false,,Shelmet
+base,10,Base,false,,Accelgor
+base,11,Base,false,,Rowlet
+base,12,Base,false,,Dartrix
+base,13,Base,false,,Decidueye
+base,14,Base,false,,Bounsweet
+base,15,Base,false,,Steenee
+base,16,Base,false,,Tsareena
+base,17,Base,false,,Wimpod
+base,18,Base,false,,Golisopod
+base,19,Base,false,,Charizard V
+base,20,Base,false,,Charizard VMAX
+base,21,Base,false,,Houndoom V
+base,22,Base,false,,Torchic
+base,23,Base,false,,Combusken
+base,24,Base,false,,Blaziken
+base,25,Base,false,,Heatran
+base,26,Base,false,,Pansear
+base,27,Base,false,,Simisear
+base,28,Base,false,,Galarian Darmanitan
+base,29,Base,false,,Larvesta
+base,30,Base,false,,Volcarona
+base,31,Base,false,,Fletchinder
+base,32,Base,false,,Talonflame
+base,33,Base,false,,Centiskorch V
+base,34,Base,false,,Centiskorch VMAX
+base,35,Base,false,,Galarian Mr. Mime
+base,36,Base,false,,Galarian Mr. Rime
+base,37,Base,false,,Suicune
+base,38,Base,false,,Feebas
+base,39,Base,false,,Milotic
+base,40,Base,false,,Relicanth
+base,41,Base,false,,Panpour
+base,42,Base,false,,Simipour
+base,43,Base,false,,Galarian Darumaka
+base,44,Base,false,,Galarian Darmanitan
+base,45,Base,false,,Vanillite
+base,46,Base,false,,Vanillish
+base,47,Base,false,,Vanilluxe
+base,48,Base,false,,Cubchoo
+base,49,Base,false,,Beartic
+base,50,Base,false,,Wishiwashi
+base,51,Base,false,,Mareanie
+base,52,Base,false,,Toxapex
+base,53,Base,false,,Dracovish
+base,54,Base,false,,Arctovish
+base,55,Base,false,,Mareep
+base,56,Base,false,,Flaaffy
+base,57,Base,false,,Ampharos
+base,58,Base,false,,Electrike
+base,59,Base,false,,Manectric
+base,60,Base,false,,Vikavolt V
+base,61,Base,false,,Tapu Koko
+base,62,Base,false,,Toxel
+base,63,Base,false,,Toxtricity
+base,64,Base,false,,Pincurchin
+base,65,Base,false,,Dracozolt
+base,66,Base,false,,Arctozolt
+base,67,Base,false,,Jigglypuff
+base,68,Base,false,,Wigglytuff
+base,69,Base,false,,Mew V
+base,70,Base,false,,Snubbull
+base,71,Base,false,,Granbull
+base,72,Base,false,,Lunatone
+base,73,Base,false,,Gothita
+base,74,Base,false,,Gothorita
+base,75,Base,false,,Gothitelle
+base,76,Base,false,,Golett
+base,77,Base,false,,Golurk
+base,78,Base,false,,Dedenne
+base,79,Base,false,,Morelull
+base,80,Base,false,,Shiinotic
+base,81,Base,false,,Mimikyu
+base,82,Base,false,,Sinistea
+base,83,Base,false,,Polteageist
+base,84,Base,false,,Diglett
+base,85,Base,false,,Dugtrio
+base,86,Base,false,,Larvitar
+base,87,Base,false,,Pupitar
+base,88,Base,false,,Tyranitar
+base,89,Base,false,,Trapinch
+base,90,Base,false,,Vibrava
+base,91,Base,false,,Flygon
+base,92,Base,false,,Solrock
+base,93,Base,false,,Hippopotas
+base,94,Base,false,,Hippowdon
+base,95,Base,false,,Rhyperior V
+base,96,Base,false,,Diggersby
+base,97,Base,false,,Passimian
+base,98,Base,false,,Galarian Sirfetch'd
+base,99,Base,false,,Galarian Slowbro V
+base,100,Base,false,,Grimer
+base,101,Base,false,,Muk
+base,102,Base,false,,Spinarak
+base,103,Base,false,,Ariados
+base,104,Base,false,,Crobat V
+base,105,Base,false,,Darkrai
+base,106,Base,false,,Purrloin
+base,107,Base,false,,Liepard
+base,108,Base,false,,Deino
+base,109,Base,false,,Zweilous
+base,110,Base,false,,Hydreigon
+base,111,Base,false,,Hoopa
+base,112,Base,false,,Nickit
+base,113,Base,false,,Thievul
+base,114,Base,false,,Grimmsnarl V
+base,115,Base,false,,Grimmsnarl VMAX
+base,116,Base,false,,Eternatus V
+base,117,Base,false,,Eternatus VMAX
+base,118,Base,false,,Scizor V
+base,119,Base,false,,Scizor VMAX
+base,120,Base,false,,Skarmory
+base,121,Base,false,,Aron
+base,122,Base,false,,Lairon
+base,123,Base,false,,Aggron
+base,124,Base,false,,Escavalier
+base,125,Base,false,,Klink
+base,126,Base,false,,Klang
+base,127,Base,false,,Klinklang
+base,128,Base,false,,Galarian Stunfisk V
+base,129,Base,false,,Meltan
+base,130,Base,false,,Melmetal
+base,131,Base,false,,Cufant
+base,132,Base,false,,Copperajah
+base,133,Base,false,,Kangaskhan
+base,134,Base,false,,Tauros
+base,135,Base,false,,Sentret
+base,136,Base,false,,Furret
+base,137,Base,false,,Dunsparce
+base,138,Base,false,,Teddiursa
+base,139,Base,false,,Ursaring
+base,140,Base,false,,Lugia
+base,141,Base,false,,Skitty
+base,142,Base,false,,Delcatty
+base,143,Base,false,,Salamence V
+base,144,Base,false,,Salamence VMAX
+base,145,Base,false,,Starly
+base,146,Base,false,,Staravia
+base,147,Base,false,,Staraptor
+base,148,Base,false,,Ducklett
+base,149,Base,false,,Swanna
+base,150,Base,false,,Bunnelby
+base,151,Base,false,,Fletchling
+base,152,Base,false,,Skwovet
+base,153,Base,false,,Greedent
+base,154,Base,false,,Rookidee
+base,155,Base,false,,Corvisquire
+base,156,Base,false,,Corviknight
+base,157,Base,false,,Big Parasol
+base,158,Base,false,,Billowing Smoke
+base,159,Base,false,,Bird Keeper
+base,160,Base,false,,Cape of Toughness
+base,161,Base,false,,Familiar Bell
+base,162,Base,false,,Glimwood Tangle
+base,163,Base,false,,Kabu
+base,164,Base,false,,Old PC
+base,165,Base,false,,Piers
+base,166,Base,false,,Pokémon Breeder's Nurturing
+base,167,Base,false,,Rare Fossil
+base,168,Base,false,,Rose
+base,169,Base,false,,Rose Tower
+base,170,Base,false,,Spikemuth
+base,171,Base,false,,Struggle Gloves
+base,172,Base,false,,Turbo Patch
+base,173,Base,false,,Yell Horn
+base,174,Base,false,,Heat Fire Energy
+base,175,Base,false,,Hiding Darkness Energy
+base,176,Base,false,,Powerful Colorless Energy
+base,177,Base,false,,Butterfree V
+base,178,Base,false,,Houndoom V
+base,179,Base,false,,Centiskorch V
+base,180,Base,false,,Vikavolt V
+base,181,Base,false,,Rhyperior V
+base,182,Base,false,,Crobat V
+base,183,Base,false,,Scizor V
+base,184,Base,false,,Galarian Stunfisk V
+base,185,Base,false,,Salamence V
+base,186,Base,false,,Kabu
+base,187,Base,false,,Piers
+base,188,Base,false,,Pokémon Breeder's Nurturing
+base,189,Base,false,,Rose
+base,190,Base,false,,Butterfree VMAX
+base,191,Base,false,,Centiskorch VMAX
+base,192,Base,false,,Eternatus VMAX
+base,193,Base,false,,Scizor VMAX
+base,194,Base,false,,Salamence VMAX
+base,195,Base,false,,Pokémon Breeder's Nurturing
+base,196,Base,false,,Rose
+base,197,Base,false,,Rillaboom
+base,198,Base,false,,Coalossal
+base,199,Base,false,,Big Parasol
+base,200,Base,false,,Turbo Patch
+base,201,Base,false,,Capture Energy

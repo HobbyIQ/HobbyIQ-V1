@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.390Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-latia",
+ "sport": "pokemon",
+ "year": 2015,
+ "setName": "XY trainer Kit (Latias)",
+ "productKey": "2015-tk-xy-latia",
+ "setKey": "tk-xy-latia",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Latias)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.553Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/mee",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Mega Evolution Energy",
+ "productKey": "2025-mee",
+ "setKey": "mee",
+ "rowCount": 8,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Mega Evolution Energy",
+   "category": "base",
+   "playerCount": 8,
+   "printRun": null
+  }
+ ]
+}

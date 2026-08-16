@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.133Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh3.5",
+ "sport": "pokemon",
+ "year": 2020,
+ "setName": "Champion's Path",
+ "productKey": "2020-swsh3-5",
+ "setKey": "swsh3-5",
+ "rowCount": 80,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Champion's Path",
+   "category": "base",
+   "playerCount": 80,
+   "printRun": null
+  }
+ ]
+}

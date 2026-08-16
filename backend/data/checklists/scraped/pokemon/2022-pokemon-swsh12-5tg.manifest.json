@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.973Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh12.5tg",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Silver Tempest Trainer Gallery",
+ "productKey": "2022-swsh12-5tg",
+ "setKey": "swsh12-5tg",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Silver Tempest Trainer Gallery",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

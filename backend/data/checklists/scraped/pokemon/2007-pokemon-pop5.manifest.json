@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.797Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pop5",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "POP Series 5",
+ "productKey": "2007-pop5",
+ "setKey": "pop5",
+ "rowCount": 17,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > POP Series 5",
+   "category": "base",
+   "playerCount": 17,
+   "printRun": null
+  }
+ ]
+}

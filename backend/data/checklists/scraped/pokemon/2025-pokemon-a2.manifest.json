@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.039Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A2",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Space-Time Smackdown",
+ "productKey": "2025-a2",
+ "setKey": "a2",
+ "rowCount": 207,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Space-Time Smackdown",
+   "category": "base",
+   "playerCount": 207,
+   "printRun": null
+  }
+ ]
+}

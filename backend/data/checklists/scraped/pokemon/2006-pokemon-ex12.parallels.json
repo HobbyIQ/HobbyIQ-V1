@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex12",
+ "setId": "ex12",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 44,
+  "normal": 154,
+  "official": 92,
+  "reverse": 0,
+  "total": 93
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.119Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A2b",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Shining Revelry",
+ "productKey": "2025-a2b",
+ "setKey": "a2b",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Shining Revelry",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

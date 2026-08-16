@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.018Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy2",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "Flashfire",
+ "productKey": "2014-xy2",
+ "setKey": "xy2",
+ "rowCount": 110,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Flashfire",
+   "category": "base",
+   "playerCount": 110,
+   "printRun": null
+  }
+ ]
+}

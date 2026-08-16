@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.027Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/col1",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "Call of Legends",
+ "productKey": "2011-col1",
+ "setKey": "col1",
+ "rowCount": 106,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Call of Legends",
+   "category": "base",
+   "playerCount": 106,
+   "printRun": null
+  }
+ ]
+}

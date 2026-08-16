@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.451Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm7.5",
+ "sport": "pokemon",
+ "year": 2018,
+ "setName": "Dragon Majesty",
+ "productKey": "2018-sm7-5",
+ "setKey": "sm7-5",
+ "rowCount": 78,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Dragon Majesty",
+   "category": "base",
+   "playerCount": 78,
+   "printRun": null
+  }
+ ]
+}

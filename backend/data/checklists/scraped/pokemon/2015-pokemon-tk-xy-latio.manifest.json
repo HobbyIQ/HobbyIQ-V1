@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.431Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-latio",
+ "sport": "pokemon",
+ "year": 2015,
+ "setName": "XY trainer Kit (Latios)",
+ "productKey": "2015-tk-xy-latio",
+ "setKey": "tk-xy-latio",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Latios)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

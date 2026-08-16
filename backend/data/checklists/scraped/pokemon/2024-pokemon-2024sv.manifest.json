@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.912Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2024sv",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "McDonald's Collection 2024",
+ "productKey": "2024-2024sv",
+ "setKey": "2024sv",
+ "rowCount": 15,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2024",
+   "category": "base",
+   "playerCount": 15,
+   "printRun": null
+  }
+ ]
+}

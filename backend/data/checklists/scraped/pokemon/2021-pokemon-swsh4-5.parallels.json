@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh4.5",
+ "setId": "swsh4.5",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 35,
+  "normal": 39,
+  "official": 72,
+  "reverse": 46,
+  "total": 73
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

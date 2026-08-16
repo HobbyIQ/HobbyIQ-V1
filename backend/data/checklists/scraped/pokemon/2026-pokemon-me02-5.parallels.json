@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me02.5",
+ "setId": "me02.5",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 142,
+  "normal": 153,
+  "official": 217,
+  "reverse": 318,
+  "total": 295
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

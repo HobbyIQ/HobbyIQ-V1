@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/mep",
+ "setId": "mep",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 88,
+  "normal": 0,
+  "official": 0,
+  "reverse": 0,
+  "total": 60
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

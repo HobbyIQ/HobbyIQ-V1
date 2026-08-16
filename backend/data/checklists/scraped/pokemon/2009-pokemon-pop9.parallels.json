@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pop9",
+ "setId": "pop9",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 3,
+  "normal": 14,
+  "official": 17,
+  "reverse": 1,
+  "total": 17
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

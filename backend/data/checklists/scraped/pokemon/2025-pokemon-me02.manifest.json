@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.744Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me02",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Phantasmal Flames",
+ "productKey": "2025-me02",
+ "setKey": "me02",
+ "rowCount": 130,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Phantasmal Flames",
+   "category": "base",
+   "playerCount": 130,
+   "printRun": null
+  }
+ ]
+}

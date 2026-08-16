@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.764Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-p",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "XY trainer Kit (Pikachu Libre)",
+ "productKey": "2016-tk-xy-p",
+ "setKey": "tk-xy-p",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Pikachu Libre)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

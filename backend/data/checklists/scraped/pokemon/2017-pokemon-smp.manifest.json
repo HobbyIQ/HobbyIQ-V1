@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.960Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/smp",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "SM Black Star Promos",
+ "productKey": "2017-smp",
+ "setKey": "smp",
+ "rowCount": 248,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > SM Black Star Promos",
+   "category": "base",
+   "playerCount": 248,
+   "printRun": null
+  }
+ ]
+}

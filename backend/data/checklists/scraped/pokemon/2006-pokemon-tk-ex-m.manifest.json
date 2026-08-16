@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.469Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-ex-m",
+ "sport": "pokemon",
+ "year": 2006,
+ "setName": "EX trainer Kit 2 (Minun)",
+ "productKey": "2006-tk-ex-m",
+ "setKey": "tk-ex-m",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > EX trainer Kit 2 (Minun)",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

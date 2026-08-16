@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.535Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ecard1",
+ "sport": "pokemon",
+ "year": 2002,
+ "setName": "Expedition Base Set",
+ "productKey": "2002-ecard1",
+ "setKey": "ecard1",
+ "rowCount": 165,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Expedition Base Set",
+   "category": "base",
+   "playerCount": 165,
+   "printRun": null
+  }
+ ]
+}

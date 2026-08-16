@@ -1,0 +1,303 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,SWSH001,Base,false,,Grookey
+base,SWSH002,Base,false,,Scorbunny
+base,SWSH003,Base,false,,Sobble
+base,SWSH004,Base,false,,Meowth V
+base,SWSH005,Base,false,,Meowth VMAX
+base,SWSH006,Base,false,,Rillaboom
+base,SWSH007,Base,false,,Frosmoth
+base,SWSH008,Base,false,,Galarian Perrserker
+base,SWSH009,Base,false,,Cinccino
+base,SWSH010,Base,false,,Gossifleur
+base,SWSH011,Base,false,,Wooloo
+base,SWSH012,Base,false,,Morpeko
+base,SWSH013,Base,false,,Galarian Ponyta
+base,SWSH014,Base,false,,Rillaboom V
+base,SWSH015,Base,false,,Cinderace V
+base,SWSH016,Base,false,,Inteleon V
+base,SWSH017,Base,false,,Toxtricity V
+base,SWSH018,Base,false,,Zacian V
+base,SWSH019,Base,false,,Zamazenta V
+base,SWSH020,Base,false,,Pikachu
+base,SWSH021,Base,false,,Polteageist V
+base,SWSH022,Base,false,,Flapple
+base,SWSH023,Base,false,,Luxray
+base,SWSH024,Base,false,,Coalossal
+base,SWSH025,Base,false,,Garbodor
+base,SWSH026,Base,false,,Mantine
+base,SWSH027,Base,false,,Noctowl
+base,SWSH028,Base,false,,Duraludon
+base,SWSH029,Base,false,,Rayquaza
+base,SWSH030,Base,false,,Copperajah V
+base,SWSH031,Base,false,,Morpeko
+base,SWSH032,Base,false,,Snorlax
+base,SWSH033,Base,false,,Zacian
+base,SWSH034,Base,false,,Zamazenta
+base,SWSH035,Base,false,,Decidueye
+base,SWSH036,Base,false,,Arctozolt
+base,SWSH037,Base,false,,Hydreigon
+base,SWSH038,Base,false,,Kangaskhan
+base,SWSH039,Base,false,,Pikachu
+base,SWSH040,Base,false,,Hatenna
+base,SWSH041,Base,false,,Flareon
+base,SWSH042,Base,false,,Eevee
+base,SWSH043,Base,false,,Galarian Sirfetch'd V
+base,SWSH044,Base,false,,Eternatus V
+base,SWSH045,Base,false,,Eternatus VMAX
+base,SWSH046,Base,false,,Eldegoss
+base,SWSH047,Base,false,,Drednaw
+base,SWSH048,Base,false,,Centiskorch
+base,SWSH049,Base,false,,Dubwool V
+base,SWSH050,Base,false,,Charizard V
+base,SWSH051,Base,false,,Lapras
+base,SWSH052,Base,false,,Gengar
+base,SWSH053,Base,false,,Machamp
+base,SWSH054,Base,false,,Coalossal
+base,SWSH055,Base,false,,Hatterene V
+base,SWSH056,Base,false,,Morpeko V
+base,SWSH057,Base,false,,Grimmsnarl V
+base,SWSH058,Base,false,,Alcremie
+base,SWSH059,Base,false,,Galarian Obstagoon
+base,SWSH060,Base,false,,Duraludon
+base,SWSH061,Base,false,,Pikachu V
+base,SWSH062,Base,false,,Pikachu VMAX
+base,SWSH063,Base,false,,Pikachu V
+base,SWSH064,Base,false,,Eternatus V
+base,SWSH065,Base,false,,Eevee V
+base,SWSH066,Base,false,,Charizard
+base,SWSH067,Base,false,,Donphan
+base,SWSH068,Base,false,,Snorlax
+base,SWSH069,Base,false,,Lugia
+base,SWSH070,Base,false,,Grookey
+base,SWSH071,Base,false,,Scorbunny
+base,SWSH072,Base,false,,Vaporeon
+base,SWSH073,Base,false,,Sobble
+base,SWSH074,Base,false,,Special Delivery Pikachu
+base,SWSH075,Base,false,,Special Delivery Charizard
+base,SWSH076,Base,false,,Zacian V
+base,SWSH077,Base,false,,Zamazenta V
+base,SWSH078,Base,false,,Orbeetle V
+base,SWSH079,Base,false,,Galarian Mr. Rime
+base,SWSH080,Base,false,,Dedenne
+base,SWSH081,Base,false,,Polteageist
+base,SWSH082,Base,false,,Bunnelby
+base,SWSH083,Base,false,,Alakazam V
+base,SWSH084,Base,false,,Eldegoss V
+base,SWSH085,Base,false,,Boltund V
+base,SWSH086,Base,false,,Cramorant V
+base,SWSH087,Base,false,,Eevee VMAX
+base,SWSH088,Base,false,,Cherrim
+base,SWSH089,Base,false,,Octillery
+base,SWSH090,Base,false,,Houndoom
+base,SWSH091,Base,false,,Bronzong
+base,SWSH092,Base,false,,Charmander
+base,SWSH093,Base,false,,Arrokuda
+base,SWSH094,Base,false,,Jolteon
+base,SWSH095,Base,false,,Eevee
+base,SWSH096,Base,false,,Dragapult V
+base,SWSH097,Base,false,,Dragapult VMAX
+base,SWSH098,Base,false,,Crobat V
+base,SWSH099,Base,false,,Crobat VMAX
+base,SWSH100,Base,false,,Venusaur V
+base,SWSH101,Base,false,,Blastoise V
+base,SWSH102,Base,false,,Venusaur VMAX
+base,SWSH103,Base,false,,Blastoise VMAX
+base,SWSH104,Base,false,,Victini V
+base,SWSH105,Base,false,,Gardevoir V
+base,SWSH106,Base,false,,Single Strike Urshifu V
+base,SWSH107,Base,false,,Rapid Strike Urshifu V
+base,SWSH108,Base,false,,Empoleon V
+base,SWSH109,Base,false,,Tyranitar V
+base,SWSH110,Base,false,,Crobat V
+base,SWSH111,Base,false,,Galarian Rapidash V
+base,SWSH112,Base,false,,Cinderace
+base,SWSH113,Base,false,,Inteleon
+base,SWSH114,Base,false,,Cresselia
+base,SWSH115,Base,false,,Passimian
+base,SWSH116,Base,false,,Morpeko
+base,SWSH117,Base,false,,Phanpy
+base,SWSH118,Base,false,,Eevee
+base,SWSH119,Base,false,,Snorlax
+base,SWSH120,Base,false,,Marnie
+base,SWSH121,Base,false,,Marnie
+base,SWSH122,Base,false,,Flaaffy
+base,SWSH123,Base,false,,Galarian Articuno
+base,SWSH124,Base,false,,Galarian Zapdos
+base,SWSH125,Base,false,,Galarian Moltres
+base,SWSH126,Base,false,,Galarian Slowpoke
+base,SWSH127,Base,false,,Eevee
+base,SWSH128,Base,false,,Eiscue
+base,SWSH129,Base,false,,Umbreon
+base,SWSH130,Base,false,,Ice Rider Calyrex V
+base,SWSH131,Base,false,,Shadow Rider Calyrex V
+base,SWSH132,Base,false,,Dragapult
+base,SWSH133,Base,false,,Lance's Charizard V
+base,SWSH134,Base,false,,Dark Sylveon V
+base,SWSH135,Base,false,,Zacian
+base,SWSH136,Base,false,,Mimikyu
+base,SWSH137,Base,false,,Light Toxtricity
+base,SWSH138,Base,false,,Hydreigon C
+base,SWSH139,Base,false,,Pikachu V-UNION
+base,SWSH140,Base,false,,Pikachu V-UNION
+base,SWSH141,Base,false,,Pikachu V-UNION
+base,SWSH142,Base,false,,Pikachu V-UNION
+base,SWSH143,Base,false,,Pikachu V
+base,SWSH144,Base,false,,Greninja ☆
+base,SWSH145,Base,false,,Pikachu V
+base,SWSH146,Base,false,,Poké Ball
+base,SWSH147,Base,false,,Rayquaza V
+base,SWSH148,Base,false,,Noivern V
+base,SWSH149,Base,false,,Flareon V
+base,SWSH150,Base,false,,Vaporeon V
+base,SWSH151,Base,false,,Jolteon V
+base,SWSH152,Base,false,,Professor's Research
+base,SWSH153,Base,false,,Pikachu
+base,SWSH154,Base,false,,Dragonite V
+base,SWSH155,Base,false,,Greninja V-UNION
+base,SWSH156,Base,false,,Greninja V-UNION
+base,SWSH157,Base,false,,Greninja V-UNION
+base,SWSH158,Base,false,,Greninja V-UNION
+base,SWSH159,Base,false,,Mewtwo V-UNION
+base,SWSH160,Base,false,,Mewtwo V-UNION
+base,SWSH161,Base,false,,Mewtwo V-UNION
+base,SWSH162,Base,false,,Mewtwo V-UNION
+base,SWSH163,Base,false,,Zacian V-UNION
+base,SWSH164,Base,false,,Zacian V-UNION
+base,SWSH165,Base,false,,Zacian V-UNION
+base,SWSH166,Base,false,,Zacian V-UNION
+base,SWSH167,Base,false,,Professor Burnet
+base,SWSH168,Base,false,,Oricorio
+base,SWSH169,Base,false,,Pyukumuku
+base,SWSH170,Base,false,,Deoxys
+base,SWSH171,Base,false,,Latias
+base,SWSH172,Base,false,,Tepig
+base,SWSH173,Base,false,,Blitzle
+base,SWSH174,Base,false,,Espeon
+base,SWSH175,Base,false,,Eevee
+base,SWSH176,Base,false,,Hoopa V
+base,SWSH177,Base,false,,Special Delivery Bidoof
+base,SWSH178,Base,false,,Professor's Research
+base,SWSH179,Base,false,,Flareon V
+base,SWSH180,Base,false,,Flareon VMAX
+base,SWSH181,Base,false,,Vaporeon V
+base,SWSH182,Base,false,,Vaporeon VMAX
+base,SWSH183,Base,false,,Jolteon V
+base,SWSH184,Base,false,,Jolteon VMAX
+base,SWSH185,Base,false,,Moltres
+base,SWSH186,Base,false,,Lucario
+base,SWSH187,Base,false,,Liepard
+base,SWSH188,Base,false,,Bibarel
+base,SWSH189,Base,false,,Flapple
+base,SWSH190,Base,false,,Eevee
+base,SWSH191,Base,false,,Leafeon
+base,SWSH192,Base,false,,Glaceon
+base,SWSH193,Base,false,,Galarian Obstagoon
+base,SWSH194,Base,false,,Leafeon V
+base,SWSH195,Base,false,,Leafeon VSTAR
+base,SWSH196,Base,false,,Glaceon V
+base,SWSH197,Base,false,,Glaceon VSTAR
+base,SWSH198,Base,false,,Pikachu V
+base,SWSH199,Base,false,,Lycanroc V
+base,SWSH200,Base,false,,Corviknight V
+base,SWSH201,Base,false,,Espeon V
+base,SWSH202,Base,false,,Sylveon V
+base,SWSH203,Base,false,,Umbreon V
+base,SWSH204,Base,false,,Arceus V
+base,SWSH205,Base,false,,Hisuian Basculegion
+base,SWSH206,Base,false,,Wyrdeer
+base,SWSH207,Base,false,,Hisuian Samurott
+base,SWSH208,Base,false,,Magnezone
+base,SWSH209,Base,false,,Toxel
+base,SWSH210,Base,false,,Oricorio
+base,SWSH211,Base,false,,Sylveon
+base,SWSH212,Base,false,,Eevee
+base,SWSH213,Base,false,,Lucario V
+base,SWSH214,Base,false,,Lucario VSTAR
+base,SWSH215,Base,false,,Morpeko V-UNION
+base,SWSH216,Base,false,,Morpeko V-UNION
+base,SWSH217,Base,false,,Morpeko V-UNION
+base,SWSH218,Base,false,,Morpeko V-UNION
+base,SWSH219,Base,false,,Boltund V
+base,SWSH220,Base,false,,Rowlet
+base,SWSH221,Base,false,,Cyndaquil
+base,SWSH222,Base,false,,Oshawott
+base,SWSH223,Base,false,,Mewtwo V
+base,SWSH224,Base,false,,Melmetal V
+base,SWSH225,Base,false,,Alolan Exeggutor V
+base,SWSH226,Base,false,,Spark
+base,SWSH227,Base,false,,Blanche
+base,SWSH228,Base,false,,Candela
+base,SWSH229,Base,false,,Mewtwo V
+base,SWSH230,Base,false,,Radiant Eevee
+base,SWSH231,Base,false,,Bulbasaur
+base,SWSH232,Base,false,,Charmander
+base,SWSH233,Base,false,,Squirtle
+base,SWSH234,Base,false,,Pikachu
+base,SWSH235,Base,false,,Dragonite V
+base,SWSH236,Base,false,,Dragonite VSTAR
+base,SWSH237,Base,false,,Hisuian Typhlosion V
+base,SWSH238,Base,false,,Hisuian Decidueye V
+base,SWSH239,Base,false,,Hisuian Samurott V
+base,SWSH240,Base,false,,Finneon
+base,SWSH241,Base,false,,Gengar
+base,SWSH242,Base,false,,Comfey
+base,SWSH243,Base,false,,Machamp
+base,SWSH244,Base,false,,Scorbunny
+base,SWSH245,Base,false,,Croagunk
+base,SWSH246,Base,false,,Weavile
+base,SWSH247,Base,false,,Regigigas
+base,SWSH248,Base,false,,Kleavor V
+base,SWSH249,Base,false,,Kleavor VSTAR
+base,SWSH250,Base,false,,Lumineon V
+base,SWSH251,Base,false,,Boss's Orders
+base,SWSH252,Base,false,,Infernape V
+base,SWSH253,Base,false,,Origin Forme Palkia V
+base,SWSH254,Base,false,,Origin Forme Palkia VSTAR
+base,SWSH255,Base,false,,Origin Forme Dialga V
+base,SWSH256,Base,false,,Origin Forme Dialga VSTAR
+base,SWSH257,Base,false,,Rotom V
+base,SWSH258,Base,false,,Gallade V
+base,SWSH259,Base,false,,Giratina V
+base,SWSH260,Base,false,,Charizard V
+base,SWSH261,Base,false,,Charizard VMAX
+base,SWSH262,Base,false,,Charizard VSTAR
+base,SWSH263,Base,false,,Zeraora V
+base,SWSH264,Base,false,,Zeraora VMAX
+base,SWSH265,Base,false,,Zeraora VSTAR
+base,SWSH266,Base,false,,Deoxys V
+base,SWSH267,Base,false,,Deoxys VMAX
+base,SWSH268,Base,false,,Deoxys VSTAR
+base,SWSH269,Base,false,,Sunflora
+base,SWSH270,Base,false,,Rapidash
+base,SWSH271,Base,false,,Kirlia
+base,SWSH272,Base,false,,Archeops
+base,SWSH273,Base,false,,Hisuian Basculin
+base,SWSH274,Base,false,,Cranidos
+base,SWSH275,Base,false,,Manaphy
+base,SWSH276,Base,false,,Togetic
+base,SWSH277,Base,false,,Rillaboom
+base,SWSH278,Base,false,,Cinderace
+base,SWSH279,Base,false,,Inteleon
+base,SWSH280,Base,false,,Regieleki V
+base,SWSH281,Base,false,,Regidrago V
+base,SWSH282,Base,false,,Galarian Articuno
+base,SWSH283,Base,false,,Galarian Zapdos
+base,SWSH284,Base,false,,Galarian Moltres
+base,SWSH285,Base,false,,Pikachu V
+base,SWSH286,Base,false,,Pikachu VMAX
+base,SWSH287,Base,false,,Morpeko V-UNION
+base,SWSH288,Base,false,,Morpeko V-UNION
+base,SWSH289,Base,false,,Morpeko V-UNION
+base,SWSH290,Base,false,,Morpeko V-UNION
+base,SWSH291,Base,false,,Lucario VSTAR
+base,SWSH292,Base,false,,Zacian V
+base,SWSH293,Base,false,,Zamazenta V
+base,SWSH294,Base,false,,Hisuian Electrode V
+base,SWSH295,Base,false,,Virizion V
+base,SWSH296,Base,false,,Champions Festival
+base,SWSH297,Base,false,,Hisuian Zoroark V
+base,SWSH298,Base,false,,Hisuian Zoroark VSTAR
+base,SWSH301,Base,false,,Lugia V
+base,SWSH302,Base,false,,Klara
+base,SWSH306,Base,false,,Arceus V
+base,SWSH307,Base,false,,Arceus VSTAR

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.728Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv07",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Stellar Crown",
+ "productKey": "2024-sv07",
+ "setKey": "sv07",
+ "rowCount": 175,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Stellar Crown",
+   "category": "base",
+   "playerCount": 175,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.755Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sma",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Hidden Fates Shiny Vault",
+ "productKey": "2019-sma",
+ "setKey": "sma",
+ "rowCount": 94,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Hidden Fates Shiny Vault",
+   "category": "base",
+   "playerCount": 94,
+   "printRun": null
+  }
+ ]
+}

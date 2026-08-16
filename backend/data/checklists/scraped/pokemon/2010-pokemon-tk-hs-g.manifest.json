@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.863Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-hs-g",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "HS trainer Kit (Gyarados)",
+ "productKey": "2010-tk-hs-g",
+ "setKey": "tk-hs-g",
+ "rowCount": 1,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > HS trainer Kit (Gyarados)",
+   "category": "base",
+   "playerCount": 1,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/me01",
+ "setId": "me01",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 105,
+  "normal": 131,
+  "official": 132,
+  "reverse": 123,
+  "total": 188
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

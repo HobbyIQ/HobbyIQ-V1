@@ -1,0 +1,123 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,SV001,Base,false,,Rowlet
+base,SV002,Base,false,,Dartrix
+base,SV003,Base,false,,Decidueye
+base,SV004,Base,false,,Grookey
+base,SV005,Base,false,,Thwackey
+base,SV006,Base,false,,Rillaboom
+base,SV007,Base,false,,Blipbug
+base,SV008,Base,false,,Dottler
+base,SV009,Base,false,,Orbeetle
+base,SV010,Base,false,,Gossifleur
+base,SV011,Base,false,,Eldegoss
+base,SV012,Base,false,,Applin
+base,SV013,Base,false,,Flapple
+base,SV014,Base,false,,Appletun
+base,SV015,Base,false,,Scorbunny
+base,SV016,Base,false,,Raboot
+base,SV017,Base,false,,Cinderace
+base,SV018,Base,false,,Sizzlipede
+base,SV019,Base,false,,Centiskorch
+base,SV020,Base,false,,Galarian Mr. Mime
+base,SV021,Base,false,,Galarian Mr. Rime
+base,SV022,Base,false,,Suicune
+base,SV023,Base,false,,Galarian Darumaka
+base,SV024,Base,false,,Galarian Darmanitan
+base,SV025,Base,false,,Sobble
+base,SV026,Base,false,,Drizzile
+base,SV027,Base,false,,Inteleon
+base,SV028,Base,false,,Chewtle
+base,SV029,Base,false,,Drednaw
+base,SV030,Base,false,,Cramorant
+base,SV031,Base,false,,Arrokuda
+base,SV032,Base,false,,Barraskewda
+base,SV033,Base,false,,Snom
+base,SV034,Base,false,,Frosmoth
+base,SV035,Base,false,,Eiscue
+base,SV036,Base,false,,Dracovish
+base,SV037,Base,false,,Arctovish
+base,SV038,Base,false,,Rotom
+base,SV039,Base,false,,Yamper
+base,SV040,Base,false,,Boltund
+base,SV041,Base,false,,Toxel
+base,SV042,Base,false,,Toxtricity
+base,SV043,Base,false,,Pincurchin
+base,SV044,Base,false,,Morpeko
+base,SV045,Base,false,,Dracozolt
+base,SV046,Base,false,,Arctozolt
+base,SV047,Base,false,,Galarian Ponyta
+base,SV048,Base,false,,Galarian Rapidash
+base,SV049,Base,false,,Galarian Corsola
+base,SV050,Base,false,,Galarian Cursola
+base,SV051,Base,false,,Dedenne
+base,SV052,Base,false,,Sinistea
+base,SV053,Base,false,,Polteageist
+base,SV054,Base,false,,Hatenna
+base,SV055,Base,false,,Hattrem
+base,SV056,Base,false,,Hatterene
+base,SV057,Base,false,,Milcery
+base,SV058,Base,false,,Alcremie
+base,SV059,Base,false,,Indeedee
+base,SV060,Base,false,,Dreepy
+base,SV061,Base,false,,Drakloak
+base,SV062,Base,false,,Dragapult
+base,SV063,Base,false,,Galarian Farfetch'd
+base,SV064,Base,false,,Galarian Sirfetch'd
+base,SV065,Base,false,,Galarian Yamask
+base,SV066,Base,false,,Galarian Runerigus
+base,SV067,Base,false,,Rolycoly
+base,SV068,Base,false,,Carkol
+base,SV069,Base,false,,Coalossal
+base,SV070,Base,false,,Silicobra
+base,SV071,Base,false,,Sandaconda
+base,SV072,Base,false,,Clobbopus
+base,SV073,Base,false,,Grapploct
+base,SV074,Base,false,,Falinks
+base,SV075,Base,false,,Stonjourner
+base,SV076,Base,false,,Koffing
+base,SV077,Base,false,,Galarian Weezing
+base,SV078,Base,false,,Galarian Zigzagoon
+base,SV079,Base,false,,Galarian Linoone
+base,SV080,Base,false,,Galarian Obstagoon
+base,SV081,Base,false,,Nickit
+base,SV082,Base,false,,Thievul
+base,SV083,Base,false,,Impidimp
+base,SV084,Base,false,,Morgrem
+base,SV085,Base,false,,Grimmsnarl
+base,SV086,Base,false,,Galarian Meowth
+base,SV087,Base,false,,Galarian Perrserker
+base,SV088,Base,false,,Galarian Stunfisk
+base,SV089,Base,false,,Corviknight
+base,SV090,Base,false,,Cufant
+base,SV091,Base,false,,Copperajah
+base,SV092,Base,false,,Duraludon
+base,SV093,Base,false,,Minccino
+base,SV094,Base,false,,Cinccino
+base,SV095,Base,false,,Ducklett
+base,SV096,Base,false,,Swanna
+base,SV097,Base,false,,Bunnelby
+base,SV098,Base,false,,Oranguru
+base,SV099,Base,false,,Skwovet
+base,SV100,Base,false,,Greedent
+base,SV101,Base,false,,Rookidee
+base,SV102,Base,false,,Corvisquire
+base,SV103,Base,false,,Wooloo
+base,SV104,Base,false,,Dubwool
+base,SV105,Base,false,,Rillaboom V
+base,SV106,Base,false,,Rillaboom VMAX
+base,SV107,Base,false,,Charizard VMAX
+base,SV108,Base,false,,Centiskorch V
+base,SV109,Base,false,,Centiskorch VMAX
+base,SV110,Base,false,,Lapras V
+base,SV111,Base,false,,Lapras VMAX
+base,SV112,Base,false,,Toxtricity V
+base,SV113,Base,false,,Toxtricity VMAX
+base,SV114,Base,false,,Indeedee V
+base,SV115,Base,false,,Falinks V
+base,SV116,Base,false,,Grimmsnarl V
+base,SV117,Base,false,,Grimmsnarl VMAX
+base,SV118,Base,false,,Ditto V
+base,SV119,Base,false,,Ditto VMAX
+base,SV120,Base,false,,Dubwool V
+base,SV121,Base,false,,Eternatus V
+base,SV122,Base,false,,Eternatus VMAX

@@ -1,0 +1,104 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Bulbasaur
+base,002,Base,false,,Ivysaur
+base,003,Base,false,,Venusaur
+base,004,Base,false,,Mega Venusaur ex
+base,005,Base,false,,Spinarak
+base,006,Base,false,,Ariados
+base,007,Base,false,,Sunkern
+base,008,Base,false,,Sunflora
+base,009,Base,false,,Burmy
+base,010,Base,false,,Mothim
+base,011,Base,false,,Charmander
+base,012,Base,false,,Charmeleon
+base,013,Base,false,,Charizard
+base,014,Base,false,,Mega Charizard Y ex
+base,015,Base,false,,Houndour
+base,016,Base,false,,Houndoom
+base,017,Base,false,,Squirtle
+base,018,Base,false,,Wartortle
+base,019,Base,false,,Blastoise
+base,020,Base,false,,Mega Blastoise ex
+base,021,Base,false,,Basculin
+base,022,Base,false,,Clauncher
+base,023,Base,false,,Clawitzer
+base,024,Base,false,,Magnemite
+base,025,Base,false,,Magneton
+base,026,Base,false,,Magnezone
+base,027,Base,false,,Emolga
+base,028,Base,false,,Helioptile
+base,029,Base,false,,Heliolisk
+base,030,Base,false,,Misdreavus
+base,031,Base,false,,Mismagius
+base,032,Base,false,,Solosis
+base,033,Base,false,,Duosion
+base,034,Base,false,,Reuniclus
+base,035,Base,false,,Spritzee
+base,036,Base,false,,Aromatisse
+base,037,Base,false,,Xerneas
+base,038,Base,false,,Onix
+base,039,Base,false,,Makuhita
+base,040,Base,false,,Hariyama
+base,041,Base,false,,Nosepass
+base,042,Base,false,,Mega Lopunny ex
+base,043,Base,false,,Mienfoo
+base,044,Base,false,,Mienshao
+base,045,Base,false,,Grimer
+base,046,Base,false,,Muk
+base,047,Base,false,,Purrloin
+base,048,Base,false,,Liepard
+base,049,Base,false,,Trubbish
+base,050,Base,false,,Garbodor
+base,051,Base,false,,Steelix
+base,052,Base,false,,Mega Steelix ex
+base,053,Base,false,,Probopass
+base,054,Base,false,,Genesect
+base,055,Base,false,,Ditto
+base,056,Base,false,,Porygon
+base,057,Base,false,,Porygon2
+base,058,Base,false,,Porygon-Z
+base,059,Base,false,,Starly
+base,060,Base,false,,Staravia
+base,061,Base,false,,Staraptor
+base,062,Base,false,,Buneary
+base,063,Base,false,,Lopunny
+base,064,Base,false,,Bouffalant
+base,065,Base,false,,Furfrou
+base,066,Base,false,,Clemont's Backpack
+base,067,Base,false,,Quick-Grow Extract
+base,068,Base,false,,Clemont
+base,069,Base,false,,Serena
+base,070,Base,false,,Ariados
+base,071,Base,false,,Sunflora
+base,072,Base,false,,Reuniclus
+base,073,Base,false,,Xerneas
+base,074,Base,false,,Trubbish
+base,075,Base,false,,Buneary
+base,076,Base,false,,Mega Venusaur ex
+base,077,Base,false,,Mega Charizard Y ex
+base,078,Base,false,,Mega Blastoise ex
+base,079,Base,false,,Mega Lopunny ex
+base,080,Base,false,,Mega Steelix ex
+base,081,Base,false,,Clemont
+base,082,Base,false,,Serena
+base,083,Base,false,,Mega Venusaur ex
+base,084,Base,false,,Mega Blastoise ex
+base,085,Base,false,,Mega Lopunny ex
+base,086,Base,false,,Mega Steelix ex
+base,087,Base,false,,Mega Charizard Y ex
+base,088,Base,false,,Oddish
+base,089,Base,false,,Gloom
+base,090,Base,false,,Vileplume
+base,091,Base,false,,Charizard
+base,092,Base,false,,Shellder
+base,093,Base,false,,Cloyster
+base,094,Base,false,,Sandshrew
+base,095,Base,false,,Sandslash
+base,096,Base,false,,Type: Null
+base,097,Base,false,,Silvally
+base,098,Base,false,,Buzzwole ex
+base,099,Base,false,,Lunala ex
+base,100,Base,false,,Guzzlord ex
+base,101,Base,false,,Solgaleo ex
+base,102,Base,false,,Aegislash
+base,103,Base,false,,Quick-Grow Extract

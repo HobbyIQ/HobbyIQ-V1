@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/lc",
+ "setId": "lc",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 19,
+  "normal": 94,
+  "official": 110,
+  "reverse": 111,
+  "total": 110
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

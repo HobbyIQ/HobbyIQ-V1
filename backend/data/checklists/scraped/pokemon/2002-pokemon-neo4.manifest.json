@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.419Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo4",
+ "sport": "pokemon",
+ "year": 2002,
+ "setName": "Neo Destiny",
+ "productKey": "2002-neo4",
+ "setKey": "neo4",
+ "rowCount": 113,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Neo Destiny",
+   "category": "base",
+   "playerCount": 113,
+   "printRun": null
+  }
+ ]
+}

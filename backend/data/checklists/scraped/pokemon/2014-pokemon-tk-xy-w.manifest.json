@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.196Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-w",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "XY trainer Kit (Wigglytuff)",
+ "productKey": "2014-tk-xy-w",
+ "setKey": "tk-xy-w",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Wigglytuff)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

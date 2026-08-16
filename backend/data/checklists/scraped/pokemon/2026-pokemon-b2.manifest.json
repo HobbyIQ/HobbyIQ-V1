@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.825Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/B2",
+ "sport": "pokemon",
+ "year": 2026,
+ "setName": "Fantastical Parade",
+ "productKey": "2026-b2",
+ "setKey": "b2",
+ "rowCount": 234,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Fantastical Parade",
+   "category": "base",
+   "playerCount": 234,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,280 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Hoppip
+base,002,Base,false,,Skiploom
+base,003,Base,false,,Jumpluff
+base,004,Base,false,,Pineco
+base,005,Base,false,,Forretress ex
+base,006,Base,false,,Heracross
+base,007,Base,false,,Tropius
+base,008,Base,false,,Combee
+base,009,Base,false,,Vespiquen
+base,010,Base,false,,Snover
+base,011,Base,false,,Abomasnow
+base,012,Base,false,,Sprigatito
+base,013,Base,false,,Sprigatito
+base,014,Base,false,,Floragato
+base,015,Base,false,,Meowscarada ex
+base,016,Base,false,,Tarountula
+base,017,Base,false,,Tarountula
+base,018,Base,false,,Spidops
+base,019,Base,false,,Nymble
+base,020,Base,false,,Nymble
+base,021,Base,false,,Lokix
+base,022,Base,false,,Bramblin
+base,023,Base,false,,Bramblin
+base,024,Base,false,,Brambleghast
+base,025,Base,false,,Rellor
+base,026,Base,false,,Rellor
+base,027,Base,false,,Wo-Chien ex
+base,028,Base,false,,Paldean Tauros
+base,029,Base,false,,Fletchinder
+base,030,Base,false,,Talonflame
+base,031,Base,false,,Litleo
+base,032,Base,false,,Pyroar
+base,033,Base,false,,Oricorio
+base,034,Base,false,,Fuecoco
+base,035,Base,false,,Fuecoco
+base,036,Base,false,,Crocalor
+base,037,Base,false,,Skeledirge ex
+base,038,Base,false,,Charcadet
+base,039,Base,false,,Charcadet
+base,040,Base,false,,Chi-Yu ex
+base,041,Base,false,,Paldean Tauros
+base,042,Base,false,,Magikarp
+base,043,Base,false,,Gyarados
+base,044,Base,false,,Marill
+base,045,Base,false,,Azumarill
+base,046,Base,false,,Delibird
+base,047,Base,false,,Luvdisc
+base,048,Base,false,,Eiscue
+base,049,Base,false,,Quaxly
+base,050,Base,false,,Quaxly
+base,051,Base,false,,Quaxwell
+base,052,Base,false,,Quaquaval ex
+base,053,Base,false,,Cetoddle
+base,054,Base,false,,Cetoddle
+base,055,Base,false,,Cetitan
+base,056,Base,false,,Veluza
+base,057,Base,false,,Frigibax
+base,058,Base,false,,Frigibax
+base,059,Base,false,,Arctibax
+base,060,Base,false,,Baxcalibur
+base,061,Base,false,,Chien-Pao ex
+base,062,Base,false,,Pikachu
+base,063,Base,false,,Pikachu ex
+base,064,Base,false,,Raichu
+base,065,Base,false,,Magnemite
+base,066,Base,false,,Voltorb
+base,067,Base,false,,Electrode
+base,068,Base,false,,Shinx
+base,069,Base,false,,Shinx
+base,070,Base,false,,Luxio
+base,071,Base,false,,Luxray
+base,072,Base,false,,Pincurchin
+base,073,Base,false,,Pincurchin
+base,074,Base,false,,Pawmi
+base,075,Base,false,,Pawmo
+base,076,Base,false,,Pawmot
+base,077,Base,false,,Tadbulb
+base,078,Base,false,,Tadbulb
+base,079,Base,false,,Bellibolt ex
+base,080,Base,false,,Wattrel
+base,081,Base,false,,Wattrel
+base,082,Base,false,,Kilowattrel
+base,083,Base,false,,Jigglypuff
+base,084,Base,false,,Wigglytuff
+base,085,Base,false,,Slowpoke
+base,086,Base,false,,Slowking ex
+base,087,Base,false,,Misdreavus
+base,088,Base,false,,Mismagius
+base,089,Base,false,,Spiritomb
+base,090,Base,false,,Gothita
+base,091,Base,false,,Gothorita
+base,092,Base,false,,Gothitelle
+base,093,Base,false,,Dedenne ex
+base,094,Base,false,,Oranguru
+base,095,Base,false,,Sandygast
+base,096,Base,false,,Palossand
+base,097,Base,false,,Mimikyu
+base,098,Base,false,,Ceruledge
+base,099,Base,false,,Rabsca
+base,100,Base,false,,Tinkatink
+base,101,Base,false,,Tinkatink
+base,102,Base,false,,Tinkatink
+base,103,Base,false,,Tinkatuff
+base,104,Base,false,,Tinkatuff
+base,105,Base,false,,Tinkaton
+base,106,Base,false,,Mankey
+base,107,Base,false,,Primeape
+base,108,Base,false,,Paldean Tauros
+base,109,Base,false,,Sudowoodo
+base,110,Base,false,,Larvitar
+base,111,Base,false,,Pupitar
+base,112,Base,false,,Makuhita
+base,113,Base,false,,Hariyama
+base,114,Base,false,,Croagunk
+base,115,Base,false,,Toxicroak
+base,116,Base,false,,Rockruff
+base,117,Base,false,,Lycanroc ex
+base,118,Base,false,,Passimian
+base,119,Base,false,,Falinks
+base,120,Base,false,,Nacli
+base,121,Base,false,,Nacli
+base,122,Base,false,,Naclstack
+base,123,Base,false,,Garganacl
+base,124,Base,false,,Glimmet
+base,125,Base,false,,Glimmet
+base,126,Base,false,,Glimmora
+base,127,Base,false,,Ting-Lu ex
+base,128,Base,false,,Paldean Wooper
+base,129,Base,false,,Paldean Wooper
+base,130,Base,false,,Paldean Clodsire ex
+base,131,Base,false,,Murkrow
+base,132,Base,false,,Honchkrow
+base,133,Base,false,,Sneasel
+base,134,Base,false,,Weavile
+base,135,Base,false,,Tyranitar
+base,136,Base,false,,Sableye
+base,137,Base,false,,Seviper
+base,138,Base,false,,Deino
+base,139,Base,false,,Zweilous
+base,140,Base,false,,Hydreigon
+base,141,Base,false,,Maschiff
+base,142,Base,false,,Maschiff
+base,143,Base,false,,Mabosstiff
+base,144,Base,false,,Shroodle
+base,145,Base,false,,Shroodle
+base,146,Base,false,,Grafaiai
+base,147,Base,false,,Bombirdier
+base,148,Base,false,,Corviknight
+base,149,Base,false,,Cufant
+base,150,Base,false,,Copperajah ex
+base,151,Base,false,,Orthworm
+base,152,Base,false,,Noibat
+base,153,Base,false,,Noivern ex
+base,154,Base,false,,Girafarig
+base,155,Base,false,,Farigiraf
+base,156,Base,false,,Dunsparce
+base,157,Base,false,,Dudunsparce
+base,158,Base,false,,Wingull
+base,159,Base,false,,Pelipper
+base,160,Base,false,,Slakoth
+base,161,Base,false,,Vigoroth
+base,162,Base,false,,Slaking
+base,163,Base,false,,Fletchling
+base,164,Base,false,,Rookidee
+base,165,Base,false,,Corvisquire
+base,166,Base,false,,Tandemaus
+base,167,Base,false,,Tandemaus
+base,168,Base,false,,Maushold
+base,169,Base,false,,Squawkabilly ex
+base,170,Base,false,,Flamigo
+base,171,Base,false,,Artazon
+base,172,Base,false,,Boss's Orders
+base,173,Base,false,,Bravery Charm
+base,174,Base,false,,Calamitous Snowy Mountain
+base,175,Base,false,,Calamitous Wasteland
+base,176,Base,false,,Choice Belt
+base,177,Base,false,,Clavell
+base,178,Base,false,,Delivery Drone
+base,179,Base,false,,Dendra
+base,180,Base,false,,Falkner
+base,181,Base,false,,Fighting Au Lait
+base,182,Base,false,,Giacomo
+base,183,Base,false,,Great Ball
+base,184,Base,false,,Grusha
+base,185,Base,false,,Iono
+base,186,Base,false,,Practice Studio
+base,187,Base,false,,Saguaro
+base,188,Base,false,,Super Rod
+base,189,Base,false,,Superior Energy Retrieval
+base,190,Base,false,,Jet Energy
+base,191,Base,false,,Luminous Energy
+base,192,Base,false,,Reversal Energy
+base,193,Base,false,,Therapeutic Energy
+base,194,Base,false,,Heracross
+base,195,Base,false,,Tropius
+base,196,Base,false,,Sprigatito
+base,197,Base,false,,Floragato
+base,198,Base,false,,Bramblin
+base,199,Base,false,,Fletchinder
+base,200,Base,false,,Pyroar
+base,201,Base,false,,Fuecoco
+base,202,Base,false,,Crocalor
+base,203,Base,false,,Magikarp
+base,204,Base,false,,Marill
+base,205,Base,false,,Eiscue
+base,206,Base,false,,Quaxly
+base,207,Base,false,,Quaxwell
+base,208,Base,false,,Frigibax
+base,209,Base,false,,Arctibax
+base,210,Base,false,,Baxcalibur
+base,211,Base,false,,Raichu
+base,212,Base,false,,Mismagius
+base,213,Base,false,,Gothorita
+base,214,Base,false,,Sandygast
+base,215,Base,false,,Rabsca
+base,216,Base,false,,Tinkatink
+base,217,Base,false,,Tinkatuff
+base,218,Base,false,,Paldean Tauros
+base,219,Base,false,,Sudowoodo
+base,220,Base,false,,Nacli
+base,221,Base,false,,Paldean Wooper
+base,222,Base,false,,Tyranitar
+base,223,Base,false,,Grafaiai
+base,224,Base,false,,Orthworm
+base,225,Base,false,,Rookidee
+base,226,Base,false,,Maushold
+base,227,Base,false,,Flamigo
+base,228,Base,false,,Farigiraf
+base,229,Base,false,,Dudunsparce
+base,230,Base,false,,Forretress ex
+base,231,Base,false,,Meowscarada ex
+base,232,Base,false,,Wo-Chien ex
+base,233,Base,false,,Skeledirge ex
+base,234,Base,false,,Chi-Yu ex
+base,235,Base,false,,Quaquaval ex
+base,236,Base,false,,Chien-Pao ex
+base,237,Base,false,,Bellibolt ex
+base,238,Base,false,,Slowking ex
+base,239,Base,false,,Dedenne ex
+base,240,Base,false,,Tinkaton ex
+base,241,Base,false,,Lycanroc ex
+base,242,Base,false,,Annihilape ex
+base,243,Base,false,,Ting-Lu ex
+base,244,Base,false,,Paldean Clodsire ex
+base,245,Base,false,,Copperajah ex
+base,246,Base,false,,Noivern ex
+base,247,Base,false,,Squawkabilly ex
+base,248,Base,false,,Boss's Orders
+base,249,Base,false,,Clavell
+base,250,Base,false,,Dendra
+base,251,Base,false,,Falkner
+base,252,Base,false,,Giacomo
+base,253,Base,false,,Grusha
+base,254,Base,false,,Iono
+base,255,Base,false,,Saguaro
+base,256,Base,false,,Meowscarada ex
+base,257,Base,false,,Wo-Chien ex
+base,258,Base,false,,Skeledirge ex
+base,259,Base,false,,Chi-Yu ex
+base,260,Base,false,,Quaquaval ex
+base,261,Base,false,,Chien-Pao ex
+base,262,Base,false,,Tinkaton ex
+base,263,Base,false,,Ting-Lu ex
+base,264,Base,false,,Squawkabilly ex
+base,265,Base,false,,Boss's Orders
+base,266,Base,false,,Dendra
+base,267,Base,false,,Giacomo
+base,268,Base,false,,Grusha
+base,269,Base,false,,Iono
+base,270,Base,false,,Saguaro
+base,271,Base,false,,Meowscarada ex
+base,272,Base,false,,Skeledirge ex
+base,273,Base,false,,Quaquaval ex
+base,274,Base,false,,Chien-Pao ex
+base,275,Base,false,,Ting-Lu ex
+base,276,Base,false,,Super Rod
+base,277,Base,false,,Superior Energy Retrieval
+base,278,Base,false,,Basic Grass Energy
+base,279,Base,false,,Basic Water Energy

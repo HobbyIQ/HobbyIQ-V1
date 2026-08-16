@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.999Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh2",
+ "sport": "pokemon",
+ "year": 2020,
+ "setName": "Rebel Clash",
+ "productKey": "2020-swsh2",
+ "setKey": "swsh2",
+ "rowCount": 209,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Rebel Clash",
+   "category": "base",
+   "playerCount": 209,
+   "printRun": null
+  }
+ ]
+}

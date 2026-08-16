@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.138Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bwp",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "BW Black Star Promos",
+ "productKey": "2011-bwp",
+ "setKey": "bwp",
+ "rowCount": 101,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > BW Black Star Promos",
+   "category": "base",
+   "playerCount": 101,
+   "printRun": null
+  }
+ ]
+}

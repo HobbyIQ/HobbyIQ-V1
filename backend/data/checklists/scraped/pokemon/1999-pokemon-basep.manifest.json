@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:03.921Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/basep",
+ "sport": "pokemon",
+ "year": 1999,
+ "setName": "Wizards Black Star Promos",
+ "productKey": "1999-basep",
+ "setKey": "basep",
+ "rowCount": 53,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Wizards Black Star Promos",
+   "category": "base",
+   "playerCount": 53,
+   "printRun": null
+  }
+ ]
+}

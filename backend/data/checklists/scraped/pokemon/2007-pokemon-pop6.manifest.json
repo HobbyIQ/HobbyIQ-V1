@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.151Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pop6",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "POP Series 6",
+ "productKey": "2007-pop6",
+ "setKey": "pop6",
+ "rowCount": 17,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > POP Series 6",
+   "category": "base",
+   "playerCount": 17,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.446Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/mfb",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "My First Battle",
+ "productKey": "2023-mfb",
+ "setKey": "mfb",
+ "rowCount": 34,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > My First Battle",
+   "category": "base",
+   "playerCount": 34,
+   "printRun": null
+  }
+ ]
+}

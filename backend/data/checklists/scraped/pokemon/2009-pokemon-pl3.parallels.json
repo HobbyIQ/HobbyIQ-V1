@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pl3",
+ "setId": "pl3",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 143,
+  "normal": 23,
+  "official": 147,
+  "reverse": 153,
+  "total": 153
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

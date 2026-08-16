@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.456Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/lc",
+ "sport": "pokemon",
+ "year": 2002,
+ "setName": "Legendary Collection",
+ "productKey": "2002-lc",
+ "setKey": "lc",
+ "rowCount": 110,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Legendary Collection",
+   "category": "base",
+   "playerCount": 110,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.959Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-n",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "XY trainer Kit (Noivern)",
+ "productKey": "2014-tk-xy-n",
+ "setKey": "tk-xy-n",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Noivern)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.680Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm10",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Unbroken Bonds",
+ "productKey": "2019-sm10",
+ "setKey": "sm10",
+ "rowCount": 234,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Unbroken Bonds",
+   "category": "base",
+   "playerCount": 234,
+   "printRun": null
+  }
+ ]
+}

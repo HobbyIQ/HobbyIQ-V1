@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.471Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw2",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "Emerging Powers",
+ "productKey": "2011-bw2",
+ "setKey": "bw2",
+ "rowCount": 98,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Emerging Powers",
+   "category": "base",
+   "playerCount": 98,
+   "printRun": null
+  }
+ ]
+}

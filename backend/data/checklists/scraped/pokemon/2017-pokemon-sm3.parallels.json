@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm3",
+ "setId": "sm3",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 71,
+  "normal": 103,
+  "official": 147,
+  "reverse": 117,
+  "total": 169
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

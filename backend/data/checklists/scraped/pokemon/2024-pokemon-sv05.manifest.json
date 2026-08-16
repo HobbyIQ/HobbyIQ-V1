@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.594Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv05",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Temporal Forces",
+ "productKey": "2024-sv05",
+ "setKey": "sv05",
+ "rowCount": 218,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Temporal Forces",
+   "category": "base",
+   "playerCount": 218,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.321Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw9",
+ "sport": "pokemon",
+ "year": 2013,
+ "setName": "Plasma Freeze",
+ "productKey": "2013-bw9",
+ "setKey": "bw9",
+ "rowCount": 122,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Plasma Freeze",
+   "category": "base",
+   "playerCount": 122,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.189Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sve",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "Scarlet & Violet Energy",
+ "productKey": "2023-sve",
+ "setKey": "sve",
+ "rowCount": 24,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Scarlet & Violet Energy",
+   "category": "base",
+   "playerCount": 24,
+   "printRun": null
+  }
+ ]
+}

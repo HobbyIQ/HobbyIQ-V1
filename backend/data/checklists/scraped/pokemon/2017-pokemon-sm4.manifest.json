@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.285Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm4",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "Crimson Invasion",
+ "productKey": "2017-sm4",
+ "setKey": "sm4",
+ "rowCount": 125,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Crimson Invasion",
+   "category": "base",
+   "playerCount": 125,
+   "printRun": null
+  }
+ ]
+}

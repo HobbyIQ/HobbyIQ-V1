@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.339Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A3b",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Eevee Grove",
+ "productKey": "2025-a3b",
+ "setKey": "a3b",
+ "rowCount": 107,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Eevee Grove",
+   "category": "base",
+   "playerCount": 107,
+   "printRun": null
+  }
+ ]
+}

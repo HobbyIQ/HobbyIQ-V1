@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.746Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex16",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "Power Keepers",
+ "productKey": "2007-ex16",
+ "setKey": "ex16",
+ "rowCount": 108,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Power Keepers",
+   "category": "base",
+   "playerCount": 108,
+   "printRun": null
+  }
+ ]
+}

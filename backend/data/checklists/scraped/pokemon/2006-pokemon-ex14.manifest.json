@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.668Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex14",
+ "sport": "pokemon",
+ "year": 2006,
+ "setName": "Crystal Guardians",
+ "productKey": "2006-ex14",
+ "setKey": "ex14",
+ "rowCount": 100,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Crystal Guardians",
+   "category": "base",
+   "playerCount": 100,
+   "printRun": null
+  }
+ ]
+}

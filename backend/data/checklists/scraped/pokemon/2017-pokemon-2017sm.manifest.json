@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.166Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2017sm",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "McDonald's Collection 2017",
+ "productKey": "2017-2017sm",
+ "setKey": "2017sm",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2017",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

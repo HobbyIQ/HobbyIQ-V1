@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.283Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2011bw",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "McDonald's Collection 2011",
+ "productKey": "2011-2011bw",
+ "setKey": "2011bw",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2011",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

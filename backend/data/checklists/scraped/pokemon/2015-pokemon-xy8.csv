@@ -1,0 +1,166 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Paras
+base,2,Base,false,,Parasect
+base,3,Base,false,,Pinsir
+base,4,Base,false,,Cacnea
+base,5,Base,false,,Pansage
+base,6,Base,false,,Simisage
+base,7,Base,false,,Chespin
+base,8,Base,false,,Chespin
+base,9,Base,false,,Chespin
+base,10,Base,false,,Quilladin
+base,11,Base,false,,Chesnaught
+base,12,Base,false,,Chesnaught BREAK
+base,13,Base,false,,Scatterbug
+base,14,Base,false,,Spewpa
+base,15,Base,false,,Vivillon
+base,16,Base,false,,Skiddo
+base,17,Base,false,,Gogoat
+base,18,Base,false,,Cyndaquil
+base,19,Base,false,,Quilava
+base,20,Base,false,,Typhlosion
+base,21,Base,false,,Houndoom EX
+base,22,Base,false,,M Houndoom EX
+base,23,Base,false,,Pansear
+base,24,Base,false,,Simisear
+base,25,Base,false,,Fennekin
+base,26,Base,false,,Braixen
+base,27,Base,false,,Goldeen
+base,28,Base,false,,Seaking
+base,29,Base,false,,Staryu
+base,30,Base,false,,Starmie
+base,31,Base,false,,Remoraid
+base,32,Base,false,,Remoraid
+base,33,Base,false,,Octillery
+base,34,Base,false,,Glalie EX
+base,35,Base,false,,M Glalie EX
+base,36,Base,false,,Piplup
+base,37,Base,false,,Prinplup
+base,38,Base,false,,Empoleon
+base,39,Base,false,,Snover
+base,40,Base,false,,Abomasnow
+base,41,Base,false,,Panpour
+base,42,Base,false,,Simipour
+base,43,Base,false,,Vanillite
+base,44,Base,false,,Vanillish
+base,45,Base,false,,Vanilluxe
+base,46,Base,false,,Froakie
+base,47,Base,false,,Frogadier
+base,48,Base,false,,Pikachu
+base,49,Base,false,,Raichu
+base,50,Base,false,,Raichu BREAK
+base,51,Base,false,,Magnemite
+base,52,Base,false,,Magnemite
+base,53,Base,false,,Magneton
+base,54,Base,false,,Magnezone
+base,55,Base,false,,Raikou
+base,56,Base,false,,Stunfisk
+base,57,Base,false,,Dedenne
+base,58,Base,false,,Gastly
+base,59,Base,false,,Haunter
+base,60,Base,false,,Gengar
+base,61,Base,false,,Mewtwo EX
+base,62,Base,false,,Mewtwo EX
+base,63,Base,false,,M Mewtwo EX
+base,64,Base,false,,M Mewtwo EX
+base,65,Base,false,,Misdreavus
+base,66,Base,false,,Mismagius
+base,67,Base,false,,Wobbuffet
+base,68,Base,false,,Ralts
+base,69,Base,false,,Kirlia
+base,70,Base,false,,Cresselia
+base,71,Base,false,,Woobat
+base,72,Base,false,,Swoobat
+base,73,Base,false,,Elgyem
+base,74,Base,false,,Beheeyem
+base,75,Base,false,,Sandshrew
+base,76,Base,false,,Sandslash
+base,77,Base,false,,Cubone
+base,78,Base,false,,Marowak
+base,79,Base,false,,Marowak BREAK
+base,80,Base,false,,Swinub
+base,81,Base,false,,Piloswine
+base,82,Base,false,,Mamoswine
+base,83,Base,false,,Hippopotas
+base,84,Base,false,,Gallade
+base,85,Base,false,,Meloetta
+base,86,Base,false,,Pancham
+base,87,Base,false,,Hawlucha
+base,88,Base,false,,Cacturne
+base,89,Base,false,,Zorua
+base,90,Base,false,,Zorua
+base,91,Base,false,,Zoroark
+base,92,Base,false,,Zoroark BREAK
+base,93,Base,false,,Inkay
+base,94,Base,false,,Yveltal
+base,95,Base,false,,Bronzor
+base,96,Base,false,,Bronzong
+base,97,Base,false,,Mr. Mime
+base,98,Base,false,,Snubbull
+base,99,Base,false,,Granbull
+base,100,Base,false,,Ralts
+base,101,Base,false,,Flabébé
+base,102,Base,false,,Floette
+base,103,Base,false,,Florges
+base,104,Base,false,,Florges BREAK
+base,105,Base,false,,Spritzee
+base,106,Base,false,,Aromatisse
+base,107,Base,false,,Xerneas
+base,108,Base,false,,Axew
+base,109,Base,false,,Axew
+base,110,Base,false,,Fraxure
+base,111,Base,false,,Haxorus
+base,112,Base,false,,Noivern
+base,113,Base,false,,Noivern BREAK
+base,114,Base,false,,Meowth
+base,115,Base,false,,Doduo
+base,116,Base,false,,Doduo
+base,117,Base,false,,Dodrio
+base,118,Base,false,,Snorlax
+base,119,Base,false,,Hoothoot
+base,120,Base,false,,Noctowl
+base,121,Base,false,,Teddiursa
+base,122,Base,false,,Ursaring
+base,123,Base,false,,Smeargle
+base,124,Base,false,,Swablu
+base,125,Base,false,,Starly
+base,126,Base,false,,Staravia
+base,127,Base,false,,Staraptor
+base,128,Base,false,,Chatot
+base,129,Base,false,,Rufflet
+base,130,Base,false,,Braviary
+base,131,Base,false,,Noibat
+base,132,Base,false,,Noibat
+base,133,Base,false,,Assault Vest
+base,134,Base,false,,Brigette
+base,135,Base,false,,Buddy-Buddy Rescue
+base,136,Base,false,,Fisherman
+base,137,Base,false,,Float Stone
+base,138,Base,false,,Giovanni's Scheme
+base,139,Base,false,,Glalie Spirit Link
+base,140,Base,false,,Heavy Ball
+base,141,Base,false,,Heavy Boots
+base,142,Base,false,,Houndoom Spirit Link
+base,143,Base,false,,Judge
+base,144,Base,false,,Mewtwo Spirit Link
+base,145,Base,false,,Parallel City
+base,146a,Base,false,,Professor's Letter
+base,146,Base,false,,Professor's Letter
+base,147,Base,false,,Reserved Ticket
+base,148,Base,false,,Skyla
+base,149,Base,false,,Super Rod
+base,150,Base,false,,Town Map
+base,151,Base,false,,Burning Energy
+base,152,Base,false,,Rainbow Energy
+base,153,Base,false,,Houndoom EX
+base,154,Base,false,,M Houndoom EX
+base,155,Base,false,,Glalie EX
+base,156,Base,false,,M Glalie EX
+base,157,Base,false,,Mewtwo EX
+base,158,Base,false,,Mewtwo EX
+base,159,Base,false,,M Mewtwo EX
+base,160,Base,false,,M Mewtwo EX
+base,161,Base,false,,Brigette
+base,162,Base,false,,Giovanni's Scheme
+base,163,Base,false,,Mewtwo EX
+base,164,Base,false,,Mewtwo EX

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.230Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv01",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "Scarlet & Violet",
+ "productKey": "2023-sv01",
+ "setKey": "sv01",
+ "rowCount": 258,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Scarlet & Violet",
+   "category": "base",
+   "playerCount": 258,
+   "printRun": null
+  }
+ ]
+}

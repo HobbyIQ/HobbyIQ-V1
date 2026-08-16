@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.583Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pl2",
+ "sport": "pokemon",
+ "year": 2009,
+ "setName": "Rising Rivals",
+ "productKey": "2009-pl2",
+ "setKey": "pl2",
+ "rowCount": 120,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Rising Rivals",
+   "category": "base",
+   "playerCount": 120,
+   "printRun": null
+  }
+ ]
+}

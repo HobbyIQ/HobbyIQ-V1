@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.272Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pop2",
+ "sport": "pokemon",
+ "year": 2005,
+ "setName": "POP Series 2",
+ "productKey": "2005-pop2",
+ "setKey": "pop2",
+ "rowCount": 17,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > POP Series 2",
+   "category": "base",
+   "playerCount": 17,
+   "printRun": null
+  }
+ ]
+}

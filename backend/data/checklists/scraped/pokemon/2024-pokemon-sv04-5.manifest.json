@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.546Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv04.5",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Paldean Fates",
+ "productKey": "2024-sv04-5",
+ "setKey": "sv04-5",
+ "rowCount": 245,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Paldean Fates",
+   "category": "base",
+   "playerCount": 245,
+   "printRun": null
+  }
+ ]
+}

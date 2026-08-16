@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.299Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo2",
+ "sport": "pokemon",
+ "year": 2001,
+ "setName": "Neo Discovery",
+ "productKey": "2001-neo2",
+ "setKey": "neo2",
+ "rowCount": 75,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Neo Discovery",
+   "category": "base",
+   "playerCount": 75,
+   "printRun": null
+  }
+ ]
+}

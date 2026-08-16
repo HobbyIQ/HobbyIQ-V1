@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgssp",
+ "setId": "hgssp",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 26,
+  "normal": 7,
+  "official": 25,
+  "reverse": 0,
+  "total": 25
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}
