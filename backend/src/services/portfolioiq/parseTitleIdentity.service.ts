@@ -847,6 +847,51 @@ function extractParallel(title: string): string {
   // (they're paper). BCPA/BDPA/BCDA/BCRA/TCRA are chrome-only rookie/
   // prospect autograph prefixes. CPA is the flagship Chrome Prospect
   // Autograph prefix (baseball).
+  // CF-NO-REFRACTOR-AUTO-RELEASED (Drew, 2026-08-15, on 2026 Bowman Eric
+  // Hartman #CPA-EHA: "this is marked as a refractor but it is a base - eric
+  // does not have a refractor auto" ... "eric hartman is the only one without
+  // a refractor auto ... no card was released by topps. There was an issue
+  // with his cards. It is an anomoly").
+  //
+  // The rule below is correct: the base tier of the chrome auto ladder IS
+  // Refractor, for Bowman and Topps Chrome alike. Owen Carey's CPA-OC exists
+  // in Base AND Refractor exactly as expected. This is not a product-wide
+  // naming question and must not be "fixed" by narrowing the rule — doing so
+  // would have moved 100,295 rows across bowman and bowman-chrome into a tier
+  // they do not belong in.
+  //
+  // It is a PRODUCTION anomaly, at the level of one card. Topps never
+  // released the Refractor auto for Eric Hartman, so 431 sold_comps rows were
+  // filed under a parallel that does not physically exist — and several of
+  // the titles say so outright ("True Base Auto", "Prospect Base AUTO").
+  //
+  // Keep this list tiny and keep every entry sourced. An entry is a claim
+  // that a specific card was never printed in its ladder's base refractor
+  // tier, which only the market can tell us. Do not add one by inference from
+  // a thin checklist: our checklist coverage shows no Refractor tier for 151
+  // of 190 2026 Bowman CPA-* cards, and that is a coverage gap, not 151
+  // anomalies.
+  // SCOPED BY YEAR, because card numbers are reused. CPA-EHA identifies Eric
+  // Hartman in 2026 Bowman; nothing stops Topps issuing a CPA-EHA to someone
+  // else in 2028, and an unscoped entry would silently inherit this anomaly
+  // onto that card forever. A title with no year still matches — sellers
+  // routinely omit it ("ERIC HARTMAN Bowman 1st Chrome Prospect Auto
+  // #CPA-EHA") and today CPA-EHA means this card — but a title naming a
+  // DIFFERENT year does not.
+  const NO_REFRACTOR_AUTO_RELEASED: Array<{ number: RegExp; years: number[] }> = [
+    // 2026 Bowman, Eric Hartman. Never released by Topps (Drew, 2026-08-15).
+    { number: /#?\bCPA-EHA\b/i, years: [2026] },
+  ];
+  const titleYear = (() => {
+    const m = T.match(/\b(19|20)\d{2}\b/);
+    return m ? Number(m[0]) : null;
+  })();
+  for (const entry of NO_REFRACTOR_AUTO_RELEASED) {
+    if (!entry.number.test(T)) continue;
+    if (titleYear !== null && !entry.years.includes(titleYear)) continue;
+    return "Base";
+  }
+
   const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CU|CDA)-[A-Z0-9]+/i;
   const isChromeAutoTitle =
     (AUTO_RE.test(T) || CHROME_AUTO_PREFIX_RE.test(T))
