@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchErpSummary, fetchErpPnl, type ErpSummaryResponse } from "@/lib/api";
+import { FinancialDashboard } from "@/components/FinancialDashboard";
 import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 
 export default function ErpPage() {
@@ -77,13 +78,23 @@ export default function ErpPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
-        <p className="text-sm text-[color:var(--color-muted)]">
-          What you hold and what it is worth right now. Snapshot as of{" "}
-          {data.asOf.slice(0, 10)}.
-        </p>
-      </div>
+      {/* CF-ONE-BUSINESS-PAGE (Drew, 2026-08-16: "put the financial dashboard
+          on financials are the first screen then put the positions and
+          holdings on the same page under the sales portion").
+          Money first, because that is the question an owner opens the page
+          with. Position follows the sales table rather than competing with it
+          — what you are holding only means something once you know what the
+          business is doing. */}
+      <FinancialDashboard />
+
+      <div className="mt-12 pt-8 border-t" style={{ borderColor: "var(--color-border)" }}>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            What you hold and what it is worth right now. Snapshot as of{" "}
+            {data.asOf.slice(0, 10)}.
+          </p>
+        </div>
 
       {/* CF-ERP-RUN-YOUR-BUSINESS (Drew, 2026-08-16: "This page needs to help
           people run their business. It isn't a good dashboard.").
@@ -277,6 +288,7 @@ export default function ErpPage() {
       {/* CF-UX-CLEANUP (Drew, 2026-07-27): "Tip — sold history" filler
           link removed. Sold history is now a first-class sidebar entry
           so the tip pointer is redundant. */}
+      </div>
     </div>
   );
 }
