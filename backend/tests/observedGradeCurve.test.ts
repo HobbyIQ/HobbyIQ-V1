@@ -5,10 +5,40 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the CH client's getCardSales — the ONE swap point. Everything
-// else in observedGradeCurve.service is vendor-neutral math.
+// getCardSales USED to be the swap point. On 2026-08-14 the service moved to
+// reading sold_comps directly (CF-OWN-THE-DATA) and nothing updated these
+// tests, so all 35 fed a function nobody called and asserted against an
+// unmocked Cosmos — every one saw zero sales. The mock stays because it is how
+// every test in this file expresses its fixture; it is now bridged to the real
+// seam below.
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   getCardSales: vi.fn(),
+}));
+
+// CF-GRADE-CURVE-TEST-SEAM (2026-08-16). readSoldCompsForGrade is the module
+// the service actually reads through now, and it exists to be mocked here.
+// Mocking "@azure/cosmos" instead was tried and hit every other Cosmos consumer
+// in the graph — the suite went 89 -> 107 failures and 80s -> 1591s.
+//
+// The bridge keeps all 35 fixtures working unchanged: the service asks for
+// (cardId, grade), which is exactly the shape the getCardSales mocks already
+// take, so each test's per-grade function answers as before. Only the WIRE
+// changed; the fixtures were never wrong.
+vi.mock("../src/services/compiq/soldCompsGradeReader.js", () => ({
+  readSoldCompsForGrade: vi.fn(async (cardId: string, grade: string) => {
+    const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+    const rows = (await vi.mocked(getCardSales)(cardId as never, grade as never)) ?? [];
+    // CH row shape -> sold_comps row shape. `title` rides through so the
+    // service's IP/TTM/bulk-lot rejection is still exercised for real.
+    return (rows as Array<Record<string, unknown>>).map((r) => ({
+      price: r.price as number,
+      soldAt: (r.soldAt ?? r.date ?? null) as string,
+      source: (r.source ?? null) as string | null,
+      title: (r.title ?? null) as string | null,
+      // sold_comps names this listingType; the CH fixtures call it saleType.
+      listingType: (r.listingType ?? r.saleType ?? null) as string | null,
+    }));
+  }),
 }));
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): trajectory now consumes
 // getPlayerTrendSnapshot which prefers matched-cohort medianRatio and
@@ -376,6 +406,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -426,6 +465,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -481,6 +529,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -580,6 +637,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -617,6 +683,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -1247,6 +1322,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
