@@ -1771,6 +1771,11 @@ export interface PnlTotals {
   costBasisSold: number;
   realizedProfitLoss: number;
   entryCount: number;
+  // CF-PNL-SHOW-GRADING (Drew, 2026-08-16). Deducted inside netProceeds but
+  // never reported, so the walk did not add up. Optional so an older backend
+  // response still parses.
+  gradingCost?: number;
+  suppliesCost?: number;
 }
 
 export interface PnlGroup {

@@ -88,7 +88,7 @@ export default function ErpPage() {
       <FinancialDashboard />
 
       <div className="mt-12 pt-8 border-t" style={{ borderColor: "var(--color-border)" }}>
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
           <p className="text-sm text-[color:var(--color-muted)]">
             What you hold and what it is worth right now. Snapshot as of{" "}
@@ -205,8 +205,8 @@ export default function ErpPage() {
           up the space where the business numbers belong. */}
       {/* Health */}
       <div className="hiq-card p-5 mb-6">
-        <h2 className="font-bold text-lg mb-1">Comp freshness</h2>
-        <p className="text-sm text-[color:var(--color-muted)] mb-3">How recently we saw a real sale for each card. Click a number to see them.</p>
+        <h2 className="font-bold text-lg mb-1 text-center">Comp freshness</h2>
+        <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">How recently we saw a real sale for each card. Click a number to see them.</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <HealthPill label="Fresh comps" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
           <HealthPill label="Stale comps" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
@@ -227,7 +227,7 @@ export default function ErpPage() {
       {/* Trend chart */}
       {data.valueTrend30d.length > 1 && (
         <div className="hiq-card p-5 mb-6">
-          <h2 className="font-bold text-lg mb-3">Value trend</h2>
+          <h2 className="font-bold text-lg mb-3 text-center">Value trend</h2>
           <TrendChart points={data.valueTrend30d} />
         </div>
       )}
@@ -295,7 +295,7 @@ export default function ErpPage() {
 
 function BigStat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="hiq-card p-4">
+    <div className="hiq-card p-4 text-center">
       <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
         {label}
       </div>
@@ -348,7 +348,7 @@ function ActionList({ missing, stale, estimated, unreconciled }: {
 
   return (
     <div className="hiq-card p-5 mb-6">
-      <h2 className="font-bold text-lg mb-1">Needs your attention</h2>
+      <h2 className="font-bold text-lg mb-1 text-center">Needs your attention</h2>
       {items.length === 0 ? (
         <p className="text-sm text-[color:var(--color-muted)]">
           Nothing to fix — every card is priced and every sale has its costs in.

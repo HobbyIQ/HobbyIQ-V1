@@ -98,7 +98,7 @@ export function FinancialDashboard() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold mb-1">Financials</h1>
         <p className="text-sm text-[color:var(--color-muted)]">
           What you sold, what you were in for, and what you actually kept.
@@ -106,7 +106,7 @@ export function FinancialDashboard() {
         </p>
       </div>
 
-      <div className="flex gap-2 flex-wrap mb-6">
+      <div className="flex gap-2 flex-wrap mb-6 justify-center">
         {(["all", ...YEARS] as Array<number | "all">).map((y) => (
           <button
             key={String(y)}
@@ -130,10 +130,10 @@ export function FinancialDashboard() {
 
       {t && (
         <>
-          <p className="text-sm text-[color:var(--color-muted)] mb-3">
-            What you sold for, minus what you were all-in for, minus fees and
-            shipping, is your profit on the flip. Take overhead off that and you
-            have what you actually kept.
+          <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">
+            What you sold for, minus what you were all-in for, minus fees,
+            shipping, grading and supplies, is your profit on the flip. Take
+            overhead off that and you have what you actually kept.
           </p>
           {/* The P&L walk, in the order an operator reads it: what came in,
               what was taken out, what it cost, what is actually left. */}
@@ -144,6 +144,12 @@ export function FinancialDashboard() {
               sub="what you had into the ones that sold" />
             <Stat label="Fees and shipping" value={formatUSD(t.feesTotal + t.shipping)}
               sub={`${formatUSD(t.feesTotal)} fees · ${formatUSD(t.shipping)} shipping`} />
+            {/* CF-PNL-SHOW-GRADING (Drew, 2026-08-16: "the financial dashboard
+                is missing the grading costs within the eric hartman orange
+                shimmer"). It was deducted from profit but shown nowhere, so
+                the walk lost money between "sold for" and "profit". */}
+            <Stat label="Grading and supplies" value={formatUSD((t.gradingCost ?? 0) + (t.suppliesCost ?? 0))}
+              sub={`${formatUSD(t.gradingCost ?? 0)} grading · ${formatUSD(t.suppliesCost ?? 0)} supplies`} />
             <Stat label="Profit on flips" value={formatUSD(t.realizedProfitLoss)}
               tone={t.realizedProfitLoss >= 0 ? "good" : "bad"}
               sub={margin != null ? `you kept ${margin.toFixed(0)}% of each sale` : "nothing flipped yet"} />
@@ -251,7 +257,7 @@ function Stat({ label, value, sub, tone }: {
   const color = tone === "good" ? "var(--color-success)"
     : tone === "bad" ? "var(--color-danger)" : undefined;
   return (
-    <div className="hiq-card p-4">
+    <div className="hiq-card p-4 text-center">
       <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">{label}</div>
       <div className="text-2xl font-bold mt-1 tabular-nums" style={color ? { color } : undefined}>{value}</div>
       {sub && <div className="text-xs text-[color:var(--color-muted)] mt-1">{sub}</div>}
