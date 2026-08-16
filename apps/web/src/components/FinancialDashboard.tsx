@@ -41,10 +41,15 @@ const GROUPINGS: Array<{ key: PnlGroupBy; label: string }> = [
 
 /** Margin on revenue. Null rather than 0 when there is no revenue — a period
  *  with no sales has no margin, and rendering 0% would read as a bad month
- *  rather than an empty one. */
-function marginPct(t: PnlTotals): number | null {
-  if (!t.grossProceeds) return null;
-  return (t.realizedProfitLoss / t.grossProceeds) * 100;
+ *  rather than an empty one.
+ *
+ *  CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16). Takes the profit figure as an
+ *  argument rather than reading realizedProfitLoss, because the headline is
+ *  now AFTER operating costs and a margin measured on a different profit than
+ *  the one displayed beside it is just a second, quieter contradiction. */
+function marginPct(profit: number | null, revenue: number): number | null {
+  if (!revenue || profit == null) return null;
+  return (profit / revenue) * 100;
 }
 
 const currentYear = new Date().getFullYear();
@@ -122,9 +127,21 @@ export function FinancialDashboard() {
   useEffect(() => { load(); }, [load]);
 
   const t = data?.totals;
-  const margin = t ? marginPct(t) : null;
-  const priorMargin = prior?.totals ? marginPct(prior.totals) : null;
   const opex = data?.operatingExpenses ?? null;
+  // CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16, asked whether the tile order
+  // was right): it was not, and the naming was the worst of it. The walk
+  // showed Revenue - All-In - Fees - Grading = "Net Profit", which is GROSS
+  // profit; operating costs sat outside it in the ratio row. With $0 overhead
+  // the two agree and nothing looks wrong — with $2,000 of overhead the
+  // headline would have overstated the business by $2,000.
+  //
+  // trueNet is what the API already returns for realizedProfitLoss minus
+  // operating expenses. Falling back to realizedProfitLoss keeps an older
+  // backend rendering a number rather than a blank.
+  const netProfit = data?.trueNet ?? t?.realizedProfitLoss ?? null;
+  const priorNet = prior?.trueNet ?? prior?.totals?.realizedProfitLoss ?? null;
+  const margin = t ? marginPct(netProfit, t.grossProceeds) : null;
+  const priorMargin = prior?.totals ? marginPct(priorNet, prior.totals.grossProceeds) : null;
 
   const yoy = useMemo(() => {
     if (!t || !prior?.totals?.grossProceeds) return null;
@@ -181,43 +198,42 @@ export function FinancialDashboard() {
       {t && (
         <>
           <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">
-            Revenue less what the cards cost you, fees, shipping, grading and
-            supplies is your net profit. Operating costs sit alongside it.
+            Revenue less what the cards cost you, fees, shipping, grading,
+            supplies and your operating costs is net profit.
           </p>
-          {/* CF-TILES-READ-AS-A-P&L (Drew, 2026-08-16: "change Profit on Flips
-              to Net Profit and reorgaize the tile to make more sense. Maybe
-              update the tiles titles to be slight more business like and not
-              childish").
-              Row one is the walk itself, top to bottom, each line a deduction
-              from the one before it and Net Profit as the result. Row two is
-              performance ABOUT that result rather than part of it — which is
-              why Overhead sat awkwardly beside a total it is not inside. */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {/* CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16: "is this the best
+              order of tiles?"). It was not, for three reasons:
+                - margin appeared twice, as a tile AND as Net Profit's subtitle
+                - Operating Costs, a dollar cost, sat in a row of ratios
+                - "Net Profit" was gross profit, because overhead was outside
+                  the walk entirely
+              One deduction chain now runs left to right and ends on a figure
+              that is genuinely net; the second row is only ratios. */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <Stat label="Revenue" value={formatUSD(t.grossProceeds)}
-              sub={yoy != null ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% vs ${year === "all" ? "prior" : Number(year) - 1}` : `${t.entryCount} sales`} />
+              sub={`${t.entryCount} ${t.entryCount === 1 ? "sale" : "sales"}`} />
             <Stat label="All-In Cost" value={formatUSD(t.costBasisSold)}
               sub="cost basis of cards sold" />
             <Stat label="Fees & Shipping" value={formatUSD(t.feesTotal + t.shipping)}
               sub={`${formatUSD(t.feesTotal)} fees · ${formatUSD(t.shipping)} shipping`} />
-            {/* CF-PNL-SHOW-GRADING (Drew, 2026-08-16). Deducted from profit but
-                previously shown nowhere, so the walk lost money between revenue
-                and profit. */}
             <Stat label="Grading & Supplies" value={formatUSD((t.gradingCost ?? 0) + (t.suppliesCost ?? 0))}
               sub={`${formatUSD(t.gradingCost ?? 0)} grading · ${formatUSD(t.suppliesCost ?? 0)} supplies`} />
-            <Stat label="Net Profit" value={formatUSD(t.realizedProfitLoss)}
-              tone={t.realizedProfitLoss >= 0 ? "good" : "bad"}
-              sub={margin != null ? `${margin.toFixed(1)}% margin` : "no sales yet"} />
+            <Stat label="Operating Costs" value={opex != null ? formatUSD(opex) : "—"}
+              sub="shows, supplies, software" />
+            <Stat label="Net Profit" value={netProfit != null ? formatUSD(netProfit) : "—"}
+              tone={netProfit != null ? (netProfit >= 0 ? "good" : "bad") : undefined}
+              sub={yoy != null ? `revenue ${yoy >= 0 ? "up" : "down"} ${Math.abs(yoy).toFixed(1)}% on last year` : "after all costs"} />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
             <Stat label="Margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
               sub={priorMargin != null && margin != null
                 ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} pts on last year`
-                : "share of revenue retained"} />
+                : "net profit as a share of revenue"} />
             <Stat label="Average Sale" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
-              sub={`${t.entryCount} sales`} />
-            <Stat label="Operating Costs" value={opex != null ? formatUSD(opex) : "—"}
-              sub="shows, supplies, software" />
+              sub="revenue per card sold" />
+            <Stat label="Sales" value={String(t.entryCount)}
+              sub="cards sold in this period" />
           </div>
 
           {/* CF-ERP-PNL-EXCLUSIONS. Unreconciled sales are NOT in these numbers.
@@ -267,8 +283,8 @@ export function FinancialDashboard() {
                   <Th right>Sold for</Th>
                   <Th right>All-in</Th>
                   <Th right>Fees + ship</Th>
-                  <Th right>Profit</Th>
-                  <Th right>Margin</Th>
+                  <Th right>Gross profit</Th>
+                  <Th right>Gross margin</Th>
                 </tr>
               </thead>
               <tbody>
@@ -278,7 +294,11 @@ export function FinancialDashboard() {
                   </td></tr>
                 )}
                 {data.groups.map((g) => {
-                  const m = marginPct(g.totals);
+                  // Per-group figures are necessarily PRE-overhead: operating
+                  // costs cannot be attributed to a player, set or channel. The
+                  // columns say "gross" so this cannot be read as the headline
+                  // Net Profit measured a second way.
+                  const m = marginPct(g.totals.realizedProfitLoss, g.totals.grossProceeds);
                   return (
                     <tr key={g.key} className="border-t" style={{ borderColor: "var(--color-border)" }}>
                       <Td>{g.label}</Td>
