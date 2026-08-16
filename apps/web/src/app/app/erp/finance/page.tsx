@@ -183,8 +183,9 @@ export default function FinancePage() {
           )}
 
           <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
-            <h2 className="text-xl font-bold">Breakdown</h2>
-            <div className="flex gap-2 flex-wrap">
+            <h2 className="text-xl font-bold">Sales</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-[color:var(--color-muted)] mr-1">break down by</span>
               {GROUPINGS.map((g) => (
                 <button
                   key={g.key}
@@ -216,7 +217,7 @@ export default function FinancePage() {
               <tbody>
                 {data.groups.length === 0 && (
                   <tr><td colSpan={7} className="p-4 text-[color:var(--color-muted)]">
-                    No reconciled sales in this window.
+                    Nothing sold in this period yet.
                   </td></tr>
                 )}
                 {data.groups.map((g) => {
