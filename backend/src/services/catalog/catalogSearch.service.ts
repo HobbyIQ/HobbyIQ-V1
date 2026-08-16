@@ -294,6 +294,22 @@ export async function searchCatalog(
   );
   const anchor = alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null;
   let anchorAnd = "";
+  // CF-SEARCH-ANCHOR-INDEXED-FAST-PATH (Drew, 2026-08-15: "the search taking
+  // 20+ seconds is bad").
+  //
+  // The anchor below matches with CONTAINS(LOWER(c.playerName), <prefix>).
+  // CONTAINS on a scalar is a substring test and CANNOT use an index, so every
+  // search scans card_catalog — 35.7M rows. That is fine for a rare name and
+  // ruinous for a common one: "2018 topps chrome update ohtani" measured
+  // 16.3s while "2026 bowman owen carey" measured 3.9s, and neither comps nor
+  // images were involved. Ohtani is slow because he is everywhere.
+  //
+  // ARRAY_CONTAINS on searchTokens IS index-accelerated. So try the EXACT
+  // token first and only fall back to the fuzzy prefix scan when that comes up
+  // empty. The fuzzy path is what bridges spelling variants ("gonzalez" vs
+  // "Gonzales", CF-SEARCH-FUZZY-PLAYER), and it still runs — for the queries
+  // that need it, which are the ones with few rows to scan anyway.
+  let anchorFastAnd = "";
   if (anchor) {
     const prefix = anchor.slice(0, Math.max(4, anchor.length - 2));
     anchorAnd =
@@ -301,6 +317,8 @@ export async function searchCatalog(
       ` OR ARRAY_CONTAINS(c.searchTokens, @anchor)` +
       ` OR (IS_DEFINED(c.parallel) AND CONTAINS(LOWER(c.parallel), @anchor)))`;
     params.push({ name: "@anchor", value: prefix });
+    anchorFastAnd = ` AND ARRAY_CONTAINS(c.searchTokens, @anchorExact)`;
+    params.push({ name: "@anchorExact", value: anchor });
   }
 
   const scopes: string[] = [];
@@ -377,10 +395,26 @@ export async function searchCatalog(
     parameters: params,
   };
 
+  /** Indexed fast path: same query, exact-token anchor instead of the
+   *  substring prefix. Only built when there is an anchor to be exact about. */
+  const canonicalFastQspec = anchorFastAnd
+    ? {
+      query: qspec.query
+        .replace(" FROM c WHERE (", " FROM c WHERE STARTSWITH(c.id, 'hiq:') AND (")
+        .replace(anchorAnd, anchorFastAnd),
+      parameters: params,
+    }
+    : null;
+
   let rows: Row[] = [];
   let provisional = false;
   try {
-    const { resources: canon } = await container.items.query<Row>(canonicalQspec).fetchAll();
+    const fast = canonicalFastQspec
+      ? (await container.items.query<Row>(canonicalFastQspec).fetchAll()).resources
+      : [];
+    const { resources: canon } = fast.length > 0
+      ? { resources: fast }
+      : await container.items.query<Row>(canonicalQspec).fetchAll();
     const { resources } = canon.length > 0
       ? { resources: canon }
       : await container.items.query<Row>(qspec).fetchAll();
