@@ -70,6 +70,23 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      # CF-DRAIN-NEEDS-DIST (2026-08-16). The first scheduled run went GREEN
+      # and ingested NOTHING: acquired=7 ingested=0 failed=7, every child
+      # process dying on "ingest failed: | Node.js v24.19.0 |".
+      #
+      # drainCatalogSeedQueue and ingest-scraped-checklist both require()
+      # compiled modules out of dist/ — cardCatalog.service, promotionJob and
+      # beckettUrlDiscovery. npm ci alone leaves dist/ absent, so every spawn
+      # crashed on a missing module and the run still exited 0.
+      #
+      # Worse than useless: the discovery probes also failed, so 18 seeds were
+      # written off as "no-checklist-published-any-source" — permanently
+      # invisible to future drains — because of a missing build, not a missing
+      # checklist. Those were restored to pending.
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
       - name: Login to Azure
         uses: azure/login@v3
         with:
