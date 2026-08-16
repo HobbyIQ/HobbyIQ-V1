@@ -2,17 +2,27 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchErpSummary, type ErpSummaryResponse } from "@/lib/api";
+import { fetchErpSummary, fetchErpPnl, type ErpSummaryResponse } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 
 export default function ErpPage() {
   const [data, setData] = useState<ErpSummaryResponse | null>(null);
+  // CF-ERP-RUN-YOUR-BUSINESS (Drew, 2026-08-16: "This page needs to help
+  // people run their business. It isn't a good dashboard."). The snapshot
+  // endpoint knows nothing about unreconciled sales, but that backlog is the
+  // single most actionable number here — those sales are missing from P&L and
+  // tax exports until someone fills in what they cost. Fetched separately and
+  // best-effort: if it fails the page still renders everything else.
+  const [unreconciled, setUnreconciled] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [gate, setGate] = useState<"none" | "upsell" | "error">("none");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    fetchErpPnl({ groupBy: "month" })
+      .then((p) => { if (!cancelled) setUnreconciled(p.excluded?.unreconciledCount ?? 0); })
+      .catch(() => { /* best-effort — the action list just omits this row */ });
     fetchErpSummary()
       .then((res) => {
         if (cancelled) return;
@@ -74,6 +84,22 @@ export default function ErpPage() {
           {data.asOf.slice(0, 10)}.
         </p>
       </div>
+
+      {/* CF-ERP-RUN-YOUR-BUSINESS (Drew, 2026-08-16: "This page needs to help
+          people run their business. It isn't a good dashboard.").
+          A dashboard that only reports state makes you work out what to do
+          from it. Everything below was already on the page as a passive
+          number — cards with no comps sat in a pill, unreconciled sales sat
+          behind a link with no count — so an owner had to know which figures
+          were problems and what each one implied. This block says it: what is
+          wrong, why it costs you, and where to fix it. It renders only rows
+          that actually apply, and says so when none do. */}
+      <ActionList
+        missing={data.totals.missingCount}
+        stale={data.totals.staleCount}
+        estimated={data.totals.estimatedCount}
+        unreconciled={unreconciled}
+      />
 
       {/* Top numbers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -265,6 +291,79 @@ function BigStat({ label, value, sub, color }: { label: string; value: string; s
         {value}
       </div>
       {sub && <div className="text-xs text-[color:var(--color-muted)] mt-1 tabular-nums">{sub}</div>}
+    </div>
+  );
+}
+
+function ActionList({ missing, stale, estimated, unreconciled }: {
+  missing: number; stale: number; estimated: number; unreconciled: number | null;
+}) {
+  const items: Array<{ n: number; title: string; why: string; href: string; urgent?: boolean }> = [];
+  if (unreconciled && unreconciled > 0) {
+    items.push({
+      n: unreconciled,
+      title: unreconciled === 1 ? "sale is missing what you paid" : "sales are missing what you paid",
+      why: "They are left out of your profit and your tax export until you fill it in.",
+      href: "/app/erp/unreconciled",
+      urgent: true,
+    });
+  }
+  if (missing > 0) {
+    items.push({
+      n: missing,
+      title: missing === 1 ? "card has no comps" : "cards have no comps",
+      why: "We could not tell which exact card it is, so it counts as $0 in your totals.",
+      href: "/app/portfolio?filter=missing",
+      urgent: true,
+    });
+  }
+  if (estimated > 0) {
+    items.push({
+      n: estimated,
+      title: estimated === 1 ? "card is priced off similar cards" : "cards are priced off similar cards",
+      why: "Ballpark only — no real sale of that exact card yet.",
+      href: "/app/portfolio?filter=estimated",
+    });
+  }
+  if (stale > 0) {
+    items.push({
+      n: stale,
+      title: stale === 1 ? "price is over 3 days old" : "prices are over 3 days old",
+      why: "Refresh before you list or quote off these.",
+      href: "/app/portfolio?filter=stale",
+    });
+  }
+
+  return (
+    <div className="hiq-card p-5 mb-6">
+      <h2 className="font-bold text-lg mb-1">Needs your attention</h2>
+      {items.length === 0 ? (
+        <p className="text-sm text-[color:var(--color-muted)]">
+          Nothing to fix — every card is priced and every sale has its costs in.
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {items.map((it) => (
+            <li key={it.href}>
+              <Link
+                href={it.href}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.03] transition-colors"
+              >
+                <span
+                  className="text-xl font-bold tabular-nums shrink-0 min-w-[2.5rem] text-right"
+                  style={{ color: it.urgent ? "var(--color-danger)" : "var(--color-accent)" }}
+                >
+                  {it.n}
+                </span>
+                <span className="min-w-0">
+                  <span className="font-medium block">{it.title}</span>
+                  <span className="text-sm text-[color:var(--color-muted)]">{it.why}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
