@@ -349,6 +349,49 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: bare 'Speckle' word alone still resolves", () => {
     expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle #CPA-EHA").parallel).toBe("Speckle Refractor");
   });
+  // CF-NO-REFRACTOR-AUTO-RELEASED (Drew, 2026-08-15): "eric hartman is the
+  // only one without a refractor auto ... no card was released by topps.
+  // There was an issue with his cards. It is an anomoly."
+  //
+  // One card, not a product rule. The first two are the exact live titles
+  // that mislabelled 431 sold_comps rows; the last two pin that the ordinary
+  // chrome-auto default is UNCHANGED for everyone else.
+  it("CPA-EHA auto → Base (Topps never released the Refractor)", () => {
+    expect(parseListingIdentity(
+      "2026 Bowman Chrome Eric Hartman 1st Bowman RC Auto Prospect Autographs #CPA-EHA - Raw",
+    ).parallel).toBe("Base");
+  });
+  it("CPA-EHA auto → Base even when the title says only 'Chrome Prospect Auto'", () => {
+    expect(parseListingIdentity(
+      "ERIC HARTMAN 2026 Bowman 1st Chrome Prospect Auto Atlanta Braves #CPA-EHA",
+    ).parallel).toBe("Base");
+  });
+  it("Owen Carey CPA-OC auto → Refractor (the anomaly is Hartman's alone)", () => {
+    expect(parseListingIdentity(
+      "2026 Bowman Chrome Owen Carey 1st Bowman RC Auto Prospect Autographs #CPA-OC",
+    ).parallel).toBe("Refractor");
+  });
+  it("Bowman Draft CPA-JHA auto → Refractor (unchanged)", () => {
+    expect(parseListingIdentity(
+      "2025 Bowman Draft #CPA-JHA Josiah Hartshorn 1st Prospect Chrome Auto",
+    ).parallel).toBe("Refractor");
+  });
+  it("a DIFFERENT year's CPA-EHA is not covered by the anomaly", () => {
+    expect(parseListingIdentity(
+      "2028 Bowman Chrome Prospect Autographs #CPA-EHA 1st Auto",
+    ).parallel).toBe("Refractor");
+  });
+  it("no year in the title still resolves to Base (sellers omit it)", () => {
+    expect(parseListingIdentity(
+      "ERIC HARTMAN Bowman 1st Chrome Prospect Auto Braves #CPA-EHA",
+    ).parallel).toBe("Base");
+  });
+  // The exception is the BASE tier only. Hartman's colour autos were printed
+  // and still normalize through the colour rules above this fallback.
+  it("CPA-EHA colour auto still resolves to '{Color} Refractor'", () => {
+    expect(parseListingIdentity("Eric Hartman Blue /150 Auto #CPA-EHA").parallel).toBe("Blue Refractor");
+  });
+
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Speckle/Shimmer/Lava/etc are
   // Chrome-only parallels; title with "Bowman" + Speckle should resolve
   // setKey → "Bowman Chrome" even when "Chrome" isn't in the title.
