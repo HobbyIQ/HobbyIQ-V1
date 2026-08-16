@@ -113,7 +113,7 @@ export default function ErpPage() {
       />
 
       {/* Top numbers */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <BigStat
           label="Comp value"
           value={formatUSD(data.totals.snapshotValue, { hideCents: true })}
@@ -295,14 +295,14 @@ export default function ErpPage() {
 
 function BigStat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="hiq-card p-4 text-center">
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
+    <div className="hiq-card p-3 text-center">
+      <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
         {label}
       </div>
-      <div className="text-2xl font-bold tabular-nums" style={color ? { color } : undefined}>
+      <div className="text-xl font-bold tabular-nums" style={color ? { color } : undefined}>
         {value}
       </div>
-      {sub && <div className="text-xs text-[color:var(--color-muted)] mt-1 tabular-nums">{sub}</div>}
+      {sub && <div className="text-[11px] text-[color:var(--color-muted)] mt-1 leading-tight">{sub}</div>}
     </div>
   );
 }
