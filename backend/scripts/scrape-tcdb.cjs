@@ -26,6 +26,14 @@ const cheerio = require("cheerio");
 const TCDB_URL = process.env.TCDB_URL;
 if (!TCDB_URL) { console.error("TCDB_URL required"); process.exit(2); }
 
+// CF-TCDB-INSERT-CATEGORY (Drew, 2026-08-17). An insert set has its OWN
+// numbering, so scraping 1995-96 Fleer - Class Encounters as category "base"
+// would mint `hiq:basketball:1995:fleer:4:base:no-auto` and overwrite Fleer
+// base #4 (Andrew Lang) with Class Encounters #4 — a different card entirely.
+// ingest-scraped-checklist maps an `insert-<name>` category onto the parallel
+// segment, which is how this codebase already models inserts and finishes.
+const CATEGORY = process.env.CATEGORY || "base";
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
 const HEADERS = {
   "User-Agent": UA,
@@ -35,12 +43,36 @@ const HEADERS = {
   "Cache-Control": "no-cache",
 };
 
+// CF-TCDB-CURL-FALLBACK (Drew, 2026-08-17). TCDB answers node's https client
+// with 403 on checklist pages while serving the identical URL to curl at 200
+// with the full 172KB body — the browser-realistic User-Agent above is not
+// enough, because what is being fingerprinted is the TLS handshake, not the
+// header set. Rather than reproduce a browser's ClientHello, shell out to curl
+// when the native client is refused. Verified 2026-08-17 on
+// Checklist.cfm/sid/2346 (1995-96 Fleer): node 403, curl 200.
+function fetchViaCurl(url) {
+  const { execFileSync } = require("node:child_process");
+  return execFileSync("curl", [
+    "-sL", "--max-time", "60",
+    "-A", UA,
+    "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "-H", "Accept-Language: en-US,en;q=0.9",
+    url,
+  ], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
 function fetchHtml(url, depth = 0) {
   return new Promise((resolve, reject) => {
     if (depth > 3) return reject(new Error("too many redirects"));
     const req = https.get(url, { headers: HEADERS }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
         return resolve(fetchHtml(new URL(res.headers.location, url).toString(), depth + 1));
+      }
+      if (res.statusCode === 403) {
+        // Refused by fingerprint, not by policy — the same URL serves fine to
+        // curl. Retry there before giving up on the page.
+        try { return resolve(fetchViaCurl(url)); }
+        catch { return reject(new Error(`HTTP 403 on ${url} (curl fallback also failed)`)); }
       }
       if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode} on ${url}`));
       const chunks = [];
@@ -63,6 +95,53 @@ function cleanPlayerName(raw) {
   s = s.replace(/^\s*-\s*/, "").trim();
   if (s.length < 2 || s.length > 80) return null;
   return s;
+}
+
+/**
+ * CF-TCDB-ANCHOR-EXTRACTOR (Drew, 2026-08-17). Pull card rows from the anchor
+ * structure rather than a <td> grid — see the call site for why the grid walk
+ * returns nothing. Appends into `rows`, deduping through `seen`.
+ */
+function extractAnchorRows($, rows, seen) {
+  let pendingNum = null;
+  let players = [];
+  const flush = () => {
+    if (pendingNum && players.length) {
+      const player = players.join(" / ").replace(/,/g, "");
+      const key = `${pendingNum}|${player}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        rows.push({
+          category: CATEGORY, cardNumber: pendingNum, parallel: "Base",
+          isAuto: "false", printRun: "", player,
+        });
+      }
+    }
+    pendingNum = null; players = [];
+  };
+
+  $("a").each((_, a) => {
+    const href = String($(a).attr("href") || "");
+    const text = $(a).text().trim().replace(/\s+/g, " ");
+    if (/\/ViewCard\.cfm\//i.test(href)) {
+      // Thumbnail anchors wrap an <img> and carry no text.
+      if (!text) return;
+      // Card numbers are frequently HYPHENATED, especially on inserts: S-1,
+      // R-8, SS-3. An unhyphenated pattern silently drops the entire set —
+      // Stackhouse's Scrapbook (all cards S-1..S-8) extracted 0 rows from a
+      // page that had every card in it. Require a digit so the pattern cannot
+      // swallow stray link text.
+      const num = text.replace(/^#/, "").trim();
+      if (!/^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})?$/.test(num)) return;
+      if (!/\d/.test(num)) return;
+      flush();
+      pendingNum = num;
+    } else if (/\/Person\.cfm\//i.test(href) && pendingNum) {
+      const p = cleanPlayerName(text);
+      if (p) players.push(p);
+    }
+  });
+  flush();
 }
 
 async function main() {
@@ -109,7 +188,7 @@ async function main() {
       if (seen.has(key)) return;
       seen.add(key);
       rows.push({
-        category: "base",
+        category: CATEGORY,
         cardNumber: num,
         parallel: "Base",
         isAuto: "false",
@@ -118,6 +197,42 @@ async function main() {
       });
     });
   });
+
+  // CF-TCDB-ANCHOR-EXTRACTOR (Drew, 2026-08-17). The table walk above assumes
+  // <td>{number}</td><td>{player}</td>. TCDB does not render that any more —
+  // a card row is a run of mostly-EMPTY <td> cells carrying anchors:
+  //
+  //   <a href="/ViewCard.cfm/sid/2346/cid/684317/1995-96-Fleer-22-Michael-Jordan">22</a>
+  //   ... <a href="/Person.cfm/pid/7391/Michael-Jordan">Michael Jordan</a>
+  //   ... <a href="/Team.cfm/tid/67/Chicago-Bulls">Chicago Bulls</a>
+  //
+  // so cells[0] is "" and cells[1] is "", and every row is skipped. On
+  // 1995-96 Fleer that yielded 0 rows from a 161KB page holding all 350 cards.
+  //
+  // The anchors are the stable structure, so pair them directly: a ViewCard
+  // link whose TEXT is the card number (the thumbnail links wrapping <img>
+  // have empty text and are ignored), then the Person link(s) that follow it.
+  // Multi-player cards keep both names rather than dropping one.
+  if (rows.length === 0) {
+    extractAnchorRows($, rows, seen);
+    if (rows.length) console.log(`  (anchor extractor: table walk found nothing)`);
+
+    // TCDB PAGINATES AT 100 CARDS. 1995-96 Fleer is 350 cards over 4 pages, so
+    // stopping at page 1 silently delivers a 100-row "checklist" that looks
+    // complete and quietly drops 250 cards — worse than no checklist, because
+    // coverage maths would then trust it. Walk PageIndex until a page adds
+    // nothing new.
+    for (let page = 2; page <= 40; page++) {
+      const before = rows.length;
+      const paged = `${TCDB_URL}${TCDB_URL.includes("?") ? "&" : "?"}PageIndex=${page}`;
+      let nextHtml;
+      try { nextHtml = await fetchHtml(paged); }
+      catch { break; }
+      extractAnchorRows(cheerio.load(nextHtml), rows, seen);
+      if (rows.length === before) break;
+      console.log(`  page ${page}: +${rows.length - before} (total ${rows.length})`);
+    }
+  }
 
   console.log(`\n  extracted ${rows.length} rows`);
 
