@@ -59,6 +59,27 @@ on:
     # parked rows every hour would burn RUs to re-park most of them. Once a day,
     # after new checklists land, is when the answer can actually have changed.
     - cron: '10 11 * * *'
+    # CF-WEEKLY-VERIFY-REDRIVE (Drew, 2026-08-17: "1 and then 2").
+    #
+    # awaiting-verify holds ~946k rows whose held-REASON is unrecoverable: the
+    # verify_queue link was never written, and (cardId, price, soldAt-day) —
+    # the only composite available — collides for 91.5% of rows, so the history
+    # cannot be rejoined. The SALES themselves are perfectly intact (title,
+    # price, soldAt, image present on 100% of a 500-row sample), which is why
+    # they are kept rather than deleted.
+    #
+    # So the only honest way to clear them is to re-decide each one against
+    # today's rules. Measured: ~7.7% promote per pass, and that share grows as
+    # the rules do — this session alone added Panini vocabulary, the pre-2009
+    # Donruss gate and grade-scoped outlier bands.
+    #
+    # WEEKLY, AND SHORT, ON PURPOSE. A re-drive re-enqueues the ~91% that still
+    # fail, and an unbounded loop of that is precisely the storm
+    # CF-PROMOTER-VERIFY-LOOP was written to stop (1.3M entries, a continuous
+    # 429 storm). 20 minutes once a week is a chip, not a flood, and
+    # verify_queue's own 60-day TTL absorbs the churn. Re-enqueued rows now
+    # carry a stagingId, so unlike the existing backlog they stay linkable.
+    - cron: '40 12 * * 0'
   workflow_dispatch:
     inputs:
       apply:
@@ -154,8 +175,8 @@ jobs:
           COMPS_STAGING_SHIM_ENABLED=true \
           LLM_MAX_INFLIGHT=20 \
           VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
-          STATUSES="${{ inputs.statuses || (github.event.schedule == '10 11 * * *' && 'awaiting-catalog' || 'pending') }}" \
-          MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
+          STATUSES="${{ inputs.statuses || (github.event.schedule == '10 11 * * *' && 'awaiting-catalog' || (github.event.schedule == '40 12 * * 0' && 'awaiting-verify' || 'pending')) }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || (github.event.schedule == '40 12 * * 0' && '20' || '45') }}" \
           CONCURRENCY="${{ inputs.concurrency || '32' }}" \
           APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
           node scripts/promote-staging-pending.cjs
