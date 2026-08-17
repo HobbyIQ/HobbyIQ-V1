@@ -835,58 +835,59 @@ function isChromeStockSetKey(setKey: string): boolean {
 // 2026-08-11).
 const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)(?:-|\d)/i;
 
+/**
+ * CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). THE sport-aware setKey
+ * resolution. Exported because callers that GATE computeHobbyIqCardId must be
+ * able to ask the exact question it will answer.
+ *
+ * WHY THIS IS EXPORTED RATHER THAN INLINE. slugGuard rejects a setKey that
+ * still carries a leading year (`isRawVendorSetKey`), and soldCompsStore fed
+ * that guard `normalizeSetKey(setName)` while this function resolved Pokemon
+ * through POKEMON_SET_ALIASES first. The two disagreed on every Pokemon row:
+ *
+ *     "2024 Pokemon Scarlet & Violet Surging Sparks"
+ *       normalizeSetKey -> 2024-pokemon-scarlet-violet-surging-sparks  REFUSED
+ *       alias table     -> sv08                                        fine
+ *
+ * Measured 2026-08-17: of 860,462 null-slug Pokemon comps, the guard accepted
+ * exactly 1, and 615,140 (71.5%) were refused on `setkey-raw-vendor-string`
+ * despite resolving cleanly here. The guard was rejecting rows the function it
+ * guards would have keyed correctly — one rule, two implementations, the
+ * stricter one winning. Same failure shape as CF-ONE-OUTLIER-RULE.
+ *
+ * `sport` must already be canonical (normalizeSport / normalizeSportStrict).
+ */
+export function resolveSetKeyForSlug(sport: string, setName: string, year: number): string {
+  // GATED ON SPORT, deliberately. The alias table contains keys like "151"
+  // (Scarlet & Violet 151) that would be actively dangerous applied to a
+  // baseball set name. A non-Pokemon card can never reach this branch.
+  const rawSetKey = sport === "pokemon"
+    ? (POKEMON_SET_ALIASES[slugify(setName)] ?? normalizeSetKey(setName))
+    : normalizeSetKey(setName);
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009: Panini did not acquire Donruss
+  // until 2009, so a 1987 "Donruss" card must not be stamped panini-donruss.
+  // Applied after normalization so it corrects the canonical key rather than
+  // racing the vocabulary that produces it.
+  return (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
+    ? "donruss"
+    : rawSetKey;
+}
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
-  // CF-POKEMON-CHECKLISTS (Drew, 2026-08-16: "get the checklists to match").
-  //
-  // Pokemon set names arrive in as many shapes as sellers can type — "Base
-  // Set", "Pokemon Base Set", "1999 Pokemon Base Set" — and normalizeSetKey
-  // slugifies each one differently, so a single product fragments across every
-  // spelling AND embeds the year that the slug already carries in its own
-  // segment. That is how 564,103 of 766,677 Pokemon comps ended up on
-  // `setKey: unknown` or a year-prefixed one-off, unable to join any checklist.
-  //
-  // The convention this file documents at the top is the stable TCG set id
-  // (`hiq:pokemon:2023:sv1:151:full-art:no-auto`). POKEMON_SET_ALIASES maps
-  // every observed name form onto that id.
-  //
-  // GATED ON SPORT, deliberately. The alias table contains keys like "151"
-  // (Scarlet & Violet 151) that would be actively dangerous applied to a
-  // baseball set name. A non-Pokemon card can never reach this branch.
-  const rawSetKey = sport === "pokemon"
-    ? (POKEMON_SET_ALIASES[slugify(components.setKey)] ?? normalizeSetKey(components.setKey))
-    : normalizeSetKey(components.setKey);
-  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
-  // them if not get them").
-  //
-  // normalizeSetKey maps bare "Donruss" to panini-donruss unconditionally, which
-  // is right for a 2015 card and wrong for a 1987 one — Panini did not acquire
-  // Donruss (via Donruss Playoff LP) until 2009. The brand existed for 28 years
-  // before the company whose name we were stamping on it.
-  //
-  // The cost was not cosmetic. It split a product away from its own checklist:
-  //
-  //     1987 panini-donruss    16,776 comps    267 checklist rows
-  //     1987 donruss                 —       1,313 checklist rows
-  //
-  // The sales were stranded at 0.65 coverage while the checklist sat right
-  // there under the honest key. Verified before wiring: of the 412 distinct card
-  // numbers those sales reference, 404 (98.1%) are present in the 1987 donruss
-  // checklist. The 8 that are not are parser debris — "rookie",
-  // "pf-wax-full-boxes-one" — not cards.
-  //
-  // Scoped to the ONE brand whose pre-Panini history is proven above. Prizm,
-  // Select and Mosaic are Panini originals with no earlier life, so they need no
-  // such gate; a blanket "strip panini- before 2009" rule would invent products
-  // that never existed. Applied after normalization so it corrects the canonical
-  // key rather than racing the vocabulary that produces it.
-  const baseSetKey = (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
-    ? "donruss"
-    : rawSetKey;
+  // CF-POKEMON-CHECKLISTS (Pokemon set names arrive in as many shapes as
+  // sellers can type, and fragment across every spelling) and
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Panini did not acquire Donruss
+  // until 2009, and stamping panini-donruss on a 1987 card split 16,776 comps
+  // away from the 1,313-row 1987 donruss checklist) BOTH live in
+  // resolveSetKeyForSlug. They are there rather than here so that slugGuard —
+  // which decides whether this function may run at all — resolves the setKey
+  // identically. See that function for the measurements.
+  const baseSetKey = resolveSetKeyForSlug(sport, components.setKey, year);
   const cardNumber = normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
