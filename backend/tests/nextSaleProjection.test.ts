@@ -203,10 +203,20 @@ describe("projectNextSaleFromComps", () => {
       );
       expect(projection).not.toBeNull();
       expect(projection!.method).toBe("linear-regression");
-      // 55-day window with a steep upward slope: extrapolation 30d
-      // forward off newest $2000 lands well above the ±25% cap of
-      // $2500. The cap should NOT fire because window >= 14 days.
-      expect(projection!.nextSaleValue).toBeGreaterThan(2000 * 1.25);
+      // SUPERSEDED by CF-MEDIAN-ANCHOR-CAP (Drew, 2026-08-05, tightened the
+      // same day to 0.25). This test was written when the only clamp was the
+      // thin-pool cap around the NEWEST sale, which window >= 14 days switches
+      // off. A second, ALWAYS-ON cap now bounds the output to +/-25% of the pool
+      // MEDIAN, and it does not care about the window.
+      //
+      // Pool median here is 1200, so the ceiling is 1500 — and 1500 is exactly
+      // what the projection returns. The thin-pool cap is still off; the median
+      // cap is what binds.
+      const medianCeiling = 1200 * 1.25;
+      expect(projection!.nextSaleValue).toBeCloseTo(medianCeiling, 2);
+      // The slope signal survives the clamp, which is what downstream telemetry
+      // reads — only the OUTPUT is bounded.
+      expect(projection!.slopePerMonthPct).toBeGreaterThan(0);
     });
 
     it("does NOT clamp when pool has 5+ points even in short window", () => {
@@ -221,9 +231,11 @@ describe("projectNextSaleFromComps", () => {
         { nowMs: NOW, minNForRegression: 3 },
       );
       expect(projection).not.toBeNull();
-      // n=5 pool even in 5-day window is enough evidence to trust the
-      // regression — the cap only fires when BOTH conditions hold.
-      expect(projection!.nextSaleValue).toBeGreaterThan(1531 * 1.25);
+      // Same supersession as above: n=5 does switch the THIN-POOL cap off, but
+      // CF-MEDIAN-ANCHOR-CAP is always on. Pool median is 1300, ceiling 1625,
+      // and 1625 is what comes back.
+      const medianCeiling5 = 1300 * 1.25;
+      expect(projection!.nextSaleValue).toBeCloseTo(medianCeiling5, 2);
     });
 
     it("clamps a thin downward-trending pool as well (symmetric)", () => {
