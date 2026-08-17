@@ -41,6 +41,24 @@ on:
     # Hourly. The job caps itself at max_minutes (45) inside a 55-minute
     # timeout, so consecutive runs cannot overlap.
     - cron: '25 * * * *'
+    # CF-DAILY-REDRIVE (Drew, 2026-08-16: "why is the sales index not moving").
+    #
+    # The hourly pass had drained status='pending' down to 107 rows — all of
+    # them junk (no soldAt, or non-positive price) — so it scanned 107 and
+    # inserted 0, while 909,175 rows sat in awaiting-catalog, a status it never
+    # queried. The public index froze at exactly 10,775,249 with ingest
+    # perfectly healthy. Nothing was broken; the promoter had simply run out of
+    # things it was willing to look at.
+    #
+    # This pass re-drives the parked rows against a catalog that now grows
+    # daily. 11:10 UTC sits after the 09:00 checklist-acquisition run, so each
+    # re-drive sees that morning's new checklists. Measured on the first live
+    # run: 1,687 inserts per 5,000 rows scanned (34%).
+    #
+    # A separate cron rather than widening the hourly filter: re-scanning ~900k
+    # parked rows every hour would burn RUs to re-park most of them. Once a day,
+    # after new checklists land, is when the answer can actually have changed.
+    - cron: '10 11 * * *'
   workflow_dispatch:
     inputs:
       apply:
@@ -136,7 +154,7 @@ jobs:
           COMPS_STAGING_SHIM_ENABLED=true \
           LLM_MAX_INFLIGHT=20 \
           VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
-          STATUSES="${{ inputs.statuses || 'pending' }}" \
+          STATUSES="${{ inputs.statuses || (github.event.schedule == '10 11 * * *' && 'awaiting-catalog' || 'pending') }}" \
           MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
           CONCURRENCY="${{ inputs.concurrency || '32' }}" \
           APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
