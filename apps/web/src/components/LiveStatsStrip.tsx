@@ -31,10 +31,22 @@ const SEED_RATE = {
 const RATE_MIN_MULT = 0.25;
 const RATE_MAX_MULT = 4.0;
 
+/**
+ * Shape-only default so the first render has something to lay out against. These
+ * numbers are NEVER shown as fact — `loaded` stays false until a real fetch
+ * lands, and the Metric renders its loading state until then.
+ *
+ * CF-SEED-WENT-STALE (Drew, 2026-08-17). The counts here were written when the
+ * pool was ~3.8M. It is 11,281,062 now, so a seed that reached the screen was
+ * understating the product by a factor of three — and being wrong is the smaller
+ * problem: a hardcoded constant cannot move, so it also made the page look dead.
+ * Zeroed rather than refreshed, because any literal here will go stale again and
+ * the only correct source is /api/stats/public.
+ */
 const FALLBACK: PublicStats = {
-  soldCompsIndexed: 3_800_000,
-  cardsWithSlug: 3_500_000,
-  productsIndexed: 3_600,
+  soldCompsIndexed: 0,
+  cardsWithSlug: 0,
+  productsIndexed: 0,
   categories: 4,
   sportsCovered: ["Baseball", "Basketball", "Football", "Pokemon"],
   dataSourceCount: 6,
@@ -97,7 +109,21 @@ export function LiveStatsStrip() {
         }
         setLoaded(true);
       } catch {
-        if (!cancelled) setLoaded(true);
+        // CF-NEVER-PRESENT-THE-FALLBACK-AS-LIVE (Drew, 2026-08-17: "why is the
+        // sales index not moving?").
+        //
+        // This used to setLoaded(true) on failure. That cleared the loading
+        // treatment while `display` was still the hardcoded FALLBACK and
+        // lastRef stayed null — so tick() never ran (it needs an anchor) and the
+        // strip showed a STATIC, FABRICATED 3,800,000 labelled "Sales Index",
+        // indistinguishable from a real reading. The true count is 11,281,062,
+        // so the page was understating the pool by ~7.5M and, worse, not moving
+        // — which is exactly the symptom.
+        //
+        // A failed fetch is not a zero and not a guess. Leave `loaded` false so
+        // the Metric keeps its loading state, and let the next poll recover.
+        // Never let the seed constants reach the screen as fact.
+        if (!cancelled && lastRef.current) setLoaded(true);
       }
     }
 
