@@ -68,11 +68,14 @@ describe("summarizeHoldings — observed/estimated/pending split", () => {
     expect(s.pendingCount).toBe(1);
     // observedPct = 100 / (100 + 400) = 0.2
     expect(s.observedPct).toBeCloseTo(0.2, 4);
-    // Backward compat: totalValue (legacy field) keeps using computeDisplayValue
-    // which falls back to cost for null-FMV holdings.
-    // Estimated holding: cost=50, FMV=null → contributes 50; pending: cost=30.
-    // observed: 100. So legacy totalValue = 100 + 50 + 30 = 180.
-    expect(s.totalValue).toBe(180);
+    // SUPERSEDED by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (Drew, 2026-08-04).
+    // This guard pinned the pre-August contract, where an estimated holding fell
+    // from observed straight to its COST proxy and its real estimated dollar was
+    // dropped. That under-counted the portfolio (~$3,124 shown against ~$5,014
+    // of actual market signal), which is why the rule changed. The guard is not
+    // wrong about what it measured — it is measuring a contract we retired.
+    // Now: observed 100 + estimated 200x2=400 + pending cost 30 = 530.
+    expect(s.totalValue).toBe(530);
   });
 
   it("missing valuationStatus treated as observed (pre-Step-1 holdings, backward compat)", () => {
@@ -161,12 +164,18 @@ describe("summarizeHoldings — CF-HEADLINE-HONEST-TOTAL", () => {
     expect(s.observedGainLossPct).toBeCloseTo(0.3657, 4);  // 256 / 700
     expect(s.estimatedCount).toBe(1);
     expect(s.pendingCount).toBe(1);
-    // Legacy fields BYTE-IDENTICAL to pre-CF behavior — cost-proxy fallback
-    // means: Trout observed → 956, Leo PSA 10 (null FMV) → cost 1000,
-    // Leo BGS 9.5 (null FMV) → cost 800. Sum 2756.
-    expect(s.totalValue).toBe(2756);
+    // SUPERSEDED by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (Drew, 2026-08-04).
+    // This guard pinned the pre-August contract, where an estimated holding fell
+    // from observed straight to its COST proxy and its real estimated dollar was
+    // dropped. That under-counted the portfolio (~$3,124 shown against ~$5,014
+    // of actual market signal), which is why the rule changed. The guard is not
+    // wrong about what it measured — it is measuring a contract we retired.
+    // Now: Trout observed 956 + Leo PSA 10 estimate (not cost 1000) + Leo
+    // BGS 9.5 still pending -> cost 800. Sum 5016.4.
+    expect(s.totalValue).toBe(5016.4);
     expect(s.totalCost).toBe(2500);
-    expect(s.totalGainLoss).toBe(256);
+    // Derived from totalValue, so it moves with it: 5016.4 - 2500.
+    expect(s.totalGainLoss).toBe(2516.4);
     expect(s.cardCount).toBe(3);
   });
 
@@ -255,11 +264,18 @@ describe("summarizeHoldings — CF-HEADLINE-HONEST-TOTAL", () => {
       } as any),
     ];
     const s = summarizeHoldings(items);
-    // computeDisplayValue: observed=500, estimated (null FMV)→cost=50, pending (null FMV)→cost=25
-    expect(s.totalValue).toBe(575);
+    // SUPERSEDED by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (Drew, 2026-08-04).
+    // This guard pinned the pre-August contract, where an estimated holding fell
+    // from observed straight to its COST proxy and its real estimated dollar was
+    // dropped. That under-counted the portfolio (~$3,124 shown against ~$5,014
+    // of actual market signal), which is why the rule changed. The guard is not
+    // wrong about what it measured — it is measuring a contract we retired.
+    // Now: observed 500 + estimated dollar (not cost 50) + pending cost 25 = 1525.
+    expect(s.totalValue).toBe(1525);
     expect(s.totalCost).toBe(375);
-    expect(s.totalGainLoss).toBe(200);
-    expect(s.totalGainLossPct).toBeCloseTo((200 / 375) * 100, 2);
+    // Derived from totalValue: 1525 - 375.
+    expect(s.totalGainLoss).toBe(1150);
+    expect(s.totalGainLossPct).toBeCloseTo((1150 / 375) * 100, 2);
     expect(s.cardCount).toBe(3);
   });
 });
@@ -315,7 +331,11 @@ describe("composeHoldingWireShape — displayableValue + displayableValueSource"
       estimatedValue: 3260.40,
       isEstimate: true,
     } as PortfolioHolding);
-    expect(wire.currentValue).toBe(100);          // observed slot unchanged
+    // CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (2026-08-04): currentValue now folds
+    // in the estimated dollar rather than holding an observed-only slot. The
+    // separate displayableValue assertion below still pins the estimate, so the
+    // two slots are no longer distinguishable on this fixture.
+    expect(wire.currentValue).toBe(3260.40);
     expect(wire.displayableValue).toBe(3260.40);   // new slot has estimate
     expect(wire.quickSaleValue).toBeNull();        // observed-only multiplier
     expect(wire.premiumValue).toBeNull();
