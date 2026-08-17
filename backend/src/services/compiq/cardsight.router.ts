@@ -1011,9 +1011,30 @@ export async function findCompsRouted(
   // CH-only serial behavior (identical to pre-PR contract).
   const branchTimeoutMs = 3000;
   const grade = opts.grade ?? "Raw";
-  const structuredEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
-  const fallbackEnabled = process.env.CARDSIGHT_FALLBACK_ENABLED === "true";
-  const backstopEnabled = process.env.CARDSIGHT_PRICING_BACKSTOP_ENABLED === "true";
+  // CF-CARDSIGHT-RETIRED (Drew, 2026-08-16: "We dont use cardsight to match or
+  // anything, that process needs to be removed").
+  //
+  // Hard-off in CODE, deliberately not left to the env. All three flags were
+  // TRUE in prod, so reading them would keep Cardsight in the live matching
+  // path until someone remembered to flip App Service settings — and the
+  // standing lesson here is that flags are the truth, not READMEs. A constant
+  // cannot drift from the intent.
+  //
+  // This is the off-switch the cascade was built with: "Turning all 4 off
+  // collapses this back to CH-only serial behavior (identical to pre-PR
+  // contract)." So the retirement path is the one the design anticipated, not
+  // a new one.
+  //
+  // The prod env vars are now inert. They are removed separately — live App
+  // Service changes need Drew's explicit go, and leaving them set changes
+  // nothing while they are unread.
+  //
+  // Historical cardsight-sourced rows are NOT touched: 523,912 sold_comps
+  // (4.86%) and 1,527,879 catalog rows (3.91%). Those are observed sales we
+  // own. Retiring the MATCHING process does not mean discarding what it saw.
+  const structuredEnabled = false;
+  const fallbackEnabled = false;
+  const backstopEnabled = false;
   // CF-LOCAL-COMP-FIRST (Drew, 2026-07-17). Default OFF — turn on in
   // prod after parity check on Drew's inventory. When enabled, our own
   // ch_daily_sales corpus contributes its comps to the merged pool
@@ -1199,7 +1220,11 @@ export async function searchCardsRouted(
   // CS-only cards onto the tail of the CH result set so users searching
   // for recent products get catalog hits. Env-gated on the existing
   // CARDSIGHT_STRUCTURED_BRIDGE_ENABLED flag (true in prod).
-  const csEnabled = process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED === "true";
+  // CF-CARDSIGHT-RETIRED (Drew, 2026-08-16). The catalog-augment branch is off
+  // for the same reason as the pricing cascade above: CS no longer participates
+  // in matching. Catalog gaps are now closed by the checklist acquisition job,
+  // which fetches from PUBLISHED checklists rather than a vendor's index.
+  const csEnabled = false;
   const [chHits, csHitsRaw] = await Promise.all([
     chSearchCards(query, limit, filters),
     csEnabled ? csSearchCatalog(query, { take: Math.min(10, limit) }).catch(() => []) : Promise.resolve([]),

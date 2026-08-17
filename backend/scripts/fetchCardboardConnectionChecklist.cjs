@@ -151,16 +151,51 @@ function stripCommonPrefix(sections) {
   }));
 }
 
+/**
+ * CF-BARE-CHECKLIST-HEADING (Drew, 2026-08-16: "see if we have them if not get
+ * them").
+ *
+ * Vintage pages do not label their sections "<Product> Set Checklist" — they
+ * carry a single bare "Checklist" heading. SECTION_RE never matched, `section`
+ * stayed null, and the loop below dropped every row. 1987 Donruss reported
+ * "parsed 0 rows" while serving 752 perfectly good ones, and the product sat on
+ * the gap report at 0.65 coverage with its checklist one HTTP request away.
+ */
+const BARE_SECTION_RE = /^(checklist|base set|base)\s*:?\s*$/i;
+
+/**
+ * The star-rating widget renders as "5 Stars - Incredible Product", which is
+ * exactly the shape of a card row and lands on numbers 1-5 — the most valuable
+ * numbers in any set. Left in, 1987 Donruss #1 would carry both "Wally Joyner"
+ * and "Star - Avoid this product like the plague".
+ *
+ * This is the whole junk yield of the looser heading rule, measured: 700 parsed
+ * rows, 665 distinct numbers, 5 of them widget. Everything else duplicating is
+ * the page printing its checklist twice (annotated "1 Wally Joyner - Diamond
+ * Kings" and plain "1 Wally Joyner"), which dedup on ingest folds together.
+ */
+const RATING_WIDGET_RE = /^Stars?\s+-\s+/i;
+
 function parse(lines) {
   const out = [];
   let section = null;
   for (const line of lines) {
     const m = SECTION_RE.exec(line);
     if (m) { section = m[1].trim(); continue; }
+    if (BARE_SECTION_RE.test(line)) { section = "Base"; continue; }
     if (!section) continue;
     const r = ROW_RE.exec(line);
     if (!r) continue;
+    // A four-digit "card number" is the site's year navigation ("2026
+    // Baseball"), never a card. Real numbers do not reach 1900. The existing
+    // prose filters test the PLAYER for a year, so these walked straight
+    // through the moment the heading rule stopped gating them.
+    if (/^(19|20)\d{2}$/.test(r[1])) continue;
     const player = r[2].trim();
+    if (RATING_WIDGET_RE.test(player)) continue;
+    // Navigation and prose fragments start lowercase ("cards. Shop for sets on
+    // eBay.", "days"). A player name or subset label never does.
+    if (!/^[A-Z0-9]/.test(player)) continue;
     // Reject prose/navigation lines without rejecting real names.
     //
     // The first cut dropped anything ending in punctuation, which silently ate

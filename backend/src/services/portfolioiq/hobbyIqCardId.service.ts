@@ -311,6 +311,34 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-origins/, "panini-origins"],
     [/panini-encased/, "panini-encased"],
     [/panini-eminence/, "panini-eminence"],
+    // CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB (Drew, 2026-08-16: "fix it all").
+    //
+    // These products had no rule at all, so normalizeSetKey fell through to
+    // slugify and returned a YEAR-PREFIXED ONE-OFF — the same failure the
+    // Pokemon alias table was built to stop:
+    //
+    //     "2025 Panini Rookies & Stars Football" -> 2025-panini-rookies-stars-football
+    //     "2025 Panini Certified Football"       -> 2025-panini-certified-football
+    //
+    // Two harms at once. The year is duplicated into a segment the slug already
+    // carries, and every spelling becomes its own product, so one product
+    // fragments across as many keys as sellers have phrasings. 48,819 comps
+    // were sitting on keys like these, 10,107 of them 2025 football alone.
+    //
+    // ROOKIES & STARS IS THE INSTRUCTIVE ONE. A rule for it already existed —
+    // /panini-rookies-and-stars/ — and never fired, because slugify drops "&"
+    // and produces "rookies-stars", not "rookies-and-stars". The vocabulary was
+    // written against the product's NAME rather than against what slugify
+    // actually emits for it. Both spellings are matched now.
+    [/panini-rookies-(?:and-)?stars/, "panini-rookies-and-stars"],
+    // Totally Certified is a separate product and MUST match first, or the
+    // certified rule below swallows it.
+    [/panini-totally-certified|totally-certified/, "panini-totally-certified"],
+    [/panini-certified/, "panini-certified"],
+    [/panini-crusade/, "panini-crusade"],
+    [/panini-hoops/, "panini-hoops"],
+    [/panini-prestige/, "panini-prestige"],
+    [/panini-elite-extra-edition/, "panini-elite-extra-edition"],
     // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). New product-line
     // vocab from parallel-vocabulary.json productLines section. Fixes
     // the ~5-6K rows the setKey audit found with raw-slugified titles
@@ -424,6 +452,17 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)encased(-|$)/, "panini-encased"],
     [/(^|-)eminence(-|$)/, "panini-eminence"],
     [/(^|-)origins(-|$)/, "panini-origins"],
+    // Bare tier for the products added to STRICT above. "certified" is
+    // deliberately NOT here: it is grading vocabulary as often as product
+    // vocabulary ("PSA certified"), and the bare tier sees text we have not
+    // confirmed names a product. "Panini Certified" is unambiguous; "certified"
+    // alone is not, and a wrong product key is invisible forever once written
+    // — see the only-improve doctrine.
+    [/(^|-)rookies-(?:and-)?stars(-|$)/, "panini-rookies-and-stars"],
+    [/(^|-)crusade(-|$)/, "panini-crusade"],
+    [/(^|-)hoops(-|$)/, "panini-hoops"],
+    [/(^|-)prestige(-|$)/, "panini-prestige"],
+    [/(^|-)elite-extra-edition(-|$)/, "panini-elite-extra-edition"],
     // NOTE: "select" and "score" are excluded from bare tier — they
     // appear in too many false-positive contexts ("Select Level Blue
     // Prizm" isn't necessarily Panini Select the product; "Score" also
@@ -818,9 +857,36 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // GATED ON SPORT, deliberately. The alias table contains keys like "151"
   // (Scarlet & Violet 151) that would be actively dangerous applied to a
   // baseball set name. A non-Pokemon card can never reach this branch.
-  const baseSetKey = sport === "pokemon"
+  const rawSetKey = sport === "pokemon"
     ? (POKEMON_SET_ALIASES[slugify(components.setKey)] ?? normalizeSetKey(components.setKey))
     : normalizeSetKey(components.setKey);
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
+  // them if not get them").
+  //
+  // normalizeSetKey maps bare "Donruss" to panini-donruss unconditionally, which
+  // is right for a 2015 card and wrong for a 1987 one — Panini did not acquire
+  // Donruss (via Donruss Playoff LP) until 2009. The brand existed for 28 years
+  // before the company whose name we were stamping on it.
+  //
+  // The cost was not cosmetic. It split a product away from its own checklist:
+  //
+  //     1987 panini-donruss    16,776 comps    267 checklist rows
+  //     1987 donruss                 —       1,313 checklist rows
+  //
+  // The sales were stranded at 0.65 coverage while the checklist sat right
+  // there under the honest key. Verified before wiring: of the 412 distinct card
+  // numbers those sales reference, 404 (98.1%) are present in the 1987 donruss
+  // checklist. The 8 that are not are parser debris — "rookie",
+  // "pf-wax-full-boxes-one" — not cards.
+  //
+  // Scoped to the ONE brand whose pre-Panini history is proven above. Prizm,
+  // Select and Mosaic are Panini originals with no earlier life, so they need no
+  // such gate; a blanket "strip panini- before 2009" rule would invent products
+  // that never existed. Applied after normalization so it corrects the canonical
+  // key rather than racing the vocabulary that produces it.
+  const baseSetKey = (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
+    ? "donruss"
+    : rawSetKey;
   const cardNumber = normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to

@@ -134,14 +134,19 @@ describe("CF-CARDID-SUGGESTER-MULTI-VENDOR — Hartman Blue Refractor scenario",
     // CS-native has the exact SKU.
     vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([csRow()]);
 
+    // CF-CARDSIGHT-RETIRED (Drew, 2026-08-16: "We dont use cardsight to match
+    // or anything"). This test previously asserted that CS WINS here, on the
+    // strength of having the exact SKU CH lacked. That was true and is no
+    // longer the behaviour we want: Cardsight no longer participates in
+    // matching at all, so the suggester falls back to CH's nearest row.
+    //
+    // The gap this exposes is real and worth stating plainly: when CH does not
+    // catalog a SKU we now answer from an adjacent parallel rather than an
+    // exact CS match. Closing that is the checklist-acquisition job's problem —
+    // published checklists, not a vendor index.
     const r = await suggestCardIdForHolding(makeHolding());
     expect(r).not.toBeNull();
-    // Primary is the CS row (compound wire cardId, no cardsight: prefix).
-    expect(r!.candidateSource).toBe("cardsight-uuid");
-    expect(r!.cardId).toBe("00000000-0000-0000-0000-000000000001::00000000-0000-0000-0000-000000000002");
-    // Primary carries the CS image + honest variant.
-    expect(r!.candidate.variant).toBe("Blue Refractor");
-    expect(r!.candidate.image).toBe("https://cs.cdn/blue-refractor.jpg");
+    expect(r!.candidateSource).not.toBe("cardsight-uuid");
   });
 
   it("CH wins when both vendors have the SKU (CH primary; CS deduped out of alternatives)", async () => {
@@ -182,9 +187,11 @@ describe("CF-CARDID-SUGGESTER-MULTI-VENDOR — Hartman Blue Refractor scenario",
   it("CH errors, CS succeeds → CS primary (vendor failure doesn't kill the suggestion)", async () => {
     vi.mocked(searchCards).mockRejectedValue(new Error("CH 500"));
     vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([csRow()]);
+    // CF-CARDSIGHT-RETIRED. With CS out of the matching path there is no
+    // second vendor to survive a CH failure — a CH error now means no
+    // suggestion, which is the honest outcome rather than a CS guess.
     const r = await suggestCardIdForHolding(makeHolding());
-    expect(r).not.toBeNull();
-    expect(r!.candidateSource).toBe("cardsight-uuid");
+    expect(r === null || r.candidateSource !== "cardsight-uuid").toBe(true);
   });
 
   it("CS errors, CH succeeds → CH primary (symmetric failure isolation)", async () => {

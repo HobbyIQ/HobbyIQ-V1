@@ -592,7 +592,9 @@ function crossVendorDedupKey(c: CommonCandidate): string {
 // untestable (a test cannot set the env before ESM import hoisting runs) and
 // meant flipping the env var in prod needed a restart to take effect.
 const chSuggesterEnabled = () => process.env.SUGGESTER_CARDHEDGE_ENABLED === "true";
-const csSuggesterEnabled = () => process.env.SUGGESTER_CARDSIGHT_ENABLED === "true";
+// CF-CARDSIGHT-RETIRED (Drew, 2026-08-16). The suggester no longer consults
+// Cardsight for card-id candidates; catalog-first search is the matching path.
+const csSuggesterEnabled = () => false;
 const ALTERNATIVE_MIN_SCORE = 0.4;
 const ALTERNATIVE_MAX_COUNT = 2;
 const SUGGESTER_TIMEOUT_MS = 8_000;
