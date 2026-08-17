@@ -169,6 +169,19 @@ export function rederiveRow(row: RederiveRow): RederiveResult {
   if (setKeyNorm.startsWith("bowman") && !/bowman/i.test(title)) {
     return { action: "unrecoverable", reasons: ["rederived:setkey-bowman-default-unsupported"] };
   }
+  // CF-UNKNOWN-IS-ALSO-A-GUESS (2026-08-16). The guard above catches the
+  // parser's old "Bowman" fallback. Narrowing that fallback
+  // (CF-BRANDS-BEFORE-THE-FALLBACK) means an unrecognised product now returns
+  // "Unknown" instead — which slipped straight past this check and would have
+  // written hiq:...:unknown:... as if it were an identity.
+  //
+  // It is not one. There are already 756,574 comps carrying an ":unknown:"
+  // setKey; they match no checklist and never will. A row we cannot name is
+  // left unkeyed for a later pass with a better vocabulary, which is exactly
+  // what the Bowman guard exists to do.
+  if (setKeyNorm === "unknown" || setKeyNorm === "") {
+    return { action: "unrecoverable", reasons: ["rederived:setkey-unknown-unsupported"] };
+  }
 
   const nextGuard = guardSlugInputs({
     sport,

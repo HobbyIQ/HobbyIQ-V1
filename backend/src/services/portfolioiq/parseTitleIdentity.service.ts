@@ -1127,8 +1127,46 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/.test(t)) {
     return "Unknown";
   }
-  // Only default to Bowman when the title looks baseball-ish.
-  if (/\b(baseball|mlb|rookie|prospect|prospects|1st\s+bowman|topps|panini|bowman|donruss)\b/.test(t)) {
+  // CF-BRANDS-BEFORE-THE-FALLBACK (Drew, 2026-08-16: "do it").
+  //
+  // These manufacturers had NO rule at all — "score", "skybox" and "o-pee-chee"
+  // appeared zero times in this file — so their cards fell to the Bowman
+  // default below, which fired on any title containing "baseball" or "rookie".
+  // A 1994 Upper Deck baseball rookie therefore came back as Bowman.
+  //
+  // Measured across 9,765,902 comps by comparing each slug's product against
+  // its own title:
+  //
+  //     147,700  upper-deck  parsed as "unknown"
+  //      90,732  upper-deck  parsed as "bowman"
+  //      34,428  o-pee-chee  parsed as "unknown"
+  //      27,013  score       parsed as "bowman"
+  //      26,441  skybox      parsed as "unknown"
+  //      21,826  panini      parsed as "bowman"
+  //      18,615  leaf        parsed as "bowman"
+  //
+  // ~432,000 comps where the SLUG was right and the PARSER was wrong. That
+  // matters twice: it blocks the null-slug backfill, and it made the
+  // title-vs-slug audit unusable — a fifth of the "disagreements" were this
+  // fallback rather than real mis-slugging.
+  //
+  // Longest name first within a family, so "Upper Deck SP Authentic" is not
+  // eaten by the bare "Upper Deck" rule.
+  if (/\bo-?pee-?chee\b/.test(t)) return "O-Pee-Chee";
+  if (/\bcollector'?s\s+choice\b/.test(t)) return "Collectors Choice";
+  if (/\bsp\s+authentic\b/.test(t)) return "SP Authentic";
+  if (/\bsp\s+game\s+used\b/.test(t)) return "SP Game Used";
+  if (/\bspx\b/.test(t)) return "SPx";
+  if (/\bupper\s+deck\b/.test(t)) return "Upper Deck";
+  if (/\bskybox\b/.test(t)) return "Skybox";
+  if (/\bpinnacle\b/.test(t)) return "Pinnacle";
+  if (/\bstadium\s+club\b/.test(t)) return "Topps Stadium Club";
+  if (/\bscore\b/.test(t)) return "Score";
+
+  // Only default to Bowman when the title actually says something Bowman-ish.
+  // It used to be enough to contain "baseball" or "rookie", which is how every
+  // unrecognised brand became a Bowman card.
+  if (/\b(1st\s+bowman|bowman)\b/.test(t)) {
     return "Bowman";
   }
   return "Unknown";

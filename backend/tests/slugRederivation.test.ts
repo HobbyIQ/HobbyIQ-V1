@@ -95,12 +95,13 @@ describe("rederiveRow — Phase 2 repair", () => {
       parallel: "Base", isAuto: false,
       title: "1978 Kellogg's 3-D Super Stars Baseball #8",
     });
-    // The title says Kellogg's, which is not in the setKey vocabulary,
-    // so inferSetKeyFromTitle falls back to its "Bowman" default. That
-    // default is a guess and would produce a confident wrong slug, so
+    // The title says Kellogg's, which is not in the setKey vocabulary. It used
+    // to fall back to "Bowman" and be caught by the bowman-default guard;
+    // since CF-BRANDS-BEFORE-THE-FALLBACK it returns "Unknown" instead. Either
+    // way it is a GUESS, and a guess would produce a confident wrong slug, so
     // the row is deliberately left unkeyed rather than half-fixed.
     expect(r.action).toBe("unrecoverable");
-    expect(r.reasons).toContain("rederived:setkey-bowman-default-unsupported");
+    expect(r.reasons).toContain("rederived:setkey-unknown-unsupported");
     expect(r.hobbyiqCardId).toBeUndefined();
   });
 
