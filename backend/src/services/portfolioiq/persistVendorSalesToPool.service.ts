@@ -890,6 +890,10 @@ export async function persistVendorSalesToPool(
     // Fire-and-forget: never blocks the pool write or delays it.
     // Gated on COMPS_STAGING_SHIM_ENABLED so the code is dormant
     // during initial rollout.
+    // CF-QUEUE-MUST-POINT-BACK — captured so the verify_queue entries below can
+    // point at the staging row they are holding. stageIngestedComp already
+    // returned this id; it was simply discarded.
+    let stagingRowId: string | null = null;
     if (process.env.COMPS_STAGING_SHIM_ENABLED === "true") {
       void (async () => {
         try {
@@ -923,7 +927,7 @@ export async function persistVendorSalesToPool(
             price,
             soldAt: new Date(soldAt).toISOString(),
           });
-          await stageIngestedComp({
+          stagingRowId = await stageIngestedComp({
             hobbyiqCardId: slug,
             raw: {
               vendor: source,
@@ -966,6 +970,7 @@ export async function persistVendorSalesToPool(
           const { enqueueForVerify } = await import("./verifyQueue.service.js");
           await enqueueForVerify({
             reason: "parser-low-confidence",
+            stagingId: stagingRowId,
             saleInput: {
               cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
               playerName,
@@ -1023,6 +1028,7 @@ export async function persistVendorSalesToPool(
           const { enqueueForVerify } = await import("./verifyQueue.service.js");
           await enqueueForVerify({
             reason: "sample-audit",
+            stagingId: stagingRowId,
             saleInput: {
               cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
               playerName,
@@ -1118,6 +1124,7 @@ export async function persistVendorSalesToPool(
               const { enqueueForVerify } = await import("./verifyQueue.service.js");
               await enqueueForVerify({
                 reason: "price-outlier",
+                stagingId: stagingRowId,
                 saleInput: {
                   cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
                   playerName,
@@ -1174,6 +1181,7 @@ export async function persistVendorSalesToPool(
                 const { enqueueForVerify } = await import("./verifyQueue.service.js");
                 await enqueueForVerify({
                   reason: "image-mismatch",
+                  stagingId: stagingRowId,
                   saleInput: {
                     cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
                     playerName,
