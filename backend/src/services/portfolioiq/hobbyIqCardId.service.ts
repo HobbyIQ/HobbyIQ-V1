@@ -392,6 +392,26 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)score/, "score"],
     [/(?:^|-)leaf-limited/, "leaf-limited"],
     [/(?:^|-)leaf/, "leaf"],
+    // CF-ULTRA-IS-NOT-FLEER (Drew, 2026-08-17). Ultra is its own product line,
+    // not a Fleer variant, and it MUST be matched before the bare-fleer
+    // catch-all below or "1995-96 Fleer Ultra" lands on `fleer`.
+    //
+    // It did. Measured 2026-08-17: 55,373 of 352,825 sold_comps rows on a
+    // `fleer` setKey (15.7%) carry "Ultra" in their own title or setName, and
+    // card_catalog held ZERO rows under any ultra setKey for 1995 basketball —
+    // every Ultra card was filed as Fleer.
+    //
+    // The two are different cards with different rosters at the same numbers.
+    // 1995-96 Fleer and 1995-96 Ultra Gold Medallion share the #1-200 range but
+    // agree on the player only 41 times in 197 (20.8%), because each orders its
+    // own checklist alphabetically by team. So the collapse did not merely blur
+    // a brand — it pooled Ultra sales into Fleer comps for cards that are not
+    // the same card. #25 is Michael Jordan in Ultra and Will Perdue in Fleer.
+    //
+    // Anchored on segment boundaries so "ultra" must be a whole segment:
+    // "ultraviolet" does NOT match. "ultra-pro" DOES — that is a supplies
+    // brand, never a setName, so it is accepted rather than special-cased.
+    [/(?:^|-)ultra(?:-|$)/, "ultra"],
     [/fleer/, "fleer"],
   ];
 }
