@@ -83,7 +83,31 @@ function extractProductNameFromUrl(url) {
 
 (async () => {
   console.log(`[discover] sport=${SPORT} download=${DOWNLOAD} maxPages=${MAX_PAGES}`);
-  const ARCHIVE = `https://www.beckett.com/news/category/${SPORT}/${SPORT}-card-checklists/`;
+  // CF-BECKETT-CATEGORY-FALLBACK (Drew, 2026-08-17). The nested
+  // `/{sport}/{sport}-card-checklists/` archive only still exists for baseball.
+  // Probed 2026-08-17:
+  //
+  //     baseball    /news/category/baseball/baseball-card-checklists/   200
+  //     basketball  /news/category/basketball/basketball-card-checklists/ 404
+  //     football    /news/category/football/football-card-checklists/   404
+  //     basketball  /news/category/basketball/                          200
+  //     football    /news/category/football/                            200
+  //
+  // The old path was hardcoded, so discovery returned ZERO entries for
+  // basketball and hockey and reported it as an empty archive rather than a
+  // dead URL. Try the specific archive first, then the plain sport category.
+  const ARCHIVE_FORMS = [
+    `https://www.beckett.com/news/category/${SPORT}/${SPORT}-card-checklists/`,
+    `https://www.beckett.com/news/category/${SPORT}/`,
+  ];
+  let ARCHIVE = ARCHIVE_FORMS[0];
+  for (const form of ARCHIVE_FORMS) {
+    try {
+      const probe = (await httpsGet(form)).toString("utf8");
+      if (extractProductLinks(probe).length > 0) { ARCHIVE = form; break; }
+    } catch { /* try the next form */ }
+  }
+  console.log(`[discover] archive: ${ARCHIVE}`);
   const productLinks = new Set();
 
   // Page 1 + paginated
