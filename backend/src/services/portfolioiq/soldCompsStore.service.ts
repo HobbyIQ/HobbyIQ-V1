@@ -42,8 +42,8 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
-import { guardSlugInputs } from "./slugGuard.service.js";
+import { computeHobbyIqCardId, resolveSetKeyForSlug } from "./hobbyIqCardId.service.js";
+import { guardSlugInputs, normalizeSportStrict } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -706,10 +706,24 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // can be re-derived from its title later; a wrong slug corrupts a comp
   // pool and looks healthy. See slugGuard.service.ts for the measurements
   // behind each check.
+  // CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). Resolve the setKey the way
+  // computeHobbyIqCardId will, THEN guard it. This line previously called
+  // normalizeSetKey directly, which skips the Pokemon alias table that the
+  // computation applies first — so the guard judged a key the computation
+  // would never have produced. Of 860,462 null-slug Pokemon comps the guard
+  // accepted exactly 1; 615,140 were refused as `setkey-raw-vendor-string`
+  // for a leading year the alias table removes. sportForSlug is normalized
+  // here because the resolver's Pokemon branch is gated on the canonical tag.
+  const guardSport = normalizeSportStrict(sportForSlug);
+  const resolvedSetKey = resolveSetKeyForSlug(
+    guardSport ?? "",
+    input.setName ?? "",
+    typeof input.cardYear === "number" ? input.cardYear : 0,
+  );
   const guard = guardSlugInputs({
     sport: sportForSlug,
     year: input.cardYear,
-    normalizedSetKey: normalizeSetKey(input.setName ?? ""),
+    normalizedSetKey: resolvedSetKey,
     cardNumber: cardNumberFinal ?? "",
   });
   if (!guard.ok) {
