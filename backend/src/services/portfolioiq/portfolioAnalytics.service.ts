@@ -50,11 +50,37 @@ export const TARGET_ALLOCATION: Record<PortfolioCategory, number> = {
   speculation: 0.10,
 };
 
+/**
+ * CF-VERTICAL-NEUTRAL-CATEGORIES (Drew, 2026-08-17: "better names for
+ * allocation? Since this is all products not just baseball").
+ *
+ * The original names were baseball-shaped — "Elite Prospects" is meaningless
+ * for Pokemon or Yu-Gi-Oh!, and "Established Greatness" reads as PLAYERS. The
+ * underlying ideas are vertical-neutral and survive intact: proven durable
+ * demand, genuinely constrained supply, unproven but quality position,
+ * short-term momentum. Only the words needed to travel.
+ *
+ * "Icons" covers a Charizard and a Blue-Eyes as well as an Ohtani. Finance
+ * vocabulary ("blue chip") was rejected deliberately — this is a hobby tool,
+ * not a trading terminal.
+ *
+ * The KEYS are unchanged on purpose: they are the wire contract iOS already
+ * decodes, and renaming them would break a shipped client to no benefit.
+ */
 export const CATEGORY_LABEL: Record<PortfolioCategory, string> = {
-  establishedGreatness: "Established Greatness",
+  establishedGreatness: "Established Icons",
   trueScarcity: "True Scarcity",
-  eliteProspects: "Elite Prospects",
-  speculation: "Speculation / Flips",
+  eliteProspects: "Emerging Upside",
+  speculation: "Speculation",
+};
+
+/** One-line explanation per bucket, rendered under the name so the category is
+ *  self-describing without a legend. Written to read for any vertical. */
+export const CATEGORY_BLURB: Record<PortfolioCategory, string> = {
+  establishedGreatness: "Proven names and characters with durable collector demand",
+  trueScarcity: "Vintage, low serial numbers, low pop — supply that is genuinely constrained",
+  eliteProspects: "Unproven but high-quality positions taken early",
+  speculation: "Momentum plays and cards held to resell rather than keep",
 };
 
 /** The subset of a holding this analysis reads. Deliberately narrow so the
@@ -79,6 +105,8 @@ export interface AnalyzableHolding {
 export interface Allocation {
   category: PortfolioCategory;
   label: string;
+  /** Self-describing one-liner so the category needs no legend. */
+  blurb: string;
   currentShare: number;
   targetShare: number;
   value: number;
@@ -415,7 +443,8 @@ export function analyzePortfolio(holdings: AnalyzableHolding[]): PortfolioAnalyt
     const currentShare = value / totalValue;
     const targetShare = TARGET_ALLOCATION[category];
     return {
-      category, label: CATEGORY_LABEL[category], currentShare, targetShare, value,
+      category, label: CATEGORY_LABEL[category], blurb: CATEGORY_BLURB[category],
+      currentShare, targetShare, value,
       cardCount: bucket.length,
       status: allocationStatus(currentShare, targetShare),
       driftPoints: (currentShare - targetShare) * 100,
