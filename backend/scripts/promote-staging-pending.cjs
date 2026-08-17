@@ -45,7 +45,94 @@ async function main() {
   const c = new CosmosClient(cs);
   const db = c.database(process.env.COSMOS_DATABASE || "hobbyiq");
   const stg = db.container("comps_staging");
+  const cat = db.container("card_catalog");
   const persist = loadPersistHelper();
+
+  /**
+   * playerName for a card, from OUR catalog, keyed on the coordinates the slug
+   * already carries. See CF-CATALOG-SUPPLIES-THE-PLAYER below.
+   *
+   * Returns null rather than a guess. A wrong player is far worse than a
+   * skipped row: it files a real sale against a card that did not sell, and a
+   * well-formed wrong row is invisible to every later sweep.
+   */
+  const playerCache = new Map();
+
+  function coordsOf(slug) {
+    const s = String(slug || "");
+    if (!s.startsWith("hiq:")) return null;
+    const p = s.split(":");
+    if (p.length < 5) return null;
+    const [, sport, year, setKey, number] = p;
+    const y = Number(year);
+    if (!sport || !setKey || !number || !Number.isFinite(y)) return null;
+    const num = String(number).toUpperCase();
+    return { sport, y, setKey, num, key: `${sport}|${y}|${setKey}|${num}` };
+  }
+
+  /**
+   * Resolve playerName for a WHOLE PAGE in a handful of queries.
+   *
+   * The first cut asked the catalog once per row, awaited inside the row loop.
+   * That measured 1,500 rows in 197s — 7.6/s, which is 33 hours for the 903k
+   * backlog and would never finish inside the 45-minute job window. The persist
+   * calls are pooled; this lookup was not, so it serialised the entire run.
+   *
+   * Grouping by (sport, year, setKey) and asking for all its card numbers at
+   * once turns ~500 round trips into one per distinct product on the page, and
+   * a staging page is dominated by a few products.
+   */
+  async function prefetchPlayers(rows) {
+    const groups = new Map();
+    for (const r of rows) {
+      const c = coordsOf(r.hobbyiqCardId);
+      if (!c || playerCache.has(c.key)) continue;
+      const gk = `${c.sport}|${c.y}|${c.setKey}`;
+      if (!groups.has(gk)) groups.set(gk, { sport: c.sport, y: c.y, setKey: c.setKey, nums: new Set() });
+      groups.get(gk).nums.add(c.num);
+    }
+    if (!groups.size) return;
+    await Promise.all([...groups.values()].map(async (g) => {
+      const nums = [...g.nums];
+      // Chunked so the IN list stays a sane size for the query planner.
+      for (let i = 0; i < nums.length; i += 200) {
+        const slice = nums.slice(i, i + 200);
+        const params = [
+          { name: "@sp", value: g.sport }, { name: "@y", value: g.y }, { name: "@k", value: g.setKey },
+        ];
+        const inList = slice.map((n, j) => { params.push({ name: `@n${j}`, value: n }); return `@n${j}`; });
+        try {
+          const { resources } = await cat.items.query({
+            query: `SELECT c.cardNumber, c.playerName FROM c
+                    WHERE c.sport=@sp AND c.year=@y AND c.setKey=@k
+                      AND c.cardNumber IN (${inList.join(", ")})
+                      AND IS_DEFINED(c.playerName) AND c.playerName != null`,
+            parameters: params,
+          }).fetchAll();
+          for (const hit of resources) {
+            const n = String(hit.cardNumber ?? "").toUpperCase();
+            const v = String(hit.playerName ?? "").trim();
+            if (n && v) playerCache.set(`${g.sport}|${g.y}|${g.setKey}|${n}`, v);
+          }
+        } catch { /* leave unresolved; the row simply re-parks */ }
+        // Negative caching: anything still absent is recorded as a miss so the
+        // next page does not re-ask. The catalog cannot learn mid-run.
+        for (const n of slice) {
+          const k = `${g.sport}|${g.y}|${g.setKey}|${n}`;
+          if (!playerCache.has(k)) playerCache.set(k, null);
+        }
+      }
+    }));
+  }
+
+  /** Cache-only read. prefetchPlayers has already run for this page.
+   *  Returns null rather than a guess — a wrong player files a real sale
+   *  against a card that never sold, and a well-formed wrong row is invisible
+   *  to every later sweep. */
+  function catalogPlayerFor(slug) {
+    const c = coordsOf(slug);
+    return c ? (playerCache.get(c.key) ?? null) : null;
+  }
 
   const STATUSES = String(process.env.STATUSES || "pending")
     .split(",").map((s) => s.trim()).filter(Boolean);
@@ -89,6 +176,7 @@ async function main() {
   };
   const iter = stg.items.query(q, { maxItemCount: BATCH_SIZE });
 
+  let playerFromCatalog = 0;
   let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0, divertedToVerify = 0;
   const inflight = new Set();
 
@@ -98,6 +186,8 @@ async function main() {
       break;
     }
     const { resources } = await iter.fetchNext();
+    // One batched catalog read per page, not one per row. See prefetchPlayers.
+    await prefetchPlayers(resources);
     for (const row of resources) {
       scanned++;
       const raw = row.raw || {};
@@ -120,6 +210,40 @@ async function main() {
       if (vp.sport) hint.sport = String(vp.sport).toLowerCase();
       if (vp.cardNumber) hint.cardNumber = String(vp.cardNumber);
       if (vp.setName) hint.setName = String(vp.setName);
+
+      // CF-CATALOG-SUPPLIES-THE-PLAYER (Drew, 2026-08-16: "looks like the sales
+      // index is frozen").
+      //
+      // The first awaiting-catalog re-drive scanned 55,500 rows and SKIPPED
+      // 43,886 of them (79%), inserting only 4,087. Sampling 600 of the parked
+      // rows found the cause is unanimous — every single one has a title, a
+      // price and a soldAt, and NONE has a playerName:
+      //
+      //     "2024 2024 Bowman Draft Chrome Baseball #CPA-CH Base"
+      //
+      // These are ch-daily rows whose titles are synthesized from card metadata
+      // with the player omitted. persistVendorSalesToPool requires a
+      // playerName and skips without one, so guessing from the title cannot
+      // work: the name is not in the string.
+      //
+      // But the card COORDINATES are all there, and the row already carries a
+      // hobbyiqCardId (it is the partition key). Those coordinates are exactly
+      // what card_catalog is keyed on, and the catalog knows the player. On a
+      // 200-row sample, 62% resolve — cpa-ch -> Carter Holton, bcp-146 ->
+      // Bobby Witt Jr., ash-rc -> Roger Clemens.
+      //
+      // This is the catalog-is-the-moat doctrine doing real work: we do not ask
+      // a vendor who the player is, we ask our own checklist.
+      //
+      // Cached per (sport,year,setKey,number) because a backlog of this shape
+      // repeats coordinates heavily — the same card sells many times.
+      if (!hint.playerName) {
+        const fromCatalog = catalogPlayerFor(row.hobbyiqCardId);
+        if (fromCatalog) {
+          hint.playerName = fromCatalog;
+          playerFromCatalog++;
+        }
+      }
 
       tried++;
       if (!APPLY) continue;
@@ -200,13 +324,13 @@ async function main() {
       if (tried % 1000 === 0) {
         const el = ((Date.now() - startMs) / 1000).toFixed(0);
         const rate = (tried / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
-        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} rate=${rate}/s elapsed=${el}s`);
+        console.log(`  scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} rate=${rate}/s elapsed=${el}s`);
       }
     }
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
 }
 
