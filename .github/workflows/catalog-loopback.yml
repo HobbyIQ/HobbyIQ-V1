@@ -34,6 +34,11 @@ on:
       apply:
         description: 'Write (true) or dry-run (false)'
         default: 'true'
+      top:
+        description: 'Rows to requeue per run (default 5000; was 25, which would need ~24 years to clear the backlog)'
+        required: false
+        type: string
+        default: '5000'
 
 concurrency:
   group: catalog-loopback
@@ -44,6 +49,25 @@ jobs:
     name: Requeue rows whose checklist has landed
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # CF-LOOPBACK-NEVER-RAN (Drew, 2026-08-17: "looks like the sales index is
+    # frozen").
+    #
+    # This job had failed on EVERY run since it was created — 12 for 12 — on
+    # `COSMOS_CONNECTION_STRING is unset`. It read
+    # ${{ secrets.COSMOS_CONNECTION_STRING }}, and that secret does not exist in
+    # this repo. Every other Cosmos workflow here fetches the value from App
+    # Service at run time via azure/login; this one was written against a secret
+    # that was never set, so it exited 1 before touching a single row.
+    #
+    # It is the loop-back: the thing that notices a checklist has landed and
+    # sends the rows that were waiting on it back through matching. With it dead,
+    # awaiting-catalog could only ever grow — which is exactly the frozen index,
+    # and the reason the manual re-drives in #1099/#1101 were needed at all.
+    #
+    # azure/login needs id-token: write, which was also absent.
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,14 +78,33 @@ jobs:
         run: |
           npm ci
           npx tsc -p tsconfig.json
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
       - name: Requeue matchable awaiting-catalog rows
         working-directory: backend
         env:
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           COSMOS_DATABASE: hobbyiq
         run: |
+          # Same pattern as every other Cosmos job in this repo: pull the
+          # connection string from App Service and pipe it straight into the
+          # child env. Never written to disk, never echoed.
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          # --top was 25. That is a rounding error against 896,337 parked rows:
+          # at 25 per 6-hour tick it would clear 100/day, i.e. ~24 years. The cap
+          # was sized for a job nobody had ever seen complete.
           if [ "${{ inputs.apply || 'true' }}" = "true" ]; then
-            node scripts/requeueMatchableAwaitingCatalog.cjs --apply --top 25
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            node scripts/requeueMatchableAwaitingCatalog.cjs --apply --top "${{ inputs.top || '5000' }}"
           else
-            node scripts/requeueMatchableAwaitingCatalog.cjs --top 25
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            node scripts/requeueMatchableAwaitingCatalog.cjs --top "${{ inputs.top || '5000' }}"
           fi
