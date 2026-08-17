@@ -220,6 +220,10 @@ router.get(
 );
 
 router.get("/holdings", portfolio.getHoldings);
+// CF-PORTFOLIO-BREAKDOWN (2026-08-17): allocation vs the HobbyIQ target mix,
+// PortfolioIQ Score, risk, concentration, quality tiers, recommendations.
+// Server-side so web and iOS cannot disagree about the same portfolio.
+router.get("/breakdown", portfolio.getPortfolioBreakdown);
 
 // CF-GRADE-WORTHY (Drew, 2026-07-17): single-holding grade-worthy
 // analysis. Given a raw holding, computes expected gain per grader

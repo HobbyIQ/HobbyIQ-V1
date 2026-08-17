@@ -47,6 +47,18 @@ function arg(name, dflt) {
 const has = (n) => process.argv.includes(`--${n}`);
 const FROM = arg("from", "");
 const TO = arg("to", "");
+/**
+ * CF-NO-CROSS-VERTICAL-FALLBACK (2026-08-17). Select by slug PREFIX instead of
+ * by a single current setKey.
+ *
+ * The Pokemon contamination is spread across every sports key the old fallback
+ * happened to match — panini-obsidian, panini-zenith, panini-origins, leaf,
+ * ultra — so there is no one `--from` that reaches it. `--prefix=hiq:pokemon:`
+ * takes the whole vertical and lets the resolver decide each row on its own
+ * setName. Only-improve still applies, so a row already on the right key is a
+ * no-op rather than a rewrite.
+ */
+const PREFIX = arg("prefix", "");
 const POOL = Math.max(1, Number(arg("pool", "12")));
 const LIMIT = Number(arg("limit", "0")) || Infinity;
 const APPLY = has("apply");
@@ -57,18 +69,27 @@ const isUseless = (k) => BARE_MANUFACTURER.has(k) || isYearPrefixed(k);
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  if (!FROM) { console.error("need --from=<current setKey>"); process.exit(2); }
+  if (!FROM && !PREFIX) { console.error("need --from=<current setKey> or --prefix=<slug prefix>"); process.exit(2); }
 
   const sold = new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
     .database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
 
   console.log(`[reslug-setkey] from=${FROM}${TO ? ` to=${TO}` : ""} mode=${APPLY ? "APPLY" : "DRY-RUN"} pool=${POOL}\n`);
 
-  const iter = sold.items.query({
-    query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.setName, c.sport
-            FROM c WHERE CONTAINS(c.hobbyiqCardId, @seg)`,
-    parameters: [{ name: "@seg", value: `:${FROM}:` }],
-  }, { maxItemCount: 1000 });
+  const iter = sold.items.query(
+    PREFIX
+      ? {
+          query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.setName, c.sport
+                  FROM c WHERE STARTSWITH(c.hobbyiqCardId, @p)`,
+          parameters: [{ name: "@p", value: PREFIX }],
+        }
+      : {
+          query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.setName, c.sport
+                  FROM c WHERE CONTAINS(c.hobbyiqCardId, @seg)`,
+          parameters: [{ name: "@seg", value: `:${FROM}:` }],
+        },
+    { maxItemCount: 1000 },
+  );
 
   let scanned = 0, moved = 0, noSetName = 0, notBetter = 0, failed = 0;
   const destinations = new Map();
@@ -81,7 +102,10 @@ async function main() {
       scanned++;
       const parts = String(r.hobbyiqCardId).split(":");
       // hiq:sport:year:setKey:cardNumber:parallel:auto[:printRun]
-      if (parts.length < 7 || parts[3] !== FROM) continue;
+      if (parts.length < 7) continue;
+      // In --from mode the current key must match exactly. In --prefix mode
+      // every key under the prefix is in scope and the resolver decides.
+      if (FROM && parts[3] !== FROM) continue;
       if (!r.setName) { noSetName++; continue; }
 
       const year = Number(parts[2]) || 0;

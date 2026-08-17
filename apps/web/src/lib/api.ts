@@ -540,6 +540,99 @@ export async function fetchPortfolio(): Promise<PortfolioResponse> {
   return await request<PortfolioResponse>("/api/portfolio/");
 }
 
+// ─── Portfolio Breakdown ───────────────────────────────────────────
+//
+// CF-PORTFOLIO-BREAKDOWN (Drew, 2026-08-17). Allocation vs the HobbyIQ target
+// mix, PortfolioIQ Score, risk, concentration, quality tiers, recommendations.
+//
+// The analysis is computed SERVER-SIDE (portfolioAnalytics.service.ts) rather
+// than here on purpose: iOS renders the same screen, and a second copy of the
+// scoring logic in TypeScript would drift from the Swift one. The web app's job
+// is to render what it is handed.
+
+export type PortfolioCategory =
+  | "establishedGreatness" | "trueScarcity" | "eliteProspects" | "speculation";
+
+export interface BreakdownAllocation {
+  category: PortfolioCategory;
+  label: string;
+  currentShare: number;
+  targetShare: number;
+  value: number;
+  cardCount: number;
+  status: "onTarget" | "slightlyUnderweight" | "underweight" | "slightlyOverweight" | "overweight";
+  driftPoints: number;
+}
+
+export interface BreakdownRiskMetric {
+  name: string;
+  score: number;
+  polarity: "riskIsBad" | "strengthIsGood";
+  level: "low" | "moderate" | "high";
+  label: string;
+  detail: string;
+  isConcerning: boolean;
+}
+
+export interface BreakdownConcentration {
+  dimension: string;
+  displayName: string;
+  label: string;
+  share: number;
+  value: number;
+  cardCount: number;
+  isWarning: boolean;
+  guidance: string;
+}
+
+export interface BreakdownQualityBucket {
+  tier: "cornerstone" | "strongHold" | "market" | "speculative";
+  label: string;
+  blurb: string;
+  cardCount: number;
+  value: number;
+  valueShare: number;
+}
+
+export interface BreakdownRecommendation {
+  kind: "allocation" | "concentration" | "quality" | "scarcity" | "consolidation" | "strength";
+  title: string;
+  detail: string;
+  priority: number;
+}
+
+export interface BreakdownUpgrade {
+  cardCount: number;
+  combinedValue: number;
+  lowValue: number;
+  highValue: number;
+  insight: string;
+}
+
+export interface PortfolioBreakdownResponse {
+  userId: string;
+  analyzedAt: string;
+  totalValue: number;
+  totalCost: number;
+  totalProfitLoss: number;
+  roi: number;
+  cardCount: number;
+  score: { value: number; tier: string; components: Array<{ name: string; score: number; weight: number }> };
+  allocations: BreakdownAllocation[];
+  risk: BreakdownRiskMetric[];
+  concentrations: BreakdownConcentration[];
+  qualityBuckets: BreakdownQualityBucket[];
+  recommendations: BreakdownRecommendation[];
+  upgradeOpportunities: BreakdownUpgrade[];
+  /** Share of value whose print run could not be read. Rendered as a caveat so
+   *  a thin-data portfolio does not read as a confident verdict. */
+  unknownScarcityValueShare: number;
+}
+
+export async function fetchPortfolioBreakdown(): Promise<PortfolioBreakdownResponse> {
+  return await request<PortfolioBreakdownResponse>("/api/portfolioiq/breakdown");
+}
+
 // ─── Market movers ─────────────────────────────────────────────────
 
 // Matches shape returned by GET /api/compiq/market-trend/top-movers
