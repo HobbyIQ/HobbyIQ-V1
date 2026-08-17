@@ -1078,11 +1078,35 @@ export async function persistVendorSalesToPool(
         let rollingPrices = rollingPricesBySlug.get(slug);
         if (!rollingPrices) {
           const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-          const { resources: rollingRows } = await container.items.query<{ price: number }>({
-            query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+          // CF-OUTLIER-POOL-MUST-BE-GRADE-SCOPED (Drew, 2026-08-17: "so we can
+          // see the sales index grow").
+          //
+          // This query had NO grade filter. It pooled raw, PSA 9, PSA 10 and
+          // BGS 9.5 prices for the slug into one list, medianed them, and
+          // compared the sale against that. A graded sale therefore had to look
+          // like an outlier: a $12,500 PSA 9 Jordan against a median dragged down
+          // by ungraded copies is >3x by construction, which is why 799 of 800
+          // queued price-outliers were HIGH and 90.5% of them carried a slab
+          // grade in the title.
+          //
+          // dataCleanJob's version of this same test DOES scope by tier
+          // (gradeTierKey). Two implementations of one rule, one of them
+          // grade-blind — so the queue filled from the blind one. Scoped here to
+          // match, using the SAME exported helper rather than a local copy that
+          // can drift.
+          const { gradeTierKey } = await import("./dataCleanJob.service.js");
+          const saleTier = gradeTierKey(parsed.gradeCompany, parsed.gradeValue);
+          const { resources: rollingRows } = await container.items.query<{
+            price: number; gradeCompany?: string | null; gradeValue?: number | null;
+          }>({
+            query: "SELECT c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
             parameters: [{ name: "@hiq", value: slug }, { name: "@cutoff", value: rollingCutoff }],
           }).fetchAll();
-          rollingPrices = (rollingRows ?? []).map((r) => Number(r.price));
+          // Only comps at the SAME grade tier as the sale under test. A sale is
+          // compared against its own kind or not at all.
+          rollingPrices = (rollingRows ?? [])
+            .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === saleTier)
+            .map((r) => Number(r.price));
           rollingPricesBySlug.set(slug, rollingPrices);
         }
         if (rollingPrices.length >= 5) {
