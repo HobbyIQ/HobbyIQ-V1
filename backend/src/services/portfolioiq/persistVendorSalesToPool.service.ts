@@ -1115,12 +1115,38 @@ export async function persistVendorSalesToPool(
             .map((r) => Number(r.price));
           rollingPricesBySlug.set(slug, rollingPrices);
         }
+        // CF-ONE-OUTLIER-RULE (Drew, 2026-08-17: "do it").
+        //
+        // This diverter tested `price / median > 3`, while dataCleanJob — the
+        // module that OWNS this rule — tests the pool's own p10..p90 spread
+        // widened x3 (CF-PRICE-BAND-FROM-DISPERSION, 2026-08-13). Two rules
+        // sharing one name, and the stricter, older one was doing the diverting.
+        //
+        // On any pool with real dispersion they disagree wildly. A base card
+        // trading $2-$50 with a $10 median:
+        //
+        //     median ratio : $30 / $10 = 3.0        -> DIVERTED
+        //     dispersion   : p90 ~$45, x3 = $135    -> passes easily
+        //
+        // Which is exactly what the queue looks like: ordinary prices — $30,
+        // $72, $110.47, $210 — sitting on base:no-auto slugs. Base cards have
+        // enormous spread (condition, auction vs BIN, raw vs slabbed-but-
+        // unparsed), so 3x the median is a line normal sales cross constantly.
+        // dataCleanJob's comment says the quiet part: "Band from the pool's OWN
+        // spread instead."
+        //
+        // Now calls the same exported helpers, so there is ONE implementation to
+        // drift from. Note this also raises the minimum sample from 5 to 8
+        // (MIN_BAND_SAMPLES): a pool too thin to describe its own spread now
+        // yields NO verdict rather than a confident one off five points.
         if (rollingPrices.length >= 5) {
           const prices = rollingPrices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-          if (prices.length >= 5) {
-            const rollingMedian = prices[Math.floor(prices.length / 2)];
+          const { priceBandFromSorted, priceOutlierDetail } = await import("./dataCleanJob.service.js");
+          const band = priceBandFromSorted(prices);
+          const bandDetail = band === null ? null : priceOutlierDetail(price, band);
+          if (band !== null && bandDetail !== null) {
+            const rollingMedian = band.median;
             const ratio = price / rollingMedian;
-            if (ratio > 3 || ratio < (1 / 3)) {
               const { enqueueForVerify } = await import("./verifyQueue.service.js");
               await enqueueForVerify({
                 reason: "price-outlier",
@@ -1147,14 +1173,13 @@ export async function persistVendorSalesToPool(
                   verifiedByUser: false,
                   confidence: 0.3,
                 },
-                signal: { rollingMedian, ratio, note: `${ratio > 3 ? "high" : "low"}-outlier vs 30d median ($${rollingMedian.toFixed(2)}, n=${prices.length})` },
+                signal: { rollingMedian, ratio, note: bandDetail },
               });
               result.skipped++;
               result.divertedToVerify++;
               continue;
             }
           }
-        }
       } catch {
         // Detector failure is non-fatal — fall through and persist.
       }
