@@ -3679,6 +3679,36 @@ export async function getHoldings(req: Request, res: Response) {
 }
 
 /**
+ * CF-PORTFOLIO-BREAKDOWN (Drew, 2026-08-17). Allocation / risk / quality
+ * analysis of the caller's own portfolio.
+ *
+ * Computed SERVER-SIDE so web and iOS render the same numbers by construction.
+ * The first cut of this shipped as a Swift service; adding a TypeScript copy
+ * for the web dashboard would have been two implementations of one rule, and
+ * they drift — the same defect this codebase was bitten by three separate times
+ * on 2026-08-17 alone. So the judgement lives once, here.
+ *
+ * Reads holdings exactly the way getHoldings does, pending-review filter
+ * included, so the breakdown can never describe a different inventory than the
+ * list the user is looking at.
+ */
+export async function getPortfolioBreakdown(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const doc = await readUserDoc(auth.userId);
+  const items = Object.values(doc.holdings).filter(
+    (h) => (h as any).cardStatus !== "pending-review",
+  );
+  const holdings = composePortfolioListResponse(items);
+  const { analyzePortfolio } = await import("./portfolioAnalytics.service.js");
+  res.json({
+    userId: auth.userId,
+    analyzedAt: new Date().toISOString(),
+    ...analyzePortfolio(holdings as never[]),
+  });
+}
+
+/**
  * CF-EBAY-REVIEW-QUEUE (2026-07-12): return the auto-created holdings
  * that are waiting for user confirmation. Same wire shape as /holdings —
  * iOS decodes the same PortfolioHolding shape and renders the review

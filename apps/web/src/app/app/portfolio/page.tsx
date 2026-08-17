@@ -300,6 +300,13 @@ function PortfolioPageBody() {
             >
               or import CSV
             </Link>
+            {/* CF-PORTFOLIO-BREAKDOWN (2026-08-17): allocation vs the HobbyIQ
+                target mix, PortfolioIQ Score, risk, concentration, quality.
+                Sits with the portfolio actions because "what is this made of"
+                is the natural next question after "what is it worth". */}
+            <Link href="/app/portfolio/breakdown" className="hiq-btn text-sm inline-block">
+              Breakdown
+            </Link>
           </div>
         </div>
       </div>
