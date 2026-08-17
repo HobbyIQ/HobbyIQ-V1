@@ -75,14 +75,20 @@ async function main() {
       // vocabulary — and cannot be answered by fetching a checklist.
       if (!setKey || setKey === "unknown" || !year || year === "0") continue;
       const k = `${sport}|${year}|${setKey}`;
-      comps.set(k, (comps.get(k) || 0) + 1);
+      let e = comps.get(k);
+      if (!e) { e = { n: 0, numbers: new Set() }; comps.set(k, e); }
+      e.n++;
+      // The card numbers our sales actually reference. This is the only
+      // honest estimate we have of how big the set IS — see the coverage
+      // note below.
+      if (p[4]) e.numbers.add(p[4]);
       scanned++;
     }
     process.stderr.write(`\rslugs=${scanned} products=${comps.size}`);
   }
   process.stderr.write("\n");
 
-  const ranked = [...comps.entries()].filter(([, n]) => n >= MIN).sort((a, b) => b[1] - a[1]);
+  const ranked = [...comps.entries()].filter(([, e]) => e.n >= MIN).sort((a, b) => b[1].n - a[1].n);
   console.log(`\ncomps with a usable product : ${scanned.toLocaleString()}`);
   console.log(`distinct products            : ${comps.size.toLocaleString()}`);
   console.log(`with >= ${MIN} comps             : ${ranked.length.toLocaleString()}\n`);
@@ -92,7 +98,7 @@ async function main() {
   const srcParams = CHECKLIST_SOURCES.map((s, i) => ({ name: `@s${i}`, value: s }));
   const gaps = [];
   let checked = 0;
-  for (const [k, n] of ranked.slice(0, TOP * 4)) {
+  for (const [k, e] of ranked.slice(0, TOP * 4)) {
     const [sport, year, setKey] = k.split("|");
     const p = [
       { name: "@sp", value: sport },
@@ -106,23 +112,59 @@ async function main() {
       parameters: [...p, ...srcParams],
     }).fetchAll();
     const chk = resources[0] || 0;
-    gaps.push({ sport, year: Number(year), setKey, comps: n, checklistRows: chk });
+    gaps.push({
+      sport, year: Number(year), setKey,
+      comps: e.n,
+      distinctNumbers: e.numbers.size,
+      checklistRows: chk,
+      coverage: e.numbers.size ? chk / e.numbers.size : 0,
+    });
     checked++;
     process.stderr.write(`\rchecked ${checked}/${Math.min(ranked.length, TOP * 4)}`);
   }
   process.stderr.write("\n");
 
-  // Stranded = sales pointing at a product with little or nothing to match.
-  const needed = gaps.filter((g) => g.checklistRows < Math.max(50, g.comps / 20))
-    .sort((a, b) => b.comps - a.comps);
+  // CF-COVERAGE-NOT-VOLUME (Drew, 2026-08-16: "lets get the gap report and
+  // clean it up today").
+  //
+  // The first cut ranked on checklistRows < comps/20 — it assumed a checklist
+  // should scale with TRADING VOLUME. It does not, and that produced a report
+  // led almost entirely by vintage Topps:
+  //
+  //     1955 topps  25,050 comps /   259 rows  -> flagged
+  //
+  // 1955 Topps is a 206-card set. 259 rows is COMPLETE. It was flagged purely
+  // for being heavily traded, while genuine holes sat below it.
+  //
+  // Coverage is the honest test: how many DISTINCT CARD NUMBERS do our sales
+  // reference, and does the checklist cover them? The comps are the only
+  // estimate of set size we have that does not require knowing the set — and
+  // a card cannot be sold without existing, so every number they reference is
+  // real.
+  //
+  //     1968 topps  598 distinct numbers /  60 rows  -> 0.10  REAL hole
+  //     1955 topps  ~206 numbers          / 259 rows  -> 1.26  covered
+  //
+  // A ratio below 1 means the checklist does not even cover the cards we have
+  // watched trade. Ordered by how many DISTINCT CARDS are uncovered, because
+  // that is the work, not the sale count.
+  const needed = gaps
+    .filter((g) => g.distinctNumbers >= 25 && g.coverage < 0.9)
+    .map((g) => ({ ...g, uncovered: Math.max(0, g.distinctNumbers - g.checklistRows) }))
+    .sort((a, b) => b.uncovered - a.uncovered);
 
   console.log("PRODUCTS OUR SALES NEED A CHECKLIST FOR\n");
-  console.log("    comps  checklistRows  sport       year  setKey");
+  console.log("    comps  cardsSeen  checklist  coverage  uncovered  sport       year  setKey");
   for (const g of needed.slice(0, TOP)) {
-    console.log(`${String(g.comps).padStart(9)}${String(g.checklistRows).padStart(15)}  ${g.sport.padEnd(11)} ${g.year}  ${g.setKey}`);
+    console.log(
+      `${String(g.comps).padStart(9)}${String(g.distinctNumbers).padStart(11)}`
+      + `${String(g.checklistRows).padStart(11)}${g.coverage.toFixed(2).padStart(10)}`
+      + `${String(g.uncovered).padStart(11)}  ${g.sport.padEnd(11)} ${g.year}  ${g.setKey}`);
   }
   const stranded = needed.reduce((a, g) => a + g.comps, 0);
-  console.log(`\n${needed.length} products, ${stranded.toLocaleString()} sales stranded`);
+  const cards = needed.reduce((a, g) => a + g.uncovered, 0);
+  console.log(`
+${needed.length} products · ${cards.toLocaleString()} cards uncovered · ${stranded.toLocaleString()} sales behind them`);
 
   if (JSON_OUT) {
     require("node:fs").writeFileSync(JSON_OUT, JSON.stringify(needed, null, 1));
