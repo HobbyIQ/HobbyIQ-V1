@@ -818,9 +818,36 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // GATED ON SPORT, deliberately. The alias table contains keys like "151"
   // (Scarlet & Violet 151) that would be actively dangerous applied to a
   // baseball set name. A non-Pokemon card can never reach this branch.
-  const baseSetKey = sport === "pokemon"
+  const rawSetKey = sport === "pokemon"
     ? (POKEMON_SET_ALIASES[slugify(components.setKey)] ?? normalizeSetKey(components.setKey))
     : normalizeSetKey(components.setKey);
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
+  // them if not get them").
+  //
+  // normalizeSetKey maps bare "Donruss" to panini-donruss unconditionally, which
+  // is right for a 2015 card and wrong for a 1987 one — Panini did not acquire
+  // Donruss (via Donruss Playoff LP) until 2009. The brand existed for 28 years
+  // before the company whose name we were stamping on it.
+  //
+  // The cost was not cosmetic. It split a product away from its own checklist:
+  //
+  //     1987 panini-donruss    16,776 comps    267 checklist rows
+  //     1987 donruss                 —       1,313 checklist rows
+  //
+  // The sales were stranded at 0.65 coverage while the checklist sat right
+  // there under the honest key. Verified before wiring: of the 412 distinct card
+  // numbers those sales reference, 404 (98.1%) are present in the 1987 donruss
+  // checklist. The 8 that are not are parser debris — "rookie",
+  // "pf-wax-full-boxes-one" — not cards.
+  //
+  // Scoped to the ONE brand whose pre-Panini history is proven above. Prizm,
+  // Select and Mosaic are Panini originals with no earlier life, so they need no
+  // such gate; a blanket "strip panini- before 2009" rule would invent products
+  // that never existed. Applied after normalization so it corrects the canonical
+  // key rather than racing the vocabulary that produces it.
+  const baseSetKey = (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
+    ? "donruss"
+    : rawSetKey;
   const cardNumber = normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to

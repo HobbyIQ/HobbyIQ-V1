@@ -87,7 +87,32 @@ async function main() {
   let fetched = 0, ingested = 0, rows = 0, missing = 0, failed = 0;
   for (const g of gaps.slice(0, MAX)) {
     const brand = URL_BRAND[g.setKey] || g.setKey;
-    const url = `https://www.cardboardconnection.com/${g.year}-${brand}-${g.sport}-cards`;
+    // CF-URL-FORMS (2026-08-16). A sweep of 44 vintage targets fetched 6 and
+    // "missed" 38 — but the pages existed. Two reasons, both mine:
+    //
+    //   301  The existence probe accepted a literal 200, and
+    //        /1968-topps-baseball-cards answers 301. Redirects are the norm on
+    //        this publisher, so every vintage baseball year read as absent.
+    //   YY   Basketball and hockey sets span two calendar years and are
+    //        published as 1986-87-fleer-basketball-cards. Asking for
+    //        1986-fleer-basketball-cards is a genuine 404 for a set we have.
+    //
+    // Both candidate forms are tried; the fetcher follows redirects itself.
+    const yy = String((g.year + 1) % 100).padStart(2, "0");
+    const candidates = [`${g.year}-${brand}-${g.sport}-cards`];
+    if (g.sport === "basketball" || g.sport === "hockey") {
+      candidates.unshift(`${g.year}-${yy}-${brand}-${g.sport}-cards`);
+    }
+    let url = null;
+    for (const c of candidates) {
+      const probe = `https://www.cardboardconnection.com/${c}`;
+      try {
+        // -L so a 301 counts as present, which is what it means.
+        const code = execFileSync("curl", ["-sL", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "35", probe], { encoding: "utf8" }).trim();
+        if (code === "200") { url = probe; break; }
+      } catch { /* try the next form */ }
+    }
+    if (!url) { missing++; console.log(`  MISS  ${`${g.year} ${g.setKey} ${g.sport}`.padEnd(38)} (no page in any form)`); continue; }
     const stem = path.join(outDir, `${g.year}-${g.setKey}-${g.sport}`);
     const label = `${g.year} ${g.setKey} ${g.sport}`.padEnd(38);
 
