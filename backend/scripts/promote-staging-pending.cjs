@@ -245,6 +245,26 @@ async function main() {
         }
       }
 
+      // CF-THE-SLUG-IS-THE-IDENTITY (Drew, 2026-08-16). Supplying playerName
+      // alone lifted the insert rate from 7.4% to only 13% — 81% of rows got a
+      // name and 86% were STILL skipped, because persistVendorSalesToPool has a
+      // second hard gate: no cardNumber, no row. These titles carry the number
+      // only as free text ("#CPA-CH"), so it has to be re-parsed out of a string
+      // that was itself synthesized from structured fields.
+      //
+      // That is backwards. hobbyiqCardId is the PARTITION KEY of this container
+      // — sport, year, setKey and cardNumber are already decided, canonical, and
+      // sitting on the row. Re-deriving them from prose can only lose
+      // information. Hand them over directly and let the cleaner spend its
+      // effort on grade and parallel, which the slug does not settle.
+      const c = coordsOf(row.hobbyiqCardId);
+      if (c) {
+        if (!hint.cardNumber) hint.cardNumber = c.num;
+        if (!hint.sport) hint.sport = c.sport;
+        if (typeof hint.cardYear !== "number") hint.cardYear = c.y;
+        if (!hint.setName) hint.setName = c.setKey;
+      }
+
       tried++;
       if (!APPLY) continue;
 
