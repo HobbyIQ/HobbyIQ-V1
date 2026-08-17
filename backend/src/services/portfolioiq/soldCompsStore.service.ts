@@ -43,7 +43,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId, resolveSetKeyForSlug } from "./hobbyIqCardId.service.js";
-import { guardSlugInputs, normalizeSportStrict } from "./slugGuard.service.js";
+import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -558,6 +558,84 @@ export interface RecordSoldCompResult {
   reason?: "catalog-unmatched" | "invalid-input" | "error";
 }
 
+export interface DerivedSlug {
+  /** The slug, or null when the guard refused. NEVER a guessed value. */
+  slug: string | null;
+  guard: SlugGuardResult;
+  sportForSlug: string | null;
+  cardNumberFinal: string | null;
+  printRunFinal: number | null;
+  /** setKey the guard actually judged — what segment 3 of the slug carries. */
+  resolvedSetKey: string;
+}
+
+/**
+ * CF-ONE-SLUG-DERIVATION (Drew, 2026-08-17). THE derivation of a
+ * hobbyiqCardId from a comp's attributes: title fallbacks, the sport-aware
+ * setKey resolution, the guard, and the computation.
+ *
+ * Exported because the repair pass for already-unkeyed rows must derive slugs
+ * the SAME way ingest does. A backfill that re-implements this — even
+ * carefully — is a second implementation that drifts, and the drift is
+ * invisible: it writes well-formed slugs that simply disagree with the ones
+ * ingest would have written. That is exactly how the guard came to reject
+ * 615,140 rows the computation would have keyed (CF-ONE-SETKEY-RESOLVER), and
+ * how the price-outlier diverter came to disagree with dataCleanJob
+ * (CF-ONE-OUTLIER-RULE). One rule, one implementation.
+ *
+ * CF-CARDNUMBER-TITLE-FALLBACK: vendor feeds sometimes omit cardNumber for
+ * modern autos even when the title carries the code ("CPA-EHA"); without it
+ * the slug gets a malformed "::" segment and every lookup misses.
+ *
+ * CF-SLUG-REFUSE-FALLBACKS: when the inputs don't hold up we return NO slug
+ * rather than a confident wrong one. computeHobbyIqCardId is total and will
+ * happily return `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's
+ * baseball card — syntactically perfect, completely meaningless, and
+ * indistinguishable from a real slug downstream. An unkeyed row is visibly
+ * incomplete and can be re-derived later; a wrong slug silently corrupts a
+ * comp pool and looks healthy.
+ */
+export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
+  "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto">): DerivedSlug {
+  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
+    ? input.cardNumber.trim()
+    : extractCardNumberFromTitle(input.title);
+  const printRunFinal = extractPrintRunFromTitle(input.title);
+
+  // Resolve the setKey the way computeHobbyIqCardId will, THEN guard it.
+  // sportForSlug is normalized first because the resolver's Pokemon branch is
+  // gated on the canonical tag.
+  const guardSport = normalizeSportStrict(sportForSlug);
+  const resolvedSetKey = resolveSetKeyForSlug(
+    guardSport ?? "",
+    input.setName ?? "",
+    typeof input.cardYear === "number" ? input.cardYear : 0,
+  );
+  const guard = guardSlugInputs({
+    sport: sportForSlug,
+    year: input.cardYear,
+    normalizedSetKey: resolvedSetKey,
+    cardNumber: cardNumberFinal ?? "",
+  });
+
+  const slug = guard.ok
+    ? computeHobbyIqCardId({
+        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
+        // so the slug namespace stays in the controlled vocabulary.
+        sport: guard.sport as string,
+        year: input.cardYear as number,
+        setKey: input.setName ?? "",
+        cardNumber: cardNumberFinal ?? "",
+        parallel: input.parallel ?? "Base",
+        isAuto: input.isAuto ?? false,
+        printRun: printRunFinal,
+      })
+    : null;
+
+  return { slug, guard, sportForSlug, cardNumberFinal, printRunFinal, resolvedSetKey };
+}
+
 export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {
   // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
   // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
@@ -689,43 +767,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // input.cardNumber is empty, sniff the title for a known auto-code
   // pattern and use it. Safe fallback: the same code appears in
   // BCCP checklists, so the recovered slug lines up cleanly.
-  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
-  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
-    ? input.cardNumber.trim()
-    : extractCardNumberFromTitle(input.title);
-  const printRunFinal = extractPrintRunFromTitle(input.title);
-
-  // CF-SLUG-REFUSE-FALLBACKS (Drew, 2026-08-14). Gate the slug inputs.
-  // computeHobbyIqCardId is total — it will happily return
-  // `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's baseball
-  // card, and that slug is indistinguishable from a real one downstream
-  // while quietly pooling a baseball card against hockey Bowman comps.
-  //
-  // When the inputs don't hold up we write the row with NO slug rather
-  // than a confident wrong one. An unkeyed row is visibly incomplete and
-  // can be re-derived from its title later; a wrong slug corrupts a comp
-  // pool and looks healthy. See slugGuard.service.ts for the measurements
-  // behind each check.
-  // CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). Resolve the setKey the way
-  // computeHobbyIqCardId will, THEN guard it. This line previously called
-  // normalizeSetKey directly, which skips the Pokemon alias table that the
-  // computation applies first — so the guard judged a key the computation
-  // would never have produced. Of 860,462 null-slug Pokemon comps the guard
-  // accepted exactly 1; 615,140 were refused as `setkey-raw-vendor-string`
-  // for a leading year the alias table removes. sportForSlug is normalized
-  // here because the resolver's Pokemon branch is gated on the canonical tag.
-  const guardSport = normalizeSportStrict(sportForSlug);
-  const resolvedSetKey = resolveSetKeyForSlug(
-    guardSport ?? "",
-    input.setName ?? "",
-    typeof input.cardYear === "number" ? input.cardYear : 0,
-  );
-  const guard = guardSlugInputs({
-    sport: sportForSlug,
-    year: input.cardYear,
-    normalizedSetKey: resolvedSetKey,
-    cardNumber: cardNumberFinal ?? "",
-  });
+  const derived = deriveHobbyIqSlug(input);
+  const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
   if (!guard.ok) {
     // Sampled — this fires on a meaningful slice of vendor rows and must
     // not drown the log. The counts are what tell us which defect leads.
@@ -744,19 +787,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       }));
     }
   }
-  let hobbyiqCardId = guard.ok
-    ? computeHobbyIqCardId({
-        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
-        // so the slug namespace stays in the controlled vocabulary.
-        sport: guard.sport as string,
-        year: input.cardYear as number,
-        setKey: input.setName ?? "",
-        cardNumber: cardNumberFinal ?? "",
-        parallel: input.parallel ?? "Base",
-        isAuto: input.isAuto ?? false,
-        printRun: printRunFinal,
-      })
-    : null;
+  let hobbyiqCardId = derived.slug;
 
   // CF-CATALOG-RESOLVE-IN-RECORDCOMP (Drew, 2026-08-08). Route through the
   // catalog matcher so the sale lands under the CATALOG's canonical slug —
