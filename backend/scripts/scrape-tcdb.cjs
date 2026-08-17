@@ -26,6 +26,14 @@ const cheerio = require("cheerio");
 const TCDB_URL = process.env.TCDB_URL;
 if (!TCDB_URL) { console.error("TCDB_URL required"); process.exit(2); }
 
+// CF-TCDB-INSERT-CATEGORY (Drew, 2026-08-17). An insert set has its OWN
+// numbering, so scraping 1995-96 Fleer - Class Encounters as category "base"
+// would mint `hiq:basketball:1995:fleer:4:base:no-auto` and overwrite Fleer
+// base #4 (Andrew Lang) with Class Encounters #4 — a different card entirely.
+// ingest-scraped-checklist maps an `insert-<name>` category onto the parallel
+// segment, which is how this codebase already models inserts and finishes.
+const CATEGORY = process.env.CATEGORY || "base";
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
 const HEADERS = {
   "User-Agent": UA,
@@ -104,7 +112,7 @@ function extractAnchorRows($, rows, seen) {
       if (!seen.has(key)) {
         seen.add(key);
         rows.push({
-          category: "base", cardNumber: pendingNum, parallel: "Base",
+          category: CATEGORY, cardNumber: pendingNum, parallel: "Base",
           isAuto: "false", printRun: "", player,
         });
       }
@@ -118,9 +126,16 @@ function extractAnchorRows($, rows, seen) {
     if (/\/ViewCard\.cfm\//i.test(href)) {
       // Thumbnail anchors wrap an <img> and carry no text.
       if (!text) return;
-      if (!/^#?[A-Za-z]{0,5}[\d]{1,4}[A-Za-z]?$/.test(text)) return;
+      // Card numbers are frequently HYPHENATED, especially on inserts: S-1,
+      // R-8, SS-3. An unhyphenated pattern silently drops the entire set —
+      // Stackhouse's Scrapbook (all cards S-1..S-8) extracted 0 rows from a
+      // page that had every card in it. Require a digit so the pattern cannot
+      // swallow stray link text.
+      const num = text.replace(/^#/, "").trim();
+      if (!/^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})?$/.test(num)) return;
+      if (!/\d/.test(num)) return;
       flush();
-      pendingNum = text.replace(/^#/, "");
+      pendingNum = num;
     } else if (/\/Person\.cfm\//i.test(href) && pendingNum) {
       const p = cleanPlayerName(text);
       if (p) players.push(p);
@@ -173,7 +188,7 @@ async function main() {
       if (seen.has(key)) return;
       seen.add(key);
       rows.push({
-        category: "base",
+        category: CATEGORY,
         cardNumber: num,
         parallel: "Base",
         isAuto: "false",
