@@ -300,7 +300,16 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-prizm/, "panini-prizm"],
     [/panini-select/, "panini-select"],
     [/panini-mosaic/, "panini-mosaic"],
-    [/panini-donruss-optic/, "panini-optic"],
+    // CF-OPTIC-WITHOUT-PANINI (Drew, 2026-08-17). This required the `panini-`
+    // prefix, so "Panini Donruss Optic" resolved correctly while bare "Donruss
+    // Optic" — how the product is almost always written — fell past it to the
+    // generic donruss rule and landed on panini-donruss.
+    //
+    // Measured 2026-08-17: 196,345 sold_comps rows whose own setName says
+    // Donruss Optic sat on panini-donruss. Optic is chrome stock with its own
+    // checklist and its own prices; pooling it with paper Donruss moves both.
+    // Largest single collapse in the CF-COLLAPSED-SETKEY-AUDIT worklist.
+    [/(?:panini-)?donruss-optic/, "panini-optic"],
     [/panini-donruss/, "panini-donruss"],
     [/panini-optic/, "panini-optic"],
     [/panini-contenders/, "panini-contenders"],
@@ -900,8 +909,26 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // GATED ON SPORT, deliberately. The alias table contains keys like "151"
   // (Scarlet & Violet 151) that would be actively dangerous applied to a
   // baseball set name. A non-Pokemon card can never reach this branch.
+  // CF-NO-CROSS-VERTICAL-FALLBACK (Drew, 2026-08-17). A Pokemon alias MISS used
+  // to fall through to normalizeSetKey — the SPORTS vocabulary — which happily
+  // matched Pokemon set names against Panini products:
+  //
+  //     "2023 Pokemon Scarlet & Violet Obsidian Flames" -> panini-obsidian
+  //     "Crown Zenith"                                  -> panini-zenith
+  //     "XY Ancient Origins"                            -> panini-origins
+  //     "EX FireRed & LeafGreen"                        -> leaf
+  //
+  // producing slugs like `hiq:pokemon:2023:panini-obsidian:106:base:no-auto` —
+  // a Pokemon card pooled with Panini basketball comps. Measured 2026-08-17:
+  // 59,748 Pokemon rows carried a sports/Panini setKey.
+  //
+  // The sports vocabulary has no jurisdiction here. On a miss, slugify the name
+  // and stop: a year-prefixed result is refused by slugGuard and the row stays
+  // honestly unkeyed, while a clean name yields a truthful pokemon-namespaced
+  // key. Both beat a confident wrong one — the same doctrine slugGuard exists
+  // for, applied one layer earlier.
   const rawSetKey = sport === "pokemon"
-    ? (POKEMON_SET_ALIASES[slugify(setName)] ?? normalizeSetKey(setName))
+    ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
     : normalizeSetKey(setName);
   // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009: Panini did not acquire Donruss
   // until 2009, so a 1987 "Donruss" card must not be stamped panini-donruss.
