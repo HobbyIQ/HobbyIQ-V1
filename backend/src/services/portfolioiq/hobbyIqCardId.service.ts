@@ -311,6 +311,34 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-origins/, "panini-origins"],
     [/panini-encased/, "panini-encased"],
     [/panini-eminence/, "panini-eminence"],
+    // CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB (Drew, 2026-08-16: "fix it all").
+    //
+    // These products had no rule at all, so normalizeSetKey fell through to
+    // slugify and returned a YEAR-PREFIXED ONE-OFF — the same failure the
+    // Pokemon alias table was built to stop:
+    //
+    //     "2025 Panini Rookies & Stars Football" -> 2025-panini-rookies-stars-football
+    //     "2025 Panini Certified Football"       -> 2025-panini-certified-football
+    //
+    // Two harms at once. The year is duplicated into a segment the slug already
+    // carries, and every spelling becomes its own product, so one product
+    // fragments across as many keys as sellers have phrasings. 48,819 comps
+    // were sitting on keys like these, 10,107 of them 2025 football alone.
+    //
+    // ROOKIES & STARS IS THE INSTRUCTIVE ONE. A rule for it already existed —
+    // /panini-rookies-and-stars/ — and never fired, because slugify drops "&"
+    // and produces "rookies-stars", not "rookies-and-stars". The vocabulary was
+    // written against the product's NAME rather than against what slugify
+    // actually emits for it. Both spellings are matched now.
+    [/panini-rookies-(?:and-)?stars/, "panini-rookies-and-stars"],
+    // Totally Certified is a separate product and MUST match first, or the
+    // certified rule below swallows it.
+    [/panini-totally-certified|totally-certified/, "panini-totally-certified"],
+    [/panini-certified/, "panini-certified"],
+    [/panini-crusade/, "panini-crusade"],
+    [/panini-hoops/, "panini-hoops"],
+    [/panini-prestige/, "panini-prestige"],
+    [/panini-elite-extra-edition/, "panini-elite-extra-edition"],
     // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). New product-line
     // vocab from parallel-vocabulary.json productLines section. Fixes
     // the ~5-6K rows the setKey audit found with raw-slugified titles
@@ -424,6 +452,17 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)encased(-|$)/, "panini-encased"],
     [/(^|-)eminence(-|$)/, "panini-eminence"],
     [/(^|-)origins(-|$)/, "panini-origins"],
+    // Bare tier for the products added to STRICT above. "certified" is
+    // deliberately NOT here: it is grading vocabulary as often as product
+    // vocabulary ("PSA certified"), and the bare tier sees text we have not
+    // confirmed names a product. "Panini Certified" is unambiguous; "certified"
+    // alone is not, and a wrong product key is invisible forever once written
+    // — see the only-improve doctrine.
+    [/(^|-)rookies-(?:and-)?stars(-|$)/, "panini-rookies-and-stars"],
+    [/(^|-)crusade(-|$)/, "panini-crusade"],
+    [/(^|-)hoops(-|$)/, "panini-hoops"],
+    [/(^|-)prestige(-|$)/, "panini-prestige"],
+    [/(^|-)elite-extra-edition(-|$)/, "panini-elite-extra-edition"],
     // NOTE: "select" and "score" are excluded from bare tier — they
     // appear in too many false-positive contexts ("Select Level Blue
     // Prizm" isn't necessarily Panini Select the product; "Score" also

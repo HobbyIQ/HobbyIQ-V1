@@ -9,6 +9,7 @@ import {
   parseHobbyIqCardId,
   slugify,
   matchKnownProductLine,
+  normalizeSetKey,
 } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 describe("slugify", () => {
@@ -461,6 +462,43 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
   // BDA- now routes to bowman-draft, not bowman-draft-paper. The paper key
   // held only 18 catalog rows — too thin to be a product, and it stranded
   // Draft autos away from the Draft checklist that actually describes them.
+  // CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB (Drew, 2026-08-16: "fix it all").
+  // With no rule, normalizeSetKey fell through to slugify and emitted a
+  // year-prefixed one-off ("2025-panini-rookies-stars-football"), duplicating
+  // the year into a segment the slug already carries and fragmenting one
+  // product across every spelling a seller used.
+  it("Panini products resolve to a stable key, never a year-prefixed one-off", () => {
+    const cases: Array<[string, string]> = [
+      ["2025 Panini Certified Football", "panini-certified"],
+      ["2024 Panini Crusade Baseball", "panini-crusade"],
+      ["2016 Panini Hoops Basketball", "panini-hoops"],
+      ["2025 Panini Prestige Football", "panini-prestige"],
+      ["2025 Panini Elite Extra Edition", "panini-elite-extra-edition"],
+    ];
+    for (const [input, want] of cases) {
+      expect(normalizeSetKey(input)).toBe(want);
+      expect(normalizeSetKey(input)).not.toMatch(/^(19|20)\d{2}-/);
+    }
+  });
+
+  // The rule for this product ALREADY existed and never fired: slugify drops
+  // "&", so "Rookies & Stars" becomes "rookies-stars" and the vocabulary was
+  // written against "rookies-and-stars". Both spellings are pinned so the
+  // ampersand form cannot regress.
+  it("Rookies & Stars matches despite slugify dropping the ampersand", () => {
+    expect(normalizeSetKey("2025 Panini Rookies & Stars Football")).toBe("panini-rookies-and-stars");
+    expect(normalizeSetKey("Panini Rookies and Stars")).toBe("panini-rookies-and-stars");
+  });
+
+  // Totally Certified is its own product and must win over the certified rule.
+  // "Select Certified" is pinned too: it resolves to score-select, and a
+  // careless bare-"certified" rule would have stolen it.
+  it("certified variants do not collide", () => {
+    expect(normalizeSetKey("Panini Totally Certified")).toBe("panini-totally-certified");
+    expect(normalizeSetKey("2025 Panini Certified Football")).toBe("panini-certified");
+    expect(normalizeSetKey("Select Certified")).toBe("score-select");
+  });
+
   // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
   // them if not get them"). Panini acquired Donruss in 2009; stamping its name
   // on a 1987 card split 150,695 vintage comps away from the donruss checklist

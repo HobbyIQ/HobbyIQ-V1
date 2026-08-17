@@ -3083,85 +3083,23 @@ async function fetchComps(
  * verifiedByUser=false. Downstream consumers filter by source/confidence.
  * Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED=true (default off).
  */
-export function ingestVendorCompsToPool(fetched: FetchedComps): void {
-  if (process.env.SOLD_COMPS_VENDOR_INGEST_ENABLED !== "true") return;
-  // CH already covered upstream — skip to avoid double-writes.
-  if (fetched.vendor !== "cardsight") return;
-  // CF-VENDOR-INGEST-GRADE-UNKNOWN (Drew, 2026-07-19). FetchedComps
-  // doesn't carry per-comp grade tier — same class of bug that burned
-  // us in historicalBackfill/cardsight.router. When (or if) this
-  // ingest is turned on, the writes below will store rows with
-  // gradeCompany=null (raw bucket) regardless of actual tier. Warn
-  // sampled so an operator flipping the flag sees the risk in logs.
-  if (Math.random() < 0.1) {
-    console.warn(JSON.stringify({
-      event: "compiq.sold_comps.vendor_ingest_grade_unknown",
-      reason: "FetchedComps lacks per-comp grade; writes will be raw-tagged",
-      cardId: fetched.card?.card_id ?? null,
-      compCount: fetched.comps.length,
-      sampled: true,
-    }));
-  }
-  const card = fetched.card;
-  if (!card?.card_id) return;
-  const playerName = (card.player ?? "").trim();
-  if (!playerName) return;
-  if (fetched.comps.length === 0) return;
-
-  const cardYear =
-    typeof card.year === "number"
-      ? card.year
-      : card.year != null
-        ? parseInt(String(card.year), 10)
-        : null;
-  const isAuto = /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
-    String(card.number ?? ""),
-  );
-
-  void (async () => {
-    let written = 0;
-    for (const c of fetched.comps) {
-      if (typeof c.price !== "number" || c.price <= 0) continue;
-      if (!c.soldDate) continue;
-      const externalId = `${card.card_id}::${c.soldDate}::${Math.round(c.price * 100)}`;
-      try {
-        await recordSoldComp({
-          cardId: card.card_id,
-          playerName,
-          cardYear: Number.isFinite(cardYear as number) ? (cardYear as number) : null,
-          setName: card.set ?? null,
-          parallel: card.variant ?? null,
-          cardNumber: card.number ?? null,
-          isAuto,
-          price: c.price,
-          soldAt: c.soldDate,
-          source: "cardsight",
-          sourceExternalId: externalId,
-          contributorUserId: null,
-          title: c.title ?? null,
-          imageUrl: c.imageUrl ?? null,
-          sellerHandle: null,
-          verifiedByUser: false,
-          confidence: 0.6,
-        });
-        written += 1;
-      } catch {
-        // swallow — vendor ingest is auxiliary
-      }
-    }
-    if (written > 0) {
-      console.log(JSON.stringify({
-        event: "compiq.sold_comps.vendor_ingest",
-        source: "compiqEstimate.ingestVendorCompsToPool",
-        cardId: card.card_id,
-        vendor: fetched.vendor,
-        written,
-        total: fetched.comps.length,
-      }));
-    }
-  })();
+/**
+ * CF-CARDSIGHT-RETIRED (Drew, 2026-08-16: "We dont use cardsight to match or
+ * anything, that process needs to be removed").
+ *
+ * This ingest existed ONLY to capture Cardsight-served comps — its second line
+ * was `if (fetched.vendor !== "cardsight") return;`, so with Cardsight retired
+ * there is no vendor it can accept. CardHedge comps were never written here;
+ * they are emitted upstream by tryCardHedge.
+ *
+ * Kept as an explicitly-retired no-op rather than deleted outright so the
+ * call site reads as a decision instead of an absence, and so any caller
+ * outside this file fails loudly at review rather than silently changing
+ * behaviour. The SOLD_COMPS_VENDOR_INGEST_ENABLED flag is now inert.
+ */
+export function ingestVendorCompsToPool(_fetched: FetchedComps): void {
+  return;
 }
-
 /**
  * CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
  * the unified sold_comps pool into vendor-fetched comps for a resolved cardId.

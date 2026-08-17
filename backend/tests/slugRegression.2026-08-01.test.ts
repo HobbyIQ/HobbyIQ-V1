@@ -19,9 +19,14 @@ import { extractGradeFromTitle } from "../src/services/portfolioiq/parseTitleIde
 import type { RecordSoldCompInput } from "../src/services/portfolioiq/soldCompsStore.service.js";
 
 describe("Chrome subset collapse (Drew's rule: buyers don't distinguish subset)", () => {
-  it("Bowman Chrome Draft collapses to bowman-chrome", () => {
-    expect(normalizeSetKey("2025 Bowman Draft Chrome Baseball")).toBe("bowman-chrome");
-    expect(normalizeSetKey("2025 Bowman Chrome Draft Baseball")).toBe("bowman-chrome");
+  // SUPERSEDED by CF-DRAFT-IS-ITS-OWN-PRODUCT (Drew, 2026-08-16: "it shuld
+  // fold into Draft since it is draft"). The subset-collapse rule below still
+  // holds for Topps Chrome Update; it does NOT hold for Draft, which is a
+  // separate product with a separate checklist — bowman-draft carries 277,616
+  // checklist-backed catalog rows against bowman-draft-chrome's ZERO.
+  it("Bowman Chrome Draft resolves to bowman-draft (its own product)", () => {
+    expect(normalizeSetKey("2025 Bowman Draft Chrome Baseball")).toBe("bowman-draft");
+    expect(normalizeSetKey("2025 Bowman Chrome Draft Baseball")).toBe("bowman-draft");
   });
   it("Topps Chrome Update collapses to topps-chrome", () => {
     expect(normalizeSetKey("2020 Topps Chrome Update Baseball")).toBe("topps-chrome");
@@ -50,8 +55,10 @@ describe("Slug determinism (idempotent regeneration)", () => {
     };
     const a = computeHobbyIqCardId(c);
     const b = computeHobbyIqCardId(c);
+    // Determinism is the point of this test and is unaffected by the Draft
+    // taxonomy change; only the expected product segment moved.
     expect(a).toBe(b);
-    expect(a).toBe("hiq:baseball:2025:bowman-chrome:cpa-jha:blue-refractor:auto:num-150");
+    expect(a).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto:num-150");
   });
 });
 

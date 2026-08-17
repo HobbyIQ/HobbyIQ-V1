@@ -11,8 +11,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // unmocked Cosmos — every one saw zero sales. The mock stays because it is how
 // every test in this file expresses its fixture; it is now bridged to the real
 // seam below.
+// CF-BRIDGE-NEEDS-ONE-SHARED-REF (2026-08-16). The bridge below originally did
+// `await import("cardhedge.client.js")` on every call to reach this mock. That
+// works exactly ONCE: the first call sees the mocked module, and every call
+// after it resolves to the REAL module (isMock=true, then false, verified by
+// instrumenting the bridge). Grade curves fetch Raw first, so Raw got its
+// fixture and all thirteen graded tiers silently received zero sales — which
+// is why tests asserting an OBSERVED graded value saw "estimated" instead.
+//
+// vi.hoisted gives both mock factories the SAME function object, so there is no
+// second resolution to get wrong.
+const h = vi.hoisted(() => ({ getCardSales: vi.fn() }));
+
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
+  getCardSales: h.getCardSales,
 }));
 
 // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). readSoldCompsForGrade is the module
@@ -26,8 +38,7 @@ vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
 // changed; the fixtures were never wrong.
 vi.mock("../src/services/compiq/soldCompsGradeReader.js", () => ({
   readSoldCompsForGrade: vi.fn(async (cardId: string, grade: string) => {
-    const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
-    const rows = (await vi.mocked(getCardSales)(cardId as never, grade as never)) ?? [];
+    const rows = (await h.getCardSales(cardId as never, grade as never)) ?? [];
     // CH row shape -> sold_comps row shape. `title` rides through so the
     // service's IP/TTM/bulk-lot rejection is still exercised for real.
     return (rows as Array<Record<string, unknown>>).map((r) => ({
@@ -35,8 +46,11 @@ vi.mock("../src/services/compiq/soldCompsGradeReader.js", () => ({
       soldAt: (r.soldAt ?? r.date ?? null) as string,
       source: (r.source ?? null) as string | null,
       title: (r.title ?? null) as string | null,
-      // sold_comps names this listingType; the CH fixtures call it saleType.
-      listingType: (r.listingType ?? r.saleType ?? null) as string | null,
+      // sold_comps names this listingType. The CH fixtures in this file use
+      // BOTH spellings — saleType and sale_type — and omitting the snake_case
+      // one left the BIN-vs-auction weighting fixtures feeding null, so the
+      // 1.5x BIN lift they exist to pin was never exercised.
+      listingType: (r.listingType ?? r.saleType ?? r.sale_type ?? null) as string | null,
     }));
   }),
 }));
