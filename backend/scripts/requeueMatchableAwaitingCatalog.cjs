@@ -61,12 +61,25 @@ async function mapLimit(items, limit, fn) {
   const byCat = new Map();   // slug -> row count
   let scannedRows = 0;
   const t0 = Date.now();
+  // CF-NO-GROUP-BY-AT-THIS-SCALE (2026-08-17). This was a server-side
+  // `GROUP BY c.hobbyiqCardId`, and it died with "Maximum call stack size
+  // exceeded" before printing a single count — the SDK's cross-partition
+  // group-by aggregator recurses over the result set, and awaiting-catalog holds
+  // ~896k rows across hundreds of thousands of distinct slugs.
+  //
+  // Nobody had seen this, because the job also failed on a missing
+  // COSMOS_CONNECTION_STRING and exited 1 before reaching the query. Two
+  // independent bugs stacked, so fixing the credential alone would have turned a
+  // red run into a different red run.
+  //
+  // Stream the slugs and count them in JS instead — the same shape
+  // checklist-gap-report uses over 9.7M rows without trouble. Flat memory per
+  // page, no recursion, and the tally is identical.
   const iter = staging.items.query({
-    query: `SELECT c.hobbyiqCardId AS slug, COUNT(1) AS n
+    query: `SELECT c.hobbyiqCardId AS slug
             FROM c
             WHERE c.status = 'awaiting-catalog'
-              AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null AND c.hobbyiqCardId != ''
-            GROUP BY c.hobbyiqCardId`,
+              AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null AND c.hobbyiqCardId != ''`,
   }, { maxItemCount: PAGE });
 
   while (iter.hasMoreResults() && scannedRows < MAX) {
@@ -76,8 +89,8 @@ async function mapLimit(items, limit, fn) {
     if (!resources || resources.length === 0) continue;
     for (const r of resources) {
       if (!r.slug) continue;
-      byCat.set(r.slug, (byCat.get(r.slug) ?? 0) + Number(r.n ?? 0));
-      scannedRows += Number(r.n ?? 0);
+      byCat.set(r.slug, (byCat.get(r.slug) ?? 0) + 1);
+      scannedRows++;
     }
   }
   const slugs = [...byCat.keys()];
