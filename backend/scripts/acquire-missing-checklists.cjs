@@ -98,9 +98,16 @@ async function main() {
     //        1986-fleer-basketball-cards is a genuine 404 for a set we have.
     //
     // Both candidate forms are tried; the fetcher follows redirects itself.
+    //   -cards  The suffix is not universal. 2025-panini-certified-football
+    //           is a 200 and 2025-panini-certified-football-cards is a 404,
+    //           so appending it unconditionally hid a live product page.
     const yy = String((g.year + 1) % 100).padStart(2, "0");
-    const candidates = [`${g.year}-${brand}-${g.sport}-cards`];
+    const candidates = [
+      `${g.year}-${brand}-${g.sport}-cards`,
+      `${g.year}-${brand}-${g.sport}`,
+    ];
     if (g.sport === "basketball" || g.sport === "hockey") {
+      candidates.unshift(`${g.year}-${yy}-${brand}-${g.sport}`);
       candidates.unshift(`${g.year}-${yy}-${brand}-${g.sport}-cards`);
     }
     let url = null;

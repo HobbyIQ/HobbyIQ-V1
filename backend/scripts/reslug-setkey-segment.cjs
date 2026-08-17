@@ -60,6 +60,10 @@ function arg(name, dflt) {
 }
 const has = (n) => process.argv.includes(`--${n}`);
 
+// Concurrent patches in flight. 12 keeps the job latency-bound without pushing
+// sold_comps into sustained throttling.
+const POOL = Math.max(1, Number(arg("pool", "12")));
+
 /**
  * from -> to, with the year window the move is valid in.
  *
@@ -111,6 +115,11 @@ async function main() {
       let yearMoved = 0;
       while (iter.hasMoreResults() && seen < LIMIT) {
         const { resources } = await iter.fetchNext();
+        // Build this page's work, then run it CONCURRENTLY. Patching one row
+        // at a time put the full 173,741-row job at roughly three hours, and
+        // almost all of that was idle time waiting on a round trip — the wall
+        // clock here is latency, not RUs.
+        const work = [];
         for (const r of resources || []) {
           if (seen >= LIMIT) break;
           seen++;
@@ -120,24 +129,34 @@ async function main() {
           parts[3] = m.to;
           const next = parts.join(":");
           if (next === r.hobbyiqCardId) { skipped++; continue; }
-
-          if (!APPLY) { moved++; yearMoved++; continue; }
-          try {
-            await sold.item(r.id, r.cardId).patch([
-              { op: "add", path: "/hobbyiqCardIdBefore", value: r.hobbyiqCardId },
-              { op: "set", path: "/hobbyiqCardId", value: next },
-            ]);
-            moved++; yearMoved++;
-          } catch (e) {
-            failed++;
-            if (failed <= 3) console.log(`   patch failed ${r.id}: ${String(e.message).slice(0, 70)}`);
-          }
+          work.push({ r, next });
         }
-        process.stderr.write(`\r${m.from}->${m.to} ${year}  moved=${moved} skipped=${skipped} failed=${failed}`);
+        if (!APPLY) { moved += work.length; yearMoved += work.length; continue; }
+
+        // A POOL, not Promise.all over the whole page. Unbounded fan-out just
+        // trades one kind of waiting for 429s, and a throttled patch that
+        // exhausts its retries is a row silently left behind.
+        let cursor = 0;
+        await Promise.all(Array.from({ length: POOL }, async () => {
+          while (cursor < work.length) {
+            const { r, next } = work[cursor++];
+            try {
+              await sold.item(r.id, r.cardId).patch([
+                { op: "add", path: "/hobbyiqCardIdBefore", value: r.hobbyiqCardId },
+                { op: "set", path: "/hobbyiqCardId", value: next },
+              ]);
+              moved++; yearMoved++;
+            } catch (e) {
+              failed++;
+              if (failed <= 3) console.log(`   patch failed ${r.id}: ${String(e.message).slice(0, 70)}`);
+            }
+          }
+        }));
       }
+      // Reported per YEAR, not per batch. A carriage-return ticker collapses to
+      // nothing in a CI log, writing thousands of lines nobody reads.
       if (yearMoved) {
-        process.stderr.write("\r");
-        console.log(`  ${year}  ${m.from} -> ${m.to}  ${String(yearMoved).padStart(7)}`);
+        console.log(`  ${year}  ${m.from} -> ${m.to}  ${String(yearMoved).padStart(7)}  (total ${moved.toLocaleString()})`);
       }
     }
     console.log(`  (${m.from}: ${m.why})\n`);
