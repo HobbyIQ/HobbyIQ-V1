@@ -974,8 +974,20 @@ export async function persistVendorSalesToPool(
               parallel: parsed.parallel,
               cardNumber: parsed.cardNumber,
               isAuto: parsed.isAuto,
-              gradeCompany: null,
-              gradeValue: null,
+              // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE (Drew, 2026-08-17: "so we can
+              // see the sales index grow"). These were hardcoded null while
+              // parsed.gradeCompany/gradeValue held the right answer the whole
+              // time. Measured on 800 queued price-outliers: 714 titles carried
+              // an explicit slab grade and 646 of them (90.5%) arrived with
+              // gradeCompany=null, so every one bucketed as RAW and a graded sale
+              // was compared against the UNGRADED pool for the same card.
+              //
+              // A $12,500 PSA 9 Jordan rookie measured against raw comps is 3x
+              // above p90 by construction — 799 of 800 were HIGH outliers. Those
+              // sales were never anomalous; they were in the wrong bucket, and
+              // then expired unreviewed on the 60-day queue TTL.
+              gradeCompany: parsed.gradeCompany ?? null,
+              gradeValue: parsed.gradeValue ?? null,
               price,
               soldAt: new Date(soldAt).toISOString(),
               source,
@@ -1019,8 +1031,20 @@ export async function persistVendorSalesToPool(
               parallel: parsed.parallel,
               cardNumber: parsed.cardNumber,
               isAuto: parsed.isAuto,
-              gradeCompany: null,
-              gradeValue: null,
+              // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE (Drew, 2026-08-17: "so we can
+              // see the sales index grow"). These were hardcoded null while
+              // parsed.gradeCompany/gradeValue held the right answer the whole
+              // time. Measured on 800 queued price-outliers: 714 titles carried
+              // an explicit slab grade and 646 of them (90.5%) arrived with
+              // gradeCompany=null, so every one bucketed as RAW and a graded sale
+              // was compared against the UNGRADED pool for the same card.
+              //
+              // A $12,500 PSA 9 Jordan rookie measured against raw comps is 3x
+              // above p90 by construction — 799 of 800 were HIGH outliers. Those
+              // sales were never anomalous; they were in the wrong bucket, and
+              // then expired unreviewed on the 60-day queue TTL.
+              gradeCompany: parsed.gradeCompany ?? null,
+              gradeValue: parsed.gradeValue ?? null,
               price,
               soldAt: new Date(soldAt).toISOString(),
               source,
@@ -1078,8 +1102,9 @@ export async function persistVendorSalesToPool(
                   parallel: parsed.parallel,
                   cardNumber: parsed.cardNumber,
                   isAuto: parsed.isAuto,
-                  gradeCompany: null,
-                  gradeValue: null,
+                  // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE — see note above.
+                  gradeCompany: parsed.gradeCompany ?? null,
+                  gradeValue: parsed.gradeValue ?? null,
                   price,
                   soldAt: new Date(soldAt).toISOString(),
                   source,
