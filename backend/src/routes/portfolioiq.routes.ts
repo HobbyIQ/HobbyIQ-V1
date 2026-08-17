@@ -225,6 +225,31 @@ router.get("/holdings", portfolio.getHoldings);
 // Server-side so web and iOS cannot disagree about the same portfolio.
 router.get("/breakdown", portfolio.getPortfolioBreakdown);
 
+// CF-EBAY-SOLD-SYNC-ON-DEMAND (Drew, 2026-08-17: "it is working, but we don't
+// have a button to make that happen").
+//
+// pollEbayOrdersForUser has existed and worked since the poll-based migration,
+// but only the 1h scheduled job (jobs/ebayOrderPoll.job.ts) ever called it.
+// A user who just sold something had no way to pull it in — they waited up to
+// an hour with no way to tell whether anything was happening.
+//
+// Same function the job calls, scoped to the caller's own userId, so an
+// on-demand sync and a scheduled one cannot diverge. The poller is idempotent
+// (dedupes on order line items and advances a cursor), so pressing the button
+// twice is safe.
+router.post("/ebay/sync-sold", async (req, res, next) => {
+  try {
+    const userId = (req as { user?: { id?: string; userId?: string } }).user?.id
+      ?? (req as { user?: { id?: string; userId?: string } }).user?.userId;
+    if (!userId) return res.status(401).json({ error: "unauthenticated" });
+    const { pollEbayOrdersForUser } = await import("../services/ebay/ebayOrderPoll.service.js");
+    const result = await pollEbayOrdersForUser(userId);
+    return res.json({ ...result, syncedAt: new Date().toISOString() });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // CF-GRADE-WORTHY (Drew, 2026-07-17): single-holding grade-worthy
 // analysis. Given a raw holding, computes expected gain per grader
 // tier using the local comp store's observed grader-premium curve.

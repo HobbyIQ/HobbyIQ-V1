@@ -225,6 +225,9 @@ export default function PortfolioBreakdownPage() {
                     {a.status.replace(/([A-Z])/g, " $1").toUpperCase()}
                   </span>
                 </div>
+                {/* Self-describing, so the category needs no legend — and so
+                    the names read for Pokemon and Yu-Gi-Oh! as well as sports. */}
+                <p className="mt-0.5 text-[11px] text-slate-500">{a.blurb}</p>
                 <div className="mt-1 flex items-center gap-2 text-xs tabular-nums">
                   <span className="text-slate-200">Current {Math.round(a.currentShare * 100)}%</span>
                   <span className="text-slate-500">· Target {Math.round(a.targetShare * 100)}%</span>

@@ -556,6 +556,7 @@ export type PortfolioCategory =
 export interface BreakdownAllocation {
   category: PortfolioCategory;
   label: string;
+  blurb: string;
   currentShare: number;
   targetShare: number;
   value: number;
@@ -631,6 +632,30 @@ export interface PortfolioBreakdownResponse {
 
 export async function fetchPortfolioBreakdown(): Promise<PortfolioBreakdownResponse> {
   return await request<PortfolioBreakdownResponse>("/api/portfolioiq/breakdown");
+}
+
+// ─── eBay sold sync ────────────────────────────────────────────────
+//
+// CF-EBAY-SOLD-SYNC-ON-DEMAND (Drew, 2026-08-17). pollEbayOrdersForUser has
+// worked since the poll-based migration, but only the 1h scheduled job ever
+// called it — so a user who just sold something waited up to an hour with no
+// way to tell whether anything was happening. This is the same function the
+// job calls, scoped to the caller, and idempotent (dedupes on order line items
+// and advances a cursor), so pressing the button twice is safe.
+
+export interface EbaySoldSyncResult {
+  status: "ok" | "no-token" | "refresh-token-expired" | "fetch-failed";
+  ordersFetched: number;
+  lineItemsProcessed: number;
+  matched: number;
+  deduped: number;
+  noMatchingHolding: number;
+  markFailures: number;
+  syncedAt: string;
+}
+
+export async function syncEbaySold(): Promise<EbaySoldSyncResult> {
+  return await request<EbaySoldSyncResult>("/api/portfolioiq/ebay/sync-sold", { method: "POST" });
 }
 
 // ─── Market movers ─────────────────────────────────────────────────
