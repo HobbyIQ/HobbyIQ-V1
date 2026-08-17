@@ -49,6 +49,11 @@ on:
         type: choice
         options: ['false', 'true']
         default: 'false'
+      statuses:
+        description: 'comps_staging statuses to process. "pending" is the routine pass; add awaiting-catalog to re-drive rows parked before their checklist existed.'
+        required: false
+        type: string
+        default: 'pending'
       vendor:
         description: 'Filter to a specific vendor (e.g. tca-ebay). Empty = all vendors.'
         required: false
@@ -131,6 +136,7 @@ jobs:
           COMPS_STAGING_SHIM_ENABLED=true \
           LLM_MAX_INFLIGHT=20 \
           VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
+          STATUSES="${{ inputs.statuses || 'pending' }}" \
           MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
           CONCURRENCY="${{ inputs.concurrency || '32' }}" \
           APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \

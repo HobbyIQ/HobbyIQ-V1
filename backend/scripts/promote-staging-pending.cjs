@@ -47,13 +47,36 @@ async function main() {
   const stg = db.container("comps_staging");
   const persist = loadPersistHelper();
 
-  console.log(`[promoter] apply=${APPLY} vendor=${VENDOR || "*"} maxMin=${MAX_MINUTES} batch=${BATCH_SIZE} concurrency=${CONCURRENCY}`);
+  const STATUSES = String(process.env.STATUSES || "pending")
+    .split(",").map((s) => s.trim()).filter(Boolean);
+  console.log(`[promoter] apply=${APPLY} statuses=${STATUSES.join(",")} vendor=${VENDOR || "*"} maxMin=${MAX_MINUTES} batch=${BATCH_SIZE} concurrency=${CONCURRENCY}`);
   const startMs = Date.now();
   const budgetMs = MAX_MINUTES * 60_000;
 
-  // Filter for status=pending + optional vendor
+  // CF-AWAITING-CATALOG-IS-NOT-A-DEAD-END (Drew, 2026-08-16: "what is going on
+  // with the sales index? are things not cleaning?").
+  //
+  // This filter was hardcoded to status='pending', so a row diverted to
+  // 'awaiting-catalog' was NEVER looked at again. That makes the divert a
+  // one-way door: the row is parked because the catalog lacked its card, and
+  // then no amount of catalog work can ever bring it back — the promoter does
+  // not ask.
+  //
+  // Measured 2026-08-16, sampling the awaiting-catalog backlog and testing each
+  // row against the catalog AS IT STANDS: 112 of 150 (75%) WOULD resolve right
+  // now. Against 909,175 parked rows that is roughly 680,000 sales sitting one
+  // re-drive away from the pool, while the index looked stalled.
+  //
+  // STATUSES is a comma list so the routine pass stays 'pending' (cheap, keeps
+  // up with inbound) and a re-drive pass can be scheduled separately after
+  // checklists land. Re-driving is safe by construction: a row that still finds
+  // no catalog row is simply re-parked in the same status.
   const parameters = [];
-  let filter = "c.status = 'pending'";
+  const statusParams = STATUSES.map((s, i) => {
+    parameters.push({ name: `@st${i}`, value: s });
+    return `@st${i}`;
+  });
+  let filter = `c.status IN (${statusParams.join(", ")})`;
   if (VENDOR) { filter += " AND c.raw.vendor = @vendor"; parameters.push({ name: "@vendor", value: VENDOR }); }
   // CF-STAGING-FLIP-PARTITION-KEY (Drew, 2026-08-14). hobbyiqCardId is
   // the PARTITION KEY of comps_staging and must be projected here — the
