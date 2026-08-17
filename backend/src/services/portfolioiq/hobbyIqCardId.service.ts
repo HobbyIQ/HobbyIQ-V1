@@ -210,6 +210,25 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // rows already carry. Still matches BEFORE the generic /^bowman/ or Mega
     // Box sales would land in the paper Bowman flagship pool.
     //
+    // CF-BOWMANS-BEST-DISTINCT (Drew, 2026-08-17). Bowman's Best is a premium
+    // product line with its own checklist, not a Bowman variant, and there was
+    // no rule for it — so it fell to the generic /bowman/ below.
+    //
+    // Measured 2026-08-17: 130,273 sold_comps rows whose own setName says
+    // Bowman's Best ("2024 Bowman's Best Baseball", "Bowman's Best") sit on the
+    // bare `bowman` key, while card_catalog already carries 80,193 rows under
+    // `bowmans-best`. So the sales and the checklist were filed under different
+    // keys for the same product — the pool could never meet its own catalog.
+    //
+    // The market prices these very differently: a Bowman's Best refractor auto
+    // is not a base Bowman common, and pooling them drags both estimates.
+    //
+    // slugify already folds the apostrophe ("Bowman's Best" -> bowmans-best), so
+    // one pattern covers both spellings. University FIRST — bowman-best-university
+    // is a separate product with 158 catalog rows of its own, and the general
+    // rule would otherwise swallow it.
+    [/bowmans?-best-university/, "bowman-best-university"],
+    [/bowmans?-best/, "bowmans-best"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
     // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome
