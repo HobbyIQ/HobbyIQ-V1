@@ -88,14 +88,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
-      # ---- RU UP -------------------------------------------------------
-      - name: Raise sold_comps throughput for the run
-        run: |
-          az cosmosdb sql container throughput update \
-            --account-name "$ACC" --resource-group "$RG" --database-name "$DB" \
-            --name sold_comps --max-throughput "$SOLD_WORK_MAX" -o none
-          echo "sold_comps autoscale max -> $SOLD_WORK_MAX"
-
+      # The key is fetched BEFORE the RU steps because they now use it.
       - name: Fetch Cosmos connection string
         id: cosmos
         run: |
@@ -105,6 +98,24 @@ jobs:
           if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
           echo "::add-mask::$CS"
           echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      # ---- RU UP -------------------------------------------------------
+      # DATA plane, not control plane. `az cosmosdb ... throughput update` needs
+      # an Azure RBAC role the CI principal does not have: it holds only
+      # `Website Contributor` scoped to the HobbyIQ3 app, so this step failed
+      # with AuthorizationFailed and the job did ZERO repair on 2026-08-17/18
+      # (runs 32093243367, 32123195430). The account key already in
+      # COSMOS_CONNECTION_STRING can set the offer directly, so the fix needs no
+      # new Azure grant -- and no grant is the smaller blast radius.
+      #
+      # continue-on-error: a container left at the idle ceiling makes the sweep
+      # SLOW; failing here makes it not run AT ALL. Slow beats skipped.
+      - name: Raise sold_comps throughput for the run
+        continue-on-error: true
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_WORK_MAX"
 
       - name: Backfill null slugs
         working-directory: backend
@@ -124,11 +135,10 @@ jobs:
       # the working ceiling. That would silently cost more than the job saves.
       - name: Lower sold_comps throughput back to idle
         if: always()
-        run: |
-          az cosmosdb sql container throughput update \
-            --account-name "$ACC" --resource-group "$RG" --database-name "$DB" \
-            --name sold_comps --max-throughput "$SOLD_IDLE_MAX" -o none || true
-          echo "sold_comps autoscale max -> $SOLD_IDLE_MAX"
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_IDLE_MAX"
 
       - name: Report remaining unkeyed rows
         if: always()
