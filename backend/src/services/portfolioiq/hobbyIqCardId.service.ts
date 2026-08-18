@@ -39,6 +39,7 @@
 // This module has ZERO side effects. Import + call is safe anywhere.
 
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
+import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -994,6 +995,25 @@ const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)
  *
  * `sport` must already be canonical (normalizeSport / normalizeSportStrict).
  */
+/**
+ * Strip the leading year(s) and the vertical’s own name from a vendor setName.
+ *
+ *   "2024 Yu-Gi-Oh! Rage of the Abyss" -> "Rage of the Abyss"
+ *   "1993 Magic The Gathering Beta"    -> "Beta"
+ *   "2024 One Piece Two Legends"       -> "One Piece Two Legends"
+ *
+ * The year is dropped because slug segment 2 already carries it, and the
+ * vertical is dropped because it IS the namespace — keeping either would mint a
+ * different key for every spelling of the same set. One Piece keeps its line
+ * name because the product name genuinely includes it.
+ */
+function stripVerticalPrefix(setName: string): string {
+  let s = String(setName ?? "").trim();
+  s = s.replace(/^((19|20)\d{2}(-\d{2})?\s+)+/g, "");
+  s = s.replace(/^(yu-?gi-?oh!?|magic:?\s*the\s+gathering|magic)\s*/i, "");
+  return s.trim();
+}
+
 export function resolveSetKeyForSlug(sport: string, setName: string, year: number): string {
   // GATED ON SPORT, deliberately. The alias table contains keys like "151"
   // (Scarlet & Violet 151) that would be actively dangerous applied to a
@@ -1016,6 +1036,26 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // honestly unkeyed, while a clean name yields a truthful pokemon-namespaced
   // key. Both beat a confident wrong one — the same doctrine slugGuard exists
   // for, applied one layer earlier.
+  // CF-TCG-VERTICAL-VOCABULARY (Drew, 2026-08-17). Each TCG vertical resolves
+  // against its OWN set table, never the sports vocabulary. Measured against
+  // live unkeyed rows: Yu-Gi-Oh 97.8% of sales match YGOPRODeck, Magic ~98%
+  // once the four manual aliases are applied. Before this every one of them
+  // slugified year-prefixed and slugGuard refused it — ~84,000 sales a day.
+  //
+  // The year and the vertical name are stripped before lookup: the slug already
+  // carries the year, and the vertical IS the namespace. One table entry per
+  // set therefore covers every vendor spelling of it.
+  if (sport === "yugioh" || sport === "tcg-other" || sport === "anime-tcg") {
+    const bare = stripVerticalPrefix(setName);
+    const table = sport === "yugioh" ? YUGIOH_SET_ALIASES
+      : sport === "tcg-other" ? MTG_SET_ALIASES
+      : null;
+    const hit = table ? table[slugify(bare)] : undefined;
+    // On a miss the CLEAN name still beats a year-prefixed one-off: it is
+    // stable, it joins to itself across spellings, and the guard accepts it.
+    // The sports vocabulary is never consulted here — CF-NO-CROSS-VERTICAL-FALLBACK.
+    return hit ?? slugify(bare);
+  }
   const rawSetKey = sport === "pokemon"
     ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
     : normalizeSetKey(setName);

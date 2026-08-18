@@ -453,6 +453,17 @@ export function inferSportFromContext(
   // "Pokémon" with é (U+00E9) is captured by lowercasing (é stays é;
   // pattern uses both forms).
   if (text.includes("pokemon") || text.includes("pokémon")) return "pokemon";
+  // CF-TCG-VERTICAL-VOCABULARY (Drew, 2026-08-17). The other TCG verticals.
+  // Without these the sport stays null, slugGuard refuses on sport-uncanonical,
+  // and the row never reaches its set table however good that table is — the
+  // two fixes only work together. Measured: 57,760 Yu-Gi-Oh, 16,837 Magic and
+  // 9,619 One Piece sales sat unkeyed with NO sport at all.
+  //
+  // Each maps to a tag already in CANONICAL_SPORTS, so nothing new enters the
+  // slug namespace.
+  if (/\byu-?gi-?oh/.test(text)) return "yugioh";
+  if (/\bmagic:?\s*the\s+gathering\b/.test(text) || /\bmtg\b/.test(text)) return "tcg-other";
+  if (/\bone piece\b/.test(text)) return "anime-tcg";
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
