@@ -203,10 +203,18 @@ describe("projectNextSaleFromComps", () => {
       );
       expect(projection).not.toBeNull();
       expect(projection!.method).toBe("linear-regression");
-      // 55-day window with a steep upward slope: extrapolation 30d
-      // forward off newest $2000 lands well above the ±25% cap of
-      // $2500. The cap should NOT fire because window >= 14 days.
-      expect(projection!.nextSaleValue).toBeGreaterThan(2000 * 1.25);
+      // CF-CAP-ANCHOR-IS-THE-LAST-SALE (Drew, 2026-08-17: "Lets fix that so it
+      // is accurate"). The always-on cap anchors on the NEWEST observed sale for
+      // a pool whose trend is trustworthy, not on the median of the whole
+      // window. Median-anchoring capped this rising card at 1500 — BELOW its own
+      // last real sale of 2000, which is a median wearing a trend's name.
+      //
+      // A projected next sale must never sit below the price the market just
+      // paid. Ceiling is now newest +/-25% = 2500.
+      expect(projection!.nextSaleValue).toBeGreaterThanOrEqual(2000);
+      expect(projection!.nextSaleValue).toBeCloseTo(2000 * 1.25, 2);
+      // The slope signal survives the clamp — only the OUTPUT is bounded.
+      expect(projection!.slopePerMonthPct).toBeGreaterThan(0);
     });
 
     it("does NOT clamp when pool has 5+ points even in short window", () => {
@@ -221,9 +229,43 @@ describe("projectNextSaleFromComps", () => {
         { nowMs: NOW, minNForRegression: 3 },
       );
       expect(projection).not.toBeNull();
-      // n=5 pool even in 5-day window is enough evidence to trust the
-      // regression — the cap only fires when BOTH conditions hold.
-      expect(projection!.nextSaleValue).toBeGreaterThan(1531 * 1.25);
+      // n=5 makes the trend trustworthy, so the cap anchors on the newest sale
+      // (1531) rather than the median (1300). Was clamped to 1625; now 1913.75,
+      // and never below the last real sale.
+      expect(projection!.nextSaleValue).toBeGreaterThanOrEqual(1531);
+      expect(projection!.nextSaleValue).toBeCloseTo(1531 * 1.25, 2);
+    });
+
+    // CF-CAP-ANCHOR-IS-THE-LAST-SALE guard tests. Moving the anchor off the
+    // median must NOT reopen the case the cap was built for.
+    it("still blocks an outlier-driven collapse (Griffey LD1 shape)", () => {
+      // The live case: 17 sales over 60d, and ONE $125 outlier that is the
+      // OLDEST sale, dragging the regression to about -60%/month. That is why
+      // anchoring on the newest sale is safe here — the outlier is not the
+      // newest sale, so it cannot move the anchor.
+      const comps = [{ price: 125, soldDate: daysAgo(59) }];
+      for (let i = 0; i < 16; i++) comps.push({ price: 300 + (i % 5) * 8, soldDate: daysAgo(55 - i * 3) });
+      const projection = projectNextSaleFromComps(comps, { nowMs: NOW, minNForRegression: 3 });
+      expect(projection).not.toBeNull();
+      // Must stay near the observed clearing price, nowhere near the outlier.
+      expect(projection!.nextSaleValue).toBeGreaterThan(250);
+    });
+
+    it("a genuinely falling card is still allowed to fall to its last sale", () => {
+      // The floor must not become a ratchet: anchoring on the newest sale has to
+      // permit real declines, not hold FMV up at a stale median.
+      const projection = projectNextSaleFromComps(
+        [
+          { price: 2000, soldDate: daysAgo(60) },
+          { price: 1200, soldDate: daysAgo(35) },
+          { price: 500,  soldDate: daysAgo(5) },
+        ],
+        { nowMs: NOW, minNForRegression: 3 },
+      );
+      expect(projection).not.toBeNull();
+      // Median x 0.75 would have floored this at 900, well above the $500 the
+      // market actually last paid.
+      expect(projection!.nextSaleValue).toBeLessThanOrEqual(500);
     });
 
     it("clamps a thin downward-trending pool as well (symmetric)", () => {
