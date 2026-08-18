@@ -31,7 +31,18 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             const to = params.get("@to");
             const player = params.get("@player");
             const lim = params.get("@lim");
+            // CF-CONTENT-HASH-DEDUP: recordSoldComp probes for an existing row
+            // by contentHash before writing. This fake did not know about @h,
+            // so that probe fell through every filter and returned the WHOLE
+            // store — making the second write of any test look like a
+            // duplicate and silently skipping it. That is why three tests here
+            // saw an empty store or one row short; the store was correct and
+            // the fake was lying. Filter on it like Cosmos would.
+            const contentHash = params.get("@h");
             let rows = Array.from(store.values()) as SoldCompDoc[];
+            if (contentHash !== undefined) {
+              return { resources: rows.filter((d) => (d as { contentHash?: string }).contentHash === contentHash) };
+            }
             if (cid) rows = rows.filter((d) => d.cardId === cid);
             if (from) rows = rows.filter((d) => d.soldAt >= from);
             if (to) rows = rows.filter((d) => d.soldAt <= to);
@@ -137,6 +148,12 @@ describe("recordSoldComp — idempotency via composite id", () => {
       price: 420,
       soldAt: "2026-07-05T00:00:00Z",
       source: "manual-user-entry" as const,
+      // preIngestClean made `parallel` REQUIRED for manual-user-entry after the
+      // 2026-08-01 Hartman incident, where a silent Base default mispriced a
+      // parallel. Without it both writes here are correctly rejected and the
+      // store stays empty — which is what made this test red, not the
+      // idempotency it is actually pinning.
+      parallel: "Base",
     };
     await recordSoldComp(base);
     await recordSoldComp(base);   // exact same → same id

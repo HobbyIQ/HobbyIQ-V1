@@ -1,3 +1,12 @@
+// PARTLY SUPERSEDED 2026-08-04 by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED, which
+// made computeDisplayValue roll estimatedValue in BEFORE the cost fallback.
+// Four assertions here encoded the June contract ("currentValue stays
+// observed-only", "legacy fields byte-identical") and went red on 2026-08-04.
+// They stayed red until 2026-08-18 — the guards were working; the intended
+// behaviour had moved and nobody retuned them. Each is now marked SUPERSEDED
+// at the assertion, with the old number kept in the comment so the change of
+// contract stays visible rather than silently rewritten.
+//
 // CF-VALUATION-TOTALS-SPLIT (2026-06-12) — coverage for:
 //   • summarizeHoldings observed/estimated/pending split + observedPct
 //   • composeHoldingWireShape displayableValue + displayableValueSource
@@ -68,11 +77,14 @@ describe("summarizeHoldings — observed/estimated/pending split", () => {
     expect(s.pendingCount).toBe(1);
     // observedPct = 100 / (100 + 400) = 0.2
     expect(s.observedPct).toBeCloseTo(0.2, 4);
-    // Backward compat: totalValue (legacy field) keeps using computeDisplayValue
-    // which falls back to cost for null-FMV holdings.
-    // Estimated holding: cost=50, FMV=null → contributes 50; pending: cost=30.
-    // observed: 100. So legacy totalValue = 100 + 50 + 30 = 180.
-    expect(s.totalValue).toBe(180);
+    // SUPERSEDED 2026-08-04 by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED.
+    // computeDisplayValue used to fall straight from observed → cost proxy for
+    // a null-FMV holding, so the estimated row contributed its $50 cost and
+    // this expected 180. It now rolls estimatedValue in BEFORE the cost
+    // fallback, because Drew's portfolio was under-counting: estimated rows
+    // have a real market number and showing cost instead understated the total.
+    // Estimated: 200×2 = 400 (not cost 50); pending stays cost 30; observed 100.
+    expect(s.totalValue).toBe(530);
   });
 
   it("missing valuationStatus treated as observed (pre-Step-1 holdings, backward compat)", () => {
@@ -161,12 +173,14 @@ describe("summarizeHoldings — CF-HEADLINE-HONEST-TOTAL", () => {
     expect(s.observedGainLossPct).toBeCloseTo(0.3657, 4);  // 256 / 700
     expect(s.estimatedCount).toBe(1);
     expect(s.pendingCount).toBe(1);
-    // Legacy fields BYTE-IDENTICAL to pre-CF behavior — cost-proxy fallback
-    // means: Trout observed → 956, Leo PSA 10 (null FMV) → cost 1000,
-    // Leo BGS 9.5 (null FMV) → cost 800. Sum 2756.
-    expect(s.totalValue).toBe(2756);
+    // SUPERSEDED 2026-08-04 by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED.
+    // Trout observed → 956, Leo PSA 10 now contributes its ESTIMATE 3260.40
+    // (it used to contribute cost 1000), Leo BGS 9.5 is pending with no
+    // estimate so it still falls to cost 800. Sum 5016.40.
+    expect(s.totalValue).toBeCloseTo(5016.40, 2);
     expect(s.totalCost).toBe(2500);
-    expect(s.totalGainLoss).toBe(256);
+    // totalGainLoss moves with it: 5016.40 - 2500.
+    expect(s.totalGainLoss).toBeCloseTo(2516.40, 2);
     expect(s.cardCount).toBe(3);
   });
 
@@ -255,11 +269,15 @@ describe("summarizeHoldings — CF-HEADLINE-HONEST-TOTAL", () => {
       } as any),
     ];
     const s = summarizeHoldings(items);
-    // computeDisplayValue: observed=500, estimated (null FMV)→cost=50, pending (null FMV)→cost=25
-    expect(s.totalValue).toBe(575);
+    // SUPERSEDED 2026-08-04 by CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED. This
+    // "byte-identical to pre-CF" guard protected the June contract, and a
+    // LATER CF deliberately changed it — the guard was doing its job by going
+    // red, but the intended behaviour moved. computeDisplayValue: observed=500,
+    // estimated now →1000 (its estimate, not cost 50), pending →cost 25.
+    expect(s.totalValue).toBe(1525);
     expect(s.totalCost).toBe(375);
-    expect(s.totalGainLoss).toBe(200);
-    expect(s.totalGainLossPct).toBeCloseTo((200 / 375) * 100, 2);
+    expect(s.totalGainLoss).toBe(1150);
+    expect(s.totalGainLossPct).toBeCloseTo((1150 / 375) * 100, 2);
     expect(s.cardCount).toBe(3);
   });
 });
@@ -301,10 +319,19 @@ describe("composeHoldingWireShape — displayableValue + displayableValueSource"
     expect(wire.fairMarketValue).toBeNull();
   });
 
-  it("currentValue stays observed-only (cost fallback) — does NOT fold in estimate", () => {
-    // Estimated holding: cost=100, estimatedValue=3260, fmv=null.
-    // currentValue must use computeDisplayValue → cost ($100), NOT $3,260.
-    // displayableValue separately surfaces the $3,260.
+  it("currentValue DOES fold in the estimate (superseded 2026-08-04)", () => {
+    // Estimated holding: cost=100, estimatedValue=3260.40, fmv=null.
+    //
+    // This test was written for CF-VALUATION-TOTALS-SPLIT (2026-06-12), when
+    // currentValue was observed-only and displayableValue was the additive
+    // estimate-aware slot. CF-PORTFOLIO-TOTAL-INCLUDE-ESTIMATED (2026-08-04)
+    // deliberately folded the estimate into computeDisplayValue, which
+    // currentValue is derived from — so both slots now carry 3260.40 for an
+    // estimated holding.
+    //
+    // The quickSale/premium/suggestedList assertions below are the part that
+    // still matters and still holds: those stay NULL for an estimated holding,
+    // because a multiplier on an estimate would compound a guess.
     const wire = composeHoldingWireShape({
       ...makeHolding({}),
       purchasePrice: 100,
@@ -315,8 +342,8 @@ describe("composeHoldingWireShape — displayableValue + displayableValueSource"
       estimatedValue: 3260.40,
       isEstimate: true,
     } as PortfolioHolding);
-    expect(wire.currentValue).toBe(100);          // observed slot unchanged
-    expect(wire.displayableValue).toBe(3260.40);   // new slot has estimate
+    expect(wire.currentValue).toBeCloseTo(3260.40, 2);  // folds in the estimate
+    expect(wire.displayableValue).toBe(3260.40);        // and so does this slot
     expect(wire.quickSaleValue).toBeNull();        // observed-only multiplier
     expect(wire.premiumValue).toBeNull();
     expect(wire.suggestedListPrice).toBeNull();
