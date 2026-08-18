@@ -464,6 +464,38 @@ export function inferSportFromContext(
   if (/\byu-?gi-?oh/.test(text)) return "yugioh";
   if (/\bmagic:?\s*the\s+gathering\b/.test(text) || /\bmtg\b/.test(text)) return "tcg-other";
   if (/\bone piece\b/.test(text)) return "anime-tcg";
+  // CF-ALL-CANONICAL-VERTICALS (Drew, 2026-08-17: "find it and find it ALL").
+  //
+  // CANONICAL_SPORTS already contained golf, racing, wrestling, mma, boxing,
+  // tennis, multi-sport and non-sport — the namespace was never the problem.
+  // Nothing DETECTED them, so the sport stayed null, slugGuard refused on
+  // sport-uncanonical, and the row never got a slug however good its setKey
+  // vocabulary was.
+  //
+  // Measured over the 45,288 rows still unkeyed after the TCG verticals
+  // shipped, these tokens classify 87.5%:
+  //
+  //     non-sport   20,938      mma          1,918
+  //     golf         4,615      tennis       1,116
+  //     wrestling    4,099      boxing         437
+  //     racing       3,511      multi-sport  3,008
+  //
+  // Most of these products ALREADY have setKey vocabulary — "2020 Topps
+  // Chrome F1 Racing" resolves to topps-chrome perfectly well. The sport tag
+  // was the only thing missing, which is why this is a large win for a small
+  // change.
+  //
+  // Ordered most-specific first: a league acronym beats a generic word, and
+  // non-sport is LAST so "Marvel" cannot outrank a real sport that happens to
+  // mention a character.
+  if (/\bufc\b|\bmma\b|mixed martial|\bpride fc\b/.test(text)) return "mma";
+  if (/\bwwe\b|\bwwf\b|\baew\b|\bwcw\b|\bnwa\b|wrestling/.test(text)) return "wrestling";
+  if (/\bf1\b|formula\s*1|\bnascar\b|\bindycar\b|\bmoto\s?gp\b|racing/.test(text)) return "racing";
+  if (/\bgolf\b|\bpga\b/.test(text)) return "golf";
+  if (/\btennis\b|\batp\b|\bwta\b/.test(text)) return "tennis";
+  if (/\bboxing\b|\bboxer\b/.test(text)) return "boxing";
+  if (/multi-?sport|olympic|four sport|all[- ]sport|sports illustrated|metal universe champions|goodwin champions/.test(text)) return "multi-sport";
+  if (/garbage pail|\bmarvel\b|star wars|spider-?man|superman|batman|dc comics|masterpieces|\bimpel\b|fortnite|playboy|wacky|jurassic/.test(text)) return "non-sport";
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";

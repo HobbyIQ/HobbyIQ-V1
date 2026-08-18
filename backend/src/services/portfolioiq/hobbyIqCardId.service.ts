@@ -1056,6 +1056,32 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
     // The sports vocabulary is never consulted here — CF-NO-CROSS-VERTICAL-FALLBACK.
     return hit ?? slugify(bare);
   }
+  // CF-LONGTAIL-VERTICAL-FALLBACK (Drew, 2026-08-17). The verticals our sports
+  // vocabulary was never built for.
+  //
+  // Most of their products ARE known — "2020 Topps Chrome F1 Racing" resolves
+  // to topps-chrome because the manufacturer rule fires — so normalizeSetKey is
+  // still tried first and still wins where it can. But when it falls through to
+  // slugify, the result is year-prefixed and slugGuard refuses it, leaving a
+  // real product (Marvel Masterpieces, Garbage Pail Kids, Netpro Tennis) with no
+  // slug at all.
+  //
+  // The year is redundant — slug segment 2 already carries it — so stripping it
+  // yields a truthful, stable key that joins to itself across spellings. That is
+  // strictly better than no slug, and it is what the vendor actually named.
+  //
+  // SCOPED TO THESE VERTICALS ON PURPOSE. For the major sports a year-prefixed
+  // key usually means a genuine parse failure, and refusing is the right answer
+  // there (CF-SLUG-REFUSE-FALLBACKS). Here it only means we never wrote a rule.
+  const LONGTAIL = new Set([
+    "non-sport", "multi-sport", "tennis", "golf", "racing", "mma", "boxing", "wrestling",
+  ]);
+  if (LONGTAIL.has(sport)) {
+    const viaVocabulary = normalizeSetKey(setName);
+    if (viaVocabulary && !/^(19|20)\d{2}-/.test(viaVocabulary)) return viaVocabulary;
+    const bare = stripVerticalPrefix(setName);
+    return slugify(bare) || viaVocabulary;
+  }
   const rawSetKey = sport === "pokemon"
     ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
     : normalizeSetKey(setName);
