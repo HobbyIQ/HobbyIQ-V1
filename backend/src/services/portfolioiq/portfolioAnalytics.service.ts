@@ -103,7 +103,10 @@ export interface AnalyzableHolding {
 }
 
 export interface Allocation {
-  category: PortfolioCategory;
+  /** One of the four built-in categories, OR a user-defined tier id when the
+   *  caller supplied custom tiers. Widened deliberately: pretending a custom
+   *  tier id is one of the four would be a lie the type system then enforces. */
+  category: PortfolioCategory | (string & {});
   label: string;
   /** Self-describing one-liner so the category needs no legend. */
   blurb: string;
@@ -389,6 +392,108 @@ function metricLabel(score: number, polarity: RiskMetric["polarity"]): string {
 }
 
 // ---------------------------------------------------------------- entry
+
+/**
+ * CF-CUSTOM-TIERS (2026-08-17). When the user has defined their own tiers, the
+ * allocation section is computed against THOSE instead of the built-in four.
+ *
+ * Everything else — score, risk, concentration, quality — is unchanged, because
+ * those measure properties of the cards rather than of the user's chosen
+ * buckets. Only "Allocation Fit" inside the score moves, which is correct: it
+ * is the one component that asks "does this match the target", and the target
+ * is now theirs.
+ */
+export function analyzeWithCustomTiers(
+  holdings: AnalyzableHolding[],
+  tiers: import("./portfolioCustomTiers.js").CustomTier[],
+): PortfolioAnalyticsResult {
+  const base = analyzePortfolio(holdings);
+  if (base.cardCount === 0 || tiers.length === 0) return base;
+
+  // Lazily required so the default path pays nothing for this.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { assignTier, UNASSIGNED_TIER_ID } =
+    require("./portfolioCustomTiers.js") as typeof import("./portfolioCustomTiers.js");
+
+  const owned = holdings.filter((h) => isOwned(h) && effectiveValue(h) > 0);
+  const totalValue = owned.reduce((s, h) => s + effectiveValue(h), 0);
+
+  const bucket = new Map<string, { value: number; count: number }>();
+  for (const h of owned) {
+    const value = effectiveValue(h);
+    const id = assignTier(tiers, {
+      printRun: parsePrintRun(String(h.parallel ?? ""), String(h.cardName ?? "")),
+      year: yearOf(h),
+      graded: isGraded(h),
+      isAuto: Boolean((h as { isAuto?: boolean }).isAuto),
+      product: `${h.setName ?? ""} ${h.cardName ?? ""} ${h.parallel ?? ""}`.toLowerCase(),
+      name: String(h.playerName ?? "").toLowerCase(),
+      value,
+    });
+    const cur = bucket.get(id) ?? { value: 0, count: 0 };
+    cur.value += value;
+    cur.count += 1;
+    bucket.set(id, cur);
+  }
+
+  const allocations: Allocation[] = tiers.map((t) => {
+    const b = bucket.get(t.id) ?? { value: 0, count: 0 };
+    const currentShare = b.value / totalValue;
+    return {
+      category: t.id as PortfolioCategory,
+      label: t.name,
+      blurb: t.blurb ?? "",
+      currentShare,
+      targetShare: t.targetShare,
+      value: b.value,
+      cardCount: b.count,
+      status: allocationStatus(currentShare, t.targetShare),
+      driftPoints: (currentShare - t.targetShare) * 100,
+    };
+  });
+
+  // Anything the user's rules did not catch is shown, not absorbed. Hiding it
+  // would make a rule set look complete when it is not.
+  const un = bucket.get(UNASSIGNED_TIER_ID);
+  if (un && un.value > 0) {
+    allocations.push({
+      category: UNASSIGNED_TIER_ID as PortfolioCategory,
+      label: "Unassigned",
+      blurb: "Cards no tier rule matched — adjust your rules to place these",
+      currentShare: un.value / totalValue,
+      targetShare: 0,
+      value: un.value,
+      cardCount: un.count,
+      status: allocationStatus(un.value / totalValue, 0),
+      driftPoints: (un.value / totalValue) * 100,
+    });
+  }
+
+  const totalDrift = allocations.reduce((s, a) => s + Math.abs(a.driftPoints), 0) / 2;
+  const allocationFit = Math.min(1, Math.max(0, 1 - totalDrift / 50));
+  const components = base.score.components.map((c) =>
+    c.name === "Allocation Fit" ? { ...c, score: allocationFit } : c);
+  const scoreValue = Math.round(components.reduce((s, c) => s + c.score * c.weight, 0) * 100);
+
+  const recommendations = [
+    ...allocations
+      .filter((a) => a.status !== "onTarget" && a.category !== UNASSIGNED_TIER_ID)
+      .map((a) => ({
+        kind: "allocation" as const,
+        title: `${a.driftPoints < 0 ? "Increase" : "Reduce"} ${a.label}`,
+        detail: `${pct(a.currentShare)} of value against your ${pct(a.targetShare)} target — ${Math.round(Math.abs(a.driftPoints))} points ${a.driftPoints < 0 ? "under" : "over"}.`,
+        priority: Math.round(Math.abs(a.driftPoints)) + 40,
+      })),
+    ...base.recommendations.filter((r) => r.kind !== "allocation"),
+  ].sort((a, b) => b.priority - a.priority).slice(0, 5);
+
+  return {
+    ...base,
+    allocations,
+    score: { value: scoreValue, tier: scoreTier(scoreValue), components },
+    recommendations,
+  };
+}
 
 export function analyzePortfolio(holdings: AnalyzableHolding[]): PortfolioAnalyticsResult {
   const owned = (holdings ?? []).filter((h) => isOwned(h) && effectiveValue(h) > 0);

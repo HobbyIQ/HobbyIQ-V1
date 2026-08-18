@@ -658,6 +658,46 @@ export async function syncEbaySold(): Promise<EbaySoldSyncResult> {
   return await request<EbaySoldSyncResult>("/api/portfolioiq/ebay/sync-sold", { method: "POST" });
 }
 
+// ─── Custom allocation tiers ───────────────────────────────────────
+//
+// CF-CUSTOM-TIERS (Drew, 2026-08-17). A tier is a name, a target share, and
+// rules deciding which holdings land in it. First match wins, in order, so the
+// list is a priority statement the user controls — which is the only model that
+// stays predictable once buckets overlap, and they always do.
+
+export interface TierRule {
+  printRunMax?: number;
+  printRunMin?: number;
+  yearMax?: number;
+  yearMin?: number;
+  graded?: boolean;
+  isAuto?: boolean;
+  productContains?: string;
+  nameContains?: string;
+  valueMin?: number;
+  valueMax?: number;
+}
+
+export interface CustomTier {
+  id: string;
+  name: string;
+  targetShare: number;
+  rules: TierRule[];
+  blurb?: string;
+}
+
+export async function fetchPortfolioTiers(): Promise<{ tiers: CustomTier[]; isCustom: boolean }> {
+  return await request<{ tiers: CustomTier[]; isCustom: boolean }>("/api/portfolioiq/breakdown/tiers");
+}
+
+/** Pass an empty array to clear back to the HobbyIQ defaults. */
+export async function savePortfolioTiers(tiers: CustomTier[]): Promise<{ tiers: CustomTier[]; isCustom: boolean }> {
+  return await request<{ tiers: CustomTier[]; isCustom: boolean }>("/api/portfolioiq/breakdown/tiers", {
+    method: "PUT",
+    body: JSON.stringify({ tiers }),
+  });
+}
+
 // ─── Market movers ─────────────────────────────────────────────────
 
 // Matches shape returned by GET /api/compiq/market-trend/top-movers
