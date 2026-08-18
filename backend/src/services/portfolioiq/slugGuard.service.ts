@@ -197,6 +197,12 @@ export function guardSlugInputs(input: {
   year: unknown;
   normalizedSetKey: string | null | undefined;
   cardNumber: string | null | undefined;
+  /** CF-PLAYER-IS-THE-NUMBER. For a genuinely unnumbered card (`nno`) the
+   *  PLAYER is the identifier, so a card with no number but a known player is
+   *  identifiable and must be allowed through. Omitting this keeps the old,
+   *  stricter behaviour — callers that cannot supply a player still get a
+   *  refusal rather than a slug shared with every other unnumbered card. */
+  playerName?: string | null;
 }): SlugGuardResult {
   const reasons: SlugRejectReason[] = [];
 
@@ -209,9 +215,14 @@ export function guardSlugInputs(input: {
   if (!setKey) reasons.push("setkey-missing");
   else if (isRawVendorSetKey(setKey)) reasons.push("setkey-raw-vendor-string");
 
+  // CF-PLAYER-IS-THE-NUMBER. `nno` is an ABSENCE, so it can never be the
+  // identity itself — but an unnumbered card with a known player IS
+  // identifiable ("T206 Wagner"), and computeHobbyIqCardId encodes that as
+  // `p-<player>`. Refuse only when neither a number nor a player exists.
   const cardNumber = String(input.cardNumber ?? "").trim().toLowerCase();
+  const hasPlayer = String(input.playerName ?? "").trim().length > 0;
   if (!cardNumber || NOT_A_CARD_NUMBER.has(cardNumber)) {
-    reasons.push("cardnumber-missing");
+    if (!hasPlayer) reasons.push("cardnumber-missing");
   }
 
   return { ok: reasons.length === 0, sport: reasons.length === 0 ? sport : null, reasons };

@@ -53,6 +53,72 @@ export interface HobbyIqCardIdComponents {
    *  cardNumber-prefix repair for untrusted vendor text must NOT fire. See
    *  CF-AUTHORITATIVE-SETKEY. Vendor paths leave this unset. */
   authoritativeSetKey?: boolean;
+  /** CF-PLAYER-IS-THE-NUMBER. Required ONLY for genuinely unnumbered cards.
+   *  See UNNUMBERED_CARD_NUMBER below for why. */
+  playerName?: string | null;
+}
+
+/**
+ * CF-PLAYER-IS-THE-NUMBER (Drew, 2026-08-18: "did they even have card
+ * numbers then?").
+ *
+ * They did not. Vendors write `NNO` — "no number" — and it is ACCURATE data,
+ * not a parse failure. Measured across the 50,989 affected sold_comps rows,
+ * the sets are ones that genuinely never carried numbers:
+ *
+ *   6,025  1909-11 T206                    famously unnumbered
+ *   8,347  Magic Alpha/Beta/Arabian/Dark   pre-collector-number era
+ *   3,487  Leaf & Donruss Signature Series autograph sets
+ *     954  1964 Topps Stand-Up
+ *     654  1966 Topps Rub-Offs
+ *
+ * Only 6.4% of those rows have any `#number` in their title, and on inspection
+ * most of those are certs (#3538117020) or print runs (#788/1000), not card
+ * numbers.
+ *
+ * Treating `nno` as an identity collapsed every unnumbered card in a set onto
+ * ONE slug — 395 players in a single pool spanning $3.49 to $103,700. Refusing
+ * it (slugGuard) stopped the damage but left those cards unpriceable forever,
+ * because the number they are missing does not exist to be recovered.
+ *
+ * For a card with no number, the PLAYER is the identifier — that is how
+ * collectors refer to them ("T206 Wagner", not "T206 #___"). So the player
+ * takes the cardNumber slot, prefixed `player-` so it can never be mistaken
+ * for, or collide with, a real card number.
+ *
+ * NOT `p-`, which was the first choice and was wrong: promo cards genuinely
+ * carry card numbers like P-1 and P-45, which slugify to `p-1` / `p-45`. A
+ * card numbered P-1 would then have produced the same segment as an unnumbered
+ * card of a player slugging to "1". No real card number is the literal word
+ * "player", so the longer prefix makes the separation total rather than likely.
+ *
+ * SAFE BECAUSE THE NAMES ARE CLEAN. Of 3,997 distinct playerNames in this
+ * population, exactly 20 groups differ only by case or punctuation — and
+ * slugify folds every one of them:
+ *
+ *   "Kiki Cuyler" / "KiKi Cuyler" / "\"Kiki\" Cuyler"  -> kiki-cuyler
+ *   "Lebron James" / "LeBron James"                    -> lebron-james
+ *
+ * Digits survive slugify, so "Checklist 1-154" and "Checklist 547-653" stay
+ * DISTINCT — they are different cards, and collapsing them would recreate the
+ * pooling this fixes.
+ */
+const UNNUMBERED_CARD_NUMBER: ReadonlySet<string> = new Set([
+  "nno", "no-number", "nonumber", "n-a", "na", "none", "unnumbered",
+]);
+
+/** True when the vendor said "this card has no number". */
+export function isUnnumberedCardNumber(raw: string | null | undefined): boolean {
+  const s = slugify(String(raw ?? ""));
+  return !s || UNNUMBERED_CARD_NUMBER.has(s);
+}
+
+/** The cardNumber segment for an unnumbered card, or null when there is no
+ *  player to identify it by — in which case the card has no identity at all
+ *  and slugGuard must refuse it. */
+export function unnumberedCardSegment(playerName: string | null | undefined): string | null {
+  const p = slugify(String(playerName ?? ""));
+  return p ? `player-${p}` : null;
 }
 
 /** Turn an arbitrary label into a URL-safe slug fragment.
@@ -1164,7 +1230,12 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // which decides whether this function may run at all — resolves the setKey
   // identically. See that function for the measurements.
   const baseSetKey = resolveSetKeyForSlug(sport, components.setKey, year);
-  const cardNumber = normalizeCardNumber(components.cardNumber);
+  // CF-PLAYER-IS-THE-NUMBER: an unnumbered card is identified by its player,
+  // never by the shared literal "nno". Falls back to the plain normalized form
+  // when there is no player, so slugGuard is the one place that refuses.
+  const cardNumber = isUnnumberedCardNumber(components.cardNumber)
+    ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(components.cardNumber))
+    : normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
   // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +
