@@ -227,6 +227,9 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // one pattern covers both spellings. University FIRST — bowman-best-university
     // is a separate product with 158 catalog rows of its own, and the general
     // rule would otherwise swallow it.
+    // CF-COLLAPSED-SETKEY-AUDIT: Bowman Platinum is its own product with
+    // 111,878 catalog rows; 12,748 sales sat on bare bowman.
+    [/bowman-platinum/, "bowman-platinum"],
     [/bowmans?-best-university/, "bowman-best-university"],
     [/bowmans?-best/, "bowmans-best"],
     [/^bowman/, "bowman"],
@@ -293,11 +296,30 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-bunt/, "topps-bunt"],
     [/allen-(and-)?ginter/, "topps-allen-ginter"],
     [/stadium-club/, "topps-stadium-club"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 1 (Drew, 2026-08-17). Distinct Topps
+    // product lines that fell to the bare-topps catch-all below. Each already
+    // has its OWN key in card_catalog, so the sales and the checklist for one
+    // product were filed apart and the pool could never meet its catalog:
+    //
+    //     Topps Cosmic Chrome   65,366 sales   34,184 catalog rows
+    //     Topps Now             23,247 sales   14,226 catalog rows
+    //
+    // Keys match the catalog rather than being invented here.
+    [/topps-cosmic-chrome|cosmic-chrome/, "topps-cosmic-chrome"],
+    [/topps-now/, "topps-now"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
     // here as a bare match because the name is uniquely Panini.
+    // CF-COLLAPSED-SETKEY-AUDIT: Prizm Draft Picks is its own product with its
+    // own checklist (36,108 catalog rows) — 65,582 sales sat on panini-prizm.
+    // MUST precede the base prizm rule or the qualifier is swallowed.
+    [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
     [/panini-prizm/, "panini-prizm"],
+    // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
+    // and Elite Extra Edition is a further distinct product (394,549) — so the
+    // Extra Edition pattern MUST come first or it is swallowed by plain Elite.
+    [/donruss-elite(?!-extra)|(?:^|-)elite(?!-extra)(?:-|$)/, "donruss-elite"],
     [/panini-select/, "panini-select"],
     [/panini-mosaic/, "panini-mosaic"],
     // CF-OPTIC-WITHOUT-PANINI (Drew, 2026-08-17). This required the `panini-`
@@ -375,6 +397,9 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/pinnacle-aficionado/, "pinnacle-aficionado"],
     [/pinnacle/, "pinnacle"],
     [/goudey/, "goudey"],
+    // Flair Showcase pools into flair DELIBERATELY (pinned by
+    // hobbyIqCardId.test.ts "both variants pool"). The collapsed-setkey audit
+    // flags it because it compares words, not intent — see that script's header.
     [/flair-showcase|flair/, "flair"],
     [/sp-prospects/, "sp-prospects"],
     [/sp-authentic/, "sp-authentic"],
@@ -393,6 +418,11 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)spx-finite/, "spx-finite"],
     [/(?:^|-)spx/, "spx"],
     [/upper-deck-choice/, "upper-deck-choice"],
+    // CF-COLLAPSED-SETKEY-AUDIT: distinct Upper Deck lines that fell to the
+    // bare catch-all. Collector's Choice carries 184,716 catalog rows under a
+    // BARE key (not upper-deck-prefixed), so the rule matches the catalog.
+    [/collector-?s?-choice/, "collectors-choice"],
+    [/upper-deck-mvp|(?:^|-)ud-mvp/, "upper-deck-mvp"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan
