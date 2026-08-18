@@ -142,6 +142,11 @@ describe("augmentCompsWithUserPool — merge behavior", () => {
       cardId: "cs-hartman-blue", playerName: "Eric Hartman", price: 1800,
       soldAt: "2026-07-12T00:00:00Z", source: "manual-user-entry",
       sourceExternalId: "manual-1", verifiedByUser: true,
+      // preIngestClean made `parallel` REQUIRED for manual-user-entry after
+      // the 2026-08-01 Hartman incident (a silent Base default mispriced a
+      // parallel). Without it this write is correctly rejected, so the merge
+      // saw 2 comps instead of 3 — the merge behaviour under test was fine.
+      parallel: "Base",
     });
     const vendor = emptyFetched([{ price: 420, soldDate: "2026-07-08T00:00:00Z" }]);
     const merged = await augmentCompsWithUserPool(vendor, "cs-hartman-blue");
