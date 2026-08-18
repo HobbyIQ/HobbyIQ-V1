@@ -19,10 +19,16 @@
  *
  * ONLY-IMPROVE, ENFORCED. A row moves only when the re-derived key is
  * genuinely different and genuinely better — not year-prefixed, not a bare
- * manufacturer, not "unknown". Rows whose setName is only "fleer" while the
- * TITLE says Ultra are LEFT ALONE on purpose: the title is untrusted parser
- * input, and guessing from it would move rows on evidence we would not accept
- * at ingest.
+ * manufacturer, not "unknown", and never an ANCESTOR of the key it already
+ * has (see isDemotion). Rows whose setName is only "fleer" while the TITLE
+ * says Ultra are LEFT ALONE on purpose: the title is untrusted parser input,
+ * and guessing from it would move rows on evidence we would not accept at
+ * ingest.
+ *
+ * The ancestor rule was MISSING until 2026-08-18, and this comment claimed
+ * the guarantee anyway. `topps` and `bowman` are not bare manufacturers by
+ * the isUseless test, so demoting topps-traded-tiffany -> topps was legal.
+ * Do not trust a header over a test again.
  *
  * Only field 3 changes. Parallel, auto and serial segments carry across
  * untouched, so a row cannot lose specificity it already had, and
@@ -38,7 +44,10 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { resolveSetKeyForSlug } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+const {
+  resolveSetKeyForSlug,
+  deriveParentSetKey,
+} = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -67,6 +76,38 @@ const BARE_MANUFACTURER = new Set(["panini", "fleer", "unknown", ""]);
 const isYearPrefixed = (k) => /^(19|20)\d{2}-/.test(k);
 const isUseless = (k) => BARE_MANUFACTURER.has(k) || isYearPrefixed(k);
 
+/**
+ * CF-RESLUG-NO-DEMOTION (Drew, 2026-08-18).
+ *
+ * The only-improve doctrine says re-canonicalize ONLY when the new key is
+ * strictly more specific — never demote. Until now this script enforced no
+ * such thing: the sole test was `next !== current` plus isUseless(next), and
+ * isUseless only catches bare `panini`/`fleer`/`unknown`. `topps` and `bowman`
+ * are NOT in that set, so a row correctly filed as topps-traded-tiffany whose
+ * setName reads only "Topps" would happily demote to `topps` — collapsing a
+ * $1,000-median Tiffany pool into a $105-median flagship one. In --prefix mode
+ * there is not even a --from to bound the blast radius.
+ *
+ * A demotion is precisely "next is an ANCESTOR of current" in the product
+ * family ladder, so ask the ladder rather than pattern-matching strings:
+ * walk up from current and refuse if we meet next. Lateral moves (topps ->
+ * fleer-update, a genuine mis-file correction) are NOT ancestors and stay
+ * allowed — this blocks losing specificity, not changing branch.
+ *
+ * The `seen` set is a cycle guard: a future ladder edit that accidentally
+ * makes two keys each other's parent must not hang a sweep over 3M rows.
+ */
+function isDemotion(current, next) {
+  const seen = new Set([current]);
+  let p = deriveParentSetKey(current);
+  while (p && !seen.has(p)) {
+    if (p === next) return true;
+    seen.add(p);
+    p = deriveParentSetKey(p);
+  }
+  return false;
+}
+
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   if (!FROM && !PREFIX) { console.error("need --from=<current setKey> or --prefix=<slug prefix>"); process.exit(2); }
@@ -91,7 +132,7 @@ async function main() {
     { maxItemCount: 1000 },
   );
 
-  let scanned = 0, moved = 0, noSetName = 0, notBetter = 0, failed = 0;
+  let scanned = 0, moved = 0, noSetName = 0, notBetter = 0, demoted = 0, failed = 0;
   const destinations = new Map();
 
   while (iter.hasMoreResults() && scanned < LIMIT) {
@@ -111,6 +152,8 @@ async function main() {
       const year = Number(parts[2]) || 0;
       const next = resolveSetKeyForSlug(parts[1], String(r.setName), year);
       if (!next || next === parts[3] || isUseless(next)) { notBetter++; continue; }
+      // Never trade a specific key for one of its own ancestors.
+      if (isDemotion(parts[3], next)) { demoted++; continue; }
       if (TO && next !== TO) { notBetter++; continue; }
 
       parts[3] = next;
@@ -142,7 +185,7 @@ async function main() {
   console.log("\nwhere the rows went:");
   [...destinations.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)
     .forEach(([k, v]) => console.log(`   ${String(v).padStart(7)}  ${k}`));
-  console.log(`\nscanned=${scanned} moved=${moved} noSetName=${noSetName} leftAlone=${notBetter} failed=${failed}`);
+  console.log(`\nscanned=${scanned} moved=${moved} noSetName=${noSetName} leftAlone=${notBetter} demotionsBlocked=${demoted} failed=${failed}`);
   if (!APPLY) console.log("DRY-RUN — re-run with --apply to write");
   return 0;
 }
