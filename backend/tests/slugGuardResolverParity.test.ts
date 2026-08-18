@@ -79,10 +79,21 @@ describe("CF-ONE-SETKEY-RESOLVER — guard and computation resolve identically",
     expect(resolveSetKeyForSlug("baseball", "Donruss", 2015)).toBe("panini-donruss");
   });
 
-  it("falls back to normalizeSetKey when Pokemon has no alias (Japanese sets)", () => {
-    // The alias table is generated from tcgdex's ENGLISH endpoint and holds
-    // zero Japanese keys, so these must degrade, not throw.
+  it("resolves Japanese sets to their own code, not the English one", () => {
+    // SUPERSEDED 2026-08-17. This case used to assert that Japanese sets
+    // DEGRADED to normalizeSetKey, because the alias table was generated from
+    // tcgdex's English endpoint and held zero Japanese keys. That was a
+    // limitation being documented, not a guarantee worth keeping.
+    //
+    // CF-JAPANESE-POKEMON-ALIASES now resolves them from a romanized source, so
+    // the assertion flips: the Japanese print gets its own identity and must
+    // never share one with the English card of the same name. Kept here — where
+    // the old expectation lived — so the change of contract is visible.
     const jp = "2023 Pokemon Japanese Scarlet & Violet 151";
-    expect(resolveSetKeyForSlug("pokemon", jp, 2023)).toBe(normalizeSetKey(jp));
+    const en = "2023 Pokemon Scarlet & Violet 151";
+    expect(resolveSetKeyForSlug("pokemon", jp, 2023)).toBe("sv2a");
+    expect(resolveSetKeyForSlug("pokemon", en, 2023)).toBe("sv03-5");
+    expect(resolveSetKeyForSlug("pokemon", jp, 2023))
+      .not.toBe(resolveSetKeyForSlug("pokemon", en, 2023));
   });
 });

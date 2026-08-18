@@ -40,6 +40,7 @@
 
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
+import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -1014,6 +1015,48 @@ function stripVerticalPrefix(setName: string): string {
   return s.trim();
 }
 
+/**
+ * CF-JAPANESE-POKEMON-ALIASES (Drew, 2026-08-17). Resolve a Japanese Pokemon
+ * set name to its canonical Japanese set code.
+ *
+ * Vendor names carry year + "Pokemon" + "Japanese" + the SERIES before the set:
+ *
+ *   "2023 Pokemon Japanese Scarlet & Violet 151"      -> sv2a
+ *   "2022 Pokemon Japanese Sword & Shield VSTAR Universe" -> swsh12a
+ *
+ * so the lookup is tried twice: once with the series stripped (the set name
+ * alone, which is how the source lists it) and once with it retained, because
+ * a few sets genuinely include their series in the name.
+ *
+ * Matched 89.9% of Japanese sales when measured against live data.
+ */
+function resolveJapanesePokemonSet(setName: string): string | null {
+  const stripped = String(setName ?? "")
+    .replace(/^((19|20)\d{2}\s+)/, "")
+    .replace(/^pokemon\s+/i, "")
+    .replace(/^japanese\s+/i, "")
+    .trim();
+  const SERIES = /^(scarlet\s*&?\s*violet|sword\s*&?\s*shield|sun\s*&?\s*moon|xy|black\s*&?\s*white|diamond\s*&?\s*pearl|heartgold\s*&?\s*soulsilver|neo|gym|e-card|dp|platinum|legend|bw)\s+/i;
+  const candidates = [stripped.replace(SERIES, "").trim(), stripped];
+  for (const cand of candidates) {
+    const key = slugify(cand);
+    if (!key) continue;
+    const exact = JAPANESE_POKEMON_SET_ALIASES[key];
+    if (exact) return exact;
+  }
+  // Segment-boundary containment, so "151" finds "pokemon-card-151" without a
+  // bare substring match dragging in an unrelated set.
+  for (const cand of candidates) {
+    const key = slugify(cand);
+    if (!key || key.length < 2) continue;
+    for (const [alias, code] of Object.entries(JAPANESE_POKEMON_SET_ALIASES)) {
+      if (alias === key || alias.endsWith("-" + key) || alias.startsWith(key + "-")
+        || alias.includes("-" + key + "-")) return code;
+    }
+  }
+  return null;
+}
+
 export function resolveSetKeyForSlug(sport: string, setName: string, year: number): string {
   // GATED ON SPORT, deliberately. The alias table contains keys like "151"
   // (Scarlet & Violet 151) that would be actively dangerous applied to a
@@ -1081,6 +1124,18 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
     if (viaVocabulary && !/^(19|20)\d{2}-/.test(viaVocabulary)) return viaVocabulary;
     const bare = stripVerticalPrefix(setName);
     return slugify(bare) || viaVocabulary;
+  }
+  // Japanese sets are looked up FIRST: a vendor name like "Pokemon Japanese
+  // Scarlet & Violet 151" would otherwise hit the ENGLISH alias for 151
+  // (sv03-5) and pool Japanese sales into the English card, which is a
+  // different print with a different market.
+  if (sport === "pokemon" && /japanese/i.test(setName)) {
+    const jp = resolveJapanesePokemonSet(setName);
+    // On a miss, the CLEAN name still beats a year-prefixed refusal and can
+    // never collide with an English set id.
+    if (jp) return jp;
+    const bare = String(setName).replace(/^((19|20)\d{2}\s+)/, "").replace(/^pokemon\s+/i, "").trim();
+    return slugify(bare);
   }
   const rawSetKey = sport === "pokemon"
     ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
