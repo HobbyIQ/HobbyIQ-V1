@@ -54,12 +54,38 @@ const TOP = Number(arg("top", "25"));
 const SPORT = arg("sport", "");
 const WITH_CATALOG = has("catalog");
 
+/**
+ * CF-CAPTION-FALSE-POSITIVE (2026-08-17). Subset cards put a CAPTION in the
+ * player field — "Fence Busters", "League Leaders", "Checklist", "Team Card".
+ * Those are not people, and comparing one against a real name reported a
+ * conflict on a card where the catalog confirmed both strings describe the same
+ * thing (1959 Topps #212: "Fence Busters" vs "Hank Aaron").
+ *
+ * Heuristic, and deliberately generous: anything containing one of these words
+ * is treated as a caption and skipped. Skipping a real surname that happens to
+ * collide (a player named "Champion") costs one missed conflict; keeping a
+ * caption costs a false repair.
+ */
+const CAPTION_WORDS = new Set([
+  "checklist", "leaders", "leader", "series", "busters", "stars", "star",
+  "highlights", "highlight", "team", "card", "cards", "combo", "duo", "trio",
+  "record", "records", "award", "awards", "champs", "champions", "champion",
+  "playoff", "playoffs", "world", "allstar", "rookies", "prospects", "future",
+  "classic", "legends", "greats", "moments", "action", "sluggers", "aces",
+  "kings", "power", "sensations", "update", "traded",
+]);
+
+function looksLikeCaption(lower) {
+  return lower.split(/[^a-z-]+/).some((w) => w && CAPTION_WORDS.has(w));
+}
+
 /** Surname + first initial. Deliberately coarse — see the header. */
 function nameKey(raw) {
   let s = String(raw ?? "").toLowerCase().trim();
   if (!s) return null;
   // Multi-player cards are legitimate; skip rather than call them a conflict.
   if (/[/&+]| and | vs\.? /.test(s)) return null;
+  if (looksLikeCaption(s)) return null;
   s = s.replace(/\b(jr|sr|ii|iii|iv|rc|rookie)\b/g, " ");
   s = s.replace(/[^a-z\s,]/g, " ").replace(/\s+/g, " ").trim();
   if (!s) return null;
@@ -157,34 +183,81 @@ async function main() {
   console.log(`rows scanned            : ${scanned.toLocaleString()}`);
   console.log(`distinct slugs          : ${bySlug.size.toLocaleString()}`);
   console.log(`slugs WITH a conflict   : ${slugsWithConflict.toLocaleString()}  ${pct(slugsWithConflict, bySlug.size)} of slugs`);
-  console.log(`sales on those slugs    : ${salesInConflict.toLocaleString()}  ${pct(salesInConflict, scanned)} of scanned\n`);
+  console.log(`sales on those slugs    : ${salesInConflict.toLocaleString()}  ${pct(salesInConflict, scanned)} of scanned
+`);
 
-  console.log(`WORST ${Math.min(TOP, offenders.length)} BY SALE COUNT`);
-  console.log("-".repeat(96));
+  // ---- Root-cause classification -------------------------------------
+  //
+  // The four causes need DIFFERENT fixes, so a single "repair" pass over this
+  // list would make things worse. Splitting them here is the point of the
+  // report:
+  //
+  //   MINORITY   catalog agrees with the most common sale name — the few
+  //              disagreeing sales are on the wrong card. Mechanically fixable.
+  //   MAJORITY   catalog agrees with a MINORITY sale name. The common name is
+  //              the wrong one, so a majority vote repairs in the wrong
+  //              direction. This is why no vote-based fix ships.
+  //   CATALOG    catalog agrees with NOBODY. Either the catalog row is wrong or
+  //              every sale is. Needs a published checklist, not a vote.
+  //   GRANULARITY  the identity itself is too coarse (unnumbered cards all
+  //              share one slug), so "conflict" is expected and repairing the
+  //              names would be meaningless.
+  //   UNKNOWN    no catalog row to adjudicate with.
+  const cat = db.container("card_catalog");
+  const classified = { MINORITY: [], MAJORITY: [], CATALOG: [], GRANULARITY: [], UNKNOWN: [] };
+  const limit = Math.min(offenders.length, Number(arg("classify", "400")));
 
-  const cat = WITH_CATALOG ? db.container("card_catalog") : null;
-  for (const o of offenders.slice(0, TOP)) {
-    console.log(`${o.slug}   ${o.total} sales`);
-    for (const v of o.names.slice(0, 4)) {
-      console.log(`      ${String(v.n).padStart(5)}  ${v.sample}`);
+  for (let i = 0; i < limit; i++) {
+    const o = offenders[i];
+    const cardNumber = String(o.slug.split(":")[4] ?? "").toLowerCase();
+    if (!cardNumber || cardNumber === "nno" || cardNumber === "null") {
+      classified.GRANULARITY.push({ ...o, catalog: null });
+      continue;
     }
-    if (cat) {
-      // The catalog is the tie-breaker: it says who the card actually depicts.
-      try {
-        const { resources } = await cat.items.query({
-          query: "SELECT TOP 1 c.playerName, c.source FROM c WHERE c.id = @id",
-          parameters: [{ name: "@id", value: o.slug }],
-        }).fetchAll();
-        const row = resources[0];
-        console.log(row
-          ? `      catalog says: ${row.playerName}   [${row.source}]`
-          : `      catalog says: (no row for this slug)`);
-      } catch { /* non-fatal */ }
+    let catName = null;
+    try {
+      const { resources } = await cat.items.query({
+        query: "SELECT TOP 1 c.playerName FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: o.slug }],
+      }).fetchAll();
+      catName = resources[0]?.playerName ?? null;
+    } catch { /* non-fatal */ }
+
+    if (!catName) { classified.UNKNOWN.push({ ...o, catalog: null }); continue; }
+    const catKey = nameKey(catName);
+    const ranked = o.names;                 // already sorted desc by count
+    const topKey = nameKey(ranked[0].sample);
+    const matchesAny = ranked.some((v) => {
+      const k = nameKey(v.sample);
+      return k && catKey && !conflicts(k, catKey);
+    });
+    if (!matchesAny) classified.CATALOG.push({ ...o, catalog: catName });
+    else if (topKey && catKey && !conflicts(topKey, catKey)) classified.MINORITY.push({ ...o, catalog: catName });
+    else classified.MAJORITY.push({ ...o, catalog: catName });
+  }
+
+  console.log(`ROOT CAUSE (top ${limit} offenders, catalog-adjudicated)`);
+  console.log("-".repeat(96));
+  for (const [k, list] of Object.entries(classified)) {
+    const sales = list.reduce((s, o) => s + o.total, 0);
+    console.log(`  ${k.padEnd(12)} ${String(list.length).padStart(5)} slugs   ${String(sales).padStart(7)} sales`);
+  }
+
+  for (const [k, list] of Object.entries(classified)) {
+    if (list.length === 0) continue;
+    console.log(`
+=== ${k} — worst ${Math.min(TOP, list.length)}`);
+    for (const o of list.slice(0, TOP)) {
+      console.log(`${o.slug}   ${o.total} sales`);
+      for (const v of o.names.slice(0, 3)) console.log(`      ${String(v.n).padStart(5)}  ${v.sample}`);
+      if (o.catalog) console.log(`      catalog: ${o.catalog}`);
     }
   }
 
-  console.log(`\nNOTE: name matching is surname + first initial and skips multi-player`);
-  console.log(`cards, so this UNDER-reports. A missed conflict beats a false one.`);
+  console.log(`
+NOTE: name matching is surname + first initial, skips multi-player cards`);
+  console.log(`and caption subsets, so this UNDER-reports. A missed conflict beats a`);
+  console.log(`false one. MAJORITY is the class that makes vote-based repair unsafe.`);
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
