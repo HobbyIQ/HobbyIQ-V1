@@ -639,7 +639,13 @@ export interface DerivedSlug {
  * comp pool and looks healthy.
  */
 export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
-  "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto">): DerivedSlug {
+  "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto"
+  // CF-PLAYER-IS-THE-NUMBER: genuinely unnumbered cards (T206, Magic Alpha,
+  // Signature Series) are identified by their player, so the player has to
+  // reach BOTH the guard and the computation — a guard that judged one
+  // identity while the computation emitted another is the parity bug this
+  // file was already fixed for once.
+  | "playerName">): DerivedSlug {
   const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
   const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
     ? input.cardNumber.trim()
@@ -660,6 +666,7 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
     year: input.cardYear,
     normalizedSetKey: resolvedSetKey,
     cardNumber: cardNumberFinal ?? "",
+    playerName: input.playerName ?? null,
   });
 
   const slug = guard.ok
@@ -673,6 +680,7 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
         parallel: input.parallel ?? "Base",
         isAuto: input.isAuto ?? false,
         printRun: printRunFinal,
+        playerName: input.playerName ?? null,
       })
     : null;
 
