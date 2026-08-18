@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
-import { BreakdownTile } from "@/components/BreakdownTile";
+import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
@@ -365,14 +365,13 @@ function PortfolioPageBody() {
       <PortfolioValueChart headlineTotal={data.summary.totalValue} />
       <SummaryBar summary={data.summary} />
 
-      {/* CF-PORTFOLIO-BREAKDOWN-TILE (2026-08-17): sits directly under the
-          headline numbers because "what is this made of" is the natural next
-          question after "what is it worth". Self-suppresses with no holdings
-          or if the endpoint is unavailable — it is additive, and must never
-          put an error banner on the portfolio page. */}
-      <div className="mt-4">
-        <BreakdownTile />
-      </div>
+      {/* CF-PORTFOLIO-DASHBOARD (2026-08-17): the portfolio reads as a car
+          dashboard — score gauge, permanent readouts, allocation, and warning
+          lights that stay dark unless something is wrong — with the inventory
+          list underneath. Self-suppresses with no holdings or if the endpoint
+          is unavailable; it is additive and must never put an error banner on
+          the portfolio page. */}
+      <PortfolioDashboard />
 
       <div className="mt-8 flex items-center gap-3 flex-wrap">
         <input
