@@ -123,7 +123,13 @@ describe("CF-REVIEW-QUEUE-CLEAN-DATA — /confirm persist-every-field", () => {
   it("null on gradeCompany clears the field (Raw signal) and cascades to gradeValue", async () => {
     const session = await signIn();
     await seedEbayPurchase(session, {
-      notes: "2020 Panini Prizm Rookie Card PSA 10",   // parser will find PSA 10
+      // A playerName is required for a holding to be created at all — the
+      // original fixture ("2020 Panini Prizm Rookie Card PSA 10") named no
+      // player, so nothing reached pending-review and `target` was undefined.
+      // What this test actually pins is that a null gradeCompany on /confirm
+      // clears the field and cascades to gradeValue, which needs a holding to
+      // exist first. The parser still finds PSA 10 in these notes.
+      notes: "2020 Panini Prizm Mookie Betts Rookie Card PSA 10",
       totalCost: 200,
       ebayOrderId: "clean-data-raw-1",
       purchaseDate: "2032-02-15T00:00:00Z",
