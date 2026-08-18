@@ -71,7 +71,8 @@ async function main() {
     { maxItemCount: 2000 },
   );
 
-  const variants = new Map(); // identity (7 segments) -> Set of print-run segments
+  const variants = new Map();  // identity (7 segments) -> Set of print-run segments
+  const byParallel = new Map(); // sport|year|setKey|parallel -> run -> Set(cardNumber)
   let scanned = 0;
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
@@ -84,25 +85,74 @@ async function main() {
       let s = variants.get(core);
       if (!s) variants.set(core, (s = new Set()));
       s.add(run);
+
+      // CF-PRINTRUN-MUST-MATCH-THE-COLOUR (Drew, 2026-08-18: "make sure the
+      // print run matches the color parallel too"). Tally, per colour, which
+      // print run the SET actually uses — counting CARDS so one popular card
+      // with 400 sales cannot outvote forty cards with one sale each.
+      if (/^num-\d+$/.test(run)) {
+        const k = `${p[1]}|${p[2]}|${p[3]}|${p[5]}`;
+        let m = byParallel.get(k);
+        if (!m) byParallel.set(k, (m = new Map()));
+        let cards = m.get(run);
+        if (!cards) m.set(run, (cards = new Set()));
+        cards.add(p[4]);
+      }
     }
     if (scanned % 250000 < 2000) process.stderr.write(`\r  pass1 scanned=${scanned} cards=${variants.size}   `);
   }
   process.stderr.write("\n");
 
+  /**
+   * The dominant print run for a colour, or null when the colour has no clear
+   * one. Without this gate the merge is DIRECTIONALLY UNSAFE: measured on 2024,
+   * 13,589 of 43,573 merges (277,133 of 331,639 rows — 84%) would have folded
+   * the MAJORITY into the MINORITY, e.g.
+   *
+   *   59 unnumbered `topps:295:base` sales -> num-265, a pool of ONE
+   *
+   * A 2024 Topps base card is not /265; that single row is a parse error, and
+   * merging into it would corrupt 59 correct sales. The mirror case is real
+   * too — 34 unnumbered `topps-finest:150:blue-refractor` sales SHOULD fold
+   * into num-150, because Finest Blue really is /150 and sellers omit it.
+   *
+   * The difference is not the pool sizes, it is whether the print run is right
+   * for that colour. So merge only INTO the run the colour actually uses.
+   */
+  const DOMINANCE = 0.85, MIN_CARDS = 8;
+  const dominantRun = (sport, year, setKey, parallel) => {
+    const m = byParallel.get(`${sport}|${year}|${setKey}|${parallel}`);
+    if (!m) return null;
+    const runs = [...m.entries()].map(([run, cards]) => ({ run, n: cards.size })).sort((a, b) => b.n - a.n);
+    const total = runs.reduce((s, r) => s + r.n, 0);
+    if (total < MIN_CARDS) return null;               // too little evidence to judge
+    if (runs[0].n / total < DOMINANCE) return null;   // genuine multi-serial colour
+    return runs[0].run;
+  };
+
   // ---- decide ------------------------------------------------------------
   const merges = [];   // { fromSlug (unnumbered), toSlug (numbered) }
-  let ambiguous = 0;
+  let ambiguous = 0, colourMismatch = 0, noColourEvidence = 0;
   for (const [core, set] of variants) {
     if (!set.has("")) continue;                       // no unnumbered pool
     const numbered = [...set].filter((v) => /^num-\d+$/.test(v));
     if (numbered.length === 0) continue;              // nothing to merge into
     if (numbered.length > 1) { ambiguous++; continue; } // serial IS the parallel
+
+    // The print run must be the one this colour actually uses.
+    const p = core.split(":");
+    const dom = dominantRun(p[1], p[2], p[3], p[5]);
+    if (dom === null) { noColourEvidence++; continue; }
+    if (dom !== numbered[0]) { colourMismatch++; continue; }
+
     merges.push({ from: core, to: `${core}:${numbered[0]}` });
   }
 
   console.log(`cards seen=${variants.size}`);
-  console.log(`  MERGE (exactly one numbered variant) : ${merges.length}`);
-  console.log(`  LEFT ALONE (two or more variants)    : ${ambiguous}\n`);
+  console.log(`  MERGE (one numbered variant, and it matches the colour) : ${merges.length}`);
+  console.log(`  LEFT ALONE — two or more print runs                     : ${ambiguous}`);
+  console.log(`  LEFT ALONE — print run disagrees with the colour        : ${colourMismatch}`);
+  console.log(`  LEFT ALONE — colour has no dominant run to check against: ${noColourEvidence}\n`);
   for (const m of merges.slice(0, TOP)) console.log(`   ${m.from}\n      -> ${m.to}`);
   if (merges.length > TOP) console.log(`   ... and ${merges.length - TOP} more`);
 
