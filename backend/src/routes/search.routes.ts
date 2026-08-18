@@ -17,7 +17,6 @@ import { Request, Response, Router } from "express";
 import { dispatchSearch } from "../services/unifiedSearch/index.js";
 import type { UnifiedSearchMode } from "../types/unifiedSearch.js";
 import { requireSession } from "../middleware/requireSession.js";
-import { patchCardsightImageUrls } from "../utils/cardsightImageUrlPatcher.js";
 
 const router = Router();
 router.use(requireSession);
@@ -57,12 +56,12 @@ router.post("/cards", async (req: Request, res: Response) => {
     const response = await dispatchSearch(body.input, hint, {
       includeProvisional: body.includeProvisional === true,
     });
-    // CF-CARDSIGHT-UUID-IMAGE (Drew, 2026-07-13, PR #414): Cardsight-native
-    // candidates (including PR #413's exploded per-parallel rows) carry
-    // imageUrl: null from the dispatcher. Patch them to route through our
-    // card-image proxy so iOS renders thumbnails. Shared helper covers
-    // both /api/search/cards and /api/compiq/cardsearch.
-    patchCardsightImageUrls(req, (response as any)?.candidates ?? []);
+    // CF-CARDSIGHT-RETIRED (Drew, 2026-08-17: "We dont use cardsight to match
+    // or anything, that process needs to be removed"). patchCardsightImageUrls
+    // filled imageUrl on Cardsight-native candidate rows. With CS out of the
+    // matching path the dispatcher no longer produces such rows, so the helper
+    // had nothing to patch — and its own kill-switch already made it a no-op
+    // whenever CARDSIGHT_API_KEY was unset. Removed with the feature.
     res.json(response);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unified search failed";

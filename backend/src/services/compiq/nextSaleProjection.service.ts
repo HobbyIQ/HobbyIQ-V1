@@ -199,16 +199,74 @@ export function projectNextSaleFromComps(
         }
       }
     }
-    // CF-MEDIAN-ANCHOR-CAP — always-on cap around the pool median.
-    // Applies AFTER the thin-pool cap so both bounds get their say.
+    // CF-MEDIAN-ANCHOR-CAP — always-on cap. Applies AFTER the thin-pool cap so
+    // both bounds get their say.
+    //
+    // CF-CAP-ANCHOR-IS-THE-LAST-SALE (Drew, 2026-08-17: "Lets fix that so it is
+    // accurate").
+    //
+    // The band was anchored on the MEDIAN OF THE WHOLE WINDOW, unconditionally.
+    // On a rising card that means the ceiling is set by the card's own older,
+    // cheaper sales, and the projection is pushed BELOW the most recent real
+    // transaction:
+    //
+    //     pool 500 / 1200 / 2000   median 1200   ceiling 1500   last sale 2000
+    //
+    // A "projected next sale" of 1500 when the market just paid 2000 is not a
+    // projection, it is the median wearing a trend's name — and the standing rule
+    // is that FMV is the projected next sale from the pool's trend, NEVER a
+    // median or mean. It also understates exactly the cards that are moving,
+    // which is where a seller most needs the number to be right.
+    //
+    // The guard this cap exists for is real and is kept: Griffey 1999 Topps
+    // Chrome LD1 Refractor, where ONE $125 outlier at t=59 dragged the
+    // regression to -60%/month and projected $125 against a $306 median. Note
+    // what that outlier was — the OLDEST sale, not the newest. So anchoring on
+    // the newest sale still blocks it: the band becomes newest +/-25%, and with
+    // the newest sale near the median that is within a few dollars of the old
+    // median-anchored bound. The protection survives; the rising-card penalty
+    // does not.
+    //
+    // Anchor choice reuses the thin-pool cap's own trust test rather than
+    // inventing a second notion of "enough evidence" — a pool that is too thin
+    // AND too short to trust keeps the median anchor, because there the outlier
+    // risk genuinely dominates.
+    //
+    // And whichever anchor is used, a bound is never placed on the wrong side of
+    // a real transaction. The last observed sale is evidence, not a fit.
     const pricedByPrice = priced.map((c) => c.price).sort((a, b) => a - b);
     if (pricedByPrice.length > 0) {
       const midIdx = Math.floor(pricedByPrice.length / 2);
       const medianPrice = pricedByPrice.length % 2 === 0
         ? (pricedByPrice[midIdx - 1] + pricedByPrice[midIdx]) / 2
         : pricedByPrice[midIdx];
-      const highCap = medianPrice * (1 + MEDIAN_ANCHOR_CAP_PCT);
-      const lowCap = medianPrice * (1 - MEDIAN_ANCHOR_CAP_PCT);
+
+      const datedForCap = priced
+        .map((c) => ({ price: c.price, t: c.soldDate ? Date.parse(c.soldDate) : NaN }))
+        .filter((p) => Number.isFinite(p.t))
+        .sort((a, b) => a.t - b.t);
+      const newestPrice = datedForCap.length > 0
+        ? datedForCap[datedForCap.length - 1].price
+        : null;
+      const spanDaysForCap = datedForCap.length >= 2
+        ? (datedForCap[datedForCap.length - 1].t - datedForCap[0].t) / MS_PER_DAY
+        : 0;
+      // Same condition the thin-pool cap clamps on, inverted: it fires only when
+      // the pool is BOTH thin and short, so anything else is a pool whose trend
+      // that cap already considers trustworthy.
+      const trustTrend = !(
+        priced.length < THIN_POOL_N_THRESHOLD && spanDaysForCap < SHORT_WINDOW_DAYS_THRESHOLD
+      );
+      const capAnchor = (trustTrend && newestPrice !== null && newestPrice > 0)
+        ? newestPrice
+        : medianPrice;
+
+      let highCap = capAnchor * (1 + MEDIAN_ANCHOR_CAP_PCT);
+      let lowCap = capAnchor * (1 - MEDIAN_ANCHOR_CAP_PCT);
+      if (newestPrice !== null && newestPrice > 0) {
+        highCap = Math.max(highCap, newestPrice);
+        lowCap = Math.min(lowCap, newestPrice);
+      }
       const preCap = clampedValue;
       clampedValue = Math.min(highCap, Math.max(lowCap, clampedValue));
       if (clampedValue !== preCap) {
