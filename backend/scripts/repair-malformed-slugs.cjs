@@ -77,10 +77,21 @@ function planRepair(slug) {
     return { cls: "empty", action: "null", next: null };
   }
 
-  // Optional segment 7 must be a print run. Anything else (bgs-10, raw, psa-10)
-  // is a grade that leaked into the slot.
-  if (p[7] !== undefined && !/^num-\d+$/.test(p[7])) {
-    return { cls: "printrun", action: "strip", next: p.slice(0, 7).join(":") };
+  // A well-formed slug is 7 segments, optionally 8 with a print run. Segment 7
+  // must be num-N; segment 8 and beyond must not exist at all.
+  //
+  // The first cut of this checked only p[7] and missed the commonest form,
+  // because the grade is APPENDED AFTER a valid print run:
+  //
+  //   hiq:baseball:2015:panini-prizm:87:blue-prizm:no-auto:num-75:bgs-10
+  //                                                       ^valid^ ^grade^
+  //
+  // p[7] is "num-75" and passes, so 188 rows survived the first pass. Keep
+  // whatever prefix is valid and drop the rest: if p[7] is a real print run it
+  // is identity worth keeping, otherwise cut back to the 7-segment core.
+  const keep = /^num-\d+$/.test(p[7] ?? "") ? 8 : 7;
+  if (p.length > keep) {
+    return { cls: "printrun", action: "strip", next: p.slice(0, keep).join(":") };
   }
   return null;
 }
@@ -92,18 +103,24 @@ async function main() {
 
   console.log(`[repair-malformed-slugs] class=${CLASS} mode=${APPLY ? "APPLY" : "DRY-RUN"} pool=${POOL}\n`);
 
-  // Narrow server-side so this never scans the whole container: every target
-  // either has a "::" (variant prefix or an empty segment) or ends in a
-  // non-numeric tail. The planner re-checks each row, so a loose filter here
-  // only costs RU, it cannot cause a wrong repair.
+  // Narrow server-side so this never scans the whole container. The planner
+  // re-checks every row, so a loose filter cannot cause a wrong repair — but
+  // it does cost RU, and the first version cost far too much: `ENDSWITH(...,
+  // "-10")` also matches the perfectly valid print run `:num-10`, so the query
+  // dragged in a large slice of the container and timed out once sold_comps
+  // was back at its 8000 idle ceiling.
+  //
+  // Match the GRADE TOKEN instead. A print-run segment is always `num-N`, so
+  // ":bgs-", ":psa-", ":sgc-", ":cgc-" and ":raw" cannot collide with one.
   const iter = sold.items.query(
     `SELECT c.id, c.cardId, c.hobbyiqCardId FROM c
       WHERE IS_DEFINED(c.hobbyiqCardId) AND NOT IS_NULL(c.hobbyiqCardId)
         AND (CONTAINS(c.hobbyiqCardId, "::")
-             OR ENDSWITH(c.hobbyiqCardId, ":raw")
-             OR ENDSWITH(c.hobbyiqCardId, "-10")
-             OR ENDSWITH(c.hobbyiqCardId, "-9")
-             OR ENDSWITH(c.hobbyiqCardId, "-95"))`,
+             OR CONTAINS(c.hobbyiqCardId, ":raw")
+             OR CONTAINS(c.hobbyiqCardId, ":bgs-")
+             OR CONTAINS(c.hobbyiqCardId, ":psa-")
+             OR CONTAINS(c.hobbyiqCardId, ":sgc-")
+             OR CONTAINS(c.hobbyiqCardId, ":cgc-"))`,
     { maxItemCount: 1000 },
   );
 
