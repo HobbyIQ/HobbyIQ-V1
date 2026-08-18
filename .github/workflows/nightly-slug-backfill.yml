@@ -1,0 +1,170 @@
+# CF-NIGHTLY-SLUG-BACKFILL (Drew, 2026-08-17: "we need 1 2 3").
+#
+# Keeps the unkeyed-row floor from rising on its own.
+#
+# WHY THIS EXISTS. The one-off backfill on 2026-08-17 keyed 691,229 rows, but
+# nothing repaired what arrived afterwards. Measured over the 6.2h after the
+# ingest fix deployed: 872,615 rows ingested, 88,617 of them unkeyed (10.2%) —
+# roughly 340,000 a day. Without a scheduled repair the backlog grows even while
+# every individual defect is being fixed, because a new vocabulary rule only
+# helps rows ingested AFTER it ships. This pass re-derives the ones that landed
+# before.
+#
+# SAFE TO LEAVE ON A TIMER. backfill-null-slugs derives through the SHIPPED
+# deriveHobbyIqSlug out of dist/, so a repaired row cannot disagree with a
+# freshly ingested one, and it REFUSES rather than guesses — a row whose inputs
+# the guard rejects is left alone, not force-keyed. Re-running is a no-op on
+# anything already correct.
+#
+# RU SCALING IS PART OF THE JOB, NOT A SEPARATE SCHEDULE. Cosmos autoscale bills
+# a floor of 10% of max continuously, so the cost lever is the MAX, not the
+# usage. Rather than run a second cron that guesses when work happens, the job
+# raises the ceiling it needs, does the work, and lowers it again in an
+# always()-guarded step so a failure mid-run cannot strand the account at the
+# expensive setting.
+
+name: Nightly Slug Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max rows to scan (default 400000; 0 = unbounded)"
+        required: false
+        default: "400000"
+      apply:
+        description: "Write to Cosmos (default true)"
+        type: choice
+        required: false
+        default: "true"
+        options: ["true", "false"]
+  schedule:
+    # 09:30 UTC = ~4:30-5:30 AM ET, after the checklist refresh (08:00 UTC) so a
+    # newly ingested checklist is available to key against on the same night.
+    - cron: "30 9 * * *"
+
+# Never let two backfills overlap: they would scan the same rows and double the
+# RU bill for no extra repair.
+concurrency:
+  group: nightly-slug-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ACC: hobbyiq-comps
+      RG: rg-hobbyiq-dev
+      DB: hobbyiq
+      # Idle ceiling and working ceiling for the container this job writes to.
+      # 40000 is the value sold_comps ran at before this job existed.
+      #
+      # 8000 is the idle floor, and it is NOT a preference -- it is the lowest
+      # Azure will accept for this container:
+      #
+      #   Requested throughput 4000 is less than required minimum throughput
+      #   8000. Minimum limit 8000 is because of Highest RUs provisioned 80000.
+      #
+      # Autoscale max may not go below highest-ever-provisioned / 10, and
+      # sold_comps peaked at 80000. This said "4000" until 2026-08-18 with a
+      # comment asserting 4000 was the floor; the teardown failed every run
+      # (32140009688) and left the account parked at the 40000 working ceiling
+      # -- the exact bill the scaling exists to avoid. The number was never
+      # reachable, so the step could only ever fail.
+      SOLD_IDLE_MAX: "8000"
+      SOLD_WORK_MAX: "40000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build TS
+        working-directory: backend
+        run: npx tsc
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # The key is fetched BEFORE the RU steps because they now use it.
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group "$RG" \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      # ---- RU UP -------------------------------------------------------
+      # DATA plane, not control plane. `az cosmosdb ... throughput update` needs
+      # an Azure RBAC role the CI principal does not have: it holds only
+      # `Website Contributor` scoped to the HobbyIQ3 app, so this step failed
+      # with AuthorizationFailed and the job did ZERO repair on 2026-08-17/18
+      # (runs 32093243367, 32123195430). The account key already in
+      # COSMOS_CONNECTION_STRING can set the offer directly, so the fix needs no
+      # new Azure grant -- and no grant is the smaller blast radius.
+      #
+      # continue-on-error: a container left at the idle ceiling makes the sweep
+      # SLOW; failing here makes it not run AT ALL. Slow beats skipped.
+      - name: Raise sold_comps throughput for the run
+        continue-on-error: true
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_WORK_MAX"
+
+      - name: Backfill null slugs
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          LIMIT="${{ github.event.inputs.limit || '400000' }}"
+          APPLY="${{ github.event.inputs.apply || 'true' }}"
+          ARGS="--pool=16"
+          [ "$LIMIT" != "0" ] && ARGS="$ARGS --limit=$LIMIT"
+          [ "$APPLY" = "true" ] && ARGS="$ARGS --apply"
+          echo "running: node scripts/backfill-null-slugs.cjs $ARGS"
+          node scripts/backfill-null-slugs.cjs $ARGS | tail -40
+
+      # ---- RU DOWN -----------------------------------------------------
+      # always(): a failed or cancelled run must NOT leave the account parked at
+      # the working ceiling. That would silently cost more than the job saves.
+      - name: Lower sold_comps throughput back to idle
+        if: always()
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_IDLE_MAX"
+
+      - name: Report remaining unkeyed rows
+        if: always()
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        working-directory: backend
+        run: |
+          node -e "
+            const {CosmosClient}=require('@azure/cosmos');
+            (async()=>{
+              const c=new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
+                .database('hobbyiq').container('sold_comps');
+              const {resources}=await c.items.query(
+                'SELECT VALUE COUNT(1) FROM c WHERE (NOT IS_DEFINED(c.hobbyiqCardId) OR IS_NULL(c.hobbyiqCardId))'
+              ).fetchAll();
+              console.log('unkeyed rows remaining: '+resources[0].toLocaleString());
+            })().catch(e=>{console.error(String(e.message).slice(0,200));});
+          "

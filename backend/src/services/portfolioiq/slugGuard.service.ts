@@ -119,6 +119,31 @@ export function isValidCardYear(year: unknown, nowYear: number = new Date().getU
 }
 
 /**
+ * CF-NNO-IS-NOT-A-CARD-NUMBER (Drew, 2026-08-18).
+ *
+ * Placeholders that mean "this card has no number". They are NOT identities,
+ * and treating them as one collapses every unnumbered card in a set onto a
+ * single slug. Measured before the fix: 50,989 rows sat on a `:nno:` slug and
+ * 637 of those slugs pooled two or more different players — 47,061 sales.
+ *
+ *   304 players, 3,650 sales, $3.95 .. $10,675   1909 t206 nno
+ *   274 players, 3,493 sales, $0.94 .. $655,960  1993 tcg-other leb nno
+ *   395 players, 1,865 sales, $3.49 .. $103,700  1909 unknown nno
+ *
+ * A pool spanning $0.94 to $655,960 cannot price anything. This is the same
+ * defect as the 1987 Topps Traded Tiffany case — one pool, several cards — but
+ * with hundreds of cards instead of two.
+ *
+ * The guard already refused "", "null" and "undefined"; `nno` merely spells the
+ * same absence differently and slipped through. Refusing it means these rows
+ * get NO slug rather than a shared wrong one, which is the whole doctrine.
+ */
+const NOT_A_CARD_NUMBER: ReadonlySet<string> = new Set([
+  "null", "undefined", "nno", "no number", "no-number", "nonumber",
+  "n/a", "na", "none", "unnumbered", "-", "#",
+]);
+
+/**
  * Detect a setKey that is really an unnormalized vendor product string.
  *
  * normalizeSetKey() falls back to slugify() when no controlled-vocabulary
@@ -172,6 +197,12 @@ export function guardSlugInputs(input: {
   year: unknown;
   normalizedSetKey: string | null | undefined;
   cardNumber: string | null | undefined;
+  /** CF-PLAYER-IS-THE-NUMBER. For a genuinely unnumbered card (`nno`) the
+   *  PLAYER is the identifier, so a card with no number but a known player is
+   *  identifiable and must be allowed through. Omitting this keeps the old,
+   *  stricter behaviour — callers that cannot supply a player still get a
+   *  refusal rather than a slug shared with every other unnumbered card. */
+  playerName?: string | null;
 }): SlugGuardResult {
   const reasons: SlugRejectReason[] = [];
 
@@ -184,9 +215,14 @@ export function guardSlugInputs(input: {
   if (!setKey) reasons.push("setkey-missing");
   else if (isRawVendorSetKey(setKey)) reasons.push("setkey-raw-vendor-string");
 
+  // CF-PLAYER-IS-THE-NUMBER. `nno` is an ABSENCE, so it can never be the
+  // identity itself — but an unnumbered card with a known player IS
+  // identifiable ("T206 Wagner"), and computeHobbyIqCardId encodes that as
+  // `p-<player>`. Refuse only when neither a number nor a player exists.
   const cardNumber = String(input.cardNumber ?? "").trim().toLowerCase();
-  if (!cardNumber || cardNumber === "null" || cardNumber === "undefined") {
-    reasons.push("cardnumber-missing");
+  const hasPlayer = String(input.playerName ?? "").trim().length > 0;
+  if (!cardNumber || NOT_A_CARD_NUMBER.has(cardNumber)) {
+    if (!hasPlayer) reasons.push("cardnumber-missing");
   }
 
   return { ok: reasons.length === 0, sport: reasons.length === 0 ? sport : null, reasons };

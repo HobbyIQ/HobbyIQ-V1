@@ -41,6 +41,8 @@ export type VerifyReason =
   | "user-flagged";           // CF-USER-FLAG (Drew, 2026-08-01) — end-user tapped "this looks wrong" on a comp row
 
 export interface VerifyQueueDoc {
+  /** comps_staging row this entry is about. See enqueueForVerify. */
+  stagingId?: string | null;
   id: string;
   reason: VerifyReason;
   status: "pending" | "approved" | "rejected" | "fixed";
@@ -99,6 +101,22 @@ export async function enqueueForVerify(input: {
   reason: VerifyReason;
   saleInput: RecordSoldCompInput;
   signal?: VerifyQueueDoc["signal"];
+  /**
+   * CF-QUEUE-MUST-POINT-BACK (Drew, 2026-08-17: "we have time, it is early lets
+   * fix it").
+   *
+   * The comps_staging row this queue entry is about. It was never recorded, and
+   * syncVerifyQueueWithStaging's own header called that out as a follow-up that
+   * never landed: "Future enqueue paths should include stagingId directly".
+   *
+   * The cost of the omission, measured: 0 of 1,489,444 pending price-outliers
+   * carry a stagingId, and 917,638 of 946,358 awaiting-verify staging rows carry
+   * no anomaly. So the staging row says "held" with no reason, the queue entry
+   * holds the reason with no pointer back, and NEITHER SIDE CAN FIND THE OTHER.
+   * A resolution therefore cannot return the sale to the pool, because `pending`
+   * is the only status the promoter reads.
+   */
+  stagingId?: string | null;
 }): Promise<string | null> {
   const c = await getContainer();
   if (!c) return null;
@@ -130,6 +148,8 @@ export async function enqueueForVerify(input: {
     observedAt: new Date().toISOString(),
     input: input.saleInput,
     signal: input.signal,
+    // The back-pointer. Without it a resolved entry is a dead end.
+    stagingId: input.stagingId ?? null,
     // 60d TTL — a stale queue is noise; if it's not triaged in 60 days
     // it wasn't worth reviewing anyway. Ingest continues.
     ttl: 60 * 24 * 3600,

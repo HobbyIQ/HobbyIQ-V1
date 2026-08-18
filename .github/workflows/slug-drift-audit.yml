@@ -1,0 +1,116 @@
+# CF-SETKEY-DRIFT-AUDIT (Drew, 2026-08-18: "should we run a scan to see and
+# fix this? and we need to run sweeps").
+#
+# Produces THE SWEEP PLAN: one pass over sold_comps that re-derives every row's
+# setKey from its own setName and reports, per current key, how many rows a
+# sweep would actually move.
+#
+# WHY A SEPARATE JOB. Sizing a sweep used to mean dry-running it, and a dry-run
+# scans every row on that key -- 3,055,051 for `topps` alone. Sizing ten keys
+# was ten full scans, and you had to GUESS the ten keys first. That guessing is
+# exactly how 1987 Topps Traded Tiffany stayed pooled with base Traded: nobody
+# thought to name `topps`. This reads each row once and names the keys for you.
+#
+# SHARES THE reslug-setkey CONCURRENCY GROUP on purpose. The audit and the
+# sweeps hit the same container, and two full scans at once would double the RU
+# bill while making both slower. Queueing behind a running sweep also means the
+# plan reflects the data AFTER that sweep, which is the number worth having.
+
+name: Slug Drift Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max rows to scan (0 = whole container)"
+        required: false
+        default: "0"
+      minRows:
+        description: "Only list a --from key if a sweep would move at least this many rows"
+        required: false
+        default: "25"
+      top:
+        description: "How many keys / moves to list"
+        required: false
+        default: "40"
+
+concurrency:
+  group: reslug-setkey
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      RG: rg-hobbyiq-dev
+      # Same ceilings as the sweeps. 8000 is Azure's floor for this container
+      # (autoscale max may not go below highest-ever-provisioned / 10, and
+      # sold_comps peaked at 80000), not a preference.
+      SOLD_IDLE_MAX: "8000"
+      SOLD_WORK_MAX: "40000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      # The audit resolves setKeys through the SHIPPED resolver out of dist/,
+      # so its plan cannot disagree with what a sweep would actually do.
+      - name: Build TS
+        working-directory: backend
+        run: npx tsc
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group "$RG" \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      # Data plane, not control plane -- the CI principal holds only
+      # Website Contributor on HobbyIQ3 and has no Cosmos RBAC. See #1126.
+      - name: Raise sold_comps throughput for the scan
+        continue-on-error: true
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_WORK_MAX"
+
+      - name: Scan for setKey drift
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          ARGS="--minRows=${{ github.event.inputs.minRows || '25' }} --top=${{ github.event.inputs.top || '40' }}"
+          LIMIT="${{ github.event.inputs.limit || '0' }}"
+          [ "$LIMIT" != "0" ] && ARGS="$ARGS --limit=$LIMIT"
+          echo "running: node scripts/audit-setkey-drift.cjs $ARGS"
+          node scripts/audit-setkey-drift.cjs $ARGS
+
+      # always(): a scan that fails or is cancelled must not strand the account
+      # at the working ceiling.
+      - name: Lower sold_comps throughput back to idle
+        if: always()
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_IDLE_MAX"

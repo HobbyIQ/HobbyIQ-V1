@@ -890,6 +890,10 @@ export async function persistVendorSalesToPool(
     // Fire-and-forget: never blocks the pool write or delays it.
     // Gated on COMPS_STAGING_SHIM_ENABLED so the code is dormant
     // during initial rollout.
+    // CF-QUEUE-MUST-POINT-BACK — captured so the verify_queue entries below can
+    // point at the staging row they are holding. stageIngestedComp already
+    // returned this id; it was simply discarded.
+    let stagingRowId: string | null = null;
     if (process.env.COMPS_STAGING_SHIM_ENABLED === "true") {
       void (async () => {
         try {
@@ -923,7 +927,7 @@ export async function persistVendorSalesToPool(
             price,
             soldAt: new Date(soldAt).toISOString(),
           });
-          await stageIngestedComp({
+          stagingRowId = await stageIngestedComp({
             hobbyiqCardId: slug,
             raw: {
               vendor: source,
@@ -966,6 +970,7 @@ export async function persistVendorSalesToPool(
           const { enqueueForVerify } = await import("./verifyQueue.service.js");
           await enqueueForVerify({
             reason: "parser-low-confidence",
+            stagingId: stagingRowId,
             saleInput: {
               cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
               playerName,
@@ -974,8 +979,20 @@ export async function persistVendorSalesToPool(
               parallel: parsed.parallel,
               cardNumber: parsed.cardNumber,
               isAuto: parsed.isAuto,
-              gradeCompany: null,
-              gradeValue: null,
+              // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE (Drew, 2026-08-17: "so we can
+              // see the sales index grow"). These were hardcoded null while
+              // parsed.gradeCompany/gradeValue held the right answer the whole
+              // time. Measured on 800 queued price-outliers: 714 titles carried
+              // an explicit slab grade and 646 of them (90.5%) arrived with
+              // gradeCompany=null, so every one bucketed as RAW and a graded sale
+              // was compared against the UNGRADED pool for the same card.
+              //
+              // A $12,500 PSA 9 Jordan rookie measured against raw comps is 3x
+              // above p90 by construction — 799 of 800 were HIGH outliers. Those
+              // sales were never anomalous; they were in the wrong bucket, and
+              // then expired unreviewed on the 60-day queue TTL.
+              gradeCompany: parsed.gradeCompany ?? null,
+              gradeValue: parsed.gradeValue ?? null,
               price,
               soldAt: new Date(soldAt).toISOString(),
               source,
@@ -1011,6 +1028,7 @@ export async function persistVendorSalesToPool(
           const { enqueueForVerify } = await import("./verifyQueue.service.js");
           await enqueueForVerify({
             reason: "sample-audit",
+            stagingId: stagingRowId,
             saleInput: {
               cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
               playerName,
@@ -1019,8 +1037,20 @@ export async function persistVendorSalesToPool(
               parallel: parsed.parallel,
               cardNumber: parsed.cardNumber,
               isAuto: parsed.isAuto,
-              gradeCompany: null,
-              gradeValue: null,
+              // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE (Drew, 2026-08-17: "so we can
+              // see the sales index grow"). These were hardcoded null while
+              // parsed.gradeCompany/gradeValue held the right answer the whole
+              // time. Measured on 800 queued price-outliers: 714 titles carried
+              // an explicit slab grade and 646 of them (90.5%) arrived with
+              // gradeCompany=null, so every one bucketed as RAW and a graded sale
+              // was compared against the UNGRADED pool for the same card.
+              //
+              // A $12,500 PSA 9 Jordan rookie measured against raw comps is 3x
+              // above p90 by construction — 799 of 800 were HIGH outliers. Those
+              // sales were never anomalous; they were in the wrong bucket, and
+              // then expired unreviewed on the 60-day queue TTL.
+              gradeCompany: parsed.gradeCompany ?? null,
+              gradeValue: parsed.gradeValue ?? null,
               price,
               soldAt: new Date(soldAt).toISOString(),
               source,
@@ -1054,22 +1084,73 @@ export async function persistVendorSalesToPool(
         let rollingPrices = rollingPricesBySlug.get(slug);
         if (!rollingPrices) {
           const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-          const { resources: rollingRows } = await container.items.query<{ price: number }>({
-            query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+          // CF-OUTLIER-POOL-MUST-BE-GRADE-SCOPED (Drew, 2026-08-17: "so we can
+          // see the sales index grow").
+          //
+          // This query had NO grade filter. It pooled raw, PSA 9, PSA 10 and
+          // BGS 9.5 prices for the slug into one list, medianed them, and
+          // compared the sale against that. A graded sale therefore had to look
+          // like an outlier: a $12,500 PSA 9 Jordan against a median dragged down
+          // by ungraded copies is >3x by construction, which is why 799 of 800
+          // queued price-outliers were HIGH and 90.5% of them carried a slab
+          // grade in the title.
+          //
+          // dataCleanJob's version of this same test DOES scope by tier
+          // (gradeTierKey). Two implementations of one rule, one of them
+          // grade-blind — so the queue filled from the blind one. Scoped here to
+          // match, using the SAME exported helper rather than a local copy that
+          // can drift.
+          const { gradeTierKey } = await import("./dataCleanJob.service.js");
+          const saleTier = gradeTierKey(parsed.gradeCompany, parsed.gradeValue);
+          const { resources: rollingRows } = await container.items.query<{
+            price: number; gradeCompany?: string | null; gradeValue?: number | null;
+          }>({
+            query: "SELECT c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
             parameters: [{ name: "@hiq", value: slug }, { name: "@cutoff", value: rollingCutoff }],
           }).fetchAll();
-          rollingPrices = (rollingRows ?? []).map((r) => Number(r.price));
+          // Only comps at the SAME grade tier as the sale under test. A sale is
+          // compared against its own kind or not at all.
+          rollingPrices = (rollingRows ?? [])
+            .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === saleTier)
+            .map((r) => Number(r.price));
           rollingPricesBySlug.set(slug, rollingPrices);
         }
+        // CF-ONE-OUTLIER-RULE (Drew, 2026-08-17: "do it").
+        //
+        // This diverter tested `price / median > 3`, while dataCleanJob — the
+        // module that OWNS this rule — tests the pool's own p10..p90 spread
+        // widened x3 (CF-PRICE-BAND-FROM-DISPERSION, 2026-08-13). Two rules
+        // sharing one name, and the stricter, older one was doing the diverting.
+        //
+        // On any pool with real dispersion they disagree wildly. A base card
+        // trading $2-$50 with a $10 median:
+        //
+        //     median ratio : $30 / $10 = 3.0        -> DIVERTED
+        //     dispersion   : p90 ~$45, x3 = $135    -> passes easily
+        //
+        // Which is exactly what the queue looks like: ordinary prices — $30,
+        // $72, $110.47, $210 — sitting on base:no-auto slugs. Base cards have
+        // enormous spread (condition, auction vs BIN, raw vs slabbed-but-
+        // unparsed), so 3x the median is a line normal sales cross constantly.
+        // dataCleanJob's comment says the quiet part: "Band from the pool's OWN
+        // spread instead."
+        //
+        // Now calls the same exported helpers, so there is ONE implementation to
+        // drift from. Note this also raises the minimum sample from 5 to 8
+        // (MIN_BAND_SAMPLES): a pool too thin to describe its own spread now
+        // yields NO verdict rather than a confident one off five points.
         if (rollingPrices.length >= 5) {
           const prices = rollingPrices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-          if (prices.length >= 5) {
-            const rollingMedian = prices[Math.floor(prices.length / 2)];
+          const { priceBandFromSorted, priceOutlierDetail } = await import("./dataCleanJob.service.js");
+          const band = priceBandFromSorted(prices);
+          const bandDetail = band === null ? null : priceOutlierDetail(price, band);
+          if (band !== null && bandDetail !== null) {
+            const rollingMedian = band.median;
             const ratio = price / rollingMedian;
-            if (ratio > 3 || ratio < (1 / 3)) {
               const { enqueueForVerify } = await import("./verifyQueue.service.js");
               await enqueueForVerify({
                 reason: "price-outlier",
+                stagingId: stagingRowId,
                 saleInput: {
                   cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
                   playerName,
@@ -1078,8 +1159,9 @@ export async function persistVendorSalesToPool(
                   parallel: parsed.parallel,
                   cardNumber: parsed.cardNumber,
                   isAuto: parsed.isAuto,
-                  gradeCompany: null,
-                  gradeValue: null,
+                  // CF-GRADE-MUST-RIDE-INTO-THE-QUEUE — see note above.
+                  gradeCompany: parsed.gradeCompany ?? null,
+                  gradeValue: parsed.gradeValue ?? null,
                   price,
                   soldAt: new Date(soldAt).toISOString(),
                   source,
@@ -1091,14 +1173,13 @@ export async function persistVendorSalesToPool(
                   verifiedByUser: false,
                   confidence: 0.3,
                 },
-                signal: { rollingMedian, ratio, note: `${ratio > 3 ? "high" : "low"}-outlier vs 30d median ($${rollingMedian.toFixed(2)}, n=${prices.length})` },
+                signal: { rollingMedian, ratio, note: bandDetail },
               });
               result.skipped++;
               result.divertedToVerify++;
               continue;
             }
           }
-        }
       } catch {
         // Detector failure is non-fatal — fall through and persist.
       }
@@ -1125,6 +1206,7 @@ export async function persistVendorSalesToPool(
                 const { enqueueForVerify } = await import("./verifyQueue.service.js");
                 await enqueueForVerify({
                   reason: "image-mismatch",
+                  stagingId: stagingRowId,
                   saleInput: {
                     cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
                     playerName,

@@ -42,8 +42,8 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
-import { guardSlugInputs } from "./slugGuard.service.js";
+import { computeHobbyIqCardId, resolveSetKeyForSlug } from "./hobbyIqCardId.service.js";
+import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -453,6 +453,49 @@ export function inferSportFromContext(
   // "Pokémon" with é (U+00E9) is captured by lowercasing (é stays é;
   // pattern uses both forms).
   if (text.includes("pokemon") || text.includes("pokémon")) return "pokemon";
+  // CF-TCG-VERTICAL-VOCABULARY (Drew, 2026-08-17). The other TCG verticals.
+  // Without these the sport stays null, slugGuard refuses on sport-uncanonical,
+  // and the row never reaches its set table however good that table is — the
+  // two fixes only work together. Measured: 57,760 Yu-Gi-Oh, 16,837 Magic and
+  // 9,619 One Piece sales sat unkeyed with NO sport at all.
+  //
+  // Each maps to a tag already in CANONICAL_SPORTS, so nothing new enters the
+  // slug namespace.
+  if (/\byu-?gi-?oh/.test(text)) return "yugioh";
+  if (/\bmagic:?\s*the\s+gathering\b/.test(text) || /\bmtg\b/.test(text)) return "tcg-other";
+  if (/\bone piece\b/.test(text)) return "anime-tcg";
+  // CF-ALL-CANONICAL-VERTICALS (Drew, 2026-08-17: "find it and find it ALL").
+  //
+  // CANONICAL_SPORTS already contained golf, racing, wrestling, mma, boxing,
+  // tennis, multi-sport and non-sport — the namespace was never the problem.
+  // Nothing DETECTED them, so the sport stayed null, slugGuard refused on
+  // sport-uncanonical, and the row never got a slug however good its setKey
+  // vocabulary was.
+  //
+  // Measured over the 45,288 rows still unkeyed after the TCG verticals
+  // shipped, these tokens classify 87.5%:
+  //
+  //     non-sport   20,938      mma          1,918
+  //     golf         4,615      tennis       1,116
+  //     wrestling    4,099      boxing         437
+  //     racing       3,511      multi-sport  3,008
+  //
+  // Most of these products ALREADY have setKey vocabulary — "2020 Topps
+  // Chrome F1 Racing" resolves to topps-chrome perfectly well. The sport tag
+  // was the only thing missing, which is why this is a large win for a small
+  // change.
+  //
+  // Ordered most-specific first: a league acronym beats a generic word, and
+  // non-sport is LAST so "Marvel" cannot outrank a real sport that happens to
+  // mention a character.
+  if (/\bufc\b|\bmma\b|mixed martial|\bpride fc\b/.test(text)) return "mma";
+  if (/\bwwe\b|\bwwf\b|\baew\b|\bwcw\b|\bnwa\b|wrestling/.test(text)) return "wrestling";
+  if (/\bf1\b|formula\s*1|\bnascar\b|\bindycar\b|\bmoto\s?gp\b|racing/.test(text)) return "racing";
+  if (/\bgolf\b|\bpga\b/.test(text)) return "golf";
+  if (/\btennis\b|\batp\b|\bwta\b/.test(text)) return "tennis";
+  if (/\bboxing\b|\bboxer\b/.test(text)) return "boxing";
+  if (/multi-?sport|olympic|four sport|all[- ]sport|sports illustrated|metal universe champions|goodwin champions/.test(text)) return "multi-sport";
+  if (/garbage pail|\bmarvel\b|star wars|spider-?man|superman|batman|dc comics|masterpieces|\bimpel\b|fortnite|playboy|wacky|jurassic/.test(text)) return "non-sport";
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
@@ -556,6 +599,92 @@ export interface RecordSoldCompResult {
   /** Present when written is false. "catalog-unmatched" is the retryable one —
    *  the sale is real, we just have no checklist for its card yet. */
   reason?: "catalog-unmatched" | "invalid-input" | "error";
+}
+
+export interface DerivedSlug {
+  /** The slug, or null when the guard refused. NEVER a guessed value. */
+  slug: string | null;
+  guard: SlugGuardResult;
+  sportForSlug: string | null;
+  cardNumberFinal: string | null;
+  printRunFinal: number | null;
+  /** setKey the guard actually judged — what segment 3 of the slug carries. */
+  resolvedSetKey: string;
+}
+
+/**
+ * CF-ONE-SLUG-DERIVATION (Drew, 2026-08-17). THE derivation of a
+ * hobbyiqCardId from a comp's attributes: title fallbacks, the sport-aware
+ * setKey resolution, the guard, and the computation.
+ *
+ * Exported because the repair pass for already-unkeyed rows must derive slugs
+ * the SAME way ingest does. A backfill that re-implements this — even
+ * carefully — is a second implementation that drifts, and the drift is
+ * invisible: it writes well-formed slugs that simply disagree with the ones
+ * ingest would have written. That is exactly how the guard came to reject
+ * 615,140 rows the computation would have keyed (CF-ONE-SETKEY-RESOLVER), and
+ * how the price-outlier diverter came to disagree with dataCleanJob
+ * (CF-ONE-OUTLIER-RULE). One rule, one implementation.
+ *
+ * CF-CARDNUMBER-TITLE-FALLBACK: vendor feeds sometimes omit cardNumber for
+ * modern autos even when the title carries the code ("CPA-EHA"); without it
+ * the slug gets a malformed "::" segment and every lookup misses.
+ *
+ * CF-SLUG-REFUSE-FALLBACKS: when the inputs don't hold up we return NO slug
+ * rather than a confident wrong one. computeHobbyIqCardId is total and will
+ * happily return `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's
+ * baseball card — syntactically perfect, completely meaningless, and
+ * indistinguishable from a real slug downstream. An unkeyed row is visibly
+ * incomplete and can be re-derived later; a wrong slug silently corrupts a
+ * comp pool and looks healthy.
+ */
+export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
+  "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto"
+  // CF-PLAYER-IS-THE-NUMBER: genuinely unnumbered cards (T206, Magic Alpha,
+  // Signature Series) are identified by their player, so the player has to
+  // reach BOTH the guard and the computation — a guard that judged one
+  // identity while the computation emitted another is the parity bug this
+  // file was already fixed for once.
+  | "playerName">): DerivedSlug {
+  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
+    ? input.cardNumber.trim()
+    : extractCardNumberFromTitle(input.title);
+  const printRunFinal = extractPrintRunFromTitle(input.title);
+
+  // Resolve the setKey the way computeHobbyIqCardId will, THEN guard it.
+  // sportForSlug is normalized first because the resolver's Pokemon branch is
+  // gated on the canonical tag.
+  const guardSport = normalizeSportStrict(sportForSlug);
+  const resolvedSetKey = resolveSetKeyForSlug(
+    guardSport ?? "",
+    input.setName ?? "",
+    typeof input.cardYear === "number" ? input.cardYear : 0,
+  );
+  const guard = guardSlugInputs({
+    sport: sportForSlug,
+    year: input.cardYear,
+    normalizedSetKey: resolvedSetKey,
+    cardNumber: cardNumberFinal ?? "",
+    playerName: input.playerName ?? null,
+  });
+
+  const slug = guard.ok
+    ? computeHobbyIqCardId({
+        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
+        // so the slug namespace stays in the controlled vocabulary.
+        sport: guard.sport as string,
+        year: input.cardYear as number,
+        setKey: input.setName ?? "",
+        cardNumber: cardNumberFinal ?? "",
+        parallel: input.parallel ?? "Base",
+        isAuto: input.isAuto ?? false,
+        printRun: printRunFinal,
+        playerName: input.playerName ?? null,
+      })
+    : null;
+
+  return { slug, guard, sportForSlug, cardNumberFinal, printRunFinal, resolvedSetKey };
 }
 
 export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {
@@ -689,29 +818,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // input.cardNumber is empty, sniff the title for a known auto-code
   // pattern and use it. Safe fallback: the same code appears in
   // BCCP checklists, so the recovered slug lines up cleanly.
-  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
-  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
-    ? input.cardNumber.trim()
-    : extractCardNumberFromTitle(input.title);
-  const printRunFinal = extractPrintRunFromTitle(input.title);
-
-  // CF-SLUG-REFUSE-FALLBACKS (Drew, 2026-08-14). Gate the slug inputs.
-  // computeHobbyIqCardId is total — it will happily return
-  // `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's baseball
-  // card, and that slug is indistinguishable from a real one downstream
-  // while quietly pooling a baseball card against hockey Bowman comps.
-  //
-  // When the inputs don't hold up we write the row with NO slug rather
-  // than a confident wrong one. An unkeyed row is visibly incomplete and
-  // can be re-derived from its title later; a wrong slug corrupts a comp
-  // pool and looks healthy. See slugGuard.service.ts for the measurements
-  // behind each check.
-  const guard = guardSlugInputs({
-    sport: sportForSlug,
-    year: input.cardYear,
-    normalizedSetKey: normalizeSetKey(input.setName ?? ""),
-    cardNumber: cardNumberFinal ?? "",
-  });
+  const derived = deriveHobbyIqSlug(input);
+  const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
   if (!guard.ok) {
     // Sampled — this fires on a meaningful slice of vendor rows and must
     // not drown the log. The counts are what tell us which defect leads.
@@ -730,19 +838,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       }));
     }
   }
-  let hobbyiqCardId = guard.ok
-    ? computeHobbyIqCardId({
-        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
-        // so the slug namespace stays in the controlled vocabulary.
-        sport: guard.sport as string,
-        year: input.cardYear as number,
-        setKey: input.setName ?? "",
-        cardNumber: cardNumberFinal ?? "",
-        parallel: input.parallel ?? "Base",
-        isAuto: input.isAuto ?? false,
-        printRun: printRunFinal,
-      })
-    : null;
+  let hobbyiqCardId = derived.slug;
 
   // CF-CATALOG-RESOLVE-IN-RECORDCOMP (Drew, 2026-08-08). Route through the
   // catalog matcher so the sale lands under the CATALOG's canonical slug —

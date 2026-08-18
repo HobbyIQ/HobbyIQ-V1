@@ -39,7 +39,11 @@ import { resolveVertical } from "./resolveVertical.service.js";
 /** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
  *  plausibility. Raw and PSA 10 are different markets for the same card, so
  *  they must not share a median. */
-function gradeTierKey(company?: string | null, value?: number | null): string {
+/** Exported so the verify-queue loop-back re-runs the IDENTICAL tier bucketing
+ *  the admission test used. A re-evaluated verdict is only trustworthy if it is
+ *  computed the same way as the verdict it replaces — a copied helper that drifts
+ *  would release rows on a rule this file no longer applies. */
+export function gradeTierKey(company?: string | null, value?: number | null): string {
   const c = String(company ?? "").trim().toUpperCase();
   if (!c) return "raw";
   const v = typeof value === "number" && Number.isFinite(value) ? value : null;

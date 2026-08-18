@@ -1,0 +1,108 @@
+# CF-PRINTRUN-MERGE-UNAMBIGUOUS (Drew, 2026-08-18).
+#
+# Merges an UNNUMBERED comp pool into its numbered twin, but only where there
+# is exactly one twin to merge into.
+#
+# WHY IT NEEDS CI RATHER THAN A LAPTOP. Pass 1 has to read every slug in the
+# year (or the container) before it can answer "how many print-run variants
+# does this card have?" — that question is not answerable row by row. At the
+# 8000 idle ceiling a local run does not finish; with the ceiling raised it is
+# minutes. Same reason the sweeps live here.
+#
+# Shares the reslug-setkey concurrency group: this and the sweeps write the
+# same container, and running both at once doubles the RU bill while making
+# each slower.
+
+name: Print Run Merge
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Limit to one cardYear (blank = whole container)"
+        required: false
+        default: ""
+      apply:
+        description: "Write to Cosmos (false = dry-run)"
+        type: choice
+        required: false
+        default: "false"
+        options: ["false", "true"]
+      top:
+        description: "How many example merges to print"
+        required: false
+        default: "25"
+
+concurrency:
+  group: reslug-setkey
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      RG: rg-hobbyiq-dev
+      # 8000 is Azure's floor for sold_comps (autoscale max may not go below
+      # highest-ever-provisioned / 10, and it peaked at 80000), not a choice.
+      SOLD_IDLE_MAX: "8000"
+      SOLD_WORK_MAX: "40000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group "$RG" \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      # Data plane, not control plane — the CI principal holds only
+      # Website Contributor on HobbyIQ3 and has no Cosmos RBAC (#1126).
+      - name: Raise sold_comps throughput for the run
+        continue-on-error: true
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_WORK_MAX"
+
+      - name: Merge unambiguous print runs
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          ARGS="--pool=16 --top=${{ github.event.inputs.top || '25' }}"
+          YEAR="${{ github.event.inputs.year }}"
+          [ -n "$YEAR" ] && ARGS="$ARGS --year=$YEAR"
+          [ "${{ github.event.inputs.apply }}" = "true" ] && ARGS="$ARGS --apply"
+          echo "running: node scripts/merge-unambiguous-printrun.cjs $ARGS"
+          node scripts/merge-unambiguous-printrun.cjs $ARGS
+
+      # always(): a failed or cancelled run must not strand the working ceiling.
+      - name: Lower sold_comps throughput back to idle
+        if: always()
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_IDLE_MAX"
