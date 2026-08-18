@@ -321,6 +321,9 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-signature-class/, "topps-signature-class"],
     [/topps-resurgence/, "topps-resurgence"],
     [/topps-composite/, "topps-composite"],
+    // Topps Cracker Jack is a MODERN Topps product, distinct from the 1915
+    // vintage Cracker Jack line. Must precede bare topps or it is swallowed.
+    [/topps-cracker-jack/, "topps-cracker-jack"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
@@ -463,6 +466,33 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)skybox-molten-metal/, "skybox-molten-metal"],
     [/(?:^|-)skybox/, "skybox"],
     [/(?:^|-)metal-universe/, "metal-universe"],
+    // CF-VINTAGE-PRODUCT-RULES (Drew, 2026-08-17). Vintage and oddball products
+    // that had NO rule, so they slugified year-prefixed and slugGuard correctly
+    // refused every one. Measured over 6.2h of post-fix ingest: ~17,300 sports
+    // rows land unkeyed per day for exactly this reason, and the same handful
+    // of products recur every single day — so each rule here pays forever.
+    //
+    // NOTE ON THE CATALOG. For several of these the catalog's own key is ALSO
+    // year-prefixed (1909-11-t206-baseball, 1962-post-cereal-baseball,
+    // 1961-golden-press-hall-of-fame-baseball) — the catalog carries the same
+    // pollution from the same root cause. These rules resolve to the CLEAN
+    // product name, which is the canonical form the catalog rows should also be
+    // repaired onto. Where a clean catalog key already exists it is used as-is:
+    // kelloggs (482 rows), cracker-jack (168), diamond-kings (38,183).
+    //
+    // Ordering matters twice over: topps-cracker-jack and panini-diamond-kings
+    // are DIFFERENT modern products from the vintage lines, so the qualified
+    // patterns lead.
+    [/(?:^|-)cracker-jack/, "cracker-jack"],
+    [/all-time-diamond-kings/, "all-time-diamond-kings"],
+    [/panini-diamond-kings/, "panini-diamond-kings"],
+    [/(?:^|-)diamond-kings/, "diamond-kings"],
+    [/(?:^|-)t206/, "t206"],
+    [/(?:^|-)play-ball/, "play-ball"],
+    [/(?:^|-)kellogg-?s?/, "kelloggs"],
+    [/(?:^|-)post-cereal/, "post-cereal"],
+    [/(?:^|-)golden-press/, "golden-press"],
+    [/(?:^|-)goudey/, "goudey"],
     [/(?:^|-)donruss-studio|(?:^|-)studio/, "donruss-studio"],
     [/(?:^|-)circa-thunder/, "circa-thunder"],
     [/(?:^|-)score-select/, "score-select"],
