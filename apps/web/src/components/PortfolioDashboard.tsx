@@ -134,13 +134,10 @@ export function PortfolioDashboard() {
           {/* allocation — the fuel gauge. White ticks are the HobbyIQ targets,
               so over/under is visible without reading two numbers. */}
           <div className="mt-5">
-            <div className="mb-1.5 flex items-baseline justify-between">
+            <div className="mb-1.5">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 Allocation
               </span>
-              <Link href="/app/portfolio/breakdown" className="text-xs text-sky-400 hover:underline">
-                Full breakdown →
-              </Link>
             </div>
             <div className="relative flex h-3 w-full overflow-hidden rounded-full bg-slate-700/50">
               {data.allocations.map((a) => (
@@ -205,6 +202,17 @@ export function PortfolioDashboard() {
           <p className="text-xs text-slate-400">{topRec.detail}</p>
         </div>
       )}
+      {/* Bottom-right "read more", the corner the eye lands on last. Anchored
+          here rather than beside the Allocation label so its position does not
+          shift as the warning lights and next-move rows come and go. */}
+      <div className="mt-4 flex justify-end border-t border-slate-700/50 pt-3">
+        <Link
+          href="/app/portfolio/breakdown"
+          className="text-xs font-semibold text-sky-400 hover:underline"
+        >
+          Full breakdown →
+        </Link>
+      </div>
     </div>
   );
 }
