@@ -130,7 +130,7 @@ struct PortfolioIQView: View {
                             // CF-BACK-NAV-FIX note above), so a plain
                             // NavigationLink is correct here.
                             if vm.inventoryCards.isEmpty == false {
-                                PortfolioBreakdownEntryCard(viewModel: vm)
+                                PortfolioBreakdownEntryCard()
                             }
 
                             if let errorMessage = vm.errorMessage {

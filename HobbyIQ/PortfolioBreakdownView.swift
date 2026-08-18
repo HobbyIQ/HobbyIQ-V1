@@ -4,33 +4,36 @@
 //
 //  CF-PORTFOLIO-BREAKDOWN (Drew, 2026-08-17). "Own fewer cards. Own better cards."
 //
-//  The screen answers six questions in order, and nothing else:
-//    What do I own? · Where is my money concentrated? · How risky is it?
-//    Am I overweight prospects or commodity modern? · How much true scarcity
-//    do I own? · What should I improve?
+//  Answers six questions in order and nothing else: what do I own · where is my
+//  money concentrated · how risky is it · am I overweight prospects or commodity
+//  modern · how much true scarcity do I own · what should I improve.
 //
-//  All arithmetic lives in PortfolioAnalyticsService. This file lays out a
-//  result it is handed. Sections below the fold are collapsed by default so the
-//  first screen stays readable on an iPhone.
+//  RENDERS, DOES NOT COMPUTE. Every number comes from
+//  GET /api/portfolioiq/breakdown. The web dashboard reads the same payload, so
+//  the two clients cannot disagree about the same portfolio — which is the whole
+//  reason the analysis is not duplicated here in Swift.
 //
 
 import SwiftUI
 import Charts
 
 struct PortfolioBreakdownView: View {
-    @ObservedObject var viewModel: PortfolioIQViewModel
-
-    @State private var result: PortfolioAnalyticsResult = .empty
-    @State private var expandedRisk = false
-    @State private var expandedQuality = false
+    @State private var result: PortfolioBreakdownResponse = .empty
+    @State private var loading = true
+    @State private var loadError: String?
     @State private var expandedScore = false
-
-    private let service = PortfolioAnalyticsService.shared
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if result.cardCount == 0 {
+                if loading {
+                    ProgressView("Analyzing portfolio…")
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .padding(.vertical, 48)
+                } else if let loadError {
+                    errorState(loadError)
+                } else if result.cardCount == 0 {
                     emptyState
                 } else {
                     headerStats
@@ -50,15 +53,39 @@ struct PortfolioBreakdownView: View {
         .background(HobbyIQTheme.Colors.appBackground.ignoresSafeArea())
         .navigationTitle("Portfolio Breakdown")
         .navigationBarTitleDisplayMode(.large)
-        .onAppear(perform: recompute)
-        .onChange(of: viewModel.inventoryCards) { _, _ in recompute() }
+        .task { await load() }
+        .refreshable { await load() }
     }
 
-    private func recompute() {
-        result = service.analyze(viewModel.inventoryCards)
+    private func load() async {
+        loadError = nil
+        do {
+            result = try await APIService.shared.fetchPortfolioBreakdown()
+        } catch {
+            loadError = error.localizedDescription
+        }
+        loading = false
     }
 
-    // MARK: - Empty
+    // MARK: - States
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 32))
+                .foregroundStyle(HobbyIQTheme.Colors.warning)
+            Text("Couldn’t load the breakdown")
+                .font(.headline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text(message)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .hiqCard()
+    }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
@@ -133,7 +160,7 @@ struct PortfolioBreakdownView: View {
                     }
                 }
                 Spacer()
-                Text(result.score.tier.displayName)
+                Text(result.score.tier)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(scoreTint)
                     .padding(.horizontal, 12).padding(.vertical, 6)
@@ -143,6 +170,7 @@ struct PortfolioBreakdownView: View {
             ProgressView(value: Double(result.score.value), total: 100)
                 .tint(scoreTint)
 
+            // A score the owner cannot interrogate is a horoscope.
             DisclosureGroup(isExpanded: $expandedScore) {
                 VStack(spacing: 8) {
                     ForEach(result.score.components) { c in
@@ -163,7 +191,7 @@ struct PortfolioBreakdownView: View {
                 }
                 .padding(.top, 8)
             } label: {
-                Text("What's behind this score")
+                Text("What is behind this score")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
@@ -175,9 +203,9 @@ struct PortfolioBreakdownView: View {
 
     private var scoreTint: Color {
         switch result.score.tier {
-        case .elite, .strong: return HobbyIQTheme.Colors.successGreen
-        case .good, .moderateRisk: return HobbyIQTheme.Colors.warning
-        case .highRisk, .speculative: return HobbyIQTheme.Colors.danger
+        case "Elite", "Strong Portfolio": return HobbyIQTheme.Colors.successGreen
+        case "Good Portfolio", "Moderate Risk": return HobbyIQTheme.Colors.warning
+        default: return HobbyIQTheme.Colors.danger
         }
     }
 
@@ -185,7 +213,8 @@ struct PortfolioBreakdownView: View {
 
     private var allocationCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionTitle("Allocation", subtitle: "Current vs HobbyIQ Target")
+            sectionTitle("Allocation",
+                         subtitle: result.usingCustomTiers == true ? "Current vs your targets" : "Current vs HobbyIQ target")
 
             Chart(result.allocations) { a in
                 SectorMark(
@@ -217,17 +246,23 @@ struct PortfolioBreakdownView: View {
         .hiqCard()
     }
 
-    private func allocationRow(_ a: PortfolioAllocation) -> some View {
+    private func allocationRow(_ a: BreakdownAllocation) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
                 Circle().fill(tint(for: a.category)).frame(width: 9, height: 9)
-                Text(a.category.displayName)
+                Text(a.label)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Spacer()
-                Text(a.status.label)
+                Text(statusLabel(a.status))
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(statusTint(a.status))
+            }
+            if a.blurb.isEmpty == false {
+                Text(a.blurb)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 6) {
                 Text("Current \(Int(a.currentShare * 100))%")
@@ -258,23 +293,43 @@ struct PortfolioBreakdownView: View {
         }
     }
 
-    private func tint(for category: PortfolioCategory) -> Color {
+    /// Colours the four built-ins by identity; user-defined tiers cycle a stable
+    /// palette keyed off the id, so a custom bucket keeps its colour run to run.
+    private func tint(for category: String) -> Color {
         switch category {
-        case .establishedGreatness: return HobbyIQTheme.Colors.hobbyGreen
-        case .trueScarcity: return HobbyIQTheme.Colors.electricBlue
-        case .eliteProspects: return HobbyIQTheme.Colors.brightBlue
-        case .speculation: return HobbyIQTheme.Colors.warning
+        case "establishedGreatness": return HobbyIQTheme.Colors.hobbyGreen
+        case "trueScarcity": return HobbyIQTheme.Colors.electricBlue
+        case "eliteProspects": return HobbyIQTheme.Colors.brightBlue
+        case "speculation": return HobbyIQTheme.Colors.warning
+        case "__unassigned__": return HobbyIQTheme.Colors.steelGray
+        default:
+            let palette: [Color] = [
+                HobbyIQTheme.Colors.hobbyGreen, HobbyIQTheme.Colors.electricBlue,
+                HobbyIQTheme.Colors.brightBlue, HobbyIQTheme.Colors.warning,
+                HobbyIQTheme.Colors.successGreen,
+            ]
+            return palette[abs(category.hashValue) % palette.count]
         }
     }
 
-    /// Deliberately restrained: only real drift earns a warning colour, and
-    /// nothing here goes red for being a few points off. A screen that shouts
-    /// at everything teaches people to stop reading it.
-    private func statusTint(_ status: AllocationStatus) -> Color {
+    private func statusLabel(_ status: String) -> String {
         switch status {
-        case .onTarget: return HobbyIQTheme.Colors.successGreen
-        case .slightlyUnderweight, .slightlyOverweight: return HobbyIQTheme.Colors.mutedText
-        case .underweight, .overweight: return HobbyIQTheme.Colors.warning
+        case "onTarget": return "ON TARGET"
+        case "slightlyUnderweight": return "SLIGHTLY UNDERWEIGHT"
+        case "underweight": return "UNDERWEIGHT"
+        case "slightlyOverweight": return "SLIGHTLY OVERWEIGHT"
+        case "overweight": return "OVERWEIGHT"
+        default: return status.uppercased()
+        }
+    }
+
+    /// Deliberately restrained: only real drift earns a warning colour. A screen
+    /// that shouts at everything teaches people to stop reading it.
+    private func statusTint(_ status: String) -> Color {
+        switch status {
+        case "onTarget": return HobbyIQTheme.Colors.successGreen
+        case "underweight", "overweight": return HobbyIQTheme.Colors.warning
+        default: return HobbyIQTheme.Colors.mutedText
         }
     }
 
@@ -283,8 +338,7 @@ struct PortfolioBreakdownView: View {
     private var riskCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("Portfolio Risk", subtitle: nil)
-            let shown = expandedRisk ? result.risk.metrics : Array(result.risk.metrics.prefix(4))
-            ForEach(shown) { m in
+            ForEach(result.risk) { m in
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(m.name)
@@ -303,26 +357,15 @@ struct PortfolioBreakdownView: View {
                         .background(riskTint(m).opacity(0.14), in: Capsule())
                 }
             }
-            if result.risk.metrics.count > 4 {
-                Button(expandedRisk ? "Show less" : "Show all \(result.risk.metrics.count)") {
-                    withAnimation(.easeInOut(duration: 0.2)) { expandedRisk.toggle() }
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-            }
         }
         .padding(16)
         .hiqCard()
     }
 
-    private func riskTint(_ m: PortfolioRiskMetric) -> Color {
+    private func riskTint(_ m: BreakdownRiskMetric) -> Color {
         if m.isConcerning { return HobbyIQTheme.Colors.danger }
-        switch m.polarity {
-        case .strengthIsGood:
-            return m.level == .high ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.warning
-        case .riskIsBad:
-            return m.level == .low ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.warning
-        }
+        let good = m.polarity == "strengthIsGood" ? m.level == "high" : m.level == "low"
+        return good ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.warning
     }
 
     // MARK: - Concentration
@@ -330,7 +373,7 @@ struct PortfolioBreakdownView: View {
     @ViewBuilder
     private var concentrationCard: some View {
         let warnings = result.concentrations.filter(\.isWarning)
-        if !warnings.isEmpty {
+        if warnings.isEmpty == false {
             VStack(alignment: .leading, spacing: 12) {
                 sectionTitle("Concentration", subtitle: nil)
                 ForEach(warnings) { c in
@@ -339,7 +382,7 @@ struct PortfolioBreakdownView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.caption2)
                                 .foregroundStyle(HobbyIQTheme.Colors.warning)
-                            Text(c.dimension.displayName)
+                            Text(c.displayName)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         }
@@ -370,7 +413,7 @@ struct PortfolioBreakdownView: View {
             ForEach(result.qualityBuckets) { b in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(b.tier.displayName)
+                        Text(b.label)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         Spacer()
@@ -378,18 +421,13 @@ struct PortfolioBreakdownView: View {
                             .font(.subheadline.weight(.bold).monospacedDigit())
                             .foregroundStyle(qualityTint(b.tier))
                     }
-                    HStack {
-                        Text("\(b.cardCount) \(b.cardCount == 1 ? "card" : "cards") · \(wholeUSDString(b.value))")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Spacer()
-                    }
-                    if expandedQuality {
-                        Text(b.tier.blurb)
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(b.blurb)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\(b.cardCount) \(b.cardCount == 1 ? "card" : "cards") · \(wholeUSDString(b.value))")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule().fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
@@ -400,22 +438,17 @@ struct PortfolioBreakdownView: View {
                     .frame(height: 5)
                 }
             }
-            Button(expandedQuality ? "Hide definitions" : "What do these mean?") {
-                withAnimation(.easeInOut(duration: 0.2)) { expandedQuality.toggle() }
-            }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
         }
         .padding(16)
         .hiqCard()
     }
 
-    private func qualityTint(_ tier: PortfolioQualityTier) -> Color {
+    private func qualityTint(_ tier: String) -> Color {
         switch tier {
-        case .cornerstone: return HobbyIQTheme.Colors.hobbyGreen
-        case .strongHold: return HobbyIQTheme.Colors.successGreen
-        case .market: return HobbyIQTheme.Colors.electricBlue
-        case .speculative: return HobbyIQTheme.Colors.warning
+        case "cornerstone": return HobbyIQTheme.Colors.hobbyGreen
+        case "strongHold": return HobbyIQTheme.Colors.successGreen
+        case "market": return HobbyIQTheme.Colors.electricBlue
+        default: return HobbyIQTheme.Colors.warning
         }
     }
 
@@ -423,15 +456,15 @@ struct PortfolioBreakdownView: View {
 
     @ViewBuilder
     private var recommendationsCard: some View {
-        if !result.recommendations.isEmpty {
+        if result.recommendations.isEmpty == false {
             VStack(alignment: .leading, spacing: 12) {
                 sectionTitle("HobbyIQ Recommendations", subtitle: nil)
                 ForEach(result.recommendations) { r in
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: icon(for: r.kind))
                             .font(.caption)
-                            .foregroundStyle(r.kind == .strength ? HobbyIQTheme.Colors.successGreen
-                                                                 : HobbyIQTheme.Colors.electricBlue)
+                            .foregroundStyle(r.kind == "strength" ? HobbyIQTheme.Colors.successGreen
+                                                                  : HobbyIQTheme.Colors.electricBlue)
                             .frame(width: 18)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(r.title)
@@ -450,14 +483,14 @@ struct PortfolioBreakdownView: View {
         }
     }
 
-    private func icon(for kind: RecommendationKind) -> String {
+    private func icon(for kind: String) -> String {
         switch kind {
-        case .allocation: return "chart.pie.fill"
-        case .concentration: return "exclamationmark.triangle.fill"
-        case .quality: return "star.fill"
-        case .scarcity: return "diamond.fill"
-        case .consolidation: return "arrow.triangle.merge"
-        case .strength: return "checkmark.seal.fill"
+        case "allocation": return "chart.pie.fill"
+        case "concentration": return "exclamationmark.triangle.fill"
+        case "quality": return "star.fill"
+        case "scarcity": return "diamond.fill"
+        case "consolidation": return "arrow.triangle.merge"
+        default: return "checkmark.seal.fill"
         }
     }
 
@@ -490,9 +523,9 @@ struct PortfolioBreakdownView: View {
 
     // MARK: - Caveat
 
-    /// Honesty rail. When a meaningful slice of the portfolio has no readable
-    /// print run, the numbers above are softer than they look and the screen
-    /// should say so rather than let a confident donut imply otherwise.
+    /// Honesty rail. When a meaningful slice has no readable print run, the
+    /// numbers above are softer than they look and the screen should say so
+    /// rather than let a confident donut imply otherwise.
     @ViewBuilder
     private var dataCaveat: some View {
         if result.unknownScarcityValueShare > 0.20 {
