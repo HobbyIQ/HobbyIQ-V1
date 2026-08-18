@@ -75,20 +75,6 @@ vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
 vi.mock("../src/services/playerTrend/parallelTierTrend.service.js", () => ({
   getParallelTierTrend: vi.fn(async () => null),
 }));
-// CF-RELEASE-DECAY-PRIOR (2026-07-05) bends the weekly rate toward baseline
-// decay for cards under 8 weeks post-release, blending to matched-cohort by
-// week 8. It was NOT mocked here, so the real prior ran and blended the
-// trend rate down — a test asserting a pure +10%/week rate then measured
-// 6.3%/week and looked like a broken cap when the cap was fine.
-//
-// Null by default so rate tests measure the signal they set. A test that
-// wants the blend should override this mock explicitly, which also makes
-// the blend visible rather than ambient.
-vi.mock("../src/services/compiq/releaseDecayPrior.service.js", () => ({
-  getReleaseDecayForCard: vi.fn(() => null),
-  getReleaseDecayForCardAsync: vi.fn(async () => null),
-  __testing__: {},
-}));
 
 // Deterministic "now" so recency-based confidence tests are stable.
 const FAKE_NOW = new Date("2026-07-04T12:00:00.000Z");
