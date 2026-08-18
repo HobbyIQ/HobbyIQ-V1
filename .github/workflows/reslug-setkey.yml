@@ -62,7 +62,12 @@ jobs:
       ACC: hobbyiq-comps
       RG: rg-hobbyiq-dev
       DB: hobbyiq
-      SOLD_IDLE_MAX: "4000"
+      # 8000 is Azure's floor for this container, not a preference: autoscale
+      # max may not go below highest-ever-provisioned / 10, and sold_comps
+      # peaked at 80000. This said "4000" until 2026-08-18, so the teardown
+      # failed on run 32140009688 and stranded the account at the 40000 working
+      # ceiling -- the exact bill the scaling exists to avoid.
+      SOLD_IDLE_MAX: "8000"
       SOLD_WORK_MAX: "40000"
     steps:
       - uses: actions/checkout@v4

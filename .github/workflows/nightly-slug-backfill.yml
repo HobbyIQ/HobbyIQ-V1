@@ -61,10 +61,21 @@ jobs:
       RG: rg-hobbyiq-dev
       DB: hobbyiq
       # Idle ceiling and working ceiling for the container this job writes to.
-      # 40000 is the value sold_comps ran at before this job existed; 4000 is
-      # the lowest Azure accepts (max autoscale may not go below 1/10 of the
-      # highest ever provisioned).
-      SOLD_IDLE_MAX: "4000"
+      # 40000 is the value sold_comps ran at before this job existed.
+      #
+      # 8000 is the idle floor, and it is NOT a preference -- it is the lowest
+      # Azure will accept for this container:
+      #
+      #   Requested throughput 4000 is less than required minimum throughput
+      #   8000. Minimum limit 8000 is because of Highest RUs provisioned 80000.
+      #
+      # Autoscale max may not go below highest-ever-provisioned / 10, and
+      # sold_comps peaked at 80000. This said "4000" until 2026-08-18 with a
+      # comment asserting 4000 was the floor; the teardown failed every run
+      # (32140009688) and left the account parked at the 40000 working ceiling
+      # -- the exact bill the scaling exists to avoid. The number was never
+      # reachable, so the step could only ever fail.
+      SOLD_IDLE_MAX: "8000"
       SOLD_WORK_MAX: "40000"
     steps:
       - uses: actions/checkout@v4
