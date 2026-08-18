@@ -208,8 +208,15 @@ export default function PortfolioBreakdownPage() {
 
       {/* allocation */}
       <div className={`mt-4 ${card}`}>
-        <h2 className="text-lg font-semibold text-white">Allocation</h2>
-        <p className="text-xs text-slate-400">Current vs HobbyIQ Target</p>
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Allocation</h2>
+            <p className="text-xs text-slate-400">Current vs target</p>
+          </div>
+          <Link href="/app/portfolio/breakdown/tiers" className="text-xs text-sky-400 hover:underline">
+            Edit tiers →
+          </Link>
+        </div>
         <div className="mt-4 flex flex-col items-center gap-6 md:flex-row md:items-start">
           <Donut allocations={data.allocations} />
           <div className="w-full space-y-4">

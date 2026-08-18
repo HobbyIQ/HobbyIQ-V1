@@ -3700,12 +3700,64 @@ export async function getPortfolioBreakdown(req: Request, res: Response) {
     (h) => (h as any).cardStatus !== "pending-review",
   );
   const holdings = composePortfolioListResponse(items);
-  const { analyzePortfolio } = await import("./portfolioAnalytics.service.js");
+  const { analyzePortfolio, analyzeWithCustomTiers } = await import("./portfolioAnalytics.service.js");
+
+  // CF-CUSTOM-TIERS (2026-08-17): when the user has defined their own buckets,
+  // the allocation is computed against THOSE. Absent → the HobbyIQ defaults, so
+  // this is purely additive for anyone who never opens the editor.
+  const custom = (doc as { portfolioTiers?: unknown[] }).portfolioTiers;
+  const result = Array.isArray(custom) && custom.length > 0
+    ? analyzeWithCustomTiers(holdings as never[], custom as never[])
+    : analyzePortfolio(holdings as never[]);
+
   res.json({
     userId: auth.userId,
     analyzedAt: new Date().toISOString(),
-    ...analyzePortfolio(holdings as never[]),
+    usingCustomTiers: Array.isArray(custom) && custom.length > 0,
+    ...result,
   });
+}
+
+/** CF-CUSTOM-TIERS: read the caller's tier definitions. Returns the HobbyIQ
+ *  defaults when none are set, so the editor always has something to open
+ *  against rather than a blank page. */
+export async function getPortfolioTiers(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const doc = await readUserDoc(auth.userId);
+  const { defaultTiers } = await import("./portfolioCustomTiers.js");
+  const custom = (doc as { portfolioTiers?: unknown[] }).portfolioTiers;
+  const isCustom = Array.isArray(custom) && custom.length > 0;
+  res.json({ tiers: isCustom ? custom : defaultTiers(), isCustom });
+}
+
+/** CF-CUSTOM-TIERS: replace the caller's tier definitions.
+ *
+ *  Validation REJECTS rather than repairs where a repair would change meaning —
+ *  a mistyped target comes back as an error instead of being silently
+ *  renormalised into something the user did not ask for. Sending an empty array
+ *  clears back to the HobbyIQ defaults. */
+export async function putPortfolioTiers(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const { validateTiers } = await import("./portfolioCustomTiers.js");
+
+  const body = (req.body ?? {}) as { tiers?: unknown };
+  if (Array.isArray(body.tiers) && body.tiers.length === 0) {
+    const doc = await readUserDoc(auth.userId);
+    delete (doc as { portfolioTiers?: unknown }).portfolioTiers;
+    await writeUserDoc(auth.userId, doc);
+    const { defaultTiers } = await import("./portfolioCustomTiers.js");
+    return res.json({ tiers: defaultTiers(), isCustom: false });
+  }
+
+  const parsed = validateTiers(body.tiers);
+  if ("error" in parsed) return res.status(400).json({ error: parsed.error });
+
+  const doc = await readUserDoc(auth.userId);
+  (doc as { portfolioTiers?: unknown }).portfolioTiers = parsed.tiers;
+  await writeUserDoc(auth.userId, doc);
+  return res.json({ tiers: parsed.tiers, isCustom: true });
 }
 
 /**

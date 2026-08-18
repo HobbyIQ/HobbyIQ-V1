@@ -224,6 +224,11 @@ router.get("/holdings", portfolio.getHoldings);
 // PortfolioIQ Score, risk, concentration, quality tiers, recommendations.
 // Server-side so web and iOS cannot disagree about the same portfolio.
 router.get("/breakdown", portfolio.getPortfolioBreakdown);
+// CF-CUSTOM-TIERS (2026-08-17): user-defined allocation buckets. GET returns
+// the HobbyIQ defaults when none are set, so the editor always opens against
+// something real. PUT with an empty array clears back to defaults.
+router.get("/breakdown/tiers", portfolio.getPortfolioTiers);
+router.put("/breakdown/tiers", portfolio.putPortfolioTiers);
 
 // CF-EBAY-SOLD-SYNC-ON-DEMAND (Drew, 2026-08-17: "it is working, but we don't
 // have a button to make that happen").
