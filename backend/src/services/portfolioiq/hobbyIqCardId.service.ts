@@ -307,6 +307,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Keys match the catalog rather than being invented here.
     [/topps-cosmic-chrome|cosmic-chrome/, "topps-cosmic-chrome"],
     [/topps-now/, "topps-now"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2 (Drew, 2026-08-17). More distinct Topps
+    // lines that fell to the bare-topps catch-all, each with its own catalog key:
+    //
+    //     Topps Signature Class   21,840 sales    1,329 catalog rows
+    //     Topps Resurgence        17,471 sales      129 catalog rows
+    //     Topps Composite         12,776 sales      330 catalog rows
+    //
+    // Deliberately requires the topps- prefix. Bare "resurgence" and "composite"
+    // also name INSERTS inside those products (resurgence-signatures,
+    // composite-patch-autographs) which hold their own catalog keys, so an
+    // unanchored match would collapse those in the opposite direction.
+    [/topps-signature-class/, "topps-signature-class"],
+    [/topps-resurgence/, "topps-resurgence"],
+    [/topps-composite/, "topps-composite"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
@@ -314,6 +328,12 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // CF-COLLAPSED-SETKEY-AUDIT: Prizm Draft Picks is its own product with its
     // own checklist (36,108 catalog rows) — 65,582 sales sat on panini-prizm.
     // MUST precede the base prizm rule or the qualifier is swallowed.
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2: Prizm WNBA is a different league with
+    // its own checklist — 51,933 sales sat on panini-prizm. Monopoly WNBA is a
+    // FURTHER distinct product (its own catalog key), so it matches first or it
+    // is swallowed here.
+    [/prizm-monopoly-wnba|monopoly-wnba/, "panini-prizm-monopoly-wnba"],
+    [/prizm-wnba/, "panini-prizm-wnba"],
     [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
     [/panini-prizm/, "panini-prizm"],
     // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
@@ -470,6 +490,15 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // "ultraviolet" does NOT match. "ultra-pro" DOES — that is a supplies
     // brand, never a setName, so it is accepted rather than special-cased.
     [/(?:^|-)ultra(?:-|$)/, "ultra"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2: Fleer Tradition is a large distinct
+    // line (158,040 catalog rows, 7,631 sales) and Fleer Update another
+    // (2,504 rows, 8,230 sales). Tradition Update and Tradition Glossy hold
+    // their own keys, so the longer patterns lead — otherwise plain Tradition
+    // swallows both.
+    [/fleer-tradition-update/, "fleer-tradition-update"],
+    [/fleer-tradition-glossy/, "fleer-tradition-glossy"],
+    [/fleer-tradition|(?:^|-)tradition(?:-|$)/, "fleer-tradition"],
+    [/fleer-update/, "fleer-update"],
     [/fleer/, "fleer"],
   ];
 }
