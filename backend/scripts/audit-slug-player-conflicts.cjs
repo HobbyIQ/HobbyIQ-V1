@@ -79,38 +79,70 @@ function looksLikeCaption(lower) {
   return lower.split(/[^a-z-]+/).some((w) => w && CAPTION_WORDS.has(w));
 }
 
-/** Surname + first initial. Deliberately coarse — see the header. */
-function nameKey(raw) {
-  let s = String(raw ?? "").toLowerCase().trim();
-  if (!s) return null;
-  // Multi-player cards are legitimate; skip rather than call them a conflict.
-  if (/[/&+]| and | vs\.? /.test(s)) return null;
-  if (looksLikeCaption(s)) return null;
-  s = s.replace(/\b(jr|sr|ii|iii|iv|rc|rookie)\b/g, " ");
-  s = s.replace(/[^a-z\s,]/g, " ").replace(/\s+/g, " ").trim();
-  if (!s) return null;
-  // "Ohtani, Shohei" → "shohei ohtani"
-  if (s.includes(",")) {
-    const [last, first] = s.split(",").map((x) => x.trim());
-    s = `${first ?? ""} ${last}`.trim();
+/**
+ * CF-NAME-NOISE-FALSE-POSITIVE (2026-08-17). The first cut took the LAST WORD
+ * as the surname. Vendor name fields routinely carry trailing noise — grading
+ * qualifiers, parallel names, print-run words — so that assumption broke:
+ *
+ *     "Ken Griffey Jr"           -> surname "griffey"
+ *     "Ken Griffey Jr Perfectly" -> surname "perfectly"    FALSE CONFLICT
+ *     "Michael Jordan"           vs "Short Print Michael Jordan"
+ *     "Jayden Daniels"           vs "Jayden Daniels Disco"
+ *
+ * All three pairs are the SAME player and all three were reported as wrong-card
+ * attachments. At full-index scale that inflated the conflict rate by roughly an
+ * order of magnitude (11.72% of slugs) and made the MINORITY class — the one
+ * that looked mechanically repairable — almost entirely noise. Acting on it
+ * would have "repaired" correct data.
+ *
+ * Names are now compared on their TOKEN SET. Two names describe the same person
+ * when one is wholly contained in the other, or when they share two meaningful
+ * tokens. Only names with no meaningful overlap are a conflict. That is immune
+ * to anything appended to the end, which is where vendor noise always lands.
+ */
+const NAME_NOISE = new Set([
+  "jr", "sr", "ii", "iii", "iv", "rc", "rookie", "short", "print", "sp",
+  "auto", "autograph", "refractor", "prizm", "holo", "disco", "mojo", "wave",
+  "psa", "bgs", "sgc", "cgc", "gem", "mint", "graded", "raw", "the", "of",
+  "perfectly", "bccg", "case", "hit", "ssp", "variation", "image", "photo",
+  "silver", "gold", "black", "red", "blue", "green", "orange", "purple",
+]);
+
+function nameTokens(raw) {
+  let t = String(raw ?? "").toLowerCase().trim();
+  if (!t) return null;
+  if (/[/&+]| and | vs\.? /.test(t)) return null;   // multi-player card
+  if (looksLikeCaption(t)) return null;
+  if (t.includes(",")) {                            // "Ohtani, Shohei"
+    const [last, first] = t.split(",").map((x) => x.trim());
+    t = `${first ?? ""} ${last}`.trim();
   }
-  const parts = s.split(" ").filter(Boolean);
-  if (parts.length === 0) return null;
-  const last = parts[parts.length - 1];
-  const initial = parts.length > 1 ? parts[0][0] : "";
-  // A bare surname matches any first initial, so it can never manufacture a
-  // conflict on its own.
-  return `${last}|${initial}`;
+  const toks = t.replace(/[^a-z\s]/g, " ").split(/\s+/)
+    .filter((w) => w.length > 1 && !NAME_NOISE.has(w));
+  return toks.length ? toks : null;
 }
 
-/** Two keys conflict only when both carry an initial and they differ, or the
- *  surnames differ outright. */
+/** Stable grouping key: the meaningful tokens, order-independent. */
+function nameKey(raw) {
+  const toks = nameTokens(raw);
+  return toks ? [...new Set(toks)].sort().join(" ") : null;
+}
+
+/**
+ * Conflict only when the two names share NO meaningful token, or share exactly
+ * one and neither contains the other. Containment ("michael jordan" inside
+ * "michael jordan short print") is the same person.
+ */
 function conflicts(a, b) {
-  const [lastA, iA] = a.split("|");
-  const [lastB, iB] = b.split("|");
-  if (lastA !== lastB) return true;
-  if (!iA || !iB) return false;      // one side unqualified — not a conflict
-  return iA !== iB;
+  const A = new Set(a.split(" "));
+  const B = new Set(b.split(" "));
+  let shared = 0;
+  for (const t of A) if (B.has(t)) shared++;
+  if (shared === 0) return true;
+  if (shared === A.size || shared === B.size) return false;  // containment
+  // A single shared token is usually just a common first name
+  // ("Chris Carter" vs "Chris Johnson"), so that still counts as a conflict.
+  return shared < 2;
 }
 
 async function main() {
