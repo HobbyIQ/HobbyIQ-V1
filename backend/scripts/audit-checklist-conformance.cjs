@@ -15,7 +15,7 @@
  * but cannot prove it. The checklist is the only authority that can, because it
  * is a transcription of what was actually printed.
  *
- * SOURCES ARE NOT EQUAL. Only sources that transcribe a printed checklist count
+ * SOURCES ARE NOT EQUAL, AND THE TEST MUST BE A PATTERN. Only transcriptions count
  * as evidence. A vendor's own catalog records how the VENDOR types, not what
  * the manufacturer printed, and vendor rows are exactly where the bad spellings
  * live — 41,638 vendor rows say BCP109 while checklist rows say BCP-109 every
@@ -56,12 +56,39 @@ const SPORT = arg("sport", "baseball");
 const TOP = Number(arg("top", "40"));
 const MIN_COMPS = Number(arg("minComps", "3"));
 
-/** Transcriptions of a printed checklist. Vendor catalogs and our own
- *  auto-seeded rows are excluded on purpose — see the header. */
-const CHECKLIST_SOURCES = new Set([
-  "beckett-checklist", "checklistcenter", "beckett-scraped",
-  "beckett-scraped-2026-08-19", "cardboardconnection",
-]);
+/**
+ * Is this source a transcription of a printed checklist?
+ *
+ * MATCHED BY PATTERN, NOT BY AN EXACT LIST — and that distinction is the whole
+ * lesson here. The first version hardcoded five exact strings and reported that
+ * only 6.1% of Bowman catalog rows were checklist-backed, which read as a
+ * catastrophic data gap. The real figure is 87.8%. The allowlist was wrong, not
+ * the data.
+ *
+ * What it silently discarded:
+ *   baseballcardpedia   918,828 rows   the single largest checklist source
+ *   bccp                375,722        (the same site, abbreviated)
+ *   checklistcenter-html 35,972        a spelling variant of an allowed source
+ *   checklist            20,219
+ *   beckett-scraped-2026-08-13/-17/-18  only the -19 run was listed
+ *   ...and the "-graded" twin of every one of them
+ *
+ * Dated scrape runs and `-graded` variants mint a NEW source string every time,
+ * so an exact list silently rots with each run. An audit whose authority set
+ * decays is worse than no audit: it reports a shrinking evidence base as if it
+ * were a growing data problem.
+ *
+ * The exclusions are what matter and they are explicit: a vendor catalog
+ * records how the VENDOR types, and `ingest-auto-seed` / `sold-comps-stub` /
+ * `catalog-explode` are our own inferences written back — a mis-slugged comp
+ * would vote to confirm itself.
+ */
+function isChecklistSource(source) {
+  const s = String(source ?? "").toLowerCase().replace(/-graded$/, "");
+  if (/^(cardhedge|cardsight|ebay|ingest-auto-seed|sold-comps-stub|tree-builder|catalog-explode|user-verified)/.test(s)) return false;
+  if (/-product-structure$/.test(s)) return false;
+  return /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor/.test(s);
+}
 
 const NOISE = new Set([
   "au", "auto", "autos", "autograph", "autographs", "on", "card", "true", "mini", "rc", "rookie",
@@ -100,7 +127,7 @@ async function main() {
       const { resources } = await iter.fetchNext();
       for (const r of resources || []) {
         n++;
-        if (!CHECKLIST_SOURCES.has(r.source)) continue;
+        if (!isChecklistSource(r.source)) continue;
         const num = numKey(r.cardNumber);
         const p = core(r.playerName);
         if (!num || !p || !r.year) continue;
