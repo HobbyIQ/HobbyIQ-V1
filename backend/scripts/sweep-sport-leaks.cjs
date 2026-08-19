@@ -109,26 +109,46 @@ const REFRESH_PAGES = Number(arg("refreshPages", "400"));
  * a resumed query returns the same rows the original would have.
  */
 async function scanAll(name, sql, onRow, label) {
-  let token, pages = 0, rows = 0;
+  let token, pages = 0, rows = 0, throttles = 0;
   for (;;) {
     const c = container(newClient(), name);
     const iter = c.items.query(sql, { maxItemCount: 2000, continuationToken: token });
-    let legPages = 0;
+    let legPages = 0, drained = false;
     while (iter.hasMoreResults()) {
-      const page = await iter.fetchNext();
+      let page;
+      try {
+        page = await iter.fetchNext();
+      } catch (e) {
+        // A 429 whose SDK retries are exhausted is NOT fatal — the continuation
+        // token still marks our place, so the correct response is to wait and
+        // resume, not to lose the scan. The second full run died here after the
+        // first survived nine hours, which would have been a very expensive way
+        // to learn that an unhandled 429 discards everything.
+        if (e?.code !== 429 && e?.code !== 503) throw e;
+        throttles++;
+        const waitMs = Math.min(60_000, (e.retryAfterInMs ?? 1000) + 1000 * Math.min(throttles, 20));
+        process.stderr.write(`\r  ${label} throttled (${throttles}), waiting ${Math.round(waitMs / 1000)}s at row ${rows}   `);
+        await new Promise((r) => setTimeout(r, waitMs));
+        break;   // rebuild the iterator from `token` on the next leg
+      }
       token = page.continuationToken;
       for (const r of page.resources || []) { rows++; onRow(r); }
       pages++; legPages++;
       if (rows % 500000 < 2000) process.stderr.write(`\r  ${label} scanned=${rows}   `);
+      if (!iter.hasMoreResults()) { drained = true; break; }
       // Hand back to the outer loop so the next leg gets a fresh credential.
       if (legPages >= REFRESH_PAGES) break;
-      if (rows >= LIMIT) { token = undefined; break; }
+      if (rows >= LIMIT) { drained = true; break; }
     }
-    // Genuinely finished only when the iterator is drained AND we did not stop
-    // early for a refresh.
-    if (rows >= LIMIT || !token || (legPages < REFRESH_PAGES && !iter.hasMoreResults())) break;
+    // Finished only when the iterator actually drained. `!token` is NOT a
+    // termination signal: a cross-partition query legitimately reports an
+    // undefined continuation mid-flight, and treating that as done silently
+    // truncates the sweep.
+    if (drained || rows >= LIMIT) break;
+    if (!token && legPages === 0 && throttles === 0) break;
   }
   process.stderr.write("\n");
+  if (throttles) console.log(`  ${label}: absorbed ${throttles} throttle pause(s)`);
   return rows;
 }
 
