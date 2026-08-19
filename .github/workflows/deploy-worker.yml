@@ -90,8 +90,14 @@ jobs:
 
       # Same packaging path as daily-refresh so the worker cannot drift from
       # HobbyIQ3 — identical dist/ + node_modules in the zip.
-      - name: Install archiver
-        working-directory: backend
+      #
+      # archiver installs at the ROOT, not in backend/, because zip.js runs
+      # from the root and resolves modules from there. daily-refresh labels
+      # this step "Install root zip dependencies (needed by zip.js)" for the
+      # same reason. Installing it under backend/ gets "Cannot find module
+      # 'archiver'" — the second directory mistake in this workflow, both from
+      # assuming the packaging step is backend-scoped when it is repo-scoped.
+      - name: Install root zip dependencies
         run: npm install archiver --no-save
 
       # zip.js lives at the REPO ROOT and writes deploy.zip beside itself —
