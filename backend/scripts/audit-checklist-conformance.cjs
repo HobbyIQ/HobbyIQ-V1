@@ -148,7 +148,22 @@ async function main() {
     }, { maxItemCount: 2000 });
     let n = 0, kept = 0;
     while (iter.hasMoreResults()) {
-      const { resources } = await iter.fetchNext();
+      let page;
+      try {
+        page = await iter.fetchNext();
+      } catch (e) {
+        // Fourth script to need this. An exhausted 429 must not discard a scan
+        // that is 14M rows deep — but this iterator has no continuation kept,
+        // so the honest response is to fail loudly rather than report a partial
+        // checklist as if it were complete. A truncated index would silently
+        // turn CONFORMANT rows into ORPHANs and MOVEs into nothing.
+        if (e?.code === 429 || e?.code === 503) {
+          console.error(`
+FATAL: throttled after ${n} catalog rows. Raise RU and re-run — a partial checklist index would mis-judge every comp.`);
+        }
+        throw e;
+      }
+      const { resources } = page;
       for (const r of resources || []) {
         n++;
         if (!isChecklistSource(r.source)) continue;
