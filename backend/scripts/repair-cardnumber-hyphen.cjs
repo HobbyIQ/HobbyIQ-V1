@@ -67,17 +67,32 @@ const arg = (n, d) => {
   return hit ? hit.slice(n.length + 3) : d;
 };
 const APPLY = process.argv.includes("--apply");
-const FAMILY = arg("family", "bowman");
+// Empty = every family in the sport. The prefix table is derived per run from
+// whatever checklist rows are in scope, so widening the scope widens the
+// evidence rather than loosening the rule.
+const FAMILY = arg("family", "");
 const SPORT = arg("sport", "baseball");
 const POOL = Math.max(1, Number(arg("pool", "8")));
 const TOP = Number(arg("top", "30"));
 
-/** Sources that transcribe a printed checklist. A vendor's own catalog is NOT
- *  evidence of how the card is printed — it is evidence of how the vendor types. */
-const CHECKLIST_SOURCES = new Set([
-  "beckett-checklist", "checklistcenter", "beckett-scraped",
-  "beckett-scraped-2026-08-19", "cardboardconnection",
-]);
+/**
+ * Sources that transcribe a printed checklist. A vendor's own catalog is NOT
+ * evidence of how the card is printed — it is evidence of how the vendor types.
+ *
+ * MATCHED BY PATTERN. This started as an exact list of five strings, which
+ * discarded baseballcardpedia's 918,828 rows, all of bccp, three of the four
+ * dated beckett-scraped runs and the "-graded" twin of everything. That is a
+ * dangerous shape for THIS script in particular: the rule is "hyphenate only
+ * where the checklist never spells it bare", so a thinner evidence base does
+ * not fail safe — it makes prefixes look UNANIMOUS that are actually split, and
+ * licenses rewrites the full checklist would have blocked.
+ */
+function isChecklistSource(source) {
+  const s = String(source ?? "").toLowerCase().replace(/-graded$/, "");
+  if (/^(cardhedge|cardsight|ebay|ingest-auto-seed|sold-comps-stub|tree-builder|catalog-explode|user-verified)/.test(s)) return false;
+  if (/-product-structure$/.test(s)) return false;
+  return /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor/.test(s);
+}
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -92,15 +107,18 @@ async function main() {
   const tally = new Map();   // prefix -> { ckHy, ckNo }
   {
     const iter = cat.items.query({
-      query: `SELECT c.cardNumber, c.source FROM c
-               WHERE IS_STRING(c.cardNumber) AND STARTSWITH(c.setKey, @f)`,
-      parameters: [{ name: "@f", value: FAMILY }],
+      query: FAMILY
+        ? `SELECT c.cardNumber, c.source FROM c
+            WHERE IS_STRING(c.cardNumber) AND STARTSWITH(c.setKey, @f)`
+        : `SELECT c.cardNumber, c.source FROM c
+            WHERE IS_STRING(c.cardNumber) AND c.sport = @s`,
+      parameters: FAMILY ? [{ name: "@f", value: FAMILY }] : [{ name: "@s", value: SPORT }],
     }, { maxItemCount: 2000 });
     let n = 0;
     while (iter.hasMoreResults()) {
       const { resources } = await iter.fetchNext();
       for (const r of resources || []) {
-        if (!CHECKLIST_SOURCES.has(r.source)) continue;
+        if (!isChecklistSource(r.source)) continue;
         const s = String(r.cardNumber).trim();
         const hy = /^([A-Za-z]{1,5})-(\d+)$/.exec(s);
         const no = /^([A-Za-z]{2,5})(\d+)$/.exec(s);
@@ -128,9 +146,14 @@ async function main() {
   const skippedUnproven = new Map();
   {
     const iter = sold.items.query({
-      query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.cardNumber FROM c
-               WHERE STARTSWITH(c.hobbyiqCardId, @p) AND CONTAINS(c.hobbyiqCardId, @f)`,
-      parameters: [{ name: "@p", value: `hiq:${SPORT}:` }, { name: "@f", value: `:${FAMILY}` }],
+      query: FAMILY
+        ? `SELECT c.id, c.cardId, c.hobbyiqCardId, c.cardNumber FROM c
+            WHERE STARTSWITH(c.hobbyiqCardId, @p) AND CONTAINS(c.hobbyiqCardId, @f)`
+        : `SELECT c.id, c.cardId, c.hobbyiqCardId, c.cardNumber FROM c
+            WHERE STARTSWITH(c.hobbyiqCardId, @p)`,
+      parameters: FAMILY
+        ? [{ name: "@p", value: `hiq:${SPORT}:` }, { name: "@f", value: `:${FAMILY}` }]
+        : [{ name: "@p", value: `hiq:${SPORT}:` }],
     }, { maxItemCount: 2000 });
     let n = 0;
     while (iter.hasMoreResults()) {
