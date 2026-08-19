@@ -1,5 +1,25 @@
 name: Staging Pipeline Cron
 
+# CF-WORKER-SEPARATION (Drew, 2026-08-18). BASE now points at
+# hobbyiq3-worker.azurewebsites.net, NOT HobbyIQ3.
+#
+# This cron drives every /api/staging/* call, and it fires every 5 minutes.
+# Measured over 24h before the move, it accounted for 262 of ~280 total
+# server-seconds on HobbyIQ3 — 94% of all work the interactive app did — while
+# real users generated ~60 requests. Batch work of that shape has no business
+# sharing a process with page loads: it competes for memory, Cosmos RU and
+# connection budget, and it couples deploy blast radius.
+#
+# HONEST SCOPE. This is hygiene and headroom, not a latency fix. The original
+# theory was that image-verify blocked the event loop; it does not — it was a
+# sequential loop of Azure Vision OCR calls, i.e. network waiting with the loop
+# idle. That job got faster from concurrency (pool of 6, ~40s -> ~7s), not from
+# moving hosts.
+#
+# The worker runs the identical build from the same zip.js packaging path, so
+# it cannot drift from HobbyIQ3. To roll back, put the HobbyIQ3 host back here
+# — nothing else is host-specific.
+#
 # CF-STAGING-PIPELINE-CRON (Drew, 2026-07-28). Autonomous drain of
 # the staging pipeline every 5 minutes. Each run walks all three
 # jobs in order: data-clean → image-verify → promotion.
@@ -128,7 +148,7 @@ jobs:
       # jobs, so a failing shard still fails the step.
       - name: Data-clean (sharded)
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.data_clean_limit || '750' }}
           SHARDS: ${{ inputs.shards || '1' }}
@@ -167,7 +187,7 @@ jobs:
         id: image_verify
         continue-on-error: true
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.image_verify_limit || '100' }}
         run: |
@@ -181,7 +201,7 @@ jobs:
           fi
       - name: Auto-triage
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: '2000'
         run: |
@@ -192,7 +212,7 @@ jobs:
       # the data path, and if it breaks the run should go red.
       - name: Promotion (sharded)
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.promotion_limit || '250' }}
           SHARDS: ${{ inputs.shards || '1' }}
@@ -212,7 +232,7 @@ jobs:
           exit $rc
       - name: Health snapshot
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
         run: |
           curl -sf -H "Authorization: Bearer $ADMIN_TOKEN" \
