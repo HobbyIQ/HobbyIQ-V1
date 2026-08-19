@@ -37,7 +37,7 @@ export interface OcrResult {
  * Extract text from an image URL. Silent-safe: any failure returns
  * `{ok: false, error}` instead of throwing. Timeout at 15s.
  */
-export async function ocrImageUrl(imageUrl: string): Promise<OcrResult> {
+export async function ocrImageUrl(imageUrl: string, attempt = 0): Promise<OcrResult> {
   if (!imageUrl) return { ok: false, rawText: "", lines: [], confidence: 0, error: "missing URL" };
   const ep = endpoint();
   const key = apiKey();
@@ -56,6 +56,31 @@ export async function ocrImageUrl(imageUrl: string): Promise<OcrResult> {
       signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
     });
     if (!submitRes.ok) {
+      // CF-VISION-429-RETRY (Drew, 2026-08-18). image-verify used to call this
+      // strictly one row at a time, so throttling was near-impossible and a
+      // non-2xx could be reported and forgotten. It now runs a pool
+      // (CF-IMAGE-VERIFY-CONCURRENCY), which makes 429 a REAL outcome rather
+      // than a theoretical one.
+      //
+      // Without this, raising concurrency would have traded a slow-but-correct
+      // job for a fast-but-lossy one: a throttled row returns ok:false, the
+      // caller reads that as "vision could not verify", and the row is routed
+      // to manual review as though the image genuinely did not match. Silent
+      // loss dressed as a verdict — the same failure shape as a confidently
+      // wrong slug.
+      //
+      // Honour Retry-After when the service sends it; otherwise back off
+      // gently. Bounded at 2 retries because the batch has its own wall clock
+      // and the cron reruns every 5 minutes — a row that cannot get through
+      // now is better left for the next pass than spun on here.
+      if (submitRes.status === 429 && attempt < 2) {
+        const hdr = Number(submitRes.headers.get("retry-after"));
+        const waitMs = Number.isFinite(hdr) && hdr > 0
+          ? Math.min(hdr * 1000, 10_000)
+          : 500 * (attempt + 1);
+        await new Promise((r) => setTimeout(r, waitMs));
+        return ocrImageUrl(imageUrl, attempt + 1);
+      }
       const body = await submitRes.text().catch(() => "");
       return { ok: false, rawText: "", lines: [], confidence: 0, error: `submit HTTP ${submitRes.status}: ${body.slice(0, 200)}` };
     }
