@@ -82,10 +82,24 @@ async function main() {
   // ---- 1. Build the correction map from the CATALOG -----------------------
   const catWhere = ["IS_DEFINED(c.cardNumber)", "IS_DEFINED(c.playerName)"];
   if (YEAR) catWhere.push(`c.cardYear = ${Number(YEAR)}`);
-  const { resources: catRows } = await cat.items.query(
+  // PAGINATE, do not fetchAll. The first version pulled a whole year of
+  // card_catalog in one call — 2,000,000 rows for 2024 — and Cosmos threw 429
+  // with x-ms-throttle-retry-count=3 after 31s of backoff, at the container's
+  // 20k RU. The audit script that produced these findings paginates with
+  // maxItemCount for exactly this reason; the repair has to as well or it can
+  // never run on the years it was written for.
+  const catIter = cat.items.query(
     `SELECT c.playerName, c.cardYear, c.setKey, c.parallel, c.cardNumber, c.source
        FROM c WHERE ${catWhere.join(" AND ")}`,
-  ).fetchAll();
+    { maxItemCount: 2000 },
+  );
+  const catRows = [];
+  while (catIter.hasMoreResults()) {
+    const { resources } = await catIter.fetchNext();
+    for (const r of resources || []) catRows.push(r);
+    if (catRows.length % 200000 < 2000) process.stderr.write(`\r  catalog scanned=${catRows.length}   `);
+  }
+  process.stderr.write("\n");
 
   const groups = new Map();  // key -> number -> {rows, checklist}
   for (const r of catRows) {

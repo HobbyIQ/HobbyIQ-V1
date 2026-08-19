@@ -82,6 +82,31 @@ async function main() {
 
   // key -> number -> { rows, sources:Set }
   const groups = new Map();
+  /**
+   * CF-MISKEYED-NOT-MISNUMBERED (Drew, 2026-08-18).
+   *
+   * (player|year|prefix|number) -> Set of setKeys where that number is
+   * CHECKLIST-backed. This is the guard that stops the repair running
+   * backwards.
+   *
+   * Without it, DECIDABLE only asked "within this setKey, is exactly one
+   * number checklist-backed?" — and that is satisfiable by data where BOTH
+   * numbers are real cards in DIFFERENT products:
+   *
+   *   CHECKLIST  bowman-chrome | BCP-238  53 rows   Colt Emerson, Bowman Chrome
+   *      vendor  bowman-chrome | BCP-10   33 rows
+   *   CHECKLIST  bowman        | BCP-10   28 rows   Colt Emerson, flagship Bowman
+   *
+   * BCP-10 is not a typo for BCP-238. It is Colt Emerson's FLAGSHIP number,
+   * and those 33 rows are flagship cards mis-filed under bowman-chrome. The
+   * defect is the setKey, not the number — so the fix is a reslug sweep, and
+   * rewriting the number instead would move a flagship card onto the Chrome
+   * card. Same player, different card, different value: precisely the pooling
+   * corruption this codebase spent 2026-08-18 undoing.
+   *
+   * Measured: this would have mis-repaired 4,051 sales in 2024 alone.
+   */
+  const numberHomes = new Map();
   let scanned = 0;
   while (iter.hasMoreResults()) {
     const { resources } = await iter.fetchNext();
@@ -97,6 +122,14 @@ async function main() {
       if (!e) byNum.set(number, (e = { rows: 0, sources: new Set() }));
       e.rows++;
       if (r.source) e.sources.add(r.source);
+
+      // Record where this number legitimately LIVES, product by product.
+      if (r.source && CHECKLIST_SOURCES.test(r.source)) {
+        const homeKey = [player, r.cardYear, prefixOf(number), number].join("|");
+        let homes = numberHomes.get(homeKey);
+        if (!homes) numberHomes.set(homeKey, (homes = new Set()));
+        homes.add(r.setKey);
+      }
     }
     if (scanned % 100000 < 2000) process.stderr.write(`\r  scanned=${scanned} keys=${groups.size}   `);
   }
@@ -116,12 +149,30 @@ async function main() {
       .sort((a, b) => b.rows - a.rows);
     if (cands.length < 2) continue;
     const backed = cands.filter((c) => c.checklistBacked);
+    const [player, year, setKey] = key.split("|");
+
+    // CF-MISKEYED-NOT-MISNUMBERED. Before calling anything a typo, ask whether
+    // the losing number is a REAL card for this player somewhere else. If it
+    // is checklist-backed under a different setKey, the row is in the wrong
+    // PRODUCT, not carrying the wrong NUMBER — and rewriting the number would
+    // move a flagship card onto its Chrome namesake.
+    const elsewhere = [];
+    for (const c of cands) {
+      if (backed.length === 1 && c.number === backed[0].number) continue;
+      const homes = numberHomes.get([player, Number(year), prefixOf(c.number), c.number].join("|"));
+      if (homes && [...homes].some((sk) => sk !== setKey)) {
+        c.homeSetKeys = [...homes].filter((sk) => sk !== setKey);
+        elsewhere.push(c);
+      }
+    }
+
     conflicts.push({
       key,
       cands,
-      // Decidable when exactly ONE candidate has checklist backing — then the
-      // checklist has already answered and the others are the typos.
-      verdict: backed.length === 1 ? `checklist says ${backed[0].number}`
+      miskeyed: elsewhere,
+      verdict: elsewhere.length > 0
+        ? `MISKEYED — ${elsewhere.map((c) => `${c.number} is a real card under ${c.homeSetKeys.join("/")}`).join("; ")} → fix the setKey, not the number`
+        : backed.length === 1 ? `checklist says ${backed[0].number}`
         : backed.length === 0 ? "NO checklist backing — cannot settle"
         : "MULTIPLE checklist-backed — genuinely different cards, leave alone",
     });
@@ -131,12 +182,19 @@ async function main() {
   const decidable = conflicts.filter((c) => c.verdict.startsWith("checklist says"));
   const unbacked = conflicts.filter((c) => c.verdict.startsWith("NO checklist"));
   const multi = conflicts.filter((c) => c.verdict.startsWith("MULTIPLE"));
+  const miskeyed = conflicts.filter((c) => c.verdict.startsWith("MISKEYED"));
 
   console.log(`\nscanned=${scanned.toLocaleString()} identityKeys=${groups.size.toLocaleString()}`);
   console.log(`conflicting keys: ${conflicts.length.toLocaleString()}  (${(conflicts.length / groups.size * 100).toFixed(2)}% — the rest agree)\n`);
   console.log(`  DECIDABLE  exactly one checklist-backed number : ${decidable.length}`);
   console.log(`  UNBACKED   no checklist behind any candidate   : ${unbacked.length}`);
-  console.log(`  LEAVE      several checklist-backed numbers    : ${multi.length}   <- real distinct cards\n`);
+  console.log(`  LEAVE      several checklist-backed numbers    : ${multi.length}   <- real distinct cards`);
+  console.log(`  MISKEYED   losing number is real under another setKey : ${miskeyed.length}   <- reslug, do NOT renumber\n`);
+  for (const c of miskeyed.slice(0, Math.min(TOP, 8))) {
+    console.log(`  ${c.key}`);
+    console.log(`     ${c.verdict}`);
+  }
+  if (miskeyed.length) console.log("");
 
   for (const c of decidable.slice(0, TOP)) {
     console.log(`  ${c.key}`);
