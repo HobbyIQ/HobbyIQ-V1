@@ -70,6 +70,12 @@ const POOL = Math.max(1, Number(arg("pool", "12")));
  * `years` is not decoration. Donruss is only wrong as panini-donruss BEFORE
  * Panini acquired the brand in 2009; the same key is correct for 2015. A
  * yearless rule would corrupt the modern product to repair the vintage one.
+ *
+ * `numberPrefix` narrows a move to one RUN of card numbers inside the key.
+ * Some keys are only wrong for part of their contents: 2026 `bowman-chrome` is
+ * a perfectly good home for BCP- numbers, and simultaneously the wrong home for
+ * CPA- ones. Without this, repairing the autos would drag the prospects with
+ * them — a fix that breaks more than it mends.
  */
 const MOVES = [
   {
@@ -88,6 +94,30 @@ const MOVES = [
     // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009. Without that fix this script
     // would be swimming upstream: new ingests would keep writing the old key.
     why: "Panini did not own Donruss until 2009",
+  },
+  {
+    sport: "baseball", from: "bowman-chrome", to: "bowman",
+    years: [2026, 2026], numberPrefix: "cpa-",
+    // Drew, 2026-08-18: a gold CPA-MG auto priced at $6.90 against a $187 cost,
+    // because the CPA-MG pool was split 226 rows on `bowman` / 27 on
+    // `bowman-chrome`. A search rooted at one key cannot see the other, so the
+    // gold-refractor:auto:num-75 comp at $51 was invisible to it.
+    //
+    // VERIFIED, NOT ASSUMED — the same bar the other two entries clear.
+    // Of 88 CPA- numbers appearing on more than one setKey in 2026, 80 carry
+    // the SAME dominant player on both. In all 8 that differ, `bowman` and
+    // `bowman-chrome` AGREE with each other and the outlier is a `topps*` key
+    // (a separate defect). So bowman-vs-bowman-chrome divergence is ZERO —
+    // the same signature bowman-draft showed on 2026-08-18 morning.
+    //
+    // Direction comes from the CHECKLIST, not from which side had more rows:
+    // beckett-checklist, beckett-scraped and cardhedge all file CPA-MG as
+    // `2026 bowman`. No checklist source puts a 2026 CPA- number on
+    // bowman-chrome.
+    //
+    // Scoped to CPA- because 2026 bowman-chrome is the RIGHT key for BCP-
+    // numbers; only the autos are misfiled.
+    why: "2026 CPA- autos are Bowman flagship; the split hid gold comps from search",
   },
 ];
 
@@ -109,7 +139,7 @@ async function main() {
       const prefix = `hiq:${m.sport}:${year}:${m.from}:`;
       const iter = sold.items.query({
         query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE STARTSWITH(c.hobbyiqCardId, @p)",
-        parameters: [{ name: "@p", value: prefix }],
+        parameters: [{ name: "@p", value: m.numberPrefix ? prefix + m.numberPrefix : prefix }],
       }, { maxItemCount: 1000 });
 
       let yearMoved = 0;
@@ -126,6 +156,10 @@ async function main() {
           const parts = String(r.hobbyiqCardId).split(":");
           // hiq:sport:year:setKey:number:parallel:auto[:extra]
           if (parts.length < 7 || parts[3] !== m.from) { skipped++; continue; }
+          // Re-checked here and not only in SQL: STARTSWITH narrows what we
+          // fetch, but the decision to rewrite a row is made against the parsed
+          // segment, so a query change can never silently widen the blast area.
+          if (m.numberPrefix && !String(parts[4]).startsWith(m.numberPrefix)) { skipped++; continue; }
           parts[3] = m.to;
           const next = parts.join(":");
           if (next === r.hobbyiqCardId) { skipped++; continue; }
