@@ -34,6 +34,10 @@ import type {
   PortfolioPurchaseEntry,
 } from "./portfolioStore.service.js";
 import type { EbayItemDetails } from "../ebay/ebayItemDetails.service.js";
+// CF-ASPECT-IS-NOT-A-PARALLEL: the normalizer is the single place that knows
+// which strings are real parallels, so the aspect is vetted through it rather
+// than against a second, drifting list here.
+import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 
 /**
  * Threshold at which we auto-create a holding from a purchase.
@@ -499,8 +503,53 @@ export function applyBrowseEnrichment(
   if (aspects["Manufacturer"]) {
     (holding as any).manufacturer = aspects["Manufacturer"];
   }
-  if (aspects["Parallel/Variety"]) {
-    holding.parallel = aspects["Parallel/Variety"];
+  // CF-ASPECT-IS-NOT-A-PARALLEL (Drew, 2026-08-18: "i am seeing a lot of
+  // refractors turned into base cards ... the name itself is not matching
+  // from ebay").
+  //
+  // eBay's Parallel/Variety aspect is SELLER-TYPED, and sellers routinely put
+  // the PRODUCT there. This blindly overwrote the title parse — which had
+  // already got it right on line ~353 — and the real parallel was discarded:
+  //
+  //   "2025 Bowman Chrome Refractor Max Williams"    aspect "Chrome"  (was Refractor)
+  //   "2026 Topps Chrome Yellow Parallel K. Griffin" aspect "Chrome"  (was Yellow)
+  //   "2026 Bowman Blue Blaine Bullard Logo Pattern" aspect "Chrome"  (was Blue)
+  //   "2026 Bowman Sapphire Numbered Owen Carey"     aspect "Numbered"
+  //
+  // Downstream, holdingFieldNormalizer correctly rejects "Chrome" as not a
+  // parallel and nulls it — and a null parallel renders as `base`. So a
+  // Refractor arrives already amputated and gets priced against base comps.
+  // Six of Drew's holdings were in this state.
+  //
+  // The aspect is still USEFUL — it is the only structured signal when a title
+  // omits the parallel. So keep it, but only when it survives normalization as
+  // a real parallel. If the normalizer would discard it, the title parse is
+  // the better source and must not be clobbered.
+  const rawAspectParallel = aspects["Parallel/Variety"];
+  if (rawAspectParallel) {
+    const { fields: probe } = normalizeHoldingFields({
+      playerName: holding.playerName ?? null,
+      cardYear: holding.cardYear ?? null,
+      setName: holding.setName ?? null,
+      parallel: rawAspectParallel,
+      cardNumber: holding.cardNumber ?? null,
+      isAuto: holding.isAuto ?? null,
+      product: holding.product ?? null,
+    });
+    const survives = typeof probe.parallel === "string" && probe.parallel.trim() !== "";
+    if (survives) {
+      holding.parallel = probe.parallel as string;
+    } else if (!holding.parallel) {
+      // Nothing from the title either — leave it unset rather than storing a
+      // product word that will silently become `base`.
+      console.log(JSON.stringify({
+        event: "ebay_aspect_parallel_rejected",
+        source: "ebayAutoHolding",
+        aspect: rawAspectParallel,
+        title: holding.cardTitle ?? null,
+        note: "aspect is not a parallel; kept title-parsed value",
+      }));
+    }
   }
   if (aspects["Card Number"] && !holding.cardNumber) {
     holding.cardNumber = aspects["Card Number"];
