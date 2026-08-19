@@ -53,6 +53,9 @@ const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 const { normalizeParallel } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// The rule that already knows a PRODUCT word is not a parallel — see the
+// PARALLEL branch below for why normalizeParallel alone is insufficient.
+const { normalizeHoldingFields } = require(path.join(backend, "dist/services/portfolioiq/holdingFieldNormalizer.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -74,7 +77,7 @@ async function main() {
   if (SETKEY) where.push(`CONTAINS(c.hobbyiqCardId, ":${SETKEY}:")`);
   const sql = `SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.price FROM c WHERE ${where.join(" AND ")}`;
 
-  const stats = { scanned: 0, parsed: 0, serial: 0, auto: 0, notAuto: 0, parallel: 0 };
+  const stats = { scanned: 0, parsed: 0, serial: 0, auto: 0, notAuto: 0, parallel: 0, parallelRejected: 0 };
   const examples = { serial: [], auto: [], notAuto: [], parallel: [] };
   const bySlugSerial = new Map();
 
@@ -141,11 +144,36 @@ async function main() {
         }
 
         // ── PARALLEL. Title names one, slug says base. ───────────────────────
-        if (p.parallel) {
-          const want = normalizeParallel(p.parallel);
-          if (want && want !== "base" && slugParallel === "base") {
+        //
+        // normalizeParallel() alone is NOT enough here: it maps "Chrome" to
+        // "chrome" and happily reports it as a parallel. Chrome is a PRODUCT,
+        // and the first run of this audit surfaced 3,918 hits led by
+        //
+        //   "2026 Topps Heritage Jac Caglianone Chrome RC #136" -> "chrome"
+        //
+        // which is a setKey question (Topps Heritage Chrome is its own product),
+        // not a missing parallel. That is the same defect as the eBay
+        // Parallel/Variety aspect bug fixed earlier today, where a seller typing
+        // the product wiped out a real parallel.
+        //
+        // normalizeHoldingFields is the rule that already knows the difference —
+        // it rejects a bare product word and keeps only the parallel half of
+        // "Chrome Refractor". Asking it, rather than re-deriving the distinction.
+        if (p.parallel && slugParallel === "base") {
+          let want = null;
+          try {
+            const { fields } = normalizeHoldingFields({
+              playerName: null, cardYear: null, setName: null,
+              parallel: p.parallel, cardNumber: null, isAuto: null, product: null,
+            });
+            want = typeof fields.parallel === "string" && fields.parallel.trim() !== ""
+              ? normalizeParallel(fields.parallel) : null;
+          } catch { want = null; }
+          if (want && want !== "base") {
             stats.parallel++;
             if (examples.parallel.length < 6) examples.parallel.push({ r, want });
+          } else if (p.parallel) {
+            stats.parallelRejected++;
           }
         }
       }
