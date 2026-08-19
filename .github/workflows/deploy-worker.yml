@@ -11,13 +11,24 @@
 #     POST /api/staging/image-verify   4 calls, avg 40.6s, max 42.7s
 #     POST /api/staging/promotion      4 calls, avg 25.0s, max 28.2s
 #
-# Staging Pipeline Cron fires every 5 minutes, so ~65s of every 300s window had
-# the single Node process busy with CPU-bound batch work. Node is
-# single-threaded: while image-verify hashes images, nothing else runs. A card
-# page then times out client-side at 30s while App Insights records the same
-# request as taking 2.0s — because `duration` measures PROCESSING, not the time
-# the request spent queued behind the batch job. That gap is what made this
-# look like a pricing bug instead of a capacity one.
+# Staging Pipeline Cron fires every 5 minutes, so ~65s of every 300s window was
+# spent inside those two endpoints.
+#
+# CORRECTION, and it matters. The first version of this comment said that work
+# was CPU-bound and blocked the event loop. It is NOT. image-verify was a
+# sequential loop of Azure Vision OCR calls over HTTP — ~100 rows x ~0.4s of
+# network WAITING with the loop idle. Node kept serving other requests
+# throughout, so this was never the cause of the reported page timeout, and
+# that timeout remains separately unexplained.
+#
+# The real win there was concurrency, not isolation: image-verify now runs a
+# pool of 6 (~40s -> ~7s) with 429 retry.
+#
+# So why keep this worker? Because batch work still has no business sharing a
+# process with interactive traffic — it competes for memory, Cosmos RU and
+# connection budget, and it couples deploy blast radius. Separation is right
+# hygiene and the scaling shape Drew asked for; it is just not a latency fix,
+# and it should not be sold as one.
 #
 # SCALING SHAPE. app_name is an input rather than a constant so a second or
 # third worker is one dispatch, not a new file. Workers are pool-fungible: they
@@ -83,8 +94,12 @@ jobs:
         working-directory: backend
         run: npm install archiver --no-save
 
+      # zip.js lives at the REPO ROOT and writes deploy.zip beside itself —
+      # it is not a backend/ script. daily-refresh runs it with no
+      # working-directory for that reason; the first cut of this workflow set
+      # working-directory: backend and died with MODULE_NOT_FOUND before ever
+      # reaching Azure.
       - name: Create deploy.zip
-        working-directory: backend
         run: node zip.js
 
       - name: Login to Azure
@@ -94,17 +109,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
-      # NOTE: the CI principal holds `Website Contributor` scoped to the
-      # HobbyIQ3 SITE (see #1126). A new app is OUTSIDE that scope, so this
-      # step fails with AuthorizationFailed until the role is extended to the
-      # resource group or granted on the new site. That is a deliberate,
-      # reviewable grant rather than something this workflow can paper over.
+      # The CI principal originally held `Website Contributor` scoped to the
+      # HobbyIQ3 SITE only (see #1126), so this step failed with
+      # AuthorizationFailed for any new app. Drew granted the same role at
+      # RESOURCE GROUP scope on 2026-08-18, which is what makes a second or
+      # third worker a dispatch rather than another IAM round-trip.
       - name: Deploy to the worker
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.APP }}
           resource-group-name: rg-hobbyiq-dev
-          package: backend/deploy.zip
+          package: deploy.zip
 
       # webapps-deploy@v3 does not touch App Settings, so /api/health would
       # report whatever build metadata was last written. Same quad as
