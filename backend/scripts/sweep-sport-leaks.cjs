@@ -81,6 +81,21 @@ const DUAL_SPORT = new Set([
   "dave debusschere", "gene conley", "mark hendrickson", "jeff samardzija",
 ]);
 
+/**
+ * Names that exist as REAL cards in more than one trading-card game.
+ *
+ * The sweep's premise is that a name identifies a person, so a minority sport
+ * must be a filing error. That premise fails for TCGs, where a "player" is a
+ * card name and the same name is genuinely printed by different games.
+ * "Mountain" is a basic land in Magic AND a field card in Yu-Gi-Oh, so its 11
+ * yugioh rows are real cards, not leaks from tcg-other.
+ *
+ * Kept explicit rather than inferred: a blanket "never move between TCG
+ * verticals" rule would also block the legitimate One Piece rows sitting under
+ * `pokemon`, which ARE mis-slugged.
+ */
+const AMBIGUOUS_TCG_NAMES = new Set(["mountain", "island", "forest", "plains", "swamp"]);
+
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 const sportOf = (slug) => String(slug ?? "").split(":")[1] || "";
 
@@ -160,9 +175,15 @@ async function main() {
 
   if (HOMES_IN) {
     const cached = JSON.parse(fs.readFileSync(HOMES_IN, "utf8"));
+    // Exclusions are re-applied on LOAD, not trusted from the file. A cache
+    // written before a name was excluded would otherwise smuggle it back in,
+    // and the whole point of the cache is that it outlives the run that made it.
+    let dropped = 0;
     for (const [player, v] of Object.entries(cached.homes)) {
+      if (DUAL_SPORT.has(player) || AMBIGUOUS_TCG_NAMES.has(player)) { dropped++; continue; }
       homeOf.set(player, { home: v.home, strays: new Set(v.strays), total: v.total, homeCount: v.homeCount });
     }
+    if (dropped) console.log(`  dropped ${dropped} cached player(s) now on an exclusion list`);
     console.log(`pass1 SKIPPED — loaded ${homeOf.size.toLocaleString()} player homes from ${HOMES_IN}`);
     console.log(`  (built ${cached.builtAt ?? "?"} from ${Number(cached.scanned ?? 0).toLocaleString()} rows)\n`);
     return await passTwo(homeOf);
@@ -187,7 +208,7 @@ async function main() {
   // ── Decide each player's home sport, and which sports are strays ──────────
   let skippedDual = 0, skippedThin = 0, skippedNoDominance = 0;
   for (const [player, m] of hist) {
-    if (DUAL_SPORT.has(player)) { skippedDual++; continue; }
+    if (DUAL_SPORT.has(player) || AMBIGUOUS_TCG_NAMES.has(player)) { skippedDual++; continue; }
     const total = [...m.values()].reduce((s, n) => s + n, 0);
     if (total < MIN_COMPS) { skippedThin++; continue; }
     const ranked = [...m.entries()].sort((a, b) => b[1] - a[1]);
