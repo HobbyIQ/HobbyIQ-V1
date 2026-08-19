@@ -76,22 +76,40 @@ const POOL = Math.max(1, Number(arg("pool", "8")));
 const TOP = Number(arg("top", "30"));
 
 /**
- * Sources that transcribe a printed checklist. A vendor's own catalog is NOT
- * evidence of how the card is printed — it is evidence of how the vendor types.
+ * Sources trusted for HOW A NUMBER IS PUNCTUATED — a narrower question than
+ * "which player is in which set", and it needs a narrower source set.
  *
- * MATCHED BY PATTERN. This started as an exact list of five strings, which
- * discarded baseballcardpedia's 918,828 rows, all of bccp, three of the four
- * dated beckett-scraped runs and the "-graded" twin of everything. That is a
- * dangerous shape for THIS script in particular: the rule is "hyphenate only
- * where the checklist never spells it bare", so a thinner evidence base does
- * not fail safe — it makes prefixes look UNANIMOUS that are actually split, and
- * licenses rewrites the full checklist would have blocked.
+ * SOURCE QUALITY IS QUESTION-DEPENDENT, which is the whole lesson here.
+ * The conformance audit was widened to every checklist-ish source because
+ * COVERAGE is what it needs. Widening this script the same way looked like the
+ * same fix and is not: it flipped 51 prefixes from proven to blocked, including
+ * BCP and BP, on evidence that turns out to be transcription noise.
+ *
+ * Measured over Bowman BCP/BP/BDC/BD/BTP numbers (hy = BCP-109, no = BCP109):
+ *
+ *     checklistcenter          85,139 hy      0 no     0%
+ *     checklistcenter-graded   81,612 hy      0 no     0%
+ *     checklist                10,608 hy     12 no     0%
+ *     beckett-* (all runs)      5,087 hy      0 no     0%
+ *     checklistinsider          3,100 hy      0 no     0%
+ *     ------------------------------------------------------
+ *     baseballcardpedia       153,296 hy 21,300 no    12%
+ *     bccp                     65,775 hy 14,411 no    18%
+ *     checklistcenter-html     13,866 hy  4,200 no    23%
+ *
+ * Dedicated transcriptions are UNANIMOUS. The wiki-style sources disagree with
+ * themselves 12-18% of the time, which is sloppiness rather than evidence that
+ * a bare-printed variant exists. Judging punctuation on those would block the
+ * repair on noise.
+ *
+ * Note `checklistcenter-html` is excluded while `checklistcenter` is trusted —
+ * same site, different extraction, and the HTML path is the dirtiest source
+ * measured. The suffix matters.
  */
 function isChecklistSource(source) {
   const s = String(source ?? "").toLowerCase().replace(/-graded$/, "");
-  if (/^(cardhedge|cardsight|ebay|ingest-auto-seed|sold-comps-stub|tree-builder|catalog-explode|user-verified)/.test(s)) return false;
-  if (/-product-structure$/.test(s)) return false;
-  return /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor/.test(s);
+  if (s === "checklistcenter-html") return false;
+  return /^(checklistcenter|checklist|checklistinsider|beckett)/.test(s);
 }
 
 async function main() {
@@ -134,11 +152,39 @@ async function main() {
     process.stderr.write("\n");
   }
 
-  const canonical = new Set();     // prefixes where the hyphen is proven
-  for (const [k, v] of tally) if (v.ckHy > 0 && v.ckNo === 0) canonical.add(k);
+  // A prefix is proven when the checklist is OVERWHELMINGLY hyphenated — not
+  // when it is literally unanimous.
+  //
+  // Requiring ZERO bare spellings sounds like the safe rule and is too brittle.
+  // It blocked BCP on 6 bare rows out of 81,291 (0.007%), BDC on 6 of 42,483,
+  // and BDN on 2 of 601 — transcription typos. Letting one typo veto a repair
+  // leaves tens of thousands of comps split across two pools.
+  //
+  // The genuine negatives sit nowhere near this line: BDPP is 61,756 bare and
+  // ZERO hyphenated, i.e. 100%. So the threshold separates noise from a real
+  // convention by a very wide margin, and a prefix with thin evidence either
+  // way is still refused by MIN_EVIDENCE.
+  const BARE_NOISE_MAX = Number(arg("bareNoiseMax", "0.01"));   // 1%
+  const MIN_EVIDENCE = Number(arg("minEvidence", "20"));
+  const canonical = new Set();
+  const blockedReal = [];
+  for (const [k, v] of tally) {
+    const total = v.ckHy + v.ckNo;
+    if (v.ckHy === 0 || total < MIN_EVIDENCE) continue;
+    const bareShare = v.ckNo / total;
+    if (bareShare <= BARE_NOISE_MAX) canonical.add(k);
+    else blockedReal.push([k, v.ckHy, v.ckNo, bareShare]);
+  }
   console.log(`prefixes seen in checklist rows           : ${tally.size}`);
   console.log(`  hyphen PROVEN canonical (fixable)       : ${canonical.size}`);
-  console.log(`  checklist itself split / un-hyphenated  : ${tally.size - canonical.size}  (left alone)\n`);
+  console.log(`  checklist itself split / un-hyphenated  : ${tally.size - canonical.size}  (left alone)`);
+  if (blockedReal.length) {
+    console.log(`  of those, a REAL bare convention (>${(BARE_NOISE_MAX * 100).toFixed(0)}% bare):`);
+    for (const [k, hy, no, sh] of blockedReal.sort((a, b) => b[3] - a[3]).slice(0, 10)) {
+      console.log(`     ${k.padEnd(6)} hy=${String(hy).padStart(6)} no=${String(no).padStart(6)}  ${(sh * 100).toFixed(1)}% bare`);
+    }
+  }
+  console.log("");
   if (!canonical.size) { console.log("no proven prefixes; nothing to do."); return 0; }
 
   // ── 2. Find comps whose number is un-hyphenated under a proven prefix ─────

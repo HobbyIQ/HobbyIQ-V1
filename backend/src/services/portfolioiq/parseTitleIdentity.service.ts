@@ -131,7 +131,25 @@ const STANDALONE_CARD_NUMBER_RE =
 // "hard signed" are required. When "On Card Auto" appears, \bauto\b
 // picks it up.
 const AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
-const AUTO_NEGATIVE_RE = /auto\s+relic|auto\s+patch/i;
+/** Phrases that mean the card is NOT signed, despite containing "auto".
+ *
+ *  CF-NON-AUTO-IS-NOT-AUTO (2026-08-19). This only listed "auto relic" and
+ *  "auto patch", so `\bauto\b` matched the "Auto" inside "Non Auto" and every
+ *  one of these parsed as SIGNED:
+ *
+ *    "WALKER JENKINS RC REFRACTOR ... Non Auto Rookie Holo"        -> isAuto true
+ *    "2026 Bowman Chrome /199 Fuchsia Konnor Griffin Non-Auto"     -> isAuto true
+ *    "2019 Bowman Prospects Yordan Alvarez #BP-123 ... Non Auto"   -> isAuto true
+ *
+ *  A $22.49 unsigned base card then sits in a signed card's comp pool and drags
+ *  its floor — found while auditing a user's Walker Jenkins /499 refractor auto,
+ *  whose pool ran from $22.49 to $769.
+ *
+ *  Note this governs the TITLE TEXT only. The card number remains the boundary
+ *  (isCardNumberAutoSubset is OR'd in separately), so a CPA- number still reads
+ *  as an auto even if a seller typed something careless. */
+const AUTO_NEGATIVE_RE =
+  /auto\s+relic|auto\s+patch|\bnon[-\s]?auto|\bno\s+auto|\bnot\s+auto|\bunsigned\b|\bwithout\s+auto/i;
 
 /** Extract identity from a marketplace title.
  *
