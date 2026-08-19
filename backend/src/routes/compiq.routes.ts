@@ -45,6 +45,9 @@ import {
   persistCertLookup,
   persistCardPanel,
 } from "../services/compiq/cardhedgeLearnCorpus.service.js";
+// Static, not dynamic: this is used inside a synchronous response literal, and
+// the module is a leaf (it imports only alias tables), so there is no cycle.
+import { normalizeSetKey } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
@@ -3120,7 +3123,16 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                     slug: best.id,
                     sport: best.sport ?? "baseball",
                     year: best.year,
-                    setKey: best.setName,
+                    // CF-SETKEY-IS-ALWAYS-A-SLUG (2026-08-19). This returned the
+                    // raw DISPLAY name — "Bowman's Best", "2024 Panini Donruss"
+                    // — under a field named setKey. A caller that echoes
+                    // cardIdentity back writes a non-slug key, which is one of
+                    // the ways 821 such spellings reached card_catalog and put
+                    // 91,135 rows of checklist evidence out of reach.
+                    // The catalog row's own setKey is already normalised;
+                    // normalizeSetKey is the fallback, never the display string.
+                    setKey: (best as { setKey?: string }).setKey
+                      || normalizeSetKey(String(best.setName ?? "")),
                     cardNumber: best.cardNumber,
                     parallel: parsed.parallel || "Base",
                     isAuto: false,

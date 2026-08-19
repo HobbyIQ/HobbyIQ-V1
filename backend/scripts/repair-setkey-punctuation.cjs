@@ -53,6 +53,12 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// slugify() is THE rule. This script originally carried its own copy, which is
+// the one-rule-two-implementations defect that caused several of the bugs this
+// whole effort exists to repair — and I reproduced it here while fixing them.
+// The canonical form must come from the same function the parser uses, so the
+// repair and the ingest path cannot drift apart.
+const { slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -64,11 +70,8 @@ const TOP = Number(arg("top", "30"));
 
 const isClean = (k) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(k);
 const strip = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, "");
-/** Apostrophes/commas/periods vanish; everything else collapses to a hyphen. */
-const toClean = (k) => String(k).toLowerCase()
-  .replace(/[‘’'`,.]/g, "")
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/^-+|-+$/g, "");
+/** Delegates to slugify — see the note on the import above. */
+const toClean = (k) => slugify(k);
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -93,6 +96,7 @@ async function main() {
   }
 
   const canonOf = new Map();     // dirty spelling -> canonical
+  const skippedWordBoundary = [];   // already-clean variants this script must not judge
   let derived = 0, plannedRows = 0;
   for (const [, variants] of byStrip) {
     const sorted = variants.sort((a, b) => b[1] - a[1]);
@@ -108,6 +112,21 @@ async function main() {
     }
     for (const [k, n] of sorted) {
       if (k === canon) continue;
+      // ONLY rewrite spellings that are not slugs. If a variant is ALREADY
+      // slug-clean, its disagreement with the canonical is not punctuation
+      // damage — it is a word-boundary judgement, and this script has no
+      // evidence to settle it:
+      //
+      //     airmail   vs  air-mail        blackgold  vs  black-gold
+      //     20-20     vs  2020            box-loaders vs boxloaders
+      //
+      // The cluster key strips hyphens (so that `bowman's-best` meets
+      // `bowmans-best`), which sweeps these in as a side effect. 85 of 821
+      // "punctuation" rewrites were actually this, and picking the more common
+      // spelling would have been the script deciding a naming question by vote
+      // — precisely the over-broad write it exists to avoid. They need a
+      // checklist, and get their own pass.
+      if (isClean(k)) { skippedWordBoundary.push([k, canon, n]); continue; }
       canonOf.set(k, canon);
       plannedRows += n;
     }
@@ -116,7 +135,12 @@ async function main() {
   console.log(`distinct setKeys              : ${keys.length.toLocaleString()}`);
   console.log(`non-canonical spellings       : ${canonOf.size.toLocaleString()}`);
   console.log(`catalog rows to re-key        : ${plannedRows.toLocaleString()}`);
-  console.log(`canonical DERIVED (no clean spelling existed) : ${derived}\n`);
+  console.log(`canonical DERIVED (no clean spelling existed) : ${derived}`);
+  console.log(`SKIPPED — already-clean word-boundary variants  : ${skippedWordBoundary.length}  (a naming question, not punctuation)`);
+  for (const [k, c, n] of skippedWordBoundary.sort((a, b) => b[2] - a[2]).slice(0, 8)) {
+    console.log(`     ${String(n).padStart(6)}  ${k}   vs   ${c}`);
+  }
+  console.log("");
   if (!canonOf.size) { console.log("nothing to do."); return 0; }
 
   console.log("largest rewrites:");
