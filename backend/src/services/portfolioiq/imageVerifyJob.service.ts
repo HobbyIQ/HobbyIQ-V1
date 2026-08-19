@@ -73,7 +73,7 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
     parameters: [{ name: "@n", value: limit }],
   }).fetchAll();
 
-  for (const row of anomalies) {
+  const processRow = async (row: StagingDoc): Promise<void> => {
     result.scanned += 1;
     try {
       const verification = await verifyRow(row);
@@ -149,10 +149,49 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
     } catch {
       result.errors += 1;
     }
-  }
+  };
+
+  /**
+   * CF-IMAGE-VERIFY-CONCURRENCY (Drew, 2026-08-18: "how can we fix the CPU
+   * bound batch job?" — it was never CPU bound).
+   *
+   * This ran as `for (const row of anomalies) await verifyRow(row)`, one row at
+   * a time. verifyRow's cost is an Azure Vision OCR call over HTTP plus a
+   * Cosmos replace — pure network WAITING, with the event loop idle. So the
+   * batch took ~100 rows x ~0.4s = ~40s of wall clock while doing almost no
+   * work, and App Insights recorded four 40-second requests a run against a
+   * cron that fires every 5 minutes.
+   *
+   * Awaiting in a loop is what made it slow; it is not what made anything else
+   * slow. Node kept serving other requests throughout.
+   *
+   * A FIXED POOL, NOT Promise.all(anomalies). Azure Vision is rate-limited —
+   * the route caps `limit` at 200 for that reason — and firing 200 concurrent
+   * OCR calls trades 40 seconds of waiting for a wall of 429s and retries,
+   * which is slower AND costs more. A small ceiling captures nearly all of the
+   * win: 6 in flight turns ~40s into ~7s.
+   *
+   * Tunable via IMAGE_VERIFY_CONCURRENCY so the ceiling can be lowered without
+   * a deploy if Vision starts throttling.
+   *
+   * Counter mutations inside processRow stay correct: JS is single-threaded,
+   * so `result.x += 1` cannot interleave. Row writes are independent — each
+   * row replaces its own document under its own partition key.
+   */
+  const POOL = Math.max(1, Math.min(12, Number(process.env.IMAGE_VERIFY_CONCURRENCY ?? 6)));
+  let cursor = 0;
+  const startedAt = Date.now();
+  await Promise.all(Array.from({ length: Math.min(POOL, anomalies.length) }, async () => {
+    while (cursor < anomalies.length) {
+      await processRow(anomalies[cursor++]);
+    }
+  }));
+
   console.log(JSON.stringify({
     event: "image_verify_batch_complete",
     source: "imageVerifyJob.service",
+    concurrency: POOL,
+    elapsedMs: Date.now() - startedAt,
     ...result,
   }));
   return result;
