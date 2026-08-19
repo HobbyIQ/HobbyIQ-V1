@@ -51,7 +51,11 @@
  *
  * Usage:
  *   COSMOS_CONNECTION_STRING="..." node backend/scripts/audit-checklist-conformance.cjs \
- *     [--family=bowman] [--sport=baseball] [--top=40] [--minComps=3]
+ *     [--family=bowman] [--sport=baseball] [--top=40] [--minComps=3] [--apply]
+ *
+ * --family defaults to EVERY family in the sport. Scope by --sport, not family:
+ * topps alone is 22M catalog rows against bowman's 3.4M, so a family loop would
+ * need dozens of passes to cover the container.
  */
 
 const path = require("path");
@@ -62,7 +66,11 @@ const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
   return hit ? hit.slice(n.length + 3) : d;
 };
-const FAMILY = arg("family", "bowman");
+// Empty family = EVERY product family in this sport. Memory is bounded by the
+// SPORT filter instead, which is the right axis: topps alone is 22M catalog
+// rows, six times bowman, so scoping by family would still have to be run
+// dozens of times to cover the container.
+const FAMILY = arg("family", "");
 const SPORT = arg("sport", "baseball");
 const TOP = Number(arg("top", "40"));
 const MIN_COMPS = Number(arg("minComps", "3"));
@@ -131,9 +139,12 @@ async function main() {
   const setsInFamily = new Set();
   {
     const iter = db.container("card_catalog").items.query({
-      query: `SELECT c.setKey, c.cardNumber, c.playerName, c.year, c.source FROM c
-               WHERE IS_STRING(c.cardNumber) AND c.cardNumber <> "" AND STARTSWITH(c.setKey, @f)`,
-      parameters: [{ name: "@f", value: FAMILY }],
+      query: FAMILY
+        ? `SELECT c.setKey, c.cardNumber, c.playerName, c.year, c.source FROM c
+            WHERE IS_STRING(c.cardNumber) AND c.cardNumber <> "" AND STARTSWITH(c.setKey, @f)`
+        : `SELECT c.setKey, c.cardNumber, c.playerName, c.year, c.source FROM c
+            WHERE IS_STRING(c.cardNumber) AND c.cardNumber <> "" AND c.sport = @s`,
+      parameters: FAMILY ? [{ name: "@f", value: FAMILY }] : [{ name: "@s", value: SPORT }],
     }, { maxItemCount: 2000 });
     let n = 0, kept = 0;
     while (iter.hasMoreResults()) {
@@ -170,9 +181,14 @@ async function main() {
   const moveExamples = new Map();
   {
     const iter = db.container("sold_comps").items.query({
-      query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName FROM c
-               WHERE STARTSWITH(c.hobbyiqCardId, @p) AND CONTAINS(c.hobbyiqCardId, @f)`,
-      parameters: [{ name: "@p", value: `hiq:${SPORT}:` }, { name: "@f", value: `:${FAMILY}` }],
+      query: FAMILY
+        ? `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName FROM c
+            WHERE STARTSWITH(c.hobbyiqCardId, @p) AND CONTAINS(c.hobbyiqCardId, @f)`
+        : `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName FROM c
+            WHERE STARTSWITH(c.hobbyiqCardId, @p)`,
+      parameters: FAMILY
+        ? [{ name: "@p", value: `hiq:${SPORT}:` }, { name: "@f", value: `:${FAMILY}` }]
+        : [{ name: "@p", value: `hiq:${SPORT}:` }],
     }, { maxItemCount: 2000 });
     let n = 0;
     while (iter.hasMoreResults()) {
@@ -184,7 +200,7 @@ async function main() {
         const [, , year, setKey, rawNum] = parts;
         const num = numKey(rawNum);
         const player = core(r.playerName);
-        if (!num || !player || !setKey.startsWith(FAMILY)) { stats.unjudgeable++; continue; }
+        if (!num || !player || (FAMILY && !setKey.startsWith(FAMILY))) { stats.unjudgeable++; continue; }
 
         const bySet = checklist.get(`${year}|${num}`);
         if (!bySet) { stats.orphan++; orphanBySet.set(setKey, (orphanBySet.get(setKey) ?? 0) + 1); continue; }
