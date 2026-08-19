@@ -152,14 +152,33 @@ async function main() {
   // ── 2. Rewrite setKey, the row's own slug, and its search tokens ─────────
   const work = [];
   {
-    const iter = cat.items.query(
-      `SELECT c.id, c.cardId, c.setKey, c.hobbyiqCardId, c.searchTokens FROM c WHERE IS_STRING(c.setKey)`,
-      { maxItemCount: 2000 },
-    );
-    let n = 0;
-    while (iter.hasMoreResults()) {
-      const { resources } = await iter.fetchNext();
-      for (const r of resources || []) {
+    // A 429 whose SDK retries are exhausted must PAUSE the scan, never end it.
+    // The continuation token still marks our place, so the scan resumes from a
+    // fresh iterator. Learned on sweep-sport-leaks, which lost a nine-hour pass
+    // to an unhandled throttle; this scan hit the same wall at 20000 RU.
+    let token, n = 0, throttles = 0, drained = false;
+    while (!drained) {
+      const iter = cat.items.query(
+        `SELECT c.id, c.cardId, c.setKey, c.hobbyiqCardId, c.searchTokens FROM c WHERE IS_STRING(c.setKey)`,
+        { maxItemCount: 2000, continuationToken: token },
+      );
+      let progressed = false;
+      while (iter.hasMoreResults()) {
+        let page;
+        try {
+          page = await iter.fetchNext();
+        } catch (e) {
+          if (e?.code !== 429 && e?.code !== 503) throw e;
+          throttles++;
+          const waitMs = Math.min(60_000, (e.retryAfterInMs ?? 1000) + 1000 * Math.min(throttles, 20));
+          process.stderr.write(`\r  throttled (${throttles}), waiting ${Math.round(waitMs / 1000)}s at row ${n}   `);
+          await new Promise((r) => setTimeout(r, waitMs));
+          break;
+        }
+        token = page.continuationToken;
+        progressed = true;
+        const resources = page.resources || [];
+      for (const r of resources) {
         n++;
         const canon = canonOf.get(r.setKey);
         if (!canon) continue;
@@ -184,9 +203,15 @@ async function main() {
         }
         work.push({ r, patch });
       }
-      if (n % 500000 < 2000) process.stderr.write(`\r  catalog scanned=${n} matched=${work.length}   `);
+        if (n % 500000 < 2000) process.stderr.write(`\r  catalog scanned=${n} matched=${work.length}   `);
+        if (!iter.hasMoreResults()) { drained = true; break; }
+      }
+      // No token and no progress means the query never started; bail rather
+      // than spin. Otherwise loop for a fresh iterator from the token.
+      if (!drained && !progressed && !token) break;
     }
     process.stderr.write("\n");
+    if (throttles) console.log(`  absorbed ${throttles} throttle pause(s)`);
   }
 
   console.log(`\nrows matched for repair: ${work.length.toLocaleString()}`);
