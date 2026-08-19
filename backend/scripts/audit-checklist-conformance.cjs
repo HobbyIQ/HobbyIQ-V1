@@ -35,8 +35,19 @@
  *   ORPHAN      no checklist in the family has it (missing checklist, a parse
  *               error, or a number we invented) — needs a human, never a move
  *
- * Only MOVE is ever actionable, and even then this script does not write. The
- * write belongs in reslug-setkey-segment, one reviewed mapping at a time.
+ * Only MOVE is ever written. AMBIGUOUS and ORPHAN are left exactly as they are.
+ *
+ * The write lives HERE rather than in reslug-setkey-segment because the target
+ * is decided per ROW, not per setKey pair: the same claimed setKey sends
+ * different cards to different homes depending on which checklist lists their
+ * number. Expressing 176,869 such decisions as a mapping table would mean
+ * re-deriving them, and a second derivation is a second chance to get the
+ * direction wrong.
+ *
+ * Segment 3 only. The checklist proves which SET a card belongs to; it says
+ * nothing about parallel, auto or serial, and those are already correct on the
+ * row. A full re-derive risks losing a parallel the slug captured but the
+ * vendor title never mentioned.
  *
  * Usage:
  *   COSMOS_CONNECTION_STRING="..." node backend/scripts/audit-checklist-conformance.cjs \
@@ -55,6 +66,8 @@ const FAMILY = arg("family", "bowman");
 const SPORT = arg("sport", "baseball");
 const TOP = Number(arg("top", "40"));
 const MIN_COMPS = Number(arg("minComps", "3"));
+const APPLY = process.argv.includes("--apply");
+const POOL = Math.max(1, Number(arg("pool", "8")));
 
 /**
  * Is this source a transcription of a printed checklist?
@@ -150,13 +163,14 @@ async function main() {
   }
 
   // ── 2. Judge every comp ──────────────────────────────────────────────────
+  const work = [];              // rows the checklist condemns, with their target
   const moves = new Map();      // "from -> to" -> { comps, cards:Set }
   const stats = { conformant: 0, move: 0, ambiguous: 0, orphan: 0, unjudgeable: 0 };
   const orphanBySet = new Map();
   const moveExamples = new Map();
   {
     const iter = db.container("sold_comps").items.query({
-      query: `SELECT c.hobbyiqCardId, c.playerName FROM c
+      query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName FROM c
                WHERE STARTSWITH(c.hobbyiqCardId, @p) AND CONTAINS(c.hobbyiqCardId, @f)`,
       parameters: [{ name: "@p", value: `hiq:${SPORT}:` }, { name: "@f", value: `:${FAMILY}` }],
     }, { maxItemCount: 2000 });
@@ -183,6 +197,15 @@ async function main() {
         if (hits.length > 1) { stats.ambiguous++; continue; }
 
         stats.move++;
+        // Segment 3 ONLY. The checklist proved WHICH SET this card belongs to;
+        // it says nothing about the parallel, auto or serial, and those are
+        // already correct on the row. A full re-derive would risk losing a
+        // parallel the slug captured but the title never mentioned.
+        {
+          const next = [...parts];
+          next[3] = hits[0];
+          work.push({ id: r.id, cardId: r.cardId, before: r.hobbyiqCardId, next: next.join(":") });
+        }
         const k = `${setKey}  ->  ${hits[0]}`;
         let agg = moves.get(k);
         if (!agg) moves.set(k, (agg = { comps: 0, cards: new Set() }));
@@ -215,8 +238,39 @@ async function main() {
     console.log(`  ${String(v).padStart(8)}  ${k}`);
   }
 
-  console.log("\nREAD-ONLY. MOVE is the only actionable verdict; ORPHAN usually means a");
-  console.log("checklist we do not own yet, not a card that is filed wrongly.");
+  if (!APPLY) {
+    console.log("\nDRY-RUN. MOVE is the only actionable verdict; ORPHAN usually means a");
+    console.log("checklist we do not own yet, not a card that is filed wrongly.");
+    console.log("Re-run with --apply to write MOVE rows. AMBIGUOUS and ORPHAN are never touched.");
+    return 0;
+  }
+
+  // Only rows a checklist POSITIVELY reassigned reach this point. AMBIGUOUS
+  // (several sets list the number) and ORPHAN (no checklist has it) are left
+  // exactly as they are — ORPHAN in particular is usually a checklist we have
+  // not acquired, and treating a gap in our evidence as a filing error would be
+  // the largest bad write available here.
+  const sold = db.container("sold_comps");
+  let done = 0, failed = 0, cursor = 0;
+  console.log(`\napplying ${work.length.toLocaleString()} checklist-proven moves...`);
+  await Promise.all(Array.from({ length: POOL }, async () => {
+    while (cursor < work.length) {
+      const w = work[cursor++];
+      try {
+        await sold.item(w.id, w.cardId).patch([
+          { op: "add", path: "/hobbyiqCardIdBefore", value: w.before },
+          { op: "set", path: "/hobbyiqCardId", value: w.next },
+          { op: "add", path: "/reslugReason", value: "CF-CHECKLIST-CONFORMANCE" },
+        ]);
+        done++;
+        if (done % 5000 === 0) process.stderr.write(`\r  patched ${done}/${work.length}   `);
+      } catch (e) {
+        failed++;
+        if (failed <= 5) console.log(`   patch failed ${w.id}: ${String(e.message).slice(0, 80)}`);
+      }
+    }
+  }));
+  console.log(`\nrepaired=${done} failed=${failed}`);
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
