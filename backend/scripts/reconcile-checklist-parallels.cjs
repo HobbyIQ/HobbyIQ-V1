@@ -11,11 +11,21 @@
  * only per-set — a source can be excellent for 2026 Topps and useless for 2022
  * hockey.
  *
- * PRINT RUN LIVES IN parallels[].numberedTo, NOT IN A printRun FIELD. Checked
- * against real rows on 2026-08-20: card_catalog documents carry
- * `parallels: [{ id, name, numberedTo }]` and have no top-level printRun at all.
- * An earlier draft of this script queried `c.printRun` and would have reported
- * every single row as FILLABLE — a 100% "win" that was pure schema error.
+ * THE PRINT RUN LIVES UNDER TWO DIFFERENT KEYS, and reading only one of them
+ * fabricates the answer. card_catalog carries BOTH parallel shapes:
+ *
+ *   vendor rows     { id, name, numberedTo }
+ *   checklist rows  { section, name, printRun }
+ *
+ * A first pass sampled only vendor rows, concluded "there is no printRun field",
+ * and read `numberedTo` alone. Every checklist-backed parallel therefore looked
+ * unnumbered and was counted FILLABLE — 851 of them — while KNOWN came back
+ * ZERO. Zero corroboration was the tell: if we genuinely held print runs, some
+ * had to match. We hold plenty; the reader was blind to the key they sit under.
+ * 2023 bowman already carries { name: "Gold", printRun: 50 }.
+ *
+ * Read both keys. A field that is absent on the rows you happened to sample is
+ * not a field that does not exist.
  *
  * FOUR OUTCOMES, kept apart because they call for different work:
  *
@@ -230,7 +240,11 @@ async function main() {
       if (!ps) continue;
       let s = m.get(ps);
       if (!s) m.set(ps, (s = new Set()));
-      const n = Number(p.numberedTo);
+      // BOTH KEYS. numberedTo on vendor rows, printRun on checklist rows —
+      // see the header. Reading one alone reports the other's rows as
+      // unnumbered and inflates FILLABLE.
+      const raw = p.numberedTo != null ? p.numberedTo : p.printRun;
+      const n = Number(raw);
       s.add(Number.isFinite(n) && n > 0 ? n : null);
     }
   }, "catalog");
