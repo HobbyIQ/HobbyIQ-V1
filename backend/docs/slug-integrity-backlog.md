@@ -86,11 +86,31 @@ print runs at all, some had to match. `2023 bowman` already carries
 `{name: "Gold", printRun: 50}`. **A field absent from the rows you happened to
 sample is not a field that does not exist.***
 
-### 3. Read the 85 CONFLICTs before adopting anything
+### 3. The 85 CONFLICTs are mostly an ARTIFACT — fix the granularity first
 
-Never auto-resolved. Pre-release checklists get revised, and this source exists
-to stop us INFERRING print runs — overwriting on scrape reintroduces that in a
-new costume.
+Do not review them as-is. Inspected 2026-08-20: **12 of the 25 displayed lines
+(48%) carry MULTIPLE `ours` values**, e.g.
+
+```text
+2023 topps  Gold  ours=1,5,2023,75,25,,50,20  theirs=/10
+```
+
+That is not a disagreement. Print run is a property of
+`(year, setKey, SUBSET, parallel)`, and the reconcile compares at
+`(year, setKey, parallel)` — so every card called "Gold" anywhere in a product
+collapses into one bucket and any variation between subsets reads as conflict.
+
+**Fix the comparison unit, then re-count.** Reviewing the current 85 would spend
+human attention on non-problems.
+
+*Also recorded so nobody else re-derives it: the `2023` and `2024` values in
+those `ours` lists are NOT the year-as-serial bug. Topps flagship Gold is
+genuinely numbered to its year — 2023 Gold is /2023. Correct data that looks
+exactly like a known defect.*
+
+When a genuine conflict list exists it is still never auto-resolved:
+pre-release checklists get revised, and this source exists to stop us INFERRING
+print runs — overwriting on scrape reintroduces that in a new costume.
 
 ### 4. The corrected sport audit — LANDED: 1.36%
 
