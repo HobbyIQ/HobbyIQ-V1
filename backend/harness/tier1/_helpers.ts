@@ -30,7 +30,31 @@ export const TIER1_ENABLED =
   process.env.npm_lifecycle_event === "test:harness:tier1";
 
 /** Per-case wall-clock budget (Tier 1 spec). */
-export const CASE_BUDGET_MS = 30_000;
+// CF-TIER1-BUDGET-VS-PROD-LATENCY (2026-08-20). Raised 30s -> 60s. This value
+// is BOTH the beforeAll hook timeout in all five case files AND, minus 1s, the
+// AbortController deadline in postJson() below. At 30s the abort fired at 29s.
+//
+// Tier 1 calls live prod. Measured in hobbyiq-insights over 24h:
+//
+//     POST /api/compiq/search   n=17   max 24,223ms
+//     during one harness window        p50 1,725ms   p95 10,114ms
+//
+// A 24.2s call against a 29s abort is a 4.8s margin, and the endpoint is
+// genuinely variable (0.1s .. 24.2s). It also shares a 2-worker P2v3 plan with
+// Staging Pipeline Cron, which fires every 5 minutes and whose promotion step
+// runs 35s at p50, so a 6-minute harness run cannot avoid overlapping one.
+//
+// The observed failure was NOT content drift. Run 32415018577 reported
+// 4 files failed / 0 tests failed / 97 skipped -- that is beforeAll hooks
+// aborting, which fails a whole file and skips every case inside it. Raising
+// the workflow timeout-minutes from 5 to 15 did not help and could not: the
+// job ended at 6m02s with Duration 332.86s, so the 15-minute ceiling was never
+// the binding limit. This constant always was.
+//
+// 60s is ~2.5x the observed max. Tier 1 exists to catch WRONG answers; a slow
+// but correct prod response should not read as a regression. If prod search
+// latency is itself the concern, that belongs in a latency SLO, not here.
+export const CASE_BUDGET_MS = 60_000;
 
 // ---------------------------------------------------------------------------
 // Test case definitions
