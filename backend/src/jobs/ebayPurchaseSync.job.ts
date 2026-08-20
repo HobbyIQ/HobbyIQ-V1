@@ -26,6 +26,7 @@
 
 import { importEbayPurchaseHistory } from "../services/ebay/ebayBuyerHistory.service.js";
 import { listConnectedUserIds } from "../services/ebay/ebayTokenStore.service.js";
+import { runSingleFlight } from "./_singleFlight.js";
 
 const TICK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const PER_USER_DELAY_MS = 1000; // polite spacing (eBay Trading API caps)
@@ -162,8 +163,8 @@ export function startWeeklyEbayPurchaseSyncJob(): void {
   console.log(`[ebay.weekly.purchase.sync] scheduler armed (enabled=${process.env.WEEKLY_EBAY_PURCHASE_SYNC_ENABLED === "true"}, fireHourUTC=${process.env.WEEKLY_EBAY_SYNC_HOUR_UTC ?? "6"}, days=${process.env.WEEKLY_EBAY_SYNC_DAYS ?? "7"})`);
   // Fire once shortly after boot to catch the case where the process
   // restarted inside the fire window on Sunday.
-  setTimeout(() => { void tick(); }, 90_000);
-  _intervalTimer = setInterval(() => { void tick(); }, TICK_INTERVAL_MS);
+  setTimeout(() => { void runSingleFlight("ebay.weekly.purchase.sync", TICK_INTERVAL_MS, tick); }, 90_000);
+  _intervalTimer = setInterval(() => { void runSingleFlight("ebay.weekly.purchase.sync", TICK_INTERVAL_MS, tick); }, TICK_INTERVAL_MS);
 }
 
 export function stopWeeklyEbayPurchaseSyncJob(): void {

@@ -17,6 +17,7 @@ import { saveTopPlayers, markNotified, getTopPlayers } from "../repositories/dai
 import { getAllDailyIQAlertPreferences } from "../repositories/alertPreferences.repository.js";
 import { getWatchlistSet } from "../services/dailyiq/watchlistStore.service.js";
 import { sendDailyIQNotification, FeaturedPlayer } from "../services/notification.service.js";
+import { runSingleFlight } from "./_singleFlight.js";
 
 function todayInTimezone(tz: string): string {
   return dateInTimezone(tz, new Date());
@@ -213,11 +214,11 @@ export function startDailyJobs(): void {
   console.log(`[dailyiq.job] scheduling first run in ${Math.round(delay / 1000 / 60)} min (target ${hour}:${String(minute).padStart(2, "0")} ${tz})`);
 
   _scheduleTimer = setTimeout(() => {
-    runDailyIQJob().catch((err) => {
+    runSingleFlight("dailyiq.job", 24 * 60 * 60 * 1000, runDailyIQJob).catch((err) => {
       console.error("[dailyiq.job] runDailyIQJob threw:", err?.message ?? err);
     });
     _intervalTimer = setInterval(() => {
-      runDailyIQJob().catch((err) => {
+      runSingleFlight("dailyiq.job", 24 * 60 * 60 * 1000, runDailyIQJob).catch((err) => {
         console.error("[dailyiq.job] runDailyIQJob threw:", err?.message ?? err);
       });
     }, 24 * 60 * 60 * 1000);
