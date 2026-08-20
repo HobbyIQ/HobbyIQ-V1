@@ -9,7 +9,6 @@ import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleE
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startWeeklyEbayPurchaseSyncJob } from "./jobs/ebayPurchaseSync.job.js";
 import { startBuyerIqDealScannerJob } from "./jobs/buyerIqDealScanner.job.js";
-import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
 import { startStagingDrainer } from "./services/portfolioiq/stagingDrainer.service.js";
 import { startMatchedCohortJob } from "./jobs/matchedCohortMomentum.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
@@ -112,16 +111,6 @@ app.listen(port, "0.0.0.0", () => {
     startBuyerIqDealScannerJob();
   } catch (err: any) {
     console.error("[server] startBuyerIqDealScannerJob failed:", err?.message ?? err);
-  }
-  // CF-CH-DELTA-POLL-FOUNDATION (2026-06-30): observation-only CardHedge
-  // price-updates delta poll. Dormant unless both CARD_HEDGE_CLIENT_ID
-  // (Drew registers with CH) AND CH_DELTA_POLL_ENABLED=true. Logs poll
-  // cycles + update counts; downstream wiring (subscribe holdings,
-  // trigger reprice) is a follow-up CF.
-  try {
-    startChDeltaPollJob();
-  } catch (err: any) {
-    console.error("[server] startChDeltaPollJob failed:", err?.message ?? err);
   }
   // CF-MATCHED-COHORT-PLAYER-MOMENTUM (2026-07-01): nightly refresh of
   // mix-bias-free per-player momentum. Gated by MATCHED_COHORT_JOB_ENABLED.

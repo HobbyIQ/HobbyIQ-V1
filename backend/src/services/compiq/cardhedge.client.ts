@@ -641,24 +641,7 @@ export interface CardHedgeCertPriceResponse {
   total_found: number;
 }
 
-/** Single price-update event from /v1/cards/price-updates (delta poll). */
-export interface CardHedgePriceUpdate {
-  card_id: string;
-  card_desc: string;
-  card_set: string;
-  card_number: string;
-  player: string;
-  variant: string;
-  grade: string;
-  price: string;        // CH ships as string — caller coerces
-  sale_date: string;    // YYYY-MM-DD
-  update_timestamp: string;
-}
 
-export interface CardHedgePriceUpdatesResponse {
-  updates: CardHedgePriceUpdate[];
-  count: number;
-}
 
 // CF-CH-DELTA-POLL-FOUNDATION (2026-06-30): per-subscription input shape
 // for /cards/subscribe-price-updates. external_id is OUR reference for
@@ -800,105 +783,7 @@ export async function getBatchPricesByCert(
   );
 }
 
-/**
- * Delta poll: fetch price updates since the given ISO timestamp. Returns
- * only cards CH has been subscribed to via subscribe-price-updates;
- * unsubscribed cards never appear here.
- *
- * NO cache: by design, delta polls should be fresh. The caller is
- * expected to record the latest observed `update_timestamp` and pass it
- * as `since` on the next call.
- */
-export async function getPriceUpdates(
-  since: string,
-  opts: { ignoreGrades?: string[] } = {},
-): Promise<CardHedgePriceUpdatesResponse | null> {
-  const h = headers();
-  if (!h || !since) return null;
-  try {
-    const body: Record<string, unknown> = { since };
-    if (Array.isArray(opts.ignoreGrades) && opts.ignoreGrades.length > 0) {
-      body.ignore_grades = opts.ignoreGrades;
-    }
-    const res = await chFetch(`${BASE_URL}/cards/price-updates`, {
-      method: "POST",
-      headers: h,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      console.warn(`[cardhedge.client] price-updates HTTP ${res.status}`);
-      return null;
-    }
-    const respBody: any = await res.json();
-    return {
-      updates: Array.isArray(respBody?.updates) ? respBody.updates : [],
-      count: typeof respBody?.count === "number" ? respBody.count : 0,
-    };
-  } catch (err: any) {
-    console.warn("[cardhedge.client] price-updates threw:", err?.message ?? err);
-    return null;
-  }
-}
 
-/**
- * Subscribe (card_id, grade) combinations to CardHedge's price tracking.
- * Once subscribed, sales appear in the delta-poll feed served by
- * getPriceUpdates(). Each subscription carries an external_id which CH
- * echoes back in the update payload — we use it to reverse-map updates
- * to holdings.
- *
- * REQUIRES CARD_HEDGE_CLIENT_ID env var. Returns null when unset (the
- * delta-poll worker treats null as "subscriptions are not enrolled yet"
- * and stays dormant).
- *
- * CH supports up to 100 subscriptions per request; we chunk transparently.
- */
-export async function subscribePriceUpdates(
-  subscriptions: CardHedgeSubscriptionItem[],
-): Promise<CardHedgeSubscribeResponse | null> {
-  const h = headers();
-  const clientId = process.env.CARD_HEDGE_CLIENT_ID;
-  if (!h) return null;
-  if (!clientId) {
-    console.warn("[cardhedge.client] subscribe-price-updates skipped — CARD_HEDGE_CLIENT_ID unset");
-    return null;
-  }
-  const valid = subscriptions.filter((s) => s?.cardId && s?.grade);
-  if (valid.length === 0) return { results: [], total_requested: 0, total_successful: 0 };
-
-  const merged: CardHedgeSubscribeResponse = { results: [], total_requested: 0, total_successful: 0 };
-  for (let i = 0; i < valid.length; i += 100) {
-    const chunk = valid.slice(i, i + 100);
-    try {
-      const res = await chFetch(`${BASE_URL}/cards/subscribe-price-updates`, {
-        method: "POST",
-        headers: h,
-        body: JSON.stringify({
-          client_id: clientId,
-          subscriptions: chunk.map((s) => ({
-            card_id: s.cardId,
-            grade: s.grade,
-            ...(s.externalId ? { external_id: s.externalId } : {}),
-          })),
-        }),
-        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-      });
-      if (!res.ok) {
-        console.warn(`[cardhedge.client] subscribe-price-updates HTTP ${res.status} (chunk ${i}-${i + chunk.length})`);
-        continue;
-      }
-      const body: any = await res.json();
-      const chunkResults: CardHedgeSubscriptionResult[] = Array.isArray(body?.results) ? body.results : [];
-      merged.results.push(...chunkResults);
-      merged.total_requested += Number(body?.total_requested ?? chunk.length) || chunk.length;
-      merged.total_successful += Number(body?.total_successful ?? 0) || 0;
-    } catch (err: any) {
-      console.warn(`[cardhedge.client] subscribe-price-updates threw on chunk ${i}:`, err?.message ?? err);
-    }
-  }
-  return merged;
-}
 
 async function _postFmvShape<T extends { price: number }>(
   path: string,

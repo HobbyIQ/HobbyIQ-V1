@@ -107,15 +107,29 @@ export async function cacheDel(key: string): Promise<void> {
   try { await client.del(key); } catch { _memory.delete(key); }
 }
 
-// CF-CH-DELTA-POLL-SINGLE-FLIGHT (2026-08-20). SET NX EX: create `key` only
-// if it does not already exist, and return true only if THIS caller created
-// it.
+// CF-JOB-SINGLE-FLIGHT (2026-08-20). SET NX EX: create `key` only if it does
+// not already exist, and return true only if THIS caller created it.
 //
-// Exists because a setInterval job inside the API process runs once PER App
-// Service worker. HobbyIQ3 runs 2 workers, so the CardHedge delta poll fired
-// twice every cycle against a quota-limited vendor. Confirmed in
-// hobbyiq-insights: every 1-minute bin containing a poll showed
-// dcount(cloud_RoleInstance) = 2.
+// WHY THIS IS HERE WITH NO CALLER YET. Every start*Job() in server.ts arms a
+// setInterval inside the API process, so each one runs once PER App Service
+// worker. HobbyIQ3 runs numberOfWorkers=2. This was written for the CardHedge
+// delta poll, which has since been deleted outright — but the poll was never
+// the only offender, just the one that got measured first.
+//
+// Measured in hobbyiq-insights, 3h window, log lines grouped by tag:
+//
+//     [price.alert.evaluator]      19 lines   dcount(cloud_RoleInstance) = 2
+//     [portfolio.reprice.job]       7 lines   dcount(cloud_RoleInstance) = 2
+//     [advanced.alert.evaluator]    7 lines   dcount(cloud_RoleInstance) = 2
+//     [buyeriq.deal.scanner]        6 lines   dcount(cloud_RoleInstance) = 2
+//     [ebay.order.poll.job]         6 lines   dcount(cloud_RoleInstance) = 2
+//     [ebay.finances.enrichment]    5 lines   dcount(cloud_RoleInstance) = 2
+//
+// Nine interval jobs still double-fire. price.alert.evaluator is the one to
+// worry about — evaluating alerts twice is how users get duplicate pushes.
+// Wrapping each scheduled cycle in this lock is the fix; that work is not
+// done yet, which is the only reason this function currently has no caller.
+// Do not delete it as dead code.
 //
 // DEGRADATION IS DELIBERATE, IN BOTH DIRECTIONS:
 //   - No Redis configured: the in-memory map is per-process, so every worker
