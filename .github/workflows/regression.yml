@@ -79,7 +79,21 @@ jobs:
     name: Tier 1 Production Harness
     runs-on: ubuntu-latest
     needs: harness
-    timeout-minutes: 5
+    # CF-TIER1-CAP-GUARANTEED-RED (2026-08-20). Was 5, and the harness needs
+    # more: run 32395820565 reported "Failed: 0" throughout and was then
+    # CANCELLED at 5m15s with `npm run test:harness:tier1` still executing.
+    #
+    # A job that always times out is worse than no job. It cannot pass, so its
+    # red carries no information, and it trains everyone to merge past it —
+    # which is exactly what happened on #1149, where the only honest read was
+    # "this check cannot tell us anything." Any real failure it later detects
+    # would land in a check people have already learned to ignore.
+    #
+    # 15 matches the sibling Pricing Regression Harness in this same file. This
+    # buys the harness room to finish and produce a verdict; if it then still
+    # exceeds 15 minutes, that is a genuine finding about the production
+    # endpoints rather than a cap set too low.
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
