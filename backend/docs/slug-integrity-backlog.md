@@ -283,3 +283,65 @@ And two process rules bought the hard way:
   widened a run from Bowman to every baseball family.
 - **A measurement that cannot run must fail loudly.** An empty connection string
   returned a clean zero; a 403 killed a 2h43m scan. Both now abort explicitly.
+
+---
+
+## 2026-08-20 — set-level sport authority: measured, and WRONG. Not applied.
+
+`audit-set-sport` ran to completion over 14,310,254 comps and reported **8.69%
+CONTRADICT (1,243,562 rows)**. That number is not a contamination rate and
+nothing was applied from it.
+
+**The reported repair was backwards on its two largest categories** —
+533,076 `basketball -> baseball` and 515,655 `football -> baseball`.
+
+### What broke
+
+Authority was ranked over checklist-backed rows only, then gated at 0.95
+dominance. Dominance over a single-sport sample is always 1.0:
+
+```
+2024 panini-donruss
+  ALL rows       baseball 5,503   football 19,130   basketball 4,031
+  CHECKLIST rows football 3,993   ONLY
+  -> dominance 1.0000, authority "football", 0.95 gate PASSES
+```
+
+We have no checklist for Donruss **baseball** 2024. The product plainly exists —
+5,503 catalog rows of it. **Absence of checklist COVERAGE was read as absence of
+the PRODUCT**, condemning every genuine baseball comp in the set.
+
+Titles settle it. Of 4,000 comps slugged `hiq:baseball:2024:panini-donruss:`,
+those naming a sport said:
+
+```
+baseball 424   soccer 32   football 0
+```
+
+Zero. The audit wanted all 4,000 moved to football.
+
+### The deeper fact
+
+**A setKey does not name a sport.** Donruss, Topps Chrome, Prizm and Select are
+cross-sport franchises. `2021 topps-chrome` alone carries baseball 27,554,
+soccer 335, racing 78, non-sport 46. There is no set-level sport authority
+without sport already in the key — which is circular.
+
+This is the **second** reversal on sport authority. Player-dominance failed on
+Jason Kelce (460 real baseball rows in a football player's name); set-dominance
+fails on every cross-sport franchise. The lesson is not "pick a better level" —
+it is that **sport is a property of the card, and set-level and player-level
+signals are both priors about its neighbours.**
+
+### Fixed in the script, needs a re-run
+
+- **Multi-sport detection now reads ALL catalog rows.** A vendor row is weak
+  evidence of what a card IS, but perfectly good evidence that the product
+  EXISTS in that sport. New `minOther=200` gate, absolute rather than ratio —
+  4% of a large set is thousands of real cards, and a ratio gate lets them past.
+- **Title veto.** A title naming a sport beats the set-level verdict, because
+  that is direct evidence about *this* card. High precision, low recall: only
+  ~11% of titles name a sport, so it can stop a repair but must never drive one.
+
+The corrected numbers are **not yet measured** — the re-run is a ~2h scan.
+Until then there is no trustworthy cross-sport contamination figure.
