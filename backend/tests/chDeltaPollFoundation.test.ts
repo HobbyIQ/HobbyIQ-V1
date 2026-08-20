@@ -15,6 +15,12 @@ const fetchMock = vi.fn();
 vi.mock("../src/services/shared/cache.service.js", () => ({
   cacheWrap: (_key: string, fn: () => Promise<unknown>) => fn(),
   cacheKey: (...parts: string[]) => parts.join(":"),
+  // CF-CH-DELTA-POLL-SINGLE-FLIGHT (2026-08-20): the job now imports
+  // cacheAcquireLock. These tests drive runDeltaPollCycle directly and never
+  // reach the scheduler, so the lock is not exercised here -- but an absent
+  // export would surface as a confusing undefined the moment someone adds a
+  // scheduler test. Grant the lock so the mock stays faithful to the module.
+  cacheAcquireLock: async () => true,
 }));
 
 const CHECKPOINT_FILE = path.join(process.cwd(), ".data", "ch-delta-poll-checkpoint.json");

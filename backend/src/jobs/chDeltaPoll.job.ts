@@ -31,6 +31,8 @@
 
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "node:crypto";
+import { cacheAcquireLock } from "../services/shared/cache.service.js";
 import { getPriceUpdates, type CardHedgePriceUpdate } from "../services/compiq/cardhedge.client.js";
 // CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): consume updates by mapping
 // (card_id, grade) → holdings → targeted reprice. Lazy-imported via
@@ -83,9 +85,25 @@ function writeCheckpoint(timestamp: string): void {
     if (!fs.existsSync(CHECKPOINT_DIR)) {
       fs.mkdirSync(CHECKPOINT_DIR, { recursive: true });
     }
-    const tmp = `${CHECKPOINT_FILE}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ lastSeenUpdateTimestamp: timestamp }, null, 2), "utf8");
-    fs.renameSync(tmp, CHECKPOINT_FILE);
+    // CF-CH-DELTA-POLL-TMP-COLLISION (2026-08-20). This was previously
+    // `${CHECKPOINT_FILE}.tmp` -- the SAME path in every process.
+    //
+    // write-tmp-then-rename is only atomic when the temp name is unique to
+    // the writer. CHECKPOINT_DIR is process.cwd()/.data, which on App Service
+    // Linux lives under /home -- an Azure Files share MOUNTED BY EVERY
+    // INSTANCE. Two workers writing one temp path can interleave write and
+    // rename, so a reader can observe a torn file. readCheckpoint() catches
+    // the parse error and returns null, which falls back to "1 hour ago" and
+    // silently re-ingests an hour of deltas.
+    const tmp = `${CHECKPOINT_FILE}.${randomUUID()}.tmp`;
+    try {
+      fs.writeFileSync(tmp, JSON.stringify({ lastSeenUpdateTimestamp: timestamp }, null, 2), "utf8");
+      fs.renameSync(tmp, CHECKPOINT_FILE);
+    } finally {
+      // rename() consumed it on success, so this only fires when write or
+      // rename threw -- the share must not accumulate orphaned temp files.
+      try { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); } catch { /* best effort */ }
+    }
   } catch (err) {
     console.warn(`[ch-delta-poll] checkpoint write failed: ${(err as Error)?.message ?? err}`);
   }
@@ -216,6 +234,36 @@ function isEnabled(): boolean {
  * already running. Returns without scheduling anything when the env gate
  * is off (the common case in dev or until Drew registers a client_id).
  */
+/** Redis key for the cross-worker single-flight lock. */
+const POLL_LOCK_KEY = "lock:ch-delta-poll";
+
+/**
+ * One SCHEDULED cycle, guarded so that only a single App Service worker runs
+ * it.
+ *
+ * CF-CH-DELTA-POLL-SINGLE-FLIGHT (2026-08-20). startChDeltaPollJob() is called
+ * from server.ts at boot, so its setInterval exists in EVERY worker process.
+ * At numberOfWorkers=2 the poll ran twice per cycle against a quota-limited
+ * vendor, with both workers reading and writing one shared checkpoint file.
+ *
+ * The lock TTL is one minute short of the interval: long enough to lock the
+ * sibling worker out of THIS cycle, short enough to always expire before the
+ * next one -- so a worker that dies holding the lock costs at most one skipped
+ * cycle, never a permanently stalled job.
+ *
+ * runDeltaPollCycle() is deliberately left unguarded: it is the unit under
+ * test and the manual one-off entry point.
+ */
+export async function runScheduledCycle(intervalMs: number): Promise<DeltaPollSummary | null> {
+  const ttlSeconds = Math.max(60, Math.floor(intervalMs / 1000) - 60);
+  const acquired = await cacheAcquireLock(POLL_LOCK_KEY, ttlSeconds);
+  if (!acquired) {
+    console.log("[ch-delta-poll] cycle skipped - another worker holds the lock");
+    return null;
+  }
+  return runDeltaPollCycle();
+}
+
 export function startChDeltaPollJob(): void {
   if (_running) return;
   if (!isEnabled()) {
@@ -226,11 +274,11 @@ export function startChDeltaPollJob(): void {
   const intervalMs = readIntervalMs();
   console.log(`[ch-delta-poll] starting — interval ${intervalMs / 60000}min, first run in ${DEFAULT_FIRST_DELAY_MS / 1000}s`);
   _firstRunTimer = setTimeout(async () => {
-    try { await runDeltaPollCycle(); } catch (e: any) {
+    try { await runScheduledCycle(intervalMs); } catch (e: any) {
       console.warn(`[ch-delta-poll] first cycle failed: ${e?.message ?? e}`);
     }
     _intervalTimer = setInterval(async () => {
-      try { await runDeltaPollCycle(); } catch (e: any) {
+      try { await runScheduledCycle(intervalMs); } catch (e: any) {
         console.warn(`[ch-delta-poll] cycle failed: ${e?.message ?? e}`);
       }
     }, intervalMs);
