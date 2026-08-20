@@ -175,7 +175,14 @@ async function main() {
     if (r.bookUnparsed) unparsed++;
     const setKey = setKeyFromSlug(r.slug, r.yearPrefix, r.sport);
     if (!setKey) { noSetKey++; continue; }
-    const k = `${r.year}|${setKey}`;
+    // SPORT BELONGS IN THE KEY. Product names are cross-sport franchises:
+    // `donruss-elite`, `panini-limited`, `panini-zenith` and `o-pee-chee` all
+    // exist in the catalog as BASEBALL, while the pages scraped here are
+    // basketball, football and hockey. Keying on (year, setKey) alone would
+    // have merged a basketball product's parallel ladder into the baseball set
+    // of the same name — the same cross-sport-franchise trap that made
+    // audit-set-sport report a bogus 8.69%.
+    const k = `${r.sport}|${r.year}|${setKey}`;
     let e = scraped.get(k);
     if (!e) scraped.set(k, (e = { slug: r.slug, sport: r.sport, year: r.year, setKey, parallels: new Map() }));
 
@@ -224,14 +231,19 @@ async function main() {
   console.log(`  distinct parallels     : ${[...scraped.values()].reduce((s, e) => s + e.parallels.size, 0).toLocaleString()}\n`);
 
   // ── 2. What does the catalog hold for those sets? ────────────────────────
-  const have = new Map();   // "year|setKey" -> Map(parallelSlug -> Set(run|null))
+  const have = new Map();      // "sport|year|setKey" -> Map(parallelSlug -> Set(run|null))
+  const setExists = new Set(); // same key, but for ANY row — with or without parallels
   await scanAll("card_catalog", {
-    query: `SELECT c.year, c.setKey, c.parallels FROM c
-             WHERE IS_DEFINED(c.setKey) AND IS_DEFINED(c.year) AND IS_DEFINED(c.parallels)`,
+    query: `SELECT c.year, c.setKey, c.sport, c.parallels FROM c
+             WHERE IS_DEFINED(c.setKey) AND IS_DEFINED(c.year)`,
     parameters: [],
   }, (r) => {
-    const k = `${r.year}|${r.setKey}`;
+    const k = `${r.sport}|${r.year}|${r.setKey}`;
     if (!scraped.has(k)) return;           // only the sets we scraped
+    // "We do not have this set" and "we have it but hold no parallels for it"
+    // are different facts and want different work — acquisition versus
+    // enrichment. The first pass collapsed both into one 53.6% bucket.
+    setExists.add(k);
     if (!Array.isArray(r.parallels)) return;
     let m = have.get(k);
     if (!m) have.set(k, (m = new Map()));
@@ -250,13 +262,20 @@ async function main() {
   }, "catalog");
 
   // ── 3. Diff. ─────────────────────────────────────────────────────────────
-  let known = 0, fillable = 0, conflict = 0, isNew = 0, noSet = 0;
-  const conflicts = [], news = [], fills = [], noSetEx = new Map();
+  let known = 0, fillable = 0, conflict = 0, isNew = 0, noSet = 0, setNoParallels = 0;
+  const conflicts = [], news = [], fills = [], noSetEx = new Map(), noParEx = new Map();
   for (const [k, e] of scraped) {
     const mine = have.get(k);
     if (!mine) {
-      noSet += e.parallels.size;
-      if (noSetEx.size < TOP) noSetEx.set(k, `${e.year} ${e.setKey.padEnd(30)} <- ${e.slug}`);
+      if (setExists.has(k)) {
+        // We HOLD this set and carry no parallels for it. Enrichment, not
+        // acquisition — and the single most adoptable bucket in the report.
+        setNoParallels += e.parallels.size;
+        if (noParEx.size < TOP) noParEx.set(k, `${e.sport}/${e.year} ${e.setKey.padEnd(28)} ${String(e.parallels.size).padStart(4)} parallels <- ${e.slug}`);
+      } else {
+        noSet += e.parallels.size;
+        if (noSetEx.size < TOP) noSetEx.set(k, `${e.sport}/${e.year} ${e.setKey.padEnd(28)} <- ${e.slug}`);
+      }
       continue;
     }
     for (const [ps, p] of e.parallels) {
@@ -273,20 +292,26 @@ async function main() {
     }
   }
 
-  const tot = known + fillable + conflict + isNew + noSet;
+  const tot = known + fillable + conflict + isNew + noSet + setNoParallels;
   const pc = (n) => `${((n / Math.max(tot, 1)) * 100).toFixed(1)}%`;
   console.log(`scraped parallels judged : ${tot.toLocaleString()}\n`);
   console.log(`  KNOWN    (same run)    : ${known.toLocaleString()}  ${pc(known)}   corroborates us`);
   console.log(`  FILLABLE (numberedTo null): ${fillable.toLocaleString()}  ${pc(fillable)}   <- the prize`);
   console.log(`  CONFLICT (run differs) : ${conflict.toLocaleString()}  ${pc(conflict)}   a human decides`);
   console.log(`  NEW      (not in cat)  : ${isNew.toLocaleString()}  ${pc(isNew)}   catalog gap`);
-  console.log(`  set not matched        : ${noSet.toLocaleString()}  ${pc(noSet)}   setKey miss OR set unknown\n`);
+  // BOTH lines, or the biggest bucket vanishes. The first run counted
+  // setNoParallels into `tot` but never printed it, so the displayed categories
+  // summed to 30% of a stated 8,993 and the dominant 6,290 was invisible —
+  // recoverable only by subtracting the printed lines from the total.
+  console.log(`  set held, NO parallels : ${setNoParallels.toLocaleString()}  ${pc(setNoParallels)}   <- ENRICHMENT, we own the set`);
+  console.log(`  set NOT in catalog     : ${noSet.toLocaleString()}  ${pc(noSet)}   acquisition, keyed by (sport, year, setKey)\n`);
 
   const show = (t, a) => { if (!a.length) return; console.log(t); for (const l of a) console.log(`   ${l}`); console.log(""); };
   show("FILLABLE - print runs we could adopt:", fills);
   show("CONFLICT - a human decides these:", conflicts);
   show("NEW - parallels absent from the catalog:", news);
-  show("SET NOT MATCHED - check before trusting that number:", [...noSetEx.values()]);
+  show("SET HELD but we carry NO parallels for it - most adoptable:", [...noParEx.values()]);
+  show("SET NOT IN CATALOG at all - acquisition:", [...noSetEx.values()]);
 
   console.log("READ-ONLY. Nothing adopted. A scraped page is evidence, not authority -");
   console.log("pre-release checklists get revised, so CONFLICT is never auto-resolved.");

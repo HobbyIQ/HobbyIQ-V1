@@ -55,42 +55,100 @@ products with ZERO unparsed workbooks. Print runs are the one field we cannot
 reconstruct from anywhere else, and every attempt to read them out of seller
 titles bred a defect class. Staged to JSONL; nothing written.
 
-### 1. setKey matching is the blocker — 53.6% never matched a set
+### 1. The opportunity is ENRICHMENT of sets we already own — 70%
 
-The reconcile ran against all 599 products. The dominant bucket is not a data
-gap, it is a JOIN failure: **4,258 of 7,950 scraped parallels (53.6%) never
-matched a `(year, setKey)` we hold.** Deriving setKey from a product URL slug
-works for fewer than half of them.
+Measured 2026-08-20, keyed on `(sport, year, setKey)`:
 
-Until that is fixed most of this data cannot be placed, and every other count
-below understates the real picture.
-
-### 2. Print runs were NOT the prize — measured, and it inverted
-
-```
-KNOWN     744   9.4%   we already hold the same run
-FILLABLE   22   0.3%   <- the entire "fill our gaps" case
-CONFLICT   85   1.1%   checklist disagrees with us
-NEW     2,841  35.7%   parallels we do not hold AT ALL
+```text
+KNOWN                   717   8.0%   we already hold the same run
+FILLABLE                 13   0.1%
+CONFLICT                 23   0.3%
+NEW                     797   8.9%   parallels absent from the catalog
+set held, NO parallels 6,290  70.0%  <- ENRICHMENT, we own the set
+set NOT in catalog     1,153  12.8%  acquisition
 ```
 
-The case for this source is **not** filling print runs we lack — there are 22
-of those. It is the 2,841 parallels absent from the catalog, plus 85
-disagreements worth a human read, plus 744 independent corroborations of runs we
-already carry.
+**70% of everything scraped belongs to sets WE ALREADY HOLD and for which we
+carry no parallels at all.** That is five times larger than acquisition and
+five hundred times larger than the print-run fill this source was chosen for.
 
-*This number was wrong once. The first run reported 851 FILLABLE and ZERO
-KNOWN, because it read only `parallels[].numberedTo` — the vendor key — while
-checklist rows carry `printRun`. Zero corroboration was the tell: if we held
-print runs at all, some had to match. `2023 bowman` already carries
-`{name: "Gold", printRun: 50}`. **A field absent from the rows you happened to
-sample is not a field that does not exist.***
+The earlier "53.6% never matched a set" is RETIRED. It was an artifact of
+keying on `(year, setKey)` without sport: `donruss-elite`, `panini-limited`,
+`panini-zenith` and `o-pee-chee` all exist in the catalog as BASEBALL while the
+scraped pages were basketball, football and hockey. The setKeys resolved
+correctly all along — matching would have merged a basketball product's ladder
+into the baseball set of the same name. Adding sport un-merged 105 groups
+(262 -> 367) and shrank every disagreement category: CONFLICT 85 -> 23,
+NEW 2,841 -> 797.
 
-### 3. Read the 85 CONFLICTs before adopting anything
+### 2. Print runs were NOT the prize — measured, and it inverted twice
 
-Never auto-resolved. Pre-release checklists get revised, and this source exists
-to stop us INFERRING print runs — overwriting on scrape reintroduces that in a
-new costume.
+The first run reported **851 FILLABLE and ZERO KNOWN** because it read only
+`parallels[].numberedTo` — the vendor key — while checklist rows carry
+`printRun`. Zero corroboration was the tell: if we held print runs at all, some
+had to match. `2023 bowman` already carries `{name: "Gold", printRun: 50}`.
+**A field absent from the rows you happened to sample is not a field that does
+not exist.**
+
+Corrected, then corrected again by the sport key: **13 FILLABLE**. The case for
+this source is not filling print-run gaps. It is item 1.
+
+*A third failure worth recording, because it was the most dangerous: the 70%
+bucket was COUNTED but never PRINTED. The report stated "judged: 8,993" and
+listed categories summing to 2,703 — and looked like a complete breakdown. A
+wrong number invites checking; a plausible-looking partial one does not.*
+
+### 3. The 85 CONFLICTs are mostly an ARTIFACT — fix the granularity first
+
+Do not review them as-is. Inspected 2026-08-20: **12 of the 25 displayed lines
+(48%) carry MULTIPLE `ours` values**, e.g.
+
+```text
+2023 topps  Gold  ours=1,5,2023,75,25,,50,20  theirs=/10
+```
+
+That is not a disagreement. Print run is a property of
+`(year, setKey, SUBSET, parallel)`, and the reconcile compares at
+`(year, setKey, parallel)` — so every card called "Gold" anywhere in a product
+collapses into one bucket and any variation between subsets reads as conflict.
+
+**Fix the comparison unit, then re-count.** Reviewing the current 85 would spend
+human attention on non-problems.
+
+*Also recorded so nobody else re-derives it: the `2023` and `2024` values in
+those `ours` lists are NOT the year-as-serial bug. Topps flagship Gold is
+genuinely numbered to its year — 2023 Gold is /2023. Correct data that looks
+exactly like a known defect.*
+
+When a genuine conflict list exists it is still never auto-resolved:
+pre-release checklists get revised, and this source exists to stop us INFERRING
+print runs — overwriting on scrape reintroduces that in a new costume.
+
+### 3b. The 19,188 YEAR-FLAGGED rows — RESOLVED into two opposite classes
+
+A subset naming a different year than its page is not one problem. Measured
+2026-08-20 over all 1,630,139 card rows carrying a print run:
+
+```text
+9,510  49.6%  "UPDATE" set    2018 Update - Signature Pucks  on a 2023 page
+              -> the SUBSET year is REAL. Upper Deck Update sets complete a
+                 PRIOR year's set; the card genuinely belongs to 2018.
+
+5,560  29.0%  retro DESIGN    1994 Pacific Gold              on a 2023 page
+              -> the CARD is the PAGE year. The year names a design homage.
+
+3,898  20.3%  ambiguous       2020-21 Award-Winning Autographs Gold
+              -> small delta, no "Update" marker. Needs a rule or a human.
+
+  220   1.1%  FORWARD-dated   2025 XRC Black Prizm           on a 2024 page
+              -> genuinely ahead. XRC cards are issued before their year.
+```
+
+**79% is confidently resolvable, and the two large classes resolve in OPPOSITE
+directions.** Assigning all 19,188 to the page year — the obvious move — would
+have corrupted 9,510 genuine prior-year Update cards. Flagging rather than
+guessing was correct, and the discriminator turns out to be simple: the literal
+word "Update" in the subset name.
 
 ### 4. The corrected sport audit — LANDED: 1.36%
 
