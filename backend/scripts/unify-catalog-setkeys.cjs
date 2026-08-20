@@ -57,6 +57,11 @@ const PAIR = arg("pair", "").split(",").map((s) => s.trim()).filter(Boolean);
 const POOL = Math.max(1, Number(arg("pool", "8")));
 const TOP = Number(arg("top", "20"));
 const REFRESH_PAGES = Number(arg("refreshPages", "400"));
+// A Cosmos auth token is minted when the iterator opens and expires under a
+// long scan. Page count is the WRONG unit for that: 400 pages is 800k rows,
+// and at a throttled RU ceiling one leg can outlive the token — which killed
+// a 10-hour trend scan with a 403. Elapsed time is what the token cares about.
+const LEG_MAX_MS = Number(arg("legMaxMinutes", "20")) * 60_000;
 
 const GRADE_TAIL = /:(psa|bgs|sgc|cgc|ace|tag|hga)-[0-9]{1,2}(-[0-9])?(-black)?$|:raw$/i;
 const norm = (s) => String(s ?? "").toLowerCase().trim();
@@ -108,6 +113,7 @@ async function scanAll(container, sql, onRow, label) {
     const c = newClient().database(process.env.COSMOS_DATABASE || "hobbyiq").container(container);
     const iter = c.items.query(sql, { maxItemCount: 2000, continuationToken: token });
     let legPages = 0, progressed = false;
+    const legStart = Date.now();
     while (iter.hasMoreResults()) {
       let page;
       try { page = await iter.fetchNext(); }
@@ -125,7 +131,7 @@ async function scanAll(container, sql, onRow, label) {
       legPages++;
       if (rows % 250000 < 2000) process.stderr.write(`\r  ${label} scanned=${rows}   `);
       if (!iter.hasMoreResults()) { drained = true; break; }
-      if (legPages >= REFRESH_PAGES) break;
+      if (legPages >= REFRESH_PAGES || Date.now() - legStart > LEG_MAX_MS) break;
     }
     if (!drained && !progressed && !token) break;
   }
