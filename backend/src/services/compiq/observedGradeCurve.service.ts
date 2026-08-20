@@ -23,6 +23,8 @@
 
 import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
+import { logSubRawInversionObserved } from "./marketRead.service.js";
+import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
 import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
@@ -387,89 +389,30 @@ async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
 ): Promise<Array<{ price: number; date: string | null; saleType: string | null }>> {
-  const { CosmosClient } = await import("@azure/cosmos");
-  const conn = process.env.COSMOS_CONNECTION_STRING;
-  if (!conn) return [];
-  const container = new CosmosClient(conn)
-    .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-    .container("sold_comps");
+  // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The Cosmos read moved to
+  // soldCompsGradeReader so tests can mock a seam of our own instead of
+  // "@azure/cosmos" — mocking that module hits every other Cosmos consumer in
+  // the graph and took the suite from 89 to 107 failures. Filtering stays HERE
+  // so mocking the reader still exercises the real title rules below.
+  const resources = await readSoldCompsForGrade(cardId, grade);
 
-  // Grade string parse. "Raw" → gradeCompany null; "PSA 10" →
-  // gradeCompany=PSA, gradeValue=10; also handle "PSA 10 Black Label"
-  // and "BGS 10 Black Label" (BGS-only variant we treat as tier 10).
-  const gradeParts = grade.trim().split(/\s+/);
-  let wantCompany: string | null = null;
-  let wantValue: number | null = null;
-  if (gradeParts[0] && gradeParts[0].toLowerCase() !== "raw") {
-    wantCompany = gradeParts[0].toUpperCase();
-    const v = Number(gradeParts[1]);
-    if (Number.isFinite(v)) wantValue = v;
-  }
+  // Title-based rejection — filters IP/TTM tokens, bulk lot listings,
+  // "read description", etc.
+  const kept = resources.filter((r) => {
+    if (!Number.isFinite(r.price) || r.price <= 0) return false;
+    if (shouldRejectSaleTitle(r.title ?? "")) return false;
+    return true;
+  });
 
-  // Window: 180d. Same as compiqEstimate + hobbyIqFmv defaults.
-  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString();
-
-  // Query by either cardId (vendor bubble.io id) OR hobbyiqCardId
-  // (our canonical slug) so cross-vendor rows both surface.
-  const clauses: string[] = [
-    "c.soldAt >= @cut",
-    "c.price > 0",
-    "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
-    "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
-    "(c.cardId = @cid OR c.hobbyiqCardId = @cid)",
-  ];
-  const params: Array<{ name: string; value: string | number | null | boolean }> = [
-    { name: "@cut", value: cutoff },
-    { name: "@cid", value: cardId },
-  ];
-  if (wantCompany === null) {
-    // Raw: gradeCompany null or undefined
-    clauses.push("(c.gradeCompany = null OR NOT IS_DEFINED(c.gradeCompany))");
-  } else {
-    clauses.push("UPPER(c.gradeCompany) = @gc");
-    params.push({ name: "@gc", value: wantCompany });
-    if (wantValue !== null) {
-      // Handle numeric or string-serialized gradeValue.
-      clauses.push("(c.gradeValue = @gv OR c.gradeValue = @gvStr)");
-      params.push({ name: "@gv", value: wantValue });
-      params.push({ name: "@gvStr", value: String(wantValue) });
-    }
-  }
-
-  try {
-    const { resources } = await container.items.query<{
-      price: number;
-      soldAt: string;
-      source?: string | null;
-      title?: string | null;
-    }>({
-      query: `SELECT TOP 500 c.price, c.soldAt, c.source, c.title
-              FROM c WHERE ${clauses.join(" AND ")}
-              ORDER BY c.soldAt DESC`,
-      parameters: params,
-    }).fetchAll();
-
-    // Same title-based rejection as before — filters IP tokens, bulk
-    // lot listings, "read description," etc. Wraps sold_comps rows
-    // the same way we filtered CH rows.
-    const kept = (resources || []).filter((r) => {
-      if (!Number.isFinite(r.price) || r.price <= 0) return false;
-      if (shouldRejectSaleTitle(r.title ?? "")) return false;
-      return true;
-    });
-
-    return kept.map((r) => ({
-      price: r.price,
-      date: r.soldAt ?? null,
-      saleType: null,  // sold_comps doesn't carry sale_type; weightedMedian falls back to plain weight
-    }));
-  } catch (err) {
-    console.warn(JSON.stringify({
-      event: "observed_grade_curve_sold_comps_query_failed",
-      cardId, grade, error: (err as Error).message,
-    }));
-    return [];
-  }
+  return kept.map((r) => ({
+    price: r.price,
+    date: r.soldAt ?? null,
+    // CF-BIN-WEIGHT-FIELD-RENAME (2026-08-16). Was hardcoded null on the
+    // belief that sold_comps carries no sale type. It does — under
+    // `listingType`, populated on 518,595 rows — so computeWeightedMedian's
+    // BIN lift had been disabled by a field rename rather than by design.
+    saleType: r.listingType ?? null,
+  }));
 }
 
 function computePlainMedian(prices: number[]): number | null {
@@ -1296,68 +1239,65 @@ async function applyTrajectory(
     // grade is supposed to be worth strictly more than raw). Grades with
     // multiplier === 1 (e.g. PSA 8) are semantically equivalent to raw
     // per Drew's spec so they can equal raw without an inversion.
-    const nonRawStrictFloor = entries.reduce<number | null>((min, e) => {
-      if (e.grader === "Raw") return min;
-      if (e.value === null || e.value <= 0) return min;
+    // Track the ENTRY, not just its number — the telemetry has to say WHICH
+    // grade the raw value sits above, or "sub-raw" is unactionable.
+    const floorEntry = entries.reduce<ObservedGradeEntry | null>((best, e) => {
+      if (e.grader === "Raw") return best;
+      if (e.value === null || e.value <= 0) return best;
       const mult = e.estimatedMultiplier;
       // Only cards with a "strictly-above-raw" multiplier count as a floor.
-      if (typeof mult !== "number" || mult <= 1.0) return min;
-      return min === null || e.value < min ? e.value : min;
+      if (typeof mult !== "number" || mult <= 1.0) return best;
+      return best === null || e.value < (best.value ?? Infinity) ? e : best;
     }, null);
+    const nonRawStrictFloor = floorEntry?.value ?? null;
 
     if (
       nonRawStrictFloor !== null &&
       rawShownValue > nonRawStrictFloor + 0.005
     ) {
-      const originalTrendAdjusted = rawEntry.trendAdjustedValue;
-      const originalPredicted = rawEntry.predictedPriceAt30d;
-      const cappedMarket = Math.round(nonRawStrictFloor * 100) / 100;
-      // Recompute predicted from the capped market value using the same
-      // forward-rate factor already applied to this entry. predictedPricePct
-      // is (predictedMultiplier - 1) * 100, so this reproduces the loop's math.
-      const predictedFactor =
-        1 + (rawEntry.predictedPricePct ?? 0) / 100;
-      const cappedPredicted =
-        Math.round(cappedMarket * predictedFactor * 100) / 100;
-      const rangePct = pickBandWidthPct(rawEntry);
-      const cappedRangeLow =
-        Math.round(cappedPredicted * (1 - rangePct) * 100) / 100;
-      const cappedRangeHigh =
-        Math.round(cappedPredicted * (1 + rangePct) * 100) / 100;
-
-      rawEntry.trendAdjustedValue = cappedMarket;
-      rawEntry.trendAdjustmentPct =
-        Math.round(((cappedMarket / rawEntry.value) - 1) * 10000) / 100;
-      rawEntry.predictedPriceAt30d = cappedPredicted;
-      rawEntry.predictedPriceRangeLow = cappedRangeLow;
-      rawEntry.predictedPriceRangeHigh = cappedRangeHigh;
-      // predictedPricePct is a percent-of-market, not-of-original —
-      // preserved: cappedMarket * (1 + pct/100) = cappedPredicted, so pct
-      // stays as it was. Keep the loop's value on the entry.
-
-      console.log(
-        JSON.stringify({
-          event: "raw_trend_capped_by_grade_monotonicity",
-          source: "observedGradeCurve",
-          rawBaseValue: rawEntry.value,
-          rawTrendAdjustedBeforeCap: originalTrendAdjusted,
-          rawPredictedBeforeCap: originalPredicted,
-          nonRawStrictFloor,
-          cappedMarketValue: cappedMarket,
-          cappedPredictedValue: cappedPredicted,
-          ratePerWeek: derivation.cappedRate,
-        }),
-      );
-
-      // Recompute the raw entry's action recommendation off the capped
-      // pair so the seller verdict reflects the actually-shown numbers.
-      const cappedMarketForRec = rawEntry.trendAdjustedValue ?? rawEntry.value;
-      rawEntry.recommendation = computeAction({
-        currentValue: cappedMarketForRec,
-        predictedValue: rawEntry.predictedPriceAt30d,
-        confidenceScore: rawEntry.confidenceScore,
-        signalSource: derivation.signalSource,
-        weeksSinceRelease: releaseDecayContext?.weeksSinceRelease ?? null,
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20: "a raw can be worth more in
+      // different areas, so lets not do that"). OBSERVE, DO NOT CLAMP.
+      //
+      // THIS USED TO CAP RAW DOWN TO THE CHEAPEST GRADED VALUE, on the premise
+      // that a raw card cannot be worth more than a graded one. The premise is
+      // false: a raw card carries the OPTION on a high grade, so it routinely
+      // trades above a low-graded copy — a raw with a shot at a PSA 10 is worth
+      // more than a PSA 8, and in some markets more than a PSA 9.
+      //
+      // The rest of the system already knows this. `sub_raw_inversion_observed`
+      // exists precisely to TRACK raw-above-graded as a market signal, and that
+      // telemetry feeds DailyIQ. Clamping here deleted the signal the product is
+      // built on, then logged the deletion as though it were a correction.
+      //
+      // It also destroyed correct output. A Raw card projecting to $220 off an
+      // accurate 12-week trend was rewritten to $108, because the cheapest
+      // ESTIMATED graded tier — itself computed as that same raw value x 1.08 —
+      // became the floor. The bound was our own estimate of the number being
+      // bounded, so the curve judged itself: the identical circularity we spent
+      // this week removing from the catalog, where a mis-slugged comp seeds a
+      // row that then vouches for the comp.
+      //
+      // The original 2026-07-09 complaint (Devin Taylor gold auto, raw $1908 vs
+      // PSA 10 estimate $1182) was a real DISPLAY problem, but its cause is that
+      // raw is trended and estimated grades deliberately are not — an
+      // apples-to-oranges comparison. Clamping raw treated the symptom by
+      // falsifying the better number.
+      const rawMarket = rawEntry.trendAdjustedValue ?? rawEntry.value;
+      logSubRawInversionObserved({
+        source: "observedGradeCurve.gradeMonotonicity",
+        player: playerName ?? null,
+        cardId: null,
+        event: {
+          grader: floorEntry?.grader ?? "unknown",
+          grade: floorEntry?.grade ?? "unknown",
+          gradeMedian: nonRawStrictFloor,
+          gradeCount: 0,
+          rawMedian: rawMarket,
+          marginPct: rawMarket > 0
+            ? Math.round(((rawMarket - nonRawStrictFloor) / rawMarket) * 10000) / 100
+            : 0,
+          marginUSD: Math.round((rawMarket - nonRawStrictFloor) * 100) / 100,
+        },
       });
     }
   }

@@ -2088,10 +2088,34 @@ export function detectGradeFromTitle(title: string): { company: string; grade: s
   const company = m[1].toUpperCase();
   const grade = m[2];
   if (company === "BGS" && grade === "10") {
-    // Case-insensitive match on "Black Label" or bare "BL" adjacent
-    // to the BGS 10 (typical eBay titles: "BGS 10 BL", "BGS 10 Pristine",
-    // "BGS 10 Black Label"). "Pristine" is BGS's other name for Black Label.
-    if (/\b(black\s+label|pristine|bl)\b/i.test(title)) {
+    // CF-PRISTINE-IS-NOT-BLACK-LABEL (Drew, 2026-08-19: "is the BGS 10 and BGS
+    // pristine 10 black label and PSA 10 matching? We may be missing the
+    // pristine" / "cardsight is a data vendor, we use what I know").
+    //
+    // This used to read /black\s+label|pristine|bl/ and treat all three as
+    // Black Label, on the belief that "Pristine is BGS's other name for Black
+    // Label". IT IS NOT. Pristine is BGS's name for the grade TEN itself. Black
+    // Label is the separate designation for a 10 whose FOUR SUBGRADES are all
+    // 10 — a different, far rarer card.
+    //
+    // The cost of the conflation: "10 Black Label" carries a 12.0x multiplier
+    // at low print runs. Measured 2026-08-19, 6,434 BGS 10 comps say "Pristine"
+    // against 1,212 that say "Black Label" — so roughly 5,200 ordinary BGS 10s
+    // were being priced as Black Label. Observed prices agree with the hobby
+    // rather than the code: Black Label median $510 vs ordinary BGS 10 $160,
+    // a 3.19x premium, not 12x applied to everything.
+    //
+    // "ALMOST BLACK LABEL" IS NOT A BLACK LABEL. Real production title:
+    //   "2024 Topps Now /5151 Aaron Judge #416 BGS 10 Pristine!! Almost Black
+    //    Label" — a $65 card that a naive match would drop into a $510 pool.
+    //
+    // Bare "BL" is gone too. It is a two-letter token that collides with
+    // ordinary words and abbreviations, and the volume never justified the
+    // risk; an explicit "Black Label" is what sellers actually write when they
+    // have one.
+    const hasBlackLabel = /\bblack[\s-]?label\b/i.test(title);
+    const hedged = /\b(almost|near(ly)?|not|non|like|close to|basically|practically)\b[^.]{0,24}\bblack[\s-]?label\b/i.test(title);
+    if (hasBlackLabel && !hedged) {
       return { company, grade: "10 Black Label" };
     }
   }
@@ -3083,85 +3107,23 @@ async function fetchComps(
  * verifiedByUser=false. Downstream consumers filter by source/confidence.
  * Gated on SOLD_COMPS_VENDOR_INGEST_ENABLED=true (default off).
  */
-export function ingestVendorCompsToPool(fetched: FetchedComps): void {
-  if (process.env.SOLD_COMPS_VENDOR_INGEST_ENABLED !== "true") return;
-  // CH already covered upstream — skip to avoid double-writes.
-  if (fetched.vendor !== "cardsight") return;
-  // CF-VENDOR-INGEST-GRADE-UNKNOWN (Drew, 2026-07-19). FetchedComps
-  // doesn't carry per-comp grade tier — same class of bug that burned
-  // us in historicalBackfill/cardsight.router. When (or if) this
-  // ingest is turned on, the writes below will store rows with
-  // gradeCompany=null (raw bucket) regardless of actual tier. Warn
-  // sampled so an operator flipping the flag sees the risk in logs.
-  if (Math.random() < 0.1) {
-    console.warn(JSON.stringify({
-      event: "compiq.sold_comps.vendor_ingest_grade_unknown",
-      reason: "FetchedComps lacks per-comp grade; writes will be raw-tagged",
-      cardId: fetched.card?.card_id ?? null,
-      compCount: fetched.comps.length,
-      sampled: true,
-    }));
-  }
-  const card = fetched.card;
-  if (!card?.card_id) return;
-  const playerName = (card.player ?? "").trim();
-  if (!playerName) return;
-  if (fetched.comps.length === 0) return;
-
-  const cardYear =
-    typeof card.year === "number"
-      ? card.year
-      : card.year != null
-        ? parseInt(String(card.year), 10)
-        : null;
-  const isAuto = /^CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA-|AU-/i.test(
-    String(card.number ?? ""),
-  );
-
-  void (async () => {
-    let written = 0;
-    for (const c of fetched.comps) {
-      if (typeof c.price !== "number" || c.price <= 0) continue;
-      if (!c.soldDate) continue;
-      const externalId = `${card.card_id}::${c.soldDate}::${Math.round(c.price * 100)}`;
-      try {
-        await recordSoldComp({
-          cardId: card.card_id,
-          playerName,
-          cardYear: Number.isFinite(cardYear as number) ? (cardYear as number) : null,
-          setName: card.set ?? null,
-          parallel: card.variant ?? null,
-          cardNumber: card.number ?? null,
-          isAuto,
-          price: c.price,
-          soldAt: c.soldDate,
-          source: "cardsight",
-          sourceExternalId: externalId,
-          contributorUserId: null,
-          title: c.title ?? null,
-          imageUrl: c.imageUrl ?? null,
-          sellerHandle: null,
-          verifiedByUser: false,
-          confidence: 0.6,
-        });
-        written += 1;
-      } catch {
-        // swallow — vendor ingest is auxiliary
-      }
-    }
-    if (written > 0) {
-      console.log(JSON.stringify({
-        event: "compiq.sold_comps.vendor_ingest",
-        source: "compiqEstimate.ingestVendorCompsToPool",
-        cardId: card.card_id,
-        vendor: fetched.vendor,
-        written,
-        total: fetched.comps.length,
-      }));
-    }
-  })();
+/**
+ * CF-CARDSIGHT-RETIRED (Drew, 2026-08-16: "We dont use cardsight to match or
+ * anything, that process needs to be removed").
+ *
+ * This ingest existed ONLY to capture Cardsight-served comps — its second line
+ * was `if (fetched.vendor !== "cardsight") return;`, so with Cardsight retired
+ * there is no vendor it can accept. CardHedge comps were never written here;
+ * they are emitted upstream by tryCardHedge.
+ *
+ * Kept as an explicitly-retired no-op rather than deleted outright so the
+ * call site reads as a decision instead of an absence, and so any caller
+ * outside this file fails loudly at review rather than silently changing
+ * behaviour. The SOLD_COMPS_VENDOR_INGEST_ENABLED flag is now inert.
+ */
+export function ingestVendorCompsToPool(_fetched: FetchedComps): void {
+  return;
 }
-
 /**
  * CF-SOLD-COMPS-READ (Drew, 2026-07-14): merge user-contributed comps from
  * the unified sold_comps pool into vendor-fetched comps for a resolved cardId.

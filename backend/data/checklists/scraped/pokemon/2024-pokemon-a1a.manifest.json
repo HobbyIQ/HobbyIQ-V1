@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.951Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A1a",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Mythical Island",
+ "productKey": "2024-a1a",
+ "setKey": "a1a",
+ "rowCount": 86,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Mythical Island",
+   "category": "base",
+   "playerCount": 86,
+   "printRun": null
+  }
+ ]
+}

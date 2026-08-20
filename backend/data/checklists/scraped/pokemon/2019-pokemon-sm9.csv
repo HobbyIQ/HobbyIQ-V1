@@ -1,0 +1,197 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Celebi & Venusaur GX
+base,2,Base,false,,Weedle
+base,3,Base,false,,Weedle
+base,4,Base,false,,Kakuna
+base,5,Base,false,,Beedrill
+base,6,Base,false,,Paras
+base,7,Base,false,,Parasect
+base,8,Base,false,,Exeggcute
+base,9,Base,false,,Pinsir
+base,10,Base,false,,Shaymin ◇
+base,11,Base,false,,Charmander
+base,12,Base,false,,Charmander
+base,13,Base,false,,Charmeleon
+base,14,Base,false,,Charizard
+base,15,Base,false,,Vulpix
+base,16,Base,false,,Ninetales
+base,17,Base,false,,Ponyta
+base,18,Base,false,,Rapidash
+base,19,Base,false,,Moltres
+base,20,Base,false,,Litten
+base,21,Base,false,,Torracat
+base,22,Base,false,,Squirtle
+base,23,Base,false,,Squirtle
+base,24,Base,false,,Wartortle
+base,25,Base,false,,Blastoise
+base,26,Base,false,,Psyduck
+base,27,Base,false,,Golduck
+base,28,Base,false,,Staryu
+base,29,Base,false,,Magikarp
+base,30,Base,false,,Gyarados
+base,31,Base,false,,Lapras
+base,32,Base,false,,Articuno
+base,33,Base,false,,Pikachu & Zekrom GX
+base,34,Base,false,,Alolan Geodude
+base,35,Base,false,,Alolan Geodude
+base,36,Base,false,,Alolan Graveler
+base,37,Base,false,,Alolan Golem
+base,38,Base,false,,Voltorb
+base,39,Base,false,,Electrode
+base,40,Base,false,,Zapdos
+base,41,Base,false,,Mareep
+base,42,Base,false,,Flaaffy
+base,43,Base,false,,Ampharos GX
+base,44,Base,false,,Blitzle
+base,45,Base,false,,Zebstrika
+base,46,Base,false,,Emolga
+base,47,Base,false,,Joltik
+base,48,Base,false,,Galvantula
+base,49,Base,false,,Helioptile
+base,50,Base,false,,Heliolisk
+base,51,Base,false,,Tapu Koko ◇
+base,52,Base,false,,Zeraora
+base,53,Base,false,,Gengar & Mimikyu GX
+base,54,Base,false,,Nidoran♀
+base,55,Base,false,,Nidorina
+base,56,Base,false,,Nidoqueen
+base,57,Base,false,,Nidoran♂
+base,58,Base,false,,Nidorino
+base,59,Base,false,,Nidoking
+base,60,Base,false,,Tentacool
+base,61,Base,false,,Tentacruel
+base,62,Base,false,,Grimer
+base,63,Base,false,,Muk
+base,64,Base,false,,Alolan Marowak
+base,65,Base,false,,Starmie
+base,66,Base,false,,Mr. Mime
+base,67,Base,false,,Mr. Mime GX
+base,68,Base,false,,Jynx
+base,69,Base,false,,Cosmog
+base,70,Base,false,,Cosmoem
+base,71,Base,false,,Mankey
+base,72,Base,false,,Primeape
+base,73,Base,false,,Hitmonlee
+base,74,Base,false,,Hitmonchan
+base,75,Base,false,,Omanyte
+base,76,Base,false,,Omastar
+base,77,Base,false,,Kabuto
+base,78,Base,false,,Kabutops
+base,79,Base,false,,Larvitar
+base,80,Base,false,,Pupitar
+base,81,Base,false,,Pancham
+base,82,Base,false,,Lycanroc GX
+base,83,Base,false,,Alolan Grimer
+base,84,Base,false,,Alolan Muk
+base,85,Base,false,,Tyranitar
+base,86,Base,false,,Poochyena
+base,87,Base,false,,Mightyena
+base,88,Base,false,,Absol
+base,89,Base,false,,Spiritomb
+base,90,Base,false,,Zorua
+base,91,Base,false,,Zoroark
+base,92,Base,false,,Vullaby
+base,93,Base,false,,Mandibuzz
+base,94,Base,false,,Pangoro
+base,95,Base,false,,Yveltal
+base,96,Base,false,,Hoopa GX
+base,97,Base,false,,Incineroar GX
+base,98,Base,false,,Skarmory
+base,99,Base,false,,Jirachi
+base,100,Base,false,,Bronzor
+base,101,Base,false,,Bronzong
+base,102,Base,false,,Ferroseed
+base,103,Base,false,,Ferrothorn
+base,104,Base,false,,Pawniard
+base,105,Base,false,,Bisharp
+base,106,Base,false,,Cobalion GX
+base,107,Base,false,,Honedge
+base,108,Base,false,,Doublade
+base,109,Base,false,,Aegislash
+base,110,Base,false,,Klefki
+base,111,Base,false,,Alolan Ninetales
+base,112,Base,false,,Mimikyu
+base,113,Base,false,,Latias & Latios GX
+base,114,Base,false,,Alolan Exeggutor
+base,115,Base,false,,Alolan Exeggutor
+base,116,Base,false,,Dratini
+base,117,Base,false,,Dratini
+base,118,Base,false,,Dragonair
+base,119,Base,false,,Dragonite
+base,120,Base,false,,Eevee & Snorlax GX
+base,121,Base,false,,Pidgey
+base,122,Base,false,,Pidgey
+base,123,Base,false,,Pidgeotto
+base,124,Base,false,,Pidgeot
+base,125,Base,false,,Meowth
+base,126,Base,false,,Persian
+base,127,Base,false,,Farfetch’d
+base,128,Base,false,,Kangaskhan
+base,129,Base,false,,Tauros
+base,130,Base,false,,Aerodactyl
+base,131,Base,false,,Lugia
+base,132,Base,false,,Zangoose
+base,133,Base,false,,Bill’s Analysis
+base,134,Base,false,,Black Market ◇
+base,135,Base,false,,Brock’s Grit
+base,136,Base,false,,Buff Padding
+base,137,Base,false,,Dana
+base,138,Base,false,,Dangerous Drill
+base,139,Base,false,,Electrocharger
+base,140,Base,false,,Erika’s Hospitality
+base,141,Base,false,,Evelyn
+base,142,Base,false,,Fairy Charm UB
+base,143,Base,false,,Grass Memory
+base,144,Base,false,,Ingo & Emmet
+base,145,Base,false,,Jasmine
+base,146,Base,false,,Judge Whistle
+base,147,Base,false,,Lavender Town
+base,148,Base,false,,Metal Goggles
+base,149,Base,false,,Morgan
+base,150,Base,false,,Nanu
+base,151,Base,false,,Nita
+base,152,Base,false,,Pokémon Communication
+base,153,Base,false,,Return Label
+base,154,Base,false,,Sabrina’s Suggestion
+base,155,Base,false,,Unidentified Fossil
+base,156,Base,false,,Viridian Forest
+base,157,Base,false,,Water Memory
+base,158,Base,false,,Wondrous Labyrinth ◇
+base,159,Base,false,,Celebi & Venusaur GX
+base,160,Base,false,,Magikarp & Wailord GX
+base,161,Base,false,,Magikarp & Wailord GX
+base,162,Base,false,,Pikachu & Zekrom GX
+base,163,Base,false,,Ampharos GX
+base,164,Base,false,,Gengar & Mimikyu GX
+base,165,Base,false,,Gengar & Mimikyu GX
+base,166,Base,false,,Hoopa GX
+base,167,Base,false,,Incineroar GX
+base,168,Base,false,,Cobalion GX
+base,169,Base,false,,Latias & Latios GX
+base,170,Base,false,,Latias & Latios GX
+base,171,Base,false,,Eevee & Snorlax GX
+base,172,Base,false,,Brock’s Grit
+base,173,Base,false,,Dana
+base,174,Base,false,,Erika’s Hospitality
+base,175,Base,false,,Evelyn
+base,176,Base,false,,Ingo & Emmet
+base,177,Base,false,,Jasmine
+base,178,Base,false,,Morgan
+base,179,Base,false,,Nanu
+base,180,Base,false,,Nita
+base,181,Base,false,,Sabrina’s Suggestion
+base,182,Base,false,,Celebi & Venusaur GX
+base,183,Base,false,,Magikarp & Wailord GX
+base,184,Base,false,,Pikachu & Zekrom GX
+base,185,Base,false,,Ampharos GX
+base,186,Base,false,,Gengar & Mimikyu GX
+base,187,Base,false,,Hoopa GX
+base,188,Base,false,,Incineroar GX
+base,189,Base,false,,Cobalion GX
+base,190,Base,false,,Latias & Latios GX
+base,191,Base,false,,Eevee & Snorlax GX
+base,192,Base,false,,Dangerous Drill
+base,193,Base,false,,Electrocharger
+base,194,Base,false,,Judge Whistle
+base,195,Base,false,,Metal Goggles
+base,196,Base,false,,Pokémon Communication

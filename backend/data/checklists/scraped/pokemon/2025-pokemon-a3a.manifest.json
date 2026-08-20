@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.251Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A3a",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Extradimensional Crisis",
+ "productKey": "2025-a3a",
+ "setKey": "a3a",
+ "rowCount": 103,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Extradimensional Crisis",
+   "category": "base",
+   "playerCount": 103,
+   "printRun": null
+  }
+ ]
+}

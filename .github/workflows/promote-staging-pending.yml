@@ -9,8 +9,77 @@ name: Promote Staging Pending
 # TCA-ebay currently has 866K pending rows to re-process. Cardhedge
 # ~5K. Run repeatedly (each run cycles through what's still pending
 # after prior runs' successes).
+#
+# CF-STAGING-DRAIN-SCHEDULE (Drew, 2026-08-14). "Run repeatedly" was
+# the whole design and there was nothing to run it — this workflow was
+# dispatch-only, and its last run was 2026-08-03. Measured 2026-08-15,
+# twelve days later:
+#
+#     comps_staging total      8,662,466
+#     status=pending           2,102,167   (2,081,074 of them tca-ebay)
+#     status=clean                94,803   cleaned, never promoted
+#     never promoted           2,668,528   = 30.8% of the container
+#
+# The backlog grew from the 866K in the note above to 2.08M purely
+# because nothing dispatched this.
+#
+# The every-5-minute staging-pipeline-cron does NOT cover this. It is
+# green and it works, but it promotes ~87 rows per tick and GitHub
+# throttles a */5 schedule to roughly one run per 45 minutes, so it
+# clears ~2,800 rows/day. Against 2.1M that is ~750 days — it cannot
+# catch up, and it is not failing, which is why nothing alarmed. A
+# green cron that moves 0.1% of its backlog per day looks identical to
+# a healthy one on the Actions page.
+#
+# APPLY defaults differ by trigger ON PURPOSE: a hand dispatch stays
+# dry-run so nobody writes 2M rows by reflex, while a scheduled run
+# applies. Without that split a schedule would dry-run forever and the
+# backlog would keep growing behind a wall of green checkmarks.
 
 on:
+  schedule:
+    # Hourly. The job caps itself at max_minutes (45) inside a 55-minute
+    # timeout, so consecutive runs cannot overlap.
+    - cron: '25 * * * *'
+    # CF-DAILY-REDRIVE (Drew, 2026-08-16: "why is the sales index not moving").
+    #
+    # The hourly pass had drained status='pending' down to 107 rows — all of
+    # them junk (no soldAt, or non-positive price) — so it scanned 107 and
+    # inserted 0, while 909,175 rows sat in awaiting-catalog, a status it never
+    # queried. The public index froze at exactly 10,775,249 with ingest
+    # perfectly healthy. Nothing was broken; the promoter had simply run out of
+    # things it was willing to look at.
+    #
+    # This pass re-drives the parked rows against a catalog that now grows
+    # daily. 11:10 UTC sits after the 09:00 checklist-acquisition run, so each
+    # re-drive sees that morning's new checklists. Measured on the first live
+    # run: 1,687 inserts per 5,000 rows scanned (34%).
+    #
+    # A separate cron rather than widening the hourly filter: re-scanning ~900k
+    # parked rows every hour would burn RUs to re-park most of them. Once a day,
+    # after new checklists land, is when the answer can actually have changed.
+    - cron: '10 11 * * *'
+    # CF-WEEKLY-VERIFY-REDRIVE (Drew, 2026-08-17: "1 and then 2").
+    #
+    # awaiting-verify holds ~946k rows whose held-REASON is unrecoverable: the
+    # verify_queue link was never written, and (cardId, price, soldAt-day) —
+    # the only composite available — collides for 91.5% of rows, so the history
+    # cannot be rejoined. The SALES themselves are perfectly intact (title,
+    # price, soldAt, image present on 100% of a 500-row sample), which is why
+    # they are kept rather than deleted.
+    #
+    # So the only honest way to clear them is to re-decide each one against
+    # today's rules. Measured: ~7.7% promote per pass, and that share grows as
+    # the rules do — this session alone added Panini vocabulary, the pre-2009
+    # Donruss gate and grade-scoped outlier bands.
+    #
+    # WEEKLY, AND SHORT, ON PURPOSE. A re-drive re-enqueues the ~91% that still
+    # fail, and an unbounded loop of that is precisely the storm
+    # CF-PROMOTER-VERIFY-LOOP was written to stop (1.3M entries, a continuous
+    # 429 storm). 20 minutes once a week is a chip, not a flood, and
+    # verify_queue's own 60-day TTL absorbs the churn. Re-enqueued rows now
+    # carry a stagingId, so unlike the existing backlog they stay linkable.
+    - cron: '40 12 * * 0'
   workflow_dispatch:
     inputs:
       apply:
@@ -19,6 +88,11 @@ on:
         type: choice
         options: ['false', 'true']
         default: 'false'
+      statuses:
+        description: 'comps_staging statuses to process. "pending" is the routine pass; add awaiting-catalog to re-drive rows parked before their checklist existed.'
+        required: false
+        type: string
+        default: 'pending'
       vendor:
         description: 'Filter to a specific vendor (e.g. tca-ebay). Empty = all vendors.'
         required: false
@@ -101,7 +175,8 @@ jobs:
           COMPS_STAGING_SHIM_ENABLED=true \
           LLM_MAX_INFLIGHT=20 \
           VENDOR="${{ inputs.vendor || 'tca-ebay' }}" \
-          MAX_MINUTES="${{ inputs.max_minutes || '45' }}" \
+          STATUSES="${{ inputs.statuses || (github.event.schedule == '10 11 * * *' && 'awaiting-catalog' || (github.event.schedule == '40 12 * * 0' && 'awaiting-verify' || 'pending')) }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || (github.event.schedule == '40 12 * * 0' && '20' || '45') }}" \
           CONCURRENCY="${{ inputs.concurrency || '32' }}" \
-          APPLY="${{ inputs.apply || 'false' }}" \
+          APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
           node scripts/promote-staging-pending.cjs

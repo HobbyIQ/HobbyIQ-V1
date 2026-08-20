@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.327Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/2023sv",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "McDonald's Collection 2023",
+ "productKey": "2023-2023sv",
+ "setKey": "2023sv",
+ "rowCount": 15,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > McDonald's Collection 2023",
+   "category": "base",
+   "playerCount": 15,
+   "printRun": null
+  }
+ ]
+}

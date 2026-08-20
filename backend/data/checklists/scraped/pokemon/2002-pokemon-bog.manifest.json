@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.575Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bog",
+ "sport": "pokemon",
+ "year": 2002,
+ "setName": "Best of game",
+ "productKey": "2002-bog",
+ "setKey": "bog",
+ "rowCount": 9,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Best of game",
+   "category": "base",
+   "playerCount": 9,
+   "printRun": null
+  }
+ ]
+}

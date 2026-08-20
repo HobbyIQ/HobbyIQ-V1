@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.639Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-bw-e",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "BW trainer Kit (Excadrill)",
+ "productKey": "2011-tk-bw-e",
+ "setKey": "tk-bw-e",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > BW trainer Kit (Excadrill)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

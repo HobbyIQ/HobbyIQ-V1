@@ -38,6 +38,9 @@
 //
 // This module has ZERO side effects. Import + call is safe anywhere.
 
+import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
+import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
+import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -50,6 +53,72 @@ export interface HobbyIqCardIdComponents {
    *  cardNumber-prefix repair for untrusted vendor text must NOT fire. See
    *  CF-AUTHORITATIVE-SETKEY. Vendor paths leave this unset. */
   authoritativeSetKey?: boolean;
+  /** CF-PLAYER-IS-THE-NUMBER. Required ONLY for genuinely unnumbered cards.
+   *  See UNNUMBERED_CARD_NUMBER below for why. */
+  playerName?: string | null;
+}
+
+/**
+ * CF-PLAYER-IS-THE-NUMBER (Drew, 2026-08-18: "did they even have card
+ * numbers then?").
+ *
+ * They did not. Vendors write `NNO` — "no number" — and it is ACCURATE data,
+ * not a parse failure. Measured across the 50,989 affected sold_comps rows,
+ * the sets are ones that genuinely never carried numbers:
+ *
+ *   6,025  1909-11 T206                    famously unnumbered
+ *   8,347  Magic Alpha/Beta/Arabian/Dark   pre-collector-number era
+ *   3,487  Leaf & Donruss Signature Series autograph sets
+ *     954  1964 Topps Stand-Up
+ *     654  1966 Topps Rub-Offs
+ *
+ * Only 6.4% of those rows have any `#number` in their title, and on inspection
+ * most of those are certs (#3538117020) or print runs (#788/1000), not card
+ * numbers.
+ *
+ * Treating `nno` as an identity collapsed every unnumbered card in a set onto
+ * ONE slug — 395 players in a single pool spanning $3.49 to $103,700. Refusing
+ * it (slugGuard) stopped the damage but left those cards unpriceable forever,
+ * because the number they are missing does not exist to be recovered.
+ *
+ * For a card with no number, the PLAYER is the identifier — that is how
+ * collectors refer to them ("T206 Wagner", not "T206 #___"). So the player
+ * takes the cardNumber slot, prefixed `player-` so it can never be mistaken
+ * for, or collide with, a real card number.
+ *
+ * NOT `p-`, which was the first choice and was wrong: promo cards genuinely
+ * carry card numbers like P-1 and P-45, which slugify to `p-1` / `p-45`. A
+ * card numbered P-1 would then have produced the same segment as an unnumbered
+ * card of a player slugging to "1". No real card number is the literal word
+ * "player", so the longer prefix makes the separation total rather than likely.
+ *
+ * SAFE BECAUSE THE NAMES ARE CLEAN. Of 3,997 distinct playerNames in this
+ * population, exactly 20 groups differ only by case or punctuation — and
+ * slugify folds every one of them:
+ *
+ *   "Kiki Cuyler" / "KiKi Cuyler" / "\"Kiki\" Cuyler"  -> kiki-cuyler
+ *   "Lebron James" / "LeBron James"                    -> lebron-james
+ *
+ * Digits survive slugify, so "Checklist 1-154" and "Checklist 547-653" stay
+ * DISTINCT — they are different cards, and collapsing them would recreate the
+ * pooling this fixes.
+ */
+const UNNUMBERED_CARD_NUMBER: ReadonlySet<string> = new Set([
+  "nno", "no-number", "nonumber", "n-a", "na", "none", "unnumbered",
+]);
+
+/** True when the vendor said "this card has no number". */
+export function isUnnumberedCardNumber(raw: string | null | undefined): boolean {
+  const s = slugify(String(raw ?? ""));
+  return !s || UNNUMBERED_CARD_NUMBER.has(s);
+}
+
+/** The cardNumber segment for an unnumbered card, or null when there is no
+ *  player to identify it by — in which case the card has no identity at all
+ *  and slugGuard must refuse it. */
+export function unnumberedCardSegment(playerName: string | null | undefined): string | null {
+  const p = slugify(String(playerName ?? ""));
+  return p ? `player-${p}` : null;
 }
 
 /** Turn an arbitrary label into a URL-safe slug fragment.
@@ -95,7 +164,7 @@ function normalizeSport(sport: string): string {
 //      returns nothing.
 //
 // Order matters WITHIN each tier: more-specific patterns first so
-// "bowman-chrome-draft" doesn't collapse to "bowman".
+// "bowman-draft" doesn't collapse to "bowman".
 function knownSetKeyPatterns(): Array<[RegExp, string]> {
   return [
     // Sapphire is a distinct product LINE, not a parallel. Must match
@@ -141,7 +210,25 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // intended correction — distinct checklists, distinct prices — but it does
     // move existing comps out of the Bowman Chrome pool for those years.
     [/bowman-(?:chrome-)?mega(?:-box)?/, "bowman-chrome-mega-box"],
-    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-chrome"],
+    // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "it shuld fold into Draft since
+    // it is draft" ... "they should match to the CATALOG"). This mapped Bowman Draft Chrome onto plain bowman-chrome,
+    // which pools a Draft card with the standalone Bowman Chrome product —
+    // different checklists, different players, different prices. Draft Chrome
+    // is the chrome half OF Bowman Draft, so it keeps the draft identity in
+    // its own key: the PRODUCT the checklist names (Drew, 2026-08-16: "we
+    // match the PRODUCT from bowman in the checklist!!").
+    //
+    // Counted by SOURCE on 2026-08-16, which is the count that matters —
+    // total rows flatter a key that only vendors use:
+    //
+    //     bowman-draft          336,463 rows, 277,616 CHECKLIST-backed
+    //     bowman-draft-chrome    23,899 rows,       0 CHECKLIST-backed
+    //                                              (23,892 cardhedge-graded,
+    //                                               an EXCLUDED source)
+    //
+    // So bowman-draft-chrome is a vendor artifact, not a product. Draft chrome
+    // cards belong to bowman-draft, where the checklist actually is.
+    [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
     // the BCP-XX subset as setName="Chrome Prospects" (their own naming
@@ -191,6 +278,28 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // rows already carry. Still matches BEFORE the generic /^bowman/ or Mega
     // Box sales would land in the paper Bowman flagship pool.
     //
+    // CF-BOWMANS-BEST-DISTINCT (Drew, 2026-08-17). Bowman's Best is a premium
+    // product line with its own checklist, not a Bowman variant, and there was
+    // no rule for it — so it fell to the generic /bowman/ below.
+    //
+    // Measured 2026-08-17: 130,273 sold_comps rows whose own setName says
+    // Bowman's Best ("2024 Bowman's Best Baseball", "Bowman's Best") sit on the
+    // bare `bowman` key, while card_catalog already carries 80,193 rows under
+    // `bowmans-best`. So the sales and the checklist were filed under different
+    // keys for the same product — the pool could never meet its own catalog.
+    //
+    // The market prices these very differently: a Bowman's Best refractor auto
+    // is not a base Bowman common, and pooling them drags both estimates.
+    //
+    // slugify already folds the apostrophe ("Bowman's Best" -> bowmans-best), so
+    // one pattern covers both spellings. University FIRST — bowman-best-university
+    // is a separate product with 158 catalog rows of its own, and the general
+    // rule would otherwise swallow it.
+    // CF-COLLAPSED-SETKEY-AUDIT: Bowman Platinum is its own product with
+    // 111,878 catalog rows; 12,748 sales sat on bare bowman.
+    [/bowman-platinum/, "bowman-platinum"],
+    [/bowmans?-best-university/, "bowman-best-university"],
+    [/bowmans?-best/, "bowmans-best"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
     // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome
@@ -208,6 +317,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-chrome-update/, "topps-chrome"],
     [/topps-chrome/, "topps-chrome"],
     [/topps-heritage/, "topps-heritage"],
+    // CF-TOPPS-GOLD-LABEL-DISTINCT (Drew, 2026-08-13). Topps Gold Label is its
+    // own premium line — Class 1/2/3, its own design, its own price tier — but
+    // it fell through to the generic /topps/ rule below and normalized to
+    // "topps", pooling it with flagship. Two consequences, both seen in prod:
+    //
+    //   - Matching: a 2017 Gold Label #86 "Blue" passed the same-set check
+    //     against flagship Topps and matched
+    //     topps:86:father-s-day-powder-blue, because both sides read "topps".
+    //   - Pricing: Gold Label comps pool with flagship comps for the same
+    //     card number, which are different cards at different prices.
+    //
+    // Must precede the generic /topps/ rule. Symmetric with
+    // topps-chrome-platinum and topps-heritage above.
+    [/topps-gold-label/, "topps-gold-label"],
     [/topps-finest/, "topps-finest"],
     [/topps-pristine/, "topps-pristine"],
     // CF-CATALOG-TRADED-TIFFANY (Drew, 2026-08-04, per baseball-almanac
@@ -241,14 +364,65 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-bunt/, "topps-bunt"],
     [/allen-(and-)?ginter/, "topps-allen-ginter"],
     [/stadium-club/, "topps-stadium-club"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 1 (Drew, 2026-08-17). Distinct Topps
+    // product lines that fell to the bare-topps catch-all below. Each already
+    // has its OWN key in card_catalog, so the sales and the checklist for one
+    // product were filed apart and the pool could never meet its catalog:
+    //
+    //     Topps Cosmic Chrome   65,366 sales   34,184 catalog rows
+    //     Topps Now             23,247 sales   14,226 catalog rows
+    //
+    // Keys match the catalog rather than being invented here.
+    [/topps-cosmic-chrome|cosmic-chrome/, "topps-cosmic-chrome"],
+    [/topps-now/, "topps-now"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2 (Drew, 2026-08-17). More distinct Topps
+    // lines that fell to the bare-topps catch-all, each with its own catalog key:
+    //
+    //     Topps Signature Class   21,840 sales    1,329 catalog rows
+    //     Topps Resurgence        17,471 sales      129 catalog rows
+    //     Topps Composite         12,776 sales      330 catalog rows
+    //
+    // Deliberately requires the topps- prefix. Bare "resurgence" and "composite"
+    // also name INSERTS inside those products (resurgence-signatures,
+    // composite-patch-autographs) which hold their own catalog keys, so an
+    // unanchored match would collapse those in the opposite direction.
+    [/topps-signature-class/, "topps-signature-class"],
+    [/topps-resurgence/, "topps-resurgence"],
+    [/topps-composite/, "topps-composite"],
+    // Topps Cracker Jack is a MODERN Topps product, distinct from the 1915
+    // vintage Cracker Jack line. Must precede bare topps or it is swallowed.
+    [/topps-cracker-jack/, "topps-cracker-jack"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
     // here as a bare match because the name is uniquely Panini.
+    // CF-COLLAPSED-SETKEY-AUDIT: Prizm Draft Picks is its own product with its
+    // own checklist (36,108 catalog rows) — 65,582 sales sat on panini-prizm.
+    // MUST precede the base prizm rule or the qualifier is swallowed.
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2: Prizm WNBA is a different league with
+    // its own checklist — 51,933 sales sat on panini-prizm. Monopoly WNBA is a
+    // FURTHER distinct product (its own catalog key), so it matches first or it
+    // is swallowed here.
+    [/prizm-monopoly-wnba|monopoly-wnba/, "panini-prizm-monopoly-wnba"],
+    [/prizm-wnba/, "panini-prizm-wnba"],
+    [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
     [/panini-prizm/, "panini-prizm"],
+    // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
+    // and Elite Extra Edition is a further distinct product (394,549) — so the
+    // Extra Edition pattern MUST come first or it is swallowed by plain Elite.
+    [/donruss-elite(?!-extra)|(?:^|-)elite(?!-extra)(?:-|$)/, "donruss-elite"],
     [/panini-select/, "panini-select"],
     [/panini-mosaic/, "panini-mosaic"],
-    [/panini-donruss-optic/, "panini-optic"],
+    // CF-OPTIC-WITHOUT-PANINI (Drew, 2026-08-17). This required the `panini-`
+    // prefix, so "Panini Donruss Optic" resolved correctly while bare "Donruss
+    // Optic" — how the product is almost always written — fell past it to the
+    // generic donruss rule and landed on panini-donruss.
+    //
+    // Measured 2026-08-17: 196,345 sold_comps rows whose own setName says
+    // Donruss Optic sat on panini-donruss. Optic is chrome stock with its own
+    // checklist and its own prices; pooling it with paper Donruss moves both.
+    // Largest single collapse in the CF-COLLAPSED-SETKEY-AUDIT worklist.
+    [/(?:panini-)?donruss-optic/, "panini-optic"],
     [/panini-donruss/, "panini-donruss"],
     [/panini-optic/, "panini-optic"],
     [/panini-contenders/, "panini-contenders"],
@@ -278,6 +452,34 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-origins/, "panini-origins"],
     [/panini-encased/, "panini-encased"],
     [/panini-eminence/, "panini-eminence"],
+    // CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB (Drew, 2026-08-16: "fix it all").
+    //
+    // These products had no rule at all, so normalizeSetKey fell through to
+    // slugify and returned a YEAR-PREFIXED ONE-OFF — the same failure the
+    // Pokemon alias table was built to stop:
+    //
+    //     "2025 Panini Rookies & Stars Football" -> 2025-panini-rookies-stars-football
+    //     "2025 Panini Certified Football"       -> 2025-panini-certified-football
+    //
+    // Two harms at once. The year is duplicated into a segment the slug already
+    // carries, and every spelling becomes its own product, so one product
+    // fragments across as many keys as sellers have phrasings. 48,819 comps
+    // were sitting on keys like these, 10,107 of them 2025 football alone.
+    //
+    // ROOKIES & STARS IS THE INSTRUCTIVE ONE. A rule for it already existed —
+    // /panini-rookies-and-stars/ — and never fired, because slugify drops "&"
+    // and produces "rookies-stars", not "rookies-and-stars". The vocabulary was
+    // written against the product's NAME rather than against what slugify
+    // actually emits for it. Both spellings are matched now.
+    [/panini-rookies-(?:and-)?stars/, "panini-rookies-and-stars"],
+    // Totally Certified is a separate product and MUST match first, or the
+    // certified rule below swallows it.
+    [/panini-totally-certified|totally-certified/, "panini-totally-certified"],
+    [/panini-certified/, "panini-certified"],
+    [/panini-crusade/, "panini-crusade"],
+    [/panini-hoops/, "panini-hoops"],
+    [/panini-prestige/, "panini-prestige"],
+    [/panini-elite-extra-edition/, "panini-elite-extra-edition"],
     // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). New product-line
     // vocab from parallel-vocabulary.json productLines section. Fixes
     // the ~5-6K rows the setKey audit found with raw-slugified titles
@@ -286,6 +488,9 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/pinnacle-aficionado/, "pinnacle-aficionado"],
     [/pinnacle/, "pinnacle"],
     [/goudey/, "goudey"],
+    // Flair Showcase pools into flair DELIBERATELY (pinned by
+    // hobbyIqCardId.test.ts "both variants pool"). The collapsed-setkey audit
+    // flags it because it compares words, not intent — see that script's header.
     [/flair-showcase|flair/, "flair"],
     [/sp-prospects/, "sp-prospects"],
     [/sp-authentic/, "sp-authentic"],
@@ -304,6 +509,11 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)spx-finite/, "spx-finite"],
     [/(?:^|-)spx/, "spx"],
     [/upper-deck-choice/, "upper-deck-choice"],
+    // CF-COLLAPSED-SETKEY-AUDIT: distinct Upper Deck lines that fell to the
+    // bare catch-all. Collector's Choice carries 184,716 catalog rows under a
+    // BARE key (not upper-deck-prefixed), so the rule matches the catalog.
+    [/collector-?s?-choice/, "collectors-choice"],
+    [/upper-deck-mvp|(?:^|-)ud-mvp/, "upper-deck-mvp"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan
@@ -324,6 +534,33 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)skybox-molten-metal/, "skybox-molten-metal"],
     [/(?:^|-)skybox/, "skybox"],
     [/(?:^|-)metal-universe/, "metal-universe"],
+    // CF-VINTAGE-PRODUCT-RULES (Drew, 2026-08-17). Vintage and oddball products
+    // that had NO rule, so they slugified year-prefixed and slugGuard correctly
+    // refused every one. Measured over 6.2h of post-fix ingest: ~17,300 sports
+    // rows land unkeyed per day for exactly this reason, and the same handful
+    // of products recur every single day — so each rule here pays forever.
+    //
+    // NOTE ON THE CATALOG. For several of these the catalog's own key is ALSO
+    // year-prefixed (1909-11-t206-baseball, 1962-post-cereal-baseball,
+    // 1961-golden-press-hall-of-fame-baseball) — the catalog carries the same
+    // pollution from the same root cause. These rules resolve to the CLEAN
+    // product name, which is the canonical form the catalog rows should also be
+    // repaired onto. Where a clean catalog key already exists it is used as-is:
+    // kelloggs (482 rows), cracker-jack (168), diamond-kings (38,183).
+    //
+    // Ordering matters twice over: topps-cracker-jack and panini-diamond-kings
+    // are DIFFERENT modern products from the vintage lines, so the qualified
+    // patterns lead.
+    [/(?:^|-)cracker-jack/, "cracker-jack"],
+    [/all-time-diamond-kings/, "all-time-diamond-kings"],
+    [/panini-diamond-kings/, "panini-diamond-kings"],
+    [/(?:^|-)diamond-kings/, "diamond-kings"],
+    [/(?:^|-)t206/, "t206"],
+    [/(?:^|-)play-ball/, "play-ball"],
+    [/(?:^|-)kellogg-?s?/, "kelloggs"],
+    [/(?:^|-)post-cereal/, "post-cereal"],
+    [/(?:^|-)golden-press/, "golden-press"],
+    [/(?:^|-)goudey/, "goudey"],
     [/(?:^|-)donruss-studio|(?:^|-)studio/, "donruss-studio"],
     [/(?:^|-)circa-thunder/, "circa-thunder"],
     [/(?:^|-)score-select/, "score-select"],
@@ -331,6 +568,35 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)score/, "score"],
     [/(?:^|-)leaf-limited/, "leaf-limited"],
     [/(?:^|-)leaf/, "leaf"],
+    // CF-ULTRA-IS-NOT-FLEER (Drew, 2026-08-17). Ultra is its own product line,
+    // not a Fleer variant, and it MUST be matched before the bare-fleer
+    // catch-all below or "1995-96 Fleer Ultra" lands on `fleer`.
+    //
+    // It did. Measured 2026-08-17: 55,373 of 352,825 sold_comps rows on a
+    // `fleer` setKey (15.7%) carry "Ultra" in their own title or setName, and
+    // card_catalog held ZERO rows under any ultra setKey for 1995 basketball —
+    // every Ultra card was filed as Fleer.
+    //
+    // The two are different cards with different rosters at the same numbers.
+    // 1995-96 Fleer and 1995-96 Ultra Gold Medallion share the #1-200 range but
+    // agree on the player only 41 times in 197 (20.8%), because each orders its
+    // own checklist alphabetically by team. So the collapse did not merely blur
+    // a brand — it pooled Ultra sales into Fleer comps for cards that are not
+    // the same card. #25 is Michael Jordan in Ultra and Will Perdue in Fleer.
+    //
+    // Anchored on segment boundaries so "ultra" must be a whole segment:
+    // "ultraviolet" does NOT match. "ultra-pro" DOES — that is a supplies
+    // brand, never a setName, so it is accepted rather than special-cased.
+    [/(?:^|-)ultra(?:-|$)/, "ultra"],
+    // CF-COLLAPSED-SETKEY-AUDIT batch 2: Fleer Tradition is a large distinct
+    // line (158,040 catalog rows, 7,631 sales) and Fleer Update another
+    // (2,504 rows, 8,230 sales). Tradition Update and Tradition Glossy hold
+    // their own keys, so the longer patterns lead — otherwise plain Tradition
+    // swallows both.
+    [/fleer-tradition-update/, "fleer-tradition-update"],
+    [/fleer-tradition-glossy/, "fleer-tradition-glossy"],
+    [/fleer-tradition|(?:^|-)tradition(?:-|$)/, "fleer-tradition"],
+    [/fleer-update/, "fleer-update"],
     [/fleer/, "fleer"],
   ];
 }
@@ -391,6 +657,17 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)encased(-|$)/, "panini-encased"],
     [/(^|-)eminence(-|$)/, "panini-eminence"],
     [/(^|-)origins(-|$)/, "panini-origins"],
+    // Bare tier for the products added to STRICT above. "certified" is
+    // deliberately NOT here: it is grading vocabulary as often as product
+    // vocabulary ("PSA certified"), and the bare tier sees text we have not
+    // confirmed names a product. "Panini Certified" is unambiguous; "certified"
+    // alone is not, and a wrong product key is invisible forever once written
+    // — see the only-improve doctrine.
+    [/(^|-)rookies-(?:and-)?stars(-|$)/, "panini-rookies-and-stars"],
+    [/(^|-)crusade(-|$)/, "panini-crusade"],
+    [/(^|-)hoops(-|$)/, "panini-hoops"],
+    [/(^|-)prestige(-|$)/, "panini-prestige"],
+    [/(^|-)elite-extra-edition(-|$)/, "panini-elite-extra-edition"],
     // NOTE: "select" and "score" are excluded from bare tier — they
     // appear in too many false-positive contexts ("Select Level Blue
     // Prizm" isn't necessarily Panini Select the product; "Score" also
@@ -668,9 +945,12 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cda(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  // CPA- on a Draft product is a Draft chrome prospect auto, not a Bowman
+  // Chrome one. Without this it fell through to bare bowman-draft.
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-draft" },
   // Topps Chrome family
   { fromSetKey: "topps",              cardNumberPrefix: /^tcpa(?:-|\d)/i,  toSetKey: "topps-chrome" },
   { fromSetKey: "topps",              cardNumberPrefix: /^cra(?:-|\d)/i,   toSetKey: "topps-chrome" },
@@ -683,8 +963,14 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   // Verlander BDP129 is chrome per Drew).
   { fromSetKey: "bowman",             cardNumberPrefix: /^bpa(?:-|\d)/i,   toSetKey: "bowman-paper" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bp(?:-|\d)/i,    toSetKey: "bowman-paper" },
-  { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
-  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft-paper" },
+  // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "they should match to the
+  // CATALOG"). BDA- used to route to "bowman-draft-paper", a key the catalog
+  // barely has — 18 rows against bowman-draft's 336,404, counted 2026-08-16.
+  // A slug nothing in the catalog shares is a card that matches nothing, so
+  // the paper distinction is kept as intent but expressed with the key that
+  // actually exists.
+  { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
+  { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
 ];
 function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {
@@ -754,14 +1040,202 @@ function isChromeStockSetKey(setKey: string): boolean {
 // 2026-08-11).
 const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)(?:-|\d)/i;
 
+/**
+ * CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). THE sport-aware setKey
+ * resolution. Exported because callers that GATE computeHobbyIqCardId must be
+ * able to ask the exact question it will answer.
+ *
+ * WHY THIS IS EXPORTED RATHER THAN INLINE. slugGuard rejects a setKey that
+ * still carries a leading year (`isRawVendorSetKey`), and soldCompsStore fed
+ * that guard `normalizeSetKey(setName)` while this function resolved Pokemon
+ * through POKEMON_SET_ALIASES first. The two disagreed on every Pokemon row:
+ *
+ *     "2024 Pokemon Scarlet & Violet Surging Sparks"
+ *       normalizeSetKey -> 2024-pokemon-scarlet-violet-surging-sparks  REFUSED
+ *       alias table     -> sv08                                        fine
+ *
+ * Measured 2026-08-17: of 860,462 null-slug Pokemon comps, the guard accepted
+ * exactly 1, and 615,140 (71.5%) were refused on `setkey-raw-vendor-string`
+ * despite resolving cleanly here. The guard was rejecting rows the function it
+ * guards would have keyed correctly — one rule, two implementations, the
+ * stricter one winning. Same failure shape as CF-ONE-OUTLIER-RULE.
+ *
+ * `sport` must already be canonical (normalizeSport / normalizeSportStrict).
+ */
+/**
+ * Strip the leading year(s) and the vertical’s own name from a vendor setName.
+ *
+ *   "2024 Yu-Gi-Oh! Rage of the Abyss" -> "Rage of the Abyss"
+ *   "1993 Magic The Gathering Beta"    -> "Beta"
+ *   "2024 One Piece Two Legends"       -> "One Piece Two Legends"
+ *
+ * The year is dropped because slug segment 2 already carries it, and the
+ * vertical is dropped because it IS the namespace — keeping either would mint a
+ * different key for every spelling of the same set. One Piece keeps its line
+ * name because the product name genuinely includes it.
+ */
+function stripVerticalPrefix(setName: string): string {
+  let s = String(setName ?? "").trim();
+  s = s.replace(/^((19|20)\d{2}(-\d{2})?\s+)+/g, "");
+  s = s.replace(/^(yu-?gi-?oh!?|magic:?\s*the\s+gathering|magic)\s*/i, "");
+  return s.trim();
+}
+
+/**
+ * CF-JAPANESE-POKEMON-ALIASES (Drew, 2026-08-17). Resolve a Japanese Pokemon
+ * set name to its canonical Japanese set code.
+ *
+ * Vendor names carry year + "Pokemon" + "Japanese" + the SERIES before the set:
+ *
+ *   "2023 Pokemon Japanese Scarlet & Violet 151"      -> sv2a
+ *   "2022 Pokemon Japanese Sword & Shield VSTAR Universe" -> swsh12a
+ *
+ * so the lookup is tried twice: once with the series stripped (the set name
+ * alone, which is how the source lists it) and once with it retained, because
+ * a few sets genuinely include their series in the name.
+ *
+ * Matched 89.9% of Japanese sales when measured against live data.
+ */
+function resolveJapanesePokemonSet(setName: string): string | null {
+  const stripped = String(setName ?? "")
+    .replace(/^((19|20)\d{2}\s+)/, "")
+    .replace(/^pokemon\s+/i, "")
+    .replace(/^japanese\s+/i, "")
+    .trim();
+  const SERIES = /^(scarlet\s*&?\s*violet|sword\s*&?\s*shield|sun\s*&?\s*moon|xy|black\s*&?\s*white|diamond\s*&?\s*pearl|heartgold\s*&?\s*soulsilver|neo|gym|e-card|dp|platinum|legend|bw)\s+/i;
+  const candidates = [stripped.replace(SERIES, "").trim(), stripped];
+  for (const cand of candidates) {
+    const key = slugify(cand);
+    if (!key) continue;
+    const exact = JAPANESE_POKEMON_SET_ALIASES[key];
+    if (exact) return exact;
+  }
+  // Segment-boundary containment, so "151" finds "pokemon-card-151" without a
+  // bare substring match dragging in an unrelated set.
+  for (const cand of candidates) {
+    const key = slugify(cand);
+    if (!key || key.length < 2) continue;
+    for (const [alias, code] of Object.entries(JAPANESE_POKEMON_SET_ALIASES)) {
+      if (alias === key || alias.endsWith("-" + key) || alias.startsWith(key + "-")
+        || alias.includes("-" + key + "-")) return code;
+    }
+  }
+  return null;
+}
+
+export function resolveSetKeyForSlug(sport: string, setName: string, year: number): string {
+  // GATED ON SPORT, deliberately. The alias table contains keys like "151"
+  // (Scarlet & Violet 151) that would be actively dangerous applied to a
+  // baseball set name. A non-Pokemon card can never reach this branch.
+  // CF-NO-CROSS-VERTICAL-FALLBACK (Drew, 2026-08-17). A Pokemon alias MISS used
+  // to fall through to normalizeSetKey — the SPORTS vocabulary — which happily
+  // matched Pokemon set names against Panini products:
+  //
+  //     "2023 Pokemon Scarlet & Violet Obsidian Flames" -> panini-obsidian
+  //     "Crown Zenith"                                  -> panini-zenith
+  //     "XY Ancient Origins"                            -> panini-origins
+  //     "EX FireRed & LeafGreen"                        -> leaf
+  //
+  // producing slugs like `hiq:pokemon:2023:panini-obsidian:106:base:no-auto` —
+  // a Pokemon card pooled with Panini basketball comps. Measured 2026-08-17:
+  // 59,748 Pokemon rows carried a sports/Panini setKey.
+  //
+  // The sports vocabulary has no jurisdiction here. On a miss, slugify the name
+  // and stop: a year-prefixed result is refused by slugGuard and the row stays
+  // honestly unkeyed, while a clean name yields a truthful pokemon-namespaced
+  // key. Both beat a confident wrong one — the same doctrine slugGuard exists
+  // for, applied one layer earlier.
+  // CF-TCG-VERTICAL-VOCABULARY (Drew, 2026-08-17). Each TCG vertical resolves
+  // against its OWN set table, never the sports vocabulary. Measured against
+  // live unkeyed rows: Yu-Gi-Oh 97.8% of sales match YGOPRODeck, Magic ~98%
+  // once the four manual aliases are applied. Before this every one of them
+  // slugified year-prefixed and slugGuard refused it — ~84,000 sales a day.
+  //
+  // The year and the vertical name are stripped before lookup: the slug already
+  // carries the year, and the vertical IS the namespace. One table entry per
+  // set therefore covers every vendor spelling of it.
+  if (sport === "yugioh" || sport === "tcg-other" || sport === "anime-tcg") {
+    const bare = stripVerticalPrefix(setName);
+    const table = sport === "yugioh" ? YUGIOH_SET_ALIASES
+      : sport === "tcg-other" ? MTG_SET_ALIASES
+      : null;
+    const hit = table ? table[slugify(bare)] : undefined;
+    // On a miss the CLEAN name still beats a year-prefixed one-off: it is
+    // stable, it joins to itself across spellings, and the guard accepts it.
+    // The sports vocabulary is never consulted here — CF-NO-CROSS-VERTICAL-FALLBACK.
+    return hit ?? slugify(bare);
+  }
+  // CF-LONGTAIL-VERTICAL-FALLBACK (Drew, 2026-08-17). The verticals our sports
+  // vocabulary was never built for.
+  //
+  // Most of their products ARE known — "2020 Topps Chrome F1 Racing" resolves
+  // to topps-chrome because the manufacturer rule fires — so normalizeSetKey is
+  // still tried first and still wins where it can. But when it falls through to
+  // slugify, the result is year-prefixed and slugGuard refuses it, leaving a
+  // real product (Marvel Masterpieces, Garbage Pail Kids, Netpro Tennis) with no
+  // slug at all.
+  //
+  // The year is redundant — slug segment 2 already carries it — so stripping it
+  // yields a truthful, stable key that joins to itself across spellings. That is
+  // strictly better than no slug, and it is what the vendor actually named.
+  //
+  // SCOPED TO THESE VERTICALS ON PURPOSE. For the major sports a year-prefixed
+  // key usually means a genuine parse failure, and refusing is the right answer
+  // there (CF-SLUG-REFUSE-FALLBACKS). Here it only means we never wrote a rule.
+  const LONGTAIL = new Set([
+    "non-sport", "multi-sport", "tennis", "golf", "racing", "mma", "boxing", "wrestling",
+  ]);
+  if (LONGTAIL.has(sport)) {
+    const viaVocabulary = normalizeSetKey(setName);
+    if (viaVocabulary && !/^(19|20)\d{2}-/.test(viaVocabulary)) return viaVocabulary;
+    const bare = stripVerticalPrefix(setName);
+    return slugify(bare) || viaVocabulary;
+  }
+  // Japanese sets are looked up FIRST: a vendor name like "Pokemon Japanese
+  // Scarlet & Violet 151" would otherwise hit the ENGLISH alias for 151
+  // (sv03-5) and pool Japanese sales into the English card, which is a
+  // different print with a different market.
+  if (sport === "pokemon" && /japanese/i.test(setName)) {
+    const jp = resolveJapanesePokemonSet(setName);
+    // On a miss, the CLEAN name still beats a year-prefixed refusal and can
+    // never collide with an English set id.
+    if (jp) return jp;
+    const bare = String(setName).replace(/^((19|20)\d{2}\s+)/, "").replace(/^pokemon\s+/i, "").trim();
+    return slugify(bare);
+  }
+  const rawSetKey = sport === "pokemon"
+    ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
+    : normalizeSetKey(setName);
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009: Panini did not acquire Donruss
+  // until 2009, so a 1987 "Donruss" card must not be stamped panini-donruss.
+  // Applied after normalization so it corrects the canonical key rather than
+  // racing the vocabulary that produces it.
+  return (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
+    ? "donruss"
+    : rawSetKey;
+}
+
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
-  const baseSetKey = normalizeSetKey(components.setKey);
-  const cardNumber = normalizeCardNumber(components.cardNumber);
+  // CF-POKEMON-CHECKLISTS (Pokemon set names arrive in as many shapes as
+  // sellers can type, and fragment across every spelling) and
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Panini did not acquire Donruss
+  // until 2009, and stamping panini-donruss on a 1987 card split 16,776 comps
+  // away from the 1,313-row 1987 donruss checklist) BOTH live in
+  // resolveSetKeyForSlug. They are there rather than here so that slugGuard —
+  // which decides whether this function may run at all — resolves the setKey
+  // identically. See that function for the measurements.
+  const baseSetKey = resolveSetKeyForSlug(sport, components.setKey, year);
+  // CF-PLAYER-IS-THE-NUMBER: an unnumbered card is identified by its player,
+  // never by the shared literal "nno". Falls back to the plain normalized form
+  // when there is no player, so slugGuard is the one place that refuses.
+  const cardNumber = isUnnumberedCardNumber(components.cardNumber)
+    ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(components.cardNumber))
+    : normalizeCardNumber(components.cardNumber);
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
   // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +

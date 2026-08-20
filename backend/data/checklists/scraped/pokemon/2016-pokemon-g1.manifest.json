@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.680Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/g1",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "Generations",
+ "productKey": "2016-g1",
+ "setKey": "g1",
+ "rowCount": 117,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Generations",
+   "category": "base",
+   "playerCount": 117,
+   "printRun": null
+  }
+ ]
+}

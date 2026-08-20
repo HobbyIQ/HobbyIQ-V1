@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.603Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh8",
+ "sport": "pokemon",
+ "year": 2021,
+ "setName": "Fusion Strike",
+ "productKey": "2021-swsh8",
+ "setKey": "swsh8",
+ "rowCount": 284,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Fusion Strike",
+   "category": "base",
+   "playerCount": 284,
+   "printRun": null
+  }
+ ]
+}

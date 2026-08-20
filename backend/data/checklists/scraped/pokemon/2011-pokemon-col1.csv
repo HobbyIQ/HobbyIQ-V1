@@ -1,0 +1,107 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Clefable
+base,2,Base,false,,Deoxys
+base,3,Base,false,,Dialga
+base,4,Base,false,,Espeon
+base,5,Base,false,,Forretress
+base,6,Base,false,,Groudon
+base,7,Base,false,,Gyarados
+base,8,Base,false,,Hitmontop
+base,9,Base,false,,Ho-Oh
+base,10,Base,false,,Houndoom
+base,11,Base,false,,Jirachi
+base,12,Base,false,,Kyogre
+base,13,Base,false,,Leafeon
+base,14,Base,false,,Lucario
+base,15,Base,false,,Lugia
+base,16,Base,false,,Magmortar
+base,17,Base,false,,Ninetales
+base,18,Base,false,,Pachirisu
+base,19,Base,false,,Palkia
+base,20,Base,false,,Rayquaza
+base,21,Base,false,,Smeargle
+base,22,Base,false,,Umbreon
+base,23,Base,false,,Ampharos
+base,24,Base,false,,Cleffa
+base,25,Base,false,,Feraligatr
+base,26,Base,false,,Granbull
+base,27,Base,false,,Meganium
+base,28,Base,false,,Mismagius
+base,29,Base,false,,Mr. Mime
+base,30,Base,false,,Pidgeot
+base,31,Base,false,,Skarmory
+base,32,Base,false,,Slowking
+base,33,Base,false,,Snorlax
+base,34,Base,false,,Tangrowth
+base,35,Base,false,,Typhlosion
+base,36,Base,false,,Tyrogue
+base,37,Base,false,,Ursaring
+base,38,Base,false,,Weezing
+base,39,Base,false,,Zangoose
+base,40,Base,false,,Bayleef
+base,41,Base,false,,Croconaw
+base,42,Base,false,,Donphan
+base,43,Base,false,,Flaaffy
+base,44,Base,false,,Flareon
+base,45,Base,false,,Jolteon
+base,46,Base,false,,Magby
+base,47,Base,false,,Mime Jr.
+base,48,Base,false,,Pidgeotto
+base,49,Base,false,,Quilava
+base,50,Base,false,,Riolu
+base,51,Base,false,,Seviper
+base,52,Base,false,,Vaporeon
+base,53,Base,false,,Chikorita
+base,54,Base,false,,Clefairy
+base,55,Base,false,,Cyndaquil
+base,56,Base,false,,Eevee
+base,57,Base,false,,Hitmonchan
+base,58,Base,false,,Hitmonlee
+base,59,Base,false,,Houndour
+base,60,Base,false,,Koffing
+base,61,Base,false,,Magikarp
+base,62,Base,false,,Magmar
+base,63,Base,false,,Mareep
+base,64,Base,false,,Mawile
+base,65,Base,false,,Misdreavus
+base,66,Base,false,,Phanpy
+base,67,Base,false,,Pidgey
+base,68,Base,false,,Pineco
+base,69,Base,false,,Relicanth
+base,70,Base,false,,Slowpoke
+base,71,Base,false,,Snubbull
+base,72,Base,false,,Tangela
+base,73,Base,false,,Teddiursa
+base,74,Base,false,,Totodile
+base,75,Base,false,,Vulpix
+base,76,Base,false,,Cheerleader's Cheer
+base,77,Base,false,,Copycat
+base,78,Base,false,,Dual Ball
+base,79,Base,false,,Interviewer's Questions
+base,80,Base,false,,Lost Remover
+base,81,Base,false,,Lost World
+base,82,Base,false,,Professor Elm's Training Method
+base,83,Base,false,,Professor Oak's New Theory
+base,84,Base,false,,Research Record
+base,85,Base,false,,Sage's Training
+base,86,Base,false,,Darkness Energy
+base,87,Base,false,,Metal Energy
+base,88,Base,false,,Grass Energy
+base,89,Base,false,,Fire Energy
+base,90,Base,false,,Water Energy
+base,91,Base,false,,Lightning Energy
+base,92,Base,false,,Psychic Energy
+base,93,Base,false,,Fighting Energy
+base,94,Base,false,,Darkness Energy
+base,95,Base,false,,Metal Energy
+base,SL1,Base,false,,Deoxys
+base,SL10,Base,false,,Rayquaza
+base,SL11,Base,false,,Suicune
+base,SL2,Base,false,,Dialga
+base,SL3,Base,false,,Entei
+base,SL4,Base,false,,Groudon
+base,SL5,Base,false,,Ho-Oh
+base,SL6,Base,false,,Kyogre
+base,SL7,Base,false,,Lugia
+base,SL8,Base,false,,Palkia
+base,SL9,Base,false,,Raikou

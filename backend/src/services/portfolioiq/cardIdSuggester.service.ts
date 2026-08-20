@@ -240,6 +240,10 @@ interface CommonCandidate {
   number: string | null;
   variant: string | null;
   image: string | null;
+  /** CF-SUGGEST-CANONICAL-ONLY: true when cardId is our own hiq: slug rather
+   *  than a vendor id. Ranked above vendor candidates so the picker offers the
+   *  catalog card, not a vendor's copy of it. */
+  canonical?: boolean;
 }
 
 function chToCommon(c: CardHedgeCard): CommonCandidate | null {
@@ -291,10 +295,31 @@ function chToCommon(c: CardHedgeCard): CommonCandidate | null {
 // auto-locking a wrong cardId is the "silently wrong pricing" failure mode
 // PR #386 exists to prevent.
 function catalogHitToCommon(h: CanonicalSearchHit): CommonCandidate | null {
+  // CF-SUGGEST-CANONICAL-ONLY (Drew, 2026-08-13: "maybe we make them select the
+  // options that it could be and select the right one?").
+  //
+  // The picker this feeds is the right idea and already built — but it was
+  // proposing VENDOR ids. hobbyiqCardId is null on vendor-sourced catalog rows,
+  // so this fell back to h.cardId, a CardHedge bubble.io id:
+  //
+  //   primary: 1606922959335x293409091214639100
+  //   alt:     1675907814837x786442928083165000
+  //
+  // Accepting one of those pins the holding to a vendor's COPY of the card
+  // rather than the card. Downstream then prices from that vendor row instead
+  // of the canonical pool — the same failure removed from search
+  // (CF-SEARCH-CHECKLIST-IS-THE-INDEX) and from the matcher's fuzzy-parallel
+  // step today.
+  //
+  // A vendor id is still better than nothing when it is all we have, so it
+  // remains the fallback — but a canonical slug always wins when present, and
+  // the flag lets a caller see which it got.
   const wireCardId = h.hobbyiqCardId ?? h.cardId;
   if (!wireCardId) return null;
+  const isCanonical = typeof wireCardId === "string" && wireCardId.startsWith("hiq:");
   return {
     cardId: wireCardId,
+    canonical: isCanonical,
     source: "hobbyiq-catalog",
     title: null,
     name: h.player ?? null,
@@ -567,7 +592,9 @@ function crossVendorDedupKey(c: CommonCandidate): string {
 // untestable (a test cannot set the env before ESM import hoisting runs) and
 // meant flipping the env var in prod needed a restart to take effect.
 const chSuggesterEnabled = () => process.env.SUGGESTER_CARDHEDGE_ENABLED === "true";
-const csSuggesterEnabled = () => process.env.SUGGESTER_CARDSIGHT_ENABLED === "true";
+// CF-CARDSIGHT-RETIRED (Drew, 2026-08-16). The suggester no longer consults
+// Cardsight for card-id candidates; catalog-first search is the matching path.
+const csSuggesterEnabled = () => false;
 const ALTERNATIVE_MIN_SCORE = 0.4;
 const ALTERNATIVE_MAX_COUNT = 2;
 const SUGGESTER_TIMEOUT_MS = 8_000;
@@ -770,7 +797,12 @@ export async function suggestCardIdForHolding(
 
   const scored = filteredByYear
     .map((c) => ({ candidate: c, match: scoreCandidate(c, holdingForScoring) }))
-    .sort((a, b) => b.match.score - a.match.score);
+    // CF-SUGGEST-CANONICAL-ONLY: a canonical hiq: slug outranks a vendor id at
+    // equal-or-lower score, so the option the user taps pins the catalog card.
+    .sort((a, b) => {
+      const canon = (x: { candidate?: { canonical?: boolean } }) => (x.candidate?.canonical ? 0 : 1);
+      return canon(a) - canon(b) || b.match.score - a.match.score;
+    });
   if (scored.length === 0) return null;    // year guard eliminated all candidates
 
   const top = scored[0];

@@ -540,6 +540,164 @@ export async function fetchPortfolio(): Promise<PortfolioResponse> {
   return await request<PortfolioResponse>("/api/portfolio/");
 }
 
+// ─── Portfolio Breakdown ───────────────────────────────────────────
+//
+// CF-PORTFOLIO-BREAKDOWN (Drew, 2026-08-17). Allocation vs the HobbyIQ target
+// mix, PortfolioIQ Score, risk, concentration, quality tiers, recommendations.
+//
+// The analysis is computed SERVER-SIDE (portfolioAnalytics.service.ts) rather
+// than here on purpose: iOS renders the same screen, and a second copy of the
+// scoring logic in TypeScript would drift from the Swift one. The web app's job
+// is to render what it is handed.
+
+export type PortfolioCategory =
+  | "establishedGreatness" | "trueScarcity" | "eliteProspects" | "speculation";
+
+export interface BreakdownAllocation {
+  category: PortfolioCategory;
+  label: string;
+  blurb: string;
+  currentShare: number;
+  targetShare: number;
+  value: number;
+  cardCount: number;
+  status: "onTarget" | "slightlyUnderweight" | "underweight" | "slightlyOverweight" | "overweight";
+  driftPoints: number;
+}
+
+export interface BreakdownRiskMetric {
+  name: string;
+  score: number;
+  polarity: "riskIsBad" | "strengthIsGood";
+  level: "low" | "moderate" | "high";
+  label: string;
+  detail: string;
+  isConcerning: boolean;
+}
+
+export interface BreakdownConcentration {
+  dimension: string;
+  displayName: string;
+  label: string;
+  share: number;
+  value: number;
+  cardCount: number;
+  isWarning: boolean;
+  guidance: string;
+}
+
+export interface BreakdownQualityBucket {
+  tier: "cornerstone" | "strongHold" | "market" | "speculative";
+  label: string;
+  blurb: string;
+  cardCount: number;
+  value: number;
+  valueShare: number;
+}
+
+export interface BreakdownRecommendation {
+  kind: "allocation" | "concentration" | "quality" | "scarcity" | "consolidation" | "strength";
+  title: string;
+  detail: string;
+  priority: number;
+}
+
+export interface BreakdownUpgrade {
+  cardCount: number;
+  combinedValue: number;
+  lowValue: number;
+  highValue: number;
+  insight: string;
+}
+
+export interface PortfolioBreakdownResponse {
+  userId: string;
+  analyzedAt: string;
+  totalValue: number;
+  totalCost: number;
+  totalProfitLoss: number;
+  roi: number;
+  cardCount: number;
+  score: { value: number; tier: string; components: Array<{ name: string; score: number; weight: number }> };
+  allocations: BreakdownAllocation[];
+  risk: BreakdownRiskMetric[];
+  concentrations: BreakdownConcentration[];
+  qualityBuckets: BreakdownQualityBucket[];
+  recommendations: BreakdownRecommendation[];
+  upgradeOpportunities: BreakdownUpgrade[];
+  /** Share of value whose print run could not be read. Rendered as a caveat so
+   *  a thin-data portfolio does not read as a confident verdict. */
+  unknownScarcityValueShare: number;
+}
+
+export async function fetchPortfolioBreakdown(): Promise<PortfolioBreakdownResponse> {
+  return await request<PortfolioBreakdownResponse>("/api/portfolioiq/breakdown");
+}
+
+// ─── eBay sold sync ────────────────────────────────────────────────
+//
+// CF-EBAY-SOLD-SYNC-ON-DEMAND (Drew, 2026-08-17). pollEbayOrdersForUser has
+// worked since the poll-based migration, but only the 1h scheduled job ever
+// called it — so a user who just sold something waited up to an hour with no
+// way to tell whether anything was happening. This is the same function the
+// job calls, scoped to the caller, and idempotent (dedupes on order line items
+// and advances a cursor), so pressing the button twice is safe.
+
+export interface EbaySoldSyncResult {
+  status: "ok" | "no-token" | "refresh-token-expired" | "fetch-failed";
+  ordersFetched: number;
+  lineItemsProcessed: number;
+  matched: number;
+  deduped: number;
+  noMatchingHolding: number;
+  markFailures: number;
+  syncedAt: string;
+}
+
+export async function syncEbaySold(): Promise<EbaySoldSyncResult> {
+  return await request<EbaySoldSyncResult>("/api/portfolioiq/ebay/sync-sold", { method: "POST" });
+}
+
+// ─── Custom allocation tiers ───────────────────────────────────────
+//
+// CF-CUSTOM-TIERS (Drew, 2026-08-17). A tier is a name, a target share, and
+// rules deciding which holdings land in it. First match wins, in order, so the
+// list is a priority statement the user controls — which is the only model that
+// stays predictable once buckets overlap, and they always do.
+
+export interface TierRule {
+  printRunMax?: number;
+  printRunMin?: number;
+  yearMax?: number;
+  yearMin?: number;
+  graded?: boolean;
+  isAuto?: boolean;
+  productContains?: string;
+  nameContains?: string;
+  valueMin?: number;
+  valueMax?: number;
+}
+
+export interface CustomTier {
+  id: string;
+  name: string;
+  targetShare: number;
+  rules: TierRule[];
+  blurb?: string;
+}
+
+export async function fetchPortfolioTiers(): Promise<{ tiers: CustomTier[]; isCustom: boolean }> {
+  return await request<{ tiers: CustomTier[]; isCustom: boolean }>("/api/portfolioiq/breakdown/tiers");
+}
+
+/** Pass an empty array to clear back to the HobbyIQ defaults. */
+export async function savePortfolioTiers(tiers: CustomTier[]): Promise<{ tiers: CustomTier[]; isCustom: boolean }> {
+  return await request<{ tiers: CustomTier[]; isCustom: boolean }>("/api/portfolioiq/breakdown/tiers", {
+    method: "PUT",
+    body: JSON.stringify({ tiers }),
+  });
+}
+
 // ─── Market movers ─────────────────────────────────────────────────
 
 // Matches shape returned by GET /api/compiq/market-trend/top-movers
@@ -1751,6 +1909,70 @@ export interface ErpSummaryResponse {
 // caller can render an upsell instead of a generic failure.
 export async function fetchErpSummary(): Promise<ErpSummaryResponse> {
   return await request<ErpSummaryResponse>("/api/portfolio/erp/summary");
+}
+
+// CF-CEO-DASHBOARD (Drew, 2026-08-16: "a true dashboard for a CEO to see
+// profitability, drill down by year, months, purchases and all that").
+//
+// The backend has carried a full P&L since CF-ERP — gross proceeds, fees,
+// shipping, COGS, realized P&L, operating expenses and true net, groupable
+// seven ways. Nothing on the web ever called it; /erp/summary only returns a
+// portfolio snapshot, which is position, not profitability.
+export type PnlGroupBy =
+  | "month" | "player" | "set" | "grade" | "source" | "salesChannel" | "paymentMethod";
+
+export interface PnlTotals {
+  grossProceeds: number;
+  feesTotal: number;
+  shipping: number;
+  netProceeds: number;
+  costBasisSold: number;
+  realizedProfitLoss: number;
+  entryCount: number;
+  // CF-PNL-SHOW-GRADING (Drew, 2026-08-16). Deducted inside netProceeds but
+  // never reported, so the walk did not add up. Optional so an older backend
+  // response still parses.
+  gradingCost?: number;
+  suppliesCost?: number;
+}
+
+export interface PnlGroup {
+  key: string;
+  label: string;
+  totals: PnlTotals;
+}
+
+export interface ErpPnlResponse {
+  success: boolean;
+  window: { from: string | null; to: string | null };
+  groupBy: PnlGroupBy;
+  totals: PnlTotals;
+  groups: PnlGroup[];
+  excluded: {
+    unreconciledCount: number;
+    unreconciledOldestSoldAt: string | null;
+    unreconciledNewestSoldAt: string | null;
+  };
+  cogs?: Record<string, number> | null;
+  operatingExpenses?: number;
+  trueNet?: number;
+}
+
+export async function fetchErpPnl(opts: {
+  from?: string;
+  to?: string;
+  groupBy?: PnlGroupBy;
+  includeExpenses?: boolean;
+} = {}): Promise<ErpPnlResponse> {
+  const qs = new URLSearchParams();
+  if (opts.from) qs.set("from", opts.from);
+  if (opts.to) qs.set("to", opts.to);
+  qs.set("groupBy", opts.groupBy ?? "month");
+  // Always ask for expenses: a profitability view that ignores operating cost
+  // is not profitability. The backend defaults this OFF only to preserve the
+  // older iOS response shape.
+  if (opts.includeExpenses !== false) qs.set("includeExpenses", "1");
+  return await request<ErpPnlResponse>(`/api/portfolio/erp/pnl?${qs.toString()}`);
 }
 
 export type ExpenseCategory =

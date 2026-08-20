@@ -1,0 +1,217 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Beedrill V
+base,002,Base,false,,Hisuian Voltorb
+base,003,Base,false,,Hisuian Electrode
+base,004,Base,false,,Scyther
+base,005,Base,false,,Scyther
+base,006,Base,false,,Yanma
+base,007,Base,false,,Yanmega
+base,008,Base,false,,Heracross
+base,009,Base,false,,Kricketot
+base,010,Base,false,,Kricketune
+base,011,Base,false,,Combee
+base,012,Base,false,,Vespiquen
+base,013,Base,false,,Leafeon
+base,014,Base,false,,Shaymin
+base,015,Base,false,,Petilil
+base,016,Base,false,,Hisuian Lilligant
+base,017,Base,false,,Hisuian Lilligant V
+base,018,Base,false,,Hisuian Lilligant VSTAR
+base,019,Base,false,,Rowlet
+base,020,Base,false,,Dartrix
+base,021,Base,false,,Ponyta
+base,022,Base,false,,Rapidash
+base,023,Base,false,,Cyndaquil
+base,024,Base,false,,Quilava
+base,025,Base,false,,Heatran V
+base,026,Base,false,,Heatran VMAX
+base,027,Base,false,,Radiant Heatran
+base,028,Base,false,,Psyduck
+base,029,Base,false,,Golduck
+base,030,Base,false,,Starmie V
+base,031,Base,false,,Swinub
+base,032,Base,false,,Piloswine
+base,033,Base,false,,Mamoswine
+base,034,Base,false,,Mantine
+base,035,Base,false,,Barboach
+base,036,Base,false,,Whiscash
+base,037,Base,false,,Regice
+base,038,Base,false,,Glaceon
+base,039,Base,false,,Origin Forme Palkia V
+base,040,Base,false,,Origin Forme Palkia VSTAR
+base,041,Base,false,,Oshawott
+base,042,Base,false,,Dewott
+base,043,Base,false,,Hisuian Basculin
+base,044,Base,false,,Hisuian Basculegion
+base,045,Base,false,,Keldeo
+base,046,Base,false,,Radiant Greninja
+base,047,Base,false,,Bergmite
+base,048,Base,false,,Hisuian Avalugg
+base,049,Base,false,,Galarian Mr. Rime V
+base,050,Base,false,,Luxray V
+base,051,Base,false,,Regieleki
+base,052,Base,false,,Hisuian Typhlosion
+base,053,Base,false,,Hisuian Typhlosion V
+base,054,Base,false,,Hisuian Typhlosion VSTAR
+base,055,Base,false,,Togepi
+base,056,Base,false,,Togetic
+base,057,Base,false,,Togekiss
+base,058,Base,false,,Misdreavus
+base,059,Base,false,,Mismagius
+base,060,Base,false,,Ralts
+base,061,Base,false,,Kirlia
+base,062,Base,false,,Gallade
+base,063,Base,false,,Drifloon
+base,064,Base,false,,Drifblim
+base,065,Base,false,,Uxie
+base,066,Base,false,,Mesprit
+base,067,Base,false,,Azelf
+base,068,Base,false,,Diancie
+base,069,Base,false,,Wyrdeer
+base,070,Base,false,,Hisuian Growlithe
+base,071,Base,false,,Hisuian Arcanine
+base,072,Base,false,,Machamp V
+base,073,Base,false,,Machamp VMAX
+base,074,Base,false,,Sudowoodo
+base,075,Base,false,,Regirock
+base,076,Base,false,,Cranidos
+base,077,Base,false,,Rampardos
+base,078,Base,false,,Lucario V
+base,079,Base,false,,Hippopotas
+base,080,Base,false,,Hippowdon
+base,081,Base,false,,Radiant Hawlucha
+base,082,Base,false,,Hisuian Decidueye
+base,083,Base,false,,Hisuian Decidueye V
+base,084,Base,false,,Hisuian Decidueye VSTAR
+base,085,Base,false,,Kleavor
+base,086,Base,false,,Kleavor
+base,087,Base,false,,Kleavor V
+base,088,Base,false,,Hisuian Qwilfish
+base,089,Base,false,,Hisuian Qwilfish
+base,090,Base,false,,Hisuian Overqwil
+base,091,Base,false,,Hisuian Overqwil
+base,092,Base,false,,Hisuian Sneasel
+base,093,Base,false,,Hisuian Sneasler
+base,094,Base,false,,Hisuian Sneasler V
+base,095,Base,false,,Poochyena
+base,096,Base,false,,Mightyena
+base,097,Base,false,,Absol
+base,098,Base,false,,Darkrai V
+base,099,Base,false,,Darkrai VSTAR
+base,100,Base,false,,Hisuian Samurott
+base,101,Base,false,,Hisuian Samurott V
+base,102,Base,false,,Hisuian Samurott VSTAR
+base,103,Base,false,,Nickit
+base,104,Base,false,,Thievul
+base,105,Base,false,,Magnemite
+base,106,Base,false,,Magneton
+base,107,Base,false,,Magnezone
+base,108,Base,false,,Registeel
+base,109,Base,false,,Shieldon
+base,110,Base,false,,Bastiodon
+base,111,Base,false,,Bronzor
+base,112,Base,false,,Bronzong
+base,113,Base,false,,Origin Forme Dialga V
+base,114,Base,false,,Origin Forme Dialga VSTAR
+base,115,Base,false,,Pawniard
+base,116,Base,false,,Bisharp
+base,117,Base,false,,Garchomp V
+base,118,Base,false,,Regidrago
+base,119,Base,false,,Eevee
+base,120,Base,false,,Hoothoot
+base,121,Base,false,,Noctowl
+base,122,Base,false,,Teddiursa
+base,123,Base,false,,Ursaring
+base,124,Base,false,,Ursaluna
+base,125,Base,false,,Stantler
+base,126,Base,false,,Miltank
+base,127,Base,false,,Glameow
+base,128,Base,false,,Purugly
+base,129,Base,false,,Chatot
+base,130,Base,false,,Regigigas
+base,131,Base,false,,Rufflet
+base,132,Base,false,,Hisuian Braviary
+base,133,Base,false,,Oranguru V
+base,134,Base,false,,Wyrdeer V
+base,135,Base,false,,Adaman
+base,136,Base,false,,Canceling Cologne
+base,137,Base,false,,Choy
+base,138,Base,false,,Cyllene
+base,139,Base,false,,Dark Patch
+base,140,Base,false,,Energy Loto
+base,141,Base,false,,Feather Ball
+base,142,Base,false,,Gapejaw Bog
+base,143,Base,false,,Gardenia's Vigor
+base,144,Base,false,,Grant
+base,145,Base,false,,Gutsy Pickaxe
+base,146,Base,false,,Hisuian Heavy Ball
+base,147,Base,false,,Irida
+base,148,Base,false,,Jubilife Village
+base,149,Base,false,,Kamado
+base,150,Base,false,,Roxanne
+base,151,Base,false,,Spicy Seasoned Curry
+base,152,Base,false,,Supereffective Glasses
+base,153,Base,false,,Sweet Honey
+base,154,Base,false,,Switch Cart
+base,155,Base,false,,Temple of Sinnoh
+base,156,Base,false,,Trekking Shoes
+base,157,Base,false,,Unidentified Fossil
+base,158,Base,false,,Wait and See Turbo
+base,159,Base,false,,Zisu
+base,160,Base,false,,Beedrill V
+base,161,Base,false,,Beedrill V
+base,162,Base,false,,Hisuian Lilligant V
+base,163,Base,false,,Hisuian Lilligant V
+base,164,Base,false,,Virizion V
+base,165,Base,false,,Heatran V
+base,166,Base,false,,Starmie V
+base,167,Base,false,,Origin Forme Palkia V
+base,168,Base,false,,Luxray V
+base,169,Base,false,,Hisuian Typhlosion V
+base,170,Base,false,,Jirachi V
+base,171,Base,false,,Machamp V
+base,172,Base,false,,Machamp V
+base,173,Base,false,,Hisuian Decidueye V
+base,174,Base,false,,Hisuian Sneasler V
+base,175,Base,false,,Hisuian Sneasler V
+base,176,Base,false,,Hisuian Samurott V
+base,177,Base,false,,Origin Forme Dialga V
+base,178,Base,false,,Garchomp V
+base,179,Base,false,,Oranguru V
+base,180,Base,false,,Wyrdeer V
+base,181,Base,false,,Adaman
+base,182,Base,false,,Choy
+base,183,Base,false,,Cyllene
+base,184,Base,false,,Gardenia's Vigor
+base,185,Base,false,,Grant
+base,186,Base,false,,Irida
+base,187,Base,false,,Kamado
+base,188,Base,false,,Roxanne
+base,189,Base,false,,Zisu
+base,190,Base,false,,Hisuian Lilligant VSTAR
+base,191,Base,false,,Heatran VMAX
+base,192,Base,false,,Origin Forme Palkia VSTAR
+base,193,Base,false,,Hisuian Typhlosion VSTAR
+base,194,Base,false,,Machamp VMAX
+base,195,Base,false,,Hisuian Decidueye VSTAR
+base,196,Base,false,,Kleavor VSTAR
+base,197,Base,false,,Hisuian Samurott VSTAR
+base,198,Base,false,,Origin Forme Dialga VSTAR
+base,199,Base,false,,Adaman
+base,200,Base,false,,Choy
+base,201,Base,false,,Cyllene
+base,202,Base,false,,Gardenia's Vigor
+base,203,Base,false,,Grant
+base,204,Base,false,,Irida
+base,205,Base,false,,Kamado
+base,206,Base,false,,Roxanne
+base,207,Base,false,,Zisu
+base,208,Base,false,,Origin Forme Palkia VSTAR
+base,209,Base,false,,Hisuian Samurott VSTAR
+base,210,Base,false,,Origin Forme Dialga VSTAR
+base,211,Base,false,,Choice Belt
+base,212,Base,false,,Jubilife Village
+base,213,Base,false,,Path to the Peak
+base,214,Base,false,,Temple of Sinnoh
+base,215,Base,false,,Trekking Shoes
+base,216,Base,false,,Double Turbo Energy

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.433Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh6",
+ "sport": "pokemon",
+ "year": 2021,
+ "setName": "Chilling Reign",
+ "productKey": "2021-swsh6",
+ "setKey": "swsh6",
+ "rowCount": 233,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Chilling Reign",
+   "category": "base",
+   "playerCount": 233,
+   "printRun": null
+  }
+ ]
+}

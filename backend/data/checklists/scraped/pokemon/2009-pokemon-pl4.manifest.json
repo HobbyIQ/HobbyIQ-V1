@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.662Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/pl4",
+ "sport": "pokemon",
+ "year": 2009,
+ "setName": "Arceus",
+ "productKey": "2009-pl4",
+ "setKey": "pl4",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Arceus",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

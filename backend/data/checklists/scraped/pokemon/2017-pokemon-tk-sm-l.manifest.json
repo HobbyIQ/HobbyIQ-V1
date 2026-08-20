@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.085Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-sm-l",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "SM trainer Kit (Lycanroc)",
+ "productKey": "2017-tk-sm-l",
+ "setKey": "tk-sm-l",
+ "rowCount": 18,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > SM trainer Kit (Lycanroc)",
+   "category": "base",
+   "playerCount": 18,
+   "printRun": null
+  }
+ ]
+}

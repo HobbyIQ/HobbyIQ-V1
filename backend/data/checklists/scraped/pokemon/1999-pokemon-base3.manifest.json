@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:03.995Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/base3",
+ "sport": "pokemon",
+ "year": 1999,
+ "setName": "Fossil",
+ "productKey": "1999-base3",
+ "setKey": "base3",
+ "rowCount": 62,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Fossil",
+   "category": "base",
+   "playerCount": 62,
+   "printRun": null
+  }
+ ]
+}

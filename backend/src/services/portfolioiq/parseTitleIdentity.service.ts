@@ -16,6 +16,54 @@
 //   whitelist when the target card is known (e.g. "only accept CPA-EHA
 //   for Eric Hartman queries") via the optional cardNumberRe.
 
+// CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14: "fix it").
+//
+// The TCG `POS/TOTAL` card-number rule below had no vertical guard, so it fired
+// on SPORTS titles too, where `N/M` means something completely different:
+//
+//   "Macklin Celebrini OL 22/30"
+//     cardNumber "22/30" -> slug ...:2230:...  + printRun 30
+//
+// 22/30 is a SERIAL. The real card number is "OL", sitting in the same title,
+// discarded. One token consumed twice, and the resulting slug can never match —
+// no checklist contains card #2230. Verified against raw titles: 206 of 208
+// decided cases were this bug (99%), covering ~6,500 slugs and ~32,000 stuck
+// sales, with ~5,600 phantom cards already in sold_comps.
+//
+// The Pokemon half is the mirror image. There, "40/147" really IS the card
+// number (card 40 of a 147-card set) — but extractPrintRun ALSO read 147 as a
+// print run, so the slug carried `:num-147` and matched nothing. A set size is
+// not a print run.
+//
+// Both halves are the same root cause: the `N/M` token was interpreted without
+// asking what it means in this vertical. So the vertical now decides. It is
+// taken from the caller when known, and otherwise detected from the title by
+// classifyTcg — the same pure classifier the ingest path already uses, so the
+// two cannot disagree.
+import { classifyTcg } from "./tcgVertical.service.js";
+
+/** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
+ *  (secret/hyper rares are numbered above set size), so only the <=400 bound
+ *  is enforced, not num <= total.
+ *
+ *  The `#` in the leading class matters: sellers write BOTH "40/147" and
+ *  "#044/193". Without it the generic #-prefix rule wins on the second form,
+ *  returns "044", and silently drops the set half — which is a different card
+ *  number and matches nothing. */
+const TCG_NUMBER_RE = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?:\s|$)/;
+/** Global twin of the above, used to REMOVE the token before print-run
+ *  extraction so a set size is never mistaken for a print run. */
+const TCG_NUMBER_RE_G = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?=\s|$)/g;
+
+export interface ParseListingIdentityOptions {
+  /** Vertical when the caller already knows it (vendor feed field, resolved
+   *  slug, etc). Authoritative — checked before title detection. */
+  vertical?: string | null;
+  /** Canonical slug when available. Carries the setKey, which survives in
+   *  cases where the title is too terse to classify. */
+  hobbyiqCardId?: string | null;
+}
+
 export interface ParsedListingIdentity {
   cardNumber: string | null;
   parallel: string;
@@ -83,7 +131,25 @@ const STANDALONE_CARD_NUMBER_RE =
 // "hard signed" are required. When "On Card Auto" appears, \bauto\b
 // picks it up.
 const AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
-const AUTO_NEGATIVE_RE = /auto\s+relic|auto\s+patch/i;
+/** Phrases that mean the card is NOT signed, despite containing "auto".
+ *
+ *  CF-NON-AUTO-IS-NOT-AUTO (2026-08-19). This only listed "auto relic" and
+ *  "auto patch", so `\bauto\b` matched the "Auto" inside "Non Auto" and every
+ *  one of these parsed as SIGNED:
+ *
+ *    "WALKER JENKINS RC REFRACTOR ... Non Auto Rookie Holo"        -> isAuto true
+ *    "2026 Bowman Chrome /199 Fuchsia Konnor Griffin Non-Auto"     -> isAuto true
+ *    "2019 Bowman Prospects Yordan Alvarez #BP-123 ... Non Auto"   -> isAuto true
+ *
+ *  A $22.49 unsigned base card then sits in a signed card's comp pool and drags
+ *  its floor — found while auditing a user's Walker Jenkins /499 refractor auto,
+ *  whose pool ran from $22.49 to $769.
+ *
+ *  Note this governs the TITLE TEXT only. The card number remains the boundary
+ *  (isCardNumberAutoSubset is OR'd in separately), so a CPA- number still reads
+ *  as an auto even if a seller typed something careless. */
+const AUTO_NEGATIVE_RE =
+  /auto\s+relic|auto\s+patch|\bnon[-\s]?auto|\bno\s+auto|\bnot\s+auto|\bunsigned\b|\bwithout\s+auto/i;
 
 /** Extract identity from a marketplace title.
  *
@@ -93,9 +159,21 @@ const AUTO_NEGATIVE_RE = /auto\s+relic|auto\s+patch/i;
 export function parseListingIdentity(
   title: string,
   cardNumberRe?: RegExp,
+  opts?: ParseListingIdentityOptions,
 ): ParsedListingIdentity {
   const t = String(title ?? "");
-  const cardNumber = extractCardNumber(t, cardNumberRe);
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER. Decide the vertical ONCE, then let it govern
+  // both readings of the `N/M` token. Callers that know the vertical should say
+  // so — title detection is a fallback, and a Pokemon listing too terse to
+  // classify will now yield cardNumber=null rather than a confidently wrong
+  // number. Null is recoverable; a wrong identity silently files a real sale
+  // against a card that does not exist.
+  const isTcg = classifyTcg({
+    sport: opts?.vertical ?? null,
+    title: t,
+    hobbyiqCardId: opts?.hobbyiqCardId ?? null,
+  }).isTcg;
+  const cardNumber = extractCardNumber(t, cardNumberRe, isTcg);
   // CF-CARDNUMBER-IMPLIES-AUTO (Drew, 2026-07-30). Auto-subset card
   // numbers carry a fixed prefix on ALL products — CPA-, BCPA-, BSPA-,
   // BDA-, BPA-, BCRA-, TCRA-, CA-, SPA-, CPALD-, etc. If the title
@@ -109,7 +187,7 @@ export function parseListingIdentity(
     cardNumber,
     parallel: extractParallel(t),
     isAuto,
-    printRun: extractPrintRun(t),
+    printRun: extractPrintRun(t, isTcg),
     autoStyle: isAuto ? extractAutoStyle(t) : null,
     gradeCompany: grade.gradeCompany,
     gradeValue: grade.gradeValue,
@@ -355,7 +433,25 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
   return false;
 }
 
-function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null {
+function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false): string | null {
+  // CF-TCG-NUMBER-BEFORE-HASH (Drew, 2026-08-14). In TCG the POS/TOTAL rule
+  // must run FIRST. Sellers write the number both ways — "40/147" and
+  // "#044/193" — and on the second form the generic #-prefix rule below
+  // matches "044" and returns early, dropping "/193". That is not a smaller
+  // answer, it is a DIFFERENT card number, and it matches no catalog row.
+  //
+  // Caught only by running the verbatim listing title through the compiled
+  // parser: the unit test had been written against the same title with the
+  // "#" removed, so it passed while the real input failed.
+  if (isTcg && !cardNumberRe) {
+    const tcg = title.match(TCG_NUMBER_RE);
+    if (tcg) {
+      const num = Number(tcg[1]); const total = Number(tcg[2]);
+      if (num > 0 && num <= 400 && total > 0 && total <= 400) {
+        return `${tcg[1]}/${tcg[2]}`;
+      }
+    }
+  }
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
   const m = title.match(re);
   if (m) return m[1].toUpperCase();
@@ -370,13 +466,19 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp): string | null 
   // CAN exceed the total (secret/hyper rares are numbered above set
   // total). Constrain both to <=400 so we don't accidentally consume
   // sports print runs like /999 or /2011.
-  const tcg = title.match(/(?:^|\s)(\d{1,3})\/(\d{1,3})(?:\s|$)/);
-  if (tcg) {
-    const num = Number(tcg[1]); const total = Number(tcg[2]);
-    if (num > 0 && num <= 400 && total > 0 && total <= 400) {
-      return `${tcg[1]}/${tcg[2]}`;
-    }
-  }
+  //
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14). The <=400 bound was the
+  // ONLY guard, and it does not separate the two meanings at all: a sports
+  // serial like "22/30" or "49/75" sits comfortably inside it. So this rule
+  // fired on sports titles and turned serials into card numbers — 99% wrong
+  // where it fired, and it reached sold_comps as phantom cards.
+  //
+  // The bound was never the right discriminator, because `N/M` is not
+  // ambiguous once you know the vertical: in TCG it is the card number, in
+  // sports it is a serial. Gate on the vertical, not on the magnitude.
+  //
+  // The TCG branch itself now runs at the TOP of this function — see
+  // CF-TCG-NUMBER-BEFORE-HASH — because it has to beat the #-prefix rule.
   return null;
 }
 
@@ -405,12 +507,39 @@ function extractAutoStyle(title: string): "on-card" | "sticker" | null {
  *  - "77/199"
  *  - "/199" (unnumbered format when only the denominator appears)
  *  - "#/50 Braves" (numerator absent) */
-function extractPrintRun(title: string): number | null {
+function extractPrintRun(title: string, isTcg = false): number | null {
+  let t = title;
+  // CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14). In TCG, "40/147" is
+  // card-40-of-a-147-card-set. 147 is the SET SIZE, not a print run — Burning
+  // Shadows was not a 147-copy print. Both branches below would have claimed
+  // it (the serial branch reads the denominator; the standalone branch matches
+  // the "/147" substring), so the token is removed rather than skipped. That
+  // leaves a genuinely numbered TCG parallel — "... 40/147 ... /25" — still
+  // able to report /25 correctly.
+  if (isTcg) t = t.replace(TCG_NUMBER_RE_G, " ");
+
+  // CF-GRADE-FRACTION-IS-NOT-A-SERIAL (Drew, 2026-08-20: "we need to fix the
+  // parser store"). A GRADE written as a fraction is not a print run:
+  //
+  //   "...#CPA-LD PSA 10/9 DZ480"   -> read as /9    (catalog says /150)
+  //   "...Padres PSA 9/10"          -> read as /10
+  //   "...PSA/9 #CPA-LD"            -> read as /9
+  //
+  // Found via the rematch diagnostic: 4,837 comps claim a serial the checklist
+  // denies, and Leo De Vries CPA-LD alone had a cluster sitting in /9 and /10
+  // pools for a card that is only ever /150. The comps are real sales at real
+  // prices, silently pooled with cards a hundred times rarer.
+  //
+  // Stripped rather than skipped, so a title carrying BOTH a grade fraction and
+  // a genuine serial — "PSA 9/10 ... Blue Refractor /150" — still reports /150.
+  t = t.replace(/\b(PSA|BGS|SGC|CGC|HGA|TAG|ACE)\s*\/?\s*\d{1,2}(\.5)?\s*\/\s*\d{1,2}(\.5)?\b/gi, " ")
+       .replace(/\b(PSA|BGS|SGC|CGC|HGA|TAG|ACE)\s*\/\s*\d{1,2}(\.5)?\b/gi, " ");
+
   // First look for X/Y serial style — denominator is the print run
-  const serial = title.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,3})(?:\D|$)/);
+  const serial = t.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,3})(?:\D|$)/);
   if (serial) return Number(serial[2]);
   // Fall back to /N standalone
-  const slash = title.match(/\/(\d{1,4})(?:\D|$)/);
+  const slash = t.match(/\/(\d{1,4})(?:\D|$)/);
   if (slash) {
     const n = Number(slash[1]);
     // Guard against grabbing a random number (e.g. "/2024") — cap
@@ -754,6 +883,51 @@ function extractParallel(title: string): string {
   // (they're paper). BCPA/BDPA/BCDA/BCRA/TCRA are chrome-only rookie/
   // prospect autograph prefixes. CPA is the flagship Chrome Prospect
   // Autograph prefix (baseball).
+  // CF-NO-REFRACTOR-AUTO-RELEASED (Drew, 2026-08-15, on 2026 Bowman Eric
+  // Hartman #CPA-EHA: "this is marked as a refractor but it is a base - eric
+  // does not have a refractor auto" ... "eric hartman is the only one without
+  // a refractor auto ... no card was released by topps. There was an issue
+  // with his cards. It is an anomoly").
+  //
+  // The rule below is correct: the base tier of the chrome auto ladder IS
+  // Refractor, for Bowman and Topps Chrome alike. Owen Carey's CPA-OC exists
+  // in Base AND Refractor exactly as expected. This is not a product-wide
+  // naming question and must not be "fixed" by narrowing the rule — doing so
+  // would have moved 100,295 rows across bowman and bowman-chrome into a tier
+  // they do not belong in.
+  //
+  // It is a PRODUCTION anomaly, at the level of one card. Topps never
+  // released the Refractor auto for Eric Hartman, so 431 sold_comps rows were
+  // filed under a parallel that does not physically exist — and several of
+  // the titles say so outright ("True Base Auto", "Prospect Base AUTO").
+  //
+  // Keep this list tiny and keep every entry sourced. An entry is a claim
+  // that a specific card was never printed in its ladder's base refractor
+  // tier, which only the market can tell us. Do not add one by inference from
+  // a thin checklist: our checklist coverage shows no Refractor tier for 151
+  // of 190 2026 Bowman CPA-* cards, and that is a coverage gap, not 151
+  // anomalies.
+  // SCOPED BY YEAR, because card numbers are reused. CPA-EHA identifies Eric
+  // Hartman in 2026 Bowman; nothing stops Topps issuing a CPA-EHA to someone
+  // else in 2028, and an unscoped entry would silently inherit this anomaly
+  // onto that card forever. A title with no year still matches — sellers
+  // routinely omit it ("ERIC HARTMAN Bowman 1st Chrome Prospect Auto
+  // #CPA-EHA") and today CPA-EHA means this card — but a title naming a
+  // DIFFERENT year does not.
+  const NO_REFRACTOR_AUTO_RELEASED: Array<{ number: RegExp; years: number[] }> = [
+    // 2026 Bowman, Eric Hartman. Never released by Topps (Drew, 2026-08-15).
+    { number: /#?\bCPA-EHA\b/i, years: [2026] },
+  ];
+  const titleYear = (() => {
+    const m = T.match(/\b(19|20)\d{2}\b/);
+    return m ? Number(m[0]) : null;
+  })();
+  for (const entry of NO_REFRACTOR_AUTO_RELEASED) {
+    if (!entry.number.test(T)) continue;
+    if (titleYear !== null && !entry.years.includes(titleYear)) continue;
+    return "Base";
+  }
+
   const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CU|CDA)-[A-Z0-9]+/i;
   const isChromeAutoTitle =
     (AUTO_RE.test(T) || CHROME_AUTO_PREFIX_RE.test(T))
@@ -767,6 +941,43 @@ function extractParallel(title: string): string {
   if (isChromeAutoTitle) {
     return "Refractor";
   }
+
+  // CF-SCARCITY-IS-NOT-BASE (Drew, 2026-08-16, on "2018 Topps Ohtani Warm-Up
+  // Shirt SSP": "are we handling SSP of players? ... we need to add these
+  // things to the catalog and find others in the data like that").
+  //
+  // We were not. A super-short-print photo variation parsed to parallel="Base"
+  // and therefore produced the SAME SLUG as the common base card:
+  //
+  //   "2018 Topps Shohei Ohtani Warm-Up Shirt SSP #150" -> Base, #150
+  //   "2018 Topps Shohei Ohtani #150 Base"              -> Base, #150
+  //
+  // So an SSP trading at a large multiple averaged into the base pool,
+  // inflating the base FMV and deflating its own at the same time. Counting
+  // sold_comps titles filed as parallel="Base" on 2026-08-16:
+  //
+  //     SSP        48,034 of 75,822      SHORT PRINT  6,355 of  7,475
+  //     CASE HIT   27,915 of 33,900      PHOTO VAR.     826 of  1,465
+  //
+  // (IMAGE VARIATION was already handled — 10 of 11,839.)
+  //
+  // THIS FIRES ONLY AT THE FALLBACK, never over a colour rule. Scarcity and
+  // colour are different axes: a "Blue Refractor SSP" is still the Blue
+  // Refractor, and every colour/pattern rule above has already returned. What
+  // reaches here is a card with no parallel of its own — exactly the set that
+  // was collapsing into Base.
+  //
+  // SP IS A BRAND AS OFTEN AS IT IS A SHORT PRINT. Discovery over 20,000
+  // Base-filed titles returned "upper deck sp" as the single most common
+  // descriptor preceding an SP marker (1,857), ahead of every genuine scarcity
+  // term. "SP Authentic" (11,146 rows) and "Upper Deck SP" (10,808) are
+  // PRODUCT LINES; a bare "SP" rule would have mislabelled ~22,000 sales into
+  // a tier that does not exist. Only unambiguous forms are matched.
+  const isSpBrand = /\b(?:sp\s+authentic|upper\s+deck\s+sp|sp\s+legendary|sp\s+game\s+used|sp\s+signature)\b/i.test(T);
+  if (/\bssp\b/i.test(T) && !isSpBrand) return "SSP";
+  if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
+  if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";
+  if (/\bphoto\s+variation\b/i.test(T)) return "Photo Variation";
 
   return "Base";
 }
@@ -829,6 +1040,45 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+archives/i.test(t)) return "Topps Archives";
   if (/topps\s+big\s+league|big\s+league/i.test(t)) return "Topps Big League";
   if (/topps\s+bunt/i.test(t)) return "Topps Bunt";
+  // CF-SUBPRODUCT-SETKEY (Drew, 2026-08-15). These product lines existed in
+  // card_catalog but had no parser rule, so every sale of them collapsed to
+  // the parent brand ("topps"/"bowman"/"fleer") and then failed to match a
+  // catalog row that was sitting right there.
+  //
+  // Measured over 30,000 awaiting-catalog staging rows: 19,900 (66%)
+  // inferred a GENERIC setKey. All 17 product lines below were confirmed
+  // present in card_catalog FIRST — the point is to route to rows we
+  // already hold, not to invent new ones:
+  //
+  //   leaf-metal 108,608 · topps-tier-one 92,677 · bowman-platinum 87,074
+  //   topps-triple-threads 83,910 · topps-pro-debut 65,989
+  //   topps-cosmic-chrome 34,144 · bowman-inception 18,029
+  //   topps-now 14,221 · topps-shoebox-treasures 4,038 · fleer-update 2,504
+  //   topps-signature-class 1,191 · fleer-ultra 598 · etopps 304
+  //   panini-totally-certified 284 · topps-resurgence 86 · panini-noir 76
+  //   fleer-metal 17
+  //
+  // Two were not merely generic but WRONG: "Panini Totally Certified" and
+  // "Panini Noir" both returned "Bowman".
+  //
+  // ORDER MATTERS. Each must precede its parent brand's bare rule, and
+  // eTopps must precede /topps/ since the brand name is a substring of it.
+  if (/\betopps\b/i.test(t)) return "eTopps";
+  if (/topps\s+pro\s+debut/i.test(t)) return "Topps Pro Debut";
+  if (/topps\s+signature\s+class/i.test(t)) return "Topps Signature Class";
+  if (/topps\s+cosmic\s+chrome|cosmic\s+chrome/i.test(t)) return "Topps Cosmic Chrome";
+  if (/topps\s+triple\s+threads|triple\s+threads/i.test(t)) return "Topps Triple Threads";
+  if (/topps\s+tier\s+one|tier\s+one/i.test(t)) return "Topps Tier One";
+  if (/topps\s+shoebox\s+treasures|shoebox\s+treasures/i.test(t)) return "Topps Shoebox Treasures";
+  if (/topps\s+resurgence/i.test(t)) return "Topps Resurgence";
+  // "Topps Now" is a dated print-to-order line. Anchor on the brand so a
+  // stray "now" elsewhere in a title cannot claim it.
+  if (/topps\s+now\b/i.test(t)) return "Topps Now";
+  // Panini sub-products — both of these previously returned "Bowman".
+  if (/panini\s+totally\s+certified|totally\s+certified/i.test(t)) return "Panini Totally Certified";
+  if (/panini\s+noir\b/i.test(t)) return "Panini Noir";
+  if (/leaf\s+metal/i.test(t)) return "Leaf Metal";
+
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
@@ -837,7 +1087,12 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // fallback. Applies to any year — Fleer produced sticker inserts across
   // multiple sports/years, all distinct products.
   if (/fleer\s+stickers?/i.test(t)) return "Fleer Stickers";
+  if (/fleer\s+ultra|\bultra\s+fleer\b/i.test(t)) return "Fleer Ultra";
+  if (/fleer\s+metal|metal\s+universe/i.test(t)) return "Fleer Metal";
+  if (/fleer\s+update/i.test(t)) return "Fleer Update";
   if (/\bfleer\b/i.test(t)) return "Fleer";
+  if (/bowman\s+platinum/i.test(t)) return "Bowman Platinum";
+  if (/bowman\s+inception/i.test(t)) return "Bowman Inception";
   if (/bowman\s+draft\s+chrome/.test(t)) return "Bowman Draft Chrome";
   if (/bowman\s+draft/.test(t)) return "Bowman Draft";
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
@@ -908,19 +1163,134 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/.test(t)) {
     return "Unknown";
   }
-  // Only default to Bowman when the title looks baseball-ish.
-  if (/\b(baseball|mlb|rookie|prospect|prospects|1st\s+bowman|topps|panini|bowman|donruss)\b/.test(t)) {
+  // CF-BRANDS-BEFORE-THE-FALLBACK (Drew, 2026-08-16: "do it").
+  //
+  // These manufacturers had NO rule at all — "score", "skybox" and "o-pee-chee"
+  // appeared zero times in this file — so their cards fell to the Bowman
+  // default below, which fired on any title containing "baseball" or "rookie".
+  // A 1994 Upper Deck baseball rookie therefore came back as Bowman.
+  //
+  // Measured across 9,765,902 comps by comparing each slug's product against
+  // its own title:
+  //
+  //     147,700  upper-deck  parsed as "unknown"
+  //      90,732  upper-deck  parsed as "bowman"
+  //      34,428  o-pee-chee  parsed as "unknown"
+  //      27,013  score       parsed as "bowman"
+  //      26,441  skybox      parsed as "unknown"
+  //      21,826  panini      parsed as "bowman"
+  //      18,615  leaf        parsed as "bowman"
+  //
+  // ~432,000 comps where the SLUG was right and the PARSER was wrong. That
+  // matters twice: it blocks the null-slug backfill, and it made the
+  // title-vs-slug audit unusable — a fifth of the "disagreements" were this
+  // fallback rather than real mis-slugging.
+  //
+  // Longest name first within a family, so "Upper Deck SP Authentic" is not
+  // eaten by the bare "Upper Deck" rule.
+  if (/\bo-?pee-?chee\b/.test(t)) return "O-Pee-Chee";
+  if (/\bcollector'?s\s+choice\b/.test(t)) return "Collectors Choice";
+  if (/\bsp\s+authentic\b/.test(t)) return "SP Authentic";
+  if (/\bsp\s+game\s+used\b/.test(t)) return "SP Game Used";
+  if (/\bspx\b/.test(t)) return "SPx";
+  if (/\bupper\s+deck\b/.test(t)) return "Upper Deck";
+  if (/\bskybox\b/.test(t)) return "Skybox";
+  if (/\bpinnacle\b/.test(t)) return "Pinnacle";
+  if (/\bstadium\s+club\b/.test(t)) return "Topps Stadium Club";
+  if (/\bscore\b/.test(t)) return "Score";
+
+  // Only default to Bowman when the title actually says something Bowman-ish.
+  // It used to be enough to contain "baseball" or "rookie", which is how every
+  // unrecognised brand became a Bowman card.
+  if (/\b(1st\s+bowman|bowman)\b/.test(t)) {
     return "Bowman";
   }
   return "Unknown";
 }
 
 /** Infer sport from a title. Falls back to a caller-supplied default. */
+/**
+ * @deprecated Use `resolveVertical()` from resolveVertical.service.ts.
+ *
+ * CF-VERTICAL-NOT-SPORT (Drew, 2026-08-13: "so maybe calling it sport is
+ * wrong?"). Two problems, both caused by the name:
+ *
+ *   1. It resolves a VERTICAL, not a sport. Pokemon, Yu-Gi-Oh and One Piece are
+ *      not sports, and modelling them as one is why they had nowhere to go.
+ *   2. `fallback = "baseball"` means an unidentifiable card silently BECOMES a
+ *      baseball card, and the return type cannot express the difference between
+ *      "this is baseball" and "I could not tell". That produced slugs like
+ *      hiq:baseball:2003:ex-sandstorm:87100 which can never match anything, and
+ *      left card_catalog 93.6% sport=baseball.
+ *
+ * Kept as-is because 800 references read this field; resolveVertical() wraps it
+ * and reports confidence. Do not add new callers.
+ */
 export function inferSportFromTitle(title: string, fallback = "baseball"): string {
   const t = String(title ?? "").toLowerCase();
+  // CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). There was no soccer
+  // branch at all, so every soccer card fell through to the `baseball`
+  // fallback and landed in the pool that feeds baseball FMV and
+  // calibration. Measured in sold_comps: 14,826 baseball-slugged rows
+  // whose title says "WORLD CUP", 13,678 "FIFA", 8,293 "UEFA", 3,139
+  // "PREMIER LEAGUE", 2,486 "UCC" — against only 7,034 rows correctly
+  // tagged sport='soccer'. The mislabelled population is several times
+  // the correctly-labelled one.
+  //
+  // Placed ABOVE the football check on purpose. Outside the US "football"
+  // MEANS soccer, so "2024 Topps Merlin Football UEFA" would otherwise
+  // match /football/ and return NFL. A named competition is a far
+  // stronger signal than the bare word, so competitions win.
+  //
+  // Competition and league names only — no bare club names here. "Arsenal",
+  // "City", "United", "Inter" and "Milan" are ordinary words or personal
+  // names, and CF-SPORT-TEAM-OVERMATCH is the standing lesson about what
+  // happens when an ordinary word is treated as a team.
+  if (/\b(soccer|f[uú]tbol|fifa|uefa|champions\s+league|europa\s+league|premier\s+league|la\s+liga|serie\s+a|bundesliga|ligue\s+1|eredivisie|copa\s+(?:america|libertadores|del\s+rey)|world\s+cup|\bucl\b|\bucc\b|\bmls\b|euro\s+20\d\d|concacaf|conmebol)\b/.test(t)) {
+    return "soccer";
+  }
+  // CF-WWE-UFC-NEVER-DETECTED (Drew, 2026-08-15: "This is marvel wwe cards").
+  // Neither wrestling nor MMA had any detection, so both fell through to the
+  // `baseball` fallback and polluted the pool that feeds baseball FMV and
+  // calibration — the same failure soccer had.
+  //
+  // Measured in sold_comps: of 7,071 titles containing "WWE", 6,134 (87%)
+  // were tagged baseball; of 5,573 containing "UFC", 4,715 (85%) were. The
+  // backlog holds another 22,602 pending WWE rows.
+  //
+  // "wrestling" and "mma" are already in CANONICAL_SPORTS in slugGuard, and
+  // ufc->mma is already an alias there, so nothing downstream needs teaching.
+  //
+  // NOTE the deliberate absence of "raw": it is the ungraded marker ending
+  // thousands of titles in every sport ("... #CPA-BG - Raw"), and matching it
+  // would drag the entire pool into wrestling. WWE's brand is "NXT"; "RAW" is
+  // unusable as a signal here.
+  if (/\b(wwe|wwf|aew|njpw|wrestlemania|smackdown|royal\s+rumble|nxt|wrestling)\b/.test(t)) {
+    return "wrestling";
+  }
+  if (/\b(ufc|mma|bellator|octagon)\b/.test(t)) return "mma";
+  if (/\bboxing\b/.test(t)) return "boxing";
   if (/football|nfl\b/.test(t)) return "football";
   if (/basketball|nba\b/.test(t)) return "basketball";
   if (/hockey|nhl\b/.test(t)) return "hockey";
+  // CF-BASEBALL-KEYWORD-MISSING (Drew, 2026-08-14). There was no
+  // baseball keyword check at all — baseball was reachable ONLY via the
+  // `fallback` parameter. So a title that says "Baseball" in plain text
+  // fell through every explicit check and landed on the team-name
+  // heuristics below, where the NHL alternation contains "stars"
+  // (Dallas Stars):
+  //
+  //   "1978 Kellogg's 3-D Super Stars Baseball #8"  -> "hockey"
+  //   "2025 Topps Stars of MLB #SMLB10 Ohtani"      -> "hockey"
+  //
+  // "Stars" is everywhere in baseball product names (Super Stars, Stars
+  // of MLB, All-Stars), so this quietly mis-sported a large slice of the
+  // pool — sport='hockey' in sold_comps was dominated by baseball rows.
+  // Placed AFTER the other three so an explicitly multi-sport title
+  // keeps its existing precedence, and BEFORE the team-name fallbacks so
+  // a stated sport always beats a guessed one. "basketball" does not
+  // contain "baseball", so there is no overlap with the check above.
+  if (/baseball|mlb\b/.test(t)) return "baseball";
   // CF-BASKETBALL-BY-PRODUCT (Drew, 2026-07-29). Some famous basketball
   // products don't carry "basketball"/"nba" in the title but their
   // product line is basketball-exclusive:
@@ -931,32 +1301,16 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // a strong basketball signal by product convention.
   if (/fleer\s+sticker/i.test(t)) return "basketball";
 
-  // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). When the title carries
-  // no explicit sport keyword, look for UNAMBIGUOUS team names as a
-  // fallback signal. NFL/NBA/NHL each have some names that also exist
-  // in another league (Panthers/Kings/Jets); those are excluded to
-  // avoid false positives. OBSERVED: Justin Herbert 2020 Panini Prizm
-  // / Mosaic rows landed at sport=baseball because the title says
-  // neither "football" nor "NFL" — but "Chargers" / "Bolts" would
-  // disambiguate.
-  //
-  // Order: check most-specific franchise names first.
-  //
-  // NFL — 32 teams (dropping ambiguous: Cardinals[MLB], Rangers[NHL],
-  // Panthers[NHL], Jets[NHL], Giants[MLB]).
-  if (/\b(chargers|bolts|cowboys|eagles|ravens|steelers|packers|bears|49ers|niners|rams|chiefs|bills|patriots|pats|broncos|raiders|vikings|lions|falcons|buccaneers|bucs|saints|seahawks|bengals|titans|colts|texans|jaguars|jags|dolphins|commanders|redskins)\b/i.test(t)) return "football";
-  // NBA — 30 teams (dropping ambiguous: Kings[NHL], Jazz→OK, Suns→OK,
-  // Hawks→OK, Nets→OK. Bruins→NHL, Hornets→OK).
-  if (/\b(lakers|celtics|warriors|dubs|heat|knicks|nets|bucks|nuggets|suns|mavericks|mavs|rockets|spurs|pelicans|pels|grizzlies|timberwolves|wolves|thunder|okc|trail\s+blazers|blazers|clippers|jazz|hawks|hornets|magic|pistons|cavaliers|cavs|wizards|pacers|76ers|sixers|raptors)\b/i.test(t)) return "basketball";
-  // NHL — 32 teams (dropping ambiguous: Kings[NBA], Jets[NFL],
-  // Panthers[NFL], Rangers→MLB).
-  if (/\b(bruins|islanders|isles|devils|flyers|penguins|pens|capitals|caps|blue\s+jackets|red\s+wings|blackhawks|hawks|wild|blues|predators|preds|stars|avalanche|avs|kraken|ducks|sharks|golden\s+knights|coyotes|canucks|flames|oilers|canadiens|habs|maple\s+leafs|leafs|senators|sens|sabres|hurricanes|canes|lightning|bolts)\b/i.test(t)) {
-    // "Bolts" overlaps NFL Chargers ("Bolts") and NHL Lightning
-    // ("Bolts"). If the football-team check above already fired, we
-    // won't reach here. Skip Hawks (matched both NBA Atlanta and NHL
-    // Chicago — but NHL bruins/leafs are unique enough).
-    return "hockey";
-  }
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). TCG/non-sport detection
+  // used to sit BELOW the team-name heuristics. A title literally
+  // reading "2025 Pokemon Mega Evolution Phantasmal Flames" therefore
+  // reached the NHL alternation, matched "flames" (Calgary), and was
+  // stamped sport=hockey — 3,436 Pokemon rows in a single month's slug
+  // sweep. The check was never missing; it was merely unreachable.
+  // A named product line is a STATED vertical, not a guessed one, so it
+  // belongs with the other keyword checks above the team fallbacks.
+  const nonSport = inferNonSportVertical(t);
+  if (nonSport) return nonSport;
 
   // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Some Herbert / Mahomes /
   // Wembanyama-style titles carry ONLY the player name — no team, no
@@ -969,24 +1323,193 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // OBSERVED: Justin Herbert 2020 Panini Prizm / Mosaic rows landed at
   // sport=baseball because the title carries neither team nor "NFL";
   // full-name "Justin Herbert" is the only signal.
+  //
+  // CF-SPORT-TEAM-OVERMATCH moved this ABOVE the team checks. An
+  // unambiguous full name is strictly more specific than a bare team
+  // word, and the table already excludes two-sport players. "Shohei
+  // Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars"
+  // resolves on "shohei ohtani" instead of colliding with "Stars".
   const playerSport = inferSportFromPlayer(t);
   if (playerSport) return playerSport;
 
-  // CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes
-  // TCG + non-sport (Pokemon, MTG, Star Wars, etc.) alongside sports.
-  // Rather than default to "baseball" (which pollutes FMV/calibration
-  // pools), tag these with their real category so downstream filters
-  // on sport IN (baseball/basketball/football/hockey/soccer) exclude
-  // them naturally. Rows stay queryable for later dedicated
-  // categorization.
+  // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). When the title carries
+  // no explicit sport keyword, look for UNAMBIGUOUS team names as a
+  // fallback signal. NFL/NBA/NHL each have some names that also exist
+  // in another league (Panthers/Kings/Jets); those are excluded to
+  // avoid false positives.
+  //
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). The single alternation
+  // per league was too blunt: it mixed distinctive franchise nouns
+  // ("Blackhawks", "Canadiens") with ordinary English words that are
+  // ALSO team names ("Stars", "Flames", "Wild", "Blues", "Heat",
+  // "Magic", "Bills"). Card titles are dense with product, insert and
+  // parallel names, so the plain words collided constantly and a
+  // GUESSED team outranked the product name sitting in the same title:
+  //
+  //   "...Sho-Time Showcase Hobby Stars #SLAD"     -> Dallas Stars
+  //   "2025 Pokemon ... Phantasmal Flames #102"    -> Calgary Flames
+  //   "...Scarlet & Violet Wild Force #53"         -> Minnesota Wild
+  //   "2024-25 Hoops #1 Lillard Frequent Flyers"   -> Philadelphia Flyers
+  //   "1940 Play Ball #22 Sammy West - Senators"   -> Ottawa Senators
+  //                                                  (it's the MLB Senators)
+  //   "1990 Pro Set #352 Bruce Matthews PB Oilers" -> Edmonton Oilers
+  //                                                  (it's the NFL Oilers)
+  //
+  // So the tokens are split into two tiers. STRONG names are
+  // distinctive enough to stand alone. WEAK names are ordinary words
+  // and only count when the franchise's CITY sits next to them. That
+  // discriminator was not invented — of the 4,589 damaged rows, every
+  // genuinely-hockey one carried its city ("San Jose Sharks", "Anaheim
+  // Ducks", "Carolina Hurricanes", "Boston Bruins", "Toronto Maple
+  // Leafs") while none of the product-name collisions did.
+  //
+  // Team names are now a TRUE last resort: stated sport, named product
+  // line and full player name all outrank them. Consistent with
+  // slugGuard's doctrine that refusing beats defaulting, an unqualified
+  // weak word yields NOTHING rather than a guess.
+  if (NFL_TEAMS_STRONG.test(t) || NFL_TEAMS_CITY_QUALIFIED.test(t)) return "football";
+  if (NBA_TEAMS_STRONG.test(t) || NBA_TEAMS_CITY_QUALIFIED.test(t)) return "basketball";
+  // "Bolts" overlaps NFL Chargers and NHL Lightning. If the football
+  // check above already fired, we won't reach here.
+  if (NHL_TEAMS_STRONG.test(t) || NHL_TEAMS_CITY_QUALIFIED.test(t)) return "hockey";
+
+  // CF-SOCCER-NEVER-DETECTED, last resort. Some soccer titles name only a
+  // club or a player — "Julian Alvarez ... Atletico Madrid" carries no
+  // competition word. Runs AFTER the US-league team checks so a shared
+  // city never steals a card from them, and every entry is a full club
+  // name or an unambiguous player. Bare "Arsenal", "City", "United",
+  // "Inter" and "Milan" are deliberately absent: they are ordinary words
+  // or personal names, which is exactly what made "Stars" and "Flames"
+  // mis-sport 4,589 rows.
+  if (SOCCER_CLUBS_AND_PLAYERS.test(t)) return "soccer";
+
+  return fallback;
+}
+
+/** Full club names and unambiguous players — never bare one-word clubs. */
+const SOCCER_CLUBS_AND_PLAYERS =
+  /\b(real\s+madrid|barcelona|fc\s+barcelona|manchester\s+(?:united|city)|man\s+(?:utd|city)|liverpool\s+fc|chelsea\s+fc|arsenal\s+fc|tottenham|bayern\s+munich|borussia\s+dortmund|paris\s+saint-?germain|\bpsg\b|juventus|ac\s+milan|inter\s+milan|atl[eé]tico\s+madrid|napoli|ajax\s+amsterdam|benfica|boca\s+juniors|river\s+plate|flamengo|lionel\s+messi|cristiano\s+ronaldo|kylian\s+mbapp[eé]|erling\s+haaland|neymar|vin[ií]cius\s+j[uú]nior|jude\s+bellingham|lamine\s+yamal|mohamed\s+salah|kevin\s+de\s+bruyne|robert\s+lewandowski|luka\s+modri[cć]|antoine\s+griezmann|julian\s+[aá]lvarez)\b/i;
+
+/**
+ * CF-TCA-NON-SPORT-DETECT (Drew, 2026-08-02). TCA firehose pushes TCG +
+ * non-sport (Pokemon, MTG, Star Wars, etc.) alongside sports. Rather
+ * than default to "baseball" (which pollutes FMV/calibration pools),
+ * tag these with their real category so downstream filters on sport IN
+ * (baseball/basketball/football/hockey/soccer) exclude them naturally.
+ * Rows stay queryable for later dedicated categorization.
+ *
+ * Extracted from inferSportFromTitle by CF-SPORT-TEAM-OVERMATCH so the
+ * check can run above the team-name fallbacks. Returns null when the
+ * title names no known non-sport product line.
+ */
+export function inferNonSportVertical(title: string): string | null {
+  const t = String(title ?? "").toLowerCase();
   if (/\b(pokemon|pok[eé]?mon)\b/i.test(t)) return "pokemon";
   if (/\b(yugioh|yu-?gi-?oh)\b/i.test(t)) return "yugioh";
   if (/\b(magic\s+the\s+gathering|\bmtg\b|hearthstone|lorcana|flesh\s+and\s+blood)\b/i.test(t)) return "tcg-other";
   if (/\b(dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|hunter\s*x\s*hunter|jujutsu\s+kaisen|attack\s+on\s+titan|naruto|my\s+hero\s+academia|demon\s+slayer)\b/i.test(t)) return "anime-tcg";
-  if (/\b(star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft|\bwow\b)\b/i.test(t)) return "non-sport";
-
-  return fallback;
+  // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). "halo" and "wow" were
+  // dropped from this alternation. Both are ordinary card-title words,
+  // not product signals, and promoting this check above the team
+  // fallbacks would have made them fire far more often. Measured over
+  // 2026-07: all 13 "halo" hits are foil/parallel treatments ("Halo
+  // Foil", "Star Power Halo Photo", "Light Blue Halo /49") and all 61
+  // "wow" hits are seller hype on real sports cards ("RARE ICONIC
+  // PARALLEL WOW", "PSA 10 gem mint WOW !!"). Neither had a single
+  // genuine Halo / World of Warcraft row. The spelled-out "world of
+  // warcraft" still matches, which is what actually identifies those.
+  // "marvel" is KEPT: its 948 hits are Donruss "Diamond Marvels", and
+  // the trailing \b means the plural never matches.
+  if (/\b(star\s+wars|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|dungeons|d\s*&\s*d|d&d|world\s+of\s+warcraft)\b/i.test(t)) return "non-sport";
+  return null;
 }
+
+/**
+ * CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). Build a pattern that
+ * matches a weak team word ONLY when its franchise city sits directly
+ * in front of it — "calgary flames" counts, a bare "Flames" does not.
+ */
+function cityQualifiedTeams(pairs: Array<[city: string, team: string]>): RegExp {
+  return new RegExp(
+    pairs.map(([city, team]) => `\\b(?:${city})\\s+(?:${team})\\b`).join("|"),
+    "i",
+  );
+}
+
+// NFL — dropping names shared with another league: Cardinals[MLB],
+// Rangers[NHL], Panthers[NHL], Jets[NHL], Giants[MLB].
+const NFL_TEAMS_STRONG =
+  /\b(chargers|bolts|steelers|packers|ravens|49ers|niners|seahawks|buccaneers|redskins|bengals|broncos)\b/i;
+const NFL_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["dallas", "cowboys"],
+  ["philadelphia|philly", "eagles"],
+  ["chicago", "bears"],
+  ["detroit", "lions"],
+  ["los\\s+angeles|la|st\\.?\\s+louis", "rams"],
+  ["kansas\\s+city|kc", "chiefs"],
+  ["buffalo", "bills"],
+  ["new\\s+england", "patriots|pats"],
+  ["las\\s+vegas|oakland|los\\s+angeles|la", "raiders"],
+  ["minnesota", "vikings"],
+  ["atlanta", "falcons"],
+  ["tampa\\s+bay|tampa", "bucs"],
+  ["new\\s+orleans|nola", "saints"],
+  ["tennessee|houston", "titans"],
+  ["indianapolis|indy|baltimore", "colts"],
+  ["houston", "texans"],
+  ["jacksonville", "jaguars|jags"],
+  ["miami", "dolphins"],
+  ["washington", "commanders"],
+]);
+
+// NBA — dropping Kings[NHL].
+const NBA_TEAMS_STRONG =
+  /\b(lakers|celtics|warriors|knicks|nuggets|mavericks|mavs|pelicans|pels|grizzlies|timberwolves|clippers|cavaliers|cavs|76ers|sixers|raptors|trail\s+blazers|okc)\b/i;
+const NBA_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["miami", "heat"],
+  ["orlando", "magic"],
+  ["oklahoma\\s+city|okc", "thunder"],
+  ["washington", "wizards"],
+  ["houston", "rockets"],
+  ["brooklyn|new\\s+jersey", "nets"],
+  ["milwaukee", "bucks"],
+  ["phoenix", "suns"],
+  ["utah", "jazz"],
+  ["minnesota", "wolves"],
+  ["san\\s+antonio", "spurs"],
+  ["charlotte|new\\s+orleans", "hornets"],
+  ["detroit", "pistons"],
+  ["indiana", "pacers"],
+  ["portland", "blazers"],
+  ["atlanta", "hawks"],
+  ["golden\\s+state", "dubs"],
+]);
+
+// NHL — dropping names shared with another league: Kings[NBA],
+// Jets[NFL], Panthers[NFL], Rangers[MLB].
+const NHL_TEAMS_STRONG =
+  /\b(bruins|islanders|blackhawks|blue\s+jackets|red\s+wings|canadiens|habs|maple\s+leafs|canucks|kraken|golden\s+knights|coyotes|sabres|penguins|capitals)\b/i;
+const NHL_TEAMS_CITY_QUALIFIED = cityQualifiedTeams([
+  ["calgary", "flames"],
+  ["dallas|minnesota\\s+north|north", "stars"],
+  ["minnesota", "wild"],
+  ["tampa\\s+bay|tampa", "lightning"],
+  ["philadelphia|philly", "flyers"],
+  ["ottawa", "senators|sens"],
+  ["edmonton", "oilers"],
+  ["san\\s+jose", "sharks"],
+  ["anaheim|mighty", "ducks"],
+  ["carolina", "hurricanes|canes"],
+  ["st\\.?\\s+louis|saint\\s+louis", "blues"],
+  ["colorado", "avalanche|avs"],
+  ["nashville", "predators|preds"],
+  ["new\\s+jersey|jersey", "devils"],
+  ["washington", "caps"],
+  ["toronto", "leafs"],
+  ["pittsburgh", "pens"],
+  ["new\\s+york|ny", "isles"],
+  ["chicago", "hawks"],
+]);
 
 // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Full-name → sport table,
 // grouped by sport for maintainability. Only include names that are

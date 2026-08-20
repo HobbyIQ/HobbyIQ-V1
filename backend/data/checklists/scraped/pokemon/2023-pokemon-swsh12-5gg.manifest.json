@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.095Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh12.5gg",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "Crown Zenith Galarian Gallery",
+ "productKey": "2023-swsh12-5gg",
+ "setKey": "swsh12-5gg",
+ "rowCount": 70,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Crown Zenith Galarian Gallery",
+   "category": "base",
+   "playerCount": 70,
+   "printRun": null
+  }
+ ]
+}

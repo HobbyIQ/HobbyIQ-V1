@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.556Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/cel25",
+ "sport": "pokemon",
+ "year": 2021,
+ "setName": "Celebrations",
+ "productKey": "2021-cel25",
+ "setKey": "cel25",
+ "rowCount": 25,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Celebrations",
+   "category": "base",
+   "playerCount": 25,
+   "printRun": null
+  }
+ ]
+}

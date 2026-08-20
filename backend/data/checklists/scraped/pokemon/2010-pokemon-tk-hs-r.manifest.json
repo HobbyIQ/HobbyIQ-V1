@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.824Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-hs-r",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "HS trainer Kit (Raichu)",
+ "productKey": "2010-tk-hs-r",
+ "setKey": "tk-hs-r",
+ "rowCount": 1,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > HS trainer Kit (Raichu)",
+   "category": "base",
+   "playerCount": 1,
+   "printRun": null
+  }
+ ]
+}

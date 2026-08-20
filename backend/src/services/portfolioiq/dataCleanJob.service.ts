@@ -9,9 +9,9 @@
 //   1. Parser sanity — parseListingIdentity on the title should agree
 //      with the derived slug's parallel + cardNumber + isAuto. Disagree
 //      → parser-low-confidence anomaly.
-//   2. Rolling-median price plausibility — is the price within
-//      [median/3, median*3] of the last 30d at this slug? Outside →
-//      price-outlier anomaly.
+//   2. Rolling price plausibility — is the price within the last 30d
+//      dispersion band at this (slug, gradeTier), i.e. [p10/3, p90*3]?
+//      Outside → price-outlier anomaly. Fewer than 8 comps → no verdict.
 //   3. Cross-grade sanity — if graded, does the price exceed the p75
 //      of a HIGHER tier at this family × value-band? Above → cross-
 //      grade-band anomaly.
@@ -33,6 +33,75 @@ import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { parseGradeLabel } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
+import { classifyTcg } from "./tcgVertical.service.js";
+import { resolveVertical } from "./resolveVertical.service.js";
+
+/** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
+ *  plausibility. Raw and PSA 10 are different markets for the same card, so
+ *  they must not share a median. */
+/** Exported so the verify-queue loop-back re-runs the IDENTICAL tier bucketing
+ *  the admission test used. A re-evaluated verdict is only trustworthy if it is
+ *  computed the same way as the verdict it replaces — a copied helper that drifts
+ *  would release rows on a rule this file no longer applies. */
+export function gradeTierKey(company?: string | null, value?: number | null): string {
+  const c = String(company ?? "").trim().toUpperCase();
+  if (!c) return "raw";
+  const v = typeof value === "number" && Number.isFinite(value) ? value : null;
+  return v === null ? c : `${c}${v}`;
+}
+
+// CF-PRICE-BAND-FROM-DISPERSION (Drew, 2026-08-13: "lets check the anomaly out
+// and fix").
+//
+// The band was median/3 .. median*3, which assumes every pool is tightly
+// clustered. Bucketing by grade tier (CF-DATA-CLEAN-MEDIAN-BY-GRADE) fixed the
+// graded-vs-raw comparison, but it cannot fix RAW: gradeTierKey collapses every
+// ungraded copy into one "raw" bucket, and a raw pool has no condition
+// dimension at all. A 1969 Topps common trades from a $3 beater to a $600
+// near-mint copy — genuine 100x dispersion, in one bucket, by design.
+//
+// So a fixed ±3x brands ordinary condition variance as bad data. Measured
+// 2026-08-13 on a 30,000-row anomaly sample: price-outlier was 46.6%, and the
+// examples are exactly this — "1969 Topps #100 Base, 2287% of 30d median
+// $44.95", "1955 Bowman #110 Base, 27% of $3.54". Those are sales, not errors,
+// and status=anomaly means they never reach sold_comps.
+//
+// Band from the pool's OWN spread instead: p10..p90, widened by OUTLIER_FACTOR.
+// Self-calibrating — a tight pool (modern graded) keeps a tight band, a
+// dispersed pool (vintage raw) earns a wide one. What still trips are the
+// failures worth catching: lot listings, typos, wrong-card matches, which sit
+// orders of magnitude outside the observed range rather than inside its tail.
+export interface PriceBand {
+  median: number;
+  /** 10th percentile of the 30d pool. */
+  lo: number;
+  /** 90th percentile of the 30d pool. */
+  hi: number;
+  n: number;
+}
+
+// Quantiles need more support than a median does. Below this we return NO
+// verdict rather than guessing — extending the rule this file already applies
+// to thin grade tiers: an unjudgeable row must not be branded an anomaly.
+const MIN_BAND_SAMPLES = 8;
+const OUTLIER_FACTOR = 3;
+
+/** Build a dispersion band from an ASCENDING-sorted price array. */
+export function priceBandFromSorted(sorted: number[]): PriceBand | null {
+  const n = sorted.length;
+  if (n < MIN_BAND_SAMPLES) return null;
+  const q = (f: number) => sorted[Math.min(n - 1, Math.max(0, Math.floor(f * (n - 1))))];
+  return { median: q(0.5), lo: q(0.1), hi: q(0.9), n };
+}
+
+/** Verdict for one price against a band. `null` detail means "in band". */
+export function priceOutlierDetail(price: number, band: PriceBand): string | null {
+  const ceiling = band.hi * OUTLIER_FACTOR;
+  const floor = band.lo / OUTLIER_FACTOR;
+  if (price <= ceiling && price >= floor) return null;
+  return `$${price.toFixed(2)} outside 30d p10-p90 $${band.lo.toFixed(2)}-$${band.hi.toFixed(2)} ` +
+    `(x${OUTLIER_FACTOR} → $${floor.toFixed(2)}-$${ceiling.toFixed(2)}, n=${band.n}, median $${band.median.toFixed(2)})`;
+}
 
 let _cached: Container | null = null;
 async function getStagingContainer(): Promise<Container | null> {
@@ -114,6 +183,15 @@ function shardChars(index: number, total: number): string[] {
   return chars;
 }
 
+// CF-STAGING-LIMIT-CAP-WAS-THE-BOTTLENECK (Drew, 2026-08-13). The batch ceiling
+// was duplicated: the route clamped `limit` to 500 AND so did this job. Raising
+// only the route changed nothing — a limit=2500 call still reported
+// scanned=500, which is how the second cap was found. Both now agree at 5000.
+//
+// This is a guard against a typo'd query param, not a throughput policy: the
+// real limiters are this job's wall-clock and the caller's curl --max-time.
+const MAX_JOB_BATCH = 5000;
+
 export async function runDataCleanBatch(opts: {
   limit?: number;
   workerShard?: { index: number; total: number };
@@ -131,7 +209,7 @@ export async function runDataCleanBatch(opts: {
   };
   if (!staging) return result;
 
-  const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+  const limit = Math.max(1, Math.min(MAX_JOB_BATCH, opts.limit ?? 100));
 
   // CF-STAGING-REJECT-ZERO-PRICE-SWEEP (Drew, 2026-07-29). "There is no
   // sales at 0 dollars." Reject any row with vendorPayload.price <= 0
@@ -200,14 +278,28 @@ export async function runDataCleanBatch(opts: {
   // remaining slots from any-source pending. CardHedge still lands but
   // TCA gets to sold_comps first.
   const { resources: tcaFirst } = await staging.items.query<StagingDoc>({
-    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source = 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
+    // CF-DATACLEAN-VENDOR-FIELD-PATH (Drew, 2026-08-13). This filtered on
+    // c.raw.vendorPayload.source, which exists on ZERO staging rows — the
+    // vendor lives at c.raw.vendor (promotionJob already reads it there).
+    //
+    // Both passes therefore matched nothing, and the fallback below could not
+    // rescue it: in Cosmos `undefined != 'tca-ebay'` evaluates to undefined,
+    // not true, so the "any other source" query returned 0 as well. The job
+    // reported {"scanned":0,"cleaned":0} every run and looked healthy while
+    // 3,513,701 rows sat in `pending` — nothing was ever cleaned, so promotion
+    // (which reads status IN ('clean','verified')) had nothing to promote and
+    // scanned 2 rows against a 3.5M backlog.
+    query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendor = 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
     parameters: [{ name: "@n", value: limit }, ...shardParams],
   }).fetchAll();
   let pending: StagingDoc[] = tcaFirst;
   if (pending.length < limit) {
     const remainder = limit - pending.length;
     const { resources: fill } = await staging.items.query<StagingDoc>({
-      query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND c.raw.vendorPayload.source != 'tca-ebay'${shardFilter} ORDER BY c.observedAt DESC`,
+      // Same field-path correction. IS_DEFINED guards the not-equals so a row
+      // with no vendor at all still qualifies for the any-source fill rather
+      // than silently evaluating to undefined.
+      query: `SELECT TOP @n * FROM c WHERE c.status = 'pending' AND (NOT IS_DEFINED(c.raw.vendor) OR c.raw.vendor != 'tca-ebay')${shardFilter} ORDER BY c.observedAt DESC`,
       parameters: [{ name: "@n", value: remainder }, ...shardParams],
     }).fetchAll();
     pending = [...pending, ...fill];
@@ -218,7 +310,7 @@ export async function runDataCleanBatch(opts: {
   // cross-partition query so classifyRow doesn't fan out to N
   // per-row queries. Before this: 500 rows × 1 query = ~5000 RU/batch,
   // ~80s wall-clock. After: 1 query + 1 write per row.
-  const medianCache = new Map<string, number>();
+  const medianCache = new Map<string, PriceBand>();
   if (soldComps) {
     const uniqSlugs = Array.from(new Set(pending.map((r) => r.hobbyiqCardId).filter(Boolean)));
     if (uniqSlugs.length > 0) {
@@ -230,23 +322,37 @@ export async function runDataCleanBatch(opts: {
           const params: Array<{ name: string; value: string }> = chunk.map((s, idx) => ({ name: `@s${idx}`, value: s }));
           const inList = chunk.map((_, idx) => `@s${idx}`).join(",");
           params.push({ name: "@cutoff", value: rollingCutoff });
-          const { resources: rows } = await soldComps.items.query<{ hobbyiqCardId: string; price: number }>({
-            query: `SELECT c.hobbyiqCardId, c.price FROM c WHERE c.hobbyiqCardId IN (${inList}) AND c.soldAt >= @cutoff`,
+          // CF-DATA-CLEAN-MEDIAN-BY-GRADE (Drew, 2026-08-13). The median was
+          // GRADE-BLIND — bucketed by slug alone — so on a card that mostly
+          // trades raw, every graded sale read as a huge outlier. Real example
+          // from the backlog: a PSA 10 1968 Topps #573 at $153.50 flagged as
+          // "4723% of 30d median $3.25", where $3.25 is the raw-commons median.
+          //
+          // price-outlier was 68% of all anomalies and 23% of them carried a
+          // grade, so a large share of the anomaly bucket is legitimate graded
+          // sales being compared against raw prices. This is the "Check 3:
+          // cross-grade sanity" the file below notes as deferred.
+          //
+          // Bucket per (slug, gradeTier) so like compares with like.
+          const { resources: rows } = await soldComps.items.query<{
+            hobbyiqCardId: string; price: number; gradeCompany?: string | null; gradeValue?: number | null;
+          }>({
+            query: `SELECT c.hobbyiqCardId, c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId IN (${inList}) AND c.soldAt >= @cutoff`,
             parameters: params,
           }).fetchAll();
           const bySlug = new Map<string, number[]>();
           for (const r of rows) {
             const p = Number(r.price);
             if (!Number.isFinite(p) || p <= 0) continue;
-            const arr = bySlug.get(r.hobbyiqCardId) ?? [];
+            const key = `${r.hobbyiqCardId}||${gradeTierKey(r.gradeCompany, r.gradeValue)}`;
+            const arr = bySlug.get(key) ?? [];
             arr.push(p);
-            bySlug.set(r.hobbyiqCardId, arr);
+            bySlug.set(key, arr);
           }
           for (const [slug, prices] of bySlug) {
-            if (prices.length >= 5) {
-              prices.sort((a, b) => a - b);
-              medianCache.set(slug, prices[Math.floor(prices.length / 2)]);
-            }
+            prices.sort((a, b) => a - b);
+            const band = priceBandFromSorted(prices);
+            if (band) medianCache.set(slug, band);
           }
         }
       } catch { /* pre-fetch failure is non-fatal — classifyRow falls back to per-row query */ }
@@ -268,7 +374,36 @@ export async function runDataCleanBatch(opts: {
         continue;
       }
       const clean = await classifyRow(row, soldComps, medianCache);
-      const nextStatus = clean.anomalies.length === 0 ? "clean" : "anomaly";
+
+      // CF-TCG-IS-NOT-BLOCKED (Drew, 2026-08-13). An earlier revision of this
+      // routed every TCG row to a `holding-tcg` park, on the theory that TCG
+      // "can never match a sports catalog". That was WRONG and would have
+      // pulled working data out of the pipeline:
+      //
+      //   sold_comps with hiq:pokemon:*   402,809 comps — matched and promoted
+      //   card_catalog sport=pokemon       48,094 rows
+      //
+      // The vertical is live. Slugs are `hiq:{vertical}:…` and `sport` is just a
+      // namespace string, so Pokemon matches exactly like baseball does. The
+      // conclusion came from a biased sample: the 8 unmatched slugs I inspected
+      // happened to all be `hiq:baseball:<pokemon-set>`, which is the
+      // MISCLASSIFIED tail (~0.6%), not TCG as a category (7.7%).
+      //
+      // So there is no park here. Rows whose vertical is wrong need their sport
+      // CORRECTED so they compute a matching slug — see resolveVertical.service
+      // — which makes them promotable rather than shelved. Tagging is recorded
+      // for visibility only.
+      const tcg = classifyTcg({
+        sport: clean.sport ?? row.raw.identityHint.sport,
+        title: row.raw.vendorPayload.title,
+        hobbyiqCardId: row.hobbyiqCardId,
+      });
+      if (tcg.isTcg && !parseHobbyIqCardId(row.hobbyiqCardId)?.sport?.match(/pokemon|yugioh|tcg|mtg|lorcana/)) {
+        // TCG content wearing a SPORT slug — the population that cannot match.
+        clean.normalizations.push(`tcg-vertical-mismatch:${tcg.reason}`);
+      }
+      const nextStatus: StagingDoc["status"] =
+        clean.anomalies.length === 0 ? "clean" : "anomaly";
       row.clean = clean;
       row.status = nextStatus;
       await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
@@ -296,7 +431,7 @@ export async function runDataCleanBatch(opts: {
  * rolling-median lookup against sold_comps (which is read-only).
  * Never throws — always returns a StagingClean.
  */
-async function classifyRow(row: StagingDoc, soldComps: Container | null, medianCache?: Map<string, number>): Promise<StagingClean> {
+async function classifyRow(row: StagingDoc, soldComps: Container | null, medianCache?: Map<string, PriceBand>): Promise<StagingClean> {
   const raw = row.raw;
   const parsed = parseHobbyIqCardId(row.hobbyiqCardId);
   const cardYear = parsed?.year ?? raw.identityHint.cardYear ?? 0;
@@ -310,10 +445,22 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // from title-visible product signals (Fleer Sticker → basketball)
   // and prefer the title-derived sport when it disagrees. Fall back
   // to slug sport / identity hint / baseball default.
+  // CF-VERTICAL-NOT-SPORT wired in (Drew, 2026-08-14). resolveVertical checks
+  // TCG before any sport keyword, because a Pokemon title contains none — it
+  // would otherwise fall through to the "baseball" default and compute a slug
+  // (hiq:baseball:2000:neo-genesis:…) that no catalog can ever hold.
+  //
+  // The slug's own sport is the fallback rather than a hardcoded default, so a
+  // row that was already correctly verticalled keeps its value.
   let sport = parsed?.sport ?? raw.identityHint.sport ?? "baseball";
   if (title) {
-    const titleSport = inferSportFromTitle(title, sport);
-    if (titleSport !== sport) sport = titleSport;
+    const res = resolveVertical({
+      declared: parsed?.sport ?? raw.identityHint.sport ?? null,
+      title,
+      hobbyiqCardId: row.hobbyiqCardId,
+      fallback: sport,
+    });
+    if (res.vertical !== sport) sport = res.vertical;
   }
 
   const normalizations: string[] = [];
@@ -364,10 +511,23 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
         titleSetSlug.length > parsed.setKey.length &&
         titleSetSlug.startsWith(parsed.setKey);
       if (titleMoreSpecific) {
-        anomalies.push({
-          kind: "parser-low-confidence",
-          detail: `title infers setKey "${titleSet}" (slug=${titleSetSlug}) — more specific than slug setKey "${parsed.setKey}"`,
-        });
+        // CF-SETKEY-UPGRADE-IS-NOT-AN-ANOMALY (Drew, 2026-08-13: "lets check
+        // the anomaly out and fix").
+        //
+        // This branch RESOLVES the discrepancy — it adopts the more specific
+        // setKey on the next line — and then used to raise an anomaly anyway,
+        // which parks the row in `anomaly` where promotion (status IN
+        // ('clean','verified')) never picks it up. Same shape as the no-image
+        // bug: intent "record that we improved this", effect "never promote".
+        //
+        // Adopting a strictly-more-specific setKey is the sanctioned operation
+        // under slug-recompute-only-improve, not a low-confidence parse. The
+        // guard above already establishes strictness (longer AND prefixed), so
+        // bowman → bowman-chrome and topps → topps-transcendent upgrade, while
+        // an orthogonal disagreement falls to the else branch untouched.
+        //
+        // Measured 2026-08-13: parser-low-confidence was 53% of a 30,000-row
+        // anomaly sample, dominated by exactly this verdict.
         derivedSetName = titleSetSlug;
         normalizations.push("setKey-preferred-from-title");
       } else {
@@ -422,28 +582,33 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // the caller didn't supply the cache (used by legacy call sites).
   if (soldComps && price > 0) {
     try {
-      let median: number | null = medianCache?.get(row.hobbyiqCardId) ?? null;
-      if (median === null && !medianCache) {
+      // Compare against this row's OWN grade tier. When that tier has too few
+      // sales we deliberately return NO verdict rather than falling back to the
+      // mixed-grade median — an unjudgeable row should not be branded an
+      // anomaly, which is exactly how legitimate graded sales ended up here.
+      // Parse the grade here rather than reusing `gradeParsed`, which is
+      // declared further down this function (line ~529) — the price check runs
+      // before it exists. parseGradeLabel is pure and cheap.
+      const rowGrade = title ? parseGradeLabel(title) : null;
+      const rowGradeKey = gradeTierKey(rowGrade?.gradeCompany, rowGrade?.gradeValue);
+      let band: PriceBand | null = medianCache?.get(`${row.hobbyiqCardId}||${rowGradeKey}`) ?? null;
+      if (band === null && !medianCache) {
         const rollingCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-        const { resources: rollingRows } = await soldComps.items.query<{ price: number }>({
-          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
+        const { resources: rollingRows } = await soldComps.items.query<{
+          price: number; gradeCompany?: string | null; gradeValue?: number | null;
+        }>({
+          query: "SELECT c.price, c.gradeCompany, c.gradeValue FROM c WHERE c.hobbyiqCardId = @hiq AND c.soldAt >= @cutoff",
           parameters: [{ name: "@hiq", value: row.hobbyiqCardId }, { name: "@cutoff", value: rollingCutoff }],
         }).fetchAll();
-        if (rollingRows.length >= 5) {
-          const prices = rollingRows.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-          if (prices.length >= 5) median = prices[Math.floor(prices.length / 2)];
-        }
+        const prices = rollingRows
+          .filter((r) => gradeTierKey(r.gradeCompany, r.gradeValue) === rowGradeKey)
+          .map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+        band = priceBandFromSorted(prices);
       }
-      if (median !== null) {
-        const ratio = price / median;
-        if (ratio > 3 || ratio < (1 / 3)) {
-          anomalies.push({
-            kind: "price-outlier",
-            detail: `${(ratio * 100).toFixed(0)}% of 30d median $${median.toFixed(2)}`,
-          });
-        } else {
-          normalizations.push("price-within-30d-band");
-        }
+      if (band !== null) {
+        const detail = priceOutlierDetail(price, band);
+        if (detail) anomalies.push({ kind: "price-outlier", detail });
+        else normalizations.push("price-within-30d-band");
       }
     } catch { /* rolling median failure is non-fatal */ }
   }
@@ -456,19 +621,32 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // Check 4: slug conflict against card_catalog — deferred until
   // catalog seed reaches meaningful coverage.
 
-  // Check 5: no-image anomaly.
+  // Check 5: image presence.
+  //
+  // CF-NO-IMAGE-IS-NOT-AN-ANOMALY (Drew, 2026-08-13: "if no image, then no
+  // need to do it"). A sale without a picture is still a valid PRICE POINT.
+  // The photo is enrichment; the sale is the data.
+  //
+  // This used to push an anomaly, which contradicted this check's own stated
+  // rule ("still routed downstream, not rejected"): status=anomaly means
+  // promotion — which reads status IN ('clean','verified') — never picks the
+  // row up. Intent was "do not reject", effect was "never promote".
+  //
+  // It mattered enormously. Blob mirroring is currently failing account-wide
+  // with "This request is not authorized to perform this operation using this
+  // permission", so EVERY row got mirrorError and therefore no-image. Measured
+  // 2026-08-13: 1,498 of 1,500 freshly-cleaned rows were anomalies, 1,498 of
+  // them for no-image — i.e. a storage permission was holding 3.5M sales out
+  // of the pool. price-outlier was only 89 of that 1,500.
+  //
+  // Recorded either way so image-verify can still enrich later and so the
+  // mirror failure stays visible — it just no longer blocks the price.
   const hasIngestImageUrl = Boolean(raw.vendorPayload.imageUrl);
   const hasMirrorSuccess = Boolean(row.mirroredImage?.blobUrl) && !row.mirroredImage?.mirrorError;
-  if (!hasIngestImageUrl && !hasMirrorSuccess) {
-    anomalies.push({
-      kind: "no-image",
-      detail: "vendor sent no imageUrl and no successful mirror on file — image-verify cannot fire",
-    });
-  } else if (row.mirroredImage?.mirrorError) {
-    anomalies.push({
-      kind: "no-image",
-      detail: `mirror failed: ${row.mirroredImage.mirrorError.reason} ${row.mirroredImage.mirrorError.detail ?? ""}`,
-    });
+  if (row.mirroredImage?.mirrorError) {
+    normalizations.push(`image-mirror-failed:${row.mirroredImage.mirrorError.reason}`);
+  } else if (!hasIngestImageUrl && !hasMirrorSuccess) {
+    normalizations.push("no-image");
   } else {
     normalizations.push("image-mirrored");
   }

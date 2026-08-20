@@ -1,0 +1,150 @@
+name: Checklist Acquisition
+
+# CF-CHECKLIST-ACQUISITION (Drew, 2026-08-16: "lets get every catalog we need
+# and ingest the FULL checklist for all of those and that way we can run it
+# daily to stay on top of it" / "let's build the daily job at 5 am 9 am 1 pm
+# and 5 pm").
+#
+# Two steps, every run:
+#   1. checklist-gap-report  — rank every product our SALES reference by how
+#                              many sales are stranded with no CHECKLIST behind
+#                              them.
+#   2. acquire-missing-checklists — fetch and ingest the top of that ranking.
+#
+# WHY NOT DRAIN THE SEED QUEUE. That queue is fed by match FAILURES, and on
+# 2026-08-16 only 22% of 478 diagnosed failures were genuinely missing a
+# checklist. Its top entry asked for 2025 Topps against 2,944,147
+# checklist-backed rows we already owned. A work list built from failures
+# inherits the failures and spends publisher goodwill on things we have.
+#
+# The gap report asks the question directly instead, which is how Donruss Optic
+# surfaced: 207,638 comps against 1,468 checklist rows — the single largest
+# coverage gap in the pool, and invisible to the queue.
+#
+# SELF-LIMITING. The ranking is recomputed every run, so a product drops off
+# the list once it is covered. The job cannot loop on the same target, and it
+# does nothing at all when there is nothing missing.
+#
+# BOUNDED PER RUN. max=12 products. Each is a real page fetch from an external
+# publisher plus a full ingest; a manual sweep of 48 seeds produced 11
+# transient ECONNABORTED aborts, and pulling harder raises the failure rate
+# rather than the throughput. Four runs a day at 12 is ~48 products/day, which
+# clears a backlog of this size in weeks while staying a polite neighbour.
+
+on:
+  schedule:
+    # 5am / 9am / 1pm / 5pm ET. GitHub cron is UTC and has no DST, so these are
+    # pinned to EDT (UTC-4) and land an hour later in winter — the same
+    # convention the other scheduled jobs in this repo use.
+    - cron: '0 9,13,17,21 * * *'
+  workflow_dispatch:
+    inputs:
+      max_products:
+        description: 'Products to acquire this run'
+        required: false
+        default: '12'
+      min_comps:
+        description: 'Ignore products with fewer stranded sales than this'
+        required: false
+        default: '800'
+      apply:
+        description: 'Write to the catalog (false = report only)'
+        required: false
+        default: 'true'
+
+concurrency:
+  group: checklist-acquisition
+  cancel-in-progress: false
+
+jobs:
+  acquire:
+    name: Acquire missing checklists
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      # CF-DRAIN-NEEDS-DIST (2026-08-16). The seed-queue job shipped without
+      # this and went green while ingesting NOTHING — ingest-scraped-checklist
+      # require()s compiled modules out of dist/, so every child died on a
+      # missing module and the parent still exited 0. Never omit the build.
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Rank what is missing
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/checklist-gap-report.cjs \
+            --min-comps="${{ inputs.min_comps || '800' }}" \
+            --top=60 \
+            --json=/tmp/gaps.json
+
+      - name: Fetch and ingest
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          APPLY_FLAG=""
+          if [ "${{ inputs.apply || 'true' }}" = "true" ]; then APPLY_FLAG="--apply"; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/acquire-missing-checklists.cjs $APPLY_FLAG \
+            --max="${{ inputs.max_products || '12' }}" --gaps=/tmp/gaps.json
+
+      - name: Report what is still stranded
+        if: always()
+        working-directory: backend
+        run: |
+          # The number that says whether this job is WORKING. A run can fetch
+          # and ingest happily while stranded sales keep climbing, which is
+          # exactly how the seed-queue drain went unnoticed for weeks — green
+          # every time, moving nothing.
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" node -e '
+            const {CosmosClient}=require("@azure/cosmos");
+            const c=new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
+              .database("hobbyiq").container("comps_staging");
+            c.items.query({query:"SELECT c.status, COUNT(1) AS n FROM c GROUP BY c.status"})
+              .fetchAll()
+              .then(({resources})=>{
+                for (const r of resources.sort((a,b)=>b.n-a.n)) {
+                  console.log(String(r.n).padStart(9) + "  " + (r.status ?? "(none)"));
+                }
+              })
+              .catch((e)=>{ console.log("depth check failed: " + e.message); });
+          '

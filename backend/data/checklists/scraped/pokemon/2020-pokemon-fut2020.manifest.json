@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.083Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/fut2020",
+ "sport": "pokemon",
+ "year": 2020,
+ "setName": "Pokémon Futsal 2020",
+ "productKey": "2020-fut2020",
+ "setKey": "fut2020",
+ "rowCount": 5,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Pokémon Futsal 2020",
+   "category": "base",
+   "playerCount": 5,
+   "printRun": null
+  }
+ ]
+}

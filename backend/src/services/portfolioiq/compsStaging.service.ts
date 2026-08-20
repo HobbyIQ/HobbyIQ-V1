@@ -28,6 +28,43 @@ export type StagingStatus =
   | "verified"
   | "pending-manual"
   | "promoted"
+  // CF-AWAITING-CATALOG-LIVELOCK (Drew, 2026-08-13). A clean row whose card has
+  // no catalog match yet. The sale is real and a checklist seed has been filed;
+  // it promotes unchanged once the checklist lands.
+  //
+  // It needs its OWN status rather than staying "clean": promotion selects
+  // `status IN ('clean','verified') ORDER BY observedAt DESC`, which is
+  // deterministic, so leaving these in the promotable set made every run
+  // re-select the same unmatched rows and promote nothing at all.
+  | "awaiting-catalog"
+  // CF-PLAYER-PRECISION-IS-NOT-AWAITING-CATALOG (Drew, 2026-08-14). A row whose
+  // card number is the synthesized `pf-<playerSlug>` marker: we know the
+  // player, set and parallel but NOT which card. PLAYER_FALLBACK_CARDNUMBER
+  // mints these so the row can land without cardNumber precision, and
+  // CATALOG_MATCH_ONLY then rejects them for not matching a card — the two
+  // features cancel, and 6,100 slugs / 70,732 sales were sitting in
+  // `awaiting-catalog` as a result.
+  //
+  // Distinct from `awaiting-catalog`, which is waiting on a checklist we can
+  // actually go and fetch. No checklist will ever contain a card numbered
+  // "pf-league-debut-almost-complete" — the prefix IS the statement that we do
+  // not know the card. Keeping them in the same bucket inflated the catalog-gap
+  // work-list and made them a permanent requeue target.
+  | "player-precision"
+  // CF-TCG-HOLDING-GROUP (Drew, 2026-08-13: "let's just tag them as TCG and
+  // into a holding group"). A Pokemon / One Piece / Yu-Gi-Oh sale. A real
+  // transaction, but there is no TCG catalog to match it against yet — the
+  // sport→vertical refactor is the parked blocker — so it can NEVER promote.
+  //
+  // Distinct from `awaiting-catalog`, which is waiting on a checklist we can
+  // actually go and fetch. This is waiting on a schema that does not exist yet,
+  // so it must not sit in the same queue: measured 7.7% of staging rows, and
+  // they were filing checklist seeds for sets no sports checklist will ever
+  // cover (the seed queue GREW 2,285 → 2,754 while we drained it).
+  //
+  // Deliberately NOT "rejected" — nothing about these sales is invalid, and
+  // this population is the seed corpus for the TCG vertical when it lands.
+  | "holding-tcg"
   // CF-STAGING-REJECT-ZERO-PRICE (Drew, 2026-07-29). "There is no sales
   // at 0 dollars." Rows with price <= 0 are rejected outright and stay
   // out of the manual queue. Distinct from `promoted` so we can audit

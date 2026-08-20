@@ -39,6 +39,16 @@ export interface PromotionResult {
   skippedInsufficientData: number;
   errors: number;
   byVerification: Record<string, number>;
+  /** CF-PROMOTION-RESPECTS-SKIP: rows held back because their card has no
+   *  catalog checklist yet. Retryable — they promote once it lands. A rising
+   *  number here is the queue of sales the catalog cannot yet describe, and
+   *  should track the seed queue's demand counts. */
+  awaitingCatalog?: number;
+  /** CF-PLAYER-PRECISION-IS-NOT-AWAITING-CATALOG. Rows whose card number is the
+   *  synthesized `pf-<playerSlug>` marker — we know the player, set and
+   *  parallel but NOT which card. Not retryable by ingesting a checklist, so
+   *  counted apart from awaitingCatalog rather than inflating it. */
+  playerPrecision?: number;
 }
 
 /**
@@ -69,6 +79,15 @@ function shardChars(index: number, total: number): string[] {
   return chars;
 }
 
+// CF-STAGING-LIMIT-CAP-WAS-THE-BOTTLENECK (Drew, 2026-08-13). The batch ceiling
+// was duplicated: the route clamped `limit` to 500 AND so did this job. Raising
+// only the route changed nothing — a limit=2500 call still reported
+// scanned=500, which is how the second cap was found. Both now agree at 5000.
+//
+// This is a guard against a typo'd query param, not a throughput policy: the
+// real limiters are this job's wall-clock and the caller's curl --max-time.
+const MAX_JOB_BATCH = 5000;
+
 export async function runPromotionBatch(opts: {
   limit?: number;
   workerShard?: { index: number; total: number };
@@ -83,7 +102,7 @@ export async function runPromotionBatch(opts: {
   };
   if (!staging) return result;
 
-  const limit = Math.max(1, Math.min(500, opts.limit ?? 100));
+  const limit = Math.max(1, Math.min(MAX_JOB_BATCH, opts.limit ?? 100));
   const shardFilter = opts.workerShard
     ? " AND (" + shardChars(opts.workerShard.index, opts.workerShard.total)
         .map((_, i) => `STARTSWITH(c.id, @shard${i})`).join(" OR ") + ")"
@@ -118,7 +137,7 @@ export async function runPromotionBatch(opts: {
       // dedup + upsert semantics apply the same way. Passes the
       // mirrored blob URL as the imageUrl so downstream renders our
       // permanent copy, not the vendor's expiring one.
-      await recordSoldComp({
+      const wrote = await recordSoldComp({
         cardId: row.raw.identityHint.vendorCardId ?? `hiq:${row.hobbyiqCardId.slice(4)}`,
         playerName: clean.playerName,
         cardYear: clean.cardYear,
@@ -139,6 +158,95 @@ export async function runPromotionBatch(opts: {
         verifiedByUser: verificationLabel === "user-verified",
         confidence,
       });
+
+      // CF-PROMOTION-RESPECTS-SKIP (Drew, 2026-08-13). This used to set
+      // status="promoted" unconditionally, even though recordSoldComp returns
+      // early when the card has no catalog match. The row was marked done
+      // forever, the sale never reached sold_comps, and the audit record
+      // claimed a promotion that never happened — so when the checklist finally
+      // landed, nothing came back for it. That is the loop-back, broken at its
+      // last step.
+      //
+      // A catalog miss is RETRYABLE: the sale is real, we simply have no
+      // checklist for its card yet, and recordSoldComp has already filed a seed
+      // asking for one. Once the checklist exists, the same row promotes with
+      // no re-ingest from the vendor.
+      //
+      // CF-AWAITING-CATALOG-LIVELOCK (Drew, 2026-08-13). The first version of
+      // this left the row at status="clean" so "the next run retries it". That
+      // deadlocked the entire pipeline. The query above is
+      //
+      //   SELECT TOP @n * ... WHERE c.status IN ('clean','verified')
+      //   ORDER BY c.observedAt DESC
+      //
+      // which is DETERMINISTIC — so every run re-selected the same newest N
+      // unmatched rows, re-stamped them, and promoted nothing. Worse, DESC
+      // pins promotion to the newest sales, i.e. today's vendor firehose, which
+      // are precisely the rows least likely to have a catalog entry yet.
+      //
+      // Measured on prod before this fix: scanned=60, promoted=0,
+      // awaitingCatalog=60. Not a slow pipeline — a stalled one.
+      //
+      // So move them OUT of the promotable set into their own status. The sale
+      // is preserved, the wait is visible in /api/staging/health, and
+      // requeueAwaitingCatalog.cjs flips them back to "clean" after new
+      // checklists land. Nothing is dropped; it just stops blocking the queue.
+      if (!wrote.written) {
+        if (wrote.reason === "catalog-unmatched") {
+          // CF-PLAYER-PRECISION-IS-NOT-AWAITING-CATALOG (Drew, 2026-08-14:
+          // "how can we fix the matching?").
+          //
+          // Two live features cancel each other out:
+          //
+          //   PLAYER_FALLBACK_CARDNUMBER_ENABLED mints `pf-<playerSlug>` as the
+          //     card number when the title has none, EXPRESSLY so the row can
+          //     land without cardNumber precision
+          //   CATALOG_MATCH_ONLY_ENABLED then refuses to write anything that
+          //     does not match a catalog card
+          //
+          // So every pf- row is manufactured and immediately rejected. Measured
+          // on prod: 6,100 distinct pf- slugs carrying 70,732 sales — 22.9% of
+          // everything in awaiting-catalog.
+          //
+          // Filing them as `awaiting-catalog` is a category error, and an
+          // expensive one. That status means "waiting for a checklist we can go
+          // and fetch", so these rows inflate the catalog-gap work-list, file
+          // seeds for checklists that would not help, and get re-tried by every
+          // requeue — while no checklist can ever contain a card numbered
+          // "pf-league-debut-almost-complete". The pf- prefix is precisely the
+          // marker that we do NOT know which card this is.
+          //
+          // They are not unmatched, they are a different PRECISION CLASS. The
+          // ingest comment already says so: valid for listing ranges, not for
+          // canonical FMV. Give them their own status so the distinction is
+          // visible instead of buried, exactly as holding-tcg did for TCG.
+          //
+          // Nothing is dropped and nothing is re-classified retroactively here;
+          // this only changes where NEW skips land.
+          const isPlayerPrecision = /^hiq:[^:]*:[^:]*:[^:]*:pf-/.test(String(row.hobbyiqCardId ?? ""));
+          (row as unknown as Record<string, unknown>).lastPromotionSkipReason = wrote.reason;
+          if (isPlayerPrecision) {
+            (row as unknown as Record<string, unknown>).playerPrecisionSince =
+              (row as unknown as Record<string, unknown>).playerPrecisionSince
+              ?? new Date().toISOString();
+            row.status = "player-precision";
+            await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
+            result.playerPrecision = (result.playerPrecision ?? 0) + 1;
+            continue;
+          }
+          (row as unknown as Record<string, unknown>).awaitingCatalogSince =
+            (row as unknown as Record<string, unknown>).awaitingCatalogSince
+            ?? new Date().toISOString();
+          row.status = "awaiting-catalog";
+          await staging.item(row.id, row.hobbyiqCardId).replace(row as unknown as Record<string, unknown>);
+          result.awaitingCatalog = (result.awaitingCatalog ?? 0) + 1;
+          continue;
+        }
+        // invalid-input / error: not retryable by waiting on a checklist.
+        // Count it and leave the row alone rather than marking it promoted.
+        result.errors += 1;
+        continue;
+      }
 
       row.status = "promoted";
       row.promoted = {

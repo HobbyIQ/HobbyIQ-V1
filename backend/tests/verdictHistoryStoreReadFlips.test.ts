@@ -53,6 +53,18 @@ function makeFakeContainer(byPlayer: Record<string, VerdictDoc[]>): FakeContaine
   };
 }
 
+// CF-RELATIVE-FIXTURE-DATES (2026-08-16: "fix it all"). These fixtures used
+// hardcoded July 2026 dates against a 30-day lookback. They passed when they
+// were written and rotted with the calendar: once real time moved past
+// 2026-08-14 every fixture row fell outside the cutoff, readVerdictHistory
+// returned nothing, and five tests failed asserting flips that could no longer
+// be seen. Nothing about the CODE changed.
+//
+// Dates are now relative to today, so the window can never age out. Older rows
+// keep the larger n, which preserves every ordering these tests assert.
+const d = (daysAgo: number): string =>
+  new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+
 function mkDoc(player: string, date: string, verdict: VerdictDoc["verdict"]): VerdictDoc {
   return {
     id: `${player}::${date}`,
@@ -71,7 +83,7 @@ describe("readRecentFlips — per-player flip detection over persisted history",
 
   it("returns empty when the player has fewer than 2 days of data", async () => {
     _setContainerForTests(makeFakeContainer({
-      "eric-hartman": [mkDoc("eric-hartman", "2026-07-10", "mixed")],
+      "eric-hartman": [mkDoc("eric-hartman", d(10), "mixed")],
     }) as never);
     const flips = await readRecentFlips("Eric Hartman", 30);
     expect(flips).toEqual([]);
@@ -80,8 +92,8 @@ describe("readRecentFlips — per-player flip detection over persisted history",
   it("detects a single flip between two consecutive-day snapshots", async () => {
     _setContainerForTests(makeFakeContainer({
       "eric-hartman": [
-        mkDoc("eric-hartman", "2026-07-14", "mixed"),
-        mkDoc("eric-hartman", "2026-07-15", "bull"),
+        mkDoc("eric-hartman", d(6), "mixed"),
+        mkDoc("eric-hartman", d(5), "bull"),
       ],
     }) as never);
     const flips = await readRecentFlips("Eric Hartman", 30);
@@ -89,22 +101,22 @@ describe("readRecentFlips — per-player flip detection over persisted history",
     expect(flips[0].from).toBe("mixed");
     expect(flips[0].to).toBe("bull");
     expect(flips[0].player).toBe("eric-hartman");
-    expect(flips[0].date).toBe("2026-07-15");
+    expect(flips[0].date).toBe(d(5));
   });
 
   it("skips stable stretches — no flip when consecutive verdicts match", async () => {
     _setContainerForTests(makeFakeContainer({
       "trout": [
-        mkDoc("trout", "2026-07-10", "bull"),
-        mkDoc("trout", "2026-07-11", "bull"),
-        mkDoc("trout", "2026-07-12", "bull"),
-        mkDoc("trout", "2026-07-13", "mixed"),
-        mkDoc("trout", "2026-07-14", "mixed"),
+        mkDoc("trout", d(10), "bull"),
+        mkDoc("trout", d(9), "bull"),
+        mkDoc("trout", d(8), "bull"),
+        mkDoc("trout", d(7), "mixed"),
+        mkDoc("trout", d(6), "mixed"),
       ],
     }) as never);
     const flips = await readRecentFlips("Trout", 30);
     expect(flips.length).toBe(1);
-    expect(flips[0].date).toBe("2026-07-13");
+    expect(flips[0].date).toBe(d(7));
     expect(flips[0].from).toBe("bull");
     expect(flips[0].to).toBe("mixed");
   });
@@ -112,14 +124,14 @@ describe("readRecentFlips — per-player flip detection over persisted history",
   it("orders flips oldest → newest (the caller may re-sort)", async () => {
     _setContainerForTests(makeFakeContainer({
       "hartman": [
-        mkDoc("hartman", "2026-07-01", "bear"),
-        mkDoc("hartman", "2026-07-02", "mixed"),
-        mkDoc("hartman", "2026-07-05", "bull"),
-        mkDoc("hartman", "2026-07-06", "strong_bull"),
+        mkDoc("hartman", d(9), "bear"),
+        mkDoc("hartman", d(8), "mixed"),
+        mkDoc("hartman", d(5), "bull"),
+        mkDoc("hartman", d(4), "strong_bull"),
       ],
     }) as never);
     const flips = await readRecentFlips("Hartman", 30);
-    expect(flips.map((f) => f.date)).toEqual(["2026-07-02", "2026-07-05", "2026-07-06"]);
+    expect(flips.map((f) => f.date)).toEqual([d(8), d(5), d(4)]);
   });
 
   it("returns empty when the container is unavailable (no throw)", async () => {
@@ -135,26 +147,26 @@ describe("readRecentFlipsForPlayers — batch across a portfolio", () => {
   it("aggregates flips across multiple players", async () => {
     _setContainerForTests(makeFakeContainer({
       "eric-hartman": [
-        mkDoc("eric-hartman", "2026-07-14", "mixed"),
-        mkDoc("eric-hartman", "2026-07-15", "bull"),
+        mkDoc("eric-hartman", d(6), "mixed"),
+        mkDoc("eric-hartman", d(5), "bull"),
       ],
       "trout": [
-        mkDoc("trout", "2026-07-15", "bull"),
-        mkDoc("trout", "2026-07-16", "strong_bull"),
+        mkDoc("trout", d(5), "bull"),
+        mkDoc("trout", d(4), "strong_bull"),
       ],
     }) as never);
     const flips = await readRecentFlipsForPlayers(["Eric Hartman", "Trout"], 30);
     expect(flips.length).toBe(2);
     // Sorted newest first
-    expect(flips[0].date).toBe("2026-07-16");
-    expect(flips[1].date).toBe("2026-07-15");
+    expect(flips[0].date).toBe(d(4));
+    expect(flips[1].date).toBe(d(5));
   });
 
   it("de-duplicates requested players by normalized name", async () => {
     _setContainerForTests(makeFakeContainer({
       "eric-hartman": [
-        mkDoc("eric-hartman", "2026-07-14", "mixed"),
-        mkDoc("eric-hartman", "2026-07-15", "bull"),
+        mkDoc("eric-hartman", d(6), "mixed"),
+        mkDoc("eric-hartman", d(5), "bull"),
       ],
     }) as never);
     const flips = await readRecentFlipsForPlayers(["Eric Hartman", "eric hartman", "  Eric Hartman  "], 30);
@@ -169,7 +181,7 @@ describe("readRecentFlipsForPlayers — batch across a portfolio", () => {
   it("filters flips to the requested window (respects days parameter)", async () => {
     _setContainerForTests(makeFakeContainer({
       "old-player": [
-        mkDoc("old-player", "2026-01-01", "bull"),
+        mkDoc("old-player", d(400), "bull"),
         mkDoc("old-player", "2026-01-02", "bear"),
       ],
     }) as never);

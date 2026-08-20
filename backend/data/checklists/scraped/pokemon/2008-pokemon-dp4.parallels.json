@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp4",
+ "setId": "dp4",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 19,
+  "normal": 126,
+  "official": 106,
+  "reverse": 103,
+  "total": 106
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

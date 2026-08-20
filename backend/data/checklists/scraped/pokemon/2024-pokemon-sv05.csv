@@ -1,0 +1,219 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Scyther
+base,002,Base,false,,Pineco
+base,003,Base,false,,Seedot
+base,004,Base,false,,Nuzleaf
+base,005,Base,false,,Shiftry
+base,006,Base,false,,Shroomish
+base,007,Base,false,,Breloom
+base,008,Base,false,,Roselia
+base,009,Base,false,,Roserade
+base,010,Base,false,,Turtwig
+base,011,Base,false,,Grotle
+base,012,Base,false,,Torterra ex
+base,013,Base,false,,Shaymin
+base,014,Base,false,,Cottonee
+base,015,Base,false,,Whimsicott
+base,016,Base,false,,Deerling
+base,017,Base,false,,Sawsbuck
+base,018,Base,false,,Grubbin
+base,019,Base,false,,Dhelmise
+base,020,Base,false,,Bramblin
+base,021,Base,false,,Brambleghast
+base,022,Base,false,,Scovillain ex
+base,023,Base,false,,Rellor
+base,024,Base,false,,Rabsca
+base,025,Base,false,,Iron Leaves ex
+base,026,Base,false,,Ponyta
+base,027,Base,false,,Rapidash
+base,028,Base,false,,Slugma
+base,029,Base,false,,Magcargo
+base,030,Base,false,,Victini
+base,031,Base,false,,Heatmor
+base,032,Base,false,,Litten
+base,033,Base,false,,Torracat
+base,034,Base,false,,Incineroar ex
+base,035,Base,false,,Turtonator
+base,036,Base,false,,Sizzlipede
+base,037,Base,false,,Centiskorch
+base,038,Base,false,,Gouging Fire ex
+base,039,Base,false,,Totodile
+base,040,Base,false,,Croconaw
+base,041,Base,false,,Feraligatr
+base,042,Base,false,,Carvanha
+base,043,Base,false,,Sharpedo
+base,044,Base,false,,Keldeo
+base,045,Base,false,,Snom
+base,046,Base,false,,Frosmoth
+base,047,Base,false,,Wiglett
+base,048,Base,false,,Finizen
+base,049,Base,false,,Palafin
+base,050,Base,false,,Walking Wake ex
+base,051,Base,false,,Pikachu
+base,052,Base,false,,Raichu
+base,053,Base,false,,Electabuzz
+base,054,Base,false,,Electivire
+base,055,Base,false,,Charjabug
+base,056,Base,false,,Vikavolt
+base,057,Base,false,,Zeraora
+base,058,Base,false,,Yamper
+base,059,Base,false,,Boltund
+base,060,Base,false,,Wugtrio ex
+base,061,Base,false,,Iron Hands
+base,062,Base,false,,Iron Thorns
+base,063,Base,false,,Mr. Mime
+base,064,Base,false,,Marill
+base,065,Base,false,,Azumarill
+base,066,Base,false,,Girafarig
+base,067,Base,false,,Latias
+base,068,Base,false,,Bronzor
+base,069,Base,false,,Bronzong
+base,070,Base,false,,Solosis
+base,071,Base,false,,Duosion
+base,072,Base,false,,Reuniclus
+base,073,Base,false,,Elgyem
+base,074,Base,false,,Beheeyem
+base,075,Base,false,,Cutiefly
+base,076,Base,false,,Ribombee
+base,077,Base,false,,Scream Tail
+base,078,Base,false,,Flutter Mane
+base,079,Base,false,,Iron Valiant
+base,080,Base,false,,Iron Valiant
+base,081,Base,false,,Iron Crown ex
+base,082,Base,false,,Meditite
+base,083,Base,false,,Medicham
+base,084,Base,false,,Relicanth
+base,085,Base,false,,Drilbur
+base,086,Base,false,,Excadrill
+base,087,Base,false,,Golett
+base,088,Base,false,,Golurk
+base,089,Base,false,,Rockruff
+base,090,Base,false,,Lycanroc
+base,091,Base,false,,Mudbray
+base,092,Base,false,,Mudsdale
+base,093,Base,false,,Rolycoly
+base,094,Base,false,,Carkol
+base,095,Base,false,,Coalossal
+base,096,Base,false,,Great Tusk
+base,097,Base,false,,Great Tusk
+base,098,Base,false,,Sandy Shocks
+base,099,Base,false,,Iron Boulder ex
+base,100,Base,false,,Ekans
+base,101,Base,false,,Arbok
+base,102,Base,false,,Gastly
+base,103,Base,false,,Haunter
+base,104,Base,false,,Gengar ex
+base,105,Base,false,,Poochyena
+base,106,Base,false,,Mightyena
+base,107,Base,false,,Sableye
+base,108,Base,false,,Farigiraf ex
+base,109,Base,false,,Roaring Moon
+base,110,Base,false,,Forretress
+base,111,Base,false,,Scizor ex
+base,112,Base,false,,Mawile
+base,113,Base,false,,Beldum
+base,114,Base,false,,Metang
+base,115,Base,false,,Metagross
+base,116,Base,false,,Meltan
+base,117,Base,false,,Melmetal
+base,118,Base,false,,Iron Treads
+base,119,Base,false,,Koraidon
+base,120,Base,false,,Koraidon ex
+base,121,Base,false,,Miraidon
+base,122,Base,false,,Miraidon ex
+base,123,Base,false,,Raging Bolt ex
+base,124,Base,false,,Lickitung
+base,125,Base,false,,Lickilicky
+base,126,Base,false,,Hoothoot
+base,127,Base,false,,Noctowl
+base,128,Base,false,,Dunsparce
+base,129,Base,false,,Dudunsparce
+base,130,Base,false,,Skitty
+base,131,Base,false,,Delcatty
+base,132,Base,false,,Chatot
+base,133,Base,false,,Pidove
+base,134,Base,false,,Tranquill
+base,135,Base,false,,Unfezant
+base,136,Base,false,,Minccino
+base,137,Base,false,,Cinccino
+base,138,Base,false,,Drampa
+base,139,Base,false,,Iron Jugulis
+base,140,Base,false,,Ancient Booster Energy Capsule
+base,141,Base,false,,Awakening Drum
+base,142,Base,false,,Bianca's Devotion
+base,143,Base,false,,Boxed Order
+base,144,Base,false,,Buddy-Buddy Poffin
+base,145,Base,false,,Ciphermaniac's Codebreaking
+base,146,Base,false,,Eri
+base,147,Base,false,,Explorer's Guidance
+base,148,Base,false,,Full Metal Lab
+base,149,Base,false,,Future Booster Energy Capsule
+base,150,Base,false,,Hand Trimmer
+base,151,Base,false,,Heavy Baton
+base,152,Base,false,,Hero's Cape
+base,153,Base,false,,Master Ball
+base,154,Base,false,,Maximum Belt
+base,155,Base,false,,Morty's Conviction
+base,156,Base,false,,Perilous Jungle
+base,157,Base,false,,Prime Catcher
+base,158,Base,false,,Reboot Pod
+base,159,Base,false,,Rescue Board
+base,160,Base,false,,Salvatore
+base,161,Base,false,,Mist Energy
+base,162,Base,false,,Neo Upper Energy
+base,163,Base,false,,Shiftry
+base,164,Base,false,,Grotle
+base,165,Base,false,,Deerling
+base,166,Base,false,,Sawsbuck
+base,167,Base,false,,Litten
+base,168,Base,false,,Snom
+base,169,Base,false,,Charjabug
+base,170,Base,false,,Bronzor
+base,171,Base,false,,Reuniclus
+base,172,Base,false,,Cutiefly
+base,173,Base,false,,Relicanth
+base,174,Base,false,,Excadrill
+base,175,Base,false,,Mudsdale
+base,176,Base,false,,Arbok
+base,177,Base,false,,Gastly
+base,178,Base,false,,Metagross
+base,179,Base,false,,Meltan
+base,180,Base,false,,Lickitung
+base,181,Base,false,,Chatot
+base,182,Base,false,,Minccino
+base,183,Base,false,,Cinccino
+base,184,Base,false,,Drampa
+base,185,Base,false,,Torterra ex
+base,186,Base,false,,Iron Leaves ex
+base,187,Base,false,,Incineroar ex
+base,188,Base,false,,Gouging Fire ex
+base,189,Base,false,,Walking Wake ex
+base,190,Base,false,,Wugtrio ex
+base,191,Base,false,,Iron Crown ex
+base,192,Base,false,,Iron Boulder ex
+base,193,Base,false,,Gengar ex
+base,194,Base,false,,Farigiraf ex
+base,195,Base,false,,Scizor ex
+base,196,Base,false,,Raging Bolt ex
+base,197,Base,false,,Bianca's Devotion
+base,198,Base,false,,Ciphermaniac's Codebreaking
+base,199,Base,false,,Eri
+base,200,Base,false,,Explorer's Guidance
+base,201,Base,false,,Morty's Conviction
+base,202,Base,false,,Salvatore
+base,203,Base,false,,Iron Leaves ex
+base,204,Base,false,,Gouging Fire ex
+base,205,Base,false,,Walking Wake ex
+base,206,Base,false,,Iron Crown ex
+base,207,Base,false,,Iron Boulder ex
+base,208,Base,false,,Raging Bolt ex
+base,209,Base,false,,Bianca's Devotion
+base,210,Base,false,,Eri
+base,211,Base,false,,Morty's Conviction
+base,212,Base,false,,Salvatore
+base,213,Base,false,,Iron Leaves ex
+base,214,Base,false,,Gouging Fire ex
+base,215,Base,false,,Walking Wake ex
+base,216,Base,false,,Iron Crown ex
+base,217,Base,false,,Iron Boulder ex
+base,218,Base,false,,Raging Bolt ex

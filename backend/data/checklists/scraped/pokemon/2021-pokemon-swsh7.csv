@@ -1,0 +1,238 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Pinsir
+base,2,Base,false,,Hoppip
+base,3,Base,false,,Skiploom
+base,4,Base,false,,Jumpluff
+base,5,Base,false,,Seedot
+base,6,Base,false,,Tropius
+base,7,Base,false,,Leafeon V
+base,8,Base,false,,Leafeon VMAX
+base,9,Base,false,,Petilil
+base,10,Base,false,,Lilligant
+base,11,Base,false,,Dwebble
+base,12,Base,false,,Crustle
+base,13,Base,false,,Trevenant V
+base,14,Base,false,,Trevenant VMAX
+base,15,Base,false,,Gossifleur
+base,16,Base,false,,Eldegoss
+base,17,Base,false,,Applin
+base,18,Base,false,,Flareon VMAX
+base,19,Base,false,,Entei
+base,20,Base,false,,Victini
+base,21,Base,false,,Volcarona V
+base,22,Base,false,,Litleo
+base,23,Base,false,,Pyroar
+base,24,Base,false,,Psyduck
+base,25,Base,false,,Golduck
+base,26,Base,false,,Tentacool
+base,27,Base,false,,Tentacruel
+base,28,Base,false,,Gyarados V
+base,29,Base,false,,Gyarados VMAX
+base,30,Base,false,,Vaporeon VMAX
+base,31,Base,false,,Suicune V
+base,32,Base,false,,Lotad
+base,33,Base,false,,Lombre
+base,34,Base,false,,Ludicolo
+base,35,Base,false,,Carvanha
+base,36,Base,false,,Sharpedo
+base,37,Base,false,,Feebas
+base,38,Base,false,,Milotic
+base,39,Base,false,,Luvdisc
+base,40,Base,false,,Glaceon V
+base,41,Base,false,,Glaceon VMAX
+base,42,Base,false,,Tympole
+base,43,Base,false,,Cryogonal
+base,44,Base,false,,Bergmite
+base,45,Base,false,,Avalugg
+base,46,Base,false,,Wishiwashi
+base,47,Base,false,,Eiscue
+base,48,Base,false,,Arctovish V
+base,49,Base,false,,Pikachu
+base,50,Base,false,,Raichu
+base,51,Base,false,,Jolteon VMAX
+base,52,Base,false,,Chinchou
+base,53,Base,false,,Lanturn
+base,54,Base,false,,Mareep
+base,55,Base,false,,Flaaffy
+base,56,Base,false,,Ampharos
+base,57,Base,false,,Emolga
+base,58,Base,false,,Dracozolt V
+base,59,Base,false,,Dracozolt VMAX
+base,60,Base,false,,Regieleki
+base,61,Base,false,,Drowzee
+base,62,Base,false,,Hypno
+base,63,Base,false,,Galarian Articuno
+base,64,Base,false,,Espeon V
+base,65,Base,false,,Espeon VMAX
+base,66,Base,false,,Wobbuffet
+base,67,Base,false,,Sableye
+base,68,Base,false,,Woobat
+base,69,Base,false,,Swoobat
+base,70,Base,false,,Golurk V
+base,71,Base,false,,Flabébé
+base,72,Base,false,,Floette
+base,73,Base,false,,Florges
+base,74,Base,false,,Sylveon V
+base,75,Base,false,,Sylveon VMAX
+base,76,Base,false,,Pumpkaboo
+base,77,Base,false,,Gourgeist
+base,78,Base,false,,Cutiefly
+base,79,Base,false,,Ribombee
+base,80,Base,false,,Marshadow
+base,81,Base,false,,Hitmonchan
+base,82,Base,false,,Galarian Zapdos
+base,83,Base,false,,Medicham V
+base,84,Base,false,,Hippopotas
+base,85,Base,false,,Hippowdon
+base,86,Base,false,,Roggenrola
+base,87,Base,false,,Boldore
+base,88,Base,false,,Gigalith
+base,89,Base,false,,Palpitoad
+base,90,Base,false,,Seismitoad
+base,91,Base,false,,Lycanroc V
+base,92,Base,false,,Lycanroc VMAX
+base,93,Base,false,,Galarian Moltres
+base,94,Base,false,,Umbreon V
+base,95,Base,false,,Umbreon VMAX
+base,96,Base,false,,Nuzleaf
+base,97,Base,false,,Shiftry
+base,98,Base,false,,Scraggy
+base,99,Base,false,,Scrafty
+base,100,Base,false,,Garbodor V
+base,101,Base,false,,Garbodor VMAX
+base,102,Base,false,,Zorua
+base,103,Base,false,,Zoroark
+base,104,Base,false,,Nickit
+base,105,Base,false,,Thievul
+base,106,Base,false,,Altaria
+base,107,Base,false,,Bagon
+base,108,Base,false,,Shelgon
+base,109,Base,false,,Salamence
+base,110,Base,false,,Rayquaza V
+base,111,Base,false,,Rayquaza VMAX
+base,112,Base,false,,Dialga
+base,113,Base,false,,Deino
+base,114,Base,false,,Zweilous
+base,115,Base,false,,Hydreigon
+base,116,Base,false,,Kyurem
+base,117,Base,false,,Noivern V
+base,118,Base,false,,Zygarde
+base,119,Base,false,,Drampa
+base,120,Base,false,,Flapple
+base,121,Base,false,,Appletun
+base,122,Base,false,,Duraludon V
+base,123,Base,false,,Duraludon VMAX
+base,124,Base,false,,Regidrago
+base,125,Base,false,,Eevee
+base,126,Base,false,,Teddiursa
+base,127,Base,false,,Ursaring
+base,128,Base,false,,Smeargle
+base,129,Base,false,,Slakoth
+base,130,Base,false,,Vigoroth
+base,131,Base,false,,Slaking
+base,132,Base,false,,Swablu
+base,133,Base,false,,Lillipup
+base,134,Base,false,,Herdier
+base,135,Base,false,,Stoutland
+base,136,Base,false,,Rufflet
+base,137,Base,false,,Braviary
+base,138,Base,false,,Fletchling
+base,139,Base,false,,Fletchinder
+base,140,Base,false,,Talonflame
+base,141,Base,false,,Aroma Lady
+base,142,Base,false,,Boost Shake
+base,143,Base,false,,Copycat
+base,144,Base,false,,Crystal Cave
+base,145,Base,false,,Digging Gloves
+base,146,Base,false,,Dream Ball
+base,147,Base,false,,Elemental Badge
+base,148,Base,false,,Full Face Guard
+base,149,Base,false,,Gordie
+base,150,Base,false,,Lucky Ice Pop
+base,151,Base,false,,Moon & Sun Badge
+base,152,Base,false,,Raihan
+base,153,Base,false,,Rapid Strike Scroll of the Flying Dragon
+base,154,Base,false,,Rescue Carrier
+base,155,Base,false,,Ribbon Badge
+base,156,Base,false,,Rubber Gloves
+base,157,Base,false,,Shopping Center
+base,158,Base,false,,Single Strike Scroll of the Fanged Dragon
+base,159,Base,false,,Snow Leaf Badge
+base,160,Base,false,,Spirit Mask
+base,161,Base,false,,Stormy Mountains
+base,162,Base,false,,Switching Cups
+base,163,Base,false,,Toy Catcher
+base,164,Base,false,,Zinnia's Resolve
+base,165,Base,false,,Treasure Energy
+base,166,Base,false,,Leafeon V
+base,167,Base,false,,Leafeon V
+base,168,Base,false,,Trevenant V
+base,169,Base,false,,Flareon V
+base,170,Base,false,,Volcarona V
+base,171,Base,false,,Gyarados V
+base,172,Base,false,,Vaporeon V
+base,173,Base,false,,Suicune V
+base,174,Base,false,,Glaceon V
+base,175,Base,false,,Glaceon V
+base,176,Base,false,,Arctovish V
+base,177,Base,false,,Jolteon V
+base,178,Base,false,,Dracozolt V
+base,179,Base,false,,Espeon V
+base,180,Base,false,,Espeon V
+base,181,Base,false,,Golurk V
+base,182,Base,false,,Golurk V
+base,183,Base,false,,Sylveon V
+base,184,Base,false,,Sylveon V
+base,185,Base,false,,Medicham V
+base,186,Base,false,,Medicham V
+base,187,Base,false,,Lycanroc V
+base,188,Base,false,,Umbreon V
+base,189,Base,false,,Umbreon V
+base,190,Base,false,,Garbodor V
+base,191,Base,false,,Dragonite V
+base,192,Base,false,,Dragonite V
+base,193,Base,false,,Rayquaza V
+base,194,Base,false,,Rayquaza V
+base,195,Base,false,,Noivern V
+base,196,Base,false,,Noivern V
+base,197,Base,false,,Duraludon V
+base,198,Base,false,,Duraludon V
+base,199,Base,false,,Aroma Lady
+base,200,Base,false,,Copycat
+base,201,Base,false,,Gordie
+base,202,Base,false,,Raihan
+base,203,Base,false,,Zinnia's Resolve
+base,204,Base,false,,Leafeon VMAX
+base,205,Base,false,,Leafeon VMAX
+base,206,Base,false,,Trevenant VMAX
+base,207,Base,false,,Gyarados VMAX
+base,208,Base,false,,Glaceon VMAX
+base,209,Base,false,,Glaceon VMAX
+base,210,Base,false,,Dracozolt VMAX
+base,211,Base,false,,Sylveon VMAX
+base,212,Base,false,,Sylveon VMAX
+base,213,Base,false,,Lycanroc VMAX
+base,214,Base,false,,Umbreon VMAX
+base,215,Base,false,,Umbreon VMAX
+base,216,Base,false,,Garbodor VMAX
+base,217,Base,false,,Rayquaza VMAX
+base,218,Base,false,,Rayquaza VMAX
+base,219,Base,false,,Duraludon VMAX
+base,220,Base,false,,Duraludon VMAX
+base,221,Base,false,,Aroma Lady
+base,222,Base,false,,Copycat
+base,223,Base,false,,Gordie
+base,224,Base,false,,Raihan
+base,225,Base,false,,Zinnia's Resolve
+base,226,Base,false,,Froslass
+base,227,Base,false,,Inteleon
+base,228,Base,false,,Cresselia
+base,229,Base,false,,Boost Shake
+base,230,Base,false,,Crystal Cave
+base,231,Base,false,,Full Face Guard
+base,232,Base,false,,Stormy Mountains
+base,233,Base,false,,Toy Catcher
+base,234,Base,false,,Turffield Stadium
+base,235,Base,false,,Lightning Energy
+base,236,Base,false,,Darkness Energy
+base,237,Base,false,,Metal Energy

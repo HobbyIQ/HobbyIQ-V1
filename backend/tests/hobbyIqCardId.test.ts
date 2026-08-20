@@ -9,6 +9,7 @@ import {
   parseHobbyIqCardId,
   slugify,
   matchKnownProductLine,
+  normalizeSetKey,
 } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 describe("slugify", () => {
@@ -299,12 +300,19 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toContain(":bowman-chrome:");
   });
 
-  it("bowman-draft + BDC- → bowman-chrome (draft-chrome collapses)", () => {
+  // CF-DRAFT-IS-ITS-OWN-PRODUCT (Drew, 2026-08-16: "it shuld fold into Draft
+  // since it is draft"). This test previously pinned BDC- to bowman-chrome.
+  // That was wrong on the data: bowman-draft carries 277,616 CHECKLIST-backed
+  // catalog rows, bowman-draft-chrome carries ZERO (23,892 of its 23,899 rows
+  // are cardhedge-graded, an excluded source). Draft is its own product with
+  // its own checklist, and 123,012 comps were re-slugged onto it.
+  it("bowman-draft + BDC- → bowman-draft (Draft is its own product)", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman Draft",
       cardNumber: "BDC-48", parallel: "Mojo Refractor", isAuto: false, printRun: 75,
     });
-    expect(slug).toContain(":bowman-chrome:");
+    expect(slug).toContain(":bowman-draft:");
+    expect(slug).not.toContain(":bowman-chrome:");
   });
 
   it("topps + TCPA- → topps-chrome", () => {
@@ -451,12 +459,87 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toContain(":bowman-paper:bpa-jj:");
   });
 
-  it("bowman + BDA- → bowman-draft-paper (Bowman Draft Paper Auto)", () => {
+  // BDA- now routes to bowman-draft, not bowman-draft-paper. The paper key
+  // held only 18 catalog rows — too thin to be a product, and it stranded
+  // Draft autos away from the Draft checklist that actually describes them.
+  // CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB (Drew, 2026-08-16: "fix it all").
+  // With no rule, normalizeSetKey fell through to slugify and emitted a
+  // year-prefixed one-off ("2025-panini-rookies-stars-football"), duplicating
+  // the year into a segment the slug already carries and fragmenting one
+  // product across every spelling a seller used.
+  it("Panini products resolve to a stable key, never a year-prefixed one-off", () => {
+    const cases: Array<[string, string]> = [
+      ["2025 Panini Certified Football", "panini-certified"],
+      ["2024 Panini Crusade Baseball", "panini-crusade"],
+      ["2016 Panini Hoops Basketball", "panini-hoops"],
+      ["2025 Panini Prestige Football", "panini-prestige"],
+      ["2025 Panini Elite Extra Edition", "panini-elite-extra-edition"],
+    ];
+    for (const [input, want] of cases) {
+      expect(normalizeSetKey(input)).toBe(want);
+      expect(normalizeSetKey(input)).not.toMatch(/^(19|20)\d{2}-/);
+    }
+  });
+
+  // The rule for this product ALREADY existed and never fired: slugify drops
+  // "&", so "Rookies & Stars" becomes "rookies-stars" and the vocabulary was
+  // written against "rookies-and-stars". Both spellings are pinned so the
+  // ampersand form cannot regress.
+  it("Rookies & Stars matches despite slugify dropping the ampersand", () => {
+    expect(normalizeSetKey("2025 Panini Rookies & Stars Football")).toBe("panini-rookies-and-stars");
+    expect(normalizeSetKey("Panini Rookies and Stars")).toBe("panini-rookies-and-stars");
+  });
+
+  // Totally Certified is its own product and must win over the certified rule.
+  // "Select Certified" is pinned too: it resolves to score-select, and a
+  // careless bare-"certified" rule would have stolen it.
+  it("certified variants do not collide", () => {
+    expect(normalizeSetKey("Panini Totally Certified")).toBe("panini-totally-certified");
+    expect(normalizeSetKey("2025 Panini Certified Football")).toBe("panini-certified");
+    expect(normalizeSetKey("Select Certified")).toBe("score-select");
+  });
+
+  // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
+  // them if not get them"). Panini acquired Donruss in 2009; stamping its name
+  // on a 1987 card split 150,695 vintage comps away from the donruss checklist
+  // that already described them. 2008/2009 are pinned because the acquisition
+  // year IS the rule — an off-by-one here silently re-splits the pool.
+  it("pre-2009 Donruss drops the panini- prefix (brand predates the owner)", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 1987, setKey: "Donruss",
+      cardNumber: "101", parallel: "Base", isAuto: false,
+    });
+    expect(s).toContain(":donruss:");
+    expect(s).not.toContain(":panini-donruss:");
+  });
+
+  it("2008 is still Donruss, 2009 is Panini Donruss (acquisition boundary)", () => {
+    const at = (year: number) => computeHobbyIqCardId({
+      sport: "baseball", year, setKey: "Donruss",
+      cardNumber: "101", parallel: "Base", isAuto: false,
+    });
+    expect(at(2008)).toContain(":donruss:");
+    expect(at(2008)).not.toContain(":panini-donruss:");
+    expect(at(2009)).toContain(":panini-donruss:");
+  });
+
+  // The gate is scoped to Donruss alone. Prizm is a Panini original with no
+  // pre-2009 life, so a blanket "strip panini- before 2009" would invent a
+  // product that never shipped.
+  it("the pre-2009 gate does NOT touch Panini-original brands", () => {
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "Panini Prizm",
+      cardNumber: "101", parallel: "Base", isAuto: false,
+    });
+    expect(s).toContain(":panini-prizm:");
+  });
+
+  it("bowman + BDA- → bowman-draft (paper key was 18 rows, not a product)", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2023, setKey: "Bowman",
       cardNumber: "BDA-EH", parallel: "Base", isAuto: true,
     });
-    expect(slug).toContain(":bowman-draft-paper:bda-eh:");
+    expect(slug).toContain(":bowman-draft:bda-eh:");
   });
 
   it("BDP- stays ambiguous — no auto-upgrade (Verlander BDP129 is chrome, others paper)", () => {
@@ -954,13 +1037,15 @@ describe("computeHobbyIqCardId — chrome stock prefix strip", () => {
     expect(s).toContain(":base:");
   });
 
-  it("BDC- prefix routes to bowman-chrome even when vendor sends 'Bowman Draft Chrome'", () => {
+  // "Bowman Draft Chrome" is a vendor spelling, not a product a checklist
+  // names. It resolves to bowman-draft — the product Topps published.
+  it("BDC- routes to bowman-draft even when vendor sends 'Bowman Draft Chrome'", () => {
     const s = computeHobbyIqCardId({
       sport: "baseball", year: 2025, setKey: "Bowman Draft Chrome",
       cardNumber: "BDC-185", parallel: "Sky Blue Refractor", isAuto: false,
     });
-    expect(s).toContain(":bowman-chrome:");
-    expect(s).not.toContain(":bowman-draft:");
+    expect(s).toContain(":bowman-draft:");
+    expect(s).not.toContain(":bowman-chrome:");
   });
 
   it("topps-heritage: 'Chrome Refractor' is PRESERVED (legit insert-set parallel)", () => {

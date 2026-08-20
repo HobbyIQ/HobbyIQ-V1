@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.490Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv04",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "Paradox Rift",
+ "productKey": "2023-sv04",
+ "setKey": "sv04",
+ "rowCount": 266,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Paradox Rift",
+   "category": "base",
+   "playerCount": 266,
+   "printRun": null
+  }
+ ]
+}

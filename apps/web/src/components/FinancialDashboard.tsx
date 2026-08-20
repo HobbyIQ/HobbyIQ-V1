@@ -1,0 +1,356 @@
+"use client";
+
+// CF-ONE-BUSINESS-PAGE (Drew, 2026-08-16: "put the financial dashboard on
+// financials are the first screen then put the positions and holdings on the
+// same page under the sales portion"). Extracted from its own route into a
+// component so /app/erp can lead with it and carry position underneath.
+//
+// CF-CEO-DASHBOARD (Drew, 2026-08-16: "We need to redo this to show profit
+// that we have made and true dashboard that shows profitability of the
+// business ... drill down by year, months, purchases and all that").
+//
+// The old /app/erp page answers "what do I hold and what is it worth" —
+// position, not profitability. A CEO reading it could not tell you what the
+// business EARNED, what it cost to earn it, or whether margin is improving.
+//
+// Everything needed was already in the backend and unused: /erp/pnl returns
+// gross proceeds, fees, shipping, net proceeds, COGS, realized P&L, operating
+// expenses and true net, groupable by month / player / set / grade / source /
+// sales channel / payment method. This page is that data, with a year selector
+// driving the window and a group-by driving the breakdown.
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  fetchErpPnl,
+  type ErpPnlResponse,
+  type PnlGroupBy,
+  type PnlTotals,
+} from "@/lib/api";
+import { formatUSD } from "@/lib/format";
+
+const GROUPINGS: Array<{ key: PnlGroupBy; label: string }> = [
+  { key: "month", label: "Month" },
+  { key: "player", label: "Player" },
+  { key: "set", label: "Set" },
+  { key: "grade", label: "Grade" },
+  { key: "salesChannel", label: "Channel" },
+  { key: "source", label: "Source" },
+  { key: "paymentMethod", label: "Payment" },
+];
+
+/** Margin on revenue. Null rather than 0 when there is no revenue — a period
+ *  with no sales has no margin, and rendering 0% would read as a bad month
+ *  rather than an empty one.
+ *
+ *  CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16). Takes the profit figure as an
+ *  argument rather than reading realizedProfitLoss, because the headline is
+ *  now AFTER operating costs and a margin measured on a different profit than
+ *  the one displayed beside it is just a second, quieter contradiction. */
+function marginPct(profit: number | null, revenue: number): number | null {
+  if (!revenue || profit == null) return null;
+  return (profit / revenue) * 100;
+}
+
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - i);
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Last calendar day of a month, so the window closes on 28/29/30/31 correctly
+ *  rather than assuming 31 and quietly spilling into the next month. */
+function lastDayOf(year: number, month1: number): number {
+  return new Date(year, month1, 0).getDate();
+}
+
+/**
+ * CF-PERIOD-DROPDOWNS (Drew, 2026-08-16: "I want a month drop down and a year
+ * drop down instead of the year tiles broken out").
+ *
+ * The window the P&L is asked for, plus the SAME window shifted back one year
+ * so every headline can be stated as a change. Shifting by year rather than by
+ * period keeps the comparison like-for-like: August against last August, not
+ * against July, which would compare a strong show month to a quiet one.
+ */
+function windowFor(year: number | "all", month: number | "all"):
+  { current: { from?: string; to?: string }; prior: { from: string; to: string } | null } {
+  if (year === "all") return { current: {}, prior: null };
+  if (month === "all") {
+    return {
+      current: { from: `${year}-01-01`, to: `${year}-12-31` },
+      prior: { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` },
+    };
+  }
+  const mm = String(month).padStart(2, "0");
+  return {
+    current: { from: `${year}-${mm}-01`, to: `${year}-${mm}-${lastDayOf(year, month)}` },
+    prior: {
+      from: `${year - 1}-${mm}-01`,
+      to: `${year - 1}-${mm}-${lastDayOf(year - 1, month)}`,
+    },
+  };
+}
+
+export function FinancialDashboard() {
+  const [year, setYear] = useState<number | "all">(currentYear);
+  const [month, setMonth] = useState<number | "all">("all");
+  const [groupBy, setGroupBy] = useState<PnlGroupBy>("month");
+  const [data, setData] = useState<ErpPnlResponse | null>(null);
+  const [prior, setPrior] = useState<ErpPnlResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { current, prior: priorWindow } = windowFor(year, month);
+      // The prior period is fetched alongside so every headline can be stated
+      // as a CHANGE. A number with nothing to compare it to is not a dashboard.
+      const [cur, prev] = await Promise.all([
+        fetchErpPnl({ ...current, groupBy }),
+        priorWindow
+          ? fetchErpPnl({ ...priorWindow, groupBy: "month" }).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      setData(cur);
+      setPrior(prev);
+    } catch (err) {
+      setError((err as { message?: string })?.message ?? "Couldn't load P&L");
+    } finally {
+      setLoading(false);
+    }
+  }, [year, month, groupBy]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const t = data?.totals;
+  const opex = data?.operatingExpenses ?? null;
+  // CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16, asked whether the tile order
+  // was right): it was not, and the naming was the worst of it. The walk
+  // showed Revenue - All-In - Fees - Grading = "Net Profit", which is GROSS
+  // profit; operating costs sat outside it in the ratio row. With $0 overhead
+  // the two agree and nothing looks wrong — with $2,000 of overhead the
+  // headline would have overstated the business by $2,000.
+  //
+  // trueNet is what the API already returns for realizedProfitLoss minus
+  // operating expenses. Falling back to realizedProfitLoss keeps an older
+  // backend rendering a number rather than a blank.
+  const netProfit = data?.trueNet ?? t?.realizedProfitLoss ?? null;
+  const priorNet = prior?.trueNet ?? prior?.totals?.realizedProfitLoss ?? null;
+  const margin = t ? marginPct(netProfit, t.grossProceeds) : null;
+  const priorMargin = prior?.totals ? marginPct(priorNet, prior.totals.grossProceeds) : null;
+
+  const yoy = useMemo(() => {
+    if (!t || !prior?.totals?.grossProceeds) return null;
+    return ((t.grossProceeds - prior.totals.grossProceeds) / prior.totals.grossProceeds) * 100;
+  }, [t, prior]);
+
+  return (
+    <div>
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl font-bold mb-1">Financials</h1>
+        <p className="text-sm text-[color:var(--color-muted)]">
+          Revenue, costs, and what the business earned.
+          {data?.window.from && ` ${data.window.from} → ${data.window.to}`}
+        </p>
+      </div>
+
+      {/* CF-PERIOD-DROPDOWNS (Drew, 2026-08-16: "I want a month drop down and a
+          year drop down instead of the year tiles broken out"). Seven year
+          buttons took a full row to express one choice and had no room to add
+          months; two selects say the same thing in less space and make the
+          period a single readable statement. Month is disabled on All time,
+          because a month without a year is not a period. */}
+      <div className="flex gap-3 flex-wrap mb-6 justify-center items-center">
+        <select
+          value={String(year)}
+          onChange={(e) => setYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+          className="px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)]"
+          style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+          aria-label="Year"
+        >
+          <option value="all">All time</option>
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
+          value={String(month)}
+          onChange={(e) => setMonth(e.target.value === "all" ? "all" : Number(e.target.value))}
+          disabled={year === "all"}
+          className="px-3 py-2 rounded-lg border text-sm outline-none focus:border-[color:var(--color-accent)] disabled:opacity-40"
+          style={{ background: "var(--color-bg)", borderColor: "var(--color-border)", color: "white" }}
+          aria-label="Month"
+        >
+          <option value="all">All months</option>
+          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
+      </div>
+
+      {error && (
+        <div className="hiq-card p-4 mb-4 text-sm" style={{ color: "var(--color-danger)" }}>{error}</div>
+      )}
+      {loading && !data && (
+        <div className="text-sm text-[color:var(--color-muted)]">Loading…</div>
+      )}
+
+      {t && (
+        <>
+          <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">
+            Revenue less what the cards cost you, fees, shipping, grading,
+            supplies and your operating costs is net profit.
+          </p>
+          {/* CF-NET-IS-AFTER-OVERHEAD (Drew, 2026-08-16: "is this the best
+              order of tiles?"). It was not, for three reasons:
+                - margin appeared twice, as a tile AND as Net Profit's subtitle
+                - Operating Costs, a dollar cost, sat in a row of ratios
+                - "Net Profit" was gross profit, because overhead was outside
+                  the walk entirely
+              One deduction chain now runs left to right and ends on a figure
+              that is genuinely net; the second row is only ratios. */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <Stat label="Revenue" value={formatUSD(t.grossProceeds)}
+              sub={`${t.entryCount} ${t.entryCount === 1 ? "sale" : "sales"}`} />
+            <Stat label="All-In Cost" value={formatUSD(t.costBasisSold)}
+              sub="cost basis of cards sold" />
+            <Stat label="Fees & Shipping" value={formatUSD(t.feesTotal + t.shipping)}
+              sub={`${formatUSD(t.feesTotal)} fees · ${formatUSD(t.shipping)} shipping`} />
+            <Stat label="Grading & Supplies" value={formatUSD((t.gradingCost ?? 0) + (t.suppliesCost ?? 0))}
+              sub={`${formatUSD(t.gradingCost ?? 0)} grading · ${formatUSD(t.suppliesCost ?? 0)} supplies`} />
+            <Stat label="Operating Costs" value={opex != null ? formatUSD(opex) : "—"}
+              sub="shows, supplies, software" />
+            <Stat label="Net Profit" value={netProfit != null ? formatUSD(netProfit) : "—"}
+              tone={netProfit != null ? (netProfit >= 0 ? "good" : "bad") : undefined}
+              sub={yoy != null ? `revenue ${yoy >= 0 ? "up" : "down"} ${Math.abs(yoy).toFixed(1)}% on last year` : "after all costs"} />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+            <Stat label="Margin" value={margin != null ? `${margin.toFixed(1)}%` : "—"}
+              sub={priorMargin != null && margin != null
+                ? `${(margin - priorMargin) >= 0 ? "up" : "down"} ${Math.abs(margin - priorMargin).toFixed(1)} pts on last year`
+                : "net profit as a share of revenue"} />
+            <Stat label="Average Sale" value={t.entryCount ? formatUSD(t.grossProceeds / t.entryCount) : "—"}
+              sub="revenue per card sold" />
+            <Stat label="Sales" value={String(t.entryCount)}
+              sub="cards sold in this period" />
+          </div>
+
+          {/* CF-ERP-PNL-EXCLUSIONS. Unreconciled sales are NOT in these numbers.
+              Saying so on the page is the difference between a P&L and a guess —
+              an operator needs to know the figure is partial before acting. */}
+          {data.excluded.unreconciledCount > 0 && (
+            <div className="hiq-card p-4 mb-8 text-sm">
+              <strong>{data.excluded.unreconciledCount}</strong> sale
+              {data.excluded.unreconciledCount === 1 ? " is" : "s are"} missing what you
+              were all-in for, so {data.excluded.unreconciledCount === 1 ? "it is" : "they are"}
+              left out of every number above
+              {data.excluded.unreconciledOldestSoldAt
+                ? ` (oldest ${data.excluded.unreconciledOldestSoldAt.slice(0, 10)})`
+                : ""}.{" "}
+              <Link href="/app/erp" className="underline" style={{ color: "var(--color-accent)" }}>
+                Fill them in
+              </Link>{" "}
+              and these numbers become complete.
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-3">
+            <h2 className="text-xl font-bold">Sales</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-[color:var(--color-muted)] mr-1">break down by</span>
+              {GROUPINGS.map((g) => (
+                <button
+                  key={g.key}
+                  onClick={() => setGroupBy(g.key)}
+                  className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  style={g.key === groupBy
+                    ? { background: "var(--color-accent)", color: "white" }
+                    : { background: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hiq-card overflow-x-auto">
+            <table className="w-full text-sm" style={{ minWidth: 720 }}>
+              <thead>
+                <tr className="text-left text-[color:var(--color-muted)]">
+                  <Th>{GROUPINGS.find((g) => g.key === groupBy)?.label}</Th>
+                  <Th right>Flips</Th>
+                  <Th right>Sold for</Th>
+                  <Th right>All-in</Th>
+                  <Th right>Fees + ship</Th>
+                  <Th right>Gross profit</Th>
+                  <Th right>Gross margin</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.groups.length === 0 && (
+                  <tr><td colSpan={7} className="p-4 text-[color:var(--color-muted)]">
+                    Nothing sold in this period yet.
+                  </td></tr>
+                )}
+                {data.groups.map((g) => {
+                  // Per-group figures are necessarily PRE-overhead: operating
+                  // costs cannot be attributed to a player, set or channel. The
+                  // columns say "gross" so this cannot be read as the headline
+                  // Net Profit measured a second way.
+                  const m = marginPct(g.totals.realizedProfitLoss, g.totals.grossProceeds);
+                  return (
+                    <tr key={g.key} className="border-t" style={{ borderColor: "var(--color-border)" }}>
+                      <Td>{g.label}</Td>
+                      <Td right muted>{g.totals.entryCount}</Td>
+                      <Td right>{formatUSD(g.totals.grossProceeds)}</Td>
+                      <Td right muted>{formatUSD(g.totals.costBasisSold)}</Td>
+                      <Td right muted>{formatUSD(g.totals.feesTotal + g.totals.shipping)}</Td>
+                      <Td right tone={g.totals.realizedProfitLoss >= 0 ? "good" : "bad"}>
+                        {formatUSD(g.totals.realizedProfitLoss)}
+                      </Td>
+                      <Td right muted>{m != null ? `${m.toFixed(1)}%` : "—"}</Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, sub, tone }: {
+  label: string; value: string; sub?: string; tone?: "good" | "bad";
+}) {
+  const color = tone === "good" ? "var(--color-success)"
+    : tone === "bad" ? "var(--color-danger)" : undefined;
+  return (
+    <div className="hiq-card p-3 text-center">
+      <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-muted)] leading-tight">{label}</div>
+      <div className="text-xl font-bold mt-1 tabular-nums" style={color ? { color } : undefined}>{value}</div>
+      {sub && <div className="text-[11px] text-[color:var(--color-muted)] mt-1 leading-tight">{sub}</div>}
+    </div>
+  );
+}
+
+function Th({ children, right }: { children?: React.ReactNode; right?: boolean }) {
+  return <th className={`px-4 py-3 font-medium ${right ? "text-right" : ""}`}>{children}</th>;
+}
+
+function Td({ children, right, muted, tone }: {
+  children?: React.ReactNode; right?: boolean; muted?: boolean; tone?: "good" | "bad";
+}) {
+  const color = tone === "good" ? "var(--color-success)"
+    : tone === "bad" ? "var(--color-danger)" : undefined;
+  return (
+    <td
+      className={`px-4 py-3 tabular-nums ${right ? "text-right" : ""} ${muted ? "text-[color:var(--color-muted)]" : ""}`}
+      style={color ? { color } : undefined}
+    >
+      {children}
+    </td>
+  );
+}

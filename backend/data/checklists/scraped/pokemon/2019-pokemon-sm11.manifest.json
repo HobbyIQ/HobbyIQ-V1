@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.718Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm11",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Unified Minds",
+ "productKey": "2019-sm11",
+ "setKey": "sm11",
+ "rowCount": 258,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Unified Minds",
+   "category": "base",
+   "playerCount": 258,
+   "printRun": null
+  }
+ ]
+}

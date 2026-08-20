@@ -1,0 +1,169 @@
+# CF-RESLUG-SETKEY-WORKFLOW (Drew, 2026-08-17: "do it in the backend, so I can
+# shut down for the night").
+#
+# Runs reslug-setkey-from-setname in the cloud so a sweep does not depend on a
+# laptop staying awake. Sweeps take tens of minutes per key on the large
+# containers — topps alone scanned 3,003,001 rows — which is exactly the kind of
+# work that should not be tied to a local shell.
+#
+# WHAT IT DOES. Re-derives the setKey segment of hobbyiqCardId from each row's
+# own vendor setName, through the SHIPPED resolveSetKeyForSlug out of dist/, so
+# a repaired row cannot disagree with a freshly ingested one. Only-improve is
+# enforced in the script: a row moves only when the new key is genuinely better,
+# and hobbyiqCardIdBefore records the original so any pass is reversible.
+#
+# IT PICKS UP WHATEVER VOCABULARY IS ON MAIN. Because it builds from the branch
+# it runs on, a sweep dispatched after new rules ship will apply those rules —
+# so re-running an old key after a vocabulary change is useful, not wasted.
+#
+# RU SCALING IS PART OF THE JOB. Cosmos autoscale bills a floor of 10% of max
+# continuously, so the lever is the ceiling. The job raises it for the run and
+# lowers it in an always() step, because a failed run that left the account
+# parked at the working ceiling would cost more than the sweep saves.
+
+name: Re-slug setKey from setName
+
+on:
+  workflow_dispatch:
+    inputs:
+      keys:
+        description: "Comma-separated source setKeys to sweep"
+        required: false
+        default: "panini-donruss,bowman,upper-deck"
+      to:
+        description: "Optional destination guard — only move rows resolving to exactly this key"
+        required: false
+        default: ""
+      apply:
+        description: "Write to Cosmos (false = dry-run)"
+        type: choice
+        required: false
+        default: "true"
+        options: ["true", "false"]
+      limit:
+        description: "Max rows to scan per key (0 = unbounded)"
+        required: false
+        default: "0"
+
+# One sweep at a time. Two concurrent sweeps would scan the same containers and
+# double the RU bill for no extra repair.
+concurrency:
+  group: reslug-setkey
+  cancel-in-progress: false
+
+jobs:
+  reslug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ACC: hobbyiq-comps
+      RG: rg-hobbyiq-dev
+      DB: hobbyiq
+      # 8000 is Azure's floor for this container, not a preference: autoscale
+      # max may not go below highest-ever-provisioned / 10, and sold_comps
+      # peaked at 80000. This said "4000" until 2026-08-18, so the teardown
+      # failed on run 32140009688 and stranded the account at the 40000 working
+      # ceiling -- the exact bill the scaling exists to avoid.
+      SOLD_IDLE_MAX: "8000"
+      SOLD_WORK_MAX: "40000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build TS
+        working-directory: backend
+        run: npx tsc
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # The key is fetched BEFORE the RU steps because they now use it.
+      - name: Fetch Cosmos connection string
+        id: cosmos
+        run: |
+          CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group "$RG" \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$CS"
+          echo "cs=$CS" >> "$GITHUB_OUTPUT"
+
+      # DATA plane, not control plane. `az cosmosdb ... throughput update` needs
+      # an Azure RBAC role the CI principal does not have: it holds only
+      # `Website Contributor` scoped to the HobbyIQ3 app, so this step failed
+      # with AuthorizationFailed and the sweep did ZERO repair on 2026-08-17/18
+      # (runs 32093243367, 32123195430). The account key already in
+      # COSMOS_CONNECTION_STRING can set the offer directly, so the fix needs no
+      # new Azure grant -- and no grant is the smaller blast radius.
+      #
+      # continue-on-error: a container left at the idle ceiling makes the sweep
+      # SLOW; failing here makes it not run AT ALL. Slow beats skipped.
+      - name: Raise sold_comps throughput for the run
+        continue-on-error: true
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_WORK_MAX"
+
+      - name: Sweep each key
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          KEYS="${{ github.event.inputs.keys || 'panini-donruss,bowman,upper-deck' }}"
+          TO="${{ github.event.inputs.to }}"
+          APPLY="${{ github.event.inputs.apply || 'true' }}"
+          LIMIT="${{ github.event.inputs.limit || '0' }}"
+          IFS=',' read -ra LIST <<< "$KEYS"
+          for k in "${LIST[@]}"; do
+            k="$(echo "$k" | xargs)"
+            [ -z "$k" ] && continue
+            ARGS="--from=$k --pool=16"
+            [ -n "$TO" ] && ARGS="$ARGS --to=$TO"
+            [ "$LIMIT" != "0" ] && ARGS="$ARGS --limit=$LIMIT"
+            [ "$APPLY" = "true" ] && ARGS="$ARGS --apply"
+            echo "::group::$k"
+            node scripts/reslug-setkey-from-setname.cjs $ARGS | tail -30
+            echo "::endgroup::"
+          done
+
+      # always(): a failed or cancelled sweep must not strand the account at the
+      # working ceiling.
+      - name: Lower sold_comps throughput back to idle
+        if: always()
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: node scripts/cosmos-throughput.cjs --container=sold_comps --max="$SOLD_IDLE_MAX"
+
+      - name: Report unkeyed rows remaining
+        if: always()
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
+        run: |
+          node -e "
+            const {CosmosClient}=require('@azure/cosmos');
+            (async()=>{
+              const c=new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
+                .database('hobbyiq').container('sold_comps');
+              const {resources}=await c.items.query(
+                'SELECT VALUE COUNT(1) FROM c WHERE (NOT IS_DEFINED(c.hobbyiqCardId) OR IS_NULL(c.hobbyiqCardId))'
+              ).fetchAll();
+              console.log('unkeyed rows remaining: '+resources[0].toLocaleString());
+            })().catch(e=>console.error(String(e.message).slice(0,200)));
+          "

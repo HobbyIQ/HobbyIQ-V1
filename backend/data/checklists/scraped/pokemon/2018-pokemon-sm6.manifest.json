@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.371Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm6",
+ "sport": "pokemon",
+ "year": 2018,
+ "setName": "Forbidden Light",
+ "productKey": "2018-sm6",
+ "setKey": "sm6",
+ "rowCount": 146,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Forbidden Light",
+   "category": "base",
+   "playerCount": 146,
+   "printRun": null
+  }
+ ]
+}

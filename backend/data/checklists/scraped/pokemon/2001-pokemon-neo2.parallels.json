@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo2",
+ "setId": "neo2",
+ "cardCount": {
+  "firstEd": 75,
+  "holo": 34,
+  "normal": 116,
+  "official": 75,
+  "reverse": 0,
+  "total": 75
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

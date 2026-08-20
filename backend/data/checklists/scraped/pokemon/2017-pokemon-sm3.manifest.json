@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.207Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm3",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "Burning Shadows",
+ "productKey": "2017-sm3",
+ "setKey": "sm3",
+ "rowCount": 169,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Burning Shadows",
+   "category": "base",
+   "playerCount": 169,
+   "printRun": null
+  }
+ ]
+}

@@ -130,12 +130,196 @@ const PARALLEL_ALIAS_MAP: Record<string, string> = {
   "base refractor": "Refractor",
 };
 
+/** CF-PARALLEL-IS-IDENTITY. Tokens of a parallel slug, as an order-independent
+ *  set. Empty and "base" collapse to the same thing so an absent parallel and
+ *  an explicit "Base" compare equal. */
+export function parallelTokenSet(slug: string): Set<string> {
+  const toks = String(slug ?? "").split("-").map((t) => t.trim()).filter(Boolean);
+  const meaningful = toks.filter((t) => t !== "base");
+  return new Set(meaningful.length ? meaningful : ["base"]);
+}
+
+/** True only when two parallels carry exactly the same tokens. Deliberately
+ *  NOT a subset test: "refractor" ⊂ "green-refractor", but a sale that says
+ *  only "Refractor" is not evidence of a Green Refractor, and treating it as
+ *  such is how a plain Refractor became a `common-green-refractor /75`. */
+export function sameParallelTokens(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const t of a) if (!b.has(t)) return false;
+  return true;
+}
+
+/** Parallel segment of a canonical `hiq:` slug, or null if not one.
+ *  Used to validate a catalog candidate by the id we would actually adopt. */
+export function parallelSegmentOf(id: string): string | null {
+  const p = String(id ?? "").split(":");
+  return p.length >= 7 && p[0] === "hiq" ? (p[5] ?? "") : null;
+}
+
+// CF-CONFIDENCE-MUST-BE-HONOURED (Drew, 2026-08-14: "lets fix it").
+//
+// canonicalize() has always returned a confidence, and BOTH rebind sites
+// ignored it:
+//
+//   if (resolved.found) slug = resolved.slug;
+//
+// So a 0.55 family-fallback guess rewrote a sale's identity exactly as
+// authoritatively as a 0.98 exact match. That is worse than having no score at
+// all, because the score's existence implies a check that was never performed.
+//
+// The threshold sits above family-fallback (0.55) and below fuzzy-parallel
+// (0.72). Rationale: since CF-PARALLEL-IS-IDENTITY, a fuzzy-parallel match is
+// parallel-verified — it can only differ in token ORDER — so adopting it is
+// safe. family-fallback is the one that changes the PRODUCT
+// (bowman-chrome-sapphire -> bowman-chrome), and Sapphire is not Chrome: those
+// are different cards at different prices, so collapsing one into the other
+// corrupts both pools exactly like the parallel bug did.
+//
+// A rejected rebind is not a dropped sale. The caller keeps its computed slug
+// and seeds a checklist request — recoverable, and it asks for the checklist
+// that would make the match exact next time.
+export const MIN_REBIND_CONFIDENCE = 0.7;
+
+export interface SlugAdoption {
+  slug: string;
+  rebound: boolean;
+  /** Set when a match existed but was refused, so callers can log it. */
+  refusedReason?: string;
+}
+
+/**
+ * The ONE place a resolved slug may replace a computed one.
+ *
+ * Both ingest paths (recordSoldComp, persistVendorSalesToPool) had their own
+ * copy of this decision, which is how the same invariant needed fixing twice.
+ * Route every adoption through here so they cannot diverge again.
+ */
+export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchResult): SlugAdoption {
+  if (!resolved.found || !resolved.slug) return { slug: computedSlug, rebound: false };
+  if (resolved.slug === computedSlug) return { slug: computedSlug, rebound: false };
+  if (resolved.confidence < MIN_REBIND_CONFIDENCE) {
+    return {
+      slug: computedSlug,
+      rebound: false,
+      refusedReason: `confidence ${resolved.confidence} < ${MIN_REBIND_CONFIDENCE} (${resolved.matchedBy})`,
+    };
+  }
+  return { slug: resolved.slug, rebound: true };
+}
+
+/**
+ * CF-BORDER-IS-THE-SAME-CARD (Drew, 2026-08-15: "bingo! just someone using
+ * different words"). Checklist sources disagree on whether the colour
+ * parallel is called "Gold" or "Gold Border" — it is one card either way.
+ *
+ * Proven on 2024 Bowman #9, where the SAME card carries both:
+ *   Gold Border /50   source=checklistcenter
+ *   Gold        /50   source=bccp
+ * Same print run, same card, two vocabularies. Across a sample of cards
+ * holding both forms, 77 agreed on print run; the 20 that "differed" were
+ * a null print run on one side, i.e. missing data rather than a second
+ * parallel.
+ *
+ * DELIBERATELY NARROW — matches only the exact form "{Colour} Border" or
+ * "{Colour} Bordered". The word "border" is NOT generally droppable, and a
+ * blanket strip would corrupt real identities:
+ *
+ *   "Borderless", "Borderless Refractor"   opposite meaning
+ *   "Gap in Border", "No Gap in Border"    printing varieties
+ *   "Team Color Border Variation"          not a colour parallel
+ *   "222 Pat Border", "Pat Borders / Ted Power"
+ *                                          a PLAYER NAME sitting in the
+ *                                          parallel field — ~4,900 rows of a
+ *                                          separate data defect, untouched
+ *   "Mini Black Border"                    qualified form, left alone
+ *
+ * Colour still distinguishes, so vintage "Black Border" and "White Border"
+ * stay distinct from each other — they normalize to "Black" and "White".
+ */
+const COLOUR_BORDER_RE =
+  /^(gold|black|blue|red|green|orange|purple|yellow|pink|white|silver|platinum|aqua|fuchsia)\s+border(ed)?$/i;
+
+/**
+ * CF-PRIZMS-WORD-ORDER (Drew, 2026-08-15: "now can we match it with what we
+ * have?"). Yes — the parallels are already catalogued, under two word orders
+ * from two scrapers:
+ *
+ *   Green Pulsar Prizm  /25   baseballcardpedia, bccp
+ *   Prizms Green Pulsar /25   checklistcenter
+ *   Glitter Prizm       /-    baseballcardpedia, bccp
+ *   Prizms Glitter      /-    checklistcenter
+ *
+ * Same card, same print run, one source writing the family name first. The
+ * matcher requires exact parallel-token equality, so a sale matched one form
+ * and missed the other, and the catalog carries both as if they were separate
+ * parallels: 51,335 rows in "Prizms X" against 444,219 in "X Prizm".
+ *
+ * Normalizing to the majority form ("X Prizm") collapses that split.
+ *
+ * NOT a general token strip. Bare "Prizm" is a real parallel in its own right
+ * (2,360 rows), so treating "prizm" as droppable would collapse it into Base.
+ * This only reorders; it never removes.
+ */
+const PRIZMS_PREFIX_RE = /^prizms\s+(.+)$/i;
+
+/**
+ * CF-PARALLEL-DESLUG (Drew, 2026-08-15: "normalize it and add it to vocab").
+ *
+ * 1,588 distinct parallel values are stored in slug form — "optic-red",
+ * "1992-nba-mvp", "1st-day-issue" — and 1,455 of them (91.6%) have a
+ * properly spaced twin elsewhere in the catalog. They come from the
+ * sold-comps-stub seeding path, which wrote the SLUG into the display field
+ * where a human-readable name belongs.
+ *
+ * SCOPE, honestly: this does NOT fix matching. The matcher compares
+ * parallelSlug, and "optic-red" and "Optic Red" both slugify to "optic-red",
+ * so they already match today. This is vocabulary hygiene — it stops the
+ * catalog presenting two spellings of one parallel, and it means anything
+ * grouping or displaying by `parallel` sees one value.
+ *
+ * Because the output re-slugifies to exactly what it came from, the change
+ * is display-only and cannot move a card to a different slug.
+ *
+ * Acronyms are preserved deliberately: naive title-casing turns
+ * "1992-nba-mvp" into "1992 Nba Mvp", which matches neither the twin
+ * "1992 NBA MVP" nor how anyone writes it.
+ */
+const PARALLEL_ACRONYMS = new Set([
+  "nba", "nfl", "mlb", "nhl", "mvp", "rc", "sp", "ssp", "gu", "usa", "hof",
+  "rpa", "fotl", "1of1", "uk", "us", "au", "opc", "tv", "ud", "wbc", "asg",
+]);
+
+/** True only for an all-lowercase hyphenated token run, e.g. "optic-red". */
+const SLUG_FORM_RE = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+
+function deslugParallel(v: string): string {
+  return v.split("-").filter(Boolean).map((w) => {
+    if (PARALLEL_ACRONYMS.has(w)) return w.toUpperCase();
+    // Ordinals and year-like tokens keep their own shape: 1st, 2026.
+    if (/^\d+(?:st|nd|rd|th)?$/.test(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
+
 export function canonicalizeParallelName(raw: string | null): string {
   if (!raw) return "Base";
   const trimmed = String(raw).trim();
   if (!trimmed) return "Base";
   const lower = trimmed.toLowerCase();
   if (PARALLEL_ALIAS_MAP[lower]) return PARALLEL_ALIAS_MAP[lower];
+  const border = lower.match(COLOUR_BORDER_RE);
+  if (border) return border[1].charAt(0).toUpperCase() + border[1].slice(1);
+  // "Prizms Green Pulsar" -> "Green Pulsar Prizm". Reorder only; the family
+  // word is preserved because bare "Prizm" is itself a distinct parallel.
+  const prizms = trimmed.match(PRIZMS_PREFIX_RE);
+  if (prizms) {
+    const rest = prizms[1].trim();
+    if (rest && !/prizm$/i.test(rest)) return `${rest} Prizm`;
+    if (rest) return rest;
+  }
+  // Slug-form display values get spelled back out. Re-slugifies identically,
+  // so this can never move a card onto a different slug.
+  if (SLUG_FORM_RE.test(trimmed)) return deslugParallel(trimmed);
   return trimmed;
 }
 
@@ -145,7 +329,26 @@ export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponen
     sport: String(input.sport ?? "").trim().toLowerCase(),
     year: input.year,
     setKey: normalizeSetKey(input.setName ?? ""),
-    cardNumber: String(input.cardNumber ?? "").trim(),
+    // CF-CARD-NUMBER-IS-CASE-INSENSITIVE (Drew, 2026-08-16: "yea, we should
+    // see if it does").
+    //
+    // The catalog lookup compares `c.cardNumber = @n` — an exact, CASE-SENSITIVE
+    // equality — and every checklist writes card numbers uppercase (4,000
+    // sampled canonical rows: 4,000 uppercase, 0 with any lowercase). Vendors
+    // do not. A sale arriving as "uk-4" could never match the catalog's "UK-4",
+    // so it was recorded as unmatched and filed a seed asking for a checklist
+    // we already had.
+    //
+    // Measured over the 241 unmatched sales whose card demonstrably IS in the
+    // catalog: 61 of them — 25.3% — failed on nothing but letter case.
+    //
+    // Uppercasing the INPUT rather than wrapping the column in UPPER() keeps
+    // the predicate index-accelerated; a function on the indexed column is what
+    // made search scan 35.7M rows earlier today. A card number is a
+    // case-insensitive identifier by nature — UK-4 and uk-4 are one card — and
+    // the slug is unaffected because computeHobbyIqCardId lowercases it again
+    // through normalizeCardNumber.
+    cardNumber: String(input.cardNumber ?? "").trim().toUpperCase(),
     parallel: canonicalizeParallelName(input.parallel),
     isAuto: !!input.isAuto,
     printRun: typeof input.printRun === "number" ? input.printRun : null,
@@ -154,7 +357,174 @@ export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponen
 
 /** The main entry point — resolve an identity claim to a canonical
  *  catalog slug. */
+// CF-PARALLEL-INVARIANT-AT-THE-BOUNDARY (Drew, 2026-08-14: "should we clean
+// the code so it doesn't do it again?").
+//
+// The parallel-identity bug took THREE edits to stamp out — Step 2, then Step
+// 3, then the candidate-id check — because the rule lived in each step rather
+// than in the function's contract. A Step 5 added later would reintroduce it,
+// and nothing would notice until pools were already corrupted.
+//
+// So the rule is enforced ONCE, here, over every exit point (there are 8):
+//
+//   canonicalize() MUST NOT return a slug whose parallel differs from the
+//   parallel it was asked about.
+//
+// Crossing SETS is still allowed — that is the product-family ladder's job.
+// Changing WHICH CARD it is, is not.
+//
+// On violation we do not silently correct: the resolution is rejected
+// (found:false), so the caller keeps its computed slug and seeds a checklist
+// request. A wrong match corrupts the pool permanently; no match is
+// recoverable and asks for the checklist that fixes it. The violation is
+// logged loudly because it means a matcher step has a bug.
+// CF-CATALOG-LOOKUP-CACHE (Drew, 2026-08-14: "we cant wait 18 days for data").
+//
+// Promotion runs ~1s per row, and that cost is NOT HTTP overhead — a local
+// runner with no App Service ceiling was just as slow. It is the catalog
+// lookups: canonicalize issues cross-partition queries against a 25.5M-row
+// container, once per row.
+//
+// Staging rows repeat cards heavily — measured 5.4 rows per distinct card
+// across the pending backlog (150,000 rows touching 27,934 cards). So most of
+// those queries re-ask a question already answered, and memoising turns an
+// 18-day drain into roughly 3.4 days; sharded 6 ways, ~14 hours.
+//
+// TTLs, not permanent memory, because checklists are being INGESTED WHILE THIS
+// RUNS. A cached "not-found" that outlived the checklist that would satisfy it
+// is the failure mode to avoid — it would silently pin a card as unmatchable
+// for the length of the run. So negatives expire fast; positives are safe to
+// hold longer, since a card that exists keeps existing.
+const POSITIVE_TTL_MS = 10 * 60_000;
+const NEGATIVE_TTL_MS = 60_000;
+const CACHE_MAX = 200_000;
+
+interface CacheEntry { result: CatalogMatchResult; expires: number; }
+const _matchCache = new Map<string, CacheEntry>();
+
+function cacheKey(c: HobbyIqCardIdComponents): string {
+  return [c.sport, c.year, c.setKey, c.cardNumber.toUpperCase(), c.parallel.toLowerCase(),
+    c.isAuto ? "1" : "0", c.printRun ?? ""].join("|");
+}
+
+/** Exposed so a long-running drain can reclaim memory between phases. */
+export function clearCatalogMatchCache(): void { _matchCache.clear(); }
+
+/**
+ * CF-MATCH-WITHOUT-CARDNUMBER (Drew, 2026-08-15: "not everyone is going to
+ * put card numbers so we should be able to match too").
+ *
+ * Resolve a card number from the identity a seller DOES give:
+ *   player + set + year + parallel + auto yes/no
+ *
+ * Returns the card number only when the catalog holds exactly ONE candidate.
+ * Several candidates means we cannot tell which card this is, and picking one
+ * would attach a sale — or a user's holding — to the wrong card. Absent beats
+ * wrong, so ambiguity returns null.
+ *
+ * Ambiguity is real and worth the refusal. Within a single 2026 "bowman"
+ * setKey a prospect can hold a Chrome auto, a Paper auto and a Mega-box auto:
+ *
+ *   Coy James 2026 bowman auto Base       -> CPA-CJ, BPA-CJ          (refuse)
+ *   Coy James 2026 bowman auto Refractor  -> CPA-CJ                  (resolve)
+ *   Marek Houston 2026 bowman auto Base   -> CPA-MHO, BPA-MH, BMA-MH (refuse)
+ *   Owen Carey 2026 bowman auto Base      -> CPA-OC                  (resolve)
+ *
+ * The parallel is what usually breaks the tie, which is why it is part of the
+ * key rather than an afterthought.
+ */
+export async function resolveCardNumberByPlayer(input: {
+  year: number;
+  setKey: string;
+  player: string;
+  isAuto: boolean;
+  parallel?: string | null;
+}): Promise<{ cardNumber: string | null; candidates: string[] }> {
+  const container = await getContainer();
+  if (!container) return { cardNumber: null, candidates: [] };
+  const year = Number(input.year);
+  const setKey = normalizeSetKey(input.setKey ?? "");
+  const player = String(input.player ?? "").trim();
+  if (!year || !setKey || !player) return { cardNumber: null, candidates: [] };
+
+  const parallel = canonicalizeParallelName(input.parallel ?? null);
+  try {
+    const { resources } = await container.items.query<string>({
+      query: `SELECT DISTINCT VALUE c.cardNumber FROM c
+              WHERE c.year = @y AND c.setKey = @s AND c.playerName = @p
+                AND c.isAuto = @a AND c.parallel = @par
+                AND IS_DEFINED(c.cardNumber) AND NOT IS_NULL(c.cardNumber)`,
+      parameters: [
+        { name: "@y", value: year },
+        { name: "@s", value: setKey },
+        { name: "@p", value: player },
+        { name: "@a", value: !!input.isAuto },
+        { name: "@par", value: parallel },
+      ],
+    }).fetchAll();
+    const candidates = (resources ?? []).filter(Boolean).map(String);
+    return {
+      cardNumber: candidates.length === 1 ? candidates[0] : null,
+      candidates,
+    };
+  } catch {
+    return { cardNumber: null, candidates: [] };
+  }
+}
+
 export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMatchResult> {
+  // Seeding sources MUST bypass the cache: canonicalize can CREATE a row for
+  // them, and a cache hit would skip that side effect.
+  const seeds = TRUSTED_SOURCES.has(input.source) && process.env.CATALOG_MATCH_ONLY_ENABLED !== "true";
+  const key = seeds ? null : cacheKey(buildComponents(input));
+
+  if (key) {
+    const hit = _matchCache.get(key);
+    if (hit && hit.expires > Date.now()) return hit.result;
+    if (hit) _matchCache.delete(key);
+  }
+
+  const result = await canonicalizeImpl(input);
+
+  if (key) {
+    // Cheap bound: drop the oldest insertion when full rather than track LRU.
+    if (_matchCache.size >= CACHE_MAX) {
+      const oldest = _matchCache.keys().next().value;
+      if (oldest !== undefined) _matchCache.delete(oldest);
+    }
+    _matchCache.set(key, {
+      result,
+      expires: Date.now() + (result.found ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS),
+    });
+  }
+
+  if (!result.found) return result;
+
+  const seg = parallelSegmentOf(result.slug);
+  // Non-canonical ids (cardhedge::…) carry no parallel segment to check.
+  if (seg === null) return result;
+
+  const want = parallelTokenSet(slugify(canonicalizeParallelName(input.parallel)));
+  if (sameParallelTokens(parallelTokenSet(seg), want)) return result;
+
+  console.warn(JSON.stringify({
+    event: "catalog_match_parallel_invariant_violated",
+    source: "catalogMatcher.canonicalize",
+    matchedBy: result.matchedBy,
+    confidence: result.confidence,
+    askedParallel: input.parallel,
+    returnedSlug: result.slug,
+    detail: "a matcher step returned a different parallel; rejecting the match",
+  }));
+  return {
+    slug: computeHobbyIqCardId(buildComponents(input)),
+    found: false,
+    confidence: 0.3,
+    matchedBy: "not-found",
+  };
+}
+
+async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchResult> {
   const components = buildComponents(input);
   const canonicalSlug = computeHobbyIqCardId(components);
   const container = await getContainer();
@@ -185,24 +555,121 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     // Non-fatal — item not found → try fuzzy paths below.
   }
 
-  // Step 2: fuzzy-parallel match — same year/set/cardNumber/isAuto,
-  // any parallel that shares a token with our canonical parallel.
+  // Step 2: parallel match — same year/set/cardNumber/isAuto, and the SAME
+  // parallel, allowing only for token order and alias differences.
   const parallelSlug = slugify(components.parallel);
-  const parallelToken = parallelSlug.split("-").filter(Boolean).slice(-1)[0]; // last token — usually the color
-  if (parallelToken) {
+  if (parallelSlug && components.cardNumber) {
     try {
+      // CF-FUZZY-PARALLEL-SAME-SET (Drew, 2026-08-13). This step's own comment
+      // promises "same year/set/cardNumber", but the query never constrained
+      // setKey — so a shared parallel TOKEN was enough to jump products. Real
+      // results against prod, from Drew's MISSING holdings:
+      //
+      //   2017 Topps Gold Label #86 "Blue"        -> topps:86:father-s-day-powder-blue
+      //   2022 Topps Chrome #221 "Image Variation"-> topps-chrome-sonic-lite:221:image-variations
+      //
+      // Right year, right number, wrong PRODUCT — "blue" and "variation" are
+      // generic tokens that appear in every set's parallel vocabulary. Matching
+      // a related set is legitimate, but that is Step 3's job (family-fallback,
+      // 0.55), where the relationship is explicit and scored lower. Step 2 must
+      // stay within the set it was given.
+      //
+      // Vendor-keyed and variant rows are also excluded: they are mirrors of
+      // cards we hold canonically, and proposing `cardhedge::…` as a holding's
+      // identity points pricing at a vendor's copy instead of the card. That is
+      // how "2020 Bowman Witt #BD152" resolved to a cardhedge:: slug.
+      // CF-PARALLEL-IS-IDENTITY (Drew, 2026-08-13: "why is it getting written
+      // to the wrong card when it is clear what it is").
+      //
+      // This step used to reduce the parallel to ONE token and search on it:
+      //
+      //   parallelSlug.split("-").slice(-1)[0]   // "last token — usually the color"
+      //   ... CONTAINS(LOWER(c.parallelSlug), @tok)
+      //
+      // The comment had it backwards. Real parallels are "<Color> <Family>", so
+      // the LAST token is the generic family word every parallel in the set
+      // shares, and the discarded prefix is the only part that identifies the
+      // card:
+      //
+      //   mojo-refractor         -> "refractor"
+      //   purple-prizm           -> "prizm"
+      //   blue-pulsar-prizm      -> "prizm"
+      //   mini-diamond-refractor -> "refractor"
+      //
+      // CONTAINS(parallelSlug,'refractor') then matches EVERY refractor in the
+      // set, and `TOP 10` with no ORDER BY handed back an arbitrary sample from
+      // which .find() took the first canonical row. Measured on prod: 41 of 300
+      // promoted sales (13.7%) were rebound onto a DIFFERENT parallel —
+      //
+      //   mojo-refractor            -> refractor
+      //   purple-prizm /149         -> premier-level-black-finite-prizms /1
+      //   mini-diamond-refractor /99-> negative-refractor
+      //   mojo-prizm /36            -> prizm-blue /199
+      //
+      // — each one a collector-distinct card at a different value, corrupting
+      // both pools and the FMV computed from them, while reporting confidence
+      // 0.72 so nothing downstream questioned it.
+      //
+      // Now: fetch the card's parallels deterministically and require the
+      // candidate's parallel TOKEN SET to equal ours. That still absorbs what
+      // this step is for — token order ("blue-refractor" vs "refractor-blue")
+      // and printRun-suffix differences, which do not appear in parallelSlug —
+      // while making it impossible to swap one specific parallel for another.
+      //
+      // A sale whose parallel we cannot find is NOT forced onto a neighbour: it
+      // keeps its computed slug and seeds a checklist request, which is real
+      // coverage demand and exactly what the seed queue exists to collect.
+      // CF-MATCHER-QUERY-COST (Drew, 2026-08-14: "we need to do it faster").
+      // Profiled at 2,666ms/row — 95.4% of promotion's entire cost. Fixing the
+      // parallel bug I rewrote this as `SELECT TOP 300 * … ORDER BY c.id`,
+      // which does three expensive things against a 25.5M-row container:
+      // pulls FULL documents, fetches 30x the rows, and forces a
+      // CROSS-PARTITION SORT. The ORDER BY existed only for determinism.
+      //
+      // Determinism does not require the database to sort. Project the three
+      // fields actually read, drop the ORDER BY, and sort in memory — a card
+      // has far fewer than 300 parallels, so we still receive the complete
+      // candidate set and the in-memory sort is exactly as deterministic.
       const { resources } = await container.items.query({
-        query: "SELECT TOP 5 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND CONTAINS(LOWER(c.parallelSlug ?? c.parallel ?? ''), @tok)",
+        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          { name: "@n", value: components.cardNumber },
+          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
+          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
+          // identical 49-row result set. card_catalog stores cardNumber
+          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
+          // this is the same comparison at 6.5x lower cost.
+          { name: "@n", value: components.cardNumber.toUpperCase() },
           { name: "@a", value: components.isAuto },
-          { name: "@tok", value: parallelToken },
+          { name: "@sk", value: components.setKey },
         ],
       }).fetchAll();
-      if (resources.length > 0) {
-        const best = resources[0];
+
+      const want = parallelTokenSet(parallelSlug);
+      const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
+        .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
+        // CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (Drew, 2026-08-14). Check the
+        // candidate's ID, not its parallel field. Catalog rows can disagree
+        // with themselves — one has parallelSlug "speckle-refractor" while its
+        // id encodes "base-sapphire-refractor" — and since we RETURN best.id,
+        // validating the field let a mismatched id through anyway. Observed
+        // post-fix on prod: "Speckle Refractor" still resolving to
+        // base-sapphire-refractor at matchedBy=fuzzy-parallel, because the
+        // field matched even though the slug we adopted did not.
+        //
+        // The id is authoritative here precisely because it is the thing being
+        // adopted. The field is kept only as a fallback for non-slug ids.
+        .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want))
+        // Prefer an ungraded row — grade variants share the card's identity
+        // fields and would otherwise win arbitrarily. `id` breaks ties so the
+        // choice is deterministic rather than dependent on scan order.
+        .sort((a, b) => {
+          const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
+          return graded(a) - graded(b) || a.id.localeCompare(b.id);
+        });
+      const best = ranked[0] ?? null;
+      if (best) {
         return {
           slug: best.id,
           found: true,
@@ -224,18 +691,41 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     : components.setKey;
   if (familyKey && familyKey !== components.setKey) {
     try {
+      // CF-PARALLEL-IS-IDENTITY (Drew, 2026-08-13). This step legitimately
+      // crosses SETS along the product-family ladder (bowman-chrome-updates ->
+      // bowman-chrome), but it did not constrain the PARALLEL at all, and took
+      // resources[0] from an unordered TOP 5. So a Mojo Refractor could land on
+      // whichever parallel of that card number the scan happened to return
+      // first — a set change and a parallel change at once.
+      //
+      // It is also the more dangerous of the two steps, because recordSoldComp
+      // rebinds on `resolved.found` and never reads `confidence` — so this
+      // 0.55 guess rewrote a sale's identity exactly as authoritatively as a
+      // 0.98 exact match. Crossing the family ladder is defensible; silently
+      // changing which card it is, is not.
+      // Same projection + no cross-partition sort as Step 2 (CF-MATCHER-QUERY-COST).
       const { resources } = await container.items.query({
-        query: "SELECT TOP 5 * FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n) AND c.isAuto = @a AND c.setKey = @fk",
+        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @fk OFFSET 0 LIMIT 300",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          { name: "@n", value: components.cardNumber },
+          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
+          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
+          // identical 49-row result set. card_catalog stores cardNumber
+          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
+          // this is the same comparison at 6.5x lower cost.
+          { name: "@n", value: components.cardNumber.toUpperCase() },
           { name: "@a", value: components.isAuto },
           { name: "@fk", value: familyKey },
         ],
       }).fetchAll();
-      if (resources.length > 0) {
-        const best = resources[0];
+      const wantFamily = parallelTokenSet(slugify(components.parallel));
+      const familyRanked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
+        .filter((r) => typeof r?.id === "string")
+        .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), wantFamily))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      if (familyRanked.length > 0) {
+        const best = familyRanked[0];
         return {
           slug: best.id,
           found: true,

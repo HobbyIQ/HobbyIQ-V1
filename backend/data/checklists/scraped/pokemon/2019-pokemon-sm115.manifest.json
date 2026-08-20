@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.793Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm115",
+ "sport": "pokemon",
+ "year": 2019,
+ "setName": "Hidden Fates",
+ "productKey": "2019-sm115",
+ "setKey": "sm115",
+ "rowCount": 69,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Hidden Fates",
+   "category": "base",
+   "playerCount": 69,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/miscp",
+ "setId": "miscp",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 1,
+  "normal": 0,
+  "official": 1,
+  "reverse": 0,
+  "total": 1
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

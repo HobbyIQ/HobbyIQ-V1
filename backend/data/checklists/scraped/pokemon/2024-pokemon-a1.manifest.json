@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.815Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A1",
+ "sport": "pokemon",
+ "year": 2024,
+ "setName": "Genetic Apex",
+ "productKey": "2024-a1",
+ "setKey": "a1",
+ "rowCount": 286,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Genetic Apex",
+   "category": "base",
+   "playerCount": 286,
+   "printRun": null
+  }
+ ]
+}

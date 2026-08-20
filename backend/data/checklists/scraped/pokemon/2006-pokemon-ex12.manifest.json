@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.428Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex12",
+ "sport": "pokemon",
+ "year": 2006,
+ "setName": "Legend Maker",
+ "productKey": "2006-ex12",
+ "setKey": "ex12",
+ "rowCount": 93,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Legend Maker",
+   "category": "base",
+   "playerCount": 93,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ecard3",
+ "setId": "ecard3",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 38,
+  "normal": 151,
+  "official": 144,
+  "reverse": 150,
+  "total": 182
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

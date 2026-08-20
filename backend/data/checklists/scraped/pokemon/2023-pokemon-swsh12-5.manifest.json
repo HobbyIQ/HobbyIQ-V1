@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.052Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh12.5",
+ "sport": "pokemon",
+ "year": 2023,
+ "setName": "Crown Zenith",
+ "productKey": "2023-swsh12-5",
+ "setKey": "swsh12-5",
+ "rowCount": 160,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Crown Zenith",
+   "category": "base",
+   "playerCount": 160,
+   "printRun": null
+  }
+ ]
+}

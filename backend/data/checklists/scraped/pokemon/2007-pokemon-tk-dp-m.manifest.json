@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.025Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-dp-m",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "DP trainer Kit (Manaphy)",
+ "productKey": "2007-tk-dp-m",
+ "setKey": "tk-dp-m",
+ "rowCount": 12,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > DP trainer Kit (Manaphy)",
+   "category": "base",
+   "playerCount": 12,
+   "printRun": null
+  }
+ ]
+}

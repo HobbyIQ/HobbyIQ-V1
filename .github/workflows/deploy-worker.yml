@@ -1,0 +1,159 @@
+# CF-WORKER-SEPARATION (Drew, 2026-08-18: "build it so it gets ready for
+# scaling").
+#
+# Deploys the SAME backend build to a batch worker App Service, so cron-driven
+# pipeline work stops sharing a Node process with interactive page loads.
+#
+# WHY THIS EXISTS. Measured in App Insights over 24h, the app served ~60
+# requests totalling ~280 server-seconds — and /api/staging/* consumed 262 of
+# them (94%):
+#
+#     POST /api/staging/image-verify   4 calls, avg 40.6s, max 42.7s
+#     POST /api/staging/promotion      4 calls, avg 25.0s, max 28.2s
+#
+# Staging Pipeline Cron fires every 5 minutes, so ~65s of every 300s window was
+# spent inside those two endpoints.
+#
+# CORRECTION, and it matters. The first version of this comment said that work
+# was CPU-bound and blocked the event loop. It is NOT. image-verify was a
+# sequential loop of Azure Vision OCR calls over HTTP — ~100 rows x ~0.4s of
+# network WAITING with the loop idle. Node kept serving other requests
+# throughout, so this was never the cause of the reported page timeout, and
+# that timeout remains separately unexplained.
+#
+# The real win there was concurrency, not isolation: image-verify now runs a
+# pool of 6 (~40s -> ~7s) with 429 retry.
+#
+# So why keep this worker? Because batch work still has no business sharing a
+# process with interactive traffic — it competes for memory, Cosmos RU and
+# connection budget, and it couples deploy blast radius. Separation is right
+# hygiene and the scaling shape Drew asked for; it is just not a latency fix,
+# and it should not be sold as one.
+#
+# SCALING SHAPE. app_name is an input rather than a constant so a second or
+# third worker is one dispatch, not a new file. Workers are pool-fungible: they
+# run identical code and identical settings, and differ only by which cron
+# points at them. To add capacity, create the app on the same plan, mirror
+# settings, and dispatch this with the new name.
+#
+# The worker runs the same server as HobbyIQ3 and therefore also exposes the
+# interactive routes. That is deliberate — it keeps the image identical and
+# leaves the worker usable as a warm spare. Traffic separation is done by WHO
+# CALLS WHICH HOST, not by building a second artifact that could drift.
+
+name: Deploy Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: "Target App Service (must already exist and have settings mirrored)"
+        required: false
+        default: "hobbyiq3-worker"
+      ref:
+        description: "Git ref to deploy (blank = this workflow's ref)"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-worker-${{ github.event.inputs.app_name || 'hobbyiq3-worker' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      APP: ${{ github.event.inputs.app_name || 'hobbyiq3-worker' }}
+      RG: rg-hobbyiq-dev
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+      # Same packaging path as daily-refresh so the worker cannot drift from
+      # HobbyIQ3 — identical dist/ + node_modules in the zip.
+      #
+      # archiver installs at the ROOT, not in backend/, because zip.js runs
+      # from the root and resolves modules from there. daily-refresh labels
+      # this step "Install root zip dependencies (needed by zip.js)" for the
+      # same reason. Installing it under backend/ gets "Cannot find module
+      # 'archiver'" — the second directory mistake in this workflow, both from
+      # assuming the packaging step is backend-scoped when it is repo-scoped.
+      - name: Install root zip dependencies
+        run: npm install archiver --no-save
+
+      # zip.js lives at the REPO ROOT and writes deploy.zip beside itself —
+      # it is not a backend/ script. daily-refresh runs it with no
+      # working-directory for that reason; the first cut of this workflow set
+      # working-directory: backend and died with MODULE_NOT_FOUND before ever
+      # reaching Azure.
+      - name: Create deploy.zip
+        run: node zip.js
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # The CI principal originally held `Website Contributor` scoped to the
+      # HobbyIQ3 SITE only (see #1126), so this step failed with
+      # AuthorizationFailed for any new app. Drew granted the same role at
+      # RESOURCE GROUP scope on 2026-08-18, which is what makes a second or
+      # third worker a dispatch rather than another IAM round-trip.
+      - name: Deploy to the worker
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP }}
+          resource-group-name: rg-hobbyiq-dev
+          package: deploy.zip
+
+      # webapps-deploy@v3 does not touch App Settings, so /api/health would
+      # report whatever build metadata was last written. Same quad as
+      # daily-refresh.
+      - name: Update build metadata
+        run: |
+          SHA_SHORT="${GITHUB_SHA:0:7}"
+          az webapp config appsettings set \
+            --resource-group "$RG" --name "$APP" \
+            --settings GIT_SHA=${{ github.sha }} GIT_SHA_SHORT=$SHA_SHORT \
+                       GIT_BRANCH=${{ github.ref_name }} \
+                       DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --output none
+
+      # Verify the WRITE, not the run — a green deploy that never came back up
+      # is the failure mode worth catching here.
+      - name: Verify health + sha
+        run: |
+          HOST="https://${APP}.azurewebsites.net"
+          for i in $(seq 1 20); do
+            BODY=$(curl -s --max-time 20 "$HOST/api/health" || true)
+            SHA=$(echo "$BODY" | grep -o '"shaShort":"[^"]*"' | head -1 | cut -d'"' -f4)
+            if [ "$SHA" = "${GITHUB_SHA:0:7}" ]; then
+              echo "worker healthy on $SHA"
+              exit 0
+            fi
+            echo "  attempt $i: sha='$SHA' (want ${GITHUB_SHA:0:7}) — waiting"
+            sleep 15
+          done
+          echo "::error::worker did not report the deployed sha"
+          exit 1

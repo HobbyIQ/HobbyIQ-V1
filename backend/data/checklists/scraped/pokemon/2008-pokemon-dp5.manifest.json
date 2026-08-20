@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.347Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp5",
+ "sport": "pokemon",
+ "year": 2008,
+ "setName": "Majestic Dawn",
+ "productKey": "2008-dp5",
+ "setKey": "dp5",
+ "rowCount": 100,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Majestic Dawn",
+   "category": "base",
+   "playerCount": 100,
+   "printRun": null
+  }
+ ]
+}

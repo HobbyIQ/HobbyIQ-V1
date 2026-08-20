@@ -134,11 +134,26 @@ export async function parseDailyExportStream(
   let errors = 0;
   let firstError: string | null = null;
 
+  // CF-CH-HISTORICAL-BACKFILL (Drew, 2026-08-14). A mid-download failure
+  // emits 'error' on the SOURCE stream, and pipe() does not forward that
+  // to the destination. Without this listener the event is unhandled and
+  // takes the whole process down rather than surfacing to the caller.
+  //
+  // Observed live: holding this stream open while doing per-row Cosmos
+  // writes slows the read enough that CH closes the connection
+  // (UND_ERR_SOCKET "other side closed") ~2.7 MB into the file. Callers
+  // doing slow per-row work MUST drain the parse first and write after —
+  // see backfillOneDay's two-phase structure. Destroying the parser here
+  // makes the async iterator below reject, so the failure is catchable.
+  stream.on("error", (err) => {
+    parser.destroy(err instanceof Error ? err : new Error(String(err)));
+  });
   stream.pipe(parser);
 
-  // Consuming the parser as an async iterable naturally handles
-  // backpressure — awaiting onRow inside the loop pauses csv-parse
-  // between records without needing manual pause/resume choreography.
+  // Consuming the parser as an async iterable handles backpressure
+  // between csv-parse and this loop. Note this does NOT make it safe to
+  // do slow I/O inside onRow — that backpressure reaches all the way to
+  // the origin socket. Keep onRow cheap.
   try {
     for await (const record of parser as unknown as AsyncIterable<Record<string, string>>) {
       try {

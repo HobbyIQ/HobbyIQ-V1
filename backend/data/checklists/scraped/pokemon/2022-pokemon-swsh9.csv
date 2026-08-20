@@ -1,0 +1,187 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Exeggcute
+base,002,Base,false,,Exeggutor
+base,003,Base,false,,Shroomish
+base,004,Base,false,,Breloom
+base,005,Base,false,,Tropius
+base,006,Base,false,,Turtwig
+base,007,Base,false,,Grotle
+base,008,Base,false,,Torterra
+base,009,Base,false,,Burmy
+base,010,Base,false,,Wormadam
+base,011,Base,false,,Mothim
+base,012,Base,false,,Cherubi
+base,013,Base,false,,Shaymin V
+base,014,Base,false,,Shaymin VSTAR
+base,015,Base,false,,Karrablast
+base,016,Base,false,,Zarude V
+base,017,Base,false,,Charizard V
+base,018,Base,false,,Charizard VSTAR
+base,019,Base,false,,Magmar
+base,020,Base,false,,Magmortar
+base,021,Base,false,,Moltres
+base,022,Base,false,,Entei V
+base,023,Base,false,,Torkoal
+base,024,Base,false,,Chimchar
+base,025,Base,false,,Monferno
+base,026,Base,false,,Infernape
+base,027,Base,false,,Simisear V
+base,028,Base,false,,Kingler V
+base,029,Base,false,,Kingler VMAX
+base,030,Base,false,,Staryu
+base,031,Base,false,,Lapras
+base,032,Base,false,,Corphish
+base,033,Base,false,,Crawdaunt
+base,034,Base,false,,Snorunt
+base,035,Base,false,,Piplup
+base,036,Base,false,,Prinplup
+base,037,Base,false,,Empoleon
+base,038,Base,false,,Buizel
+base,039,Base,false,,Floatzel
+base,040,Base,false,,Lumineon V
+base,041,Base,false,,Manaphy
+base,042,Base,false,,Cubchoo
+base,043,Base,false,,Beartic
+base,044,Base,false,,Eiscue
+base,045,Base,false,,Raichu V
+base,046,Base,false,,Electabuzz
+base,047,Base,false,,Electivire
+base,048,Base,false,,Raikou V
+base,049,Base,false,,Shinx
+base,050,Base,false,,Luxio
+base,051,Base,false,,Luxray
+base,052,Base,false,,Pachirisu
+base,053,Base,false,,Clefairy
+base,054,Base,false,,Clefable
+base,055,Base,false,,Starmie
+base,056,Base,false,,Mewtwo
+base,057,Base,false,,Granbull V
+base,058,Base,false,,Baltoy
+base,059,Base,false,,Claydol
+base,060,Base,false,,Duskull
+base,061,Base,false,,Dusclops
+base,062,Base,false,,Dusknoir
+base,063,Base,false,,Chimecho
+base,064,Base,false,,Whimsicott V
+base,065,Base,false,,Whimsicott VSTAR
+base,066,Base,false,,Sigilyph
+base,067,Base,false,,Dedenne
+base,068,Base,false,,Mimikyu V
+base,069,Base,false,,Mimikyu VMAX
+base,070,Base,false,,Milcery
+base,071,Base,false,,Alcremie
+base,072,Base,false,,Hitmontop
+base,073,Base,false,,Nosepass
+base,074,Base,false,,Trapinch
+base,075,Base,false,,Vibrava
+base,076,Base,false,,Flygon
+base,077,Base,false,,Wormadam
+base,078,Base,false,,Riolu
+base,079,Base,false,,Lucario
+base,080,Base,false,,Throh
+base,081,Base,false,,Sawk
+base,082,Base,false,,Golett
+base,083,Base,false,,Golurk
+base,084,Base,false,,Grimer
+base,085,Base,false,,Muk
+base,086,Base,false,,Sneasel
+base,087,Base,false,,Weavile
+base,088,Base,false,,Honchkrow V
+base,089,Base,false,,Spiritomb
+base,090,Base,false,,Purrloin
+base,091,Base,false,,Liepard
+base,092,Base,false,,Impidimp
+base,093,Base,false,,Morgrem
+base,094,Base,false,,Grimmsnarl
+base,095,Base,false,,Morpeko V
+base,096,Base,false,,Aggron V
+base,097,Base,false,,Aggron VMAX
+base,098,Base,false,,Wormadam
+base,099,Base,false,,Probopass
+base,100,Base,false,,Heatran
+base,101,Base,false,,Escavalier
+base,102,Base,false,,Klink
+base,103,Base,false,,Klang
+base,104,Base,false,,Klinklang
+base,105,Base,false,,Zamazenta V
+base,106,Base,false,,Flygon V
+base,107,Base,false,,Gible
+base,108,Base,false,,Gabite
+base,109,Base,false,,Garchomp
+base,110,Base,false,,Axew
+base,111,Base,false,,Fraxure
+base,112,Base,false,,Haxorus
+base,113,Base,false,,Druddigon
+base,114,Base,false,,Dracovish V
+base,115,Base,false,,Farfetch'd
+base,116,Base,false,,Castform
+base,117,Base,false,,Starly
+base,118,Base,false,,Staravia
+base,119,Base,false,,Staraptor
+base,120,Base,false,,Bidoof
+base,121,Base,false,,Bibarel
+base,122,Base,false,,Arceus V
+base,123,Base,false,,Arceus VSTAR
+base,124,Base,false,,Minccino
+base,125,Base,false,,Cinccino
+base,126,Base,false,,Tornadus
+base,127,Base,false,,Hawlucha
+base,128,Base,false,,Drampa V
+base,129,Base,false,,Acerola's Premonition
+base,130,Base,false,,Barry
+base,131,Base,false,,Blunder Policy
+base,132,Base,false,,Boss's Orders
+base,133,Base,false,,Café Master
+base,134,Base,false,,Cheren's Care
+base,135,Base,false,,Choice Belt
+base,136,Base,false,,Cleansing Gloves
+base,137,Base,false,,Collapsed Stadium
+base,138,Base,false,,Cynthia's Ambition
+base,139,Base,false,,Fresh Water Set
+base,140,Base,false,,Friends in Galar
+base,141,Base,false,,Gloria
+base,142,Base,false,,Hunting Gloves
+base,143,Base,false,,Kindler
+base,144,Base,false,,Magma Basin
+base,145,Base,false,,Marnie's Pride
+base,146,Base,false,,Pot Helmet
+base,147,Base,false,,Professor's Research
+base,148,Base,false,,Roseanne's Backup
+base,149,Base,false,,Team Yell's Cheer
+base,150,Base,false,,Ultra Ball
+base,151,Base,false,,Double Turbo Energy
+base,152,Base,false,,Shaymin V
+base,153,Base,false,,Charizard V
+base,154,Base,false,,Charizard V
+base,155,Base,false,,Lumineon V
+base,156,Base,false,,Lumineon V
+base,157,Base,false,,Pikachu V
+base,158,Base,false,,Raichu V
+base,159,Base,false,,Granbull V
+base,160,Base,false,,Whimsicott V
+base,161,Base,false,,Honchkrow V
+base,162,Base,false,,Honchkrow V
+base,163,Base,false,,Zamazenta V
+base,164,Base,false,,Flygon V
+base,165,Base,false,,Arceus V
+base,166,Base,false,,Arceus V
+base,167,Base,false,,Barry
+base,168,Base,false,,Cheren's Care
+base,169,Base,false,,Cynthia's Ambition
+base,170,Base,false,,Kindler
+base,171,Base,false,,Marnie's Pride
+base,172,Base,false,,Roseanne's Backup
+base,173,Base,false,,Shaymin VSTAR
+base,174,Base,false,,Charizard VSTAR
+base,175,Base,false,,Whimsicott VSTAR
+base,176,Base,false,,Arceus VSTAR
+base,177,Base,false,,Cheren's Care
+base,178,Base,false,,Cynthia's Ambition
+base,179,Base,false,,Kindler
+base,180,Base,false,,Roseanne's Backup
+base,181,Base,false,,Galarian Articuno V
+base,182,Base,false,,Galarian Zapdos V
+base,183,Base,false,,Galarian Moltres V
+base,184,Base,false,,Arceus VSTAR
+base,185,Base,false,,Magma Basin
+base,186,Base,false,,Ultra Ball

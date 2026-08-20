@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv09",
+ "setId": "sv09",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 103,
+  "normal": 145,
+  "official": 159,
+  "reverse": 143,
+  "total": 190
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

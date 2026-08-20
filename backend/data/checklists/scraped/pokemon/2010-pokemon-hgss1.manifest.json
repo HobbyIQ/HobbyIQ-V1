@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.752Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgss1",
+ "sport": "pokemon",
+ "year": 2010,
+ "setName": "HeartGold SoulSilver",
+ "productKey": "2010-hgss1",
+ "setKey": "hgss1",
+ "rowCount": 124,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > HeartGold SoulSilver",
+   "category": "base",
+   "playerCount": 124,
+   "printRun": null
+  }
+ ]
+}

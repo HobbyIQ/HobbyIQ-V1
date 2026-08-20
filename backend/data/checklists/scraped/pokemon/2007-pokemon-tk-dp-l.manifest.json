@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.982Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-dp-l",
+ "sport": "pokemon",
+ "year": 2007,
+ "setName": "DP trainer Kit (Lucario)",
+ "productKey": "2007-tk-dp-l",
+ "setKey": "tk-dp-l",
+ "rowCount": 11,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > DP trainer Kit (Lucario)",
+   "category": "base",
+   "playerCount": 11,
+   "printRun": null
+  }
+ ]
+}

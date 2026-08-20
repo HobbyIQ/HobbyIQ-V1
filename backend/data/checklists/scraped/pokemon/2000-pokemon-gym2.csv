@@ -1,0 +1,133 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Blaine's Arcanine
+base,2,Base,false,,Blaine's Charizard
+base,3,Base,false,,Brock's Ninetales
+base,4,Base,false,,Erika's Venusaur
+base,5,Base,false,,Giovanni's Gyarados
+base,6,Base,false,,Giovanni's Machamp
+base,7,Base,false,,Giovanni's Nidoking
+base,8,Base,false,,Giovanni's Persian
+base,9,Base,false,,Koga's Beedrill
+base,10,Base,false,,Koga's Ditto
+base,11,Base,false,,Lt. Surge's Raichu
+base,12,Base,false,,Misty's Golduck
+base,13,Base,false,,Misty's Gyarados
+base,14,Base,false,,Rocket's Mewtwo
+base,15,Base,false,,Rocket's Zapdos
+base,16,Base,false,,Sabrina's Alakazam
+base,17,Base,false,,Blaine
+base,18,Base,false,,Giovanni
+base,19,Base,false,,Koga
+base,20,Base,false,,Sabrina
+base,21,Base,false,,Blaine's Ninetales
+base,22,Base,false,,Brock's Dugtrio
+base,23,Base,false,,Giovanni's Nidoqueen
+base,24,Base,false,,Giovanni's Pinsir
+base,25,Base,false,,Koga's Arbok
+base,26,Base,false,,Koga's Muk
+base,27,Base,false,,Koga's Pidgeotto
+base,28,Base,false,,Lt. Surge's Jolteon
+base,29,Base,false,,Sabrina's Gengar
+base,30,Base,false,,Sabrina's Golduck
+base,31,Base,false,,Blaine's Charmeleon
+base,32,Base,false,,Blaine's Dodrio
+base,33,Base,false,,Blaine's Rapidash
+base,34,Base,false,,Brock's Graveler
+base,35,Base,false,,Brock's Primeape
+base,36,Base,false,,Brock's Sandslash
+base,37,Base,false,,Brock's Vulpix
+base,38,Base,false,,Erika's Bellsprout
+base,39,Base,false,,Erika's Bulbasaur
+base,40,Base,false,,Erika's Clefairy
+base,41,Base,false,,Erika's Ivysaur
+base,42,Base,false,,Giovanni's Machoke
+base,43,Base,false,,Giovanni's Meowth
+base,44,Base,false,,Giovanni's Nidorina
+base,45,Base,false,,Giovanni's Nidorino
+base,46,Base,false,,Koga's Golbat
+base,47,Base,false,,Koga's Kakuna
+base,48,Base,false,,Koga's Koffing
+base,49,Base,false,,Koga's Pidgey
+base,50,Base,false,,Koga's Weezing
+base,51,Base,false,,Lt. Surge's Eevee
+base,52,Base,false,,Lt. Surge's Electrode
+base,53,Base,false,,Lt. Surge's Raticate
+base,54,Base,false,,Misty's Dewgong
+base,55,Base,false,,Sabrina's Haunter
+base,56,Base,false,,Sabrina's Hypno
+base,57,Base,false,,Sabrina's Jynx
+base,58,Base,false,,Sabrina's Kadabra
+base,59,Base,false,,Sabrina's Mr. Mime
+base,60,Base,false,,Blaine's Charmander
+base,61,Base,false,,Blaine's Doduo
+base,62,Base,false,,Blaine's Growlithe
+base,63,Base,false,,Blaine's Mankey
+base,64,Base,false,,Blaine's Ponyta
+base,65,Base,false,,Blaine's Rhyhorn
+base,66,Base,false,,Blaine's Vulpix
+base,67,Base,false,,Brock's Diglett
+base,68,Base,false,,Brock's Geodude
+base,69,Base,false,,Erika's Jigglypuff
+base,70,Base,false,,Erika's Oddish
+base,71,Base,false,,Erika's Paras
+base,72,Base,false,,Giovanni's Machop
+base,73,Base,false,,Giovanni's Magikarp
+base,74,Base,false,,Giovanni's Meowth
+base,75,Base,false,,Giovanni's Nidoran♀
+base,76,Base,false,,Giovanni's Nidoran♂
+base,77,Base,false,,Koga's Ekans
+base,78,Base,false,,Koga's Grimer
+base,79,Base,false,,Koga's Koffing
+base,80,Base,false,,Koga's Pidgey
+base,81,Base,false,,Koga's Tangela
+base,82,Base,false,,Koga's Weedle
+base,83,Base,false,,Koga's Zubat
+base,84,Base,false,,Lt. Surge's Pikachu
+base,85,Base,false,,Lt. Surge's Rattata
+base,86,Base,false,,Lt. Surge's Voltorb
+base,87,Base,false,,Misty's Horsea
+base,88,Base,false,,Misty's Magikarp
+base,89,Base,false,,Misty's Poliwag
+base,90,Base,false,,Misty's Psyduck
+base,91,Base,false,,Misty's Seel
+base,92,Base,false,,Misty's Staryu
+base,93,Base,false,,Sabrina's Abra
+base,94,Base,false,,Sabrina's Abra
+base,95,Base,false,,Sabrina's Drowzee
+base,96,Base,false,,Sabrina's Gastly
+base,97,Base,false,,Sabrina's Gastly
+base,98,Base,false,,Sabrina's Porygon
+base,99,Base,false,,Sabrina's Psyduck
+base,100,Base,false,,Blaine
+base,101,Base,false,,Brock's Protection
+base,102,Base,false,,Chaos Gym
+base,103,Base,false,,Erika's Kindness
+base,104,Base,false,,Giovanni
+base,105,Base,false,,Giovanni's Last Resort
+base,106,Base,false,,Koga
+base,107,Base,false,,Lt. Surge's Secret Plan
+base,108,Base,false,,Misty's Wish
+base,109,Base,false,,Resistance Gym
+base,110,Base,false,,Sabrina
+base,111,Base,false,,Blaine's Quiz #2
+base,112,Base,false,,Blaine's Quiz #3
+base,113,Base,false,,Cinnabar City Gym
+base,114,Base,false,,Fuchsia City Gym
+base,115,Base,false,,Koga's Ninja Trick
+base,116,Base,false,,Master Ball
+base,117,Base,false,,Max Revive
+base,118,Base,false,,Misty's Tears
+base,119,Base,false,,Rocket's Minefield Gym
+base,120,Base,false,,Rocket's Secret Experiment
+base,121,Base,false,,Sabrina's Psychic Control
+base,122,Base,false,,Saffron City Gym
+base,123,Base,false,,Viridian City Gym
+base,124,Base,false,,Fervor
+base,125,Base,false,,Transparent Walls
+base,126,Base,false,,Warp Point
+base,127,Base,false,,Fighting Energy
+base,128,Base,false,,Fire Energy
+base,129,Base,false,,Grass Energy
+base,130,Base,false,,Lightning Energy
+base,131,Base,false,,Psychic Energy
+base,132,Base,false,,Water Energy

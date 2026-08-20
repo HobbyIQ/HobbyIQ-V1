@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.518Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/cel25cc",
+ "sport": "pokemon",
+ "year": 2021,
+ "setName": "Celebrations Classic Collection",
+ "productKey": "2021-cel25cc",
+ "setKey": "cel25cc",
+ "rowCount": 25,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Celebrations Classic Collection",
+   "category": "base",
+   "playerCount": 25,
+   "printRun": null
+  }
+ ]
+}

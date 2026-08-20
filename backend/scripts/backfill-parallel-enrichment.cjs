@@ -1,4 +1,49 @@
 #!/usr/bin/env node
+//
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │ DISARMED 2026-08-20. DO NOT RUN WITH BACKFILL_APPLY=true.                │
+// └──────────────────────────────────────────────────────────────────────────┘
+//
+// CF-DISARM-PARALLEL-ENRICHMENT. This script re-derives the WHOLE slug through
+// computeHobbyIqCardId, not just the parallel segment its name advertises. Its
+// dry run on 2026-08-19 was caught pushing
+//
+//     hiq:baseball:2026:bowman:cpa-eha:...   ->   ...:bowman-chrome:cpa-eha:...
+//
+// which would have re-split the CPA- pool that had just been merged hours
+// earlier — the very split that priced a gold CPA-MG auto at $6.90 against $187
+// paid. A full re-derive is only as good as the vendor title, and vendor titles
+// routinely omit a setKey or parallel the existing slug already had right.
+//
+// It also earns almost nothing now. Re-running it over 20,000 candidate rows
+// improved 6, because the 2026-07-30 pass already harvested what the parser can
+// see. The remaining "base with a colour in the title" rows are not recoverable
+// from text: the parallel is absent at the SOURCE (identical generic titles
+// across a $1.25-$725 spread), which is why the colour work moved to the image
+// path.
+//
+// Left in the tree rather than deleted because the dry-run output is useful
+// evidence and the measurement above should not have to be redone. If parallel
+// enrichment is wanted again, it must patch ONLY the parallel segment and carry
+// every other segment across untouched — the shape reslug-setkey-segment uses.
+//
+// The guard below refuses to write. Removing it is a decision, not an accident.
+if (process.env.BACKFILL_APPLY === "true" && process.env.I_HAVE_READ_CF_DISARM !== "yes") {
+  console.error([
+    "",
+    "REFUSING TO RUN: backfill-parallel-enrichment is disarmed.",
+    "",
+    "It re-derives the ENTIRE slug, not just the parallel, and was caught in dry",
+    "run pushing bowman:cpa-eha back to bowman-chrome:cpa-eha — re-splitting a",
+    "pool merged hours earlier. It also improved only 6 rows in 20,000.",
+    "",
+    "If you truly intend this, read the header, then set:",
+    "  I_HAVE_READ_CF_DISARM=yes",
+    "",
+  ].join("\n"));
+  process.exit(1);
+}
+//
 // CF-BACKFILL-PARALLEL-ENRICHMENT (Drew, 2026-07-30). 56,510 rows have
 // parallel="Base" but title mentions a color word ("gold", "red",
 // "orange", "purple", "pink"). Re-run extractParallel via

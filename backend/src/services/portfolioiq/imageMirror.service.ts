@@ -38,6 +38,35 @@ const ACCOUNT_URL = `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net`;
 const MAX_BYTES = 8 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 15_000;
 
+// CF-MIRROR-UPLOAD-RETRY (Drew, 2026-08-13: "do it upgrade me").
+//
+// The premise going in was that mirroring was denied account-wide and needed a
+// permission upgrade. It isn't, and it doesn't. Measured 2026-08-13 against
+// prod: Storage Blob Data Contributor has been on `card-images` since
+// 2026-05-20, the App Service has one system-assigned identity (no
+// DefaultAzureCredential ambiguity), the account's network default is Allow,
+// and 19,570 of 20,000 sampled attempts (97.9%) SUCCEEDED — with fresh blobs
+// landing under vendor-mirror/2026/08/13/ while the failures all carried a
+// mirroredAt days old. Nothing was upgraded because nothing was misconfigured.
+//
+// What's real: those 2.1% are transient 403s
+// ("This request is not authorized to perform this operation using this
+// permission" — AuthorizationPermissionMismatch), and the upload was a SINGLE
+// attempt. mirrorVendorImage has exactly one caller (persistVendorSalesToPool,
+// at ingest) and nothing anywhere re-mirrors a row, so one blip cost that sale
+// its image permanently — the row keeps a stale mirrorError forever.
+//
+// Retrying is safe because the upload is already idempotent by construction:
+// the blob name is content-hash + stagingId and Azure overwrites by default,
+// so a retry rewrites identical bytes to the identical path.
+//
+// Deliberately NOT classifying which errors are retryable. A 403 reads as
+// permanent and empirically was not — that misread is what made this a silent
+// data-loss path. Bounded attempts with short backoff cost ~1.25s on a row
+// that is genuinely unwritable, which is cheaper than being wrong again.
+const UPLOAD_ATTEMPTS = 3;
+const UPLOAD_BACKOFF_MS = [250, 1000];
+
 const ALLOWED_CONTENT_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -147,35 +176,54 @@ export async function mirrorVendorImage(
   const ext = EXT_BY_CONTENT_TYPE[contentType] ?? "jpg";
   const blobName = `${PATH_PREFIX}/${todayPathSegments()}/${contentHash.slice(0, 8)}-${stagingId}.${ext}`;
 
-  // Upload
-  try {
-    const svc = getBlobService();
-    const container = svc.getContainerClient(CONTAINER_NAME);
-    const blob = container.getBlockBlobClient(blobName);
-    // If the same content-hash+stagingId ever collides, that's fine —
-    // Azure blob upload will overwrite by default and the bytes are
-    // identical (idempotent).
-    await blob.uploadData(bytes, {
-      blobHTTPHeaders: { blobContentType: contentType },
-      metadata: {
-        stagingId,
-        vendorUrl: vendorImageUrl.length <= 2048 ? vendorImageUrl : vendorImageUrl.slice(0, 2048),
-        contentHash,
-      },
-    });
-    return {
-      ok: true,
-      image: {
-        blobUrl: blob.url,
-        contentHash,
-        size: bytes.length,
-        contentType,
-        blobName,
-        originalUrl: vendorImageUrl,
-        mirroredAt: new Date().toISOString(),
-      },
-    };
-  } catch (err) {
-    return { ok: false, reason: "write-failed", detail: (err as Error)?.message ?? String(err), originalUrl: vendorImageUrl };
+  // Upload — bounded retry, see CF-MIRROR-UPLOAD-RETRY.
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= UPLOAD_ATTEMPTS; attempt++) {
+    try {
+      const svc = getBlobService();
+      const container = svc.getContainerClient(CONTAINER_NAME);
+      const blob = container.getBlockBlobClient(blobName);
+      // If the same content-hash+stagingId ever collides, that's fine —
+      // Azure blob upload will overwrite by default and the bytes are
+      // identical (idempotent). That property is also what makes the
+      // retry above safe.
+      await blob.uploadData(bytes, {
+        blobHTTPHeaders: { blobContentType: contentType },
+        metadata: {
+          stagingId,
+          vendorUrl: vendorImageUrl.length <= 2048 ? vendorImageUrl : vendorImageUrl.slice(0, 2048),
+          contentHash,
+        },
+      });
+      return {
+        ok: true,
+        image: {
+          blobUrl: blob.url,
+          contentHash,
+          size: bytes.length,
+          contentType,
+          blobName,
+          originalUrl: vendorImageUrl,
+          mirroredAt: new Date().toISOString(),
+        },
+      };
+    } catch (err) {
+      lastErr = err;
+      const backoff = UPLOAD_BACKOFF_MS[attempt - 1];
+      if (attempt < UPLOAD_ATTEMPTS && backoff !== undefined) {
+        await new Promise((r) => setTimeout(r, backoff));
+      }
+    }
   }
+
+  // Record the attempt count: a row that failed 3× is a different problem from
+  // one that failed once, and without this the two are indistinguishable in
+  // the staging data — which is how the account-wide theory survived so long.
+  const detail = (lastErr as Error)?.message ?? String(lastErr);
+  return {
+    ok: false,
+    reason: "write-failed",
+    detail: `[${UPLOAD_ATTEMPTS} attempts] ${detail}`,
+    originalUrl: vendorImageUrl,
+  };
 }

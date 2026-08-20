@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.209Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/A3",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Celestial Guardians",
+ "productKey": "2025-a3",
+ "setKey": "a3",
+ "rowCount": 239,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Celestial Guardians",
+   "category": "base",
+   "playerCount": 239,
+   "printRun": null
+  }
+ ]
+}

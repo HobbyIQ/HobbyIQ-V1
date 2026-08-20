@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv07",
+ "setId": "sv07",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 82,
+  "normal": 116,
+  "official": 142,
+  "reverse": 125,
+  "total": 175
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

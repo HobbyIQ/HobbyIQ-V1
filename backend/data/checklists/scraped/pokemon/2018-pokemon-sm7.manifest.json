@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.412Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm7",
+ "sport": "pokemon",
+ "year": 2018,
+ "setName": "Celestial Storm",
+ "productKey": "2018-sm7",
+ "setKey": "sm7",
+ "rowCount": 183,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Celestial Storm",
+   "category": "base",
+   "playerCount": 183,
+   "printRun": null
+  }
+ ]
+}

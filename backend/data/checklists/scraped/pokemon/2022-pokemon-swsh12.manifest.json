@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:12.011Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh12",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Silver Tempest",
+ "productKey": "2022-swsh12",
+ "setKey": "swsh12",
+ "rowCount": 215,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Silver Tempest",
+   "category": "base",
+   "playerCount": 215,
+   "printRun": null
+  }
+ ]
+}

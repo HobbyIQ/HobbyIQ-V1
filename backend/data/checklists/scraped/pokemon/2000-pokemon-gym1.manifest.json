@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.171Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/gym1",
+ "sport": "pokemon",
+ "year": 2000,
+ "setName": "Gym Heroes",
+ "productKey": "2000-gym1",
+ "setKey": "gym1",
+ "rowCount": 132,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Gym Heroes",
+   "category": "base",
+   "playerCount": 132,
+   "printRun": null
+  }
+ ]
+}

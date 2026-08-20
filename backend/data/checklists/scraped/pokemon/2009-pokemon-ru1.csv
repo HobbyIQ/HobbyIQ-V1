@@ -1,0 +1,17 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Venusaur
+base,2,Base,false,,Cherrim
+base,3,Base,false,,Ninetales
+base,4,Base,false,,Heatran
+base,5,Base,false,,Starmie
+base,6,Base,false,,Gyarados
+base,7,Base,false,,Pikachu
+base,8,Base,false,,Zapdos
+base,9,Base,false,,Mewtwo
+base,10,Base,false,,Mew
+base,11,Base,false,,Diglett
+base,12,Base,false,,Lucario
+base,13,Base,false,,Skuntank
+base,14,Base,false,,Bastiodon
+base,15,Base,false,,Rattata
+base,16,Base,false,,Bibarel

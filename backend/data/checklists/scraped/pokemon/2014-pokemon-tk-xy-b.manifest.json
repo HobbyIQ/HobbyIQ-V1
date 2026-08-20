@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.143Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-xy-b",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "XY trainer Kit (Bisharp)",
+ "productKey": "2014-tk-xy-b",
+ "setKey": "tk-xy-b",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY trainer Kit (Bisharp)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

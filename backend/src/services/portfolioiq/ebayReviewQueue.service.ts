@@ -283,6 +283,50 @@ export async function confirmHoldingReview(
   // Edit modal separately. The suggester's auto-applied cardId still
   // gets flagged with cardIdAutoAppliedFromSuggestion so downstream
   // can distinguish user-picked vs suggester-picked cardIds.
+  // CF-CONFIRM-MATCHES-CATALOG (Drew, 2026-08-13: "I approved these and looked
+  // matched but still says unverified and missing").
+  //
+  // Everything below — identityVerified, the catalog cross-reference, and the
+  // reprice back in the route — is gated on cardId ALREADY existing. Confirm
+  // never attempted a match itself. So approving a holding that was imported
+  // before match-at-ingest existed flipped cardStatus to active and did nothing
+  // visible: it stayed UNVERIFIED, stayed MISSING, and showed no value, which
+  // reads as the approval having failed.
+  //
+  // Approval is the user telling us the identity fields are right, so it is
+  // exactly the moment to look the card up. Same strict matcher and same >= 0.9
+  // pin gate as the ingest path — approval affirms the FIELDS, it does not make
+  // a weak catalog match trustworthy, and pinning the wrong card here would
+  // price the holding wrongly while looking confirmed.
+  if (!(holding as any).cardId) {
+    try {
+      const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+      const h = holding as Record<string, unknown>;
+      const match = await canonicalize({
+        sport: String(h.sport ?? "baseball"),
+        year: typeof h.cardYear === "number" ? h.cardYear : null,
+        setName: String(h.setName ?? h.product ?? ""),
+        cardNumber: String(h.cardNumber ?? ""),
+        parallel: String(h.parallel ?? "") || null,
+        isAuto: Boolean(h.isAuto),
+        playerName: String(h.playerName ?? ""),
+        source: "user-verified",
+      } as never);
+      if (match) {
+        h.catalogMatchConfidence = match.confidence;
+        h.catalogMatchedBy = match.matchedBy ?? null;
+        h.catalogMatchSlug = match.slug ?? null;
+        if (match.found && match.slug && match.confidence >= 0.9) {
+          h.cardId = match.slug;
+          h.cardIdSetOnConfirm = true;
+        }
+      }
+    } catch {
+      // Never fail an approval because the matcher was unavailable — the
+      // holding still activates, just without an identity link.
+    }
+  }
+
   if ((holding as any).cardId) {
     (holding as any).identityVerified = true;
     (holding as any).identityVerifiedAt = new Date().toISOString();

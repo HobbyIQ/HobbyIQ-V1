@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/svp",
+ "setId": "svp",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 280,
+  "normal": 48,
+  "official": 225,
+  "reverse": 1,
+  "total": 226
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

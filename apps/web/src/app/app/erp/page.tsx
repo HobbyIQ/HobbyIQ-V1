@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchErpSummary, type ErpSummaryResponse, type ErpTopMover } from "@/lib/api";
+import { fetchErpSummary, fetchErpPnl, type ErpSummaryResponse } from "@/lib/api";
+import { FinancialDashboard } from "@/components/FinancialDashboard";
 import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 
 export default function ErpPage() {
   const [data, setData] = useState<ErpSummaryResponse | null>(null);
+  // CF-ERP-RUN-YOUR-BUSINESS (Drew, 2026-08-16: "This page needs to help
+  // people run their business. It isn't a good dashboard."). The snapshot
+  // endpoint knows nothing about unreconciled sales, but that backlog is the
+  // single most actionable number here — those sales are missing from P&L and
+  // tax exports until someone fills in what they cost. Fetched separately and
+  // best-effort: if it fails the page still renders everything else.
+  const [unreconciled, setUnreconciled] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [gate, setGate] = useState<"none" | "upsell" | "error">("none");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    fetchErpPnl({ groupBy: "month" })
+      .then((p) => { if (!cancelled) setUnreconciled(p.excluded?.unreconciledCount ?? 0); })
+      .catch(() => { /* best-effort — the action list just omits this row */ });
     fetchErpSummary()
       .then((res) => {
         if (cancelled) return;
@@ -49,7 +60,7 @@ export default function ErpPage() {
   if (gate === "error" || !data) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
         <div className="hiq-card p-6 mt-6 text-sm" style={{ color: "var(--color-danger)" }}>
           {error ?? "Failed to load."}
         </div>
@@ -67,27 +78,54 @@ export default function ErpPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Financial Dashboard</h1>
-        <p className="text-sm text-[color:var(--color-muted)]">
-          Portfolio-wide P&amp;L, position, and movement. Snapshot as of{" "}
-          {data.asOf.slice(0, 10)}.
-        </p>
-      </div>
+      {/* CF-ONE-BUSINESS-PAGE (Drew, 2026-08-16: "put the financial dashboard
+          on financials are the first screen then put the positions and
+          holdings on the same page under the sales portion").
+          Money first, because that is the question an owner opens the page
+          with. Position follows the sales table rather than competing with it
+          — what you are holding only means something once you know what the
+          business is doing. */}
+      <FinancialDashboard />
+
+      <div className="mt-12 pt-8 border-t" style={{ borderColor: "var(--color-border)" }}>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-1">Position &amp; Holdings</h1>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            What you hold and what it is worth right now. Snapshot as of{" "}
+            {data.asOf.slice(0, 10)}.
+          </p>
+        </div>
+
+      {/* CF-ERP-RUN-YOUR-BUSINESS (Drew, 2026-08-16: "This page needs to help
+          people run their business. It isn't a good dashboard.").
+          A dashboard that only reports state makes you work out what to do
+          from it. Everything below was already on the page as a passive
+          number — cards with no comps sat in a pill, unreconciled sales sat
+          behind a link with no count — so an owner had to know which figures
+          were problems and what each one implied. This block says it: what is
+          wrong, why it costs you, and where to fix it. It renders only rows
+          that actually apply, and says so when none do. */}
+      <ActionList
+        missing={data.totals.missingCount}
+        stale={data.totals.staleCount}
+        estimated={data.totals.estimatedCount}
+        unreconciled={unreconciled}
+      />
 
       {/* Top numbers */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <BigStat
-          label="Snapshot value"
+          label="Comp value"
           value={formatUSD(data.totals.snapshotValue, { hideCents: true })}
-          sub={`${data.totals.holdingCount} cards`}
+          sub={`${data.totals.holdingCount} cards · what comps say today`}
         />
         <BigStat
-          label="Total paid"
+          label="All-in cost"
           value={formatUSD(data.totals.costBasis, { hideCents: true })}
+          sub="what you have into them"
         />
         <BigStat
-          label="Unrealized P&L"
+          label="Up on paper"
           value={formatUSDCompact(data.totals.unrealizedGainLoss)}
           color={
             data.totals.unrealizedGainLoss > 0
@@ -96,12 +134,12 @@ export default function ErpPage() {
               ? "var(--color-danger)"
               : undefined
           }
-          sub={formatPct(data.totals.unrealizedPct)}
+          sub={`${formatPct(data.totals.unrealizedPct)} — not real until you sell`}
         />
         <BigStat
-          label="Full position"
+          label="Total profit"
           value={formatUSDCompact(data.fullPosition.total)}
-          sub={`realized ${formatUSDCompact(data.fullPosition.realizedYtd)} YTD`}
+          sub={`incl. ${formatUSDCompact(data.fullPosition.realizedYtd)} already flipped this year`}
         />
       </div>
 
@@ -109,8 +147,17 @@ export default function ErpPage() {
       {change && (
         <div className="hiq-card p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
           <div>
+            {/* CF-30D-IS-NOT-PERFORMANCE (Drew, 2026-08-16). The dashboard
+                showed "30-day change +141.8%" directly beside "unrealized P&L
+                +4.3%" on the same portfolio. Both were right and the pair was
+                nonsense: this figure is the difference between two SNAPSHOT
+                TOTALS, so adding cards to the portfolio moves it exactly like
+                the cards appreciating does. On a portfolio that grew from a
+                handful of tracked cards to 29, it mostly measured cards ADDED.
+                Labelling it honestly costs nothing and stops it being read as
+                performance. Real performance lives on /app/erp/finance. */}
             <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium">
-              30-day change
+              Tracked value, last 30 days
             </div>
             <div className="text-2xl font-bold tabular-nums mt-1" style={changeColor ? { color: changeColor } : undefined}>
               {formatUSDCompact(change.absolute)}
@@ -131,34 +178,48 @@ export default function ErpPage() {
               Limited history — under 30 days
             </span>
           )}
-          <div className="text-xs text-[color:var(--color-muted)]">
-            baseline {change.asOfDate.slice(0, 10)}
+          <Link
+            href="/app/erp/finance"
+            className="text-sm font-medium px-3 py-2 rounded-lg whitespace-nowrap"
+            style={{
+              background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
+              color: "var(--color-accent)",
+              border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)",
+            }}
+            title="Revenue, COGS, fees, operating expenses and true net — by year and month"
+          >
+            Financial Dashboard →
+          </Link>
+          <div className="text-xs text-[color:var(--color-muted)] basis-full">
+            Counts cards you <em>added</em> as well as prices going up, so it can
+            jump when you add to the collection. For money actually made, see the
+            Financial Dashboard. Compared against {change.asOfDate.slice(0, 10)}
           </div>
         </div>
       )}
 
-      {/* Top movers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <MoversCard title="Top gainers" movers={data.topGainers} tint="var(--color-success)" />
-        <MoversCard title="Top losers" movers={data.topLosers} tint="var(--color-danger)" />
-      </div>
-
+      {/* CF-MOVERS-LIVE-IN-INVENTORY (Drew, 2026-08-16: "top gainers and top
+          losers can go. that is easy in the inventory tab"). Removed rather
+          than moved — the inventory list already sorts by change, so this was
+          a second, smaller copy of a view that exists in a better form, taking
+          up the space where the business numbers belong. */}
       {/* Health */}
       <div className="hiq-card p-5 mb-6">
-        <h2 className="font-bold text-lg mb-3">Data health</h2>
+        <h2 className="font-bold text-lg mb-1 text-center">Comp freshness</h2>
+        <p className="text-sm text-[color:var(--color-muted)] mb-3 text-center">How recently we saw a real sale for each card. Click a number to see them.</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-          <HealthPill label="Fresh" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
-          <HealthPill label="Stale" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
-          <HealthPill label="Estimated" n={data.totals.estimatedCount} filter="estimated" />
-          <HealthPill label="Pending" n={data.totals.pendingCount} filter="pending" />
-          <HealthPill label="Missing" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
+          <HealthPill label="Fresh comps" n={data.totals.freshCount} color="var(--color-success)" filter="fresh" />
+          <HealthPill label="Stale comps" n={data.totals.staleCount} color="var(--color-accent)" filter="stale" />
+          <HealthPill label="No direct comps" n={data.totals.estimatedCount} filter="estimated" />
+          <HealthPill label="Still checking" n={data.totals.pendingCount} filter="pending" />
+          <HealthPill label="No comps" n={data.totals.missingCount} color="var(--color-danger)" filter="missing" />
         </div>
         {(data.totals.staleCount > 0 || data.totals.missingCount > 0) && (
           <p className="text-xs text-[color:var(--color-muted)] mt-3">
-            Click <strong>Missing</strong> to see cards with no FMV (usually
-            insufficient identity — pick a real card in Edit, or run Refresh
-            price). <strong>Stale</strong> = FMV over 72h old. <strong>Estimated</strong> =
-            engine gave a ballpark, not a real comp match.
+            <strong>No comps</strong> usually means we could not tell which exact card
+            you have — open it and pick the right one.{" "}
+            <strong>No direct comps</strong> means we priced it off similar cards
+            instead of real sales of that exact card, so treat it as a ballpark.
           </p>
         )}
       </div>
@@ -166,7 +227,7 @@ export default function ErpPage() {
       {/* Trend chart */}
       {data.valueTrend30d.length > 1 && (
         <div className="hiq-card p-5 mb-6">
-          <h2 className="font-bold text-lg mb-3">Value trend</h2>
+          <h2 className="font-bold text-lg mb-3 text-center">Value trend</h2>
           <TrendChart points={data.valueTrend30d} />
         </div>
       )}
@@ -227,61 +288,98 @@ export default function ErpPage() {
       {/* CF-UX-CLEANUP (Drew, 2026-07-27): "Tip — sold history" filler
           link removed. Sold history is now a first-class sidebar entry
           so the tip pointer is redundant. */}
+      </div>
     </div>
   );
 }
 
 function BigStat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="hiq-card p-4">
-      <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
+    <div className="hiq-card p-3 text-center">
+      <div className="text-[11px] uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-1">
         {label}
       </div>
-      <div className="text-2xl font-bold tabular-nums" style={color ? { color } : undefined}>
+      <div className="text-xl font-bold tabular-nums" style={color ? { color } : undefined}>
         {value}
       </div>
-      {sub && <div className="text-xs text-[color:var(--color-muted)] mt-1 tabular-nums">{sub}</div>}
+      {sub && <div className="text-[11px] text-[color:var(--color-muted)] mt-1 leading-tight">{sub}</div>}
     </div>
   );
 }
 
-function MoversCard({ title, movers, tint }: { title: string; movers: ErpTopMover[]; tint: string }) {
+function ActionList({ missing, stale, estimated, unreconciled }: {
+  missing: number; stale: number; estimated: number; unreconciled: number | null;
+}) {
+  const items: Array<{ n: number; title: string; why: string; href: string; urgent?: boolean }> = [];
+  if (unreconciled && unreconciled > 0) {
+    items.push({
+      n: unreconciled,
+      title: unreconciled === 1 ? "sale is missing what you paid" : "sales are missing what you paid",
+      why: "They are left out of your profit and your tax export until you fill it in.",
+      href: "/app/erp/unreconciled",
+      urgent: true,
+    });
+  }
+  if (missing > 0) {
+    items.push({
+      n: missing,
+      title: missing === 1 ? "card has no comps" : "cards have no comps",
+      why: "We could not tell which exact card it is, so it counts as $0 in your totals.",
+      href: "/app/portfolio?filter=missing",
+      urgent: true,
+    });
+  }
+  if (estimated > 0) {
+    items.push({
+      n: estimated,
+      title: estimated === 1 ? "card is priced off similar cards" : "cards are priced off similar cards",
+      why: "Ballpark only — no real sale of that exact card yet.",
+      href: "/app/portfolio?filter=estimated",
+    });
+  }
+  if (stale > 0) {
+    items.push({
+      n: stale,
+      title: stale === 1 ? "price is over 3 days old" : "prices are over 3 days old",
+      why: "Refresh before you list or quote off these.",
+      href: "/app/portfolio?filter=stale",
+    });
+  }
+
   return (
-    <div className="hiq-card p-5">
-      <h2 className="font-bold text-lg mb-3">{title}</h2>
-      {movers.length === 0 ? (
-        <p className="text-sm text-[color:var(--color-muted)]">No priced holdings yet.</p>
+    <div className="hiq-card p-5 mb-6">
+      <h2 className="font-bold text-lg mb-1 text-center">Needs your attention</h2>
+      {items.length === 0 ? (
+        <p className="text-sm text-[color:var(--color-muted)]">
+          Nothing to fix — every card is priced and every sale has its costs in.
+        </p>
       ) : (
-        <div className="space-y-2">
-          {movers.map((m) => (
-            <Link
-              key={m.holdingId}
-              href={`/app/portfolio/${encodeURIComponent(m.holdingId)}`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="text-sm truncate">{m.title}</div>
-                <div className="text-xs text-[color:var(--color-muted)] truncate">{m.playerName}</div>
-              </div>
-              <div className="text-right flex-shrink-0 ml-3">
-                <div className="text-sm font-medium tabular-nums" style={{ color: tint }}>
-                  {formatUSDCompact(m.unrealizedGainLoss)}
-                </div>
-                <div className="text-xs tabular-nums" style={{ color: tint }}>
-                  {formatPct(m.unrealizedPct)}
-                </div>
-              </div>
-            </Link>
+        <ul className="mt-2 space-y-2">
+          {items.map((it) => (
+            <li key={it.href}>
+              <Link
+                href={it.href}
+                className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.03] transition-colors"
+              >
+                <span
+                  className="text-xl font-bold tabular-nums shrink-0 min-w-[2.5rem] text-right"
+                  style={{ color: it.urgent ? "var(--color-danger)" : "var(--color-accent)" }}
+                >
+                  {it.n}
+                </span>
+                <span className="min-w-0">
+                  <span className="font-medium block">{it.title}</span>
+                  <span className="text-sm text-[color:var(--color-muted)]">{it.why}</span>
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
 }
 
-// CF-DATA-HEALTH-DRILLDOWN (Drew, 2026-07-27): each pill deep-links into
-// /app/portfolio?filter=<label>. Zero-count pills stay static (no filter
-// gets applied to an empty set — clicking would just show "no matches").
 function HealthPill({
   label,
   n,

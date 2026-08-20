@@ -1,0 +1,133 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Blaine's Moltres
+base,2,Base,false,,Brock's Rhydon
+base,3,Base,false,,Erika's Clefable
+base,4,Base,false,,Erika's Dragonair
+base,5,Base,false,,Erika's Vileplume
+base,6,Base,false,,Lt. Surge's Electabuzz
+base,7,Base,false,,Lt. Surge's Fearow
+base,8,Base,false,,Lt. Surge's Magneton
+base,9,Base,false,,Misty's Seadra
+base,10,Base,false,,Misty's Tentacruel
+base,11,Base,false,,Rocket's Hitmonchan
+base,12,Base,false,,Rocket's Moltres
+base,13,Base,false,,Rocket's Scyther
+base,14,Base,false,,Sabrina's Gengar
+base,15,Base,false,,Brock
+base,16,Base,false,,Erika
+base,17,Base,false,,Lt. Surge
+base,18,Base,false,,Misty
+base,19,Base,false,,The Rocket's Trap
+base,20,Base,false,,Brock's Golem
+base,21,Base,false,,Brock's Onix
+base,22,Base,false,,Brock's Rhyhorn
+base,23,Base,false,,Brock's Sandslash
+base,24,Base,false,,Brock's Zubat
+base,25,Base,false,,Erika's Clefairy
+base,26,Base,false,,Erika's Victreebel
+base,27,Base,false,,Lt. Surge's Electabuzz
+base,28,Base,false,,Lt. Surge's Raichu
+base,29,Base,false,,Misty's Cloyster
+base,30,Base,false,,Misty's Goldeen
+base,31,Base,false,,Misty's Poliwrath
+base,32,Base,false,,Misty's Tentacool
+base,33,Base,false,,Rocket's Snorlax
+base,34,Base,false,,Sabrina's Venomoth
+base,35,Base,false,,Blaine's Growlithe
+base,36,Base,false,,Blaine's Kangaskhan
+base,37,Base,false,,Blaine's Magmar
+base,38,Base,false,,Brock's Geodude
+base,39,Base,false,,Brock's Golbat
+base,40,Base,false,,Brock's Graveler
+base,41,Base,false,,Brock's Lickitung
+base,42,Base,false,,Erika's Dratini
+base,43,Base,false,,Erika's Exeggcute
+base,44,Base,false,,Erika's Exeggutor
+base,45,Base,false,,Erika's Gloom
+base,46,Base,false,,Erika's Gloom
+base,47,Base,false,,Erika's Oddish
+base,48,Base,false,,Erika's Weepinbell
+base,49,Base,false,,Erika's Weepinbell
+base,50,Base,false,,Lt. Surge's Magnemite
+base,51,Base,false,,Lt. Surge's Raticate
+base,52,Base,false,,Lt. Surge's Spearow
+base,53,Base,false,,Misty's Poliwhirl
+base,54,Base,false,,Misty's Psyduck
+base,55,Base,false,,Misty's Seaking
+base,56,Base,false,,Misty's Starmie
+base,57,Base,false,,Misty's Tentacool
+base,58,Base,false,,Sabrina's Haunter
+base,59,Base,false,,Sabrina's Jynx
+base,60,Base,false,,Sabrina's Slowbro
+base,61,Base,false,,Blaine's Charmander
+base,62,Base,false,,Blaine's Growlithe
+base,63,Base,false,,Blaine's Ponyta
+base,64,Base,false,,Blaine's Tauros
+base,65,Base,false,,Blaine's Vulpix
+base,66,Base,false,,Brock's Geodude
+base,67,Base,false,,Brock's Mankey
+base,68,Base,false,,Brock's Mankey
+base,69,Base,false,,Brock's Onix
+base,70,Base,false,,Brock's Rhyhorn
+base,71,Base,false,,Brock's Sandshrew
+base,72,Base,false,,Brock's Sandshrew
+base,73,Base,false,,Brock's Vulpix
+base,74,Base,false,,Brock's Zubat
+base,75,Base,false,,Erika's Bellsprout
+base,76,Base,false,,Erika's Bellsprout
+base,77,Base,false,,Erika's Exeggcute
+base,78,Base,false,,Erika's Oddish
+base,79,Base,false,,Erika's Tangela
+base,80,Base,false,,Lt. Surge's Magnemite
+base,81,Base,false,,Lt. Surge's Pikachu
+base,82,Base,false,,Lt. Surge's Rattata
+base,83,Base,false,,Lt. Surge's Spearow
+base,84,Base,false,,Lt. Surge's Voltorb
+base,85,Base,false,,Misty's Goldeen
+base,86,Base,false,,Misty's Horsea
+base,87,Base,false,,Misty's Poliwag
+base,88,Base,false,,Misty's Seel
+base,89,Base,false,,Misty's Shellder
+base,90,Base,false,,Misty's Staryu
+base,91,Base,false,,Sabrina's Abra
+base,92,Base,false,,Sabrina's Drowzee
+base,93,Base,false,,Sabrina's Gastly
+base,94,Base,false,,Sabrina's Mr. Mime
+base,95,Base,false,,Sabrina's Slowpoke
+base,96,Base,false,,Sabrina's Venonat
+base,97,Base,false,,Blaine's Quiz #1
+base,98,Base,false,,Brock
+base,99,Base,false,,Charity
+base,100,Base,false,,Erika
+base,101,Base,false,,Lt. Surge
+base,102,Base,false,,Misty
+base,103,Base,false,,No Removal Gym
+base,104,Base,false,,The Rocket's Training Gym
+base,105,Base,false,,Blaine's Last Resort
+base,106,Base,false,,Brock's Training Method
+base,107,Base,false,,Celadon City Gym
+base,108,Base,false,,Cerulean City Gym
+base,109,Base,false,,Erika's Maids
+base,110,Base,false,,Erika's Perfume
+base,111,Base,false,,Good Manners
+base,112,Base,false,,Lt. Surge's Treaty
+base,113,Base,false,,Minion of Team Rocket
+base,114,Base,false,,Misty's Wrath
+base,115,Base,false,,Pewter City Gym
+base,116,Base,false,,Recall
+base,117,Base,false,,Sabrina's ESP
+base,118,Base,false,,Secret Mission
+base,119,Base,false,,Tickling Machine
+base,120,Base,false,,Vermilion City Gym
+base,121,Base,false,,Blaine's Gamble
+base,122,Base,false,,Energy Flow
+base,123,Base,false,,Misty's Duel
+base,124,Base,false,,Narrow Gym
+base,125,Base,false,,Sabrina's Gaze
+base,126,Base,false,,Trash Exchange
+base,127,Base,false,,Fighting Energy
+base,128,Base,false,,Fire Energy
+base,129,Base,false,,Grass Energy
+base,130,Base,false,,Lightning Energy
+base,131,Base,false,,Psychic Energy
+base,132,Base,false,,Water Energy

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.261Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo1",
+ "sport": "pokemon",
+ "year": 2000,
+ "setName": "Neo Genesis",
+ "productKey": "2000-neo1",
+ "setKey": "neo1",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Neo Genesis",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

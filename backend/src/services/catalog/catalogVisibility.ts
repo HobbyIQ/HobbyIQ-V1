@@ -33,8 +33,58 @@
  *  silently stop matching on the next sweep. */
 const PROVISIONAL_SOURCE_PREFIXES = ["sold-comps-stub-"] as const;
 
-/** Dead sources. Not provisional — actively harmful, pending retire scripts. */
-const EXCLUDED_SOURCES = new Set(["sales-derived", "tree-builder-v1"]);
+/** Dead sources. Not provisional — actively harmful, pending retire scripts.
+ *
+ *  CF-RETIRE-CARDHEDGE-ROWS (Drew, 2026-08-13: "clean up cardhege please that
+ *  is the problem").
+ *
+ *  CardHedge is switched off at runtime (CH_RUNTIME_DISABLED=true) but its rows
+ *  stayed in card_catalog and kept surfacing as if they were cards we own:
+ *
+ *    - search returned four `cardhedge::` rows above the real card, every one
+ *      with comps=0, because sales hang off the canonical slug not the vendor's
+ *      copy of it (CF-SEARCH-CHECKLIST-IS-THE-INDEX)
+ *    - the review picker offered vendor bubble.io ids as the options to accept
+ *      (1606922959335x293409091214639100), so approving one pinned a holding to
+ *      a vendor row
+ *    - the matcher's fuzzy-parallel step resolved 2020 Bowman #BD152 to a
+ *      cardhedge:: slug
+ *
+ *  Excluding by SOURCE — not deleting. sold_comps rows still reference vendor
+ *  cardIds, and deleting the catalog rows would orphan real sales with no way
+ *  back. This makes them invisible to search, suggestions and the verified
+ *  tier while leaving the data intact and the change reversible by removing
+ *  two strings.
+ */
+/**
+ * DELIBERATELY NARROWER THAN catalogAuthority's `isDerived` — do not "unify"
+ * them (checked 2026-08-20).
+ *
+ * Three different questions get asked about a source, and they have three
+ * different answers for the same string:
+ *
+ *   catalogAuthorityOf   may this row DECIDE a fact?    cardhedge -> vendor
+ *   isDerived            did WE generate this row?      cardhedge -> false
+ *   EXCLUDED_SOURCES     may a USER SEE this row?       cardhedge -> EXCLUDED
+ *
+ * Two consequences of collapsing them, both regressions:
+ *
+ *   - Routing this list through `catalogAuthorityOf` would make cardhedge
+ *     VISIBLE again, undoing CF-RETIRE-CARDHEDGE-ROWS — vendor rows surfacing
+ *     as cards we own, with the review picker offering bubble.io ids as accept
+ *     options.
+ *   - Routing it through `isDerived` would hide `ingest-auto-seed`,
+ *     `sold-comps-stub`, `catalog-explode-*` and `pool`. Those are frequently
+ *     the ONLY row a card has; hiding them loses coverage without gaining
+ *     accuracy. Search demotes them (see canonicalCardSearch) rather than
+ *     hiding them, which is the right treatment for a weak-but-real row.
+ */
+const EXCLUDED_SOURCES = new Set([
+  "sales-derived",
+  "tree-builder-v1",
+  "cardhedge",
+  "cardhedge-graded",
+]);
 
 /** Review states that are never user-facing. */
 const EXCLUDED_VERIFICATION = new Set(["rejected"]);

@@ -1,0 +1,245 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Ethan's Pinsir
+base,002,Base,false,,Yanma
+base,003,Base,false,,Yanmega ex
+base,004,Base,false,,Pineco
+base,005,Base,false,,Shroomish
+base,006,Base,false,,Breloom
+base,007,Base,false,,Cynthia's Roselia
+base,008,Base,false,,Cynthia's Roserade
+base,009,Base,false,,Mow Rotom
+base,010,Base,false,,Shaymin
+base,011,Base,false,,Dwebble
+base,012,Base,false,,Crustle
+base,013,Base,false,,Fomantis
+base,014,Base,false,,Lurantis
+base,015,Base,false,,Team Rocket's Blipbug
+base,016,Base,false,,Applin
+base,017,Base,false,,Dipplin
+base,018,Base,false,,Hydrapple
+base,019,Base,false,,Team Rocket's Tarountula
+base,020,Base,false,,Team Rocket's Spidops
+base,021,Base,false,,Smoliv
+base,022,Base,false,,Dolliv
+base,023,Base,false,,Arboliva ex
+base,024,Base,false,,Rellor
+base,025,Base,false,,Rabsca ex
+base,026,Base,false,,Teal Mask Ogerpon
+base,027,Base,false,,Growlithe
+base,028,Base,false,,Arcanine
+base,029,Base,false,,Ponyta
+base,030,Base,false,,Rapidash
+base,031,Base,false,,Team Rocket's Moltres ex
+base,032,Base,false,,Ethan's Cyndaquil
+base,033,Base,false,,Ethan's Quilava
+base,034,Base,false,,Ethan's Typhlosion
+base,035,Base,false,,Ethan's Slugma
+base,036,Base,false,,Ethan's Magcargo
+base,037,Base,false,,Team Rocket's Houndour
+base,038,Base,false,,Team Rocket's Houndoom
+base,039,Base,false,,Ethan's Ho-Oh ex
+base,040,Base,false,,Torchic
+base,041,Base,false,,Combusken
+base,042,Base,false,,Blaziken
+base,043,Base,false,,Heat Rotom
+base,044,Base,false,,Hearthflame Mask Ogerpon
+base,045,Base,false,,Misty's Psyduck
+base,046,Base,false,,Misty's Staryu
+base,047,Base,false,,Misty's Starmie
+base,048,Base,false,,Misty's Magikarp
+base,049,Base,false,,Misty's Gyarados
+base,050,Base,false,,Misty's Lapras
+base,051,Base,false,,Team Rocket's Articuno
+base,052,Base,false,,Cynthia's Feebas
+base,053,Base,false,,Cynthia's Milotic
+base,054,Base,false,,Clamperl
+base,055,Base,false,,Huntail
+base,056,Base,false,,Gorebyss
+base,057,Base,false,,Buizel
+base,058,Base,false,,Floatzel
+base,059,Base,false,,Snover
+base,060,Base,false,,Abomasnow
+base,061,Base,false,,Wash Rotom
+base,062,Base,false,,Arrokuda
+base,063,Base,false,,Barraskewda
+base,064,Base,false,,Cetoddle
+base,065,Base,false,,Cetitan ex
+base,066,Base,false,,Dondozo ex
+base,067,Base,false,,Wellspring Mask Ogerpon
+base,068,Base,false,,Electabuzz
+base,069,Base,false,,Electivire ex
+base,070,Base,false,,Team Rocket's Zapdos
+base,071,Base,false,,Ethan's Pichu
+base,072,Base,false,,Team Rocket's Mareep
+base,073,Base,false,,Team Rocket's Flaaffy
+base,074,Base,false,,Team Rocket's Ampharos
+base,075,Base,false,,Electrike
+base,076,Base,false,,Manectric
+base,077,Base,false,,Rotom
+base,078,Base,false,,Zeraora
+base,079,Base,false,,Team Rocket's Drowzee
+base,080,Base,false,,Team Rocket's Hypno
+base,081,Base,false,,Team Rocket's Mewtwo ex
+base,082,Base,false,,Team Rocket's Wobbuffet
+base,083,Base,false,,Steven's Baltoy
+base,084,Base,false,,Steven's Claydol
+base,085,Base,false,,Team Rocket's Chingling
+base,086,Base,false,,Steven's Carbink
+base,087,Base,false,,Team Rocket's Mimikyu
+base,088,Base,false,,Team Rocket's Dottler
+base,089,Base,false,,Team Rocket's Orbeetle
+base,090,Base,false,,Mankey
+base,091,Base,false,,Primeape
+base,092,Base,false,,Annihilape
+base,093,Base,false,,Ethan's Sudowoodo
+base,094,Base,false,,Team Rocket's Larvitar
+base,095,Base,false,,Team Rocket's Pupitar
+base,096,Base,false,,Team Rocket's Tyranitar
+base,097,Base,false,,Nosepass
+base,098,Base,false,,Probopass
+base,099,Base,false,,Meditite
+base,100,Base,false,,Medicham
+base,101,Base,false,,Regirock ex
+base,102,Base,false,,Cynthia's Gible
+base,103,Base,false,,Cynthia's Gabite
+base,104,Base,false,,Cynthia's Garchomp ex
+base,105,Base,false,,Hippopotas
+base,106,Base,false,,Hippowdon
+base,107,Base,false,,Mudbray
+base,108,Base,false,,Mudsdale
+base,109,Base,false,,Arven's Toedscool
+base,110,Base,false,,Arven's Toedscruel
+base,111,Base,false,,Cornerstone Mask Ogerpon
+base,112,Base,false,,Team Rocket's Ekans
+base,113,Base,false,,Team Rocket's Arbok
+base,114,Base,false,,Team Rocket's Nidoran♀
+base,115,Base,false,,Team Rocket's Nidorina
+base,116,Base,false,,Team Rocket's Nidoqueen
+base,117,Base,false,,Team Rocket's Nidoran♂
+base,118,Base,false,,Team Rocket's Nidorino
+base,119,Base,false,,Team Rocket's Nidoking ex
+base,120,Base,false,,Team Rocket's Zubat
+base,121,Base,false,,Team Rocket's Golbat
+base,122,Base,false,,Team Rocket's Crobat ex
+base,123,Base,false,,Team Rocket's Grimer
+base,124,Base,false,,Team Rocket's Muk
+base,125,Base,false,,Team Rocket's Koffing
+base,126,Base,false,,Team Rocket's Weezing
+base,127,Base,false,,Team Rocket's Murkrow
+base,128,Base,false,,Team Rocket's Sneasel
+base,129,Base,false,,Cynthia's Spiritomb
+base,130,Base,false,,Marnie's Purrloin
+base,131,Base,false,,Marnie's Liepard
+base,132,Base,false,,Marnie's Scraggy
+base,133,Base,false,,Marnie's Scrafty
+base,134,Base,false,,Marnie's Impidimp
+base,135,Base,false,,Marnie's Morgrem
+base,136,Base,false,,Marnie's Grimmsnarl ex
+base,137,Base,false,,Marnie's Morpeko
+base,138,Base,false,,Arven's Maschiff
+base,139,Base,false,,Arven's Mabosstiff ex
+base,140,Base,false,,Forretress
+base,141,Base,false,,Skarmory
+base,142,Base,false,,Steven's Skarmory
+base,143,Base,false,,Steven's Beldum
+base,144,Base,false,,Steven's Metang
+base,145,Base,false,,Steven's Metagross ex
+base,146,Base,false,,Zamazenta
+base,147,Base,false,,Team Rocket's Rattata
+base,148,Base,false,,Team Rocket's Raticate
+base,149,Base,false,,Team Rocket's Meowth
+base,150,Base,false,,Team Rocket's Persian ex
+base,151,Base,false,,Kangaskhan
+base,152,Base,false,,Tauros
+base,153,Base,false,,Team Rocket's Porygon
+base,154,Base,false,,Team Rocket's Porygon2
+base,155,Base,false,,Team Rocket's Porygon-Z
+base,156,Base,false,,Taillow
+base,157,Base,false,,Swellow
+base,158,Base,false,,Arven's Skwovet
+base,159,Base,false,,Arven's Greedent
+base,160,Base,false,,Squawkabilly
+base,161,Base,false,,Arven's Sandwich
+base,162,Base,false,,Cynthia's Power Weight
+base,163,Base,false,,Emcee's Hype
+base,164,Base,false,,Energy Recycler
+base,165,Base,false,,Ethan's Adventure
+base,166,Base,false,,Granite Cave
+base,167,Base,false,,Judge
+base,168,Base,false,,Sacred Ash
+base,169,Base,false,,Spikemuth Gym
+base,170,Base,false,,Team Rocket's Archer
+base,171,Base,false,,Team Rocket's Ariana
+base,172,Base,false,,Team Rocket's Bother-Bot
+base,173,Base,false,,Team Rocket's Factory
+base,174,Base,false,,Team Rocket's Giovanni
+base,175,Base,false,,Team Rocket's Great Ball
+base,176,Base,false,,Team Rocket's Petrel
+base,177,Base,false,,Team Rocket's Proton
+base,178,Base,false,,Team Rocket's Transceiver
+base,179,Base,false,,Team Rocket's Venture Bomb
+base,180,Base,false,,Team Rocket's Watchtower
+base,181,Base,false,,TM Machine
+base,182,Base,false,,Team Rocket's Energy
+base,183,Base,false,,Yanma
+base,184,Base,false,,Cynthia's Roserade
+base,185,Base,false,,Shaymin
+base,186,Base,false,,Crustle
+base,187,Base,false,,Team Rocket's Spidops
+base,188,Base,false,,Hydrapple
+base,189,Base,false,,Rapidash
+base,190,Base,false,,Ethan's Typhlosion
+base,191,Base,false,,Team Rocket's Houndoom
+base,192,Base,false,,Blaziken
+base,193,Base,false,,Misty's Psyduck
+base,194,Base,false,,Misty's Lapras
+base,195,Base,false,,Clamperl
+base,196,Base,false,,Electrike
+base,197,Base,false,,Rotom
+base,198,Base,false,,Team Rocket's Orbeetle
+base,199,Base,false,,Team Rocket's Weezing
+base,200,Base,false,,Team Rocket's Murkrow
+base,201,Base,false,,Zamazenta
+base,202,Base,false,,Team Rocket's Raticate
+base,203,Base,false,,Team Rocket's Meowth
+base,204,Base,false,,Kangaskhan
+base,205,Base,false,,Arven's Greedent
+base,206,Base,false,,Yanmega ex
+base,207,Base,false,,Arboliva ex
+base,208,Base,false,,Team Rocket's Moltres ex
+base,209,Base,false,,Ethan's Ho-Oh ex
+base,210,Base,false,,Cetitan ex
+base,211,Base,false,,Dondozo ex
+base,212,Base,false,,Electivire ex
+base,213,Base,false,,Team Rocket's Mewtwo ex
+base,214,Base,false,,Regirock ex
+base,215,Base,false,,Cynthia's Garchomp ex
+base,216,Base,false,,Team Rocket's Nidoking ex
+base,217,Base,false,,Team Rocket's Crobat ex
+base,218,Base,false,,Arven's Mabosstiff ex
+base,219,Base,false,,Team Rocket's Persian ex
+base,220,Base,false,,Emcee's Hype
+base,221,Base,false,,Ethan's Adventure
+base,222,Base,false,,Judge
+base,223,Base,false,,Team Rocket's Archer
+base,224,Base,false,,Team Rocket's Ariana
+base,225,Base,false,,Team Rocket's Giovanni
+base,226,Base,false,,Team Rocket's Petrel
+base,227,Base,false,,Team Rocket's Proton
+base,228,Base,false,,Yanmega ex
+base,229,Base,false,,Team Rocket's Moltres ex
+base,230,Base,false,,Ethan's Ho-Oh ex
+base,231,Base,false,,Team Rocket's Mewtwo ex
+base,232,Base,false,,Cynthia's Garchomp ex
+base,233,Base,false,,Team Rocket's Nidoking ex
+base,234,Base,false,,Team Rocket's Crobat ex
+base,235,Base,false,,Arven's Mabosstiff ex
+base,236,Base,false,,Ethan's Adventure
+base,237,Base,false,,Team Rocket's Ariana
+base,238,Base,false,,Team Rocket's Giovanni
+base,239,Base,false,,Ethan's Ho-Oh ex
+base,240,Base,false,,Team Rocket's Mewtwo ex
+base,241,Base,false,,Cynthia's Garchomp ex
+base,242,Base,false,,Team Rocket's Crobat ex
+base,243,Base,false,,Jamming Tower
+base,244,Base,false,,Levincia

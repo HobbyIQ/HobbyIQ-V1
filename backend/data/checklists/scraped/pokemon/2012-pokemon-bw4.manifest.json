@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.797Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw4",
+ "sport": "pokemon",
+ "year": 2012,
+ "setName": "Next Destinies",
+ "productKey": "2012-bw4",
+ "setKey": "bw4",
+ "rowCount": 103,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Next Destinies",
+   "category": "base",
+   "playerCount": 103,
+   "printRun": null
+  }
+ ]
+}

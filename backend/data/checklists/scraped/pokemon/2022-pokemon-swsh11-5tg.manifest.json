@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:11.931Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/swsh11.5tg",
+ "sport": "pokemon",
+ "year": 2022,
+ "setName": "Lost Origin Trainer Gallery",
+ "productKey": "2022-swsh11-5tg",
+ "setKey": "swsh11-5tg",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Lost Origin Trainer Gallery",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

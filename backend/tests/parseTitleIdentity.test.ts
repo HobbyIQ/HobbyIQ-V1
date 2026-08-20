@@ -349,6 +349,49 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: bare 'Speckle' word alone still resolves", () => {
     expect(parseListingIdentity("Eric Hartman 2026 Bowman Chrome Speckle #CPA-EHA").parallel).toBe("Speckle Refractor");
   });
+  // CF-NO-REFRACTOR-AUTO-RELEASED (Drew, 2026-08-15): "eric hartman is the
+  // only one without a refractor auto ... no card was released by topps.
+  // There was an issue with his cards. It is an anomoly."
+  //
+  // One card, not a product rule. The first two are the exact live titles
+  // that mislabelled 431 sold_comps rows; the last two pin that the ordinary
+  // chrome-auto default is UNCHANGED for everyone else.
+  it("CPA-EHA auto → Base (Topps never released the Refractor)", () => {
+    expect(parseListingIdentity(
+      "2026 Bowman Chrome Eric Hartman 1st Bowman RC Auto Prospect Autographs #CPA-EHA - Raw",
+    ).parallel).toBe("Base");
+  });
+  it("CPA-EHA auto → Base even when the title says only 'Chrome Prospect Auto'", () => {
+    expect(parseListingIdentity(
+      "ERIC HARTMAN 2026 Bowman 1st Chrome Prospect Auto Atlanta Braves #CPA-EHA",
+    ).parallel).toBe("Base");
+  });
+  it("Owen Carey CPA-OC auto → Refractor (the anomaly is Hartman's alone)", () => {
+    expect(parseListingIdentity(
+      "2026 Bowman Chrome Owen Carey 1st Bowman RC Auto Prospect Autographs #CPA-OC",
+    ).parallel).toBe("Refractor");
+  });
+  it("Bowman Draft CPA-JHA auto → Refractor (unchanged)", () => {
+    expect(parseListingIdentity(
+      "2025 Bowman Draft #CPA-JHA Josiah Hartshorn 1st Prospect Chrome Auto",
+    ).parallel).toBe("Refractor");
+  });
+  it("a DIFFERENT year's CPA-EHA is not covered by the anomaly", () => {
+    expect(parseListingIdentity(
+      "2028 Bowman Chrome Prospect Autographs #CPA-EHA 1st Auto",
+    ).parallel).toBe("Refractor");
+  });
+  it("no year in the title still resolves to Base (sellers omit it)", () => {
+    expect(parseListingIdentity(
+      "ERIC HARTMAN Bowman 1st Chrome Prospect Auto Braves #CPA-EHA",
+    ).parallel).toBe("Base");
+  });
+  // The exception is the BASE tier only. Hartman's colour autos were printed
+  // and still normalize through the colour rules above this fallback.
+  it("CPA-EHA colour auto still resolves to '{Color} Refractor'", () => {
+    expect(parseListingIdentity("Eric Hartman Blue /150 Auto #CPA-EHA").parallel).toBe("Blue Refractor");
+  });
+
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Speckle/Shimmer/Lava/etc are
   // Chrome-only parallels; title with "Bowman" + Speckle should resolve
   // setKey → "Bowman Chrome" even when "Chrome" isn't in the title.
@@ -888,6 +931,222 @@ describe("inferSportFromTitle — team-name fallback", () => {
   });
 });
 
+// CF-SUBPRODUCT-SETKEY (Drew, 2026-08-15). 17 product lines existed in
+// card_catalog with no parser rule, so their sales collapsed to the parent
+// brand and then failed to match a catalog row that was already there.
+describe("inferSetKeyFromTitle — sub-products that had no rule", () => {
+  it.each([
+    ["2024 Topps Pro Debut #PD-100 Jackson Holliday", "Topps Pro Debut"],
+    ["2023 Topps Signature Class Auto #SC-JD", "Topps Signature Class"],
+    ["2024 Topps Cosmic Chrome #55 Refractor", "Topps Cosmic Chrome"],
+    ["2022 Topps Triple Threads Relic #TTR-1", "Topps Triple Threads"],
+    ["2023 Topps Tier One Auto #TOA-BW", "Topps Tier One"],
+    ["2025 Topps Now #35 Shohei Ohtani", "Topps Now"],
+    ["2024 Topps Resurgence #R-12", "Topps Resurgence"],
+    ["2003 eTopps #45 Albert Pujols", "eTopps"],
+    ["Don Mattingly 2025 Topps Shoebox Treasures #14", "Topps Shoebox Treasures"],
+    ["2024 Bowman Platinum Top Prospects #TP-5", "Bowman Platinum"],
+    ["2023 Bowman Inception Auto #BI-JD", "Bowman Inception"],
+    ["1994 Fleer Ultra #200 Griffey", "Fleer Ultra"],
+    ["1996 Fleer Metal Universe #2 Barry Bonds", "Fleer Metal"],
+    ["1990 Fleer Update #U-87", "Fleer Update"],
+    ["2023 Leaf Metal Sports Heroes Auto #5", "Leaf Metal"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  // Both of these previously returned "Bowman" — not merely generic, wrong.
+  it.each([
+    ["2013 Panini Totally Certified Red #12", "Panini Totally Certified"],
+    ["2024 Panini Noir USMNT #12", "Panini Noir"],
+  ])("was mis-routed to Bowman: %s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  describe("guardrails — parent products must not be stolen", () => {
+    it.each([
+      ["2025 Topps Series 1 Baseball #100", "Topps"],
+      ["2025 Topps Update Baseball #US140", "Topps Update"],
+      ["2025 Topps Chrome #150 Refractor", "Topps Chrome"],
+      ["2024 Bowman Chrome Prospect Auto #CPA-AB", "Bowman Chrome"],
+      ["2024 Bowman Draft Chrome #BDC-1", "Bowman Draft Chrome"],
+      ["1986 Fleer #57 Michael Jordan Rookie", "Fleer"],
+    ])("%s -> %s", (title, want) => {
+      expect(inferSetKeyFromTitle(title)).toBe(want);
+    });
+  });
+});
+
+// CF-WWE-UFC-NEVER-DETECTED (Drew, 2026-08-15: "This is marvel wwe cards").
+// Neither wrestling nor MMA had detection, so both fell to the baseball
+// fallback. Measured: of 7,071 sold_comps titles containing "WWE", 6,134
+// (87%) were tagged baseball; of 5,573 containing "UFC", 4,715 (85%) were.
+describe("inferSportFromTitle — wrestling / MMA / boxing", () => {
+  it.each([
+    ["2023 Panini Prizm WWE Roman Reigns #1", "wrestling"],
+    ["2022 Topps WWE Slam Attax Liv Morgan", "wrestling"],
+    ["2024 Panini AEW Chrome Adam Cole Auto", "wrestling"],
+    ["WrestleMania 40 Topps Chrome Cody Rhodes", "wrestling"],
+    ["2023 Panini Prizm UFC Conor McGregor #12", "mma"],
+    ["2024 Topps UFC Bellator Auto", "mma"],
+    ["2023 Topps Boxing Muhammad Ali #5", "boxing"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSportFromTitle(title)).toBe(want);
+  });
+
+  // "RAW" is the ungraded marker, not WWE Raw. It ends thousands of titles
+  // in every sport, so matching it would drag the whole pool into wrestling.
+  it.each([
+    "2025 Bowman Chrome Eric Hartman #CPA-EH - Raw",
+    "2026 Bowman - Chrome Prospect Autographs Breyson Guedez #CPA-BG (AU, RC) - Raw",
+    "Shohei Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars #SLAD - Raw",
+  ])("the ungraded marker '- Raw' stays baseball: %s", (title) => {
+    expect(inferSportFromTitle(title)).toBe("baseball");
+  });
+});
+
+// CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). inferSportFromTitle had no
+// soccer branch at all, so every soccer card fell through to the baseball
+// fallback and polluted the pool that feeds baseball FMV + calibration.
+// Measured in sold_comps: 14,826 baseball-slugged rows saying "WORLD CUP",
+// 13,678 "FIFA", 8,293 "UEFA", against only 7,034 correctly tagged soccer.
+describe("inferSportFromTitle — soccer", () => {
+  it.each([
+    ["Topps Chrome UCC", "2022-23 Topps Chrome UCC Julian Alvarez Aqua Wave Refractor RC /199 PSA 10"],
+    ["UEFA", "JULIAN ALVAREZ 2025-26 TOPPS CHROME UEFA PURPLE GEOMETRIC AUTO /75 #CA-AL"],
+    ["World Cup", "2026 PANINI PRIZM WORLD CUP #25 SCORERS CLUB SILVER ARGENTINA"],
+    ["Panini Select FIFA", "2022-23 Panini Select FIFA - Gold Prizm Julian Alvarez #202"],
+    ["MLS", "Lionel Messi 2023 Inter Miami MLS Debut"],
+  ])("competition/league '%s' resolves to soccer", (_l, title) => {
+    expect(inferSportFromTitle(title)).toBe("soccer");
+  });
+
+  it("a named competition beats the bare word 'football' (which means soccer abroad)", () => {
+    expect(inferSportFromTitle("2024 Topps Merlin Football UEFA Champions League Haaland"))
+      .toBe("soccer");
+  });
+
+  it("club name alone still resolves when no competition is named", () => {
+    expect(inferSportFromTitle("Erling Haaland Manchester City 2023 Topps")).toBe("soccer");
+  });
+
+  describe("guardrails — must NOT be stolen by soccer", () => {
+    it.each([
+      ["2024 Panini Prizm Football Ladd McConkey", "football"],
+      ["JUSTIN HERBERT 2020 PANINI PRIZM ROOKIE Chargers", "football"],
+      ["2023 Panini Prizm Basketball Wembanyama", "basketball"],
+      ["Auston Matthews Maple Leafs Rookie", "hockey"],
+      ["2025 Bowman Chrome Eric Hartman #CPA-EH", "baseball"],
+      ["2025 Pokemon Mega Evolution Phantasmal Flames #102 Base", "pokemon"],
+    ])("%s -> %s", (title, want) => {
+      expect(inferSportFromTitle(title)).toBe(want);
+    });
+  });
+});
+
+// CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). A slug sweep over 2026-07
+// stamped 4,589 rows sport='hockey'; ~91.6% were wrong. Team words that
+// are also ordinary English ("Stars", "Flames", "Wild") were matching
+// product and insert names, and a GUESSED team outranked the product
+// line sitting in the same title. Every title below is verbatim from
+// the damaged set.
+describe("inferSportFromTitle — CF-SPORT-TEAM-OVERMATCH", () => {
+  describe("named product lines outrank guessed team names", () => {
+    it("Pokemon 'Phantasmal Flames' is not Calgary (2,822 rows)", () => {
+      expect(inferSportFromTitle("2025 2025 Pokemon Mega Evolution Phantasmal Flames #102 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Brilliant Stars' is not Dallas", () => {
+      expect(inferSportFromTitle("2022 2022 Pokemon Brilliant Stars #48 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Wild Force' is not Minnesota (195 rows)", () => {
+      expect(inferSportFromTitle("2024 2024 Pokemon Japanese Scarlet & Violet Wild Force #53 Base"))
+        .toBe("pokemon");
+    });
+    it("Pokemon 'Lightning' type is not Tampa Bay", () => {
+      expect(inferSportFromTitle("Morpeko Promo SWSH: Sword & Shield Promo Cards SWSH012 Lightning Holo Pokemon Ca - Raw"))
+        .toBe("pokemon");
+    });
+  });
+
+  describe("full player names outrank guessed team names", () => {
+    it("Ohtani 'Hobby Stars' → baseball, not Dallas Stars", () => {
+      expect(inferSportFromTitle("Shohei Ohtani 2025 Bowman Chrome - HS4 Sho-Time Showcase Hobby Stars #SLAD - Raw"))
+        .toBe("baseball");
+    });
+    it("Hoops 'Frequent Flyers' → basketball, not Philadelphia Flyers", () => {
+      expect(inferSportFromTitle("2024-25 Hoops #1 Damian Lillard Frequent Flyers - Raw"))
+        .toBe("basketball");
+    });
+    it("Panini 'Rookies & Stars' is a FOOTBALL product", () => {
+      expect(inferSportFromTitle("2025 Panini Rookies & Stars - Thrillers Chris Olave #14 Orange Prizm /25 - Raw"))
+        .toBe("football");
+    });
+  });
+
+  describe("weak team words need their city; strong names stand alone", () => {
+    it.each([
+      ["Calgary Flames", "2023-24 Upper Deck Calgary Flames Jonathan Huberdeau #77"],
+      ["Dallas Stars", "2022-23 Dallas Stars Jason Robertson #12 Series 2"],
+      ["Minnesota Wild", "2021-22 Minnesota Wild Kirill Kaprizov Series One"],
+      ["San Jose Sharks", "24/25 UD Extended - MACKLIN CELEBRINI Rc #BH-24 Beehive Insert San Jose Sharks"],
+      ["Anaheim Ducks", "2021-22 Upper Deck Series 1   Jamie Drysdale young guns #205 RC Anaheim Ducks"],
+      ["Carolina Hurricanes", "Upper Deck 2024-25 Series 2 Jalen Chatfield #278 Deluxe Carolina Hurricanes /250"],
+    ])("city-qualified '%s' still resolves to hockey", (_label, title) => {
+      expect(inferSportFromTitle(title, "")).toBe("hockey");
+    });
+
+    it.each([
+      ["Blackhawks", "2024 Colton Dach #102 Chicago Blackhawks Upper Deck SPX Rookie Card"],
+      ["Bruins", "2013-14 Dougie Hamilton Rookie Card #646 Boston Bruins"],
+      ["Islanders", "MATHEW BARZAL 2016-17 ROOKIE  CARD #689  New York Islanders"],
+      ["Canadiens", "1986-87 Patrick Roy Rookie O-Pee-Chee OPC RC #53 PSA 7 NM Canadiens"],
+    ])("distinctive '%s' matches bare", (_label, title) => {
+      expect(inferSportFromTitle(title, "")).toBe("hockey");
+    });
+
+    it("an UNQUALIFIED weak word refuses rather than guessing", () => {
+      // Doctrine: absent beats wrong. Nothing in this title proves a
+      // sport, so the caller's default is what should decide it.
+      expect(inferSportFromTitle("2024 Some Set Flames Insert #12", "")).toBe("");
+      expect(inferSportFromTitle("2024 Some Set Wild Insert #12", "")).toBe("");
+    });
+
+    it("MLB Washington Senators are not the Ottawa Senators", () => {
+      expect(inferSportFromTitle("1940 Play Ball #22 Sammy West - Washington Senators (vA1) RARE & VINTAGE! - Raw", ""))
+        .not.toBe("hockey");
+    });
+    it("NFL Houston Oilers are not the Edmonton Oilers", () => {
+      expect(inferSportFromTitle("1990 Pro Set #352 Bruce Matthews PB Oilers - Raw", ""))
+        .not.toBe("hockey");
+    });
+    it("'Name in All Caps' is not the Washington Capitals", () => {
+      expect(inferSportFromTitle("1939 Play Ball - Joe DiMaggio #26 Name in All Caps PSA Graded 1.5 PSA 1.5"))
+        .toBe("baseball");
+    });
+  });
+
+  describe("non-sport detector: card-title words removed", () => {
+    it("'WOW' seller hype is not World of Warcraft", () => {
+      expect(inferSportFromTitle("1997 Bowman's Best REFRACTOR #73 Barry Bonds SF Giants RARE ICONIC PARALLEL WOW - Raw"))
+        .toBe("baseball");
+    });
+    it("'Halo' foil treatment is not the Halo franchise", () => {
+      expect(inferSportFromTitle("2025 Topps Stadium Club Mike Trout #32 Los Angeles Angles Star Power Halo Photo", ""))
+        .not.toBe("non-sport");
+    });
+    it("spelled-out 'World of Warcraft' still detected", () => {
+      expect(inferSportFromTitle("2007 World of Warcraft TCG Landro Longshot Loot Card"))
+        .toBe("non-sport");
+    });
+    it("'Diamond Marvels' (Donruss baseball insert) is not Marvel", () => {
+      expect(inferSportFromTitle("2026 Panini Donruss Nick Kurtz Diamond Marvels #6 A's", ""))
+        .not.toBe("non-sport");
+    });
+  });
+});
+
 // CF-PLAYER-SPORT-HINTS (Drew, 2026-07-29). Last-resort player→sport
 // disambiguation: title carries neither team nor league keyword —
 // only the player name. Full-name matches only.
@@ -1001,5 +1260,97 @@ describe("inferSportFromTitle", () => {
   });
   it("no sport keyword → falls back", () => {
     expect(inferSportFromTitle("Eric Hartman 2026 Bowman Chrome", "baseball")).toBe("baseball");
+  });
+});
+
+// CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14: "fix it").
+//
+// The TCG `POS/TOTAL` rule had no vertical guard, so it fired on sports titles
+// and turned SERIALS into card numbers. Every title below is a real one taken
+// from comps_staging rows that were stuck in awaiting-catalog because of it.
+//
+// Verified before the fix: 206 of 208 decided cases were this bug, ~6,500
+// distinct slugs, ~32,000 stuck sales, ~5,600 phantom cards in sold_comps.
+describe("serial is not a card number", () => {
+  // ─── sports: N/M is a SERIAL, never the card number ──────────────────────
+  it("does not take a sports serial as the card number", () => {
+    const r = parseListingIdentity("2025-26 Fleer Ultra Outlining Macklin Celebrini OL 22/30 Color Match Sharks");
+    // Was "22/30" -> slug ...:2230:... which no checklist can contain.
+    expect(r.cardNumber).not.toBe("22/30");
+    expect(r.printRun).toBe(30);
+  });
+
+  it("reads the serial as print run only, on a real blocked title", () => {
+    const r = parseListingIdentity("Josue De Paula 2025 Topps Pro Debut Gold AUTO 25/50 LA Dodgers");
+    expect(r.cardNumber).not.toBe("25/50");
+    expect(r.printRun).toBe(50);
+  });
+
+  it("prefers an explicit #cardNumber over the serial in the same title", () => {
+    const r = parseListingIdentity("Tai PEETE 2024 Topps Pro Debut GREEN FOIL #TP-9 #'d 88/99 RC");
+    expect(r.cardNumber).toBe("TP-9");
+    expect(r.printRun).toBe(99);
+  });
+
+  it("an explicit vertical suppresses the TCG rule even when TCG-ish", () => {
+    const r = parseListingIdentity("Some Player 40/147", undefined, { vertical: "baseball" });
+    expect(r.cardNumber).not.toBe("40/147");
+  });
+
+  // ─── TCG: N/M IS the card number, and M is a SET SIZE not a print run ────
+  it("keeps the TCG card number when the title names the vertical", () => {
+    const r = parseListingIdentity("Pikachu Common SM - Burning Shadows 40/147 NM Pokemon");
+    expect(r.cardNumber).toBe("40/147");
+    // 147 is the set size. Burning Shadows was not a 147-copy print run.
+    expect(r.printRun).toBeNull();
+  });
+
+  it("keeps the TCG card number via an explicit vertical", () => {
+    const r = parseListingIdentity("PIKACHU EX MEGA DREAM EX HOLO DOUBLE RARE 044/193 CGC 10", undefined, { vertical: "pokemon" });
+    expect(r.cardNumber).toBe("044/193");
+    expect(r.printRun).toBeNull();
+  });
+
+  // CF-TCG-NUMBER-BEFORE-HASH. The VERBATIM listing title — the version above
+  // had its "#" removed when the test was written, which is exactly why it
+  // passed while the real input failed. Sellers write both forms, and on the
+  // "#" form the generic #-prefix rule used to win and return "044",
+  // silently dropping "/193" — a different card number, matching nothing.
+  it("keeps the TCG card number when it is written with a # prefix", () => {
+    const r = parseListingIdentity("PIKACHU EX 2025 POKEMON JAPANESE MEGA DREAM EX HOLO DOUBLE RARE #044/193 CGC 10");
+    expect(r.cardNumber).toBe("044/193");
+    expect(r.printRun).toBeNull();
+  });
+
+  it("a bare #NNN TCG number with no set total is still read as-is", () => {
+    // "#072" with no "/total" is a real card number, not a truncated one.
+    const r = parseListingIdentity("2021 POKEMON SWORD & SHIELD SHINING FATES #072 FULL ART/SKYLA PSA 10");
+    expect(r.cardNumber).toBe("072");
+  });
+
+  it("a secret rare numbered above set size still parses", () => {
+    const r = parseListingIdentity("Charizard VMAX 294/217 Pokemon Secret Rare");
+    expect(r.cardNumber).toBe("294/217");
+    expect(r.printRun).toBeNull();
+  });
+
+  it("a genuinely numbered TCG parallel still reports its print run", () => {
+    // The set-size token is removed, not the whole print-run search — so an
+    // actual serial elsewhere in the title survives.
+    const r = parseListingIdentity("Pokemon Burning Shadows Pikachu 40/147 Gold Parallel /25", undefined, { vertical: "pokemon" });
+    expect(r.cardNumber).toBe("40/147");
+    expect(r.printRun).toBe(25);
+  });
+
+  // ─── the existing contract must not move ─────────────────────────────────
+  it("sports print-run extraction is unchanged", () => {
+    expect(parseListingIdentity("2026 Bowman Chrome Sapphire Owen Carey 77/199 Braves").printRun).toBe(199);
+    expect(parseListingIdentity("Owen Carey 2026 Red Sapphire Auto 3/5 Atlanta Braves").printRun).toBe(5);
+    expect(parseListingIdentity("2026 Bowman Chrome Eric Hartman Gold Refractor /50 Braves").printRun).toBe(50);
+  });
+
+  it("sports card numbers are unchanged", () => {
+    expect(parseListingIdentity("2026 Bowman Eric Hartman Base Auto #CPA-EHA").cardNumber).toBe("CPA-EHA");
+    expect(parseListingIdentity("2025 Topps Black & White - Freddie Freeman #020").cardNumber).toBe("020");
   });
 });

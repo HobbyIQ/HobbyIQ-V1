@@ -31,6 +31,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { moverCredibility, looksDamaged } from "../services/compiq/moverCredibility.service.js";
 
 const router = Router();
 
@@ -46,6 +47,7 @@ interface CompRow {
   price: number;
   soldAt: string;
   imageUrl?: string | null;
+  title?: string | null;
 }
 
 let sharedContainer: Container | null = null;
@@ -137,7 +139,8 @@ function buildMoversFromDaily(
     if (priorMedian <= 0) continue;
     const deltaPct = Math.round(((currentMedian - priorMedian) / priorMedian) * 1000) / 10;
     const deltaUSD = Math.round((currentMedian - priorMedian) * 100) / 100;
-    if (Math.abs(deltaUSD) < 1) continue;
+    const verdict = moverCredibility({ priorMedian, currentMedian, deltaPct, deltaUSD, salesInWindow: totalSales });
+    if (!verdict.ok) continue;
     movers.push({
       cardId: g.sku.cardId,
       playerName: g.sku.playerName,
@@ -269,7 +272,8 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
     // memory for aggregation).
     const iter = container.items.query<CompRow>({
       query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.cardNumber,
-                     c.cardYear, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.imageUrl
+                     c.cardYear, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.imageUrl,
+                     c.title
               FROM c
               WHERE c.sport = @sport
                 AND c.soldAt >= @from
@@ -282,9 +286,16 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
     });
 
     const rows: CompRow[] = [];
+    let damagedSkipped = 0;
     while (iter.hasMoreResults()) {
       const { resources } = await iter.fetchNext();
-      rows.push(...resources);
+      for (const r of resources) {
+        // A "READ" / creased / miscut listing is a real sale of a DAMAGED card.
+        // It belongs in neither half of a price comparison — several sat at the
+        // top of the live index.
+        if (looksDamaged(r.title)) { damagedSkipped++; continue; }
+        rows.push(r);
+      }
     }
 
     // Group by (cardId, parallel, gradeCompany, gradeValue) — same SKU
@@ -299,6 +310,9 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
     }
 
     const movers: Mover[] = [];
+    // Counted rather than silently dropped: an index that filters everything
+    // looks exactly like one that is broken, which is how this stayed hidden.
+    const rejected = new Map<string, number>();
 
     for (const [, g] of groups) {
       if (g.rows.length < minSales) continue;
@@ -313,9 +327,11 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
       const deltaPct = Math.round(((currentMedian - priorMedian) / priorMedian) * 1000) / 10;
       const deltaUSD = Math.round((currentMedian - priorMedian) * 100) / 100;
 
-      // Guard against thin-comp noise: require abs(delta) >= $1 so
-      // dime-per-comp movers don't dominate the list.
-      if (Math.abs(deltaUSD) < 1) continue;
+      // CF-MOVER-CREDIBILITY. The old guard was abs(deltaUSD) >= $1, which a
+      // $0.01 -> $10 penny listing clears while reading as +99,900% — so junk
+      // permanently outranked every genuine mover and the index looked frozen.
+      const verdict = moverCredibility({ priorMedian, currentMedian, deltaPct, deltaUSD, salesInWindow: g.rows.length });
+      if (!verdict.ok) { rejected.set(verdict.reason, (rejected.get(verdict.reason) ?? 0) + 1); continue; }
 
       const sampleImage = g.rows.find((r) => r.imageUrl)?.imageUrl ?? null;
       movers.push({
@@ -343,6 +359,8 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
       windowDays,
       totalSkusInWindow: groups.size,
       qualifyingMovers: movers.length,
+      damagedSkipped,
+      rejectedByCredibility: Object.fromEntries([...rejected.entries()].sort((a, b) => b[1] - a[1])),
       returned: result.length,
       computedAt: new Date().toISOString(),
       source: "raw",

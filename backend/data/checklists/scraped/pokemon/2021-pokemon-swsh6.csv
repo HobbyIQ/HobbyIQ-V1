@@ -1,0 +1,234 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Weedle
+base,2,Base,false,,Kakuna
+base,3,Base,false,,Beedrill
+base,4,Base,false,,Ledyba
+base,5,Base,false,,Ledian
+base,6,Base,false,,Heracross
+base,7,Base,false,,Celebi V
+base,8,Base,false,,Celebi VMAX
+base,9,Base,false,,Snover
+base,10,Base,false,,Abomasnow
+base,11,Base,false,,Deerling
+base,12,Base,false,,Sawsbuck
+base,13,Base,false,,Bounsweet
+base,14,Base,false,,Steenee
+base,15,Base,false,,Tsareena
+base,16,Base,false,,Grookey
+base,17,Base,false,,Thwackey
+base,18,Base,false,,Rillaboom
+base,19,Base,false,,Zarude
+base,20,Base,false,,Blaziken V
+base,21,Base,false,,Blaziken VMAX
+base,22,Base,false,,Castform Sunny Form
+base,23,Base,false,,Larvesta
+base,24,Base,false,,Volcarona
+base,25,Base,false,,Volcanion V
+base,26,Base,false,,Scorbunny
+base,27,Base,false,,Raboot
+base,28,Base,false,,Cinderace
+base,29,Base,false,,Lapras
+base,30,Base,false,,Sneasel
+base,31,Base,false,,Weavile
+base,32,Base,false,,Delibird
+base,33,Base,false,,Castform Rainy Form
+base,34,Base,false,,Castform Snowy Form
+base,35,Base,false,,Snorunt
+base,36,Base,false,,Froslass
+base,37,Base,false,,Spheal
+base,38,Base,false,,Sealeo
+base,39,Base,false,,Walrein
+base,40,Base,false,,Tapu Fini
+base,41,Base,false,,Sobble
+base,42,Base,false,,Drizzile
+base,43,Base,false,,Inteleon
+base,44,Base,false,,Rapid Strike Urshifu
+base,45,Base,false,,Ice Rider Calyrex V
+base,46,Base,false,,Ice Rider Calyrex VMAX
+base,47,Base,false,,Mareep
+base,48,Base,false,,Flaaffy
+base,49,Base,false,,Ampharos
+base,50,Base,false,,Blitzle
+base,51,Base,false,,Zebstrika
+base,52,Base,false,,Thundurus
+base,53,Base,false,,Zeraora V
+base,54,Base,false,,Galarian Slowpoke
+base,55,Base,false,,Gastly
+base,56,Base,false,,Haunter
+base,57,Base,false,,Gengar
+base,58,Base,false,,Galarian Articuno V
+base,59,Base,false,,Ralts
+base,60,Base,false,,Kirlia
+base,61,Base,false,,Gardevoir
+base,62,Base,false,,Shuppet
+base,63,Base,false,,Banette
+base,64,Base,false,,Cresselia
+base,65,Base,false,,Golett
+base,66,Base,false,,Golurk
+base,67,Base,false,,Swirlix
+base,68,Base,false,,Slurpuff
+base,69,Base,false,,Inkay
+base,70,Base,false,,Malamar
+base,71,Base,false,,Hatenna
+base,72,Base,false,,Hattrem
+base,73,Base,false,,Hatterene
+base,74,Base,false,,Shadow Rider Calyrex V
+base,75,Base,false,,Shadow Rider Calyrex VMAX
+base,76,Base,false,,Diglett
+base,77,Base,false,,Dugtrio
+base,78,Base,false,,Galarian Farfetch'd
+base,79,Base,false,,Galarian Sirfetch'd
+base,80,Base,false,,Galarian Zapdos V
+base,81,Base,false,,Gallade
+base,82,Base,false,,Galarian Yamask
+base,83,Base,false,,Galarian Runerigus
+base,84,Base,false,,Crabrawler
+base,85,Base,false,,Crabominable
+base,86,Base,false,,Rockruff
+base,87,Base,false,,Lycanroc
+base,88,Base,false,,Passimian
+base,89,Base,false,,Sandaconda V
+base,90,Base,false,,Sandaconda VMAX
+base,91,Base,false,,Clobbopus
+base,92,Base,false,,Grapploct
+base,93,Base,false,,Kubfu
+base,94,Base,false,,Koffing
+base,95,Base,false,,Weezing
+base,96,Base,false,,Galarian Weezing
+base,97,Base,false,,Galarian Moltres V
+base,98,Base,false,,Galarian Slowking
+base,99,Base,false,,Galarian Slowking V
+base,100,Base,false,,Galarian Slowking VMAX
+base,101,Base,false,,Qwilfish
+base,102,Base,false,,Seviper
+base,103,Base,false,,Spiritomb
+base,104,Base,false,,Liepard V
+base,105,Base,false,,Venipede
+base,106,Base,false,,Whirlipede
+base,107,Base,false,,Scolipede
+base,108,Base,false,,Single Strike Urshifu
+base,109,Base,false,,Aron
+base,110,Base,false,,Lairon
+base,111,Base,false,,Aggron
+base,112,Base,false,,Metagross V
+base,113,Base,false,,Metagross VMAX
+base,114,Base,false,,Cobalion
+base,115,Base,false,,Tauros
+base,116,Base,false,,Porygon
+base,117,Base,false,,Porygon2
+base,118,Base,false,,Porygon-Z
+base,119,Base,false,,Blissey V
+base,120,Base,false,,Zangoose
+base,121,Base,false,,Castform
+base,122,Base,false,,Kecleon
+base,123,Base,false,,Shaymin
+base,124,Base,false,,Tornadus V
+base,125,Base,false,,Tornadus VMAX
+base,126,Base,false,,Furfrou
+base,127,Base,false,,Skwovet
+base,128,Base,false,,Greedent
+base,129,Base,false,,Agatha
+base,130,Base,false,,Avery
+base,131,Base,false,,Brawly
+base,132,Base,false,,Caitlin
+base,133,Base,false,,Crushing Gloves
+base,134,Base,false,,Doctor
+base,135,Base,false,,Dyna Tree Hill
+base,136,Base,false,,Echoing Horn
+base,137,Base,false,,Expedition Uniform
+base,138,Base,false,,Fire-Resistant Gloves
+base,139,Base,false,,Flannery
+base,140,Base,false,,Fog Crystal
+base,141,Base,false,,Galarian Chestplate
+base,142,Base,false,,Honey
+base,143,Base,false,,Justified Gloves
+base,144,Base,false,,Karen's Conviction
+base,145,Base,false,,Klara
+base,146,Base,false,,Melony
+base,147,Base,false,,Old Cemetery
+base,148,Base,false,,Path to the Peak
+base,149,Base,false,,Peonia
+base,150,Base,false,,Peony
+base,151,Base,false,,Rapid Strike Scroll of the Skies
+base,152,Base,false,,Rugged Helmet
+base,153,Base,false,,Siebold
+base,154,Base,false,,Single Strike Scroll of Piercing
+base,155,Base,false,,Weeding Gloves
+base,156,Base,false,,Welcoming Lantern
+base,157,Base,false,,Impact Energy
+base,158,Base,false,,Lucky Energy
+base,159,Base,false,,Spiral Energy
+base,160,Base,false,,Celebi V
+base,161,Base,false,,Blaziken V
+base,162,Base,false,,Volcanion V
+base,163,Base,false,,Ice Rider Calyrex V
+base,164,Base,false,,Ice Rider Calyrex V
+base,165,Base,false,,Zeraora V
+base,166,Base,false,,Zeraora V
+base,167,Base,false,,Galarian Rapidash V
+base,168,Base,false,,Galarian Rapidash V
+base,169,Base,false,,Galarian Articuno V
+base,170,Base,false,,Galarian Articuno V
+base,171,Base,false,,Shadow Rider Calyrex V
+base,172,Base,false,,Shadow Rider Calyrex V
+base,173,Base,false,,Galarian Zapdos V
+base,174,Base,false,,Galarian Zapdos V
+base,175,Base,false,,Sandaconda V
+base,176,Base,false,,Galarian Moltres V
+base,177,Base,false,,Galarian Moltres V
+base,178,Base,false,,Galarian Slowking V
+base,179,Base,false,,Galarian Slowking V
+base,180,Base,false,,Liepard V
+base,181,Base,false,,Metagross V
+base,182,Base,false,,Blissey V
+base,183,Base,false,,Blissey V
+base,184,Base,false,,Tornadus V
+base,185,Base,false,,Tornadus V
+base,186,Base,false,,Agatha
+base,187,Base,false,,Avery
+base,188,Base,false,,Brawly
+base,189,Base,false,,Caitlin
+base,190,Base,false,,Doctor
+base,191,Base,false,,Flannery
+base,192,Base,false,,Honey
+base,193,Base,false,,Karen's Conviction
+base,194,Base,false,,Klara
+base,195,Base,false,,Melony
+base,196,Base,false,,Peonia
+base,197,Base,false,,Peony
+base,198,Base,false,,Siebold
+base,199,Base,false,,Celebi VMAX
+base,200,Base,false,,Blaziken VMAX
+base,201,Base,false,,Blaziken VMAX
+base,202,Base,false,,Ice Rider Calyrex VMAX
+base,203,Base,false,,Ice Rider Calyrex VMAX
+base,204,Base,false,,Shadow Rider Calyrex VMAX
+base,205,Base,false,,Shadow Rider Calyrex VMAX
+base,206,Base,false,,Sandaconda VMAX
+base,207,Base,false,,Galarian Slowking VMAX
+base,208,Base,false,,Metagross VMAX
+base,209,Base,false,,Tornadus VMAX
+base,210,Base,false,,Agatha
+base,211,Base,false,,Avery
+base,212,Base,false,,Brawly
+base,213,Base,false,,Caitlin
+base,214,Base,false,,Doctor
+base,215,Base,false,,Flannery
+base,216,Base,false,,Karen's Conviction
+base,217,Base,false,,Klara
+base,218,Base,false,,Melony
+base,219,Base,false,,Peonia
+base,220,Base,false,,Peony
+base,221,Base,false,,Siebold
+base,222,Base,false,,Electrode
+base,223,Base,false,,Bronzong
+base,224,Base,false,,Snorlax
+base,225,Base,false,,Echoing Horn
+base,226,Base,false,,Fan of Waves
+base,227,Base,false,,Fog Crystal
+base,228,Base,false,,Rugged Helmet
+base,229,Base,false,,Urn of Vitality
+base,230,Base,false,,Welcoming Lantern
+base,231,Base,false,,Water Energy
+base,232,Base,false,,Psychic Energy
+base,233,Base,false,,Fighting Energy

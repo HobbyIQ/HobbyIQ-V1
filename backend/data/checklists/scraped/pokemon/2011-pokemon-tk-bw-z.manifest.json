@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.555Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-bw-z",
+ "sport": "pokemon",
+ "year": 2011,
+ "setName": "BW trainer Kit (Zoroark)",
+ "productKey": "2011-tk-bw-z",
+ "setKey": "tk-bw-z",
+ "rowCount": 30,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > BW trainer Kit (Zoroark)",
+   "category": "base",
+   "playerCount": 30,
+   "printRun": null
+  }
+ ]
+}

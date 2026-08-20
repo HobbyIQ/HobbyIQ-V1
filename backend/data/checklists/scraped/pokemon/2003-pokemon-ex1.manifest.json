@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.700Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex1",
+ "sport": "pokemon",
+ "year": 2003,
+ "setName": "Ruby & Sapphire",
+ "productKey": "2003-ex1",
+ "setKey": "ex1",
+ "rowCount": 109,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Ruby & Sapphire",
+   "category": "base",
+   "playerCount": 109,
+   "printRun": null
+  }
+ ]
+}

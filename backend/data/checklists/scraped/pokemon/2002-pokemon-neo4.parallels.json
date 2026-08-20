@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/neo4",
+ "setId": "neo4",
+ "cardCount": {
+  "firstEd": 113,
+  "holo": 48,
+  "normal": 178,
+  "official": 105,
+  "reverse": 0,
+  "total": 113
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

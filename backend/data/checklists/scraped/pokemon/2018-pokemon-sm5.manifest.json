@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.329Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sm5",
+ "sport": "pokemon",
+ "year": 2018,
+ "setName": "Ultra Prism",
+ "productKey": "2018-sm5",
+ "setKey": "sm5",
+ "rowCount": 173,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Ultra Prism",
+   "category": "base",
+   "playerCount": 173,
+   "printRun": null
+  }
+ ]
+}

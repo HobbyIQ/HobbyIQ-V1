@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.802Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy10",
+ "sport": "pokemon",
+ "year": 2016,
+ "setName": "Fates Collide",
+ "productKey": "2016-xy10",
+ "setKey": "xy10",
+ "rowCount": 129,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Fates Collide",
+   "category": "base",
+   "playerCount": 129,
+   "printRun": null
+  }
+ ]
+}

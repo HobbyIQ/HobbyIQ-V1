@@ -16,6 +16,25 @@ import {
 function fakeContainer(): { container: Container; store: Map<string, any> } {
   const store = new Map<string, any>();
   const container = {
+    // CF-FAKE-MUST-IMPLEMENT-DELETE (2026-08-20). The fake had no `item()`, so
+    // the pre-write dedup's `c.item(id, pk).delete()` threw and was swallowed
+    // by its best-effort catch. That made this suite NON-DETERMINISTIC:
+    // scoreForCanonical tie-breaks on observedAt, so two writes landing in the
+    // SAME millisecond score equal and dedup skips (1 row), while a millisecond
+    // apart lets the incoming row win — it deletes the existing one, the delete
+    // silently fails against this fake, and BOTH rows survive (2 rows).
+    //
+    // Same lesson the @h filter above was added for, one layer down: the store
+    // was behaving correctly and the fake was lying about the outcome. A fake
+    // that no-ops a mutation does not make a test lenient, it makes it random.
+    item(id: string, partitionKey: string) {
+      return {
+        async delete() {
+          store.delete(`${partitionKey}::${id}`);
+          return { resource: undefined };
+        },
+      };
+    },
     items: {
       async upsert(doc: any) {
         store.set(`${doc.cardId}::${doc.id}`, doc);
@@ -31,7 +50,18 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             const to = params.get("@to");
             const player = params.get("@player");
             const lim = params.get("@lim");
+            // CF-CONTENT-HASH-DEDUP: recordSoldComp probes for an existing row
+            // by contentHash before writing. This fake did not know about @h,
+            // so that probe fell through every filter and returned the WHOLE
+            // store — making the second write of any test look like a
+            // duplicate and silently skipping it. That is why three tests here
+            // saw an empty store or one row short; the store was correct and
+            // the fake was lying. Filter on it like Cosmos would.
+            const contentHash = params.get("@h");
             let rows = Array.from(store.values()) as SoldCompDoc[];
+            if (contentHash !== undefined) {
+              return { resources: rows.filter((d) => (d as { contentHash?: string }).contentHash === contentHash) };
+            }
             if (cid) rows = rows.filter((d) => d.cardId === cid);
             if (from) rows = rows.filter((d) => d.soldAt >= from);
             if (to) rows = rows.filter((d) => d.soldAt <= to);
@@ -117,7 +147,17 @@ describe("recordSoldComp — idempotency via composite id", () => {
     expect(doc.price).toBe(450);  // last write wins
   });
 
-  it("different externalIds create separate rows", async () => {
+  // CF-CONTENT-HASH-DEDUP (2026-07-21, extended 2026-08-06). This test used to
+  // assert that two different externalIds ALWAYS produce two rows. That belief
+  // is the one the store's own comment now calls wrong: CardHedge emits the
+  // SAME eBay listing under two externalId shapes ("<cardId>x<listing>" and
+  // "ch-daily::<listing>"), so keying only on the id minted dupes that fooled
+  // the pool. Identity is contentHash — (cardId, parallel, isAuto, grade,
+  // price, soldAt) — because two sellers listing the same card at the same
+  // price in the same SECOND is lottery-tier.
+  //
+  // So the axis under test is CONTENT, not the id. Both halves are pinned.
+  it("same content + different externalIds → ONE row (CH multi-path dedup)", async () => {
     const base = {
       cardId: "cs-hartman-blue",
       playerName: "Eric Hartman",
@@ -127,6 +167,19 @@ describe("recordSoldComp — idempotency via composite id", () => {
     };
     await recordSoldComp({ ...base, sourceExternalId: "ebay-A" });
     await recordSoldComp({ ...base, sourceExternalId: "ebay-B" });
+    expect(store.size).toBe(1);
+  });
+
+  it("different content + different externalIds → separate rows", async () => {
+    // Genuinely distinct sales must still both land, or dedup would be eating
+    // real comps rather than duplicates — the failure mode that matters.
+    const base = {
+      cardId: "cs-hartman-blue",
+      playerName: "Eric Hartman",
+      source: "ebay-user-purchase" as const,
+    };
+    await recordSoldComp({ ...base, price: 420, soldAt: "2026-07-05T00:00:00Z", sourceExternalId: "ebay-A" });
+    await recordSoldComp({ ...base, price: 505, soldAt: "2026-07-06T00:00:00Z", sourceExternalId: "ebay-B" });
     expect(store.size).toBe(2);
   });
 
@@ -137,6 +190,12 @@ describe("recordSoldComp — idempotency via composite id", () => {
       price: 420,
       soldAt: "2026-07-05T00:00:00Z",
       source: "manual-user-entry" as const,
+      // preIngestClean made `parallel` REQUIRED for manual-user-entry after the
+      // 2026-08-01 Hartman incident, where a silent Base default mispriced a
+      // parallel. Without it both writes here are correctly rejected and the
+      // store stays empty — which is what made this test red, not the
+      // idempotency it is actually pinning.
+      parallel: "Base",
     };
     await recordSoldComp(base);
     await recordSoldComp(base);   // exact same → same id

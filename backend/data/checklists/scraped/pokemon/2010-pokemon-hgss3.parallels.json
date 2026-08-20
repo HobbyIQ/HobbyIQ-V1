@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/hgss3",
+ "setId": "hgss3",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 26,
+  "normal": 82,
+  "official": 90,
+  "reverse": 83,
+  "total": 91
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

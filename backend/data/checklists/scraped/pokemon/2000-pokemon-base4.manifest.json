@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.078Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/base4",
+ "sport": "pokemon",
+ "year": 2000,
+ "setName": "Base Set 2",
+ "productKey": "2000-base4",
+ "setKey": "base4",
+ "rowCount": 130,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Base Set 2",
+   "category": "base",
+   "playerCount": 130,
+   "printRun": null
+  }
+ ]
+}

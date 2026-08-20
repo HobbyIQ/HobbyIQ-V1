@@ -1,0 +1,183 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Aerodactyl
+base,2,Base,false,,Alakazam
+base,3,Base,false,,Arcanine
+base,4,Base,false,,Articuno
+base,5,Base,false,,Beedrill
+base,6,Base,false,,Crobat
+base,7,Base,false,,Dewgong
+base,8,Base,false,,Flareon
+base,9,Base,false,,Forretress
+base,10,Base,false,,Gengar
+base,11,Base,false,,Gyarados
+base,12,Base,false,,Houndoom
+base,13,Base,false,,Jolteon
+base,14,Base,false,,Kabutops
+base,15,Base,false,,Ledian
+base,16,Base,false,,Machamp
+base,17,Base,false,,Magcargo
+base,18,Base,false,,Magcargo
+base,19,Base,false,,Magneton
+base,20,Base,false,,Magneton
+base,21,Base,false,,Moltres
+base,22,Base,false,,Nidoqueen
+base,23,Base,false,,Omastar
+base,24,Base,false,,Piloswine
+base,25,Base,false,,Politoed
+base,26,Base,false,,Poliwrath
+base,27,Base,false,,Raichu
+base,28,Base,false,,Raikou
+base,29,Base,false,,Rhydon
+base,30,Base,false,,Starmie
+base,31,Base,false,,Steelix
+base,32,Base,false,,Umbreon
+base,33,Base,false,,Vaporeon
+base,34,Base,false,,Wigglytuff
+base,35,Base,false,,Xatu
+base,36,Base,false,,Electrode
+base,37,Base,false,,Kabuto
+base,38,Base,false,,Machoke
+base,39,Base,false,,Misdreavus
+base,40,Base,false,,Noctowl
+base,41,Base,false,,Omanyte
+base,42,Base,false,,Persian
+base,43,Base,false,,Piloswine
+base,44,Base,false,,Starmie
+base,45,Base,false,,Wobbuffet
+base,46,Base,false,,Abra
+base,47,Base,false,,Buried Fossil
+base,48,Base,false,,Cleffa
+base,49,Base,false,,Delibird
+base,50,Base,false,,Diglett
+base,51,Base,false,,Ditto
+base,52,Base,false,,Dugtrio
+base,53,Base,false,,Dunsparce
+base,54,Base,false,,Eevee
+base,55,Base,false,,Farfetch'd
+base,56,Base,false,,Forretress
+base,57,Base,false,,Gastly
+base,58,Base,false,,Girafarig
+base,59,Base,false,,Gligar
+base,60,Base,false,,Golbat
+base,61,Base,false,,Granbull
+base,62,Base,false,,Growlithe
+base,63,Base,false,,Haunter
+base,64,Base,false,,Heracross
+base,65,Base,false,,Hoothoot
+base,66,Base,false,,Houndour
+base,67,Base,false,,Igglybuff
+base,68,Base,false,,Jigglypuff
+base,69,Base,false,,Kadabra
+base,70,Base,false,,Kakuna
+base,71,Base,false,,Lapras
+base,72,Base,false,,Ledyba
+base,73,Base,false,,Ledyba
+base,74,Base,false,,Machop
+base,75,Base,false,,Magikarp
+base,76,Base,false,,Magnemite
+base,77,Base,false,,Mantine
+base,78,Base,false,,Meowth
+base,79,Base,false,,Murkrow
+base,80,Base,false,,Natu
+base,81,Base,false,,Nidoran♀
+base,82,Base,false,,Nidoran♀
+base,83,Base,false,,Nidorina
+base,84,Base,false,,Pikachu
+base,85,Base,false,,Pineco
+base,86,Base,false,,Pineco
+base,87,Base,false,,Poliwag
+base,88,Base,false,,Poliwhirl
+base,89,Base,false,,Raticate
+base,90,Base,false,,Rattata
+base,91,Base,false,,Rhyhorn
+base,92,Base,false,,Sandshrew
+base,93,Base,false,,Sandslash
+base,94,Base,false,,Seel
+base,95,Base,false,,Seel
+base,96,Base,false,,Shuckle
+base,97,Base,false,,Skarmory
+base,98,Base,false,,Slugma
+base,99,Base,false,,Slugma
+base,100,Base,false,,Snorlax
+base,101,Base,false,,Snubbull
+base,102,Base,false,,Stantler
+base,103,Base,false,,Staryu
+base,104,Base,false,,Staryu
+base,105,Base,false,,Sunflora
+base,106,Base,false,,Sunkern
+base,107,Base,false,,Swinub
+base,108,Base,false,,Swinub
+base,109,Base,false,,Teddiursa
+base,110,Base,false,,Ursaring
+base,111,Base,false,,Venomoth
+base,112,Base,false,,Venonat
+base,113,Base,false,,Voltorb
+base,114,Base,false,,Weedle
+base,115,Base,false,,Weedle
+base,116,Base,false,,Yanma
+base,117,Base,false,,Zubat
+base,118,Base,false,,Zubat
+base,119,Base,false,,Ancient Ruins
+base,120,Base,false,,Relic Hunter
+base,121,Base,false,,Apricorn Maker
+base,122,Base,false,,Crystal Shard
+base,123,Base,false,,Desert Shaman
+base,124,Base,false,,Fast Ball
+base,125,Base,false,,Fisherman
+base,126,Base,false,,Friend Ball
+base,127,Base,false,,Hyper Potion
+base,128,Base,false,,Lure Ball
+base,129,Base,false,,Miracle Sphere Alpha
+base,130,Base,false,,Miracle Sphere Beta
+base,131,Base,false,,Miracle Sphere Gamma
+base,132,Base,false,,Mirage Stadium
+base,133,Base,false,,Mystery Plate Alpha
+base,134,Base,false,,Mystery Plate Beta
+base,135,Base,false,,Mystery Plate Gamma
+base,136,Base,false,,Mystery Plate Delta
+base,137,Base,false,,Mystery Zone
+base,138,Base,false,,Oracle
+base,139,Base,false,,Star Piece
+base,140,Base,false,,Underground Expedition
+base,141,Base,false,,Underground Lake
+base,142,Base,false,,Bounce Energy
+base,143,Base,false,,Cyclone Energy
+base,144,Base,false,,Retro Energy
+base,145,Base,false,,Celebi
+base,146,Base,false,,Charizard
+base,147,Base,false,,Crobat
+base,148,Base,false,,Golem
+base,149,Base,false,,Ho-oh
+base,150,Base,false,,Kabutops
+base,H01,Base,false,,Alakazam
+base,H02,Base,false,,Arcanine
+base,H03,Base,false,,Articuno
+base,H04,Base,false,,Beedrill
+base,H05,Base,false,,Crobat
+base,H06,Base,false,,Dewgong
+base,H07,Base,false,,Flareon
+base,H08,Base,false,,Forretress
+base,H09,Base,false,,Gengar
+base,H10,Base,false,,Gyarados
+base,H11,Base,false,,Houndoom
+base,H12,Base,false,,Jolteon
+base,H13,Base,false,,Kabutops
+base,H14,Base,false,,Ledian
+base,H15,Base,false,,Machamp
+base,H16,Base,false,,Magcargo
+base,H17,Base,false,,Magcargo
+base,H18,Base,false,,Magneton
+base,H19,Base,false,,Magneton
+base,H20,Base,false,,Moltres
+base,H21,Base,false,,Nidoqueen
+base,H22,Base,false,,Piloswine
+base,H23,Base,false,,Politoed
+base,H24,Base,false,,Poliwrath
+base,H25,Base,false,,Raichu
+base,H26,Base,false,,Raikou
+base,H27,Base,false,,Rhydon
+base,H28,Base,false,,Starmie
+base,H29,Base,false,,Steelix
+base,H30,Base,false,,Umbreon
+base,H31,Base,false,,Vaporeon
+base,H32,Base,false,,Xatu

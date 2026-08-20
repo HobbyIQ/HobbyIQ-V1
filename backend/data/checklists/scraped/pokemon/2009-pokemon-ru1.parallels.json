@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ru1",
+ "setId": "ru1",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 0,
+  "normal": 16,
+  "official": 16,
+  "reverse": 0,
+  "total": 16
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:07.927Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/bw5",
+ "sport": "pokemon",
+ "year": 2012,
+ "setName": "Dark Explorers",
+ "productKey": "2012-bw5",
+ "setKey": "bw5",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Dark Explorers",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

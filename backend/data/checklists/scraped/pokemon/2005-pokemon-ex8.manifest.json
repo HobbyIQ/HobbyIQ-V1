@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.194Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex8",
+ "sport": "pokemon",
+ "year": 2005,
+ "setName": "Deoxys",
+ "productKey": "2005-ex8",
+ "setKey": "ex8",
+ "rowCount": 108,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Deoxys",
+   "category": "base",
+   "playerCount": 108,
+   "printRun": null
+  }
+ ]
+}

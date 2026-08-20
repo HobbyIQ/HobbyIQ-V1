@@ -1,0 +1,19 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Bulbasaur
+base,2,Base,false,,Ludicolo
+base,3,Base,false,,Morelull
+base,4,Base,false,,Charmander
+base,5,Base,false,,Charizard
+base,6,Base,false,,Arcanine
+base,7,Base,false,,Psyduck
+base,8,Base,false,,Magikarp
+base,9,Base,false,,Greninja
+base,10,Base,false,,Detective Pikachu
+base,11,Base,false,,Mr. Mime
+base,12,Base,false,,Mewtwo
+base,13,Base,false,,Machamp
+base,14,Base,false,,Jigglypuff
+base,15,Base,false,,Snubbull
+base,16,Base,false,,Lickitung
+base,17,Base,false,,Ditto
+base,18,Base,false,,Slaking

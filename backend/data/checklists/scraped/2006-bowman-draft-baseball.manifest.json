@@ -1,0 +1,18 @@
+{
+  "source": "cardboard-connection",
+  "sourceUrl": "https://www.cardboardconnection.com/2006-bowman-draft-picks-prospects-baseball",
+  "year": 2006,
+  "setKey": "bowman-draft",
+  "setName": "2006 Bowman Draft",
+  "sport": "baseball",
+  "rows": 214,
+  "deduped": 0,
+  "sections": {
+    "Base": 55,
+    "Draft Picks": 95,
+    "Futures Game Prospects": 45,
+    "Head of the Class": 1,
+    "Signs of the Future": 18
+  },
+  "fetchedAt": "2026-08-14T00:11:19.036Z"
+}

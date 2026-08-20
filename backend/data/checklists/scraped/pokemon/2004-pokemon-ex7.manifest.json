@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.155Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex7",
+ "sport": "pokemon",
+ "year": 2004,
+ "setName": "Team Rocket Returns",
+ "productKey": "2004-ex7",
+ "setKey": "ex7",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Team Rocket Returns",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

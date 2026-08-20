@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:13.162Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/sv09",
+ "sport": "pokemon",
+ "year": 2025,
+ "setName": "Journey Together",
+ "productKey": "2025-sv09",
+ "setKey": "sv09",
+ "rowCount": 190,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Journey Together",
+   "category": "base",
+   "playerCount": 190,
+   "printRun": null
+  }
+ ]
+}

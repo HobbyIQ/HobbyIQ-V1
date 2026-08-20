@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/base4",
+ "setId": "base4",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 20,
+  "normal": 111,
+  "official": 130,
+  "reverse": 0,
+  "total": 130
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

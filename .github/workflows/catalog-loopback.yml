@@ -1,0 +1,110 @@
+name: Catalog Loop-back (requeue matchable)
+
+# CF-CATALOG-LOOPBACK-CRON (Drew, 2026-08-14: "how can we fix the matching?").
+#
+# The loop was open. A staged row lands in `awaiting-catalog` when its sale is
+# real but no checklist describes the card, and recordSoldComp files a seed
+# asking for that checklist. When the checklist finally lands, NOTHING wakes the
+# rows that were waiting on it — requeueAwaitingCatalog.cjs was the only path
+# back to `clean`, it is manual, and it appeared in no workflow.
+#
+# So ingesting checklists did not convert into promoted sales. Measured while
+# diagnosing the matcher: 12% of blocked slugs ALREADY match the catalog
+# completely — they are stale, not blocked, and nothing was ever going to
+# requeue them.
+#
+# This runs the TARGETED requeue, which asks the catalog first and only flips
+# rows whose slug it can now resolve. The blunt version flips all of them, so
+# most churn through the expensive matcher, fail again, and land right back —
+# a full promotion pass per row to learn nothing.
+#
+# Cheap enough to run often: card_catalog stores id = cardId = slug, so the
+# check is a point read, done once per DISTINCT slug rather than per row.
+#
+# Deliberately NOT chained to checklist ingestion. Checklists arrive from
+# several places (checklist-refresh, MCP fetches, manual ingests, auto-seed),
+# and a hook on one of them would silently miss the others — which is how the
+# loop came to be open in the first place.
+
+on:
+  schedule:
+    - cron: '25 */6 * * *'   # every 6 hours, offset off the hour
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write (true) or dry-run (false)'
+        default: 'true'
+      top:
+        description: 'Rows to requeue per run (default 5000; was 25, which would need ~24 years to clear the backlog)'
+        required: false
+        type: string
+        default: '5000'
+
+concurrency:
+  group: catalog-loopback
+  cancel-in-progress: false   # never cancel mid-write; the next tick resumes
+
+jobs:
+  requeue:
+    name: Requeue rows whose checklist has landed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # CF-LOOPBACK-NEVER-RAN (Drew, 2026-08-17: "looks like the sales index is
+    # frozen").
+    #
+    # This job had failed on EVERY run since it was created — 12 for 12 — on
+    # `COSMOS_CONNECTION_STRING is unset`. It read
+    # ${{ secrets.COSMOS_CONNECTION_STRING }}, and that secret does not exist in
+    # this repo. Every other Cosmos workflow here fetches the value from App
+    # Service at run time via azure/login; this one was written against a secret
+    # that was never set, so it exited 1 before touching a single row.
+    #
+    # It is the loop-back: the thing that notices a checklist has landed and
+    # sends the rows that were waiting on it back through matching. With it dead,
+    # awaiting-catalog could only ever grow — which is exactly the frozen index,
+    # and the reason the manual re-drives in #1099/#1101 were needed at all.
+    #
+    # azure/login needs id-token: write, which was also absent.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps + build dist
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc -p tsconfig.json
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Requeue matchable awaiting-catalog rows
+        working-directory: backend
+        env:
+          COSMOS_DATABASE: hobbyiq
+        run: |
+          # Same pattern as every other Cosmos job in this repo: pull the
+          # connection string from App Service and pipe it straight into the
+          # child env. Never written to disk, never echoed.
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          # --top was 25. That is a rounding error against 896,337 parked rows:
+          # at 25 per 6-hour tick it would clear 100/day, i.e. ~24 years. The cap
+          # was sized for a job nobody had ever seen complete.
+          if [ "${{ inputs.apply || 'true' }}" = "true" ]; then
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            node scripts/requeueMatchableAwaitingCatalog.cjs --apply --top "${{ inputs.top || '5000' }}"
+          else
+            COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+            node scripts/requeueMatchableAwaitingCatalog.cjs --top "${{ inputs.top || '5000' }}"
+          fi

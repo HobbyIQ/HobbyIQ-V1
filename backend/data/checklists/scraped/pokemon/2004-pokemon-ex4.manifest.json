@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.856Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex4",
+ "sport": "pokemon",
+ "year": 2004,
+ "setName": "Team Magma vs Team Aqua",
+ "productKey": "2004-ex4",
+ "setKey": "ex4",
+ "rowCount": 97,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Team Magma vs Team Aqua",
+   "category": "base",
+   "playerCount": 97,
+   "printRun": null
+  }
+ ]
+}

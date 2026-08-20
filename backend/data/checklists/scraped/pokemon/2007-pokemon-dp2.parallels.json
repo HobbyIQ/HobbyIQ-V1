@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp2",
+ "setId": "dp2",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 28,
+  "normal": 122,
+  "official": 123,
+  "reverse": 120,
+  "total": 124
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

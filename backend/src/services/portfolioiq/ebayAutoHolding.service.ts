@@ -34,6 +34,10 @@ import type {
   PortfolioPurchaseEntry,
 } from "./portfolioStore.service.js";
 import type { EbayItemDetails } from "../ebay/ebayItemDetails.service.js";
+// CF-ASPECT-IS-NOT-A-PARALLEL: the normalizer is the single place that knows
+// which strings are real parallels, so the aspect is vetted through it rather
+// than against a second, drifting list here.
+import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 
 /**
  * Threshold at which we auto-create a holding from a purchase.
@@ -69,11 +73,14 @@ export interface AutoHoldingDocShape {
  * is merged AUTHORITATIVELY over the title-parse for grader/grade/aspects/
  * images. Absent `details` → title-parse only (current-day behavior).
  */
-export function autoCreateHoldingForPurchase(
+// Async since CF-EBAY-MATCH-CATALOG-AT-INGEST: the catalog match is a Cosmos
+// read, so matching at import time makes this awaitable. Sole caller is
+// ebayBuyerHistory.service, already inside an async loop.
+export async function autoCreateHoldingForPurchase(
   doc: AutoHoldingDocShape,
   purchase: PortfolioPurchaseEntry,
   details?: EbayItemDetails | null,
-): AutoHoldingResult {
+): Promise<AutoHoldingResult> {
   if (purchase.holdingIds.length > 0) {
     return {
       status: "skipped-already-linked",
@@ -141,6 +148,92 @@ export function autoCreateHoldingForPurchase(
 
   const holding = buildHoldingFromParse(purchase, parsed);
   if (details) applyBrowseEnrichment(holding, details);
+
+  // CF-EBAY-MATCH-CATALOG-AT-INGEST (Drew, 2026-08-13: "I want ebay to match to
+  // the card catalog immediately... and we can approve it once ingested in the
+  // ebay tab").
+  //
+  // This path built a holding from the parsed title and seeded a NEW catalog
+  // row from eBay's aspects, but never asked whether we ALREADY hold that card
+  // in the checklist. Nothing looked, so every imported holding rendered
+  // "MISSING / VALUE —" with a Fix-identity link, even for cards whose
+  // checklist row and comps we have.
+  //
+  // Match against the catalog here, at ingest. The holding still lands as
+  // pending-review under EBAY_IMPORT_FORCE_REVIEW — the match is a PROPOSAL
+  // the user approves in the eBay tab, not an auto-commit. That distinction
+  // matters: title parsing is lossy, and a loose match is confidently wrong in
+  // a way the user cannot see. Probed against prod on 2026-08-13, free-text
+  // matching returned "2018 Topps Chrome Update Ohtani" as topps-HERITAGE #20
+  // and "2017 Bowman ROYF-9 Judge" as bowman #1 — right player, wrong card.
+  //
+  // canonicalize() is the strict matcher (exact identity → 0.98, degrading to
+  // 0.3 for speculative), so the confidence it returns is what the review UI
+  // should sort and colour by. Only a strong match pins cardId; a weak one is
+  // recorded for the reviewer without steering pricing.
+  try {
+    const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+    const h = holding as Record<string, unknown>;
+    const match = await canonicalize({
+      sport: String(h.sport ?? "baseball"),
+      year: typeof h.cardYear === "number" ? h.cardYear : null,
+      setName: String(h.setName ?? h.product ?? ""),
+      cardNumber: String(h.cardNumber ?? ""),
+      parallel: String(h.parallel ?? "") || null,
+      isAuto: Boolean(h.isAuto),
+      playerName: String(h.playerName ?? ""),
+      source: "ebay-title",
+    } as never);
+
+    if (match) {
+      h.catalogMatchConfidence = match.confidence;
+      h.catalogMatchedBy = match.matchedBy ?? null;
+      h.catalogMatchSlug = match.slug ?? null;
+      // Pin the identity only when the matcher is confident. Below that the
+      // slug is a suggestion for the reviewer — pinning it would send pricing
+      // to the wrong card while still showing a value, which reads as correct.
+      if (match.found && match.slug && match.confidence >= 0.9) {
+        h.cardId = match.slug;
+      }
+
+      // CF-EBAY-MISS-SEEDS-CHECKLIST (Drew, 2026-08-13: "we should get those
+      // checklists if we are missing them").
+      //
+      // A miss on a card the user demonstrably owns is the strongest possible
+      // signal that a checklist is worth building — they paid for it. Record it
+      // so the gap becomes a work order instead of a permanently unmatched
+      // holding. Deduped per release by checklistSeedQueue, so a 200-card
+      // import files one order per set, not 200.
+      //
+      // Real misses this fires on, from Drew's own portfolio: 2017 Topps Gold
+      // Label, 2020 Bowman Draft (BD152), 2022 Topps Chrome image variations.
+      if (!match.found) {
+        const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
+        const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
+        const setNameForSeed = String(h.setName ?? h.product ?? "").trim();
+        if (setNameForSeed && typeof h.cardYear === "number") {
+          await requestChecklistSeed({
+            sport: String(h.sport ?? "baseball"),
+            year: h.cardYear,
+            setName: setNameForSeed,
+            setKey: normalizeSetKey(setNameForSeed),
+            reason: "ebay-import-unmatched",
+            missingPlayer: String(h.playerName ?? "") || undefined,
+            missingCardNumber: String(h.cardNumber ?? "") || undefined,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    // Never block an import on the matcher — the holding still lands for
+    // review, exactly as before.
+    console.warn(JSON.stringify({
+      event: "ebay_import_catalog_match_failed",
+      source: "ebayAutoHolding.service",
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
   doc.holdings[holding.id] = holding;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
   const merged = new Set([...purchase.holdingIds, holding.id]);
@@ -410,8 +503,53 @@ export function applyBrowseEnrichment(
   if (aspects["Manufacturer"]) {
     (holding as any).manufacturer = aspects["Manufacturer"];
   }
-  if (aspects["Parallel/Variety"]) {
-    holding.parallel = aspects["Parallel/Variety"];
+  // CF-ASPECT-IS-NOT-A-PARALLEL (Drew, 2026-08-18: "i am seeing a lot of
+  // refractors turned into base cards ... the name itself is not matching
+  // from ebay").
+  //
+  // eBay's Parallel/Variety aspect is SELLER-TYPED, and sellers routinely put
+  // the PRODUCT there. This blindly overwrote the title parse — which had
+  // already got it right on line ~353 — and the real parallel was discarded:
+  //
+  //   "2025 Bowman Chrome Refractor Max Williams"    aspect "Chrome"  (was Refractor)
+  //   "2026 Topps Chrome Yellow Parallel K. Griffin" aspect "Chrome"  (was Yellow)
+  //   "2026 Bowman Blue Blaine Bullard Logo Pattern" aspect "Chrome"  (was Blue)
+  //   "2026 Bowman Sapphire Numbered Owen Carey"     aspect "Numbered"
+  //
+  // Downstream, holdingFieldNormalizer correctly rejects "Chrome" as not a
+  // parallel and nulls it — and a null parallel renders as `base`. So a
+  // Refractor arrives already amputated and gets priced against base comps.
+  // Six of Drew's holdings were in this state.
+  //
+  // The aspect is still USEFUL — it is the only structured signal when a title
+  // omits the parallel. So keep it, but only when it survives normalization as
+  // a real parallel. If the normalizer would discard it, the title parse is
+  // the better source and must not be clobbered.
+  const rawAspectParallel = aspects["Parallel/Variety"];
+  if (rawAspectParallel) {
+    const { fields: probe } = normalizeHoldingFields({
+      playerName: holding.playerName ?? null,
+      cardYear: holding.cardYear ?? null,
+      setName: holding.setName ?? null,
+      parallel: rawAspectParallel,
+      cardNumber: holding.cardNumber ?? null,
+      isAuto: holding.isAuto ?? null,
+      product: holding.product ?? null,
+    });
+    const survives = typeof probe.parallel === "string" && probe.parallel.trim() !== "";
+    if (survives) {
+      holding.parallel = probe.parallel as string;
+    } else if (!holding.parallel) {
+      // Nothing from the title either — leave it unset rather than storing a
+      // product word that will silently become `base`.
+      console.log(JSON.stringify({
+        event: "ebay_aspect_parallel_rejected",
+        source: "ebayAutoHolding",
+        aspect: rawAspectParallel,
+        title: holding.cardTitle ?? null,
+        note: "aspect is not a parallel; kept title-parsed value",
+      }));
+    }
   }
   if (aspects["Card Number"] && !holding.cardNumber) {
     holding.cardNumber = aspects["Card Number"];

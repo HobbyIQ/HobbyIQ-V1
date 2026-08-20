@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.354Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/exu",
+ "sport": "pokemon",
+ "year": 2005,
+ "setName": "Unseen Forces Unown Collection",
+ "productKey": "2005-exu",
+ "setKey": "exu",
+ "rowCount": 28,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Unseen Forces Unown Collection",
+   "category": "base",
+   "playerCount": 28,
+   "printRun": null
+  }
+ ]
+}

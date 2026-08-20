@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex16",
+ "setId": "ex16",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 47,
+  "normal": 175,
+  "official": 108,
+  "reverse": 0,
+  "total": 108
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

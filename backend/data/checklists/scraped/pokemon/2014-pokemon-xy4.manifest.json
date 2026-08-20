@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.271Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy4",
+ "sport": "pokemon",
+ "year": 2014,
+ "setName": "Phantom Forces",
+ "productKey": "2014-xy4",
+ "setKey": "xy4",
+ "rowCount": 124,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Phantom Forces",
+   "category": "base",
+   "playerCount": 124,
+   "printRun": null
+  }
+ ]
+}

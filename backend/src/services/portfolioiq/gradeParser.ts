@@ -42,6 +42,27 @@ export interface ParsedGrade {
    * follow-up — this file just extracts the tag.
    */
   qualifier?: string;
+  /**
+   * CF-AUTHENTIC-BUCKET (Drew, 2026-08-15: "we need a new bucket for Auth for
+   * all grading companies so vintage cards fall in there too").
+   *
+   * True when the slab is AUTHENTICATED but carries NO numeric grade —
+   * "CGC AUTH", "PSA Authentic", "SGC AUTH", "BGS AUTHENTIC". Common on
+   * vintage, and on any card trimmed, recoloured or otherwise altered, so it
+   * trades well BELOW the same card raw.
+   *
+   * Measured on 2018 Bowman Chrome Ohtani #1: two "CGC AUTH" sales at $1,680
+   * and $1,770 were counted as RAW comps against genuine raw sales at
+   * $3,000-3,049, dragging the raw median to $2,900 and setting the low.
+   * Across the pool: 4,313 rows say "CGC AUTH", 1,993 "PSA AUTH", 1,235
+   * "SGC AUTH", 378 "BGS AUTH" — roughly 7,900 sales in the wrong bucket.
+   *
+   * gradeValue is 0 on purpose. Real grades run 0.5-10, so 0 cannot collide
+   * with one; `gradeValue !== null` (this codebase's "is graded" test)
+   * correctly stops these being raw; and any consumer guarding on a positive
+   * grade skips them rather than treating them as a top grade.
+   */
+  isAuthentic?: boolean;
 }
 
 /** PSA grade qualifier flag codes. All slab-printed as parenthesized
@@ -142,6 +163,15 @@ const COMPANY_TOKENS: Array<{ token: RegExp; canonical: string }> = [
  *   - "10" / "9.5" / number-only    → null (no company; surfaced for review)
  *   - "GEM" alone                   → null (no value; surfaced for review)
  */
+/** Company token for a label, or null. Shared by the Authentic branch and the
+ *  main numeric path so both agree on the grader. */
+function detectedCompanyOf(text: string): string | null {
+  for (const { token, canonical } of COMPANY_TOKENS) {
+    if (token.test(text)) return canonical;
+  }
+  return null;
+}
+
 export function parseGradeLabel(label: string | null | undefined): ParsedGrade | null {
   if (!label) return null;
   const trimmed = String(label).trim();
@@ -149,6 +179,33 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
 
   const lower = trimmed.toLowerCase();
   if (lower === "raw" || lower === "ungraded" || lower === "none") return null;
+
+  // ── Authenticated, no numeric grade ──────────────────────────────────
+  // Runs BEFORE the numeric scan. "CGC AUTH" carries no digit, so the scan
+  // returns null and the row falls through to RAW — the bug this fixes.
+  //
+  // "AUTO"/"AUTOGRAPH" is deliberately not a trigger: that is a signature on
+  // the card, not an authentication-only slab. And a numeric grade sitting
+  // beside the word means the slab IS graded and "AUTH" describes the
+  // autograph ("CGC AUTH w/ 10 AUTO GRADE"), so the bucket is only claimed
+  // when no grade number is present. Card numbers and years are stripped
+  // first so "#1" and "2018" cannot be mistaken for a grade.
+  if (/\bauth(?:entic|enticated)?\b/i.test(trimmed)) {
+    const withoutNoise = trimmed
+      .replace(/\b(?:19|20)\d{2}\b/g, " ")
+      .replace(/#\s*[\w-]+/g, " ");
+    const hasNumericGrade = /\b(?:10|[1-9](?:\.5)?)\b/.test(withoutNoise);
+    // A GRADING COMPANY IS REQUIRED. Without one, "Authentic" is far more
+    // often a product or marketing word than an authentication:
+    // "SP Authentic" is an Upper Deck product line, and a dry run over the
+    // pool tagged 6,450 rows — mostly "2001 SP Authentic Baseball" — as
+    // authenticated slabs on the strength of the word alone. That is a worse
+    // error than the bug being fixed, so no company means no bucket.
+    const company = detectedCompanyOf(trimmed);
+    if (!hasNumericGrade && company) {
+      return { gradeCompany: company, gradeValue: 0, isAuthentic: true };
+    }
+  }
 
   // ── Detect company token ─────────────────────────────────────────────
   let detectedCompany: string | null = null;

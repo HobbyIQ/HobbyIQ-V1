@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:08.445Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xyp",
+ "sport": "pokemon",
+ "year": 2013,
+ "setName": "XY Black Star Promos",
+ "productKey": "2013-xyp",
+ "setKey": "xyp",
+ "rowCount": 216,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > XY Black Star Promos",
+   "category": "base",
+   "playerCount": 216,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp5",
+ "setId": "dp5",
+ "cardCount": {
+  "firstEd": 0,
+  "holo": 21,
+  "normal": 123,
+  "official": 100,
+  "reverse": 97,
+  "total": 100
+ },
+ "note": "Set-level finish counts. NOT expanded into per-card rows — the source does not say which cards exist in which finish."
+}

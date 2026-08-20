@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.588Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex13",
+ "sport": "pokemon",
+ "year": 2006,
+ "setName": "Holon Phantoms",
+ "productKey": "2006-ex13",
+ "setKey": "ex13",
+ "rowCount": 111,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Holon Phantoms",
+   "category": "base",
+   "playerCount": 111,
+   "printRun": null
+  }
+ ]
+}

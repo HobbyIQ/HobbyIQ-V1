@@ -45,6 +45,9 @@ import {
   persistCertLookup,
   persistCardPanel,
 } from "../services/compiq/cardhedgeLearnCorpus.service.js";
+// Static, not dynamic: this is used inside a synchronous response literal, and
+// the module is a leaf (it imports only alias tables), so there is no cycle.
+import { normalizeSetKey } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
@@ -2641,7 +2644,47 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         cardId: (result as any).cardIdentity?.card_id ?? undefined,
       });
     }
-    res.json(result);
+
+    // CF-SEARCH-CHECKLIST-OPTIONS (Drew, 2026-08-13: "we want to show all the
+    // potential options in that checklist with auto" / "the checklist feeds
+    // the search").
+    //
+    // This endpoint PRICES one card — it parses the text and runs
+    // computeEstimate — so its recentComps were the only list a client could
+    // render, which is why a search surfaced sold-comp rows and duplicates
+    // instead of the checklist. Attach the catalog options so a client can
+    // show "here are every parallel/auto of this card we have a checklist
+    // for", and let the user pick rather than guessing from comps.
+    //
+    // ADDITIVE on purpose. iOS decodes this response as CompIQSearchResponse
+    // and Swift's Codable ignores unknown keys, so shipping a new field cannot
+    // break the existing client; the priced fields are untouched. Replacing
+    // the response shape outright is the follow-up, once a client renders the
+    // picker.
+    //
+    // Best-effort: a catalog failure must never take down a working price.
+    //
+    // `result` came from cacheWrap, so it is a CACHED object — mutating it
+    // would write the options into the cache entry and serve one query's
+    // checklist to another. Merge into a copy instead, and compute the options
+    // outside the cache so a newly-ingested checklist row and its fresh comps
+    // appear immediately rather than after the 6h TTL.
+    let catalogOptions: unknown[] = [];
+    let catalogProvisional = false;
+    try {
+      const { searchCatalog } = await import("../services/catalog/catalogSearch.service.js");
+      const catalog = await searchCatalog({ query: query.trim(), limit: 25 });
+      catalogOptions = catalog.hits;
+      catalogProvisional = catalog.provisional === true;
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "compiq_search_catalog_options_failed",
+        source: "compiq.routes.search",
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
+    res.json({ ...(result as Record<string, unknown>), catalogOptions, catalogProvisional });
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
     // single capture. Each writer self-gates on its own env vars
@@ -3080,7 +3123,16 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                     slug: best.id,
                     sport: best.sport ?? "baseball",
                     year: best.year,
-                    setKey: best.setName,
+                    // CF-SETKEY-IS-ALWAYS-A-SLUG (2026-08-19). This returned the
+                    // raw DISPLAY name — "Bowman's Best", "2024 Panini Donruss"
+                    // — under a field named setKey. A caller that echoes
+                    // cardIdentity back writes a non-slug key, which is one of
+                    // the ways 821 such spellings reached card_catalog and put
+                    // 91,135 rows of checklist evidence out of reach.
+                    // The catalog row's own setKey is already normalised;
+                    // normalizeSetKey is the fallback, never the display string.
+                    setKey: (best as { setKey?: string }).setKey
+                      || normalizeSetKey(String(best.setName ?? "")),
                     cardNumber: best.cardNumber,
                     parallel: parsed.parallel || "Base",
                     isAuto: false,
@@ -4935,6 +4987,88 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
     })();
 
     if (!card || !certInfo) {
+      // CF-CERT-READ-THROUGH (Drew, 2026-08-13). Both branches above are
+      // CardHedge calls, and CH_RUNTIME_DISABLED=true in prod makes
+      // headers() return null so getFmvByCert/getPricesByCert BOTH return
+      // null — this endpoint has been answering "cert not found" for every
+      // cert, regardless of the cert. It was not slow; it was dead.
+      //
+      // Fall back to the grader registry (PSA today, BGS/SGC/CGC as adapters
+      // land) fronted by the graded_cert store: a repeat lookup is a ~1 RU
+      // point read instead of a 400-800ms vendor round trip, and pricing comes
+      // from our own pool via the linked cardId rather than from CH.
+      //
+      // Placed HERE rather than replacing the CH path so behaviour is
+      // unchanged wherever CH still answers — this only fills the hole.
+      try {
+        const { resolveCert } = await import("../services/certGraders/resolveCert.service.js");
+        const resolved = await resolveCert(graderNorm, cert.trim());
+        if (resolved) {
+          // Price from OUR pool when the cert is linked to a catalog card.
+          let canonical: unknown = null;
+          if (resolved.cardId) {
+            try {
+              const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+              const gradeNum = resolved.grade ? Number(resolved.grade) : null;
+              canonical = await computeCanonicalFmv({
+                cardId: resolved.cardId,
+                parallel: resolved.parallel || "Base",
+                gradeCompany: resolved.grader,
+                gradeValue: Number.isFinite(gradeNum) ? gradeNum : null,
+                cardYear: resolved.year,
+                product: resolved.setName,
+                player: resolved.playerName,
+                cardNumber: resolved.cardNumber,
+                freshCompute: false,
+              } as never);
+            } catch { /* identity still answers without a price */ }
+          }
+          return res.json({
+            success: true,
+            cert: resolved.certNumber,
+            grader: resolved.grader,
+            grade: resolved.grade,
+            card: {
+              cardId: resolved.cardId,
+              description: [resolved.playerName, resolved.year, resolved.setName, resolved.cardNumber]
+                .filter(Boolean).join(" ") || null,
+              player: resolved.playerName,
+              set: resolved.setName,
+              number: resolved.cardNumber,
+              variant: resolved.parallel,
+              imageUrl: null,
+              descriptionRebuilt: true,
+            },
+            canonicalFmv: canonical,
+            readyToAdd: {
+              cardId: resolved.cardId,
+              playerName: resolved.playerName,
+              cardYear: resolved.year,
+              product: resolved.setName,
+              setName: resolved.setName,
+              cardNumber: resolved.cardNumber,
+              parallel: resolved.parallel,
+              isAuto: resolved.isAuto ?? false,
+              gradingCompany: resolved.grader,
+              gradeValue: resolved.grade ? Number(resolved.grade) : null,
+            },
+            population: {
+              total: resolved.totalPopulation,
+              higher: resolved.populationHigher,
+            },
+            // Which path answered, and how fast. "store" is the ~1 RU read.
+            servedFrom: resolved.servedFrom,
+            elapsedMs: resolved.elapsedMs,
+          });
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "cert_readthrough_failed",
+          source: "compiq.lookup-by-cert",
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+
       return res.json({
         success: false,
         error: "Cert not found or card could not be resolved",
@@ -6114,13 +6248,45 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // factor the estimate produced. Keeps FMV → predicted always
         // internally consistent regardless of grade selection.
         predictedPrice: (() => {
-          const factor = typeof (est as any).forwardProjectionFactor === "number" && Number.isFinite((est as any).forwardProjectionFactor)
-            ? (est as any).forwardProjectionFactor as number
-            : 1.0;
+          // CF-PREDICTED-FACTOR-NEVER-SET (Drew, 2026-08-20). This read
+          // `est.forwardProjectionFactor`, which NOTHING ever assigns — the
+          // service passes that name to emitPredictionToCorpus (telemetry) and
+          // stores the value on `predictedPriceAttribution`, never on the
+          // estimate itself. So the factor was ALWAYS undefined, always fell
+          // back to 1.0, and this endpoint returned
+          //   predictedPrice = effectiveFmv x 1.0 = effectiveFmv
+          // for every card. Predicted silently equalled Market Value on
+          // /price-by-id, which is the surface iOS pins a card to.
+          //
+          // The failure was invisible because the shape stayed correct: a
+          // populated, plausible, internally-consistent number that happened to
+          // carry no forward signal at all.
+          //
+          // Derive the factor the way the comment always described it — "the
+          // same forward-projection factor the estimate produced" — as the
+          // estimate's OWN predicted/market ratio, so a grade-adjusted
+          // effectiveFmv is re-anchored by the raw tier's projection.
+          const estPredicted = (est as any).predictedPrice;
+          const estFmv = (est as any).effectiveFmv;
+          const attr = (est as any).predictedPriceAttribution as Record<string, unknown> | null;
+          const attrFactor = attr && typeof attr.forwardProjectionFactor === "number"
+            && Number.isFinite(attr.forwardProjectionFactor)
+            ? (attr.forwardProjectionFactor as number)
+            : null;
+          const ratioFactor =
+            typeof estPredicted === "number" && Number.isFinite(estPredicted) && estPredicted > 0 &&
+            typeof estFmv === "number" && Number.isFinite(estFmv) && estFmv > 0
+              ? estPredicted / estFmv
+              : null;
+          const factor = ratioFactor ?? attrFactor;
+          // No factor means no forward signal. Pass the estimate's own
+          // predictedPrice through rather than inventing FMV x 1.0, so
+          // "no projection" stays distinguishable from "projected flat".
+          if (factor === null) return estPredicted ?? null;
           if (typeof effectiveFmv === "number" && effectiveFmv > 0) {
             return Math.round(effectiveFmv * factor * 100) / 100;
           }
-          return (est as any).predictedPrice ?? null;
+          return estPredicted ?? null;
         })(),
         predictedPriceRange: (est as any).predictedPriceRange ?? null,
         predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,

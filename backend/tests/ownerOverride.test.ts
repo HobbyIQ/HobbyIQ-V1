@@ -197,8 +197,15 @@ describe("CF-OWNER-OVERRIDE: setUserSubscriptionState preserves override", () =>
       },
     );
 
-    // Plan moved to investor (Apple's truth) but override survives.
-    expect(afterWebhook?.plan).toBe("investor");
+    // SUPERSEDED 2026-07-31 by CF-EFFECTIVE-PLAN-IN-AUTH-RESPONSE. toAuthUser
+    // now returns the EFFECTIVE plan (override → raw), so a comped account no
+    // longer renders as its raw Apple tier. Apple's truth still lands on the
+    // stored record (user.plan = "investor"); what the wire reports is the
+    // resolved entitlement, which is "pro_seller" while the override stands.
+    //
+    // The thing this test actually pins — the override SURVIVES an Apple
+    // webhook write — is unchanged and asserted below.
+    expect(afterWebhook?.plan).toBe("pro_seller");
     expect(afterWebhook?.entitlementOverride).toBe("pro_seller");
 
     // And the effective resolver still says pro_seller.

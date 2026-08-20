@@ -1,17 +1,42 @@
 name: Staging Pipeline Cron
 
+# CF-WORKER-SEPARATION (Drew, 2026-08-18). BASE now points at
+# hobbyiq3-worker.azurewebsites.net, NOT HobbyIQ3.
+#
+# This cron drives every /api/staging/* call, and it fires every 5 minutes.
+# Measured over 24h before the move, it accounted for 262 of ~280 total
+# server-seconds on HobbyIQ3 — 94% of all work the interactive app did — while
+# real users generated ~60 requests. Batch work of that shape has no business
+# sharing a process with page loads: it competes for memory, Cosmos RU and
+# connection budget, and it couples deploy blast radius.
+#
+# HONEST SCOPE. This is hygiene and headroom, not a latency fix. The original
+# theory was that image-verify blocked the event loop; it does not — it was a
+# sequential loop of Azure Vision OCR calls, i.e. network waiting with the loop
+# idle. That job got faster from concurrency (pool of 6, ~40s -> ~7s), not from
+# moving hosts.
+#
+# The worker runs the identical build from the same zip.js packaging path, so
+# it cannot drift from HobbyIQ3. To roll back, put the HobbyIQ3 host back here
+# — nothing else is host-specific.
+#
 # CF-STAGING-PIPELINE-CRON (Drew, 2026-07-28). Autonomous drain of
 # the staging pipeline every 5 minutes. Each run walks all three
 # jobs in order: data-clean → image-verify → promotion.
 #
 # CF-STAGING-BATCH-BUMP (Drew, 2026-08-01). Batch sizes bumped 4×
 # after audit found 416K pending rows and the old sizing (data-clean
-# 200 / promotion 500) would take 17 days to drain. Endpoints are
-# fast (~8s for 200 rows) so 4× headroom is safe within the 5-min
-# job budget.
-#   data-clean:  200 → 800   (~230K/day drain capacity)
+# 200 / promotion 500) would take 17 days to drain.
+#   data-clean:  200 → 800   (intended ~230K/day drain capacity)
 #   image-verify: 50 → 100
-#   promotion:   500 → 2000  (~575K/day promotion capacity)
+#   promotion:   500 → 2000  (intended ~575K/day promotion capacity)
+#
+# CORRECTION (2026-08-13): that bump never took effect. The route clamped
+# `limit` with Math.min(500, ...), so 800 and 2000 both became 500 and the
+# real capacity stayed 144K/day per stage — under the ~300K/day inbound,
+# which is why the backlog grew to 3.5M instead of draining. Nothing
+# surfaced it: the workflow passed 800, got HTTP 200, and reported success.
+# Cap is now MAX_BATCH=5000 and the numbers above are finally reachable.
 #
 # Rate-limit friendly:
 #   - Vision: 50 rows × 2s/call = 100s per run, well under 300s job
@@ -26,14 +51,68 @@ on:
   workflow_dispatch:
     inputs:
       data_clean_limit:
-        description: 'Data-clean batch size'
-        default: '800'
+        # CF-DATACLEAN-HEADROOM (Drew, 2026-08-14). Same failure as promotion,
+        # one step earlier: shards 0/2/4 hit --max-time 240 while 1/3/5 returned
+        # fine. Verified NOT contention — it still failed with the local drain
+        # stopped, which was my first (wrong) theory.
+        #
+        # Cost per row is not uniform: data-clean does per-slug rolling-median
+        # lookups for the price band, so a shard whose slice lands on
+        # high-volume slugs does far more work at the same batch size. Sizing
+        # for the average shard guarantees the slow ones fail.
+        description: 'Data-clean batch size PER SHARD (must finish inside 240s)'
+        default: '750'
       image_verify_limit:
         description: 'Image-verify batch size'
         default: '100'
       promotion_limit:
-        description: 'Promotion batch size'
-        default: '2000'
+        # CF-PROMOTION-SIZED-TO-THE-CEILING (Drew, 2026-08-14: "we need to
+        # really work on the ingestion and matching to catch up and stay
+        # ahead"). 2000 could NEVER finish: promotion is bounded by App
+        # Service's 240s request ceiling, so an oversized batch times out and
+        # accomplishes nothing — the cron was asking for work it could not
+        # complete. Measured on f5cbed54 after the RU fix:
+        #   limit=200 -> 132s (90 rows/min)
+        #   limit=400 -> 195s (123 rows/min)   <- completes, with headroom
+        # CORRECTION (2026-08-14, same day): 400 was sized from a 195s
+        # measurement against a --max-time of 200s. A five-second margin is not
+        # a margin. Measured on the cron itself, shards 1/3/5 returned in
+        # 114-121s while shards 0/2/4 hit the timeout exactly — same batch size,
+        # ~2x spread, because per-row matcher cost varies by set.
+        #
+        # "Largest size that completes" was the wrong target; it has to be the
+        # largest that completes on the SLOWEST shard, on a bad day. 250 lands
+        # around 120s at the observed rate, leaving real headroom, and the
+        # curl timeout below is raised to the App Service ceiling so a slow
+        # shard is killed by the server rather than by us at 200s.
+        description: 'Promotion batch size PER SHARD (must finish well inside 240s)'
+        default: '250'
+      shards:
+        # CF-DISABLE-SHARDING (Drew, 2026-08-14). Set to 1 — sharding OFF.
+        #
+        # The jobs shard by STARTSWITH(c.id, <hex char>). That assumes ids are
+        # uniformly distributed across hex. They are NOT: most rows carry
+        # Bubble ids that are millisecond timestamps ("1778468473145x..."), so
+        # essentially every id begins with '1'.
+        #
+        # The consequence is that one shard owns almost all the data and every
+        # other shard scans the whole container to find rows that barely exist,
+        # then hits the 240s timeout. Measured on prod:
+        #
+        #   6 shards -> 3 of 6 failed, every run
+        #   8 shards -> 7 of 8 failed; only shard 1 (which owns '1') returned
+        #
+        # I mis-diagnosed this twice as RU contention and once as 6-not-dividing
+        # -16. It is neither. More shards makes it WORSE, which is the tell:
+        # the split is invalid, not the sizing.
+        #
+        # Unsharded, promotion takes the top N with no id filter and returns
+        # normally. Slower per tick than working sharding would be, but it is
+        # GREEN and self-sustaining, which sharding never was. Restoring
+        # parallelism needs a shard key that matches the id distribution —
+        # a hash of the id, not its first character.
+        description: 'Worker shards. 1 = OFF. Do NOT raise without a hash-based shard key.'
+        default: '1'
 
 concurrency:
   group: staging-pipeline
@@ -43,47 +122,117 @@ jobs:
   drain:
     name: Drain staging pipeline
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Raised from 5: shards run concurrently, but data-clean and promotion are
+    # still sequential steps, each allowed ~200-240s. A tick that overruns the
+    # 5-minute cron cadence is fine — the concurrency group serialises runs, and
+    # one run now moves ~8,000 rows per stage instead of 500.
+    timeout-minutes: 12
     steps:
-      - name: Data-clean
+      # CF-STAGING-FANOUT (Drew, 2026-08-13: "how can we speed it up? ... go
+      # live date is 9/14").
+      #
+      # Two compounding problems, both silent:
+      #
+      #   1. The route capped `limit` at 500 via Math.min, so the 800 below was
+      #      clamped and the 2026-08-01 batch bump never took effect. Real
+      #      capacity was 144K/day against ~300K/day inbound — the backlog could
+      #      only grow. Cap is now MAX_BATCH=5000.
+      #   2. Both jobs already supported worker sharding, but the routes never
+      #      exposed it, so every tick was one serial batch.
+      #
+      # Now: SHARDS parallel calls over disjoint id-prefix slices. Wall-clock is
+      # one shard, not the sum. Each shard gets its own --max-time; a slow shard
+      # cannot stall the others because they run concurrently.
+      #
+      # `wait` without an argument returns the highest exit status among the
+      # jobs, so a failing shard still fails the step.
+      - name: Data-clean (sharded)
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.data_clean_limit || '800' }}
+          LIMIT: ${{ inputs.data_clean_limit || '750' }}
+          SHARDS: ${{ inputs.shards || '1' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/data-clean?limit=$LIMIT" --max-time 120 2>&1)
-          echo "$RESULT" | jq .
+          pids=""
+          for i in $(seq 0 $((SHARDS - 1))); do
+            (
+              R=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+                "$BASE/api/staging/data-clean?limit=$LIMIT&shard=$i&shards=$SHARDS" \
+                --max-time 240) || { echo "::warning::data-clean shard $i failed"; exit 1; }
+              echo "shard $i: $(echo "$R" | jq -c '{scanned,cleaned,anomalies,zeroPriceRejected}')"
+            ) &
+            pids="$pids $!"
+          done
+          rc=0
+          for p in $pids; do wait "$p" || rc=1; done
+          exit $rc
+      # CF-STAGING-IMAGE-VERIFY-NONBLOCKING (Drew, 2026-08-13). Image-verify is
+      # ENRICHMENT; promotion is the data path. This step is a separate job
+      # step, so when its curl exceeded --max-time 240 the job aborted and
+      # Auto-triage + Promotion never ran at all — staged comps stopped
+      # reaching sold_comps because a picture took too long to fetch.
+      #
+      # Observed 2026-08-13 at 16:09 and 17:12 UTC, both exit code 28 (curl
+      # timeout) at exactly 240s, each between successful runs. The runs either
+      # side promoted normally, so the effect was intermittent stalling of
+      # ingestion rather than an outage — the kind that hides in a mostly-green
+      # run list.
+      #
+      # continue-on-error keeps the pipeline moving. The failure is NOT
+      # swallowed: the explicit ::warning:: makes it visible in the run
+      # summary, so a persistently slow image-verify is still noticeable
+      # instead of silently passing. Promotion stays fatal — if THAT breaks,
+      # the run should go red.
       - name: Image-verify
+        id: image_verify
+        continue-on-error: true
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: ${{ inputs.image_verify_limit || '100' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1)
-          echo "$RESULT" | jq .
+          if RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+            "$BASE/api/staging/image-verify?limit=$LIMIT" --max-time 240 2>&1); then
+            echo "$RESULT" | jq .
+          else
+            CODE=$?
+            echo "::warning::image-verify failed (curl exit $CODE — 28 means it exceeded --max-time 240s at limit=$LIMIT). Continuing so promotion still runs; lower image_verify_limit if this persists."
+            exit 0
+          fi
       - name: Auto-triage
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           LIMIT: '2000'
         run: |
           RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
             "$BASE/api/staging/auto-triage?limit=$LIMIT" --max-time 120 2>&1)
           echo "$RESULT" | jq .
-      - name: Promotion
+      # Sharded for the same reason as data-clean. Promotion stays FATAL — it is
+      # the data path, and if it breaks the run should go red.
+      - name: Promotion (sharded)
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
-          LIMIT: ${{ inputs.promotion_limit || '2000' }}
+          LIMIT: ${{ inputs.promotion_limit || '250' }}
+          SHARDS: ${{ inputs.shards || '1' }}
         run: |
-          RESULT=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
-            "$BASE/api/staging/promotion?limit=$LIMIT" --max-time 120 2>&1)
-          echo "$RESULT" | jq .
+          pids=""
+          for i in $(seq 0 $((SHARDS - 1))); do
+            (
+              R=$(curl -sf -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
+                "$BASE/api/staging/promotion?limit=$LIMIT&shard=$i&shards=$SHARDS" \
+                --max-time 240) || { echo "promotion shard $i FAILED"; exit 1; }
+              echo "shard $i: $(echo "$R" | jq -c '{scanned,promoted,awaitingCatalog,errors}')"
+            ) &
+            pids="$pids $!"
+          done
+          rc=0
+          for p in $pids; do wait "$p" || rc=1; done
+          exit $rc
       - name: Health snapshot
         env:
-          BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+          BASE: https://hobbyiq3-worker.azurewebsites.net
           ADMIN_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
         run: |
           curl -sf -H "Authorization: Bearer $ADMIN_TOKEN" \

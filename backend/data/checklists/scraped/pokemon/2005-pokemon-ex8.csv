@@ -1,0 +1,109 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Altaria
+base,2,Base,false,,Beautifly
+base,3,Base,false,,Breloom
+base,4,Base,false,,Camerupt
+base,5,Base,false,,Claydol
+base,6,Base,false,,Crawdaunt
+base,7,Base,false,,Dusclops
+base,8,Base,false,,Gyarados
+base,9,Base,false,,Jirachi
+base,10,Base,false,,Ludicolo
+base,11,Base,false,,Metagross
+base,12,Base,false,,Mightyena
+base,13,Base,false,,Ninjask
+base,14,Base,false,,Shedinja
+base,15,Base,false,,Slaking
+base,16,Base,false,,Deoxys
+base,17,Base,false,,Deoxys
+base,18,Base,false,,Deoxys
+base,19,Base,false,,Ludicolo
+base,20,Base,false,,Magcargo
+base,21,Base,false,,Pelipper
+base,22,Base,false,,Rayquaza
+base,23,Base,false,,Sableye
+base,24,Base,false,,Seaking
+base,25,Base,false,,Shiftry
+base,26,Base,false,,Skarmory
+base,27,Base,false,,Tropius
+base,28,Base,false,,Whiscash
+base,29,Base,false,,Xatu
+base,30,Base,false,,Donphan
+base,31,Base,false,,Golbat
+base,32,Base,false,,Grumpig
+base,33,Base,false,,Lombre
+base,34,Base,false,,Lombre
+base,35,Base,false,,Lotad
+base,36,Base,false,,Lunatone
+base,37,Base,false,,Magcargo
+base,38,Base,false,,Manectric
+base,39,Base,false,,Masquerain
+base,40,Base,false,,Metang
+base,41,Base,false,,Minun
+base,42,Base,false,,Nosepass
+base,43,Base,false,,Nuzleaf
+base,44,Base,false,,Plusle
+base,45,Base,false,,Shelgon
+base,46,Base,false,,Silcoon
+base,47,Base,false,,Solrock
+base,48,Base,false,,Starmie
+base,49,Base,false,,Swellow
+base,50,Base,false,,Vigoroth
+base,51,Base,false,,Weezing
+base,52,Base,false,,Bagon
+base,53,Base,false,,Baltoy
+base,54,Base,false,,Barboach
+base,55,Base,false,,Beldum
+base,56,Base,false,,Carvanha
+base,57,Base,false,,Corphish
+base,58,Base,false,,Duskull
+base,59,Base,false,,Electrike
+base,60,Base,false,,Electrike
+base,61,Base,false,,Goldeen
+base,62,Base,false,,Koffing
+base,63,Base,false,,Lotad
+base,64,Base,false,,Magikarp
+base,65,Base,false,,Makuhita
+base,66,Base,false,,Natu
+base,67,Base,false,,Nincada
+base,68,Base,false,,Numel
+base,69,Base,false,,Phanpy
+base,70,Base,false,,Poochyena
+base,71,Base,false,,Seedot
+base,72,Base,false,,Shroomish
+base,73,Base,false,,Slakoth
+base,74,Base,false,,Slugma
+base,75,Base,false,,Slugma
+base,76,Base,false,,Spoink
+base,77,Base,false,,Staryu
+base,78,Base,false,,Surskit
+base,79,Base,false,,Swablu
+base,80,Base,false,,Taillow
+base,81,Base,false,,Wingull
+base,82,Base,false,,Wurmple
+base,83,Base,false,,Zubat
+base,84,Base,false,,Balloon Berry
+base,85,Base,false,,Crystal Shard
+base,86,Base,false,,Energy Charge
+base,87,Base,false,,Lady Outing
+base,88,Base,false,,Master Ball
+base,89,Base,false,,Meteor Falls
+base,90,Base,false,,Professor Cozmo's Discovery
+base,91,Base,false,,Space Center
+base,92,Base,false,,Strength Charm
+base,93,Base,false,,Boost Energy
+base,94,Base,false,,Heal Energy
+base,95,Base,false,,Scramble Energy
+base,96,Base,false,,Crobat ex
+base,97,Base,false,,Deoxys ex
+base,98,Base,false,,Deoxys ex
+base,99,Base,false,,Deoxys ex
+base,100,Base,false,,Hariyama ex
+base,101,Base,false,,Manectric ex
+base,102,Base,false,,Rayquaza ex
+base,103,Base,false,,Salamence ex
+base,104,Base,false,,Sharpedo ex
+base,105,Base,false,,Latias ☆
+base,106,Base,false,,Latios ☆
+base,107,Base,false,,Rayquaza ☆
+base,108,Base,false,,Rocket's Raikou ex

@@ -5,6 +5,23 @@
 // Refractor…True" was slugging to :blue:auto while every CH/CS ingest
 // of the same physical card slugs to :blue-refractor:auto.
 
+// SETKEYS RECONCILED TO THE CATALOG, 2026-08-16 (Drew: "it shuld fold into
+// Draft since it is draft" ... "they should match to the CATALOG").
+//
+// The rule is now simple: a slug's setKey must be a key the CATALOG actually
+// uses, because a slug nothing in the catalog shares is a card that matches
+// nothing. Row counts taken 2026-08-16:
+//
+//     bowman-draft   23,899      bowman-draft      480
+//     bowman-draft         336,404      bowman-draft-paper        18
+//     bowman             1,252,848      bowman-paper           1,785
+//
+// So Draft Chrome keeps its Draft identity under bowman-draft (not the
+// bowman-chrome it used to collapse into, and not the bowman-draft this
+// file previously asked for — that variant was itself a fragment the
+// normaliser had been minting). BDA- paper Draft autos go to bowman-draft
+// rather than the 18-row bowman-draft-paper.
+
 import { describe, expect, it } from "vitest";
 import { deriveHoldingSlug } from "../src/services/portfolioiq/holdingSlug.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";

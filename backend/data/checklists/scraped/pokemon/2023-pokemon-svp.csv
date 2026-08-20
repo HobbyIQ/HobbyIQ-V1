@@ -1,0 +1,227 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Base,false,,Sprigatito
+base,002,Base,false,,Fuecoco
+base,003,Base,false,,Quaxly
+base,004,Base,false,,Mimikyu ex
+base,005,Base,false,,Quaquaval
+base,006,Base,false,,Pawmot
+base,007,Base,false,,Hawlucha
+base,008,Base,false,,Revavroom
+base,009,Base,false,,Spidops
+base,010,Base,false,,Espathra
+base,011,Base,false,,Arcanine
+base,012,Base,false,,Dondozo
+base,013,Base,false,,Miraidon
+base,014,Base,false,,Koraidon
+base,015,Base,false,,Flaaffy
+base,016,Base,false,,Ampharos ex
+base,017,Base,false,,Lucario ex
+base,018,Base,false,,Cyclizar ex
+base,019,Base,false,,Baxcalibur
+base,020,Base,false,,Tinkaton
+base,021,Base,false,,Murkrow
+base,022,Base,false,,Pelipper
+base,023,Base,false,,Smoliv
+base,024,Base,false,,Growlithe
+base,025,Base,false,,Tinkatink
+base,026,Base,false,,Varoom
+base,027,Base,false,,Pikachu
+base,028,Base,false,,Miraidon ex
+base,029,Base,false,,Koraidon ex
+base,030,Base,false,,Chien-Pao ex
+base,031,Base,false,,Tinkaton ex
+base,032,Base,false,,Annihilape ex
+base,033,Base,false,,Meowscarada ex
+base,034,Base,false,,Skeledirge ex
+base,035,Base,false,,Quaquaval ex
+base,036,Base,false,,Palafin
+base,037,Base,false,,Cleffa
+base,038,Base,false,,Togekiss
+base,039,Base,false,,Mawile
+base,040,Base,false,,Pawmi
+base,041,Base,false,,Paldean Wooper
+base,042,Base,false,,Houndstone
+base,043,Base,false,,Eevee
+base,044,Base,false,,Charmander
+base,045,Base,false,,Paradise Resort
+base,046,Base,false,,Bulbasaur
+base,047,Base,false,,Charmander
+base,048,Base,false,,Squirtle
+base,049,Base,false,,Zapdos ex
+base,050,Base,false,,Alakazam ex
+base,051,Base,false,,Snorlax
+base,052,Base,false,,Mewtwo
+base,053,Base,false,,Mew ex
+base,054,Base,false,,Greninja ex
+base,055,Base,false,,Kangaskhan ex
+base,056,Base,false,,Charizard ex
+base,057,Base,false,,Chi-Yu
+base,058,Base,false,,Iron Bundle
+base,059,Base,false,,Xatu
+base,060,Base,false,,Aegislash
+base,061,Base,false,,Pineco
+base,062,Base,false,,Sinistea
+base,063,Base,false,,Cetitan
+base,064,Base,false,,Arctibax
+base,065,Base,false,,Scream Tail
+base,066,Base,false,,Iron Bundle
+base,067,Base,false,,Roaring Moon ex
+base,068,Base,false,,Iron Valiant ex
+base,069,Base,false,,Fidough
+base,070,Base,false,,Greavard
+base,071,Base,false,,Maschiff
+base,072,Base,false,,Great Tusk ex
+base,073,Base,false,,Iron Treads ex
+base,074,Base,false,,Charizard ex
+base,075,Base,false,,Mimikyu
+base,076,Base,false,,Sprigatito
+base,077,Base,false,,Floragato
+base,078,Base,false,,Meowscarada ex
+base,079,Base,false,,Fuecoco
+base,080,Base,false,,Crocalor
+base,081,Base,false,,Skeledirge ex
+base,082,Base,false,,Quaxly
+base,083,Base,false,,Quaxwell
+base,084,Base,false,,Quaquaval ex
+base,085,Base,false,,Pikachu with Grey Felt Hat
+base,086,Base,false,,Mabosstiff ex
+base,087,Base,false,,Sprigatito ex
+base,088,Base,false,,Pikachu
+base,089,Base,false,,Feraligatr
+base,090,Base,false,,Metang
+base,091,Base,false,,Koraidon
+base,092,Base,false,,Miraidon
+base,093,Base,false,,Carvanha
+base,094,Base,false,,Bellibolt
+base,095,Base,false,,Cleffa
+base,096,Base,false,,Cyclizar
+base,097,Base,false,,Flutter Mane
+base,098,Base,false,,Iron Thorns
+base,099,Base,false,,Shroodle
+base,100,Base,false,,Grafaiai ex
+base,101,Base,false,,Pikachu
+base,102,Base,false,,Oddish
+base,103,Base,false,,Houndoom ex
+base,104,Base,false,,Melmetal ex
+base,105,Base,false,,Armarouge ex
+base,106,Base,false,,Pikachu ex
+base,107,Base,false,,Mareep
+base,108,Base,false,,Flaaffy
+base,109,Base,false,,Ampharos
+base,110,Base,false,,Darkrai ex
+base,111,Base,false,,Pawniard
+base,112,Base,false,,Bisharp
+base,113,Base,false,,Kingambit
+base,114,Base,false,,Picnicker
+base,115,Base,false,,Thwackey
+base,116,Base,false,,Infernape
+base,117,Base,false,,Froslass
+base,118,Base,false,,Tatsugiri
+base,119,Base,false,,Toxel
+base,120,Base,false,,Pupitar
+base,121,Base,false,,Revavroom
+base,122,Base,false,,Snorlax
+base,123,Base,false,,Teal Mask Ogerpon
+base,124,Base,false,,Iono
+base,125,Base,false,,Armarouge ex
+base,126,Base,false,,Palafin ex
+base,127,Base,false,,Walking Wake ex
+base,128,Base,false,,Iron Leaves ex
+base,129,Base,false,,Pecharunt
+base,130,Base,false,,Kingambit
+base,131,Base,false,,Kingdra ex
+base,132,Base,false,,Greninja ex
+base,133,Base,false,,Ledian
+base,134,Base,false,,Crabominable
+base,135,Base,false,,Drifblim
+base,136,Base,false,,Bouffalant
+base,137,Base,false,,Horsea
+base,138,Base,false,,Porygon2
+base,139,Base,false,,Latias
+base,140,Base,false,,Tinkaton
+base,141,Base,false,,Noctowl
+base,142,Base,false,,Victini ex
+base,143,Base,false,,Miraidon ex
+base,144,Base,false,,Gouging Fire ex
+base,145,Base,false,,Raging Bolt ex
+base,146,Base,false,,Iron Crown ex
+base,147,Base,false,,Iron Boulder ex
+base,148,Base,false,,Miraidon
+base,149,Base,false,,Pecharunt
+base,150,Base,false,,Paradise Resort
+base,151,Base,false,,Gouging Fire
+base,152,Base,false,,Chien-Pao
+base,153,Base,false,,Magneton
+base,154,Base,false,,Indeedee
+base,155,Base,false,,Wooper
+base,156,Base,false,,Quagsire
+base,157,Base,false,,Zapdos
+base,158,Base,false,,Pachirisu
+base,159,Base,false,,Magneton
+base,160,Base,false,,Squawkabilly ex
+base,161,Base,false,,Charizard ex
+base,162,Base,false,,Houndstone ex
+base,163,Base,false,,Cinderace ex
+base,164,Base,false,,Lapras ex
+base,165,Base,false,,Terapagos ex
+base,166,Base,false,,Teal Mask Ogerpon ex
+base,167,Base,false,,Flareon
+base,168,Base,false,,Vaporeon
+base,169,Base,false,,Jolteon
+base,170,Base,false,,Leafeon
+base,171,Base,false,,Glaceon
+base,172,Base,false,,Sylveon
+base,173,Base,false,,Eevee
+base,174,Base,false,,Eevee ex
+base,175,Base,false,,Espeon ex
+base,176,Base,false,,Umbreon ex
+base,177,Base,false,,Bloodmoon Ursaluna ex
+base,178,Base,false,,Kyogre ex
+base,179,Base,false,,Xerneas ex
+base,180,Base,false,,Dialga ex
+base,181,Base,false,,N's Darmanitan
+base,182,Base,false,,Iono's Kilowattrel
+base,183,Base,false,,Lillie's Ribombee
+base,184,Base,false,,Hop's Snorlax
+base,185,Base,false,,Yanma
+base,186,Base,false,,Scraggy
+base,187,Base,false,,Yanmega
+base,188,Base,false,,Scrafty
+base,189,Base,false,,N's Zorua
+base,190,Base,false,,Pikachu
+base,191,Base,false,,Sprigatito
+base,192,Base,false,,Fuecoco
+base,193,Base,false,,Hop's Zacian ex
+base,194,Base,false,,Iono's Bellibolt ex
+base,195,Base,false,,Lillie's Clefairy ex
+base,196,Base,false,,Charizard ex
+base,197,Base,false,,Koraidon ex
+base,198,Base,false,,Zacian ex
+base,199,Base,false,,Zarude
+base,200,Base,false,,Eevee
+base,201,Base,false,,Zebstrika
+base,202,Base,false,,Kangaskhan
+base,203,Base,false,,Team Rocket's Wobbuffet
+base,204,Base,false,,Cynthia's Garchomp ex
+base,205,Base,false,,Team Rocket's Mewtwo ex
+base,206,Base,false,,Marnie's Morpeko
+base,207,Base,false,,Steven's Beldum
+base,208,Base,false,,Victini
+base,209,Base,false,,Thundurus
+base,210,Base,false,,Tornadus
+base,211,Base,false,,Gothitelle
+base,212,Base,false,,Reuniclus
+base,213,Base,false,,Feraligatr
+base,214,Base,false,,Pikachu
+base,215,Base,false,,Toxtricity ex
+base,216,Base,false,,Team Rocket's Mewtwo ex
+base,217,Base,false,,Team Rocket's Nidoking ex
+base,218,Base,false,,Team Rocket's Persian ex
+base,219,Base,false,,Black Belt's Training
+base,220,Base,false,,Black Belt's Training
+base,221,Base,false,,Professor's Research
+base,222,Base,false,,Professor's Research
+base,223,Base,false,,Professor's Research
+base,224,Base,false,,Paradise Resort
+base,225,Base,false,,Pikachu
+base,500,Base,false,,Terapagos & Friends

@@ -113,6 +113,11 @@ export async function tryCardsightStructuredBridge(
   identity: CardIdentityHint,
   grade: string,
 ): Promise<RoutedResult | null> {
+  // CF-CARDSIGHT-RETIRED (Drew, 2026-08-16: "We dont use cardsight to match or
+  // anything"). This function is now unreachable: cardsight.router is its only
+  // caller and hard-disables the branch in code. The env guard stays as the
+  // second lock rather than being replaced by an early return, which would
+  // leave the whole body as dead-but-type-checked code.
   if (process.env.CARDSIGHT_STRUCTURED_BRIDGE_ENABLED !== "true") return null;
   if (!isCardsightConfigured()) return null;
 

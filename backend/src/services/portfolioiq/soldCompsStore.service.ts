@@ -42,7 +42,8 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, resolveSetKeyForSlug } from "./hobbyIqCardId.service.js";
+import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -161,6 +162,8 @@ export interface SoldCompDoc {
   // emit paths from PortfolioHolding.gradeCompany / gradeValue.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   /** CF-GRADE-QUALIFIER (Drew, 2026-07-23, issue #713 phase 2). PSA
    *  qualifier flag on the sale — "OC" (off-center), "MK" (marks),
    *  "ST" (stain), "PD" (print defect), "MC" (miscut), "OF" (out of
@@ -270,6 +273,8 @@ export interface RecordSoldCompInput {
   sport?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   price: number;
   soldAt: string;
   source: SoldCompSource;
@@ -448,6 +453,49 @@ export function inferSportFromContext(
   // "Pokémon" with é (U+00E9) is captured by lowercasing (é stays é;
   // pattern uses both forms).
   if (text.includes("pokemon") || text.includes("pokémon")) return "pokemon";
+  // CF-TCG-VERTICAL-VOCABULARY (Drew, 2026-08-17). The other TCG verticals.
+  // Without these the sport stays null, slugGuard refuses on sport-uncanonical,
+  // and the row never reaches its set table however good that table is — the
+  // two fixes only work together. Measured: 57,760 Yu-Gi-Oh, 16,837 Magic and
+  // 9,619 One Piece sales sat unkeyed with NO sport at all.
+  //
+  // Each maps to a tag already in CANONICAL_SPORTS, so nothing new enters the
+  // slug namespace.
+  if (/\byu-?gi-?oh/.test(text)) return "yugioh";
+  if (/\bmagic:?\s*the\s+gathering\b/.test(text) || /\bmtg\b/.test(text)) return "tcg-other";
+  if (/\bone piece\b/.test(text)) return "anime-tcg";
+  // CF-ALL-CANONICAL-VERTICALS (Drew, 2026-08-17: "find it and find it ALL").
+  //
+  // CANONICAL_SPORTS already contained golf, racing, wrestling, mma, boxing,
+  // tennis, multi-sport and non-sport — the namespace was never the problem.
+  // Nothing DETECTED them, so the sport stayed null, slugGuard refused on
+  // sport-uncanonical, and the row never got a slug however good its setKey
+  // vocabulary was.
+  //
+  // Measured over the 45,288 rows still unkeyed after the TCG verticals
+  // shipped, these tokens classify 87.5%:
+  //
+  //     non-sport   20,938      mma          1,918
+  //     golf         4,615      tennis       1,116
+  //     wrestling    4,099      boxing         437
+  //     racing       3,511      multi-sport  3,008
+  //
+  // Most of these products ALREADY have setKey vocabulary — "2020 Topps
+  // Chrome F1 Racing" resolves to topps-chrome perfectly well. The sport tag
+  // was the only thing missing, which is why this is a large win for a small
+  // change.
+  //
+  // Ordered most-specific first: a league acronym beats a generic word, and
+  // non-sport is LAST so "Marvel" cannot outrank a real sport that happens to
+  // mention a character.
+  if (/\bufc\b|\bmma\b|mixed martial|\bpride fc\b/.test(text)) return "mma";
+  if (/\bwwe\b|\bwwf\b|\baew\b|\bwcw\b|\bnwa\b|wrestling/.test(text)) return "wrestling";
+  if (/\bf1\b|formula\s*1|\bnascar\b|\bindycar\b|\bmoto\s?gp\b|racing/.test(text)) return "racing";
+  if (/\bgolf\b|\bpga\b/.test(text)) return "golf";
+  if (/\btennis\b|\batp\b|\bwta\b/.test(text)) return "tennis";
+  if (/\bboxing\b|\bboxer\b/.test(text)) return "boxing";
+  if (/multi-?sport|olympic|four sport|all[- ]sport|sports illustrated|metal universe champions|goodwin champions/.test(text)) return "multi-sport";
+  if (/garbage pail|\bmarvel\b|star wars|spider-?man|superman|batman|dc comics|masterpieces|\bimpel\b|fortnite|playboy|wacky|jurassic/.test(text)) return "non-sport";
   // Product-family heuristics (unambiguous single-sport lines)
   if (/\bbowman\b/.test(text)) return "baseball";      // Bowman = baseball only
   if (/\btopps\s+chrome\b/.test(text) && !text.includes("f1") && !text.includes("ufc")) return "baseball";
@@ -485,6 +533,8 @@ function computeContentHash(input: {
   isAuto?: boolean;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   price: number;
   soldAt: string;
 }): string {
@@ -531,7 +581,113 @@ function scoreForCanonical(row: {
  * trust decision — this store never fabricates the cardId.
  * Silent no-op on missing cardId, non-positive price, or Cosmos absence.
  */
-export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> {
+/**
+ * CF-RECORDCOMP-REPORTS-SKIP (Drew, 2026-08-13). recordSoldComp returned void
+ * and skipped silently, so callers could not tell a write from a drop.
+ *
+ * That silence broke the loop-back. promotionJob awaited this and then
+ * unconditionally set status="promoted" — so a staging row whose card had no
+ * checklist yet was marked done forever and never retried, and the audit record
+ * claimed a promotion that never happened. Once the checklist landed, nothing
+ * went back for it.
+ *
+ * `written: false` with a reason lets the caller keep the row retryable.
+ * Additive: the 46 existing callers ignore the return and are unaffected.
+ */
+export interface RecordSoldCompResult {
+  written: boolean;
+  /** Present when written is false. "catalog-unmatched" is the retryable one —
+   *  the sale is real, we just have no checklist for its card yet. */
+  reason?: "catalog-unmatched" | "invalid-input" | "error";
+}
+
+export interface DerivedSlug {
+  /** The slug, or null when the guard refused. NEVER a guessed value. */
+  slug: string | null;
+  guard: SlugGuardResult;
+  sportForSlug: string | null;
+  cardNumberFinal: string | null;
+  printRunFinal: number | null;
+  /** setKey the guard actually judged — what segment 3 of the slug carries. */
+  resolvedSetKey: string;
+}
+
+/**
+ * CF-ONE-SLUG-DERIVATION (Drew, 2026-08-17). THE derivation of a
+ * hobbyiqCardId from a comp's attributes: title fallbacks, the sport-aware
+ * setKey resolution, the guard, and the computation.
+ *
+ * Exported because the repair pass for already-unkeyed rows must derive slugs
+ * the SAME way ingest does. A backfill that re-implements this — even
+ * carefully — is a second implementation that drifts, and the drift is
+ * invisible: it writes well-formed slugs that simply disagree with the ones
+ * ingest would have written. That is exactly how the guard came to reject
+ * 615,140 rows the computation would have keyed (CF-ONE-SETKEY-RESOLVER), and
+ * how the price-outlier diverter came to disagree with dataCleanJob
+ * (CF-ONE-OUTLIER-RULE). One rule, one implementation.
+ *
+ * CF-CARDNUMBER-TITLE-FALLBACK: vendor feeds sometimes omit cardNumber for
+ * modern autos even when the title carries the code ("CPA-EHA"); without it
+ * the slug gets a malformed "::" segment and every lookup misses.
+ *
+ * CF-SLUG-REFUSE-FALLBACKS: when the inputs don't hold up we return NO slug
+ * rather than a confident wrong one. computeHobbyIqCardId is total and will
+ * happily return `hiq:hockey:197:bowman:8:base:no-auto` for a 1978 Kellogg's
+ * baseball card — syntactically perfect, completely meaningless, and
+ * indistinguishable from a real slug downstream. An unkeyed row is visibly
+ * incomplete and can be re-derived later; a wrong slug silently corrupts a
+ * comp pool and looks healthy.
+ */
+export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
+  "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto"
+  // CF-PLAYER-IS-THE-NUMBER: genuinely unnumbered cards (T206, Magic Alpha,
+  // Signature Series) are identified by their player, so the player has to
+  // reach BOTH the guard and the computation — a guard that judged one
+  // identity while the computation emitted another is the parity bug this
+  // file was already fixed for once.
+  | "playerName">): DerivedSlug {
+  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
+    ? input.cardNumber.trim()
+    : extractCardNumberFromTitle(input.title);
+  const printRunFinal = extractPrintRunFromTitle(input.title);
+
+  // Resolve the setKey the way computeHobbyIqCardId will, THEN guard it.
+  // sportForSlug is normalized first because the resolver's Pokemon branch is
+  // gated on the canonical tag.
+  const guardSport = normalizeSportStrict(sportForSlug);
+  const resolvedSetKey = resolveSetKeyForSlug(
+    guardSport ?? "",
+    input.setName ?? "",
+    typeof input.cardYear === "number" ? input.cardYear : 0,
+  );
+  const guard = guardSlugInputs({
+    sport: sportForSlug,
+    year: input.cardYear,
+    normalizedSetKey: resolvedSetKey,
+    cardNumber: cardNumberFinal ?? "",
+    playerName: input.playerName ?? null,
+  });
+
+  const slug = guard.ok
+    ? computeHobbyIqCardId({
+        // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
+        // so the slug namespace stays in the controlled vocabulary.
+        sport: guard.sport as string,
+        year: input.cardYear as number,
+        setKey: input.setName ?? "",
+        cardNumber: cardNumberFinal ?? "",
+        parallel: input.parallel ?? "Base",
+        isAuto: input.isAuto ?? false,
+        printRun: printRunFinal,
+        playerName: input.playerName ?? null,
+      })
+    : null;
+
+  return { slug, guard, sportForSlug, cardNumberFinal, printRunFinal, resolvedSetKey };
+}
+
+export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {
   // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
   // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
   // two-pass ingest cleaning. Any of the 46 callers of this function
@@ -551,14 +707,14 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         sampled: true,
       }));
     }
-    return;
+    return { written: false, reason: "invalid-input" };
   }
   if (preClean.input) input = preClean.input;
 
-  if (!input.cardId || !input.cardId.trim()) return;
-  if (!input.playerName || !input.playerName.trim()) return;
-  if (typeof input.price !== "number" || input.price <= 0) return;
-  if (!input.soldAt) return;
+  if (!input.cardId || !input.cardId.trim()) return { written: false, reason: "invalid-input" };
+  if (!input.playerName || !input.playerName.trim()) return { written: false, reason: "invalid-input" };
+  if (typeof input.price !== "number" || input.price <= 0) return { written: false, reason: "invalid-input" };
+  if (!input.soldAt) return { written: false, reason: "invalid-input" };
 
   // CF-GRADE-VALUE-NULL-REJECT (Drew, 2026-08-06). Reject rows where
   // gradeCompany is set but gradeValue is null/undefined. These
@@ -566,6 +722,35 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // that rendered as duplicate "PSA 10 with no data" tiles in the UI.
   // If we don't know the numeric grade, treat as raw — safer than
   // creating a phantom grade tier.
+  // CF-GRADE-VALUE-STRING (Drew, 2026-08-15: "fix those"). gradeValue is
+  // typed number|null, but callers reach this through untyped vendor payloads
+  // and 68,410 rows landed with a STRING — 68,284 of them from cardsight.
+  //
+  // Cosmos does not coerce, so `WHERE c.gradeValue = 10` never matches "10".
+  // 24,444 PSA 10 sales were therefore invisible to the PSA 10 comp pool
+  // while 514,015 numeric ones were visible: a silent, uneven hole in the
+  // tier rather than an obvious failure.
+  //
+  // Coerced HERE because this is the single write boundary every source
+  // funnels through, so one guard covers cardsight, tca-ebay and anything
+  // added later.
+  //
+  // "AU" / "A" / "Authentic" are not grades — they are the authentication
+  // designation, and they route to the Authentic bucket (gradeValue 0) so a
+  // slab that was never numerically graded is not silently discarded.
+  if (typeof (input.gradeValue as unknown) === "string") {
+    const rawGrade = String(input.gradeValue).trim();
+    if (/^(?:au|a|authentic)$/i.test(rawGrade)) {
+      input = { ...input, gradeValue: 0, isAuthentic: true } as typeof input;
+    } else {
+      const asNumber = Number(rawGrade);
+      input = {
+        ...input,
+        gradeValue: Number.isFinite(asNumber) && asNumber > 0 && asNumber <= 10 ? asNumber : null,
+      };
+    }
+  }
+
   if (input.gradeCompany && (input.gradeValue === null || input.gradeValue === undefined)) {
     input = { ...input, gradeCompany: null, gradeValue: null };
   }
@@ -605,7 +790,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   const stagingRouteEnabled = process.env.CARDSIGHT_TO_STAGING_ENABLED === "true";
   const shouldRouteToStaging = stagingRouteEnabled && input.source === "cardsight";
   const c = shouldRouteToStaging ? await getCardsightStagingContainer() : await getContainer();
-  if (!c) return;
+  if (!c) return { written: false, reason: "error" };
 
   const contentHash = computeContentHash({
     cardId: input.cardId,
@@ -613,6 +798,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
     isAuto: input.isAuto,
     gradeCompany: input.gradeCompany,
     gradeValue: input.gradeValue,
+    isAuthentic: input.isAuthentic ?? null,
     price: input.price,
     soldAt: input.soldAt,
   });
@@ -632,22 +818,27 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
   // input.cardNumber is empty, sniff the title for a known auto-code
   // pattern and use it. Safe fallback: the same code appears in
   // BCCP checklists, so the recovered slug lines up cleanly.
-  const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
-  const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
-    ? input.cardNumber.trim()
-    : extractCardNumberFromTitle(input.title);
-  const printRunFinal = extractPrintRunFromTitle(input.title);
-  let hobbyiqCardId = (input.cardYear !== null && input.cardYear !== undefined && sportForSlug !== null)
-    ? computeHobbyIqCardId({
+  const derived = deriveHobbyIqSlug(input);
+  const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
+  if (!guard.ok) {
+    // Sampled — this fires on a meaningful slice of vendor rows and must
+    // not drown the log. The counts are what tell us which defect leads.
+    if (Math.random() < 0.01) {
+      console.warn(JSON.stringify({
+        event: "slug_refused",
+        source: "soldCompsStore.recordSoldComp",
+        reasons: guard.reasons,
+        compSource: input.source,
         sport: sportForSlug,
-        year: input.cardYear,
-        setKey: input.setName ?? "",
-        cardNumber: cardNumberFinal ?? "",
-        parallel: input.parallel ?? "Base",
-        isAuto: input.isAuto ?? false,
-        printRun: printRunFinal,
-      })
-    : null;
+        cardYear: input.cardYear,
+        setName: input.setName,
+        cardNumber: cardNumberFinal,
+        titleSnippet: String(input.title ?? "").slice(0, 100),
+        sampled: true,
+      }));
+    }
+  }
+  let hobbyiqCardId = derived.slug;
 
   // CF-CATALOG-RESOLVE-IN-RECORDCOMP (Drew, 2026-08-08). Route through the
   // catalog matcher so the sale lands under the CATALOG's canonical slug —
@@ -686,27 +877,81 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
         player: input.playerName,
         source: matcherSource,
       });
-      if (resolved.found && resolved.slug && resolved.slug !== hobbyiqCardId) {
+      // CF-CONFIDENCE-MUST-BE-HONOURED (Drew, 2026-08-14). This used to rebind
+      // on `resolved.found` alone, ignoring the confidence canonicalize had
+      // just computed — so a 0.55 family-fallback guess rewrote identity as
+      // authoritatively as a 0.98 exact match. adoptResolvedSlug is now the
+      // single place that decision is made, shared with
+      // persistVendorSalesToPool so the two cannot drift apart again.
+      const { adoptResolvedSlug } = await import("../catalog/catalogMatcher.service.js");
+      const adoption = adoptResolvedSlug(hobbyiqCardId, resolved);
+      if (adoption.rebound) {
         console.log(JSON.stringify({
           event: "catalog_resolve_rebind_in_recordcomp",
           source: "soldCompsStore.recordSoldComp",
           vendorSource: input.source,
           computedSlug: hobbyiqCardId,
-          resolvedSlug: resolved.slug,
+          resolvedSlug: adoption.slug,
           matchedBy: resolved.matchedBy,
+          confidence: resolved.confidence,
         }));
-        hobbyiqCardId = resolved.slug;
+        hobbyiqCardId = adoption.slug;
+      } else if (adoption.refusedReason) {
+        // Kept the computed slug. The sale is still recorded — it just is not
+        // moved onto a card we are not confident it is.
+        console.log(JSON.stringify({
+          event: "catalog_resolve_rebind_refused",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          computedSlug: hobbyiqCardId,
+          candidateSlug: resolved.slug,
+          reason: adoption.refusedReason,
+        }));
       } else if (!resolved.found && process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
         // Vendor source + no catalog match under match-only rule = skip write.
         // User sources will have hit the seed branch and returned found:true
         // from canonicalize, so they never reach this line.
+        //
+        // CF-UNMATCHED-SALE-SEEDS-CHECKLIST (Drew, 2026-08-13: "this is where
+        // sold data pushes us to get more checklists to create catalogs").
+        //
+        // A real sale we cannot match is the market telling us a card exists
+        // that our catalog does not know. Dropping it silently discarded BOTH
+        // the sale and the signal — the set never got a checklist, so the next
+        // sale of the same card was dropped too, forever. Record the gap as a
+        // work order first; the queue counts demand per release, so the sets
+        // the market actually trades rise to the top on their own.
+        //
+        // Deduped per release by checklistSeedQueue, so a firehose of unmatched
+        // sales files one order per set rather than one per sale. Best-effort:
+        // a seed failure must never change the skip behaviour.
+        try {
+          const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
+          const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
+          const seedSetName = String(input.setName ?? "").trim();
+          if (seedSetName && input.cardYear && sportForSlug) {
+            await requestChecklistSeed({
+              sport: sportForSlug,
+              year: Number(input.cardYear),
+              setName: seedSetName,
+              setKey: normalizeSetKey(seedSetName),
+              reason: "unmatched-sale",
+              missingPlayer: String(input.playerName ?? "") || undefined,
+              missingCardNumber: String(input.cardNumber ?? "") || undefined,
+            });
+          }
+        } catch { /* never block the skip path on the queue */ }
+
         console.log(JSON.stringify({
           event: "recordcomp_catalog_unmatched_skip",
           source: "soldCompsStore.recordSoldComp",
           vendorSource: input.source,
           computedSlug: hobbyiqCardId,
         }));
-        return;
+        // Retryable: the sale is real, we simply have no checklist for its card
+        // yet. The seed above asks for one; the caller keeps the row so the
+        // loop-back can promote it once that checklist lands.
+        return { written: false, reason: "catalog-unmatched" };
       }
     } catch (err) {
       // Fail-open: keep computed slug if resolve errors, don't drop the comp.
@@ -888,7 +1133,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
           });
         } catch { /* soft */ }
       }
-      return;
+      return { written: false, reason: "invalid-input" };
     }
     // Quarantine band: still persist but flag it
     if (conf.band === "quarantine") {
@@ -970,7 +1215,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
             sampled: true,
           }));
         }
-        return;
+        return { written: true };
       }
       // Incoming wins → delete existing dupes (cross- AND same-source)
       // before writing. Anything with the same contentHash in the
@@ -1059,7 +1304,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
             existingCardIds: crossPartitionExisting.map(e => e.cardId),
             bestExistingScore,
           }));
-          return;
+          return { written: true };
         }
         // Incoming beats existing — delete the losers so we don't leave
         // stale duplicates under the other cardId partitions.
@@ -1255,6 +1500,9 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<void> 
       cumulativeEmitFailures: _emitFailureCounter,
     }));
   }
+
+  // Reached only after the upsert succeeded — the sale is in the pool.
+  return { written: true };
 }
 
 /** Monotonic counter of upsert failures across the process lifetime.
@@ -1391,6 +1639,8 @@ export async function readCompsByCardId(input: {
   // for raw). Case-insensitive on company.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   // CF-USER-COMPS-AUTO-FILTER (Drew, 2026-07-23). Strict isAuto equality.
   // CH cardIds routinely bucket the base rookie + autograph variants under
   // one id (e.g. Owen Carey Blue Refractor /150 Auto shares a cardId with
@@ -1430,9 +1680,31 @@ export async function readCompsByCardId(input: {
   // only). Cross-partition since we can't scope to a partition when
   // matching on non-partition-key field. Costs a few extra RUs but
   // consistent with the pool query in unifiedPricing.service.ts.
+  // CF-RECENT-SALES-DROP-THE-OR (Drew, 2026-08-14: card page "Request timed
+  // out after 30s" on a holding whose comps demonstrably exist).
+  //
+  // The OR is what times out. One side is the partition key and the other is
+  // not, so Cosmos can target a partition for NEITHER and fans out across all
+  // of them, dragging whole documents (SELECT *) back from each and then
+  // sorting 5.6M rows. Measured separately, the same lookup by hobbyiqCardId
+  // alone is 631ms / 22 RU — it is the OR that is expensive, not the data.
+  //
+  // The OR was never needed, because the two cases are disjoint by input:
+  //   a "hiq:" slug   -> match hobbyiqCardId. Rows already migrated so
+  //                      cardId === the slug carry the SAME value in
+  //                      hobbyiqCardId, so this still finds them.
+  //   a vendor cardId -> match cardId, partition-scoped. No row carries a
+  //                      vendor id in hobbyiqCardId, so the other side could
+  //                      never have contributed anything.
+  //
+  // Branching keeps this to a SINGLE query, which also matters for the
+  // existing tests: they stub one items.query call, and a two-query version
+  // broke 7 of them by consuming a mock that only answers once.
+  const looksLikeHiqSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
+  const matchField = looksLikeHiqSlug ? "c.hobbyiqCardId" : "c.cardId";
   const q = {
     query:
-      "SELECT * FROM c WHERE (c.cardId = @cid OR c.hobbyiqCardId = @cid) AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC",
+      `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC`,
     parameters: [
       { name: "@cid", value: input.cardId },
       { name: "@from", value: from },
@@ -1682,6 +1954,8 @@ export async function readCompsByHobbyIqCardId(input: {
   sources?: SoldCompSource[];
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   limit?: number;
   // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
   // 2026-07-23). Even though the slug already encodes both, callers
@@ -1767,6 +2041,8 @@ export async function readCompsByIdentity(input: {
   fromDate?: string;
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
+  isAuthentic?: boolean | null;
   limit?: number;
   // CF-USER-COMPS-AUTO-FILTER + CF-USER-COMPS-PRINTRUN-FILTER (Drew,
   // 2026-07-23). Same rationale as readCompsByCardId — identity fallback

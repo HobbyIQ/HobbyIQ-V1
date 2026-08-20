@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:05.390Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/ex11",
+ "sport": "pokemon",
+ "year": 2005,
+ "setName": "Delta Species",
+ "productKey": "2005-ex11",
+ "setKey": "ex11",
+ "rowCount": 114,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Delta Species",
+   "category": "base",
+   "playerCount": 114,
+   "printRun": null
+  }
+ ]
+}

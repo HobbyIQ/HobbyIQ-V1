@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:09.513Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/xy7",
+ "sport": "pokemon",
+ "year": 2015,
+ "setName": "Ancient Origins",
+ "productKey": "2015-xy7",
+ "setKey": "xy7",
+ "rowCount": 101,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Ancient Origins",
+   "category": "base",
+   "playerCount": 101,
+   "printRun": null
+  }
+ ]
+}

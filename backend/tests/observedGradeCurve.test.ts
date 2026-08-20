@@ -5,10 +5,54 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the CH client's getCardSales — the ONE swap point. Everything
-// else in observedGradeCurve.service is vendor-neutral math.
+// getCardSales USED to be the swap point. On 2026-08-14 the service moved to
+// reading sold_comps directly (CF-OWN-THE-DATA) and nothing updated these
+// tests, so all 35 fed a function nobody called and asserted against an
+// unmocked Cosmos — every one saw zero sales. The mock stays because it is how
+// every test in this file expresses its fixture; it is now bridged to the real
+// seam below.
+// CF-BRIDGE-NEEDS-ONE-SHARED-REF (2026-08-16). The bridge below originally did
+// `await import("cardhedge.client.js")` on every call to reach this mock. That
+// works exactly ONCE: the first call sees the mocked module, and every call
+// after it resolves to the REAL module (isMock=true, then false, verified by
+// instrumenting the bridge). Grade curves fetch Raw first, so Raw got its
+// fixture and all thirteen graded tiers silently received zero sales — which
+// is why tests asserting an OBSERVED graded value saw "estimated" instead.
+//
+// vi.hoisted gives both mock factories the SAME function object, so there is no
+// second resolution to get wrong.
+const h = vi.hoisted(() => ({ getCardSales: vi.fn() }));
+
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
+  getCardSales: h.getCardSales,
+}));
+
+// CF-GRADE-CURVE-TEST-SEAM (2026-08-16). readSoldCompsForGrade is the module
+// the service actually reads through now, and it exists to be mocked here.
+// Mocking "@azure/cosmos" instead was tried and hit every other Cosmos consumer
+// in the graph — the suite went 89 -> 107 failures and 80s -> 1591s.
+//
+// The bridge keeps all 35 fixtures working unchanged: the service asks for
+// (cardId, grade), which is exactly the shape the getCardSales mocks already
+// take, so each test's per-grade function answers as before. Only the WIRE
+// changed; the fixtures were never wrong.
+vi.mock("../src/services/compiq/soldCompsGradeReader.js", () => ({
+  readSoldCompsForGrade: vi.fn(async (cardId: string, grade: string) => {
+    const rows = (await h.getCardSales(cardId as never, grade as never)) ?? [];
+    // CH row shape -> sold_comps row shape. `title` rides through so the
+    // service's IP/TTM/bulk-lot rejection is still exercised for real.
+    return (rows as Array<Record<string, unknown>>).map((r) => ({
+      price: r.price as number,
+      soldAt: (r.soldAt ?? r.date ?? null) as string,
+      source: (r.source ?? null) as string | null,
+      title: (r.title ?? null) as string | null,
+      // sold_comps names this listingType. The CH fixtures in this file use
+      // BOTH spellings — saleType and sale_type — and omitting the snake_case
+      // one left the BIN-vs-auction weighting fixtures feeding null, so the
+      // 1.5x BIN lift they exist to pin was never exercised.
+      listingType: (r.listingType ?? r.saleType ?? r.sale_type ?? null) as string | null,
+    }));
+  }),
 }));
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): trajectory now consumes
 // getPlayerTrendSnapshot which prefers matched-cohort medianRatio and
@@ -376,6 +420,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -426,6 +479,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -481,6 +543,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -508,12 +579,25 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa9.value).toBeCloseTo(140, 0);                 // 100 × (4.0 × 0.35)
     });
 
-    it("without setName + no empirical calibration → estimated fill is unavailable", async () => {
-      // CF-EMPIRICAL-ONLY-DOCTRINE (Drew, 2026-07-21) requires that when
-      // no family classification is available (no setName provided),
-      // and no reference-price is supplied, non-observed grades stay
-      // "unavailable" rather than falling back to a hardcoded matrix.
-      // gradeMultiplierFor was reduced to a no-op in PR #633.
+    it("without setName → still estimates, from empirical calibration", async () => {
+      // CF-ALL-GRADES-AVAILABLE (Drew, 2026-08-20: "no we need to be able to
+      // give estimates"; earlier, "we want to have all grades available for
+      // people").
+      //
+      // THIS TEST USED TO ASSERT "unavailable". That was correct on 2026-07-21,
+      // when gradeMultiplierFor had just been reduced to a no-op (PR #633) and
+      // the ONLY alternative to a family-specific calibration was the hardcoded
+      // matrix the empirical-only doctrine bans. Showing nothing beat showing an
+      // invented number.
+      //
+      // It is not correct now. A family-agnostic EMPIRICAL multiplier exists, so
+      // a grade with no observed comps can be estimated from GRADE_CALIBRATION
+      // rather than from a matrix someone typed. Both rules are satisfied at
+      // once: the estimate is empirical, and the user sees every grade.
+      //
+      // Verified numerically before retiring the old assertion, not merely
+      // asserted to exist: Raw observed = 100, PSA 10 multiplier = 2.66 from
+      // gradeCalibrationData.ts, value = 266.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -530,8 +614,18 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1"); // no setName
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(psa10.valueSource).toBe("unavailable");
-      expect(psa10.estimatedMultiplier).toBeNull();
+      expect(psa10.valueSource).toBe("estimated");
+      expect(psa10.estimatedMultiplier).toBeGreaterThan(1);
+      // The value must be Raw x the multiplier — pinning the ARITHMETIC, not
+      // just that some number appeared. A multiplier that stops being applied
+      // to the observed anchor would otherwise pass silently.
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(psa10.value).toBeCloseTo(
+        (raw.value as number) * (psa10.estimatedMultiplier as number),
+        1,
+      );
+      // Every grade is offered, per "we want to have all grades available".
+      expect(curve.entries.every((e) => e.valueSource !== "unavailable")).toBe(true);
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
@@ -580,6 +674,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -617,6 +720,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -1247,6 +1359,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
           },
         },
         GRADE_CALIBRATION_BY_SPORT: {},
+        // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The service gained a
+        // GRADE_MULTIPLIER_BY_VALUE_BAND import after these mocks were
+        // written, and a vi.mock factory must return EVERY export the module
+        // under test reads — a missing one throws at import time, which is
+        // why 37 of these tests failed before reaching an assertion. Empty
+        // bands are correct here: these cases pin the byTier/medianRatio
+        // paths, and an empty table makes the value-band lookup miss and fall
+        // through to them rather than quietly supplying a second answer.
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
       }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
@@ -1284,9 +1405,12 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         )
         .reduce<number>((min, e) => ((e.value as number) < min ? (e.value as number) : min), Number.POSITIVE_INFINITY);
       expect(nonRawStrictFloor).toBeLessThan(280);
-      // Raw's shown trendAdjustedValue is capped at that floor (within
-      // rounding tolerance).
-      expect(raw.trendAdjustedValue).toBeLessThanOrEqual(nonRawStrictFloor + 0.01);
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20): raw is NOT clamped to that floor.
+      // A raw card carries the option on a high grade, so it legitimately trades
+      // above a low-graded copy. The floor here is PSA 8 at $110 — an ESTIMATE
+      // computed from this very raw value — so clamping to it would have the
+      // curve bound a number by its own derivative.
+      expect(raw.trendAdjustedValue).toBeGreaterThan(nonRawStrictFloor);
     });
 
     it("guarantees Raw ≤ every graded value with multiplier > 1 after cap fires", async () => {
@@ -1315,15 +1439,22 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       const rawShown = raw.trendAdjustedValue ?? raw.value;
 
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20). Grade monotonicity is NOT an
+      // invariant of this system. A hot raw is allowed to exceed graded tiers,
+      // and when it does the inversion is REPORTED rather than erased —
+      // sub_raw_inversion_observed is the DailyIQ pipe, so clamping deleted the
+      // signal the product is built on.
+      let exceededSomeGrade = false;
       for (const entry of curve.entries) {
         if (entry.grader === "Raw") continue;
         if (typeof entry.estimatedMultiplier !== "number") continue;
         if ((entry.estimatedMultiplier as number) <= 1.0) continue;
         if (entry.value === null || (entry.value as number) <= 0) continue;
-        // Monotonicity: raw shown value must not exceed any grade that's
-        // structurally supposed to be worth more than raw.
-        expect(rawShown).toBeLessThanOrEqual((entry.value as number) + 0.01);
+        if ((rawShown as number) > (entry.value as number) + 0.01) exceededSomeGrade = true;
       }
+      // A "VeryHot" raw with a stale comp SHOULD out-run the cheap graded tiers.
+      // If this ever goes false the clamp has crept back in.
+      expect(exceededSomeGrade).toBe(true);
     });
 
     it("recomputes raw's predictedPriceAt30d from the capped market value", async () => {

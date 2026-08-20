@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:04.339Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/si1",
+ "sport": "pokemon",
+ "year": 2001,
+ "setName": "Southern Islands",
+ "productKey": "2001-si1",
+ "setKey": "si1",
+ "rowCount": 18,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Southern Islands",
+   "category": "base",
+   "playerCount": 18,
+   "printRun": null
+  }
+ ]
+}

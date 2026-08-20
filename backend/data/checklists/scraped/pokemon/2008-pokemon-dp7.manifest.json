@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:06.467Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/dp7",
+ "sport": "pokemon",
+ "year": 2008,
+ "setName": "Stormfront",
+ "productKey": "2008-dp7",
+ "setKey": "dp7",
+ "rowCount": 106,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Stormfront",
+   "category": "base",
+   "playerCount": 106,
+   "printRun": null
+  }
+ ]
+}

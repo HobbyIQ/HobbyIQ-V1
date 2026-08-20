@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
@@ -89,6 +90,9 @@ function PortfolioPageBody() {
   // ?add=1 is present (that's how the old /app/portfolio/add route
   // redirect lands the user + how iOS deep links can reach the flow).
   const [addOpen, setAddOpen] = useState(searchParams.get("add") === "1");
+  // CF-EBAY-SOLD-SYNC-ON-DEMAND (2026-08-17): on-demand pull of eBay sales.
+  const [ebaySyncing, setEbaySyncing] = useState(false);
+  const [ebaySyncMsg, setEbaySyncMsg] = useState<string | null>(null);
   useEffect(() => {
     // Sync when the URL param changes (browser back / forward or
     // client-side push into ?add=1 from elsewhere).
@@ -300,6 +304,51 @@ function PortfolioPageBody() {
             >
               or import CSV
             </Link>
+            {/* CF-EBAY-SOLD-SYNC-ON-DEMAND (2026-08-17): the poller worked but
+                only the 1h scheduled job called it, so a user who just sold
+                something had no way to pull it in. Idempotent, so pressing it
+                twice is safe. */}
+            <button
+              type="button"
+              onClick={async () => {
+                if (ebaySyncing) return;
+                setEbaySyncing(true);
+                setEbaySyncMsg(null);
+                try {
+                  const r = await syncEbaySold();
+                  if (r.status === "no-token" || r.status === "refresh-token-expired") {
+                    setEbaySyncMsg("Reconnect eBay to sync sold items.");
+                  } else if (r.status === "fetch-failed") {
+                    setEbaySyncMsg("eBay did not respond. Try again shortly.");
+                  } else if (r.matched > 0) {
+                    setEbaySyncMsg(`Synced ${r.matched} sold ${r.matched === 1 ? "card" : "cards"}.`);
+                    const next = await fetchPortfolio().catch(() => null);
+                    if (next) setData(next);
+                  } else {
+                    // Say WHY nothing changed. "0 synced" with no reason reads
+                    // as a broken button.
+                    setEbaySyncMsg(
+                      r.lineItemsProcessed > 0
+                        ? `Checked ${r.lineItemsProcessed} eBay items — none matched a holding.`
+                        : "No new eBay sales since the last sync.",
+                    );
+                  }
+                } catch {
+                  setEbaySyncMsg("Sync failed. Try again shortly.");
+                } finally {
+                  setEbaySyncing(false);
+                }
+              }}
+              className="hiq-btn text-sm inline-block"
+              disabled={ebaySyncing}
+            >
+              {ebaySyncing ? "Syncing eBay…" : "Sync eBay sold"}
+            </button>
+            {ebaySyncMsg && (
+              <span className="text-xs" style={{ color: "var(--color-muted)" }}>
+                {ebaySyncMsg}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -315,6 +364,14 @@ function PortfolioPageBody() {
 
       <PortfolioValueChart headlineTotal={data.summary.totalValue} />
       <SummaryBar summary={data.summary} />
+
+      {/* CF-PORTFOLIO-DASHBOARD (2026-08-17): the portfolio reads as a car
+          dashboard — score gauge, permanent readouts, allocation, and warning
+          lights that stay dark unless something is wrong — with the inventory
+          list underneath. Self-suppresses with no holdings or if the endpoint
+          is unavailable; it is additive and must never put an error banner on
+          the portfolio page. */}
+      <PortfolioDashboard />
 
       <div className="mt-8 flex items-center gap-3 flex-wrap">
         <input

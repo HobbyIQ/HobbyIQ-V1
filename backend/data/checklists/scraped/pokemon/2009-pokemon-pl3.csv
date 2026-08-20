@@ -1,0 +1,154 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,Base,false,,Absol G
+base,2,Base,false,,Blaziken FB
+base,3,Base,false,,Drifblim FB
+base,4,Base,false,,Electivire FB
+base,5,Base,false,,Garchomp
+base,6,Base,false,,Magmortar
+base,7,Base,false,,Metagross
+base,8,Base,false,,Rayquaza C
+base,9,Base,false,,Regigigas FB
+base,10,Base,false,,Rhyperior
+base,11,Base,false,,Staraptor FB
+base,12,Base,false,,Swampert
+base,13,Base,false,,Venusaur
+base,14,Base,false,,Yanmega
+base,15,Base,false,,Arcanine G
+base,16,Base,false,,Articuno
+base,17,Base,false,,Butterfree FB
+base,18,Base,false,,Camerupt
+base,19,Base,false,,Camerupt G
+base,20,Base,false,,Charizard G
+base,21,Base,false,,Chimecho
+base,22,Base,false,,Claydol
+base,23,Base,false,,Crawdaunt G
+base,24,Base,false,,Dewgong
+base,25,Base,false,,Dodrio
+base,26,Base,false,,Dusknoir FB
+base,27,Base,false,,Empoleon FB
+base,28,Base,false,,Exploud
+base,29,Base,false,,Honchkrow
+base,30,Base,false,,Lickilicky C
+base,31,Base,false,,Lucario C
+base,32,Base,false,,Lunatone
+base,33,Base,false,,Mawile
+base,34,Base,false,,Medicham
+base,35,Base,false,,Milotic C
+base,36,Base,false,,Moltres
+base,37,Base,false,,Mr. Mime
+base,38,Base,false,,Parasect
+base,39,Base,false,,Primeape
+base,40,Base,false,,Roserade C
+base,41,Base,false,,Sableye G
+base,42,Base,false,,Sandslash
+base,43,Base,false,,Seaking
+base,44,Base,false,,Shedinja
+base,45,Base,false,,Solrock
+base,46,Base,false,,Spinda
+base,47,Base,false,,Wailord
+base,48,Base,false,,Zapdos
+base,49,Base,false,,Altaria C
+base,50,Base,false,,Arcanine
+base,51,Base,false,,Bibarel
+base,52,Base,false,,Breloom
+base,53,Base,false,,Carnivine
+base,54,Base,false,,Chatot G
+base,55,Base,false,,Cherrim
+base,56,Base,false,,Dragonite FB
+base,57,Base,false,,Drifblim
+base,58,Base,false,,Floatzel
+base,59,Base,false,,Gabite
+base,60,Base,false,,Garchomp C
+base,61,Base,false,,Hippopotas
+base,62,Base,false,,Ivysaur
+base,63,Base,false,,Lopunny
+base,64,Base,false,,Loudred
+base,65,Base,false,,Magmar
+base,66,Base,false,,Manectric G
+base,67,Base,false,,Marshtomp
+base,68,Base,false,,Masquerain
+base,69,Base,false,,Metang
+base,70,Base,false,,Milotic
+base,71,Base,false,,Minun
+base,72,Base,false,,Murkrow
+base,73,Base,false,,Ninjask
+base,74,Base,false,,Numel
+base,75,Base,false,,Pinsir
+base,76,Base,false,,Plusle
+base,77,Base,false,,Raichu
+base,78,Base,false,,Raticate G
+base,79,Base,false,,Relicanth
+base,80,Base,false,,Rhydon
+base,81,Base,false,,Roserade
+base,82,Base,false,,Rotom
+base,83,Base,false,,Skarmory FB
+base,84,Base,false,,Spiritomb C
+base,85,Base,false,,Staravia
+base,86,Base,false,,Togekiss C
+base,87,Base,false,,Wailmer
+base,88,Base,false,,Yanma
+base,89,Base,false,,Baltoy
+base,90,Base,false,,Beldum
+base,91,Base,false,,Bidoof
+base,92,Base,false,,Buizel
+base,93,Base,false,,Bulbasaur
+base,94,Base,false,,Buneary
+base,95,Base,false,,Chatot
+base,96,Base,false,,Cherubi
+base,97,Base,false,,Chimchar
+base,98,Base,false,,Chingling
+base,99,Base,false,,Combee
+base,100,Base,false,,Corphish
+base,101,Base,false,,Croagunk
+base,102,Base,false,,Doduo
+base,103,Base,false,,Drifloon
+base,104,Base,false,,Feebas
+base,105,Base,false,,Geodude
+base,106,Base,false,,Gible
+base,107,Base,false,,Goldeen
+base,108,Base,false,,Growlithe
+base,109,Base,false,,Kricketot
+base,110,Base,false,,Magikarp
+base,111,Base,false,,Magnemite
+base,112,Base,false,,Mankey
+base,113,Base,false,,Meditite
+base,114,Base,false,,Meowth
+base,115,Base,false,,Mime Jr.
+base,116,Base,false,,Mudkip
+base,117,Base,false,,Nincada
+base,118,Base,false,,Pachirisu
+base,119,Base,false,,Paras
+base,120,Base,false,,Pikachu
+base,121,Base,false,,Piplup
+base,122,Base,false,,Rhyhorn
+base,123,Base,false,,Roselia
+base,124,Base,false,,Sandshrew
+base,125,Base,false,,Seel
+base,126,Base,false,,Shinx
+base,127,Base,false,,Shroomish
+base,128,Base,false,,Skorupi
+base,129,Base,false,,Starly
+base,130,Base,false,,Surskit
+base,131,Base,false,,Turtwig
+base,132,Base,false,,Whismur
+base,133,Base,false,,Zubat
+base,134,Base,false,,Battle Tower
+base,135,Base,false,,Champion's Room
+base,136,Base,false,,Cynthia's Guidance
+base,137,Base,false,,Cyrus's Initiative
+base,138,Base,false,,Night Teleporter
+base,139,Base,false,,Palmer's Contribution
+base,140,Base,false,,VS Seeker
+base,141,Base,false,,Absol G
+base,142,Base,false,,Blaziken FB
+base,143,Base,false,,Charizard G
+base,144,Base,false,,Electivire FB
+base,145,Base,false,,Garchomp C
+base,146,Base,false,,Rayquaza C
+base,147,Base,false,,Staraptor FB
+base,148,Base,false,,Articuno
+base,149,Base,false,,Moltres
+base,150,Base,false,,Zapdos
+base,SH7,Base,false,,Milotic
+base,SH8,Base,false,,Relicanth
+base,SH9,Base,false,,Yanma

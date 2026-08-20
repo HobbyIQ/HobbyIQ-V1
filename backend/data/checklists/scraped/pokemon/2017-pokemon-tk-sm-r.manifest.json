@@ -1,0 +1,18 @@
+{
+ "scrapedAt": "2026-08-16T15:19:10.042Z",
+ "sourceUrl": "https://api.tcgdex.net/v2/en/sets/tk-sm-r",
+ "sport": "pokemon",
+ "year": 2017,
+ "setName": "SM trainer Kit (Alolan Raichu)",
+ "productKey": "2017-tk-sm-r",
+ "setKey": "tk-sm-r",
+ "rowCount": 19,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > SM trainer Kit (Alolan Raichu)",
+   "category": "base",
+   "playerCount": 19,
+   "printRun": null
+  }
+ ]
+}
