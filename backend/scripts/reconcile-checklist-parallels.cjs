@@ -299,7 +299,12 @@ async function main() {
   console.log(`  FILLABLE (numberedTo null): ${fillable.toLocaleString()}  ${pc(fillable)}   <- the prize`);
   console.log(`  CONFLICT (run differs) : ${conflict.toLocaleString()}  ${pc(conflict)}   a human decides`);
   console.log(`  NEW      (not in cat)  : ${isNew.toLocaleString()}  ${pc(isNew)}   catalog gap`);
-  console.log(`  set not matched        : ${noSet.toLocaleString()}  ${pc(noSet)}   setKey miss OR set unknown\n`);
+  // BOTH lines, or the biggest bucket vanishes. The first run counted
+  // setNoParallels into `tot` but never printed it, so the displayed categories
+  // summed to 30% of a stated 8,993 and the dominant 6,290 was invisible —
+  // recoverable only by subtracting the printed lines from the total.
+  console.log(`  set held, NO parallels : ${setNoParallels.toLocaleString()}  ${pc(setNoParallels)}   <- ENRICHMENT, we own the set`);
+  console.log(`  set NOT in catalog     : ${noSet.toLocaleString()}  ${pc(noSet)}   acquisition, keyed by (sport, year, setKey)\n`);
 
   const show = (t, a) => { if (!a.length) return; console.log(t); for (const l of a) console.log(`   ${l}`); console.log(""); };
   show("FILLABLE - print runs we could adopt:", fills);
