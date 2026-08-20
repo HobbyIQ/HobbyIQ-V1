@@ -2088,10 +2088,34 @@ export function detectGradeFromTitle(title: string): { company: string; grade: s
   const company = m[1].toUpperCase();
   const grade = m[2];
   if (company === "BGS" && grade === "10") {
-    // Case-insensitive match on "Black Label" or bare "BL" adjacent
-    // to the BGS 10 (typical eBay titles: "BGS 10 BL", "BGS 10 Pristine",
-    // "BGS 10 Black Label"). "Pristine" is BGS's other name for Black Label.
-    if (/\b(black\s+label|pristine|bl)\b/i.test(title)) {
+    // CF-PRISTINE-IS-NOT-BLACK-LABEL (Drew, 2026-08-19: "is the BGS 10 and BGS
+    // pristine 10 black label and PSA 10 matching? We may be missing the
+    // pristine" / "cardsight is a data vendor, we use what I know").
+    //
+    // This used to read /black\s+label|pristine|bl/ and treat all three as
+    // Black Label, on the belief that "Pristine is BGS's other name for Black
+    // Label". IT IS NOT. Pristine is BGS's name for the grade TEN itself. Black
+    // Label is the separate designation for a 10 whose FOUR SUBGRADES are all
+    // 10 — a different, far rarer card.
+    //
+    // The cost of the conflation: "10 Black Label" carries a 12.0x multiplier
+    // at low print runs. Measured 2026-08-19, 6,434 BGS 10 comps say "Pristine"
+    // against 1,212 that say "Black Label" — so roughly 5,200 ordinary BGS 10s
+    // were being priced as Black Label. Observed prices agree with the hobby
+    // rather than the code: Black Label median $510 vs ordinary BGS 10 $160,
+    // a 3.19x premium, not 12x applied to everything.
+    //
+    // "ALMOST BLACK LABEL" IS NOT A BLACK LABEL. Real production title:
+    //   "2024 Topps Now /5151 Aaron Judge #416 BGS 10 Pristine!! Almost Black
+    //    Label" — a $65 card that a naive match would drop into a $510 pool.
+    //
+    // Bare "BL" is gone too. It is a two-letter token that collides with
+    // ordinary words and abbreviations, and the volume never justified the
+    // risk; an explicit "Black Label" is what sellers actually write when they
+    // have one.
+    const hasBlackLabel = /\bblack[\s-]?label\b/i.test(title);
+    const hedged = /\b(almost|near(ly)?|not|non|like|close to|basically|practically)\b[^.]{0,24}\bblack[\s-]?label\b/i.test(title);
+    if (hasBlackLabel && !hedged) {
       return { company, grade: "10 Black Label" };
     }
   }
