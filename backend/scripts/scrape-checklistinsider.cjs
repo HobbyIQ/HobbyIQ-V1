@@ -191,6 +191,20 @@ function detectHeader(rows) {
     // A header is only convincing with BOTH a card number and a player column;
     // "SET" alone appears in plenty of ordinary rows.
     if ("cardNumber" in map && "player" in map) return { row: i, map };
+
+    // A CHECKLIST WITH NO CARD NUMBERS IS READABLE BUT UNUSABLE, and that is a
+    // THIRD outcome, distinct from both "no checklist" and "we cannot read it".
+    //
+    // 2025 Topps T205 publishes "Player | Team" and lists its 300 subjects
+    // alphabetically; the cards are numbered, the checklist just does not say
+    // so. Our slug space is keyed on cardNumber, so parsing these would mint
+    // rows nothing can match — and null-cardNumber catalog rows are already a
+    // known defect we are cleaning up, not one to manufacture more of.
+    //
+    // So it is REPORTED, not forced. Flattering the parse rate by emitting
+    // unusable rows is the kind of number that hides work rather than finding
+    // it.
+    if ("player" in map && "team" in map) return { row: i, map, noCardNumbers: true };
   }
   return null;
 }
@@ -207,8 +221,21 @@ function parseWorkbook(buf) {
     if (!sheet) continue;
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, defval: null });
     if (!rows.length) continue;
-    const head = detectHeader(rows) || detectHeaderless(rows);
+    // ORDER MATTERS, and getting it wrong costs real rows. "No card numbers" is
+    // a LAST resort, not a first read: 2023 Topps Composite has a Player/Team
+    // header AND card numbers in a column the header does not name. Accepting
+    // the no-card-number signature before trying shape inference threw away
+    // 1,078 correctly-parsed cards and reported the product as unusable.
+    const strict = detectHeader(rows);
+    const head = (strict && !strict.noCardNumbers) ? strict : (detectHeaderless(rows) || strict);
     if (!head) continue;
+    if (head.noCardNumbers) {
+      // Readable, but it lists no card numbers — see detectHeader. Recorded and
+      // skipped rather than parsed into rows nothing can key on.
+      layout = "no-card-numbers";
+      diagnostics.push({ level: "warn", message: `sheet "${name}" lists players with no card-number column; ${rows.length} rows skipped` });
+      continue;
+    }
     layout = head.inferred ? "tabular-inferred" : "tabular";
     let map = head.map;
     for (let i = head.row + 1; i < rows.length; i++) {
@@ -221,8 +248,16 @@ function parseWorkbook(buf) {
       // applying it to all 4,400 rows reads later sections at the wrong offset,
       // which does not fail loudly: it silently mints wrong print runs and
       // wrong player names. So a header row RE-MAPS rather than being skipped.
+      // A RE-MAP MUST NOT LOSE A FIELD. 2023 Topps Composite opens with
+      // ["BASE", null, "Name", "Team", "Rookie"] — header-shaped, but with no
+      // card-number column. Accepting it replaced a correct inferred mapping
+      // (confidence 0.98) with one lacking cardNumber, after which every row
+      // failed the shape test and the product reported zero cards. Only a
+      // header naming BOTH a number and a player may re-map; anything else is
+      // skipped as a banner.
       const asHeader = detectHeader([r]);
-      if (asHeader) { map = asHeader.map; continue; }
+      if (asHeader && !asHeader.noCardNumbers) { map = asHeader.map; continue; }
+      if (asHeader) continue;
 
       const at = (f) => (f in map ? (r[map[f]] == null ? null : String(r[map[f]]).trim()) : null);
       const cardNumber = at("cardNumber");
@@ -273,6 +308,10 @@ function parseWorkbook(buf) {
   // stream reader, which reported zero cards — a parse that succeeds and is then
   // thrown away looks exactly like a parse that failed.
   if (layout && layout.startsWith("tabular")) return { layout, cards, sections: [...sections], diagnostics };
+  // A no-card-number sheet is a FINAL answer, not a reason to try the stream
+  // reader — the stream reader would find no numbers either, and its empty
+  // result would be logged as a parse failure rather than the truth.
+  if (layout === "no-card-numbers") return { layout, cards: [], sections: [...sections], diagnostics };
 
   // No header row anywhere -> the Topps section-stream shape. Hand it to the
   // parser already written for exactly that layout rather than writing a third.
@@ -425,7 +464,7 @@ async function main() {
   console.log(`set pages in scope: ${sets.length.toLocaleString()} of ${urls.length.toLocaleString()} sitemap urls\n`);
 
   const stream = fs.createWriteStream(OUT, { flags: "w" });
-  let done = 0, withLadder = 0, withBook = 0, stubs = 0, ladderRows = 0, cardRows = 0, failed = 0, bookFailed = 0, diagged = 0, bookRuns = 0;
+  let done = 0, withLadder = 0, withBook = 0, stubs = 0, ladderRows = 0, cardRows = 0, failed = 0, bookFailed = 0, diagged = 0, bookRuns = 0, noCardNumbers = 0;
   const layouts = {};
   for (const s of sets) {
     if (done >= LIMIT) break;
@@ -450,7 +489,12 @@ async function main() {
           sections = parsed.sections || [];
           diagnostics = parsed.diagnostics || [];
           layout = parsed.layout;
-          if (!cards.length) {
+          if (layout === "no-card-numbers") {
+            // Readable, and genuinely carries no card numbers. NOT a parse gap —
+            // counting it as one would send someone to fix a reader that is
+            // working correctly.
+            noCardNumbers++;
+          } else if (!cards.length) {
             // A workbook that yields nothing is a PARSE GAP, not an absent
             // checklist. Collapsing the two would hide a reader we need to fix
             // behind a number that looks like the site's fault.
@@ -497,6 +541,7 @@ async function main() {
   console.log(`  STUBS (published nothing): ${stubs.toLocaleString()}`);
   console.log(`  page fetch failed  : ${failed.toLocaleString()}`);
   console.log(`  WORKBOOK UNPARSED  : ${bookFailed.toLocaleString()}   <- our reader, not their gap`);
+  console.log(`  no card numbers    : ${noCardNumbers.toLocaleString()}   <- readable, but nothing to key on`);
   console.log(`  with diagnostics   : ${diagged.toLocaleString()}   <- read these before trusting the set`);
   console.log(`  layouts            : ${JSON.stringify(layouts)}`);
   console.log(`\nparallel rows        : ${ladderRows.toLocaleString()}   (print runs)`);
