@@ -51,6 +51,7 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { buildAuthority, judgeComp } = require("./lib/setSportAuthority.cjs");
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -62,7 +63,6 @@ const TOP = Number(arg("top", "25"));
 /** Absolute count of catalog rows in OTHER sports that makes a setKey a
  *  cross-sport franchise. Absolute, not a ratio - see the note in main(). */
 const MIN_OTHER = Number(arg("minOther", "200"));
-const SPORT_WORDS = ["baseball", "football", "basketball", "hockey", "soccer"];
 const REFRESH_PAGES = Number(arg("refreshPages", "400"));
 const LEG_MAX_MS = Number(arg("legMaxMinutes", "20")) * 60_000;
 
@@ -147,34 +147,19 @@ async function main() {
     m.set(r.sport, (m.get(r.sport) ?? 0) + 1);
   }, "catalog");
 
-  const authority = new Map();   // "year|setKey" -> sport
-  let mixed = 0, thin = 0, crossSport = 0;
-  const mixedEx = [];
-  for (const [k, m] of setChecklist) {
-    const total = [...m.values()].reduce((s, n) => s + n, 0);
-    if (total < MIN_CHECKLIST) { thin++; continue; }
-    const ranked = [...m.entries()].sort((a, b) => b[1] - a[1]);
-    if (ranked[0][1] / total < DOMINANCE) {
-      mixed++;
-      if (mixedEx.length < 6) mixedEx.push(`${k}  ${ranked.slice(0, 3).map(([s, n]) => `${s}:${n}`).join(" ")}`);
-      continue;
-    }
-    // THE NEW GATE. Even at 1.0 checklist dominance, a meaningful population of
-    // catalog rows in another sport means the franchise spans sports and this
-    // setKey cannot adjudicate. MIN_OTHER is absolute, not a ratio: 4% of a
-    // large set is thousands of real cards, and a ratio gate lets them through.
-    const all = setAll.get(k);
-    const other = all ? [...all.entries()].filter(([s]) => s !== ranked[0][0]).reduce((n, [, c]) => n + c, 0) : 0;
-    if (other >= MIN_OTHER) {
-      crossSport++;
-      if (mixedEx.length < 12) {
-        const top = [...all.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, n]) => `${s}:${n}`).join(" ");
-        mixedEx.push(`${k}  CROSS-SPORT  checklist=${ranked[0][0]}:${ranked[0][1]}  allRows= ${top}`);
-      }
-      continue;
-    }
-    authority.set(k, ranked[0][0]);
-  }
+  // GATES COME FROM THE SHARED MODULE, not a copy here. The repair applies
+  // these same gates; if this file kept its own, "the dry run matches the
+  // audit" would prove nothing about them agreeing — it would only prove two
+  // copies had not drifted YET. See scripts/lib/setSportAuthority.cjs.
+  const built = buildAuthority(setChecklist, setAll, {
+    minOther: MIN_OTHER, minChecklist: MIN_CHECKLIST, dominance: DOMINANCE,
+  });
+  const authority = built.authority;
+  const mixed = built.skipped.mixed;
+  const thin = built.skipped.thin;
+  const crossSport = built.skipped.crossSport;
+  const mixedEx = built.examples;
+
   console.log(`(year, setKey) with a checklist : ${setChecklist.size.toLocaleString()}`);
   console.log(`  usable as authority           : ${authority.size.toLocaleString()}`);
   console.log(`  MIXED-sport products (skipped): ${mixed.toLocaleString()}`);
@@ -196,30 +181,16 @@ async function main() {
     const [, sport, year, setKey] = p;
     if (!sport || !year || !setKey) return;
     judged++;
-    const truth = authority.get(`${year}|${setKey}`);
-    if (!truth) { noAuthority++; return; }
-    if (truth === sport) { agree++; return; }
-
-    // TITLE VETO. A title that NAMES a sport is direct evidence about THIS card;
-    // the set-level verdict is only a prior about its neighbours. When they
-    // disagree the card wins, because that is the pair that was measured wrong:
-    // 4,000 comps slugged hiq:baseball:2024:panini-donruss carried baseball 424,
-    // soccer 32, football 0 - while the set-level rule wanted all of them moved
-    // to football.
-    //
-    // The veto is high-precision and low-recall: only ~11% of titles name a
-    // sport at all, so it cannot DRIVE a repair. It can only stop one, which is
-    // the correct asymmetry for a rule that would otherwise rewrite good rows.
-    const t = String(r.title || "").toLowerCase();
-    const named = SPORT_WORDS.filter((s) => t.includes(s));
-    if (named.length === 1) {
-      if (named[0] === sport) { vetoed++; return; }         // title backs the slug
-      if (named[0] !== truth) { vetoedOther++; return; }    // title backs NEITHER
-    }
+    // ONE decision function, shared with the repair.
+    const v = judgeComp({ slugSport: sport, year, setKey, title: r.title }, authority);
+    if (v.verdict === "no-authority") { noAuthority++; return; }
+    if (v.verdict === "agree") { agree++; return; }
+    if (v.verdict === "vetoed-title-backs-slug") { vetoed++; return; }
+    if (v.verdict === "vetoed-title-backs-neither") { vetoedOther++; return; }
     contradict++;
-    const k = `${sport} -> ${truth}`;
+    const k = `${v.from} -> ${v.to}`;
     moves.set(k, (moves.get(k) ?? 0) + 1);
-    if (ex.length < TOP) ex.push(`$${String(r.price).padEnd(8)} ${String(r.playerName || "?").slice(0, 22).padEnd(23)} ${sport} -> ${truth}\n        ${String(r.title || "").slice(0, 76)}\n        ${r.hobbyiqCardId}`);
+    if (ex.length < TOP) ex.push(`$${String(r.price).padEnd(8)} ${String(r.playerName || "?").slice(0, 22).padEnd(23)} ${v.from} -> ${v.to}\n        ${String(r.title || "").slice(0, 76)}\n        ${r.hobbyiqCardId}`);
   }, "comps");
 
   const pc = (n) => `${((n / Math.max(judged, 1)) * 100).toFixed(2)}%`;
