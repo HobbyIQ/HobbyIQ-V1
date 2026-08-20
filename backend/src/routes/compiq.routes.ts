@@ -11,9 +11,6 @@ import {
   type GradeLadderGrade,
 } from "../services/compiq/compiqEstimate.service.js";
 import {
-  getCardFmv,
-  getPriceEstimate,
-  getSalesStatsByPlayer,
   getTotalSalesByPlayer,
   // CF-COMPIQ-SCAN-ROUTE (2026-06-30): iOS slab scanning entry point.
   // Uses CH's image-match + cert-OCR endpoints to identify a card
@@ -875,145 +872,6 @@ const NON_LIVE_SOURCES_FOR_REGIME: ReadonlySet<string> = new Set([
   "upstream-timeout",
 ]);
 
-/**
- * CF-CH-TELEMETRY-FANOUT (2026-06-28): fire-and-forget helper that posts
- * the two CardHedge-reference telemetry events (`fmv_drift_observed` +
- * `sales_momentum_observed`) for a freshly-priced card. Called from
- * `/search`, `/price`, and `/price-by-id` so the evidence base accumulates
- * uniformly regardless of which user-facing route fires.
- *
- * Pure side-effect: void return, never throws (every CH call and every
- * log is guarded). Caller MUST invoke as `void recordCHReferenceTelemetry(...)`
- * — awaiting it would block the response path and defeat the purpose.
- *
- * `source` is the App Insights `source` field, used downstream KQL to
- * separate per-route base rates ("which route gives best drift signal
- * coverage?"). `engineFmv` should be null when the route surfaced null
- * (thin/can't-price) — matches what the user actually sees.
- */
-function recordCHReferenceTelemetry(opts: {
-  source: string;
-  cardId: string | null;
-  player: string | null;
-  gradingCompany: string | null;
-  gradeValue: number | null;
-  engineFmv: number | null;
-}): void {
-  if (!opts.cardId) return;
-  const grade =
-    opts.gradingCompany && typeof opts.gradeValue === "number"
-      ? `${opts.gradingCompany} ${opts.gradeValue}`
-      : "Raw";
-  // FMV drift telemetry (single-grade drift signal at the user's grade).
-  void (async () => {
-    try {
-      const [chFmv, chEst] = await Promise.all([
-        getCardFmv(opts.cardId!, grade),
-        getPriceEstimate(opts.cardId!, grade),
-      ]);
-      logFmvDriftObserved({
-        source: opts.source,
-        player: opts.player,
-        cardId: opts.cardId!,
-        gradingCompany: opts.gradingCompany,
-        grade,
-        engineFmv: opts.engineFmv,
-        chCardFmv: chFmv
-          ? {
-              price: chFmv.price,
-              confidence: chFmv.confidence,
-              confidenceGrade: chFmv.confidence_grade ?? null,
-              freshnessDays: chFmv.freshness_days,
-              method: chFmv.method,
-            }
-          : null,
-        chPriceEstimate: chEst
-          ? { price: chEst.price, confidence: chEst.confidence, method: chEst.method }
-          : null,
-      });
-    } catch (err) {
-      console.warn(
-        `[${opts.source}] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
-      );
-    }
-  })();
-  // CF-CH-CORPUS-CAPTURE-ALL-GRADES (2026-07-04): every priced request also
-  // captures the FULL per-grade reference-price snapshot to the corpus.
-  // This is the standalone-first play — Drew's directive: "our entire goal
-  // is to learn from CH; when eBay Browse lands we can do it on our own."
-  //
-  // Cost: one CH HTTP per unique card per 12h (getAllPricesByCard cache
-  // TTL matches FMV cache). Fire-and-forget; never blocks the response.
-  //
-  // Value: builds the (cardId, grade, referencePrice, timestamp) corpus
-  // continuously across every /price /price-by-id /bulk request. When
-  // eBay Browse is wired we join against observed per-grade sale medians
-  // → drift-per-grade → prove the standalone engine can operate without
-  // the third-party signal before we retire it. Data collected via server
-  // logs → available in App Insights for offline analysis.
-  void (async () => {
-    try {
-      const rows = await getAllPricesByCard(opts.cardId!);
-      if (rows.length === 0) return;
-      console.log(JSON.stringify({
-        event: "reference_prices_captured",
-        source: opts.source,
-        referenceVendor: "cardhedge",
-        cardId: opts.cardId,
-        player: opts.player,
-        rowCount: rows.length,
-        grades: rows.map((r) => ({
-          grade: r.grade,
-          grader: r.grader,
-          referencePrice: r.price,
-          displayOrder: r.display_order,
-        })),
-        timestamp: new Date().toISOString(),
-      }));
-      persistReferencePrices({
-        source: opts.source,
-        cardId: opts.cardId!,
-        player: opts.player,
-        grades: rows.map((r) => ({
-          grade: r.grade,
-          grader: r.grader,
-          referencePrice: r.price,
-          displayOrder: r.display_order,
-        })),
-      });
-    } catch (err) {
-      console.warn(
-        `[${opts.source}] reference-prices capture failed (non-fatal): ${(err as Error)?.message ?? err}`,
-      );
-    }
-  })();
-  // Sales-momentum telemetry — player-keyed, so skip if we don't have one.
-  if (!opts.player) return;
-  void (async () => {
-    try {
-      const [stats, totals] = await Promise.all([
-        getSalesStatsByPlayer([opts.player!], "week"),
-        getTotalSalesByPlayer([opts.player!]),
-      ]);
-      const playerResult = stats?.results?.find((r) => r.player === opts.player);
-      if (!playerResult) return;
-      const signal = deriveSalesMomentum(playerResult.buckets);
-      const totals30d =
-        totals?.results?.find((r) => r.player === opts.player)?.total_sales ?? null;
-      logSalesMomentumObserved({
-        source: opts.source,
-        player: opts.player!,
-        cardId: opts.cardId,
-        signal,
-        totalSales30d: totals30d,
-      });
-    } catch (err) {
-      console.warn(
-        `[${opts.source}] sales-momentum telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
-      );
-    }
-  })();
-}
 
 /**
  * CF-PRICING-TIER-TELEMETRY (2026-07-11, Drew).
@@ -1073,9 +931,12 @@ function recordPricingTierHit(opts: {
 /**
  * CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION (2026-07-01):
  * Fire-and-forget telemetry that evaluates the momentum projection
- * against the just-served response and logs the result. Runs alongside
- * recordCHReferenceTelemetry — same fire-and-forget contract, same
- * player-keyed gate, same never-throws guarantee.
+ * against the just-served response and logs the result. Fire-and-forget:
+ * player-keyed gate, never throws, never awaited on the response path.
+ *
+ * (It used to run alongside recordCHReferenceTelemetry. That was removed in
+ * CF-CH-INGEST-ONLY-2026-08-20 — CardHedge is an ingest source, not a
+ * pricing reference.)
  *
  * Purely observational for now:
  * - Fetches getPlayerTrendSnapshot (vendor-neutral via services/playerTrend/)
@@ -2569,32 +2430,17 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         return false;
       },
     });
-    // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): fire on EVERY response
-    // (cache hit + miss) by reading from `result` instead of nesting
-    // inside the producer. The route is cacheWrapped at CACHE_TTL_SECONDS
-    // (15 minutes, NOT the 6h this comment claimed) — a hit
-    // bypasses the producer entirely, so the in-producer call we shipped
-    // in #161 only fired on cache misses (~1 in N). Cache itself caches
-    // CH calls inside recordCHReferenceTelemetry (12h getCardFmv +
-    // getPriceEstimate + getSalesStatsByPlayer), so emitting on every
-    // cache hit doesn't multiply CH traffic — it just lets the App
-    // Insights event flow through on every priced response.
-    recordCHReferenceTelemetry({
-      source: "compiq.search",
-      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): cardIdentity emits
-      // `card_id` snake_case; prior `cardId` was always undefined.
-      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
-      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
-      gradingCompany: null,
-      gradeValue: null,
-      engineFmv:
-        typeof (result as any).fairMarketValueLive === "number"
-          ? ((result as any).fairMarketValueLive as number)
-          : null,
-    });
-    // CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION observational telemetry —
-    // runs alongside recordCHReferenceTelemetry, gated by the same flag
-    // that later drives pricing.
+    // CF-TELEMETRY-OUTSIDE-CACHE (2026-06-28, revised 2026-08-20): fire on
+    // EVERY response (cache hit + miss) by reading from `result` instead of
+    // nesting inside the producer. The route is cacheWrapped at
+    // CACHE_TTL_SECONDS (15 minutes) — a hit bypasses the producer entirely,
+    // so the in-producer call we shipped in #161 only fired on cache misses
+    // (~1 in N).
+    //
+    // This block previously also explained why CH reference telemetry was
+    // safe to emit on every cache hit. That telemetry is gone
+    // (CF-CH-INGEST-ONLY-2026-08-20), so the only thing firing here now is
+    // the momentum projection evaluation, which touches no vendor API.
     recordMomentumProjectionEvaluated({
       source: "compiq.search",
       cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
@@ -3707,18 +3553,6 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       },
     });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
-    recordCHReferenceTelemetry({
-      source: "compiq.price",
-      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): see /search above.
-      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
-      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
-      gradingCompany: null,
-      gradeValue: null,
-      engineFmv:
-        typeof (result as any).fairMarketValueLive === "number"
-          ? ((result as any).fairMarketValueLive as number)
-          : null,
-    });
     recordMomentumProjectionEvaluated({
       source: "compiq.price",
       cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
@@ -6546,17 +6380,6 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       }
     }
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
-    recordCHReferenceTelemetry({
-      source: "compiq.price-by-id",
-      cardId: resolvedCardId,
-      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
-      gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
-      gradeValue: typeof gradeValue === "number" ? gradeValue : null,
-      engineFmv:
-        typeof (result as any).fairMarketValueLive === "number"
-          ? ((result as any).fairMarketValueLive as number)
-          : null,
-    });
     recordMomentumProjectionEvaluated({
       source: "compiq.price-by-id",
       cardId: resolvedCardId,

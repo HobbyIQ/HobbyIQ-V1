@@ -4026,33 +4026,30 @@ export function emitPredictionToCorpus(params: {
     // Logging must never block a pricing response.
   }
 
-  // CF-PER-CARD-COMP-POOL-AUDIT (2026-06-29): side-channel telemetry
-  // comparing the engine's surfaced FMV to CardHedge's reference FMV
-  // for the same (chCardId, grade). Volume test 2026-06-29 surfaced
-  // Class D drift cases (Bryant, Arenado where engine ≈ CH ± 50%);
-  // this audit captures those events with enough context for offline
-  // diagnosis. Fire-and-forget via setImmediate so it never adds to
-  // pricing latency. getCardFmv is cached (12h TTL) so the audit is
-  // essentially free when the pricing path already touched it.
-  emitCompPoolAuditAsync({
-    chCardId: params.cardIdentity?.card_id ?? params.body.cardId ?? null,
-    gradeCompany: params.body.gradeCompany ?? null,
-    gradeValue: params.body.gradeValue ?? null,
-    engineFmv:
-      typeof params.fairMarketValue === "number" && Number.isFinite(params.fairMarketValue)
-        ? params.fairMarketValue
-        : null,
-    engineCompsUsed: params.compsUsed ?? 0,
-    callSource: params.callContext?.source ?? null,
-  });
+  // CF-CH-INGEST-ONLY-2026-08-20. CF-PER-CARD-COMP-POOL-AUDIT used to fire
+  // here: side-channel telemetry comparing the engine's surfaced FMV against
+  // CardHedge's reference FMV for the same (chCardId, grade).
+  //
+  // Removed. CardHedge is an ingest source -- we take its SALES and clean them
+  // into our own pool -- not a pricing oracle to benchmark ourselves against.
+  // Grading our FMV by how close it lands to a vendor's FMV quietly makes that
+  // vendor the standard, which is backwards: the engine owns the number.
+  //
+  // Nothing about the served price changes -- the audit was fire-and-forget
+  // inside setImmediate and never fed the response.
 }
 
 /**
- * CF-PER-CARD-COMP-POOL-AUDIT (2026-06-29): build the CardHedge grade
- * string from the engine's (gradeCompany, gradeValue) pair. CH expects
- * "Raw" or "PSA 10" / "BGS 9.5" / "SGC 9". Returns null when inputs
- * don't combine into a recognizable grade label (audit skipped).
+ * Build a canonical grade string from an (gradeCompany, gradeValue) pair:
+ * "Raw", or "PSA 10" / "BGS 9.5" / "SGC 9". Returns null when the inputs
+ * do not combine into a recognizable grade label.
  */
+// CF-CH-INGEST-ONLY-2026-08-20. Its only caller, emitCompPoolAuditAsync, was
+// removed with the rest of the CardHedge FMV reference audit -- CardHedge is
+// an ingest source, not a pricing reference. This function itself touches no
+// vendor API: it is a pure PSA/BGS/SGC/CGC/HGA grade-label formatter, exported
+// and covered by 19 cases in tests/perCardCompPoolAudit.test.ts, so it is kept
+// rather than deleted alongside its former caller.
 export function formatGradeForCardHedge(
   gradeCompany: string | null | undefined,
   gradeValue: number | string | null | undefined,
@@ -4079,75 +4076,6 @@ export function formatGradeForCardHedge(
   return `${company} ${valueStr}`;
 }
 
-function emitCompPoolAuditAsync(opts: {
-  chCardId: string | null;
-  gradeCompany: string | null;
-  gradeValue: number | string | null;
-  engineFmv: number | null;
-  engineCompsUsed: number;
-  callSource: string | null;
-}): void {
-  // Fast skip when there's nothing meaningful to audit. Done OUTSIDE
-  // setImmediate so we don't even schedule the microtask for skip cases.
-  if (!opts.chCardId || opts.engineFmv == null || opts.engineFmv <= 0) return;
-  if (opts.engineCompsUsed === 0) return;
-  const grade = formatGradeForCardHedge(opts.gradeCompany, opts.gradeValue);
-  if (!grade) return;
-
-  setImmediate(async () => {
-    try {
-      // Dynamic import mirrors the existing pattern in this file
-      // (e.g. line 1343 getPricesByCard via dynamic import) to avoid
-      // creating a top-level edge cardhedge.client → compiqEstimate.
-      const mod = await import("./cardhedge.client.js");
-      const chFmv = await mod.getCardFmv(opts.chCardId!, grade);
-      if (!chFmv || typeof chFmv.price !== "number" || chFmv.price <= 0) {
-        // CH has no FMV for this (cardId, grade). Useful audit signal —
-        // tells us how often the engine prices something CH won't.
-        console.log(JSON.stringify({
-          event: "engine_vs_ch_fmv_audit",
-          source: "compiq.emitPredictionToCorpus",
-          chCardId: opts.chCardId,
-          grade,
-          engineFmv: opts.engineFmv,
-          chFmv: null,
-          ratio: null,
-          engineCompsUsed: opts.engineCompsUsed,
-          isDrift: false,
-          chMissing: true,
-          callSource: opts.callSource,
-          timestamp: new Date().toISOString(),
-        }));
-        return;
-      }
-      const ratio = opts.engineFmv! / chFmv.price;
-      // Drift bands: engine outside [0.7, 1.5] of CH is a Class D candidate
-      // (the volume-test cases ranged 0.5×–2×). Tightening the band to
-      // 0.7–1.5 captures the ~30% drift signal without false-positive
-      // noise from natural sub-day price flicker.
-      const isDrift = ratio < 0.7 || ratio > 1.5;
-      console.log(JSON.stringify({
-        event: "engine_vs_ch_fmv_audit",
-        source: "compiq.emitPredictionToCorpus",
-        chCardId: opts.chCardId,
-        grade,
-        engineFmv: opts.engineFmv,
-        chFmv: chFmv.price,
-        ratio: Math.round(ratio * 1000) / 1000,
-        engineCompsUsed: opts.engineCompsUsed,
-        chConfidenceGrade: chFmv.confidence_grade ?? null,
-        chFreshnessDays: chFmv.freshness_days ?? null,
-        chMethod: chFmv.method ?? null,
-        isDrift,
-        chMissing: false,
-        callSource: opts.callSource,
-        timestamp: new Date().toISOString(),
-      }));
-    } catch {
-      // Audit never throws.
-    }
-  });
-}
 
 // ---------------------------------------------------------------------------
 // CF-VARIANT-FILTER-LOOSENING — tier ladder constants + helpers
