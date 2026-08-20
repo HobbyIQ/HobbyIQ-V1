@@ -3,7 +3,7 @@
 // from raw sales — vendor-agnostic aggregation with the fetch source
 // isolated for future swap (CH /cards/comps → eBay Browse).
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // getCardSales USED to be the swap point. On 2026-08-14 the service moved to
 // reading sold_comps directly (CF-OWN-THE-DATA) and nothing updated these
@@ -81,6 +81,17 @@ const FAKE_NOW = new Date("2026-07-04T12:00:00.000Z");
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(FAKE_NOW);
+});
+
+// CF-RESTORE-FAKE-TIMERS (2026-08-20). This file installed fake timers and
+// never restored them, so it ended leaving the clock frozen at FAKE_NOW.
+// vitest runs with isolate:true today, which contains the damage to this
+// file, but that is the ONLY thing containing it — flipping isolate off, or
+// any pool change that shares an environment between files, would leak a
+// frozen clock into whichever file ran next in the worker. Restore explicitly
+// rather than depend on isolation we do not configure.
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function daysAgo(n: number): string {
