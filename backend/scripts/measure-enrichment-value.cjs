@@ -45,10 +45,20 @@
  * Even so the result is a CANDIDATE count, deliberately labelled as such. It is
  * an upper bound on the win, not the win.
  *
- * Reported separately, because they are different facts:
+ * Reported separately, because they are different facts and different work:
  *   CANDIDATE      base-slugged comp whose title names a scraped parallel
+ *                  -> ENRICH: adopt the ladder and this comp resolves
  *   ALREADY-PAR    comp already carrying a parallel — no change available
+ *   GAP SIGNAL     title names a parallel or serial our ladder LACKS
+ *                  -> ACQUIRE: a checklist gap with a completed sale behind it
  *   NO-TITLE-MATCH base-slugged and genuinely looks like a base card
+ *
+ * GAP SIGNAL exists because Drew asked "shouldn't the no match be a good place
+ * to get better checklist data?" — and he was right. Filing those as "probably
+ * base" discarded the most demand-weighted acquisition signal we have: real
+ * money changed hands on a card our checklist cannot describe. They are ranked
+ * by SALES DOLLARS, not row count, so the list is ordered by what the market
+ * actually cares about.
  *
  * Usage:
  *   COSMOS_CONNECTION_STRING="..." node backend/scripts/measure-enrichment-value.cjs \
@@ -60,6 +70,7 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { normalizeSetKey, normalizeParallel } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -168,8 +179,8 @@ async function main() {
   console.log(`  ...and carry NO parallels      : ${enrichable.size.toLocaleString()}   <- the enrichable sets\n`);
 
   // ── 3. How many real comps would newly resolve? ─────────────────────────
-  let inScope = 0, candidate = 0, alreadyPar = 0, noMatch = 0;
-  const byParallel = new Map(), examples = [];
+  let inScope = 0, candidate = 0, alreadyPar = 0, noMatch = 0, gapSignal = 0;
+  const byParallel = new Map(), examples = [], gaps = new Map(), gapEx = [];
   await scanAll("sold_comps", {
     query: `SELECT c.hobbyiqCardId, c.title, c.price, c.playerName FROM c
              WHERE IS_DEFINED(c.hobbyiqCardId) AND NOT IS_NULL(c.hobbyiqCardId)`,
@@ -183,8 +194,44 @@ async function main() {
     inScope++;
     if (parallel && parallel !== "base") { alreadyPar++; return; }
     const t = String(r.title || "").toLowerCase();
-    const hit = (ladders.get(k) || []).find((x) => x.lower.length >= 3 && x.re.test(t));
-    if (!hit) { noMatch++; return; }
+    const known = ladders.get(k) || [];
+    const hit = known.find((x) => x.lower.length >= 3 && x.re.test(t));
+    if (!hit) {
+      // CF-NO-MATCH-IS-A-SIGNAL (Drew, 2026-08-20: "shouldn't the no match be a
+      // good place to get better checklist data?"). Yes — and treating this
+      // bucket as "probably a base card" threw that away.
+      //
+      // A base-slugged comp whose TITLE names a parallel or a serial that our
+      // scraped ladder does not contain is not a base card. It is a CHECKLIST
+      // GAP with a completed sale behind it: real money changed hands on a card
+      // our checklist cannot describe. That is the strongest acquisition signal
+      // available, because it is demand-weighted rather than guessed — the same
+      // logic as the provisional tier being a demand signal for which checklist
+      // to build next.
+      //
+      // parseListingIdentity is reused rather than re-deriving a serial regex.
+      // It already carries today's fixes: `PSA 9/10` is rejected as a grade
+      // fraction, and `/2022` on 2022 Topps Gold is kept because that parallel
+      // really is numbered to its year.
+      let parsed = null;
+      try { parsed = parseListingIdentity(String(r.title || "")); } catch { /* unparseable title is not a signal */ }
+      const pName = parsed && parsed.parallel ? String(parsed.parallel) : null;
+      const pRun = parsed && Number.isFinite(parsed.printRun) ? parsed.printRun : null;
+      const pSlug = pName ? normalizeParallel(pName) : null;
+      const nameUnknown = !!pSlug && pSlug !== "base" && !known.some((x) => normalizeParallel(x.name) === pSlug);
+      const runUnknown = pRun != null && !known.some((x) => x.printRun === pRun);
+      if (nameUnknown || runUnknown) {
+        gapSignal++;
+        const label = `${year} ${setKey} :: ${pName || "(unnamed)"}${pRun != null ? ` /${pRun}` : ""}`;
+        const g = gaps.get(label) || { n: 0, usd: 0 };
+        g.n++; g.usd += Number(r.price) || 0;
+        gaps.set(label, g);
+        if (gapEx.length < TOP) gapEx.push(`$${String(r.price).padEnd(8)} ${String(r.playerName || "?").slice(0, 20).padEnd(21)} -> MISSING ${pName || "?"}${pRun != null ? ` /${pRun}` : ""}\n        ${String(r.title || "").slice(0, 76)}`);
+        return;
+      }
+      noMatch++;
+      return;
+    }
     candidate++;
     const key = `${year} ${setKey} :: ${hit.name}${hit.printRun ? ` /${hit.printRun}` : ""}`;
     byParallel.set(key, (byParallel.get(key) ?? 0) + 1);
