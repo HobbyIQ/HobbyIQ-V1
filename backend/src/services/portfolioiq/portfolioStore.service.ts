@@ -27,13 +27,6 @@ import { composeHoldingWireShape, composePortfolioListResponse } from "./respons
 // falls back to this behind the user's own uploaded photo.
 import { resolveCatalogImageUrl } from "../compiq/cardImageResolver.js";
 // CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): subscribe holdings
-// to CH's price-tracking feed on add/update. Fire-and-forget — failure
-// must NEVER block the holding save. Dormant unless CARD_HEDGE_CLIENT_ID
-// is set on the server.
-import {
-  subscribeHoldingToDeltaPoll,
-  holdingSubscriptionChanged,
-} from "./deltaPollSubscriptions.service.js";
 import {
   tryFinalizeReconciliation,
   type LedgerEntryForErp,
@@ -4747,10 +4740,6 @@ export async function addHolding(req: Request, res: Response) {
   // CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): enroll the new
   // holding in CH's price-tracking feed so the delta-poll worker (PR
   // #211) sees future sales for this card. Fire-and-forget: a failure
-  // here MUST NOT block the iOS success response. The wrapper itself
-  // short-circuits when CARD_HEDGE_CLIENT_ID is unset, so this is
-  // dormant in any environment without the client_id env var.
-  void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[holding.id]!);
 
   res.status(201).json({ message: "Holding saved", id: holding.id });
 }
@@ -4934,9 +4923,6 @@ export async function updateHolding(req: Request, res: Response) {
   // when the update changed the (cardId, grade) identity. Edits that
   // only touch quantity / notes / photos don't change what CH should
   // track. Saves a CH call on every quantity bump.
-  if (holdingSubscriptionChanged(previous, doc.holdings[id]!)) {
-    void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
-  }
 
   // CF-MARKETPLACE-SYNC (Drew, 2026-08-10). Marketplace listings are
   // refreshed via a nightly cron workflow (marketplace-listings-refresh),
@@ -5167,9 +5153,6 @@ export async function regradeHolding(req: Request, res: Response) {
 
   // Re-subscribe delta polls when grade/cardId identity changed (grade
   // change always changes the tracked (cardId, grade) tuple).
-  if (holdingSubscriptionChanged(previous, doc.holdings[id]!)) {
-    void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
-  }
 
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): standardize response envelope
   // across all mutation routes. `updatedHolding` preserved for existing
@@ -8451,51 +8434,6 @@ export async function repriceHoldingByDelta(
   }
 }
 
-// CF-CH-DELTA-POLL-MIGRATION (2026-06-30): one-shot batch-subscribe of
-// EVERY existing holding across all users. Used to enroll holdings
-// created before delta-poll subscription was wired (PR #212), or to
-// re-enroll after CH-side subscription state is lost. Idempotent —
-// CH dedupes (card_id, grade) per client_id, so re-running is safe.
-//
-// Throttles to BATCH_SIZE holdings per CH call (subscribePriceUpdates
-// chunks at 100). Reports the totals back.
-export async function migrateExistingHoldingsToDeltaPoll(): Promise<{
-  usersScanned: number;
-  holdingsSubmitted: number;
-  holdingsSubscribed: number;
-}> {
-  const { batchSubscribeHoldings } = await import("./deltaPollSubscriptions.service.js");
-  const items: Array<{ userId: string; holding: PortfolioHolding }> = [];
-  let usersScanned = 0;
-  try {
-    const userIds = await listAllPortfolioUserIds();
-    for (const userId of userIds) {
-      usersScanned++;
-      try {
-        const doc = await readUserDoc(userId);
-        for (const h of Object.values(doc.holdings ?? {})) {
-          if (h) items.push({ userId, holding: h });
-        }
-      } catch (err) {
-        console.warn(
-          `[migrateExistingHoldings] read userId=${userId} failed (skipped):`,
-          (err as Error)?.message ?? err,
-        );
-      }
-    }
-  } catch (err) {
-    console.warn(
-      "[migrateExistingHoldings] user iteration failed:",
-      (err as Error)?.message ?? err,
-    );
-  }
-  const result = await batchSubscribeHoldings(items);
-  return {
-    usersScanned,
-    holdingsSubmitted: result.submitted,
-    holdingsSubscribed: result.subscribed,
-  };
-}
 
 export async function runBatchReprice(req: Request, res: Response) {
   const auth = await requireUser(req, res);
