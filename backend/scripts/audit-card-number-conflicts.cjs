@@ -44,6 +44,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -56,7 +57,8 @@ const MIN_ROWS = Number(arg("minRows", "1"));
 
 /** Checklist-backed sources — these settle a conflict. Vendor/auto-seed rows
  *  do not, however many of them there are. */
-const CHECKLIST_SOURCES = /checklistcenter|baseballcardpedia|bccp|tcdb|beckett/i;
+/** Delegates to catalogAuthority — see CF-CATALOG-AUTHORITY. */
+const isChecklistSource = (source) => canAdjudicate(source);
 
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 const prefixOf = (n) => {
@@ -124,7 +126,7 @@ async function main() {
       if (r.source) e.sources.add(r.source);
 
       // Record where this number legitimately LIVES, product by product.
-      if (r.source && CHECKLIST_SOURCES.test(r.source)) {
+      if (r.source && isChecklistSource(r.source)) {
         const homeKey = [player, r.cardYear, prefixOf(number), number].join("|");
         let homes = numberHomes.get(homeKey);
         if (!homes) numberHomes.set(homeKey, (homes = new Set()));
@@ -142,7 +144,7 @@ async function main() {
       .map(([number, e]) => ({
         number,
         rows: e.rows,
-        checklistBacked: [...e.sources].some((s) => CHECKLIST_SOURCES.test(s)),
+        checklistBacked: [...e.sources].some((s) => isChecklistSource(s)),
         sources: [...e.sources].slice(0, 3),
       }))
       .filter((c) => c.rows >= MIN_ROWS)

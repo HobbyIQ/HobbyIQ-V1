@@ -51,6 +51,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -61,7 +62,8 @@ const APPLY = process.argv.includes("--apply");
 const POOL = Math.max(1, Number(arg("pool", "8")));
 const TOP = Number(arg("top", "25"));
 
-const CHECKLIST_SOURCES = /checklistcenter|baseballcardpedia|bccp|tcdb|beckett/i;
+/** Delegates to catalogAuthority — see CF-CATALOG-AUTHORITY. */
+const isChecklistSource = (source) => canAdjudicate(source);
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
 const prefixOf = (n) => {
   const s = String(n ?? "").toUpperCase().trim();
@@ -113,7 +115,7 @@ async function main() {
     let e = byNum.get(number);
     if (!e) byNum.set(number, (e = { rows: 0, checklist: false }));
     e.rows++;
-    if (r.source && CHECKLIST_SOURCES.test(r.source)) e.checklist = true;
+    if (r.source && isChecklistSource(r.source)) e.checklist = true;
   }
 
   /** key -> { correct, wrong:Set } for DECIDABLE conflicts only. */

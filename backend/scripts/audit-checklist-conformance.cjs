@@ -61,6 +61,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -104,12 +105,8 @@ const POOL = Math.max(1, Number(arg("pool", "8")));
  * `catalog-explode` are our own inferences written back — a mis-slugged comp
  * would vote to confirm itself.
  */
-function isChecklistSource(source) {
-  const s = String(source ?? "").toLowerCase().replace(/-graded$/, "");
-  if (/^(cardhedge|cardsight|ebay|ingest-auto-seed|sold-comps-stub|tree-builder|catalog-explode|user-verified)/.test(s)) return false;
-  if (/-product-structure$/.test(s)) return false;
-  return /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor/.test(s);
-}
+/** Delegates to catalogAuthority — see CF-CATALOG-AUTHORITY. */
+const isChecklistSource = (source) => canAdjudicate(source);
 
 const NOISE = new Set([
   "au", "auto", "autos", "autograph", "autographs", "on", "card", "true", "mini", "rc", "rookie",

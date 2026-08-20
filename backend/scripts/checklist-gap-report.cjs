@@ -31,18 +31,29 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : dflt;
 }
 
-// Sources that trace to a PUBLISHED checklist. Everything else is a vendor
-// mirror or a stub derived from the very sales we are trying to match.
+// Sources that trace to a PUBLISHED checklist.
+//
+// CF-CATALOG-AUTHORITY (2026-08-20): `ingest-auto-seed` USED TO BE IN THIS LIST,
+// directly contradicting the comment above it. Those rows are generated from the
+// very sales this report is trying to find checklists for, so counting them made
+// gaps look SMALLER than they are — a product with no real checklist could appear
+// covered by rows we invented from its own comps. Removed.
+//
+// The array survives because it builds a server-side STARTSWITH filter, which is
+// far cheaper than fetching every row and judging in JS. canAdjudicate() is then
+// applied per row as the actual authority, so this list can only ever narrow the
+// scan, never widen what counts as evidence.
 const CHECKLIST_SOURCES = [
   "checklist", "checklistcenter", "beckett", "baseballcardpedia", "bccp",
   "cardboardchecklist", "cardboardconnection", "hobbymonitor", "tcgdex",
-  "ingest-auto-seed",
+  "checklistinsider", "almanac", "tcdb",
 ];
 
 async function main() {
