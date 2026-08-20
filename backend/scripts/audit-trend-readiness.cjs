@@ -141,6 +141,23 @@ async function main() {
   console.log(`series with >= ${MIN_COMPS} comps            : ${tradable.length.toLocaleString()}  ${pc(tradable.length)}`);
   console.log(`series ALSO spanning >= ${MIN_MONTHS} months : ${trendable.length.toLocaleString()}  ${pc(trendable.length)}   <- can show a TREND\n`);
 
+  // COMP-WEIGHTED, which is the denominator the PRODUCT cares about.
+  //
+  // Series-count says most series are singletons, and that reads as a crisis.
+  // But card sales are a long tail: a few thousand heavily-traded cards carry
+  // most of the volume, and a collector looking at a trend is almost always
+  // looking at one of those. So "what share of SERIES are trendable" and "what
+  // share of SALES sit in a trendable series" are different questions with very
+  // different answers, and only the second says whether the feature works for
+  // the cards people actually hold.
+  const compsIn = (list) => list.reduce((s, x) => s + x.n, 0);
+  const compsTotal = compsIn(all);
+  const compsTrendable = compsIn(trendable);
+  const cpc = (n) => `${((n / Math.max(compsTotal, 1)) * 100).toFixed(1)}%`;
+  console.log("COMP-WEIGHTED — the denominator the product cares about:");
+  console.log(`  sales in a trendable series : ${compsTrendable.toLocaleString()}  ${cpc(compsTrendable)}`);
+  console.log(`  sales in a singleton series : ${compsIn(all.filter((s) => s.n === 1)).toLocaleString()}  ${cpc(compsIn(all.filter((s) => s.n === 1)))}\n`);
+
   // Distribution — where does the mass sit?
   const buckets = [[1, 1], [2, 2], [3, 4], [5, 9], [10, 24], [25, 99], [100, Infinity]];
   console.log("comps-per-series distribution:");
