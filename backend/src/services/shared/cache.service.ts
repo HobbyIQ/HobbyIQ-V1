@@ -107,6 +107,43 @@ export async function cacheDel(key: string): Promise<void> {
   try { await client.del(key); } catch { _memory.delete(key); }
 }
 
+// CF-CH-DELTA-POLL-SINGLE-FLIGHT (2026-08-20). SET NX EX: create `key` only
+// if it does not already exist, and return true only if THIS caller created
+// it.
+//
+// Exists because a setInterval job inside the API process runs once PER App
+// Service worker. HobbyIQ3 runs 2 workers, so the CardHedge delta poll fired
+// twice every cycle against a quota-limited vendor. Confirmed in
+// hobbyiq-insights: every 1-minute bin containing a poll showed
+// dcount(cloud_RoleInstance) = 2.
+//
+// DEGRADATION IS DELIBERATE, IN BOTH DIRECTIONS:
+//   - No Redis configured: the in-memory map is per-process, so every worker
+//     acquires and behaviour is exactly what it is today. Duplicated, never
+//     stopped.
+//   - Redis throws mid-call: return true (proceed). A Redis blip must not
+//     silently halt ingest on every worker at once. Duplicate work is
+//     recoverable; a delta poll that quietly stops is not.
+//
+// The lock is NOT released on completion. Releasing it immediately would let
+// the sibling worker -- whose timer fires milliseconds later -- take it and
+// run the same cycle anyway. It expires on its TTL instead, which the caller
+// sizes below its own poll interval.
+export async function cacheAcquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+  const client = await getClient();
+  if (!client) {
+    if (memoryGet(key) !== null) return false;
+    memorySet(key, String(Date.now()), ttlSeconds);
+    return true;
+  }
+  try {
+    const res = await client.set(key, String(Date.now()), "EX", ttlSeconds, "NX");
+    return res === "OK";
+  } catch {
+    return true;
+  }
+}
+
 // ─── PHASE-4A-2.2: per-prediction cache stats (AsyncLocalStorage) ───────────
 //
 // Allows callers (computeEstimate → predictionCorpus.service emit) to know
