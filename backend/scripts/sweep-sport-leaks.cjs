@@ -104,6 +104,11 @@ const container = (c, name) => c.database(process.env.COSMOS_DATABASE || "hobbyi
 
 /** Pages to read before minting a fresh client. */
 const REFRESH_PAGES = Number(arg("refreshPages", "400"));
+// A Cosmos auth token is minted when the iterator opens and expires under a
+// long scan. Page count is the WRONG unit for that: 400 pages is 800k rows,
+// and at a throttled RU ceiling one leg can outlive the token — which killed
+// a 10-hour trend scan with a 403. Elapsed time is what the token cares about.
+const LEG_MAX_MS = Number(arg("legMaxMinutes", "20")) * 60_000;
 
 /**
  * Full-container scan that survives its own duration.
@@ -129,6 +134,7 @@ async function scanAll(name, sql, onRow, label) {
     const c = container(newClient(), name);
     const iter = c.items.query(sql, { maxItemCount: 2000, continuationToken: token });
     let legPages = 0, drained = false;
+    const legStart = Date.now();
     while (iter.hasMoreResults()) {
       let page;
       try {
@@ -152,7 +158,7 @@ async function scanAll(name, sql, onRow, label) {
       if (rows % 500000 < 2000) process.stderr.write(`\r  ${label} scanned=${rows}   `);
       if (!iter.hasMoreResults()) { drained = true; break; }
       // Hand back to the outer loop so the next leg gets a fresh credential.
-      if (legPages >= REFRESH_PAGES) break;
+      if (legPages >= REFRESH_PAGES || Date.now() - legStart > LEG_MAX_MS) break;
       if (rows >= LIMIT) { drained = true; break; }
     }
     // Finished only when the iterator actually drained. `!token` is NOT a
