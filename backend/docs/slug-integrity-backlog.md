@@ -214,9 +214,28 @@ border, because the card does not fill the frame. It needs card-edge detection.
 - **Page timeout** — a card page reported "Request timed out after 30s". Two
   theories disproven; API measures 0.2–0.36s. Needs a tester repro with the
   network tab.
-- **Chronic CI reds** — `observedGradeCurve` ×2 (trend-cap). Verified
-  pre-existing: reverting the parser to `origin/main` reproduces them exactly,
-  and neither file references the parser.
+- **Chronic CI reds** — `observedGradeCurve` ×2, red since 7/31. Verified
+  pre-existing (reverting the parser to `origin/main` reproduces them exactly).
+  **Investigated 2026-08-20 and NOT solved** — recorded so the next attempt
+  starts further along:
+  - the failing assertion expects `trendAdjustedValue` 220 (`1 + 0.10 × 12`)
+    and gets **176**, an effective multiplier of **1.76**
+  - the rate comes from `matchedCohort.medianRatio - 1`, NOT the momentum path
+    the fixture name suggests
+  - `releaseDecay` BLENDS the rate:
+    `decayRatePerWeek × blend + rawRate × (1 - blend)` — but only when a
+    `releaseCardKey` exists, and the test passes none
+  - 1.76 is reachable two ways: rate ≈0.063 at 12 weeks, or 0.10 at ~7.6 weeks.
+    Which one is happening is still unknown.
+  - an isolated probe replicating the test's mocks returns
+    `valueSource: "unavailable"`, so the test depends on shared `beforeEach`
+    setup — reason about THAT before reading the service again
+  - a previous attempt to mock `releaseDecayPrior` broke two legitimate tests
+    and was reverted; that path is a known trap
+
+  **Why it matters more than it looks:** every PR requires hand-comparing test
+  totals against a remembered baseline to tell a real break from these. A
+  genuine failure would most likely be waved through as "the chronic ones".
 - **`backfill-parallel-enrichment` is DISARMED** (2026-08-20). It re-derives the
   whole slug and was caught pushing `bowman:cpa-eha` back to
   `bowman-chrome:cpa-eha`. Requires `I_HAVE_READ_CF_DISARM=yes` to write.
