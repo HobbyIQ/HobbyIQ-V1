@@ -2571,7 +2571,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     });
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): fire on EVERY response
     // (cache hit + miss) by reading from `result` instead of nesting
-    // inside the producer. The route is cacheWrapped at 6h TTL — a hit
+    // inside the producer. The route is cacheWrapped at CACHE_TTL_SECONDS
+    // (15 minutes, NOT the 6h this comment claimed) — a hit
     // bypasses the producer entirely, so the in-producer call we shipped
     // in #161 only fired on cache misses (~1 in N). Cache itself caches
     // CH calls inside recordCHReferenceTelemetry (12h getCardFmv +
@@ -2668,7 +2669,8 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     // would write the options into the cache entry and serve one query's
     // checklist to another. Merge into a copy instead, and compute the options
     // outside the cache so a newly-ingested checklist row and its fresh comps
-    // appear immediately rather than after the 6h TTL.
+    // appear immediately rather than after the cache TTL (15 minutes;
+    // this comment previously said 6h, which was never true for this route).
     let catalogOptions: unknown[] = [];
     let catalogProvisional = false;
     try {

@@ -27,6 +27,25 @@
  * have diverged and NEITHER result should be trusted. That check is the point
  * of sharing the module.
  *
+ * ── "REPRODUCE" MEANS THE DRY RUN, NOT THE AUDIT NUMBER ────────────────────
+ *
+ * CF-SET-SPORT-BASELINE-DRIFT (2026-08-20). The 195,440 above is the AUDIT
+ * figure, and sold_comps grows continuously. Comparing a later run to it and
+ * concluding "the gates diverged" is a false alarm -- one that cost real time
+ * on the day of the apply. Three runs of the SAME gates:
+ *
+ *     audit    (setsport3.txt)     14,348,489 judged -> 195,440   1.36209%
+ *     dry run  (repair-dryrun.txt) 14,397,490 judged -> 195,950   1.36101%
+ *     apply    (repair-apply.txt)  14,397,426 judged -> 195,947   1.36099%
+ *
+ * The pool grew 49,001 comps between audit and dry run, and contradicts grew
+ * +510 with it. Dry run and apply -- hours apart -- agree to within 3 rows and
+ * match to four decimal places on the RATE.
+ *
+ * So compare the RATE against the most recent prior run, not the raw count
+ * against a stale audit. A real gate divergence moves the rate; pool growth
+ * does not.
+ *
  * ── SAFETY ──────────────────────────────────────────────────────────────────
  *
  * ONLY EVER ACT ON A POSITIVE ANSWER. A row is rewritten only when a
