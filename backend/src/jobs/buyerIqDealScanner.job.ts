@@ -8,6 +8,7 @@
 //   BUYERIQ_DEAL_SCANNER_DISABLE          "true" to no-op (also gates the scan itself)
 
 import { runBuyerIqDealScan } from "../services/buyeriq/buyerIqDealScanner.service.js";
+import { runSingleFlight } from "./_singleFlight.js";
 
 const DEFAULT_INTERVAL_MIN = 60;
 const DEFAULT_FIRST_DELAY_MS = 2 * 60 * 1000;
@@ -36,8 +37,8 @@ export function startBuyerIqDealScannerJob(): void {
   const intervalMin = Math.max(5, Number(process.env.BUYERIQ_DEAL_SCANNER_INTERVAL_MIN ?? DEFAULT_INTERVAL_MIN));
   const firstDelayMs = Math.max(30_000, Number(process.env.BUYERIQ_DEAL_SCANNER_FIRST_DELAY_MS ?? DEFAULT_FIRST_DELAY_MS));
   console.log(`[buyeriq.deal.scanner.job] scheduler armed (interval=${intervalMin}min, firstDelay=${firstDelayMs / 1000}s, disabled=${process.env.BUYERIQ_DEAL_SCANNER_DISABLE === "true"})`);
-  _firstRunTimer = setTimeout(() => { void tick(); }, firstDelayMs);
-  _intervalTimer = setInterval(() => { void tick(); }, intervalMin * 60 * 1000);
+  _firstRunTimer = setTimeout(() => { void runSingleFlight("buyeriq.deal.scanner", intervalMin * 60 * 1000, tick); }, firstDelayMs);
+  _intervalTimer = setInterval(() => { void runSingleFlight("buyeriq.deal.scanner", intervalMin * 60 * 1000, tick); }, intervalMin * 60 * 1000);
 }
 
 export function stopBuyerIqDealScannerJob(): void {

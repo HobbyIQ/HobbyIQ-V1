@@ -23,6 +23,7 @@ import {
 import { computeEstimate } from "../services/compiq/compiqEstimate.service.js";
 import type { CompIQEstimateRequest } from "../types/compiq.types.js";
 import { sendPriceAlertNotification } from "../services/notification.service.js";
+import { runSingleFlight } from "./_singleFlight.js";
 
 interface EvaluatorSummary {
   startedAt: string;
@@ -268,11 +269,11 @@ export function startPriceAlertEvaluatorJob(): void {
   );
 
   _firstRunTimer = setTimeout(() => {
-    runPriceAlertEvaluator().catch((err) => {
+    runSingleFlight("price.alert.evaluator", intervalMs, runPriceAlertEvaluator).catch((err) => {
       console.error("[price.alert.evaluator] first run threw:", err?.message ?? err);
     });
     _intervalTimer = setInterval(() => {
-      runPriceAlertEvaluator().catch((err) => {
+      runSingleFlight("price.alert.evaluator", intervalMs, runPriceAlertEvaluator).catch((err) => {
         console.error("[price.alert.evaluator] interval run threw:", err?.message ?? err);
       });
     }, intervalMs);

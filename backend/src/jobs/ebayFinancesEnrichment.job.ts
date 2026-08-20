@@ -40,6 +40,7 @@ import {
 } from "../services/ebay/ebayFinances.service.js";
 import { applyFeeEnrichment } from "../services/portfolioiq/erpAgingOverride.service.js";
 import type { LedgerEntryForErp } from "../services/portfolioiq/erpReconciliation.service.js";
+import { runSingleFlight } from "./_singleFlight.js";
 
 const DEFAULT_INTERVAL_HOURS = 6;
 const DEFAULT_FIRST_DELAY_MS = 120_000;
@@ -291,11 +292,11 @@ export function startEbayFinancesEnrichmentJob(): void {
   );
 
   _firstRunTimer = setTimeout(() => {
-    runFinancesEnrichmentSweep().catch((err) => {
+    runSingleFlight("ebay.finances.enrichment.job", intervalMs, runFinancesEnrichmentSweep).catch((err) => {
       console.error("[ebay.finances.enrichment.job] first run threw:", err?.message ?? err);
     });
     _intervalTimer = setInterval(() => {
-      runFinancesEnrichmentSweep().catch((err) => {
+      runSingleFlight("ebay.finances.enrichment.job", intervalMs, runFinancesEnrichmentSweep).catch((err) => {
         console.error("[ebay.finances.enrichment.job] interval run threw:", err?.message ?? err);
       });
     }, intervalMs);
