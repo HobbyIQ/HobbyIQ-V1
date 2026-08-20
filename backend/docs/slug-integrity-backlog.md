@@ -12,6 +12,32 @@ audits cost multi-hour full-container scans — read this rather than re-derivin
 
 ---
 
+## Tomorrow — start here
+
+1. **The sales index is not moving** (Drew, 2026-08-20 night). Ingest is NOT the
+   cause: newest `observedAt` is `2026-08-20T02:29:29Z`, minutes old, with
+   tca-ebay and cardhedge both current, and newest `soldAt` `00:56:23Z`. So the
+   pipe is healthy and the fault is in the **index computation or its cache**.
+   Narrow, and user-visible.
+
+2. **Finish the comp-weighted trend number.** Series-weighted says only 14.9% of
+   (card, grade) series can show a trend and the median series holds ONE sale.
+   Comp-weighted asks what share of actual SALES sit in a trendable series — the
+   long tail means those answers may differ enormously, and they lead to opposite
+   plans. `audit-trend-readiness.cjs` now reports both; the run was interrupted.
+   **Do not plan the week before this lands.**
+
+3. **Identity-level dedupe.** The slug-level pass is done (31,692 rows hidden),
+   but Eric Hartman still shows 28 duplicate identities because they are ONE card
+   across SEVERAL slugs — invisible to slug grouping. Needs `cardIdentityKey`
+   grouping, and its own dry run: two different slugs might be two different
+   cards.
+
+4. Then the doc order below: **checklistinsider ingest → fill-only rematch →
+   other sports**.
+
+---
+
 ## The model is right, and the data mostly supports it
 
 | container | role |
@@ -62,6 +88,7 @@ Shared contracts extracted, each replacing copies that had drifted:
 ## Open work, highest leverage first
 
 ### 1. Scope — everything applied is baseball, mostly Bowman
+
 The tools all take `--sport` now, but the sweeps have not run for:
 `pokemon` 2,427,233 · `football` 2,287,136 · `basketball` 1,979,377 ·
 `hockey` 222,009 · `soccer` 70,259 comps.
@@ -71,6 +98,7 @@ parses as a print run of 25. Baseball never writes years that way, so the guard
 in `audit-title-contradicts-slug` is untested in the sports that need it.
 
 ### 2. Search still shows doubles — the dedupe
+
 **27,261** identities have several rows behind ONE slug, because a catalog id of
 `cardhedge::<vendor-record-id>::<hash>` is scoped to the **vendor listing**, not
 the card. Eric Hartman's `cpa-eha` has **21 rows, one slug**.
@@ -82,6 +110,7 @@ now done, so this is unblocked.
 Nothing is mispriced by this — it is a search/display defect.
 
 ### 3. Comps are still slugged from titles, not matched to the catalog
+
 `diagnose-catalog-rematch`, Bowman 2023-26, 1,025,607 comps:
 
 ```text
@@ -97,6 +126,7 @@ makes text-extraction bugs impossible rather than guarded. Every parser bug
 today lived in that gap. **Fill-only** — never overwrite a populated segment.
 
 ### 4. Acquisition — the real ceiling
+
 **17.3% NO MATCH**, and `audit-orphan-causes` says **93.1% is a genuine checklist
 gap**, only 6.9% our own malformed slugs.
 
@@ -121,6 +151,7 @@ from our own data — and corrected a claim that the /499 and unnumbered CPA-WJ
 pools were two products.
 
 ### 5. Wire the six private `isChecklistSource` copies to `catalogAuthority`
+
 `audit-card-number-conflicts`, `audit-checklist-conformance`,
 `checklist-gap-report`, `repair-card-number-from-checklist`,
 `repair-cardnumber-hyphen`, `unify-catalog-setkeys`.
@@ -132,6 +163,7 @@ hyphenation, so they count for coverage and not for formatting. Widening the
 formatting predicate flipped **51 prefixes** from repair to blocked.
 
 ### 6. Smaller measured items
+
 - **`gradeQualifier` is set on 0 of 1,212** Black Label comps. Not load-bearing
   for price (grade is detected from the title at pricing time) but wrong.
 - **4,837 CONFLICT comps** — the grade-fraction parser fix is deployed, so this
@@ -144,6 +176,7 @@ formatting predicate flipped **51 prefixes** from repair to blocked.
   naming question needing a checklist, not a vote.
 
 ### 7. Colour recovery — text is exhausted
+
 253 plain-refractor CPA-MG comps run **$1.25–$725, all raw**. The $725, the $255
 and the $1.25 carry the *identical* title `"2026 2026 Bowman Baseball #CPA-MG
 Base"`. The parallel is absent at the **source**, which is why re-running the
@@ -154,6 +187,7 @@ committed to `src`** — measured on real eBay photos it returns 1% saturated
 border, because the card does not fill the frame. It needs card-edge detection.
 
 ### 8. Ops
+
 - **Page timeout** — a card page reported "Request timed out after 30s". Two
   theories disproven; API measures 0.2–0.36s. Needs a tester repro with the
   network tab.
