@@ -12,20 +12,43 @@ audits cost multi-hour full-container scans — read this rather than re-derivin
 
 ---
 
+## The number that decides the plan
+
+Measured 2026-08-20 over **6,950,635** baseball comps, `audit-trend-readiness.cjs`:
+
+| denominator | trendable (≥5 comps, ≥3 months) |
+|---|---|
+| by SERIES | **14.9%** — median series holds ONE sale, 55.7% are singletons |
+| **by SALES** | **73.0%** — only 9.9% of sales sit in a singleton series |
+
+**Read by series count this looks like a coverage crisis. By sales it is not.**
+The long tail is a tail: most *series* are singletons, but they carry under a
+tenth of the volume. The cards people actually trade already have the data.
+
+So **matching quality is the lever, not acquisition.** The 82,932-comp checklist
+gap is real, but it is TAIL coverage. The higher-value work is making the
+**183,417 trendable series** correct — a far smaller and more tractable job.
+
+This also reframes the day's parser fixes as the right instinct rather than
+incidental cleanup: `Non Auto`, Pristine-as-Black-Label at 12×, grade fractions
+read as serials, penny listings topping the index — every one corrupts FAT
+series, which is exactly where that 73% lives.
+
+---
+
 ## Tomorrow — start here
 
-1. **The sales index is not moving** (Drew, 2026-08-20 night). Ingest is NOT the
-   cause: newest `observedAt` is `2026-08-20T02:29:29Z`, minutes old, with
-   tca-ebay and cardhedge both current, and newest `soldAt` `00:56:23Z`. So the
-   pipe is healthy and the fault is in the **index computation or its cache**.
-   Narrow, and user-visible.
+1. **Cross-sport contamination in the index.** Marcus Mariota and Shedeur
+   Sanders (football) and Cristiano Ronaldo (soccer) still appear in the
+   BASEBALL market-movers list. Their `sport` field AND their slug both say
+   baseball, so this is bad data rather than a query bug. The sport sweep's 85%
+   dominance / 25-comp minimum leaves thin-history players untouched — it needs a
+   second pass at lower thresholds, with its own dry run.
 
-2. **Finish the comp-weighted trend number.** Series-weighted says only 14.9% of
-   (card, grade) series can show a trend and the median series holds ONE sale.
-   Comp-weighted asks what share of actual SALES sit in a trendable series — the
-   long tail means those answers may differ enormously, and they lead to opposite
-   plans. `audit-trend-readiness.cjs` now reports both; the run was interrupted.
-   **Do not plan the week before this lands.**
+2. **Scope the repairs to trendable series.** Everything below is currently
+   phrased as "repair the container". Given the 73% finding, the first cut should
+   be: of the 183,417 trendable series, how many are contaminated? That list is
+   the actionable one, and it is much shorter than the container.
 
 3. **Identity-level dedupe.** The slug-level pass is done (31,692 rows hidden),
    but Eric Hartman still shows 28 duplicate identities because they are ONE card
@@ -33,8 +56,8 @@ audits cost multi-hour full-container scans — read this rather than re-derivin
    grouping, and its own dry run: two different slugs might be two different
    cards.
 
-4. Then the doc order below: **checklistinsider ingest → fill-only rematch →
-   other sports**.
+4. **checklistinsider ingest** — still worth building for print runs, but it is
+   now a TAIL play rather than the main event. Rank it below matching work.
 
 ---
 
