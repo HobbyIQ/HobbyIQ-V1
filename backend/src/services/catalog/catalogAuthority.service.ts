@@ -135,6 +135,23 @@ export function isReKeyable(source: string | null | undefined): boolean {
 }
 
 /**
+ * Was this row generated from our own observations rather than transcribed?
+ *
+ * The predicate callers actually want when they ask "is this row dirty" — and
+ * the one they kept re-declaring as a two-element Set. `sales-derived` and
+ * `tree-builder-v1` are the two everyone remembers; `ingest-auto-seed`,
+ * `sold-comps-stub`, `catalog-explode` and `pool` are the same shape at much
+ * larger scale and were being treated as clean.
+ *
+ * NOT the same question as "should a user see this row" — see catalogVisibility,
+ * which is deliberately narrower because a derived row is often the ONLY row a
+ * card has, and hiding it would lose coverage rather than gain accuracy.
+ */
+export function isDerived(source: string | null | undefined): boolean {
+  return catalogAuthorityOf(source) === "derived";
+}
+
+/**
  * Rank sources when choosing a survivor among duplicate rows for one card.
  * Higher wins. Deliberately coarse — within a class, callers should break ties
  * on completeness (a row carrying a print run beats one that does not) rather
