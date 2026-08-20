@@ -56,6 +56,21 @@ export const TIER1_ENABLED =
 // latency is itself the concern, that belongs in a latency SLO, not here.
 export const CASE_BUDGET_MS = 60_000;
 
+/**
+ * beforeAll timeout for one case.
+ *
+ * CF-TIER1-HOOK-VS-CALL-BUDGET (2026-08-20). CASE_BUDGET_MS was serving two
+ * incompatible roles: the deadline for ONE prod call (postJson aborts at
+ * CASE_BUDGET_MS - 1s) AND the timeout for a beforeAll that makes up to TWO
+ * sequential calls (hitSearch then hitPriceById). A hook budgeted at exactly
+ * one call's deadline fails whenever two individually-legal calls run back to
+ * back -- 35s + 30s aborts nothing but blows a 60s hook.
+ *
+ * realLookups/pinnedIdHard/popularBaseline make two calls; nonBaseball and
+ * vintage make one. Size the hook for the two-call worst case plus margin.
+ */
+export const HOOK_BUDGET_MS = CASE_BUDGET_MS * 2 + 10_000;
+
 // ---------------------------------------------------------------------------
 // Test case definitions
 // ---------------------------------------------------------------------------
