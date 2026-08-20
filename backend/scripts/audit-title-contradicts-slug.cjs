@@ -53,6 +53,9 @@ const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 const { normalizeParallel } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// The rule that already knows a PRODUCT word is not a parallel — see the
+// PARALLEL branch below for why normalizeParallel alone is insufficient.
+const { normalizeHoldingFields } = require(path.join(backend, "dist/services/portfolioiq/holdingFieldNormalizer.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -62,6 +65,38 @@ const SPORT = arg("sport", "baseball");
 const SETKEY = arg("setKey", "");
 const TOP = Number(arg("top", "25"));
 const LIMIT = Number(arg("limit", "0")) || Infinity;
+const APPLY = process.argv.includes("--apply");
+const POOL = Math.max(1, Number(arg("pool", "8")));
+
+/**
+ * Shapes that can FAKE a print run. Each was proven to fool the parser before
+ * being guarded, not imagined:
+ *
+ *   "2024/25 Panini Prizm Basketball"      -> printRun 25   (a SEASON SPAN)
+ *   "Sold 10/15 2024 Bowman Chrome"        -> printRun 15   (a DATE)
+ *   "LOT of 3 cards Refractor /499 mixed"  -> printRun 499  (whose card?)
+ *   "Refractor /499 and Blue /150 lot"     -> printRun 499  (two serials)
+ *
+ * Measured on 40,000 real baseball comps: 0 season spans, 0 lots, 1 multi-serial
+ * (itself a false positive — "#/199 ... 36/199" is one serial written twice), so
+ * 99.6% of findings survive. Season spans are ZERO in baseball because the sport
+ * does not use them; the guard exists for basketball and hockey, where 2024/25
+ * is the normal way to write a year.
+ */
+// WORD BOUNDARIES ARE LOAD-BEARING. Written via String.raw because a
+// heredoc turned every \b into a literal backspace (0x08) — the regex then
+// matched a control character instead of a word edge. Without real \b,
+// "lot" also matches Charlotte, pilot and ballot, and the guard silently
+// rejects thousands of good rows while looking like it works.
+const seasonSpan = (t) => /\b(19|20)\d{2}\s*[/-]\s*\d{2}\b/.test(t);
+const lotish = (t) => /\blot\b|\bbundle\b|\bx\s?[2-9]\b|\b[2-9]\s+cards?\b|\bmixed\b/i.test(t);
+const multiSerial = (t) => {
+  // DISTINCT denominators only. "#/199 ... 36/199" is one serial written
+  // twice and must not be rejected.
+  const found = (t.match(/\/\s*\d{1,5}\b/g) || []).map((x) => x.replace(/[^0-9]/g, ""));
+  return new Set(found).size > 1;
+};
+const serialIsTrustworthy = (t) => !seasonSpan(t) && !lotish(t) && !multiSerial(t);
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -74,7 +109,8 @@ async function main() {
   if (SETKEY) where.push(`CONTAINS(c.hobbyiqCardId, ":${SETKEY}:")`);
   const sql = `SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.price FROM c WHERE ${where.join(" AND ")}`;
 
-  const stats = { scanned: 0, parsed: 0, serial: 0, auto: 0, notAuto: 0, parallel: 0 };
+  const stats = { scanned: 0, parsed: 0, serial: 0, serialConflict: 0, serialRejected: 0, auto: 0, notAuto: 0, parallel: 0, parallelRejected: 0 };
+  const work = [];   // ONLY serial-added and non-auto ever land here
   const examples = { serial: [], auto: [], notAuto: [], parallel: [] };
   const bySlugSerial = new Map();
 
@@ -114,17 +150,26 @@ async function main() {
 
         // ── SERIAL. Only when the title states one AND they differ. ──────────
         if (p.printRun && slugSerial && Number(p.printRun) !== slugSerial) {
-          stats.serial++;
+          // CONFLICT, not a gap. The slug already claims a serial and the title
+          // claims a different one; neither is obviously right, so this is
+          // reported and never written.
+          stats.serialConflict++;
           const k = `${slugSerial} <- title says ${p.printRun}`;
           bySlugSerial.set(k, (bySlugSerial.get(k) ?? 0) + 1);
           if (examples.serial.length < TOP) examples.serial.push({ r, said: p.printRun, slug: slugSerial });
         } else if (p.printRun && !slugSerial) {
           // Slug has no serial but the title names one — the row is pooled with
           // unnumbered cards. Same defect, opposite shape.
-          stats.serial++;
-          const k = `(none) <- title says ${p.printRun}`;
-          bySlugSerial.set(k, (bySlugSerial.get(k) ?? 0) + 1);
-          if (examples.serial.length < TOP) examples.serial.push({ r, said: p.printRun, slug: null });
+          if (!serialIsTrustworthy(String(r.title))) { stats.serialRejected++; }
+          else {
+            stats.serial++;
+            const k = `(none) <- title says ${p.printRun}`;
+            bySlugSerial.set(k, (bySlugSerial.get(k) ?? 0) + 1);
+            if (examples.serial.length < TOP) examples.serial.push({ r, said: p.printRun, slug: null });
+            // Append the serial segment; every other segment is carried across.
+            const next = [...parts.slice(0, 7), `num-${Number(p.printRun)}`].join(":");
+            work.push({ id: r.id, cardId: r.cardId, before: r.hobbyiqCardId, next, why: "serial-added" });
+          }
         }
 
         // ── AUTO. parseListingIdentity decides; "Non Auto" is explicit. ──────
@@ -137,15 +182,42 @@ async function main() {
             // returning false for a quiet title is absence, not contradiction.
             stats.notAuto++;
             if (examples.notAuto.length < 6) examples.notAuto.push(r);
+            const next = [...parts]; next[6] = "no-auto";
+            work.push({ id: r.id, cardId: r.cardId, before: r.hobbyiqCardId, next: next.join(":"), why: "non-auto" });
           }
         }
 
         // ── PARALLEL. Title names one, slug says base. ───────────────────────
-        if (p.parallel) {
-          const want = normalizeParallel(p.parallel);
-          if (want && want !== "base" && slugParallel === "base") {
+        //
+        // normalizeParallel() alone is NOT enough here: it maps "Chrome" to
+        // "chrome" and happily reports it as a parallel. Chrome is a PRODUCT,
+        // and the first run of this audit surfaced 3,918 hits led by
+        //
+        //   "2026 Topps Heritage Jac Caglianone Chrome RC #136" -> "chrome"
+        //
+        // which is a setKey question (Topps Heritage Chrome is its own product),
+        // not a missing parallel. That is the same defect as the eBay
+        // Parallel/Variety aspect bug fixed earlier today, where a seller typing
+        // the product wiped out a real parallel.
+        //
+        // normalizeHoldingFields is the rule that already knows the difference —
+        // it rejects a bare product word and keeps only the parallel half of
+        // "Chrome Refractor". Asking it, rather than re-deriving the distinction.
+        if (p.parallel && slugParallel === "base") {
+          let want = null;
+          try {
+            const { fields } = normalizeHoldingFields({
+              playerName: null, cardYear: null, setName: null,
+              parallel: p.parallel, cardNumber: null, isAuto: null, product: null,
+            });
+            want = typeof fields.parallel === "string" && fields.parallel.trim() !== ""
+              ? normalizeParallel(fields.parallel) : null;
+          } catch { want = null; }
+          if (want && want !== "base") {
             stats.parallel++;
             if (examples.parallel.length < 6) examples.parallel.push({ r, want });
+          } else if (p.parallel) {
+            stats.parallelRejected++;
           }
         }
       }
@@ -182,8 +254,49 @@ async function main() {
     console.log(`   $${String(e.r.price).padEnd(9)} -> ${e.want}\n      ${String(e.r.title).slice(0, 92)}\n      ${e.r.hobbyiqCardId}`);
   }
 
-  console.log("\nREAD-ONLY. Absence is never a contradiction — only titles that STATE a");
-  console.log("differing value are counted. Repair differs per class and gets its own pass.");
+  console.log(`\nwritable rows queued: ${work.length.toLocaleString()}`
+    + `  (serial-added ${work.filter((w) => w.why === "serial-added").length.toLocaleString()},`
+    + ` non-auto ${work.filter((w) => w.why === "non-auto").length.toLocaleString()})`);
+
+  if (!APPLY) {
+    console.log("\nDRY-RUN. Absence is never a contradiction — only titles that STATE a");
+    console.log("differing value are counted.");
+    console.log("\nONLY two classes are ever written:");
+    console.log("  serial-added  slug had NO serial and the title states one");
+    console.log("  non-auto      title says NON AUTO in words");
+    console.log("NEVER written:");
+    console.log("  serial CONFLICT  slug and title both name a serial and disagree —");
+    console.log("                   neither is obviously right");
+    console.log("  AUTO             title says auto, slug says not. The CARD NUMBER is the");
+    console.log("                   auto boundary, not the title: BCP- is a prospect prefix");
+    console.log("                   and CPA- is the auto one, so a seller writing \"Auto\" on");
+    console.log("                   a BCP- card does not make it signed. Writing these would");
+    console.log("                   push non-autos into auto pools.");
+    console.log("  PARALLEL         moving a base card into a coloured pool is the most");
+    console.log("                   damaging wrong write available here; needs review.");
+    return 0;
+  }
+
+  let done = 0, failed = 0, cursor = 0;
+  console.log(`\napplying ${work.length.toLocaleString()} rows...`);
+  await Promise.all(Array.from({ length: POOL }, async () => {
+    while (cursor < work.length) {
+      const w = work[cursor++];
+      try {
+        await sold.item(w.id, w.cardId).patch([
+          { op: "add", path: "/hobbyiqCardIdBefore", value: w.before },
+          { op: "set", path: "/hobbyiqCardId", value: w.next },
+          { op: "add", path: "/reslugReason", value: `CF-TITLE-CONTRADICTS-SLUG:${w.why}` },
+        ]);
+        done++;
+        if (done % 2000 === 0) process.stderr.write(`\r  patched ${done}/${work.length}   `);
+      } catch (e) {
+        failed++;
+        if (failed <= 5) console.log(`   patch failed ${w.id}: ${String(e.message).slice(0, 80)}`);
+      }
+    }
+  }));
+  console.log(`\nrepaired=${done} failed=${failed}`);
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
