@@ -90,6 +90,40 @@ export function canAdjudicate(source: string | null | undefined): boolean {
 }
 
 /**
+ * The narrower set trusted for HOW A VALUE IS SPELLED — punctuation, hyphens,
+ * casing — as opposed to WHICH CARDS EXIST.
+ *
+ * SOURCE QUALITY IS QUESTION-DEPENDENT, and conflating the two questions is a
+ * real bug we shipped and had to unpick. Coverage wants every transcription;
+ * formatting wants only the meticulous ones. Measured over Bowman
+ * BCP/BP/BDC/BD/BTP numbers (hy = "BCP-109", no = "BCP109"):
+ *
+ *     checklistcenter        85,139 hy      0 no     0%
+ *     checklistcenter-graded 81,612 hy      0 no     0%
+ *     checklist              10,608 hy     12 no     0%
+ *     beckett-* (all runs)    5,087 hy      0 no     0%
+ *     checklistinsider        3,100 hy      0 no     0%
+ *     ------------------------------------------------------
+ *     baseballcardpedia     153,296 hy 21,300 no    12%
+ *     bccp                   65,775 hy 14,411 no    18%
+ *     checklistcenter-html   13,866 hy  4,200 no    23%
+ *
+ * Dedicated transcriptions are unanimous; the wiki-style sources disagree with
+ * THEMSELVES 12-18% of the time. Judging punctuation on those blocks correct
+ * repairs on noise — widening this predicate to match canAdjudicate flipped 51
+ * card-number prefixes from "repair" to "blocked" on exactly that.
+ *
+ * Note `checklistcenter-html` is excluded while `checklistcenter` is trusted:
+ * same site, different extraction, and the HTML path is the dirtiest source
+ * measured. The suffix matters.
+ */
+export function isTranscriptionGrade(source: string | null | undefined): boolean {
+  const s = String(source ?? "").toLowerCase().trim().replace(/-graded$/, "");
+  if (s === "checklistcenter-html") return false;
+  return /^(checklistcenter|checklist|checklistinsider|beckett)/.test(s);
+}
+
+/**
  * May this row's setKey be rewritten to a checklist-backed one?
  *
  * Everything that is not itself a checklist. A vendor's product classification

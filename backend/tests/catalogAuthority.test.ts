@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  catalogAuthorityOf, canAdjudicate, isReKeyable, authorityRank,
+  catalogAuthorityOf, canAdjudicate, isReKeyable, authorityRank, isTranscriptionGrade,
 } from "../src/services/catalog/catalogAuthority.service.js";
 
 describe("CF-CATALOG-AUTHORITY", () => {
@@ -80,5 +80,37 @@ describe("CF-CATALOG-AUTHORITY", () => {
     expect(authorityRank("checklistcenter")).toBeGreaterThan(authorityRank("cardhedge"));
     expect(authorityRank("cardhedge")).toBeGreaterThan(authorityRank("ingest-auto-seed"));
     expect(authorityRank("ingest-auto-seed")).toBeGreaterThan(authorityRank("undefined"));
+  });
+});
+
+describe("CF-CATALOG-AUTHORITY — formatting vs coverage", () => {
+  it("the wiki-style sources count for COVERAGE but not for FORMATTING", () => {
+    // They disagree with themselves 12-18% on hyphenation, so they may say
+    // WHICH cards exist but not HOW a number is spelled.
+    for (const s of ["baseballcardpedia", "bccp", "baseballcardpedia-graded"]) {
+      expect(canAdjudicate(s), `${s} coverage`).toBe(true);
+      expect(isTranscriptionGrade(s), `${s} formatting`).toBe(false);
+    }
+  });
+
+  it("the meticulous sources count for BOTH", () => {
+    for (const s of ["checklistcenter", "checklistcenter-graded", "beckett-checklist",
+      "beckett-scraped-2026-08-19", "checklistinsider-2026-08-11"]) {
+      expect(canAdjudicate(s), `${s} coverage`).toBe(true);
+      expect(isTranscriptionGrade(s), `${s} formatting`).toBe(true);
+    }
+  });
+
+  it("checklistcenter-html is trusted for coverage but NOT formatting", () => {
+    // Same site as checklistcenter, different extraction: 23% bare. The suffix
+    // matters, and an exact-list approach kept missing it.
+    expect(canAdjudicate("checklistcenter-html")).toBe(true);
+    expect(isTranscriptionGrade("checklistcenter-html")).toBe(false);
+  });
+
+  it("nothing non-checklist is transcription grade", () => {
+    for (const s of ["cardhedge", "ingest-auto-seed", "undefined", "sold-comps-stub-2026-08-12"]) {
+      expect(isTranscriptionGrade(s), s).toBe(false);
+    }
   });
 });

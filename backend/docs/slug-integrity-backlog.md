@@ -1,172 +1,209 @@
-# Slug integrity backlog
+# Catalog & comp integrity — backlog
 
-Opened 2026-08-19, from the session that started with a user's mis-priced
-1997 Skybox Metal Universe Chipper Jones #31 and became a slug-integrity pass
-over the whole comp pool. Merged as #1142 (`75802d4`), deployed and verified.
+Opened 2026-08-19 from a user's mis-priced Chipper Jones #31; rewritten
+2026-08-20 after a day that changed several of its own conclusions.
 
-Everything here is **measured**, not estimated. Numbers are as of 2026-08-19 and
-the query that produced each is named, so nothing needs re-deriving from scratch.
+**The goal, in Drew's words:** *"Every card in the catalog with all possible
+grades. All sold comps matching to the correct card and grade to be able to see
+trends."*
+
+Every number here is **measured**, with the script that produced it named. The
+audits cost multi-hour full-container scans — read this rather than re-deriving.
 
 ---
 
-## Done — applied and verified
+## The model is right, and the data mostly supports it
 
-| repair | rows | verification |
+| container | role |
+|---|---|
+| `card_catalog` | the universe — every card × every grade |
+| `sold_comps` | observations, each attaching to exactly ONE (card, grade) |
+| trends | the price series per (card, grade) over time |
+
+Measured 2026-08-20 across **40,090,298** catalog rows / 56 sources:
+
+| authority | rows | share | may decide? |
+|---|---|---|---|
+| CHECKLIST | 34,176,691 | 85.2% | yes |
+| VENDOR | 2,167,086 | 5.4% | no — records how a vendor *types* |
+| DERIVED | 3,405,953 | 8.5% | **no — the catalog judging itself** |
+| UNKNOWN | 340,568 | 0.8% | no (incl. 133,568 with source `"undefined"`) |
+
+The grade explode is **correct and complete**: 597,433 rows carry grade fields
+and 597,433 carry `parentSlug` — exactly consistent. There is no schema repair
+to do. An earlier estimate of ~3,452 rows needing a grade backfill was **zero**.
+
+---
+
+## Shipped and deployed
+
+| fix | effect | prod |
 |---|---|---|
-| 2026 CPA- setKey split | 6,180 | gold tier reachable again: $51 /75, $76 /50, $725 /15 |
-| card-number hyphen (`bcp109` → `bcp-109`) | 21,753 | `bcp25` → 0, all 570 on `bcp-25` |
-| sport leaks | 48,536 | **0** Shannon Sharpe rows left on the baseball #31 slug |
-| setKey punctuation (catalog) | 87,884 | 745 spellings; 76 naming questions deliberately held back |
+| `Non Auto` parsed as signed | unsigned base cards in auto pools | `75802d4` |
+| **Pristine conflated with Black Label** | **~5,200 ordinary BGS 10s priced at a 12× multiplier** | `3afe710` |
+| grade fraction read as a serial | `PSA 9/10` → `/10`; /150 cards in /9 pools | `aad1e1b` |
 
-All reversible: `hobbyiqCardIdBefore`, `sportBefore`, `setKeyBefore`,
-`reslugReason`.
+Data repairs applied — **171,151 rows**, all reversible via
+`hobbyiqCardIdBefore` / `sportBefore` / `setKeyBefore` / `unifiedBy`:
 
-Shipped in `backend/src`: the `Non Auto` parser fix (`AUTO_NEGATIVE_RE`) and the
-`compiq.routes.ts` display-name-as-setKey leak. Live on `75802d4`.
+```text
+sport leaks              48,536   0 failed   (0 Sharpe rows left on the baseball #31 slug)
+setKey punctuation       87,884   0 failed
+card-number hyphen       21,753   0 failed   (bcp25 -> 0, all 570 on bcp-25)
+CPA- setKey split         6,180   0 failed   (gold tier visible: $51 /75, $76 /50, $725 /15)
+catalog setKey unify      6,399   0 failed   (fragmentation -855; ZERO cards worsened)
+```
+
+Shared contracts extracted, each replacing copies that had drifted:
+`cardIdentityKey` / `gradeOf` (9 tests), `catalogAuthority` (12 tests).
 
 ---
 
-## 1. Conformance apply — STOPPED, needs a dry run at the widened scope
+## Open work, highest leverage first
 
-`audit-checklist-conformance.cjs --apply`
+### 1. Scope — everything applied is baseball, mostly Bowman
+The tools all take `--sport` now, but the sweeps have not run for:
+`pokemon` 2,427,233 · `football` 2,287,136 · `basketball` 1,979,377 ·
+`hockey` 222,009 · `soccer` 70,259 comps.
 
-Bowman scope was dry-run and is trustworthy:
+**Season spans are a live hazard outside baseball.** `2024/25 Panini Prizm`
+parses as a print run of 25. Baseball never writes years that way, so the guard
+in `audit-title-contradicts-slug` is untested in the sports that need it.
 
-```
-comps judged  1,516,913
-CONFORMANT      983,091   64.8%
-MOVE            176,869   11.7%   <- provable, safe to write
-AMBIGUOUS       160,781   10.6%   <- never written
-ORPHAN          196,031   12.9%   <- never written
-```
+### 2. Search still shows doubles — the dedupe
+**27,261** identities have several rows behind ONE slug, because a catalog id of
+`cardhedge::<vendor-record-id>::<hash>` is scoped to the **vendor listing**, not
+the card. Eric Hartman's `cpa-eha` has **21 rows, one slug**.
 
-Top proven moves:
+Sequenced deliberately **after** the setKey unify: dedupe first would pick a
+survivor *per setKey*, cementing the split while reporting success. The unify is
+now done, so this is unblocked.
 
-```
-70,619  bowman-chrome -> bowman        e.g. 2026 #bp-102 Eric Hartman
-33,728  bowman -> bowmans-best         e.g. 2025 #bs-12 Shohei Ohtani
-25,839  bowman-chrome -> bowman-draft
-23,249  bowman-paper -> bowman         (bowman-paper is not a product key)
- 7,425  bowman-draft -> bowman-draft-picks-and-prospects
-```
+Nothing is mispriced by this — it is a search/display defect.
 
-**Why it is stopped.** The `--family` default was edited to "all" while the job
-sat queued. Node reads the file at process start, so step 2 launched against
-EVERY baseball family rather than the Bowman scope that had been dry-run.
-Stopped in the index phase with **0 rows written**.
+### 3. Comps are still slugged from titles, not matched to the catalog
+`diagnose-catalog-rematch`, Bowman 2023-26, 1,025,607 comps:
 
-**Next:** dry-run `--sport=baseball` with no family, confirm the number, then
-apply. Two rules that came out of this — never apply at a scope that was not
-dry-run, and do not edit a script that a queued job will later load.
-
-## 2. The other five sports
-
-Conformance and the hyphen repair now scope by SPORT rather than family, because
-`topps` alone is 22,047,574 catalog rows against bowman's 3,415,852, across 3,451
-distinct families.
-
-```
-baseball    6,831,646 comps    (bowman done; rest of the sport pending)
-pokemon     2,427,233
-football    2,287,136
-basketball  1,979,377
-hockey        222,009
-soccer         70,259
+```text
+EXACT      820,897   80.0%    already matches
+FILLABLE    21,798    2.1%    checklist supplies the serial   <- the win
+AMBIGUOUS      822    0.1%
+CONFLICT     4,837    0.5%    comp claims a serial the checklist denies
+NO MATCH   177,253   17.3%
 ```
 
-## 3. audit-title-contradicts-slug — built, never executed
+The 2.1% is modest; the *structural* value is that matching against a ladder
+makes text-extraction bugs impossible rather than guarded. Every parser bug
+today lived in that gap. **Fill-only** — never overwrite a populated segment.
 
-Committed but has never touched real data. Finds comps whose own listing title
-states a serial, auto status or parallel that contradicts their slug. Known to
-exist: 12 wrong-serial comps and 1 `Non Auto` in a single Walker Jenkins pool,
-which is what made a user's /499 refractor auto price wrongly. Scale unknown.
+### 4. Acquisition — the real ceiling
+**17.3% NO MATCH**, and `audit-orphan-causes` says **93.1% is a genuine checklist
+gap**, only 6.9% our own malformed slugs.
 
-Built on `parseListingIdentity` deliberately — a hand-rolled colour matcher
-during this work scored "Red Sox", "Redemption" and "Stickered" as RED, and
-"Choice" as ICE, then reported 6.3% of a pool as recoverable when the true
-figure was near zero.
+> This reverses, then re-reverses, an earlier reading. A handful of `#null`
+> examples suggested ORPHAN was mostly our own mess; measured properly it is not.
+> **Examples from an unordered scan are not a sample.**
 
-## 4. ORPHAN → checklist acquisition, and a dead source
+Sources, verified 2026-08-20:
 
-196,031 Bowman comps sit under a number no checklist covers. **That is an
-acquisition list, not a defect list** — and it will not shrink on its own:
+| source | status |
+|---|---|
+| **cardboardchecklist.com** | free public **MCP** at `/api/mcp`, no auth, 1987–2026, 8 sports. Card-level coverage only — **no print runs, no colour parallels**. Closes just **2.4%** of ORPHAN. |
+| **checklistinsider.com** | ✅ **the one to build** — static HTML, 3 script tags, carries parallel ladders **with print runs** (`Blue Refractor /150`, `Black /10`, `Platinum 1/1`). We hold only 5,810 rows. |
+| cardboardconnection.com | ❌ **dead** (DNS). Search engines still serve cached pages, so it looks alive. Was the only gap-fill source. |
+| groupbreakchecklists.com | ❌ dead |
+| topps.com / ripped.topps.com / Blowout PDFs | ❌ **403 behind bot protection** — not usable programmatically |
+| tcdb.com | 403 to bots; scraped once (produced 23,515 `bbm-` rows with no setName) |
 
-> Cardboard Connection went DNS-dead on 2026-08-17 and was the ONLY checklist
-> source wired into gap-fill, so acquisition has been silently doing nothing.
+`cardboardchecklist` still earns its keep as an **independent check**: it
+confirmed `CPA-WJ` exists only in 2024 Bowman, corroborating a direction derived
+from our own data — and corrected a claim that the /499 and unnumbered CPA-WJ
+pools were two products.
 
-Fixing that source (or replacing it) is upstream of every ORPHAN number here.
+### 5. Wire the six private `isChecklistSource` copies to `catalogAuthority`
+`audit-card-number-conflicts`, `audit-checklist-conformance`,
+`checklist-gap-report`, `repair-card-number-from-checklist`,
+`repair-cardnumber-hyphen`, `unify-catalog-setkeys`.
 
-## 5. Held back on purpose — need a human or a checklist
+**Use the right predicate — they do not ask the same question.**
+`canAdjudicate` for *which cards exist*; `isTranscriptionGrade` for *how a value
+is spelled*. `baseballcardpedia` and `bccp` disagree with themselves 12–18% on
+hyphenation, so they count for coverage and not for formatting. Widening the
+formatting predicate flipped **51 prefixes** from repair to blocked.
 
-- **76 word-boundary setKey pairs.** `turbo-charged` vs `turbocharged`,
-  `light-speed` vs `lightspeed`, `topps-town` vs `toppstown`,
-  `breakout-autographs` vs `break-out-autographs`. Both spellings are valid
-  slugs, so this is a naming question. A script must not settle it by vote.
-- **160,781 AMBIGUOUS comps** — several setKeys legitimately list the number.
-- **`bowman-chrome` vs `bowman-draft`** and the Sapphire / Mega Box clusters:
-  candidates from `audit-multihome-slugs`, unconfirmed. Ohtani #17 exists in
-  bowman, bowman-chrome, mega-box AND sapphire as four REAL cards — merging on
-  shared player+number would flatten a $500 Sapphire into a $5 paper base.
+### 6. Smaller measured items
+- **`gradeQualifier` is set on 0 of 1,212** Black Label comps. Not load-bearing
+  for price (grade is detected from the title at pricing time) but wrong.
+- **4,837 CONFLICT comps** — the grade-fraction parser fix is deployed, so this
+  should shrink; re-measure before repairing.
+- **11,001 identities** span several setKeys where *both* are checklist-backed —
+  genuinely different cards, correctly left alone. **5,592** unproven.
+- **507** Bowman comps with literal `"null"` as a card number.
+- `mma` derived from a card-number suffix (`88BA-MMA` → sport `mma`).
+- **76 word-boundary setKey pairs** (`turbo-charged` vs `turbocharged`) — a
+  naming question needing a checklist, not a vote.
 
-## 6. Smaller measured defects
+### 7. Colour recovery — text is exhausted
+253 plain-refractor CPA-MG comps run **$1.25–$725, all raw**. The $725, the $255
+and the $1.25 carry the *identical* title `"2026 2026 Bowman Baseball #CPA-MG
+Base"`. The parallel is absent at the **source**, which is why re-running the
+parser over 20,000 rows improved **6**.
 
-- **`isAuto`**: 838 Bowman comps titled AUTO slugged `:no-auto`; 155 titled
-  NON-AUTO slugged `:auto`. The root parser bug is fixed and deployed, so these
-  are history; container-wide count not yet measured.
-- **507** Bowman comps with the literal string `null` in the cardNumber segment.
-- **`mma` from a card-number suffix**: `88BA-MMA` → sport `mma` for Manny
-  Machado. The sport sweep corrected the rows; the parser path was not chased.
-- **Walker Jenkins residue**: 12 wrong-serial comps + 1 Non-Auto still in the
-  CPA-WJ pool.
+Only the image path remains. `cardColourHue.service.ts` is written but **not
+committed to `src`** — measured on real eBay photos it returns 1% saturated
+border, because the card does not fill the frame. It needs card-edge detection.
 
-## 7. Colour recovery — text is exhausted
-
-The 253 plain-refractor CPA-MG comps run $1.25 to $725 and are ALL raw, so grade
-is not the driver. The $725, the $255 and the $1.25 sales carry the IDENTICAL
-title `"2026 2026 Bowman Baseball #CPA-MG Base"`. The parallel is absent at the
-SOURCE, which is why re-running the parser over 20,000 such rows improved 6.
-
-So the only remaining path is the image. `cardColourHue.service.ts` exists but is
-deliberately NOT committed to `src`: measured on real eBay photos it returns 1%
-saturated border, because the card does not fill the frame. It needs card-edge
-detection before it is worth anything.
-
-## 8. Ops / unresolved
-
+### 8. Ops
 - **Page timeout** — a card page reported "Request timed out after 30s". Two
-  theories disproven; API measures healthy (0.2–0.36s). Needs a tester repro
-  with the network tab.
-- **Chronic CI reds** — `observedGradeCurve` ×2 (trend-cap assertion),
-  `signalFetchObservability` timeout, `compiqRoutePredictionShape`. Verified
-  2026-08-19 as pre-existing: reverting the parser to `origin/main` reproduces
-  them exactly, and none of the three files reference the parser.
-- **`backfill-parallel-enrichment` must not be run broadly.** Its dry run showed
-  it rewriting the WHOLE slug via `computeHobbyIqCardId`, pushing
-  `bowman:cpa-eha` back to `bowman-chrome:cpa-eha` — it would re-split the pool
-  this work merged.
+  theories disproven; API measures 0.2–0.36s. Needs a tester repro with the
+  network tab.
+- **Chronic CI reds** — `observedGradeCurve` ×2 (trend-cap). Verified
+  pre-existing: reverting the parser to `origin/main` reproduces them exactly,
+  and neither file references the parser.
+- **`backfill-parallel-enrichment` is DISARMED** (2026-08-20). It re-derives the
+  whole slug and was caught pushing `bowman:cpa-eha` back to
+  `bowman-chrome:cpa-eha`. Requires `I_HAVE_READ_CF_DISARM=yes` to write.
 
 ---
 
-## The pattern worth keeping
+## Unmeasured, and it should be measured first
 
-Six times in one session the mechanism was right and the DIRECTION or SCOPE was
-wrong. Every one was caught by checking against an independent authority before
-writing, and several were caught only because the target side was measured
-first.
+**Trend readiness.** Everything above fixes the *correctness* of matches, but a
+trend needs enough sales on one card **in one grade over time** — never measured.
+
+- series **THIN** → perfect matching still yields no trend; **coverage** is the lever
+- series **FAT** → the sales exist and land wrong; **matching** is the lever
+
+`audit-trend-readiness.cjs` answers it. Choosing between those on intuition is
+what produced this document's reversals.
+
+---
+
+## The pattern, worth keeping
+
+Across one day, the mechanism was right and the **direction or scope** was wrong
+**seven times** — twice in code written while fixing the others. Every one was
+caught by checking against an *independent authority* before writing, and
+several only because the target side was measured first.
 
 - Blanket hyphenation would have corrupted `BDPP` — 61,756 checklist rows, never
   hyphenated. `bdpp19` is correct as it stands.
-- "Same player = safe to merge" would have flattened a $500 Sapphire.
+- "Same player = safe to merge" would have flattened a $500 Sapphire into a $5
+  paper base. Ohtani #17 is four real cards.
 - Majority-wins on setKey elected `x's-and-o's`, `all-out!` and `bbm-` as
   canonical, entrenching punctuation into slugs.
-- An exact source allowlist reported 6.1% checklist coverage when the truth is
-  **87.8%** — it discarded baseballcardpedia's 918,828 rows.
-- Widening that same allowlist for the HYPHEN question flipped 51 prefixes to
-  blocked on wiki-transcription noise. **Source quality is question-dependent:**
-  coverage and precision need different source sets.
-- Requiring literal unanimity then blocked BCP on 6 bare rows out of 81,291.
-  Real conventions are nowhere near that line — `BDPP` is 100% bare.
+- An exact source allowlist reported **6.1%** checklist coverage where the truth
+  is **87.8%** — it discarded baseballcardpedia's 918,828 rows.
+- Widening that same allowlist for the *hyphen* question flipped 51 prefixes to
+  blocked on wiki noise. **Source quality is question-dependent.**
+- Requiring literal unanimity then blocked BCP on **6 bare rows out of 81,291**.
+- A positionally-blind grade regex flagged 221 rows whose *card number* begins
+  `PSA-`.
 
-And twice the defect was one I introduced while fixing the others: a second copy
-of `slugify()` inside the repair script, and a cluster key that silently
-swallowed word-boundary variants.
+And two process rules bought the hard way:
+
+- **Never apply at a scope that was not dry-run**, and never edit a script a
+  queued job will later load. A `--family` default edited mid-flight silently
+  widened a run from Bowman to every baseball family.
+- **A measurement that cannot run must fail loudly.** An empty connection string
+  returned a clean zero; a 403 killed a 2h43m scan. Both now abort explicitly.
