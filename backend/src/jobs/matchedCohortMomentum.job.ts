@@ -35,6 +35,7 @@ import {
 } from "../services/compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "../services/playerTrend/momentum.compute.js";
 import type { NormalizedWeeklySales } from "../services/playerTrend/playerTrend.types.js";
+import { runSingleFlight } from "./_singleFlight.js";
 import {
   assembleMarketPlayersPayload,
   writeMarketPlayersPayload,
@@ -448,7 +449,7 @@ export function startMatchedCohortJob(): void {
   );
   _firstRunTimer = setTimeout(async () => {
     try {
-      await runCycle();
+      await runSingleFlight("matched-cohort", intervalMs, runCycle);
     } catch (e: unknown) {
       console.warn(
         `[matched-cohort] first cycle failed: ${(e as Error)?.message ?? e}`,
@@ -456,7 +457,7 @@ export function startMatchedCohortJob(): void {
     }
     _intervalTimer = setInterval(async () => {
       try {
-        await runCycle();
+        await runSingleFlight("matched-cohort", intervalMs, runCycle);
       } catch (e: unknown) {
         console.warn(
           `[matched-cohort] cycle failed: ${(e as Error)?.message ?? e}`,

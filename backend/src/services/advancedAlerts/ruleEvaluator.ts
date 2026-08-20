@@ -39,6 +39,7 @@ import {
   readUserDoc,
 } from "../portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { runSingleFlight } from "../../jobs/_singleFlight.js";
 
 export const ADVANCED_ALERT_TARGETS_PER_RULE_DEFAULT = 50;
 
@@ -485,14 +486,14 @@ export function startAdvancedAlertsEvaluatorJob(): void {
   );
 
   _advancedFirstRunTimer = setTimeout(() => {
-    runAdvancedAlertsEvaluator().catch((err) => {
+    runSingleFlight("advanced.alert.evaluator", intervalMs, runAdvancedAlertsEvaluator).catch((err) => {
       console.error(
         "[advanced.alert.evaluator] first run threw:",
         err?.message ?? err,
       );
     });
     _advancedIntervalTimer = setInterval(() => {
-      runAdvancedAlertsEvaluator().catch((err) => {
+      runSingleFlight("advanced.alert.evaluator", intervalMs, runAdvancedAlertsEvaluator).catch((err) => {
         console.error(
           "[advanced.alert.evaluator] interval run threw:",
           err?.message ?? err,
