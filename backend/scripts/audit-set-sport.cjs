@@ -175,7 +175,7 @@ async function main() {
     }
     authority.set(k, ranked[0][0]);
   }
-  console.log(`(year, setKey) with a checklist : ${setSport.size.toLocaleString()}`);
+  console.log(`(year, setKey) with a checklist : ${setChecklist.size.toLocaleString()}`);
   console.log(`  usable as authority           : ${authority.size.toLocaleString()}`);
   console.log(`  MIXED-sport products (skipped): ${mixed.toLocaleString()}`);
   console.log(`  CROSS-SPORT franchise (skipped): ${crossSport.toLocaleString()}   <- new gate, minOther=${MIN_OTHER}`);
