@@ -2063,6 +2063,19 @@ router.get("/suggest", async (req, res, next) => {
 // the /price cap by calling /search with the same body. Same gate stack.
 router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
+  // CF-SEARCH-STAGE-TIMING (2026-08-20). /api/compiq/search returns HTTP 200
+  // in anywhere from 0.1s to 57.9s (measured). Dependency telemetry accounts
+  // for only 3-39% of that wall time -- the 57.9s case spent 3.2s on I/O --
+  // so the remainder is in-process, and nothing currently says WHERE.
+  //
+  // Console traces carry no operation_Id (0 of 39,415 in a 24h window), so
+  // per-stage attribution cannot be reconstructed by joining logs to
+  // requests. Emit the split directly instead. Three numbers are enough to
+  // tell apart the three candidate explanations: engine compute, the
+  // uncached catalog lookup, and everything else.
+  let producerRan = false;
+  let cacheMs = 0;
+  let catalogMs = 0;
   try {
     const { query } = req.body || {};
     if (!query || typeof query !== "string" || !query.trim()) {
@@ -2075,7 +2088,11 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     // pre-fallback probe would see the cached sibling-pool synthesis for
     // up to 6h even though the engine now returns real CS-sourced comps.
     const cacheKey = normalizeCacheKey("compiq:search:v2", query);
+    const cacheStartedAt = Date.now();
     const result = await cacheWrap(cacheKey, async () => {
+      // Reached only on a MISS — a hit bypasses the producer entirely, which
+      // is exactly the signal we want.
+      producerRan = true;
       // Parse free-text â†’ structured fields so downstream filters fire.
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
@@ -2430,6 +2447,7 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         return false;
       },
     });
+    cacheMs = Date.now() - cacheStartedAt;
     // CF-TELEMETRY-OUTSIDE-CACHE (2026-06-28, revised 2026-08-20): fire on
     // EVERY response (cache hit + miss) by reading from `result` instead of
     // nesting inside the producer. The route is cacheWrapped at
@@ -2521,7 +2539,9 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     let catalogProvisional = false;
     try {
       const { searchCatalog } = await import("../services/catalog/catalogSearch.service.js");
+      const catalogStartedAt = Date.now();
       const catalog = await searchCatalog({ query: query.trim(), limit: 25 });
+      catalogMs = Date.now() - catalogStartedAt;
       catalogOptions = catalog.hits;
       catalogProvisional = catalog.provisional === true;
     } catch (err) {
@@ -2532,6 +2552,19 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       }));
     }
 
+    const totalMs = Date.now() - handlerStart;
+    console.log(JSON.stringify({
+      event: "compiq_search_stage_timing",
+      source: "compiq.routes.search",
+      totalMs,
+      cacheMs,
+      catalogMs,
+      // Neither engine nor catalog: parsing, serialization, and any time
+      // this request spent waiting for the event loop behind other work.
+      otherMs: Math.max(0, totalMs - cacheMs - catalogMs),
+      cacheHit: !producerRan,
+      queryLen: query.trim().length,
+    }));
     res.json({ ...(result as Record<string, unknown>), catalogOptions, catalogProvisional });
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
