@@ -6248,13 +6248,45 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // factor the estimate produced. Keeps FMV → predicted always
         // internally consistent regardless of grade selection.
         predictedPrice: (() => {
-          const factor = typeof (est as any).forwardProjectionFactor === "number" && Number.isFinite((est as any).forwardProjectionFactor)
-            ? (est as any).forwardProjectionFactor as number
-            : 1.0;
+          // CF-PREDICTED-FACTOR-NEVER-SET (Drew, 2026-08-20). This read
+          // `est.forwardProjectionFactor`, which NOTHING ever assigns — the
+          // service passes that name to emitPredictionToCorpus (telemetry) and
+          // stores the value on `predictedPriceAttribution`, never on the
+          // estimate itself. So the factor was ALWAYS undefined, always fell
+          // back to 1.0, and this endpoint returned
+          //   predictedPrice = effectiveFmv x 1.0 = effectiveFmv
+          // for every card. Predicted silently equalled Market Value on
+          // /price-by-id, which is the surface iOS pins a card to.
+          //
+          // The failure was invisible because the shape stayed correct: a
+          // populated, plausible, internally-consistent number that happened to
+          // carry no forward signal at all.
+          //
+          // Derive the factor the way the comment always described it — "the
+          // same forward-projection factor the estimate produced" — as the
+          // estimate's OWN predicted/market ratio, so a grade-adjusted
+          // effectiveFmv is re-anchored by the raw tier's projection.
+          const estPredicted = (est as any).predictedPrice;
+          const estFmv = (est as any).effectiveFmv;
+          const attr = (est as any).predictedPriceAttribution as Record<string, unknown> | null;
+          const attrFactor = attr && typeof attr.forwardProjectionFactor === "number"
+            && Number.isFinite(attr.forwardProjectionFactor)
+            ? (attr.forwardProjectionFactor as number)
+            : null;
+          const ratioFactor =
+            typeof estPredicted === "number" && Number.isFinite(estPredicted) && estPredicted > 0 &&
+            typeof estFmv === "number" && Number.isFinite(estFmv) && estFmv > 0
+              ? estPredicted / estFmv
+              : null;
+          const factor = ratioFactor ?? attrFactor;
+          // No factor means no forward signal. Pass the estimate's own
+          // predictedPrice through rather than inventing FMV x 1.0, so
+          // "no projection" stays distinguishable from "projected flat".
+          if (factor === null) return estPredicted ?? null;
           if (typeof effectiveFmv === "number" && effectiveFmv > 0) {
             return Math.round(effectiveFmv * factor * 100) / 100;
           }
-          return (est as any).predictedPrice ?? null;
+          return estPredicted ?? null;
         })(),
         predictedPriceRange: (est as any).predictedPriceRange ?? null,
         predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,

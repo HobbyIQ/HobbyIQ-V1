@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  isDerived,
   catalogAuthorityOf, canAdjudicate, isReKeyable, authorityRank, isTranscriptionGrade,
 } from "../src/services/catalog/catalogAuthority.service.js";
 
@@ -112,5 +113,59 @@ describe("CF-CATALOG-AUTHORITY — formatting vs coverage", () => {
     for (const s of ["cardhedge", "ingest-auto-seed", "undefined", "sold-comps-stub-2026-08-12"]) {
       expect(isTranscriptionGrade(s), s).toBe(false);
     }
+  });
+});
+
+// CF-SEARCH-AUTHORITY-RANK (Drew, 2026-08-20: "lets fix things the right way").
+//
+// Search ranked duplicate rows for one card by an exact eleven-string list.
+// Every real checklist source fell outside it and scored the WORST rank, while
+// self-seeded and vendor rows scored inside it — so a row we generated from our
+// own comps beat a printed checklist, and search showed the self-confirming
+// copy. These pin the ordering that stops that.
+describe("isDerived - the predicate callers kept re-declaring", () => {
+  it("covers every self-generated source, not just the two everyone remembers", () => {
+    // The old inline Set was {sales-derived, tree-builder-v1}. The rest are the
+    // same shape at far larger scale and were being treated as clean.
+    for (const s of [
+      "sales-derived", "tree-builder-v1",
+      "ingest-auto-seed", "sold-comps-stub", "sold-comps-stub-2026-08-12",
+      "catalog-explode", "catalog-explode-actuals", "pool",
+    ]) {
+      expect(isDerived(s), s).toBe(true);
+    }
+  });
+
+  it("does NOT claim vendor or checklist rows", () => {
+    // cardhedge is excluded from SEARCH by policy (catalogVisibility), but it is
+    // not something we generated, and conflating the two questions un-hides it.
+    for (const s of ["cardhedge", "cardsight", "ebay", "checklistcenter",
+      "beckett-scraped-2026-08-19", "baseballcardpedia"]) {
+      expect(isDerived(s), s).toBe(false);
+    }
+  });
+});
+
+describe("authorityRank beats a checklist row's dated source string", () => {
+  it("ranks every real checklist source above derived, vendor and unknown", () => {
+    // These are the exact pairings that were resolving backwards in production.
+    const beats: Array<[string, string]> = [
+      ["beckett-scraped-2026-08-19", "ingest-auto-seed"],
+      ["baseballcardpedia", "ch-catalog"],
+      ["checklistcenter", "cardhedge"],
+      ["checklistinsider", "ingest-auto-seed"],
+      ["bccp", "sold-comps-stub"],
+    ];
+    for (const [winner, loser] of beats) {
+      expect(authorityRank(winner), `${winner} vs ${loser}`)
+        .toBeGreaterThan(authorityRank(loser));
+    }
+  });
+
+  it("orders the classes checklist > vendor > derived > unknown", () => {
+    expect(authorityRank("checklistcenter")).toBe(3);
+    expect(authorityRank("cardhedge")).toBe(2);
+    expect(authorityRank("ingest-auto-seed")).toBe(1);
+    expect(authorityRank("ch-catalog")).toBe(0);
   });
 });

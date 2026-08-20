@@ -10,6 +10,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { verifiedCatalogSqlClause, provisionalCatalogSqlClause } from "../catalog/catalogVisibility.js";
+import { authorityRank, isDerived } from "../catalog/catalogAuthority.service.js";
 
 export interface CanonicalSearchInput {
   q: string;
@@ -878,8 +879,16 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // Once holdingFieldNormalizer is fixed and the pool is re-cleaned
   // (CF-NORMALIZER-SUBSET-STRIP backlog), the tree-builder can be
   // re-run cleanly and this priority list becomes redundant.
-  const DIRTY_SOURCES = new Set(["sales-derived", "tree-builder-v1"]);
-  const isClean = (h: CanonicalSearchHit) => !h.source || !DIRTY_SOURCES.has(h.source);
+  // CF-SEARCH-AUTHORITY-RANK (Drew, 2026-08-20: "lets fix things the right way").
+  //
+  // WAS an exact two-element Set — {sales-derived, tree-builder-v1} — which
+  // missed every other self-generated source. `ingest-auto-seed`,
+  // `sold-comps-stub`, `catalog-explode-*` and `pool` are the same shape at far
+  // larger scale and were all counted CLEAN.
+  //
+  // Now asks catalogAuthority, so the set cannot drift out of step with the
+  // audit tooling that uses the same declaration.
+  const isClean = (h: CanonicalSearchHit) => !h.source || !isDerived(h.source);
 
   // CF-CATALOG-IDENTITY-DEDUP (Drew, 2026-08-09). Prior dedup keyed on
   // exact hobbyiqCardId, which meant every slug-shape fragment (Blue
@@ -905,7 +914,9 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   const AUTO_PREFIX_RE = /^(CPA|CPRA|CPAA|BSPA|CDA|CFA|BCPA)-/i;
   const isAutoPrefixCardNumber = (cn: string | null): boolean =>
     typeof cn === "string" && AUTO_PREFIX_RE.test(cn.trim());
-  // Source priority for tie-break (lower index = preferred).
+  // Within-class tie-break only (lower index = preferred). This list is EXACT
+  // strings, so it decays: dated scrape runs mint a new source every night and
+  // fall to 99. It is no longer the primary ordering for exactly that reason.
   const SOURCE_PRIORITY = [
     "checklist",
     "bccp-product-structure",
@@ -924,6 +935,33 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     const i = SOURCE_PRIORITY.indexOf(s);
     return i === -1 ? 99 : i;
   };
+
+  /**
+   * CF-SEARCH-AUTHORITY-RANK (Drew, 2026-08-20: "lets fix things the right way").
+   *
+   * Duplicate rows for one card were ranked by SOURCE_PRIORITY alone, an exact
+   * eleven-string list. Every real checklist source falls outside it and scored
+   * 99 — the worst rank — while self-seeded and vendor rows scored inside it:
+   *
+   *   beckett-scraped-2026-08-19  checklist  rank 99   LOST to
+   *   ingest-auto-seed            derived    rank  6
+   *
+   *   baseballcardpedia           checklist  rank 99   LOST to
+   *   ch-catalog                  unknown    rank 10
+   *
+   *   checklistcenter             checklist  rank 99   LOST to
+   *   cardhedge                   vendor     rank  2
+   *
+   * So a row we generated from our own comps outranked a printed checklist, and
+   * search showed the self-confirming copy. That is the precise failure the
+   * authority model exists to stop: a mis-slugged comp seeds a catalog row, and
+   * the row then vouches for the comp.
+   *
+   * Authority CLASS decides first (checklist > vendor > derived > unknown),
+   * which is pattern-matched and so survives dated source strings. The old list
+   * still breaks ties WITHIN a class, where its opinions are reasonable.
+   */
+  const rankPair = (s: string | null): [number, number] => [-authorityRank(s), sourceRank(s)];
   const dedupKey = (h: CanonicalSearchHit): string => {
     const par = (h.parallels?.[0]?.id ?? h.parallels?.[0]?.name ?? "base")
       .toString().trim().toLowerCase().replace(/\s+/g, "-");
@@ -951,9 +989,11 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
     const eClean = isClean(existing);
     if (hClean && !eClean) { byCanonical.set(key, h); continue; }
     if (!hClean && eClean) continue;
-    // Both same cleanliness class — prefer canonical source, then score.
-    const hRank = sourceRank(h.source);
-    const eRank = sourceRank(existing.source);
+    // Both same cleanliness class — authority class first, then the legacy
+    // within-class list, then score.
+    const [hAuth, hRank] = rankPair(h.source);
+    const [eAuth, eRank] = rankPair(existing.source);
+    if (hAuth !== eAuth) { if (hAuth < eAuth) byCanonical.set(key, h); continue; }
     if (hRank < eRank) { byCanonical.set(key, h); continue; }
     if (hRank > eRank) continue;
     if (h.score > existing.score) byCanonical.set(key, h);

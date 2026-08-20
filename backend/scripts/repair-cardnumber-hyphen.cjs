@@ -61,6 +61,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { isTranscriptionGrade } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -106,11 +107,8 @@ const TOP = Number(arg("top", "30"));
  * same site, different extraction, and the HTML path is the dirtiest source
  * measured. The suffix matters.
  */
-function isChecklistSource(source) {
-  const s = String(source ?? "").toLowerCase().replace(/-graded$/, "");
-  if (s === "checklistcenter-html") return false;
-  return /^(checklistcenter|checklist|checklistinsider|beckett)/.test(s);
-}
+/** Delegates to catalogAuthority — see CF-CATALOG-AUTHORITY. */
+const isChecklistSource = (source) => isTranscriptionGrade(source);
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }

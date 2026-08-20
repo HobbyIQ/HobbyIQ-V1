@@ -56,6 +56,29 @@ const PROVISIONAL_SOURCE_PREFIXES = ["sold-comps-stub-"] as const;
  *  tier while leaving the data intact and the change reversible by removing
  *  two strings.
  */
+/**
+ * DELIBERATELY NARROWER THAN catalogAuthority's `isDerived` — do not "unify"
+ * them (checked 2026-08-20).
+ *
+ * Three different questions get asked about a source, and they have three
+ * different answers for the same string:
+ *
+ *   catalogAuthorityOf   may this row DECIDE a fact?    cardhedge -> vendor
+ *   isDerived            did WE generate this row?      cardhedge -> false
+ *   EXCLUDED_SOURCES     may a USER SEE this row?       cardhedge -> EXCLUDED
+ *
+ * Two consequences of collapsing them, both regressions:
+ *
+ *   - Routing this list through `catalogAuthorityOf` would make cardhedge
+ *     VISIBLE again, undoing CF-RETIRE-CARDHEDGE-ROWS — vendor rows surfacing
+ *     as cards we own, with the review picker offering bubble.io ids as accept
+ *     options.
+ *   - Routing it through `isDerived` would hide `ingest-auto-seed`,
+ *     `sold-comps-stub`, `catalog-explode-*` and `pool`. Those are frequently
+ *     the ONLY row a card has; hiding them loses coverage without gaining
+ *     accuracy. Search demotes them (see canonicalCardSearch) rather than
+ *     hiding them, which is the right treatment for a weak-but-real row.
+ */
 const EXCLUDED_SOURCES = new Set([
   "sales-derived",
   "tree-builder-v1",

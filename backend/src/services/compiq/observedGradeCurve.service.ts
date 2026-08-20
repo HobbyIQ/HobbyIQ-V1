@@ -23,6 +23,7 @@
 
 import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
+import { logSubRawInversionObserved } from "./marketRead.service.js";
 import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
 import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
@@ -1238,68 +1239,65 @@ async function applyTrajectory(
     // grade is supposed to be worth strictly more than raw). Grades with
     // multiplier === 1 (e.g. PSA 8) are semantically equivalent to raw
     // per Drew's spec so they can equal raw without an inversion.
-    const nonRawStrictFloor = entries.reduce<number | null>((min, e) => {
-      if (e.grader === "Raw") return min;
-      if (e.value === null || e.value <= 0) return min;
+    // Track the ENTRY, not just its number — the telemetry has to say WHICH
+    // grade the raw value sits above, or "sub-raw" is unactionable.
+    const floorEntry = entries.reduce<ObservedGradeEntry | null>((best, e) => {
+      if (e.grader === "Raw") return best;
+      if (e.value === null || e.value <= 0) return best;
       const mult = e.estimatedMultiplier;
       // Only cards with a "strictly-above-raw" multiplier count as a floor.
-      if (typeof mult !== "number" || mult <= 1.0) return min;
-      return min === null || e.value < min ? e.value : min;
+      if (typeof mult !== "number" || mult <= 1.0) return best;
+      return best === null || e.value < (best.value ?? Infinity) ? e : best;
     }, null);
+    const nonRawStrictFloor = floorEntry?.value ?? null;
 
     if (
       nonRawStrictFloor !== null &&
       rawShownValue > nonRawStrictFloor + 0.005
     ) {
-      const originalTrendAdjusted = rawEntry.trendAdjustedValue;
-      const originalPredicted = rawEntry.predictedPriceAt30d;
-      const cappedMarket = Math.round(nonRawStrictFloor * 100) / 100;
-      // Recompute predicted from the capped market value using the same
-      // forward-rate factor already applied to this entry. predictedPricePct
-      // is (predictedMultiplier - 1) * 100, so this reproduces the loop's math.
-      const predictedFactor =
-        1 + (rawEntry.predictedPricePct ?? 0) / 100;
-      const cappedPredicted =
-        Math.round(cappedMarket * predictedFactor * 100) / 100;
-      const rangePct = pickBandWidthPct(rawEntry);
-      const cappedRangeLow =
-        Math.round(cappedPredicted * (1 - rangePct) * 100) / 100;
-      const cappedRangeHigh =
-        Math.round(cappedPredicted * (1 + rangePct) * 100) / 100;
-
-      rawEntry.trendAdjustedValue = cappedMarket;
-      rawEntry.trendAdjustmentPct =
-        Math.round(((cappedMarket / rawEntry.value) - 1) * 10000) / 100;
-      rawEntry.predictedPriceAt30d = cappedPredicted;
-      rawEntry.predictedPriceRangeLow = cappedRangeLow;
-      rawEntry.predictedPriceRangeHigh = cappedRangeHigh;
-      // predictedPricePct is a percent-of-market, not-of-original —
-      // preserved: cappedMarket * (1 + pct/100) = cappedPredicted, so pct
-      // stays as it was. Keep the loop's value on the entry.
-
-      console.log(
-        JSON.stringify({
-          event: "raw_trend_capped_by_grade_monotonicity",
-          source: "observedGradeCurve",
-          rawBaseValue: rawEntry.value,
-          rawTrendAdjustedBeforeCap: originalTrendAdjusted,
-          rawPredictedBeforeCap: originalPredicted,
-          nonRawStrictFloor,
-          cappedMarketValue: cappedMarket,
-          cappedPredictedValue: cappedPredicted,
-          ratePerWeek: derivation.cappedRate,
-        }),
-      );
-
-      // Recompute the raw entry's action recommendation off the capped
-      // pair so the seller verdict reflects the actually-shown numbers.
-      const cappedMarketForRec = rawEntry.trendAdjustedValue ?? rawEntry.value;
-      rawEntry.recommendation = computeAction({
-        currentValue: cappedMarketForRec,
-        predictedValue: rawEntry.predictedPriceAt30d,
-        confidenceScore: rawEntry.confidenceScore,
-        signalSource: derivation.signalSource,
-        weeksSinceRelease: releaseDecayContext?.weeksSinceRelease ?? null,
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20: "a raw can be worth more in
+      // different areas, so lets not do that"). OBSERVE, DO NOT CLAMP.
+      //
+      // THIS USED TO CAP RAW DOWN TO THE CHEAPEST GRADED VALUE, on the premise
+      // that a raw card cannot be worth more than a graded one. The premise is
+      // false: a raw card carries the OPTION on a high grade, so it routinely
+      // trades above a low-graded copy — a raw with a shot at a PSA 10 is worth
+      // more than a PSA 8, and in some markets more than a PSA 9.
+      //
+      // The rest of the system already knows this. `sub_raw_inversion_observed`
+      // exists precisely to TRACK raw-above-graded as a market signal, and that
+      // telemetry feeds DailyIQ. Clamping here deleted the signal the product is
+      // built on, then logged the deletion as though it were a correction.
+      //
+      // It also destroyed correct output. A Raw card projecting to $220 off an
+      // accurate 12-week trend was rewritten to $108, because the cheapest
+      // ESTIMATED graded tier — itself computed as that same raw value x 1.08 —
+      // became the floor. The bound was our own estimate of the number being
+      // bounded, so the curve judged itself: the identical circularity we spent
+      // this week removing from the catalog, where a mis-slugged comp seeds a
+      // row that then vouches for the comp.
+      //
+      // The original 2026-07-09 complaint (Devin Taylor gold auto, raw $1908 vs
+      // PSA 10 estimate $1182) was a real DISPLAY problem, but its cause is that
+      // raw is trended and estimated grades deliberately are not — an
+      // apples-to-oranges comparison. Clamping raw treated the symptom by
+      // falsifying the better number.
+      const rawMarket = rawEntry.trendAdjustedValue ?? rawEntry.value;
+      logSubRawInversionObserved({
+        source: "observedGradeCurve.gradeMonotonicity",
+        player: playerName ?? null,
+        cardId: null,
+        event: {
+          grader: floorEntry?.grader ?? "unknown",
+          grade: floorEntry?.grade ?? "unknown",
+          gradeMedian: nonRawStrictFloor,
+          gradeCount: 0,
+          rawMedian: rawMarket,
+          marginPct: rawMarket > 0
+            ? Math.round(((rawMarket - nonRawStrictFloor) / rawMarket) * 10000) / 100
+            : 0,
+          marginUSD: Math.round((rawMarket - nonRawStrictFloor) * 100) / 100,
+        },
       });
     }
   }

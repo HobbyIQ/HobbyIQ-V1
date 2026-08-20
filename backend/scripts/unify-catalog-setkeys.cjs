@@ -45,6 +45,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -98,12 +99,8 @@ function isReKeyable(source) {
   return /^(cardhedge|cardsight|ebay)/.test(s);
 }
 
-function isChecklistSource(source) {
-  const s = norm(source).replace(/-graded$/, "");
-  if (/^(cardhedge|cardsight|ebay|ingest-auto-seed|sold-comps-stub|tree-builder|catalog-explode|user-verified)/.test(s)) return false;
-  if (/-product-structure$/.test(s)) return false;
-  return /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor/.test(s);
-}
+/** Delegates to catalogAuthority — see CF-CATALOG-AUTHORITY. */
+const isChecklistSource = (source) => canAdjudicate(source);
 
 const newClient = () => new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
 

@@ -579,12 +579,25 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa9.value).toBeCloseTo(140, 0);                 // 100 × (4.0 × 0.35)
     });
 
-    it("without setName + no empirical calibration → estimated fill is unavailable", async () => {
-      // CF-EMPIRICAL-ONLY-DOCTRINE (Drew, 2026-07-21) requires that when
-      // no family classification is available (no setName provided),
-      // and no reference-price is supplied, non-observed grades stay
-      // "unavailable" rather than falling back to a hardcoded matrix.
-      // gradeMultiplierFor was reduced to a no-op in PR #633.
+    it("without setName → still estimates, from empirical calibration", async () => {
+      // CF-ALL-GRADES-AVAILABLE (Drew, 2026-08-20: "no we need to be able to
+      // give estimates"; earlier, "we want to have all grades available for
+      // people").
+      //
+      // THIS TEST USED TO ASSERT "unavailable". That was correct on 2026-07-21,
+      // when gradeMultiplierFor had just been reduced to a no-op (PR #633) and
+      // the ONLY alternative to a family-specific calibration was the hardcoded
+      // matrix the empirical-only doctrine bans. Showing nothing beat showing an
+      // invented number.
+      //
+      // It is not correct now. A family-agnostic EMPIRICAL multiplier exists, so
+      // a grade with no observed comps can be estimated from GRADE_CALIBRATION
+      // rather than from a matrix someone typed. Both rules are satisfied at
+      // once: the estimate is empirical, and the user sees every grade.
+      //
+      // Verified numerically before retiring the old assertion, not merely
+      // asserted to exist: Raw observed = 100, PSA 10 multiplier = 2.66 from
+      // gradeCalibrationData.ts, value = 266.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -601,8 +614,18 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1"); // no setName
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(psa10.valueSource).toBe("unavailable");
-      expect(psa10.estimatedMultiplier).toBeNull();
+      expect(psa10.valueSource).toBe("estimated");
+      expect(psa10.estimatedMultiplier).toBeGreaterThan(1);
+      // The value must be Raw x the multiplier — pinning the ARITHMETIC, not
+      // just that some number appeared. A multiplier that stops being applied
+      // to the observed anchor would otherwise pass silently.
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(psa10.value).toBeCloseTo(
+        (raw.value as number) * (psa10.estimatedMultiplier as number),
+        1,
+      );
+      // Every grade is offered, per "we want to have all grades available".
+      expect(curve.entries.every((e) => e.valueSource !== "unavailable")).toBe(true);
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
@@ -1382,9 +1405,12 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         )
         .reduce<number>((min, e) => ((e.value as number) < min ? (e.value as number) : min), Number.POSITIVE_INFINITY);
       expect(nonRawStrictFloor).toBeLessThan(280);
-      // Raw's shown trendAdjustedValue is capped at that floor (within
-      // rounding tolerance).
-      expect(raw.trendAdjustedValue).toBeLessThanOrEqual(nonRawStrictFloor + 0.01);
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20): raw is NOT clamped to that floor.
+      // A raw card carries the option on a high grade, so it legitimately trades
+      // above a low-graded copy. The floor here is PSA 8 at $110 — an ESTIMATE
+      // computed from this very raw value — so clamping to it would have the
+      // curve bound a number by its own derivative.
+      expect(raw.trendAdjustedValue).toBeGreaterThan(nonRawStrictFloor);
     });
 
     it("guarantees Raw ≤ every graded value with multiplier > 1 after cap fires", async () => {
@@ -1413,15 +1439,22 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       const rawShown = raw.trendAdjustedValue ?? raw.value;
 
+      // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20). Grade monotonicity is NOT an
+      // invariant of this system. A hot raw is allowed to exceed graded tiers,
+      // and when it does the inversion is REPORTED rather than erased —
+      // sub_raw_inversion_observed is the DailyIQ pipe, so clamping deleted the
+      // signal the product is built on.
+      let exceededSomeGrade = false;
       for (const entry of curve.entries) {
         if (entry.grader === "Raw") continue;
         if (typeof entry.estimatedMultiplier !== "number") continue;
         if ((entry.estimatedMultiplier as number) <= 1.0) continue;
         if (entry.value === null || (entry.value as number) <= 0) continue;
-        // Monotonicity: raw shown value must not exceed any grade that's
-        // structurally supposed to be worth more than raw.
-        expect(rawShown).toBeLessThanOrEqual((entry.value as number) + 0.01);
+        if ((rawShown as number) > (entry.value as number) + 0.01) exceededSomeGrade = true;
       }
+      // A "VeryHot" raw with a stale comp SHOULD out-run the cheap graded tiers.
+      // If this ever goes false the clamp has crept back in.
+      expect(exceededSomeGrade).toBe(true);
     });
 
     it("recomputes raw's predictedPriceAt30d from the capped market value", async () => {

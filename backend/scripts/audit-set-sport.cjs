@@ -59,6 +59,10 @@ const arg = (n, d) => {
 const MIN_CHECKLIST = Number(arg("minChecklist", "20"));
 const DOMINANCE = Number(arg("dominance", "0.95"));
 const TOP = Number(arg("top", "25"));
+/** Absolute count of catalog rows in OTHER sports that makes a setKey a
+ *  cross-sport franchise. Absolute, not a ratio - see the note in main(). */
+const MIN_OTHER = Number(arg("minOther", "200"));
+const SPORT_WORDS = ["baseball", "football", "basketball", "hockey", "soccer"];
 const REFRESH_PAGES = Number(arg("refreshPages", "400"));
 const LEG_MAX_MS = Number(arg("legMaxMinutes", "20")) * 60_000;
 
@@ -102,46 +106,86 @@ async function main() {
   console.log(`[set-sport] minChecklist=${MIN_CHECKLIST} dominance=${DOMINANCE}\n`);
 
   // ── 1. What sport does the CHECKLIST say each (year, setKey) is? ─────────
-  const setSport = new Map();   // "year|setKey" -> Map(sport -> count)
+  //
+  // CORRECTED 2026-08-20 AFTER THIS AUDIT PRODUCED A WRONG ANSWER. The first
+  // version ranked ONLY checklist-backed rows and required 0.95 dominance. That
+  // is unsound, because dominance over a single-sport sample is always 1.0:
+  //
+  //   2024 panini-donruss
+  //     ALL rows       baseball 5,503  football 19,130  basketball 4,031
+  //     CHECKLIST rows football 3,993  ONLY
+  //     -> dominance 1.0000, authority "football", gate PASSES
+  //
+  // We simply have no checklist for Donruss BASEBALL 2024; the product plainly
+  // exists, with 5,503 catalog rows. Absence of checklist COVERAGE was being
+  // read as absence of the PRODUCT, condemning every genuine baseball comp in
+  // the set. Sampled titles of those "contradictions" said baseball 424,
+  // soccer 32, football 0.
+  //
+  // So the two questions are separated, because they need different evidence:
+  //
+  //   IS THIS SET MULTI-SPORT?  asked of ALL catalog rows. A vendor row is weak
+  //     evidence of what a card IS, but perfectly good evidence that the product
+  //     EXISTS in that sport. Donruss, Topps Chrome, Prizm and Select are
+  //     cross-sport franchises; a setKey does not name one sport.
+  //
+  //   IF SINGLE-SPORT, WHICH?   asked of checklist rows only, unchanged.
+  const setAll = new Map();     // "year|setKey" -> Map(sport -> count)   ALL rows
+  const setChecklist = new Map();
   await scanAll("card_catalog", {
     query: `SELECT c.year, c.setKey, c.sport, c.source FROM c
              WHERE IS_DEFINED(c.setKey) AND IS_DEFINED(c.sport) AND IS_DEFINED(c.year)`,
     parameters: [],
   }, (r) => {
-    // Only a checklist may say what a set IS. Letting vendor or self-seeded rows
-    // vote would allow a mis-filed card to prove its own set's sport.
-    if (!canAdjudicate(r.source)) return;
     const k = `${r.year}|${r.setKey}`;
-    let m = setSport.get(k);
-    if (!m) setSport.set(k, (m = new Map()));
+    let a = setAll.get(k);
+    if (!a) setAll.set(k, (a = new Map()));
+    a.set(r.sport, (a.get(r.sport) ?? 0) + 1);
+    if (!canAdjudicate(r.source)) return;
+    let m = setChecklist.get(k);
+    if (!m) setChecklist.set(k, (m = new Map()));
     m.set(r.sport, (m.get(r.sport) ?? 0) + 1);
   }, "catalog");
 
   const authority = new Map();   // "year|setKey" -> sport
-  let mixed = 0, thin = 0;
+  let mixed = 0, thin = 0, crossSport = 0;
   const mixedEx = [];
-  for (const [k, m] of setSport) {
+  for (const [k, m] of setChecklist) {
     const total = [...m.values()].reduce((s, n) => s + n, 0);
     if (total < MIN_CHECKLIST) { thin++; continue; }
     const ranked = [...m.entries()].sort((a, b) => b[1] - a[1]);
     if (ranked[0][1] / total < DOMINANCE) {
-      // A genuinely multi-sport product — Leaf, some Panini, Allen & Ginter.
       mixed++;
       if (mixedEx.length < 6) mixedEx.push(`${k}  ${ranked.slice(0, 3).map(([s, n]) => `${s}:${n}`).join(" ")}`);
       continue;
     }
+    // THE NEW GATE. Even at 1.0 checklist dominance, a meaningful population of
+    // catalog rows in another sport means the franchise spans sports and this
+    // setKey cannot adjudicate. MIN_OTHER is absolute, not a ratio: 4% of a
+    // large set is thousands of real cards, and a ratio gate lets them through.
+    const all = setAll.get(k);
+    const other = all ? [...all.entries()].filter(([s]) => s !== ranked[0][0]).reduce((n, [, c]) => n + c, 0) : 0;
+    if (other >= MIN_OTHER) {
+      crossSport++;
+      if (mixedEx.length < 12) {
+        const top = [...all.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, n]) => `${s}:${n}`).join(" ");
+        mixedEx.push(`${k}  CROSS-SPORT  checklist=${ranked[0][0]}:${ranked[0][1]}  allRows= ${top}`);
+      }
+      continue;
+    }
     authority.set(k, ranked[0][0]);
   }
-  console.log(`(year, setKey) with a checklist : ${setSport.size.toLocaleString()}`);
+  console.log(`(year, setKey) with a checklist : ${setChecklist.size.toLocaleString()}`);
   console.log(`  usable as authority           : ${authority.size.toLocaleString()}`);
   console.log(`  MIXED-sport products (skipped): ${mixed.toLocaleString()}`);
+  console.log(`  CROSS-SPORT franchise (skipped): ${crossSport.toLocaleString()}   <- new gate, minOther=${MIN_OTHER}`);
   console.log(`  too thin (< ${MIN_CHECKLIST})              : ${thin.toLocaleString()}\n`);
   if (mixedEx.length) { console.log("mixed-sport examples (correctly left alone):"); for (const e of mixedEx) console.log(`   ${e}`); console.log(""); }
 
   // ── 2. Which comps contradict their own set? ─────────────────────────────
   const moves = new Map();
   const ex = [];
-  let judged = 0, agree = 0, noAuthority = 0, contradict = 0;
+  let judged = 0, agree = 0, noAuthority = 0, contradict = 0, vetoed = 0, vetoedOther = 0;
   await scanAll("sold_comps", {
     query: `SELECT c.hobbyiqCardId, c.playerName, c.title, c.price FROM c
              WHERE IS_DEFINED(c.hobbyiqCardId) AND NOT IS_NULL(c.hobbyiqCardId)`,
@@ -155,6 +199,23 @@ async function main() {
     const truth = authority.get(`${year}|${setKey}`);
     if (!truth) { noAuthority++; return; }
     if (truth === sport) { agree++; return; }
+
+    // TITLE VETO. A title that NAMES a sport is direct evidence about THIS card;
+    // the set-level verdict is only a prior about its neighbours. When they
+    // disagree the card wins, because that is the pair that was measured wrong:
+    // 4,000 comps slugged hiq:baseball:2024:panini-donruss carried baseball 424,
+    // soccer 32, football 0 - while the set-level rule wanted all of them moved
+    // to football.
+    //
+    // The veto is high-precision and low-recall: only ~11% of titles name a
+    // sport at all, so it cannot DRIVE a repair. It can only stop one, which is
+    // the correct asymmetry for a rule that would otherwise rewrite good rows.
+    const t = String(r.title || "").toLowerCase();
+    const named = SPORT_WORDS.filter((s) => t.includes(s));
+    if (named.length === 1) {
+      if (named[0] === sport) { vetoed++; return; }         // title backs the slug
+      if (named[0] !== truth) { vetoedOther++; return; }    // title backs NEITHER
+    }
     contradict++;
     const k = `${sport} -> ${truth}`;
     moves.set(k, (moves.get(k) ?? 0) + 1);
