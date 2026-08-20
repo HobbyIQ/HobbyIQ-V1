@@ -33,7 +33,20 @@ import {
 // of worker load / file-distribution reshuffles. MUST be called at module
 // (collection) scope — vi.setConfig inside a hook applies too late to override
 // the already-captured per-test timeout.
-vi.setConfig({ testTimeout: 20000 });
+// CF-SIGNAL-FETCH-TIMEOUT-FLOOR (2026-08-20). The 20000 this replaces was a
+// RAISE when written — vitest's default was 5000 then. vitest.config.ts moved the
+// suite-wide testTimeout to 30000 the very next day (2026-07-21, #679), which
+// silently inverted this line into a REDUCTION: this file ran on 20s of headroom
+// while every other file got 30s. That is the ~1-in-3 full-suite flake on
+// "emits outcome=not_configured" — being the FIRST test in the file, it pays the
+// one-time SWC transform of the fetchSignals module graph (that case configures
+// no URL, so it does zero I/O; the time is pure import cost) and dies at exactly
+// "Test timed out in 20000ms". Measured locally, full suite, 505 files/16 cores:
+//     warm → all 14 tests in    4,036ms  (run 2, passed)
+//     cold → first test alone > 20,000ms (run 1, killed; file total 52,756ms)
+// A 13x spread, so inheriting 30000 is not a safe floor either. This value MUST
+// stay ABOVE vitest.config.ts's testTimeout — do not "tidy" it down to match.
+vi.setConfig({ testTimeout: 60000 });
 
 // Track all stdout lines for log-shape assertions.
 let logs: string[] = [];
