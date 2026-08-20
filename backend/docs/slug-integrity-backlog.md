@@ -124,6 +124,32 @@ When a genuine conflict list exists it is still never auto-resolved:
 pre-release checklists get revised, and this source exists to stop us INFERRING
 print runs — overwriting on scrape reintroduces that in a new costume.
 
+### 3b. The 19,188 YEAR-FLAGGED rows — RESOLVED into two opposite classes
+
+A subset naming a different year than its page is not one problem. Measured
+2026-08-20 over all 1,630,139 card rows carrying a print run:
+
+```text
+9,510  49.6%  "UPDATE" set    2018 Update - Signature Pucks  on a 2023 page
+              -> the SUBSET year is REAL. Upper Deck Update sets complete a
+                 PRIOR year's set; the card genuinely belongs to 2018.
+
+5,560  29.0%  retro DESIGN    1994 Pacific Gold              on a 2023 page
+              -> the CARD is the PAGE year. The year names a design homage.
+
+3,898  20.3%  ambiguous       2020-21 Award-Winning Autographs Gold
+              -> small delta, no "Update" marker. Needs a rule or a human.
+
+  220   1.1%  FORWARD-dated   2025 XRC Black Prizm           on a 2024 page
+              -> genuinely ahead. XRC cards are issued before their year.
+```
+
+**79% is confidently resolvable, and the two large classes resolve in OPPOSITE
+directions.** Assigning all 19,188 to the page year — the obvious move — would
+have corrupted 9,510 genuine prior-year Update cards. Flagging rather than
+guessing was correct, and the discriminator turns out to be simple: the literal
+word "Update" in the subset name.
+
 ### 4. The corrected sport audit — LANDED: 1.36%
 
 **195,440 comps (1.36%)**, down from the withdrawn 1,243,562 (8.69%). The new
