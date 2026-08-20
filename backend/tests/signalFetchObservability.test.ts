@@ -62,6 +62,18 @@ beforeEach(() => {
   // vitest timeout. Force real timers FIRST so this file is hermetic
   // regardless of worker file ordering (exposed when sibling files were
   // deleted and the worker file distribution reshuffled).
+  // CORRECTION (2026-08-20). The paragraph above is wrong about the cause and
+  // wrong about the files. cacheStaleServe, mlbStatsResolverGap and
+  // playerScoreLeagueLevel all DO restore real timers. The only file in tests/
+  // that installs fake timers without restoring them was observedGradeCurve,
+  // which this comment never named -- and that is fixed now too.
+  //
+  // Cross-file timer leakage is not even a live mechanism here: vitest runs
+  // with isolate:true, so every file gets a fresh environment. The real cause
+  // of the flake was the stale testTimeout override above.
+  //
+  // This call is kept as cheap, harmless insurance against isolate ever being
+  // turned off. It is NOT load-bearing today -- do not reason from it.
   vi.useRealTimers();
   logs = [];
   console.log = (...args: unknown[]) => {
