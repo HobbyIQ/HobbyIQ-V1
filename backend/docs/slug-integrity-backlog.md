@@ -36,28 +36,95 @@ series, which is exactly where that 73% lives.
 
 ---
 
-## Tomorrow — start here
+## Start here — as of 2026-08-20 end of day
 
-1. **Cross-sport contamination in the index.** Marcus Mariota and Shedeur
-   Sanders (football) and Cristiano Ronaldo (soccer) still appear in the
-   BASEBALL market-movers list. Their `sport` field AND their slug both say
-   baseball, so this is bad data rather than a query bug. The sport sweep's 85%
-   dominance / 25-comp minimum leaves thin-history players untouched — it needs a
-   second pass at lower thresholds, with its own dry run.
+Two items from the previous version of this list are RETIRED, and one is
+promoted. Read the retirements first; both were confidently wrong.
 
-2. **Scope the repairs to trendable series.** Everything below is currently
-   phrased as "repair the container". Given the 73% finding, the first cut should
-   be: of the 183,417 trendable series, how many are contaminated? That list is
-   the actionable one, and it is much shorter than the container.
+**RETIRED — "cross-sport contamination, lower the thresholds."** Twice wrong.
+Player-dominance is not the authority (Jason Kelce has 460 GENUINE baseball
+rows — First Pitch is a real Topps baseball insert). Set-dominance is not the
+authority either: `audit-set-sport` reported 8.69% contamination, 1,243,562
+comps, and its two largest moves were BACKWARDS. See the 2026-08-20 section at
+the bottom. **The corrected figure is 1.36% (195,440 comps)** — item 4 below.
+The 8.69% is withdrawn; never act on it.
 
-3. **Identity-level dedupe.** The slug-level pass is done (31,692 rows hidden),
-   but Eric Hartman still shows 28 duplicate identities because they are ONE card
-   across SEVERAL slugs — invisible to slug grouping. Needs `cardIdentityKey`
-   grouping, and its own dry run: two different slugs might be two different
-   cards.
+**PROMOTED — checklistinsider is built, and it was not a tail play.** It
+yielded 2,388,636 card rows, **1,630,139 carrying print runs**, from 599
+products with ZERO unparsed workbooks. Print runs are the one field we cannot
+reconstruct from anywhere else, and every attempt to read them out of seller
+titles bred a defect class. Staged to JSONL; nothing written.
 
-4. **checklistinsider ingest** — still worth building for print runs, but it is
-   now a TAIL play rather than the main event. Rank it below matching work.
+### 1. setKey matching is the blocker — 53.6% never matched a set
+
+The reconcile ran against all 599 products. The dominant bucket is not a data
+gap, it is a JOIN failure: **4,258 of 7,950 scraped parallels (53.6%) never
+matched a `(year, setKey)` we hold.** Deriving setKey from a product URL slug
+works for fewer than half of them.
+
+Until that is fixed most of this data cannot be placed, and every other count
+below understates the real picture.
+
+### 2. Print runs were NOT the prize — measured, and it inverted
+
+```
+KNOWN     744   9.4%   we already hold the same run
+FILLABLE   22   0.3%   <- the entire "fill our gaps" case
+CONFLICT   85   1.1%   checklist disagrees with us
+NEW     2,841  35.7%   parallels we do not hold AT ALL
+```
+
+The case for this source is **not** filling print runs we lack — there are 22
+of those. It is the 2,841 parallels absent from the catalog, plus 85
+disagreements worth a human read, plus 744 independent corroborations of runs we
+already carry.
+
+*This number was wrong once. The first run reported 851 FILLABLE and ZERO
+KNOWN, because it read only `parallels[].numberedTo` — the vendor key — while
+checklist rows carry `printRun`. Zero corroboration was the tell: if we held
+print runs at all, some had to match. `2023 bowman` already carries
+`{name: "Gold", printRun: 50}`. **A field absent from the rows you happened to
+sample is not a field that does not exist.***
+
+### 3. Read the 85 CONFLICTs before adopting anything
+
+Never auto-resolved. Pre-release checklists get revised, and this source exists
+to stop us INFERRING print runs — overwriting on scrape reintroduces that in a
+new costume.
+
+### 4. The corrected sport audit — LANDED: 1.36%
+
+**195,440 comps (1.36%)**, down from the withdrawn 1,243,562 (8.69%). The new
+gate refused 146 setKeys as cross-sport franchises — `2022|topps` alone carries
+baseball 183,114 against football 214 and is no longer allowed to adjudicate.
+
+Spot-checked before trusting it: the largest moves are Victor Wembanyama cards
+in *2023 Topps Now Baseball*, currently slugged `hiq:basketball:`. The title
+says Baseball and the set is a baseball product, so the move is correct — the
+same shape as the Jason Kelce First Pitch case, resolved the other way. NOT YET
+APPLIED.
+
+### 5. Identity-level dedupe — unchanged, still open
+
+Slug-level is done (31,692 rows hidden), but Eric Hartman still shows 28
+duplicate identities: ONE card across SEVERAL slugs, invisible to slug grouping.
+Needs `cardIdentityKey` grouping and its own dry run — two different slugs might
+be two different cards.
+
+### 6. Re-measure before acting on anything below
+
+Every figure in the sections that follow was taken BEFORE the 2026-08-20 fixes
+(search authority ranking, the sub-raw clamp removal, the flat-predicted fix).
+`isAuto 838+155`, `507 null cardNumbers`, `4,837 CONFLICT comps` and the
+trendable-series counts are all stale. Re-measure, then act.
+
+### 7. Watch the post-deploy pricing surfaces — SHIPPED e54c302a
+
+`e54c302a` changed three runtime paths. The one to watch is `/price-by-id`:
+predicted price was structurally flat (`effectiveFmv x 1.0`) for EVERY card
+because `est.forwardProjectionFactor` is never assigned. Predicted prices on
+pinned cards will now move. That is the fix working, not a regression — but it
+is the most likely explanation for a sales index that appeared stuck.
 
 ---
 
