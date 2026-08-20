@@ -517,6 +517,24 @@ function extractPrintRun(title: string, isTcg = false): number | null {
   // leaves a genuinely numbered TCG parallel — "... 40/147 ... /25" — still
   // able to report /25 correctly.
   if (isTcg) t = t.replace(TCG_NUMBER_RE_G, " ");
+
+  // CF-GRADE-FRACTION-IS-NOT-A-SERIAL (Drew, 2026-08-20: "we need to fix the
+  // parser store"). A GRADE written as a fraction is not a print run:
+  //
+  //   "...#CPA-LD PSA 10/9 DZ480"   -> read as /9    (catalog says /150)
+  //   "...Padres PSA 9/10"          -> read as /10
+  //   "...PSA/9 #CPA-LD"            -> read as /9
+  //
+  // Found via the rematch diagnostic: 4,837 comps claim a serial the checklist
+  // denies, and Leo De Vries CPA-LD alone had a cluster sitting in /9 and /10
+  // pools for a card that is only ever /150. The comps are real sales at real
+  // prices, silently pooled with cards a hundred times rarer.
+  //
+  // Stripped rather than skipped, so a title carrying BOTH a grade fraction and
+  // a genuine serial — "PSA 9/10 ... Blue Refractor /150" — still reports /150.
+  t = t.replace(/\b(PSA|BGS|SGC|CGC|HGA|TAG|ACE)\s*\/?\s*\d{1,2}(\.5)?\s*\/\s*\d{1,2}(\.5)?\b/gi, " ")
+       .replace(/\b(PSA|BGS|SGC|CGC|HGA|TAG|ACE)\s*\/\s*\d{1,2}(\.5)?\b/gi, " ");
+
   // First look for X/Y serial style — denominator is the print run
   const serial = t.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,3})(?:\D|$)/);
   if (serial) return Number(serial[2]);
