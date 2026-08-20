@@ -97,6 +97,108 @@ const DUAL_SPORT = new Set([
 const AMBIGUOUS_TCG_NAMES = new Set(["mountain", "island", "forest", "plains", "swamp"]);
 
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+
+/**
+ * CF-NAME-FRAGMENTATION (Drew, 2026-08-20: cross-sport contamination still in
+ * the baseball index after the first sweep).
+ *
+ * The first sweep keyed its histogram on norm(playerName), and that is why
+ * Marcus Mariota, Shedeur Sanders and Cristiano Ronaldo survived it. Their comp
+ * playerNames are polluted with insert and parallel words, so ONE player becomes
+ * hundreds of keys:
+ *
+ *   shedeur sanders   10,731 comps   84.8% football, 14.4% BASEBALL
+ *                     550 distinct normalised names
+ *     9,003  "shedeur sanders"
+ *       145  "rookies shedeur sanders"
+ *        72  "rated shedeur sanders"
+ *
+ *   and the baseball rows are named
+ *     "Phoenician Penmanship Shedeur Sanders"
+ *     "Revolution Rookies Shedeur Sanders"
+ *
+ * Each variant is thin on its own, so it is skipped as insufficient history and
+ * the player's overwhelming football dominance never reaches it. I had blamed
+ * the DOMINANCE / MIN_COMPS thresholds; they were never the cause.
+ *
+ * A leading-noise stripper does not fix it either. core() takes the first two
+ * non-noise tokens, which for "Phoenician Penmanship Shedeur Sanders" yields
+ * "phoenician penmanship" — the noise here is a PREFIX, and the vocabulary of
+ * insert names is open-ended, so no strip list can be complete.
+ *
+ * CONTAINMENT AGAINST AN ESTABLISHED NAME IS THE SIGNAL. A variant that CONTAINS
+ * a name we already know — one with real volume and a clear home sport — is
+ * almost certainly that player. Anchors require ANCHOR_MIN_COMPS so a rare
+ * two-word name cannot capture unrelated cards, and both parts must be present
+ * as whole words so "sanders" alone never matches Deion.
+ */
+const ANCHOR_MIN_COMPS = Number(arg("anchorMinComps", "200"));
+
+/**
+ * CF-TWO-PEOPLE-ONE-NAME. Dominance alone cannot tell a contaminated player
+ * from two real people who share a name, and the two need OPPOSITE treatment:
+ *
+ *   tony gonzalez  1,227 comps   69.6% baseball / 28.9% football
+ *      baseball 838 PRE-1990        <- the MLB outfielder, 1960s
+ *      football 279 (1990-2009)     <- the NFL Hall of Fame tight end
+ *      TWO PEOPLE — moving either way destroys real data
+ *
+ *   jason kelce    1,327 comps   65.3% football / 34.7% baseball
+ *      football 866 (2010+)
+ *      baseball 460 (2010+)         <- same era
+ *      ONE PERSON — 460 contaminated rows
+ *
+ * Both sit below a 0.85 dominance bar, so the current threshold protects
+ * Gonzalez and abandons Kelce by accident rather than by reasoning. Lowering it
+ * would fix Kelce and CORRUPT Gonzalez.
+ *
+ * ERA IS THE DISCRIMINATOR. Two people occupy different decades; contamination
+ * shares an era. So a stray sport is only condemned when its cards overlap the
+ * home sport's active years — otherwise it is reported and left alone.
+ */
+const ERA_OVERLAP_MIN = Number(arg("eraOverlapMin", "0.5"));
+
+/** Median year of a set of card years, cheap and outlier-tolerant. */
+function medianYear(years) {
+  if (!years.length) return null;
+  const s = years.slice().sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+}
+
+/**
+ * Do two year-sets describe the same career window?
+ *
+ * Compares medians against a generous 20-year window — a career plus its
+ * reprints. Deliberately generous: the cost of a false "same era" is one bad
+ * move, while a false "different era" merely leaves a row unfixed.
+ */
+function sameEra(homeYears, strayYears) {
+  const h = medianYear(homeYears), t = medianYear(strayYears);
+  if (h == null || t == null) return true;   // no evidence -> do not block
+  return Math.abs(h - t) <= 20;
+}
+
+/** Build a lookup of established two-word names, longest first so a more
+ *  specific anchor wins over a shorter one it contains. */
+function buildAnchors(hist) {
+  const anchors = [];
+  for (const [name, m] of hist) {
+    const total = [...m.values()].reduce((s, n) => s + n, 0);
+    if (total < ANCHOR_MIN_COMPS) continue;
+    if (name.split(" ").length !== 2) continue;   // first + last only
+    anchors.push(name);
+  }
+  anchors.sort((a, b) => b.length - a.length);
+  return anchors;
+}
+
+/** Does this variant name contain an established anchor as whole words? */
+function anchorFor(name, anchors) {
+  if (!name) return null;
+  const padded = ` ${name} `;
+  for (const a of anchors) if (padded.includes(` ${a} `)) return a;
+  return null;
+}
 const sportOf = (slug) => String(slug ?? "").split(":")[1] || "";
 
 const newClient = () => new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
@@ -198,6 +300,7 @@ async function main() {
   // ── PASS 1: player -> sport histogram, whole container ────────────────────
   // Counts only. Row identities are NOT held here — 13M ids would not fit.
   const hist = new Map();   // player -> Map(sport -> count)
+  const years = new Map();  // player -> Map(sport -> year[])
   let scanned = 0;
   scanned = await scanAll("sold_comps",
     `SELECT c.playerName, c.hobbyiqCardId FROM c
@@ -209,10 +312,52 @@ async function main() {
       let m = hist.get(player);
       if (!m) hist.set(player, (m = new Map()));
       m.set(sport, (m.get(sport) ?? 0) + 1);
+      // Year per (player, sport) — the era signal that separates two people
+      // sharing a name from one contaminated player.
+      const yr = Number(String(r.hobbyiqCardId).split(":")[2]);
+      if (Number.isFinite(yr) && yr > 1900) {
+        let ym = years.get(player);
+        if (!ym) years.set(player, (ym = new Map()));
+        let arr = ym.get(sport);
+        if (!arr) ym.set(sport, (arr = []));
+        if (arr.length < 400) arr.push(yr);   // a sample is plenty for a median
+      }
     }, "pass1");
 
+  // ── Fold name variants into their anchor BEFORE deciding homes ───────────
+  //
+  // Without this, "Phoenician Penmanship Shedeur Sanders" is a separate player
+  // from "Shedeur Sanders", thin on its own, and skipped — which is exactly how
+  // 1,547 of his BASEBALL rows survived the first sweep.
+  const anchors = buildAnchors(hist);
+  const alias = new Map();          // variant -> anchor
+  let folded = 0, foldedComps = 0;
+  for (const [name, m] of hist) {
+    if (name.split(" ").length === 2 && hist.has(name)) {
+      const total = [...m.values()].reduce((s, n) => s + n, 0);
+      if (total >= ANCHOR_MIN_COMPS) continue;   // it IS an anchor
+    }
+    const a = anchorFor(name, anchors);
+    if (!a || a === name) continue;
+    alias.set(name, a);
+    folded++;
+    const target = hist.get(a);
+    for (const [sport, n] of m) { target.set(sport, (target.get(sport) ?? 0) + n); foldedComps += n; }
+    const vy = years.get(name), ay = years.get(a);
+    if (vy && ay) for (const [sport, arr] of vy) {
+      let dst = ay.get(sport); if (!dst) ay.set(sport, (dst = []));
+      for (const y of arr) if (dst.length < 400) dst.push(y);
+    }
+  }
+  // A variant's counts now live on its anchor; drop the variant so it cannot be
+  // judged on its own thin history.
+  for (const v of alias.keys()) hist.delete(v);
+  console.log(`name variants folded into an anchor: ${folded.toLocaleString()}  (${foldedComps.toLocaleString()} comps)`);
+  console.log(`anchors (>= ${ANCHOR_MIN_COMPS} comps, two-word names): ${anchors.length.toLocaleString()}
+`);
+
   // ── Decide each player's home sport, and which sports are strays ──────────
-  let skippedDual = 0, skippedThin = 0, skippedNoDominance = 0;
+  let skippedDual = 0, skippedThin = 0, skippedNoDominance = 0, eraBlocked = 0;
   for (const [player, m] of hist) {
     if (DUAL_SPORT.has(player) || AMBIGUOUS_TCG_NAMES.has(player)) { skippedDual++; continue; }
     const total = [...m.values()].reduce((s, n) => s + n, 0);
@@ -221,9 +366,15 @@ async function main() {
     const [home, homeCount] = ranked[0];
     if (homeCount / total < DOMINANCE) { skippedNoDominance++; continue; }
     const strays = new Set();
+    const ym = years.get(player);
     for (const [sport, n] of ranked.slice(1)) {
       if (!sport || sport === "multi-sport") continue;
-      if (n / total <= MAX_MINORITY) strays.add(sport);
+      if (n / total > MAX_MINORITY) continue;
+      // ERA GATE. A stray whose cards sit in a different decade from the home
+      // sport is probably a DIFFERENT PERSON with the same name — the MLB and
+      // NFL Tony Gonzalezes — and must not be moved.
+      if (ym && !sameEra(ym.get(home) ?? [], ym.get(sport) ?? [])) { eraBlocked++; continue; }
+      strays.add(sport);
     }
     if (strays.size) homeOf.set(player, { home, strays, total, homeCount });
   }
@@ -239,14 +390,15 @@ async function main() {
     fs.writeFileSync(HOMES_OUT, JSON.stringify({
       builtAt: new Date().toISOString(), scanned, players: hist.size,
       minComps: MIN_COMPS, dominance: DOMINANCE, maxMinority: MAX_MINORITY, homes,
+      alias: Object.fromEntries(alias),
     }));
     console.log(`pass1 verdict saved -> ${HOMES_OUT}\n`);
   }
-  return await passTwo(homeOf);
+  return await passTwo(homeOf, alias);
 }
 
 /** ── PASS 2: collect the actual stray rows, then repair ──────────────────── */
-async function passTwo(homeOf) {
+async function passTwo(homeOf, alias = new Map()) {
   const sold = container(newClient(), "sold_comps");
 
   // Pass 2 re-reads the container rather than querying the 4,791 condemned
@@ -260,7 +412,8 @@ async function passTwo(homeOf) {
     `SELECT c.id, c.cardId, c.playerName, c.hobbyiqCardId, c.sport, c.price FROM c
       WHERE IS_DEFINED(c.hobbyiqCardId) AND NOT IS_NULL(c.hobbyiqCardId) AND IS_DEFINED(c.playerName)`,
     (r) => {
-      const info = homeOf.get(norm(r.playerName));
+      const n = norm(r.playerName);
+      const info = homeOf.get(alias.get(n) ?? n);
       if (!info) return;
       const sport = sportOf(r.hobbyiqCardId);
       if (!info.strays.has(sport)) return;
