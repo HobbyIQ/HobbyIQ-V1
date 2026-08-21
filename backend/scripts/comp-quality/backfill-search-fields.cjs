@@ -136,8 +136,16 @@ async function main() {
   // Pass 1: build recent-sale-count map from sold_comps (last 90 days)
   const cutoffIso = new Date(Date.now() - 90 * 86_400_000).toISOString();
   console.log(`  building recent-sale-count map (>= ${cutoffIso})...`);
-  const rscQuery = `SELECT c.cardYear, c.cardNumber FROM c WHERE c.sport = @sp AND c.soldAt >= @from AND IS_DEFINED(c.cardNumber) AND c.cardNumber != null AND c.cardNumber != ''`;
-  const rscIt = sc.items.query({ query: rscQuery, parameters: [{ name: "@sp", value: sport }, { name: "@from", value: cutoffIso }] }, { maxItemCount: 5000 });
+  // CF-SEARCH-ENRICH-SPORT-ALL (2026-08-20). This query kept `c.sport = @sp`
+  // after the catalog scan learned about --sport all. No row has sport
+  // literally "all", so the map came back EMPTY and every patch would have
+  // carried recentSaleCount: 0 — clobbering the real count on 3,030,193 rows.
+  // Caught by reading a dry run rather than its headline.
+  const rscSportFilter = sport && sport !== "all" ? " AND c.sport = @sp" : "";
+  const rscParams = [{ name: "@from", value: cutoffIso }];
+  if (rscSportFilter) rscParams.push({ name: "@sp", value: sport });
+  const rscQuery = `SELECT c.cardYear, c.cardNumber FROM c WHERE c.soldAt >= @from${rscSportFilter} AND IS_DEFINED(c.cardNumber) AND c.cardNumber != null AND c.cardNumber != ''`;
+  const rscIt = sc.items.query({ query: rscQuery, parameters: rscParams }, { maxItemCount: 5000 });
   const recentCountByYearNumber = new Map();
   let scannedSales = 0;
   while (rscIt.hasMoreResults()) {
@@ -152,6 +160,9 @@ async function main() {
     process.stdout.write(`\r  sales scanned=${scannedSales} distinct=${recentCountByYearNumber.size}`);
   }
   console.log(`\n  ${recentCountByYearNumber.size} distinct (year|number) keys with recent sales`);
+  if (recentCountByYearNumber.size === 0) {
+    console.warn("  WARNING: sales map is EMPTY — recentSaleCount will be CARRIED FORWARD, not recomputed.");
+  }
 
   // Pass 2: scan card_catalog, compute searchText + searchTokens + lookup recentSaleCount
   // MISSING_ONLY mode narrows the scan to rows where searchTokens is undefined
@@ -196,11 +207,17 @@ async function main() {
       if (searchTokens.length === 0) { refused++; continue; }
       const key = `${r.year}|${String(r.number || "").toUpperCase()}`;
       const recentSaleCount = recentCountByYearNumber.get(key) || 0;
+      // If the sales map is empty we have NO information about recency, and
+      // writing 0 would assert something false on every row. Carry the
+      // existing value forward instead. Independent of the fix above: this
+      // also protects a run where the sales scan legitimately returns nothing.
+      const haveSalesData = recentCountByYearNumber.size > 0;
+      const effectiveRecentSaleCount = haveSalesData ? recentSaleCount : (r.recentSaleCount ?? 0);
       // Skip only when all three match — searchTokens compared by
       // stringified sort so array-order differences don't force rewrites.
       const existingTokensKey = Array.isArray(r.searchTokens) ? [...r.searchTokens].sort().join("|") : "";
       const newTokensKey = [...searchTokens].sort().join("|");
-      if (r.searchText === searchText && existingTokensKey === newTokensKey && (r.recentSaleCount ?? 0) === recentSaleCount) {
+      if (r.searchText === searchText && existingTokensKey === newTokensKey && (r.recentSaleCount ?? 0) === effectiveRecentSaleCount) {
         unchanged++;
         continue;
       }
@@ -209,7 +226,7 @@ async function main() {
         partitionKey: r.cardId,
         searchText,
         searchTokens,
-        recentSaleCount,
+        recentSaleCount: effectiveRecentSaleCount,
       });
     }
     process.stdout.write(`\r  catalog scanned=${scanned} unchanged=${unchanged} refused=${refused} patches=${patches.length}`);
