@@ -97,4 +97,13 @@ jobs:
           SEARCH_ENRICH_APPLY: 'true'
           SEARCH_ENRICH_MISSING_ONLY: 'true'
           SEARCH_ENRICH_CONCURRENCY: '8'
+          # CF-SEARCH-ENRICH-BOUNDED-BATCH (2026-08-20). The scan was widened
+          # beyond source='cardsight' AND sport=baseball, which took the
+          # eligible set from a few thousand rows to ~3.03M missing tokens
+          # (measured, refused=0). Draining that unattended in one pass would
+          # saturate RU on an account whose /search latency is already the
+          # open problem. Cap the nightly and let it drain over many runs;
+          # the script prints DEFERRED so a capped run cannot be mistaken
+          # for a finished one. Run it manually without the cap to go faster.
+          SEARCH_ENRICH_MAX_PATCHES: '150000'
         run: node scripts/comp-quality/backfill-search-fields.cjs --sport baseball
