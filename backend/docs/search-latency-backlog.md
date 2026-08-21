@@ -107,6 +107,55 @@ arm and the fuzzy arm, so no exact-match arm can short-circuit a misspelling.
 Note the range is wider than it looks: exact "carey" 1.5s vs prefix "care" 16.6s,
 because "care" also pulls Careaga, Carela and every other token starting that way.
 
+### 2b. ROOT CAUSE: the searchTokens backfill cannot reach most rows
+
+The seven `CONTAINS` branches in item 2 exist for a documented reason:
+
+> tree-built card nodes (~182K docs) do not have searchTokens populated — only
+> legacy vendor rows do
+
+So the fix is not only SQL. If `searchTokens` were populated everywhere, the
+seven unindexed branches could be dropped and the query would be fully indexed.
+
+There IS a `Nightly searchTokens backfill` workflow. It has run **green every
+night** (verified: successive successes through 2026-08-20). Its query:
+
+```sql
+WHERE c.source = cardsight AND c.sport = @sp
+      AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null)
+```
+
+Two hard filters that the workflow name does not suggest:
+
+1. **`c.source = cardsight` only.** Cardsight was RETIRED from matching on
+   2026-08-16 (`project_cardsight_status_deprecated_but_active_backup`). The
+   nightly job backfills a dead source and touches nothing else — not
+   tree-built nodes, not checklist-scraped rows, not CH-derived rows.
+2. **`c.sport = @sp`, default baseball**, and the workflow invokes it as
+   `--sport baseball`. Football, basketball, hockey and Pokemon get nothing.
+
+It is green because it does exactly what it was scoped to do. It is not the job
+its name implies. See `feedback_green_workflow_is_not_data_flow` — verify the
+write, not the run.
+
+**Sizing query (run on a quiet account — this is a scan):**
+
+```sql
+SELECT c.source, COUNT(1) AS n FROM c
+WHERE STARTSWITH(c.id, hiq:)
+  AND (NOT IS_DEFINED(c.searchTokens) OR ARRAY_LENGTH(c.searchTokens) = 0)
+GROUP BY c.source
+```
+
+**Order of work, once sized:**
+
+1. Widen the backfill to every source and every sport (drop both filters, or
+   parameterise and fan out). Re-tokenising is idempotent.
+2. Only THEN drop the `CONTAINS` branches. Dropping them while rows still lack
+   tokens would make those cards unfindable — strictly worse than slow.
+
+Do not reverse that order.
+
 ### 3. Product decisions — not engineering calls
 
 - **`catalogOptions` freshness vs speed.** Uncached *by design* so a
