@@ -39,15 +39,44 @@ const CONCURRENCY = Number(process.env.SEARCH_ENRICH_CONCURRENCY || "12");
 // nightly cron so we don't re-scan 866k already-indexed rows every day.
 const MISSING_ONLY = process.env.SEARCH_ENRICH_MISSING_ONLY === "true";
 
+// CF-SEARCH-ENRICH-BOTH-SHAPES (2026-08-20). card_catalog holds TWO row
+// shapes and this only ever read one of them.
+//
+//   cardsight rows : player, releaseName, number, parallels[].name, attributes[]
+//   canonical rows : playerName, setKey, cardNumber, parallel, parallelSlug
+//
+// The job was scoped `WHERE c.source = 'cardsight'`, so reading only the
+// first shape was self-consistent — and also why every non-cardsight row in
+// the catalog still has no searchTokens, which is what forces
+// catalogSearch's seven unindexed CONTAINS branches and the 20s+ scans.
+//
+// Read both. A row that carries neither shape produces no parts, and the
+// caller REFUSES it rather than writing an empty token array — see the
+// refusal guard at the patch site.
 function buildSearchText(row) {
   const parts = [];
+  // player
   if (row.player) parts.push(String(row.player));
+  if (row.playerName && row.playerName !== row.player) parts.push(String(row.playerName));
+  // product / set
   if (row.releaseName) parts.push(String(row.releaseName));
   if (row.setName && row.setName !== row.releaseName) parts.push(String(row.setName));
+  if (row.setKey && row.setKey !== row.setName && row.setKey !== row.releaseName) {
+    parts.push(String(row.setKey).replace(/-/g, " "));
+  }
+  // card number
   if (row.number) parts.push(String(row.number));
+  if (row.cardNumber && row.cardNumber !== row.number) parts.push(String(row.cardNumber));
   if (row.year) parts.push(String(row.year));
+  // parallels: array shape (cardsight) and scalar shape (canonical)
   if (Array.isArray(row.parallels)) {
     for (const p of row.parallels) if (p?.name) parts.push(String(p.name));
+  }
+  if (row.parallel && String(row.parallel).toLowerCase() !== "base") {
+    parts.push(String(row.parallel));
+  }
+  if (row.parallelSlug && row.parallelSlug !== row.parallel) {
+    parts.push(String(row.parallelSlug).replace(/-/g, " "));
   }
   if (Array.isArray(row.attributes)) {
     for (const a of row.attributes) if (a) parts.push(String(a));
@@ -94,12 +123,15 @@ async function runInParallel(items, worker, concurrency = CONCURRENCY) {
 }
 
 async function main() {
+  // Default kept as baseball so an existing invocation behaves identically.
+  // Pass --sport all to cover every sport, which is what the widened scan
+  // is for.
   const sport = arg("sport", "baseball");
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const cc = client.database("hobbyiq").container("card_catalog");
   const sc = client.database("hobbyiq").container("sold_comps");
 
-  console.log(`[search-enrich] scope: sport=${sport}  apply=${APPLY}`);
+  console.log(`[search-enrich] scope: sport=${sport}  source=ALL  apply=${APPLY}  missingOnly=${MISSING_ONLY}`);
 
   // Pass 1: build recent-sale-count map from sold_comps (last 90 days)
   const cutoffIso = new Date(Date.now() - 90 * 86_400_000).toISOString();
@@ -126,12 +158,29 @@ async function main() {
   // — used by the nightly cron to avoid re-scanning already-indexed rows.
   console.log(`  scanning card_catalog${MISSING_ONLY ? " (missing-only)" : ""}...`);
   const missingFilter = MISSING_ONLY
-    ? " AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null)"
+    // An EMPTY array must count as missing. It is defined and not null, so
+    // the original predicate skipped such rows forever — exactly the
+    // well-formed-wrong-row trap that hides a row from every later sweep.
+    ? " AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null OR ARRAY_LENGTH(c.searchTokens) = 0)"
     : "";
-  const ccQuery = `SELECT c.id, c.cardId, c.player, c.releaseName, c.setName, c.number, c.year, c.parallels, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE c.source = 'cardsight' AND c.sport = @sp${missingFilter}`;
-  const ccIt = cc.items.query({ query: ccQuery, parameters: [{ name: "@sp", value: sport }] }, { maxItemCount: 5000 });
+  // CF-SEARCH-ENRICH-WIDEN (2026-08-20). Was:
+  //     WHERE c.source = 'cardsight' AND c.sport = @sp
+  //
+  // Both filters were invisible from the workflow name ("Nightly
+  // searchTokens backfill") and between them excluded almost the whole
+  // catalog: every tree-built node, every checklist-scraped row, every
+  // CH-derived row, and every sport except baseball. Cardsight was retired
+  // from matching on 2026-08-16, so the job was backfilling a dead source
+  // nightly and reporting success.
+  //
+  // Now: no source filter, and sport is opt-IN via --sport. Projection
+  // carries both row shapes so buildSearchText can see canonical rows.
+  const sportFilter = sport && sport !== "all" ? " AND c.sport = @sp" : "";
+  const ccParams = sportFilter ? [{ name: "@sp", value: sport }] : [];
+  const ccQuery = `SELECT c.id, c.cardId, c.player, c.playerName, c.releaseName, c.setName, c.setKey, c.number, c.cardNumber, c.year, c.parallels, c.parallel, c.parallelSlug, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE STARTSWITH(c.id, 'hiq:')${sportFilter}${missingFilter}`;
+  const ccIt = cc.items.query({ query: ccQuery, parameters: ccParams }, { maxItemCount: 5000 });
   const patches = [];
-  let scanned = 0, unchanged = 0;
+  let scanned = 0, unchanged = 0, refused = 0;
   while (ccIt.hasMoreResults()) {
     const { resources } = await ccIt.fetchNext();
     if (!Array.isArray(resources)) continue;
@@ -139,6 +188,12 @@ async function main() {
       scanned++;
       const searchText = buildSearchText(r);
       const searchTokens = buildSearchTokens(searchText);
+      // REFUSE rather than fall back. A row we cannot tokenise must be left
+      // ALONE, not stamped with an empty array: `searchTokens: []` is
+      // defined and not null, so it would satisfy the missing-only filter
+      // forever after and the row could never be repaired. Skipping leaves
+      // it visible to the next run.
+      if (searchTokens.length === 0) { refused++; continue; }
       const key = `${r.year}|${String(r.number || "").toUpperCase()}`;
       const recentSaleCount = recentCountByYearNumber.get(key) || 0;
       // Skip only when all three match — searchTokens compared by
@@ -157,11 +212,12 @@ async function main() {
         recentSaleCount,
       });
     }
-    process.stdout.write(`\r  catalog scanned=${scanned} unchanged=${unchanged} patches=${patches.length}`);
+    process.stdout.write(`\r  catalog scanned=${scanned} unchanged=${unchanged} refused=${refused} patches=${patches.length}`);
   }
   console.log(`\nSummary:`);
   console.log(`  scanned:      ${scanned}`);
   console.log(`  unchanged:    ${unchanged}`);
+  console.log(`  refused:      ${refused}   (no tokenisable fields — left untouched, NOT stamped empty)`);
   console.log(`  to patch:     ${patches.length}`);
 
   if (!APPLY || patches.length === 0) {
