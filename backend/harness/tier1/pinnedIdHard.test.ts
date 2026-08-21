@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   beginCase,
   casesIn,
-  CASE_BUDGET_MS,
+  HOOK_BUDGET_MS,
   expectPinnedIdAllowedSource,
   expectWellFormed,
   handleSnapshotDiff,
@@ -56,7 +56,7 @@ describeTier("Tier 1 · pinned-id-hard (cases 19-20)", () => {
             ctx.notes.push("no cardHedgeCardId in baseline");
           }
         },
-        CASE_BUDGET_MS
+        HOOK_BUDGET_MS
       );
 
       it("search is well-formed", () => {

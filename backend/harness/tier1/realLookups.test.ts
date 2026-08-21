@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   beginCase,
   casesIn,
-  CASE_BUDGET_MS,
+  HOOK_BUDGET_MS,
   expectWellFormed,
   handleSnapshotDiff,
   hitPriceById,
@@ -57,7 +57,7 @@ describeTier("Tier 1 · real-lookup (cases 01-11)", () => {
             ctx.notes.push("baseline had no cardHedgeCardId — skipping /price-by-id");
           }
         },
-        CASE_BUDGET_MS
+        HOOK_BUDGET_MS
       );
 
       it("search response is well-formed", () => {

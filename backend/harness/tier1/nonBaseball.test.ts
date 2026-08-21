@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   beginCase,
   casesIn,
-  CASE_BUDGET_MS,
+  HOOK_BUDGET_MS,
   expectWellFormed,
   handleSnapshotDiff,
   hitSearch,
@@ -40,7 +40,7 @@ describeTier("Tier 1 · non-baseball (cases 17-18)", () => {
           ctx.startMs = beginCase(c).startMs;
           ctx.search = await hitSearch(c.query);
         },
-        CASE_BUDGET_MS
+        HOOK_BUDGET_MS
       );
 
       it("response is well-formed even without comps", () => {

@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   beginCase,
   casesIn,
-  CASE_BUDGET_MS,
+  HOOK_BUDGET_MS,
   expectLiveData,
   expectWellFormed,
   handleSnapshotDiff,
@@ -69,7 +69,7 @@ describeTier("Tier 1 · popular-baseline (cases 12-14)", () => {
             }
           }
         },
-        CASE_BUDGET_MS
+        HOOK_BUDGET_MS
       );
 
       it("search is well-formed", () => {
