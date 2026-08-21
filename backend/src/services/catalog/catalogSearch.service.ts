@@ -61,6 +61,10 @@ export interface CatalogSearchInput {
   sport?: string | null;
   year?: number | null;
   isAuto?: boolean | null;
+  /** CF-SEARCH-ANCHOR-FROM-PARSER (2026-08-21). The player as already
+   *  resolved by parseCardQuery. When present it decides the anchor,
+   *  instead of re-guessing it from raw tokens. See the anchor block. */
+  playerName?: string | null;
 }
 
 export interface CatalogSearchHit {
@@ -336,7 +340,38 @@ export async function searchCatalog(
   const alphaTokens = tokens.filter(
     (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !isStopword(t),
   );
-  const anchor = alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null;
+  // CF-SEARCH-ANCHOR-FROM-PARSER (2026-08-21). "Longest non-stopword token"
+  // is a PROXY for the surname, and it loses whenever a colour or finish word
+  // is longer than the name. The stopword list covers brands and product lines
+  // (bowman, topps, chrome, refractor, sapphire) but no colours, so:
+  //
+  //   "2024 Bowman Chrome Blue Raywave Auto Leo De Vries"  -> raywave (7) beats vries (5)
+  //   "2018 Panini Prizm Silver Luka Doncic"               -> silver (6) ties doncic (6)
+  //
+  // Anchoring on "raywav" matches EVERY Raywave card, so TOP N is an arbitrary
+  // sample that rarely holds the card asked for, the quality gate fails, and the
+  // request escalates into the unindexed CONTAINS fallbacks. Measured 2026-08-21
+  // on an idle box: those queries spent 18-364s in searchCatalog while queries
+  // whose surname happened to win the anchor came back under 1.4s.
+  //
+  // This has been patched twice by adding the specific offending words to the
+  // denylist (CF-SEARCH-SELECTIVE-ANCHOR, CF-SEARCH-ANCHOR-IS-THE-NAME). A
+  // denylist cannot be completed — there are thousands of colour and finish
+  // words. But the caller has ALREADY resolved the player: parseCardQuery
+  // returns playerName with a confidence score. Use it.
+  //
+  // Longest token OF THE PLAYER NAME, not the last, so particles and suffixes
+  // ("de", "jr") cannot win: "Leo De Vries" -> vries, "Josh Hammond" -> hammond.
+  // Falls back to the old heuristic when the parser found no player.
+  const parsedPlayerAnchor = (() => {
+    const pn = String(input.playerName ?? "").toLowerCase();
+    if (!pn) return null;
+    const parts = pn.split(/[^a-z]+/).filter((t) => t.length >= 3);
+    if (parts.length === 0) return null;
+    return parts.sort((a, b) => b.length - a.length)[0] ?? null;
+  })();
+  const anchor = parsedPlayerAnchor
+    ?? (alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null);
 
   // A token that looks like a CARD NUMBER: alphanumeric with a digit, and not a
   // bare year. "hmt1", "bcp-69", "cpa-eha", "us285". Used to guarantee the

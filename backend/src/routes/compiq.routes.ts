@@ -2540,7 +2540,17 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     try {
       const { searchCatalog } = await import("../services/catalog/catalogSearch.service.js");
       const catalogStartedAt = Date.now();
-      const catalog = await searchCatalog({ query: query.trim(), limit: 25 });
+      // CF-SEARCH-ANCHOR-FROM-PARSER (2026-08-21). Hand searchCatalog the
+      // player we have already resolved. parseCardQuery runs inside the
+      // cacheWrap producer above, whose closure is not in scope here, and it
+      // is a pure function of the string — so re-running it is cheap and
+      // avoids restructuring the cached region.
+      const parsedForAnchor = parseCardQuery(query);
+      const catalog = await searchCatalog({
+        query: query.trim(),
+        limit: 25,
+        playerName: parsedForAnchor?.playerName ?? null,
+      });
       catalogMs = Date.now() - catalogStartedAt;
       catalogOptions = catalog.hits;
       catalogProvisional = catalog.provisional === true;
