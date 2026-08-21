@@ -29,7 +29,13 @@ const path = require("path");
 const backend = path.resolve(__dirname, "..", "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 
+// CF-ARG-BOTH-FORMS (2026-08-21). This accepted only `--name value`. A
+// `--minYear=2026` silently fell through to the fallback, so the scan ran
+// UNSCOPED while the log said years=any..any — a wrong flag that looked like
+// a working one. Accept both forms.
 function arg(name, fallback) {
+  const eq = process.argv.find((a) => a.startsWith(`--${name}=`));
+  if (eq) return eq.slice(name.length + 3);
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : fallback;
 }
@@ -55,6 +61,16 @@ const SKIP_SALES = process.env.SEARCH_ENRICH_SKIP_SALES === "true";
 // Bulk patching. Cosmos caps a bulk call at 100 operations.
 const BULK = process.env.SEARCH_ENRICH_BULK !== "false";
 const BULK_BATCH = 100;
+// CF-SEARCH-ENRICH-STREAMING (2026-08-21). The scan used to buffer EVERY
+// patch and write once at the end. Fine for a missing-only pass of a few
+// thousand rows; fatal for a full re-tokenisation, where 99.94% of 35.7M rows
+// change. Measured before this fix: 1.47GB resident at 1.79M buffered patches
+// (~820 bytes each) => ~29GB at full scale against an 8GB heap. It would have
+// died around 9-10M rows AFTER a long scan, having written nothing.
+//
+// Flush during the scan instead. Memory stays flat and the job remains ONE
+// scan, rather than N bounded passes each re-scanning all 35.7M rows.
+const FLUSH_EVERY = Number(process.env.SEARCH_ENRICH_FLUSH_EVERY || "50000");
 // MISSING_ONLY mode: only pull rows that lack searchTokens. Used by the
 // nightly cron so we don't re-scan 866k already-indexed rows every day.
 const MISSING_ONLY = process.env.SEARCH_ENRICH_MISSING_ONLY === "true";
@@ -151,7 +167,19 @@ async function main() {
   const cc = client.database("hobbyiq").container("card_catalog");
   const sc = client.database("hobbyiq").container("sold_comps");
 
-  console.log(`[search-enrich] scope: sport=${sport}  source=ALL  apply=${APPLY}  missingOnly=${MISSING_ONLY}`);
+  // CF-SEARCH-ENRICH-YEAR-SCOPE (2026-08-21). A full re-tokenisation is 35.7M
+  // rows (~13h at the 200,000 RU/s ceiling, which is partition-bound and will
+  // not go higher). Search traffic skews hard to recent product, so scope by
+  // year and run newest-first: value lands early and each year is resumable.
+  //   2026 829,705 | 2025 7,135,739 | 2024 1,965,345 | 2023 1,408,357
+  const minYear = Number(arg("minYear", "0")) || 0;
+  const maxYear = Number(arg("maxYear", "0")) || 0;
+  const yearFilter = (minYear ? " AND c.year >= @minY" : "") + (maxYear ? " AND c.year <= @maxY" : "");
+  const yearParams = [
+    ...(minYear ? [{ name: "@minY", value: minYear }] : []),
+    ...(maxYear ? [{ name: "@maxY", value: maxYear }] : []),
+  ];
+  console.log(`[search-enrich] scope: sport=${sport}  years=${minYear||"any"}..${maxYear||"any"}  apply=${APPLY}  missingOnly=${MISSING_ONLY}`);
 
   // Pass 1: build recent-sale-count map from sold_comps (last 90 days)
   const cutoffIso = new Date(Date.now() - 90 * 86_400_000).toISOString();
@@ -211,11 +239,53 @@ async function main() {
   // Now: no source filter, and sport is opt-IN via --sport. Projection
   // carries both row shapes so buildSearchText can see canonical rows.
   const sportFilter = sport && sport !== "all" ? " AND c.sport = @sp" : "";
-  const ccParams = sportFilter ? [{ name: "@sp", value: sport }] : [];
-  const ccQuery = `SELECT c.id, c.cardId, c.player, c.playerName, c.releaseName, c.setName, c.setKey, c.number, c.cardNumber, c.year, c.parallels, c.parallel, c.parallelSlug, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE STARTSWITH(c.id, 'hiq:')${sportFilter}${missingFilter}`;
+  const ccParams = [...(sportFilter ? [{ name: "@sp", value: sport }] : []), ...yearParams];
+  const ccQuery = `SELECT c.id, c.cardId, c.player, c.playerName, c.releaseName, c.setName, c.setKey, c.number, c.cardNumber, c.year, c.parallels, c.parallel, c.parallelSlug, c.attributes, c.searchText, c.recentSaleCount FROM c WHERE STARTSWITH(c.id, 'hiq:')${sportFilter}${yearFilter}${missingFilter}`;
   const ccIt = cc.items.query({ query: ccQuery, parameters: ccParams }, { maxItemCount: 5000 });
   const patches = [];
   let scanned = 0, unchanged = 0, refused = 0, deferred = 0;
+  // Writer, callable mid-scan. Totals accumulate across flushes.
+  let wroteOk = 0, wroteErr = 0, throttled = 0, flushes = 0;
+  const opsFor = (pp) => ({
+    operationType: "Patch",
+    id: pp.id,
+    partitionKey: pp.partitionKey,
+    resourceBody: {
+      operations: [
+        { op: "set", path: "/searchText", value: pp.searchText },
+        { op: "set", path: "/searchTokens", value: pp.searchTokens },
+        { op: "set", path: "/recentSaleCount", value: pp.recentSaleCount },
+      ],
+    },
+  });
+
+  // RETRY ON 429 IS NOT OPTIONAL. The set-sport repair had none and silently
+  // lost 659 rows to throttling; only a second full pass recovered them.
+  async function flush(batchRows) {
+    if (!APPLY || batchRows.length === 0) return;
+    flushes++;
+    const batches = [];
+    for (let i = 0; i < batchRows.length; i += BULK_BATCH) batches.push(batchRows.slice(i, i + BULK_BATCH));
+    const r = await runInParallel(batches, async (batch) => {
+      let pending = batch;
+      for (let attempt = 0; attempt < 6 && pending.length > 0; attempt++) {
+        if (attempt > 0) await new Promise((r2) => setTimeout(r2, Math.min(8000, 250 * 2 ** attempt)));
+        const res = await cc.items.bulk(pending.map(opsFor));
+        const retry = [];
+        for (let k = 0; k < res.length; k++) {
+          const code = res[k]?.statusCode ?? 0;
+          if (code >= 200 && code < 300) wroteOk++;
+          else if (code === 429 || code === 449 || code === 503) { throttled++; retry.push(pending[k]); }
+          else wroteErr++;
+        }
+        pending = retry;
+      }
+      wroteErr += pending.length;
+    });
+    // r.err counts BATCHES that threw outright; convert to rows.
+    wroteErr += r.err * BULK_BATCH;
+  }
+
   while (ccIt.hasMoreResults()) {
     const { resources } = await ccIt.fetchNext();
     if (!Array.isArray(resources)) continue;
@@ -239,9 +309,15 @@ async function main() {
       const effectiveRecentSaleCount = haveSalesData ? recentSaleCount : (r.recentSaleCount ?? 0);
       // Skip only when all three match — searchTokens compared by
       // stringified sort so array-order differences don't force rewrites.
-      const existingTokensKey = Array.isArray(r.searchTokens) ? [...r.searchTokens].sort().join("|") : "";
-      const newTokensKey = [...searchTokens].sort().join("|");
-      if (r.searchText === searchText && existingTokensKey === newTokensKey && (r.recentSaleCount ?? 0) === effectiveRecentSaleCount) {
+      // CF-SEARCH-ENRICH-NARROW-SCAN (2026-08-21). The scan used to project
+      // c.searchTokens for every row purely to detect "unchanged" — the large
+      // array field, across 8M rows, competing for the same RU as the writes.
+      // Same projection-width cost that makes the fallback SEARCH queries slow.
+      //
+      // Unnecessary: searchTokens is buildSearchTokens(searchText), a pure
+      // deterministic function. Equal searchText implies equal tokens, so
+      // comparing the string alone is sufficient AND strictly cheaper.
+      if (r.searchText === searchText && (r.recentSaleCount ?? 0) === effectiveRecentSaleCount) {
         unchanged++;
         continue;
       }
@@ -254,7 +330,14 @@ async function main() {
         recentSaleCount: effectiveRecentSaleCount,
       });
     }
-    process.stdout.write(`\r  catalog scanned=${scanned} unchanged=${unchanged} refused=${refused} patches=${patches.length}`);
+    if (APPLY && patches.length >= FLUSH_EVERY) {
+      await flush(patches);
+      patches.length = 0; // release before the next page
+    }
+    process.stdout.write(
+      `\r  scanned=${scanned} unchanged=${unchanged} refused=${refused} ` +
+      `written=${wroteOk} err=${wroteErr} thr=${throttled} buf=${patches.length}`,
+    );
   }
   console.log(`\nSummary:`);
   console.log(`  scanned:      ${scanned}`);
@@ -268,87 +351,24 @@ async function main() {
     console.log(`  NOT DONE. ${deferred} rows still need tokens after this batch.`);
   }
 
-  if (!APPLY || patches.length === 0) {
-    if (!APPLY && patches.length > 0) console.log(`\n*** DRY-RUN. Set SEARCH_ENRICH_APPLY=true to persist. ***`);
+  if (!APPLY) {
+    if (patches.length > 0) console.log(`\n*** DRY-RUN. Set SEARCH_ENRICH_APPLY=true to persist. ***`);
     return;
   }
 
-  // CF-SEARCH-ENRICH-BULK (2026-08-20). Per-item patch measured ~3,350
-  // rows/min at concurrency 16 on this account — 3.03M rows would take ~15
-  // hours. Cosmos bulk batches operations server-side (100 max per call), so
-  // send batches instead of individual round trips.
-  //
-  // RETRY ON 429 IS NOT OPTIONAL. The set-sport repair earlier today had no
-  // retry and silently lost 659 rows to throttling; only a second full pass
-  // recovered them. Here a throttled operation is retried with backoff, and
-  // anything still failing is reported rather than absorbed.
-  const opsFor = (p) => ({
-    operationType: "Patch",
-    id: p.id,
-    partitionKey: p.partitionKey,
-    resourceBody: {
-      operations: [
-        { op: "set", path: "/searchText", value: p.searchText },
-        { op: "set", path: "/searchTokens", value: p.searchTokens },
-        { op: "set", path: "/recentSaleCount", value: p.recentSaleCount },
-      ],
-    },
-  });
-
-  console.log(`\nPatching ${patches.length} rows — ${BULK ? `bulk(${BULK_BATCH})` : "per-item"} at concurrency ${CONCURRENCY}...`);
   const t0 = Date.now();
-  let done = 0, throttled = 0;
-  let result;
+  await flush(patches); // remainder
+  patches.length = 0;
 
-  if (BULK) {
-    const batches = [];
-    for (let i = 0; i < patches.length; i += BULK_BATCH) batches.push(patches.slice(i, i + BULK_BATCH));
-    let ok = 0, err = 0;
-    const r = await runInParallel(batches, async (batch) => {
-      let pending = batch;
-      for (let attempt = 0; attempt < 6 && pending.length > 0; attempt++) {
-        if (attempt > 0) {
-          const waitMs = Math.min(8000, 250 * 2 ** attempt);
-          await new Promise((r2) => setTimeout(r2, waitMs));
-        }
-        const res = await cc.items.bulk(pending.map(opsFor));
-        const retry = [];
-        for (let k = 0; k < res.length; k++) {
-          const code = res[k]?.statusCode ?? 0;
-          if (code >= 200 && code < 300) { ok++; }
-          else if (code === 429 || code === 449 || code === 503) { throttled++; retry.push(pending[k]); }
-          else { err++; }
-        }
-        pending = retry;
-      }
-      // Anything still pending after the retry budget is a real failure.
-      // COUNT ROWS, NOT BATCHES. runInParallel counts a thrown batch as a
-      // single error; at 100 rows per batch that understated the 2026-08-20
-      // run by 19x (reported 11,598, actually 220,793 unwritten) and read as
-      // 99.6% complete when it was 91.9%.
-      err += pending.length;
-      done += batch.length;
-      process.stdout.write(`\r  patched ${done}/${patches.length}  throttled-retries=${throttled}  errors=${err}`);
-    });
-    // r.err counts BATCHES that threw outright; convert to rows.
-    result = { ok, err: err + r.err * BULK_BATCH };
-    if (r.err > 0) console.log(`\n  ${r.err} batch(es) failed outright = ~${r.err * BULK_BATCH} rows`);
-  } else {
-    result = await runInParallel(patches, async (p) => {
-      await cc.item(p.id, p.partitionKey).patch(opsFor(p).resourceBody.operations);
-      done++;
-      if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${patches.length}`);
-    });
-  }
-  const secs = (Date.now() - t0) / 1000;
-  console.log(`\n  patched ${result.ok} / errors ${result.err} in ${secs.toFixed(1)}s  (${Math.round(result.ok / Math.max(secs, 1) * 60)}/min)`);
-  if (throttled > 0) console.log(`  ${throttled} operations hit 429 and were RETRIED (not lost).`);
+  console.log(`\n  written:      ${wroteOk}`);
+  console.log(`  errors:       ${wroteErr}`);
+  console.log(`  throttled:    ${throttled}   (retried, not lost)`);
+  console.log(`  flushes:      ${flushes}   (streamed during the scan, memory stayed flat)`);
+  if (wroteErr > 0) console.log(`  ${wroteErr} rows FAILED — re-run to pick them up.`);
+  void t0;
 
-  // CF-SEARCH-ENRICH-COVERAGE-ASSERT (2026-08-20). Never let the run's own
-  // counters be the last word. The nightly was GREEN for months while
-  // scoped to a retired source and one sport, and tonight's run reported a
-  // completion figure 19x off. Re-query the data and print what is actually
-  // left, so the log always carries ground truth.
+  // CF-SEARCH-ENRICH-COVERAGE-ASSERT: never let the run's own counters be
+  // the last word. Re-query the data and print what is actually left.
   try {
     const remainQ = {
       query:
@@ -359,12 +379,10 @@ async function main() {
     };
     const { resources: rem } = await cc.items.query(remainQ).fetchAll();
     const stillMissing = Array.isArray(rem) ? rem[0] : null;
-    console.log(`\n  COVERAGE: ${stillMissing} rows still lack searchTokens${sportFilter ? ` (sport=${sport})` : " (all sports)"}.`);
-    if (stillMissing > 0) console.log("  NOT FULLY COVERED — re-run to continue.");
-    else console.log("  Fully covered.");
+    console.log(`\n  COVERAGE: ${stillMissing} rows still lack searchTokens.`);
   } catch (e) {
     console.warn(`  coverage check failed: ${e.message} — do NOT read this run as complete`);
   }
-  if (result.err > 0) console.log(`  ${result.err} rows still FAILED — re-run to pick them up.`);
 }
+
 main().catch(e => { console.error(e); process.exit(1); });
