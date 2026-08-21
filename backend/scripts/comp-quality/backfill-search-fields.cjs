@@ -35,6 +35,26 @@ function arg(name, fallback) {
 }
 const APPLY = process.env.SEARCH_ENRICH_APPLY === "true";
 const CONCURRENCY = Number(process.env.SEARCH_ENRICH_CONCURRENCY || "12");
+// CF-SEARCH-ENRICH-BOUNDED-BATCH (2026-08-20). Widening the scan took the
+// nightly's workload from a few thousand cardsight rows to ~3.03M rows
+// missing tokens. Draining that in one unattended pass would saturate RU on
+// an account whose /search latency is ALREADY the open problem.
+//
+// 0 or unset = unlimited (the manual, supervised mode). The nightly sets a
+// real number so it drains incrementally.
+const MAX_PATCHES = Number(process.env.SEARCH_ENRICH_MAX_PATCHES || "0") || Infinity;
+// CF-SEARCH-ENRICH-SKIP-SALES (2026-08-20). Building the recent-sale map
+// scans ~3.02M sold_comps rows BEFORE a single catalog row is written, and it
+// is rebuilt on every invocation. When the goal is tokens — which is what
+// unblocks the indexed search path — that scan is pure overhead.
+//
+// Safe because of the CF-SEARCH-ENRICH-SPORT-ALL guard: an empty map means
+// recentSaleCount is CARRIED FORWARD from the existing row, never written as
+// 0. Skipping therefore leaves the field exactly as it was.
+const SKIP_SALES = process.env.SEARCH_ENRICH_SKIP_SALES === "true";
+// Bulk patching. Cosmos caps a bulk call at 100 operations.
+const BULK = process.env.SEARCH_ENRICH_BULK !== "false";
+const BULK_BATCH = 100;
 // MISSING_ONLY mode: only pull rows that lack searchTokens. Used by the
 // nightly cron so we don't re-scan 866k already-indexed rows every day.
 const MISSING_ONLY = process.env.SEARCH_ENRICH_MISSING_ONLY === "true";
@@ -135,7 +155,11 @@ async function main() {
 
   // Pass 1: build recent-sale-count map from sold_comps (last 90 days)
   const cutoffIso = new Date(Date.now() - 90 * 86_400_000).toISOString();
-  console.log(`  building recent-sale-count map (>= ${cutoffIso})...`);
+  if (SKIP_SALES) {
+    console.log("  SKIPPING recent-sale map (SEARCH_ENRICH_SKIP_SALES=true).");
+    console.log("  recentSaleCount will be carried forward, not recomputed.");
+  }
+  if (!SKIP_SALES) console.log(`  building recent-sale-count map (>= ${cutoffIso})...`);
   // CF-SEARCH-ENRICH-SPORT-ALL (2026-08-20). This query kept `c.sport = @sp`
   // after the catalog scan learned about --sport all. No row has sport
   // literally "all", so the map came back EMPTY and every patch would have
@@ -145,10 +169,10 @@ async function main() {
   const rscParams = [{ name: "@from", value: cutoffIso }];
   if (rscSportFilter) rscParams.push({ name: "@sp", value: sport });
   const rscQuery = `SELECT c.cardYear, c.cardNumber FROM c WHERE c.soldAt >= @from${rscSportFilter} AND IS_DEFINED(c.cardNumber) AND c.cardNumber != null AND c.cardNumber != ''`;
-  const rscIt = sc.items.query({ query: rscQuery, parameters: rscParams }, { maxItemCount: 5000 });
+  const rscIt = SKIP_SALES ? null : sc.items.query({ query: rscQuery, parameters: rscParams }, { maxItemCount: 5000 });
   const recentCountByYearNumber = new Map();
   let scannedSales = 0;
-  while (rscIt.hasMoreResults()) {
+  while (rscIt && rscIt.hasMoreResults()) {
     const { resources } = await rscIt.fetchNext();
     if (!Array.isArray(resources)) continue;
     for (const r of resources) {
@@ -159,8 +183,8 @@ async function main() {
     scannedSales += (resources || []).length;
     process.stdout.write(`\r  sales scanned=${scannedSales} distinct=${recentCountByYearNumber.size}`);
   }
-  console.log(`\n  ${recentCountByYearNumber.size} distinct (year|number) keys with recent sales`);
-  if (recentCountByYearNumber.size === 0) {
+  if (!SKIP_SALES) console.log(`\n  ${recentCountByYearNumber.size} distinct (year|number) keys with recent sales`);
+  if (!SKIP_SALES && recentCountByYearNumber.size === 0) {
     console.warn("  WARNING: sales map is EMPTY — recentSaleCount will be CARRIED FORWARD, not recomputed.");
   }
 
@@ -191,7 +215,7 @@ async function main() {
   const ccQuery = `SELECT c.id, c.cardId, c.player, c.playerName, c.releaseName, c.setName, c.setKey, c.number, c.cardNumber, c.year, c.parallels, c.parallel, c.parallelSlug, c.attributes, c.searchText, c.searchTokens, c.recentSaleCount FROM c WHERE STARTSWITH(c.id, 'hiq:')${sportFilter}${missingFilter}`;
   const ccIt = cc.items.query({ query: ccQuery, parameters: ccParams }, { maxItemCount: 5000 });
   const patches = [];
-  let scanned = 0, unchanged = 0, refused = 0;
+  let scanned = 0, unchanged = 0, refused = 0, deferred = 0;
   while (ccIt.hasMoreResults()) {
     const { resources } = await ccIt.fetchNext();
     if (!Array.isArray(resources)) continue;
@@ -221,6 +245,7 @@ async function main() {
         unchanged++;
         continue;
       }
+      if (patches.length >= MAX_PATCHES) { deferred++; continue; }
       patches.push({
         id: r.id,
         partitionKey: r.cardId,
@@ -236,24 +261,110 @@ async function main() {
   console.log(`  unchanged:    ${unchanged}`);
   console.log(`  refused:      ${refused}   (no tokenisable fields — left untouched, NOT stamped empty)`);
   console.log(`  to patch:     ${patches.length}`);
+  // NEVER let a cap look like completion. A bounded run that prints only
+  // its own batch size reads identically to a finished backfill.
+  if (deferred > 0) {
+    console.log(`  DEFERRED:     ${deferred}   (capped by SEARCH_ENRICH_MAX_PATCHES=${MAX_PATCHES}) — re-run to continue`);
+    console.log(`  NOT DONE. ${deferred} rows still need tokens after this batch.`);
+  }
 
   if (!APPLY || patches.length === 0) {
     if (!APPLY && patches.length > 0) console.log(`\n*** DRY-RUN. Set SEARCH_ENRICH_APPLY=true to persist. ***`);
     return;
   }
 
-  console.log(`\nPatching ${patches.length} rows at concurrency ${CONCURRENCY}...`);
-  const t0 = Date.now();
-  let done = 0;
-  const result = await runInParallel(patches, async (p) => {
-    await cc.item(p.id, p.partitionKey).patch([
-      { op: "set", path: "/searchText", value: p.searchText },
-      { op: "set", path: "/searchTokens", value: p.searchTokens },
-      { op: "set", path: "/recentSaleCount", value: p.recentSaleCount },
-    ]);
-    done++;
-    if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${patches.length}`);
+  // CF-SEARCH-ENRICH-BULK (2026-08-20). Per-item patch measured ~3,350
+  // rows/min at concurrency 16 on this account — 3.03M rows would take ~15
+  // hours. Cosmos bulk batches operations server-side (100 max per call), so
+  // send batches instead of individual round trips.
+  //
+  // RETRY ON 429 IS NOT OPTIONAL. The set-sport repair earlier today had no
+  // retry and silently lost 659 rows to throttling; only a second full pass
+  // recovered them. Here a throttled operation is retried with backoff, and
+  // anything still failing is reported rather than absorbed.
+  const opsFor = (p) => ({
+    operationType: "Patch",
+    id: p.id,
+    partitionKey: p.partitionKey,
+    resourceBody: {
+      operations: [
+        { op: "set", path: "/searchText", value: p.searchText },
+        { op: "set", path: "/searchTokens", value: p.searchTokens },
+        { op: "set", path: "/recentSaleCount", value: p.recentSaleCount },
+      ],
+    },
   });
-  console.log(`\n  patched ${result.ok} / errors ${result.err} in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+
+  console.log(`\nPatching ${patches.length} rows — ${BULK ? `bulk(${BULK_BATCH})` : "per-item"} at concurrency ${CONCURRENCY}...`);
+  const t0 = Date.now();
+  let done = 0, throttled = 0;
+  let result;
+
+  if (BULK) {
+    const batches = [];
+    for (let i = 0; i < patches.length; i += BULK_BATCH) batches.push(patches.slice(i, i + BULK_BATCH));
+    let ok = 0, err = 0;
+    const r = await runInParallel(batches, async (batch) => {
+      let pending = batch;
+      for (let attempt = 0; attempt < 6 && pending.length > 0; attempt++) {
+        if (attempt > 0) {
+          const waitMs = Math.min(8000, 250 * 2 ** attempt);
+          await new Promise((r2) => setTimeout(r2, waitMs));
+        }
+        const res = await cc.items.bulk(pending.map(opsFor));
+        const retry = [];
+        for (let k = 0; k < res.length; k++) {
+          const code = res[k]?.statusCode ?? 0;
+          if (code >= 200 && code < 300) { ok++; }
+          else if (code === 429 || code === 449 || code === 503) { throttled++; retry.push(pending[k]); }
+          else { err++; }
+        }
+        pending = retry;
+      }
+      // Anything still pending after the retry budget is a real failure.
+      // COUNT ROWS, NOT BATCHES. runInParallel counts a thrown batch as a
+      // single error; at 100 rows per batch that understated the 2026-08-20
+      // run by 19x (reported 11,598, actually 220,793 unwritten) and read as
+      // 99.6% complete when it was 91.9%.
+      err += pending.length;
+      done += batch.length;
+      process.stdout.write(`\r  patched ${done}/${patches.length}  throttled-retries=${throttled}  errors=${err}`);
+    });
+    // r.err counts BATCHES that threw outright; convert to rows.
+    result = { ok, err: err + r.err * BULK_BATCH };
+    if (r.err > 0) console.log(`\n  ${r.err} batch(es) failed outright = ~${r.err * BULK_BATCH} rows`);
+  } else {
+    result = await runInParallel(patches, async (p) => {
+      await cc.item(p.id, p.partitionKey).patch(opsFor(p).resourceBody.operations);
+      done++;
+      if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${patches.length}`);
+    });
+  }
+  const secs = (Date.now() - t0) / 1000;
+  console.log(`\n  patched ${result.ok} / errors ${result.err} in ${secs.toFixed(1)}s  (${Math.round(result.ok / Math.max(secs, 1) * 60)}/min)`);
+  if (throttled > 0) console.log(`  ${throttled} operations hit 429 and were RETRIED (not lost).`);
+
+  // CF-SEARCH-ENRICH-COVERAGE-ASSERT (2026-08-20). Never let the run's own
+  // counters be the last word. The nightly was GREEN for months while
+  // scoped to a retired source and one sport, and tonight's run reported a
+  // completion figure 19x off. Re-query the data and print what is actually
+  // left, so the log always carries ground truth.
+  try {
+    const remainQ = {
+      query:
+        "SELECT VALUE COUNT(1) FROM c WHERE STARTSWITH(c.id, @pfx) " +
+        "AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null OR ARRAY_LENGTH(c.searchTokens) = 0)" +
+        (sportFilter ? " AND c.sport = @sp" : ""),
+      parameters: [{ name: "@pfx", value: "hiq:" }, ...ccParams],
+    };
+    const { resources: rem } = await cc.items.query(remainQ).fetchAll();
+    const stillMissing = Array.isArray(rem) ? rem[0] : null;
+    console.log(`\n  COVERAGE: ${stillMissing} rows still lack searchTokens${sportFilter ? ` (sport=${sport})` : " (all sports)"}.`);
+    if (stillMissing > 0) console.log("  NOT FULLY COVERED — re-run to continue.");
+    else console.log("  Fully covered.");
+  } catch (e) {
+    console.warn(`  coverage check failed: ${e.message} — do NOT read this run as complete`);
+  }
+  if (result.err > 0) console.log(`  ${result.err} rows still FAILED — re-run to pick them up.`);
 }
 main().catch(e => { console.error(e); process.exit(1); });
