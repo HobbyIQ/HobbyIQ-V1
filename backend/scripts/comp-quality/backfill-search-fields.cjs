@@ -322,11 +322,17 @@ async function main() {
         pending = retry;
       }
       // Anything still pending after the retry budget is a real failure.
+      // COUNT ROWS, NOT BATCHES. runInParallel counts a thrown batch as a
+      // single error; at 100 rows per batch that understated the 2026-08-20
+      // run by 19x (reported 11,598, actually 220,793 unwritten) and read as
+      // 99.6% complete when it was 91.9%.
       err += pending.length;
       done += batch.length;
       process.stdout.write(`\r  patched ${done}/${patches.length}  throttled-retries=${throttled}  errors=${err}`);
     });
-    result = { ok, err: err + r.err };
+    // r.err counts BATCHES that threw outright; convert to rows.
+    result = { ok, err: err + r.err * BULK_BATCH };
+    if (r.err > 0) console.log(`\n  ${r.err} batch(es) failed outright = ~${r.err * BULK_BATCH} rows`);
   } else {
     result = await runInParallel(patches, async (p) => {
       await cc.item(p.id, p.partitionKey).patch(opsFor(p).resourceBody.operations);
@@ -337,6 +343,28 @@ async function main() {
   const secs = (Date.now() - t0) / 1000;
   console.log(`\n  patched ${result.ok} / errors ${result.err} in ${secs.toFixed(1)}s  (${Math.round(result.ok / Math.max(secs, 1) * 60)}/min)`);
   if (throttled > 0) console.log(`  ${throttled} operations hit 429 and were RETRIED (not lost).`);
+
+  // CF-SEARCH-ENRICH-COVERAGE-ASSERT (2026-08-20). Never let the run's own
+  // counters be the last word. The nightly was GREEN for months while
+  // scoped to a retired source and one sport, and tonight's run reported a
+  // completion figure 19x off. Re-query the data and print what is actually
+  // left, so the log always carries ground truth.
+  try {
+    const remainQ = {
+      query:
+        "SELECT VALUE COUNT(1) FROM c WHERE STARTSWITH(c.id, @pfx) " +
+        "AND (NOT IS_DEFINED(c.searchTokens) OR c.searchTokens = null OR ARRAY_LENGTH(c.searchTokens) = 0)" +
+        (sportFilter ? " AND c.sport = @sp" : ""),
+      parameters: [{ name: "@pfx", value: "hiq:" }, ...ccParams],
+    };
+    const { resources: rem } = await cc.items.query(remainQ).fetchAll();
+    const stillMissing = Array.isArray(rem) ? rem[0] : null;
+    console.log(`\n  COVERAGE: ${stillMissing} rows still lack searchTokens${sportFilter ? ` (sport=${sport})` : " (all sports)"}.`);
+    if (stillMissing > 0) console.log("  NOT FULLY COVERED — re-run to continue.");
+    else console.log("  Fully covered.");
+  } catch (e) {
+    console.warn(`  coverage check failed: ${e.message} — do NOT read this run as complete`);
+  }
   if (result.err > 0) console.log(`  ${result.err} rows still FAILED — re-run to pick them up.`);
 }
 main().catch(e => { console.error(e); process.exit(1); });

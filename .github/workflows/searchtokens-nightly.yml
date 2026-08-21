@@ -106,4 +106,10 @@ jobs:
           # the script prints DEFERRED so a capped run cannot be mistaken
           # for a finished one. Run it manually without the cap to go faster.
           SEARCH_ENRICH_MAX_PATCHES: '150000'
-        run: node scripts/comp-quality/backfill-search-fields.cjs --sport baseball
+        # CF-SEARCH-ENRICH-ALL-SPORTS (2026-08-20). Was --sport baseball.
+        # Combined with the old source='cardsight' filter that meant the job
+        # covered a retired source in ONE sport while reporting success every
+        # night. Widening the source without widening the sport would have
+        # left football, basketball, hockey and Pokemon permanently untokenised
+        # — half a fix that looks like a whole one.
+        run: node scripts/comp-quality/backfill-search-fields.cjs --sport all

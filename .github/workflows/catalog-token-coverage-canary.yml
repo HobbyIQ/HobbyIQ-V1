@@ -1,0 +1,63 @@
+name: Catalog Token Coverage Canary
+
+# CF-TOKEN-COVERAGE-CANARY (2026-08-20). Fails loudly (red ❌ → GitHub emails
+# Drew) when card_catalog rows missing searchTokens exceed the threshold.
+#
+# WHY. The "Nightly searchTokens backfill" ran green every night for months
+# while scoped to `source = 'cardsight' AND sport = baseball` — a source retired
+# on 2026-08-16. Measured 2026-08-20: 3,030,193 rows had no searchTokens.
+# searchTokens is the only index-accelerated predicate catalogSearch has, so
+# those rows forced /search onto a ~35.7M-row scan; catalogMs averaged 31,214ms
+# on cache HITS while the pricing engine cost 6ms.
+#
+# The backfill's exit code was never wrong — it did exactly what it was scoped
+# to do. Only a query against the data catches a scope bug.
+# See feedback_green_workflow_is_not_data_flow.
+
+on:
+  schedule:
+    - cron: '45 */6 * * *'   # every 6h, offset from the freshness canary
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    name: card_catalog searchTokens coverage
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Check coverage
+        working-directory: backend
+        env:
+          MAX_MISSING_TOKENS: '250000'
+        run: |
+          COSMOS_CONNECTION_STRING="$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" \
+            -o tsv | tr -d '\r\n')"
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::could not read COSMOS_CONNECTION_STRING"
+            exit 2
+          fi
+          export COSMOS_CONNECTION_STRING
+          node scripts/checkCatalogTokenCoverage.cjs
