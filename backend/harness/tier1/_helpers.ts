@@ -502,12 +502,30 @@ export function hitSearch(query: string): Promise<Record<string, unknown>> {
   return postJson("/api/compiq/search", { query });
 }
 
+// CF-TIER1-PRICE-BY-ID-FIELD (2026-08-21). This sent `cardHedgeCardId`.
+// The route has never accepted that name — it reads `cardId`, plus legacy
+// `cardsightCardId` for unmigrated iOS clients (CF-CARDID-RENAME,
+// 2026-06-30) — so EVERY call returned:
+//
+//     400 {"success":false,"error":"Missing \"cardId\" field"}
+//
+// Measured in hobbyiq-insights: 5 of 5 price-by-id requests in a harness
+// window returned 400 in 0-2ms. Zero of them reached pricing.
+//
+// It was invisible because the failure is swallowed twice over. The
+// beforeAll catches the throw into ctx.notes, then the assertion opens with
+// `if (!ctx.priceById) return;` — so the case PASSES having never seen a
+// response. Roughly half of what Tier 1 claims to verify has been inert.
+//
+// The parameter keeps its name: callers pass baseline.cardHedgeCardId, which
+// is genuinely a CardHedge id. Only the WIRE FIELD changes, because that is
+// what the route reads.
 export function hitPriceById(
   cardHedgeCardId: string,
   query: string,
   grade: CaseGrade
 ): Promise<Record<string, unknown>> {
-  const body: Record<string, unknown> = { cardHedgeCardId, query };
+  const body: Record<string, unknown> = { cardId: cardHedgeCardId, query };
   if (grade !== "Raw") {
     const [gradeCompany, gradeValueStr] = grade.split(/\s+/);
     body.gradeCompany = gradeCompany;
