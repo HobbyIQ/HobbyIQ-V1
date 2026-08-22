@@ -25,12 +25,21 @@ import { RegradeModal } from "@/components/RegradeModal";
 import { GradeCalcModal } from "@/components/GradeCalcModal";
 import { RecentCompsList } from "@/components/RecentCompsList";
 import { GradeCurveView } from "@/components/GradeCurveView";
+import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const holdingId = String(params?.id ?? "");
   const [h, setH] = useState<PortfolioHolding | null>(null);
+  // CF-WEB-MARKET-VALUE-FROM-CURVE (2026-08-22). The grade curve is the best
+  // pricing we have, so the headline reads from it directly instead of from
+  // the stored holding value. Fetched here (not inside GradeCurveView) so the
+  // number at the top and the tiles below are the SAME data, and a stale or
+  // starved stored value cannot make them disagree.
+  const [curve, setCurve] = useState<ObservedGradeEntry[] | null>(null);
+  const [curveLoading, setCurveLoading] = useState(false);
+  const [curveError, setCurveError] = useState<string | null>(null);
   const [history, setHistory] = useState<HoldingPricePoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +74,34 @@ export default function HoldingDetailPage() {
     };
   }, [holdingId]);
 
+  // Fetch the grade curve once the holding's card id is known. This is the
+  // same request GradeCurveView used to make for itself; it is lifted here so
+  // the headline and the tiles are one source.
+  const curveCardId = h ? (h.hobbyiqCardId || h.cardId || "") : "";
+  useEffect(() => {
+    if (!curveCardId) return;
+    let cancelled = false;
+    setCurveLoading(true);
+    setCurveError(null);
+    fetchObservedGradeCurve(curveCardId)
+      .then((res) => {
+        if (cancelled) return;
+        setCurve(res.entries ?? []);
+        setCurveLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const e = err as { status?: number; message?: string };
+        setCurveError(e.status === 429
+          ? "Daily price-check limit reached — try again tomorrow."
+          : (e.message ?? "Failed to load grade curve"));
+        setCurve([]);
+        setCurveLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [curveCardId]);
+
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -97,7 +134,35 @@ export default function HoldingDetailPage() {
   const estHigh = h.pricing?.estimate?.high ?? h.estimateHigh;
   const estConfidence = h.pricing?.estimate?.confidence ?? h.estimateConfidence;
   const estBasis = h.pricing?.estimate?.basisNote ?? h.estimateBasis;
-  const value = holdingDisplayValue(h);
+  const storedValue = holdingDisplayValue(h);
+
+  // CF-WEB-MARKET-VALUE-FROM-CURVE (2026-08-22). The grade curve is the best
+  // pricing we have, so the headline reads the curve's tile for THIS card's
+  // grade rather than the stored holding value. They are supposed to be the
+  // same number — CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH makes the backend write
+  // exactly this — but the stored copy can drift (a reprice during a Cosmos
+  // throttling event blanked one and the page then disagreed with its own
+  // curve). Reading the curve makes that class of drift impossible to display.
+  //
+  // Grade match parses the numeric part out of the LABEL. entry.grade is
+  // "PSA 9" / "BGS 9.5", so Number(entry.grade) is NaN — the exact trap that
+  // made the backend tile lookup silently miss every graded card.
+  const wantGrader = (h.gradeCompany ?? "").trim() ? String(h.gradeCompany).toUpperCase() : "Raw";
+  const wantGradeNum = typeof h.gradeValue === "number"
+    ? h.gradeValue
+    : (h.gradeValue ? Number(h.gradeValue) : null);
+  const curveTile = (curve ?? []).find((e) => {
+    if ((e.grader ?? "").toUpperCase() !== wantGrader.toUpperCase()) return false;
+    if (wantGrader === "Raw") return true;
+    const n = Number(String(e.grade).replace(/[^0-9.]/g, ""));
+    return Number.isFinite(n) && n === wantGradeNum;
+  });
+  const curvePerUnit = curveTile?.trendAdjustedValue ?? curveTile?.value ?? null;
+  const qty = Math.max(1, h.quantity ?? 1);
+  const curveValue = curvePerUnit != null && curvePerUnit > 0 ? curvePerUnit * qty : null;
+  // Curve first; stored value only when the curve has nothing for this grade.
+  const value = curveValue ?? storedValue;
+  const valueFromCurve = curveValue != null;
   const paidPrice = h.purchasePrice;
   const totalPaid = paidPrice != null ? paidPrice * h.quantity : null;
   // CF-COST-FALLBACK (Drew, 2026-08-03). Show purchasePrice as
@@ -162,7 +227,7 @@ export default function HoldingDetailPage() {
 
         {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
-          <Stat label="Current value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
+          <Stat label="Market value" value={formatUSD(value, { hideCents: true })} badge={!valueFromCurve && showEstimateBadge ? "EST" : undefined} />
           <Stat label="Total paid" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
@@ -331,7 +396,7 @@ export default function HoldingDetailPage() {
 
       {(h.hobbyiqCardId || h.cardId) && (
         <div className="mb-6">
-          <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} />
+          <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} entries={curve} loading={curveLoading} error={curveError} />
         </div>
       )}
 
