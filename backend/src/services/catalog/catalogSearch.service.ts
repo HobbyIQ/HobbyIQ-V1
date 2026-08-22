@@ -208,8 +208,20 @@ function preferHit(a: CatalogSearchHit, b: CatalogSearchHit): boolean {
  *
  * That last case is exactly the misspelling trap: "gonzalez" is a real token
  * owned by other players, so the exact arm succeeds while answering the wrong
- * question. Matching is fuzzy per token (CF-SEARCH-FUZZY-PLAYER), so "erik"
- * still covers Eric without escalating.
+ * question. Matching is fuzzy per token (CF-SEARCH-FUZZY-PLAYER), so
+ * "gonzales" still covers Gonzalez without escalating.
+ *
+ * That example used to read "erik" still covers Eric. It does not, and never
+ * did: fuzzyIncludes bails on tokens under 5 chars ("too short to risk a fuzzy
+ * hit"), so a 4-char misspelling escalates. Corrected 2026-08-21 rather than
+ * changing the threshold, which is a deliberate false-positive guard.
+ *
+ * CF-ESCALATE-ON-NAME-TOKENS-ONLY (2026-08-21). `nameTokens` must be tokens
+ * of the PLAYER NAME. Every example above is a name-only query, and the
+ * predicate compares each token against `playerName` alone — so any token
+ * that is not part of a person's name makes this UNSATISFIABLE and forces an
+ * escalation that can never be avoided. The call site used to pass every
+ * >=4-char non-brand token, which includes every colour and finish word.
  */
 function nameTokensCovered(
   rows: Array<{ playerName?: string }>,
@@ -224,7 +236,13 @@ function nameTokensCovered(
 }
 
 /** Pure helpers, exported for tests only. */
-export const __testables = { fold, editDistance, fuzzyIncludes, dedupeKey, preferHit };
+export const __testables = {
+  fold, editDistance, fuzzyIncludes, dedupeKey, preferHit,
+  // CF-ESCALATE-ON-NAME-TOKENS-ONLY (2026-08-21). Exposed so the escalation
+  // decision is pinned directly: it is the difference between a 1.5s exact
+  // arm and a 16.6s prefix scan, and it was silently unsatisfiable.
+  nameTokensCovered,
+};
 
 function tokenize(input: string): string[] {
   return String(input ?? "")
@@ -363,13 +381,22 @@ export async function searchCatalog(
   // Longest token OF THE PLAYER NAME, not the last, so particles and suffixes
   // ("de", "jr") cannot win: "Leo De Vries" -> vries, "Josh Hammond" -> hammond.
   // Falls back to the old heuristic when the parser found no player.
-  const parsedPlayerAnchor = (() => {
+  // CF-ESCALATE-ON-NAME-TOKENS-ONLY (2026-08-21). Tokens of the parsed player
+  // name. Two consumers: the anchor below picks the longest of these, and the
+  // escalation gate needs ALL of them (see nameTokensCovered). Derived once
+  // from the same source so the two cannot disagree about who was asked for.
+  // null — not [] — when the parser found no usable name, so each consumer
+  // can fall back to the old token proxy rather than treating "no name" as
+  // "no tokens required".
+  const playerNameTokens: string[] | null = (() => {
     const pn = String(input.playerName ?? "").toLowerCase();
     if (!pn) return null;
     const parts = pn.split(/[^a-z]+/).filter((t) => t.length >= 3);
-    if (parts.length === 0) return null;
-    return parts.sort((a, b) => b.length - a.length)[0] ?? null;
+    return parts.length > 0 ? parts : null;
   })();
+  const parsedPlayerAnchor = playerNameTokens
+    ? (playerNameTokens.slice().sort((a, b) => b.length - a.length)[0] ?? null)
+    : null;
   const anchor = parsedPlayerAnchor
     ?? (alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null);
 
@@ -613,7 +640,36 @@ export async function searchCatalog(
     absorb((await Promise.all([runArm(armExact), runArm(armNumber)])).flat());
     // Escalate to the fuzzy prefix scan only when the cheap arms did not
     // produce a confident answer for this query.
-    if (armFuzzy && !nameTokensCovered([...fastById.values()], alphaTokens)) {
+    //
+    // CF-ESCALATE-ON-NAME-TOKENS-ONLY (2026-08-21). This used to pass
+    // `alphaTokens`. nameTokensCovered tests each token against `playerName`
+    // ONLY, and alphaTokens is every >=4-char token that is not a brand or
+    // product word — so it carries every colour and finish the user typed.
+    // No playerName contains "blue" or "raywave", which made the gate
+    // UNSATISFIABLE for any query naming a parallel:
+    //
+    //   "2024 Bowman Chrome Blue Raywave Auto Leo De Vries"
+    //     alphaTokens = [blue, raywave, vries]
+    //     -> needs a playerName containing all three -> never -> escalate
+    //
+    // So the arm this gate exists to make RARE ran on essentially every real
+    // card query. It is not cheap, and the cost was already measured in the
+    // comments below: exact "carey" 1.5s vs prefix "care" 16.6s. That is the
+    // dense 19-24s cluster in compiq_search_stage_timing — a fixed cost, not
+    // variable query work, which is why it did not move when the anchor was
+    // fixed in CF-SEARCH-ANCHOR-FROM-PARSER.
+    //
+    // The docstring above is unambiguous that these are meant to be name
+    // tokens, and it even prices a false escalation: "escalated to the
+    // expensive fuzzy scan for no reason and took 28.8s". That earlier fix
+    // removed a length-driven false escalation; this removes a colour-driven
+    // one.
+    //
+    // parseCardQuery has already resolved the player, so use its tokens. Fall
+    // back to alphaTokens when it found no player — there, the old proxy is
+    // still the best signal available, and escalating is the safe direction.
+    const nameTokensForGate = playerNameTokens ?? alphaTokens;
+    if (armFuzzy && !nameTokensCovered([...fastById.values()], nameTokensForGate)) {
       absorb(await runArm(armFuzzy));
     }
     const fast = [...fastById.values()];
