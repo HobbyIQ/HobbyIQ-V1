@@ -54,6 +54,9 @@ export interface OurPoolPricingResult {
 // Rungs where a graded query returning a positive fmv is treated as an
 // observation of real graded comps of this-or-nearby identity. "no-basis"
 // and "grade-cross-raw" are handled explicitly outside this set.
+//
+// CF-OBSERVED-NEEDS-COMPS (Drew, 2026-08-22). Membership here is NOT on its
+// own enough to publish a number as observed — see MIN_COMPS_FOR_BROAD_RUNG.
 const OBSERVED_RUNGS: ReadonlySet<HobbyIqFmvMethod> = new Set<HobbyIqFmvMethod>([
   "direct-slug",
   "cross-setkey",
@@ -63,6 +66,38 @@ const OBSERVED_RUNGS: ReadonlySet<HobbyIqFmvMethod> = new Set<HobbyIqFmvMethod>(
   "sibling-parallel",
   "family-baseline",
 ]);
+
+/**
+ * CF-OBSERVED-NEEDS-COMPS (Drew, 2026-08-22).
+ *
+ * Every rung above direct-slug prices a DIFFERENT card and reasons across to
+ * this one. That is legitimate when several sales agree. It is not when the
+ * rung found one.
+ *
+ * Live case that surfaced it — 2024 Bowman Draft Cam Caminiti #CPA-CC Blue
+ * Refractor /150, cost $205.40. The Blue Refractor partition holds zero
+ * comps, so cross-setkey fired, found exactly ONE sale under a different
+ * setKey, and published $4.99 as an OBSERVED fair market value. The card's
+ * own sibling parallels were all sitting in the pool at the time:
+ *
+ *     base:auto              7 comps   $39-62
+ *     refractor:auto         5 comps   $38-58
+ *     purple-refractor /250  2 comps   $56-128
+ *     green-lava /99         1 comp    $113.50
+ *
+ * The cheapest real sale of that card in ANY parallel is $37. The dashboard
+ * rendered -97.6% P&L against cost off a single stray comp.
+ *
+ * So a broad rung must clear a floor before it counts as observed. Below it
+ * the number still goes out — suppressing it entirely would leave the card
+ * blank when we do hold weak evidence — but as an ESTIMATE carrying its
+ * confidence tier and band, which is what the UI needs to render it as a
+ * guess rather than a fact.
+ *
+ * direct-slug is deliberately exempt. One sale of the EXACT card is thin,
+ * but it is genuinely that card, which is the whole difference.
+ */
+const MIN_COMPS_FOR_BROAD_RUNG = 3;
 
 // Estimate confidence tier from the FMV service's numeric confidence.
 // hobbyiq-fmv returns a 0-1 score per rung; map into the discrete tier
@@ -146,20 +181,48 @@ export async function priceHoldingFromOurPool(
       };
     }
 
-    // "Observed" from our pool. For rungs broader than direct-slug (e.g.
-    // family-baseline or sibling-parallel) we still classify the number
-    // as observed but with lower confidence — these are real recorded
-    // sales of adjacent-identity cards, not synthesized values. The
-    // basisNote makes the rung transparent to the user.
-    if (OBSERVED_RUNGS.has(result.method)) {
+    // "Observed" from our pool — real recorded sales, not synthesized values.
+    //
+    // CF-OBSERVED-NEEDS-COMPS (2026-08-22). A broad rung has to clear
+    // MIN_COMPS_FOR_BROAD_RUNG first. This block previously published any
+    // rung in OBSERVED_RUNGS as observed regardless of compCount, which is
+    // how a single cross-setkey comp became a $4.99 "observed" FMV on a card
+    // whose own comps run $37-128.
+    //
+    // It also set estimateConfidence: null while the comment directly above
+    // it claimed the number carried "lower confidence". The tier was computed
+    // and thrown away, so nothing downstream could tell a 50-comp direct hit
+    // from a 1-comp reach. `conf` now rides along on both paths.
+    const isBroadRung = result.method !== "direct-slug";
+    if (OBSERVED_RUNGS.has(result.method)
+        && (!isBroadRung || compsUsed >= MIN_COMPS_FOR_BROAD_RUNG)) {
       return {
         fairMarketValue: result.fmv,
         valuationStatus: "observed",
         estimatedValue: null,
         estimateLow: null,
         estimateHigh: null,
-        estimateConfidence: null,
-        estimateBasis: result.basisNote,  // still record the rung's prose for transparency
+        estimateConfidence: conf,
+        estimateBasis: result.basisNote,  // the rung's prose, for transparency
+        method: result.method,
+        compsUsed,
+        slug,
+        source: "our-pool",
+      };
+    }
+
+    // Broad rung that did not clear the floor. Still worth showing — we do
+    // hold SOME evidence, and blanking the card hides that — but as an
+    // estimate with its band and tier, never as a fact.
+    if (OBSERVED_RUNGS.has(result.method)) {
+      return {
+        fairMarketValue: null,
+        valuationStatus: "estimated",
+        estimatedValue: result.fmv,
+        estimateLow: band.low,
+        estimateHigh: band.high,
+        estimateConfidence: conf,
+        estimateBasis: result.basisNote,
         method: result.method,
         compsUsed,
         slug,
