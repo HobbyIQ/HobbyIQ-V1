@@ -131,21 +131,24 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
   // includeGradeLadder default remains false per the PR #763 opt-in
   // hotfix; iOS asks for it explicitly on the grade-breakdown view.
   const includeGradeLadder = input.includeGradeLadder === true;
-  const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
-    ? computeGradeBreakdownSingleScan(slug, { maxAgeDays: input.maxAgeDays })
-        .then((r): GradeLadderTier[] => r.tiers.map((t: GradeBreakdownTier) => ({
-          gradeLabel: t.gradeLabel,
-          gradeCompany: t.gradeCompany,
-          gradeValue: t.gradeValue,
-          fmv: t.fmv,
-          compCount: t.compCount,
-          trend: t.trend,
-          method: "direct-slug",     // single-scan is direct-slug by definition
-          confidence: 0.95,          // matches computeHobbyIqFmv direct-slug confidence
-        })))
-    : Promise.resolve([]);
 
-  const [fmvSettled, relatedSettled, gradeLadderSettled] = await Promise.allSettled([
+  // CF-LADDER-PROJECTS-FROM-ANCHOR (2026-08-22). The header and the ladder used
+  // to be two independent computations raced in the same Promise.allSettled,
+  // and nothing made the ladder's entry for the card's own grade equal the
+  // number printed above it. On Griffin they disagreed completely: header $650
+  // from his last real sale, ladder empty.
+  //
+  // computeHobbyIqFmv is NOT memoised — only its Cosmos container is cached —
+  // so it is computed exactly ONCE here and its value feeds both the header
+  // and the ladder's anchor. Calling it twice would double the expensive path
+  // on the very route CF-GRADE-BREAKDOWN-SINGLE-SCAN exists to keep fast.
+  //
+  // relatedPromise is started BEFORE the await so it still overlaps the FMV
+  // call. Only the ladder is serialised behind it, and only when the ladder
+  // was actually asked for (opt-in; iOS grade-breakdown view).
+  const relatedPromise = computeRelatedCards(slug, input.relatedLimit ?? 8);
+
+  const fmvSettled = (await Promise.allSettled([
     computeHobbyIqFmv({
       hobbyiqCardId: slug,
       gradeCompany: input.gradeCompany ?? null,
@@ -153,7 +156,32 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
       maxAgeDays: input.maxAgeDays,
       previewLimit: input.previewLimit,
     }),
-    computeRelatedCards(slug, input.relatedLimit ?? 8),
+  ]))[0];
+  const fmvForAnchor = fmvSettled.status === "fulfilled" ? fmvSettled.value : null;
+
+  const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
+    ? computeGradeBreakdownSingleScan(slug, {
+        maxAgeDays: input.maxAgeDays,
+        anchorFmv: fmvForAnchor?.fmv ?? null,
+        anchorGradeCompany: input.gradeCompany ?? null,
+        anchorGradeValue: input.gradeValue ?? null,
+      })
+        .then((r): GradeLadderTier[] => r.tiers.map((t: GradeBreakdownTier) => ({
+          gradeLabel: t.gradeLabel,
+          gradeCompany: t.gradeCompany,
+          gradeValue: t.gradeValue,
+          fmv: t.fmv,
+          compCount: t.compCount,
+          trend: t.trend,
+          // CF-LADDER-PROJECTS-FROM-ANCHOR: a projected tier is NOT direct-slug
+          // and must not claim direct-slug's 0.95. The tier carries its own.
+          method: t.basis === "projected" ? "anchor-projected" : "direct-slug",
+          confidence: t.confidence,
+        })))
+    : Promise.resolve([]);
+
+  const [relatedSettled, gradeLadderSettled] = await Promise.allSettled([
+    relatedPromise,
     gradeLadderPromise,
   ]);
 
