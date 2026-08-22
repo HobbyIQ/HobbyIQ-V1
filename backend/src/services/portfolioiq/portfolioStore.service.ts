@@ -2339,7 +2339,22 @@ async function autoPriceHolding(
         const tile = curve.entries.find((e: { grader: string; grade: string }) => {
           if (e.grader !== wantGrader) return false;
           if (wantGrader === "Raw") return true;
-          return Number(e.grade) === wantVal;
+          // CF-GRADE-CURVE-TILE-LABEL (2026-08-22). `e.grade` is the LABEL and
+          // already carries the grader — "PSA 9", "BGS 9.5" — so Number(e.grade)
+          // is NaN and NaN === 9 is false. The tile was therefore never found
+          // for ANY graded holding, CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH silently
+          // fell through to unified pricing, and the portfolio price could not
+          // agree with the grade curve it is supposed to be reading.
+          //
+          // Raw holdings return true above, which is why this survived: raw
+          // cards agreed and graded ones never did. Shohei Ohtani 2018 Bowman
+          // Chrome #1 PSA 9 showed $2,114.10 stored against $2,341.20 on the
+          // curve for the same card and grade.
+          //
+          // Same wrong assumption CF-GRADE-LABEL-BUGFIX (2026-08-08) fixed in
+          // the unified overlay, still live here.
+          const gradeNum = Number(String(e.grade).replace(/[^0-9.]/g, ""));
+          return Number.isFinite(gradeNum) && gradeNum === wantVal;
         }) as { trendAdjustedValue: number | null; value: number | null; weightedMedianPrice: number | null; predictedPriceAt30d: number | null } | undefined;
         const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
         if (tileFmv !== null && tileFmv > 0) {
