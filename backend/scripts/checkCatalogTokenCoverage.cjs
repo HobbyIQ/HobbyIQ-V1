@@ -65,15 +65,29 @@ const MAX_MISSING = Number(process.env.MAX_MISSING_TOKENS || 250000);
 // they lack the ASCII forms users type: "acuna" does not reach Ronald Acuña,
 // "aguero" does not reach Sergio Agüero.
 //
-// Set at 8 rather than 2 deliberately. The gap is real and a full
-// re-tokenisation clears it, but a permanently-red cron is how the previous
-// generation of this check stopped being read at all. 8% still catches what
-// this canary is FOR — a scope or builder regression shows up in the tens of
-// percent — while the current level stays visible in the log line every run.
+// It was set at 8 rather than 2 deliberately, because the gap was real and a
+// permanently-red cron is how the previous generation of this check stopped
+// being read at all. 8% still caught what this canary is FOR — a scope or
+// builder regression shows up in the tens of percent.
 //
-// LOWER THIS TO 2 once the re-tokenisation pass has run. If the number has not
-// come down by then, the backfill did not do what it claimed.
-const MAX_STALE_PCT = Number(process.env.MAX_STALE_TOKENS_PCT || 8);
+// NOW LOWERED TO 2. The re-tokenisation pass ran 2026-08-22 and the number came
+// down as predicted, measured on two consecutive clean runs:
+//
+//   before   5.07%  (36/710)
+//   pass 2   1.69%  (12/708)
+//   pass 3   0.99%  ( 7/708)
+//
+// 2% is deliberately close to the measured 0.99%. That is the point — the fold
+// gap is cleared, so anything that reopens it should go red rather than hide
+// under headroom sized for a backlog that no longer exists. Note the sample is
+// ~708 rows, so 2% is about 14 stale rows: expect single-row jitter, and treat
+// a red as "look", not "certainly broken".
+//
+// MAX_MISSING is a separate axis and is NOT clean: 24,720 rows still lack
+// tokens (up from 16,226 after pass 2), because pass 3 lost ~56k rows to RU
+// throttling. That is under the 250,000 threshold and is a coverage backlog,
+// not staleness — dedup the catalog before spending RU on another pass.
+const MAX_STALE_PCT = Number(process.env.MAX_STALE_TOKENS_PCT || 2);
 const STALE_SAMPLE_PER_YEAR = Number(process.env.STALE_SAMPLE_PER_YEAR || 60);
 
 async function main() {
