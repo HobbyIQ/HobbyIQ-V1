@@ -108,7 +108,27 @@ async function main() {
   // Pass --sport all to cover every sport, which is what the widened scan
   // is for.
   const sport = arg("sport", "baseball");
-  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+  // CF-SCAN-NEEDS-A-RETRY-BUDGET (2026-08-22). The write path retries 429s;
+  // the SCAN did not. With the SDK default of 9 attempts, pass 2 died mid-scan
+  // on 2026, 2025 and 2024 — the three years carrying the most failed rows
+  // (5,125 + 143,476 + 288,212 ~= 436k) — throwing an unhandled
+  // TooManyRequests after x-ms-throttle-retry-count: 9. No Summary was
+  // printed, and the driver loop moved on without noticing.
+  //
+  // The container is autoscale-capped and partition-bound, so throttling is
+  // NORMAL here, not exceptional. Budget for it: honour the server's
+  // retry-after and keep going for up to 10 minutes on a single request
+  // rather than abandoning a multi-hour run.
+  const client = new CosmosClient({
+    connectionString: process.env.COSMOS_CONNECTION_STRING,
+    connectionPolicy: {
+      retryOptions: {
+        maxRetryAttemptCount: Number(process.env.COSMOS_MAX_RETRIES || 100),
+        maxWaitTimeInSeconds: Number(process.env.COSMOS_MAX_RETRY_WAIT_S || 600),
+        fixedRetryIntervalInMilliseconds: 0,   // 0 = obey x-ms-retry-after-ms
+      },
+    },
+  });
   const cc = client.database("hobbyiq").container("card_catalog");
   const sc = client.database("hobbyiq").container("sold_comps");
 
@@ -232,7 +252,29 @@ async function main() {
   }
 
   while (ccIt.hasMoreResults()) {
-    const { resources } = await ccIt.fetchNext();
+    // Even with the budget above, a long enough throttle storm can exhaust it.
+    // Losing a whole year's scan to one page is not an acceptable outcome, so
+    // retry the PAGE explicitly before giving up. Failing here is loud: the
+    // catch re-throws once the attempts are spent.
+    let resources;
+    {
+      const MAX_PAGE_ATTEMPTS = Number(process.env.SCAN_PAGE_ATTEMPTS || 12);
+      let attempt = 0;
+      for (;;) {
+        try { ({ resources } = await ccIt.fetchNext()); break; }
+        catch (e) {
+          const code = e && (e.code || e.statusCode);
+          attempt++;
+          if (code !== 429 || attempt >= MAX_PAGE_ATTEMPTS) {
+            console.error(`  SCAN FAILED on page after ${attempt} attempt(s): ${e && e.message}`);
+            throw e;
+          }
+          const waitMs = Number(e.retryAfterInMs) > 0 ? Number(e.retryAfterInMs) : 2000 * attempt;
+          console.log(`  scan throttled (429), attempt ${attempt}/${MAX_PAGE_ATTEMPTS}, waiting ${waitMs}ms`);
+          await new Promise((r) => setTimeout(r, waitMs));
+        }
+      }
+    }
     if (!Array.isArray(resources)) continue;
     for (const r of resources) {
       scanned++;
@@ -288,7 +330,13 @@ async function main() {
   console.log(`  scanned:      ${scanned}`);
   console.log(`  unchanged:    ${unchanged}`);
   console.log(`  refused:      ${refused}   (no tokenisable fields — left untouched, NOT stamped empty)`);
-  console.log(`  to patch:     ${patches.length}`);
+  // NOT a total. `patches` is streamed and drained by flush() during the scan,
+  // so this is only what is left in the buffer at the end. Reported as a total
+  // it invites exactly the wrong conclusion: on 2025 it read 16,586 beside
+  // written=239,677 + errors=143,476, and cost a session's worth of doubt
+  // about whether the run had corrupted its own accounting.
+  console.log(`  buffered tail: ${patches.length}   (remainder after the last flush, NOT a total)`);
+  console.log(`  total patched: ${wroteOk + wroteErr}   (written + errors, accumulated across all flushes)`);
   // NEVER let a cap look like completion. A bounded run that prints only
   // its own batch size reads identically to a finished backfill.
   if (deferred > 0) {
