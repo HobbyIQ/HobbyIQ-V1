@@ -1238,6 +1238,37 @@ export function holdingIdentityIsResolved(input: {
   return vendorId !== "" || slug !== "";
 }
 
+/**
+ * CF-NO-REGRESSION-ON-STARVED-POOL (2026-08-22). Should a reprice that came
+ * back with nothing be allowed to erase the price we already had?
+ *
+ * No — a recompute that produced neither an FMV nor an estimate is a failed
+ * query, not an observation that the card became worthless. Ohtani 2018 Bowman
+ * Chrome #1 PSA 9 lost a correct $2,341.20 (225 real sales, equal to its own
+ * grade-curve tile) to a reprice that ran during a Cosmos throttling event.
+ *
+ * Deliberately narrow:
+ *   - only when the new surface has BOTH no fmv and no estimate. Any number at
+ *     all, including a worse one, is a real answer and wins.
+ *   - only when a positive value is already stored. Nothing to protect
+ *     otherwise.
+ *   - only when identity resolves. The unidentified path withholds prices ON
+ *     PURPOSE (#1179) and must keep doing so.
+ */
+export function shouldKeepStoredPriceOnEmptySurface(input: {
+  newFairMarketValue: number | null | undefined;
+  newEstimatedValue: number | null | undefined;
+  storedFairMarketValue: number | null | undefined;
+  identityResolved: boolean;
+}): boolean {
+  if (!input.identityResolved) return false;
+  const stored = typeof input.storedFairMarketValue === "number" ? input.storedFairMarketValue : 0;
+  if (!Number.isFinite(stored) || stored <= 0) return false;
+  const hasFmv = typeof input.newFairMarketValue === "number" && Number.isFinite(input.newFairMarketValue);
+  const hasEst = typeof input.newEstimatedValue === "number" && Number.isFinite(input.newEstimatedValue);
+  return !hasFmv && !hasEst;
+}
+
 export function reconcileEstimatedFmvToBand(input: {
   valuationStatus: string | null | undefined;
   fairMarketValue: number | null | undefined;
@@ -3308,6 +3339,45 @@ async function autoPriceHolding(
       reviewReason: coherencePatch.reviewReason,
       flaggedForReview: true,
     }));
+  }
+
+  // ── CF-NO-REGRESSION-ON-STARVED-POOL (2026-08-22) ─────────────────────
+  //
+  // A reprice that found NOTHING is not a market observation, it is a failed
+  // query, and it must not be written down as a valuation.
+  //
+  // Live case: Shohei Ohtani 2018 Bowman Chrome #1 PSA 9 held a correct
+  // fairMarketValue of $2,341.20, computed from 225 real PSA 9 sales and equal
+  // to its own grade-curve tile. A reprice ran during a Cosmos throttling
+  // event (17,834 x 429 in that five-minute bucket), its pool queries came
+  // back starved, and the engine persisted valuationStatus "estimated" with
+  // fairMarketValue REMOVED — over the good number. The grade curve, which
+  // recomputes on read, still said $2,341.20, so the card page showed a
+  // current value that disagreed with its own curve.
+  //
+  // The card did not become unpriceable. Cosmos was busy.
+  //
+  // So: when the new surface carries no FMV and no estimate, and the holding
+  // already had a positive stored FMV, keep what we had and log it. A genuine
+  // transition to unpriceable still lands the moment the engine returns any
+  // number at all, and the unidentified-holding path above is untouched — that
+  // one withholds deliberately and has already blanked the surface by design.
+  const priorFmv = toNumber((holding as { fairMarketValue?: unknown }).fairMarketValue, 0);
+  if (shouldKeepStoredPriceOnEmptySurface({
+    newFairMarketValue: priceSurface.fairMarketValueOverride,
+    newEstimatedValue: priceSurface.estimatedValue,
+    storedFairMarketValue: priorFmv,
+    identityResolved: holdingIdentityIsResolved(identityAfterPatch),
+  })) {
+    console.warn(JSON.stringify({
+      event: "reprice_skipped_starved_pool",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      playerName: holding.playerName ?? null,
+      keptFairMarketValue: priorFmv,
+      detail: "recompute produced neither an FMV nor an estimate; keeping the stored value rather than blanking it",
+    }));
+    return holding;
   }
 
   const updated: PortfolioHolding = {
