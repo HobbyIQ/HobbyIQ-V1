@@ -1212,6 +1212,32 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
  * estimatedValue (the honest answer for an estimated holding), else null.
  * Pure so it can be pinned by tests without Cosmos.
  */
+/**
+ * CF-NO-IDENTITY-NO-PRICE (2026-08-22).
+ *
+ * A holding we cannot identify must not be quoted a price. Max Williams
+ * "2025 Bowman Draft Gold #CPA-MWI" (holding deced7d3, $301.43 paid) carried
+ * NO cardId and NO hobbyiqCardId — catalogMatchedBy "not-found", confidence
+ * 0.3 — and still rendered VALUE $13.64 and P&L -95.5%. The $13.64 was the
+ * BASE Refractor's price (the sibling holding 98eda1a3 is $14.44) leaking onto
+ * a /50 Gold through a fallback pool.
+ *
+ * Measured 2026-08-22: 18 sports holdings in this state carrying $2,117.19 of
+ * cost basis — 23% of the portfolio — every one of them showing a confident
+ * number with no warning attached.
+ *
+ * "Unverified" as a badge is not enough when the number beside it looks real.
+ * No identity, no price.
+ */
+export function holdingIdentityIsResolved(input: {
+  cardId?: string | null;
+  hobbyiqCardId?: string | null;
+}): boolean {
+  const vendorId = String(input.cardId ?? "").trim();
+  const slug = String(input.hobbyiqCardId ?? "").trim();
+  return vendorId !== "" || slug !== "";
+}
+
 export function reconcileEstimatedFmvToBand(input: {
   valuationStatus: string | null | undefined;
   fairMarketValue: number | null | undefined;
@@ -3124,6 +3150,47 @@ async function autoPriceHolding(
   // stored fairMarketValue 112.50 against estimateLow 21 / estimateHigh 31 and
   // estimatedValue 26 — the UI rendered 112.50 while the engine's own band said
   // 21-31. The band is the honest answer for an estimated holding.
+  // CF-NO-IDENTITY-NO-PRICE: runs BEFORE the band and cost-basis guards,
+  // because a price with no identity behind it is not a price those guards
+  // should be reasoning about. Identity is read AFTER identityPatch so a
+  // holding hydrated during this very run is judged on its new state.
+  const identityAfterPatch = {
+    cardId: (identityPatch as { cardId?: string | null }).cardId ?? holding.cardId ?? null,
+    hobbyiqCardId:
+      (identityPatch as { hobbyiqCardId?: string | null }).hobbyiqCardId
+      ?? (holding as { hobbyiqCardId?: string | null }).hobbyiqCardId
+      ?? null,
+  };
+  let unidentifiedPatch: { needsReview?: boolean; reviewReason?: string } = {};
+  if (!holdingIdentityIsResolved(identityAfterPatch)) {
+    if (priceSurface.fairMarketValueOverride !== null || priceSurface.estimatedValue !== null) {
+      console.warn(JSON.stringify({
+        event: "unidentified_holding_price_withheld",
+        source: "portfolioStore.autoPriceHolding",
+        holdingId: holding.id,
+        playerName: holding.playerName ?? null,
+        cardNumber: holding.cardNumber ?? null,
+        parallel: holding.parallel ?? null,
+        withheldFairMarketValue: priceSurface.fairMarketValueOverride,
+        withheldEstimatedValue: priceSurface.estimatedValue,
+        costBasis: toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0)),
+      }));
+    }
+    priceSurface = {
+      ...priceSurface,
+      fairMarketValueOverride: null,
+      estimatedValue: null,
+      estimateLow: null,
+      estimateHigh: null,
+      isEstimate: false,
+    };
+    unidentifiedPatch = {
+      needsReview: true,
+      reviewReason:
+        "We could not identify this card, so we are not showing a value. Confirm the set, card number and parallel.",
+    };
+  }
+
   const band = reconcileEstimatedFmvToBand({
     valuationStatus: priceSurface.valuationStatus,
     fairMarketValue: priceSurface.fairMarketValueOverride,
@@ -3169,6 +3236,7 @@ async function autoPriceHolding(
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
+    ...unidentifiedPatch,
     ...coherencePatch,
     fairMarketValue: priceSurface.fairMarketValueOverride === null
       ? null as any  // null erases the field on display; ERP read coerces null→null
