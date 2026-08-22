@@ -6,6 +6,13 @@ import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 
 interface Props {
   cardId: string;
+  /** CF-WEB-MARKET-VALUE-FROM-CURVE (2026-08-22). When the parent already
+   *  fetched the curve — the holding page does, so its headline can show the
+   *  same number this component draws — it passes the entries in and we skip
+   *  our own request. Omitted elsewhere, so the card page is unchanged. */
+  entries?: ObservedGradeEntry[] | null;
+  loading?: boolean;
+  error?: string | null;
 }
 
 // Per-grade breakdown of a card's market. Renders every canonical grade
@@ -18,14 +25,24 @@ interface Props {
 //
 // Skips entries where valueSource === "unavailable" AND sampleCount === 0
 // unless the user opens "Show all grades".
-export function GradeCurveView({ cardId }: Props) {
+export function GradeCurveView({ cardId, entries: entriesProp, loading: loadingProp, error: errorProp }: Props) {
   const [entries, setEntries] = useState<ObservedGradeEntry[]>([]);
   const [totalSamples, setTotalSamples] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
+  const parentSupplied = entriesProp !== undefined;
+
   useEffect(() => {
+    // Parent already has the curve — use it and make no request of our own.
+    if (parentSupplied) {
+      setEntries(entriesProp ?? []);
+      setTotalSamples((entriesProp ?? []).reduce((n, e) => n + (e.sampleCount ?? 0), 0));
+      setLoading(Boolean(loadingProp));
+      setError(errorProp ?? null);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     fetchObservedGradeCurve(cardId)
@@ -45,7 +62,7 @@ export function GradeCurveView({ cardId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [cardId]);
+  }, [cardId, parentSupplied, entriesProp, loadingProp, errorProp]);
 
   const visibleEntries = showAll
     ? entries
