@@ -2269,6 +2269,12 @@ async function autoPriceHolding(
       const { buildObservedGradeCurve } = await import("../compiq/observedGradeCurve.service.js");
       const curve = await buildObservedGradeCurve(curveCardId, {
         playerName: (holding as any).playerName ?? null,
+        // CF-GRADE-CURVE-POOL-UNION (2026-08-22). curveCardId was just
+        // resolved from the slug to the dominant vendor cardId; hand the slug
+        // over too so the unified overlay unions both, as this service's own
+        // pricing path already does. Otherwise the curve prices this card off
+        // a strictly smaller pool than the holding does.
+        hobbyiqCardId: holdingSlug.startsWith("hiq:") ? holdingSlug : null,
       });
       if (curve?.entries?.length) {
         const wantGrader = (holding as any).gradeCompany ? String((holding as any).gradeCompany).toUpperCase() : "Raw";

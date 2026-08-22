@@ -1580,6 +1580,29 @@ function fillEstimatedFallback(
  * Every input grade produces a row (even empty ones) so consumers can
  * render a stable UI without extra null-coalescing.
  */
+/**
+ * CF-GRADE-CURVE-POOL-UNION (2026-08-22). Which slug should the unified overlay
+ * union against, given the id we were called with and the one the caller kept?
+ *
+ * Prefer the caller's slug: a caller that resolved slug -> dominant vendor
+ * cardId still knows the slug, and dropping it makes the curve price off a
+ * strictly narrower pool than the portfolio path, which unions both. Fall back
+ * to cardId when it IS the slug, for callers that only ever hold one id.
+ *
+ * Returns null when there is no slug to union — callers must not pass a vendor
+ * id as hobbyiqCardId, which would union an id against itself and silently
+ * widen nothing.
+ */
+export function resolveUnionSlug(
+  cardId: string,
+  callerSlug: string | null | undefined,
+): string | null {
+  const supplied = typeof callerSlug === "string" ? callerSlug.trim() : "";
+  if (supplied.startsWith("hiq:")) return supplied;
+  const own = String(cardId ?? "").trim();
+  return own.startsWith("hiq:") ? own : null;
+}
+
 export async function buildObservedGradeCurve(
   cardId: string,
   opts: {
@@ -1624,6 +1647,20 @@ export async function buildObservedGradeCurve(
     setName?: string | null;
     /** Optional sport override for sport-specific calibration overlays. */
     sport?: string | null;
+    /** CF-GRADE-CURVE-POOL-UNION (2026-08-22). The canonical hiq slug for this
+     *  card, when the caller has one AND `cardId` is not it.
+     *
+     *  Callers that hold a slug routinely resolve it to the dominant vendor
+     *  cardId before calling here, because the observed-curve queries below
+     *  want the vendor id. That resolution DISCARDS the slug, and the unified
+     *  overlay then unions `cardId` against nothing — a narrower pool than the
+     *  portfolio pricing path, which unions (cardId OR hobbyiqCardId). Same
+     *  card, two pools, two market values.
+     *
+     *  Pass the pre-resolution slug here and both survive. Callers that only
+     *  ever have one id can omit it; the hiq:-prefix fallback below still
+     *  covers them. */
+    hobbyiqCardId?: string | null;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
@@ -1827,7 +1864,8 @@ export async function buildObservedGradeCurve(
     const hiqOpt: Parameters<typeof computeUnifiedPrice>[1] = {
       fixedWindowDays: 180,
     };
-    if (String(cardId).startsWith("hiq:")) hiqOpt.hobbyiqCardId = cardId;
+    const unionSlug = resolveUnionSlug(cardId, opts.hobbyiqCardId);
+    if (unionSlug) hiqOpt.hobbyiqCardId = unionSlug;
     const u = await computeUnifiedPrice(cardId, hiqOpt);
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
     for (const entry of curve.entries) {
