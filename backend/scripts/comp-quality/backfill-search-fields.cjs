@@ -75,74 +75,19 @@ const FLUSH_EVERY = Number(process.env.SEARCH_ENRICH_FLUSH_EVERY || "50000");
 // nightly cron so we don't re-scan 866k already-indexed rows every day.
 const MISSING_ONLY = process.env.SEARCH_ENRICH_MISSING_ONLY === "true";
 
-// CF-SEARCH-ENRICH-BOTH-SHAPES (2026-08-20). card_catalog holds TWO row
-// shapes and this only ever read one of them.
+// CF-TOKEN-BUILDERS-SHARED (2026-08-22). buildSearchText/buildSearchTokens
+// used to live here, carrying the CF-SEARCH-ENRICH-BOTH-SHAPES fix. They now
+// live in searchTokenBuilders.cjs, moved verbatim, so the coverage canary can
+// import the SAME code this job writes with instead of keeping a copy.
 //
-//   cardsight rows : player, releaseName, number, parallels[].name, attributes[]
-//   canonical rows : playerName, setKey, cardNumber, parallel, parallelSlug
-//
-// The job was scoped `WHERE c.source = 'cardsight'`, so reading only the
-// first shape was self-consistent — and also why every non-cardsight row in
-// the catalog still has no searchTokens, which is what forces
-// catalogSearch's seven unindexed CONTAINS branches and the 20s+ scans.
-//
-// Read both. A row that carries neither shape produces no parts, and the
-// caller REFUSES it rather than writing an empty token array — see the
-// refusal guard at the patch site.
-function buildSearchText(row) {
-  const parts = [];
-  // player
-  if (row.player) parts.push(String(row.player));
-  if (row.playerName && row.playerName !== row.player) parts.push(String(row.playerName));
-  // product / set
-  if (row.releaseName) parts.push(String(row.releaseName));
-  if (row.setName && row.setName !== row.releaseName) parts.push(String(row.setName));
-  if (row.setKey && row.setKey !== row.setName && row.setKey !== row.releaseName) {
-    parts.push(String(row.setKey).replace(/-/g, " "));
-  }
-  // card number
-  if (row.number) parts.push(String(row.number));
-  if (row.cardNumber && row.cardNumber !== row.number) parts.push(String(row.cardNumber));
-  if (row.year) parts.push(String(row.year));
-  // parallels: array shape (cardsight) and scalar shape (canonical)
-  if (Array.isArray(row.parallels)) {
-    for (const p of row.parallels) if (p?.name) parts.push(String(p.name));
-  }
-  if (row.parallel && String(row.parallel).toLowerCase() !== "base") {
-    parts.push(String(row.parallel));
-  }
-  if (row.parallelSlug && row.parallelSlug !== row.parallel) {
-    parts.push(String(row.parallelSlug).replace(/-/g, " "));
-  }
-  if (Array.isArray(row.attributes)) {
-    for (const a of row.attributes) if (a) parts.push(String(a));
-  }
-  return parts.join(" ").toLowerCase();
-}
-
-// Tokenize searchText into unique alphanumeric tokens for ARRAY_CONTAINS
-// lookups. Mirrors canonicalCardSearch's tokenize() (kept simple + sync).
-// Also includes card-number fragments (e.g. "cpa-eha" → also "cpa" + "eha")
-// so users typing either half of a hyphenated card number hit the row.
-function buildSearchTokens(searchText) {
-  if (!searchText) return [];
-  const seen = new Set();
-  const out = [];
-  // Split on whitespace + non-alphanum, keeping hyphenated tokens whole
-  // AND their halves so both "cpa-eha" and "cpa" match.
-  const rawTokens = String(searchText).toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean);
-  for (const raw of rawTokens) {
-    // Emit the full token (may contain hyphen, e.g. "cpa-eha", "o-pee-chee")
-    if (raw.length >= 2 && !seen.has(raw)) { seen.add(raw); out.push(raw); }
-    // Also emit hyphen-split fragments so partial-cardNumber queries hit
-    if (raw.includes("-")) {
-      for (const frag of raw.split("-")) {
-        if (frag.length >= 2 && !seen.has(frag)) { seen.add(frag); out.push(frag); }
-      }
-    }
-  }
-  return out;
-}
+// A canary holding its own copy of the builder cannot notice the builder
+// changing underneath it, and that is the failure this area keeps producing:
+// the nightly ran green for months while structurally unable to touch
+// anything. Shared code makes the canary's comparison mean something.
+const {
+  buildSearchText,
+  buildSearchTokens,
+} = require("./searchTokenBuilders.cjs");
 
 async function runInParallel(items, worker, concurrency = CONCURRENCY) {
   let i = 0;
