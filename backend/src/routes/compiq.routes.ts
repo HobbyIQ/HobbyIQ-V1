@@ -1164,6 +1164,11 @@ function requestFromParsed(parsed: ParsedCardQuery): CompIQEstimateRequest {
 }
 
 const CACHE_TTL_SECONDS = 15 * 60; // 15 minutes
+// CF-CATALOG-OPTIONS-SHORT-CACHE (2026-08-21). Deliberately far shorter than
+// the pricing TTL above. catalogOptions was left uncached so a newly-ingested
+// checklist row appeared instantly; this caps how much of that immediacy we
+// trade away to stop paying the catalog cost on every single request.
+const CATALOG_OPTIONS_TTL_SECONDS = 60;
 
 function normalizeCacheKey(prefix: string, query: string): string {
   return `${prefix}:${query.trim().toLowerCase().replace(/\s+/g, " ")}`;
@@ -2531,10 +2536,13 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     //
     // `result` came from cacheWrap, so it is a CACHED object — mutating it
     // would write the options into the cache entry and serve one query's
-    // checklist to another. Merge into a copy instead, and compute the options
-    // outside the cache so a newly-ingested checklist row and its fresh comps
-    // appear immediately rather than after the cache TTL (15 minutes;
-    // this comment previously said 6h, which was never true for this route).
+    // checklist to another. Merge into a copy instead.
+    //
+    // The options used to be computed with NO cache at all, so a newly-ingested
+    // checklist row and its fresh comps appeared immediately rather than after
+    // the pricing TTL (15 minutes; an older comment said 6h, never true here).
+    // CF-CATALOG-OPTIONS-SHORT-CACHE (2026-08-21) keeps that intent but stops
+    // charging every request for it — see the cacheWrap below.
     let catalogOptions: unknown[] = [];
     let catalogProvisional = false;
     try {
@@ -2546,11 +2554,38 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       // is a pure function of the string — so re-running it is cheap and
       // avoids restructuring the cached region.
       const parsedForAnchor = parseCardQuery(query);
-      const catalog = await searchCatalog({
-        query: query.trim(),
-        limit: 25,
-        playerName: parsedForAnchor?.playerName ?? null,
-      });
+      // CF-CATALOG-OPTIONS-SHORT-CACHE (2026-08-21). This lookup ran on EVERY
+      // request — including requests that HIT the pricing cache, where the
+      // engine returned in ~0ms and the catalog was the entire response time.
+      // Measured on an idle box (CPU ~10%, no backfill running), catalogMs on
+      // cache-HIT requests: 92.8s 70.6s 45.2s 23.5s 23.2s 22.5s 22.4s 22.1s ...
+      // — a user repeating a search paid full catalog cost every time while the
+      // priced answer was already cached and free.
+      //
+      // Cached under its OWN key, never merged into the pricing entry: the
+      // options are a function of the query text alone, whereas the pricing
+      // entry is per-query and must not carry another query's checklist.
+      //
+      // 60s keeps the original freshness intent nearly intact — a checklist row
+      // ingested now is visible within a minute instead of instantly, which is
+      // still 15x tighter than the pricing TTL this was written to beat.
+      const catalogCacheKey = normalizeCacheKey("compiq:catalogopts:v1", query);
+      const catalog = await cacheWrap(
+        catalogCacheKey,
+        () => searchCatalog({
+          query: query.trim(),
+          limit: 25,
+          playerName: parsedForAnchor?.playerName ?? null,
+        }),
+        {
+          freshTtlSeconds: CATALOG_OPTIONS_TTL_SECONDS,
+          // Never persist a zero-hit lookup. A cold catalog or a transient
+          // Cosmos blip would otherwise pin "no options" for the full TTL,
+          // and the next request is exactly the one that would have repaired
+          // it. Mirrors the same guard on the pricing cacheWrap above.
+          skipCacheWhen: (r) => !r || !Array.isArray(r.hits) || r.hits.length === 0,
+        },
+      );
       catalogMs = Date.now() - catalogStartedAt;
       catalogOptions = catalog.hits;
       catalogProvisional = catalog.provisional === true;
