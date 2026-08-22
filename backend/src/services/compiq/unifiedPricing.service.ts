@@ -22,6 +22,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
+import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -42,9 +43,33 @@ const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_co
 // Prior config was 30d/60d/90d/180d, which dragged FMV behind hot
 // cards mid-surge. Concrete case: 2018 Bowman Chrome Ohtani PSA 9
 // 7d median $2,650 vs engine's 30d median $2,400 → FMV lagged ~$250.
+// CF-WINDOW-FLOOR-60D (2026-08-22). The 7d and 30d tiers are gone, and the
+// reason is measured rather than preferred. Same Ohtani PSA 9 as the note
+// above, 884 deduped sales, value and trend by window:
+//
+//     7d   $2,433.09   -17.9%/wk   n=36     <- what the cascade was picking
+//    14d   $2,601.51    -5.9%/wk   n=91
+//    30d   $1,769.34   -38.5%/wk   n=164    <- worst of all
+//    60d   $2,926.50    +4.2%/wk   n=415
+//    90d   $2,926.50    +3.7%/wk   n=625
+//   180d   $2,926.50    +3.2%/wk   n=884
+//
+// Everything at 60d and beyond agrees; everything below it is noise, and the
+// cascade picked the SHORTEST window that had enough sales — so the busiest
+// cards, the ones with the most evidence, were priced off the least of it.
+// Individual sales of this card span $2,341-$3,050, so seven days of them can
+// say anything.
+//
+// WHY THIS DOES NOT REINTRODUCE THE LAG THE 7d TIER WAS ADDED TO FIX. That
+// note is about a long-window MEDIAN trailing a surge. The level is no longer
+// a median — CF-TREND-FROM-FIT-NOT-LAST-THREE makes it a trend fit read AT
+// NOW, so the slope carries it forward instead of averaging it backward. On
+// this card the 180d fit returns $2,926.50, ABOVE the 30d median of $2,768,
+// on a market that is genuinely rising. Long window, current answer.
+//
+// The weighted median that remains is recency-decayed at a 14d half-life, so
+// it does not sit still either.
 const WINDOWS = [
-  { days: 7, minDirect: 5 },
-  { days: 30, minDirect: 10 },
   { days: 60, minDirect: 5 },
   { days: 90, minDirect: 5 },
   { days: 180, minDirect: 3 },
@@ -380,6 +405,49 @@ export async function computeUnifiedPrice(
     trendPctPerWeek: number | null;
     trendDirection: "up" | "down" | "flat";
   } {
+    // ── CF-TREND-FROM-FIT-NOT-LAST-THREE (2026-08-22) ──────────────────
+    //
+    // marketValue used to be the MEDIAN OF THE LAST 3 SALES, with direction
+    // taken from those 3 against the next 10 — roughly one day of activity on
+    // a busy card. That is not a trend, it is the newest sale's jitter.
+    //
+    // Shohei Ohtani 2018 Bowman Chrome #1 PSA 9, 224 real sales after dedupe:
+    //
+    //   last 3      $2,341 / $3,050 / $2,401  -> median $2,401, "-11%, falling"
+    //   regression  over the same 224 sales   -> +16.0%/month, $2,762 today
+    //   30d median                            -> $2,768
+    //
+    // Two independent methods agree at ~$2,765 and the shipped number was
+    // $2,401 and pointing down. Individual sales of this card range
+    // $2,341-$3,050, so any three of them can say anything.
+    //
+    // So fit the trend over the window and read it AT NOW. That is the golden
+    // rule as written — FMV is the projected next sale from the pool's trend,
+    // never a median — and projectNextSaleFromComps already implements it,
+    // including the guards that make a fit safe: a thin-pool slope clamp and a
+    // +/-25% median-anchor cap so an outlier cannot drag the output away from
+    // the observed clearing price.
+    //
+    // The leading-edge path below is KEPT as the fallback for pools too thin
+    // to fit, which is what it was always good at.
+    const datedForFit = rows
+      .map((r) => ({ price: Number(r.price), soldDate: String(r.soldAt ?? "") }))
+      .filter((c) => Number.isFinite(c.price) && c.price > 0 && Number.isFinite(Date.parse(c.soldDate)));
+    if (datedForFit.length >= 8) {
+      const atNow = projectNextSaleFromComps(datedForFit, { forwardDays: 0, minNForRegression: 3, nowMs });
+      const at7d = projectNextSaleFromComps(datedForFit, { forwardDays: 7, minNForRegression: 3, nowMs });
+      if (atNow && atNow.nextSaleValue > 0) {
+        // slopePerMonthPct -> per week, the unit this function reports in.
+        const perWeek = Math.round((atNow.slopePerMonthPct / (30 / 7)) * 10) / 10;
+        return {
+          marketValue: Math.round(atNow.nextSaleValue * 100) / 100,
+          predictedPrice: Math.round((at7d?.nextSaleValue ?? atNow.nextSaleValue) * 100) / 100,
+          trendPctPerWeek: perWeek,
+          trendDirection: Math.abs(perWeek) < 1 ? "flat" : (perWeek > 0 ? "up" : "down"),
+        };
+      }
+    }
+
     if (wMedian === null || rows.length < 4) {
       return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
     }
