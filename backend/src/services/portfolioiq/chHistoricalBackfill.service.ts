@@ -93,6 +93,17 @@ export interface BackfillOptions {
   ignoreCursor?: boolean;
 }
 
+/**
+ * CF-CH-BACKFILL-POISON-PILL (2026-08-22). Consecutive runs a single date may
+ * block the walk before it is quarantined and stepped over.
+ *
+ * 3 is chosen against the schedule, not arbitrarily: this job runs twice a
+ * day, so three consecutive failures means the date has been unavailable for
+ * roughly a day and a half. That is far past any deploy blip or rate-limit
+ * window, and comfortably short of the three days of total stall the previous
+ * unbounded hold actually produced.
+ */
+const MAX_BLOCKED_ATTEMPTS = Number(process.env.CH_BACKFILL_MAX_BLOCKED_ATTEMPTS ?? 3) || 3;
 export interface BackfillRunResult {
   startDate: string;
   endDate: string;
@@ -107,6 +118,8 @@ export interface BackfillRunResult {
   cursorBefore: string | null;
   cursorAfter: string | null;
   stoppedReason: "range-exhausted" | "max-days" | "time-budget" | "hard-error";
+  /** CF-CH-BACKFILL-POISON-PILL: dates stepped over this run, with the hole recorded. */
+  quarantinedThisRun?: string[];
   apply: boolean;
   elapsedMs: number;
 }
@@ -296,6 +309,7 @@ export async function runHistoricalBackfill(opts: BackfillOptions = {}): Promise
   });
 
   const perDay: DayResult[] = [];
+  const quarantinedThisRun: string[] = [];
   let cursorAfter = cursorBefore;
   let stoppedReason: BackfillRunResult["stoppedReason"] = "range-exhausted";
   let current = startDate;
@@ -314,10 +328,85 @@ export async function runHistoricalBackfill(opts: BackfillOptions = {}): Promise
     log("ch_historical_backfill.day", { ...day, skipBreakdown: undefined });
 
     if (!day.complete) {
-      // Hold the cursor. Retrying beyond a failed day would leave a
-      // permanent hole that nothing later goes back for.
-      stoppedReason = "hard-error";
-      break;
+      // Holding the cursor is right for a TRANSIENT failure: skipping would
+      // leave a hole nothing goes back for. It is wrong forever.
+      //
+      // CF-CH-BACKFILL-POISON-PILL (2026-08-22). CardHedge returned HTTP 500
+      // for 2025-10-08. The run died in 0.9s holding the cursor, and did that
+      // on EVERY scheduled run from 2026-08-19 on — three days of zero rows
+      // because one upstream date is permanently unavailable. A retry policy
+      // with no give-up condition is a deadlock, not a safety property.
+      //
+      // So: hold for MAX_BLOCKED_ATTEMPTS consecutive runs, which covers any
+      // real transient. Past that, record the date in quarantinedDates and
+      // step over it. That list is what "goes back for it" — a known,
+      // reported hole, which is the opposite of silently skipping.
+      const sameAsBefore = cursor?.blockedDate === current;
+      const attempts = (sameAsBefore ? (cursor?.blockedAttempts ?? 0) : 0) + 1;
+      const dayError = day.error ?? `day incomplete (http=${day.httpStatus})`;
+
+      if (attempts < MAX_BLOCKED_ATTEMPTS) {
+        if (apply) {
+          await writeBackfillCursor({
+            // cursorAfter is null before any day has ever completed; the hold
+            // is only recording the block, so keep whatever was there.
+            lastCompletedDate: cursorAfter ?? cursorBefore ?? current,
+            rowsWritten: 0,
+            rowsParsed: 0,
+            blockedDate: current,
+            blockedAttempts: attempts,
+            blockedFirstSeenAt: sameAsBefore
+              ? (cursor?.blockedFirstSeenAt ?? new Date().toISOString())
+              : new Date().toISOString(),
+            blockedLastError: String(dayError).slice(0, 300),
+          });
+        }
+        log("ch_historical_backfill.blocked", {
+          date: current, attempts, maxAttempts: MAX_BLOCKED_ATTEMPTS, error: String(dayError).slice(0, 300),
+        });
+        stoppedReason = "hard-error";
+        break;
+      }
+
+      // Give up on this date and keep going.
+      quarantinedThisRun.push(current);
+      const allQuarantined = [...(cursor?.quarantinedDates ?? []), current]
+        .filter((d, i, a) => a.indexOf(d) === i)
+        .sort();
+      console.warn(
+        `::warning::[ch-backfill] QUARANTINED ${current} after ${attempts} failed runs ` +
+        `(${String(dayError).slice(0, 160)}). Stepping over it — this date is a KNOWN HOLE ` +
+        `and is recorded in the cursor. ${allQuarantined.length} quarantined total.`,
+      );
+      log("ch_historical_backfill.quarantined", { date: current, attempts, totalQuarantined: allQuarantined.length });
+      if (apply) {
+        await writeBackfillCursor({
+          lastCompletedDate: current,   // step past it
+          rowsWritten: day.rowsWritten,
+          rowsParsed: day.rowsParsed,
+          blockedDate: null,
+          blockedAttempts: 0,
+          blockedFirstSeenAt: null,
+          blockedLastError: null,
+          quarantinedDates: allQuarantined,
+        });
+      }
+      cursorAfter = current;
+      current = addDays(current, 1);
+      continue;
+    }
+
+    // A day that completed clears any block record for it.
+    if (cursor?.blockedDate === current && apply) {
+      await writeBackfillCursor({
+        lastCompletedDate: current,
+        rowsWritten: 0,
+        rowsParsed: 0,
+        blockedDate: null,
+        blockedAttempts: 0,
+        blockedFirstSeenAt: null,
+        blockedLastError: null,
+      });
     }
 
     if (apply) {
@@ -347,6 +436,7 @@ export async function runHistoricalBackfill(opts: BackfillOptions = {}): Promise
     cursorBefore,
     cursorAfter,
     stoppedReason,
+    quarantinedThisRun,
     apply,
     elapsedMs: Date.now() - t0,
   };

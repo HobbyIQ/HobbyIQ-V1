@@ -33,6 +33,29 @@ export interface BackfillCursor {
   cumulativeDays: number;
   /** Never expire — see header. */
   ttl: number;
+  /**
+   * CF-CH-BACKFILL-POISON-PILL (2026-08-22). The date currently blocking
+   * the walk, and how many consecutive runs it has blocked it.
+   *
+   * Holding the cursor on a failed day is correct for a TRANSIENT failure —
+   * skipping it would leave a hole nothing goes back for. It is not correct
+   * forever: CardHedge returned HTTP 500 for 2025-10-08, the run died in
+   * 0.9s holding the cursor, and it did that on every scheduled run from
+   * 2026-08-19 onward. Zero rows ingested for three days because one date
+   * upstream is permanently unavailable.
+   */
+  blockedDate?: string | null;
+  blockedAttempts?: number;
+  blockedFirstSeenAt?: string | null;
+  blockedLastError?: string | null;
+  /**
+   * Dates given up on after MAX_BLOCKED_ATTEMPTS and stepped over.
+   *
+   * This list is the thing that "goes back for them" — the concern the
+   * original hold-the-cursor comment raised. A quarantined day is a KNOWN,
+   * recorded hole, which is the opposite of silently skipping past it.
+   */
+  quarantinedDates?: string[];
 }
 
 let _container: Container | null = null;
@@ -102,6 +125,13 @@ export async function writeBackfillCursor(update: {
   lastCompletedDate: string;
   rowsWritten: number;
   rowsParsed: number;
+  // CF-CH-BACKFILL-POISON-PILL (2026-08-22). Optional so every existing
+  // call site keeps working unchanged; absent means "leave as-is".
+  blockedDate?: string | null;
+  blockedAttempts?: number;
+  blockedFirstSeenAt?: string | null;
+  blockedLastError?: string | null;
+  quarantinedDates?: string[];
 }): Promise<void> {
   const c = await getContainer();
   if (!c) return;
@@ -113,6 +143,13 @@ export async function writeBackfillCursor(update: {
     updatedAt: new Date().toISOString(),
     cumulativeRowsWritten: (prior?.cumulativeRowsWritten ?? 0) + update.rowsWritten,
     cumulativeRowsParsed: (prior?.cumulativeRowsParsed ?? 0) + update.rowsParsed,
+    // Undefined means "unchanged", so a normal successful-day write does not
+    // wipe an in-progress block record.
+    blockedDate: update.blockedDate !== undefined ? update.blockedDate : (prior?.blockedDate ?? null),
+    blockedAttempts: update.blockedAttempts !== undefined ? update.blockedAttempts : (prior?.blockedAttempts ?? 0),
+    blockedFirstSeenAt: update.blockedFirstSeenAt !== undefined ? update.blockedFirstSeenAt : (prior?.blockedFirstSeenAt ?? null),
+    blockedLastError: update.blockedLastError !== undefined ? update.blockedLastError : (prior?.blockedLastError ?? null),
+    quarantinedDates: update.quarantinedDates !== undefined ? update.quarantinedDates : (prior?.quarantinedDates ?? []),
     cumulativeDays: (prior?.cumulativeDays ?? 0) + 1,
     ttl: -1,
   };
