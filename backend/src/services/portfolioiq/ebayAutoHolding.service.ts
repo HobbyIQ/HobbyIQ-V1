@@ -551,6 +551,58 @@ export function applyBrowseEnrichment(
       }));
     }
   }
+  // CF-NORMALISE-FINAL-PARALLEL (2026-08-22). The block above normalises the
+  // eBay ASPECT only. A title-parsed parallel never went through
+  // holdingFieldNormalizer at all, so raw scraped strings reached Cosmos and
+  // could never match a catalog row:
+  //
+  //   "ChromeProspectAutographsBlueRefractor"   "ChromeProspectAutographRefractor"
+  //   "Chrome Prospects Mojo Black Refractor"   "[Base]"   "NONE"   "Logofractor"
+  //   "Gold Prizm Missing Serial Number"
+  //
+  // One of them was baked into a slug:
+  //   hiq:baseball:2025:draft:cpa-dc:chromeprospectautographgoldrefractor:auto
+  //
+  // holdingFieldNormalizer is THE cleaning standard; applying it to one branch
+  // instead of to the value we actually store is the same scope error that
+  // produced the Kurtz and Caglianone bugs. Normalise the FINAL value here.
+  //
+  // Note this can only IMPROVE or clear the parallel. If normalisation rejects
+  // the string outright we keep it rather than silently dropping to base —
+  // a wrong-but-present parallel is reviewable, an amputated one is invisible
+  // (that amputation is exactly what PR #1141 fixed for the aspect path).
+  if (typeof holding.parallel === "string" && holding.parallel.trim() !== "") {
+    const before = holding.parallel;
+    const { fields: cleaned } = normalizeHoldingFields({
+      playerName: holding.playerName ?? null,
+      cardYear: holding.cardYear ?? null,
+      setName: holding.setName ?? null,
+      parallel: before,
+      cardNumber: holding.cardNumber ?? null,
+      isAuto: holding.isAuto ?? null,
+      product: holding.product ?? null,
+    });
+    const cleanedParallel = typeof cleaned.parallel === "string" ? cleaned.parallel.trim() : "";
+    if (cleanedParallel !== "" && cleanedParallel !== before) {
+      console.log(JSON.stringify({
+        event: "ebay_final_parallel_normalised",
+        source: "ebayAutoHolding",
+        before,
+        after: cleanedParallel,
+        title: holding.cardTitle ?? null,
+      }));
+      holding.parallel = cleanedParallel;
+    } else if (cleanedParallel === "") {
+      console.log(JSON.stringify({
+        event: "ebay_final_parallel_unrecognised",
+        source: "ebayAutoHolding",
+        parallel: before,
+        title: holding.cardTitle ?? null,
+        note: "normalizer did not recognise it; KEPT as-is so it stays reviewable rather than becoming base",
+      }));
+    }
+  }
+
   if (aspects["Card Number"] && !holding.cardNumber) {
     holding.cardNumber = aspects["Card Number"];
   }
