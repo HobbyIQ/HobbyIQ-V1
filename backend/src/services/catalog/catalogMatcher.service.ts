@@ -528,7 +528,7 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     if (hit) _matchCache.delete(key);
   }
 
-  const result = await canonicalizeImpl(input);
+  const result = applyParallelInvariant(input, await canonicalizeImpl(input));
 
   if (key) {
     // Cheap bound: drop the oldest insertion when full rather than track LRU.
@@ -542,6 +542,36 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     });
   }
 
+  return result;
+}
+
+/**
+ * Reject a match whose parallel is not the one that was asked for.
+ *
+ * CF-INVARIANT-BEFORE-CACHE (2026-08-22). This used to run AFTER the cache
+ * write and after the early return on a cache hit, which made canonicalize()
+ * answer the same question two different ways:
+ *
+ *   call 1  miss -> compute -> cache{found} -> invariant rejects -> not-found
+ *   call 2  hit  -> return cache{found}                          -> FOUND
+ *
+ * So the first caller got the rejection and every caller for the next TTL got
+ * the match the invariant had just thrown out. A guard that runs on the miss
+ * path but not the hit path is not a guard — it is a coin flip, and it hid
+ * behind the fact that a rejection looks identical to "no such card".
+ *
+ * Observed on Andrew Fischer #CPA-AF: asked with no parallel, the matcher
+ * returned `…:cpa-af:refractor:auto` at exact/0.98. Called once the answer was
+ * not-found; called twice in a process it was FOUND, same input.
+ *
+ * Now the invariant is applied to the compute result BEFORE that result is
+ * cached, so the cache stores exactly what a caller would have been given and
+ * every path returns the same answer. Pure — no I/O, no cache access.
+ */
+function applyParallelInvariant(
+  input: CatalogMatchInput,
+  result: CatalogMatchResult,
+): CatalogMatchResult {
   if (!result.found) return result;
 
   const seg = parallelSegmentOf(result.slug);
