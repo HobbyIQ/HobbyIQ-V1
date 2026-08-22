@@ -1199,6 +1199,78 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
 // Per-site `callContext` (source, userId, holdingId, routedFromHolding) is
 // the caller's concern — layered separately at each computeEstimate call.
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * CF-FINAL-PRICE-COHERENCE (2026-08-22), part 1.
+ *
+ * An "estimated" holding whose FMV falls outside its own estimate band is
+ * internally incoherent whichever number is right. Barry Bonds (holding
+ * 46f3dd96) stored fairMarketValue 112.50 against estimateLow 21 /
+ * estimateHigh 31 with estimatedValue 26 — the UI rendered 112.50 while the
+ * engine's own band said 21-31.
+ *
+ * Returns the FMV that should be published: unchanged when coherent, else the
+ * estimatedValue (the honest answer for an estimated holding), else null.
+ * Pure so it can be pinned by tests without Cosmos.
+ */
+export function reconcileEstimatedFmvToBand(input: {
+  valuationStatus: string | null | undefined;
+  fairMarketValue: number | null | undefined;
+  estimateLow: number | null | undefined;
+  estimateHigh: number | null | undefined;
+  estimatedValue: number | null | undefined;
+}): { fmv: number | null; changed: boolean } {
+  const { valuationStatus, fairMarketValue, estimateLow, estimateHigh, estimatedValue } = input;
+  const fmv = typeof fairMarketValue === "number" && Number.isFinite(fairMarketValue) ? fairMarketValue : null;
+  if (valuationStatus !== "estimated") return { fmv, changed: false };
+  if (fmv === null) return { fmv, changed: false };
+  if (typeof estimateLow !== "number" || typeof estimateHigh !== "number") return { fmv, changed: false };
+  if (!Number.isFinite(estimateLow) || !Number.isFinite(estimateHigh)) return { fmv, changed: false };
+  if (fmv >= estimateLow && fmv <= estimateHigh) return { fmv, changed: false };
+  const replacement =
+    typeof estimatedValue === "number" && Number.isFinite(estimatedValue) && estimatedValue > 0
+      ? estimatedValue
+      : null;
+  return { fmv: replacement, changed: true };
+}
+
+/**
+ * CF-FINAL-PRICE-COHERENCE (2026-08-22), part 2.
+ *
+ * CF-COST-BASIS-SANITY-FLOOR (2026-08-04) refuses a proposed FMV under 15% of
+ * cost for holdings over $50 — but it lived inside the our-pool branch only.
+ * Jac Caglianone (holding 9b971b03) arrived with pricingSource=null, so the
+ * floor never ran and $9.66 published against $205.48 paid (4.7%). The root
+ * cause was an identity error: eBay's Set aspect said "2024 Bowman Draft"
+ * while the seller's own title said "2026 Topps Chrome".
+ *
+ * Flags for review; deliberately does NOT overwrite the price. We have no
+ * better number, and silently nulling it would hide a card that genuinely
+ * crashed. Re-identifying here was measured and rejected: title-over-aspect
+ * precedence would have re-identified 10 of 59 titled eBay holdings (16.9%),
+ * only 2 of which were real errors.
+ */
+export const COST_BASIS_REVIEW_FLOOR_PCT = 0.15;
+export const COST_BASIS_REVIEW_MIN_COST = 50;
+
+export function costBasisReviewPatch(input: {
+  costBasis: number | null | undefined;
+  fairMarketValue: number | null | undefined;
+  quantity?: number | null;
+}): { needsReview?: boolean; reviewReason?: string } {
+  const qty = Math.max(1, typeof input.quantity === "number" && Number.isFinite(input.quantity) ? input.quantity : 1);
+  const cost = typeof input.costBasis === "number" && Number.isFinite(input.costBasis) ? input.costBasis : 0;
+  const fmv = typeof input.fairMarketValue === "number" && Number.isFinite(input.fairMarketValue) ? input.fairMarketValue : 0;
+  const proposed = fmv > 0 ? fmv * qty : 0;
+  if (!(cost > COST_BASIS_REVIEW_MIN_COST)) return {};
+  if (!(proposed > 0)) return {};
+  if (proposed / cost >= COST_BASIS_REVIEW_FLOOR_PCT) return {};
+  const pct = Math.round((proposed / cost) * 10000) / 100;
+  return {
+    needsReview: true,
+    reviewReason: `FMV $${proposed.toFixed(2)} is ${pct}% of $${cost.toFixed(2)} paid — likely a card-identity mismatch, not a price move.`,
+  };
+}
+
 export function buildEstimateRequestFromHolding(
   holding: PortfolioHolding,
 ): CompIQEstimateRequest {
@@ -3021,9 +3093,83 @@ async function autoPriceHolding(
   // patch already computed above (hoisted to fire on both the success path
   // here AND the no-FMV early return). Spread is a no-op when the patch
   // is empty.
+  // CF-FINAL-PRICE-COHERENCE (2026-08-22). Two guards that already existed in
+  // narrower forms, hoisted to the FINAL price surface.
+  //
+  // Both bugs this closes share one shape, the same shape as the Kurtz
+  // canonical-override bug: a CORRECT guard scoped to ONE code path, while the
+  // value can arrive by several.
+  //
+  //   - CF-COST-BASIS-SANITY-FLOOR (2026-08-04) refuses a proposed FMV under
+  //     15% of cost for holdings over $50 — but only inside the our-pool
+  //     branch. Jac Caglianone (holding 9b971b03) arrived with
+  //     pricingSource=null, so the floor never ran and $9.66 published against
+  //     $205.48 paid (4.7%). Root cause is an identity error: the eBay Set
+  //     aspect said "2024 Bowman Draft" while the seller's own title said
+  //     "2026 Topps Chrome".
+  //   - PURCHASE_PRICE_SANITY_FLOOR_PCT flags needsReview under 20% of paid,
+  //     but lives only in ebayImportRematch, so a reprice can never raise it.
+  //
+  // This deliberately does NOT re-identify or re-price anything. The measured
+  // blast radius of flipping eBay title-over-aspect precedence was 10 of 59
+  // titled holdings (16.9%), of which only 2 were genuine errors — the rest
+  // were the documented product-family ladder ("2026 Bowman Chrome" stored as
+  // "2026 Bowman", slug already correct). Guessing a different slug here would
+  // stack a second guess on top of the first. Refuse and flag instead.
+  const cohQty = Math.max(1, toNumber(holding.quantity, 1));
+  const cohCost = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * cohQty);
+
+  // (a) An "estimated" holding whose FMV falls outside its own estimate band is
+  // internally incoherent whichever number is right. Barry Bonds (46f3dd96)
+  // stored fairMarketValue 112.50 against estimateLow 21 / estimateHigh 31 and
+  // estimatedValue 26 — the UI rendered 112.50 while the engine's own band said
+  // 21-31. The band is the honest answer for an estimated holding.
+  const band = reconcileEstimatedFmvToBand({
+    valuationStatus: priceSurface.valuationStatus,
+    fairMarketValue: priceSurface.fairMarketValueOverride,
+    estimateLow: priceSurface.estimateLow,
+    estimateHigh: priceSurface.estimateHigh,
+    estimatedValue: priceSurface.estimatedValue,
+  });
+  if (band.changed) {
+    console.warn(JSON.stringify({
+      event: "estimated_fmv_outside_own_band",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      fairMarketValue: priceSurface.fairMarketValueOverride,
+      estimateLow: priceSurface.estimateLow,
+      estimateHigh: priceSurface.estimateHigh,
+      estimatedValue: priceSurface.estimatedValue,
+      replacedWith: band.fmv,
+    }));
+    priceSurface = { ...priceSurface, fairMarketValueOverride: band.fmv };
+  }
+
+  // (b) Cost-basis floor, applied to whatever produced the final number.
+  // Flags for review; does NOT overwrite the price. We have no better number,
+  // and silently nulling it would hide a card that genuinely crashed.
+  const coherencePatch = costBasisReviewPatch({
+    costBasis: cohCost,
+    fairMarketValue: priceSurface.fairMarketValueOverride,
+    quantity: cohQty,
+  });
+  if (coherencePatch.needsReview) {
+    console.warn(JSON.stringify({
+      event: "final_price_below_cost_basis_floor",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      costBasis: cohCost,
+      fairMarketValue: priceSurface.fairMarketValueOverride,
+      pricingSource: ourPoolMeta ? "our-pool" : "legacy-engine",
+      reviewReason: coherencePatch.reviewReason,
+      flaggedForReview: true,
+    }));
+  }
+
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
+    ...coherencePatch,
     fairMarketValue: priceSurface.fairMarketValueOverride === null
       ? null as any  // null erases the field on display; ERP read coerces null→null
       : priceSurface.fairMarketValueOverride,
