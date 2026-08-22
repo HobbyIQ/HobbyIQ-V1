@@ -38,6 +38,22 @@ const LIMIT = Number(process.env.BULK_LIMIT || "500000");
 const SLICE_DAYS = Number(process.env.BULK_SLICE_DAYS || "7");
 const START_DATE = process.env.BULK_START_DATE || new Date().toISOString().slice(0, 10);
 const END_DATE = process.env.BULK_END_DATE || "2018-01-01";
+// CF-CH-FANOUT-TIME-BUDGET (2026-08-22). Stop cleanly before the workflow
+// timeout instead of being killed by it.
+//
+// The scheduled run passes no BULK_END_DATE, so it took the 2018-01-01
+// default and walked EIGHT YEARS of dates every night - while the workflow
+// header documented "Default: 30-day slice ending yesterday". As sold_comps
+// grew, that walk crossed the job timeout-minutes: 340 and the run was
+// cancelled at 5h41m on 2026-08-19, -20 and -21, three nights running.
+//
+// A cancelled job prints no summary, so it looked like "CH fan-out is
+// broken" rather than "the window is too wide". Budget in MINUTES, set
+// below the workflow timeout, so the run always reports where it reached
+// and which window to resume from.
+const TIME_BUDGET_MIN = Number(process.env.BULK_TIME_BUDGET_MIN || "0") || 0;
+const RUN_STARTED_AT = Date.now();
+let stoppedOnBudget = false;
 const SPORT_FILTER = (process.env.BULK_SPORT_FILTER || "").trim();
 
 function normSport(chGroup) {
@@ -264,9 +280,26 @@ async function main() {
     // Advance the window
     currentEnd = currentStart;
     currentStart = addDays(currentEnd, -SLICE_DAYS);
+
+    // CF-CH-FANOUT-TIME-BUDGET: check BETWEEN slices, never mid-slice, so
+    // the run always stops on a clean boundary the next one can resume from.
+    if (TIME_BUDGET_MIN > 0 && Date.now() - RUN_STARTED_AT >= TIME_BUDGET_MIN * 60000) {
+      stoppedOnBudget = true;
+      console.log(
+        `
+  TIME BUDGET REACHED (${TIME_BUDGET_MIN}m). Stopping cleanly at ` +
+        `${currentEnd}. NOT COMPLETE - re-run with BULK_START_DATE=${currentEnd} ` +
+        `to continue backwards from here.`,
+      );
+      break;
+    }
   }
 
   console.log(`\n════════════════ SUMMARY ════════════════`);
+  // Never let a budgeted stop read as a finished walk.
+  if (stoppedOnBudget) {
+    console.log(`  !! STOPPED ON TIME BUDGET - this run did NOT reach ${END_DATE}.`);
+  }
   console.log(`  rows processed:          ${processed.toLocaleString()}`);
   console.log(`  emitted to sold_comps:   ${emitted.toLocaleString()} ${APPLY ? "" : "(dry-run count)"}`);
   console.log(`  skipped (raw grade):     ${skippedRaw.toLocaleString()} (still emitted with null grade)`);

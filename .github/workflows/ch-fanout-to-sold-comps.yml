@@ -105,10 +105,33 @@ jobs:
           BULK_END_DATE: ${{ inputs.end_date }}
           BULK_SPORT_FILTER: ${{ inputs.sport_filter }}
           BULK_SLICE_DAYS: '14'
+          NIGHTLY_WINDOW_DAYS: '10'
+          # CF-CH-FANOUT-TIME-BUDGET (2026-08-22). 300m sits below this job's
+          # timeout-minutes: 340, so the script stops itself on a slice
+          # boundary and PRINTS A SUMMARY instead of being cancelled mid-walk
+          # with no output. A cancelled run reads as "the fan-out is broken";
+          # a budgeted stop says exactly which window to resume from.
+          BULK_TIME_BUDGET_MIN: '300'
         run: |
+          # CF-CH-FANOUT-NIGHTLY-WINDOW (2026-08-22). On a `schedule` trigger
+          # `inputs.*` are EMPTY, so BULK_END_DATE was unset and the script fell
+          # back to its own default of 2018-01-01 — an eight-year walk, every
+          # night. The header above documented a 30-day default that nothing
+          # implemented. That is what pushed the run past 340 minutes and got it
+          # cancelled on 2026-08-19, -20 and -21.
+          #
+          # Nightly only needs enough overlap to self-heal a missed night;
+          # contentHash dedup in recordSoldComp makes the overlap nearly free.
+          # Explicit dispatches still get whatever window they ask for.
+          if [ -z "$BULK_END_DATE" ]; then
+            BULK_END_DATE="$(date -u -d "${NIGHTLY_WINDOW_DAYS} days ago" +%Y-%m-%d)"
+            echo "No end_date supplied (scheduled run) -> defaulting to a ${NIGHTLY_WINDOW_DAYS}-day window ending $BULK_END_DATE"
+            export BULK_END_DATE
+          fi
           echo "Running bulk-import-ch-daily-to-sold-comps.cjs"
           echo "  APPLY=$BACKFILL_APPLY  CONCURRENCY=$BACKFILL_CONCURRENCY"
           echo "  START=$BULK_START_DATE  END=$BULK_END_DATE  SPORTS=$BULK_SPORT_FILTER"
+          echo "  TIME_BUDGET=${BULK_TIME_BUDGET_MIN}m (job timeout is 340m)"
           node scripts/bulk-import-ch-daily-to-sold-comps.cjs
 
       # Runs from `backend` because it require()s @azure/cosmos, which is
