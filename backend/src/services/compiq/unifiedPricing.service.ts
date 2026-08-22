@@ -21,6 +21,7 @@
 // Both derive the same numbers from the same rows.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -154,7 +155,28 @@ async function queryComps(
       query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
-    const clean = (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+    const raw = (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+    // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
+    // cardsight, cardhedge and tca-ebay all ingest the same eBay transaction,
+    // and cardhedge writes it twice at different timestamp precision. On
+    // Ohtani 2018 BC #1 that is 340 of 1,238 rows.
+    //
+    // It matters here more than anywhere else: the leading edge below is the
+    // MEDIAN OF THE LAST 3 SALES, so two copies of one sale outvote every
+    // other recent sale and become the market value. That is how this card
+    // reported "-9.7%, falling" while its own PSA 9 sales rose +16%/month.
+    const clean = dedupeSoldComps(raw);
+    if (clean.length !== raw.length) {
+      console.log(JSON.stringify({
+        event: "sold_comps_deduped",
+        source: "unifiedPricing.queryComps",
+        cardId,
+        hobbyiqCardId,
+        before: raw.length,
+        after: clean.length,
+        removed: raw.length - clean.length,
+      }));
+    }
     // Post-filter: exclude self-comps ONLY when the surviving other-pool
     // is large enough to price on its own. See SELF_COMP_MIN_OTHER_SAMPLES.
     if (excludeContributorUserId) {
