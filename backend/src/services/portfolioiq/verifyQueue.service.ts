@@ -18,6 +18,24 @@
 // queue reads cheap and cross-reason listing is a cross-partition scan
 // (rarer). Rows carry the ORIGINAL persist input verbatim so promote
 // can rehydrate through the standard sold-comps path.
+//
+// WHAT THIS CONTAINER ACTUALLY IS (Drew, 2026-08-17 — see
+// docs/decisions/ADR-verify-queue-is-telemetry-2026-08-17.md).
+//
+// The human-in-the-loop framing above describes the /verify surface, which
+// works. It does NOT describe the volume. Measured 2026-08-17: 2,426,514 rows
+// pending against 2,748 ever actioned — 0.11% — while inflow runs ~229,000/day.
+//
+// So the 60-day defaultTtl is not losing sales that would have been reviewed;
+// it is the only thing bounding a store human review has never meaningfully
+// consumed. Treat this as telemetry + sampling with a retention policy, and do
+// not plan features that assume the queue gets drained by people.
+//
+// The load-bearing behaviour is unaffected either way: a diverted comp is
+// withheld from sold_comps, so no reprice or FMV compute ever sees suspect
+// data, reviewed or not. The lever that matters is DETECTOR PRECISION, not
+// review throughput — CF-ONE-OUTLIER-RULE cut price-outlier inflow 90.3% in a
+// single change, which is more than any plausible increase in review capacity.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { randomUUID } from "crypto";
