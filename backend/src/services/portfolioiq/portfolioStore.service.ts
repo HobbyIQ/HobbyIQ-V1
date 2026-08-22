@@ -1666,6 +1666,62 @@ function dropClearedGradeFields(holding: Record<string, unknown>): void {
   }
 }
 
+// CF-GRADE-COMPANY-WITHOUT-VALUE (2026-08-22). A grading company with no grade
+// value is not a graded card — it is a half-filled form, and it prices like a
+// slab while displaying like one too.
+//
+// Measured on 2026-08-22: 3 of 79 holdings stored gradingCompany "PSA" with
+// gradeValue absent. Nick Kurtz #RA-KG carried fairMarketValue $239.64 against
+// $6.85 paid, while his own predictedPrice sat at $3.75 — a 64x spread on a
+// card the engine was believed to be pricing as raw. The badge said PSA and so,
+// evidently, did some rung of the ladder. Confirmed with Drew 2026-08-22: these
+// cards are ungraded and the company is simply wrong.
+//
+// Absent beats wrong, the same rule #1179 applies to identity: we would rather
+// show a raw card than a confident graded price for a slab that does not exist.
+//
+// THE CERT CARVE-OUT. A holding carrying a certNumber IS slabbed — the grade is
+// missing but recoverable via resolveCert. Clearing that would throw away the
+// one field that can recover it, so those are left alone for cert lookup and
+// only the unrecoverable case is cleared.
+//
+// Strip-and-warn rather than 4xx, per the FIELD-PRUNE precedent above: iOS is
+// shipping into a 9/14 launch and a new hard rejection at the write boundary is
+// the wrong thing to introduce first. The telemetry below is what tells us
+// whether a client is still producing the shape.
+export function clearGradeCompanyWithoutValue(
+  holding: Record<string, unknown>,
+  ctx: { userId: string; holdingId?: string | null },
+): void {
+  const rawCompany = holding.gradingCompany ?? holding.gradeCompany;
+  const company = typeof rawCompany === "string" ? rawCompany.trim() : "";
+  if (!company) return;
+
+  const gv = holding.gradeValue;
+  const hasGrade =
+    typeof gv === "number"
+      ? Number.isFinite(gv)
+      : typeof gv === "string"
+        ? gv.trim() !== ""
+        : false;
+  if (hasGrade) return;
+
+  const cert = holding.certNumber;
+  const hasCert = typeof cert === "string" ? cert.trim() !== "" : cert != null;
+  if (hasCert) return;
+
+  console.warn(JSON.stringify({
+    event: "grade_company_without_value_cleared",
+    source: "portfolioStore.clearGradeCompanyWithoutValue",
+    userId: ctx.userId,
+    holdingId: ctx.holdingId ?? null,
+    clearedCompany: company,
+    detail: "grading company with no grade value and no cert — stored as raw",
+  }));
+
+  for (const k of GRADE_CLEAR_FIELDS) delete holding[k];
+}
+
 // CF-INVENTORYIQ-R1 — write-side normalizer for `cardId`.
 // Applied by addHolding + updateHolding so the stored form is always
 // the bare Cardsight UUID regardless of which shape the client sends.
@@ -4886,6 +4942,13 @@ export async function addHolding(req: Request, res: Response) {
     }));
   }
 
+  // CF-GRADE-COMPANY-WITHOUT-VALUE: run before the identity gate so the
+  // persisted shape is already coherent.
+  clearGradeCompanyWithoutValue(holding as unknown as Record<string, unknown>, {
+    userId: auth.userId,
+    holdingId: holding.id,
+  });
+
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: gate must run AFTER
   // normalizeR1CardsightCardId (which can hoist cardId from
   // legacy field shapes) AND AFTER populateCardsightGradeId, so the
@@ -5079,6 +5142,13 @@ export async function updateHolding(req: Request, res: Response) {
       error: (err as Error)?.message ?? String(err),
     }));
   }
+
+  // CF-GRADE-COMPANY-WITHOUT-VALUE: symmetric with addHolding. An edit that
+  // adds a company without a grade must not persist the shape either.
+  clearGradeCompanyWithoutValue(next as unknown as Record<string, unknown>, {
+    userId: auth.userId,
+    holdingId: id,
+  });
 
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: symmetric with addHolding.
   // Validates the merged AFTER-state — an update of an existing legacy
