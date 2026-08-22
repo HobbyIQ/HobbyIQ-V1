@@ -149,6 +149,50 @@ export function sameParallelTokens(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
+/**
+ * CF-IMPLIED-REFRACTOR-EQUIVALENCE (2026-08-22).
+ *
+ * sameParallelTokens is deliberately strict, and must stay strict in the
+ * direction it was written for: a sale saying only "Refractor" is not evidence
+ * of a Green Refractor, and treating it as such is how a plain Refractor became
+ * a common-green-refractor /75.
+ *
+ * The OPPOSITE direction is not the same claim. "Yellow" and "Yellow Refractor"
+ * name one card — in a Chrome product the refractor finish is implied, which is
+ * why stripRefr() treats "Blue" and "Blue Refractor" as one parallel everywhere
+ * in the pricing path (canonicalFmv, peerPoolBuilder, parallelTitleMatch).
+ *
+ * The adoption invariant in canonicalize() did not know that, so it threw away
+ * correct matches AFTER finding them. Measured 2026-08-22, re-matching the 18
+ * unidentified holdings:
+ *
+ *   askedParallel "Yellow"  ->  hiq:...:ra-kg:yellow-refractor:auto
+ *   matchedBy "exact", confidence 0.98, REJECTED
+ *
+ * Konnor Griffin, $535.36 paid, left with no identity and therefore no price.
+ *
+ * This permits ONE relaxation and nothing else: the two token sets are
+ * identical apart from "refractor", AND the side lacking it still carries a
+ * real qualifier. So:
+ *
+ *   {yellow} vs {yellow,refractor}   -> equivalent   (colour agrees)
+ *   {refractor} vs {green,refractor} -> NOT          (would invent a colour)
+ *   {base} vs {refractor}            -> NOT          (base is not a refractor)
+ *   {blue} vs {gold,refractor}       -> NOT          (different colours)
+ */
+export function parallelsEquivalentForAdoption(a: Set<string>, b: Set<string>): boolean {
+  if (sameParallelTokens(a, b)) return true;
+  const withoutRefractor = (s: Set<string>) =>
+    new Set([...s].filter((t) => t !== "refractor"));
+  const ar = withoutRefractor(a);
+  const br = withoutRefractor(b);
+  // A side that is nothing but "refractor" carries no colour to agree on, and
+  // "base" is a claim in its own right — neither may borrow the other's tokens.
+  if (ar.size === 0 || br.size === 0) return false;
+  if (ar.has("base") || br.has("base")) return false;
+  return sameParallelTokens(ar, br);
+}
+
 /** Parallel segment of a canonical `hiq:` slug, or null if not one.
  *  Used to validate a catalog candidate by the id we would actually adopt. */
 export function parallelSegmentOf(id: string): string | null {
@@ -505,7 +549,9 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
   if (seg === null) return result;
 
   const want = parallelTokenSet(slugify(canonicalizeParallelName(input.parallel)));
-  if (sameParallelTokens(parallelTokenSet(seg), want)) return result;
+  // CF-IMPLIED-REFRACTOR-EQUIVALENCE: "Yellow" and "Yellow Refractor" are one
+  // parallel. Anything beyond that single relaxation still fails the invariant.
+  if (parallelsEquivalentForAdoption(parallelTokenSet(seg), want)) return result;
 
   console.warn(JSON.stringify({
     event: "catalog_match_parallel_invariant_violated",
