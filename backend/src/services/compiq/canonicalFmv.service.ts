@@ -1335,7 +1335,15 @@ async function tryNeighborParallel(
   input: CanonicalFmvInput,
   trendPctPerMonth: number | null,
 ): Promise<CanonicalFmvResult | null> {
+  // CF-NEIGHBOR-PARALLEL-REQUIRES-PLAYER (2026-08-22). This rung's contract
+  // is "the SAME card in a DIFFERENT year". It filtered only on product-family
+  // + variant, so parallel "Base" matched every base card of every player in
+  // the product across all years — pricing Nick Kurtz P-3 off the last 100 raw
+  // Topps Chrome sales league-wide. Without a player we cannot honour the
+  // contract, so refuse rather than guess.
   if (!input.product || !input.parallel || typeof input.cardYear !== "number") return null;
+  const neighborPlayer = String(input.player ?? "").trim();
+  if (!neighborPlayer) return null;
   const container = await getChDailyContainer();
   if (!container) return null;
 
@@ -1357,6 +1365,7 @@ async function tryNeighborParallel(
     // string ops are less forgiving than string.toLowerCase compare).
     const iter = container.items.query<{
       card_id: string;
+      player: string;
       year: number;
       card_set: string;
       variant: string;
@@ -1368,10 +1377,11 @@ async function tryNeighborParallel(
       // CF-LOWER-QUERY-ANTI-PATTERNS (Drew, 2026-07-26). @productLike
       // is already lowercased at bind time (line below), so the
       // LOWER(@productLike) inside the query was redundant work per row.
-      query: `SELECT TOP 100 c.card_id, c.year, c.card_set, c.variant, c.number,
+      query: `SELECT TOP 100 c.card_id, c.player, c.year, c.card_set, c.variant, c.number,
                               c.price, c.sale_date, c.image_url
               FROM c
               WHERE CONTAINS(LOWER(c.card_set), @productLike)
+                AND CONTAINS(LOWER(c.player), @playerLike)
                 AND c.year != @targetYear
                 AND c.grade = @grader
                 AND c.sale_date >= @cutoff
@@ -1379,6 +1389,7 @@ async function tryNeighborParallel(
               ORDER BY c.sale_date DESC`,
       parameters: [
         { name: "@productLike", value: productToken.toLowerCase() },
+        { name: "@playerLike", value: neighborPlayer.toLowerCase() },
         { name: "@targetYear", value: input.cardYear },
         { name: "@grader", value: graderQuery },
         { name: "@cutoff", value: cutoff },
@@ -1396,7 +1407,14 @@ async function tryNeighborParallel(
     // years is bounded to variant text mismatches, not card_set.
     const stripRefr = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "");
     const targetParallelNorm = stripRefr(input.parallel);
-    const matches = resources.filter((r) => stripRefr(r.variant ?? "") === targetParallelNorm);
+    // CONTAINS narrows in the query; exact normalised equality here stops
+    // "Nick Kurtz" borrowing sales from "Nick Kurtzman".
+    const normName = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const targetPlayerNorm = normName(neighborPlayer);
+    const matches = resources.filter(
+      (r) => stripRefr(r.variant ?? "") === targetParallelNorm
+        && normName(r.player ?? "") === targetPlayerNorm,
+    );
     if (matches.length === 0) return null;
 
     // For each neighbor sale, apply year-delta multiplier.

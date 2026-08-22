@@ -8646,16 +8646,51 @@ export async function computeEstimate(
         player: (body.playerName as string | null | undefined) ?? null,
         cardNumber: (body.cardNumber as string | null | undefined) ?? null,
       });
-      if (canonical.fmv !== null && canonical.fmv > 0) {
+      // CF-CANONICAL-OVERRIDE-CONFIDENCE-FLOOR (2026-08-22). The override
+      // used to accept ANY positive canonical fmv. Nick Kurtz P-3 (holding
+      // 92d07730) rendered $3,724.61 against a $6.85 cost because a
+      // 0.21-confidence neighbor-parallel result replaced a correct $3.75
+      // sibling-pool answer built from 282 sales.
+      //
+      // The line drawn here: transaction-derived rungs (direct-comp 0.9,
+      // ebay-ended 0.85, cross-parallel 0.8, hot-raw-anchor cap 0.5) may
+      // override the legacy engine. Model/projection-derived rungs
+      // (sibling-parallel 0.35, neighbor-parallel, product-tier 0.18) may
+      // NOT — the legacy engine's own answer beats a product-family
+      // projection, and silently replacing it is how a $3.75 card became
+      // a $3,724 card.
+      const MIN_OVERRIDE_CONFIDENCE = Number(
+        process.env.CANONICAL_FMV_OVERRIDE_MIN_CONFIDENCE ?? 0.5,
+      );
+      const canonConfidence =
+        typeof canonical.confidence === "number" ? canonical.confidence : 0;
+      const canonFmv =
+        typeof canonical.fmv === "number" && canonical.fmv > 0 ? canonical.fmv : null;
+      if (canonFmv !== null && canonConfidence < MIN_OVERRIDE_CONFIDENCE) {
+        // Fail VISIBLE. A suppressed override must never be indistinguishable
+        // from "canonical had no opinion" — that ambiguity is exactly what let
+        // this bug survive an investigation that cleared canonicalFmv.
+        console.warn(JSON.stringify({
+          event: "canonical_fmv_override_suppressed_low_confidence",
+          source: "compiqEstimate.service",
+          cardId: body.cardId,
+          method: canonical.method,
+          confidence: canonConfidence,
+          minConfidence: MIN_OVERRIDE_CONFIDENCE,
+          canonicalFmv: canonical.fmv,
+          legacyFmv: (legacyResult as Record<string, unknown>).fairMarketValue ?? null,
+        }));
+      }
+      if (canonFmv !== null && canonConfidence >= MIN_OVERRIDE_CONFIDENCE) {
         const round2 = (n: number) => Math.round(n * 100) / 100;
-        (legacyResult as Record<string, unknown>).fairMarketValue = canonical.fmv;
+        (legacyResult as Record<string, unknown>).fairMarketValue = canonFmv;
         // Recompute derived tiers from canonical anchor. Preserves the
         // legacy semantic (quickSale = FMV × 0.85, premium = FMV × 1.15,
         // suggestedList = FMV × 1.05) so downstream consumers keep the
         // same relative structure.
-        (legacyResult as Record<string, unknown>).quickSaleValue = round2(canonical.fmv * 0.85);
-        (legacyResult as Record<string, unknown>).premiumValue = round2(canonical.fmv * 1.15);
-        (legacyResult as Record<string, unknown>).suggestedListPrice = round2(canonical.fmv * 1.05);
+        (legacyResult as Record<string, unknown>).quickSaleValue = round2(canonFmv * 0.85);
+        (legacyResult as Record<string, unknown>).premiumValue = round2(canonFmv * 1.15);
+        (legacyResult as Record<string, unknown>).suggestedListPrice = round2(canonFmv * 1.05);
         // Debug/audit marker — visible in logs and dev tooling but not
         // in the iOS contract.
         (legacyResult as Record<string, unknown>).__canonicalFmvOverride = {

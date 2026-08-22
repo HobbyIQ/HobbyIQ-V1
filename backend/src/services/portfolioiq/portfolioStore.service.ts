@@ -1204,16 +1204,36 @@ export function buildEstimateRequestFromHolding(
 ): CompIQEstimateRequest {
   const pinnedCardId =
     String(holding.cardId ?? "").trim() || undefined;
+  // CF-GRADED-IDENTITY-REQUIRES-VALUE (2026-08-22). A grading company with no
+  // numeric grade is not a valid graded identity, and passing the half that
+  // exists is worse than passing neither: the comp pool is NOT grade-filtered
+  // (that guard requires gradeValue !== undefined) so the anchor stays raw,
+  // while gradeCompany still rides into the canonical ladder and pushes it off
+  // direct-comp onto a projection rung. Measured 2026-08-22: 3 of 79 live
+  // holdings sat in this state. Verified against prod Cosmos for Kurtz P-3 —
+  // dropping the orphan company moves canonical from neighbor-parallel
+  // $3,724.31 @0.21 to direct-comp $3.0975 @0.90.
+  const rawGradeCompany =
+    String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined;
+  const rawGradeValue = toNumber((holding as any).gradeValue, 0) || undefined;
+  const hasGradedIdentity = rawGradeCompany !== undefined && rawGradeValue !== undefined;
+  if (rawGradeCompany !== undefined && rawGradeValue === undefined) {
+    console.warn(JSON.stringify({
+      event: "holding_graded_identity_incomplete",
+      source: "portfolioStore.buildEstimateRequestFromHolding",
+      holdingId: holding.id,
+      gradingCompany: rawGradeCompany,
+      action: "priced_as_raw",
+    }));
+  }
   return {
     playerName: String(holding.playerName ?? "").trim(),
     cardYear: shimmedCardYear(holding),
     product: shimmedProduct(holding),
     parallel: String(holding.parallel ?? "").trim() || undefined,
     isAuto: Boolean(holding.isAuto),
-    gradeCompany:
-      String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() ||
-      undefined,
-    gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+    gradeCompany: hasGradedIdentity ? rawGradeCompany : undefined,
+    gradeValue: hasGradedIdentity ? rawGradeValue : undefined,
     isBlackLabel: (holding as any).isBlackLabel === true ? true : undefined,
     cardId: pinnedCardId,
     // CF-HOLDING-REFRESH-PARALLELID-THREAD (2026-06-26): thread the
