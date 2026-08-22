@@ -181,7 +181,20 @@ export default function HoldingDetailPage() {
     gainPct = cost > 0 ? (gain / cost) * 100 : 0;
   }
   const gainColor = (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
-  const showEstimateBadge = fmv == null && estValue != null;
+  // CF-WEB-ONE-NUMBER (2026-08-22). When the grade curve priced this card, the
+  // headline above IS that number and the estimate block is a SECOND number
+  // from a different path — it can only agree by luck, and a card showing two
+  // values disagrees with itself.
+  //
+  // Not deleted, which was the other option considered: the estimate is the
+  // real source when the curve has no tile for this grade, and hiding it then
+  // would drop the only thing we know about the card. Precedence, not removal
+  // — the reasoning recorded on 2026-08-14 was that removing values "deletes
+  // the signal, not the defect".
+  const showEstimateBadge = !valueFromCurve && fmv == null && estValue != null;
+  // The estimate DETAILS block follows the same rule: it appears only when the
+  // estimate is doing the work.
+  const showEstimateDetails = !valueFromCurve && showEstimateBadge;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -227,7 +240,7 @@ export default function HoldingDetailPage() {
 
         {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
-          <Stat label="Market value" value={formatUSD(value, { hideCents: true })} badge={!valueFromCurve && showEstimateBadge ? "EST" : undefined} />
+          <Stat label="Market value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
           <Stat label="Total paid" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
@@ -251,8 +264,9 @@ export default function HoldingDetailPage() {
           </div>
         )}
 
-        {/* Estimate details — only shown when we're rendering an estimate */}
-        {showEstimateBadge && (
+        {/* Estimate details — only when the estimate IS the headline, never
+            alongside a curve-priced number. */}
+        {showEstimateDetails && (
           <div className="mt-4 pt-4 border-t border-[color:var(--color-border)]">
             <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] font-medium mb-2">
               Estimate details
