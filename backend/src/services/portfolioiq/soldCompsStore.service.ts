@@ -1700,11 +1700,34 @@ export async function readCompsByCardId(input: {
   // Branching keeps this to a SINGLE query, which also matters for the
   // existing tests: they stub one items.query call, and a two-query version
   // broke 7 of them by consuming a mock that only answers once.
+  // CF-RECENT-SALES-SORT-IN-MEMORY (2026-08-22). DROP-THE-OR above removed the
+  // fan-out; the ORDER BY is what is left, and on a high-volume card it is the
+  // whole cost.
+  //
+  // Matching a "hiq:" slug cannot be partition-scoped — sold_comps is
+  // partitioned by /cardId — so the query is cross-partition, and a
+  // cross-partition ORDER BY makes Cosmos merge-sort every partition's result
+  // before returning a row. Measured on Shohei Ohtani 2018 Bowman Chrome #1
+  // (1,236 comps in 180d, the card behind a reported site timeout):
+  //
+  //   with ORDER BY, cross-partition   6.85s warm  (6.0 / 6.9 / 7.1)
+  //
+  // The rows are all fetched anyway — fetchAll(), then several in-memory
+  // filters below — so the sort costs nothing here. Sorting ~1,200 objects in
+  // JS is sub-millisecond against seconds of merge-sort in Cosmos.
+  //
+  // Partition-scoped lookups (a vendor cardId) KEEP the ORDER BY: within one
+  // partition it is index-backed and free, and leaving that path untouched
+  // keeps the change to the branch that is actually slow.
+  //
+  // Ordering of the returned array is unchanged either way — soldAt DESC is
+  // re-applied below.
   const looksLikeHiqSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
   const matchField = looksLikeHiqSlug ? "c.hobbyiqCardId" : "c.cardId";
+  const orderClause = looksLikeHiqSlug ? "" : " ORDER BY c.soldAt DESC";
   const q = {
     query:
-      `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to ORDER BY c.soldAt DESC`,
+      `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to${orderClause}`,
     parameters: [
       { name: "@cid", value: input.cardId },
       { name: "@from", value: from },
@@ -1722,6 +1745,22 @@ export async function readCompsByCardId(input: {
       : { partitionKey: input.cardId };
     const { resources } = await c.items.query(q, queryOpts).fetchAll();
     let all = resources as SoldCompDoc[];
+    // Re-apply the ordering the cross-partition branch no longer asks Cosmos
+    // for. Callers and tests rely on soldAt DESC.
+    if (looksLikeHiqSlug) {
+      // Sort by PARSED time, not by string. soldAt is not stored in one
+      // format — this card alone carries both "2026-08-21T11:01:00+00:00" and
+      // "2026-02-24T11:56:42.000Z" — so an ordinal string sort interleaves the
+      // two shapes, and localeCompare is worse still because it is
+      // locale-aware about "+" and "Z". Parsing gives true newest-first
+      // regardless of shape. Unparseable values sort last rather than
+      // poisoning the comparison.
+      const ts = (v: unknown): number => {
+        const t = Date.parse(String(v ?? ""));
+        return Number.isFinite(t) ? t : Number.NEGATIVE_INFINITY;
+      };
+      all = [...all].sort((a, b) => ts(b.soldAt) - ts(a.soldAt));
+    }
     if (input.sources && input.sources.length > 0) {
       const set = new Set(input.sources);
       all = all.filter((d) => set.has(d.source));
