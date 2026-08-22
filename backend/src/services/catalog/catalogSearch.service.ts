@@ -43,6 +43,20 @@ async function getContainer(): Promise<Container | null> {
   } catch { return null; }
 }
 
+/**
+ * CF-CATALOG-SEARCH-TIME-BUDGET (2026-08-21). Test-only container injection.
+ *
+ * The budget is a wall-clock behaviour of the escalation LADDER — which rungs
+ * get skipped, and what is returned when they are — so mirroring the rules in
+ * a test file would pin a copy of the logic rather than the logic. Injecting a
+ * fake container lets the real searchCatalog run against slow/fast stubs.
+ *
+ * Pass null to restore normal resolution.
+ */
+export function __setCatalogContainerForTest(c: Container | null): void {
+  _container = c;
+}
+
 /** sold_comps handle for CF-SEARCH-ATTACH-COMPS. Separate from the catalog
  *  container so a comps outage can never take the catalog search down. */
 async function getCompsContainer(): Promise<Container | null> {
@@ -106,6 +120,13 @@ export interface CatalogSearchResponse {
    *  checklist yet") rather than render them as ordinary results, and this
    *  is the signal that a checklist for that release is worth building. */
   provisional?: boolean;
+  /** CF-CATALOG-SEARCH-TIME-BUDGET (2026-08-21): true when the search ran
+   *  out of its wall-clock budget and returned the candidates it had
+   *  already collected instead of finishing the escalation ladder. The
+   *  hits are real, the set may be incomplete. Never silently empty — a
+   *  caller that cannot distinguish "no such card" from "we gave up" will
+   *  cache the wrong answer. */
+  timedOut?: boolean;
 }
 
 /** Fold to ASCII and strip punctuation so "Ronald Acuña, Jr." and
@@ -234,6 +255,37 @@ function nameTokensCovered(
     return nameTokens.every((t) => fuzzyIncludes(player, t));
   });
 }
+
+/**
+ * CF-CATALOG-SEARCH-TIME-BUDGET (2026-08-21).
+ *
+ * Two comments in this file already reason about "the 20s budget" as though
+ * it were enforced. It never was — there is no timeout, no AbortSignal and no
+ * deadline anywhere in the escalation ladder, so a query that falls through
+ * to the unindexed CONTAINS fallbacks runs until Cosmos is done with it.
+ * Measured in prod over 6h on 2026-08-21, catalogMs:
+ *
+ *     p50 2.3s   p95 556s   max 727s
+ *
+ * 727s is twelve minutes. Nobody is still waiting; the client gave up long
+ * ago. But the query keeps burning RUs and holding an event-loop slot, and
+ * that combination is exactly what starved the box earlier today. An
+ * abandoned request that still costs full price is worse than a truncated
+ * answer.
+ *
+ * So: enforce the budget the comments already assume. Every query in the
+ * ladder shares one AbortController, and each escalation is skipped once the
+ * deadline has passed. On expiry we return the candidates already collected
+ * and set `timedOut` — partial and labelled, never silently empty.
+ *
+ * AbortSignal rather than Promise.race on purpose: racing leaves the Cosmos
+ * query running server-side, which does nothing for the RU burn that is the
+ * actual damage. Same idiom as watchlistStore.service and ops.routes.
+ */
+const SEARCH_BUDGET_MS = Math.max(
+  1000,
+  Number(process.env.CATALOG_SEARCH_BUDGET_MS ?? 20_000) || 20_000,
+);
 
 /** Pure helpers, exported for tests only. */
 export const __testables = {
@@ -625,13 +677,27 @@ export async function searchCatalog(
 
   let rows: Row[] = [];
   let provisional = false;
+  // CF-CATALOG-SEARCH-TIME-BUDGET (2026-08-21). One controller for the whole
+  // ladder: aborting it stops every in-flight query, not just the current one.
+  const controller = new AbortController();
+  const deadline = Date.now() + SEARCH_BUDGET_MS;
+  const budgetTimer = setTimeout(() => controller.abort(), SEARCH_BUDGET_MS);
+  let timedOut = false;
+  /** False once the budget is spent — check BEFORE paying for an escalation. */
+  const withinBudget = () => {
+    if (Date.now() < deadline) return true;
+    timedOut = true;
+    return false;
+  };
   try {
+    // Every query carries the shared signal, and swallows its own failure so
+    // one aborted arm cannot discard the candidates the others found.
+    const runQuery = (qs: { query: string; parameters: typeof params }) =>
+      container.items.query<Row>(qs, { abortSignal: controller.signal }).fetchAll()
+        .then((r) => r.resources ?? [])
+        .catch(() => { if (controller.signal.aborted) timedOut = true; return [] as Row[]; });
     const runArm = (qs: { query: string; parameters: typeof params } | null) =>
-      qs
-        ? container.items.query<Row>(qs).fetchAll()
-          .then((r) => r.resources ?? [])
-          .catch(() => [] as Row[])
-        : Promise.resolve([] as Row[]);
+      qs ? runQuery(qs) : Promise.resolve([] as Row[]);
 
     const fastById = new Map<string, Row>();
     const absorb = (rows: Row[]) => { for (const r of rows) if (r?.id) fastById.set(r.id, r); };
@@ -669,27 +735,39 @@ export async function searchCatalog(
     // back to alphaTokens when it found no player — there, the old proxy is
     // still the best signal available, and escalating is the safe direction.
     const nameTokensForGate = playerNameTokens ?? alphaTokens;
-    if (armFuzzy && !nameTokensCovered([...fastById.values()], nameTokensForGate)) {
+    if (armFuzzy && withinBudget()
+        && !nameTokensCovered([...fastById.values()], nameTokensForGate)) {
       absorb(await runArm(armFuzzy));
     }
+    // CF-CATALOG-SEARCH-TIME-BUDGET: each rung below is an unindexed CONTAINS
+    // scan and they run in SEQUENCE, so without a check between them one slow
+    // query does not just blow the budget, it lets the next two start anyway.
     const fast = [...fastById.values()];
-    const { resources: canon } = fast.length > 0
-      ? { resources: fast }
-      : await container.items.query<Row>(canonicalQspec).fetchAll();
-    const { resources } = canon.length > 0
-      ? { resources: canon }
-      : await container.items.query<Row>(qspec).fetchAll();
-    rows = resources;
+    const canon = fast.length > 0
+      ? fast
+      : withinBudget() ? await runQuery(canonicalQspec) : [];
+    rows = canon.length > 0
+      ? canon
+      : withinBudget() ? await runQuery(qspec) : [];
     // CF-CATALOG-SEARCH-TIERS: fall back to the provisional tier ONLY when
     // nothing verified matched. A card we hold real sales for should never
     // read as "not found" just because its checklist hasn't landed — but a
     // stub must never dilute a page of verified results either, so this is
     // strictly empty-else, not a merge.
-    if (rows.length === 0) {
-      const { resources: prov } = await container.items.query<Row>(provisionalQspec).fetchAll();
+    if (rows.length === 0 && withinBudget()) {
+      const prov = await runQuery(provisionalQspec);
       if (prov.length > 0) { rows = prov; provisional = true; }
     }
-  } catch { return { hits: [], totalCandidatesScanned: 0, query, tokensUsed: tokens }; }
+  } catch {
+    // CF-CATALOG-SEARCH-TIME-BUDGET: keep whatever the ladder already
+    // collected. This used to return [] unconditionally, which would have
+    // turned a late abort into "no such card".
+    if (rows.length === 0) {
+      return { hits: [], totalCandidatesScanned: 0, query, tokensUsed: tokens, timedOut };
+    }
+  } finally {
+    clearTimeout(budgetTimer);
+  }
 
   // CF-CATALOG-SCORING-MULTI-FIELD (Drew, 2026-08-06). Score each row
   // by weighted matches across ALL searchable fields (searchTokens +
@@ -884,6 +962,11 @@ export async function searchCatalog(
     query,
     tokensUsed: tokens,
     ...(provisional ? { provisional: true } : {}),
+    // CF-CATALOG-SEARCH-TIME-BUDGET: surface truncation on the SUCCESS path
+    // too. A budget expiry usually still returns hits — just fewer rungs of
+    // the ladder than the query deserved — and a caller that cannot tell the
+    // difference will cache a short answer as if it were the whole one.
+    ...(timedOut ? { timedOut: true } : {}),
   };
 }
 

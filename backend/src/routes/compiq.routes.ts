@@ -2583,7 +2583,15 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           // Cosmos blip would otherwise pin "no options" for the full TTL,
           // and the next request is exactly the one that would have repaired
           // it. Mirrors the same guard on the pricing cacheWrap above.
-          skipCacheWhen: (r) => !r || !Array.isArray(r.hits) || r.hits.length === 0,
+          //
+          // CF-CATALOG-SEARCH-TIME-BUDGET (2026-08-21): nor a TRUNCATED one.
+          // A budget expiry returns real hits from an unfinished escalation
+          // ladder, so it looks like a perfectly good answer — caching it
+          // would pin one slow moment's short result over the complete one
+          // for the whole TTL. This is the reason searchCatalog reports
+          // `timedOut` rather than just returning what it has.
+          skipCacheWhen: (r) =>
+            !r || !Array.isArray(r.hits) || r.hits.length === 0 || r.timedOut === true,
         },
       );
       catalogMs = Date.now() - catalogStartedAt;
