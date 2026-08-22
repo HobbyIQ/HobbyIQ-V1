@@ -2133,13 +2133,28 @@ function detectIsAuto(input: CanonicalFmvInput): boolean {
  *  Once ch_daily_sales sold-data includes explicit grade values, refine
  *  the calibration script to per-tier granularity and drop this scaler.
  */
-function gradeTierMultiplier(
+/**
+ * The EMPIRICAL half of gradeTierMultiplier, on its own.
+ *
+ * CF-EMPIRICAL-MULTIPLIER-SPLIT (2026-08-22). gradeTierMultiplier answers
+ * "what multiplier should I use", and falls back to a hardcoded per-company
+ * matrix when calibration is missing. That is fine where a number must exist,
+ * but it cannot answer "do we actually have evidence for this tier" — the
+ * fallback is indistinguishable from a calibrated ratio in the return value.
+ *
+ * Callers that must stay empirical-only (the grade breakdown projects tiers
+ * from an anchor, and a hardcoded 4x PSA 10 would be a fabricated tier, not a
+ * projection) need the distinction. Returns null when only the fallback would
+ * apply. gradeTierMultiplier below delegates here, so there is exactly one
+ * definition of the empirical lookup and of sub-tier scaling.
+ */
+export function empiricalGradeMultiplier(
   company: string | null,
   value: number | null,
   productFamily: string | null,
   sport?: string | null,
-): number {
-  if (!company || value === null) return 1;   // raw
+): number | null {
+  if (!company || value === null) return 1;   // raw is 1 by definition
   const c = company.toUpperCase();
 
   // Sub-tier scaling — top grade gets the full empirical ratio.
@@ -2159,6 +2174,21 @@ function gradeTierMultiplier(
       return empiricalRatio * subTierScale;
     }
   }
+  return null;
+}
+
+function gradeTierMultiplier(
+  company: string | null,
+  value: number | null,
+  productFamily: string | null,
+  sport?: string | null,
+): number {
+  const empirical = empiricalGradeMultiplier(company, value, productFamily, sport);
+  if (empirical !== null) return empirical;
+  // Unreachable for raw — empiricalGradeMultiplier returns 1 for it — but the
+  // narrowing has to be explicit for the fallback table below.
+  if (!company || value === null) return 1;
+  const c = company.toUpperCase();
 
   // Fallback: hardcoded per-company/per-tier defaults.
   if (c === "PSA") {

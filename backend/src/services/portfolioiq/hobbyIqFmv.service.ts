@@ -1334,12 +1334,20 @@ export interface GradeBreakdownTier {
   gradeLabel: string;
   gradeCompany: string | null;   // null = raw
   gradeValue: number | null;     // null = raw
-  fmv: number;                   // median of comps in this tier
-  compCount: number;             // direct comps at this tier in window
+  fmv: number;                   // observed: projected next sale from THIS tier's comps. projected: anchor x empirical ratio
+  compCount: number;             // direct comps at this tier in window (0 when projected)
   trend: "up" | "down" | "flat"; // 30d vs prior-60d median direction
   min: number;
   max: number;
   freshestSoldAt: string;
+  /** CF-LADDER-PROJECTS-FROM-ANCHOR (2026-08-22). "observed" = this tier's own
+   *  sales. "projected" = no sales at this grade, so the tier is the card's
+   *  anchor scaled by the EMPIRICAL grade ratio for its family. Never a
+   *  hardcoded multiplier — a tier with no calibration is still omitted. */
+  basis: "observed" | "projected";
+  /** Confidence in this tier specifically. Observed tiers scale with sample
+   *  size; projected tiers inherit the anchor's uncertainty plus the ratio's. */
+  confidence: number;
 }
 
 export interface GradeBreakdownResult {
@@ -1354,7 +1362,23 @@ export interface GradeBreakdownResult {
  *  {tiers: []} when the slug has no comps in the window. */
 export async function computeGradeBreakdownSingleScan(
   slug: string,
-  opts: { maxAgeDays?: number; minTierComps?: number } = {},
+  opts: {
+    maxAgeDays?: number;
+    minTierComps?: number;
+    /** CF-LADDER-PROJECTS-FROM-ANCHOR (2026-08-22). The card's headline value,
+     *  supplied by a caller that already computed it. Used as the raw anchor
+     *  when the scan holds no observed raw tier of its own — which is exactly
+     *  the rare-card case, where the headline IS the last real sale.
+     *
+     *  Passing it is what makes the ladder and the header agree: the entry for
+     *  the card's own grade is derived from the same number the header shows,
+     *  rather than from a second independent computation. */
+    anchorFmv?: number | null;
+    /** Grade of `anchorFmv`, so it can be divided back to a raw base. Omit for
+     *  a raw anchor. */
+    anchorGradeCompany?: string | null;
+    anchorGradeValue?: number | null;
+  } = {},
 ): Promise<GradeBreakdownResult> {
   const t0 = Date.now();
   const now = new Date();
@@ -1402,6 +1426,27 @@ export async function computeGradeBreakdownSingleScan(
     const sorted = [...prices].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
 
+    // CF-LADDER-PROJECTS-NOT-MEDIANS (2026-08-22). This tier used to publish
+    // the MEDIAN of its comps, which is the one thing FMV is never allowed to
+    // be (golden rule / no-medians). It also put the ladder permanently at odds
+    // with the header, which routes the very same rows through
+    // projectNextSaleFromComps — Ohtani 2018 BC #1 raw: 623 comps, ladder said
+    // $2,225 (median), header said $3,089.30 (projected next sale). Same card,
+    // same rows, 28% apart, and the median was the wrong one.
+    //
+    // Same function, same options buildResult uses, so an observed tier is now
+    // the projected next sale for that grade rather than a different quantity
+    // wearing the same label.
+    const tierProjection = projectNextSaleFromComps(
+      groupRows
+        .map((r) => ({ price: Number(r.price), soldDate: r.soldAt }))
+        .filter((c) => Number.isFinite(c.price) && c.price > 0),
+      { forwardDays: 0, minNForRegression: 3, nowMs: now.getTime() },
+    );
+    const tierValue = tierProjection && tierProjection.nextSaleValue > 0
+      ? tierProjection.nextSaleValue
+      : median;   // only when the projection cannot anchor at all
+
     // 30d/60d trend from THIS group's rows only (no cross-tier contamination)
     const recent30: number[] = [], prior60: number[] = [];
     for (const r of groupRows) {
@@ -1427,14 +1472,145 @@ export async function computeGradeBreakdownSingleScan(
 
     tiers.push({
       gradeLabel, gradeCompany: company, gradeValue: value,
-      fmv: Math.round(median * 100) / 100,
+      fmv: Math.round(tierValue * 100) / 100,
       compCount: prices.length,
       trend,
       min: sorted[0],
       max: sorted[sorted.length - 1],
       freshestSoldAt: freshest,
+      basis: "observed",
+      confidence: Math.min(0.95, 0.6 + Math.min(0.35, prices.length / 20)),
     });
   }
+
+  // ── CF-LADDER-PROJECTS-FROM-ANCHOR (2026-08-22) ───────────────────────
+  //
+  // Omitting a tier with no sales was the wrong answer to the right worry.
+  // The product exists to put a number on every card at every grade from
+  // historical evidence; a blank grade breakdown on a card we can price is a
+  // failure, not caution. Griffin had a $650 anchor from his own last sale and
+  // rendered an EMPTY ladder.
+  //
+  // So: tiers with their own sales stay observed. Tiers without are projected
+  // from the card's raw anchor by the EMPIRICAL grade ratio for its family.
+  //
+  // The empirical-only doctrine is what bounds this. empiricalGradeMultiplier
+  // returns null where calibration is missing, and gradeTierMultiplier's
+  // hardcoded fallback matrix (PSA 10 = 4x and friends) is deliberately NOT
+  // consulted here — projecting off a made-up ratio would manufacture a tier
+  // rather than infer one. A grade with no calibration is still omitted.
+  //
+  // Anchor precedence, most-evidenced first:
+  //   1. an observed Raw tier — the card's own raw sales
+  //   2. an observed graded tier, divided back by its own empirical ratio
+  //   3. opts.anchorFmv from the caller (the header value), likewise divided
+  // No anchor → no projection, and the ladder stays exactly as it was.
+  try {
+    const { empiricalGradeMultiplier, classifyFamily } = await import("../compiq/canonicalFmv.service.js")
+      .then(async (m) => ({
+        empiricalGradeMultiplier: m.empiricalGradeMultiplier,
+        classifyFamily: (await import("../compiq/gradeCalibrationConfig.js")).classifyFamily,
+      }));
+
+    // hiq:sport:year:setKey:cardNumber:parallel:auto — segment 1 is the sport,
+    // segment 3 the setKey. classifyFamily is hyphen-tolerant by design.
+    const seg = slug.split(":");
+    const sport = seg[1] ?? null;
+    const family = classifyFamily(seg[3] ?? null);
+
+    const ratioFor = (company: string | null, value: number | null): number | null =>
+      empiricalGradeMultiplier(company, value, family, sport);
+
+    let rawAnchor: number | null = null;
+    let anchorNote = "";
+
+    const observedRaw = tiers.find((t) => t.gradeCompany === null);
+    if (observedRaw) {
+      rawAnchor = observedRaw.fmv;
+      anchorNote = `raw sales of this card (${observedRaw.compCount})`;
+    } else {
+      // Best-evidenced graded tier, divided back to a raw base.
+      const candidates = tiers
+        .filter((t) => t.gradeCompany !== null)
+        .sort((a, b) => b.compCount - a.compCount);
+      for (const c of candidates) {
+        const r = ratioFor(c.gradeCompany, c.gradeValue);
+        if (r !== null && r > 0) {
+          rawAnchor = c.fmv / r;
+          anchorNote = `${c.gradeLabel} sales (${c.compCount}) divided by its empirical ratio`;
+          break;
+        }
+      }
+    }
+
+    if (rawAnchor === null && typeof opts.anchorFmv === "number" && opts.anchorFmv > 0) {
+      const r = ratioFor(opts.anchorGradeCompany ?? null, opts.anchorGradeValue ?? null);
+      if (r !== null && r > 0) {
+        rawAnchor = opts.anchorFmv / r;
+        anchorNote = "the card's headline value";
+      }
+    }
+
+    if (rawAnchor !== null && Number.isFinite(rawAnchor) && rawAnchor > 0) {
+      const have = new Set(tiers.map((t) => t.gradeLabel));
+      // PROJECTED tiers stop at 9, and that bound is the empirical-only rule
+      // again rather than caution.
+      //
+      // Sub-tier scaling has three distinct buckets — 10 -> 1.0, 9.5 -> 0.65,
+      // 9 -> 0.35 — and then ONE bucket, 0.20, for everything from 8.5 down to
+      // 1. Projecting the whole range off that would print PSA 8, PSA 7, ...,
+      // PSA 1 at the identical price, which is not a weak estimate, it is a
+      // statement we have no basis for. Any collector spots it instantly and
+      // it discredits the tiers that ARE grounded.
+      //
+      // So we project only where the calibration actually distinguishes the
+      // grades. A low grade with its OWN sales still appears — observed tiers
+      // are added above this and are never filtered here.
+      const GRADE_SPACE: Array<[string, number[]]> = [
+        ["PSA", [10, 9]],
+        ["BGS", [10, 9.5, 9]],
+        ["SGC", [10, 9.5, 9]],
+        ["CGC", [10, 9.5, 9]],
+      ];
+
+      if (!have.has("Raw")) {
+        tiers.push({
+          gradeLabel: "Raw", gradeCompany: null, gradeValue: null,
+          fmv: Math.round(rawAnchor * 100) / 100,
+          compCount: 0, trend: "flat",
+          min: Math.round(rawAnchor * 0.85 * 100) / 100,
+          max: Math.round(rawAnchor * 1.15 * 100) / 100,
+          freshestSoldAt: "",
+          basis: "projected",
+          confidence: 0.4,
+        });
+      }
+
+      for (const [grader, values] of GRADE_SPACE) {
+        for (const value of values) {
+          const label = `${grader} ${value}`;
+          if (have.has(label)) continue;          // never overwrite an observation
+          const r = ratioFor(grader, value);
+          if (r === null || !Number.isFinite(r) || r <= 0) continue;  // no calibration → omit
+          const projected = rawAnchor * r;
+          if (!Number.isFinite(projected) || projected <= 0) continue;
+          tiers.push({
+            gradeLabel: label, gradeCompany: grader, gradeValue: value,
+            fmv: Math.round(projected * 100) / 100,
+            compCount: 0, trend: "flat",
+            min: Math.round(projected * 0.75 * 100) / 100,
+            max: Math.round(projected * 1.25 * 100) / 100,
+            freshestSoldAt: "",
+            basis: "projected",
+            // Two sources of error compound: the anchor's, and the ratio's.
+            // Deliberately below every observed tier's floor.
+            confidence: 0.35,
+          });
+        }
+      }
+      if (anchorNote) void anchorNote;  // reserved for a future basis string on the result
+    }
+  } catch { /* silent-safe — a projection failure must not blank the observed ladder */ }
 
   // Sort: Raw always last, others by fmv desc (highest tier first — PSA 10 > BGS 9.5 > ...)
   tiers.sort((a, b) => {
