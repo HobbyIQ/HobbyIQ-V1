@@ -78,6 +78,56 @@ describe("priceHoldingFromOurPool", () => {
     expect(result).toBeNull();
   });
 
+  // CF-RARE-CARD-ANCHOR-LABEL (2026-08-22). The rare-card rung anchors on the
+  // LAST ACTUAL SALE of the exact slug and projects it by the parent pool's
+  // drift — the most empirical answer we hold for a card too rare to have a
+  // pool. Its wrapper used to report it as "no-basis", and the guard above
+  // then dropped it, so the card went blank.
+  //
+  // Measured across 57 holdings with slugs: 8 discarded, $1,466.47 of value,
+  // including Caglianone's $205.48 last sale.
+  it("KEEPS a rare-card anchor — it is the last real sale of this exact card", async () => {
+    const mock = await computeMock();
+    mock.mockResolvedValue(fmvResultShell({
+      method: "rare-card-anchor",
+      fmv: 650,
+      min: 487.5,
+      max: 812.5,
+      compCount: 1,
+      confidence: 0.45,
+      basisNote: "Last sold $650 on 2026-08-17. Parent pool thin (31 total sales) — anchor to last sale ±25%.",
+    }));
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(baseHolding());
+
+    expect(result).not.toBeNull();
+    expect(result!.estimatedValue).toBe(650);
+  });
+
+  it("publishes the rare-card anchor as an ESTIMATE with a band, never as a fact", async () => {
+    // The projection forward is modelled, so it must not read as observed —
+    // but it must still reach the user, which is the entire point of the rung.
+    const mock = await computeMock();
+    mock.mockResolvedValue(fmvResultShell({
+      method: "rare-card-anchor",
+      fmv: 112,
+      min: 95.2,
+      max: 128.8,
+      compCount: 1,
+      confidence: 0.65,
+      basisNote: "Last sold $67.34 on 2026-07-29. Comparable base pool up 65.9% since. Projected: $112.",
+    }));
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(baseHolding());
+
+    expect(result!.valuationStatus).toBe("estimated");
+    expect(result!.fairMarketValue).toBeNull();
+    expect(result!.estimateLow).not.toBeNull();
+    expect(result!.estimateHigh).not.toBeNull();
+    // The prose is the transparency surface — it names the sale and the drift.
+    expect(result!.estimateBasis).toContain("Last sold");
+  });
+
   it("returns null when fmv is 0 (no positive comps in pool)", async () => {
     const mock = await computeMock();
     mock.mockResolvedValue(fmvResultShell({ method: "direct-slug", fmv: 0, compCount: 0 }));

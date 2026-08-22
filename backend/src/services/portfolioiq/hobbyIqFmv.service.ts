@@ -103,6 +103,7 @@ export type HobbyIqFmvMethod =
   | "family-baseline"            // same year + cardNumber, any variant (broadest same-card fallback)
   | "grade-cross-raw"            // grade requested but no graded comps at any rung; raw median × graded multiplier
   | "composite-neighbor"         // CF-HOBBYIQFMV-COMPOSITE (Drew, 2026-07-30). Composite axis-drop pool + per-axis calibration multipliers. Runs BEFORE the legacy string-slug ladder when HOBBYIQFMV_COMPOSITE_ENABLED=true and target has enough enriched neighbors.
+  | "rare-card-anchor"           // last actual sale of THIS slug, projected by parent drift
   | "no-basis";                  // truly nothing — should be rare after the ladder
 
 export interface HobbyIqFmvResult {
@@ -479,7 +480,18 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         recentComps: rare.lastSale
           ? [{ price: rare.lastSale.price, soldAt: rare.lastSale.soldAt, source: rare.lastSale.source }]
           : [],
-        method: "no-basis",   // no dedicated ladder rung name for rare-card-anchor yet; basisNote carries the detail
+        // CF-RARE-CARD-ANCHOR-LABEL (2026-08-22). This used to report
+        // "no-basis" with the note "no dedicated rung name yet". The name did
+        // exist — rareCardFmv.service.ts has always returned
+        // method: "rare-card-anchor" — and this wrapper discarded it.
+        //
+        // The cost was not cosmetic. priceFromOurPool drops any result whose
+        // method is "no-basis", so the best empirical price we hold for the
+        // RAREST cards was computed and then thrown away. Measured across 57
+        // holdings with slugs: 8 discarded, $1,466.47 of value, including
+        // Caglianone's $205.48 last sale — the very card #1178 needed a
+        // cost-basis floor to rescue from the fallback that ran instead.
+        method: "rare-card-anchor",
         basisNote: rare.basisNote,
         confidence: rare.parentDeltaPct !== null ? 0.65 : 0.45,
         population,
@@ -1084,6 +1096,11 @@ function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
     // hits when both are present. Confidence is also set inline in
     // tryCompositePath based on axis distance; this is the fallback.
     case "composite-neighbor":           return Math.min(0.90, 0.65 + nBonus);
+    // Anchored on ONE real sale of the exact card plus parent drift. Thin,
+    // but genuinely this card — so above the broad reasoning rungs and below
+    // direct-slug. The rare-card rung sets its own confidence inline
+    // (0.65 with a parent delta, 0.45 without); this is the fallback.
+    case "rare-card-anchor":             return Math.min(0.65, 0.45 + nBonus);
     case "no-basis":                     return 0;
   }
 }

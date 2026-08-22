@@ -22,6 +22,8 @@
 //   - Calls computeHobbyIqFmv({slug, gradeCompany, gradeValue}).
 //   - Interprets the winning rung:
 //       method === "grade-cross-raw"  → estimated (raw × multiplier)
+//       method === "rare-card-anchor" → estimated (last real sale of THIS
+//                                        card, projected by parent drift)
 //       method === "no-basis"         → null (no data; fall back)
 //       any other observed rung       → observed (real graded comps
 //                                        of this exact / adjacent identity)
@@ -204,6 +206,32 @@ export async function priceHoldingFromOurPool(
         estimateHigh: null,
         estimateConfidence: conf,
         estimateBasis: result.basisNote,  // the rung's prose, for transparency
+        method: result.method,
+        compsUsed,
+        slug,
+        source: "our-pool",
+      };
+    }
+
+    // CF-RARE-CARD-ANCHOR-LABEL (2026-08-22). One real sale of the EXACT card,
+    // projected forward by the parent pool's drift. By this file's own rule —
+    // "one sale of the EXACT card is thin, but it is genuinely that card" — it
+    // is not a broad rung and does not face MIN_COMPS_FOR_BROAD_RUNG.
+    //
+    // It is still an ESTIMATE, not an observation: the projection is modelled,
+    // and rareCardFmv hands us a confidence band precisely because of that. So
+    // the number goes out with its band and tier, which is what the UI needs to
+    // render a guess as a guess. Before this rung was named, it was labelled
+    // "no-basis" and dropped entirely — the card went blank instead.
+    if (result.method === "rare-card-anchor") {
+      return {
+        fairMarketValue: null,
+        valuationStatus: "estimated",
+        estimatedValue: result.fmv,
+        estimateLow: band.low,
+        estimateHigh: band.high,
+        estimateConfidence: conf,
+        estimateBasis: result.basisNote,
         method: result.method,
         compsUsed,
         slug,
