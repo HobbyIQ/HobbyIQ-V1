@@ -108,6 +108,91 @@ export interface EbayCorrectionRecord {
  * applied first; deltas are logged as a correction record so the parser
  * + engine can improve from user ground truth.
  */
+/**
+ * Adopt a catalog row's identity fields onto a holding.
+ *
+ * EXTRACTED 2026-08-23 so the accept path has ONE definition. It was inline in
+ * confirmHoldingReview, reachable only through the pending-review queue — and
+ * `cardStatus: "pending-review"` is written in exactly one place, at holding
+ * creation, with no route back. So every already-active holding could see a
+ * proposed identity and had no way to take it. A second copy of this logic for
+ * the new route is precisely the drift that produced two player-name matchers
+ * (2fbd1a43) whose difference silently refused 828 sales.
+ *
+ * `skipFields` is what the caller has already been told by the user. The
+ * confirm path passes the edit keys, so a field the user typed is never
+ * overwritten by a lookup — they may be correcting the catalog.
+ *
+ * WHY setName AND product MOVE TOGETHER. The inline version adopted setName
+ * alone, while its sibling applyEdit() sets both. That gap is load-bearing:
+ * portfolioStore feeds canonicalize `product ?? setName` — product FIRST — so a
+ * pick that updated setName and left a stale product meant the NEXT edit
+ * re-derived identity from the stale field and could rebind away from the row
+ * the user had just chosen. The pick would appear to work and then quietly undo
+ * itself.
+ *
+ * Never throws: a hydrate failure must not cost the caller its write.
+ */
+export async function applyCatalogIdentityToHolding(
+  holding: Record<string, unknown>,
+  slug: string,
+  opts: { holdingId: string; skipFields?: ReadonlySet<string>; identitySource?: string },
+): Promise<{ applied: boolean; corrections: FieldCorrection[] }> {
+  const corrections: FieldCorrection[] = [];
+  const picked = String(slug ?? "").trim();
+  if (!picked.startsWith("hiq:")) return { applied: false, corrections };
+
+  const skip = opts.skipFields ?? new Set<string>();
+  try {
+    const { readCatalogIdentityBySlug } = await import("../catalog/catalogMatcher.service.js");
+    const row = await readCatalogIdentityBySlug(picked);
+    if (!row) {
+      // A pick that names no catalog row is not an identity. Say so loudly
+      // rather than storing a slug nothing resolves.
+      console.warn(JSON.stringify({
+        event: "holding_identity_pick_not_in_catalog",
+        holdingId: opts.holdingId,
+        cardId: picked,
+      }));
+      return { applied: false, corrections };
+    }
+
+    const adopt = (field: string, value: unknown) => {
+      if (skip.has(field)) return;                 // the user typed it; leave it
+      if (value === null || value === undefined) return;
+      if (holding[field] === value) return;
+      corrections.push({ field, before: (holding[field] ?? null) as never, after: value as never });
+      holding[field] = value;
+    };
+    adopt("playerName", row.playerName);
+    adopt("cardYear", row.year);
+    adopt("setName", row.setName ?? row.setKey);
+    // See the header: product is what canonicalize reads first.
+    adopt("product", row.setName ?? row.setKey);
+    adopt("cardNumber", row.cardNumber);
+    adopt("parallel", row.parallel);
+    adopt("isAuto", row.isAuto);
+    adopt("sport", row.sport);
+    holding.identitySource = opts.identitySource ?? "user-selected-catalog";
+    holding.identitySelectedAt = new Date().toISOString();
+    console.log(JSON.stringify({
+      event: "holding_identity_from_catalog_pick",
+      holdingId: opts.holdingId,
+      cardId: picked,
+      identitySource: holding.identitySource,
+      fieldsAdopted: corrections.length,
+    }));
+    return { applied: true, corrections };
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "holding_identity_hydrate_failed",
+      holdingId: opts.holdingId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return { applied: false, corrections };
+  }
+}
+
 export async function confirmHoldingReview(
   userId: string,
   holdingId: string,
@@ -247,49 +332,12 @@ export async function confirmHoldingReview(
   // never overwritten by a lookup.
   const pickedCardId = String((edits as Record<string, unknown>).cardId ?? "").trim();
   if (pickedCardId.startsWith("hiq:")) {
-    try {
-      const { readCatalogIdentityBySlug } = await import("../catalog/catalogMatcher.service.js");
-      const row = await readCatalogIdentityBySlug(pickedCardId);
-      if (row) {
-        const h = holding as Record<string, unknown>;
-        const adopt = <K extends string>(field: K, value: unknown) => {
-          if (field in edits) return;              // the user typed it; leave it
-          if (value === null || value === undefined) return;
-          if (h[field] === value) return;
-          corrections.push({ field, before: (h[field] ?? null) as never, after: value as never });
-          h[field] = value;
-        };
-        adopt("playerName", row.playerName);
-        adopt("cardYear", row.year);
-        adopt("setName", row.setName ?? row.setKey);
-        adopt("cardNumber", row.cardNumber);
-        adopt("parallel", row.parallel);
-        adopt("isAuto", row.isAuto);
-        adopt("sport", row.sport);
-        h.identitySource = "user-selected-catalog";
-        h.identitySelectedAt = new Date().toISOString();
-        console.log(JSON.stringify({
-          event: "holding_identity_from_catalog_pick",
-          holdingId,
-          cardId: pickedCardId,
-          fieldsAdopted: corrections.filter((c) => c.after !== null).length,
-        }));
-      } else {
-        // A pick that names no catalog row is not an identity. Say so loudly
-        // rather than storing a slug nothing resolves.
-        console.warn(JSON.stringify({
-          event: "holding_identity_pick_not_in_catalog",
-          holdingId,
-          cardId: pickedCardId,
-        }));
-      }
-    } catch (err) {
-      console.warn(JSON.stringify({
-        event: "holding_identity_hydrate_failed",
-        holdingId,
-        error: (err as Error)?.message ?? String(err),
-      }));
-    }
+    const adopted = await applyCatalogIdentityToHolding(
+      holding as Record<string, unknown>,
+      pickedCardId,
+      { holdingId, skipFields: new Set(Object.keys(edits)) },
+    );
+    corrections.push(...adopted.corrections);
   }
 
   // CF-SUGGESTER-AUTO-APPLY-ON-CONFIRM (Drew, 2026-07-20).

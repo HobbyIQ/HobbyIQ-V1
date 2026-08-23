@@ -1312,6 +1312,103 @@ router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
   }
 });
 
+// CF-ACCEPT-IDENTITY-WHATEVER-THE-STATE (Drew, 2026-08-23).
+//
+// THE DOOR THAT WAS LOCKED. /confirm above is the accept action, and it is
+// correct — but confirmHoldingReview returns not-pending (409) unless
+// cardStatus === "pending-review", and that status is written in exactly ONE
+// place: holding creation. There is no route back to it.
+//
+// So every holding that was ever confirmed, or that landed active, could be
+// shown a proposed identity and had no way to take it. Measured on Drew's own
+// portfolio: holding aff3236a (2025 Bowman Draft Gold #CPA-MWI, $301.43 paid)
+// is cardStatus "active" with pendingTotal 0, carrying the CORRECT slug at
+// catalogMatchSlug the whole time. The picker shipped in #1214/#1215 opens a
+// door that, for that card, is welded shut.
+//
+// Search is not a workaround either: probed against prod with that holding's
+// own context, the parked :gold: row was absent from the top ten, and every
+// call came back timedOut.
+//
+// This is the identity half of confirm, with the state gate removed and
+// nothing else changed. It deliberately does NOT promote cardStatus, write an
+// eBay correction record, or touch the review queue — those are confirm's job
+// and are meaningless for a holding that is already active.
+//
+// The slug MUST resolve to a catalog row. Accepting a slug nothing resolves
+// would store an identity that prices from an empty pool, which is the failure
+// the 0.9 pin gate exists to prevent, arriving by another route.
+router.post("/holdings/:id/accept-identity", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const holdingId = String(req.params.id ?? "").trim();
+    if (!holdingId) return res.status(400).json({ success: false, error: "id is required" });
+
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const cardId = String(body.cardId ?? "").trim();
+    if (!cardId.startsWith("hiq:")) {
+      return res.status(400).json({ success: false, error: "cardId must be a canonical hiq: slug" });
+    }
+
+    const { readUserDoc, writeUserDoc, repriceOneHolding } = await import(
+      "../services/portfolioiq/portfolioStore.service.js"
+    );
+    const doc = await readUserDoc(userId);
+    const holding = (doc.holdings as Record<string, any> | undefined)?.[holdingId];
+    if (!holding) return res.status(404).json({ success: false, error: "holding not found" });
+
+    const { applyCatalogIdentityToHolding } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    // Whether the user accepted a proposal we authored or picked a card
+    // themselves changes how much the identity is worth as evidence later, so
+    // it is recorded rather than flattened to "user-selected".
+    const acceptedParked = String(holding.catalogMatchSlug ?? "") === cardId;
+    const adopted = await applyCatalogIdentityToHolding(holding, cardId, {
+      holdingId,
+      identitySource: acceptedParked ? "user-accepted-parked-match" : "user-selected-catalog",
+    });
+    if (!adopted.applied) {
+      return res.status(409).json({
+        success: false,
+        error: "slug-not-in-catalog",
+        detail: "That card is not in the catalog, so accepting it would price from an empty pool.",
+      });
+    }
+
+    holding.cardId = cardId;
+    holding.hobbyiqCardId = cardId;
+    holding.identityVerified = true;
+    holding.identityVerifiedAt = new Date().toISOString();
+    holding.identityVerifiedBy = {
+      source: acceptedParked ? "user-accepted-parked-match" : "catalog-picker",
+      candidateId: cardId,
+      confidenceAtAccept: typeof holding.catalogMatchConfidence === "number"
+        ? holding.catalogMatchConfidence
+        : null,
+    };
+    holding.needsReview = false;
+    holding.reviewReason = null;
+
+    await writeUserDoc(userId, doc);
+
+    // Fire-and-forget, same pattern as /confirm: the user should see a real
+    // price without waiting for the next scheduled reprice. Now that identity
+    // is resolved, the door guard in writeUserDoc will let a value through.
+    void repriceOneHolding(userId, holdingId).catch(() => {});
+
+    res.json({
+      success: true,
+      holding,
+      corrections: adopted.corrections,
+      correctionCount: adopted.corrections.length,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/:id/accept-identity failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Accept failed" });
+  }
+});
+
 router.post("/holdings/:id/reject", async (req: Request, res: Response) => {
   try {
     const userId = userIdFrom(req);
