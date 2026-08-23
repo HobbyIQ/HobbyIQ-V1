@@ -38,13 +38,29 @@ const CARD_CATALOG_FIELDS = new Set([
 /** Field names that LOOK plausible but do not exist — the exact trap. */
 const KNOWN_PHANTOM_FIELDS = ["player", "number", "releaseName", "setName", "parallels"];
 
-/** Pull the SQL string out of every `query: "..."` literal in a file. */
+/** Pull the SQL out of every `query:` literal in a file — double-quoted OR a
+ *  template literal.
+ *
+ *  TEMPLATE LITERALS WERE INVISIBLE (2026-08-23). This matched only `query: "…"`,
+ *  so the moment a query needed a dynamic fragment — an `IN (@n0, @n1)` list
+ *  built from a parameter array — it became a backtick literal and this guard
+ *  stopped seeing the file at all. It did not fail loudly either: the file
+ *  simply contributed zero queries, and only the "at least one catalog query"
+ *  assertion caught it. Without that assertion this would have gone quiet.
+ *
+ *  A `${…}` interpolation is captured as literal text, which is harmless:
+ *  fieldsReferenced only looks for `c.<name>`, and an interpolation of parameter
+ *  names contains none. */
 function extractQueries(file: string): string[] {
   const src = readFileSync(file, "utf8");
   const out: string[] = [];
-  const re = /query:\s*"((?:[^"\\]|\\.)*)"/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) out.push(m[1]);
+  for (const re of [
+    /query:\s*"((?:[^"\\]|\\.)*)"/g,
+    /query:\s*`((?:[^`\\]|\\.)*)`/g,
+  ]) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) out.push(m[1]);
+  }
   return out;
 }
 

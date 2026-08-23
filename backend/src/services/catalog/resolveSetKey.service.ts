@@ -172,10 +172,13 @@ export async function resolveSetKeyFromCatalog(
     // not. Deduped because "CPA-MWI" yields one variant, not three.
     const variants = [...new Set([cardNumber, cardNumber.toUpperCase(), cardNumber.toLowerCase()])];
     const numParams = variants.map((v, i) => ({ name: `@n${i}`, value: v }));
+    // ONE template literal, not a concatenation. catalogQuerySchema.test.ts
+    // reads the SQL back out of this file to check every c.<field> against the
+    // real row schema, and a query split across `+` is invisible to it — which
+    // silently disabled that guard on this file the first time this was written.
+    const numberIn = numParams.map((p) => p.name).join(", ");
     const { resources } = await container.items.query<CatalogRow>({
-      query:
-        `SELECT c.setKey, c.playerSlug, c.source FROM c WHERE c.sport = @s AND c.year = @y ` +
-        `AND c.cardNumber IN (${numParams.map((p) => p.name).join(", ")})`,
+      query: `SELECT c.setKey, c.playerSlug, c.source FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber IN (${numberIn})`,
       parameters: [
         { name: "@s", value: sport },
         { name: "@y", value: year },
