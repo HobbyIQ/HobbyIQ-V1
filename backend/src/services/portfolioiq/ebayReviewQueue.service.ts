@@ -223,6 +223,75 @@ export async function confirmHoldingReview(
     (h) => { delete (h as any).cardId; },
   );
 
+  // CF-SELECTED-CARD-IS-THE-IDENTITY (Drew, 2026-08-23: "i want the SEARCH
+  // function to find the card to match it. Not the edit card feature. That
+  // search then gets selected and edits the card to the catalog match").
+  //
+  // When the user searches the catalog and picks a card, that pick IS the
+  // identity — there is nothing left to infer. Automated matching already gets
+  // three attempts before this point (import-time canonicalize at >=0.9, a
+  // cached suggestion, and a synchronous suggester at >=0.55), and the cards
+  // that reach a human are the ones where all three failed. Measured on the
+  // three stranded in prod, they failed for the same reason: the card IS in the
+  // catalog, under several parallels, and only the person holding it knows
+  // which one. #CPA-MWI Max Williams is base:auto:num-15 and four others.
+  //
+  // Until now a pick stamped the slug and nothing else, leaving the holding's
+  // own setName/parallel/cardNumber saying whatever the eBay title parse
+  // produced. A row whose fields disagree with its slug is the Theo Gillen
+  // defect — 8,412 catalog rows measured with exactly that split, and it prices
+  // the card off a pool it does not belong to.
+  //
+  // So: adopt the catalog row's fields. An explicit edit in the SAME request
+  // still wins — the user may be correcting the catalog, and their typing is
+  // never overwritten by a lookup.
+  const pickedCardId = String((edits as Record<string, unknown>).cardId ?? "").trim();
+  if (pickedCardId.startsWith("hiq:")) {
+    try {
+      const { readCatalogIdentityBySlug } = await import("../catalog/catalogMatcher.service.js");
+      const row = await readCatalogIdentityBySlug(pickedCardId);
+      if (row) {
+        const h = holding as Record<string, unknown>;
+        const adopt = <K extends string>(field: K, value: unknown) => {
+          if (field in edits) return;              // the user typed it; leave it
+          if (value === null || value === undefined) return;
+          if (h[field] === value) return;
+          corrections.push({ field, before: (h[field] ?? null) as never, after: value as never });
+          h[field] = value;
+        };
+        adopt("playerName", row.playerName);
+        adopt("cardYear", row.year);
+        adopt("setName", row.setName ?? row.setKey);
+        adopt("cardNumber", row.cardNumber);
+        adopt("parallel", row.parallel);
+        adopt("isAuto", row.isAuto);
+        adopt("sport", row.sport);
+        h.identitySource = "user-selected-catalog";
+        h.identitySelectedAt = new Date().toISOString();
+        console.log(JSON.stringify({
+          event: "holding_identity_from_catalog_pick",
+          holdingId,
+          cardId: pickedCardId,
+          fieldsAdopted: corrections.filter((c) => c.after !== null).length,
+        }));
+      } else {
+        // A pick that names no catalog row is not an identity. Say so loudly
+        // rather than storing a slug nothing resolves.
+        console.warn(JSON.stringify({
+          event: "holding_identity_pick_not_in_catalog",
+          holdingId,
+          cardId: pickedCardId,
+        }));
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "holding_identity_hydrate_failed",
+        holdingId,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
   // CF-SUGGESTER-AUTO-APPLY-ON-CONFIRM (Drew, 2026-07-20).
   // Pattern 4 from suggester-quality-audit-2026-07-20.md: user confirms
   // a holding but iOS didn't include cardId in `edits`, leaving the

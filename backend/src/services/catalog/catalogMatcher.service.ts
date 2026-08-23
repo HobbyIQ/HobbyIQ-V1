@@ -531,6 +531,60 @@ export async function resolveCardNumberByPlayer(input: {
 // data, it does not change between requests.
 const _playerNameCache = new Map<string, string | null>();
 
+/** The identity fields of one catalog row, by its canonical slug.
+ *
+ *  CF-SELECTED-CARD-IS-THE-IDENTITY (Drew, 2026-08-23). When a user searches
+ *  the catalog and picks a card, the holding must take that ROW's fields, not
+ *  keep the ones parsed from an eBay title. Stamping the slug alone leaves the
+ *  holding's own setName/parallel/cardNumber saying something else, and a row
+ *  whose fields disagree with its slug is the defect behind the Theo Gillen bug
+ *  — 8,412 catalog rows measured with exactly that disagreement.
+ *
+ *  Returns null when the slug names no row, so a caller can tell "not found"
+ *  from "found but blank". */
+export async function readCatalogIdentityBySlug(slug: string): Promise<{
+  playerName: string | null;
+  year: number | null;
+  setKey: string | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  isAuto: boolean | null;
+  sport: string | null;
+} | null> {
+  const id = String(slug ?? "").trim();
+  if (!id.startsWith("hiq:")) return null;
+  try {
+    const container = await getContainer();
+    if (!container) return null;
+    const { resources } = await container.items.query<Record<string, unknown>>({
+      query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
+                     c.parallel, c.isAuto, c.sport
+              FROM c WHERE c.id = @id`,
+      parameters: [{ name: "@id", value: id }],
+    }).fetchAll();
+    const r = resources[0];
+    if (!r) return null;
+    const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
+    const str = (v: unknown) => {
+      const s = String(v ?? "").trim();
+      return s ? s : null;
+    };
+    return {
+      playerName: str(r.playerName),
+      year: num(r.cardYear) ?? num(r.year),
+      setKey: str(r.setKey),
+      setName: str(r.setName),
+      cardNumber: str(r.cardNumber),
+      parallel: str(r.parallel),
+      isAuto: typeof r.isAuto === "boolean" ? r.isAuto : null,
+      sport: str(r.sport),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function lookupCatalogPlayerName(
   year: number | null | undefined,
   setKey: string | null | undefined,
