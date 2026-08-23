@@ -52,6 +52,20 @@ const YEARS = String(process.env.YEARS || "2024").split(",").map((y) => Number(y
 // surfaced, but the failure mode — one card catalogued under two product keys
 // — is not specific to it. KEEP is authoritative; DROP is superseded onto it.
 const KEEP = String(process.env.KEEP || "bowman-draft");
+
+/** The provenance stamp. repoint-comps-to-surviving-slug requires this exact
+ *  string before it will follow a mark, so the two must never drift — hence one
+ *  definition, exported, rather than the same literal typed in both files. */
+function supersedeReasonFor(drop, keep) {
+  return `${drop}->${keep} ${SUPERSEDE_MARKER}; ${keep} is authoritative`;
+}
+/** The stable part of the stamp. The wording around it has already changed once
+ *  — 2024 was marked "draft-chrome-overlap: ... Bowman Draft is authoritative"
+ *  before the template was parameterised — so the repoint matches on THIS
+ *  substring rather than the whole sentence. Exact matching would have silently
+ *  locked out 438 legitimate 2024 marks. No other pass's reason contains it. */
+const SUPERSEDE_MARKER = "overlap: same card catalogued under both product keys";
+module.exports = { supersedeReasonFor, SUPERSEDE_MARKER };
 const DROP = String(process.env.DROP || "bowman-chrome");
 const APPLY = process.env.APPLY === "true";
 const PACE_MS = Number(process.env.PACE_MS || 250);
@@ -241,7 +255,7 @@ async function main() {
           const { resource: doc } = await c.item(row.id, pk).read();
           if (!doc) { unaddressable++; continue; }
           doc.supersededBy = twinId || `bowman-draft:${num}`;
-          doc.supersededReason = `${DROP}->${KEEP} overlap: same card catalogued under both product keys; ${KEEP} is authoritative`;
+          doc.supersededReason = supersedeReasonFor(DROP, KEEP);
           doc.supersededAt = new Date().toISOString();
           await c.item(row.id, pk).replace(doc);
           marked++;
@@ -275,7 +289,11 @@ async function main() {
   if (totalFailed) process.exit(4);
 }
 
-main().catch((e) => {
-  console.error("FATAL:", e?.stack || e?.message || String(e));
-  process.exit(3);
-});
+// Guarded so the repoint can require this module for supersedeReasonFor
+// without executing a catalog sweep as a side effect.
+if (require.main === module) {
+  main().catch((e) => {
+    console.error("FATAL:", e?.stack || e?.message || String(e));
+    process.exit(3);
+  });
+}
