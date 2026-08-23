@@ -893,21 +893,41 @@ struct IndividualReviewSwipeSheet: View {
         defer { isBusy = false }
         var patch = HoldingConfirmRequest.empty
         let c = holding.suggestionCandidate
-        patch.playerName = pick?.player ?? holding.playerName
-        if let py = pick?.year {
-            patch.cardYear = py
-        } else if let intY = Int(holding.year) {
-            patch.cardYear = intY
+
+        // CF-SELECTED-CARD-IS-THE-IDENTITY (Drew, 2026-08-23). When the pick is
+        // a canonical catalog slug, send ONLY the slug and let the backend adopt
+        // that row's fields wholesale.
+        //
+        // Sending our own playerName/setName/parallel alongside it would beat
+        // the hydration — confirm treats an explicit edit as the user's word and
+        // will not overwrite it. That is right for typed corrections and wrong
+        // here, because these values came from the eBay title parse that already
+        // failed to identify the card. The result would be a holding whose
+        // fields disagree with its own slug, which is the defect that prices a
+        // card against a pool it does not belong to.
+        //
+        // Grade, team and sport still ride along: they describe THIS copy, not
+        // the card, and the catalog has nothing to say about them.
+        let isCanonicalPick = pick?.cardId.hasPrefix("hiq:") == true
+        if isCanonicalPick {
+            patch.cardId = pick?.cardId
+        } else {
+            patch.playerName = pick?.player ?? holding.playerName
+            if let py = pick?.year {
+                patch.cardYear = py
+            } else if let intY = Int(holding.year) {
+                patch.cardYear = intY
+            }
+            patch.setName = pick?.set ?? c?.set ?? holding.setName
+            patch.parallel = pick?.variant ?? c?.variant ?? holding.parallel
+            patch.cardNumber = pick?.number ?? c?.number
+            patch.isAuto = pick?.isAuto ?? holding.isAuto
+            patch.cardId = pick?.cardId ?? holding.suggestedCardId
         }
-        patch.setName = pick?.set ?? c?.set ?? holding.setName
-        patch.parallel = pick?.variant ?? c?.variant ?? holding.parallel
-        patch.cardNumber = pick?.number ?? c?.number
         patch.gradeCompany = (holding.gradeCompany?.isEmpty == false) ? holding.gradeCompany : nil
         patch.gradeValue = holding.gradeValue
         patch.team = (holding.team?.isEmpty == false) ? holding.team : nil
         patch.sport = (holding.sport?.isEmpty == false) ? holding.sport : nil
-        patch.isAuto = pick?.isAuto ?? holding.isAuto
-        patch.cardId = pick?.cardId ?? holding.suggestedCardId
         let identifier = holding.backendId ?? holding.id.uuidString
         let ok = await viewModel.confirmPendingHolding(id: identifier, patch: patch)
         if ok {

@@ -2434,6 +2434,34 @@ struct APIService {
         return try await post(path: "/api/search/cards", body: body, responseType: UnifiedSearchResponse.self)
     }
 
+    /// CF-SEARCH-AND-PICK (Drew, 2026-08-23: "i want the SEARCH function to find
+    /// the card to match it... that search then gets selected and edits the card
+    /// to the catalog match", and "that search should put best matches at the
+    /// top").
+    ///
+    /// Catalog-first, unlike `searchCards` which fans out to vendors. Two
+    /// reasons the review sheet wants this one:
+    ///
+    ///  1. Every hit is a canonical `hiq:` slug, so picking one gives the
+    ///     holding a real catalog identity. A vendor hit does not.
+    ///  2. `context` — what the import already parsed off the listing — lets the
+    ///     server rank hits against the card being identified rather than
+    ///     against the typed words. Token overlap alone cannot tell a 2024 from
+    ///     a 2025 card when the player and number are the same.
+    ///
+    /// The ranking lives server-side so iOS and web cannot drift apart on what
+    /// "best" means. It boosts, never filters: the context comes from a title
+    /// parse already known to be unreliable, so a wrong parse must reorder the
+    /// list, never hide the right card.
+    func searchCatalogForMatch(
+        query: String,
+        context: CatalogSearchContext?,
+        limit: Int = 25
+    ) async throws -> CatalogSearchResponse {
+        let body = CatalogSearchRequest(query: query, limit: limit, context: context)
+        return try await post(path: "/api/catalog/search", body: body, responseType: CatalogSearchResponse.self)
+    }
+
     // MARK: - Messaging (CF-MESSAGING iOS parity, 2026-08-05)
     //
     // Shared endpoint set with web (apps/web/src/lib/api.ts:fetchThreads
@@ -4782,6 +4810,63 @@ typealias PortfolioEbayListingResponse = EbayListingResponse
 private struct UnifiedSearchRequest: Encodable {
     let input: String
     let hint: String?
+}
+
+// MARK: - Catalog search (CF-SEARCH-AND-PICK, 2026-08-23)
+
+/// What we already know about the card being identified. Server-side ranking
+/// boosts hits that agree; it never filters on these, because they came from an
+/// eBay title parse that has already been shown to be wrong.
+struct CatalogSearchContext: Encodable {
+    let cardNumber: String?
+    let year: Int?
+    let setName: String?
+    let playerName: String?
+    let isAuto: Bool?
+}
+
+private struct CatalogSearchRequest: Encodable {
+    let query: String
+    let limit: Int
+    let context: CatalogSearchContext?
+}
+
+struct CatalogSearchSalesSummary: Decodable, Hashable {
+    let count: Int?
+    let median30d: Double?
+    let median90d: Double?
+    let medianAll: Double?
+    let lastSaleAt: String?
+}
+
+struct CatalogSearchHit: Decodable, Identifiable, Hashable {
+    let slug: String
+    let cardNumber: String?
+    let playerName: String?
+    let sport: String?
+    let year: Int?
+    let setKey: String?
+    let setName: String?
+    let parallel: String?
+    let isAuto: Bool?
+    let printRun: Int?
+    let imageUrl: String?
+    let salesSummary: CatalogSearchSalesSummary?
+
+    var id: String { slug }
+}
+
+struct CatalogSearchResponse: Decodable {
+    let success: Bool?
+    let hits: [CatalogSearchHit]?
+    /// True when nothing verified matched and these came from the provisional
+    /// tier — cards we hold real sales for but have no checklist for yet. Label
+    /// them rather than rendering them as ordinary results.
+    let provisional: Bool?
+    /// True when the search ran out of its time budget and returned what it had.
+    /// The hits are real; the set may be incomplete. Never let this read as "no
+    /// such card".
+    let timedOut: Bool?
 }
 
 struct UnifiedSearchInput: Decodable {
