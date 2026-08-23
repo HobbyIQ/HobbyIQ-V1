@@ -202,6 +202,23 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
         setSubmitting(false);
         return;
       }
+      // CF-GRADE-EDIT-MUST-STICK (2026-08-22). A company with no number was
+      // allowed through here — the check above skips when gvN is null — and
+      // the backend then cleared BOTH fields, because a grading company with
+      // no grade is not a graded card. Net effect for the user: they picked
+      // PSA 9, pressed Save, and the grade silently vanished.
+      //
+      // A grade is both halves or neither.
+      if (gradeCompany.trim() && gvN === null) {
+        setError("Enter the grade number, or clear the grading company to save as Raw.");
+        setSubmitting(false);
+        return;
+      }
+      if (!gradeCompany.trim() && gvN !== null) {
+        setError("Choose a grading company, or clear the grade to save as Raw.");
+        setSubmitting(false);
+        return;
+      }
       if (ppN !== undefined && !(Number.isFinite(ppN) && ppN >= 0)) {
         setError("Purchase price can't be negative.");
         setSubmitting(false);
