@@ -52,6 +52,13 @@ const FRESH_NOW_ISO = new Date().toISOString();
 
 const PRICED_FIXTURE = {
   id: "wire-shape-priced",
+  // CF-NO-IDENTITY-NO-PRICE-AT-THE-DOOR (2026-08-23). A priced holding must
+  // carry an identity — writeUserDoc withholds the value surface from any
+  // holding that cannot be identified, so a fixture that is "priced" without a
+  // cardId models a state production can no longer hold. This file locks the
+  // WIRE SHAPE, not identity policy, so the identity is supplied rather than
+  // the assertions relaxed.
+  cardId: "hiq:baseball:2024:bowman-chrome:cpa-ps:base:auto",
   playerName: "Paul Skenes",
   cardTitle: "2024 Bowman Chrome Auto",
   cardYear: 2024,
@@ -284,6 +291,8 @@ describe("Portfolio wire shape — contract lock", () => {
       const { sessionId } = await signIn();
       await addHolding(sessionId, {
         id: "wire-shape-priced-nocost",
+        // Identity required for a priced holding — see PRICED_FIXTURE above.
+        cardId: "hiq:baseball:2024:bowman-chrome:cpa-ps:base:auto",
         playerName: "Paul Skenes",
         cardTitle: "Test no-cost",
         cardYear: 2024,
@@ -310,6 +319,8 @@ describe("Portfolio wire shape — contract lock", () => {
       const { sessionId } = await signIn();
       await addHolding(sessionId, {
         id: "wire-shape-qty4",
+        // Identity required for a priced holding — see PRICED_FIXTURE above.
+        cardId: "hiq:baseball:2024:bowman-chrome:cpa-ps:base:auto",
         playerName: "Multi-unit test",
         cardTitle: "qty 4 lot",
         cardYear: 2024,
