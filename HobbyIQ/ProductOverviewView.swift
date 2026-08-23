@@ -53,7 +53,7 @@ struct ProductOverviewView: View {
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             if let brand = product?.brand ?? seedBrand, let year = product?.year ?? seedYear {
                 Text("\(brand.uppercased()) · \(String(year))")
-                    .font(HobbyIQTheme.Typography.footnote)
+                    .font(HobbyIQTheme.Typography.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
         }
@@ -127,11 +127,11 @@ struct ProductOverviewView: View {
         VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .font(HobbyIQTheme.Typography.headline)
+                    .font(HobbyIQTheme.Typography.cardTitle)
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Spacer()
                 Text(subtitle)
-                    .font(HobbyIQTheme.Typography.footnote)
+                    .font(HobbyIQTheme.Typography.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
             VStack(spacing: 0) {
@@ -167,7 +167,7 @@ private struct ParallelRow: View {
             Spacer()
             if let n = parallel.printRun {
                 Text("/\(n)")
-                    .font(HobbyIQTheme.Typography.footnote)
+                    .font(HobbyIQTheme.Typography.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             } else {
                 Text("unnum.")

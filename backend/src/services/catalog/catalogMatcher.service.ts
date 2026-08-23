@@ -551,6 +551,10 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
   parallel: string | null;
   isAuto: boolean | null;
   sport: string | null;
+  /** CF-ACCEPT-CARRIES-PRINTRUN (2026-08-23). Without it, an accepted identity
+   *  is re-canonicalized by the next PATCH from a holding that has no printRun,
+   *  the slug loses its :num-N segment, and the acceptance is silently undone. */
+  printRun: number | null;
 } | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
@@ -559,7 +563,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     if (!container) return null;
     const { resources } = await container.items.query<Record<string, unknown>>({
       query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
-                     c.parallel, c.isAuto, c.sport
+                     c.parallel, c.isAuto, c.sport, c.printRun
               FROM c WHERE c.id = @id`,
       parameters: [{ name: "@id", value: id }],
     }).fetchAll();
@@ -579,6 +583,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
       parallel: str(r.parallel),
       isAuto: typeof r.isAuto === "boolean" ? r.isAuto : null,
       sport: str(r.sport),
+      printRun: num(r.printRun),
     };
   } catch {
     return null;
