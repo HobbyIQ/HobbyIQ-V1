@@ -103,6 +103,17 @@ const CANONICAL_GRADES: ReadonlyArray<{
   { label: "PSA 8", grader: "PSA", psaEquivalent: 8 },
   // BGS 10 is the "Pristine 10" — a rarer tier above PSA 10 in most markets.
   // BGS 9.5 is the workhorse gem-mint BGS grade.
+  // CF-BGS-BLACK-LABEL-SPLIT (2026-08-22). A BGS 10 Black Label (all four
+  // subgrades 10) is a different card from a Pristine 10 and trades like one.
+  // Measured over 4,000 BGS 10 sales in 365d: 365 of them (9.1%) say "black
+  // label" in the title, median $395 against $130 for the rest — 3.0x. They
+  // were being folded into BGS 10, inflating both the tile and the BGS 10
+  // calibration ratio platform-wide.
+  //
+  // gradeQualifier exists for exactly this and is null on all 4,000 rows, so
+  // the split is done by title text, which is what the Cardsight-conflation
+  // note prescribes.
+  { label: "BGS 10 Black Label", grader: "BGS", psaEquivalent: 10 },
   { label: "BGS 10", grader: "BGS", psaEquivalent: 10 },
   { label: "BGS 9.5", grader: "BGS", psaEquivalent: 9.5 },
   { label: "BGS 9", grader: "BGS", psaEquivalent: 9 },
@@ -385,6 +396,25 @@ function shouldRejectSaleTitle(title: string | null): boolean {
 //      not a vendor's aggregation.
 //   3. Latency — one Cosmos query instead of a remote CH round-trip
 //      per grade tier.
+/** Matches the tier LABEL "BGS 10 Black Label". */
+const BLACK_LABEL_LABEL_RE = /black\s*label/i;
+
+/**
+ * CF-BGS-BLACK-LABEL-SPLIT (2026-08-22). Is this sale a BGS Black Label?
+ *
+ * Detected from the listing title because `gradeQualifier` — the field that
+ * exists for this — is null on all 4,000 BGS 10 rows sampled. Sellers name it
+ * explicitly when they have one; it is the whole point of the card.
+ *
+ * Conservative by construction: only a positive title match splits a sale out.
+ * An unlabelled Black Label stays in the Pristine pool, which understates it
+ * slightly. The reverse — a Pristine 10 pulled into the Black pool — would
+ * overstate a much scarcer grade, so the asymmetry is deliberate.
+ */
+export function isBlackLabelSale(title: string | null | undefined): boolean {
+  return BLACK_LABEL_LABEL_RE.test(String(title ?? ""));
+}
+
 async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
@@ -394,13 +424,23 @@ async function fetchRawSalesForGrade(
   // "@azure/cosmos" — mocking that module hits every other Cosmos consumer in
   // the graph and took the suite from 89 to 107 failures. Filtering stays HERE
   // so mocking the reader still exercises the real title rules below.
-  const resources = await readSoldCompsForGrade(cardId, grade);
+  // CF-BGS-BLACK-LABEL-SPLIT (2026-08-22). Both tiers read the same BGS 10
+  // rows and then partition on the title, because gradeQualifier is null on
+  // every one of them.
+  const isBlackTier = BLACK_LABEL_LABEL_RE.test(grade);
+  const readGrade = isBlackTier ? "BGS 10" : grade;
+  const resources = await readSoldCompsForGrade(cardId, readGrade);
 
   // Title-based rejection — filters IP/TTM tokens, bulk lot listings,
   // "read description", etc.
   const kept = resources.filter((r) => {
     if (!Number.isFinite(r.price) || r.price <= 0) return false;
     if (shouldRejectSaleTitle(r.title ?? "")) return false;
+    // The partition. A Black Label sale must not price a Pristine 10, and a
+    // Pristine 10 sale must not price a Black Label — 3x apart.
+    const black = isBlackLabelSale(r.title ?? null);
+    if (isBlackTier) return black;
+    if (readGrade === "BGS 10") return !black;
     return true;
   });
 

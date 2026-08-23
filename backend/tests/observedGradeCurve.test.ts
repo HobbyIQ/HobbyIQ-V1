@@ -218,13 +218,23 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     expect(curve.totalSampleCount).toBe(0);
     // CF-EIGHT-TIER-GRADES (2026-07-06): 14 canonical grades =
     // Raw + PSA 10/9/8 + BGS 10/9.5/9/8 + SGC 10/9/8 + CGC 10/9/8
-    expect(curve.entries).toHaveLength(14);
+    expect(curve.entries).toHaveLength(15);
+    // CF-BGS-BLACK-LABEL-SPLIT (2026-08-22): the 15th is BGS 10 Black Label,
+    // a distinct tier from BGS 10 — measured 3.0x apart on 4,000 real sales
+    // ($395 median vs $130). Asserting it exists AND is separate, so a future
+    // merge of the two fails here rather than silently pricing a Pristine 10
+    // like a Black Label.
+    const labels = curve.entries.map((e) => `${e.grader} ${e.grade}`.trim());
+    expect(curve.entries.some((e) => /black label/i.test(String(e.grade)))).toBe(true);
+    expect(curve.entries.filter((e) => String(e.grade) === "BGS 10")).toHaveLength(1);
+    expect(new Set(labels).size).toBe(labels.length);
     const grades = curve.entries.map((e) => e.grade);
     expect(grades).toEqual([
       "Raw",
       "PSA 10",
       "PSA 9",
       "PSA 8",
+      "BGS 10 Black Label",
       "BGS 10",
       "BGS 9.5",
       "BGS 9",
