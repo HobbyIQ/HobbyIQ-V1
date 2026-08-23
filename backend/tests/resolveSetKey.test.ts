@@ -31,8 +31,17 @@ import {
   __resetResolveSetKeyForTests,
 } from "../src/services/catalog/resolveSetKey.service";
 
-function catalogReturns(rows: Array<{ setKey: string; playerSlug?: string }>) {
-  queryMock.mockImplementation(() => ({ fetchAll: async () => ({ resources: rows }) }));
+// CF-RESOLVER-RESPECTS-AUTHORITY (2026-08-23). These fixtures predate
+// CF-CATALOG-AUTHORITY (2026-08-20): they returned rows with no `source`, and
+// the resolver now asks canAdjudicate() before letting a row decide anything.
+// A row with no source is UNKNOWN authority and may not adjudicate — correctly.
+//
+// So the helper defaults to a checklist source, which is what every one of
+// these cases has always MEANT: "the catalog says". The authority behaviour
+// itself is exercised explicitly further down, with sources named.
+function catalogReturns(rows: Array<{ setKey: string; playerSlug?: string; source?: string }>) {
+  const withSource = rows.map((r) => ({ source: "baseballcardpedia", ...r }));
+  queryMock.mockImplementation(() => ({ fetchAll: async () => ({ resources: withSource }) }));
 }
 
 // The real case that started this: a 2025 Bowman Draft Chrome auto.

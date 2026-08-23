@@ -40,6 +40,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { requestChecklistSeed } from "./checklistSeedQueue.service.js";
 import { slugify } from "../portfolioiq/hobbyIqCardId.service.js";
+import { canAdjudicate } from "./catalogAuthority.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -68,6 +69,11 @@ export type SetKeyResolution =
   | "ambiguous"
   /** Catalog has no row for this cardNumber — seed requested. */
   | "catalog-gap"
+  /** Rows exist but every one is vendor- or derived-sourced, so none may
+   *  adjudicate. Distinct from catalog-gap because the action differs: a gap
+   *  needs acquisition, this needs PROMOTION — a checklist for a card we
+   *  already have rows for. Seed requested either way. */
+  | "vendor-only"
   | "insufficient-input"
   | "catalog-unavailable";
 
@@ -95,6 +101,9 @@ export interface ResolveSetKeyResult {
 interface CatalogRow {
   setKey?: string | null;
   playerSlug?: string | null;
+  /** CF-RESOLVER-RESPECTS-AUTHORITY: needed to decide whether this row may
+   *  adjudicate at all. See catalogAuthority.service. */
+  source?: string | null;
 }
 
 // CF-PLAYER-NAME-FOLDING (Drew, 2026-08-12). This used to be a local slug that
@@ -147,13 +156,30 @@ export async function resolveSetKeyFromCatalog(
 
   let rows: CatalogRow[] = [];
   try {
+    // CF-RESOLVER-INDEX-FRIENDLY (2026-08-23). This filter used to read
+    //
+    //     UPPER(c.cardNumber ?? '') = UPPER(@n)
+    //
+    // and a function wrapped around an indexed field cannot use that field's
+    // index — Cosmos falls back to scanning. That is the likely origin of the
+    // ~145k RU/s figure this file's own header warns about, and it was measured
+    // again today: a batched gap probe using the same shape managed under 25 of
+    // 538 lookups in 71 minutes.
+    //
+    // Card numbers are short and their casing varies only a few ways, so the
+    // case-insensitive match is expressed as equality against the variants
+    // instead. An IN over literals is index-usable; UPPER() over a column is
+    // not. Deduped because "CPA-MWI" yields one variant, not three.
+    const variants = [...new Set([cardNumber, cardNumber.toUpperCase(), cardNumber.toLowerCase()])];
+    const numParams = variants.map((v, i) => ({ name: `@n${i}`, value: v }));
     const { resources } = await container.items.query<CatalogRow>({
       query:
-        "SELECT c.setKey, c.playerSlug FROM c WHERE c.sport = @s AND c.year = @y AND UPPER(c.cardNumber ?? '') = UPPER(@n)",
+        `SELECT c.setKey, c.playerSlug, c.source FROM c WHERE c.sport = @s AND c.year = @y ` +
+        `AND c.cardNumber IN (${numParams.map((p) => p.name).join(", ")})`,
       parameters: [
         { name: "@s", value: sport },
         { name: "@y", value: year },
-        { name: "@n", value: cardNumber },
+        ...numParams,
       ],
     }).fetchAll();
     rows = resources ?? [];
@@ -162,7 +188,45 @@ export async function resolveSetKeyFromCatalog(
     return { setKey: null, resolution: "catalog-unavailable" };
   }
 
-  const candidates = tally(rows);
+  // CF-RESOLVER-RESPECTS-AUTHORITY (2026-08-23). This file was written
+  // 2026-08-12; CF-CATALOG-AUTHORITY landed 2026-08-20 and its PR title is the
+  // failure this guard prevents: "a self-seeded row was outranking a printed
+  // checklist" (#1149).
+  //
+  // Until now every row voted equally, including the DERIVED class —
+  // ingest-auto-seed, sold-comps-stub, catalog-explode — which are built FROM
+  // our own comps. Letting those decide closes a loop: a mis-slugged comp seeds
+  // a catalog row, and that row then confirms the comp. Wiring this resolver
+  // into ingest without the filter would have run that loop across 15.5M sales.
+  //
+  // So only rows that may adjudicate decide. The rest are still READ — they are
+  // what separates "we hold nothing for this card" from "we hold only vendor
+  // rows for it", and those need different actions: acquisition versus
+  // promotion. A row can be worth keeping and still not be allowed to decide.
+  const adjudicating = rows.filter((r) => canAdjudicate(r.source));
+  const candidates = tally(adjudicating);
+
+  // Rows exist, but none of them may decide. Not a gap — the card is probably
+  // real — but nothing here is evidence of WHICH set it belongs to. Hand back
+  // null so the caller keeps its existing behaviour, and seed a checklist so
+  // the next sale can be answered by something that may adjudicate.
+  if (candidates.length === 0 && rows.length > 0) {
+    const seedRequested = await requestChecklistSeed({
+      sport,
+      year,
+      setName: String(input.sourceSetText ?? "").trim(),
+      setKey: slug(String(input.sourceSetText ?? "")) || `unknown-${cardNumber.toLowerCase()}`,
+      reason: "setkey-vendor-only",
+      missingCardNumber: cardNumber,
+      missingPlayer: input.playerName ?? undefined,
+    });
+    return {
+      setKey: null,
+      resolution: "vendor-only",
+      candidates: tally(rows),
+      seedRequested,
+    };
+  }
 
   // 3. GAP — the catalog has never seen this card number in this release.
   if (candidates.length === 0) {
@@ -190,7 +254,9 @@ export async function resolveSetKeyFromCatalog(
   //     different player; the player collapses it.
   const playerSlug = input.playerName ? slug(input.playerName) : "";
   if (playerSlug) {
-    const byPlayer = tally(rows.filter((r) => String(r.playerSlug ?? "") === playerSlug));
+    // `adjudicating`, not `rows` — a derived row must not become the tiebreak
+    // after being excluded from the vote. Narrowing is still deciding.
+    const byPlayer = tally(adjudicating.filter((r) => String(r.playerSlug ?? "") === playerSlug));
     if (byPlayer.length === 1) {
       return { setKey: byPlayer[0].setKey, resolution: "narrowed-by-player", candidates };
     }
