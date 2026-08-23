@@ -21,20 +21,25 @@
 //     chain sales through a retired card into another one.
 //   - sold_comps is partitioned by /cardId, so a row missing it cannot be
 //     written and is counted separately rather than silently failing.
-//   - Paced. The whole-pool version of this hammers Cosmos.
+//   - PATCH + a small pool, not read-then-replace in series. Measured at ~16
+//     RU/s against an 8,000 RU/s ceiling, so throughput was never the limit —
+//     round trips were.
 //
 // Usage:
 //   COSMOS_CONNECTION_STRING=... node scripts/comp-quality/repoint-comps-to-surviving-slug.cjs
 //     YEAR=2024        catalog year to sweep (default 2024)
 //     SETKEY=bowman-chrome   the superseded side (default bowman-chrome)
 //     APPLY=true       perform the writes
-//     PACE_MS=120      delay between writes
+//     CONCURRENCY=8    parallel writers (default 8)
+//     PACE_MS=0        optional delay between writes
 const { CosmosClient } = require("@azure/cosmos");
 
 const YEAR = Number(process.env.YEAR || 2024);
 const SETKEY = String(process.env.SETKEY || "bowman-chrome");
 const APPLY = process.env.APPLY === "true";
-const PACE_MS = Number(process.env.PACE_MS || 120);
+// Zero by default: with patch + a pool this runs at ~0.2% of the container's
+// 8,000 RU/s ceiling. The sleep was protecting against a limit we never reached.
+const PACE_MS = Number(process.env.PACE_MS || 0);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const isCanonical = (s) => String(s || "").startsWith("hiq:");
 
@@ -102,29 +107,60 @@ async function main() {
   }
 
   // 3. Repoint.
-  let moved = 0, unaddressable = 0, failed = 0;
-  for (const r of found) {
-    const pk = typeof r.cardId === "string" && r.cardId ? r.cardId : null;
-    if (!pk) { unaddressable++; continue; }
-    try {
-      const { resource: doc } = await sold.item(r.id, pk).read();
-      if (!doc) { unaddressable++; continue; }
-      const to = map.get(doc.hobbyiqCardId);
-      if (!to) { continue; }                      // changed under us; leave it
-      doc.hobbyiqCardId = to;
-      doc.repointedFrom = r.hobbyiqCardId;
-      doc.repointedReason = `catalog row superseded (${SETKEY} overlap); sale follows the surviving card`;
-      doc.repointedAt = new Date().toISOString();
-      await sold.item(r.id, pk).replace(doc);
-      moved++;
-      if (moved % 250 === 0) process.stdout.write(`  ...${moved}/${found.length}\r`);
-    } catch (e) {
-      failed++;
-      if (failed <= 3) console.log(`  write failed ${r.id}: ${e.message}`);
+  // CF-REPOINT-USE-PATCH (2026-08-22). The first version did read-then-replace,
+  // one row at a time, behind a 120ms sleep — about 1 write/second, which put
+  // 7,255 rows at roughly 75 minutes. Measured while it ran: ~16 RU/s against
+  // an 8,000 RU/s ceiling, and no 429s. It was never throughput-bound; it was
+  // two Azure round trips per row, serialised, from a laptop. More RU would
+  // have bought nothing.
+  //
+  // So: PATCH — one round trip, sending only the fields that change — through
+  // a small concurrency pool. Still a rounding error against the ceiling, but
+  // roughly 20x the wall-clock, which is what makes sweeping the remaining
+  // years practical.
+  //
+  // The condition asserts the row is STILL on the retired slug, so a row
+  // already moved fails its precondition rather than being rewritten. That is
+  // what makes re-running safe.
+  let moved = 0, unaddressable = 0, failed = 0, skipped = 0;
+  let cursor = 0;
+
+  async function worker() {
+    for (;;) {
+      const i = cursor++;
+      if (i >= found.length) return;
+      const r = found[i];
+      const pk = typeof r.cardId === "string" && r.cardId ? r.cardId : null;
+      if (!pk) { unaddressable++; continue; }
+      const to = map.get(r.hobbyiqCardId);
+      if (!to) { skipped++; continue; }
+      try {
+        await sold.item(r.id, pk).patch({
+          operations: [
+            { op: "set", path: "/hobbyiqCardId", value: to },
+            { op: "set", path: "/repointedFrom", value: r.hobbyiqCardId },
+            { op: "set", path: "/repointedReason", value: `catalog row superseded (${SETKEY} overlap); sale follows the surviving card` },
+            { op: "set", path: "/repointedAt", value: new Date().toISOString() },
+          ],
+          condition: `FROM c WHERE c.hobbyiqCardId = "${String(r.hobbyiqCardId).replace(/"/g, "")}"`,
+        });
+        moved++;
+        if (moved % 500 === 0) process.stdout.write(`  ...${moved}/${found.length}
+`);
+      } catch (e) {
+        // Precondition failed / gone = someone already moved it. Not an error.
+        if (e && (e.code === 412 || e.code === 404)) { skipped++; continue; }
+        failed++;
+        if (failed <= 3) console.log(`  write failed ${r.id}: ${e.message}`);
+      }
+      if (PACE_MS > 0) await sleep(PACE_MS);
     }
-    await sleep(PACE_MS);
   }
-  console.log(`\nMOVED: ${moved}   unaddressable (no cardId): ${unaddressable}   failed: ${failed}`);
+
+  const CONCURRENCY = Number(process.env.CONCURRENCY || 8);
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+  console.log(`
+MOVED: ${moved}   skipped (already moved): ${skipped}   unaddressable (no cardId): ${unaddressable}   failed: ${failed}`);
   if (failed) process.exit(4);
 }
 
