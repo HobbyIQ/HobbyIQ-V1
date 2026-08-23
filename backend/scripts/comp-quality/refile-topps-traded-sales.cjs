@@ -33,28 +33,14 @@
 //     APPLY=true       perform the writes (default: report only)
 //     CONCURRENCY=6
 const { CosmosClient } = require("@azure/cosmos");
+const { normPlayerName } = require("./playerNameMatch.cjs");
 
 const APPLY = process.env.APPLY === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 6);
 
-/** Card DESIGNATIONS that ride along in a playerName field and say nothing
- *  about who the player is. Catalog rows carry things like
- *  "Darryl Strawberry XRC" — extended rookie card — while the sale says
- *  "Darryl Strawberry". Comparing raw strings rejected 12,870 of 20,682 sales
- *  as different people when they are the same person.
- *
- *  "jr" and "sr" are deliberately NOT here. Ken Griffey and Ken Griffey Jr are
- *  two players, and collapsing them would merge a father's cards into his
- *  son's — the exact class of error these guards exist to prevent. */
-const DESIGNATION = new Set([
-  "xrc", "rc", "rookie", "rookies", "hof", "sp", "ssp", "err", "cor", "uer",
-  "var", "variation", "prospect", "prospects", "star", "allstar", "as",
-]);
-const norm = (s) => String(s || "")
-  .toLowerCase()
-  .split(/[^a-z]+/)
-  .filter((t) => t && !DESIGNATION.has(t))
-  .join("");
+// Shared with refile-tiffany-sales.cjs — see playerNameMatch.cjs for why this
+// is neither string equality nor fuzzy matching.
+const norm = normPlayerName;
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;

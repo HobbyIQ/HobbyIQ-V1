@@ -43,6 +43,7 @@
 //     CONCURRENCY=8
 //     YEARS=1984-1992  era window (default 1984-1992)
 const { CosmosClient } = require("@azure/cosmos");
+const { normPlayerName } = require("./playerNameMatch.cjs");
 
 const APPLY = process.env.APPLY === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 8);
@@ -133,7 +134,9 @@ async function main() {
   // exists" is not evidence that it is THIS card — that is precisely the
   // mistake that nearly merged 131 unrelated bowman cards whose initials-based
   // numbers collided. Existence plus identity, or it does not move.
-  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+  // Shared with refile-topps-traded-sales.cjs — see playerNameMatch.cjs for why
+  // this is neither string equality nor fuzzy matching.
+  const norm = normPlayerName;
   const moves = [];
   let noDestination = 0, ambiguous = 0, wrongPlayer = 0, noPlayerToCheck = 0;
   const wrongPlayerSample = [];
