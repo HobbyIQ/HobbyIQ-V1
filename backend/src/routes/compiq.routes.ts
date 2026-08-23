@@ -5396,6 +5396,65 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       return res.status(400).json({ success: false, error: 'Missing "cardId" field' });
     }
 
+    // ── CF-IDENTITY-STAMPED-ON-EVERY-RESPONSE (2026-08-22) ───────────────
+    //
+    // This handler returns through MANY res.json sites — canonical-first,
+    // cardsight, projection fallbacks — and only some of them build a full
+    // cardIdentity. Patching one branch fixed one card and left the next one
+    // titled "#CPA-TG" with no player and an Add button that 400s, which is
+    // exactly what happened.
+    //
+    // So the identity is resolved ONCE here and stamped onto whatever payload
+    // goes out. A hiq: slug already carries sport, year, setKey, cardNumber,
+    // parallel, auto and print run; card_catalog supplies the only thing it
+    // cannot — who the card is of.
+    //
+    // Only ever FILLS GAPS: any field a branch already set wins. And it is
+    // best-effort — a failed lookup degrades a title, it must never cost the
+    // price.
+    const hiqParts = String(resolvedCardId).split(":");
+    const isHiqSlugReq = hiqParts[0] === "hiq" && hiqParts.length >= 5;
+    let stampPlayer: string | null = null;
+    if (isHiqSlugReq) {
+      try {
+        stampPlayer = await lookupCatalogPlayerName(
+          Number(hiqParts[2]), hiqParts[3], hiqParts[4],
+        );
+      } catch { stampPlayer = null; }
+      const prettySeg = (v: string | undefined) => String(v || "")
+        .split("-").filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      const slugIdentity = {
+        card_id: resolvedCardId,
+        slug: resolvedCardId,
+        sport: hiqParts[1] || null,
+        year: Number(hiqParts[2]) || null,
+        set: prettySeg(hiqParts[3]),
+        setKey: hiqParts[3] || null,
+        number: String(hiqParts[4] ?? "").toUpperCase() || null,
+        cardNumber: String(hiqParts[4] ?? "").toUpperCase() || null,
+        parallel: hiqParts[5] && hiqParts[5] !== "base" ? prettySeg(hiqParts[5]) : "Base",
+        isAuto: hiqParts[6] === "auto",
+        player: stampPlayer,
+        playerName: stampPlayer,
+      };
+      const rawJson = res.json.bind(res);
+      (res as unknown as { json: (b: unknown) => unknown }).json = (body: unknown) => {
+        try {
+          if (body && typeof body === "object") {
+            const b = body as Record<string, unknown>;
+            const existing = (b.cardIdentity ?? {}) as Record<string, unknown>;
+            const merged: Record<string, unknown> = { ...slugIdentity };
+            for (const [k, v] of Object.entries(existing)) {
+              if (v !== null && v !== undefined && v !== "") merged[k] = v;
+            }
+            b.cardIdentity = merged;
+          }
+        } catch { /* never let stamping break a response */ }
+        return rawJson(body);
+      };
+    }
+
     // CF-PRICE-BY-ID-CANONICAL-FIRST (Drew, 2026-08-08, revised). Any
     // request that arrives with an hiq: slug should try canonical-fmv
     // FIRST. Prior behavior: convert hiq: → vendor cardId (bubble.io),

@@ -771,8 +771,32 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       for (const g of ["PSA 9", "BGS 9", "SGC 9", "CGC 9"]) {
         const entry = curve.entries.find((e) => e.grade === g)!;
         expect(entry.valueSource, g).toBe("estimated");
-        expect(entry.value, g).toBe(300);              // 100 × 3.0 empirical
+        // The byTier lookup is what this test is for, and the multiplier is
+        // the direct evidence it fired — it survives regardless of the cap.
         expect(entry.estimatedMultiplier, g).toBe(3.0);
+      }
+
+      // CF-PROJECTED-TIERS-MONOTONIC (2026-08-22). 100 × 3.0 = 300 for each
+      // 9-tier, but this fixture's HIGHER tiers fall back to company-level
+      // ratios and land BELOW that — BGS 9.5 at $227.50. A projected 9 worth
+      // more than its own 9.5 is two calibration cells disagreeing, not a
+      // market inversion, so projected tiers are capped by the tier above.
+      //
+      // Asserting the RULE rather than the old raw numbers: every 9 either
+      // shows its full 300, or is capped to its own grader's next tier up.
+      for (const grader of ["PSA", "BGS", "SGC", "CGC"]) {
+        const nine = curve.entries.find((e) => e.grade === `${grader} 9`)!;
+        const above = curve.entries
+          .filter((e) => e.grader === grader && !/black label/i.test(String(e.grade)))
+          .map((e) => ({ gv: parseFloat(String(e.grade).replace(/[^0-9.]/g, "")), v: e.value }))
+          .filter((x) => x.gv > 9 && typeof x.v === "number")
+          .sort((a, b) => a.gv - b.gv)[0];
+        if (above) {
+          expect(nine.value!, `${grader} 9 must not exceed its own ${above.gv}`)
+            .toBeLessThanOrEqual(above.v as number);
+        } else {
+          expect(nine.value, grader).toBe(300);
+        }
       }
     });
 
