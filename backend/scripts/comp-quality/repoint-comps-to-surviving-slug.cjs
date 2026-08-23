@@ -31,12 +31,18 @@
 //     SETKEY=bowman-chrome   the superseded side (default bowman-chrome)
 //     APPLY=true       perform the writes
 //     CONCURRENCY=8    parallel writers (default 8)
+//     REASON=...       only follow marks carrying this supersededReason
 //     PACE_MS=0        optional delay between writes
 const { CosmosClient } = require("@azure/cosmos");
 
 const YEAR = Number(process.env.YEAR || 2024);
 const SETKEY = String(process.env.SETKEY || "bowman-chrome");
 const APPLY = process.env.APPLY === "true";
+// Must match what consolidate-draft-chrome-overlap.cjs writes. Following any
+// other pass's marks is what caused the 2026-08-23 revert.
+const KEEP = String(process.env.KEEP || "bowman-draft");
+const { SUPERSEDE_MARKER } = require("./consolidate-draft-chrome-overlap.cjs");
+const REASON = String(process.env.REASON || SUPERSEDE_MARKER);
 // Zero by default: with patch + a pool this runs at ~0.2% of the container's
 // 8,000 RU/s ceiling. The sleep was protecting against a limit we never reached.
 const PACE_MS = Number(process.env.PACE_MS || 0);
@@ -56,9 +62,22 @@ async function main() {
 
   // 1. The retired -> surviving map.
   const { resources: rows } = await cat.items.query({
+    // ONLY marks this operation made. CF-REPOINT-OWN-MARKS-ONLY (2026-08-23):
+    // the first version selected every row carrying supersededBy for the
+    // year+setKey, with no filter on who set it. card_catalog holds marks from
+    // other passes — CF-DEDUPE-CATALOG-ROWS among them — pointing in directions
+    // the draft/chrome twin rule never vouched for, and the repoint followed
+    // all of them. 5,969 sales moved on that basis, including 625 sapphire
+    // sales onto chrome cards: a separate product with its own checklist, so
+    // those comps were pricing a different card. All were reverted from their
+    // repointedFrom stamp; see revert-foreign-supersede-repoints.cjs.
+    //
+    // A repoint may only follow a supersede decision whose reasoning it can
+    // point at. Provenance is the filter.
     query: `SELECT c.id, c.supersededBy FROM c
-            WHERE c.year=@y AND c.setKey=@sk AND IS_DEFINED(c.supersededBy) AND c.supersededBy != null`,
-    parameters: [{ name: "@y", value: YEAR }, { name: "@sk", value: SETKEY }],
+            WHERE c.year=@y AND c.setKey=@sk AND IS_DEFINED(c.supersededBy) AND c.supersededBy != null
+              AND CONTAINS(c.supersededReason, @reason)`,
+    parameters: [{ name: "@y", value: YEAR }, { name: "@sk", value: SETKEY }, { name: "@reason", value: REASON }],
   }).fetchAll();
 
   const map = new Map();
