@@ -112,7 +112,12 @@ describe("CF-CARD-PANEL — GET /api/compiq/card-panel/:cardId", () => {
     // Grade curve shape — 10 canonical entries even when all empty
     expect(res.body.gradeCurve).toBeDefined();
     // CF-EIGHT-TIER-GRADES (2026-07-06): 14 canonical grades now
-    expect(res.body.gradeCurve.entries).toHaveLength(14);
+    expect(res.body.gradeCurve.entries).toHaveLength(15);
+    // CF-BGS-BLACK-LABEL-SPLIT (2026-08-22): BGS 10 Black Label is its own
+    // tier and must reach the wire, not just the service.
+    expect(
+      res.body.gradeCurve.entries.some((e: { grade: string }) => /black label/i.test(String(e.grade))),
+    ).toBe(true);
     expect(res.body.gradeCurve.totalSampleCount).toBe(0);
 
     // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the wire
