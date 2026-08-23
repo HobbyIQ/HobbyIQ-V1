@@ -135,6 +135,11 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
       purchasePrice: 25, // unit cost
       totalCostBasis: 100,
       fairMarketValue: 100,
+      // CF-NO-IDENTITY-NO-PRICE-AT-THE-DOOR (2026-08-23): writeUserDoc withholds
+      // the value surface from a holding it cannot identify, so a fixture that
+      // carries a fairMarketValue has to carry an identity too. This test is
+      // about prorating a partial sale, not about identity.
+      cardId: "hiq:baseball:2024:bowman-chrome:cpa-ps:base:auto",
     });
 
     const result = await markHoldingSoldFromEbay(

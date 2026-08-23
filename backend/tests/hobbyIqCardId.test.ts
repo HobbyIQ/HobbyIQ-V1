@@ -357,33 +357,54 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toBe("hiq:baseball:1991:topps:392:base:no-auto");
   });
 
-  // CF-CHROME-AUTO-BASE-IS-REFRACTOR (Drew, 2026-08-10). CH labels the
-  // /499 baseline CPA-/TCPA-/CRA- auto as "Base" but collectors
-  // uniformly call it "Refractor" — those product lines have no
-  // non-refractor base variant. Upgrade Base → Refractor to unify the
-  // pool.
-  it("CPA- auto + Base parallel → Refractor (chrome-auto base-is-refractor)", () => {
+  // CF-BASE-IS-NOT-A-REFRACTOR (Drew, 2026-08-23: "base is a refractor is
+  // wrong"). These four cases previously asserted the OPPOSITE — that a "Base"
+  // parallel on a CPA-/TCPA-/CRA- auto was upgraded to "refractor" so the /499
+  // pool would not "split in half".
+  //
+  // That rule (CF-CHROME-AUTO-BASE-IS-REFRACTOR, 2026-08-10) is removed. Its
+  // own comment cited Drew's words — "a base does not equal a refractor" — and
+  // then merged them anyway; the rationale was inverted when it was written.
+  //
+  // Measured on 2025 Bowman Draft CPA-MWI, the card that surfaced it: 42 sales
+  // on :refractor:auto and 20 on :base:auto. Those 20 are Base autographs and
+  // pooling them drags the Refractor toward a different card's price. A smaller
+  // correct pool beats a larger wrong one.
+  it("CPA- auto + Base parallel STAYS base — base is not a refractor", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Base", isAuto: true, printRun: 499,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:auto:num-499");
   });
 
-  it("TCPA- auto + Base → topps-chrome refractor", () => {
+  it("TCPA- auto + Base stays base on topps-chrome", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2024, setKey: "Topps",
       cardNumber: "TCPA-CB", parallel: "Base", isAuto: true,
     });
-    expect(slug).toContain(":topps-chrome:tcpa-cb:refractor:auto");
+    expect(slug).toContain(":topps-chrome:tcpa-cb:base:auto");
   });
 
-  it("CRA- auto + Base → topps-chrome refractor", () => {
+  it("CRA- auto + Base stays base on topps-chrome", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Topps",
       cardNumber: "CRA-JD", parallel: "Base", isAuto: true,
     });
-    expect(slug).toContain(":topps-chrome:cra-jd:refractor:auto");
+    expect(slug).toContain(":topps-chrome:cra-jd:base:auto");
+  });
+
+  it("a Base auto and a Refractor auto are DIFFERENT slugs", () => {
+    // The point of the removal, stated directly: these two must never collapse.
+    const base = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Base", isAuto: true, printRun: 499,
+    });
+    const refractor = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
+    });
+    expect(base).not.toBe(refractor);
   });
 
   it("CPA- with vendor isAuto=false is force-corrected to :auto (CF-AUTO-ONLY-FORCE)", () => {
@@ -391,13 +412,14 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     // and produced :no-auto. That was the bug — CPA- is auto-only by
     // product definition, so the pool was fragmenting between :auto
     // (correct) and :no-auto (bad vendor label) for the same sale.
-    // New behavior: force isAuto=true, and since it's now auto the
-    // Base→Refractor upgrade for chrome-auto subsets also fires.
+    //
+    // The isAuto force still stands. What changed is the parallel: the
+    // Base→Refractor upgrade no longer fires, so Base stays base.
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Base", isAuto: false,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto");
+    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:auto");
   });
 
   it("BCP- auto + Base stays Base (rule scoped to CPA/TCPA/CRA only)", () => {

@@ -481,9 +481,119 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
   }
 }
 
+/**
+ * CF-NO-IDENTITY-NO-PRICE-AT-THE-DOOR (Drew, 2026-08-23).
+ *
+ * CF-NO-IDENTITY-NO-PRICE (2026-08-22) put the rule — a holding we cannot
+ * identify must not be quoted a price — inside autoPriceHolding, and that
+ * implementation is correct: it blanks the surface and writes
+ * fairMarketValue: null. It shipped, and the next day the card it was written
+ * for was still wrong.
+ *
+ * Max Williams "2025 Bowman Draft Gold #CPA-MWI", holding aff3236a, $301.43
+ * paid. Re-measured 2026-08-23 18:59Z:
+ *
+ *     cardId            (absent)          <- no identity at all
+ *     catalogMatchSlug  …:cpa-mwi:gold:auto:num-50   <- the RIGHT answer, parked
+ *     fairMarketValue   14.29             <- 4.7% of cost basis
+ *     valuationStatus   "observed"        <- the strongest claim we can make
+ *     verdict           "Variant approximation — parallel unverified"
+ *     pricingSource     "legacy-engine"   sourceVendor "cardsight"
+ *
+ * autoPriceHolding did not write that number — it cannot, its guard runs first.
+ * Some other writer did. There are 22 assignments to fairMarketValue in this
+ * file alone, and the guard sat on one of them.
+ *
+ * That is the shape this codebase keeps repeating, named in
+ * catalogMatcherCacheInvariant's own header: "a guard that is correct in
+ * isolation but runs on only one of the paths the value can travel". The fix
+ * for that shape is not a 23rd call site. It is to move the check to the one
+ * place every path must pass through.
+ *
+ * writeUserDoc is that place: one upsert, and the test-mode branch below it.
+ * Nothing reaches Cosmos without coming through here.
+ *
+ * WHAT IT DOES NOT DO. It does not invent a price, does not clear identity, and
+ * does not touch a holding whose identity resolves. It withholds the VALUE
+ * SURFACE only, and flags the row for review with the same wording
+ * autoPriceHolding uses, so the two paths present identically.
+ *
+ * valuationStatus is cleared with the rest, unlike the 2026-08-22 version. A
+ * withheld price cannot simultaneously be an "observed" one, and leaving that
+ * word on the row is most of why the number read as authoritative on the card
+ * page while the badge said UNVERIFIED.
+ */
+export function withholdPricesFromUnidentifiedHoldings(doc: UserDoc): UserDoc {
+  const holdings = doc?.holdings;
+  if (!holdings || typeof holdings !== "object") return doc;
+
+  let withheld = 0;
+  const next: Record<string, PortfolioHolding> = {};
+
+  for (const [id, holding] of Object.entries(holdings as Record<string, PortfolioHolding>)) {
+    if (!holding || typeof holding !== "object") { next[id] = holding; continue; }
+
+    const identity = {
+      cardId: (holding as { cardId?: string | null }).cardId ?? null,
+      hobbyiqCardId: (holding as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? null,
+    };
+    if (holdingIdentityIsResolved(identity)) { next[id] = holding; continue; }
+
+    const hadPrice =
+      toNumber((holding as { fairMarketValue?: unknown }).fairMarketValue, 0) > 0
+      || toNumber((holding as { estimatedValue?: unknown }).estimatedValue, 0) > 0;
+    if (!hadPrice) { next[id] = holding; continue; }
+
+    withheld += 1;
+    if (withheld <= 5) {
+      console.warn(JSON.stringify({
+        event: "unidentified_holding_price_withheld_at_write",
+        source: "portfolioStore.writeUserDoc",
+        holdingId: id,
+        playerName: (holding as { playerName?: string }).playerName ?? null,
+        cardNumber: (holding as { cardNumber?: string }).cardNumber ?? null,
+        parallel: (holding as { parallel?: string }).parallel ?? null,
+        withheldFairMarketValue: (holding as { fairMarketValue?: unknown }).fairMarketValue ?? null,
+        withheldEstimatedValue: (holding as { estimatedValue?: unknown }).estimatedValue ?? null,
+        // The answer we already had and did not use, so the log says how close
+        // this row was to being right rather than only that it was wrong.
+        catalogMatchSlug: (holding as { catalogMatchSlug?: string }).catalogMatchSlug ?? null,
+        catalogMatchConfidence: (holding as { catalogMatchConfidence?: number }).catalogMatchConfidence ?? null,
+        pricingSource: (holding as { pricingSource?: string }).pricingSource ?? null,
+        sourceVendor: (holding as { sourceVendor?: string }).sourceVendor ?? null,
+        costBasis: toNumber(
+          (holding as { totalCostBasis?: unknown }).totalCostBasis,
+          toNumber((holding as { purchasePrice?: unknown }).purchasePrice, 0),
+        ),
+      }));
+    }
+
+    next[id] = {
+      ...holding,
+      fairMarketValue: null as any,
+      estimatedValue: null,
+      estimateLow: null,
+      estimateHigh: null,
+      isEstimate: false,
+      valuationStatus: null as any,
+      needsReview: true,
+      reviewReason:
+        "We could not identify this card, so we are not showing a value. Confirm the set, card number and parallel.",
+    } as PortfolioHolding;
+  }
+
+  if (!withheld) return doc;
+  return { ...doc, holdings: next };
+}
+
 export async function writeUserDoc(userId: string, doc: UserDoc): Promise<void> {
   invalidateCache(userId);
   const container = await getContainer();
+
+  // Every write to a portfolio doc passes through here. See
+  // CF-NO-IDENTITY-NO-PRICE-AT-THE-DOOR above for why the check lives at the
+  // door rather than at each of the 22 places that set a price.
+  doc = withholdPricesFromUnidentifiedHoldings(doc);
 
   // Test mode: use in-memory store
   if (!container && isTestMode) {
