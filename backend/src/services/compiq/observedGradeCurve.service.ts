@@ -2061,8 +2061,15 @@ export async function buildObservedGradeCurve(
   // ("PSA 10" → 10, "BGS 9.5" → 9.5) so ascending sort works as intended.
   const extractGradeNum = (grade: string | number | null): number => {
     if (typeof grade === "number") return grade;
-    const m = String(grade ?? "").match(/(\d+(?:\.\d+)?)/);
-    return m ? parseFloat(m[1]) : 0;
+    const text = String(grade ?? "");
+    const m = text.match(/(\d+(?:\.\d+)?)/);
+    const n = m ? parseFloat(m[1]) : 0;
+    // CF-BGS-BLACK-LABEL-SPLIT: "BGS 10 Black Label" parses to 10, tying with
+    // "BGS 10" and leaving their order arbitrary. A Black Label outranks a
+    // Pristine 10 — measured 3.0x — so nudge it above, which also stops the
+    // ceiling pass below from clamping it down to the Pristine value.
+    if (/black\s*label/i.test(text)) return n + 0.25;
+    return n;
   };
   const graders = new Set(curve.entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
@@ -2088,6 +2095,74 @@ export async function buildObservedGradeCurve(
       // tier (which may have far better data at a lower price).
       if (own !== null && t.valueSource === "observed" && (t.sampleCount ?? 0) >= MONOTONIC_TRUST_MIN) {
         prevFloor = own;
+      }
+    }
+  }
+
+  // ── CF-PROJECTED-TIERS-MONOTONIC (2026-08-22) ─────────────────────────
+  //
+  // The floor pass above only advances its floor on OBSERVED tiers with
+  // sampleCount >= MONOTONIC_TRUST_MIN, which is right: a real low-grade sale
+  // may legitimately exceed a thin high-grade one, and grade monotonicity is
+  // not an invariant of observed data.
+  //
+  // But when a card has no graded sales, EVERY tier is projected from one
+  // anchor times a ratio, nothing is ever trusted as a floor, and the ratio
+  // table's own inconsistencies pass straight through to the user:
+  //
+  //   SGC 10  $1,086.21   estimated
+  //   SGC  9  $2,121.39   estimated   <- a 9 worth 2x its own 10
+  //
+  // Nothing was observed there. That is not a market inversion, it is two
+  // calibration cells disagreeing, and a 9 above its own 10 discredits every
+  // other number on the card.
+  //
+  // So: projected tiers may not exceed the nearest HIGHER tier of the same
+  // grader. Walk each grader top-down and cap. Observed tiers are never
+  // touched — they set the ceiling, they do not receive one — so a genuine
+  // observed inversion still shows, exactly as the doctrine requires.
+  const isBlackLabelTier = (e: { grade: string | number }) =>
+    /black\s*label/i.test(String(e.grade ?? ""));
+
+  for (const grader of graders) {
+    // Black Label sits OUT of this walk. It is a qualifier on the 10, not a
+    // grade above it, and it has no calibration cell of its own — so its
+    // projection is the least reliable number in the grader and must not cap
+    // anything. Left in, it projected $4,009.50 and dragged a legitimate
+    // BGS 10 of $5,904.90 down to meet it, which is precisely backwards.
+    const rows = curve.entries
+      .filter((e) => e.grader === grader && !isBlackLabelTier(e))
+      .map((e) => ({ e, gv: extractGradeNum(e.grade) }))
+      .sort((a, b) => b.gv - a.gv);   // highest grade first
+    let ceiling: number | null = null;
+    for (const { e } of rows) {
+      const own = e.trendAdjustedValue ?? e.value ?? null;
+      if (own === null) continue;
+      if (e.valueSource === "estimated" && ceiling !== null && own > ceiling) {
+        e.value = ceiling;
+        e.trendAdjustedValue = ceiling;
+        if (e.predictedPriceAt30d !== null && e.predictedPriceAt30d > ceiling) {
+          e.predictedPriceAt30d = ceiling;
+        }
+        continue;   // capped value must not then raise the ceiling
+      }
+      ceiling = ceiling === null ? own : Math.min(ceiling, own);
+    }
+
+    // The one constraint that DOES bind Black Label, and it is a floor rather
+    // than a ceiling: it cannot be worth less than the Pristine 10 it outranks.
+    // Measured 3.0x above it on real sales. Only raises an ESTIMATED Black
+    // Label — an observed one is evidence and stands however it lands.
+    const black = curve.entries.find((e) => e.grader === grader && isBlackLabelTier(e));
+    const plainTen = curve.entries.find(
+      (e) => e.grader === grader && !isBlackLabelTier(e) && extractGradeNum(e.grade) === 10,
+    );
+    if (black && plainTen && black.valueSource === "estimated") {
+      const blackVal = black.trendAdjustedValue ?? black.value ?? null;
+      const tenVal = plainTen.trendAdjustedValue ?? plainTen.value ?? null;
+      if (blackVal !== null && tenVal !== null && blackVal < tenVal) {
+        black.value = tenVal;
+        black.trendAdjustedValue = tenVal;
       }
     }
   }
