@@ -45,7 +45,31 @@ const LINES = {
     // Topps Chrome Sapphire and Bowman Chrome/Draft Sapphire, 2018 onward.
     bases: ["bowman-chrome", "bowman-draft", "topps-chrome", "bowman", "topps"],
     era: [2017, 2030],
-    dest: (base) => [`${base}-sapphire`],
+    // dest() below lists SPELLINGS of one product, not rival products, so the
+    // first surviving candidate wins instead of being called ambiguous.
+    destOrdered: true,
+    // ORDERED BY PREFERENCE, because the same product is filed under several
+    // setKey spellings and we would otherwise mint duplicates of cards we
+    // already ingested. Drew: "do we have these checklists? we should, we
+    // ingested a lot." The catalog says yes, under more than one name:
+    //
+    //   bowman-chrome-sapphire          21858
+    //   bowman-chrome-sapphire-edition   6188
+    //   bowman-sapphire-edition          7248
+    //   bowman-sapphire-chrome           4676
+    //   bowman-draft-sapphire-edition    1728
+    //
+    // Computing only "<base>-sapphire" reports "no destination" for a card
+    // sitting under "-sapphire-edition" — a checklist that has been ours all
+    // along. The first spelling that exists AND names the same player wins;
+    // canonical is listed first so it is preferred when both are present.
+    dest: (base) => [
+      `${base}-sapphire`,
+      `${base}-sapphire-edition`,
+      `${base}-sapphire-chrome`,
+      `${base.replace("-chrome", "")}-sapphire`,
+      `${base.replace("-chrome", "")}-sapphire-edition`,
+    ],
     // "SAPPHIRE" IS NOT ALWAYS THE PRODUCT — but it is more often than a first
     // pass assumed. RUBY & SAPPHIRE is Pokemon: 2003-pokemon-ex-ruby-sapphire,
     // ex-ruby-and-sapphire, ruby-sapphire. The era window happens to exclude
@@ -202,7 +226,18 @@ async function main() {
       if (sample.length < 5) sample.push(`${r.playerName} -> ${String(hits[0]).slice(4, 62)} is ${exists.get(hits[0])}`);
       continue;
     }
-    if (same.length > 1) { ambiguous++; continue; }
+    // TWO DESTINATIONS MEAN DIFFERENT THINGS DEPENDING ON THE LINE.
+    //
+    // For sapphire they are SPELLINGS of one product — bowman-chrome-sapphire
+    // and bowman-chrome-sapphire-edition are the same set filed twice — so the
+    // preference order in dest() decides and the first survivor wins.
+    //
+    // For tiffany they are DIFFERENT PRODUCTS: topps-tiffany and
+    // topps-traded-tiffany both number from 1, so a card matching both is
+    // genuinely ambiguous and guessing would file it under the wrong set.
+    // That line keeps the strict rule.
+    if (same.length > 1 && !cfg.destOrdered) { ambiguous++; continue; }
+    // same[] preserves dest() order, so same[0] is the preferred spelling.
     moves.push({ r, to: same[0] });
   }
   console.log(`  no ${cfg.word} card exists to move to${" ".repeat(Math.max(0, 20 - cfg.word.length))}: ${noDest}   (needs a catalog row first)`);
