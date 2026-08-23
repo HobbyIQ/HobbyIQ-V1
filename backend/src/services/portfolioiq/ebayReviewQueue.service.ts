@@ -164,15 +164,39 @@ export async function applyCatalogIdentityToHolding(
       corrections.push({ field, before: (holding[field] ?? null) as never, after: value as never });
       holding[field] = value;
     };
+    // Captured BEFORE any adopt() runs. The product gate below compares product
+    // against setName, and adopting setName first would change the very value it
+    // is compared to — the gate would then never match and product would never
+    // move, which is the bug it exists to prevent.
+    const productBefore = String(holding.product ?? "").trim();
+    const setNameBefore = String(holding.setName ?? "").trim();
+
     adopt("playerName", row.playerName);
     adopt("cardYear", row.year);
     adopt("setName", row.setName ?? row.setKey);
-    // See the header: product is what canonicalize reads first.
-    adopt("product", row.setName ?? row.setKey);
+    // CORRECTED 2026-08-23. This first read `row.setName ?? row.setKey`, mirroring
+    // the setName line above — which is wrong for `product`. setName is
+    // wire-rendered, and a catalog row's setName can be null, so the fallback
+    // would put a machine key ("bowman-draft-picks-and-prospects") in front of a
+    // user. setKey is a fine fallback for setName, which is already a key-ish
+    // field; it is not one for product.
+    //
+    // Only adopt product when it is safe to: it currently agrees with setName
+    // (so the pair moves together, which is the whole point — portfolioStore
+    // feeds canonicalize `product ?? setName`, product FIRST), or it is empty.
+    // A product the user set independently is left alone.
+    if (row.setName && (!productBefore || productBefore === setNameBefore)) {
+      adopt("product", row.setName);
+    }
     adopt("cardNumber", row.cardNumber);
     adopt("parallel", row.parallel);
     adopt("isAuto", row.isAuto);
     adopt("sport", row.sport);
+    // CF-ACCEPT-CARRIES-PRINTRUN: the slug's :num-N segment is rebuilt from the
+    // holding's printRun on the next canonicalize. Adopting the identity without
+    // it means the very next PATCH drops the segment and silently undoes the
+    // acceptance.
+    adopt("printRun", row.printRun);
     holding.identitySource = opts.identitySource ?? "user-selected-catalog";
     holding.identitySelectedAt = new Date().toISOString();
     console.log(JSON.stringify({
