@@ -515,6 +515,61 @@ export interface PortfolioHoldingWire {
    *  which remain for one release while both clients migrate. Deletion
    *  of the flats happens in a follow-up CF once both clients cut over. */
   pricing: PricingEnvelope;
+  /** CF-SURFACE-THE-PARKED-MATCH (Drew, 2026-08-23).
+   *
+   *  The matcher already found this card and we never showed the user.
+   *
+   *  canonicalize() runs at import and again at confirm, stores its answer on
+   *  the holding as catalogMatchSlug, and pins cardId only at confidence >=
+   *  0.9 (ebayAutoHolding.service.ts:195, ebayReviewQueue.service.ts:388).
+   *  That gate is right — pinning a weak match prices the holding wrongly
+   *  while looking confirmed. But below the gate the answer was simply parked,
+   *  and NOTHING in src/ read the field. The user saw "Fix identity" with no
+   *  suggestion and had to go searching for a card we had already identified.
+   *
+   *  Max Williams "2025 Bowman Draft Gold #CPA-MWI", $301.43 paid: parked at
+   *  hiq:baseball:2025:bowman-draft:cpa-mwi:gold:auto:num-50, confidence 0.72,
+   *  matchedBy "fuzzy-parallel" — the correct /50 Gold, unread.
+   *
+   *  Measured across the live portfolio 2026-08-23: 23 of 91 holdings carry no
+   *  identity, and 20 of those 23 have a parked match. Surfacing them takes
+   *  identity coverage from 74.7% to ~96.7% without acquiring a single row.
+   *
+   *  NULL unless there is genuinely something to offer: a holding that already
+   *  resolved does not need a proposal, and a holding with no parked match has
+   *  none to give. The confidence travels with it so the client can present a
+   *  0.72 differently from a 0.89 rather than implying we are certain. */
+  proposedIdentity: {
+    slug: string;
+    confidence: number | null;
+    matchedBy: string | null;
+  } | null;
+}
+
+/** The parked match, or null when there is nothing to propose.
+ *
+ *  Reads the STORED identity only — deriveHoldingSlug() computes a slug from
+ *  the holding's own fields, and those fields are exactly what is in doubt on
+ *  an unidentified holding, so a derived slug must not suppress the proposal. */
+function proposedIdentityOf(holding: PortfolioHolding): PortfolioHoldingWire["proposedIdentity"] {
+  const h = holding as {
+    cardId?: string | null;
+    hobbyiqCardId?: string | null;
+    catalogMatchSlug?: string | null;
+    catalogMatchConfidence?: number | null;
+    catalogMatchedBy?: string | null;
+  };
+  const resolved = String(h.cardId ?? "").trim() !== "" || String(h.hobbyiqCardId ?? "").trim() !== "";
+  if (resolved) return null;
+
+  const slug = String(h.catalogMatchSlug ?? "").trim();
+  if (!slug) return null;
+
+  return {
+    slug,
+    confidence: typeof h.catalogMatchConfidence === "number" ? h.catalogMatchConfidence : null,
+    matchedBy: h.catalogMatchedBy ?? null,
+  };
 }
 
 export function composeHoldingWireShape(
@@ -552,6 +607,7 @@ export function composeHoldingWireShape(
 
   return {
     // Identity
+    proposedIdentity: proposedIdentityOf(holding),
     id: holding.id,
     playerName: holding.playerName,
     cardTitle: holding.cardTitle,
