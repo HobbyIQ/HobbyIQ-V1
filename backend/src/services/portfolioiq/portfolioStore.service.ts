@@ -1229,6 +1229,14 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
  * "Unverified" as a badge is not enough when the number beside it looks real.
  * No identity, no price.
  */
+/** CF-ADD-KEEPS-THE-SLUG-YOU-VIEWED (2026-08-22). A re-derivation must clear
+ *  this to move a user off a canonical slug they added from. 0.9 is the bar
+ *  every other identity-adoption site already uses — ebayAutoHolding,
+ *  ebayReviewQueue, resolveCert. */
+const ADD_SLUG_OVERRIDE_MIN_CONFIDENCE = Number(
+  process.env.ADD_SLUG_OVERRIDE_MIN_CONFIDENCE ?? 0.9,
+);
+
 export function holdingIdentityIsResolved(input: {
   cardId?: string | null;
   hobbyiqCardId?: string | null;
@@ -5011,7 +5019,44 @@ export async function addHolding(req: Request, res: Response) {
         player: holding.playerName,
         source: "user-verified",
       });
-      if (matchResult.found && matchResult.slug) {
+      // CF-ADD-KEEPS-THE-SLUG-YOU-VIEWED (2026-08-22). This adopted ANY match,
+      // at any confidence, over an identity the caller had already pinned.
+      //
+      // Live case: adding Theo Gillen 2024 Bowman Draft #CPA-TG Blue Refractor
+      // /150 from its own card page. The page's URL carried the exact canonical
+      // slug — ...:bowman-draft:cpa-tg:blue-refractor:auto:num-150 — and the
+      // matcher answered ...:bowman-CHROME:... at fuzzy-parallel / 0.72. That
+      // won. The card's only comp, the $729 sale, is tagged bowman-draft, so
+      // the holding landed on a slug with zero comps, priced $662 estimated
+      // instead of $729 observed, and the comp looked like it had vanished.
+      //
+      // A pinned hiq: slug is the strongest identity statement available — the
+      // user was looking at that exact card. A fuzzy re-derivation must not
+      // silently move them to a different setKey. Same rule #1177 established
+      // for FMV overrides: a low-confidence result may not overwrite a
+      // high-confidence one.
+      //
+      // Still adopted when the incoming id is NOT already canonical, which is
+      // the case this block was written for.
+      const pinnedSlug = String((holding as { hobbyiqCardId?: string }).hobbyiqCardId ?? "").trim();
+      const hasPinnedSlug = pinnedSlug.startsWith("hiq:");
+      const matchOverridesPin =
+        hasPinnedSlug
+        && matchResult.slug !== pinnedSlug
+        && (matchResult.confidence ?? 0) < ADD_SLUG_OVERRIDE_MIN_CONFIDENCE;
+      if (matchOverridesPin) {
+        console.warn(JSON.stringify({
+          event: "catalog_auto_seed_kept_pinned_slug",
+          source: "portfolioStore.addHolding",
+          userId: auth.userId,
+          pinnedSlug,
+          rejectedSlug: matchResult.slug,
+          matchedBy: matchResult.matchedBy,
+          confidence: matchResult.confidence,
+          detail: "re-derivation disagreed with the slug the user added from; keeping theirs",
+        }));
+      }
+      if (matchResult.found && matchResult.slug && !matchOverridesPin) {
         (holding as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
         if (!holding.cardId) (holding as { cardId?: string }).cardId = matchResult.slug;
         console.log(JSON.stringify({
