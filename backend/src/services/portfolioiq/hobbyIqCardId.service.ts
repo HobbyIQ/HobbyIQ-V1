@@ -825,6 +825,44 @@ export function deriveParentSetKey(setKey: string): string | null {
  *  to slugified full name when no known pattern matches (preserves
  *  determinism). Callers that need STRICT matching (return null on
  *  unknown) should use matchKnownProductLine below. */
+/* CF-ARBITRATION-HAS-NO-MECHANICAL-ANSWER (2026-08-23). Read this before
+ * trying to make the pattern list safer — two obvious fixes were measured and
+ * both are wrong.
+ *
+ * THE DEFECT THIS LIST MANUFACTURES. Measured 2026-08-23: 188 rules, 135
+ * destinations, 49 destinations with rival rules, and 187 of the 188 patterns
+ * UNANCHORED. First-match-wins over unanchored patterns means any product whose
+ * name EXTENDS a shorter product's name can be swallowed by the shorter rule,
+ * and which one wins is line order:
+ *
+ *     bowman-chrome-draft-picks-and-prospects
+ *       /bowman-(?:chrome-draft|draft-chrome)/ matched its prefix -> bowman-draft
+ *
+ * Manufacturers name new products by extending old ones, so this generates a
+ * fresh instance roughly once per release.
+ *
+ * ATTEMPT 1 — rank by how much of the INPUT a pattern matches. Diffed against
+ * this function over all 14,918 distinct setNames in the pool: 71 disagreements,
+ * 76,089 sales, and it LOST on the big ones. A greedy pattern eats more
+ * characters while pointing at a less specific key:
+ *     "2024 Panini Prizm WNBA"  panini-prizm-wnba -> panini-prizm   (52,078 sales)
+ *
+ * ATTEMPT 2 — rank by tokens in the DESTINATION. Much closer: 27 disagreements,
+ * 849 sales, and 21 of them are improvements (skybox -> circa-thunder,
+ * topps -> post-cereal). But it still loses 6, because token count conflates
+ * "more words" with "more specific" and a hyphenated MANUFACTURER outranks a
+ * one-word PRODUCT:
+ *     "2008 Upper Deck Goudey"  goudey -> upper-deck   (533 sales across years)
+ *
+ * The lesson is not "find a third metric". These patterns encode products,
+ * manufacturers and eras in one flat namespace, so arbitration between them has
+ * no correct mechanical answer. resolveSetKeyFromCatalog does not arbitrate at
+ * all — a checklist says which product a card is in. The path is to let the
+ * catalog answer what it can and let this list shrink to a residual small
+ * enough that its ordering stops mattering.
+ *
+ * Diff logs for both attempts are reproducible with scripts/comp-quality/ +
+ * a GROUP BY on sold_comps.setName; the numbers above are from 2026-08-23. */
 export function normalizeSetKey(setName: string): string {
   const s = slugify(setName);
   for (const [re, canonical] of knownSetKeyPatterns()) {
@@ -835,6 +873,7 @@ export function normalizeSetKey(setName: string): string {
   }
   return s;
 }
+
 
 /** CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Strict variant of
  *  normalizeSetKey: returns the canonical short form ONLY when the input
