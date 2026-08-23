@@ -164,15 +164,46 @@ export function CardPriceDetail({
   // that had no stashed candidate. This block builds the title from
   // cardIdentity first, then falls back to slug-parse, then finally
   // to the placeholder.
+  // CF-FULL-CARD-TITLE (2026-08-22). identityTitle used to stop at
+  // year / set / player / number — no parallel, no auto, no print run. That
+  // was invisible while cardIdentity had no player, because the title fell
+  // through to slugTitle which DOES carry them. The moment the player started
+  // resolving, identityTitle won and the title regressed from
+  //
+  //   2024 Bowman Draft #CPA-TG Blue Refractor Auto /150
+  // to
+  //   2024 Bowman Draft Theo Gillen #CPA-TG
+  //
+  // — gaining the player and losing which of the card's 65 parallels it is,
+  // on a page quoting $729 for the Blue Refractor /150 specifically.
+  //
+  // Neither source is complete on its own: identity has the player, the slug
+  // has the print run. So compose from both, preferring identity per field.
   const identityTitle = (() => {
     const id = detail?.cardIdentity;
-    if (!id) return null;
-    const parts = [
-      id.year != null ? String(id.year) : "",
-      id.set ?? "",
-      id.player ?? "",
-      id.number ? `#${id.number}` : "",
-    ].map((s) => s.trim()).filter(Boolean);
+    const sp = String(cardsightCardId).split(":");
+    const isHiq = sp[0] === "hiq" && sp.length >= 5;
+    if (!id && !isHiq) return null;
+
+    const pretty = (v: string | undefined | null) => String(v || "")
+      .split("-").filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+
+    const year = id?.year != null ? String(id.year) : (isHiq ? sp[2] : "");
+    const set = id?.set ?? (isHiq ? pretty(sp[3]) : "");
+    const player = id?.player ?? "";
+    const number = id?.number ?? (isHiq ? String(sp[4] ?? "").toUpperCase() : "");
+
+    // "Base" adds nothing a reader wants — the absence of a parallel says it.
+    const parallelRaw = id?.parallel ?? (isHiq ? pretty(sp[5]) : "");
+    const parallel = parallelRaw && !/^base$/i.test(parallelRaw) ? parallelRaw : "";
+    const isAuto = id?.isAuto ?? (isHiq ? sp[6] === "auto" : false);
+    // Print run lives only in the slug.
+    const printRun = isHiq && /^num-\d+$/.test(String(sp[7] ?? "")) ? `/${String(sp[7]).slice(4)}` : "";
+
+    const parts = [year, set, player, number ? `#${number}` : "", parallel, isAuto ? "Auto" : "", printRun]
+      .map((x) => String(x).trim())
+      .filter(Boolean);
     return parts.length > 0 ? parts.join(" ") : null;
   })();
   const slugTitle = (() => {
@@ -219,7 +250,13 @@ export function CardPriceDetail({
       <Header
         title={title}
         image={image}
-        summary={detail?.summary}
+        // CF-FULL-CARD-TITLE (2026-08-22). The summary is price-by-id's prose
+        // and says "Insufficient recent comps — no comps on file" whenever THAT
+        // path found nothing. When the grade-curve tile supplied the number,
+        // the panel below already reports "1 comps used · source: observed",
+        // so the sentence contradicts the figures directly above and below it.
+        // Same defect as the comps/confidence line, one element up.
+        summary={usingTile ? undefined : detail?.summary}
         candidate={candidate}
         cardIdentity={detail?.cardIdentity ?? null}
         grade={grade}
