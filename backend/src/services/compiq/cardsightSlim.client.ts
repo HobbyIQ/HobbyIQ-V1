@@ -47,7 +47,40 @@ function apiKey(): string | null {
   return key && key.trim() ? key.trim() : null;
 }
 
+/**
+ * CF-CARDSIGHT-RETIRED-FROM-PRICING (Drew, 2026-08-23: "NO IT SHOULD NOT").
+ *
+ * Cardsight was retired from MATCHING on 2026-08-16 — in code, not by pulling
+ * the env var, so CARDSIGHT_API_KEY is still set in App Service and this
+ * function still returned true. It was therefore never retired from PRICING,
+ * and it kept quoting values.
+ *
+ * Max Williams "2025 Bowman Draft Gold #CPA-MWI", $301.43 paid, measured
+ * 2026-08-23 18:59Z:
+ *
+ *     fairMarketValue  14.29   sourceVendor "cardsight"   valuationStatus "observed"
+ *
+ * on a holding with NO cardId at all — 4.7% of cost basis, labelled with the
+ * strongest claim the system can make. Three Cardsight paths can price
+ * (cardsightStructuredBridge, cardsightFallback, cardsightPricingBackstop) and
+ * all three gate on this one function, which is why the retirement goes here
+ * rather than at each of them.
+ *
+ * DEFAULT OFF, opt back IN. Set CARDSIGHT_ENABLED=true to restore the vendor
+ * without a deploy if something downstream turns out to depend on it. That
+ * direction matters: leaving it default-on behind a kill switch is how the
+ * matching retirement stayed half-done for a week.
+ *
+ * The API key check is kept below the flag so an accidental re-enable with no
+ * key still fails closed, and so the fifteen call sites keep their existing
+ * "not configured" semantics rather than needing a second concept.
+ */
+function cardsightEnabled(): boolean {
+  return String(process.env.CARDSIGHT_ENABLED ?? "").trim().toLowerCase() === "true";
+}
+
 export function isCardsightConfigured(): boolean {
+  if (!cardsightEnabled()) return false;
   return apiKey() !== null;
 }
 
