@@ -134,6 +134,26 @@ export function CardPriceDetail({
   const tilePredicted = tile?.predictedPriceAt30d ?? null;
   const fmv = tileFmv ?? detail?.fairMarketValueLive ?? detail?.marketValue ?? null;
   const predicted = tilePredicted ?? detail?.predictedPrice;
+
+  // CF-BASIS-DESCRIBES-THE-NUMBER-SHOWN (2026-08-22). The headline came from
+  // the grade-curve TILE while comps / confidence / source came from
+  // price-by-id — two different computations — so a correct price was being
+  // labelled with another path's emptiness:
+  //
+  //   RAW FMV $729   CONFIDENCE 0.0%
+  //   0 comps used · 0 available · source: no-recent-comps
+  //
+  // Live on hiq:baseball:2024:bowman-draft:cpa-tg:blue-refractor:auto:num-150.
+  // The $729 is right — it is that card's last actual sale, via the
+  // rare-card-anchor rung, "Last sold $729 on 2026-08-20", 1 comp, conf 0.45.
+  // price-by-id separately found nothing and its zeroes were printed beside
+  // the good number.
+  //
+  // So when the tile supplies the value, the tile supplies its provenance too.
+  const usingTile = tileFmv != null;
+  const shownComps = usingTile ? (tile?.sampleCount ?? null) : (detail?.compsUsed ?? null);
+  const shownConfidence = usingTile ? (tile?.confidenceScore ?? null) : (detail?.confidence ?? null);
+  const shownSource = usingTile ? (tile?.valueSource ?? null) : (detail?.source ?? null);
   const parallels = candidate?.parallels ?? [];
   // CF-TITLE-CARD-IDENTITY (Drew, 2026-08-11). Backend enriches the
   // response with cardIdentity (player, year, set, number) precisely
@@ -156,15 +176,41 @@ export function CardPriceDetail({
     return parts.length > 0 ? parts.join(" ") : null;
   })();
   const slugTitle = (() => {
+    // CF-SLUG-TITLE-KEEPS-THE-PARALLEL (2026-08-22). This parsed the slug and
+    // then DROPPED the parallel, the auto flag and the print run, so
+    //
+    //   hiq:baseball:2024:bowman-draft:cpa-tg:blue-refractor:auto:num-150
+    //
+    // rendered as "2024 Bowman Draft #CPA-TG" — a title that cannot tell you
+    // which of that card's 65 catalogued parallels you are looking at, on a
+    // page quoting $729 for the Blue Refractor /150 specifically. The id was
+    // in the URL the whole time; only three of its seven segments were used.
+    //
+    // Segments: hiq : sport : year : setKey : cardNumber : parallel :
+    //           auto|no-auto : num-N (optional)
     const parts = String(cardsightCardId).split(":");
     if (parts[0] !== "hiq" || parts.length < 5) return null;
-    const [, , year, setKey, cardNumber] = parts;
-    const setKeyPretty = String(setKey || "")
+    const [, , year, setKey, cardNumber, parallelSeg, autoSeg, printRunSeg] = parts;
+    const pretty = (v: string | undefined) => String(v || "")
       .split("-")
+      .filter(Boolean)
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
-    const parts2 = [year, setKeyPretty, cardNumber ? `#${String(cardNumber).toUpperCase()}` : ""].filter(Boolean);
-    return parts2.join(" ") || null;
+    // "base" adds nothing a reader wants — the absence of a parallel says it.
+    const parallelPretty = parallelSeg && parallelSeg !== "base" ? pretty(parallelSeg) : "";
+    const autoPretty = autoSeg === "auto" ? "Auto" : "";
+    const printRun = /^num-\d+$/.test(String(printRunSeg ?? ""))
+      ? `/${String(printRunSeg).slice(4)}`
+      : "";
+    const segs = [
+      year,
+      pretty(setKey),
+      cardNumber ? `#${String(cardNumber).toUpperCase()}` : "",
+      parallelPretty,
+      autoPretty,
+      printRun,
+    ].filter(Boolean);
+    return segs.join(" ") || null;
   })();
   const title = candidate?.title ?? identityTitle ?? slugTitle ?? "Card detail";
 
@@ -207,8 +253,8 @@ export function CardPriceDetail({
                 label="Predicted sale"
                 value={formatUSD(predicted, { hideCents: predicted != null && predicted >= 100 })}
               />
-              {detail.confidence != null && (
-                <Stat label="Confidence" value={formatPct(detail.confidence * 100, { signed: false })} />
+              {shownConfidence != null && (
+                <Stat label="Confidence" value={formatPct(shownConfidence * 100, { signed: false })} />
               )}
             </div>
             <button
@@ -286,10 +332,10 @@ export function CardPriceDetail({
           )}
 
           <div className="text-xs text-[color:var(--color-muted)] pt-3 border-t border-[color:var(--color-border)]">
-            {detail.compsUsed != null && <span>{detail.compsUsed} comps used</span>}
-            {detail.compsAvailable != null && <span> · {detail.compsAvailable} available</span>}
+            {shownComps != null && <span>{shownComps} comps used</span>}
+            {!usingTile && detail.compsAvailable != null && <span> · {detail.compsAvailable} available</span>}
             {detail.daysSinceNewestComp != null && <span> · newest {detail.daysSinceNewestComp}d ago</span>}
-            {detail.source && <span> · source: {detail.source}</span>}
+            {shownSource && <span> · source: {shownSource}</span>}
           </div>
         </>
       )}
