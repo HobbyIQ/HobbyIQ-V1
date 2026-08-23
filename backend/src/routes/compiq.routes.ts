@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { lookupCatalogPlayerName } from "../services/catalog/catalogMatcher.service.js";
 import {
   compiqEstimate,
   computeEstimate,
@@ -2730,10 +2731,15 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               parallel: c.parallel ?? parsed.parallel ?? null,
               marketplace: c.source ?? undefined,
             })).filter((r: any) => r.price > 0 && r.soldDate);
+            // Resolved once — the lookup is cached per process, but calling it
+            // twice in one object literal is just noise.
+            const resolvedPlayerName = parsed.playerName
+              ?? await lookupCatalogPlayerName(parsed.year, parsed.brand, parsed.cardNumber);
             console.log(JSON.stringify({
               event: "price_canonical_first_hit",
               source: "compiq.routes.price",
               query, slug, fmv: canonFmv, method, compsUsed: canonN,
+              playerResolved: resolvedPlayerName,
             }));
             return {
               ...buildEngineMeta(),
@@ -2758,15 +2764,33 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               compsUsed: canonN,
               compsAvailable: canonN,
               verdict: (canon as any).provenance?.summary ?? "Canonical-FMV direct match.",
+              // CF-CARD-IDENTITY-CANONICAL-KEYS (2026-08-22). This emitted
+              // setKey / cardNumber / playerName, but every consumer reads the
+              // engine's shape — card_id / set / number / player (see the
+              // snake_case convention note). Only `year` lined up, so the card
+              // page could never build a title with the player in it and Add
+              // to portfolio 400d with "card identity missing player name" on
+              // cards we price perfectly well.
+              //
+              // Canonical keys are emitted alongside the originals rather than
+              // instead of them, so anything already reading setKey /
+              // cardNumber keeps working.
+              //
+              // playerName comes from card_catalog because a slug has no
+              // player in it — that is the whole gap.
               cardIdentity: {
+                card_id: slug,
                 slug,
                 sport: sportGuess,
                 year: parsed.year,
+                set: parsed.brand,
                 setKey: parsed.brand,
+                number: parsed.cardNumber,
                 cardNumber: parsed.cardNumber,
                 parallel: parsed.parallel || "Base",
                 isAuto: parsed.isAuto ?? false,
-                playerName: parsed.playerName ?? null,
+                player: resolvedPlayerName,
+                playerName: resolvedPlayerName,
               },
             };
           }

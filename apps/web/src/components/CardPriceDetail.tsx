@@ -221,6 +221,7 @@ export function CardPriceDetail({
         image={image}
         summary={detail?.summary}
         candidate={candidate}
+        cardIdentity={detail?.cardIdentity ?? null}
         grade={grade}
         parallel={parallel}
         cardsightCardId={cardsightCardId}
@@ -520,12 +521,15 @@ function shortCardRef(id: string): string {
 }
 
 function Header({
-  title, image, summary, candidate, grade, parallel, cardsightCardId,
+  title, image, summary, candidate, cardIdentity, grade, parallel, cardsightCardId,
 }: {
   title: string;
   image: string | null;
   summary?: string;
   candidate?: SearchCandidate | null;
+  /** CF-ADD-USES-RESOLVED-IDENTITY (2026-08-22). The resolved identity for
+   *  this card, so Add does not depend on a stashed search candidate. */
+  cardIdentity?: PriceByIdResponse["cardIdentity"] | null;
   grade: Grade | null;
   parallel: string | null;
   cardsightCardId: string;
@@ -543,16 +547,36 @@ function Header({
     setAdding(true);
     setAddError(null);
     try {
+      // CF-ADD-USES-RESOLVED-IDENTITY (2026-08-22). Every field here read ONLY
+      // from `candidate` — the search result stashed on the way to this page.
+      // Arrive by URL, or come back after the stash expires, and candidate is
+      // null, so all of them go undefined and the add 400s with "card identity
+      // missing player name" on a card we price perfectly well.
+      //
+      // detail.cardIdentity is the resolved identity for exactly this card and
+      // is present however you got here; the slug supplies parallel, number and
+      // print run. Candidate still wins when it exists — it is the most
+      // specific thing the user actually picked.
+      const ident = cardIdentity;
+      // Last-resort identity straight from the slug in the URL, so Add works
+      // on a cold page load with no stash and no enrichment.
+      const sp = String(cardsightCardId).split(":");
+      const isHiq = sp[0] === "hiq" && sp.length >= 7;
+      const slugCardNumber = isHiq ? (String(sp[4] ?? "").toUpperCase() || null) : null;
+      const slugParallel = isHiq && sp[5] && sp[5] !== "base"
+        ? String(sp[5]).split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+        : null;
+      const slugIsAuto = isHiq ? sp[6] === "auto" : undefined;
       const res = await addHolding({
         cardsightCardId,
-        playerName: candidate?.player ?? undefined,
+        playerName: candidate?.player ?? ident?.player ?? undefined,
         cardTitle: title,
-        cardYear: candidate?.year ?? undefined,
-        product: candidate?.setName ?? candidate?.brand ?? undefined,
-        parallel: parallel ?? undefined,
-        cardNumber: candidate?.cardNumber ?? undefined,
+        cardYear: candidate?.year ?? ident?.year ?? undefined,
+        product: candidate?.setName ?? candidate?.brand ?? ident?.set ?? undefined,
+        parallel: parallel ?? ident?.parallel ?? slugParallel ?? undefined,
+        cardNumber: candidate?.cardNumber ?? ident?.number ?? slugCardNumber ?? undefined,
         serialNumber: candidate?.serialNumber ?? undefined,
-        isAuto: candidate?.isAuto,
+        isAuto: candidate?.isAuto ?? ident?.isAuto ?? slugIsAuto,
         gradeCompany: grade?.company ?? null,
         gradeValue: grade?.value ?? null,
         quantity: 1,
