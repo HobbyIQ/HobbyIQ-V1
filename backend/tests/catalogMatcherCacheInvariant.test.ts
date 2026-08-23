@@ -84,17 +84,45 @@ describe("canonicalize — the invariant must not be cache-dependent", () => {
     expect(second.confidence).toBe(first.confidence);
   });
 
-  it("rejects the mismatched parallel on BOTH calls, not just the first", async () => {
+  // UPDATED 2026-08-23 by CF-BASE-IS-NOT-A-REFRACTOR.
+  //
+  // This case used to assert not-found on both calls. Read the file header: the
+  // reason Fischer was rejected at all is that "our own slug builder supplies
+  // 'refractor'" — CF-CHROME-AUTO-BASE-IS-REFRACTOR rewrote a Base ask into a
+  // refractor slug, and the invariant then correctly refused a Refractor for a
+  // caller who asked for no parallel.
+  //
+  // That rule is removed (Drew: "base is a refractor is wrong"), so the slug
+  // builder no longer contradicts the caller: a no-parallel CPA auto computes a
+  // BASE slug and matching it is right. Fischer's $140.82 card stops returning
+  // not-found.
+  //
+  // The determinism property this file exists for is unchanged and still
+  // asserted — on both calls, and by the deliberate-mismatch case below.
+  it("matches a no-parallel auto to its BASE slug, identically on both calls", async () => {
     const first = await canonicalize({ ...FISCHER });
     const second = await canonicalize({ ...FISCHER });
 
-    // Direction matters: asked for no parallel, offered a Refractor. Absent
-    // beats wrong, and it has to stay absent on the repeat call.
-    expect(first.found).toBe(false);
-    expect(first.matchedBy).toBe("not-found");
-    expect(second.found).toBe(false);
-    expect(second.matchedBy).toBe("not-found");
+    expect(first.found).toBe(true);
+    expect(first.slug).toContain(":cpa-af:base:auto");
+    expect(first.slug).not.toContain(":refractor:");
+    expect(second.found).toBe(first.found);
+    expect(second.slug).toBe(first.slug);
+    expect(second.matchedBy).toBe(first.matchedBy);
   });
+
+  // NOTE ON COVERAGE (2026-08-23). This file no longer exercises the parallel
+  // invariant's REJECTION branch, and that is a consequence of the fix rather
+  // than a gap opened by it: step 1 reads the slug canonicalize computed from
+  // the caller's own input, so once the slug builder stopped rewriting Base to
+  // Refractor, the asked and matched parallels agree by construction here. A
+  // rejection can now only come from the query-driven fuzzy/family steps, which
+  // this file deliberately mocks as empty to isolate the cache ordering.
+  //
+  // The rejection branch is covered by parallelIsIdentity.test.ts, which drives
+  // those steps directly. Rather than mock a mismatch into this file — which
+  // would pass for a reason unrelated to what the file is about — the coverage
+  // is left where it belongs.
 
   it("still caches — the second call does not re-read Cosmos", async () => {
     await canonicalize({ ...FISCHER });
