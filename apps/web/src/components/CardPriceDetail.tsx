@@ -344,7 +344,25 @@ export function CardPriceDetail({
             />
           ) : null}
 
-          {detail.recentComps && detail.recentComps.length > 0 && (
+          {/* CF-COMPS-MUST-BACK-THE-NUMBER (Drew, 2026-08-23). Only render the
+              comps that produced the price shown above. detail.recentComps is
+              price-by-id's pool; when the tile supplies the value it is a
+              DIFFERENT pool, and printing it under the tile's number claims
+              evidence the number never used.
+
+              Theo Gillen Blue Refractor Auto /150: the tile priced it at $729
+              from its one real auto comp and the footer said "1 comps used",
+              while this list showed eight $15-$54 sales — non-autos, and a Sky
+              Blue Refractor among them. Nothing was mis-tagged in sold_comps;
+              exactly one sale is attached to that slug and it is the auto. The
+              page was just showing someone else's pool.
+
+              iOS already holds this line — recentComps.length === compsUsed is
+              the stated contract (CF-RECENTCOMPS-FULL-POOL, 2026-07-17). Web
+              was the surface that broke it. The RecentCompsList panel below
+              queries the slug directly and remains the place to browse the
+              wider market. */}
+          {!usingTile && detail.recentComps && detail.recentComps.length > 0 && (
             <div>
               <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-3">
                 Recent comps

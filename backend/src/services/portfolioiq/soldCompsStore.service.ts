@@ -1765,7 +1765,30 @@ export async function readCompsByCardId(input: {
       const set = new Set(input.sources);
       all = all.filter((d) => set.has(d.source));
     }
-    if (typeof input.parallel === "string") {
+    // CF-SLUG-IS-THE-IDENTITY (2026-08-23). A hobbyiqCardId slug already names
+    // the parallel and the auto — the query above matched it EXACTLY, so every
+    // row here is that card by construction. Re-filtering on a parallel string
+    // cannot narrow a set that is already one card; it can only wrongly empty
+    // it, and it did.
+    //
+    // The card page sends `parallel={initialParallel ?? ""}` on every request,
+    // so a page opened without a parallel in hand sends "" — which this filter
+    // reads as "base only" via BASE_ALIASES. For
+    // hiq:...:cpa-tg:blue-refractor:auto:num-150 that discards the card's only
+    // real comp, the $729 auto, and the panel goes empty on a card we price
+    // correctly.
+    //
+    // Grade filtering below still applies: the canonical slug does not encode a
+    // grade, so Raw vs PSA 10 remains a real distinction the caller may want.
+    const slugIsIdentity = looksLikeHiqSlug;
+    if (slugIsIdentity && typeof input.parallel === "string") {
+      console.log(JSON.stringify({
+        event: "recent_comps_parallel_filter_skipped_for_slug",
+        cardId: input.cardId,
+        requestedParallel: input.parallel,
+      }));
+    }
+    if (!slugIsIdentity && typeof input.parallel === "string") {
       const wanted = normalizeParallelForFilter(input.parallel);
       // Empty string as filter = "no-parallel / base holdings only" —
       // match against docs whose parallel is null / "" / "Base" / "[Base]".
@@ -1801,7 +1824,10 @@ export async function readCompsByCardId(input: {
     // Critical: CH cardIds mix base rookies + auto variants under one
     // id, so without this filter autographed holdings get diluted to
     // near-zero by the base-rookie pool.
-    if (input.isAuto !== undefined) {
+    // Same reasoning as the parallel filter: the slug already says :auto: or
+    // :no-auto:, so an exact hobbyiqCardId match is already auto-correct. A
+    // caller's isAuto here can only contradict the identity it just asked for.
+    if (input.isAuto !== undefined && !looksLikeHiqSlug) {
       const wantAuto = input.isAuto === true;
       all = all.filter((d) => d.isAuto === wantAuto);
     }
