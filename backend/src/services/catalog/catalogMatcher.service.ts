@@ -587,7 +587,7 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
     if (hit) _matchCache.delete(key);
   }
 
-  const result = applyParallelInvariant(input, await canonicalizeImpl(input));
+  const result = applySetKeyInvariant(input, applyParallelInvariant(input, await canonicalizeImpl(input)));
 
   if (key) {
     // Cheap bound: drop the oldest insertion when full rather than track LRU.
@@ -627,6 +627,68 @@ export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMat
  * cached, so the cache stores exactly what a caller would have been given and
  * every path returns the same answer. Pure — no I/O, no cache access.
  */
+/** The setKey segment of a canonical slug, or null for non-canonical ids. */
+function setKeySegmentOf(slug: string | null | undefined): string | null {
+  const parts = String(slug ?? "").split(":");
+  return parts[0] === "hiq" && parts.length > 3 ? parts[3] : null;
+}
+
+/**
+ * CF-MATCH-SETKEY-INVARIANT (2026-08-22). A match may not return a card from a
+ * DIFFERENT product than the one that was asked for.
+ *
+ * The parallel invariant below has guarded the parallel segment since #1180.
+ * The setKey segment had no such check, and it needed one, because catalog
+ * rows routinely disagree with themselves: the row is FILTERED on its setKey
+ * field but the matcher returns its `id`, and those two do not always encode
+ * the same product. Measured on 2024 bowman-draft + bowman-chrome alone —
+ * 125,044 rows:
+ *
+ *   id-slug agrees with the setKey field   94,788
+ *   id-slug DISAGREES                       8,412
+ *   id is not a canonical slug             21,844
+ *
+ *   e.g. id says "bowman-draft-chrome" while setKey says "bowman-draft"
+ *
+ * So a query correctly constrained to bowman-draft could hand back a slug for
+ * another product, and every consumer downstream trusts the slug. That is how
+ * a Theo Gillen Blue Refractor /150 added from its bowman-draft page became a
+ * bowman-chrome holding — priced against a pool with none of its comps, which
+ * made its only sale look like it had vanished.
+ *
+ * family-fallback is EXEMPT by design: crossing to a related product is what
+ * that rung is for, and it reports itself honestly. This rejects the silent
+ * crossings only.
+ */
+function applySetKeyInvariant(
+  input: CatalogMatchInput,
+  result: CatalogMatchResult,
+): CatalogMatchResult {
+  if (!result.found) return result;
+  if (result.matchedBy === "family-fallback") return result;
+
+  const got = setKeySegmentOf(result.slug);
+  if (got === null) return result;          // non-canonical id, nothing to compare
+  const want = normalizeSetKey(input.setName ?? "");
+  if (!want || got === want) return result;
+
+  console.warn(JSON.stringify({
+    event: "catalog_match_setkey_invariant_violated",
+    source: "catalogMatcher.canonicalize",
+    matchedBy: result.matchedBy,
+    confidence: result.confidence,
+    askedSetKey: want,
+    returnedSlug: result.slug,
+    detail: "a matcher step returned a different product; rejecting the match",
+  }));
+  return {
+    slug: computeHobbyIqCardId(buildComponents(input)),
+    found: false,
+    confidence: 0.3,
+    matchedBy: "not-found",
+  };
+}
+
 function applyParallelInvariant(
   input: CatalogMatchInput,
   result: CatalogMatchResult,
