@@ -89,22 +89,60 @@ async function main() {
     process.exit(2);
   }
 
-  const db = new CosmosClient(conn).database("hobbyiq");
+  // A delete on card_catalog is expensive — the container is broadly indexed,
+  // so every removed row rewrites many index entries. It autoscales to 40,000
+  // RU/s but the floor is a tenth of that, and ten concurrent deletes outran
+  // the ramp and returned 429 before the SDK's default retry budget ran out.
+  // Widen the budget and let the client wait rather than failing the run.
+  const db = new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: {
+      retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 },
+    },
+  }).database("hobbyiq");
   const cat = db.container("card_catalog");
   const sold = db.container("sold_comps");
   console.log(`mode: ${APPLY ? "APPLY — WILL DELETE CATALOG ROWS" : "report only"}   setKeys: ${SETKEYS.join(", ")}\n`);
 
   const ps = SETKEYS.map((s, i) => ({ name: `@k${i}`, value: s }));
-  const { resources: rows } = await cat.items.query({
-    query: `SELECT c.id, c.cardId, c.cardNumber, c.playerName, c.parallel, c.setKey, c.year, c.source FROM c
+
+  // TWO STEPS, BECAUSE THE ONE-STEP VERSION TAKES THE CONTAINER DOWN.
+  // Pulling every row for these setKeys is 915,377 documents; it completed once
+  // and then returned 429 on the retry, and it was the SCAN throttling, not the
+  // deletes. A GROUP BY is answered server-side and comes back with distinct
+  // values only, so step 1 costs a few hundred RU instead of tens of thousands.
+  //
+  // 1. distinct playerName values -> classify locally -> the junk ones
+  // 2. fetch only rows carrying a junk playerName
+  const { resources: names } = await cat.items.query({
+    query: `SELECT c.playerName, COUNT(1) AS n FROM c
             WHERE c.setKey IN (${ps.map((p) => p.name).join(", ")})
-              AND IS_DEFINED(c.playerName) AND c.playerName != null`,
+              AND IS_DEFINED(c.playerName) AND c.playerName != null
+            GROUP BY c.playerName`,
     parameters: ps,
   }).fetchAll();
+  const junkNames = names.filter((x) => isProductWord(x.playerName)).map((x) => x.playerName);
+  const junkRowCount = names.filter((x) => isProductWord(x.playerName)).reduce((a, b) => a + b.n, 0);
+  console.log(`distinct playerName values            : ${names.length}`);
+  console.log(`  of those, a product word            : ${junkNames.length}   covering ${junkRowCount} rows`);
+  if (!junkNames.length) { console.log("no phantoms here."); return; }
 
-  const phantoms = rows.filter((r) => isProductWord(r.playerName) && isProductWord(r.cardNumber));
-  const playerOnly = rows.filter((r) => isProductWord(r.playerName) && !isProductWord(r.cardNumber));
-  console.log(`rows examined                         : ${rows.length}`);
+  const rows = [];
+  for (let i = 0; i < junkNames.length; i += 40) {
+    const chunk = junkNames.slice(i, i + 40);
+    const np = chunk.map((s, k) => ({ name: `@n${k}`, value: s }));
+    const { resources } = await cat.items.query({
+      query: `SELECT c.id, c.cardId, c.cardNumber, c.playerName, c.parallel, c.setKey, c.year, c.source FROM c
+              WHERE c.setKey IN (${ps.map((p) => p.name).join(", ")})
+                AND c.playerName IN (${np.map((p) => p.name).join(", ")})`,
+      parameters: [...ps, ...np],
+    }).fetchAll();
+    rows.push(...resources);
+  }
+
+  const phantoms = rows.filter((r) => isProductWord(r.cardNumber));
+  const playerOnly = rows.filter((r) => !isProductWord(r.cardNumber));
+  console.log(`rows fetched                          : ${rows.length}`);
   console.log(`phantoms (BOTH fields product words)  : ${phantoms.length}`);
   console.log(`playerName junk but cardNumber real   : ${playerOnly.length}   (left alone — repairable, not phantom)`);
 
@@ -148,26 +186,40 @@ async function main() {
     return;
   }
 
-  let gone = 0, failed = 0, unaddressable = 0, cursor = 0;
+  let gone = 0, failed = 0, unaddressable = 0, cursor = 0, throttled = 0;
   async function worker() {
     for (;;) {
       const i = cursor++;
       if (i >= deletable.length) return;
       const r = deletable[i];
       if (typeof r.cardId !== "string" || !r.cardId) { unaddressable++; continue; }
-      try {
-        await cat.item(r.id, r.cardId).delete();
-        gone++;
-        if (gone % 1000 === 0) process.stdout.write(`  ...${gone}/${deletable.length}\n`);
-      } catch (e) {
-        if (e && e.code === 404) { gone++; continue; }
-        failed++;
-        if (failed <= 3) console.log(`  delete failed ${r.id}: ${e.message}`);
+      // Retry throttling here as well as in the SDK, and never let it escape:
+      // a worker that throws rejects the Promise.all and abandons the run
+      // mid-way, which is how the first attempt died having deleted nothing.
+      let attempt = 0;
+      for (;;) {
+        try {
+          await cat.item(r.id, r.cardId).delete();
+          gone++;
+          if (gone % 1000 === 0) process.stdout.write(`  ...${gone}/${deletable.length}\n`);
+          break;
+        } catch (e) {
+          if (e && e.code === 404) { gone++; break; }
+          if (e && (e.code === 429 || e.code === 503) && attempt < 8) {
+            attempt++;
+            throttled++;
+            await new Promise((res) => setTimeout(res, Math.min(8000, 250 * 2 ** attempt)));
+            continue;
+          }
+          failed++;
+          if (failed <= 3) console.log(`  delete failed ${r.id}: ${e.code} ${e.message}`);
+          break;
+        }
       }
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-  console.log(`\nDELETED: ${gone}   failed: ${failed}   unaddressable: ${unaddressable}`);
+  console.log(`\nDELETED: ${gone}   failed: ${failed}   unaddressable: ${unaddressable}   throttle-retries: ${throttled}`);
   if (failed) process.exit(4);
 }
 
