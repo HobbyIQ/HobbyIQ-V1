@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CatalogPickerModal } from "@/components/CatalogPickerModal";
 import {
   fetchEbayStatus,
   fetchEbayConnectUrl,
@@ -12,6 +13,7 @@ import {
   fetchEbayOfferStatus,
   endEbayListing,
   importEbayPurchases,
+  type CatalogSearchHit,
   fetchPendingReviewHoldings,
   generatePendingReviewSuggestions,
   confirmPendingReviewHolding,
@@ -639,6 +641,29 @@ function ReviewQueueSection() {
     }
   }
 
+  // CF-SEARCH-AND-PICK (Drew, 2026-08-23). Which holding is being identified,
+  // or null when the picker is closed.
+  const [picking, setPicking] = useState<PendingReviewHolding | null>(null);
+  const [pickBusy, setPickBusy] = useState(false);
+
+  // The pick IS the identity. Confirming with cardId makes the backend adopt
+  // that catalog row's fields wholesale, so the holding's set/parallel can
+  // never disagree with its slug — that disagreement is what prices a card off
+  // the wrong pool.
+  async function onPickCard(holdingId: string, hit: CatalogSearchHit) {
+    setPickBusy(true);
+    try {
+      await confirmPendingReviewHolding(holdingId, { cardId: hit.slug });
+      setHoldings((prev) => (prev ?? []).filter((h) => h.id !== holdingId));
+      setPicking(null);
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message ?? "Could not attach that card");
+    } finally {
+      setPickBusy(false);
+    }
+  }
+
   async function onApprove(id: string) {
     setApproving((prev) => ({ ...prev, [id]: true }));
     try {
@@ -758,6 +783,12 @@ function ReviewQueueSection() {
                     >
                       {approving[h.id] ? "…" : "Approve"}
                     </button>
+                    <button
+                      onClick={() => setPicking(h)}
+                      className="hiq-btn-secondary text-xs"
+                    >
+                      Find card
+                    </button>
                     <Link
                       href={`/app/portfolio/${encodeURIComponent(h.id)}`}
                       className="hiq-btn-secondary text-xs text-center"
@@ -771,6 +802,37 @@ function ReviewQueueSection() {
           })}
         </div>
       )}
+
+      {/* CF-SEARCH-AND-PICK (Drew, 2026-08-23). Opens pre-searched on the
+          holding's own details and ranked against them, so the right card is
+          usually the first row rather than something to go hunting for. */}
+      <CatalogPickerModal
+        open={picking !== null}
+        busy={pickBusy}
+        initialQuery={
+          picking
+            ? [
+                picking.cardYear ? String(picking.cardYear) : null,
+                picking.setName,
+                picking.playerName,
+                picking.cardNumber ? `#${picking.cardNumber}` : null,
+              ].filter(Boolean).join(" ")
+            : ""
+        }
+        context={
+          picking
+            ? {
+                cardNumber: picking.cardNumber ?? null,
+                year: picking.cardYear ?? null,
+                setName: picking.setName ?? null,
+                playerName: picking.playerName ?? null,
+                isAuto: picking.isAuto ?? null,
+              }
+            : undefined
+        }
+        onPick={(hit) => { if (picking) void onPickCard(picking.id, hit); }}
+        onClose={() => setPicking(null)}
+      />
     </div>
   );
 }
