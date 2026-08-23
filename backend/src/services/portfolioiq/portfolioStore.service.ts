@@ -5236,6 +5236,31 @@ export async function updateHolding(req: Request, res: Response) {
 
   // CF-GRADE-COMPANY-WITHOUT-VALUE: symmetric with addHolding. An edit that
   // adds a company without a grade must not persist the shape either.
+  // CF-GRADE-EDIT-MUST-STICK (2026-08-22). The guard below cleans stale
+  // INGEST data — a grading company left on a row with no grade. On an
+  // explicit edit it did something quite different: silently deleted a grade
+  // the user had just typed. Reported from the app as "I saved PSA 9 and the
+  // PSA 9 didn't stay".
+  //
+  // If this request explicitly set a grading company but supplied no value,
+  // say so instead of quietly dropping it. Cleaning data we inferred is one
+  // thing; discarding what someone entered without telling them is another.
+  const bodySetCompany = typeof (cleanBody as Record<string, unknown>).gradeCompany === "string"
+    && String((cleanBody as Record<string, unknown>).gradeCompany).trim() !== "";
+  const bodyGradeValue = (cleanBody as Record<string, unknown>).gradeValue;
+  const bodyHasGradeValue = typeof bodyGradeValue === "number"
+    ? Number.isFinite(bodyGradeValue)
+    : typeof bodyGradeValue === "string" && bodyGradeValue.trim() !== "";
+  const bodyCert = (cleanBody as Record<string, unknown>).certNumber;
+  const bodyHasCert = typeof bodyCert === "string" ? bodyCert.trim() !== "" : bodyCert != null;
+  if (bodySetCompany && !bodyHasGradeValue && !bodyHasCert) {
+    res.status(400).json({
+      success: false,
+      error: "Grade needs both a company and a number. Send a gradeValue, or clear gradeCompany to save the card as Raw.",
+    });
+    return;
+  }
+
   clearGradeCompanyWithoutValue(next as unknown as Record<string, unknown>, {
     userId: auth.userId,
     holdingId: id,

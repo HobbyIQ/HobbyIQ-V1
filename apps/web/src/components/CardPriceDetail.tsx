@@ -13,6 +13,8 @@ import {
   type SearchCandidate,
   type PriceByIdResponse,
 } from "@/lib/api";
+import { EditHoldingModal } from "@/components/EditHoldingModal";
+import type { PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatPct } from "@/lib/format";
 
 interface Grade { company: string; value: number }
@@ -573,6 +575,12 @@ function Header({
 }) {
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
+  // CF-ADD-THEN-EDIT (2026-08-22). Adding from a card page can only supply
+  // what the page knows — identity. Grade and what you paid are things only
+  // the owner can say, and leaving them unset means the holding prices as Raw
+  // against a cost basis of nothing. So the add hands straight over to the
+  // edit sheet, seeded with the holding we just created.
+  const [justAdded, setJustAdded] = useState<PortfolioHolding | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [watching, setWatching] = useState(false);
   const [watched, setWatched] = useState(false);
@@ -618,7 +626,24 @@ function Header({
         gradeValue: grade?.value ?? null,
         quantity: 1,
       });
-      if (res.success) setAdded(true);
+      if (res.success) {
+        setAdded(true);
+        if (res.id) {
+          // Seed the sheet from what we just sent, so it opens populated
+          // rather than empty and the user only fills in grade + price paid.
+          setJustAdded({
+            id: res.id,
+            playerName: candidate?.player ?? ident?.player ?? undefined,
+            cardYear: candidate?.year ?? ident?.year ?? undefined,
+            product: candidate?.setName ?? candidate?.brand ?? ident?.set ?? undefined,
+            parallel: parallel ?? ident?.parallel ?? slugParallel ?? undefined,
+            cardNumber: candidate?.cardNumber ?? ident?.number ?? slugCardNumber ?? undefined,
+            isAuto: candidate?.isAuto ?? ident?.isAuto ?? slugIsAuto,
+            hobbyiqCardId: cardsightCardId,
+            quantity: 1,
+          } as unknown as PortfolioHolding);
+        }
+      }
       else setAddError(res.error ?? "Failed to add");
     } catch (err) {
       const e = err as { status?: number; message?: string };
@@ -697,6 +722,14 @@ function Header({
             {adding ? "Adding…" : "+ Add to portfolio"}
           </button>
         )}
+        {justAdded && (
+          <EditHoldingModal
+            holding={justAdded}
+            onCancel={() => setJustAdded(null)}
+            onSaved={() => setJustAdded(null)}
+          />
+        )}
+
         {addError && (
           <div className="text-xs max-w-[220px] text-right" style={{ color: "var(--color-danger)" }}>
             {addError}
