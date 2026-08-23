@@ -37,9 +37,21 @@ const DESIGNATION = new Set([
   "sp", "ssp", "err", "cor", "uer", "var", "variation",
 ]);
 
-/** Normalised form for comparison: alphabetic tokens, designations removed. */
+/** Normalised form for comparison: ASCII-folded, designations removed.
+ *
+ *  FOLDING HAS TO HAPPEN BEFORE THE SPLIT. Splitting on [^a-z] first tears an
+ *  accented name in half instead of folding it — "Luis Peña" became
+ *  luis + pe + a while the sale's "Luis Pena" stayed luispena, so the two never
+ *  matched and 576 sapphire sales were refused as different people. Same
+ *  mistake would silently under-move every Peña, Acuña, Suárez and Jiménez in
+ *  the pool, and it did on the Tiffany and Topps Traded sweeps before this.
+ *
+ *  NFKD splits "ñ" into "n" + a combining tilde; stripping the combining marks
+ *  leaves plain "n". Mirrors fold() in catalogSearch.service. */
 function normPlayerName(s) {
   return String(s === null || s === undefined ? "" : s)
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .split(/[^a-z]+/)
     .filter((t) => t && !DESIGNATION.has(t))

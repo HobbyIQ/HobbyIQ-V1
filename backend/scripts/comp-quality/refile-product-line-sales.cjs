@@ -46,23 +46,33 @@ const LINES = {
     bases: ["bowman-chrome", "bowman-draft", "topps-chrome", "bowman", "topps"],
     era: [2017, 2030],
     dest: (base) => [`${base}-sapphire`],
-    // "SAPPHIRE" IS NOT ALWAYS THE PRODUCT. Two collisions, both real in our
-    // catalog, and either one would move a sale onto a card it is not:
+    // "SAPPHIRE" IS NOT ALWAYS THE PRODUCT — but it is more often than a first
+    // pass assumed. RUBY & SAPPHIRE is Pokemon: 2003-pokemon-ex-ruby-sapphire,
+    // ex-ruby-and-sapphire, ruby-sapphire. The era window happens to exclude
+    // those, but an era window is a weak thing to rest correctness on, so they
+    // are named.
     //
-    //   BLUE SAPPHIRE is a PARALLEL inside an ordinary set —
-    //   blue-sapphire-refractor-best-players-of-all-time and
-    //   bowman-blue-sapphire-best-players-of-all-time are both setKeys we hold.
-    //   A "Blue Sapphire Refractor" is not a Sapphire Edition card.
-    //
-    //   RUBY & SAPPHIRE is Pokemon — 2003-pokemon-ex-ruby-sapphire,
-    //   ex-ruby-and-sapphire, ruby-sapphire. The era window excludes those
-    //   today, but only incidentally, and an era window is a weak thing to rest
-    //   a correctness guarantee on.
-    //
-    // So the word only counts when nothing immediately before it reinterprets
-    // it. Same shape as the Tiffany-Stratton guard: the word alone is not a
-    // product claim.
-    titleExcludes: [/\b(blue|ruby|red|green|black|pink|white|gold)\s+sapphire\b/i, /\bruby\s*(&|and)\s*sapphire\b/i],
+    // AN EARLIER VERSION ALSO BLOCKED EVERY "<colour> Sapphire" as a suspected
+    // parallel-in-an-ordinary-set. That was wrong, and Drew corrected it: Blue
+    // Sapphire IS the base Sapphire card, and gold/black/orange/red/yellow/
+    // padparadscha are parallels OF Sapphire. The catalog agrees —
+    // bowman-draft-sapphire holds Base (21,459) alongside Orange Sapphire, Red
+    // Sapphire, Gold Sapphire, Black Sapphire and Padparadscha Sapphire as
+    // distinct parallels. Those 292 sales belong in Sapphire; they need the
+    // right PARALLEL, which parallelFromTitle supplies.
+    titleExcludes: [/\bruby\s*(&|and)\s*sapphire\b/i, /\bpokemon\b/i],
+    // WHICH PARALLEL, not just which set. Swapping only the setKey would file a
+    // "Gold Sapphire /50" as base Sapphire — the same conflation this whole
+    // sweep exists to undo, one level down. Returns the parallel slug segment,
+    // or null to keep whatever the source slug already had.
+    parallelFromTitle: (title) => {
+      const t = String(title || "").toLowerCase();
+      // Blue Sapphire is the base card, so it maps to the base parallel rather
+      // than to a "blue-sapphire" segment that does not exist.
+      if (/\bblue\s+sapphire\b/.test(t)) return "base";
+      const m = t.match(/\b(gold|black|orange|red|yellow|purple|green|aqua|pink|padparadscha|papradascha)\s+sapphire\b/);
+      return m ? `${m[1]}-sapphire` : null;
+    },
   },
   tiffany: {
     word: "tiffany",
@@ -71,6 +81,11 @@ const LINES = {
     dest: (base) => [`${base}-tiffany`, base === "topps" ? "topps-traded-tiffany" : `${base}-tiffany`],
   },
 };
+
+// Exported so create-product-line-cards-from-base.cjs works from the SAME
+// definition of each line. A second copy of "which base products, which years,
+// which destination setKey" is precisely how the earlier scripts drifted.
+module.exports = { LINES };
 
 const LINE = String(process.env.LINE || "").trim().toLowerCase();
 const APPLY = process.env.APPLY === "true";
@@ -119,8 +134,8 @@ async function main() {
     const base = seg(r.hobbyiqCardId, 3);
     if (!(y >= cfg.era[0] && y <= cfg.era[1]) || !cfg.bases.includes(base)) { outOfScope++; continue; }
     if (wordRe.test(String(r.playerName || ""))) { wordIsPlayer++; continue; }
-    // The word is present but something next to it changes what it means —
-    // "Blue Sapphire" is a parallel, not the Sapphire Edition product.
+    // The word is present but its neighbours change what it means — "Ruby &
+    // Sapphire" is a Pokemon set, not a Topps product line.
     if ((cfg.titleExcludes ?? []).some((re) => re.test(String(r.title || "")))) {
       reinterpreted++;
       if (reinterpretedSample.length < 4) reinterpretedSample.push(String(r.title || "").slice(0, 76));
@@ -130,23 +145,31 @@ async function main() {
   }
   console.log(`  excluded, outside the era/brands this line existed in : ${outOfScope}`);
   console.log(`  excluded, the word is the PLAYER's own name           : ${wordIsPlayer}`);
-  console.log(`  excluded, the word means something else in context    : ${reinterpreted}   (e.g. "Blue Sapphire" is a parallel)`);
+  console.log(`  excluded, the word means something else in context    : ${reinterpreted}   (e.g. Pokemon Ruby & Sapphire)`);
   for (const t of reinterpretedSample) console.log(`      ${t}`);
   console.log(`  eligible                                             : ${eligible.length}`);
   if (!eligible.length) { console.log("nothing to do."); return; }
 
   // Guard 3.
-  const candidatesFor = (slug) => {
+  // hiq : sport : year : setKey : cardNumber : parallel : auto [: num-N]
+  //  0      1       2       3         4           5        6
+  const PARALLEL_SEG = 5;
+  const candidatesFor = (slug, title) => {
     const parts = String(slug).split(":");
     const base = parts[3];
+    // A colour named in the title decides the parallel; without one, keep
+    // whatever the source slug had. Never guess between the two — the
+    // destination-must-exist guard is what catches a wrong colour.
+    const par = cfg.parallelFromTitle ? cfg.parallelFromTitle(title) : null;
     return [...new Set(cfg.dest(base))].map((d) => {
       const n = [...parts];
       n[3] = d;
+      if (par && n.length > PARALLEL_SEG) n[PARALLEL_SEG] = par;
       return n.join(":");
     });
   };
   const wanted = new Set();
-  for (const r of eligible) for (const s of candidatesFor(r.hobbyiqCardId)) wanted.add(s);
+  for (const r of eligible) for (const s of candidatesFor(r.hobbyiqCardId, r.title)) wanted.add(s);
   const want = [...wanted];
   const exists = new Map();
   for (let i = 0; i < want.length; i += 60) {
@@ -166,7 +189,7 @@ async function main() {
   let noDest = 0, wrongPlayer = 0, noPlayer = 0, ambiguous = 0;
   const sample = [];
   for (const r of eligible) {
-    const hits = candidatesFor(r.hobbyiqCardId).filter((s) => exists.has(s));
+    const hits = candidatesFor(r.hobbyiqCardId, r.title).filter((s) => exists.has(s));
     if (!hits.length) { noDest++; continue; }
     const want2 = normPlayerName(r.playerName);
     if (!want2) { noPlayer++; continue; }
@@ -230,4 +253,8 @@ async function main() {
   if (failed) process.exit(4);
 }
 
-main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); process.exit(3); });
+// Guarded so the creation tool can require this module for LINES without
+// running a sweep as a side effect.
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); process.exit(3); });
+}
