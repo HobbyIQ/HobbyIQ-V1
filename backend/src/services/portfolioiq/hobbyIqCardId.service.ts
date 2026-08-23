@@ -246,6 +246,45 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     //
     // So bowman-draft-chrome is a vendor artifact, not a product. Draft chrome
     // cards belong to bowman-draft, where the checklist actually is.
+    //
+    // CF-DPP-IS-ITS-OWN-PRODUCT (Drew, 2026-08-23: "the name should be the set
+    // name" ... "the actual full name of the card is correct and what bowman
+    // says the name of the set is" ... "in most cases ebay is giving us the
+    // correct name").
+    //
+    // THESE MUST PRECEDE THE DRAFT-CHROME RULE BELOW, and that ordering is the
+    // whole fix. The rule below is UNANCHORED, so "Bowman Chrome Draft Picks &
+    // Prospects" slugified to bowman-chrome-draft-picks-and-prospects matched on
+    // its bowman-chrome-draft PREFIX and was truncated to "bowman-draft" —
+    // a rule written for a different product swallowing this one's name. The
+    // paper version had no rule at all and fell through to the bare
+    // /bowman-draft/ further down, losing "picks and prospects" the same way.
+    //
+    // MEASURED 2026-08-23. Draft Picks & Prospects is not a vendor artifact —
+    // it is a published product whose checklist we already hold, and the catalog
+    // already separates the two stocks cleanly:
+    //
+    //     bowman-draft-picks-and-prospects         155,555 cards, all setName
+    //                                              "Bowman Draft Picks And Prospects"
+    //     bowman-chrome-draft-picks-and-prospects      110 cards, all setName
+    //                                              "Bowman Chrome Draft Picks And Prospects"
+    //
+    // while 8,682 sales whose own eBay setName NAMES the product sat under
+    // bowman-draft (7,169 paper + 1,246 chrome) and bowman-chrome (267). The
+    // incoming data was right and the translator discarded it.
+    //
+    // THIS DOES NOT REVERSE CF-MATCH-THE-CATALOG. That ruling concerns "Bowman
+    // Draft Chrome", which still folds to bowman-draft on the rule below. DPP
+    // is a different product, and the catalog holds it under its own keys.
+    //
+    // The "&" is handled either way: whether slugify renders it "and" or drops
+    // it, both -picks-and-prospects and -picks-prospects match. That also folds
+    // the ampersand-dropped setKeys the catalog already carries
+    // (bowman-draft-picks-prospects, bowman-chrome-draft-picks-prospects) onto
+    // the canonical spelling. Trailing "-prospects" is optional so the truncated
+    // "Bowman Draft Picks" spelling lands on the product rather than fragmenting.
+    [/bowman-chrome-draft-picks(?:-and)?(?:-prospects)?/, "bowman-chrome-draft-picks-and-prospects"],
+    [/bowman-draft-picks(?:-and)?(?:-prospects)?/, "bowman-draft-picks-and-prospects"],
     [/bowman-(?:chrome-draft|draft-chrome)/, "bowman-draft"],
     [/bowman-chrome/, "bowman-chrome"],
     // CF-CHROME-PROSPECTS-IS-BOWMAN-CHROME (Drew, 2026-07-29). CH tags
@@ -1305,25 +1344,32 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
       parallelSlug = parallelSlug.slice("chrome-".length);
     }
   }
-  // CF-CHROME-AUTO-BASE-IS-REFRACTOR (Drew, 2026-08-10). CardHedge (and
-  // some other vendors) label the /499 baseline CPA-/TCPA-/CRA- Auto as
-  // "Base Auto" because colored refractors get their own parallel names
-  // (Blue /150, Gold /50, etc.). But in these product lines the /499
-  // baseline IS on refractor stock — collectors uniformly call it
-  // "Refractor" and "Base" implies a non-refractor variant that doesn't
-  // exist for these subsets. Fragmenting the pool between "Base Auto"
-  // and "Refractor Auto" silently splits the /499 comps in half.
-  // Confirmed by Drew 2026-08-10: "a base does not equal a refractor" —
-  // canonicalize by upgrading Base → Refractor for the chrome-auto
-  // subsets so they land in one pool.
-  if (
-    parallelSlug === "base" &&
-    isAuto === true &&
-    /^(cpa|tcpa|cra)(?:-|\d)/i.test(cardNumber) &&
-    (setKey === "bowman-chrome" || setKey === "topps-chrome")
-  ) {
-    parallelSlug = "refractor";
-  }
+  // CF-BASE-IS-NOT-A-REFRACTOR (Drew, 2026-08-23: "base is a refractor is
+  // wrong"). REMOVED: CF-CHROME-AUTO-BASE-IS-REFRACTOR, which upgraded
+  // parallel "Base" to "Refractor" for CPA-/TCPA-/CRA- autos on bowman-chrome
+  // and topps-chrome.
+  //
+  // The rule cited Drew's own words as its justification and then did the
+  // opposite of them. Its comment read: 'Confirmed by Drew 2026-08-10: "a base
+  // does not equal a refractor" — canonicalize by upgrading Base → Refractor
+  // ... so they land in one pool.' A quote saying two parallels are NOT equal
+  // cannot support merging them; the rationale was inverted when written.
+  //
+  // This is the recurring shape in this file: a canonicalization that unifies a
+  // pool by erasing a distinction collectors actually price on. Base and
+  // Refractor are different cards and must stay different slugs, even when that
+  // leaves each pool smaller. A smaller correct pool beats a larger wrong one —
+  // the whole point of the comp pool is that everything in it is the same card.
+  //
+  // NOTE FOR THE REPAIR SWEEP: rows written while this rule was live carry
+  // parallel "Base" on a slug whose parallel segment says "refractor". That
+  // disagreement between the row's own parallel field and its slug is exactly
+  // how those rows are found and separated again — sold_comps keeps the vendor
+  // parallel, so the original value was never lost.
+  //
+  // CF-CHROME-COLOR-IMPLIES-REFRACTOR below is deliberately NOT affected: it
+  // acts on non-base parallels only, so "Blue" still unifies with "Blue
+  // Refractor" while "Base" stays "Base".
 
   // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). See CHROME_STOCK
   // constants above — on known chrome product lines, any non-base parallel
