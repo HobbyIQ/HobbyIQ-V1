@@ -36,6 +36,21 @@
 //     CONCURRENCY=6
 const { CosmosClient } = require("@azure/cosmos");
 const { normPlayerName } = require("./playerNameMatch.cjs");
+// THE REAL TRANSLATOR, not a copy of it. Drew: "so we need a translator that
+// works!!!" — and he is right that the failure was translation, not coverage.
+//
+// Every year+set with waiting sapphire sales already HAS a checklist:
+//   2025 bowman-draft-sapphire   7,709 sales waiting   6,138 cards held
+//   2024 topps-chrome-sapphire   1,061 sales waiting  14,551 cards held
+// The genuinely missing sets total ~450 sales across eight years. The 9,625
+// "no destination" was never a gap in the data; it was this tool doing string
+// surgery on an already-wrong slug instead of asking the translator.
+//
+// Requiring the compiled service rather than re-implementing slugify is the
+// point. Eight scripts in this repo hand-roll their own set-name slugify, and
+// one of mine fabricated an entire list of missing checklists an hour ago by
+// forgetting to strip a year prefix — which normalizeSetKey has always done.
+const { normalizeSetKey } = require("../../dist/services/portfolioiq/hobbyIqCardId.service.js");
 
 /** Each line: the word in the title, the base products it spins off from, the
  *  years it existed, and how a destination setKey is built from a base one. */
@@ -140,7 +155,7 @@ async function main() {
   console.log(`mode: ${APPLY ? "APPLY — WILL REFILE SALES" : "report only"}   line: ${cfg.word}   era: ${cfg.era[0]}-${cfg.era[1]}\n`);
 
   const { resources: raw } = await sold.items.query({
-    query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName, c.title, c.price FROM c
+    query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.playerName, c.title, c.price, c.setName FROM c
             WHERE CONTAINS(LOWER(c.title), @w)
               AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
               AND NOT CONTAINS(c.hobbyiqCardId, @w)`,
@@ -178,14 +193,18 @@ async function main() {
   // hiq : sport : year : setKey : cardNumber : parallel : auto [: num-N]
   //  0      1       2       3         4           5        6
   const PARALLEL_SEG = 5;
-  const candidatesFor = (slug, title) => {
+  const candidatesFor = (slug, title, setName) => {
     const parts = String(slug).split(":");
     const base = parts[3];
+    // FIRST CHOICE: what the translator makes of the sale's OWN set name. The
+    // slug is what we got wrong; the set name is what the seller actually said.
+    const translated = setName ? normalizeSetKey(String(setName)) : "";
+    const fromTranslator = translated && translated.includes(cfg.word) ? [translated] : [];
     // A colour named in the title decides the parallel; without one, keep
     // whatever the source slug had. Never guess between the two — the
     // destination-must-exist guard is what catches a wrong colour.
     const par = cfg.parallelFromTitle ? cfg.parallelFromTitle(title) : null;
-    return [...new Set(cfg.dest(base))].map((d) => {
+    return [...new Set([...fromTranslator, ...cfg.dest(base)])].map((d) => {
       const n = [...parts];
       n[3] = d;
       if (par && n.length > PARALLEL_SEG) n[PARALLEL_SEG] = par;
@@ -193,7 +212,7 @@ async function main() {
     });
   };
   const wanted = new Set();
-  for (const r of eligible) for (const s of candidatesFor(r.hobbyiqCardId, r.title)) wanted.add(s);
+  for (const r of eligible) for (const s of candidatesFor(r.hobbyiqCardId, r.title, r.setName)) wanted.add(s);
   const want = [...wanted];
   const exists = new Map();
   for (let i = 0; i < want.length; i += 60) {
@@ -219,12 +238,12 @@ async function main() {
   const gapBySet = new Map();
   const gapWanted = new Map();
   for (const r of eligible) {
-    const hits = candidatesFor(r.hobbyiqCardId, r.title).filter((s) => exists.has(s));
+    const hits = candidatesFor(r.hobbyiqCardId, r.title, r.setName).filter((s) => exists.has(s));
     if (!hits.length) {
       noDest++;
       const k = `${seg(r.hobbyiqCardId, 2)} ${seg(r.hobbyiqCardId, 3)}`;
       gapBySet.set(k, (gapBySet.get(k) || 0) + 1);
-      const first = candidatesFor(r.hobbyiqCardId, r.title)[0];
+      const first = candidatesFor(r.hobbyiqCardId, r.title, r.setName)[0];
       if (first) gapWanted.set(seg(first, 3), (gapWanted.get(seg(first, 3)) || 0) + 1);
       continue;
     }
