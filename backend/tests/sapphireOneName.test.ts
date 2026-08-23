@@ -53,16 +53,18 @@ describe("sapphire spellings already converge on one name", () => {
     // such sale was filed into the base Draft set AT INGEST — 6,417 of the ones
     // the refile sweep is now moving back. Cleaning them up without this fix
     // would just let the ingest recreate them.
-    for (const name of ["Bowman Draft Sapphire", "Bowman Draft Sapphire Edition", "Bowman Chrome Sapphire", "Topps Chrome Sapphire", "Bowman Sapphire"]) {
+    for (const name of ["Bowman Draft Sapphire", "Bowman Draft Sapphire Edition", "Bowman Chrome Sapphire", "Topps Chrome Sapphire"]) {
       expect(normalizeSetKey(name), `${name} must keep sapphire`).toContain("sapphire");
     }
   });
 
-  it("keeps Bowman and Bowman Chrome apart — they are different sets", () => {
-    // The whole reason the fold has to be conservative. Collapsing these would
-    // put one set's comps in the other's pool.
-    expect(normalizeSetKey("Bowman Chrome Sapphire")).not.toBe(normalizeSetKey("Bowman Sapphire"));
+  it("keeps Bowman Draft Sapphire and Bowman Chrome Sapphire apart", () => {
+    // Different products, and the whole point of not dropping the word.
     expect(normalizeSetKey("Bowman Draft Sapphire")).not.toBe(normalizeSetKey("Bowman Chrome Sapphire"));
+    // "Bowman Sapphire" deliberately COLLAPSES into Bowman Chrome Sapphire —
+    // it is vendor shorthand, not a product. Pinned by hobbyIqCardId.test.ts
+    // and left alone here; see the note in normalizeSetKey.
+    expect(normalizeSetKey("Bowman Sapphire")).toBe("bowman-chrome-sapphire");
   });
 
   it("leaves non-sapphire products untouched", () => {

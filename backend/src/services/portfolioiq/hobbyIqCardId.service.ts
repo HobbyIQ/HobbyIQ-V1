@@ -172,10 +172,10 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // CF-CATALOG-SAPPHIRE-ORDER (Drew, 2026-08-04, per baseballcardpedia).
     // Both "Chrome Sapphire" and "Sapphire Chrome" appear in vendor
     // titles for the same product. Also "Bowman Draft Sapphire Chrome".
-    // CF-SAPPHIRE-DROPPED-AT-INGEST (Drew, 2026-08-23). Two defects here, and
-    // the first was manufacturing the very misfiling we have been cleaning up.
+    // CF-SAPPHIRE-DROPPED-AT-INGEST (Drew, 2026-08-23). This was manufacturing
+    // the very misfiling the refile sweeps have been cleaning up.
     //
-    // 1. "Bowman Draft Sapphire" — no "chrome" in the name — matched NEITHER of
+    // "Bowman Draft Sapphire" — no "chrome" in the name — matched NEITHER of
     //    these, fell through to the plain /bowman-draft/ rule far below, and
     //    normalised to "bowman-draft". The word sapphire was silently dropped,
     //    so every such sale was filed into the base Draft set at ingest. That
@@ -183,15 +183,15 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     //    without this line the sweep would clean them up and the ingest would
     //    recreate them tomorrow.
     //
-    // 2. The bare `|sapphire` alternative below sent "Bowman Sapphire" to
-    //    bowman-chrome-sapphire. Those are DIFFERENT SETS — the Bowman vs
-    //    Bowman Chrome merge — and the catalog holds both, 6,227 and 21,858
-    //    rows. Collapsing them puts one set's comps in the other's pool.
     [/bowman-draft-(?:chrome-sapphire|sapphire-chrome|sapphire)/, "bowman-draft-sapphire"],
-    [/bowman-(?:chrome-sapphire|sapphire-chrome)/, "bowman-chrome-sapphire"],
-    // Bowman Sapphire keeps its own key rather than falling through to plain
-    // "bowman", which would drop the word exactly as case 1 did.
-    [/bowman-sapphire/, "bowman-sapphire"],
+    // The bare `sapphire` alternative stays. I removed it as a suspected
+    // Bowman/Bowman-Chrome merge and it broke an existing test that states the
+    // reasoning outright: vendors write "Bowman Sapphire" as shorthand for
+    // Bowman Chrome Sapphire, so the collapse is intended, not a bug. There is
+    // no standalone Bowman Sapphire product. The 6,227 bowman-sapphire catalog
+    // rows therefore came from some path that does not run through here, which
+    // is a catalog question and not a normaliser one.
+    [/bowman-(?:chrome-sapphire|sapphire-chrome|sapphire)/, "bowman-chrome-sapphire"],
     [/topps-(?:chrome-sapphire|sapphire-chrome)/, "topps-chrome-sapphire"],
     // Topps Chrome Update Sapphire — subset ordering variants.
     [/topps-(?:chrome-update-sapphire|update-sapphire-chrome|sapphire-chrome-update)/, "topps-chrome-update-sapphire"],

@@ -212,9 +212,22 @@ async function main() {
   const moves = [];
   let noDest = 0, wrongPlayer = 0, noPlayer = 0, ambiguous = 0;
   const sample = [];
+  // WHERE the gap is, not just how big. A single number invites "go get
+  // checklists" as though the gap were uniform; it never is, and the answer
+  // differs per set — some are a release we hold nothing for, others are a
+  // handful of parallels missing from a set we otherwise have.
+  const gapBySet = new Map();
+  const gapWanted = new Map();
   for (const r of eligible) {
     const hits = candidatesFor(r.hobbyiqCardId, r.title).filter((s) => exists.has(s));
-    if (!hits.length) { noDest++; continue; }
+    if (!hits.length) {
+      noDest++;
+      const k = `${seg(r.hobbyiqCardId, 2)} ${seg(r.hobbyiqCardId, 3)}`;
+      gapBySet.set(k, (gapBySet.get(k) || 0) + 1);
+      const first = candidatesFor(r.hobbyiqCardId, r.title)[0];
+      if (first) gapWanted.set(seg(first, 3), (gapWanted.get(seg(first, 3)) || 0) + 1);
+      continue;
+    }
     const want2 = normPlayerName(r.playerName);
     if (!want2) { noPlayer++; continue; }
     const same = hits.filter((s) => {
