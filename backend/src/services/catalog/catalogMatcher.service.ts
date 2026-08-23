@@ -516,6 +516,65 @@ export async function resolveCardNumberByPlayer(input: {
   }
 }
 
+// CF-CARD-IDENTITY-PLAYER (2026-08-22). A hiq: slug carries sport, year,
+// setKey, cardNumber, parallel, auto and print run — everything except WHO the
+// card is of. card_catalog knows: all 25 Blue Refractor rows for 2024 CPA-TG
+// say "Theo Gillen".
+//
+// Without it the card page titles itself "2024 Bowman Draft #CPA-TG Blue
+// Refractor Auto /150" with no player, and Add to portfolio 400s with "card
+// identity missing player name" — so a card we can fully price cannot be
+// added.
+//
+// Every row for one (year, setKey, cardNumber) is the same player, so the
+// first non-empty name answers it. Cached for the process: this is checklist
+// data, it does not change between requests.
+const _playerNameCache = new Map<string, string | null>();
+
+export async function lookupCatalogPlayerName(
+  year: number | null | undefined,
+  setKey: string | null | undefined,
+  cardNumber: string | null | undefined,
+): Promise<string | null> {
+  const y = Number(year);
+  const sk = String(setKey ?? "").trim().toLowerCase();
+  const cn = String(cardNumber ?? "").trim().toUpperCase();
+  if (!Number.isFinite(y) || !sk || !cn) return null;
+
+  const key = `${y}|${sk}|${cn}`;
+  const hit = _playerNameCache.get(key);
+  if (hit !== undefined) return hit;
+
+  try {
+    const container = await getContainer();
+    if (!container) return null;
+    const { resources } = await container.items.query<{ playerName?: string | null }>({
+      // No TOP N without ORDER BY — cosmosQueryHygiene forbids it, and rightly:
+      // TOP without an order returns arbitrary rows. An ORDER BY here would be
+      // cross-partition and is not worth it, so the filter alone bounds this
+      // (one card number in one set — tens of rows) and the first non-empty
+      // name is taken in code. Every row for this key is the same player.
+      query: `SELECT c.playerName FROM c
+              WHERE c.year = @y AND c.setKey = @sk AND UPPER(c.cardNumber) = @cn
+                AND IS_DEFINED(c.playerName) AND c.playerName != null`,
+      parameters: [
+        { name: "@y", value: y },
+        { name: "@sk", value: sk },
+        { name: "@cn", value: cn },
+      ],
+    }).fetchAll();
+    const found = resources
+      .map((r) => (typeof r.playerName === "string" ? r.playerName.trim() : ""))
+      .find((n) => n.length > 0) ?? null;
+    _playerNameCache.set(key, found);
+    return found;
+  } catch {
+    // Never block a price on this — a missing name degrades the title, an
+    // exception would lose the whole response.
+    return null;
+  }
+}
+
 export async function canonicalize(input: CatalogMatchInput): Promise<CatalogMatchResult> {
   // Seeding sources MUST bypass the cache: canonicalize can CREATE a row for
   // them, and a cache hit would skip that side effect.
