@@ -59,6 +59,41 @@ const PACE_MS = Number(process.env.PACE_MS || 250);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Same person regardless of casing, punctuation or spacing. */
 const normPlayer = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+
+// A "player" that is actually a product word means the ROW IS MIS-PARSED, not
+// that we found a twin. Some catalog rows have the parallel in the cardNumber
+// slot and a product word in the playerName slot:
+//
+//   cardNumber "Gold"         parallel "Base"            playerName "Refractor"
+//   cardNumber "Printing"     parallel "SuperFractor"    playerName "Plates"
+//   cardNumber "SuperFractor" parallel "Base"            playerName "(one-of-one)"
+//
+// The same-player rule then matches "Refractor" to "Refractor" and calls two
+// pieces of debris the same card. Both sides being garbage does not make the
+// merge safe: repointing sales onto a junk slug buries them somewhere no
+// lookup will ever ask for. These are excluded and COUNTED, not silently
+// dropped — they are a parser bug worth its own fix, not noise.
+const PRODUCT_TOKEN = new RegExp("^(" + [
+  "base","refractor","refractors","superfractor","xfractor","atomic","mojo",
+  "prism","prizm","shimmer","wave","speckle","sparkle","lava","magma","scope",
+  "disco","negative","ray","aqua","sepia","gold","orange","red","blue","green",
+  "purple","black","yellow","pink","bronze","silver","platinum","chrome",
+  "draft","sapphire","auto","autograph","autographs","parallel","insert",
+  "plate","plates","printingplate","printingplates","printing","mini",
+  "oneofone","onefone","numbered","diecut","image","variation","short","print",
+].join("|") + ")$");
+
+/** Two alphabetic tokens or more, and not a bare product word. Deliberately
+ *  strict: over-rejecting leaves a real duplicate in place, which is the
+ *  reversible direction. Over-accepting corrupts sales attribution. */
+function isPlayerLike(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return false;
+  const words = s.toLowerCase().replace(/[^a-z\s'-]/g, " ").split(/\s+/).filter(Boolean);
+  if (words.length < 2) return false;
+  if (words.every((w) => PRODUCT_TOKEN.test(w.replace(/[^a-z]/g, "")))) return false;
+  return true;
+}
 /** Parallel compared on letters only — "Gold Refractor" vs "gold-refractor". */
 const normParallel = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 /** Print run from a slug's num-N segment, wherever it sits. Anchoring on the
@@ -127,13 +162,24 @@ async function main() {
     }
 
     let same = 0, diff = 0, unknown = 0, marked = 0, failed = 0, already = 0, unaddressable = 0;
+    let parseJunk = 0;
+    const junkSample = [];
     const toMark = [];
     const noTwin = [];
 
     for (const [num, side] of byNum) {
       if (!side.draft.length || !side.chrome.length) continue;
-      const draftPlayers = new Set(side.draft.map((r) => normPlayer(r.playerName)).filter(Boolean));
-      const chromePlayers = new Set(side.chrome.map((r) => normPlayer(r.playerName)).filter(Boolean));
+      // Count what the parse guard removes BEFORE using the filtered sets, so
+      // the exclusion shows up in the report instead of vanishing into a lower
+      // "same player" number.
+      for (const r of side.chrome) {
+        if (r.playerName && !isPlayerLike(r.playerName)) {
+          parseJunk++;
+          if (junkSample.length < 6) junkSample.push(r);
+        }
+      }
+      const draftPlayers = new Set(side.draft.filter((r) => isPlayerLike(r.playerName)).map((r) => normPlayer(r.playerName)).filter(Boolean));
+      const chromePlayers = new Set(side.chrome.filter((r) => isPlayerLike(r.playerName)).map((r) => normPlayer(r.playerName)).filter(Boolean));
       if (!draftPlayers.size || !chromePlayers.size) { unknown++; continue; }
 
       const sharesAPlayer = [...chromePlayers].some((p) => draftPlayers.has(p));
@@ -143,6 +189,7 @@ async function main() {
       // Only the chrome rows whose player is ALSO on the draft side. A number
       // can carry both a shared player and a distinct one.
       for (const row of side.chrome) {
+        if (!isPlayerLike(row.playerName)) continue;   // mis-parsed row, counted above
         const p = normPlayer(row.playerName);
         if (!p || !draftPlayers.has(p)) continue;
         if (row.supersededBy) { already++; continue; }
@@ -161,6 +208,7 @@ async function main() {
           // FIELD says draft while its slug says "bowman-draft-chrome" is a
           // third spelling, not the card we are consolidating onto.
           && slugSetKey(d.id) === KEEP
+          && isPlayerLike(d.playerName)
           && normPlayer(d.playerName) === p
           && slugParallelSeg(d.id) === slugParallelSeg(row.id)
           && slugAutoSeg(d.id) === slugAutoSeg(row.id)
@@ -173,6 +221,10 @@ async function main() {
     console.log(`${year}: ${byNum.size} card numbers, ${resources.length} rows`);
     console.log(`  overlapping, SAME player      : ${same}   -> ${toMark.length} chrome rows to supersede`);
     console.log(`  overlapping, DIFFERENT player : ${diff}   (left alone — distinct cards)`);
+    console.log(`  excluded, playerName is a product word : ${parseJunk}   (mis-parsed rows — parser bug, not a twin)`);
+    for (const r of junkSample) {
+      console.log(`      #${String(r.cardNumber).padEnd(12)} parallel=${String(r.parallel || "—").padEnd(16)} player=${JSON.stringify(r.playerName)}`);
+    }
     console.log(`  overlapping, no player        : ${unknown}   (left alone — cannot tell)`);
     console.log(`  already superseded            : ${already}`);
     console.log(`  chrome rows with NO exact twin : ${noTwin.length}   (left alone — parallel or print run differs)`);
