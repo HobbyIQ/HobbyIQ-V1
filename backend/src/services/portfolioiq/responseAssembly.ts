@@ -544,6 +544,12 @@ export interface PortfolioHoldingWire {
     confidence: number | null;
     matchedBy: string | null;
   } | null;
+  /** CF-REVIEW-REASON-ON-THE-WIRE (2026-08-23). `needsReview` is already on the
+   *  wire; the sentence explaining it was not. After the no-identity-no-price
+   *  guard shipped, a client could learn a holding needs review and had no way
+   *  to say WHY, while the row was carrying the explanation the whole time —
+   *  the same shape as the parked match itself. */
+  reviewReason: string | null;
 }
 
 /** The parked match, or null when there is nothing to propose.
@@ -608,6 +614,7 @@ export function composeHoldingWireShape(
   return {
     // Identity
     proposedIdentity: proposedIdentityOf(holding),
+    reviewReason: ((holding as { reviewReason?: string | null }).reviewReason ?? null),
     id: holding.id,
     playerName: holding.playerName,
     cardTitle: holding.cardTitle,
