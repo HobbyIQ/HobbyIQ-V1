@@ -266,8 +266,45 @@ struct CatalogMatchSearchSheet: View {
         errorMessage = nil
         defer { isSearching = false }
         do {
+            // CF-SEARCH-AND-PICK (Drew, 2026-08-23). CATALOG FIRST.
+            //
+            // This sheet exists to give a holding a real identity, and only a
+            // canonical `hiq:` slug can do that — a vendor hit cannot. So try
+            // /api/catalog/search before the dispatcher, and hand it the
+            // holding's own parsed fields as ranking context so the card the
+            // user is actually holding sorts to the top instead of being hunted
+            // for among five near-identical parallels.
+            //
+            // Ranking is server-side (see catalogSearch.service) so this sheet
+            // and the web picker cannot drift apart on what "best" means.
             #if DEBUG
-            print("[CatalogSearch] POST /api/search/cards input=\(q)")
+            print("[CatalogSearch] POST /api/catalog/search input=\(q)")
+            #endif
+            // InventoryCard carries no cardNumber of its own — the parsed number
+            // lives on the suggestion candidate, which is the same place
+            // accept(holding:pick:) reads it from.
+            let ctx = CatalogSearchContext(
+                cardNumber: holding.suggestionCandidate?.number,
+                year: Int(holding.year),
+                setName: holding.setName.isEmpty ? nil : holding.setName,
+                playerName: holding.playerName.isEmpty ? nil : holding.playerName,
+                isAuto: holding.isAuto
+            )
+            if let catalogHits = try? await APIService.shared
+                .searchCatalogForMatch(query: q, context: ctx).hits,
+               catalogHits.isEmpty == false {
+                results = Array(catalogHits.prefix(24)).map(Self.asVariantHit)
+                #if DEBUG
+                print("[CatalogSearch] catalog returned \(results.count)")
+                #endif
+                return
+            }
+
+            // Catalog had nothing. Fall back to the vendor dispatcher so a
+            // release we hold no checklist for is still matchable — that path
+            // is why this sheet included provisional results in the first place.
+            #if DEBUG
+            print("[CatalogSearch] catalog empty — falling back to /api/search/cards")
             #endif
             // 30s dispatcher — same route as the Find Cards page.
             // CF-FIX-FLOW-PROVISIONAL (Drew, 2026-08-12). This sheet IS the
@@ -322,4 +359,48 @@ struct CatalogMatchSearchSheet: View {
         if player.isEmpty == false { parts.append(player) }
         return parts.joined(separator: " ")
     }
+
+    /// Catalog hit -> the shape this sheet already renders. `cardId` carries the
+    /// canonical slug, which is what makes the pick an identity rather than a
+    /// description: confirm sends only that, and the backend adopts the catalog
+    /// row's fields wholesale (CF-SELECTED-CARD-IS-THE-IDENTITY).
+    private static func asVariantHit(_ h: CatalogSearchHit) -> CompIQVariantHit {
+        let variantBits = [
+            (h.parallel?.isEmpty == false && h.parallel?.lowercased() != "base") ? h.parallel : nil,
+            (h.isAuto == true) ? "Auto" : nil,
+            h.printRun.map { "/\($0)" }
+        ].compactMap { $0 }
+        // Every stored property, in declaration order - CompIQVariantHit has
+        // no defaults, so a partial memberwise init does not compile. Fields
+        // the catalog does not carry are explicitly nil, never invented.
+        return CompIQVariantHit(
+            cardId: h.slug,
+            player: h.playerName,
+            set: h.setName ?? h.setKey,
+            year: h.year,
+            number: h.cardNumber,
+            variant: variantBits.isEmpty ? nil : variantBits.joined(separator: " \u{00B7} "),
+            title: nil,
+            displayLabel: nil,
+            imageUrl: h.imageUrl,
+            parallelId: nil,
+            brand: nil,
+            variation: nil,
+            isAuto: h.isAuto ?? false,
+            serialNumber: h.printRun.map(String.init),
+            gradeCompany: nil,
+            gradeValue: nil,
+            grade: nil,
+            certNumber: nil,
+            source: "catalog",
+            attribution: nil,
+            // The catalog row IS the identity once picked, so relevance
+            // scoring has nothing left to say - nil keeps the confidence dot
+            // from implying a match probability that no longer applies.
+            confidence: nil,
+            attributes: nil,
+            parallels: nil
+        )
+    }
+
 }

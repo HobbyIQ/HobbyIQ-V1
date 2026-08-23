@@ -2264,6 +2264,59 @@ export async function confirmPendingReviewHolding(
   );
 }
 
+// CF-SEARCH-AND-PICK (Drew, 2026-08-23: "if it is not verified — i want the
+// SEARCH function to find the card to match it... that search then gets
+// selected and edits the card to the catalog match").
+export interface CatalogSearchHit {
+  slug: string;
+  cardNumber: string | null;
+  playerName: string | null;
+  sport: string | null;
+  year: number | null;
+  setKey: string | null;
+  setName: string | null;
+  parallel: string | null;
+  isAuto: boolean;
+  printRun: number | null;
+  imageUrl: string | null;
+  score: number;
+  salesSummary: {
+    count: number;
+    median30d: number | null;
+    median90d: number | null;
+    medianAll: number | null;
+    lastSaleAt: string | null;
+    trendDirection: "up" | "down" | "flat";
+  } | null;
+}
+
+/** `context` is what we already know about the card being identified. The
+ *  server boosts hits that agree with it so the right card opens at the top;
+ *  it never filters, because every one of those fields came from a title parse
+ *  that has already proved unreliable. Ranking lives server-side so iOS and
+ *  web cannot drift apart on what "best" means. */
+export async function searchCatalog(input: {
+  query: string;
+  limit?: number;
+  context?: {
+    cardNumber?: string | null;
+    year?: number | null;
+    setName?: string | null;
+    playerName?: string | null;
+    isAuto?: boolean | null;
+  } | null;
+}): Promise<{
+  success: boolean;
+  hits: CatalogSearchHit[];
+  provisional?: boolean;
+  timedOut?: boolean;
+}> {
+  return await request("/api/catalog/search", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function createPurchase(body: CreatePurchaseInput): Promise<PurchaseEntry> {
   const res = await request<{ success: boolean; purchase: PurchaseEntry }>(
     "/api/portfolio/erp/purchases",

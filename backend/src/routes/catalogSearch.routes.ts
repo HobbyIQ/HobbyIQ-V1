@@ -34,8 +34,24 @@ router.post("/search", async (req: Request, res: Response) => {
   const year = typeof body.year === "number" ? body.year : null;
   const isAuto = typeof body.isAuto === "boolean" ? body.isAuto : null;
 
+  // CF-SEARCH-RANK-AGAINST-THE-HOLDING (Drew, 2026-08-23). Optional: what the
+  // caller already knows about the card being identified. Boosts matching hits
+  // so the review queue's search-and-pick opens on the right answer instead of
+  // making the user hunt. Never filters — see the weights in searchCatalog.
+  const rawCtx = (req.body ?? {}) as { context?: Record<string, unknown> };
+  const c = rawCtx.context && typeof rawCtx.context === "object" ? rawCtx.context : null;
+  const context = c
+    ? {
+        cardNumber: typeof c.cardNumber === "string" ? c.cardNumber : null,
+        year: typeof c.year === "number" ? c.year : null,
+        setName: typeof c.setName === "string" ? c.setName : null,
+        playerName: typeof c.playerName === "string" ? c.playerName : null,
+        isAuto: typeof c.isAuto === "boolean" ? c.isAuto : null,
+      }
+    : null;
+
   try {
-    const result = await searchCatalog({ query, limit, sport, year, isAuto });
+    const result = await searchCatalog({ query, limit, sport, year, isAuto, context });
     res.json({ success: true, ...result });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Catalog search failed";

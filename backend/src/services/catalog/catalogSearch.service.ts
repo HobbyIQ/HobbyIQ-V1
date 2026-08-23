@@ -24,6 +24,9 @@ import {
   verifiedCatalogSqlClause,
   provisionalCatalogSqlClause,
 } from "./catalogVisibility.js";
+// Same normaliser the slug generator uses, so "Bowman Draft" here and
+// "bowman-draft" in a slug are compared as the one thing they are.
+import { normalizeSetKey } from "../portfolioiq/hobbyIqCardId.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -79,6 +82,25 @@ export interface CatalogSearchInput {
    *  resolved by parseCardQuery. When present it decides the anchor,
    *  instead of re-guessing it from raw tokens. See the anchor block. */
   playerName?: string | null;
+  /** CF-SEARCH-RANK-AGAINST-THE-HOLDING (Drew, 2026-08-23: "that search should
+   *  put best matches at the top").
+   *
+   *  When the search is being used to IDENTIFY a specific card the user already
+   *  owns — the review queue's search-and-pick — we know more than the typed
+   *  query. Token overlap alone cannot use that: it ranks a 2024 card and a
+   *  2025 card identically when both share a player name.
+   *
+   *  Pass what the import already parsed and matching hits float up. This lives
+   *  here rather than in each client on purpose: iOS and web would otherwise
+   *  each grow their own idea of "best", and two copies of a ranking rule drift
+   *  — which is exactly what happened to the player-name matcher this week. */
+  context?: {
+    cardNumber?: string | null;
+    year?: number | null;
+    setName?: string | null;
+    playerName?: string | null;
+    isAuto?: boolean | null;
+  } | null;
 }
 
 export interface CatalogSearchHit {
@@ -857,6 +879,45 @@ export async function searchCatalog(
       score,
       salesSummary: r.salesSummary ?? null,
     });
+  }
+
+  // CF-SEARCH-RANK-AGAINST-THE-HOLDING (Drew, 2026-08-23). Boost hits that
+  // agree with what we already know about the card being identified.
+  //
+  // Weights are ordered by how much each field NARROWS the answer, which is not
+  // the same as how confident we are in it:
+  //
+  //   cardNumber  1.20  near-unique within a year+set. The strongest signal
+  //                     there is, and worth more than the query's own exact-
+  //                     number bonus because it came from the listing rather
+  //                     than from something the user typed while searching.
+  //   year        0.60  cheap and decisive — the same player and number recur
+  //                     every season, and a wrong year is a different card.
+  //   setKey      0.40  narrows product family; deliberately below year
+  //                     because set NAMES are the thing parsers get wrong
+  //                     (Bowman vs Bowman Draft is this week's whole story).
+  //   playerName  0.30  usually already in the query, so mostly a tie-break.
+  //   isAuto      0.15  binary, and the parse is often wrong about it, so it
+  //                     breaks ties and nothing more.
+  //
+  // Deliberately additive, never a filter. Every one of these fields came from
+  // an eBay title parse that has ALREADY been shown to be unreliable — that is
+  // why the card reached a human. Filtering on a wrong parse would hide the
+  // right card completely; boosting merely orders the page, and the correct
+  // answer stays reachable by scrolling.
+  const ctx = input.context ?? null;
+  if (ctx) {
+    const wantNumber = String(ctx.cardNumber ?? "").trim().toUpperCase();
+    const wantYear = Number.isFinite(Number(ctx.year)) ? Number(ctx.year) : null;
+    const wantSetKey = ctx.setName ? normalizeSetKey(String(ctx.setName)) : "";
+    const wantPlayer = fold(String(ctx.playerName ?? ""));
+    for (const h of scored) {
+      if (wantNumber && String(h.cardNumber ?? "").trim().toUpperCase() === wantNumber) h.score += 1.2;
+      if (wantYear !== null && h.year === wantYear) h.score += 0.6;
+      if (wantSetKey && String(h.setKey ?? "") === wantSetKey) h.score += 0.4;
+      if (wantPlayer && fold(String(h.playerName ?? "")) === wantPlayer) h.score += 0.3;
+      if (typeof ctx.isAuto === "boolean" && h.isAuto === ctx.isAuto) h.score += 0.15;
+    }
   }
 
   scored.sort((a, b) => {
