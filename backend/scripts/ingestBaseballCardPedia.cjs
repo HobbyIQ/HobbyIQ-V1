@@ -112,6 +112,78 @@ function parseParallelsFromList(body) {
   return parallels;
 }
 
+// CF-BCP-PARALLELS-ARE-PER-SUBSET (Drew, 2026-08-24: "remove contamination").
+//
+// The Parallels section is not one list. On 2025 Bowman Draft it reads:
+//
+//     Sky Blue /499, Blue /150, Green /99, Gold /50, Orange /25, Red, Black
+//     <h3>Chrome</h3>
+//     Refractor, Sky Blue Refractor, X-Fractor, ... Gold Refractor /50 ...
+//
+// Everything above the h3 belongs to the PAPER set (BD- cards). Everything
+// below belongs to the CHROME sets (BDC-, CPA-). They are different cards:
+// paper Gold /50 and chrome Gold Refractor /50 are two products that happen to
+// share a print run.
+//
+// Flattening them was my own bug, and it is the difference between a safe
+// cleanup and a destructive one. Flat, a paper Gold /50 sitting on a chrome
+// autograph is indistinguishable from a real chrome parallel that has not sold
+// yet — so "delete what has no sales" would have removed ~178,000 rows
+// including real cards, and an eBay listing for one of them would then match
+// nothing at all.
+//
+// Grouped, the same question is a lookup: is this parallel legal for THIS
+// card's subset? Nothing has to be inferred from whether it happens to have
+// sold.
+//  HEADING LEVEL CARRIES THE MEANING, and the two levels mean different things:
+//
+//    h3  SCOPES THE SET.       "Chrome" -> these parallels belong to the chrome
+//                              cards (BDC-, CPA-), not the paper BD- set. The
+//                              names beneath it are already complete: the entry
+//                              reads "Gold Refractor", not "Gold".
+//    h4  NAMES A FAMILY.       "Geometric" -> the entry reads "Gold", and the
+//                              card is Gold Geometric (Drew, 2026-08-24: "It is
+//                              Gold Geometric"). Colour first, family second.
+//
+// So h4 headings compose into the parallel name and h3 headings do not. That
+// is read off the document structure rather than a list of known family words,
+// which is the difference between this surviving next year's product and not.
+//
+// Composition is also what keeps them apart: the College Variations group also
+// lists a "Gold Refractor /50", and without the family suffix it would collide
+// with the chrome group's Gold Refractor /50 — two different cards silently
+// becoming one, which is the exact failure this whole cleanup exists to undo.
+function parseParallelGroups(sectionHtml) {
+  const groups = [];
+  const rx = /<h([34])[^>]*>(?:<[^>]+>)*([^<]+)[\s\S]*?<\/h[34]>/gi;
+  const marks = [];
+  let m;
+  while ((m = rx.exec(sectionHtml))) {
+    marks.push({ level: Number(m[1]), heading: decodeHtml(m[2].trim()), at: m.index, end: rx.lastIndex });
+  }
+
+  const push = (scope, family, body) => {
+    const parallels = parseParallelsFromList(body).map((p) => ({
+      ...p,
+      // The card's actual name. "Gold" under Geometric IS "Gold Geometric".
+      name: family ? `${p.name} ${family}` : p.name,
+      baseName: p.name,
+    }));
+    if (parallels.length) groups.push({ scope, family, heading: family || scope, parallels });
+  };
+
+  if (!marks.length) { push("", "", sectionHtml); return groups; }
+  push("", "", sectionHtml.slice(0, marks[0].at));   // above any heading = the paper set
+  let scope = "";
+  for (let i = 0; i < marks.length; i++) {
+    const mk = marks[i];
+    if (mk.level === 3) scope = mk.heading;
+    const body = sectionHtml.slice(mk.end, i + 1 < marks.length ? marks[i + 1].at : undefined);
+    push(scope, mk.level === 4 ? mk.heading : "", body);
+  }
+  return groups;
+}
+
 // Extract sections between h2 headers. BCP markup: <h2 id="X">Title</h2>
 // wrapped in <div class="mw-heading mw-heading2">...</div>.
 function extractSections(html) {
@@ -187,7 +259,11 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   // Extract parallel manifest from Parallels section — parse <li> items
   // for the actual parallel names + serial-numbered runs.
   const parMatch = /<h2[^>]*id="Parallels"[\s\S]*?<\/h2>([\s\S]*?)(?=<h2|<h1)/i.exec(html);
-  const parallels = parMatch ? parseParallelsFromList(parMatch[1]) : [];
+  const groups = parMatch ? parseParallelGroups(parMatch[1]) : [];
+  const parallels = groups.flatMap((g) => g.parallels);
+  for (const g of groups) {
+    console.log(`[bcp-ingest]   group "${g.heading}": ${g.parallels.length} parallels`);
+  }
   console.log(`[bcp-ingest] Parallels detected (${parallels.length}):`, parallels.map((p) => `${p.name}${p.printRun ? "/"+p.printRun : ""}`).join(", "));
 
   const sections = extractSections(html);
@@ -246,6 +322,18 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
     setKey: SET_KEY,
     scrapedAt: new Date().toISOString(),
     note: "Set-level parallel list. Does NOT assert that every card exists in every parallel.",
+    // Groups are the point. A flat list cannot answer "is this parallel legal
+    // for this card", which is the only question the cleanup needs answered.
+    groups: groups.map((g) => ({
+      scope: g.scope,          // "" = paper set, "Chrome" = the chrome cards
+      family: g.family,        // "" = none, "Geometric" = <Colour> Geometric
+      heading: g.heading,
+      parallels: g.parallels.map((p) => ({
+        name: p.name,          // composed: the card's actual name
+        baseName: p.baseName,  // as printed in the list, before composition
+        printRun: p.printRun ?? null,
+      })),
+    })),
     parallels: parallels.map((p) => ({ name: p.name, printRun: p.printRun ?? null })),
   };
   try {
