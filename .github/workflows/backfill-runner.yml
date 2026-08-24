@@ -106,6 +106,8 @@ on:
           - reaudit-cardsight-unverified
           - recover-chrome-collapse-damage
           - normalize-catalog-format
+          - attest-unnumbered-by-player
+          - resolve-sales-without-identity
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -135,6 +137,14 @@ on:
         description: "For normalize-catalog-format: total partitions. 37.3M rows / 16 is ~2.3M per run, which fits the 150-min step ceiling."
         required: false
         default: "16"
+      min_sales:
+        description: "For attest-* scripts: how many independent sales must agree before a card is created. 2 is the default; 1 accepts a single sale and is much riskier."
+        required: false
+        default: "2"
+      years:
+        description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -360,6 +370,10 @@ jobs:
           # one can be re-run alone — the script skips rows already normalised.
           SLOT: ${{ inputs.slot }}
           SLOTS: ${{ inputs.slots }}
+          # attest-unnumbered-by-player / resolve-sales-without-identity:
+          # corroboration threshold and optional year scoping.
+          MIN_SALES: ${{ inputs.min_sales }}
+          YEARS: ${{ inputs.years }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
