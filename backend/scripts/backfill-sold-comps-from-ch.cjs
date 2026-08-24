@@ -184,7 +184,25 @@ async function main() {
         // → every graded sale stored as raw. Read r.grade instead.
         const { gradeCompany, gradeValue } = parseGrader(r.grade ?? r.grader);
         const sourceExternalId = `ch-daily::${r.card_id}::${r.sale_date}::${Math.round(Number(r.price) * 100)}`;
-        const title = `${r.year} ${r.card_set} #${r.number} ${r.variant}`.trim();
+        // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR (Drew, 2026-08-24: "lets fix the
+        // double year while we can").
+        //
+        // CardHedge's card_set is already year-prefixed — "1954 Topps
+        // Baseball", "2021 Topps Now Baseball" — every row sampled, no
+        // exceptions. Prefixing r.year again produced
+        //
+        //     "1954 1954 Topps Baseball #133 Base"
+        //
+        // on 3,175,209 sold_comps rows, 20% of the pool, across 124 years.
+        // Every matcher and parser that reads a title has been reading that.
+        //
+        // Prefix only when the set text does not already say it, so a source
+        // that changes its mind later still yields a complete title.
+        const chSet = String(r.card_set ?? "").trim();
+        const chYear = String(r.year);
+        const nextChar = chSet.charAt(chYear.length);
+        const yearPrefixed = chSet.startsWith(chYear) && (nextChar < "0" || nextChar > "9");
+        const title = `${yearPrefixed ? "" : `${r.year} `}${chSet} #${r.number} ${r.variant}`.trim().replace(/\s+/g, " ");
         const sport = args.sport ?? inferSport(r.card_set, title);
 
         // CF-CH-INGEST-SLUG-AT-SOURCE (Drew, 2026-07-25). Normalize cardNumber
