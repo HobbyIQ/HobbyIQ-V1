@@ -34,6 +34,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 // Overridable so a re-ingest can be identified as its own pass.
 const BUILT_AT = new Date().toISOString();
 const BATCH = argOf("batch", `bcp-nocross-${BUILT_AT.slice(0, 10)}`);
+const MIN_YIELD = Number(argOf("min-yield", 25));
 
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
@@ -313,6 +314,27 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   // are minted from observed sales, not from a template.
   const allRows = [];
   for (const sec of sections) {
+    // CF-BCP-PARALLELS-SECTION-IS-NOT-A-CARD-LIST (2026-08-24).
+    //
+    // extractSections returns EVERY h2, and this loop used to call parseCards
+    // on all of them — including the Parallels section it had already parsed as
+    // parallels. parseCards accepts "<token> <text>", which every parallel
+    // bullet satisfies, so the manifest got minted a second time as cards:
+    //
+    //   cardNumber "X-Fractor"  playerName "(Jumbo and Super Jumbo only)"
+    //   cardNumber "Purple"     playerName "(serial-numbered to 250 copies)"
+    //   cardNumber "Sky"        playerName "Blue Refractor: 650 copies"
+    //
+    // 43 of these were written to prod on the first apply and then deleted.
+    // They are exactly the failure the CARD-IS-NOT-A-PARALLEL guard prevents in
+    // the other direction, and the inverse was missing: that guard was applied
+    // only inside parseParallelsFromList. A junk row like cardNumber "Green" is
+    // also precisely what poisoned four separate attempts to build a trusted
+    // card list, so this is not cosmetic.
+    if (/^parallels?$/i.test(String(sec.title || "").trim()) || /^parallels?$/i.test(String(sec.id || "").trim())) {
+      console.log(`  [${sec.title}] skipped — this section is the parallel manifest, not a card list`);
+      continue;
+    }
     const cards = parseCards(sec.body);
     if (cards.length === 0) continue;
     const isAuto = isAutoSection(sec.title);
@@ -395,7 +417,14 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
     }).fetchAll()).resources;
     for (const r of rs) existing.set(r.id, String(r.source ?? ""));
   }
-  const isOurs = (src) => src === "" || src.startsWith("baseballcardpedia");
+  // An ABSENT source is not ours. catalogVisibility.ts:107 is explicit that
+  // "most of the existing catalog predates provenance tagging" and treats a
+  // source-less row as legacy-AUTHORITATIVE. Claiming those would let this
+  // wiki full-document-replace the oldest rows in the catalog, erasing every
+  // field patched on afterwards — salesSummary, imageUrl, playerSlug,
+  // searchText — none of which buildCatalogRow emits. catalogVerify queries by
+  // playerSlug, so that erasure is not cosmetic either.
+  const isOurs = (src) => src.startsWith("baseballcardpedia");
   const writable = allRows.filter((r) => !existing.has(r.id) || isOurs(existing.get(r.id)));
   const skipped = allRows.length - writable.length;
   const created = writable.filter((r) => !existing.has(r.id)).length;
@@ -412,4 +441,8 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
     }));
   }
   console.log(`[bcp-ingest] DONE — upserted ${done}, errors ${errors}, skipped ${skipped}`);
+  // A moved wiki page still answers 200 and yields zero cards. Exiting green on
+  // that reads as "nothing to do" when it means "we learned nothing".
+  if (errors > 0) { console.error(`[bcp-ingest] FAILED — ${errors} upsert errors`); process.exitCode = 1; }
+  if (allRows.length < MIN_YIELD) { console.error(`[bcp-ingest] FAILED — only ${allRows.length} cards parsed (min ${MIN_YIELD}); the page shape probably changed`); process.exitCode = 1; }
 })().catch((e) => { console.error(e); process.exit(1); });
