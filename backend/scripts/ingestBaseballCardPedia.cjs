@@ -31,6 +31,10 @@ if (!URL || !YEAR || !SET_KEY) {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
+// Overridable so a re-ingest can be identified as its own pass.
+const BUILT_AT = new Date().toISOString();
+const BATCH = argOf("batch", `bcp-nocross-${BUILT_AT.slice(0, 10)}`);
+
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { "User-Agent": UA } }, (res) => {
@@ -243,9 +247,19 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
     isAuto, printRun,
     source: "baseballcardpedia",
     catalogVersion: 2,
-    catalogBatch: "bcp-2026-08-10",
+    // CF-BCP-BATCH-IS-EVIDENCE (2026-08-24). The stamp was frozen at
+    // "bcp-2026-08-10" — the batch that ran the cross product — so rows from
+    // the fixed parser were indistinguishable from the templated ones they
+    // replace. That is not cosmetic: the cleanup needs a card list it can
+    // TRUST, and every attempt to derive one from the existing catalog was
+    // poisoned by the corruption already in it (a junk row whose cardNumber
+    // slugged to "green" and playerName to "refractor" put "green-refractor"
+    // into the set of real cards, condemning every real Green Refractor in the
+    // product). A batch stamp that moves with the parser is what makes "rows
+    // this parser produced" answerable at all.
+    catalogBatch: BATCH,
     verificationStatus: "verified",
-    builtAt: "2026-08-10T00:00:00.000Z",
+    builtAt: BUILT_AT,
     subsetName,
     searchTokens: [...searchTokens],
   };
@@ -354,17 +368,48 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const c = new CosmosClient(conn);
+  const c = new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } },
+  });
   const cat = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
-  console.log(`\n[bcp-ingest] APPLY — upserting ${allRows.length} rows`);
+
+  // CF-BCP-DOES-NOT-CLOBBER-BETTER-SOURCES (2026-08-24).
+  //
+  // The upsert is keyed by id, and the id IS the slug, so a base row from this
+  // wiki lands on exactly the id a first-party checklist already occupies.
+  // Checked before the first apply ever ran: every id this pass would write for
+  // 2025 Bowman Draft was already held by `beckett-scraped-2026-08-24` rows — a
+  // fresh scrape from Beckett, who publish the actual checklists. Upserting
+  // blind would have replaced 502+ publisher rows with wiki rows and called it
+  // a repair.
+  //
+  // So the write is conditional: create where nothing exists, refresh our OWN
+  // earlier rows, never overwrite anybody else's. A row from another source
+  // either knows something we do not or knows it from a better place.
+  const existing = new Map();
+  {
+    const rs = (await cat.items.query({
+      query: `SELECT c.id, c.source FROM c WHERE c.year=@y AND c.setKey=@k`,
+      parameters: [{ name: "@y", value: YEAR }, { name: "@k", value: SET_KEY }],
+    }).fetchAll()).resources;
+    for (const r of rs) existing.set(r.id, String(r.source ?? ""));
+  }
+  const isOurs = (src) => src === "" || src.startsWith("baseballcardpedia");
+  const writable = allRows.filter((r) => !existing.has(r.id) || isOurs(existing.get(r.id)));
+  const skipped = allRows.length - writable.length;
+  const created = writable.filter((r) => !existing.has(r.id)).length;
+  console.log(`\n[bcp-ingest] APPLY — ${writable.length} writable (create ${created}, refresh ${writable.length - created})`);
+  console.log(`[bcp-ingest]         ${skipped} SKIPPED — id held by a better-sourced row`);
+
   let done = 0, errors = 0;
-  const CH = 24;
-  for (let i = 0; i < allRows.length; i += CH) {
-    const batch = allRows.slice(i, i + CH);
+  const CH = 16;
+  for (let i = 0; i < writable.length; i += CH) {
+    const batch = writable.slice(i, i + CH);
     await Promise.all(batch.map(async (r) => {
       try { await cat.items.upsert(r); done++; }
       catch (err) { errors++; if (errors <= 5) console.warn(`   ERR ${r.id}: ${err.message.slice(0,80)}`); }
     }));
   }
-  console.log(`[bcp-ingest] DONE — upserted ${done}, errors ${errors}`);
+  console.log(`[bcp-ingest] DONE — upserted ${done}, errors ${errors}, skipped ${skipped}`);
 })().catch((e) => { console.error(e); process.exit(1); });
