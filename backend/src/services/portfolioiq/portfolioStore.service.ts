@@ -1534,6 +1534,32 @@ export function buildEstimateRequestFromHolding(
     product: shimmedProduct(holding),
     parallel: String(holding.parallel ?? "").trim() || undefined,
     isAuto: Boolean(holding.isAuto),
+    // CF-THE-GUARD-NEVER-SAW-THE-CARD-NUMBER (Drew, 2026-08-23).
+    //
+    // CF-SIBLING-POOL-SKIP-FOR-AUTOS (compiqEstimate.service.ts:6352) exists
+    // to stop exactly one failure: when a Bowman-family auto's own pool is
+    // thin, computeEstimate's sibling rescue widens to fetchCompsByPlayer —
+    // player + product + year, with NO card number and NO parallel — and
+    // prices a /50 auto off hundreds of base commons. It was written after the
+    // 2026-07-03 Hartman CPA-EHA trace found 315 sibling sales producing a $9
+    // median for a card catalogued at $1038.
+    //
+    // The guard reads cardIdentity.number. This builder never populated
+    // cardNumber, needsParseFallback (compiqEstimate.service.ts:4354) requires
+    // !cardYear && !product so the defensive re-parse never fires either, and
+    // buildIdentityFromContext (:531) therefore sets number: null. The regex
+    // ran against "" on every portfolio reprice, matched nothing, and the
+    // rescue it was written to prevent ran anyway — for thirteen months on the
+    // one rail where the damage lands on a real person's holdings.
+    //
+    // Measured on prod at the time of this change: 5 of 92 holdings were being
+    // priced by that rescue, every one of them a numbered auto, showing 0.7% to
+    // 19.2% of what was paid — CPA-TG at $17.77 against $700, CPA-MWI at
+    // $53.77 against $301.43.
+    //
+    // This does not compute a better price. It stops the engine manufacturing
+    // one out of a pool that belongs to different cards.
+    cardNumber: String(holding.cardNumber ?? "").trim() || undefined,
     gradeCompany: hasGradedIdentity ? rawGradeCompany : undefined,
     gradeValue: hasGradedIdentity ? rawGradeValue : undefined,
     isBlackLabel: (holding as any).isBlackLabel === true ? true : undefined,
