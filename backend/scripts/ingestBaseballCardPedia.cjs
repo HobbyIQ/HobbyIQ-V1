@@ -112,6 +112,51 @@ function parseParallelsFromList(body) {
   return parallels;
 }
 
+// CF-BCP-PARALLELS-ARE-PER-SUBSET (Drew, 2026-08-24: "remove contamination").
+//
+// The Parallels section is not one list. On 2025 Bowman Draft it reads:
+//
+//     Sky Blue /499, Blue /150, Green /99, Gold /50, Orange /25, Red, Black
+//     <h3>Chrome</h3>
+//     Refractor, Sky Blue Refractor, X-Fractor, ... Gold Refractor /50 ...
+//
+// Everything above the h3 belongs to the PAPER set (BD- cards). Everything
+// below belongs to the CHROME sets (BDC-, CPA-). They are different cards:
+// paper Gold /50 and chrome Gold Refractor /50 are two products that happen to
+// share a print run.
+//
+// Flattening them was my own bug, and it is the difference between a safe
+// cleanup and a destructive one. Flat, a paper Gold /50 sitting on a chrome
+// autograph is indistinguishable from a real chrome parallel that has not sold
+// yet — so "delete what has no sales" would have removed ~178,000 rows
+// including real cards, and an eBay listing for one of them would then match
+// nothing at all.
+//
+// Grouped, the same question is a lookup: is this parallel legal for THIS
+// card's subset? Nothing has to be inferred from whether it happens to have
+// sold.
+function parseParallelGroups(sectionHtml) {
+  const groups = [];
+  // Split on h3/h4 boundaries, keeping each heading with the block beneath it.
+  const rx = /<h[34][^>]*>(?:<[^>]+>)*([^<]+)[\s\S]*?<\/h[34]>/gi;
+  const marks = [];
+  let m;
+  while ((m = rx.exec(sectionHtml))) marks.push({ heading: decodeHtml(m[1].trim()), at: m.index, end: rx.lastIndex });
+
+  const push = (heading, body) => {
+    const parallels = parseParallelsFromList(body);
+    if (parallels.length) groups.push({ heading, parallels });
+  };
+
+  if (!marks.length) { push("", sectionHtml); return groups; }
+  push("", sectionHtml.slice(0, marks[0].at));            // text above the first heading
+  for (let i = 0; i < marks.length; i++) {
+    const body = sectionHtml.slice(marks[i].end, i + 1 < marks.length ? marks[i + 1].at : undefined);
+    push(marks[i].heading, body);
+  }
+  return groups;
+}
+
 // Extract sections between h2 headers. BCP markup: <h2 id="X">Title</h2>
 // wrapped in <div class="mw-heading mw-heading2">...</div>.
 function extractSections(html) {
@@ -187,7 +232,11 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   // Extract parallel manifest from Parallels section — parse <li> items
   // for the actual parallel names + serial-numbered runs.
   const parMatch = /<h2[^>]*id="Parallels"[\s\S]*?<\/h2>([\s\S]*?)(?=<h2|<h1)/i.exec(html);
-  const parallels = parMatch ? parseParallelsFromList(parMatch[1]) : [];
+  const groups = parMatch ? parseParallelGroups(parMatch[1]) : [];
+  const parallels = groups.flatMap((g) => g.parallels);
+  for (const g of groups) {
+    console.log(`[bcp-ingest]   group "${g.heading}": ${g.parallels.length} parallels`);
+  }
   console.log(`[bcp-ingest] Parallels detected (${parallels.length}):`, parallels.map((p) => `${p.name}${p.printRun ? "/"+p.printRun : ""}`).join(", "));
 
   const sections = extractSections(html);
@@ -246,6 +295,12 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
     setKey: SET_KEY,
     scrapedAt: new Date().toISOString(),
     note: "Set-level parallel list. Does NOT assert that every card exists in every parallel.",
+    // Groups are the point. A flat list cannot answer "is this parallel legal
+    // for this card", which is the only question the cleanup needs answered.
+    groups: groups.map((g) => ({
+      heading: g.heading,
+      parallels: g.parallels.map((p) => ({ name: p.name, printRun: p.printRun ?? null })),
+    })),
     parallels: parallels.map((p) => ({ name: p.name, printRun: p.printRun ?? null })),
   };
   try {
