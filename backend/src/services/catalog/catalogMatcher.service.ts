@@ -887,7 +887,7 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // has far fewer than 300 parallels, so we still receive the complete
       // candidate set and the in-memory sort is exactly as deterministic.
       const { resources } = await container.items.query({
-        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300",
+        query: "SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300",
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
@@ -903,7 +903,7 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       }).fetchAll();
 
       const want = parallelTokenSet(parallelSlug);
-      const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string }>)
+      const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string; printRun?: number | null }>)
         .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
         // CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (Drew, 2026-08-14). Check the
         // candidate's ID, not its parallel field. Catalog rows can disagree
@@ -917,6 +917,33 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
         // The id is authoritative here precisely because it is the thing being
         // adopted. The field is kept only as a fallback for non-slug ids.
         .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want))
+        // CF-THE-PRINT-RUN-IS-A-DISCRIMINATOR (Drew, 2026-08-24:
+        // "2025 Bowman Draft Chrome Prospect Auto - Eli Willits Yellow
+        // Refractor /75 ... This is the best format bc we can match to it
+        // correctly").
+        //
+        // He is right, and the /75 was the half being thrown away. printRun is
+        // parsed from the title, reaches canonicalize (:398) and is even part
+        // of the cache key (:451) — then this step neither SELECTed it nor
+        // ranked on it, so the one field that separates two same-coloured
+        // parallels was discarded exactly where it would have settled the
+        // answer.
+        //
+        // Live case: "2025 Bowman Draft Chrome MAX WILLIAMS 1/50 1st Auto Gold
+        // Ref. #CPA-MWI PSA 9" carries printRun 50. The Gold Refractor row is
+        // /50; the plain Refractor row is /499. That sale is currently filed
+        // on :refractor:, which is why the gold pool holds zero comps for a
+        // card that has demonstrably traded.
+        //
+        // Conservative on purpose: a print run only ever REJECTS, and only
+        // when both sides state one. An unnumbered card, or a title that never
+        // mentioned a serial, behaves exactly as before.
+        .filter((r) => {
+          const want = components.printRun;
+          const got = typeof r.printRun === "number" ? r.printRun : null;
+          if (typeof want !== "number" || want <= 0 || got === null) return true;
+          return got === want;
+        })
         // Prefer an ungraded row — grade variants share the card's identity
         // fields and would otherwise win arbitrarily. `id` breaks ties so the
         // choice is deterministic rather than dependent on scan order.
