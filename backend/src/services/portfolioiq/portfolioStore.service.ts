@@ -1427,22 +1427,77 @@ export function reconcileEstimatedFmvToBand(input: {
 export const COST_BASIS_REVIEW_FLOOR_PCT = 0.15;
 export const COST_BASIS_REVIEW_MIN_COST = 50;
 
+/** CF-A-REVIEW-FLAG-MUST-BE-RETRACTABLE (Drew, 2026-08-23: "But missing
+ *  doesn't go away after I verify it" / "I selected the correct card and it
+ *  still does this").
+ *
+ *  The sentence this check writes, used to prove OWNERSHIP before retracting.
+ *
+ *  needsReview is written by three different concerns — parse confidence at
+ *  import, the unidentified-holding guard, and this cost-basis floor — and
+ *  they share one boolean. Clearing it on a healthy price ratio without
+ *  checking who set it would silently unflag a holding that is flagged for a
+ *  completely different, still-true reason. That is the exact defect shape
+ *  this codebase keeps producing: a guard that is correct in isolation,
+ *  applied at the wrong scope. The reason string is the only ownership
+ *  evidence stored, so it is what we test. */
+const COST_BASIS_REVIEW_SUFFIX = "likely a card-identity mismatch, not a price move.";
+
+export function isCostBasisReviewReason(reason: unknown): boolean {
+  return typeof reason === "string" && reason.endsWith(COST_BASIS_REVIEW_SUFFIX);
+}
+
+/** Flags a holding whose value is implausibly far below what was paid — and,
+ *  since 2026-08-23, UNFLAGS it when that stops being true.
+ *
+ *  The original returned `{}` on a healthy ratio, which reads as "nothing to
+ *  say" but spreads as "leave the old flag exactly where it is". So the flag
+ *  was a one-way switch: once a holding was flagged, no later reprice could
+ *  ever retract it, no matter how completely the underlying problem was fixed.
+ *
+ *  Measured on holding aff3236a (2025 Bowman Draft Gold Refractor /50 auto,
+ *  $301.43 paid). The owner picked the correct catalog card, the identity
+ *  pinned cleanly, and the reprice moved the value $13.50 -> $53.77 — from
+ *  4.5% of cost to 17.8%, comfortably above the 15% floor. The flag and its
+ *  now-false sentence ("FMV $13.50 is 4.48% of $301.43 paid") stayed on the
+ *  card anyway, telling the owner their verified card still needed verifying.
+ *
+ *  Retracts ONLY a flag this check set (see isCostBasisReviewReason). Never
+ *  retracts while there is no price to judge: a holding that lost its value
+ *  entirely has not been vindicated, it has gone quiet, and dropping the flag
+ *  there would hide it. */
 export function costBasisReviewPatch(input: {
   costBasis: number | null | undefined;
   fairMarketValue: number | null | undefined;
   quantity?: number | null;
-}): { needsReview?: boolean; reviewReason?: string } {
+  /** Current stored flag state. Omit and the function only ever sets, which
+   *  is the pre-2026-08-23 behaviour and is what every non-pricing caller
+   *  wants. */
+  needsReview?: boolean | null;
+  reviewReason?: string | null;
+}): { needsReview?: boolean; reviewReason?: string | null } {
   const qty = Math.max(1, typeof input.quantity === "number" && Number.isFinite(input.quantity) ? input.quantity : 1);
   const cost = typeof input.costBasis === "number" && Number.isFinite(input.costBasis) ? input.costBasis : 0;
   const fmv = typeof input.fairMarketValue === "number" && Number.isFinite(input.fairMarketValue) ? input.fairMarketValue : 0;
   const proposed = fmv > 0 ? fmv * qty : 0;
-  if (!(cost > COST_BASIS_REVIEW_MIN_COST)) return {};
+
+  // Retraction, available only where this check is the one that flagged.
+  const retract = (): { needsReview?: boolean; reviewReason?: string | null } =>
+    input.needsReview === true && isCostBasisReviewReason(input.reviewReason)
+      ? { needsReview: false, reviewReason: null }
+      : {};
+
+  // The check no longer applies to this holding at all (cost fell below the
+  // floor's minimum) — so it has no standing to keep asserting anything.
+  if (!(cost > COST_BASIS_REVIEW_MIN_COST)) return retract();
+  // No price to judge. Say nothing; do NOT retract.
   if (!(proposed > 0)) return {};
-  if (proposed / cost >= COST_BASIS_REVIEW_FLOOR_PCT) return {};
+  if (proposed / cost >= COST_BASIS_REVIEW_FLOOR_PCT) return retract();
+
   const pct = Math.round((proposed / cost) * 10000) / 100;
   return {
     needsReview: true,
-    reviewReason: `FMV $${proposed.toFixed(2)} is ${pct}% of $${cost.toFixed(2)} paid — likely a card-identity mismatch, not a price move.`,
+    reviewReason: `FMV $${proposed.toFixed(2)} is ${pct}% of $${cost.toFixed(2)} paid — ${COST_BASIS_REVIEW_SUFFIX}`,
   };
 }
 
@@ -3465,11 +3520,20 @@ async function autoPriceHolding(
   // (b) Cost-basis floor, applied to whatever produced the final number.
   // Flags for review; does NOT overwrite the price. We have no better number,
   // and silently nulling it would hide a card that genuinely crashed.
-  const coherencePatch = costBasisReviewPatch({
+  const coherencePatch0 = costBasisReviewPatch({
     costBasis: cohCost,
     fairMarketValue: priceSurface.fairMarketValueOverride,
     quantity: cohQty,
+    // Pass the stored state so a price that has recovered can RETRACT the
+    // flag, not just fail to re-set it.
+    needsReview: (holding as { needsReview?: boolean | null }).needsReview ?? null,
+    reviewReason: (holding as { reviewReason?: string | null }).reviewReason ?? null,
   });
+  // The spread below puts coherencePatch AFTER unidentifiedPatch, so a
+  // retraction here would silently undo an unidentified flag raised on this
+  // same pass. An unidentified holding is flagged for a different, still-true
+  // reason; this check does not get to speak for it.
+  const coherencePatch = unidentifiedPatch.needsReview ? {} : coherencePatch0;
   if (coherencePatch.needsReview) {
     console.warn(JSON.stringify({
       event: "final_price_below_cost_basis_floor",
