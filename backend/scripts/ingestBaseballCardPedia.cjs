@@ -13,6 +13,8 @@
 
 const { CosmosClient } = require("@azure/cosmos");
 const https = require("https");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const argOf = (name, def) => {
   const a = process.argv.find((x) => x.startsWith(`--${name}=`));
@@ -88,6 +90,20 @@ function parseParallelsFromList(body) {
     // Also strip trailing "Refractors" plural → singular
     name = name.replace(/s$/, "").trim();
     if (!name || name.length < 2) continue;
+    // CF-BCP-A-CARD-IS-NOT-A-PARALLEL (2026-08-23). The Parallels capture can
+    // run past its own section into a card list, and every card it swallows
+    // becomes a "parallel". Prod carried 20 of them on CPA-MWI alone —
+    // "BDC-17 Ethan Conrad", "BDC-25 Seth Hernandez", "BDC-3 Kade Anderson" —
+    // each one a different card filed as a colour of this one.
+    //
+    // Structural test, not a vocabulary list: a card entry is a card number
+    // followed by a person's name. A parallel never looks like that.
+    // Card-number shapes: "BDC-8 JoJo Parker", "BD-1 Eli Willits", "27 Mike Trout".
+    // Matching the NAME half was too fragile — "JoJo" defeated [A-Z][a-z]+ and
+    // that entry shipped as a parallel. The card NUMBER is the reliable half,
+    // and no parallel is ever LETTERS-DIGITS followed by more text.
+    if (/^[A-Z]{1,6}-\d{1,4}[a-z]?\s+\S/.test(name)) continue;
+    if (/^\d{1,4}[a-z]?\s+[A-Z]\S*\s+\S/.test(name)) continue;
     // Skip non-parallel bullets (long descriptive text)
     if (name.length > 60) continue;
     if (/^(hobby|retail|jumbo|fanatics)\s/i.test(name)) continue;
@@ -177,23 +193,67 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   const sections = extractSections(html);
   console.log(`[bcp-ingest] Found ${sections.length} h2 sections`);
 
+  // CF-BCP-NO-CROSS-PRODUCT (Drew, 2026-08-23: "we need one source of truth").
+  //
+  // This loop used to be `for (card) for (parallel)` — a literal cross product
+  // that minted one catalog row for every combination of card and parallel in
+  // the product. BCP states a subset's parallel LIST. It never says card
+  // #CPA-MWI exists in Yellow Refractor; short prints, subset exclusions and
+  // case hits make that inference wrong in detail.
+  //
+  // The damage was measurable and was measured. Across 8 products, 19,681
+  // catalog rows carried a print run whose distribution is a dead giveaway:
+  //
+  //     CPA|auto|base   /499x102 /250x102 /199x102 /150x102 /99x102 /75x102
+  //
+  // 102 Chrome Prospect Autographs times seven numbered parallels — every run
+  // on exactly the same card count, which no real checklist produces. Those
+  // fabricated print runs then fed the pricing engine, which is how a Gold
+  // Refractor /50 ended up valued against /499 commons.
+  //
+  // The sibling scraper fetchHobbyMonitorChecklist.cjs, written five days
+  // after this one, already refuses the same temptation in its header comment
+  // and cites the doctrine it comes from: "No synthetic parallels — actuals
+  // only" (2026-08-11). This file predates that ruling by a day and was never
+  // brought into line.
+  //
+  // So: ONE ROW PER CARD. The parallel manifest is written beside the cards as
+  // set-level metadata, where it is the authority on a parallel's NAME and
+  // PRINT RUN without asserting which cards exist in it. Actual parallel rows
+  // are minted from observed sales, not from a template.
   const allRows = [];
-  const alwaysBase = [{ name: "Base", printRun: null }, ...parallels];
   for (const sec of sections) {
     const cards = parseCards(sec.body);
     if (cards.length === 0) continue;
     const isAuto = isAutoSection(sec.title);
-    console.log(`  [${sec.title}] ${cards.length} cards · ${alwaysBase.length} parallels · auto=${isAuto}`);
+    console.log(`  [${sec.title}] ${cards.length} cards · auto=${isAuto}  (parallels NOT crossed)`);
     for (const c of cards) {
-      for (const par of alwaysBase) {
-        allRows.push(buildCatalogRow({
-          year: YEAR, setKey: SET_KEY,
-          cardNumber: c.cardNumber, playerName: c.playerName,
-          parallel: par, printRun: par.printRun, isAuto,
-          subsetName: sec.title,
-        }));
-      }
+      allRows.push(buildCatalogRow({
+        year: YEAR, setKey: SET_KEY,
+        cardNumber: c.cardNumber, playerName: c.playerName,
+        parallel: { name: "Base", printRun: null }, printRun: null, isAuto,
+        subsetName: sec.title,
+      }));
     }
+  }
+
+  // Set-level parallel manifest, same contract as the .parallels.json sidecars
+  // fetchHobbyMonitorChecklist.cjs emits, so one reader serves both sources.
+  const manifestPath = argOf("out-parallels", `data/checklists/scraped/${YEAR}-${SET_KEY}.parallels.json`);
+  const manifest = {
+    sourceUrl: URL,
+    year: YEAR,
+    setKey: SET_KEY,
+    scrapedAt: new Date().toISOString(),
+    note: "Set-level parallel list. Does NOT assert that every card exists in every parallel.",
+    parallels: parallels.map((p) => ({ name: p.name, printRun: p.printRun ?? null })),
+  };
+  try {
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 1));
+    console.log(`[bcp-ingest] parallel manifest -> ${manifestPath} (${manifest.parallels.length} parallels)`);
+  } catch (e) {
+    console.warn(`[bcp-ingest] could not write manifest: ${e.message}`);
   }
 
   console.log(`\n[bcp-ingest] Total rows: ${allRows.length}`);
