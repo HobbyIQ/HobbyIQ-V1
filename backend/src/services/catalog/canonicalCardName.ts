@@ -133,10 +133,31 @@ export function canonicalSetName(input: CanonicalNameInput): string {
 export function canonicalCardName(input: CanonicalNameInput): string {
   const parts: string[] = [canonicalSetName(input)];
 
-  // Stored subset wins; a checklist knows better than a prefix table. Skipped
-  // when the product name already says it, so "Bowman Draft" + subset
-  // "Bowman Draft Chrome Prospects" does not stutter.
-  const subset = String(input.subsetName ?? "").trim() || subsetFromCardNumber(input.cardNumber) || "";
+  // ONLY-IMPROVE, not stored-always-wins (Drew, 2026-08-24: "the eli willits
+  // should have autograph in it too, it is chrome prospect Autograph coming
+  // from CPA").
+  //
+  // Preferring the stored value unconditionally produced
+  //   "2025 Bowman Draft Baseball Autographs #CPA-EW ..."
+  // because the checklist stored the vaguer "Autographs" while the card number
+  // says Chrome Prospect Autographs. A checklist usually knows better, but not
+  // when it is strictly less specific than what the card number states.
+  //
+  // So take the richer of the two: if one contains the other, the longer wins.
+  // If they disagree outright, the stored value still wins — that is a real
+  // disagreement, not a missing detail, and the checklist is the authority.
+  //
+  // "Base Set" is dropped entirely. Every non-insert card is in the base set,
+  // so it adds a word and no information ("1952 Topps Baseball Base Set #311").
+  const storedSubset = String(input.subsetName ?? "").trim();
+  const derivedSubset = subsetFromCardNumber(input.cardNumber) ?? "";
+  let subset = storedSubset || derivedSubset;
+  if (storedSubset && derivedSubset) {
+    const a = storedSubset.toLowerCase();
+    const b = derivedSubset.toLowerCase();
+    if (b.includes(a) && b.length > a.length) subset = derivedSubset;
+  }
+  if (/^base set$/i.test(subset)) subset = "";
   if (subset && !parts[0].toLowerCase().includes(subset.toLowerCase())) {
     parts.push(subset);
   }
