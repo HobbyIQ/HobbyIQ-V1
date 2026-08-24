@@ -5363,9 +5363,26 @@ export async function updateHolding(req: Request, res: Response) {
       });
       if (matchResult.found && matchResult.slug) {
         const currentSlug = (next as { hobbyiqCardId?: string }).hobbyiqCardId;
+        // CF-ONE-PIN-GATE-EVERYWHERE (Drew, 2026-08-23). cardId was pinned on
+        // `found` alone, with no confidence test — while BOTH deliberate pin
+        // sites require >= 0.9 (ebayAutoHolding.service.ts:195,
+        // ebayReviewQueue.service.ts:389). canonicalize returns found:true at
+        // confidence 0.72 for matchedBy "fuzzy-parallel", so ANY patch of a
+        // holding — changing only its notes — silently pinned a 0.72 match.
+        //
+        // Measured on holding aff3236a (2025 Bowman Draft Gold #CPA-MWI,
+        // $301.43): its parked match is exactly that shape. The machine has
+        // been accepting on the user's behalf, invisibly, at a confidence the
+        // rest of the system considers too weak to trust.
+        //
+        // hobbyiqCardId stays UNGATED on purpose. It is a derived slug, not a
+        // pin — CF-PORTFOLIO-DETAIL-SLUG needs it present so iOS tap-into-card
+        // resolves — and nothing prices off it alone. cardId is the pin, and
+        // the pin is what must agree across all three sites.
+        const confident = (matchResult.confidence ?? 0) >= 0.9;
         if (matchResult.slug !== currentSlug) {
           (next as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
-          (next as { cardId?: string }).cardId = matchResult.slug;
+          if (confident) (next as { cardId?: string }).cardId = matchResult.slug;
           console.log(JSON.stringify({
             event: "catalog_resolve_on_update_rebind",
             source: "portfolioStore.updateHolding",
@@ -5375,6 +5392,8 @@ export async function updateHolding(req: Request, res: Response) {
             resolvedSlug: matchResult.slug,
             matchedBy: matchResult.matchedBy,
             confidence: matchResult.confidence,
+            // So a skipped pin is visible rather than looking like a no-op.
+            pinned: confident,
           }));
         }
       }
