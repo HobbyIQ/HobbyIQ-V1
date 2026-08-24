@@ -78,3 +78,32 @@ describe("canonical card name", () => {
     expect(canonicalCardName({})).toBe("");
   });
 });
+
+describe("subset picks the more specific of stored vs derived", () => {
+  it("lets CPA beat a vaguer stored 'Autographs'", () => {
+    // Live rows store subsetName "Autographs" while the card number says
+    // Chrome Prospect Autographs. The card number is strictly richer.
+    expect(canonicalCardName({
+      year: 2025, setName: "2025 Bowman Draft Baseball", setKey: "bowman-draft", sport: "baseball",
+      cardNumber: "CPA-EW", playerName: "Eli Willits", parallel: "Yellow Refractor",
+      printRun: 75, subsetName: "Autographs",
+    })).toBe("2025 Bowman Draft Baseball Chrome Prospect Autographs #CPA-EW Eli Willits Yellow Refractor /75");
+  });
+
+  it("keeps a stored subset that genuinely disagrees", () => {
+    // Not a missing detail — a different claim. The checklist is the authority.
+    const n = canonicalCardName({
+      year: 2025, setName: "2025 Bowman Draft Baseball", setKey: "bowman-draft", sport: "baseball",
+      cardNumber: "CPA-EW", playerName: "Eli Willits", parallel: "Base",
+      subsetName: "Chrome Prospect Autographs Gold Ink",
+    });
+    expect(n).toContain("Chrome Prospect Autographs Gold Ink");
+  });
+
+  it("drops 'Base Set' — every non-insert card is in it", () => {
+    expect(canonicalCardName({
+      year: 1952, setName: "1952 Topps Baseball", setKey: "topps", sport: "baseball",
+      cardNumber: "311", playerName: "Mickey Mantle", parallel: "Base", subsetName: "Base Set",
+    })).toBe("1952 Topps Baseball #311 Mickey Mantle Base");
+  });
+});
