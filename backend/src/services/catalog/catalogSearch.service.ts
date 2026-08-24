@@ -19,6 +19,7 @@
  * A downstream fallback to vendor search is the caller's choice.
  */
 
+import { canonicalCardName } from "./canonicalCardName.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import {
   verifiedCatalogSqlClause,
@@ -105,6 +106,10 @@ export interface CatalogSearchInput {
 
 export interface CatalogSearchHit {
   slug: string;               // canonical hobbyiqCardId
+  /** The one display format, computed per request:
+   *  "2025 Bowman Draft Baseball Chrome Prospect Autographs #CPA-EW Eli Willits Yellow Refractor /75"
+   *  Segments are omitted when absent — no print run means the string just ends. */
+  displayName: string;
   cardNumber: string | null;
   playerName: string | null;
   sport: string | null;
@@ -865,6 +870,23 @@ export async function searchCatalog(
     if (hitFields < Math.max(1, Math.ceil(tokens.length / 2))) continue;
     scored.push({
       slug: r.id,
+      // CF-ONE-NAME-FORMAT-FOR-EVERY-CARD (Drew, 2026-08-24: "we want the SAME
+      // consistent format FOR all of our catalog").
+      //
+      // COMPUTED, never stored. canonicalCardName is a pure function of fields
+      // already on the row, so every one of the 40.1M rows gets the format the
+      // moment this ships — no backfill, no RU, nothing to re-run. Storing it
+      // would have meant ~22 days of upserts single-threaded, and worse, a
+      // stored name goes stale the instant any input is corrected. Today alone
+      // that would have invalidated thousands: setName normalised, 5,986 player
+      // names recovered, 12,000+ sales moved to different parallels, Berk Ross
+      // renumbered. A computed name cannot drift.
+      displayName: canonicalCardName({
+        year: r.year, setName: r.setName, setKey: r.setKey, sport: r.sport,
+        cardNumber: r.cardNumber, playerName: r.playerName, parallel: r.parallel,
+        printRun: typeof r.printRun === "number" ? r.printRun : null,
+        subsetName: (r as { subsetName?: string | null }).subsetName ?? null,
+      }),
       cardNumber: r.cardNumber ?? null,
       playerName: r.playerName ?? null,
       sport: r.sport ?? null,
