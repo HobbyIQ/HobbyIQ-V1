@@ -1526,6 +1526,30 @@ export function estimateInputChanged(
 ): boolean {
   if (!previous) return true;
   try {
+    // CF-THE-SLUG-IS-A-PRICING-INPUT-TOO (Drew, 2026-08-23: "this consistently
+    // drops the price... unless I refresh, the price is wrong").
+    //
+    // buildEstimateRequestFromHolding is the LEGACY engine's input, and it
+    // carries cardId but not hobbyiqCardId. priceHoldingFromOurPool prices from
+    // the SLUG. So the our-pool path reads a field this comparison could not
+    // see: correct a holding's identity, the slug moves, this returns false,
+    // no reprice runs, and the stale number stays on screen until the user
+    // hits Refresh by hand.
+    //
+    // Live case — 2024 Bowman Draft Theo Gillen #CPA-TG Blue Refractor /150,
+    // $700 paid. Identity corrected to the Blue Refractor slug; stored FMV
+    // stayed at 17.80 and the page read -97.5%. Asked directly at 00:11Z the
+    // engine returns 729 for that exact slug (rare-card-anchor, "Last sold $729
+    // on 2026-08-20"). The engine was right the whole time and nothing asked it
+    // again.
+    //
+    // This matters MORE after CF-ONE-PIN-GATE-EVERYWHERE: a rebind below 0.9
+    // now moves hobbyiqCardId alone, so without this the entire sub-0.9 rebind
+    // path silently skips repricing.
+    const slugOf = (h: PortfolioHolding) =>
+      String((h as { hobbyiqCardId?: unknown }).hobbyiqCardId ?? "").trim();
+    if (slugOf(previous) !== slugOf(next)) return true;
+
     return (
       JSON.stringify(buildEstimateRequestFromHolding(previous)) !==
       JSON.stringify(buildEstimateRequestFromHolding(next))
