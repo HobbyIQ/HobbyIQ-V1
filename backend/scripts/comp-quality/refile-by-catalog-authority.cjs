@@ -63,6 +63,46 @@ const CONCURRENCY = Number(process.env.CONCURRENCY || 6);
 
 const GRADE = /:(raw|psa-\d+(-\d+)?|bgs-\d+(-\d+)?(-black)?|sgc-\d+(-\d+)?|cgc-\d+(-\d+)?)$/;
 const SETKEY_SEG = 3;
+
+// ── CF-A-CARD-NUMBER-IS-ONLY-MEANINGFUL-INSIDE-A-PRODUCT (2026-08-23) ────────
+//
+// The first version of this tool asked the catalog "who holds (sport, year,
+// cardNumber)?" and moved the sale wherever exactly one checklist answered.
+// Card number 19 in 2013 exists in dozens of products, so "exactly one" was
+// often satisfied by a completely different manufacturer. Report-only run:
+//
+//     4125  panini-prizm-draft-picks -> panini-prizm
+//      202  panini-contenders        -> bowman
+//      183  donruss-elite            -> bowman
+//
+// Donruss Elite into Bowman. The same-player guard waved it through because a
+// player appears in both products. Nothing was written, but MOVABLE said 4,910
+// and it was wrong.
+//
+// Two structural guards, both about the RELATIONSHIP between the current key
+// and the proposed one — neither trusts vendor text:
+//
+//   SHARED ROOT   the two keys must share at least one token. bowman-chrome and
+//                 bowman-draft share "bowman"; donruss and panini-donruss share
+//                 "donruss" (a real correction, 138,782 rows). panini-contenders
+//                 and bowman share nothing, so that move cannot be proposed.
+//
+//   NEVER LESS SPECIFIC   a destination may not have fewer tokens than where the
+//                 sale already sits. Every defect this session was specificity
+//                 being discarded — Tiffany into base, Gold into Refractor, DPP
+//                 into bowman-draft. A repoint that DROPS tokens is that same
+//                 failure wearing the costume of a fix. It blocks
+//                 panini-prizm-draft-picks -> panini-prizm exactly.
+const tokens = (k) => String(k || "").split("-").filter(Boolean);
+
+/** May a sale on `from` be proposed a move to `to`? Structure only. */
+function compatibleKeys(from, to) {
+  const a = tokens(from), b = tokens(to);
+  if (!a.length || !b.length) return { ok: false, why: "unparseable" };
+  if (!a.some((t) => b.includes(t))) return { ok: false, why: "no-shared-root" };
+  if (b.length < a.length) return { ok: false, why: "less-specific" };
+  return { ok: true, why: "" };
+}
 const seg = (id, i) => { const p = String(id || "").replace(GRADE, "").split(":"); return p[0] === "hiq" && p.length > i ? p[i] : null; };
 const retarget = (slug, setKey) => {
   const p = String(slug).split(":");
@@ -149,7 +189,8 @@ async function main() {
 
   // ── Decide
   const moves = [];
-  let already = 0, noAuthority = 0, ambiguous = 0, weakOnly = 0, noKey = 0;
+  let already = 0, noAuthority = 0, ambiguous = 0, weakOnly = 0, noKey = 0, incompatible = 0;
+  const incompatibleBy = new Map();
   const ambSample = [], weakSample = [];
   const wantByPair = new Map();
 
@@ -173,6 +214,17 @@ async function main() {
     }
     const want = [...e.adj][0];
     if (want === cur) { already++; continue; }
+
+    // Structural compatibility — see CF-A-CARD-NUMBER-IS-ONLY-MEANINGFUL-INSIDE-
+    // A-PRODUCT at the top. This is what stops "Donruss Elite -> Bowman".
+    const compat = compatibleKeys(cur, want);
+    if (!compat.ok) {
+      incompatible++;
+      const k = `${cur} -> ${want}   [${compat.why}]`;
+      incompatibleBy.set(k, (incompatibleBy.get(k) || 0) + 1);
+      continue;
+    }
+
     const to = retarget(r.hobbyiqCardId, want);
     if (!to) { noKey++; continue; }
     moves.push({ r, to, want, cur });
@@ -187,6 +239,10 @@ async function main() {
   console.log(`  two checklists disagree        : ${ambiguous}   (reported, never guessed)`);
   for (const s of ambSample) console.log(`      ${s}`);
   console.log(`  unparseable                    : ${noKey}`);
+  console.log(`  structurally incompatible      : ${incompatible}   (cross-brand, or would LOSE specificity)`);
+  for (const [k, n] of [...incompatibleBy].sort((a, b) => b[1] - a[1]).slice(0, 10)) {
+    console.log(`     ${String(n).padStart(7)}  ${k}`);
+  }
   console.log(`  CANDIDATES to move             : ${moves.length}`);
   for (const [k, n] of [...wantByPair].sort((a, b) => b[1] - a[1]).slice(0, 15)) {
     console.log(`     ${String(n).padStart(7)}  ${k}`);
