@@ -556,7 +556,24 @@ function extractPrintRun(title: string, isTcg = false): number | null {
  *  Sapphire is the product context + a color appears > color refractors
  *  > misc named parallels. Unrecognized → "Base". */
 function extractParallel(title: string): string {
-  const T = title;
+  // CF-REF-IS-REFRACTOR (Drew, 2026-08-24). Sellers abbreviate it, and the
+  // abbreviation was invisible to every rule below.
+  //
+  //   "2025 Bowman Draft Chrome MAX WILLIAMS 1/50 1st Auto Gold Ref. #CPA-MWI PSA 9"
+  //
+  // The bare-refractor rule tests /refractor/, which "Ref." does not
+  // match, so every colour and pattern rule was skipped and the title fell all
+  // the way to the chrome-auto fallback, returning "Refractor". The colour was
+  // not lost by a bad rule — it was never read.
+  //
+  // That is the real sale above: a Gold Refractor /50 filed as a plain
+  // Refractor, which is why the gold pool held ZERO comps for a card that has
+  // demonstrably traded, and why the holding priced against /499 commons.
+  //
+  // Expanding once, up front, means every existing colour and pattern rule
+  // gets its chance rather than each having to learn the abbreviation.
+  // (?!ractor) so "Refractor" is left alone.
+  const T = title.replace(/\bref\b\.?(?!ractor)/gi, "Refractor");
   if (/superfractor|super\s+fractor/i.test(T)) return "SuperFractor";
 
   // ─── Paper-auto Border ladder (runs FIRST to win vs refractor rules) ─
