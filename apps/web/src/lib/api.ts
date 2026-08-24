@@ -442,6 +442,21 @@ export interface PortfolioHolding {
     candidateId: string;
     verifiedAt: string;
   } | null;
+  /** CF-SURFACE-THE-PARKED-MATCH (2026-08-23). The catalog match the
+   *  importer already found but did not pin, present ONLY when the holding
+   *  has no identity of its own. 20 of 23 unidentified holdings carry one —
+   *  the work of finding them was already done and thrown away at the glass.
+   *  Confidence travels with it so a 0.72 can be presented differently from
+   *  a 0.94 rather than implying the machine is certain. */
+  proposedIdentity?: {
+    slug: string;
+    confidence?: number | null;
+    matchedBy?: string | null;
+  } | null;
+  /** Why the holding is parked, in a sentence — written by the no-identity-
+   *  no-price guard at the store door. */
+  reviewReason?: string | null;
+  needsReview?: boolean | null;
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
    *  Optional during the migration window — new endpoints emit it, older
    *  endpoints may still return only the legacy flat fields above.
@@ -2473,6 +2488,26 @@ export async function exportPortfolio(format: "csv" | "xlsx" = "xlsx"): Promise<
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/** CF-ACCEPT-THE-PARKED-MATCH (2026-08-23). One click from "we think this is
+ *  X" to a pinned identity. The route is state-agnostic on purpose — a
+ *  holding does not have to be sitting in the eBay review queue for its owner
+ *  to be allowed to say which card it is. On success the server pins the
+ *  slug, marks the holding verified, clears needsReview, and kicks a reprice,
+ *  so the caller should re-read the holding rather than patching state
+ *  locally.
+ *
+ *  409 slug-not-in-catalog is a real answer, not a failure: accepting a card
+ *  the catalog has never seen would price it from an empty pool. */
+export async function acceptHoldingIdentity(
+  id: string,
+  cardId: string,
+): Promise<{ success: boolean; holding?: PortfolioHolding; correctionCount?: number; error?: string; detail?: string }> {
+  return await request(
+    `/api/portfolio/erp/holdings/${encodeURIComponent(id)}/accept-identity`,
+    { method: "POST", body: JSON.stringify({ cardId }) },
+  );
 }
 
 export async function refreshHolding(id: string): Promise<{ success: boolean; holding?: PortfolioHolding; message?: string }> {

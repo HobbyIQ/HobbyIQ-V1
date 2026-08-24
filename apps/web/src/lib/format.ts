@@ -94,3 +94,55 @@ export function formatGrade(h: {
   if (h.gradeValue == null) return h.gradeCompany;
   return `${h.gradeCompany} ${h.gradeValue}`;
 }
+
+/** CF-SHOW-WHAT-WE-WOULD-WRITE (2026-08-23). Renders a canonical slug as the
+ *  card a person would recognise, for the one screen where the machine asks
+ *  "is this it?" and the answer has to be readable at a glance.
+ *
+ *    hiq:baseball:2024:bowman-draft:cpa-tg:blue-refractor:auto:num-150
+ *    -> 2024 Bowman Draft · #CPA-TG · Blue Refractor · Auto · /150
+ *
+ *  Segments are positional and fixed:
+ *    hiq:{sport}:{year}:{setKey}:{cardNumber}:{parallel}:{autoFlag}[:num-{n}]
+ *
+ *  This prettifies the SLUG, not a catalog row — so it shows our setKey, which
+ *  may read less naturally than the printed product name. That is deliberate:
+ *  this is the identity about to be written, and showing something nicer than
+ *  what gets stored would be a lie at exactly the moment the user is being
+ *  asked to vouch for it. The raw slug is shown alongside for the same reason.
+ *  Returns null for anything that is not a canonical slug rather than
+ *  half-rendering a string it does not understand. */
+export function describeSlug(slug: string | null | undefined): string | null {
+  const parts = String(slug ?? "").split(":");
+  if (parts[0] !== "hiq" || parts.length < 7) return null;
+
+  const [, , year, setKey, cardNumber, parallel, autoFlag, ...rest] = parts;
+  const titleCase = (s: string) =>
+    s.split("-").filter(Boolean)
+      .map((w) => (w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)))
+      .join(" ");
+
+  const bits: string[] = [];
+  const head = [year, setKey ? titleCase(setKey) : ""].filter(Boolean).join(" ");
+  if (head) bits.push(head);
+  if (cardNumber) bits.push(`#${cardNumber.toUpperCase()}`);
+  // "base" is the absence of a parallel, not a parallel called Base.
+  if (parallel && parallel !== "base") bits.push(titleCase(parallel));
+  if (autoFlag === "auto") bits.push("Auto");
+  const printRun = rest.find((p) => p.startsWith("num-"));
+  if (printRun) bits.push(`/${printRun.slice(4)}`);
+  // Graders are initialisms, and titleCase would render PSA as "Psa". "raw"
+  // is a word, not a grader, so it stays a word.
+  const grade = rest.find((p) => !p.startsWith("num-"));
+  if (grade) {
+    bits.push(
+      grade === "raw"
+        ? "Raw"
+        : grade.split("-").filter(Boolean)
+            .map((t) => (/^[a-z]+$/.test(t) && t.length <= 4 ? t.toUpperCase() : t))
+            .join(" "),
+    );
+  }
+
+  return bits.join(" · ") || null;
+}
