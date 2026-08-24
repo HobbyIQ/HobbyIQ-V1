@@ -105,6 +105,7 @@ on:
           - score-all-sold-comps
           - reaudit-cardsight-unverified
           - recover-chrome-collapse-damage
+          - normalize-catalog-format
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -126,6 +127,14 @@ on:
         description: "For backfill-cardsight-title-identity: comma-separated cardNumbers to scope the scan (e.g. CPA-EHA,CPA-JHA). Empty = scan all."
         required: false
         default: ""
+      slot:
+        description: "For normalize-catalog-format: which partition this run owns (0..slots-1). Dispatch once per slot."
+        required: false
+        default: "0"
+      slots:
+        description: "For normalize-catalog-format: total partitions. 37.3M rows / 16 is ~2.3M per run, which fits the 150-min step ceiling."
+        required: false
+        default: "16"
 
 permissions:
   contents: read
@@ -344,6 +353,13 @@ jobs:
           BULK_START_DATE: ${{ inputs.bulk_start_date }}
           BULK_END_DATE: ${{ inputs.bulk_end_date }}
           BACKFILL_CARD_NUMBERS: ${{ inputs.card_numbers }}
+          # CF-ONE-NAME-FORMAT-FOR-EVERY-CARD: normalize-catalog-format owns one
+          # partition per dispatch, computed from live row counts at startup and
+          # balanced by row count (2025 alone is 7.1M, ~400x a vintage year).
+          # Slots never overlap, so 16 dispatches need no coordination and any
+          # one can be re-run alone — the script skips rows already normalised.
+          SLOT: ${{ inputs.slot }}
+          SLOTS: ${{ inputs.slots }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
