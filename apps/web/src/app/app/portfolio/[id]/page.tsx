@@ -24,6 +24,7 @@ import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { RegradeModal } from "@/components/RegradeModal";
 import { GradeCalcModal } from "@/components/GradeCalcModal";
 import { RecentCompsList } from "@/components/RecentCompsList";
+import { IdentityBanner } from "@/components/IdentityBanner";
 import { GradeCurveView } from "@/components/GradeCurveView";
 import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 
@@ -201,6 +202,22 @@ export default function HoldingDetailPage() {
       <Link href="/app/portfolio" className="text-sm text-[color:var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">
         ← Back to portfolio
       </Link>
+
+      {/* CF-SURFACE-THE-PARKED-MATCH: above the header on purpose. An
+          unidentified holding has no value to show, so the first thing on the
+          page should be the one action that changes that. Renders nothing when
+          the card is already identified. */}
+      <IdentityBanner
+        holding={h}
+        onResolved={async () => {
+          // The accept route kicks the reprice fire-and-forget, so the first
+          // read can beat the new value home. Read once for the identity
+          // (which is already committed), then once more for the price rather
+          // than leaving the user looking at a blank value they just fixed.
+          setH(await fetchHolding(holdingId));
+          setTimeout(() => { void fetchHolding(holdingId).then(setH).catch(() => {}); }, 2500);
+        }}
+      />
 
       {/* Header */}
       <div className="hiq-card p-6 mb-6">

@@ -739,7 +739,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
                 style={{ color: "var(--color-accent)" }}
                 onClick={(e) => e.stopPropagation()}
               >
-                Fix identity →
+                {h.proposedIdentity ? "Confirm identity →" : "Fix identity →"}
               </Link>
             </>
           )}
