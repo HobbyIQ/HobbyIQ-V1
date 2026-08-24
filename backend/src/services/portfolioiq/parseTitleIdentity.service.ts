@@ -126,6 +126,27 @@ const DEFAULT_CARD_NUMBER_RE =
 const STANDALONE_CARD_NUMBER_RE =
   /(?:^|\s)(\d{1,4})(?=\s+(?:PSA|BGS|SGC|CGC|BVG|HGA|GEM|MINT|NM|RC|ROOKIE|GRADED|RAW|$))/i;
 
+// CF-STANDALONE-PREFIXED-CARDNUMBER (Drew, 2026-08-24). The two regexes above
+// cover "#SMLB-10" and a bare "194", but not a PREFIXED number with no hash:
+//
+//   "2025 Topps Stars of MLB SMLB-10 Shohei Ohtani ..."   -> cardNumber null
+//   "2025 Bowman Draft CPA-EW Eli Willits Yellow Refractor" -> cardNumber null
+//
+// Both state the card number plainly. Nothing read it, and canonicalize's
+// fuzzy step requires a cardNumber, so every such sale failed to match — the
+// same shape as "Gold Ref." parsing to plain Refractor.
+//
+// Guarded, because titles are full of hyphenated words that are not card
+// numbers. The suffix must contain a digit or be short and uppercase (CPA-EW),
+// and grade/condition compounds are excluded outright — those are the ones
+// that actually appear in this position.
+const NOT_A_CARD_NUMBER = new Set([
+  "ALL-STAR", "ALL-STARS", "SET-BREAK", "ON-CARD", "EX-MT", "NM-MT", "GEM-MT",
+  "VG-EX", "PO-FR", "GD-VG", "ONE-OF", "SHORT-PRINT", "HALL-OF", "DIE-CUT",
+  "MULTI-SPORT", "RE-PACK", "PRE-SALE", "LOW-POP", "HIGH-END", "MINI-DIAMOND",
+]);
+const STANDALONE_PREFIXED_CARD_NUMBER_RE = /(?:^|\s)([A-Z]{2,6}-[A-Z0-9]{1,6})(?=\s|$)/i;
+
 // Note: `on card` alone does NOT imply auto — "On Card Display" and
 // similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
 // "hard signed" are required. When "On Card Auto" appears, \bauto\b
@@ -460,6 +481,16 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
   if (!cardNumberRe) {
     const m2 = title.match(STANDALONE_CARD_NUMBER_RE);
     if (m2) return m2[1].toUpperCase();
+    // CF-STANDALONE-PREFIXED-CARDNUMBER: a prefixed number with no '#'.
+    // "2025 Topps Stars of MLB SMLB-10 Shohei Ohtani" and
+    // "2025 Bowman Draft CPA-EW Eli Willits" both state it plainly.
+    const m3 = title.match(STANDALONE_PREFIXED_CARD_NUMBER_RE);
+    if (m3) {
+      const tok = m3[1].toUpperCase();
+      const suffix = tok.slice(tok.indexOf("-") + 1);
+      const plausible = /\d/.test(suffix) || suffix.length <= 4;
+      if (plausible && !NOT_A_CARD_NUMBER.has(tok)) return tok;
+    }
   }
   // CF-TCG-CARDNUM (Drew, 2026-08-02). Pokemon/TCG card numbers use the
   // format `POS/TOTAL` (e.g. "008/132", "294/217"). Note the position
