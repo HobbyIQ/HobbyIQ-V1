@@ -28,14 +28,20 @@ describe("CF-PARALLEL-FROM-TITLE — Cardsight title-parallel guard", () => {
     const r = parseListingIdentity(
       "JOSIAH HARTSHORN - 2025 Bowman Draft - Chrome Prospect 1st Auto #CPA-JHA Cubs 🔥 - Raw",
     );
-    expect(r.parallel).toBe("Refractor");
+    // Back to Base, which is what this test's NAME said all along. The
+    // assertion was flipped to "Refractor" when CF-CHROME-AUTO-DEFAULT-
+    // REFRACTOR landed on 2026-07-31; the name was never updated, so the test
+    // has been contradicting itself since. Drew retracted that rule on
+    // 2026-08-25 -- "Refractor is a parallel or a finish and is out of /499
+    // for autos" -- so a chrome auto naming no parallel is Base again.
+    expect(r.parallel).toBe("Base");
     expect(r.isAuto).toBe(true);
     expect(r.cardNumber).toBe("CPA-JHA");
   });
 
   it("returns Base when title just says 'Chrome Auto' (Cardsight's common mis-tag)", () => {
     const r = parseListingIdentity("2025 Bowman Draft Josiah Hartshorn Chrome Auto 1st Prospect");
-    expect(r.parallel).toBe("Refractor");
+    expect(r.parallel).toBe("Base");
   });
 
   it("returns Blue Refractor when title actually says Blue Refractor", () => {
@@ -64,11 +70,10 @@ describe("CF-PARALLEL-FROM-TITLE — Cardsight title-parallel guard", () => {
     ];
     for (const t of titles) {
       const r = parseListingIdentity(t);
-      // Same supersession as above: CF-CHROME-AUTO-DEFAULT-REFRACTOR (07-31)
-      // makes the no-colour chrome auto the Refractor tier. What this case
-      // still guards is the thing that mattered — a plain Chrome Auto listing
-      // must NOT be stamped "Blue" off Cardsight's parallel_name.
-      expect(r.parallel, `title="${t}"`).toBe("Refractor");
+      // The 07-31 supersession is retracted, so this is Base again. The thing
+      // this case has always really guarded is unchanged: a plain Chrome Auto
+      // listing must NOT be stamped "Blue" off Cardsight's parallel_name.
+      expect(r.parallel, `title="${t}"`).toBe("Base");
       expect(r.parallel, `title="${t}"`).not.toBe("Blue");
     }
   });

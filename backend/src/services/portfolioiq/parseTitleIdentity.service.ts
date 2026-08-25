@@ -220,6 +220,19 @@ const STANDALONE_PREFIXED_CARD_NUMBER_RE = /(?:^|\s)([A-Z]{2,6}-[A-Z0-9]{1,6})(?
 // "hard signed" are required. When "On Card Auto" appears, \bauto\b
 // picks it up.
 const AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
+
+/** Chrome products, where a bare colour IS that colour's Refractor.
+ *  The chrome-auto SKU prefixes count as product context on their own: real
+ *  titles are often just "Eric Hartman Red /5 #CPA-EHA", with the card number
+ *  as the only thing naming the product. Same principle as the isAuto
+ *  boundary -- the card number is the signal, not the marketing text. */
+const CHROME_PRODUCT_RE =
+  /bowman\s+chrome|topps\s+chrome|chrome\s+prospect|chrome\s+auto|bowman[^.]*chrome|#?\b(?:CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CDA)-[A-Z0-9]+/i;
+
+/** Team names that contain a colour word. Stripped before any bare-colour
+ *  read, because "Blue Jays" is a team and "Blue" is a parallel. */
+const TEAM_COLOUR_NOISE_RE =
+  /\b(blue\s+jays?|red\s+sox|white\s+sox|green\s+bay|red\s+wings?|blue\s+jackets?|golden\s+knights?|red\s+raiders?|blue\s+devils?|red\s+bulls?|orange\s+bowl|black\s?hawks?|white\s+caps?)\b/gi;
 /** Phrases that mean the card is NOT signed, despite containing "auto".
  *
  *  CF-NON-AUTO-IS-NOT-AUTO (2026-08-19). This only listed "auto relic" and
@@ -893,16 +906,47 @@ function extractParallel(title: string): string {
     if (/\bchrome\b/i.test(T)) return "Chrome";
   }
 
-  // Base color refractors — accept "Color Refractor" OR "Color /N" where
-  // N matches the traditional print run for that color.
-  if (/gold\s+refractor/i.test(T) || /\bgold\b.*\/50\b/i.test(T)) return "Gold Refractor";
-  if (/red\s+refractor/i.test(T) || /\bred\b.*\/5\b/i.test(T)) return "Red Refractor";
-  if (/orange\s+refractor/i.test(T) || /\borange\b.*\/25\b/i.test(T)) return "Orange Refractor";
+  // Base color refractors. The explicit "<Colour> Refractor" form first.
+  if (/gold\s+refractor/i.test(T)) return "Gold Refractor";
+  if (/red\s+refractor/i.test(T)) return "Red Refractor";
+  if (/orange\s+refractor/i.test(T)) return "Orange Refractor";
   if (/purple\s+refractor/i.test(T)) return "Purple Refractor";
-  if (/green\s+refractor/i.test(T) || /\bgreen\b.*\/99\b/i.test(T)) return "Green Refractor";
+  if (/green\s+refractor/i.test(T)) return "Green Refractor";
   if (/yellow\s+refractor/i.test(T)) return "Yellow Refractor";
   if (/aqua\s+refractor/i.test(T)) return "Aqua Refractor";
-  if (/blue\s+refractor/i.test(T) || /\bblue\b.*\/150\b/i.test(T) || /\bblue\b.*\/125\b/i.test(T)) return "Blue Refractor";
+  if (/blue\s+refractor/i.test(T)) return "Blue Refractor";
+
+  // CF-THE-PRINT-RUN-IS-DATA-NOT-A-GATE (Drew, 2026-08-25: "so orange /25 is
+  // orange refractor /25 and so on").
+  //
+  // These rules used to accept a bare colour ONLY when it arrived with that
+  // colour's traditional print run -- gold needed /50, orange needed /25,
+  // green needed /99 -- and purple, yellow and aqua had no bare form at all.
+  // So the vocabulary decided which colours survived:
+  //
+  //   "... 1st Auto Orange /25"    -> Orange Refractor    (rule existed)
+  //   "... 1st Auto Purple /250"   -> Refractor           (COLOUR LOST)
+  //   "... 1st Auto Aqua /125"     -> Refractor           (COLOUR LOST)
+  //
+  // A dropped colour is not a smaller answer, it is a DIFFERENT CARD: those
+  // Purple /250 sales pooled with plain refractors. The print run is a fact
+  // about the card, never the thing that licenses reading the colour.
+  //
+  // Scoped to chrome products deliberately. Colour-equals-refractor is a
+  // chrome convention; applied at product level it destroys Panini Prizm,
+  // where a colour is a Prizm and not a Refractor at all.
+  if (CHROME_PRODUCT_RE.test(T)) {
+    // Team names carry colours and are not parallels. Removed by name rather
+    // than guessed at, so "Toronto Blue Jays" cannot become a Blue Refractor.
+    const noTeams = T.replace(TEAM_COLOUR_NOISE_RE, " ");
+    const two = noTeams.match(/\b(sky\s+blue|neon\s+green|hot\s+pink|royal\s+blue)\b/i);
+    if (two) {
+      const words = two[1].split(/\s+/).map((w) => capFirst(w)).join(" ");
+      return words + " Refractor";
+    }
+    const one = noTeams.match(/\b(gold|red|orange|purple|green|yellow|aqua|blue|pink|black|white|fuchsia|bronze)\b/i);
+    if (one) return capFirst(one[1]) + " Refractor";
+  }
   // CF-PINK-REFRACTOR (Drew, 2026-07-29). Pink refractor is a Topps
   // Chrome parallel (Mother's Day pink, and other pink variants). Was
   // missing from the color ladder. OBSERVED: "Aaron Judge 2017 Topps
@@ -972,40 +1016,31 @@ function extractParallel(title: string): string {
   // Contenders — Cracked Ice is the iconic parallel
   if (/cracked\s+ice/i.test(T)) return "Cracked Ice";
 
-  // CF-CHROME-AUTO-DEFAULT-REFRACTOR (Drew, 2026-07-31). For Bowman
-  // Chrome auto titles that reach this fallback with no color rule
-  // matched, return "Refractor" not "Base". In Bowman Chrome
-  // nomenclature the base tier of the auto ladder IS Refractor
-  // (typically /499 print run); "Base" only makes sense for paper
-  // (non-chrome) products.
+  // The chrome-auto Refractor default that used to sit here is GONE
+  // (Drew, 2026-08-25: "no refractor is a base. Refractor is a parallel or a
+  // finish and is out of /499 for autos", then "remove that 7/31 comment").
   //
-  // Live evidence 2026-07-31 on Josiah Hartshorn CPA-JHA:
-  // 304 sold_comps rows landed at parallel="Base" because titles like
-  //   "2025 Bowman Draft #CPA-JHA Josiah Hartshorn 1st Prospect Chrome Auto"
-  // don't contain the word "refractor" — but they ARE /499 Chrome
-  // Refractor autos by definition of the CPA-* subset. The Base
-  // labels polluted the sibling pool, dragging Blue Refractor FMVs down.
+  // It claimed the base tier of the chrome auto ladder IS Refractor, so any
+  // Bowman Chrome or Topps Chrome auto title with no colour rule matched
+  // returned "Refractor" instead of "Base". Refractor is a PARALLEL sitting
+  // above base, /499 for autos -- so the default inverted the ladder, and
+  // three things followed from it:
   //
-  // CF-CHROME-AUTO-REFRACTOR-DEFAULT (Drew, 2026-07-31, revised).
-  // The base TIER of the chrome auto ladder IS "Refractor" (typically
-  // /499 print run). When a title is a Chrome auto with no color rule
-  // matched, return Refractor — NOT Base ("Base" is paper terminology).
+  //   "2022 Bowman Chrome Prospects #CPA-MG Base"     -> Refractor
+  //   "2026 Bowman Chrome ... True Base Auto #CPA-MG" -> Refractor
+  //   "Marconi German 2026 Bowman #CPA-MG Chrome Auto" -> Refractor
   //
-  // "Not all autos are refractors" (Drew, mid-turn): paper autos
-  // (BPA-/BDA-/BSPA- prefixes on paper stock) have their own base
-  // (paper Base) and their own color ladder ("Border" per CF-PAPER-
-  // AUTO-BORDERS at line 401). Non-Chrome/non-Bowman autos (Panini,
-  // Topps flagship non-Chrome, etc.) don't have Refractor at all.
+  // The first two say Base in the title and were overridden. The third is a
+  // plain base auto. All three landed in refractor pools, so a real Gold /50
+  // priced off base comps: $7.49 against $187 paid, -96%.
   //
-  // So this rule ONLY fires when:
-  //   1. AUTO signal present (title text OR chrome-only prefix), AND
-  //   2. Chrome PRODUCT signal present (bowman chrome / chrome
-  //      prospects / chrome auto / topps chrome / bowman draft chrome).
+  // It also split one card in two. A 2026 Topps Chrome #RA-JC auto went to
+  // the Base pool ($175 median) when the seller typed the word "Base" and to
+  // a Refractor pool when they did not -- same card, two prices, decided by
+  // seller phrasing.
   //
-  // BPA/BDA/BSPA are excluded from the prefix list here on purpose
-  // (they're paper). BCPA/BDPA/BCDA/BCRA/TCRA are chrome-only rookie/
-  // prospect autograph prefixes. CPA is the flagship Chrome Prospect
-  // Autograph prefix (baseball).
+  // Unrecognised now falls through to "Base", which is what the ladder says.
+
   // CF-NO-REFRACTOR-AUTO-RELEASED (Drew, 2026-08-15, on 2026 Bowman Eric
   // Hartman #CPA-EHA: "this is marked as a refractor but it is a base - eric
   // does not have a refractor auto" ... "eric hartman is the only one without
@@ -1049,20 +1084,6 @@ function extractParallel(title: string): string {
     if (!entry.number.test(T)) continue;
     if (titleYear !== null && !entry.years.includes(titleYear)) continue;
     return "Base";
-  }
-
-  const CHROME_AUTO_PREFIX_RE = /#?\b(CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CU|CDA)-[A-Z0-9]+/i;
-  const isChromeAutoTitle =
-    (AUTO_RE.test(T) || CHROME_AUTO_PREFIX_RE.test(T))
-    && (
-      /bowman\s+chrome/i.test(T)
-      || /chrome\s+prospect(s)?/i.test(T)
-      || /chrome\s+auto/i.test(T)
-      || /topps\s+chrome/i.test(T)
-      || /bowman\s+draft.*chrome/i.test(T)
-    );
-  if (isChromeAutoTitle) {
-    return "Refractor";
   }
 
   // CF-SCARCITY-IS-NOT-BASE (Drew, 2026-08-16, on "2018 Topps Ohtani Warm-Up
