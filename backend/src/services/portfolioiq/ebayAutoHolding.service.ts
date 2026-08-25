@@ -182,7 +182,33 @@ export async function autoCreateHoldingForPurchase(
       parallel: String(h.parallel ?? "") || null,
       isAuto: Boolean(h.isAuto),
       playerName: String(h.playerName ?? ""),
-      source: "ebay-title",
+      // CF-THE-USER-SEED-EXEMPTION-WAS-NEVER-REACHED (Drew, 2026-08-25: "when
+      // we buy from ebay and they aren't in our existing sold comps. It needs
+      // to create the sold comp. It is truly a comp DIRECTLY from ebay").
+      //
+      // This passed "ebay-title", which is a VENDOR source. Under
+      // CATALOG_MATCH_ONLY_ENABLED the matcher returns early for vendor
+      // sources with found:false, confidence:0.3 -- so a card the user
+      // physically owns could never seed a catalog row, and the whole chain
+      // downstream of it died:
+      //
+      //   no catalog row  ->  confidence 0.3 never clears the 0.9 pin bar
+      //                   ->  holding.cardId never set
+      //                   ->  "We could not identify this card"
+      //                   ->  confirmHoldingReview gates its comp emit on
+      //                       cardId, so NO COMP WAS EVER EMITTED
+      //
+      // USER_SEED_ALLOWED_SOURCES and TRUSTED_SOURCES both already name
+      // "ebay-user-purchase", the sold-comp source enum already has it, and
+      // soldCompsStore was built for precisely this. Every piece was in place
+      // and unreachable because the caller announced itself as a vendor.
+      //
+      // The user owns the physical card; that is the whole basis of the
+      // exemption. Seeds land confidence 0.6 / verificationStatus
+      // pending-review, below the 0.9 pin bar, so this creates the row without
+      // steering pricing -- then confirm re-matches as "user-verified", finds
+      // the now-existing row exactly, pins it, and the comp emits.
+      source: "ebay-user-purchase",
     } as never);
 
     if (match) {
