@@ -57,6 +57,14 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
   }).database("hobbyiq").container("card_catalog");
 
   let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0, verifyFailed = 0;
+  // CF-COUNT-WHAT-THE-LOOP-TOUCHES. `candidates` counts rows the SCAN found;
+  // `attempted` counts rows the work loop actually took up. They differ the
+  // moment LIMIT stops the run mid-page: the remainder of that page was seen
+  // but never tried, and charging it to `intended` reports a shortfall that
+  // did not happen (88 phantom rows on the first 5,000-row slice). This is the
+  // same mistake dedupe-catalog-partition-shadows made -- taking intent from
+  // the scan rather than from the loop -- so it gets the same fix.
+  let attempted = 0;
   const samples = [];
 
   const where = ["STARTSWITH(c.id,'hiq:')", "c.id != c.cardId", "IS_DEFINED(c.cardId)", "c.cardId != null"];
@@ -82,6 +90,7 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
     if (APPLY && work.length) {
       for (let i = 0; i < work.length; i += CONCURRENCY) {
         await Promise.all(work.slice(i, i + CONCURRENCY).map(async (r) => {
+          attempted++;
           const oldKey = r.cardId;
           try {
             // Already at its own address? Then this is the duplicate case, not
@@ -136,6 +145,9 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
   console.log(`  already had a row at (id,id)  ${alreadyThere.toLocaleString()}   (duplicate case -> dedupe job)`);
   console.log(`  copy could not be read back   ${verifyFailed.toLocaleString()}   (NOT deleted)`);
   console.log(`  failed                        ${failed.toLocaleString()}`);
+  if (LIMIT && candidates > attempted) {
+    console.log(`  not attempted                 ${(candidates - attempted).toLocaleString()}   (LIMIT reached; seen, not tried)`);
+  }
   if (samples.length) {
     console.log(`\n  sample:`);
     for (const s of samples) console.log("     " + s);
@@ -143,7 +155,7 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
   if (APPLY) {
     reportWrites({
       job: "rehome-catalog-rows-to-own-partition",
-      intended: candidates, written: rehomed,
+      intended: attempted, written: rehomed,
       skipped: alreadyThere + verifyFailed, failed,
     });
   }
