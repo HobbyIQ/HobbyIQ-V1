@@ -45,6 +45,9 @@ const { reportWrites } = require(path.join(ROOT, "dist/services/ops/writeReconci
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "2026").split(",").map(Number).filter(Boolean);
 const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
+// Retire duplicate rows that carry no partition key at all. Off by default:
+// see CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY at the delete site.
+const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true";
 
 (async () => {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -89,13 +92,26 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
     } while (token);
 
     const dupes = [...groups.entries()].filter(([, v]) => v.length > 1);
-    const surplus = dupes.reduce((a, [, v]) => a + v.length - 1, 0);
+    // CF-COUNTERS-THAT-DO-NOT-ADD-UP (Drew, 2026-08-25). This was
+    // `v.length - 1` -- "every row but one" -- which silently assumes one row
+    // in the group is ALREADY keyed by its own slug and will be kept in place.
+    // When none is, the retire loop below skips nothing (its guard is
+    // `s.cardId === id`) and acts on all v.length rows, so the run claimed more
+    // work than it declared: intended 15,876 against written 14,827 + skipped
+    // 5,120 on the 2026-08-25 bowman run, over by 4,071.
+    //
+    // The reconciler clamped that difference at zero and printed the total as a
+    // balanced equation, so it read as green. Count what the loop will actually
+    // touch, using the loop's own predicate, and the two cannot drift again.
+    const surplus = dupes.reduce((a, [id, v]) => a + v.filter((r) => r.cardId !== id).length, 0);
+    const orphanGroups = dupes.filter(([id, v]) => !v.some((r) => r.cardId === id)).length;
     intended += surplus;
 
     console.log("  " + year + "  scanned " + scanned.toLocaleString() +
                 "  canonical slugs " + groups.size.toLocaleString() +
                 "  slugs with shadows " + dupes.length.toLocaleString() +
-                "  surplus rows " + surplus.toLocaleString());
+                "  surplus rows " + surplus.toLocaleString() +
+                "  groups with no canonical row " + orphanGroups.toLocaleString());
 
     // Classify the surplus before deleting any of it. The two mechanisms need
     // different handling: a vendor-keyed shadow can be addressed and deleted
@@ -121,6 +137,10 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
     }
 
     for (const [id, rowsForId] of dupes) {
+      // The rows this group will act on -- the same predicate `surplus` counted
+      // and the retire loop guards on. Named once so the three cannot diverge.
+      const toRetire = rowsForId.filter((r) => r.cardId !== id);
+      let retiredHere = 0;
       try {
         // The canonical row is the one already keyed by its own slug. If none
         // exists, promote the richest shadow rather than inventing a row.
@@ -130,7 +150,7 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
 
         // Read the FULL keeper doc; the projection above is not the whole row.
         const full = (await cat.item(keeper.id, keeper.cardId).read()).resource;
-        if (!full) { skipped += rowsForId.length - 1; continue; }
+        if (!full) { skipped += toRetire.length; continue; }
 
         // Consolidate every shadow's vendor mappings onto the keeper FIRST.
         // A CH lookup resolves by vendor cardId; losing these is a silent break.
@@ -158,14 +178,48 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
           // (id, cardId) the way the others can. Skipping it loudly beats
           // deleting the wrong row: it stays visible in the count instead of
           // disappearing into a success total.
-          if (s.cardId === undefined || s.cardId === null) { skipped++; continue; }
+          if (s.cardId === undefined || s.cardId === null) {
+            // CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY (Drew, 2026-08-25).
+            // This used to skip unconditionally, on the belief that a row
+            // written with no partition key "cannot be addressed by (id,
+            // cardId) the way the others can". It can:
+            //
+            //   cat.item(id, undefined).read() -> 200, cardId=undefined
+            //   cat.item(id, id).read()        -> 200, the canonical row
+            //
+            // Two distinct, separately addressable documents. Every one of the
+            // 5,142 left in 2026 bowman is this shape, and skipping them meant
+            // the job could never make progress on them however often it ran.
+            //
+            // Opt-in, because deleting by a partition key the SDK infers rather
+            // than one we pass explicitly is a targeting risk I have verified
+            // by READ and not by delete. And verify immediately before each
+            // delete: the row must still be the keyless one, and the canonical
+            // row must already exist, or we would be deleting the last copy.
+            if (!RETIRE_NO_PK) { skipped++; continue; }
+            try {
+              const shadow = (await cat.item(s.id, undefined).read()).resource;
+              const canonical = (await cat.item(id, id).read()).resource;
+              if (!shadow || shadow.cardId !== undefined || !canonical) { skipped++; continue; }
+              await cat.item(s.id, undefined).delete();
+              retired++; retiredHere++;
+              console.log("      RETIRED (no partition key) " + s.id);
+            } catch { failed++; }
+            continue;
+          }
           try {
             await cat.item(s.id, s.cardId).delete();
-            retired++;
+            retired++; retiredHere++;
             console.log("      RETIRED " + s.id + "  cardId=" + s.cardId);
           } catch { failed++; }
         }
-      } catch { failed += rowsForId.length - 1; }
+      } catch {
+        // Only the rows this group had NOT already retired are failures. The
+        // old `rowsForId.length - 1` charged the whole group every time, so a
+        // throw after a partial retire counted those rows twice -- once as
+        // retired, once as failed.
+        failed += Math.max(0, toRetire.length - retiredHere);
+      }
     }
   }
 
@@ -173,6 +227,10 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
   console.log("canonical rows written " + merged + "   shadows retired " + retired +
               "   skipped " + skipped + "   failed " + failed);
   if (!APPLY) { console.log("REPORT ONLY - nothing written."); return; }
+  if (!RETIRE_NO_PK && skipped) {
+    console.log("  " + skipped + " keyless duplicate rows were left in place. " +
+                "They ARE addressable -- re-run with RETIRE_NO_PARTITION_KEY=true to retire them.");
+  }
   reportWrites({ job: "dedupe-catalog-partition-shadows", intended, written: retired, skipped, failed });
 })().catch((e) => {
   console.error("FATAL:", e?.stack || e?.message || String(e));
