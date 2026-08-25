@@ -14,5 +14,8 @@
     "Head of the Class": 1,
     "Signs of the Future": 18
   },
-  "fetchedAt": "2026-08-14T00:11:19.036Z"
+  "fetchedAt": "2026-08-14T00:11:19.036Z",
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.647Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

@@ -7,5 +7,8 @@
   "setName": "1995-96 Fleer - NBA All-Stars Basketball Checklist",
   "productKey": "1995-96-fleer-nba-all-stars",
   "setKey": "fleer",
-  "rowCount": 1
+  "rowCount": 1,
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.765Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

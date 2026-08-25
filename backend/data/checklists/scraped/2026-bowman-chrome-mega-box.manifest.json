@@ -63,5 +63,8 @@
       "section": "Mega Futures",
       "cards": 25
     }
-  ]
+  ],
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.700Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

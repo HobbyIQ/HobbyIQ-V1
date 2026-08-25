@@ -13,5 +13,8 @@
     "Normal": 108,
     "Reverse Holofoil": 108
   },
-  "fetchedAt": "2026-08-14T02:59:33.751Z"
+  "fetchedAt": "2026-08-14T02:59:33.751Z",
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.689Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

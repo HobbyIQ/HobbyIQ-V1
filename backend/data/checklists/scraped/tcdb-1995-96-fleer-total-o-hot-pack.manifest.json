@@ -7,5 +7,8 @@
   "setName": "1995-96 Fleer - Total O Hot Pack Basketball Checklist",
   "productKey": "1995-96-fleer-total-o-hot-pack",
   "setKey": "fleer",
-  "rowCount": 10
+  "rowCount": 10,
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.785Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

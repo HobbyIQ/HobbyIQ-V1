@@ -1,41 +1,41 @@
 category,cardNumber,parallel,isAuto,printRun,player
-insert-class-encounters,1,Base,false,,Derrick Alston
-insert-class-encounters,2,Base,false,,Brian Grant
-insert-class-encounters,3,Base,false,,Grant Hill
-insert-class-encounters,4,Base,false,,Juwan Howard
-insert-class-encounters,5,Base,false,,Eddie Jones
-insert-class-encounters,6,Base,false,,Jason Kidd
-insert-class-encounters,7,Base,false,,Donyell Marshall
-insert-class-encounters,8,Base,false,,Anthony Miller
-insert-class-encounters,9,Base,false,,Eric Mobley
-insert-class-encounters,10,Base,false,,Eric Montross
-insert-class-encounters,11,Base,false,,Lamond Murray
-insert-class-encounters,12,Base,false,,Wesley Person
-insert-class-encounters,13,Base,false,,Eric Piatkowski
-insert-class-encounters,14,Base,false,,Khalid Reeves
-insert-class-encounters,15,Base,false,,Glenn Robinson
-insert-class-encounters,16,Base,false,,Carlos Rogers
-insert-class-encounters,17,Base,false,,Jalen Rose
-insert-class-encounters,18,Base,false,,Clifford Rozier
-insert-class-encounters,19,Base,false,,Michael Smith
-insert-class-encounters,20,Base,false,,Sharone Wright
-insert-class-encounters,21,Base,false,,Brent Barry
-insert-class-encounters,22,Base,false,,Jason Caffey
-insert-class-encounters,23,Base,false,,Randolph Childress
-insert-class-encounters,24,Base,false,,Kevin Garnett
-insert-class-encounters,25,Base,false,,Alan Henderson
-insert-class-encounters,26,Base,false,,Antonio McDyess
-insert-class-encounters,27,Base,false,,Ed O'Bannon
-insert-class-encounters,28,Base,false,,Cherokee Parks
-insert-class-encounters,29,Base,false,,Theo Ratliff
-insert-class-encounters,30,Base,false,,Bryant Reeves
-insert-class-encounters,31,Base,false,,Shawn Respert
-insert-class-encounters,32,Base,false,,Joe Smith
-insert-class-encounters,33,Base,false,,Jerry Stackhouse
-insert-class-encounters,34,Base,false,,Damon Stoudamire
-insert-class-encounters,35,Base,false,,Bob Sura
-insert-class-encounters,36,Base,false,,Kurt Thomas
-insert-class-encounters,37,Base,false,,Gary Trent
-insert-class-encounters,38,Base,false,,Rasheed Wallace
-insert-class-encounters,39,Base,false,,Eric Williams
-insert-class-encounters,40,Base,false,,Corliss Williamson
+insert-class-encounters,1,Class Encounters,false,,Derrick Alston
+insert-class-encounters,2,Class Encounters,false,,Brian Grant
+insert-class-encounters,3,Class Encounters,false,,Grant Hill
+insert-class-encounters,4,Class Encounters,false,,Juwan Howard
+insert-class-encounters,5,Class Encounters,false,,Eddie Jones
+insert-class-encounters,6,Class Encounters,false,,Jason Kidd
+insert-class-encounters,7,Class Encounters,false,,Donyell Marshall
+insert-class-encounters,8,Class Encounters,false,,Anthony Miller
+insert-class-encounters,9,Class Encounters,false,,Eric Mobley
+insert-class-encounters,10,Class Encounters,false,,Eric Montross
+insert-class-encounters,11,Class Encounters,false,,Lamond Murray
+insert-class-encounters,12,Class Encounters,false,,Wesley Person
+insert-class-encounters,13,Class Encounters,false,,Eric Piatkowski
+insert-class-encounters,14,Class Encounters,false,,Khalid Reeves
+insert-class-encounters,15,Class Encounters,false,,Glenn Robinson
+insert-class-encounters,16,Class Encounters,false,,Carlos Rogers
+insert-class-encounters,17,Class Encounters,false,,Jalen Rose
+insert-class-encounters,18,Class Encounters,false,,Clifford Rozier
+insert-class-encounters,19,Class Encounters,false,,Michael Smith
+insert-class-encounters,20,Class Encounters,false,,Sharone Wright
+insert-class-encounters,21,Class Encounters,false,,Brent Barry
+insert-class-encounters,22,Class Encounters,false,,Jason Caffey
+insert-class-encounters,23,Class Encounters,false,,Randolph Childress
+insert-class-encounters,24,Class Encounters,false,,Kevin Garnett
+insert-class-encounters,25,Class Encounters,false,,Alan Henderson
+insert-class-encounters,26,Class Encounters,false,,Antonio McDyess
+insert-class-encounters,27,Class Encounters,false,,Ed O'Bannon
+insert-class-encounters,28,Class Encounters,false,,Cherokee Parks
+insert-class-encounters,29,Class Encounters,false,,Theo Ratliff
+insert-class-encounters,30,Class Encounters,false,,Bryant Reeves
+insert-class-encounters,31,Class Encounters,false,,Shawn Respert
+insert-class-encounters,32,Class Encounters,false,,Joe Smith
+insert-class-encounters,33,Class Encounters,false,,Jerry Stackhouse
+insert-class-encounters,34,Class Encounters,false,,Damon Stoudamire
+insert-class-encounters,35,Class Encounters,false,,Bob Sura
+insert-class-encounters,36,Class Encounters,false,,Kurt Thomas
+insert-class-encounters,37,Class Encounters,false,,Gary Trent
+insert-class-encounters,38,Class Encounters,false,,Rasheed Wallace
+insert-class-encounters,39,Class Encounters,false,,Eric Williams
+insert-class-encounters,40,Class Encounters,false,,Corliss Williamson
