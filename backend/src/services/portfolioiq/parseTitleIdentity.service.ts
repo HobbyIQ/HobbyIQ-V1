@@ -126,6 +126,67 @@ const DEFAULT_CARD_NUMBER_RE =
 const STANDALONE_CARD_NUMBER_RE =
   /(?:^|\s)(\d{1,4})(?=\s+(?:PSA|BGS|SGC|CGC|BVG|HGA|GEM|MINT|NM|RC|ROOKIE|GRADED|RAW|$))/i;
 
+// CF-A-GRADE-IS-NOT-A-CARD-NUMBER (Drew, 2026-08-24). The regex above has a
+// lookahead but no lookbehind, so on a title with no `#` it reads the GRADE:
+//
+//   "1972 Icee Bear Set Break Wilt Chamberlain PSA 9 MINT"  -> cardNumber "9"
+//   "... Wilt Chamberlain SGC 8 NM-MT"                      -> cardNumber "8"
+//   "CGC 10 GEM MINT Entei ... Movie Promo 34"              -> cardNumber "10"
+//
+// "9" is followed by MINT, which is on the follower list, so it matched. The
+// damage is not one bad field: it SPLITS ONE CARD INTO ONE ROW PER GRADE, so a
+// single Wilt Chamberlain became cards #7, #8, #9 and #10, each with its own
+// comp pool. Caught in a dry run before any row was written.
+//
+// The discriminator is the token BEFORE the number. A number directly after a
+// grading company or a condition word is that company's grade.
+const GRADER_BEFORE_NUMBER = new Set([
+  "PSA", "BGS", "SGC", "CGC", "BVG", "HGA", "KSA", "GMA", "ACE", "TAG", "RCG",
+  "ISA", "CSG", "AGS", "RAW", "GEM", "MINT", "PRISTINE", "GRADE", "GRADED",
+]);
+// Condition vocabulary, hyphens removed so "EX-MT" and "NM-MINT" both land
+// here. Two uses, and enumerating the family beats enumerating its members:
+//   1. "PSA EX-MT 6" -- the token before the number is the condition, not the
+//      grader, so a grader-only check missed it and read card number "6".
+//   2. "NR-MT" and "NM-MINT" are shaped exactly like a prefixed SKU and are
+//      printed in caps, so neither the shape test nor the caps test rejects
+//      them. Both halves being condition words does.
+const CONDITION_WORDS = new Set([
+  "NR", "NM", "MT", "EX", "VG", "GD", "PR", "FR", "PO", "MINT", "NEAR", "GEM",
+  "POOR", "FAIR", "GOOD", "VERY", "EXMT", "NMMT", "NRMT", "NMMINT", "NRMINT",
+  "EXMINT", "GEMMT", "VGEX", "GDVG", "MTNM", "NRMINT", "AUTHENTIC", "ALTERED",
+]);
+// Followers that make a bare number card-number-shaped, per CF-CARDNUM-STANDALONE.
+// Matched by prefix so "NM-MT" counts via "NM".
+const NUMBER_FOLLOWERS = [
+  "PSA", "BGS", "SGC", "CGC", "BVG", "HGA", "GEM", "MINT", "NM", "RC",
+  "ROOKIE", "GRADED", "RAW",
+];
+
+/** Bare card number with no '#', skipping grades and years.
+ *  Written as a token walk rather than a lookbehind: the preceding-token test
+ *  is a set membership, and string comparison does not have escape bugs. */
+function standaloneCardNumber(title: string): string | null {
+  const toks = String(title).split(/\s+/).filter(Boolean);
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i].replace(/[^0-9]/g, "");
+    if (!tok || tok.length > 4 || tok !== toks[i]) continue;
+    // A 4-digit token in year range, with no '#' to make it explicit, is the
+    // set year far more often than it is card #1972.
+    const n = Number(tok);
+    if (tok.length === 4 && n >= 1900 && n <= 2035) continue;
+    const prev = i > 0 ? toks[i - 1].toUpperCase().replace(/[^A-Z]/g, "") : "";
+    if (GRADER_BEFORE_NUMBER.has(prev) || CONDITION_WORDS.has(prev)) continue;
+    // A follower must actually be present. End-of-string does NOT qualify: in
+    // "2025 Bowman Draft CPA-EW Eli Willits Yellow Refractor Auto 75" the
+    // trailing 75 would otherwise win and pre-empt the prefixed rule, which is
+    // the one that knows the card number is CPA-EW.
+    const next = i + 1 < toks.length ? toks[i + 1].toUpperCase() : "";
+    if (next && NUMBER_FOLLOWERS.some((f) => next.startsWith(f))) return tok;
+  }
+  return null;
+}
+
 // CF-STANDALONE-PREFIXED-CARDNUMBER (Drew, 2026-08-24). The two regexes above
 // cover "#SMLB-10" and a bare "194", but not a PREFIXED number with no hash:
 //
@@ -144,6 +205,13 @@ const NOT_A_CARD_NUMBER = new Set([
   "ALL-STAR", "ALL-STARS", "SET-BREAK", "ON-CARD", "EX-MT", "NM-MT", "GEM-MT",
   "VG-EX", "PO-FR", "GD-VG", "ONE-OF", "SHORT-PRINT", "HALL-OF", "DIE-CUT",
   "MULTI-SPORT", "RE-PACK", "PRE-SALE", "LOW-POP", "HIGH-END", "MINI-DIAMOND",
+  // CF-GAME-USED-IS-NOT-A-SKU (Drew, 2026-08-24). "Game-Used" fits the shape
+  // exactly -- 4 letters, hyphen, 4 alphanumerics -- so every 2001 Fleer
+  // Legacy relic resolved to card number "GAME-USED", collapsing every relic
+  // in the set onto one row. Same for "Game-Worn".
+  "GAME-USED", "GAME-WORN", "GAME-ISSUED", "PLAYER-WORN", "TAILOR-MADE",
+  "BLACK-LABEL", "DUAL-AUTO", "TRIPLE-AUTO", "BOX-BREAK", "CASE-BREAK",
+  "TEAM-SET", "TOP-LOADER", "ONE-TOUCH", "TRI-COLOR", "TWO-COLOR",
 ]);
 const STANDALONE_PREFIXED_CARD_NUMBER_RE = /(?:^|\s)([A-Z]{2,6}-[A-Z0-9]{1,6})(?=\s|$)/i;
 
@@ -479,8 +547,8 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
   // CF-CARDNUM-STANDALONE fallback — only tried when the primary #-prefix
   // regex didn't fire. Won't match print runs (leading `/` blocked).
   if (!cardNumberRe) {
-    const m2 = title.match(STANDALONE_CARD_NUMBER_RE);
-    if (m2) return m2[1].toUpperCase();
+    const m2 = standaloneCardNumber(title);
+    if (m2) return m2;
     // CF-STANDALONE-PREFIXED-CARDNUMBER: a prefixed number with no '#'.
     // "2025 Topps Stars of MLB SMLB-10 Shohei Ohtani" and
     // "2025 Bowman Draft CPA-EW Eli Willits" both state it plainly.
@@ -488,7 +556,14 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
     if (m3) {
       const tok = m3[1].toUpperCase();
       const suffix = tok.slice(tok.indexOf("-") + 1);
-      const plausible = /\d/.test(suffix) || suffix.length <= 4;
+      // A digitless suffix (CPA-EW) is only credible when the token is printed
+      // in caps as SKUs are; "Game-Used" is title case and is a description.
+      const asWritten = m3[1];
+      const halves = tok.split("-");
+      const bothCondition = halves.length === 2 &&
+        CONDITION_WORDS.has(halves[0]) && CONDITION_WORDS.has(halves[1]);
+      const plausible = !bothCondition &&
+        (/\d/.test(suffix) || (suffix.length <= 4 && asWritten === asWritten.toUpperCase()));
       if (plausible && !NOT_A_CARD_NUMBER.has(tok)) return tok;
     }
   }
