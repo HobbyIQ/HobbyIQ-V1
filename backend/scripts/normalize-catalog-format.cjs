@@ -16,6 +16,7 @@
 // no coordination and no lost updates.
 const { CosmosClient } = require("@azure/cosmos");
 const { canonicalCardName, canonicalSetName, titleCaseWords } = require(require("node:path").resolve(__dirname, "..", "dist/services/catalog/canonicalCardName.js"));
+const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // Work units come from partitions.json: {y, lo, hi} where lo/hi optionally
@@ -215,4 +216,17 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
   // Loud, because the previous run's silence on exactly this is why 9,081,247
   // rows were reported done when they had not been written.
   if (exhausted) console.error(`[${TAG}] WARNING ${exhausted} rows exhausted ${MAX_ATTEMPTS} attempts and are STILL UNWRITTEN`);
+
+  // ...and loud is still not enough. On 2026-08-25 all 28 reporting slots
+  // printed that WARNING, together dropping 3,805,355 of 8,944,939 intended
+  // writes to throttling, and every one of them exited 0 and went green. A
+  // warning nobody is paged on is the same as silence.
+  //
+  // Reconciling makes the shortfall the exit code. That is safe to do here
+  // BECAUSE this job is convergent: it re-reads every row and skips the ones
+  // already normalised (`same`), so a row dropped this run is simply still
+  // pending next run. Red means "run me again", not "the work is lost".
+  if (APPLY) {
+    reportWrites({ job: `normalize-catalog-format ${TAG}`, intended: changed, written: wrote, failed });
+  }
 })().catch((e) => { console.error(`[${TAG}] FATAL:`, e?.message || String(e)); process.exit(3); });

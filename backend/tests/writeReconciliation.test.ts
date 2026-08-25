@@ -63,3 +63,35 @@ describe("a green run is not a data flow", () => {
     expect(r.shortfallPct).toBe(0);
   });
 });
+
+describe("counters that do not add up", () => {
+  it("catches the dedupe run that printed an equation which was false", () => {
+    // Verbatim from run 32855422642, which exited 0 and printed:
+    //   "reconciled: intended 15,876 = written 14,827 + skipped 5,120"
+    // 14,827 + 5,120 is 19,947. Clamping the difference at zero made an
+    // accounting bug look like a clean reconciliation.
+    const r = reconcileWrites({
+      job: "dedupe-catalog-partition-shadows",
+      intended: 15876, written: 14827, skipped: 5120, failed: 0,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.overAccounted).toBe(4071);
+    expect(process.exitCode).toBe(4);
+    expect(r.message).toContain("COUNTERS DO NOT ADD UP");
+    // and it must NOT claim a shortfall it does not have
+    expect(r.message).not.toContain("WORK VANISHED");
+  });
+
+  it("still reports a plain shortfall as a shortfall, not as over-accounting", () => {
+    const r = reconcileWrites({ job: "x", intended: 100000, written: 98000 });
+    expect(r.overAccounted).toBe(0);
+    expect(r.message).toContain("WORK VANISHED");
+  });
+
+  it("a job that balances exactly reports no over-accounting", () => {
+    const r = reconcileWrites({ job: "x", intended: 100, written: 60, skipped: 40 });
+    expect(r.ok).toBe(true);
+    expect(r.overAccounted).toBe(0);
+    expect(process.exitCode).toBe(0);
+  });
+});

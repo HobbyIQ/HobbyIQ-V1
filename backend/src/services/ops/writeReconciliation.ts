@@ -42,6 +42,9 @@ export interface WriteReconciliation {
 export interface ReconciliationResult {
   ok: boolean;
   unaccounted: number;
+  /** Rows claimed BEYOND what was intended. Non-zero means a counter is
+   *  double-counting and none of the other numbers can be trusted. */
+  overAccounted: number;
   shortfallPct: number;
   message: string;
 }
@@ -62,9 +65,19 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
   // Everything intended must be accounted for as written, deliberately
   // skipped, or explicitly failed. What is left over is work that vanished
   // without anyone naming it -- which is exactly the 9,081,247 case.
-  const unaccounted = Math.max(0, intended - written - skipped - failed);
+  const accounted = written + skipped + failed;
+  const unaccounted = Math.max(0, intended - accounted);
+  // The mirror image, and previously invisible: a job can also claim MORE than
+  // it set out to do. dedupe-catalog-partition-shadows printed
+  //   "reconciled: intended 15,876 = written 14,827 + skipped 5,120"
+  // and 14,827 + 5,120 is 19,947, not 15,876. Clamping the difference at zero
+  // made that read as a clean reconciliation and printed an equation that was
+  // arithmetically false. Over-accounting means a counter is being incremented
+  // on a path it does not own, so the shortfall arithmetic is measuring
+  // nothing — it has to be as loud as a shortfall, not quieter.
+  const overAccounted = Math.max(0, accounted - intended);
   const shortfallPct = intended > 0 ? unaccounted / intended : 0;
-  const ok = unaccounted === 0 || shortfallPct <= tolerance;
+  const ok = (unaccounted === 0 || shortfallPct <= tolerance) && overAccounted === 0;
 
   const pct = (n: number) => (n * 100).toFixed(2) + "%";
   const num = (n: number) => n.toLocaleString();
@@ -73,6 +86,7 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
     return {
       ok: true,
       unaccounted,
+      overAccounted,
       shortfallPct,
       message:
         `[${input.job}] reconciled: intended ${num(intended)} = written ${num(written)}` +
@@ -80,6 +94,27 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
         (failed ? ` + failed ${num(failed)}` : "") +
         (unaccounted ? ` (${num(unaccounted)} unaccounted, within tolerance)` : ""),
     };
+  }
+
+  if (overAccounted > 0) {
+    const overMessage = [
+      "",
+      "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      `!! ${input.job}: COUNTERS DO NOT ADD UP`,
+      "!!",
+      `!!   intended     ${num(intended).padStart(12)}`,
+      `!!   written      ${num(written).padStart(12)}`,
+      `!!   skipped      ${num(skipped).padStart(12)}`,
+      `!!   failed       ${num(failed).padStart(12)}`,
+      `!!   OVER by      ${num(overAccounted).padStart(12)}   more claimed than intended`,
+      "!!",
+      "!! A counter is being incremented on a path it does not own, so none of",
+      "!! these numbers can be trusted — including the ones that look fine.",
+      "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+      "",
+    ].join("\n");
+    if (typeof process !== "undefined") process.exitCode = 4;
+    return { ok: false, unaccounted, overAccounted, shortfallPct, message: overMessage };
   }
 
   const message = [
@@ -102,7 +137,7 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
   // Red, not green. The dashboard only reads this.
   if (typeof process !== "undefined") process.exitCode = 4;
 
-  return { ok: false, unaccounted, shortfallPct, message };
+  return { ok: false, unaccounted, overAccounted, shortfallPct, message };
 }
 
 /** Print the verdict on the right stream and return it. */
