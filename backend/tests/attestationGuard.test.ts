@@ -56,3 +56,22 @@ describe("attestation guard holds back sales whose title names a variant", () =>
     expect(unparsedVariantReason({ title: "2001 SP Legendary Cuts Baseball #60 Roberto Clemente Pittsburgh Pirates" })).toBeNull();
   });
 });
+
+describe("the -fractor family is parallel vocabulary", () => {
+  it("holds a Packfractor rather than calling it base", () => {
+    // From the refractor repair dry run. The parser reads this as Base, so
+    // without the guard the repair would file a /89 parallel into base.
+    expect(unparsedVariantReason({
+      title: "#CPA-BA Brailyn Antunez 2026 Bowman SN Milwaukee Brewers Chrome PackFractor /89 - Raw",
+      parsedParallel: "Base", parsedIsAuto: true, parsedPrintRun: 89,
+    })).toBe("parallel word");
+  });
+
+  it("still lets a genuinely plain chrome auto through", () => {
+    expect(unparsedVariantReason({
+      title: "2021 Bowman Chrome Prospects Baseball #CPA-AMA Base",
+      setName: "2021 Bowman Chrome Prospects Baseball",
+      parsedParallel: "Base", parsedIsAuto: true,
+    })).toBeNull();
+  });
+});
