@@ -111,6 +111,7 @@ on:
           - retire-flattened-attestations
           - repair-refractor-mislabel
           - merge-bare-colour-parallels
+          - dedupe-catalog-partition-shadows
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -148,6 +149,11 @@ on:
         description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool)."
         required: false
         default: "refractor"
+        type: string
+      setkey_like:
+        description: "For dedupe-catalog-partition-shadows: substring the setKey must contain (e.g. bowman)."
+        required: false
+        default: "bowman"
         type: string
       years:
         description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
@@ -385,6 +391,8 @@ jobs:
           # repair-refractor-mislabel: "refractor" (plain segment only) or
           # "all" (every slug whose parallel disagrees with its own title).
           SCOPE: ${{ inputs.scope }}
+          # dedupe-catalog-partition-shadows: which products to sweep.
+          SETKEY_LIKE: ${{ inputs.setkey_like }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
