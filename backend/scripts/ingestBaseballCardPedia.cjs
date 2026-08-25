@@ -20,10 +20,25 @@ const argOf = (name, def) => {
   const a = process.argv.find((x) => x.startsWith(`--${name}=`));
   return a ? a.split("=").slice(1).join("=") : def;
 };
+const SPORT = (argOf("sport", "baseball") || "baseball").toLowerCase();
 const APPLY = process.argv.includes("--apply");
 const URL = argOf("url");
 const YEAR = Number(argOf("year"));
 const SET_KEY = argOf("setKey");
+// CF-BCP-SPORT-IS-AN-ARGUMENT (Drew, 2026-08-24). The sport was
+// hardcoded "baseball" here and in the slug below, which is fine for a
+// site called BaseballCardPedia right up until you point it at a
+// multi-sport set. 1951 Berk Ross ingested cleanly and landed at
+// hiq:baseball:1951:berk-ross-multi-sport:... while every sale for it
+// lives at hiq:multi-sport:..., so 100 of 105 sales stayed orphaned and
+// the rows had to be rewritten by hand. Same trap waits on every hockey,
+// basketball and multi-sport page BCP carries.
+if (SPORT === "baseball" && /multi-sport|hockey|basketball|football|soccer|boxing/.test(String(SET_KEY || ""))) {
+  console.error(`[bcp-ingest] REFUSING: setKey "${SET_KEY}" names a sport but --sport was left at baseball.`);
+  console.error(`[bcp-ingest] Pass --sport=<sport> explicitly. Berk Ross 1951 landed under baseball this way and`);
+  console.error(`[bcp-ingest] left 100 of 105 sales orphaned until the rows were rewritten.`);
+  process.exit(1);
+}
 if (!URL || !YEAR || !SET_KEY) {
   console.error("Missing --url --year --setKey");
   process.exit(1);
@@ -230,7 +245,7 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   const parallelSlug = sanitizeSlug(parallel.name);
   const autoSuffix = isAuto ? ":auto" : ":no-auto";
   const printRunSuffix = printRun ? `:num-${printRun}` : "";
-  const slug = `hiq:baseball:${year}:${setKey}:${cardNumSlug}:${parallelSlug || "base"}${autoSuffix}${printRunSuffix}`;
+  const slug = `hiq:${SPORT}:${year}:${setKey}:${cardNumSlug}:${parallelSlug || "base"}${autoSuffix}${printRunSuffix}`;
   const searchTokens = new Set([
     ...String(playerName).toLowerCase().split(/\s+/).filter(Boolean),
     ...setKey.split("-").filter(Boolean),
@@ -241,7 +256,7 @@ function buildCatalogRow({ year, setKey, cardNumber, playerName, parallel, print
   ].flat().filter(Boolean));
   return {
     id: slug, cardId: slug, hobbyiqCardId: slug,
-    sport: "baseball", year, cardYear: year, setKey,
+    sport: SPORT, year, cardYear: year, setKey,
     setName: setKey.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "),
     cardNumber, playerName, team: null,
     parallel: parallel.name, parallelSlug: parallelSlug || "base",
