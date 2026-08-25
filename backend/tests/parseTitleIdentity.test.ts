@@ -1354,3 +1354,52 @@ describe("serial is not a card number", () => {
     expect(parseListingIdentity("2025 Topps Black & White - Freddie Freeman #020").cardNumber).toBe("020");
   });
 });
+
+// CF-A-GRADE-IS-NOT-A-CARD-NUMBER + CF-GAME-USED-IS-NOT-A-SKU (Drew,
+// 2026-08-24). Both found by dry-running the sales resolver over 1955/1972/2001
+// and reading the rows it proposed to create, rather than by a failing test.
+// Every title below is verbatim from sold_comps.
+describe("card number extraction rejects grades, years and relic phrases", () => {
+  it("does not read a grading company's grade as the card number", () => {
+    // The damage was per-grade card splitting: one Wilt Chamberlain became
+    // cards #7, #8, #9 and #10, each with its own comp pool.
+    expect(parseListingIdentity("1972 Icee Bear Set Break Wilt Chamberlain PSA 9 MINT").cardNumber).toBeNull();
+    expect(parseListingIdentity("1972 Icee Bear Basketball Wilt Chamberlain SGC 8 NM-MT").cardNumber).toBeNull();
+    expect(parseListingIdentity("1972 Icee Bear Wilt Chamberlain PSA 7 NM").cardNumber).toBeNull();
+    expect(parseListingIdentity("1972 NFLPA IRON ONS TERRY BRADSHAW PSA 9 MINT PITTSBURGH STEELERS LOW POP RARE").cardNumber).toBeNull();
+  });
+
+  it("does not read the set year as the card number", () => {
+    expect(parseListingIdentity("CGC 10 GEM MINT Entei 2001 Black Star Movie Promo 34 Reverse Holo Pokemon Card").cardNumber).toBeNull();
+  });
+
+  it("does not read a relic phrase as a prefixed card number", () => {
+    expect(parseListingIdentity("2001 Fleer Legacy TROY GLAUS Hit Kings Game-Used Bat Relic Anaheim Angels - Raw 10").cardNumber).toBeNull();
+    expect(parseListingIdentity("2001 Fleer Legacy Barry Bonds San Francisco Giants Tailor Made Game-Worn Swatch - Raw 10").cardNumber).toBeNull();
+    expect(parseListingIdentity("Chipper Jones Game-Worn Jersey 2001 Fleer Material Issue Pinstripe Atlanta Brave - Raw 10").cardNumber).toBeNull();
+  });
+
+  it("still reads the real card numbers these guards sit next to", () => {
+    // The guards must not cost us the cases the standalone/prefixed rules exist for.
+    expect(parseListingIdentity("2023 PANINI SELECT GOLD GLITTER JALEN BRUNSON 194 PSA 10").cardNumber).toBe("194");
+    expect(parseListingIdentity("2025 Bowman Draft CPA-EW Eli Willits Yellow Refractor").cardNumber).toBe("CPA-EW");
+    expect(parseListingIdentity("2025 Topps Stars of MLB SMLB-10 Shohei Ohtani").cardNumber).toBe("SMLB-10");
+    expect(parseListingIdentity("1955 Parkhurst Syl Apps #28 PSA 2 GD").cardNumber).toBe("28");
+    expect(parseListingIdentity("1955 Red Man Tobacco #22 Hank Bauer Sports Trading Card  - Raw 10").cardNumber).toBe("22");
+  });
+});
+
+// Second round, from re-running the same dry run after the first fix: the
+// condition VOCABULARY is the family, not the individual compounds.
+describe("condition compounds are never card numbers", () => {
+  it("rejects hyphenated condition grades printed in caps", () => {
+    expect(parseListingIdentity("1972 ICEE BEAR DENNIS AWTREY 76ERS NR-MT 498104 (KYCARDS) - Raw 10").cardNumber).toBeNull();
+    expect(parseListingIdentity("1972 MILTON BRADLEY  John Hiller  DETROIT TIGERS  NM-MINT  A - Raw 10").cardNumber).toBeNull();
+  });
+
+  it("does not read the numeric grade that follows a condition word", () => {
+    // "PSA EX-MT 6" -- the grader check alone missed this, because the token
+    // immediately before the 6 is the condition, not the grading company.
+    expect(parseListingIdentity("1972 Comspec Bob Lanier PSA EX-MT 6").cardNumber).toBeNull();
+  });
+});

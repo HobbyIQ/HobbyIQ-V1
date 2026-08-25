@@ -35,6 +35,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const { parseListingIdentity } = require(path.join(ROOT, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 const { canonicalCardName } = require(path.join(ROOT, "dist/services/catalog/canonicalCardName.js"));
+const { unparsedVariantReason } = require(path.join(ROOT, "dist/services/catalog/attestationGuard.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const MIN_SALES = Number(process.env.MIN_SALES || 2);
@@ -81,7 +82,8 @@ function tokensFor(parts) {
   const params = YEARS.map((y, i) => ({ name: "@y" + i, value: y }));
 
   const groups = new Map();
-  let scanned = 0, numbered = 0, noPlayer = 0, noSet = 0;
+  let scanned = 0, numbered = 0, noPlayer = 0, noSet = 0, held = 0;
+  const heldReasons = new Map();
   let token;
 
   do {
@@ -113,6 +115,19 @@ function tokensFor(parts) {
       if (parsed.cardNumber) { numbered++; continue; }
       if (!r.playerName) { noPlayer++; continue; }
 
+      // CF-DO-NOT-ATTEST-A-BASE-ROW-OVER-A-VARIANT (2026-08-24). The first run
+      // of this script hardcoded parallel "Base", isAuto false and printRun
+      // null, on the assumption that a set with no card numbers is a 1950s set
+      // with no parallels either. That holds for Red Man and Berk Ross. It does
+      // NOT hold for modern cards, where a missing card number usually means
+      // the PARSER missed it -- so 878 rows carrying 18,134 sales were minted
+      // as plain base from titles reading "Blue Foil /99" and "Rookie Auto /50".
+      const flatten = unparsedVariantReason({
+        title: r.title, setName: r.setName, parsedParallel: parsed.parallel,
+        parsedIsAuto: parsed.isAuto, parsedPrintRun: parsed.printRun,
+      });
+      if (flatten) { held++; heldReasons.set(flatten, (heldReasons.get(flatten) || 0) + 1); continue; }
+
       const setKey = slugify(r.setName || "");
       if (!setKey || setKey === "unknown") { noSet++; continue; }
 
@@ -132,6 +147,8 @@ function tokensFor(parts) {
   console.log("");
   console.log("scanned " + scanned + "   numbered(other pass) " + numbered +
               "   noPlayer " + noPlayer + "   noSetName " + noSet);
+  console.log("held back (title names a variant we did not parse): " + held +
+              "   [" + [...heldReasons].map(([k, v]) => k + " " + v).join(", ") + "]");
   console.log("identities " + groups.size + "   attested(>=" + MIN_SALES + ") " + attested.length +
               "   single-sale held back " + heldBack);
   for (const g of attested.slice().sort((a, b) => b.sales.length - a.sales.length).slice(0, 8)) {

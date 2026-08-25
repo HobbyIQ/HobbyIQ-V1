@@ -108,6 +108,7 @@ on:
           - normalize-catalog-format
           - attest-unnumbered-by-player
           - resolve-sales-without-identity
+          - retire-flattened-attestations
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
