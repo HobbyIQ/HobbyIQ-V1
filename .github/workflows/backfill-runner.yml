@@ -112,6 +112,8 @@ on:
           - repair-refractor-mislabel
           - merge-bare-colour-parallels
           - dedupe-catalog-partition-shadows
+          - rehome-catalog-rows-to-own-partition
+          - reslug-tcg-out-of-sports-namespace
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -159,6 +161,26 @@ on:
         description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
         required: false
         default: ""
+      limit:
+        description: "For rehome-catalog-rows-to-own-partition: stop after N rows are moved. 0 = no limit. Use a small number to prove a slice before running it wide."
+        required: false
+        default: "0"
+        type: string
+      scan_limit:
+        description: "For rehome-catalog-rows-to-own-partition: stop SCANNING after N rows. Lets a dry-run size a slice without walking all of it. 0 = no limit."
+        required: false
+        default: "0"
+        type: string
+      sports:
+        description: "For reslug-tcg-out-of-sports-namespace: which non-sport categories to sweep (comma-separated). Empty = all of them."
+        required: false
+        default: ""
+        type: string
+      retire_no_partition_key:
+        description: "For dedupe-catalog-partition-shadows: also retire duplicate rows that carry NO partition key. They ARE addressable; off by default because it is a delete."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -393,6 +415,14 @@ jobs:
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}
+          # CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW: bound the
+          # re-home so a slice can be proven before it runs across 17.7M rows.
+          LIMIT: ${{ inputs.limit }}
+          SCAN_LIMIT: ${{ inputs.scan_limit }}
+          # reslug-tcg-out-of-sports-namespace: which non-sport categories.
+          SPORTS: ${{ inputs.sports }}
+          # dedupe-catalog-partition-shadows: opt in to deleting keyless rows.
+          RETIRE_NO_PARTITION_KEY: ${{ inputs.retire_no_partition_key == true && 'true' || 'false' }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
