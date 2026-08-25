@@ -230,9 +230,16 @@ const CHROME_PRODUCT_RE =
   /bowman\s+chrome|topps\s+chrome|chrome\s+prospect|chrome\s+auto|bowman[^.]*chrome|#?\b(?:CPA|BCPA|BDPA|BCDA|BCRA|TCRA|FCA|CDA)-[A-Z0-9]+/i;
 
 /** Team names that contain a colour word. Stripped before any bare-colour
- *  read, because "Blue Jays" is a team and "Blue" is a parallel. */
+ *  read, because "Blue Jays" is a team and "Blue" is a parallel.
+ *
+ *  Insert SET names carry colours too, and cost more than teams do. Measured
+ *  on 8,500 sampled rows: "2010 Topps Chrome Carlos Santana Red Hot Rookies
+ *  Refractor #RHR-1" was read as a Red Refractor, when it is a plain Refractor
+ *  of the Red Hot Rookies insert. The colour belongs to the insert's NAME, not
+ *  to the card's finish. Same shape as the team case, so the same treatment:
+ *  remove the phrase by name before any colour is read. */
 const TEAM_COLOUR_NOISE_RE =
-  /\b(blue\s+jays?|red\s+sox|white\s+sox|green\s+bay|red\s+wings?|blue\s+jackets?|golden\s+knights?|red\s+raiders?|blue\s+devils?|red\s+bulls?|orange\s+bowl|black\s?hawks?|white\s+caps?)\b/gi;
+  /\b(blue\s+jays?|red\s+sox|white\s+sox|green\s+bay|red\s+wings?|blue\s+jackets?|golden\s+knights?|red\s+raiders?|blue\s+devils?|red\s+bulls?|orange\s+bowl|black\s?hawks?|white\s+caps?|red\s+hot|blue\s+chip\w*|black\s+gold|gold\s+rush|gold\s+standard|gold\s+label|green\s+machine|purple\s+reign|red\s+zone|blue\s+ribbon|white\s+whale|black\s+friday|red\s+carpet|golden\s+age|silver\s+slugger|green\s+monster|black\s+diamond|white\s+sox|red\s+letter)\b/gi;
 /** Phrases that mean the card is NOT signed, despite containing "auto".
  *
  *  CF-NON-AUTO-IS-NOT-AUTO (2026-08-19). This only listed "auto relic" and
