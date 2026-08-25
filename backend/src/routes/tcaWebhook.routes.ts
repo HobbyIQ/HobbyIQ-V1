@@ -25,6 +25,42 @@ import { Router, Request, Response } from "express";
 import express from "express";
 import crypto from "crypto";
 import { persistVendorSalesToPool } from "../services/portfolioiq/persistVendorSalesToPool.service.js";
+import { matchKnownProductLine } from "../services/portfolioiq/hobbyIqCardId.service.js";
+
+/**
+ * CF-ONE-PIECE-IS-NOT-A-BOWMAN-CARD (Drew, 2026-08-25). Decide whether TCA's
+ * `card_set` may be trusted as a setName hint.
+ *
+ * This is the other half of CF-SPORT-PRIORITY-INVERT. That fix stopped trusting
+ * TCA's `sport` when the title said otherwise, but left `card_set` trusted
+ * absolutely -- and TCA mis-categorises a TCG card wholesale, not one field at
+ * a time. Still arriving as of 2026-08-23:
+ *
+ *   "2024 One Piece OP07 Japanese Manga Alternate Art #051 Boa Hancock"
+ *     -> hiq:anime-tcg:2024:bowman:051:base:no-auto
+ *
+ * 30,829 One Piece and Naruto sales filed under setKey `bowman`, polluting the
+ * most valuable namespace we have. Our own title parse gets this right
+ * unaided -- inferSetKeyFromTitle returns "Unknown" for every one of them -- so
+ * the vendor hint is the ONLY thing introducing the error.
+ *
+ * @param catSport  non-sport category detected from the title, or null
+ * @param vendorSet TCA's card_set value
+ * @returns the hint to use, or null to drop it and let the title parse speak
+ */
+export function vendorSetNameHint(catSport: string | null, vendorSet: string): string | null {
+  const set = String(vendorSet ?? "").trim();
+  if (!set) return null;
+  // A sports title keeps the vendor's set: that is the case it is good at.
+  if (!catSport) return set;
+  // The title says TCG / non-sport. A card_set naming a real SPORTS product
+  // line is vendor mis-categorisation by definition -- drop it.
+  if (matchKnownProductLine(set) !== null) return null;
+  // A set we do not recognise as a sports line is still useful: "One Piece
+  // OP07" is a genuine hint and must survive. Dropping every hint on TCG rows
+  // would trade one bug for a worse one.
+  return set;
+}
 
 const router = Router();
 
@@ -241,6 +277,9 @@ async function processBatchAsync(
     return null;
   }
   let inserted = 0, deduped = 0, skipped = 0, errors = 0;
+  // Vendor card_set values discarded because the title says TCG and the value
+  // named a sports product. Counted so the mis-categorisation stays visible.
+  let tcgSetHintDropped = 0;
   // Skip-reason instrumentation (Drew, 2026-08-02). Track WHERE we're
   // losing rows so we can prioritize which parser gate to fix first.
   const skipReasons = {
@@ -325,7 +364,29 @@ async function processBatchAsync(
       hint.sport = String(t.sport).toLowerCase();
     }
     if (t.card_number) hint.cardNumber = String(t.card_number);
-    if (t.card_set) hint.setName = String(t.card_set);
+    // CF-ONE-PIECE-IS-NOT-A-BOWMAN-CARD (Drew, 2026-08-25). The other half of
+    // CF-SPORT-PRIORITY-INVERT above. That fix stopped trusting TCA's `sport`
+    // when the title says otherwise, but left `card_set` trusted absolutely --
+    // and TCA mis-categorises a TCG card wholesale, not one field at a time.
+    // The result, still arriving as of 2026-08-23:
+    //
+    //   "2024 One Piece OP07 Japanese Manga Alternate Art #051 Boa Hancock"
+    //     -> hiq:anime-tcg:2024:bowman:051:base:no-auto
+    //
+    // 30,829 One Piece and Naruto sales filed under setKey `bowman`, polluting
+    // the single most valuable namespace we have. Our own title parse gets this
+    // right on its own -- inferSetKeyFromTitle returns "Unknown" for all of
+    // them -- so the vendor hint is the only thing introducing the error.
+    //
+    // When the title has already told us this is a TCG/non-sport card, a
+    // `card_set` naming a real SPORTS product line is vendor mis-categorisation
+    // by definition. Drop it and let the title parse speak. A card_set we do
+    // not recognise as a sports line is still passed through: "One Piece OP07"
+    // is a genuinely useful hint and must survive.
+    const vendorSet = t.card_set ? String(t.card_set) : "";
+    const keptSet = vendorSetNameHint(catSport, vendorSet);
+    if (keptSet) hint.setName = keptSet;
+    else if (vendorSet) tcgSetHintDropped++;
     // TCA payload doesn't split parallel from card_set (grade/grader are
     // separate fields, but parallel is baked into set/features). Leave
     // parallel + printRun + isAuto to fall through to title-parse.
@@ -357,7 +418,7 @@ async function processBatchAsync(
     endpoint: endpointLabel,
     event_type: payload?.event ?? null,
     batch_size: rows.length,
-    inserted, deduped, skipped, errors,
+    inserted, deduped, skipped, errors, tcgSetHintDropped,
     skipReasons,
     skipSamples,
     elapsedMs,
