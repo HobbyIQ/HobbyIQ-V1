@@ -97,6 +97,30 @@ async function yearsPresent(sold) {
   const total = { seen: 0, correct: 0, toBase: 0, toColour: 0, other: 0, noDest: 0, held: 0, wrote: 0, failed: 0 };
   const destCache = new Map();
 
+  // CF-THE-SCAN-CAN-BE-THROTTLED-TOO (2026-08-25). The first apply run lost 3
+  // of 8 workers to "The request rate is too large" thrown from fetchNext --
+  // not from a write. sold_comps is provisioned at 8,000 RU against
+  // card_catalog's 400,000, so 8 workers reading it in parallel saturate the
+  // container and the SDK's own retry budget (60 attempts / 300s) runs out.
+  //
+  // A throttled QUERY is the same claim as a throttled write: not now, ask
+  // again. Letting it reach the top level kills the worker and abandons every
+  // year it had not reached yet, which is how a partial run reports FATAL and
+  // looks like a code fault rather than a capacity one.
+  const queryWithRetry = async (spec, opts) => {
+    let wait = 1000;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await sold.items.query(spec, opts).fetchNext();
+      } catch (e) {
+        const throttled = /request rate is too large|429/i.test(String(e?.message));
+        if (!throttled || attempt >= 12) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
   const destExists = async (slug) => {
     if (destCache.has(slug)) return destCache.get(slug);
     let ok = false;
@@ -111,13 +135,13 @@ async function yearsPresent(sold) {
     const samples = [], missing = new Map();
 
     do {
-      const page = await sold.items.query(
+      const page = await queryWithRetry(
         { query: "SELECT c.id, c.cardId, c.title, c.hobbyiqCardId, c.cardYear FROM c " +
                  "WHERE c.cardYear = @y AND IS_STRING(c.hobbyiqCardId) " +
                  "AND CONTAINS(c.hobbyiqCardId, ':refractor:')",
           parameters: [{ name: "@y", value: year }] },
         { maxItemCount: 400, continuationToken: token },
-      ).fetchNext();
+      );
       token = page.continuationToken;
 
       for (const r of page.resources) {
@@ -168,7 +192,25 @@ async function yearsPresent(sold) {
           };
           await sold.item(r.id, r.cardId ?? r.id).replace(d);
           wrote++;
-        } catch { failed++; }
+        } catch (e) {
+          if (/request rate is too large|429/i.test(String(e?.message))) {
+            // Same claim, same answer: wait and try this row once more before
+            // charging it to failed.
+            await new Promise((res) => setTimeout(res, 2000));
+            try {
+              const d2 = (await sold.item(r.id, r.cardId ?? r.id).read()).resource;
+              if (d2) {
+                d2.hobbyiqCardId = dest;
+                d2.parallelRepairedBy = { by: "repair-refractor-mislabel", was: r.hobbyiqCardId,
+                  reason: "CF-CHROME-AUTO-DEFAULT-REFRACTOR retracted 2026-08-25", at: new Date().toISOString() };
+                await sold.item(r.id, r.cardId ?? r.id).replace(d2);
+                wrote++;
+                continue;
+              }
+            } catch { /* falls through to failed */ }
+          }
+          failed++;
+        }
       }
     } while (token);
 
