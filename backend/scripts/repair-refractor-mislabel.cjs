@@ -40,6 +40,9 @@ const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "").split(",").map(Number).filter(Boolean);
 const SLOT = Number(process.env.SLOT || 0);
 const SLOTS = Math.max(1, Number(process.env.SLOTS || 1));
+// "refractor" = only the plain-refractor segment (the original, narrow pass).
+// "all"       = every slug whose parallel segment disagrees with its title.
+const SCOPE = String(process.env.SCOPE || "refractor").toLowerCase();
 
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -73,7 +76,8 @@ async function yearsPresent(sold) {
   const rows = (await sold.items.query({
     query: "SELECT c.cardYear AS y, COUNT(1) AS n FROM c " +
            "WHERE IS_NUMBER(c.cardYear) AND IS_STRING(c.hobbyiqCardId) " +
-           "AND CONTAINS(c.hobbyiqCardId, ':refractor:') GROUP BY c.cardYear",
+           (SCOPE === "refractor" ? "AND CONTAINS(c.hobbyiqCardId, ':refractor:') " : "") +
+           "GROUP BY c.cardYear",
   }).fetchAll()).resources;
   return rows.filter((r) => r.y >= 1990 && r.y <= 2030)
     .sort((a, b) => b.n - a.n).map((r) => r.y);
@@ -138,7 +142,7 @@ async function yearsPresent(sold) {
       const page = await queryWithRetry(
         { query: "SELECT c.id, c.cardId, c.title, c.hobbyiqCardId, c.cardYear FROM c " +
                  "WHERE c.cardYear = @y AND IS_STRING(c.hobbyiqCardId) " +
-                 "AND CONTAINS(c.hobbyiqCardId, ':refractor:')",
+                 (SCOPE === "refractor" ? "AND CONTAINS(c.hobbyiqCardId, ':refractor:')" : ""),
           parameters: [{ name: "@y", value: year }] },
         { maxItemCount: 400, continuationToken: token },
       );
@@ -148,12 +152,30 @@ async function yearsPresent(sold) {
         seen++;
         const parts = String(r.hobbyiqCardId).split(":");
         const current = parts[5];
-        if (current !== "refractor") { correct++; continue; }   // a colour refractor already
+        // CF-GOLD-REFRACTOR-DOES-NOT-CONTAIN-COLON-REFRACTOR (Drew, 2026-08-25:
+        // "i did the marconi and still shows bases").
+        //
+        // The first pass scanned CONTAINS(hobbyiqCardId, ':refractor:') and
+        // only handled the segment that is EXACTLY "refractor". ':gold-
+        // refractor:' does not contain ':refractor:', so every COLOUR pool went
+        // unscanned -- and those are the pools that hurt most, because a base
+        // auto sitting in Gold prices a /50 off $9 commons:
+        //
+        //   hiq:...:cpa-mg:gold-refractor:auto   51 sales, median $10.01
+        //     "Marconi German 2026 Bowman #CPA-MG Chrome Auto Rookie 1st RC"
+        //     "2026 Bowman Chrome Prospect Autographs Marconi German #CPA-MG"
+        //   -- neither title says Gold. Both are base.
+        //
+        // SCOPE=all compares every slug's parallel segment against its own
+        // title, which is what the fix always should have been. The narrow
+        // scope stays available because it is far cheaper to re-run.
+        if (SCOPE === "refractor" && current !== "refractor") { correct++; continue; }
+        if (!current) { correct++; continue; }
 
         let parsed = {};
         try { parsed = parseListingIdentity(dedupeYear(r.title, r.cardYear)) || {}; } catch { correct++; continue; }
         const want = slugify(parsed.parallel || "base") || "base";
-        if (want === "refractor") { correct++; continue; }
+        if (want === current) { correct++; continue; }
 
         // A move is only as good as the parse behind it. The dry run found
         //   "#CPA-BA Brailyn Antunez 2026 Bowman ... Chrome PackFractor /89"
