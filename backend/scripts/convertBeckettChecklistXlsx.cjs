@@ -40,7 +40,9 @@ const SET_NAME = val("--set-name", "");
 const SPORT = val("--sport", "baseball");
 const OUT = val("--out", "");
 const SOURCE_URL = val("--source-url", "");
-if (!XLSX || !YEAR || !SET_KEY || !OUT) {
+// Only a direct run needs the CLI args; the classifier is also imported as a
+// module (see module.exports at the bottom) and must not exit on load.
+if (require.main === module && (!XLSX || !YEAR || !SET_KEY || !OUT)) {
   console.error("required: --xlsx --year --set-key --out");
   process.exit(2);
 }
@@ -140,76 +142,262 @@ const slug = (s) => String(s || "").toLowerCase()
 // in Mega Box), so match on shape rather than one literal.
 const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets", "Teams", "Checklist"]);
 
+// CF-CHECKLIST-VARIATION-IS-A-PARALLEL (Drew, 2026-08-25). Sections that name
+// the plain card of their own numbering run rather than a variant of it. These
+// seed the ANCHOR set every other section is tested against. Kept identical to
+// the PLAIN_SECTION list in ingest-scraped-checklist.cjs so the converter and
+// the ingester agree on what "the plain card" means.
+const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospects?|prospects?|chrome[- ]prospect[- ]autographs?|rookie[- ]autographs?|chrome[- ]rookie[- ]autographs?)$/;
+
 // Sheet -> category prefix. Chrome Prospects are part of the base set's own
 // numbering (BCP-###), so they are base cards, not inserts.
 function categoryFor(sheetName, section) {
   const s = slug(section) || "unsectioned";
-  // Image / photo variations are DISTINCT cards that reuse the base card's
-  // number and player — Mega Box files list them inside the Base sheet. Left
-  // as category "base" they collide with the very cards they vary and get
-  // dropped by the dedup below (10 lost on the first 2026 Mega Box parse).
-  // They also need to stay findable as variations for the IV search (#1007).
-  if (/variation/i.test(section)) return `insert-${s}`;
+  // A variation section gets its own category even when Beckett lists it on the
+  // Base sheet, which Mega Box does ('Base > Mega Chrome Base Cards - Image
+  // Variations'). Returning "base" here would seed it as an ANCHOR instead of a
+  // candidate rung, and it would then collide with the very cards it varies —
+  // same number, same player, same blank parallel — and be dropped by the dedup
+  // (10 lost on the first 2026 Mega Box parse).
+  //
+  // It keeps the sheet's auto-ness, though: an autographed variation returned as
+  // "insert-" would only ever be compared against non-auto anchors, so it could
+  // never fold onto the signed card it varies, and left unfolded it would claim
+  // isAuto=false on a card that is signed.
+  if (/variation/i.test(section)) return (sheetName === "Autographs" ? "auto-" : "insert-") + s;
   if (sheetName === "Base" || sheetName === "Prospects") return "base";
-  if (sheetName === "Autographs") return `auto-${s}`;
-  return `insert-${s}`;   // Inserts + Variations
+  if (sheetName === "Autographs") return "auto-" + s;
+  return "insert-" + s;   // Inserts + Variations
 }
 
 const isCountLine = (r) => /^\d[\d,]*\s+cards?$/i.test(String(r[0] || ""));
 const nonEmpty = (r) => r.filter((c) => c !== "").length;
 
+// ---- parallel naming ------------------------------------------------------
+// Canonical rung spellings already verified in
+// backend/src/services/catalog/parallelLadders.ts (2026 Bowman Chrome ladder,
+// Cardsmiths + LUDEX 2026-08-04). Beckett's section title and the verified
+// ladder disagree on these two; the ladder wins, or the checklist row slugs to
+// `gold-ink` while every other code path in the repo says `gold-ink-variation`.
+const CANONICAL_RUNG = {
+  "packfractor": "PackFractor",
+  "gold ink": "Gold Ink Variation",
+};
+
+// The rung name is what the section ADDS to its anchor, not the whole section
+// title. "Chrome Prospect Packfractor Autographs" anchored on "Chrome Prospect
+// Autographs" is the PackFractor rung — storing the full section name produced
+// slugs like `...:cpa-jg:chrome-prospect-packfractor-autographs:auto`, which no
+// parsed sale title can ever match.
+const tokens = (s) => String(s || "").split(/[\s–—]+/)
+  .map((t) => t.replace(/^-+|-+$/g, "").trim())
+  .filter((t) => t.length > 0);
+
+function rungName(section, anchorSection) {
+  const drop = new Set(tokens(anchorSection).map((t) => t.toLowerCase()));
+  let out = tokens(section).filter((t) => !drop.has(t.toLowerCase()));
+  // "Autograph(s)" is carried by the isAuto flag, not by the parallel name.
+  out = out.filter((t) => !/^autographs?$/i.test(t));
+  if (!out.length) return "";
+  // Beckett titles sections in the plural ("Packfractors"); a rung is singular.
+  const last = out[out.length - 1];
+  if (/s$/i.test(last) && !/ss$/i.test(last)) out[out.length - 1] = last.replace(/s$/i, "");
+  const name = out.join(" ");
+  return CANONICAL_RUNG[name.toLowerCase()] || name;
+}
+
+function secBrief(s) {
+  return { sheet: s.sheet, section: s.section, category: s.category, cards: s.cards };
+}
+
+// Decide, for every section, whether it is an anchor, a parallel of an anchor,
+// or its own run of cards. Exported so the classification can be tested and
+// re-run against an already-generated checklist without re-reading the xlsx.
+//
+// A variation is a RUNG on an existing card, not a separate card. The test is
+// the card numbers: a section whose numbers ALL already exist in an anchor
+// section is re-listing those same cards in a different finish. Classify on the
+// numbers, never on the sheet name — Beckett files WBC Flag Variations and
+// Retrofractors on the same 'Variations' sheet as the Packfractors, and those
+// two are their own cards on their own numbering runs.
+function classifySections(sections) {
+  const all = [...sections.values()];
+  const isAutoSection = (s) => s.category.startsWith("auto-");
+  const normSection = (s) => s.toLowerCase().replace(/\s*-\s*/g, " ").trim();
+
+  // Sections that name the plain card of their own run are anchors outright.
+  // Everything else has to earn the title by not folding onto one.
+  const anchors = all.filter(
+    (s) => s.category === "base" || PLAIN_SECTION.test(normSection(s.section)),
+  );
+  for (const a of anchors) { a.isAnchor = true; a.explicitAnchor = true; }
+
+  // Largest first, so a section that turns out to be a card run in its own right
+  // is already an anchor by the time its own variations are tested against it.
+  // PLAIN_SECTION only ever knew Bowman Chrome's vocabulary; Mega Box calls its
+  // anchor "Prospect Mega Autographs", which that list has never heard of, and
+  // its Image Variations would otherwise have no anchor to fold onto at all.
+  const rest = all.filter((s) => !s.isAnchor).sort((a, b) => b.numbers.size - a.numbers.size);
+
+  const report = [];
+  const push = (sec, extra) => report.push(Object.assign(secBrief(sec), extra));
+
+  for (const sec of rest) {
+    // Only compare against anchors of the same auto class: a non-auto insert
+    // cannot be a rung on a signed card, however well the numbers line up.
+    // A section may only fold onto an anchor that is either (a) the plain card
+    // of its own run — base / PLAIN_SECTION — or (b) a section whose whole name
+    // this one contains and extends, which is what "X - Image Variations" is to
+    // "X". Without (b)'s containment test, size alone decides, and the LARGER
+    // section wins even when it is the more specific one: 1999 Black Diamond
+    // folded "Prime Cuts Relics" onto "Prime Cuts Pine Tar Relics" and then had
+    // no words left to name the rung with.
+    const extendsName = (cand, anchor) => {
+      const at = tokens(anchor.section).map((t) => t.toLowerCase());
+      const ct = tokens(cand.section).map((t) => t.toLowerCase());
+      return at.length > 0 && ct.length > at.length && at.every((t) => ct.includes(t));
+    };
+    const candidates = anchors.filter((a) =>
+      a !== sec && isAutoSection(a) === isAutoSection(sec) &&
+      (a.explicitAnchor || extendsName(sec, a)));
+    let best = null;
+    for (const a of candidates) {
+      const hit = [...sec.numbers].filter((n) => a.numbers.has(n)).length;
+      const pct = sec.numbers.size ? hit / sec.numbers.size : 0;
+      // On a tie prefer the tightest anchor — the smallest section that still
+      // contains every one of these numbers is the run they actually belong to.
+      if (!best || pct > best.pct || (pct === best.pct && a.numbers.size < best.anchor.numbers.size)) {
+        best = { anchor: a, pct: pct, hit: hit };
+      }
+    }
+
+    if (best && best.pct === 1) {
+      const rung = rungName(sec.section, best.anchor.section);
+      // A fold that cannot be named is not a fold. An empty rung means this
+      // section adds no word to the anchor's name, so folding would collapse it
+      // silently onto the anchor's own slug and overwrite it. Leave it as its
+      // own cards and say why — refusing is always recoverable, overwriting is
+      // not.
+      if (!rung) {
+        sec.isAnchor = true;
+        anchors.push(sec);
+        push(sec, {
+          role: "own-cards-UNNAMEABLE", anchor: best.anchor.key,
+          note: "numbers match the anchor exactly but the section name yields no rung",
+        });
+        continue;
+      }
+      sec.parallelOf = best.anchor;
+      sec.rung = rung;
+      push(sec, { role: "parallel", anchor: best.anchor.key, rung: rung });
+      continue;
+    }
+
+    // It folds onto nothing, so it is a run of cards in its own right — and
+    // therefore an anchor that its OWN variations can fold onto.
+    sec.isAnchor = true;
+    anchors.push(sec);
+
+    if (!best || best.pct === 0) {
+      push(sec, { role: "own-cards" });
+    } else {
+      // Partially overlapping: genuinely ambiguous. Do NOT guess in either
+      // direction — leave it as its own cards (the prior behaviour) and say so
+      // loudly, because a silent choice here is how a whole section gets filed
+      // wrong and stays wrong.
+      push(sec, {
+        role: "own-cards-AMBIGUOUS", anchor: best.anchor.key,
+        overlapPct: Number((best.pct * 100).toFixed(1)),
+      });
+    }
+  }
+
+  for (const s of all) {
+    if (s.isAnchor && !report.some((r) => r.sheet === s.sheet && r.section === s.section)) {
+      push(s, { role: "anchor" });
+    }
+  }
+  // Report in the workbook's own section order, not the order decided in.
+  const order = new Map(all.map((s, i) => [s.sheet + ">" + s.section, i]));
+  report.sort((a, b) => order.get(a.sheet + ">" + a.section) - order.get(b.sheet + ">" + b.section));
+  return report;
+}
+
 function main() {
   const files = readZip(fs.readFileSync(path.resolve(XLSX)));
   const sheets = sheetsByName(files);
 
-  const out = [];
-  const sections = [];
+  // ---- pass 1: read every row, remembering which section it came from -----
+  const records = [];
+  const sections = new Map();   // "sheet>section" -> section descriptor
   for (const [name, rows] of Object.entries(sheets)) {
     if (SKIP_SHEETS.has(name)) continue;
     let section = name;
-    let inSection = 0;
     for (const row of rows) {
       if (!nonEmpty(row)) continue;
       if (isCountLine(row)) continue;
       // A single populated cell is a section header.
-      if (nonEmpty(row) === 1 && row[0]) {
-        if (inSection) sections.push({ sheet: name, section, cards: inSection });
-        section = row[0]; inSection = 0; continue;
-      }
+      if (nonEmpty(row) === 1 && row[0]) { section = row[0]; continue; }
       const cardNumber = String(row[0] || "").trim();
       let player = String(row[1] || "").replace(/,\s*$/, "").trim();
       if (!cardNumber || !player) continue;
-      // An RC flag sits in a later column; the repo's CSV folds it into the
-      // player field ("Jacob Wilson RC").
+      // An RC flag sits in a later column; the repo's CSV convention folds it
+      // into the player field ("Jacob Wilson RC").
       if (row.slice(2).some((c) => /^RC$/i.test(String(c || "").trim()))) player += " RC";
 
-      const category = categoryFor(name, section);
-      out.push({
-        category,
-        cardNumber,
-        parallel: "Base",
-        isAuto: category.startsWith("auto-") ? "true" : "false",
-        printRun: "",   // Beckett xlsx are card lists only — never guessed
-        player,
-      });
-      inSection++;
+      const key = name + ">" + section;
+      if (!sections.has(key)) {
+        sections.set(key, {
+          sheet: name, section: section, key: key,
+          category: categoryFor(name, section),
+          numbers: new Set(), cards: 0,
+        });
+      }
+      const sec = sections.get(key);
+      sec.numbers.add(cardNumber.toUpperCase());
+      sec.cards++;
+      records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
     }
-    if (inSection) sections.push({ sheet: name, section, cards: inSection });
   }
 
-  // Guard against the duplicate-id class of bug: same category+number+player
-  // appearing twice would upsert over itself and hide a parse error.
+  // ---- pass 2: which sections are parallels of which anchors? -------------
+  const report = classifySections(sections);
+
+  // ---- pass 3: emit ------------------------------------------------------
+  const out = [];
+  for (const rec of records) {
+    const sec = sections.get(rec.sectionKey);
+    const target = sec.parallelOf || sec;
+    out.push({
+      category: target.category,
+      cardNumber: rec.cardNumber,
+      // Beckett publishes card LISTS, not ladders. A row we were never told the
+      // finish of leaves parallel BLANK — asserting "Base" claims knowledge the
+      // source never gave us. normalizeParallel() already reads "" as the base
+      // tier, so the blank costs nothing downstream and lies about nothing.
+      parallel: sec.parallelOf ? sec.rung : "",
+      isAuto: target.category.startsWith("auto-") ? "true" : "false",
+      printRun: "",   // Beckett xlsx are card lists only — never guessed
+      player: rec.player,
+    });
+  }
+
+  // Guard against the duplicate-id class of bug: the same card appearing twice
+  // would upsert over itself and hide a parse error. parallel and isAuto are
+  // part of the key — once a variation folds onto its anchor's card number, the
+  // rung is the ONLY thing separating it from the anchor row, and keying
+  // without it would delete every folded row as a "duplicate".
   const seen = new Set();
   const rowsOut = out.filter((r) => {
-    const k = `${r.category}|${r.cardNumber}|${r.player}`;
+    const k = [r.category, r.cardNumber, r.parallel, r.isAuto, r.player].join("|");
     if (seen.has(k)) return false;
     seen.add(k); return true;
   });
 
   const csv = ["category,cardNumber,parallel,isAuto,printRun,player"];
   for (const r of rowsOut) {
-    const q = (v) => (/[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-    csv.push([r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, q(r.player)].join(","));
+    const q = (v) => (/[",]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v);
+    csv.push([r.category, r.cardNumber, q(r.parallel), r.isAuto, r.printRun, q(r.player)].join(","));
   }
 
   const outPath = path.resolve(OUT);
@@ -222,10 +410,16 @@ function main() {
     sport: SPORT,
     year: YEAR,
     setName: SET_NAME || SET_KEY,
-    productKey: `${YEAR}-${SET_KEY}`,
+    productKey: YEAR + "-" + SET_KEY,
     setKey: SET_KEY,
     rowCount: rowsOut.length,
-    sectionsReport: sections,
+    // Tells ingest-scraped-checklist.cjs to read the CSV's parallel column
+    // instead of re-deriving a label from the category slug. Opt-in by design:
+    // checklists written by the other scrapers carry a parallel column that
+    // means something different ("Normal" for the Pokemon base tier), and
+    // changing how those are read is a separate decision from this one.
+    parallelColumnAuthoritative: true,
+    sectionsReport: report,
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 
@@ -234,10 +428,25 @@ function main() {
     const k = r.category.split("-")[0];
     byCat[k] = (byCat[k] || 0) + 1;
   }
-  console.log(`wrote ${outPath}`);
-  console.log(`  rows=${rowsOut.length}  (deduped ${out.length - rowsOut.length})`);
-  console.log(`  by kind: ${JSON.stringify(byCat)}`);
-  console.log(`  sections: ${sections.length}`);
-  for (const s of sections.slice(0, 14)) console.log(`     ${s.sheet} > ${s.section}: ${s.cards}`);
+  const roleCount = (role) => report.filter((r) => r.role === role).length;
+  const folded = report.filter((r) => r.role === "parallel");
+  const ambiguous = report.filter((r) => r.role === "own-cards-AMBIGUOUS");
+  console.log("wrote " + outPath);
+  console.log("  rows=" + rowsOut.length + "  (deduped " + (out.length - rowsOut.length) + ")");
+  console.log("  by kind: " + JSON.stringify(byCat));
+  console.log("  sections: " + report.length + "  (anchors " + roleCount("anchor") +
+    ", parallels " + folded.length + ", own-cards " + roleCount("own-cards") + ")");
+  for (const f of folded) {
+    console.log("     PARALLEL  " + f.sheet + " > " + f.section + " (" + f.cards +
+      ")  ->  " + f.anchor + "   parallel=\"" + f.rung + "\"");
+  }
+  for (const a of ambiguous) {
+    console.log("     !! AMBIGUOUS  " + a.sheet + " > " + a.section + " (" + a.cards +
+      ") overlaps " + a.anchor + " by " + a.overlapPct +
+      "% — left as its own cards, needs a human ruling");
+  }
 }
-main();
+
+if (require.main === module) main();
+
+module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION };
