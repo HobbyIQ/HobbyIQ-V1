@@ -398,6 +398,16 @@ describe("parseListingIdentity — parallel extraction", () => {
     expect(parseListingIdentity("2026 Bowman Chrome 1st - Marconi German - True Base Auto - CPA-MG - Raw").parallel).toBe("Base");
   });
 
+  it("an insert set name is not a parallel", () => {
+    // Found by sampling 8,500 real rows after the colour rules were widened:
+    // "Red Hot Rookies" is the INSERT's name, so this is a plain Refractor of
+    // that insert, not a Red Refractor. The colour belongs to the set name.
+    expect(parseListingIdentity("2010 Topps Chrome Carlos Santana Red Hot Rookies Refractor #RHR-1 RC").parallel).toBe("Refractor");
+    // ...but the colours that ARE parallels must still read.
+    expect(parseListingIdentity("2010 Topps Chrome Ichiro Suzuki Orange Refractor #38 Mariners").parallel).toBe("Orange Refractor");
+    expect(parseListingIdentity("DREW BREES SP PURPLE REFRACTOR #/555 ~ 2010 TOPPS CHROME #C220").parallel).toBe("Purple Refractor");
+  });
+
   it("a team name is not a parallel", () => {
     expect(parseListingIdentity("2026 Bowman Chrome #CPA-XX Player 1st Auto Toronto Blue Jays").parallel).toBe("Base");
     expect(parseListingIdentity("2026 Bowman Chrome #CPA-XX Player 1st Auto Boston Red Sox").parallel).toBe("Base");
