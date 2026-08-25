@@ -1,1198 +1,1198 @@
 category,cardNumber,parallel,isAuto,printRun,player
-base,1,Base,false,,Konnor Griffin RC
-base,2,Base,false,,Mookie Betts
-base,3,Base,false,,Parker Messick RC
-base,4,Base,false,,Byron Buxton
-base,5,Base,false,,Bobby Witt Jr.
-base,6,Base,false,,Kevin McGonigle RC
-base,7,Base,false,,Didier Fuentes RC
-base,8,Base,false,,José Ramírez
-base,9,Base,false,,Cody Bellinger
-base,10,Base,false,,Luis Robert Jr.
-base,11,Base,false,,Noah Schultz RC
-base,12,Base,false,,Alex Bregman
-base,13,Base,false,,Jacob Wilson
-base,14,Base,false,,Justin Verlander
-base,15,Base,false,,Travis Bazzana RC
-base,16,Base,false,,Bo Bichette
-base,17,Base,false,,Francisco Lindor
-base,18,Base,false,,Nick Kurtz
-base,19,Base,false,,Jackson Chourio
-base,20,Base,false,,Andrew Painter RC
-base,21,Base,false,,James Wood
-base,22,Base,false,,Geraldo Perdomo
-base,23,Base,false,,Fernando Tatis Jr.
-base,24,Base,false,,Chase DeLauter RC
-base,25,Base,false,,Cole Young RC
-base,26,Base,false,,Ezequiel Tovar
-base,27,Base,false,,Chase Burns RC
-base,28,Base,false,,Tatsuya Imai RC
-base,29,Base,false,,Cam Schlittler RC
-base,30,Base,false,,Ketel Marte
-base,31,Base,false,,Alex Freeland RC
-base,32,Base,false,,JR Ritchie RC
-base,33,Base,false,,Connelly Early RC
-base,34,Base,false,,Vladimir Guerrero Jr.
-base,35,Base,false,,Julio Rodríguez
-base,36,Base,false,,MacKenzie Gore
-base,37,Base,false,,Owen Caissie RC
-base,38,Base,false,,Bubba Chandler RC
-base,39,Base,false,,Freddie Freeman
-base,40,Base,false,,Jose Fernandez RC
-base,41,Base,false,,Framber Valdez
-base,42,Base,false,,Jeferson Quero RC
-base,43,Base,false,,Roman Anthony RC
-base,44,Base,false,,Christian Moore RC
-base,45,Base,false,,Dylan Cease
-base,46,Base,false,,Kyle Tucker
-base,47,Base,false,,Sung-Mun Song RC
-base,48,Base,false,,Sal Stewart RC
-base,49,Base,false,,Bryan Woo
-base,50,Base,false,,Vinnie Pasquantino
-base,51,Base,false,,Jazz Chisholm Jr.
-base,52,Base,false,,JJ Wetherholt RC
-base,53,Base,false,,Mason Miller
-base,54,Base,false,,Justin Crawford RC
-base,55,Base,false,,Elmer Rodríguez RC
-base,56,Base,false,,Wyatt Langford
-base,57,Base,false,,Ronald Acuña Jr.
-base,58,Base,false,,Jose Altuve
-base,59,Base,false,,Roki Sasaki
-base,60,Base,false,,Paul Skenes
-base,61,Base,false,,Samuel Basallo RC
-base,62,Base,false,,Chris Sale
-base,63,Base,false,,Bryce Harper
-base,64,Base,false,,Jung Hoo Lee
-base,65,Base,false,,Jacob Misiorowski RC
-base,66,Base,false,,Aaron Judge
-base,67,Base,false,,Juan Soto
-base,68,Base,false,,Yordan Alvarez
-base,69,Base,false,,Willy Adames
-base,70,Base,false,,Colson Montgomery RC
-base,71,Base,false,,Kyle Schwarber
-base,72,Base,false,,Tarik Skubal
-base,73,Base,false,,Freddy Peralta
-base,74,Base,false,,Kyle Karros RC
-base,75,Base,false,,Mike Trout
-base,76,Base,false,,Munetaka Murakami RC
-base,77,Base,false,,TJ Rumfield RC
-base,78,Base,false,,Bryce Eldridge RC
-base,79,Base,false,,Jac Caglianone RC
-base,80,Base,false,,Nolan McLean RC
-base,81,Base,false,,Andrew McCutchen
-base,82,Base,false,,Corey Seager
-base,83,Base,false,,Corbin Carroll
-base,84,Base,false,,Yoshinobu Yamamoto
-base,85,Base,false,,Gunnar Henderson
-base,86,Base,false,,Cal Raleigh
-base,87,Base,false,,Steven Kwan
-base,88,Base,false,,Nathan Church RC
-base,89,Base,false,,Michael Harris II
-base,90,Base,false,,Manny Machado
-base,91,Base,false,,Pete Crow-Armstrong
-base,92,Base,false,,Austin Riley
-base,93,Base,false,,Trey Yesavage RC
-base,94,Base,false,,Kazuma Okamoto RC
-base,95,Base,false,,Carter Jensen RC
-base,96,Base,false,,Carson Benge RC
-base,97,Base,false,,Elly De La Cruz
-base,98,Base,false,,Junior Caminero
-base,99,Base,false,,Pete Alonso
-base,100,Base,false,,Shohei Ohtani
-base,BCP-151,Base,false,,Slater de Brun
-base,BCP-152,Base,false,,Wandy Asigen
-base,BCP-153,Base,false,,Alex Lodise
-base,BCP-154,Base,false,,Colt Emerson
-base,BCP-155,Base,false,,John Gil
-base,BCP-156,Base,false,,Isaias Castillo
-base,BCP-157,Base,false,,Rubel Arias
-base,BCP-158,Base,false,,Fabricio Blanco
-base,BCP-159,Base,false,,Christian Zazueta
-base,BCP-160,Base,false,,Johenssy Colome
-base,BCP-161,Base,false,,Diego Frontado
-base,BCP-162,Base,false,,Talon Haley
-base,BCP-163,Base,false,,Francisco Renteria
-base,BCP-164,Base,false,,JoJo Parker
-base,BCP-165,Base,false,,Darell Morel
-base,BCP-166,Base,false,,Hagen Smith
-base,BCP-167,Base,false,,Ezequiel Melbourne
-base,BCP-168,Base,false,,Joseph Sullivan
-base,BCP-169,Base,false,,Sebastian Blanco
-base,BCP-170,Base,false,,Leo De Vries
-base,BCP-171,Base,false,,Brandon Clarke
-base,BCP-172,Base,false,,Leonardo Reynoso
-base,BCP-173,Base,false,,Luis De La Torre
-base,BCP-174,Base,false,,Aiva Arquette
-base,BCP-175,Base,false,,Randy Santana
-base,BCP-176,Base,false,,Gregory Pio
-base,BCP-177,Base,false,,Juan Rujano
-base,BCP-178,Base,false,,Wilton Guerrero Jr.
-base,BCP-179,Base,false,,Samil Serrano
-base,BCP-180,Base,false,,Jaider Suarez
-base,BCP-181,Base,false,,Logan Sauve
-base,BCP-182,Base,false,,Jaiden Lo Re
-base,BCP-183,Base,false,,Hyun Seung Lee
-base,BCP-184,Base,false,,Gustavo Baptista
-base,BCP-185,Base,false,,Ricky Duran
-base,BCP-186,Base,false,,Brendan Jones
-base,BCP-187,Base,false,,Wyatt Vincent
-base,BCP-188,Base,false,,Wilder Dalis
-base,BCP-189,Base,false,,Emil Morales
-base,BCP-190,Base,false,,Sebastian Dos Santos
-base,BCP-191,Base,false,,Dawvris Brito
-base,BCP-192,Base,false,,Ricky Moneys
-base,BCP-193,Base,false,,Juan Rojas
-base,BCP-194,Base,false,,Angeibel Gomez
-base,BCP-195,Base,false,,Braylen Wimmer
-base,BCP-196,Base,false,,Jett Williams
-base,BCP-197,Base,false,,Juan Rijo
-base,BCP-198,Base,false,,Louis Andujar
-base,BCP-199,Base,false,,Walker Jenkins
-base,BCP-200,Base,false,,Luis Hernandez
-base,BCP-201,Base,false,,Joniel Hernandez
-base,BCP-202,Base,false,,Avery Owusu-Asiedu
-base,BCP-203,Base,false,,Stharlin Torres
-base,BCP-204,Base,false,,Angel De Los Santos
-base,BCP-205,Base,false,,Eduardo Quintero
-base,BCP-206,Base,false,,Adrian Lunar
-base,BCP-207,Base,false,,Santiago Solarte
-base,BCP-208,Base,false,,Cleiner Ramirez
-base,BCP-209,Base,false,,Ethan Holliday
-base,BCP-210,Base,false,,Angel Salio
-base,BCP-211,Base,false,,Juneiker Caceres
-base,BCP-212,Base,false,,Nelson Rada
-base,BCP-213,Base,false,,Mike Sirota
-base,BCP-214,Base,false,,Owen Ayers
-base,BCP-215,Base,false,,Gavin Fien
-base,BCP-216,Base,false,,Enmanuel Merlo
-base,BCP-217,Base,false,,Sir Jamison Jones
-base,BCP-218,Base,false,,Caleb Bonemer
-base,BCP-219,Base,false,,Yadier Muñoz
-base,BCP-220,Base,false,,Angel Nunez
-base,BCP-221,Base,false,,Manuel Bolivar
-base,BCP-222,Base,false,,Jeancer Custodio
-base,BCP-223,Base,false,,Elaineiker Coronado
-base,BCP-224,Base,false,,Dax Kilby
-base,BCP-225,Base,false,,Alexander Pio
-base,BCP-226,Base,false,,Wellington Aracena
-base,BCP-227,Base,false,,Pedro Gomez
-base,BCP-228,Base,false,,Jeyson Horton
-base,BCP-229,Base,false,,Randy Guzman
-base,BCP-230,Base,false,,Jose Castro
-base,BCP-231,Base,false,,Sebastian Walcott
-base,BCP-232,Base,false,,Yunior Amparo
-base,BCP-233,Base,false,,Dante Nori
-base,BCP-234,Base,false,,Kevin Alvarez
-base,BCP-235,Base,false,,Alfredo Duno
-base,BCP-236,Base,false,,Max Clark
-base,BCP-237,Base,false,,Austin Overn
-base,BCP-238,Base,false,,Seth Hernandez
-base,BCP-239,Base,false,,Samy Natera Jr.
-base,BCP-240,Base,false,,Ariel Roque
-base,BCP-241,Base,false,,Elian Rosario
-base,BCP-242,Base,false,,Randy Arias
-base,BCP-243,Base,false,,Steele Hall
-base,BCP-244,Base,false,,Jesús Made
-base,BCP-245,Base,false,,Eli Willits
-base,BCP-246,Base,false,,Garielvin Silverio
-base,BCP-247,Base,false,,Erick De La Cruz
-base,BCP-248,Base,false,,Cooper Pratt
-base,BCP-249,Base,false,,Andri Hidalgo
-base,BCP-250,Base,false,,Yordani Soto
-insert-wbc-flag-variations,WBC-1,Base,false,,Maikel Garcia
-insert-wbc-flag-variations,WBC-2,Base,false,,Vladimir Guerrero Jr.
-insert-wbc-flag-variations,WBC-3,Base,false,,Roman Anthony
-insert-wbc-flag-variations,WBC-4,Base,false,,Vinnie Pasquantino
-insert-wbc-flag-variations,WBC-5,Base,false,,Jackson Chourio
-insert-wbc-flag-variations,WBC-6,Base,false,,Jakob Marsee
-insert-wbc-flag-variations,WBC-7,Base,false,,Bobby Witt Jr.
-insert-wbc-flag-variations,WBC-8,Base,false,,Austin Wells
-insert-wbc-flag-variations,WBC-9,Base,false,,Sam Antonacci
-insert-wbc-flag-variations,WBC-10,Base,false,,Bryce Harper
-insert-wbc-flag-variations,WBC-11,Base,false,,Xander Bogaerts
-insert-wbc-flag-variations,WBC-12,Base,false,,Josh Naylor
-insert-wbc-flag-variations,WBC-13,Base,false,,Eugenio Suárez
-insert-wbc-flag-variations,WBC-14,Base,false,,Dean Kremer
-insert-wbc-flag-variations,WBC-15,Base,false,,Tommy Kahnle
-insert-wbc-flag-variations,WBC-16,Base,false,,Tyler O'Neill
-insert-wbc-flag-variations,WBC-17,Base,false,,Shohei Ohtani
-insert-wbc-flag-variations,WBC-18,Base,false,,Hyeseong Kim
-insert-wbc-flag-variations,WBC-19,Base,false,,Will Smith
-insert-wbc-flag-variations,WBC-20,Base,false,,Jazz Chisholm Jr.
-insert-wbc-flag-variations,WBC-21,Base,false,,Ronald Acuña Jr.
-insert-wbc-flag-variations,WBC-22,Base,false,,Pete Crow-Armstrong
-insert-wbc-flag-variations,WBC-23,Base,false,,Alex Bregman
-insert-wbc-flag-variations,WBC-24,Base,false,,Geraldo Perdomo
-insert-wbc-flag-variations,WBC-25,Base,false,,Stuart Fairchild
-insert-wbc-flag-variations,WBC-26,Base,false,,Michael Lorenzen
-insert-wbc-flag-variations,WBC-27,Base,false,,Daniel Palencia
-insert-wbc-flag-variations,WBC-28,Base,false,,David Bednar
-insert-wbc-flag-variations,WBC-29,Base,false,,Nolan McLean
-insert-wbc-flag-variations,WBC-30,Base,false,,Dante Nori
-insert-wbc-flag-variations,WBC-31,Base,false,,Randy Arozarena
-insert-wbc-flag-variations,WBC-32,Base,false,,Nate Eaton
-insert-wbc-flag-variations,WBC-33,Base,false,,Tsung-Che Cheng
-insert-wbc-flag-variations,WBC-34,Base,false,,Masataka Yoshida
-insert-wbc-flag-variations,WBC-35,Base,false,,Ranger Suarez
-insert-wbc-flag-variations,WBC-36,Base,false,,Jac Caglianone
-insert-wbc-flag-variations,WBC-37,Base,false,,Travis Bazzana
-insert-wbc-flag-variations,WBC-38,Base,false,,Juan Soto
-insert-wbc-flag-variations,WBC-39,Base,false,,Wei-En Lin
-insert-wbc-flag-variations,WBC-40,Base,false,,Paul Skenes
-insert-wbc-flag-variations,WBC-41,Base,false,,Mark Vientos
-insert-wbc-flag-variations,WBC-42,Base,false,,Yusei Kikuchi
-insert-wbc-flag-variations,WBC-43,Base,false,,Fernando Tatis Jr.
-insert-wbc-flag-variations,WBC-44,Base,false,,Gio Urshela
-insert-wbc-flag-variations,WBC-45,Base,false,,Yariel Rodríguez
-insert-wbc-flag-variations,WBC-46,Base,false,,Alejandro Kirk
-insert-wbc-flag-variations,WBC-47,Base,false,,Seth Lugo
-insert-wbc-flag-variations,WBC-48,Base,false,,Terrin Vavra
-insert-wbc-flag-variations,WBC-49,Base,false,,Salvador Perez
-insert-wbc-flag-variations,WBC-50,Base,false,,Luis Arraez
-insert-wbc-flag-variations,WBC-51,Base,false,,Julio Rodríguez
-insert-wbc-flag-variations,WBC-52,Base,false,,Curtis Mead
-insert-wbc-flag-variations,WBC-53,Base,false,,Bo Naylor
-insert-wbc-flag-variations,WBC-54,Base,false,,Andrew Fischer
-insert-wbc-flag-variations,WBC-55,Base,false,,Munetaka Murakami
-insert-wbc-flag-variations,WBC-56,Base,false,,Sandy Alcantara
-insert-wbc-flag-variations,WBC-57,Base,false,,Cal Raleigh
-insert-wbc-flag-variations,WBC-58,Base,false,,Nolan Arenado
-insert-wbc-flag-variations,WBC-59,Base,false,,Enrique Bradfield Jr.
-insert-wbc-flag-variations,WBC-60,Base,false,,Gunnar Henderson
-insert-wbc-flag-variations,WBC-61,Base,false,,Ceddanne Rafaela
-insert-wbc-flag-variations,WBC-62,Base,false,,Kazuma Okamoto
-insert-wbc-flag-variations,WBC-63,Base,false,,Cristopher Sánchez
-insert-wbc-flag-variations,WBC-64,Base,false,,Oneil Cruz
-insert-wbc-flag-variations,WBC-65,Base,false,,Ketel Marte
-insert-wbc-flag-variations,WBC-66,Base,false,,Yoán Moncada
-insert-wbc-flag-variations,WBC-67,Base,false,,Tarik Skubal
-insert-wbc-flag-variations,WBC-68,Base,false,,Brice Turang
-insert-wbc-flag-variations,WBC-69,Base,false,,Seiya Suzuki
-insert-wbc-flag-variations,WBC-70,Base,false,,Manny Machado
-insert-wbc-flag-variations,WBC-71,Base,false,,Mason Miller
-insert-wbc-flag-variations,WBC-72,Base,false,,Junior Caminero
-insert-wbc-flag-variations,WBC-73,Base,false,,José Caballero
-insert-wbc-flag-variations,WBC-74,Base,false,,Kenley Jansen
-insert-wbc-flag-variations,WBC-75,Base,false,,Owen Caissie
-insert-wbc-flag-variations,WBC-76,Base,false,,Edmundo Sosa
-insert-wbc-flag-variations,WBC-77,Base,false,,Aaron Nola
-insert-wbc-flag-variations,WBC-78,Base,false,,Harrison Bader
-insert-wbc-flag-variations,WBC-79,Base,false,,Michael Arroyo
-insert-wbc-flag-variations,WBC-80,Base,false,,Shay Whitcomb
-insert-wbc-flag-variations,WBC-81,Base,false,,Druw Jones
-insert-wbc-flag-variations,WBC-82,Base,false,,Edwin Díaz
-insert-wbc-flag-variations,WBC-83,Base,false,,Jonathan Aranda
-insert-wbc-flag-variations,WBC-84,Base,false,,Matthew Boyd
-insert-wbc-flag-variations,WBC-85,Base,false,,Logan Webb
-insert-wbc-flag-variations,WBC-86,Base,false,,Lucas Ramirez
-insert-wbc-flag-variations,WBC-87,Base,false,,Kyle Teel
-insert-wbc-flag-variations,WBC-88,Base,false,,Denzel Clarke
-insert-wbc-flag-variations,WBC-89,Base,false,,Ozzie Albies
-insert-wbc-flag-variations,WBC-90,Base,false,,Byron Buxton
-insert-wbc-flag-variations,WBC-91,Base,false,,Kyle Schwarber
-insert-wbc-flag-variations,WBC-92,Base,false,,Woo-Suk Go
-insert-wbc-flag-variations,WBC-93,Base,false,,Wilyer Abreu
-insert-wbc-flag-variations,WBC-94,Base,false,,Jarren Duran
-insert-wbc-flag-variations,WBC-95,Base,false,,Andrés Giménez
-insert-wbc-flag-variations,WBC-96,Base,false,,Harry Ford
-insert-wbc-flag-variations,WBC-97,Base,false,,Willi Castro
-insert-wbc-flag-variations,WBC-98,Base,false,,Jung Hoo Lee
-insert-wbc-flag-variations,WBC-99,Base,false,,Aaron Judge
-insert-wbc-flag-variations,WBC-100,Base,false,,Ezequiel Tovar
-insert-red-rc-variations,1,Base,false,,Konnor Griffin
-insert-red-rc-variations,6,Base,false,,Kevin McGonigle
-insert-red-rc-variations,7,Base,false,,Didier Fuentes
-insert-red-rc-variations,20,Base,false,,Andrew Painter
-insert-red-rc-variations,24,Base,false,,Chase DeLauter
-insert-red-rc-variations,25,Base,false,,Cole Young
-insert-red-rc-variations,27,Base,false,,Chase Burns
-insert-red-rc-variations,28,Base,false,,Tatsuya Imai
-insert-red-rc-variations,29,Base,false,,Cam Schlittler
-insert-red-rc-variations,31,Base,false,,Alex Freeland
-insert-red-rc-variations,33,Base,false,,Connelly Early
-insert-red-rc-variations,37,Base,false,,Owen Caissie
-insert-red-rc-variations,38,Base,false,,Bubba Chandler
-insert-red-rc-variations,42,Base,false,,Jeferson Quero
-insert-red-rc-variations,43,Base,false,,Roman Anthony
-insert-red-rc-variations,44,Base,false,,Christian Moore
-insert-red-rc-variations,48,Base,false,,Sal Stewart
-insert-red-rc-variations,52,Base,false,,JJ Wetherholt
-insert-red-rc-variations,54,Base,false,,Justin Crawford
-insert-red-rc-variations,61,Base,false,,Samuel Basallo
-insert-red-rc-variations,65,Base,false,,Jacob Misiorowski
-insert-red-rc-variations,70,Base,false,,Colson Montgomery
-insert-red-rc-variations,74,Base,false,,Kyle Karros
-insert-red-rc-variations,76,Base,false,,Munetaka Murakami
-insert-red-rc-variations,77,Base,false,,TJ Rumfield
-insert-red-rc-variations,78,Base,false,,Bryce Eldridge
-insert-red-rc-variations,79,Base,false,,Jac Caglianone
-insert-red-rc-variations,80,Base,false,,Nolan McLean
-insert-red-rc-variations,88,Base,false,,Nathan Church
-insert-red-rc-variations,93,Base,false,,Trey Yesavage
-insert-red-rc-variations,94,Base,false,,Kazuma Okamoto
-insert-red-rc-variations,95,Base,false,,Carter Jensen
-insert-red-rc-variations,96,Base,false,,Carson Benge
-insert-base-rookie-image-variations,1,Base,false,,Konnor Griffin
-insert-base-rookie-image-variations,6,Base,false,,Kevin McGonigle
-insert-base-rookie-image-variations,28,Base,false,,Tatsuya Imai
-insert-base-rookie-image-variations,29,Base,false,,Cam Schlittler
-insert-base-rookie-image-variations,43,Base,false,,Roman Anthony
-insert-base-rookie-image-variations,44,Base,false,,Christian Moore
-insert-base-rookie-image-variations,52,Base,false,,JJ Wetherholt
-insert-base-rookie-image-variations,54,Base,false,,Justin Crawford
-insert-base-rookie-image-variations,61,Base,false,,Samuel Basallo
-insert-base-rookie-image-variations,70,Base,false,,Colson Montgomery
-insert-base-rookie-image-variations,76,Base,false,,Munetaka Murakami
-insert-base-rookie-image-variations,78,Base,false,,Bryce Eldridge
-insert-base-rookie-image-variations,79,Base,false,,Jac Caglianone
-insert-base-rookie-image-variations,94,Base,false,,Kazuma Okamoto
-insert-base-rookie-image-variations,96,Base,false,,Carson Benge
-insert-retrofractors,BCP-251,Base,false,,Jim Palmer
-insert-retrofractors,BCP-252,Base,false,,Rogers Hornsby
-insert-international-refractors,BCP-151,Base,false,,Slater de Brun
-insert-international-refractors,BCP-152,Base,false,,Wandy Asigen
-insert-international-refractors,BCP-153,Base,false,,Alex Lodise
-insert-international-refractors,BCP-156,Base,false,,Isaias Castillo
-insert-international-refractors,BCP-157,Base,false,,Rubel Arias
-insert-international-refractors,BCP-158,Base,false,,Fabricio Blanco
-insert-international-refractors,BCP-160,Base,false,,Johenssy Colome
-insert-international-refractors,BCP-161,Base,false,,Diego Frontado
-insert-international-refractors,BCP-162,Base,false,,Talon Haley
-insert-international-refractors,BCP-163,Base,false,,Francisco Renteria
-insert-international-refractors,BCP-167,Base,false,,Ezequiel Melbourne
-insert-international-refractors,BCP-169,Base,false,,Sebastian Blanco
-insert-international-refractors,BCP-170,Base,false,,Leo De Vries
-insert-international-refractors,BCP-171,Base,false,,Brandon Clarke
-insert-international-refractors,BCP-172,Base,false,,Leonardo Reynoso
-insert-international-refractors,BCP-175,Base,false,,Randy Santana
-insert-international-refractors,BCP-176,Base,false,,Gregory Pio
-insert-international-refractors,BCP-178,Base,false,,Wilton Guerrero Jr.
-insert-international-refractors,BCP-179,Base,false,,Samil Serrano
-insert-international-refractors,BCP-180,Base,false,,Jaider Suarez
-insert-international-refractors,BCP-183,Base,false,,Hyun Seung Lee
-insert-international-refractors,BCP-185,Base,false,,Ricky Duran
-insert-international-refractors,BCP-190,Base,false,,Sebastian Dos Santos
-insert-international-refractors,BCP-191,Base,false,,Dawvris Brito
-insert-international-refractors,BCP-192,Base,false,,Ricky Moneys
-insert-international-refractors,BCP-194,Base,false,,Angeibel Gomez
-insert-international-refractors,BCP-197,Base,false,,Juan Rijo
-insert-international-refractors,BCP-199,Base,false,,Walker Jenkins
-insert-international-refractors,BCP-200,Base,false,,Luis Hernandez
-insert-international-refractors,BCP-201,Base,false,,Joniel Hernandez
-insert-international-refractors,BCP-207,Base,false,,Santiago Solarte
-insert-international-refractors,BCP-208,Base,false,,Cleiner Ramirez
-insert-international-refractors,BCP-209,Base,false,,Ethan Holliday
-insert-international-refractors,BCP-210,Base,false,,Angel Salio
-insert-international-refractors,BCP-216,Base,false,,Enmanuel Merlo
-insert-international-refractors,BCP-219,Base,false,,Yadier Muñoz
-insert-international-refractors,BCP-220,Base,false,,Angel Nunez
-insert-international-refractors,BCP-222,Base,false,,Jeancer Custodio
-insert-international-refractors,BCP-225,Base,false,,Alexander Pio
-insert-international-refractors,BCP-227,Base,false,,Pedro Gomez
-insert-international-refractors,BCP-228,Base,false,,Jeyson Horton
-insert-international-refractors,BCP-236,Base,false,,Max Clark
-insert-international-refractors,BCP-238,Base,false,,Seth Hernandez
-insert-international-refractors,BCP-240,Base,false,,Ariel Roque
-insert-international-refractors,BCP-241,Base,false,,Elian Rosario
-insert-international-refractors,BCP-242,Base,false,,Randy Arias
-insert-international-refractors,BCP-246,Base,false,,Garielvin Silverio
-insert-international-refractors,BCP-248,Base,false,,Cooper Pratt
-insert-international-refractors,BCP-249,Base,false,,Andri Hidalgo
-insert-packfractors,BCP-151,Base,false,,Slater de Brun
-insert-packfractors,BCP-152,Base,false,,Wandy Asigen
-insert-packfractors,BCP-153,Base,false,,Alex Lodise
-insert-packfractors,BCP-154,Base,false,,Colt Emerson
-insert-packfractors,BCP-155,Base,false,,John Gil
-insert-packfractors,BCP-156,Base,false,,Isaias Castillo
-insert-packfractors,BCP-157,Base,false,,Rubel Arias
-insert-packfractors,BCP-158,Base,false,,Fabricio Blanco
-insert-packfractors,BCP-159,Base,false,,Christian Zazueta
-insert-packfractors,BCP-160,Base,false,,Johenssy Colome
-insert-packfractors,BCP-161,Base,false,,Diego Frontado
-insert-packfractors,BCP-162,Base,false,,Talon Haley
-insert-packfractors,BCP-163,Base,false,,Francisco Renteria
-insert-packfractors,BCP-164,Base,false,,JoJo Parker
-insert-packfractors,BCP-165,Base,false,,Darell Morel
-insert-packfractors,BCP-166,Base,false,,Hagen Smith
-insert-packfractors,BCP-167,Base,false,,Ezequiel Melbourne
-insert-packfractors,BCP-168,Base,false,,Joseph Sullivan
-insert-packfractors,BCP-169,Base,false,,Sebastian Blanco
-insert-packfractors,BCP-170,Base,false,,Leo De Vries
-insert-packfractors,BCP-171,Base,false,,Brandon Clarke
-insert-packfractors,BCP-172,Base,false,,Leonardo Reynoso
-insert-packfractors,BCP-173,Base,false,,Luis De La Torre
-insert-packfractors,BCP-174,Base,false,,Aiva Arquette
-insert-packfractors,BCP-175,Base,false,,Randy Santana
-insert-packfractors,BCP-176,Base,false,,Gregory Pio
-insert-packfractors,BCP-177,Base,false,,Juan Rujano
-insert-packfractors,BCP-178,Base,false,,Wilton Guerrero Jr.
-insert-packfractors,BCP-179,Base,false,,Samil Serrano
-insert-packfractors,BCP-180,Base,false,,Jaider Suarez
-insert-packfractors,BCP-181,Base,false,,Logan Sauve
-insert-packfractors,BCP-182,Base,false,,Jaiden Lo Re
-insert-packfractors,BCP-183,Base,false,,Hyun Seung Lee
-insert-packfractors,BCP-184,Base,false,,Gustavo Baptista
-insert-packfractors,BCP-185,Base,false,,Ricky Duran
-insert-packfractors,BCP-186,Base,false,,Brendan Jones
-insert-packfractors,BCP-187,Base,false,,Wyatt Vincent
-insert-packfractors,BCP-188,Base,false,,Wilder Dalis
-insert-packfractors,BCP-189,Base,false,,Emil Morales
-insert-packfractors,BCP-190,Base,false,,Sebastian Dos Santos
-insert-packfractors,BCP-191,Base,false,,Dawvris Brito
-insert-packfractors,BCP-192,Base,false,,Ricky Moneys
-insert-packfractors,BCP-193,Base,false,,Juan Rojas
-insert-packfractors,BCP-194,Base,false,,Angeibel Gomez
-insert-packfractors,BCP-195,Base,false,,Braylen Wimmer
-insert-packfractors,BCP-196,Base,false,,Jett Williams
-insert-packfractors,BCP-197,Base,false,,Juan Rijo
-insert-packfractors,BCP-198,Base,false,,Louis Andujar
-insert-packfractors,BCP-199,Base,false,,Walker Jenkins
-insert-packfractors,BCP-200,Base,false,,Luis Hernandez
-insert-packfractors,BCP-201,Base,false,,Joniel Hernandez
-insert-packfractors,BCP-202,Base,false,,Avery Owusu-Asiedu
-insert-packfractors,BCP-203,Base,false,,Stharlin Torres
-insert-packfractors,BCP-204,Base,false,,Angel De Los Santos
-insert-packfractors,BCP-205,Base,false,,Eduardo Quintero
-insert-packfractors,BCP-206,Base,false,,Adrian Lunar
-insert-packfractors,BCP-207,Base,false,,Santiago Solarte
-insert-packfractors,BCP-208,Base,false,,Cleiner Ramirez
-insert-packfractors,BCP-209,Base,false,,Ethan Holliday
-insert-packfractors,BCP-210,Base,false,,Angel Salio
-insert-packfractors,BCP-211,Base,false,,Juneiker Caceres
-insert-packfractors,BCP-212,Base,false,,Nelson Rada
-insert-packfractors,BCP-213,Base,false,,Mike Sirota
-insert-packfractors,BCP-214,Base,false,,Owen Ayers
-insert-packfractors,BCP-215,Base,false,,Gavin Fien
-insert-packfractors,BCP-216,Base,false,,Enmanuel Merlo
-insert-packfractors,BCP-217,Base,false,,Sir Jamison Jones
-insert-packfractors,BCP-218,Base,false,,Caleb Bonemer
-insert-packfractors,BCP-219,Base,false,,Yadier Muñoz
-insert-packfractors,BCP-220,Base,false,,Angel Nunez
-insert-packfractors,BCP-221,Base,false,,Manuel Bolivar
-insert-packfractors,BCP-222,Base,false,,Jeancer Custodio
-insert-packfractors,BCP-223,Base,false,,Elaineiker Coronado
-insert-packfractors,BCP-224,Base,false,,Dax Kilby
-insert-packfractors,BCP-225,Base,false,,Alexander Pio
-insert-packfractors,BCP-226,Base,false,,Wellington Aracena
-insert-packfractors,BCP-227,Base,false,,Pedro Gomez
-insert-packfractors,BCP-228,Base,false,,Jeyson Horton
-insert-packfractors,BCP-229,Base,false,,Randy Guzman
-insert-packfractors,BCP-230,Base,false,,Jose Castro
-insert-packfractors,BCP-231,Base,false,,Sebastian Walcott
-insert-packfractors,BCP-232,Base,false,,Yunior Amparo
-insert-packfractors,BCP-233,Base,false,,Dante Nori
-insert-packfractors,BCP-234,Base,false,,Kevin Alvarez
-insert-packfractors,BCP-235,Base,false,,Alfredo Duno
-insert-packfractors,BCP-236,Base,false,,Max Clark
-insert-packfractors,BCP-237,Base,false,,Austin Overn
-insert-packfractors,BCP-238,Base,false,,Seth Hernandez
-insert-packfractors,BCP-239,Base,false,,Samy Natera Jr.
-insert-packfractors,BCP-240,Base,false,,Ariel Roque
-insert-packfractors,BCP-241,Base,false,,Elian Rosario
-insert-packfractors,BCP-242,Base,false,,Randy Arias
-insert-packfractors,BCP-243,Base,false,,Steele Hall
-insert-packfractors,BCP-244,Base,false,,Jesús Made
-insert-packfractors,BCP-245,Base,false,,Eli Willits
-insert-packfractors,BCP-246,Base,false,,Garielvin Silverio
-insert-packfractors,BCP-247,Base,false,,Erick De La Cruz
-insert-packfractors,BCP-248,Base,false,,Cooper Pratt
-insert-packfractors,BCP-249,Base,false,,Andri Hidalgo
-insert-packfractors,BCP-250,Base,false,,Yordani Soto
-auto-chrome-prospect-autographs,CPA-AC,Base,true,,Argenis Cayama
-auto-chrome-prospect-autographs,CPA-AD,Base,true,,Angel De Los Santos
-auto-chrome-prospect-autographs,CPA-AG,Base,true,,Angeibel Gomez
-auto-chrome-prospect-autographs,CPA-AH,Base,true,,Andri Hidalgo
-auto-chrome-prospect-autographs,CPA-AL,Base,true,,Adrian Lunar
-auto-chrome-prospect-autographs,CPA-ALO,Base,true,,Alex Lodise
-auto-chrome-prospect-autographs,CPA-AMA,Base,true,,Anthony Martinez
-auto-chrome-prospect-autographs,CPA-AN,Base,true,,Angel Nunez
-auto-chrome-prospect-autographs,CPA-AN,Base,true,,Alejandro Nunez
-auto-chrome-prospect-autographs,CPA-AO,Base,true,,Austin Overn
-auto-chrome-prospect-autographs,CPA-AOW,Base,true,,Avery Owusu-Asiedu
-auto-chrome-prospect-autographs,CPA-AP,Base,true,,Alexander Pio
-auto-chrome-prospect-autographs,CPA-AR,Base,true,,Ariel Roque
-auto-chrome-prospect-autographs,CPA-AS,Base,true,,Angel Salio
-auto-chrome-prospect-autographs,CPA-ASA,Base,true,,Alimber Santa
-auto-chrome-prospect-autographs,CPA-BBU,Base,true,,Brandon Butterworth
-auto-chrome-prospect-autographs,CPA-BC,Base,true,,Brandon Clarke
-auto-chrome-prospect-autographs,CPA-BJ,Base,true,,Brendan Jones
-auto-chrome-prospect-autographs,CPA-BN,Base,true,,Braden Nett
-auto-chrome-prospect-autographs,CPA-BW,Base,true,,Braylen Wimmer
-auto-chrome-prospect-autographs,CPA-CA,Base,true,,Chris Arroyo
-auto-chrome-prospect-autographs,CPA-CR,Base,true,,Cleiner Ramirez
-auto-chrome-prospect-autographs,CPA-CZ,Base,true,,Christian Zazueta
-auto-chrome-prospect-autographs,CPA-DB,Base,true,,Dawvris Brito
-auto-chrome-prospect-autographs,CPA-DF,Base,true,,Diego Frontado
-auto-chrome-prospect-autographs,CPA-DK,Base,true,,Dax Kilby
-auto-chrome-prospect-autographs,CPA-DM,Base,true,,Darell Morel
-auto-chrome-prospect-autographs,CPA-DT,Base,true,,Deward Tovar
-auto-chrome-prospect-autographs,CPA-EA,Base,true,,Enddy Azocar
-auto-chrome-prospect-autographs,CPA-EC,Base,true,,Elaineiker Coronado
-auto-chrome-prospect-autographs,CPA-ED,Base,true,,Erick De La Cruz
-auto-chrome-prospect-autographs,CPA-ED,Base,true,,Edward Duran
-auto-chrome-prospect-autographs,CPA-EM,Base,true,,Ezequiel Melbourne
-auto-chrome-prospect-autographs,CPA-EMER,Base,true,,Enmanuel Merlo
-auto-chrome-prospect-autographs,CPA-EPE,Base,true,,Enyervert Perez
-auto-chrome-prospect-autographs,CPA-EQ,Base,true,,Eduardo Quintero
-auto-chrome-prospect-autographs,CPA-ER,Base,true,,Elian Rosario
-auto-chrome-prospect-autographs,CPA-FA,Base,true,,Franklin Arias
-auto-chrome-prospect-autographs,CPA-FB,Base,true,,Fabricio Blanco
-auto-chrome-prospect-autographs,CPA-FE,Base,true,,Francisco Espinoza
-auto-chrome-prospect-autographs,CPA-FR,Base,true,,Francisco Renteria
-auto-chrome-prospect-autographs,CPA-GB,Base,true,,Gustavo Baptista
-auto-chrome-prospect-autographs,CPA-GP,Base,true,,Gregory Pio
-auto-chrome-prospect-autographs,CPA-HL,Base,true,,Hyun Seung Lee
-auto-chrome-prospect-autographs,CPA-IC,Base,true,,Isaias Castillo
-auto-chrome-prospect-autographs,CPA-JC,Base,true,,Johenssy Colome
-auto-chrome-prospect-autographs,CPA-JCA,Base,true,,Jose Castro
-auto-chrome-prospect-autographs,CPA-JCI,Base,true,,Jurrangelo Cijntje
-auto-chrome-prospect-autographs,CPA-JCU,Base,true,,Jeancer Custodio
-auto-chrome-prospect-autographs,CPA-JGO,Base,true,,Josuar Gonzalez
-auto-chrome-prospect-autographs,CPA-JH,Base,true,,Jeyson Horton
-auto-chrome-prospect-autographs,CPA-JHE,Base,true,,Joniel Hernandez
-auto-chrome-prospect-autographs,CPA-JLO,Base,true,,Jaiden Lo Re
-auto-chrome-prospect-autographs,CPA-JPA,Base,true,,JoJo Parker
-auto-chrome-prospect-autographs,CPA-JR,Base,true,,Juan Rijo
-auto-chrome-prospect-autographs,CPA-JRO,Base,true,,Juan Rojas
-auto-chrome-prospect-autographs,CPA-JRU,Base,true,,Juan Rujano
-auto-chrome-prospect-autographs,CPA-JS,Base,true,,Jaider Suarez
-auto-chrome-prospect-autographs,CPA-JSU,Base,true,,Joseph Sullivan
-auto-chrome-prospect-autographs,CPA-JT,Base,true,,Juan Torres
-auto-chrome-prospect-autographs,CPA-KA,Base,true,,Keaton Anthony
-auto-chrome-prospect-autographs,CPA-KCA,Base,true,,Kyle Carr
-auto-chrome-prospect-autographs,CPA-KMA,Base,true,,Keyner Martinez
-auto-chrome-prospect-autographs,CPA-LA,Base,true,,Louis Andujar
-auto-chrome-prospect-autographs,CPA-LC,Base,true,,Luis Cova
-auto-chrome-prospect-autographs,CPA-LD,Base,true,,Luis De La Torre
-auto-chrome-prospect-autographs,CPA-LD,Base,true,,Liam Doyle
-auto-chrome-prospect-autographs,CPA-LDA,Base,true,,Logan Dawson
-auto-chrome-prospect-autographs,CPA-LH,Base,true,,Luis Hernandez
-auto-chrome-prospect-autographs,CPA-LP,Base,true,,Luis Peña
-auto-chrome-prospect-autographs,CPA-LR,Base,true,,Leonardo Reynoso
-auto-chrome-prospect-autographs,CPA-MB,Base,true,,Manuel Bolivar
-auto-chrome-prospect-autographs,CPA-MM,Base,true,,Miguel Mendez
-auto-chrome-prospect-autographs,CPA-NDE,Base,true,,Nauris De La Cruz
-auto-chrome-prospect-autographs,CPA-OA,Base,true,,Owen Ayers
-auto-chrome-prospect-autographs,CPA-PC,Base,true,,Patrick Copen
-auto-chrome-prospect-autographs,CPA-PG,Base,true,,Pedro Gomez
-auto-chrome-prospect-autographs,CPA-RA,Base,true,,Randy Arias
-auto-chrome-prospect-autographs,CPA-RAR,Base,true,,Rubel Arias
-auto-chrome-prospect-autographs,CPA-RD,Base,true,,Ricky Duran
-auto-chrome-prospect-autographs,CPA-RD,Base,true,,Ramiro Dominguez
-auto-chrome-prospect-autographs,CPA-RE,Base,true,,Romeli Espinosa
-auto-chrome-prospect-autographs,CPA-RG,Base,true,,Randy Guzman
-auto-chrome-prospect-autographs,CPA-RM,Base,true,,Ricky Moneys
-auto-chrome-prospect-autographs,CPA-RS,Base,true,,Randy Santana
-auto-chrome-prospect-autographs,CPA-SB,Base,true,,Sebastian Blanco
-auto-chrome-prospect-autographs,CPA-SDE,Base,true,,Slater de Brun
-auto-chrome-prospect-autographs,CPA-SDO,Base,true,,Sebastian Dos Santos
-auto-chrome-prospect-autographs,CPA-SJ,Base,true,,Sir Jamison Jones
-auto-chrome-prospect-autographs,CPA-SL,Base,true,,Sean Paul Liñan
-auto-chrome-prospect-autographs,CPA-SN,Base,true,,Samy Natera Jr.
-auto-chrome-prospect-autographs,CPA-SS,Base,true,,Santiago Solarte
-auto-chrome-prospect-autographs,CPA-SSE,Base,true,,Samil Serrano
-auto-chrome-prospect-autographs,CPA-ST,Base,true,,Stharlin Torres
-auto-chrome-prospect-autographs,CPA-TH,Base,true,,Talon Haley
-auto-chrome-prospect-autographs,CPA-WA,Base,true,,Wandy Asigen
-auto-chrome-prospect-autographs,CPA-WAR,Base,true,,Wellington Aracena
-auto-chrome-prospect-autographs,CPA-WD,Base,true,,Wilder Dalis
-auto-chrome-prospect-autographs,CPA-WG,Base,true,,Wilton Guerrero Jr.
-auto-chrome-prospect-autographs,CPA-WV,Base,true,,Wyatt Vincent
-auto-chrome-prospect-autographs,CPA-WW,Base,true,,Will Watson
-auto-chrome-prospect-autographs,CPA-YA,Base,true,,Yunior Amparo
-auto-chrome-prospect-autographs,CPA-YM,Base,true,,Yadier Muñoz
-auto-chrome-prospect-autographs,CPA-YS,Base,true,,Yordani Soto
-auto-chrome-prospect-autographs-gold-ink,CPA-AD,Base,true,,Angel De Los Santos
-auto-chrome-prospect-autographs-gold-ink,CPA-AG,Base,true,,Angeibel Gomez
-auto-chrome-prospect-autographs-gold-ink,CPA-AH,Base,true,,Andri Hidalgo
-auto-chrome-prospect-autographs-gold-ink,CPA-AL,Base,true,,Adrian Lunar
-auto-chrome-prospect-autographs-gold-ink,CPA-ALO,Base,true,,Alex Lodise
-auto-chrome-prospect-autographs-gold-ink,CPA-AN,Base,true,,Angel Nunez
-auto-chrome-prospect-autographs-gold-ink,CPA-AO,Base,true,,Austin Overn
-auto-chrome-prospect-autographs-gold-ink,CPA-AP,Base,true,,Alexander Pio
-auto-chrome-prospect-autographs-gold-ink,CPA-AR,Base,true,,Ariel Roque
-auto-chrome-prospect-autographs-gold-ink,CPA-AS,Base,true,,Angel Salio
-auto-chrome-prospect-autographs-gold-ink,CPA-BJ,Base,true,,Brendan Jones
-auto-chrome-prospect-autographs-gold-ink,CPA-BW,Base,true,,Braylen Wimmer
-auto-chrome-prospect-autographs-gold-ink,CPA-CR,Base,true,,Cleiner Ramirez
-auto-chrome-prospect-autographs-gold-ink,CPA-DB,Base,true,,Dawvris Brito
-auto-chrome-prospect-autographs-gold-ink,CPA-DF,Base,true,,Diego Frontado
-auto-chrome-prospect-autographs-gold-ink,CPA-EA,Base,true,,Enddy Azocar
-auto-chrome-prospect-autographs-gold-ink,CPA-EC,Base,true,,Elaineiker Coronado
-auto-chrome-prospect-autographs-gold-ink,CPA-ED,Base,true,,Erick De La Cruz
-auto-chrome-prospect-autographs-gold-ink,CPA-EM,Base,true,,Ezequiel Melbourne
-auto-chrome-prospect-autographs-gold-ink,CPA-EMER,Base,true,,Enmanuel Merlo
-auto-chrome-prospect-autographs-gold-ink,CPA-ER,Base,true,,Elian Rosario
-auto-chrome-prospect-autographs-gold-ink,CPA-FB,Base,true,,Fabricio Blanco
-auto-chrome-prospect-autographs-gold-ink,CPA-FE,Base,true,,Francisco Espinoza
-auto-chrome-prospect-autographs-gold-ink,CPA-FR,Base,true,,Francisco Renteria
-auto-chrome-prospect-autographs-gold-ink,CPA-GP,Base,true,,Gregory Pio
-auto-chrome-prospect-autographs-gold-ink,CPA-HL,Base,true,,Hyun Seung Lee
-auto-chrome-prospect-autographs-gold-ink,CPA-IC,Base,true,,Isaias Castillo
-auto-chrome-prospect-autographs-gold-ink,CPA-JC,Base,true,,Johenssy Colome
-auto-chrome-prospect-autographs-gold-ink,CPA-JCA,Base,true,,Jose Castro
-auto-chrome-prospect-autographs-gold-ink,CPA-JCI,Base,true,,Jurrangelo Cijntje
-auto-chrome-prospect-autographs-gold-ink,CPA-JCU,Base,true,,Jeancer Custodio
-auto-chrome-prospect-autographs-gold-ink,CPA-JH,Base,true,,Jeyson Horton
-auto-chrome-prospect-autographs-gold-ink,CPA-JHE,Base,true,,Joniel Hernandez
-auto-chrome-prospect-autographs-gold-ink,CPA-JRU,Base,true,,Juan Rujano
-auto-chrome-prospect-autographs-gold-ink,CPA-JS,Base,true,,Jaider Suarez
-auto-chrome-prospect-autographs-gold-ink,CPA-JSU,Base,true,,Joseph Sullivan
-auto-chrome-prospect-autographs-gold-ink,CPA-LC,Base,true,,Luis Cova
-auto-chrome-prospect-autographs-gold-ink,CPA-LH,Base,true,,Luis Hernandez
-auto-chrome-prospect-autographs-gold-ink,CPA-LR,Base,true,,Leonardo Reynoso
-auto-chrome-prospect-autographs-gold-ink,CPA-MB,Base,true,,Manuel Bolivar
-auto-chrome-prospect-autographs-gold-ink,CPA-OA,Base,true,,Owen Ayers
-auto-chrome-prospect-autographs-gold-ink,CPA-PG,Base,true,,Pedro Gomez
-auto-chrome-prospect-autographs-gold-ink,CPA-RA,Base,true,,Randy Arias
-auto-chrome-prospect-autographs-gold-ink,CPA-RAR,Base,true,,Rubel Arias
-auto-chrome-prospect-autographs-gold-ink,CPA-RD,Base,true,,Ricky Duran
-auto-chrome-prospect-autographs-gold-ink,CPA-RE,Base,true,,Romeli Espinosa
-auto-chrome-prospect-autographs-gold-ink,CPA-RM,Base,true,,Ricky Moneys
-auto-chrome-prospect-autographs-gold-ink,CPA-RS,Base,true,,Randy Santana
-auto-chrome-prospect-autographs-gold-ink,CPA-SB,Base,true,,Sebastian Blanco
-auto-chrome-prospect-autographs-gold-ink,CPA-SDE,Base,true,,Slater de Brun
-auto-chrome-prospect-autographs-gold-ink,CPA-SDO,Base,true,,Sebastian Dos Santos
-auto-chrome-prospect-autographs-gold-ink,CPA-SS,Base,true,,Santiago Solarte
-auto-chrome-prospect-autographs-gold-ink,CPA-SSE,Base,true,,Samil Serrano
-auto-chrome-prospect-autographs-gold-ink,CPA-TH,Base,true,,Talon Haley
-auto-chrome-prospect-autographs-gold-ink,CPA-WA,Base,true,,Wandy Asigen
-auto-chrome-prospect-autographs-gold-ink,CPA-WAR,Base,true,,Wellington Aracena
-auto-chrome-prospect-autographs-gold-ink,CPA-WG,Base,true,,Wilton Guerrero Jr.
-auto-chrome-prospect-autographs-gold-ink,CPA-YA,Base,true,,Yunior Amparo
-auto-chrome-prospect-autographs-gold-ink,CPA-YM,Base,true,,Yadier Muñoz
-auto-chrome-prospect-international-refractor-autographs,CPA-AG,Base,true,,Angeibel Gomez
-auto-chrome-prospect-international-refractor-autographs,CPA-AH,Base,true,,Andri Hidalgo
-auto-chrome-prospect-international-refractor-autographs,CPA-ALO,Base,true,,Alex Lodise
-auto-chrome-prospect-international-refractor-autographs,CPA-AN,Base,true,,Angel Nunez
-auto-chrome-prospect-international-refractor-autographs,CPA-AP,Base,true,,Alexander Pio
-auto-chrome-prospect-international-refractor-autographs,CPA-AR,Base,true,,Ariel Roque
-auto-chrome-prospect-international-refractor-autographs,CPA-CR,Base,true,,Cleiner Ramirez
-auto-chrome-prospect-international-refractor-autographs,CPA-DB,Base,true,,Dawvris Brito
-auto-chrome-prospect-international-refractor-autographs,CPA-DF,Base,true,,Diego Frontado
-auto-chrome-prospect-international-refractor-autographs,CPA-EM,Base,true,,Ezequiel Melbourne
-auto-chrome-prospect-international-refractor-autographs,CPA-EMER,Base,true,,Enmanuel Merlo
-auto-chrome-prospect-international-refractor-autographs,CPA-ER,Base,true,,Elian Rosario
-auto-chrome-prospect-international-refractor-autographs,CPA-FB,Base,true,,Fabricio Blanco
-auto-chrome-prospect-international-refractor-autographs,CPA-FR,Base,true,,Francisco Renteria
-auto-chrome-prospect-international-refractor-autographs,CPA-GP,Base,true,,Gregory Pio
-auto-chrome-prospect-international-refractor-autographs,CPA-HL,Base,true,,Hyun Seung Lee
-auto-chrome-prospect-international-refractor-autographs,CPA-JC,Base,true,,Johenssy Colome
-auto-chrome-prospect-international-refractor-autographs,CPA-JCI,Base,true,,Jurrangelo Cijntje
-auto-chrome-prospect-international-refractor-autographs,CPA-JCU,Base,true,,Jeancer Custodio
-auto-chrome-prospect-international-refractor-autographs,CPA-JH,Base,true,,Jeyson Horton
-auto-chrome-prospect-international-refractor-autographs,CPA-JHE,Base,true,,Joniel Hernandez
-auto-chrome-prospect-international-refractor-autographs,CPA-JS,Base,true,,Jaider Suarez
-auto-chrome-prospect-international-refractor-autographs,CPA-LH,Base,true,,Luis Hernandez
-auto-chrome-prospect-international-refractor-autographs,CPA-LR,Base,true,,Leonardo Reynoso
-auto-chrome-prospect-international-refractor-autographs,CPA-PG,Base,true,,Pedro Gomez
-auto-chrome-prospect-international-refractor-autographs,CPA-RA,Base,true,,Randy Arias
-auto-chrome-prospect-international-refractor-autographs,CPA-RAR,Base,true,,Rubel Arias
-auto-chrome-prospect-international-refractor-autographs,CPA-RD,Base,true,,Ricky Duran
-auto-chrome-prospect-international-refractor-autographs,CPA-RM,Base,true,,Ricky Moneys
-auto-chrome-prospect-international-refractor-autographs,CPA-RS,Base,true,,Randy Santana
-auto-chrome-prospect-international-refractor-autographs,CPA-SDE,Base,true,,Slater de Brun
-auto-chrome-prospect-international-refractor-autographs,CPA-SS,Base,true,,Santiago Solarte
-auto-chrome-prospect-international-refractor-autographs,CPA-SSE,Base,true,,Samil Serrano
-auto-chrome-prospect-international-refractor-autographs,CPA-WA,Base,true,,Wandy Asigen
-auto-chrome-prospect-international-refractor-autographs,CPA-WG,Base,true,,Wilton Guerrero Jr.
-auto-chrome-prospect-international-refractor-autographs,CPA-YM,Base,true,,Yadier Muñoz
-auto-chrome-prospect-packfractor-autographs,CPA-AD,Base,true,,Angel De Los Santos
-auto-chrome-prospect-packfractor-autographs,CPA-AG,Base,true,,Angeibel Gomez
-auto-chrome-prospect-packfractor-autographs,CPA-AH,Base,true,,Andri Hidalgo
-auto-chrome-prospect-packfractor-autographs,CPA-AL,Base,true,,Adrian Lunar
-auto-chrome-prospect-packfractor-autographs,CPA-ALO,Base,true,,Alex Lodise
-auto-chrome-prospect-packfractor-autographs,CPA-AN,Base,true,,Angel Nunez
-auto-chrome-prospect-packfractor-autographs,CPA-AO,Base,true,,Austin Overn
-auto-chrome-prospect-packfractor-autographs,CPA-AP,Base,true,,Alexander Pio
-auto-chrome-prospect-packfractor-autographs,CPA-AR,Base,true,,Ariel Roque
-auto-chrome-prospect-packfractor-autographs,CPA-AS,Base,true,,Angel Salio
-auto-chrome-prospect-packfractor-autographs,CPA-BC,Base,true,,Brandon Clarke
-auto-chrome-prospect-packfractor-autographs,CPA-BJ,Base,true,,Brendan Jones
-auto-chrome-prospect-packfractor-autographs,CPA-BW,Base,true,,Braylen Wimmer
-auto-chrome-prospect-packfractor-autographs,CPA-CR,Base,true,,Cleiner Ramirez
-auto-chrome-prospect-packfractor-autographs,CPA-DF,Base,true,,Diego Frontado
-auto-chrome-prospect-packfractor-autographs,CPA-EA,Base,true,,Enddy Azocar
-auto-chrome-prospect-packfractor-autographs,CPA-EC,Base,true,,Elaineiker Coronado
-auto-chrome-prospect-packfractor-autographs,CPA-ED,Base,true,,Erick De La Cruz
-auto-chrome-prospect-packfractor-autographs,CPA-EM,Base,true,,Ezequiel Melbourne
-auto-chrome-prospect-packfractor-autographs,CPA-EMER,Base,true,,Enmanuel Merlo
-auto-chrome-prospect-packfractor-autographs,CPA-EPE,Base,true,,Enyervert Perez
-auto-chrome-prospect-packfractor-autographs,CPA-ER,Base,true,,Elian Rosario
-auto-chrome-prospect-packfractor-autographs,CPA-FB,Base,true,,Fabricio Blanco
-auto-chrome-prospect-packfractor-autographs,CPA-FE,Base,true,,Francisco Espinoza
-auto-chrome-prospect-packfractor-autographs,CPA-FR,Base,true,,Francisco Renteria
-auto-chrome-prospect-packfractor-autographs,CPA-GP,Base,true,,Gregory Pio
-auto-chrome-prospect-packfractor-autographs,CPA-HL,Base,true,,Hyun Seung Lee
-auto-chrome-prospect-packfractor-autographs,CPA-IC,Base,true,,Isaias Castillo
-auto-chrome-prospect-packfractor-autographs,CPA-JC,Base,true,,Johenssy Colome
-auto-chrome-prospect-packfractor-autographs,CPA-JCA,Base,true,,Jose Castro
-auto-chrome-prospect-packfractor-autographs,CPA-JCU,Base,true,,Jeancer Custodio
-auto-chrome-prospect-packfractor-autographs,CPA-JH,Base,true,,Jeyson Horton
-auto-chrome-prospect-packfractor-autographs,CPA-JHE,Base,true,,Joniel Hernandez
-auto-chrome-prospect-packfractor-autographs,CPA-JR,Base,true,,Juan Rijo
-auto-chrome-prospect-packfractor-autographs,CPA-JRU,Base,true,,Juan Rujano
-auto-chrome-prospect-packfractor-autographs,CPA-JS,Base,true,,Jaider Suarez
-auto-chrome-prospect-packfractor-autographs,CPA-JSU,Base,true,,Joseph Sullivan
-auto-chrome-prospect-packfractor-autographs,CPA-LC,Base,true,,Luis Cova
-auto-chrome-prospect-packfractor-autographs,CPA-LH,Base,true,,Luis Hernandez
-auto-chrome-prospect-packfractor-autographs,CPA-LR,Base,true,,Leonardo Reynoso
-auto-chrome-prospect-packfractor-autographs,CPA-MB,Base,true,,Manuel Bolivar
-auto-chrome-prospect-packfractor-autographs,CPA-OA,Base,true,,Owen Ayers
-auto-chrome-prospect-packfractor-autographs,CPA-PG,Base,true,,Pedro Gomez
-auto-chrome-prospect-packfractor-autographs,CPA-RA,Base,true,,Randy Arias
-auto-chrome-prospect-packfractor-autographs,CPA-RAR,Base,true,,Rubel Arias
-auto-chrome-prospect-packfractor-autographs,CPA-RD,Base,true,,Ricky Duran
-auto-chrome-prospect-packfractor-autographs,CPA-RE,Base,true,,Romeli Espinosa
-auto-chrome-prospect-packfractor-autographs,CPA-RM,Base,true,,Ricky Moneys
-auto-chrome-prospect-packfractor-autographs,CPA-RS,Base,true,,Randy Santana
-auto-chrome-prospect-packfractor-autographs,CPA-SB,Base,true,,Sebastian Blanco
-auto-chrome-prospect-packfractor-autographs,CPA-SDE,Base,true,,Slater de Brun
-auto-chrome-prospect-packfractor-autographs,CPA-SDO,Base,true,,Sebastian Dos Santos
-auto-chrome-prospect-packfractor-autographs,CPA-SS,Base,true,,Santiago Solarte
-auto-chrome-prospect-packfractor-autographs,CPA-SSE,Base,true,,Samil Serrano
-auto-chrome-prospect-packfractor-autographs,CPA-TH,Base,true,,Talon Haley
-auto-chrome-prospect-packfractor-autographs,CPA-WA,Base,true,,Wandy Asigen
-auto-chrome-prospect-packfractor-autographs,CPA-WAR,Base,true,,Wellington Aracena
-auto-chrome-prospect-packfractor-autographs,CPA-WG,Base,true,,Wilton Guerrero Jr.
-auto-chrome-prospect-packfractor-autographs,CPA-YA,Base,true,,Yunior Amparo
-auto-chrome-prospect-packfractor-autographs,CPA-YM,Base,true,,Yadier Muñoz
-auto-wbc-flag-variation-autographs,WBC-1,Base,true,,Maikel Garcia
-auto-wbc-flag-variation-autographs,WBC-4,Base,true,,Vinnie Pasquantino
-auto-wbc-flag-variation-autographs,WBC-5,Base,true,,Jackson Chourio
-auto-wbc-flag-variation-autographs,WBC-6,Base,true,,Jakob Marsee
-auto-wbc-flag-variation-autographs,WBC-7,Base,true,,Bobby Witt Jr.
-auto-wbc-flag-variation-autographs,WBC-8,Base,true,,Austin Wells
-auto-wbc-flag-variation-autographs,WBC-9,Base,true,,Sam Antonacci
-auto-wbc-flag-variation-autographs,WBC-10,Base,true,,Bryce Harper
-auto-wbc-flag-variation-autographs,WBC-17,Base,true,,Shohei Ohtani
-auto-wbc-flag-variation-autographs,WBC-18,Base,true,,Hyeseong Kim
-auto-wbc-flag-variation-autographs,WBC-19,Base,true,,Will Smith
-auto-wbc-flag-variation-autographs,WBC-20,Base,true,,Jazz Chisholm Jr.
-auto-wbc-flag-variation-autographs,WBC-21,Base,true,,Ronald Acuña Jr.
-auto-wbc-flag-variation-autographs,WBC-23,Base,true,,Alex Bregman
-auto-wbc-flag-variation-autographs,WBC-24,Base,true,,Geraldo Perdomo
-auto-wbc-flag-variation-autographs,WBC-29,Base,true,,Nolan McLean
-auto-wbc-flag-variation-autographs,WBC-30,Base,true,,Dante Nori
-auto-wbc-flag-variation-autographs,WBC-31,Base,true,,Randy Arozarena
-auto-wbc-flag-variation-autographs,WBC-33,Base,true,,Tsung-Che Cheng
-auto-wbc-flag-variation-autographs,WBC-34,Base,true,,Masataka Yoshida
-auto-wbc-flag-variation-autographs,WBC-36,Base,true,,Jac Caglianone
-auto-wbc-flag-variation-autographs,WBC-37,Base,true,,Travis Bazzana
-auto-wbc-flag-variation-autographs,WBC-38,Base,true,,Juan Soto
-auto-wbc-flag-variation-autographs,WBC-40,Base,true,,Paul Skenes
-auto-wbc-flag-variation-autographs,WBC-41,Base,true,,Mark Vientos
-auto-wbc-flag-variation-autographs,WBC-43,Base,true,,Fernando Tatis Jr.
-auto-wbc-flag-variation-autographs,WBC-46,Base,true,,Alejandro Kirk
-auto-wbc-flag-variation-autographs,WBC-47,Base,true,,Seth Lugo
-auto-wbc-flag-variation-autographs,WBC-50,Base,true,,Luis Arraez
-auto-wbc-flag-variation-autographs,WBC-51,Base,true,,Julio Rodríguez
-auto-wbc-flag-variation-autographs,WBC-54,Base,true,,Andrew Fischer
-auto-wbc-flag-variation-autographs,WBC-55,Base,true,,Munetaka Murakami
-auto-wbc-flag-variation-autographs,WBC-58,Base,true,,Nolan Arenado
-auto-wbc-flag-variation-autographs,WBC-59,Base,true,,Enrique Bradfield Jr.
-auto-wbc-flag-variation-autographs,WBC-60,Base,true,,Gunnar Henderson
-auto-wbc-flag-variation-autographs,WBC-61,Base,true,,Ceddanne Rafaela
-auto-wbc-flag-variation-autographs,WBC-67,Base,true,,Tarik Skubal
-auto-wbc-flag-variation-autographs,WBC-68,Base,true,,Brice Turang
-auto-wbc-flag-variation-autographs,WBC-70,Base,true,,Manny Machado
-auto-wbc-flag-variation-autographs,WBC-71,Base,true,,Mason Miller
-auto-wbc-flag-variation-autographs,WBC-72,Base,true,,Junior Caminero
-auto-wbc-flag-variation-autographs,WBC-75,Base,true,,Owen Caissie
-auto-wbc-flag-variation-autographs,WBC-77,Base,true,,Aaron Nola
-auto-wbc-flag-variation-autographs,WBC-81,Base,true,,Druw Jones
-auto-wbc-flag-variation-autographs,WBC-83,Base,true,,Jonathan Aranda
-auto-wbc-flag-variation-autographs,WBC-84,Base,true,,Matthew Boyd
-auto-wbc-flag-variation-autographs,WBC-85,Base,true,,Logan Webb
-auto-wbc-flag-variation-autographs,WBC-88,Base,true,,Denzel Clarke
-auto-wbc-flag-variation-autographs,WBC-89,Base,true,,Ozzie Albies
-auto-wbc-flag-variation-autographs,WBC-90,Base,true,,Byron Buxton
-auto-wbc-flag-variation-autographs,WBC-91,Base,true,,Kyle Schwarber
-auto-wbc-flag-variation-autographs,WBC-93,Base,true,,Wilyer Abreu
-auto-wbc-flag-variation-autographs,WBC-95,Base,true,,Andrés Giménez
-auto-wbc-flag-variation-autographs,WBC-98,Base,true,,Jung Hoo Lee
-auto-wbc-flag-variation-autographs,WBC-99,Base,true,,Aaron Judge
-auto-chrome-rookie-autographs,CRA-AP,Base,true,,Andrew Painter
-auto-chrome-rookie-autographs,CRA-BC,Base,true,,Bubba Chandler
-auto-chrome-rookie-autographs,CRA-BE,Base,true,,Bryce Eldridge
-auto-chrome-rookie-autographs,CRA-CB,Base,true,,Chase Burns
-auto-chrome-rookie-autographs,CRA-CBE,Base,true,,Carson Benge
-auto-chrome-rookie-autographs,CRA-CD,Base,true,,Chase DeLauter
-auto-chrome-rookie-autographs,CRA-CM,Base,true,,Christian Moore
-auto-chrome-rookie-autographs,CRA-CMO,Base,true,,Colson Montgomery
-auto-chrome-rookie-autographs,CRA-CS,Base,true,,Cam Schlittler
-auto-chrome-rookie-autographs,CRA-CWI,Base,true,,Carson Williams
-auto-chrome-rookie-autographs,CRA-JC,Base,true,,Jac Caglianone
-auto-chrome-rookie-autographs,CRA-JC,Base,true,,Jimmy Crooks
-auto-chrome-rookie-autographs,CRA-JMI,Base,true,,Jacob Misiorowski
-auto-chrome-rookie-autographs,CRA-JT,Base,true,,Jonah Tong
-auto-chrome-rookie-autographs,CRA-JWE,Base,true,,JJ Wetherholt
-auto-chrome-rookie-autographs,CRA-KG,Base,true,,Konnor Griffin
-auto-chrome-rookie-autographs,CRA-KM,Base,true,,Kevin McGonigle
-auto-chrome-rookie-autographs,CRA-KO,Base,true,,Kazuma Okamoto
-auto-chrome-rookie-autographs,CRA-LM,Base,true,,Luis Morales
-auto-chrome-rookie-autographs,CRA-MM,Base,true,,Munetaka Murakami
-auto-chrome-rookie-autographs,CRA-NM,Base,true,,Nolan McLean
-auto-chrome-rookie-autographs,CRA-OC,Base,true,,Owen Caissie
-auto-chrome-rookie-autographs,CRA-RA,Base,true,,Roman Anthony
-auto-chrome-rookie-autographs,CRA-SB,Base,true,,Samuel Basallo
-auto-chrome-rookie-autographs,CRA-SS,Base,true,,Sung-Mun Song
-auto-chrome-rookie-autographs,CRA-TB,Base,true,,Travis Bazzana
-auto-chrome-rookie-autographs,CRA-TI,Base,true,,Tatsuya Imai
-auto-chrome-rookie-autographs,CRA-TY,Base,true,,Trey Yesavage
-auto-bowman-gpk-autographs,BGP-AA,Base,true,,Aiva Arquette
-auto-bowman-gpk-autographs,BGP-AJ,Base,true,,Aaron Judge
-auto-bowman-gpk-autographs,BGP-BW,Base,true,,Bobby Witt Jr.
-auto-bowman-gpk-autographs,BGP-CC,Base,true,,Corbin Carroll
-auto-bowman-gpk-autographs,BGP-CK,Base,true,,Clayton Kershaw
-auto-bowman-gpk-autographs,BGP-CR,Base,true,,Cal Raleigh
-auto-bowman-gpk-autographs,BGP-CRI,Base,true,,Cal Ripken Jr.
-auto-bowman-gpk-autographs,BGP-CW,Base,true,,Carson Williams
-auto-bowman-gpk-autographs,BGP-ED,Base,true,,Elly De La Cruz
-auto-bowman-gpk-autographs,BGP-EH,Base,true,,Ethan Holliday
-auto-bowman-gpk-autographs,BGP-EW,Base,true,,Eli Willits
-auto-bowman-gpk-autographs,BGP-FT,Base,true,,Frank Thomas
-auto-bowman-gpk-autographs,BGP-GB,Base,true,,George Brett
-auto-bowman-gpk-autographs,BGP-GM,Base,true,,Greg Maddux
-auto-bowman-gpk-autographs,BGP-JB,Base,true,,Johnny Bench
-auto-bowman-gpk-autographs,BGP-JC,Base,true,,Jac Caglianone
-auto-bowman-gpk-autographs,BGP-JM,Base,true,,Jacob Misiorowski
-auto-bowman-gpk-autographs,BGP-JP,Base,true,,JoJo Parker
-auto-bowman-gpk-autographs,BGP-JR,Base,true,,Jose Ramirez
-auto-bowman-gpk-autographs,BGP-KO,Base,true,,Kazuma Okamoto
-auto-bowman-gpk-autographs,BGP-KS,Base,true,,Kyle Schwarber
-auto-bowman-gpk-autographs,BGP-LW,Base,true,,Larry Walker
-auto-bowman-gpk-autographs,BGP-MM,Base,true,,Munetaka Murakami
-auto-bowman-gpk-autographs,BGP-MMA,Base,true,,Manny Machado
-auto-bowman-gpk-autographs,BGP-MMC,Base,true,,Mark McGwire
-auto-bowman-gpk-autographs,BGP-MP,Base,true,,Mike Piazza
-auto-bowman-gpk-autographs,BGP-MS,Base,true,,Mike Schmidt
-auto-bowman-gpk-autographs,BGP-MT,Base,true,,Mike Trout
-auto-bowman-gpk-autographs,BGP-NK,Base,true,,Nick Kurtz
-auto-bowman-gpk-autographs,BGP-PC,Base,true,,Pete Crow-Armstrong
-auto-bowman-gpk-autographs,BGP-PS,Base,true,,Paul Skenes
-auto-bowman-gpk-autographs,BGP-RA,Base,true,,Roman Anthony
-auto-bowman-gpk-autographs,BGP-RCL,Base,true,,Roger Clemens
-auto-bowman-gpk-autographs,BGP-RJ,Base,true,,Reggie Jackson
-auto-bowman-gpk-autographs,BGP-SM,Base,true,,Shotaro Morii
-auto-bowman-gpk-autographs,BGP-SO,Base,true,,Shohei Ohtani
-auto-bowman-gpk-autographs,BGP-TI,Base,true,,Tatsuya Imai
-auto-bowman-gpk-autographs,BGP-VG,Base,true,,Vladimir Guerrero
-auto-bowman-gpk-autographs,BGP-WC,Base,true,,Will Clark
-auto-bowman-gpk-autographs,BGP-YY,Base,true,,Yoshinobu Yamamoto
-auto-big-break-autographs,BBA-AF,Base,true,,Alex Freeland
-auto-big-break-autographs,BBA-CC,Base,true,,Charlie Condon
-auto-big-break-autographs,BBA-CD,Base,true,,Chase DeLauter
-auto-big-break-autographs,BBA-CJ,Base,true,,Carter Jensen
-auto-big-break-autographs,BBA-CM,Base,true,,Colson Montgomery
-auto-big-break-autographs,BBA-DG,Base,true,,Denzer Guzman
-auto-big-break-autographs,BBA-EH,Base,true,,Ethan Holliday
-auto-big-break-autographs,BBA-JC,Base,true,,Jac Caglianone
-auto-big-break-autographs,BBA-JT,Base,true,,James Tibbs III
-auto-big-break-autographs,BBA-LP,Base,true,,Luis Peña
-auto-big-break-autographs,BBA-SK,Base,true,,Seong-Jun Kim
-auto-big-break-autographs,BBA-SS,Base,true,,Sal Stewart
-auto-big-break-autographs,BBA-TB,Base,true,,Travis Bazzana
-auto-2026-mlb-spring-breakout-autographs,SB-1,Base,true,,Konnor Griffin
-auto-2026-mlb-spring-breakout-autographs,SB-2,Base,true,,JJ Wetherholt
-auto-2026-mlb-spring-breakout-autographs,SB-3,Base,true,,Leo De Vries
-auto-2026-mlb-spring-breakout-autographs,SB-4,Base,true,,Ethan Holliday
-auto-2026-mlb-spring-breakout-autographs,SB-5,Base,true,,Max Clark
-auto-2026-mlb-spring-breakout-autographs,SB-6,Base,true,,Seth Hernandez
-auto-2026-mlb-spring-breakout-autographs,SB-7,Base,true,,James Tibbs III
-auto-2026-mlb-spring-breakout-autographs,SB-8,Base,true,,Luis Hernandez
-auto-2026-mlb-spring-breakout-autographs,SB-9,Base,true,,JoJo Parker
-auto-2026-mlb-spring-breakout-autographs,SB-10,Base,true,,Gavin Fien
-auto-2026-mlb-spring-breakout-autographs,SB-12,Base,true,,Ethan Salas
-auto-travel-tags-autographs,TT-1,Base,true,,Juan Soto
-auto-travel-tags-autographs,TT-3,Base,true,,Roki Sasaki
-auto-travel-tags-autographs,TT-4,Base,true,,Tatsuya Imai
-auto-travel-tags-autographs,TT-5,Base,true,,Paul Skenes
-auto-travel-tags-autographs,TT-6,Base,true,,Luis Hernandez
-auto-travel-tags-autographs,TT-7,Base,true,,Edward Florentino
-auto-travel-tags-autographs,TT-9,Base,true,,Leo De Vries
-auto-travel-tags-autographs,TT-12,Base,true,,Shotaro Morii
-auto-travel-tags-autographs,TT-13,Base,true,,Josuar Gonzalez
-auto-travel-tags-autographs,TT-15,Base,true,,Munetaka Murakami
-auto-it-came-to-the-league-autographs,IT-3,Base,true,,Jac Caglianone
-auto-it-came-to-the-league-autographs,IT-4,Base,true,,Kevin McGonigle
-auto-it-came-to-the-league-autographs,IT-10,Base,true,,Munetaka Murakami
-auto-it-came-to-the-league-autographs,IT-12,Base,true,,Konnor Griffin
-auto-it-came-to-the-league-autographs,IT-13,Base,true,,JJ Wetherholt
-auto-it-came-to-the-league-autographs,IT-15,Base,true,,Luis Hernandez
-auto-it-came-to-the-league-autographs,IT-17,Base,true,,Leo De Vries
-auto-it-came-to-the-league-autographs,IT-18,Base,true,,Josuar Gonzalez
-auto-it-came-to-the-league-autographs,IT-19,Base,true,,Ethan Holliday
-auto-it-came-to-the-league-autographs,IT-20,Base,true,,Max Clark
-auto-across-the-seams,AS-AJ,Base,true,,Aaron Judge
-auto-across-the-seams,AS-BH,Base,true,,Bryce Harper
-auto-across-the-seams,AS-BW,Base,true,,Bobby Witt Jr.
-auto-across-the-seams,AS-CC,Base,true,,Charlie Condon
-auto-across-the-seams,AS-CCA,Base,true,,Corbin Carroll
-auto-across-the-seams,AS-ED,Base,true,,Elly De La Cruz
-auto-across-the-seams,AS-EH,Base,true,,Ethan Holliday
-auto-across-the-seams,AS-FR,Base,true,,Francisco Renteria
-auto-across-the-seams,AS-FT,Base,true,,Fernando Tatis Jr.
-auto-across-the-seams,AS-JC,Base,true,,Jac Caglianone
-auto-across-the-seams,AS-JCA,Base,true,,Junior Caminero
-auto-across-the-seams,AS-JS,Base,true,,Juan Soto
-auto-across-the-seams,AS-JW,Base,true,,JJ Wetherholt
-auto-across-the-seams,AS-KG,Base,true,,Konnor Griffin
-auto-across-the-seams,AS-MM,Base,true,,Munetaka Murakami
-auto-across-the-seams,AS-MT,Base,true,,Mike Trout
-auto-across-the-seams,AS-PC,Base,true,,Pete Crow-Armstrong
-auto-across-the-seams,AS-RAN,Base,true,,Roman Anthony
-auto-across-the-seams,AS-SB,Base,true,,Samuel Basallo
-auto-across-the-seams,AS-SO,Base,true,,Shohei Ohtani
-auto-across-the-seams,AS-TY,Base,true,,Trey Yesavage
-auto-across-the-seams,AS-WL,Base,true,,Wyatt Langford
-auto-retrofractor-autographs,BRA-JPA,Base,true,,Jim Palmer
-auto-rookie-image-variation-autographs,CRA-BE,Base,true,,Bryce Eldridge
-auto-rookie-image-variation-autographs,CRA-CBE,Base,true,,Carson Benge
-auto-rookie-image-variation-autographs,CRA-CM,Base,true,,Christian Moore
-auto-rookie-image-variation-autographs,CRA-CS,Base,true,,Cam Schlittler
-auto-rookie-image-variation-autographs,CRA-JC,Base,true,,Jac Caglianone
-auto-rookie-image-variation-autographs,CRA-JCR,Base,true,,Justin Crawford
-auto-rookie-image-variation-autographs,CRA-JT,Base,true,,Jonah Tong
-auto-rookie-image-variation-autographs,CRA-JW,Base,true,,JJ Wetherholt
-auto-rookie-image-variation-autographs,CRA-KG,Base,true,,Konnor Griffin
-auto-rookie-image-variation-autographs,CRA-KM,Base,true,,Kevin McGonigle
-auto-rookie-image-variation-autographs,CRA-MM,Base,true,,Munetaka Murakami
-auto-rookie-image-variation-autographs,CRA-RA,Base,true,,Roman Anthony
-auto-rookie-image-variation-autographs,CRA-SB,Base,true,,Samuel Basallo
-auto-rookie-image-variation-autographs,CRA-TI,Base,true,,Tatsuya Imai
-auto-jumbo-chrome-autograph-relics,JCAR-AF,Base,true,,Alex Freeland
-auto-jumbo-chrome-autograph-relics,JCAR-AM,Base,true,,Aidan Miller
-auto-jumbo-chrome-autograph-relics,JCAR-BW,Base,true,,Bobby Witt Jr.
-auto-jumbo-chrome-autograph-relics,JCAR-CB,Base,true,,Chase Burns
-auto-jumbo-chrome-autograph-relics,JCAR-CC,Base,true,,Corbin Carroll
-auto-jumbo-chrome-autograph-relics,JCAR-CCO,Base,true,,Charlie Condon
-auto-jumbo-chrome-autograph-relics,JCAR-CD,Base,true,,Chase DeLauter
-auto-jumbo-chrome-autograph-relics,JCAR-CH,Base,true,,Cade Horton
-auto-jumbo-chrome-autograph-relics,JCAR-CW,Base,true,,Carson Williams
-auto-jumbo-chrome-autograph-relics,JCAR-ED,Base,true,,Elly De La Cruz
-auto-jumbo-chrome-autograph-relics,JCAR-FT,Base,true,,Fernando Tatis Jr.
-auto-jumbo-chrome-autograph-relics,JCAR-JC,Base,true,,Jac Caglianone
-auto-jumbo-chrome-autograph-relics,JCAR-JCA,Base,true,,Junior Caminero
-auto-jumbo-chrome-autograph-relics,JCAR-JG,Base,true,,Josuar Gonzalez
-auto-jumbo-chrome-autograph-relics,JCAR-JM,Base,true,,Jakob Marsee
-auto-jumbo-chrome-autograph-relics,JCAR-JMI,Base,true,,Jacob Misiorowski
-auto-jumbo-chrome-autograph-relics,JCAR-JT,Base,true,,Jonah Tong
-auto-jumbo-chrome-autograph-relics,JCAR-JW,Base,true,,JJ Wetherholt
-auto-jumbo-chrome-autograph-relics,JCAR-JWO,Base,true,,James Wood
-auto-jumbo-chrome-autograph-relics,JCAR-KG,Base,true,,Konnor Griffin
-auto-jumbo-chrome-autograph-relics,JCAR-KM,Base,true,,Kevin McGonigle
-auto-jumbo-chrome-autograph-relics,JCAR-LD,Base,true,,Leo De Vries
-auto-jumbo-chrome-autograph-relics,JCAR-MC,Base,true,,Max Clark
-auto-jumbo-chrome-autograph-relics,JCAR-MM,Base,true,,Munetaka Murakami
-auto-jumbo-chrome-autograph-relics,JCAR-MMI,Base,true,,Mason Miller
-auto-jumbo-chrome-autograph-relics,JCAR-MT,Base,true,,Mike Trout
-auto-jumbo-chrome-autograph-relics,JCAR-NM,Base,true,,Nolan McLean
-auto-jumbo-chrome-autograph-relics,JCAR-PS,Base,true,,Paul Skenes
-auto-jumbo-chrome-autograph-relics,JCAR-RA,Base,true,,Roman Anthony
-auto-jumbo-chrome-autograph-relics,JCAR-SB,Base,true,,Samuel Basallo
-auto-jumbo-chrome-autograph-relics,JCAR-TB,Base,true,,Travis Bazzana
-auto-jumbo-chrome-autograph-relics,JCAR-TT,Base,true,,Trea Turner
-auto-jumbo-chrome-autograph-relics,JCAR-TY,Base,true,,Trey Yesavage
-auto-jumbo-chrome-autograph-relics,JCAR-WJ,Base,true,,Walker Jenkins
-auto-jumbo-chrome-autograph-relics,JCAR-WL,Base,true,,Wyatt Langford
-insert-big-break,BB-1,Base,false,,Alex Freeland
-insert-big-break,BB-2,Base,false,,Billy Carlson
-insert-big-break,BB-3,Base,false,,Carter Jensen
-insert-big-break,BB-4,Base,false,,Charlie Condon
-insert-big-break,BB-5,Base,false,,Chase Burns
-insert-big-break,BB-6,Base,false,,Chase DeLauter
-insert-big-break,BB-7,Base,false,,Colson Montgomery
-insert-big-break,BB-8,Base,false,,Denzer Guzman
-insert-big-break,BB-9,Base,false,,Ethan Holliday
-insert-big-break,BB-10,Base,false,,Gavin Kilen
-insert-big-break,BB-11,Base,false,,Jac Caglianone
-insert-big-break,BB-12,Base,false,,Jacob Misiorowski
-insert-big-break,BB-13,Base,false,,Joswa Lugo
-insert-big-break,BB-14,Base,false,,Kade Anderson
-insert-big-break,BB-15,Base,false,,Kyle Teel
-insert-big-break,BB-16,Base,false,,Leo De Vries
-insert-big-break,BB-17,Base,false,,Luis Peña
-insert-big-break,BB-18,Base,false,,Sal Stewart
-insert-big-break,BB-19,Base,false,,Seong-Jun Kim
-insert-big-break,BB-20,Base,false,,Slade Caldwell
-insert-big-break,BB-21,Base,false,,Travis Bazzana
-insert-big-break,BB-22,Base,false,,Wei-En Lin
-insert-big-break,BB-23,Base,false,,Yorger Bautista
-insert-big-break,BB-24,Base,false,,Josuar Gonzalez
-insert-big-break,BB-25,Base,false,,James Tibbs III
-insert-stars-of-the-future,SF-1,Base,false,,Roman Anthony
-insert-stars-of-the-future,SF-2,Base,false,,Munetaka Murakami
-insert-stars-of-the-future,SF-3,Base,false,,Kevin McGonigle
-insert-stars-of-the-future,SF-4,Base,false,,Jac Caglianone
-insert-stars-of-the-future,SF-5,Base,false,,Carter Jensen
-insert-stars-of-the-future,SF-6,Base,false,,Jacob Misiorowski
-insert-stars-of-the-future,SF-7,Base,false,,Nolan McLean
-insert-stars-of-the-future,SF-8,Base,false,,Justin Crawford
-insert-stars-of-the-future,SF-9,Base,false,,JJ Wetherholt
-insert-stars-of-the-future,SF-10,Base,false,,Trey Yesavage
-insert-stars-of-the-future,SF-11,Base,false,,Konnor Griffin
-insert-stars-of-the-future,SF-12,Base,false,,Jesús Made
-insert-stars-of-the-future,SF-13,Base,false,,Max Clark
-insert-stars-of-the-future,SF-14,Base,false,,Eli Willits
-insert-stars-of-the-future,SF-15,Base,false,,Walker Jenkins
-insert-stars-of-the-future,SF-16,Base,false,,Ethan Holliday
-insert-stars-of-the-future,SF-17,Base,false,,JoJo Parker
-insert-stars-of-the-future,SF-18,Base,false,,Luis Hernandez
-insert-stars-of-the-future,SF-19,Base,false,,Franklin Arias
-insert-stars-of-the-future,SF-20,Base,false,,George Lombard Jr.
-insert-travel-tags,TT-1,Base,false,,Juan Soto
-insert-travel-tags,TT-2,Base,false,,Shohei Ohtani
-insert-travel-tags,TT-3,Base,false,,Roki Sasaki
-insert-travel-tags,TT-4,Base,false,,Tatsuya Imai
-insert-travel-tags,TT-5,Base,false,,Paul Skenes
-insert-travel-tags,TT-6,Base,false,,Luis Hernandez
-insert-travel-tags,TT-7,Base,false,,Edward Florentino
-insert-travel-tags,TT-8,Base,false,,Kazuma Okamoto
-insert-travel-tags,TT-9,Base,false,,Leo De Vries
-insert-travel-tags,TT-10,Base,false,,Yoshinobu Yamamoto
-insert-travel-tags,TT-11,Base,false,,Junior Caminero
-insert-travel-tags,TT-12,Base,false,,Shotaro Morii
-insert-travel-tags,TT-13,Base,false,,Josuar Gonzalez
-insert-travel-tags,TT-14,Base,false,,Ronald Acuña Jr.
-insert-travel-tags,TT-15,Base,false,,Munetaka Murakami
-insert-it-came-to-the-league,IT-1,Base,false,,Franklin Arias
-insert-it-came-to-the-league,IT-2,Base,false,,Jamie Arnold
-insert-it-came-to-the-league,IT-3,Base,false,,Jac Caglianone
-insert-it-came-to-the-league,IT-4,Base,false,,Kevin McGonigle
-insert-it-came-to-the-league,IT-5,Base,false,,Travis Bazzana
-insert-it-came-to-the-league,IT-6,Base,false,,Roman Anthony
-insert-it-came-to-the-league,IT-7,Base,false,,Carson Benge
-insert-it-came-to-the-league,IT-8,Base,false,,Alex Freeland
-insert-it-came-to-the-league,IT-9,Base,false,,Kazuma Okamoto
-insert-it-came-to-the-league,IT-10,Base,false,,Munetaka Murakami
-insert-it-came-to-the-league,IT-11,Base,false,,Colson Montgomery
-insert-it-came-to-the-league,IT-12,Base,false,,Konnor Griffin
-insert-it-came-to-the-league,IT-13,Base,false,,JJ Wetherholt
-insert-it-came-to-the-league,IT-14,Base,false,,Tatsuya Imai
-insert-it-came-to-the-league,IT-15,Base,false,,Luis Hernandez
-insert-it-came-to-the-league,IT-16,Base,false,,Sal Stewart
-insert-it-came-to-the-league,IT-17,Base,false,,Leo De Vries
-insert-it-came-to-the-league,IT-18,Base,false,,Josuar Gonzalez
-insert-it-came-to-the-league,IT-19,Base,false,,Ethan Holliday
-insert-it-came-to-the-league,IT-20,Base,false,,Max Clark
-insert-bowman-gpk,GPK-1,Base,false,,Aaron Judge
-insert-bowman-gpk,GPK-2,Base,false,,Aiva Arquette
-insert-bowman-gpk,GPK-3,Base,false,,Alex Rodriguez
-insert-bowman-gpk,GPK-4,Base,false,,Bobby Witt Jr.
-insert-bowman-gpk,GPK-5,Base,false,,Cal Ripken Jr.
-insert-bowman-gpk,GPK-6,Base,false,,Cal Raleigh
-insert-bowman-gpk,GPK-7,Base,false,,Carson Williams
-insert-bowman-gpk,GPK-8,Base,false,,Bo Bichette
-insert-bowman-gpk,GPK-9,Base,false,,Clayton Kershaw
-insert-bowman-gpk,GPK-10,Base,false,,Corbin Carroll
-insert-bowman-gpk,GPK-11,Base,false,,Eli Willits
-insert-bowman-gpk,GPK-12,Base,false,,Elly De La Cruz
-insert-bowman-gpk,GPK-13,Base,false,,Ethan Holliday
-insert-bowman-gpk,GPK-14,Base,false,,Frank Thomas
-insert-bowman-gpk,GPK-15,Base,false,,George Brett
-insert-bowman-gpk,GPK-16,Base,false,,Greg Maddux
-insert-bowman-gpk,GPK-17,Base,false,,Jac Caglianone
-insert-bowman-gpk,GPK-18,Base,false,,José Ramírez
-insert-bowman-gpk,GPK-19,Base,false,,Jacob Misiorowski
-insert-bowman-gpk,GPK-20,Base,false,,Jesús Made
-insert-bowman-gpk,GPK-21,Base,false,,Johnny Bench
-insert-bowman-gpk,GPK-22,Base,false,,JoJo Parker
-insert-bowman-gpk,GPK-23,Base,false,,Reggie Jackson
-insert-bowman-gpk,GPK-24,Base,false,,Kazuma Okamoto
-insert-bowman-gpk,GPK-25,Base,false,,Kyle Schwarber
-insert-bowman-gpk,GPK-26,Base,false,,Larry Walker
-insert-bowman-gpk,GPK-27,Base,false,,Manny Ramirez
-insert-bowman-gpk,GPK-28,Base,false,,Manny Machado
-insert-bowman-gpk,GPK-29,Base,false,,Mark McGwire
-insert-bowman-gpk,GPK-30,Base,false,,Mike Trout
-insert-bowman-gpk,GPK-31,Base,false,,Mike Piazza
-insert-bowman-gpk,GPK-32,Base,false,,Mike Schmidt
-insert-bowman-gpk,GPK-33,Base,false,,Yoshinobu Yamamoto
-insert-bowman-gpk,GPK-34,Base,false,,Munetaka Murakami
-insert-bowman-gpk,GPK-35,Base,false,,Nick Kurtz
-insert-bowman-gpk,GPK-36,Base,false,,Nolan Ryan
-insert-bowman-gpk,GPK-37,Base,false,,Paul Skenes
-insert-bowman-gpk,GPK-38,Base,false,,Pete Crow-Armstrong
-insert-bowman-gpk,GPK-39,Base,false,,Rod Carew
-insert-bowman-gpk,GPK-40,Base,false,,Roger Clemens
-insert-bowman-gpk,GPK-41,Base,false,,Roman Anthony
-insert-bowman-gpk,GPK-42,Base,false,,Sebastian Walcott
-insert-bowman-gpk,GPK-43,Base,false,,Shohei Ohtani
-insert-bowman-gpk,GPK-44,Base,false,,Shotaro Morii
-insert-bowman-gpk,GPK-45,Base,false,,Tarik Skubal
-insert-bowman-gpk,GPK-46,Base,false,,Tatsuya Imai
-insert-bowman-gpk,GPK-47,Base,false,,Vladimir Guerrero
-insert-bowman-gpk,GPK-48,Base,false,,Will Clark
-insert-bowman-gpk,GPK-49,Base,false,,Yadier Molina
-insert-bowman-gpk,GPK-50,Base,false,,Aaron Judge/Shohei Ohtani
-insert-final-draft,FD-1,Base,false,,Mike Trout
-insert-final-draft,FD-2,Base,false,,Greg Maddux
-insert-final-draft,FD-3,Base,false,,Pete Alonso
-insert-final-draft,FD-4,Base,false,,Pedro Martínez
-insert-final-draft,FD-5,Base,false,,Sammy Sosa
-insert-final-draft,FD-6,Base,false,,Alex Bregman
-insert-final-draft,FD-7,Base,false,,Miguel Cabrera
-insert-final-draft,FD-8,Base,false,,Kevin McGonigle
-insert-final-draft,FD-9,Base,false,,Tatsuya Imai
-insert-final-draft,FD-10,Base,false,,Bobby Witt Jr.
-insert-final-draft,FD-11,Base,false,,Yoshinobu Yamamoto
-insert-final-draft,FD-12,Base,false,,Mookie Betts
-insert-final-draft,FD-13,Base,false,,Bo Bichette
-insert-final-draft,FD-14,Base,false,,Aaron Judge
-insert-final-draft,FD-15,Base,false,,Fernando Tatis Jr.
-insert-final-draft,FD-16,Base,false,,Ichiro
-insert-final-draft,FD-17,Base,false,,JJ Wetherholt
-insert-final-draft,FD-18,Base,false,,Albert Pujols
-insert-final-draft,FD-19,Base,false,,Kazuma Okamoto
-insert-final-draft,FD-20,Base,false,,Vladimir Guerrero Jr.
-insert-crystallized,BWC-1,Base,false,,Kevin McGonigle
-insert-crystallized,BWC-2,Base,false,,JJ Wetherholt
-insert-crystallized,BWC-3,Base,false,,Carson Benge
-insert-crystallized,BWC-4,Base,false,,Munetaka Murakami
-insert-crystallized,BWC-5,Base,false,,Kazuma Okamoto
-insert-crystallized,BWC-6,Base,false,,Justin Crawford
-insert-crystallized,BWC-7,Base,false,,Chase DeLauter
-insert-crystallized,BWC-8,Base,false,,Kyle Teel
-insert-crystallized,BWC-9,Base,false,,Carson Williams
-insert-crystallized,BWC-10,Base,false,,Konnor Griffin
-insert-crystallized,BWC-11,Base,false,,Josuar Gonzalez
-insert-crystallized,BWC-12,Base,false,,Wehiwa Aloy
-insert-crystallized,BWC-13,Base,false,,Leo De Vries
-insert-crystallized,BWC-14,Base,false,,Yoshinobu Yamamoto
-insert-crystallized,BWC-15,Base,false,,Luis Hernandez
-insert-crystallized,BWC-16,Base,false,,Nick Kurtz
-insert-crystallized,BWC-17,Base,false,,Mike Trout
-insert-crystallized,BWC-18,Base,false,,Fernando Tatis Jr.
-insert-crystallized,BWC-19,Base,false,,Julio Rodríguez
-insert-crystallized,BWC-20,Base,false,,Elly De La Cruz
-insert-bowman-spotlights,BS-1,Base,false,,Konnor Griffin
-insert-bowman-spotlights,BS-2,Base,false,,Munetaka Murakami
-insert-bowman-spotlights,BS-3,Base,false,,Wandy Asigen
-insert-bowman-spotlights,BS-4,Base,false,,Colt Emerson
-insert-bowman-spotlights,BS-5,Base,false,,Andrew Fischer
-insert-bowman-spotlights,BS-6,Base,false,,Shohei Ohtani
-insert-bowman-spotlights,BS-7,Base,false,,Carson Benge
-insert-bowman-spotlights,BS-8,Base,false,,Aaron Judge
-insert-bowman-spotlights,BS-9,Base,false,,Bryce Harper
-insert-bowman-spotlights,BS-10,Base,false,,Max Clark
-insert-bowman-spotlights,BS-11,Base,false,,Kevin McGonigle
-insert-bowman-spotlights,BS-12,Base,false,,Kazuma Okamoto
-insert-bowman-spotlights,BS-13,Base,false,,Carter Jensen
-insert-bowman-spotlights,BS-14,Base,false,,JJ Wetherholt
-insert-bowman-spotlights,BS-15,Base,false,,Luis Hernandez
-insert-2026-mlb-spring-breakout,SB-1,Base,false,,Konnor Griffin
-insert-2026-mlb-spring-breakout,SB-2,Base,false,,JJ Wetherholt
-insert-2026-mlb-spring-breakout,SB-3,Base,false,,Leo De Vries
-insert-2026-mlb-spring-breakout,SB-4,Base,false,,Ethan Holliday
-insert-2026-mlb-spring-breakout,SB-5,Base,false,,Max Clark
-insert-2026-mlb-spring-breakout,SB-6,Base,false,,Seth Hernandez
-insert-2026-mlb-spring-breakout,SB-7,Base,false,,James Tibbs III
-insert-2026-mlb-spring-breakout,SB-8,Base,false,,Luis Hernandez
-insert-2026-mlb-spring-breakout,SB-9,Base,false,,JoJo Parker
-insert-2026-mlb-spring-breakout,SB-10,Base,false,,Gavin Fien
-insert-2026-mlb-spring-breakout,SB-11,Base,false,,Zach Root
-insert-2026-mlb-spring-breakout,SB-12,Base,false,,Ethan Salas
-insert-2026-mlb-spring-breakout,SB-13,Base,false,,Colt Emerson
-insert-2026-mlb-spring-breakout,SB-14,Base,false,,John Gil
-insert-2026-mlb-spring-breakout,SB-15,Base,false,,Yorger Bautista
+base,1,,false,,Konnor Griffin RC
+base,2,,false,,Mookie Betts
+base,3,,false,,Parker Messick RC
+base,4,,false,,Byron Buxton
+base,5,,false,,Bobby Witt Jr.
+base,6,,false,,Kevin McGonigle RC
+base,7,,false,,Didier Fuentes RC
+base,8,,false,,José Ramírez
+base,9,,false,,Cody Bellinger
+base,10,,false,,Luis Robert Jr.
+base,11,,false,,Noah Schultz RC
+base,12,,false,,Alex Bregman
+base,13,,false,,Jacob Wilson
+base,14,,false,,Justin Verlander
+base,15,,false,,Travis Bazzana RC
+base,16,,false,,Bo Bichette
+base,17,,false,,Francisco Lindor
+base,18,,false,,Nick Kurtz
+base,19,,false,,Jackson Chourio
+base,20,,false,,Andrew Painter RC
+base,21,,false,,James Wood
+base,22,,false,,Geraldo Perdomo
+base,23,,false,,Fernando Tatis Jr.
+base,24,,false,,Chase DeLauter RC
+base,25,,false,,Cole Young RC
+base,26,,false,,Ezequiel Tovar
+base,27,,false,,Chase Burns RC
+base,28,,false,,Tatsuya Imai RC
+base,29,,false,,Cam Schlittler RC
+base,30,,false,,Ketel Marte
+base,31,,false,,Alex Freeland RC
+base,32,,false,,JR Ritchie RC
+base,33,,false,,Connelly Early RC
+base,34,,false,,Vladimir Guerrero Jr.
+base,35,,false,,Julio Rodríguez
+base,36,,false,,MacKenzie Gore
+base,37,,false,,Owen Caissie RC
+base,38,,false,,Bubba Chandler RC
+base,39,,false,,Freddie Freeman
+base,40,,false,,Jose Fernandez RC
+base,41,,false,,Framber Valdez
+base,42,,false,,Jeferson Quero RC
+base,43,,false,,Roman Anthony RC
+base,44,,false,,Christian Moore RC
+base,45,,false,,Dylan Cease
+base,46,,false,,Kyle Tucker
+base,47,,false,,Sung-Mun Song RC
+base,48,,false,,Sal Stewart RC
+base,49,,false,,Bryan Woo
+base,50,,false,,Vinnie Pasquantino
+base,51,,false,,Jazz Chisholm Jr.
+base,52,,false,,JJ Wetherholt RC
+base,53,,false,,Mason Miller
+base,54,,false,,Justin Crawford RC
+base,55,,false,,Elmer Rodríguez RC
+base,56,,false,,Wyatt Langford
+base,57,,false,,Ronald Acuña Jr.
+base,58,,false,,Jose Altuve
+base,59,,false,,Roki Sasaki
+base,60,,false,,Paul Skenes
+base,61,,false,,Samuel Basallo RC
+base,62,,false,,Chris Sale
+base,63,,false,,Bryce Harper
+base,64,,false,,Jung Hoo Lee
+base,65,,false,,Jacob Misiorowski RC
+base,66,,false,,Aaron Judge
+base,67,,false,,Juan Soto
+base,68,,false,,Yordan Alvarez
+base,69,,false,,Willy Adames
+base,70,,false,,Colson Montgomery RC
+base,71,,false,,Kyle Schwarber
+base,72,,false,,Tarik Skubal
+base,73,,false,,Freddy Peralta
+base,74,,false,,Kyle Karros RC
+base,75,,false,,Mike Trout
+base,76,,false,,Munetaka Murakami RC
+base,77,,false,,TJ Rumfield RC
+base,78,,false,,Bryce Eldridge RC
+base,79,,false,,Jac Caglianone RC
+base,80,,false,,Nolan McLean RC
+base,81,,false,,Andrew McCutchen
+base,82,,false,,Corey Seager
+base,83,,false,,Corbin Carroll
+base,84,,false,,Yoshinobu Yamamoto
+base,85,,false,,Gunnar Henderson
+base,86,,false,,Cal Raleigh
+base,87,,false,,Steven Kwan
+base,88,,false,,Nathan Church RC
+base,89,,false,,Michael Harris II
+base,90,,false,,Manny Machado
+base,91,,false,,Pete Crow-Armstrong
+base,92,,false,,Austin Riley
+base,93,,false,,Trey Yesavage RC
+base,94,,false,,Kazuma Okamoto RC
+base,95,,false,,Carter Jensen RC
+base,96,,false,,Carson Benge RC
+base,97,,false,,Elly De La Cruz
+base,98,,false,,Junior Caminero
+base,99,,false,,Pete Alonso
+base,100,,false,,Shohei Ohtani
+base,BCP-151,,false,,Slater de Brun
+base,BCP-152,,false,,Wandy Asigen
+base,BCP-153,,false,,Alex Lodise
+base,BCP-154,,false,,Colt Emerson
+base,BCP-155,,false,,John Gil
+base,BCP-156,,false,,Isaias Castillo
+base,BCP-157,,false,,Rubel Arias
+base,BCP-158,,false,,Fabricio Blanco
+base,BCP-159,,false,,Christian Zazueta
+base,BCP-160,,false,,Johenssy Colome
+base,BCP-161,,false,,Diego Frontado
+base,BCP-162,,false,,Talon Haley
+base,BCP-163,,false,,Francisco Renteria
+base,BCP-164,,false,,JoJo Parker
+base,BCP-165,,false,,Darell Morel
+base,BCP-166,,false,,Hagen Smith
+base,BCP-167,,false,,Ezequiel Melbourne
+base,BCP-168,,false,,Joseph Sullivan
+base,BCP-169,,false,,Sebastian Blanco
+base,BCP-170,,false,,Leo De Vries
+base,BCP-171,,false,,Brandon Clarke
+base,BCP-172,,false,,Leonardo Reynoso
+base,BCP-173,,false,,Luis De La Torre
+base,BCP-174,,false,,Aiva Arquette
+base,BCP-175,,false,,Randy Santana
+base,BCP-176,,false,,Gregory Pio
+base,BCP-177,,false,,Juan Rujano
+base,BCP-178,,false,,Wilton Guerrero Jr.
+base,BCP-179,,false,,Samil Serrano
+base,BCP-180,,false,,Jaider Suarez
+base,BCP-181,,false,,Logan Sauve
+base,BCP-182,,false,,Jaiden Lo Re
+base,BCP-183,,false,,Hyun Seung Lee
+base,BCP-184,,false,,Gustavo Baptista
+base,BCP-185,,false,,Ricky Duran
+base,BCP-186,,false,,Brendan Jones
+base,BCP-187,,false,,Wyatt Vincent
+base,BCP-188,,false,,Wilder Dalis
+base,BCP-189,,false,,Emil Morales
+base,BCP-190,,false,,Sebastian Dos Santos
+base,BCP-191,,false,,Dawvris Brito
+base,BCP-192,,false,,Ricky Moneys
+base,BCP-193,,false,,Juan Rojas
+base,BCP-194,,false,,Angeibel Gomez
+base,BCP-195,,false,,Braylen Wimmer
+base,BCP-196,,false,,Jett Williams
+base,BCP-197,,false,,Juan Rijo
+base,BCP-198,,false,,Louis Andujar
+base,BCP-199,,false,,Walker Jenkins
+base,BCP-200,,false,,Luis Hernandez
+base,BCP-201,,false,,Joniel Hernandez
+base,BCP-202,,false,,Avery Owusu-Asiedu
+base,BCP-203,,false,,Stharlin Torres
+base,BCP-204,,false,,Angel De Los Santos
+base,BCP-205,,false,,Eduardo Quintero
+base,BCP-206,,false,,Adrian Lunar
+base,BCP-207,,false,,Santiago Solarte
+base,BCP-208,,false,,Cleiner Ramirez
+base,BCP-209,,false,,Ethan Holliday
+base,BCP-210,,false,,Angel Salio
+base,BCP-211,,false,,Juneiker Caceres
+base,BCP-212,,false,,Nelson Rada
+base,BCP-213,,false,,Mike Sirota
+base,BCP-214,,false,,Owen Ayers
+base,BCP-215,,false,,Gavin Fien
+base,BCP-216,,false,,Enmanuel Merlo
+base,BCP-217,,false,,Sir Jamison Jones
+base,BCP-218,,false,,Caleb Bonemer
+base,BCP-219,,false,,Yadier Muñoz
+base,BCP-220,,false,,Angel Nunez
+base,BCP-221,,false,,Manuel Bolivar
+base,BCP-222,,false,,Jeancer Custodio
+base,BCP-223,,false,,Elaineiker Coronado
+base,BCP-224,,false,,Dax Kilby
+base,BCP-225,,false,,Alexander Pio
+base,BCP-226,,false,,Wellington Aracena
+base,BCP-227,,false,,Pedro Gomez
+base,BCP-228,,false,,Jeyson Horton
+base,BCP-229,,false,,Randy Guzman
+base,BCP-230,,false,,Jose Castro
+base,BCP-231,,false,,Sebastian Walcott
+base,BCP-232,,false,,Yunior Amparo
+base,BCP-233,,false,,Dante Nori
+base,BCP-234,,false,,Kevin Alvarez
+base,BCP-235,,false,,Alfredo Duno
+base,BCP-236,,false,,Max Clark
+base,BCP-237,,false,,Austin Overn
+base,BCP-238,,false,,Seth Hernandez
+base,BCP-239,,false,,Samy Natera Jr.
+base,BCP-240,,false,,Ariel Roque
+base,BCP-241,,false,,Elian Rosario
+base,BCP-242,,false,,Randy Arias
+base,BCP-243,,false,,Steele Hall
+base,BCP-244,,false,,Jesús Made
+base,BCP-245,,false,,Eli Willits
+base,BCP-246,,false,,Garielvin Silverio
+base,BCP-247,,false,,Erick De La Cruz
+base,BCP-248,,false,,Cooper Pratt
+base,BCP-249,,false,,Andri Hidalgo
+base,BCP-250,,false,,Yordani Soto
+insert-wbc-flag-variations,WBC-1,,false,,Maikel Garcia
+insert-wbc-flag-variations,WBC-2,,false,,Vladimir Guerrero Jr.
+insert-wbc-flag-variations,WBC-3,,false,,Roman Anthony
+insert-wbc-flag-variations,WBC-4,,false,,Vinnie Pasquantino
+insert-wbc-flag-variations,WBC-5,,false,,Jackson Chourio
+insert-wbc-flag-variations,WBC-6,,false,,Jakob Marsee
+insert-wbc-flag-variations,WBC-7,,false,,Bobby Witt Jr.
+insert-wbc-flag-variations,WBC-8,,false,,Austin Wells
+insert-wbc-flag-variations,WBC-9,,false,,Sam Antonacci
+insert-wbc-flag-variations,WBC-10,,false,,Bryce Harper
+insert-wbc-flag-variations,WBC-11,,false,,Xander Bogaerts
+insert-wbc-flag-variations,WBC-12,,false,,Josh Naylor
+insert-wbc-flag-variations,WBC-13,,false,,Eugenio Suárez
+insert-wbc-flag-variations,WBC-14,,false,,Dean Kremer
+insert-wbc-flag-variations,WBC-15,,false,,Tommy Kahnle
+insert-wbc-flag-variations,WBC-16,,false,,Tyler O'Neill
+insert-wbc-flag-variations,WBC-17,,false,,Shohei Ohtani
+insert-wbc-flag-variations,WBC-18,,false,,Hyeseong Kim
+insert-wbc-flag-variations,WBC-19,,false,,Will Smith
+insert-wbc-flag-variations,WBC-20,,false,,Jazz Chisholm Jr.
+insert-wbc-flag-variations,WBC-21,,false,,Ronald Acuña Jr.
+insert-wbc-flag-variations,WBC-22,,false,,Pete Crow-Armstrong
+insert-wbc-flag-variations,WBC-23,,false,,Alex Bregman
+insert-wbc-flag-variations,WBC-24,,false,,Geraldo Perdomo
+insert-wbc-flag-variations,WBC-25,,false,,Stuart Fairchild
+insert-wbc-flag-variations,WBC-26,,false,,Michael Lorenzen
+insert-wbc-flag-variations,WBC-27,,false,,Daniel Palencia
+insert-wbc-flag-variations,WBC-28,,false,,David Bednar
+insert-wbc-flag-variations,WBC-29,,false,,Nolan McLean
+insert-wbc-flag-variations,WBC-30,,false,,Dante Nori
+insert-wbc-flag-variations,WBC-31,,false,,Randy Arozarena
+insert-wbc-flag-variations,WBC-32,,false,,Nate Eaton
+insert-wbc-flag-variations,WBC-33,,false,,Tsung-Che Cheng
+insert-wbc-flag-variations,WBC-34,,false,,Masataka Yoshida
+insert-wbc-flag-variations,WBC-35,,false,,Ranger Suarez
+insert-wbc-flag-variations,WBC-36,,false,,Jac Caglianone
+insert-wbc-flag-variations,WBC-37,,false,,Travis Bazzana
+insert-wbc-flag-variations,WBC-38,,false,,Juan Soto
+insert-wbc-flag-variations,WBC-39,,false,,Wei-En Lin
+insert-wbc-flag-variations,WBC-40,,false,,Paul Skenes
+insert-wbc-flag-variations,WBC-41,,false,,Mark Vientos
+insert-wbc-flag-variations,WBC-42,,false,,Yusei Kikuchi
+insert-wbc-flag-variations,WBC-43,,false,,Fernando Tatis Jr.
+insert-wbc-flag-variations,WBC-44,,false,,Gio Urshela
+insert-wbc-flag-variations,WBC-45,,false,,Yariel Rodríguez
+insert-wbc-flag-variations,WBC-46,,false,,Alejandro Kirk
+insert-wbc-flag-variations,WBC-47,,false,,Seth Lugo
+insert-wbc-flag-variations,WBC-48,,false,,Terrin Vavra
+insert-wbc-flag-variations,WBC-49,,false,,Salvador Perez
+insert-wbc-flag-variations,WBC-50,,false,,Luis Arraez
+insert-wbc-flag-variations,WBC-51,,false,,Julio Rodríguez
+insert-wbc-flag-variations,WBC-52,,false,,Curtis Mead
+insert-wbc-flag-variations,WBC-53,,false,,Bo Naylor
+insert-wbc-flag-variations,WBC-54,,false,,Andrew Fischer
+insert-wbc-flag-variations,WBC-55,,false,,Munetaka Murakami
+insert-wbc-flag-variations,WBC-56,,false,,Sandy Alcantara
+insert-wbc-flag-variations,WBC-57,,false,,Cal Raleigh
+insert-wbc-flag-variations,WBC-58,,false,,Nolan Arenado
+insert-wbc-flag-variations,WBC-59,,false,,Enrique Bradfield Jr.
+insert-wbc-flag-variations,WBC-60,,false,,Gunnar Henderson
+insert-wbc-flag-variations,WBC-61,,false,,Ceddanne Rafaela
+insert-wbc-flag-variations,WBC-62,,false,,Kazuma Okamoto
+insert-wbc-flag-variations,WBC-63,,false,,Cristopher Sánchez
+insert-wbc-flag-variations,WBC-64,,false,,Oneil Cruz
+insert-wbc-flag-variations,WBC-65,,false,,Ketel Marte
+insert-wbc-flag-variations,WBC-66,,false,,Yoán Moncada
+insert-wbc-flag-variations,WBC-67,,false,,Tarik Skubal
+insert-wbc-flag-variations,WBC-68,,false,,Brice Turang
+insert-wbc-flag-variations,WBC-69,,false,,Seiya Suzuki
+insert-wbc-flag-variations,WBC-70,,false,,Manny Machado
+insert-wbc-flag-variations,WBC-71,,false,,Mason Miller
+insert-wbc-flag-variations,WBC-72,,false,,Junior Caminero
+insert-wbc-flag-variations,WBC-73,,false,,José Caballero
+insert-wbc-flag-variations,WBC-74,,false,,Kenley Jansen
+insert-wbc-flag-variations,WBC-75,,false,,Owen Caissie
+insert-wbc-flag-variations,WBC-76,,false,,Edmundo Sosa
+insert-wbc-flag-variations,WBC-77,,false,,Aaron Nola
+insert-wbc-flag-variations,WBC-78,,false,,Harrison Bader
+insert-wbc-flag-variations,WBC-79,,false,,Michael Arroyo
+insert-wbc-flag-variations,WBC-80,,false,,Shay Whitcomb
+insert-wbc-flag-variations,WBC-81,,false,,Druw Jones
+insert-wbc-flag-variations,WBC-82,,false,,Edwin Díaz
+insert-wbc-flag-variations,WBC-83,,false,,Jonathan Aranda
+insert-wbc-flag-variations,WBC-84,,false,,Matthew Boyd
+insert-wbc-flag-variations,WBC-85,,false,,Logan Webb
+insert-wbc-flag-variations,WBC-86,,false,,Lucas Ramirez
+insert-wbc-flag-variations,WBC-87,,false,,Kyle Teel
+insert-wbc-flag-variations,WBC-88,,false,,Denzel Clarke
+insert-wbc-flag-variations,WBC-89,,false,,Ozzie Albies
+insert-wbc-flag-variations,WBC-90,,false,,Byron Buxton
+insert-wbc-flag-variations,WBC-91,,false,,Kyle Schwarber
+insert-wbc-flag-variations,WBC-92,,false,,Woo-Suk Go
+insert-wbc-flag-variations,WBC-93,,false,,Wilyer Abreu
+insert-wbc-flag-variations,WBC-94,,false,,Jarren Duran
+insert-wbc-flag-variations,WBC-95,,false,,Andrés Giménez
+insert-wbc-flag-variations,WBC-96,,false,,Harry Ford
+insert-wbc-flag-variations,WBC-97,,false,,Willi Castro
+insert-wbc-flag-variations,WBC-98,,false,,Jung Hoo Lee
+insert-wbc-flag-variations,WBC-99,,false,,Aaron Judge
+insert-wbc-flag-variations,WBC-100,,false,,Ezequiel Tovar
+base,1,Red RC Variation,false,,Konnor Griffin
+base,6,Red RC Variation,false,,Kevin McGonigle
+base,7,Red RC Variation,false,,Didier Fuentes
+base,20,Red RC Variation,false,,Andrew Painter
+base,24,Red RC Variation,false,,Chase DeLauter
+base,25,Red RC Variation,false,,Cole Young
+base,27,Red RC Variation,false,,Chase Burns
+base,28,Red RC Variation,false,,Tatsuya Imai
+base,29,Red RC Variation,false,,Cam Schlittler
+base,31,Red RC Variation,false,,Alex Freeland
+base,33,Red RC Variation,false,,Connelly Early
+base,37,Red RC Variation,false,,Owen Caissie
+base,38,Red RC Variation,false,,Bubba Chandler
+base,42,Red RC Variation,false,,Jeferson Quero
+base,43,Red RC Variation,false,,Roman Anthony
+base,44,Red RC Variation,false,,Christian Moore
+base,48,Red RC Variation,false,,Sal Stewart
+base,52,Red RC Variation,false,,JJ Wetherholt
+base,54,Red RC Variation,false,,Justin Crawford
+base,61,Red RC Variation,false,,Samuel Basallo
+base,65,Red RC Variation,false,,Jacob Misiorowski
+base,70,Red RC Variation,false,,Colson Montgomery
+base,74,Red RC Variation,false,,Kyle Karros
+base,76,Red RC Variation,false,,Munetaka Murakami
+base,77,Red RC Variation,false,,TJ Rumfield
+base,78,Red RC Variation,false,,Bryce Eldridge
+base,79,Red RC Variation,false,,Jac Caglianone
+base,80,Red RC Variation,false,,Nolan McLean
+base,88,Red RC Variation,false,,Nathan Church
+base,93,Red RC Variation,false,,Trey Yesavage
+base,94,Red RC Variation,false,,Kazuma Okamoto
+base,95,Red RC Variation,false,,Carter Jensen
+base,96,Red RC Variation,false,,Carson Benge
+base,1,Rookie Image Variation,false,,Konnor Griffin
+base,6,Rookie Image Variation,false,,Kevin McGonigle
+base,28,Rookie Image Variation,false,,Tatsuya Imai
+base,29,Rookie Image Variation,false,,Cam Schlittler
+base,43,Rookie Image Variation,false,,Roman Anthony
+base,44,Rookie Image Variation,false,,Christian Moore
+base,52,Rookie Image Variation,false,,JJ Wetherholt
+base,54,Rookie Image Variation,false,,Justin Crawford
+base,61,Rookie Image Variation,false,,Samuel Basallo
+base,70,Rookie Image Variation,false,,Colson Montgomery
+base,76,Rookie Image Variation,false,,Munetaka Murakami
+base,78,Rookie Image Variation,false,,Bryce Eldridge
+base,79,Rookie Image Variation,false,,Jac Caglianone
+base,94,Rookie Image Variation,false,,Kazuma Okamoto
+base,96,Rookie Image Variation,false,,Carson Benge
+insert-retrofractors,BCP-251,,false,,Jim Palmer
+insert-retrofractors,BCP-252,,false,,Rogers Hornsby
+base,BCP-151,International Refractor,false,,Slater de Brun
+base,BCP-152,International Refractor,false,,Wandy Asigen
+base,BCP-153,International Refractor,false,,Alex Lodise
+base,BCP-156,International Refractor,false,,Isaias Castillo
+base,BCP-157,International Refractor,false,,Rubel Arias
+base,BCP-158,International Refractor,false,,Fabricio Blanco
+base,BCP-160,International Refractor,false,,Johenssy Colome
+base,BCP-161,International Refractor,false,,Diego Frontado
+base,BCP-162,International Refractor,false,,Talon Haley
+base,BCP-163,International Refractor,false,,Francisco Renteria
+base,BCP-167,International Refractor,false,,Ezequiel Melbourne
+base,BCP-169,International Refractor,false,,Sebastian Blanco
+base,BCP-170,International Refractor,false,,Leo De Vries
+base,BCP-171,International Refractor,false,,Brandon Clarke
+base,BCP-172,International Refractor,false,,Leonardo Reynoso
+base,BCP-175,International Refractor,false,,Randy Santana
+base,BCP-176,International Refractor,false,,Gregory Pio
+base,BCP-178,International Refractor,false,,Wilton Guerrero Jr.
+base,BCP-179,International Refractor,false,,Samil Serrano
+base,BCP-180,International Refractor,false,,Jaider Suarez
+base,BCP-183,International Refractor,false,,Hyun Seung Lee
+base,BCP-185,International Refractor,false,,Ricky Duran
+base,BCP-190,International Refractor,false,,Sebastian Dos Santos
+base,BCP-191,International Refractor,false,,Dawvris Brito
+base,BCP-192,International Refractor,false,,Ricky Moneys
+base,BCP-194,International Refractor,false,,Angeibel Gomez
+base,BCP-197,International Refractor,false,,Juan Rijo
+base,BCP-199,International Refractor,false,,Walker Jenkins
+base,BCP-200,International Refractor,false,,Luis Hernandez
+base,BCP-201,International Refractor,false,,Joniel Hernandez
+base,BCP-207,International Refractor,false,,Santiago Solarte
+base,BCP-208,International Refractor,false,,Cleiner Ramirez
+base,BCP-209,International Refractor,false,,Ethan Holliday
+base,BCP-210,International Refractor,false,,Angel Salio
+base,BCP-216,International Refractor,false,,Enmanuel Merlo
+base,BCP-219,International Refractor,false,,Yadier Muñoz
+base,BCP-220,International Refractor,false,,Angel Nunez
+base,BCP-222,International Refractor,false,,Jeancer Custodio
+base,BCP-225,International Refractor,false,,Alexander Pio
+base,BCP-227,International Refractor,false,,Pedro Gomez
+base,BCP-228,International Refractor,false,,Jeyson Horton
+base,BCP-236,International Refractor,false,,Max Clark
+base,BCP-238,International Refractor,false,,Seth Hernandez
+base,BCP-240,International Refractor,false,,Ariel Roque
+base,BCP-241,International Refractor,false,,Elian Rosario
+base,BCP-242,International Refractor,false,,Randy Arias
+base,BCP-246,International Refractor,false,,Garielvin Silverio
+base,BCP-248,International Refractor,false,,Cooper Pratt
+base,BCP-249,International Refractor,false,,Andri Hidalgo
+base,BCP-151,PackFractor,false,,Slater de Brun
+base,BCP-152,PackFractor,false,,Wandy Asigen
+base,BCP-153,PackFractor,false,,Alex Lodise
+base,BCP-154,PackFractor,false,,Colt Emerson
+base,BCP-155,PackFractor,false,,John Gil
+base,BCP-156,PackFractor,false,,Isaias Castillo
+base,BCP-157,PackFractor,false,,Rubel Arias
+base,BCP-158,PackFractor,false,,Fabricio Blanco
+base,BCP-159,PackFractor,false,,Christian Zazueta
+base,BCP-160,PackFractor,false,,Johenssy Colome
+base,BCP-161,PackFractor,false,,Diego Frontado
+base,BCP-162,PackFractor,false,,Talon Haley
+base,BCP-163,PackFractor,false,,Francisco Renteria
+base,BCP-164,PackFractor,false,,JoJo Parker
+base,BCP-165,PackFractor,false,,Darell Morel
+base,BCP-166,PackFractor,false,,Hagen Smith
+base,BCP-167,PackFractor,false,,Ezequiel Melbourne
+base,BCP-168,PackFractor,false,,Joseph Sullivan
+base,BCP-169,PackFractor,false,,Sebastian Blanco
+base,BCP-170,PackFractor,false,,Leo De Vries
+base,BCP-171,PackFractor,false,,Brandon Clarke
+base,BCP-172,PackFractor,false,,Leonardo Reynoso
+base,BCP-173,PackFractor,false,,Luis De La Torre
+base,BCP-174,PackFractor,false,,Aiva Arquette
+base,BCP-175,PackFractor,false,,Randy Santana
+base,BCP-176,PackFractor,false,,Gregory Pio
+base,BCP-177,PackFractor,false,,Juan Rujano
+base,BCP-178,PackFractor,false,,Wilton Guerrero Jr.
+base,BCP-179,PackFractor,false,,Samil Serrano
+base,BCP-180,PackFractor,false,,Jaider Suarez
+base,BCP-181,PackFractor,false,,Logan Sauve
+base,BCP-182,PackFractor,false,,Jaiden Lo Re
+base,BCP-183,PackFractor,false,,Hyun Seung Lee
+base,BCP-184,PackFractor,false,,Gustavo Baptista
+base,BCP-185,PackFractor,false,,Ricky Duran
+base,BCP-186,PackFractor,false,,Brendan Jones
+base,BCP-187,PackFractor,false,,Wyatt Vincent
+base,BCP-188,PackFractor,false,,Wilder Dalis
+base,BCP-189,PackFractor,false,,Emil Morales
+base,BCP-190,PackFractor,false,,Sebastian Dos Santos
+base,BCP-191,PackFractor,false,,Dawvris Brito
+base,BCP-192,PackFractor,false,,Ricky Moneys
+base,BCP-193,PackFractor,false,,Juan Rojas
+base,BCP-194,PackFractor,false,,Angeibel Gomez
+base,BCP-195,PackFractor,false,,Braylen Wimmer
+base,BCP-196,PackFractor,false,,Jett Williams
+base,BCP-197,PackFractor,false,,Juan Rijo
+base,BCP-198,PackFractor,false,,Louis Andujar
+base,BCP-199,PackFractor,false,,Walker Jenkins
+base,BCP-200,PackFractor,false,,Luis Hernandez
+base,BCP-201,PackFractor,false,,Joniel Hernandez
+base,BCP-202,PackFractor,false,,Avery Owusu-Asiedu
+base,BCP-203,PackFractor,false,,Stharlin Torres
+base,BCP-204,PackFractor,false,,Angel De Los Santos
+base,BCP-205,PackFractor,false,,Eduardo Quintero
+base,BCP-206,PackFractor,false,,Adrian Lunar
+base,BCP-207,PackFractor,false,,Santiago Solarte
+base,BCP-208,PackFractor,false,,Cleiner Ramirez
+base,BCP-209,PackFractor,false,,Ethan Holliday
+base,BCP-210,PackFractor,false,,Angel Salio
+base,BCP-211,PackFractor,false,,Juneiker Caceres
+base,BCP-212,PackFractor,false,,Nelson Rada
+base,BCP-213,PackFractor,false,,Mike Sirota
+base,BCP-214,PackFractor,false,,Owen Ayers
+base,BCP-215,PackFractor,false,,Gavin Fien
+base,BCP-216,PackFractor,false,,Enmanuel Merlo
+base,BCP-217,PackFractor,false,,Sir Jamison Jones
+base,BCP-218,PackFractor,false,,Caleb Bonemer
+base,BCP-219,PackFractor,false,,Yadier Muñoz
+base,BCP-220,PackFractor,false,,Angel Nunez
+base,BCP-221,PackFractor,false,,Manuel Bolivar
+base,BCP-222,PackFractor,false,,Jeancer Custodio
+base,BCP-223,PackFractor,false,,Elaineiker Coronado
+base,BCP-224,PackFractor,false,,Dax Kilby
+base,BCP-225,PackFractor,false,,Alexander Pio
+base,BCP-226,PackFractor,false,,Wellington Aracena
+base,BCP-227,PackFractor,false,,Pedro Gomez
+base,BCP-228,PackFractor,false,,Jeyson Horton
+base,BCP-229,PackFractor,false,,Randy Guzman
+base,BCP-230,PackFractor,false,,Jose Castro
+base,BCP-231,PackFractor,false,,Sebastian Walcott
+base,BCP-232,PackFractor,false,,Yunior Amparo
+base,BCP-233,PackFractor,false,,Dante Nori
+base,BCP-234,PackFractor,false,,Kevin Alvarez
+base,BCP-235,PackFractor,false,,Alfredo Duno
+base,BCP-236,PackFractor,false,,Max Clark
+base,BCP-237,PackFractor,false,,Austin Overn
+base,BCP-238,PackFractor,false,,Seth Hernandez
+base,BCP-239,PackFractor,false,,Samy Natera Jr.
+base,BCP-240,PackFractor,false,,Ariel Roque
+base,BCP-241,PackFractor,false,,Elian Rosario
+base,BCP-242,PackFractor,false,,Randy Arias
+base,BCP-243,PackFractor,false,,Steele Hall
+base,BCP-244,PackFractor,false,,Jesús Made
+base,BCP-245,PackFractor,false,,Eli Willits
+base,BCP-246,PackFractor,false,,Garielvin Silverio
+base,BCP-247,PackFractor,false,,Erick De La Cruz
+base,BCP-248,PackFractor,false,,Cooper Pratt
+base,BCP-249,PackFractor,false,,Andri Hidalgo
+base,BCP-250,PackFractor,false,,Yordani Soto
+auto-chrome-prospect-autographs,CPA-AC,,true,,Argenis Cayama
+auto-chrome-prospect-autographs,CPA-AD,,true,,Angel De Los Santos
+auto-chrome-prospect-autographs,CPA-AG,,true,,Angeibel Gomez
+auto-chrome-prospect-autographs,CPA-AH,,true,,Andri Hidalgo
+auto-chrome-prospect-autographs,CPA-AL,,true,,Adrian Lunar
+auto-chrome-prospect-autographs,CPA-ALO,,true,,Alex Lodise
+auto-chrome-prospect-autographs,CPA-AMA,,true,,Anthony Martinez
+auto-chrome-prospect-autographs,CPA-AN,,true,,Angel Nunez
+auto-chrome-prospect-autographs,CPA-AN,,true,,Alejandro Nunez
+auto-chrome-prospect-autographs,CPA-AO,,true,,Austin Overn
+auto-chrome-prospect-autographs,CPA-AOW,,true,,Avery Owusu-Asiedu
+auto-chrome-prospect-autographs,CPA-AP,,true,,Alexander Pio
+auto-chrome-prospect-autographs,CPA-AR,,true,,Ariel Roque
+auto-chrome-prospect-autographs,CPA-AS,,true,,Angel Salio
+auto-chrome-prospect-autographs,CPA-ASA,,true,,Alimber Santa
+auto-chrome-prospect-autographs,CPA-BBU,,true,,Brandon Butterworth
+auto-chrome-prospect-autographs,CPA-BC,,true,,Brandon Clarke
+auto-chrome-prospect-autographs,CPA-BJ,,true,,Brendan Jones
+auto-chrome-prospect-autographs,CPA-BN,,true,,Braden Nett
+auto-chrome-prospect-autographs,CPA-BW,,true,,Braylen Wimmer
+auto-chrome-prospect-autographs,CPA-CA,,true,,Chris Arroyo
+auto-chrome-prospect-autographs,CPA-CR,,true,,Cleiner Ramirez
+auto-chrome-prospect-autographs,CPA-CZ,,true,,Christian Zazueta
+auto-chrome-prospect-autographs,CPA-DB,,true,,Dawvris Brito
+auto-chrome-prospect-autographs,CPA-DF,,true,,Diego Frontado
+auto-chrome-prospect-autographs,CPA-DK,,true,,Dax Kilby
+auto-chrome-prospect-autographs,CPA-DM,,true,,Darell Morel
+auto-chrome-prospect-autographs,CPA-DT,,true,,Deward Tovar
+auto-chrome-prospect-autographs,CPA-EA,,true,,Enddy Azocar
+auto-chrome-prospect-autographs,CPA-EC,,true,,Elaineiker Coronado
+auto-chrome-prospect-autographs,CPA-ED,,true,,Erick De La Cruz
+auto-chrome-prospect-autographs,CPA-ED,,true,,Edward Duran
+auto-chrome-prospect-autographs,CPA-EM,,true,,Ezequiel Melbourne
+auto-chrome-prospect-autographs,CPA-EMER,,true,,Enmanuel Merlo
+auto-chrome-prospect-autographs,CPA-EPE,,true,,Enyervert Perez
+auto-chrome-prospect-autographs,CPA-EQ,,true,,Eduardo Quintero
+auto-chrome-prospect-autographs,CPA-ER,,true,,Elian Rosario
+auto-chrome-prospect-autographs,CPA-FA,,true,,Franklin Arias
+auto-chrome-prospect-autographs,CPA-FB,,true,,Fabricio Blanco
+auto-chrome-prospect-autographs,CPA-FE,,true,,Francisco Espinoza
+auto-chrome-prospect-autographs,CPA-FR,,true,,Francisco Renteria
+auto-chrome-prospect-autographs,CPA-GB,,true,,Gustavo Baptista
+auto-chrome-prospect-autographs,CPA-GP,,true,,Gregory Pio
+auto-chrome-prospect-autographs,CPA-HL,,true,,Hyun Seung Lee
+auto-chrome-prospect-autographs,CPA-IC,,true,,Isaias Castillo
+auto-chrome-prospect-autographs,CPA-JC,,true,,Johenssy Colome
+auto-chrome-prospect-autographs,CPA-JCA,,true,,Jose Castro
+auto-chrome-prospect-autographs,CPA-JCI,,true,,Jurrangelo Cijntje
+auto-chrome-prospect-autographs,CPA-JCU,,true,,Jeancer Custodio
+auto-chrome-prospect-autographs,CPA-JGO,,true,,Josuar Gonzalez
+auto-chrome-prospect-autographs,CPA-JH,,true,,Jeyson Horton
+auto-chrome-prospect-autographs,CPA-JHE,,true,,Joniel Hernandez
+auto-chrome-prospect-autographs,CPA-JLO,,true,,Jaiden Lo Re
+auto-chrome-prospect-autographs,CPA-JPA,,true,,JoJo Parker
+auto-chrome-prospect-autographs,CPA-JR,,true,,Juan Rijo
+auto-chrome-prospect-autographs,CPA-JRO,,true,,Juan Rojas
+auto-chrome-prospect-autographs,CPA-JRU,,true,,Juan Rujano
+auto-chrome-prospect-autographs,CPA-JS,,true,,Jaider Suarez
+auto-chrome-prospect-autographs,CPA-JSU,,true,,Joseph Sullivan
+auto-chrome-prospect-autographs,CPA-JT,,true,,Juan Torres
+auto-chrome-prospect-autographs,CPA-KA,,true,,Keaton Anthony
+auto-chrome-prospect-autographs,CPA-KCA,,true,,Kyle Carr
+auto-chrome-prospect-autographs,CPA-KMA,,true,,Keyner Martinez
+auto-chrome-prospect-autographs,CPA-LA,,true,,Louis Andujar
+auto-chrome-prospect-autographs,CPA-LC,,true,,Luis Cova
+auto-chrome-prospect-autographs,CPA-LD,,true,,Luis De La Torre
+auto-chrome-prospect-autographs,CPA-LD,,true,,Liam Doyle
+auto-chrome-prospect-autographs,CPA-LDA,,true,,Logan Dawson
+auto-chrome-prospect-autographs,CPA-LH,,true,,Luis Hernandez
+auto-chrome-prospect-autographs,CPA-LP,,true,,Luis Peña
+auto-chrome-prospect-autographs,CPA-LR,,true,,Leonardo Reynoso
+auto-chrome-prospect-autographs,CPA-MB,,true,,Manuel Bolivar
+auto-chrome-prospect-autographs,CPA-MM,,true,,Miguel Mendez
+auto-chrome-prospect-autographs,CPA-NDE,,true,,Nauris De La Cruz
+auto-chrome-prospect-autographs,CPA-OA,,true,,Owen Ayers
+auto-chrome-prospect-autographs,CPA-PC,,true,,Patrick Copen
+auto-chrome-prospect-autographs,CPA-PG,,true,,Pedro Gomez
+auto-chrome-prospect-autographs,CPA-RA,,true,,Randy Arias
+auto-chrome-prospect-autographs,CPA-RAR,,true,,Rubel Arias
+auto-chrome-prospect-autographs,CPA-RD,,true,,Ricky Duran
+auto-chrome-prospect-autographs,CPA-RD,,true,,Ramiro Dominguez
+auto-chrome-prospect-autographs,CPA-RE,,true,,Romeli Espinosa
+auto-chrome-prospect-autographs,CPA-RG,,true,,Randy Guzman
+auto-chrome-prospect-autographs,CPA-RM,,true,,Ricky Moneys
+auto-chrome-prospect-autographs,CPA-RS,,true,,Randy Santana
+auto-chrome-prospect-autographs,CPA-SB,,true,,Sebastian Blanco
+auto-chrome-prospect-autographs,CPA-SDE,,true,,Slater de Brun
+auto-chrome-prospect-autographs,CPA-SDO,,true,,Sebastian Dos Santos
+auto-chrome-prospect-autographs,CPA-SJ,,true,,Sir Jamison Jones
+auto-chrome-prospect-autographs,CPA-SL,,true,,Sean Paul Liñan
+auto-chrome-prospect-autographs,CPA-SN,,true,,Samy Natera Jr.
+auto-chrome-prospect-autographs,CPA-SS,,true,,Santiago Solarte
+auto-chrome-prospect-autographs,CPA-SSE,,true,,Samil Serrano
+auto-chrome-prospect-autographs,CPA-ST,,true,,Stharlin Torres
+auto-chrome-prospect-autographs,CPA-TH,,true,,Talon Haley
+auto-chrome-prospect-autographs,CPA-WA,,true,,Wandy Asigen
+auto-chrome-prospect-autographs,CPA-WAR,,true,,Wellington Aracena
+auto-chrome-prospect-autographs,CPA-WD,,true,,Wilder Dalis
+auto-chrome-prospect-autographs,CPA-WG,,true,,Wilton Guerrero Jr.
+auto-chrome-prospect-autographs,CPA-WV,,true,,Wyatt Vincent
+auto-chrome-prospect-autographs,CPA-WW,,true,,Will Watson
+auto-chrome-prospect-autographs,CPA-YA,,true,,Yunior Amparo
+auto-chrome-prospect-autographs,CPA-YM,,true,,Yadier Muñoz
+auto-chrome-prospect-autographs,CPA-YS,,true,,Yordani Soto
+auto-chrome-prospect-autographs,CPA-AD,Gold Ink Variation,true,,Angel De Los Santos
+auto-chrome-prospect-autographs,CPA-AG,Gold Ink Variation,true,,Angeibel Gomez
+auto-chrome-prospect-autographs,CPA-AH,Gold Ink Variation,true,,Andri Hidalgo
+auto-chrome-prospect-autographs,CPA-AL,Gold Ink Variation,true,,Adrian Lunar
+auto-chrome-prospect-autographs,CPA-ALO,Gold Ink Variation,true,,Alex Lodise
+auto-chrome-prospect-autographs,CPA-AN,Gold Ink Variation,true,,Angel Nunez
+auto-chrome-prospect-autographs,CPA-AO,Gold Ink Variation,true,,Austin Overn
+auto-chrome-prospect-autographs,CPA-AP,Gold Ink Variation,true,,Alexander Pio
+auto-chrome-prospect-autographs,CPA-AR,Gold Ink Variation,true,,Ariel Roque
+auto-chrome-prospect-autographs,CPA-AS,Gold Ink Variation,true,,Angel Salio
+auto-chrome-prospect-autographs,CPA-BJ,Gold Ink Variation,true,,Brendan Jones
+auto-chrome-prospect-autographs,CPA-BW,Gold Ink Variation,true,,Braylen Wimmer
+auto-chrome-prospect-autographs,CPA-CR,Gold Ink Variation,true,,Cleiner Ramirez
+auto-chrome-prospect-autographs,CPA-DB,Gold Ink Variation,true,,Dawvris Brito
+auto-chrome-prospect-autographs,CPA-DF,Gold Ink Variation,true,,Diego Frontado
+auto-chrome-prospect-autographs,CPA-EA,Gold Ink Variation,true,,Enddy Azocar
+auto-chrome-prospect-autographs,CPA-EC,Gold Ink Variation,true,,Elaineiker Coronado
+auto-chrome-prospect-autographs,CPA-ED,Gold Ink Variation,true,,Erick De La Cruz
+auto-chrome-prospect-autographs,CPA-EM,Gold Ink Variation,true,,Ezequiel Melbourne
+auto-chrome-prospect-autographs,CPA-EMER,Gold Ink Variation,true,,Enmanuel Merlo
+auto-chrome-prospect-autographs,CPA-ER,Gold Ink Variation,true,,Elian Rosario
+auto-chrome-prospect-autographs,CPA-FB,Gold Ink Variation,true,,Fabricio Blanco
+auto-chrome-prospect-autographs,CPA-FE,Gold Ink Variation,true,,Francisco Espinoza
+auto-chrome-prospect-autographs,CPA-FR,Gold Ink Variation,true,,Francisco Renteria
+auto-chrome-prospect-autographs,CPA-GP,Gold Ink Variation,true,,Gregory Pio
+auto-chrome-prospect-autographs,CPA-HL,Gold Ink Variation,true,,Hyun Seung Lee
+auto-chrome-prospect-autographs,CPA-IC,Gold Ink Variation,true,,Isaias Castillo
+auto-chrome-prospect-autographs,CPA-JC,Gold Ink Variation,true,,Johenssy Colome
+auto-chrome-prospect-autographs,CPA-JCA,Gold Ink Variation,true,,Jose Castro
+auto-chrome-prospect-autographs,CPA-JCI,Gold Ink Variation,true,,Jurrangelo Cijntje
+auto-chrome-prospect-autographs,CPA-JCU,Gold Ink Variation,true,,Jeancer Custodio
+auto-chrome-prospect-autographs,CPA-JH,Gold Ink Variation,true,,Jeyson Horton
+auto-chrome-prospect-autographs,CPA-JHE,Gold Ink Variation,true,,Joniel Hernandez
+auto-chrome-prospect-autographs,CPA-JRU,Gold Ink Variation,true,,Juan Rujano
+auto-chrome-prospect-autographs,CPA-JS,Gold Ink Variation,true,,Jaider Suarez
+auto-chrome-prospect-autographs,CPA-JSU,Gold Ink Variation,true,,Joseph Sullivan
+auto-chrome-prospect-autographs,CPA-LC,Gold Ink Variation,true,,Luis Cova
+auto-chrome-prospect-autographs,CPA-LH,Gold Ink Variation,true,,Luis Hernandez
+auto-chrome-prospect-autographs,CPA-LR,Gold Ink Variation,true,,Leonardo Reynoso
+auto-chrome-prospect-autographs,CPA-MB,Gold Ink Variation,true,,Manuel Bolivar
+auto-chrome-prospect-autographs,CPA-OA,Gold Ink Variation,true,,Owen Ayers
+auto-chrome-prospect-autographs,CPA-PG,Gold Ink Variation,true,,Pedro Gomez
+auto-chrome-prospect-autographs,CPA-RA,Gold Ink Variation,true,,Randy Arias
+auto-chrome-prospect-autographs,CPA-RAR,Gold Ink Variation,true,,Rubel Arias
+auto-chrome-prospect-autographs,CPA-RD,Gold Ink Variation,true,,Ricky Duran
+auto-chrome-prospect-autographs,CPA-RE,Gold Ink Variation,true,,Romeli Espinosa
+auto-chrome-prospect-autographs,CPA-RM,Gold Ink Variation,true,,Ricky Moneys
+auto-chrome-prospect-autographs,CPA-RS,Gold Ink Variation,true,,Randy Santana
+auto-chrome-prospect-autographs,CPA-SB,Gold Ink Variation,true,,Sebastian Blanco
+auto-chrome-prospect-autographs,CPA-SDE,Gold Ink Variation,true,,Slater de Brun
+auto-chrome-prospect-autographs,CPA-SDO,Gold Ink Variation,true,,Sebastian Dos Santos
+auto-chrome-prospect-autographs,CPA-SS,Gold Ink Variation,true,,Santiago Solarte
+auto-chrome-prospect-autographs,CPA-SSE,Gold Ink Variation,true,,Samil Serrano
+auto-chrome-prospect-autographs,CPA-TH,Gold Ink Variation,true,,Talon Haley
+auto-chrome-prospect-autographs,CPA-WA,Gold Ink Variation,true,,Wandy Asigen
+auto-chrome-prospect-autographs,CPA-WAR,Gold Ink Variation,true,,Wellington Aracena
+auto-chrome-prospect-autographs,CPA-WG,Gold Ink Variation,true,,Wilton Guerrero Jr.
+auto-chrome-prospect-autographs,CPA-YA,Gold Ink Variation,true,,Yunior Amparo
+auto-chrome-prospect-autographs,CPA-YM,Gold Ink Variation,true,,Yadier Muñoz
+auto-chrome-prospect-autographs,CPA-AG,International Refractor,true,,Angeibel Gomez
+auto-chrome-prospect-autographs,CPA-AH,International Refractor,true,,Andri Hidalgo
+auto-chrome-prospect-autographs,CPA-ALO,International Refractor,true,,Alex Lodise
+auto-chrome-prospect-autographs,CPA-AN,International Refractor,true,,Angel Nunez
+auto-chrome-prospect-autographs,CPA-AP,International Refractor,true,,Alexander Pio
+auto-chrome-prospect-autographs,CPA-AR,International Refractor,true,,Ariel Roque
+auto-chrome-prospect-autographs,CPA-CR,International Refractor,true,,Cleiner Ramirez
+auto-chrome-prospect-autographs,CPA-DB,International Refractor,true,,Dawvris Brito
+auto-chrome-prospect-autographs,CPA-DF,International Refractor,true,,Diego Frontado
+auto-chrome-prospect-autographs,CPA-EM,International Refractor,true,,Ezequiel Melbourne
+auto-chrome-prospect-autographs,CPA-EMER,International Refractor,true,,Enmanuel Merlo
+auto-chrome-prospect-autographs,CPA-ER,International Refractor,true,,Elian Rosario
+auto-chrome-prospect-autographs,CPA-FB,International Refractor,true,,Fabricio Blanco
+auto-chrome-prospect-autographs,CPA-FR,International Refractor,true,,Francisco Renteria
+auto-chrome-prospect-autographs,CPA-GP,International Refractor,true,,Gregory Pio
+auto-chrome-prospect-autographs,CPA-HL,International Refractor,true,,Hyun Seung Lee
+auto-chrome-prospect-autographs,CPA-JC,International Refractor,true,,Johenssy Colome
+auto-chrome-prospect-autographs,CPA-JCI,International Refractor,true,,Jurrangelo Cijntje
+auto-chrome-prospect-autographs,CPA-JCU,International Refractor,true,,Jeancer Custodio
+auto-chrome-prospect-autographs,CPA-JH,International Refractor,true,,Jeyson Horton
+auto-chrome-prospect-autographs,CPA-JHE,International Refractor,true,,Joniel Hernandez
+auto-chrome-prospect-autographs,CPA-JS,International Refractor,true,,Jaider Suarez
+auto-chrome-prospect-autographs,CPA-LH,International Refractor,true,,Luis Hernandez
+auto-chrome-prospect-autographs,CPA-LR,International Refractor,true,,Leonardo Reynoso
+auto-chrome-prospect-autographs,CPA-PG,International Refractor,true,,Pedro Gomez
+auto-chrome-prospect-autographs,CPA-RA,International Refractor,true,,Randy Arias
+auto-chrome-prospect-autographs,CPA-RAR,International Refractor,true,,Rubel Arias
+auto-chrome-prospect-autographs,CPA-RD,International Refractor,true,,Ricky Duran
+auto-chrome-prospect-autographs,CPA-RM,International Refractor,true,,Ricky Moneys
+auto-chrome-prospect-autographs,CPA-RS,International Refractor,true,,Randy Santana
+auto-chrome-prospect-autographs,CPA-SDE,International Refractor,true,,Slater de Brun
+auto-chrome-prospect-autographs,CPA-SS,International Refractor,true,,Santiago Solarte
+auto-chrome-prospect-autographs,CPA-SSE,International Refractor,true,,Samil Serrano
+auto-chrome-prospect-autographs,CPA-WA,International Refractor,true,,Wandy Asigen
+auto-chrome-prospect-autographs,CPA-WG,International Refractor,true,,Wilton Guerrero Jr.
+auto-chrome-prospect-autographs,CPA-YM,International Refractor,true,,Yadier Muñoz
+auto-chrome-prospect-autographs,CPA-AD,PackFractor,true,,Angel De Los Santos
+auto-chrome-prospect-autographs,CPA-AG,PackFractor,true,,Angeibel Gomez
+auto-chrome-prospect-autographs,CPA-AH,PackFractor,true,,Andri Hidalgo
+auto-chrome-prospect-autographs,CPA-AL,PackFractor,true,,Adrian Lunar
+auto-chrome-prospect-autographs,CPA-ALO,PackFractor,true,,Alex Lodise
+auto-chrome-prospect-autographs,CPA-AN,PackFractor,true,,Angel Nunez
+auto-chrome-prospect-autographs,CPA-AO,PackFractor,true,,Austin Overn
+auto-chrome-prospect-autographs,CPA-AP,PackFractor,true,,Alexander Pio
+auto-chrome-prospect-autographs,CPA-AR,PackFractor,true,,Ariel Roque
+auto-chrome-prospect-autographs,CPA-AS,PackFractor,true,,Angel Salio
+auto-chrome-prospect-autographs,CPA-BC,PackFractor,true,,Brandon Clarke
+auto-chrome-prospect-autographs,CPA-BJ,PackFractor,true,,Brendan Jones
+auto-chrome-prospect-autographs,CPA-BW,PackFractor,true,,Braylen Wimmer
+auto-chrome-prospect-autographs,CPA-CR,PackFractor,true,,Cleiner Ramirez
+auto-chrome-prospect-autographs,CPA-DF,PackFractor,true,,Diego Frontado
+auto-chrome-prospect-autographs,CPA-EA,PackFractor,true,,Enddy Azocar
+auto-chrome-prospect-autographs,CPA-EC,PackFractor,true,,Elaineiker Coronado
+auto-chrome-prospect-autographs,CPA-ED,PackFractor,true,,Erick De La Cruz
+auto-chrome-prospect-autographs,CPA-EM,PackFractor,true,,Ezequiel Melbourne
+auto-chrome-prospect-autographs,CPA-EMER,PackFractor,true,,Enmanuel Merlo
+auto-chrome-prospect-autographs,CPA-EPE,PackFractor,true,,Enyervert Perez
+auto-chrome-prospect-autographs,CPA-ER,PackFractor,true,,Elian Rosario
+auto-chrome-prospect-autographs,CPA-FB,PackFractor,true,,Fabricio Blanco
+auto-chrome-prospect-autographs,CPA-FE,PackFractor,true,,Francisco Espinoza
+auto-chrome-prospect-autographs,CPA-FR,PackFractor,true,,Francisco Renteria
+auto-chrome-prospect-autographs,CPA-GP,PackFractor,true,,Gregory Pio
+auto-chrome-prospect-autographs,CPA-HL,PackFractor,true,,Hyun Seung Lee
+auto-chrome-prospect-autographs,CPA-IC,PackFractor,true,,Isaias Castillo
+auto-chrome-prospect-autographs,CPA-JC,PackFractor,true,,Johenssy Colome
+auto-chrome-prospect-autographs,CPA-JCA,PackFractor,true,,Jose Castro
+auto-chrome-prospect-autographs,CPA-JCU,PackFractor,true,,Jeancer Custodio
+auto-chrome-prospect-autographs,CPA-JH,PackFractor,true,,Jeyson Horton
+auto-chrome-prospect-autographs,CPA-JHE,PackFractor,true,,Joniel Hernandez
+auto-chrome-prospect-autographs,CPA-JR,PackFractor,true,,Juan Rijo
+auto-chrome-prospect-autographs,CPA-JRU,PackFractor,true,,Juan Rujano
+auto-chrome-prospect-autographs,CPA-JS,PackFractor,true,,Jaider Suarez
+auto-chrome-prospect-autographs,CPA-JSU,PackFractor,true,,Joseph Sullivan
+auto-chrome-prospect-autographs,CPA-LC,PackFractor,true,,Luis Cova
+auto-chrome-prospect-autographs,CPA-LH,PackFractor,true,,Luis Hernandez
+auto-chrome-prospect-autographs,CPA-LR,PackFractor,true,,Leonardo Reynoso
+auto-chrome-prospect-autographs,CPA-MB,PackFractor,true,,Manuel Bolivar
+auto-chrome-prospect-autographs,CPA-OA,PackFractor,true,,Owen Ayers
+auto-chrome-prospect-autographs,CPA-PG,PackFractor,true,,Pedro Gomez
+auto-chrome-prospect-autographs,CPA-RA,PackFractor,true,,Randy Arias
+auto-chrome-prospect-autographs,CPA-RAR,PackFractor,true,,Rubel Arias
+auto-chrome-prospect-autographs,CPA-RD,PackFractor,true,,Ricky Duran
+auto-chrome-prospect-autographs,CPA-RE,PackFractor,true,,Romeli Espinosa
+auto-chrome-prospect-autographs,CPA-RM,PackFractor,true,,Ricky Moneys
+auto-chrome-prospect-autographs,CPA-RS,PackFractor,true,,Randy Santana
+auto-chrome-prospect-autographs,CPA-SB,PackFractor,true,,Sebastian Blanco
+auto-chrome-prospect-autographs,CPA-SDE,PackFractor,true,,Slater de Brun
+auto-chrome-prospect-autographs,CPA-SDO,PackFractor,true,,Sebastian Dos Santos
+auto-chrome-prospect-autographs,CPA-SS,PackFractor,true,,Santiago Solarte
+auto-chrome-prospect-autographs,CPA-SSE,PackFractor,true,,Samil Serrano
+auto-chrome-prospect-autographs,CPA-TH,PackFractor,true,,Talon Haley
+auto-chrome-prospect-autographs,CPA-WA,PackFractor,true,,Wandy Asigen
+auto-chrome-prospect-autographs,CPA-WAR,PackFractor,true,,Wellington Aracena
+auto-chrome-prospect-autographs,CPA-WG,PackFractor,true,,Wilton Guerrero Jr.
+auto-chrome-prospect-autographs,CPA-YA,PackFractor,true,,Yunior Amparo
+auto-chrome-prospect-autographs,CPA-YM,PackFractor,true,,Yadier Muñoz
+auto-wbc-flag-variation-autographs,WBC-1,,true,,Maikel Garcia
+auto-wbc-flag-variation-autographs,WBC-4,,true,,Vinnie Pasquantino
+auto-wbc-flag-variation-autographs,WBC-5,,true,,Jackson Chourio
+auto-wbc-flag-variation-autographs,WBC-6,,true,,Jakob Marsee
+auto-wbc-flag-variation-autographs,WBC-7,,true,,Bobby Witt Jr.
+auto-wbc-flag-variation-autographs,WBC-8,,true,,Austin Wells
+auto-wbc-flag-variation-autographs,WBC-9,,true,,Sam Antonacci
+auto-wbc-flag-variation-autographs,WBC-10,,true,,Bryce Harper
+auto-wbc-flag-variation-autographs,WBC-17,,true,,Shohei Ohtani
+auto-wbc-flag-variation-autographs,WBC-18,,true,,Hyeseong Kim
+auto-wbc-flag-variation-autographs,WBC-19,,true,,Will Smith
+auto-wbc-flag-variation-autographs,WBC-20,,true,,Jazz Chisholm Jr.
+auto-wbc-flag-variation-autographs,WBC-21,,true,,Ronald Acuña Jr.
+auto-wbc-flag-variation-autographs,WBC-23,,true,,Alex Bregman
+auto-wbc-flag-variation-autographs,WBC-24,,true,,Geraldo Perdomo
+auto-wbc-flag-variation-autographs,WBC-29,,true,,Nolan McLean
+auto-wbc-flag-variation-autographs,WBC-30,,true,,Dante Nori
+auto-wbc-flag-variation-autographs,WBC-31,,true,,Randy Arozarena
+auto-wbc-flag-variation-autographs,WBC-33,,true,,Tsung-Che Cheng
+auto-wbc-flag-variation-autographs,WBC-34,,true,,Masataka Yoshida
+auto-wbc-flag-variation-autographs,WBC-36,,true,,Jac Caglianone
+auto-wbc-flag-variation-autographs,WBC-37,,true,,Travis Bazzana
+auto-wbc-flag-variation-autographs,WBC-38,,true,,Juan Soto
+auto-wbc-flag-variation-autographs,WBC-40,,true,,Paul Skenes
+auto-wbc-flag-variation-autographs,WBC-41,,true,,Mark Vientos
+auto-wbc-flag-variation-autographs,WBC-43,,true,,Fernando Tatis Jr.
+auto-wbc-flag-variation-autographs,WBC-46,,true,,Alejandro Kirk
+auto-wbc-flag-variation-autographs,WBC-47,,true,,Seth Lugo
+auto-wbc-flag-variation-autographs,WBC-50,,true,,Luis Arraez
+auto-wbc-flag-variation-autographs,WBC-51,,true,,Julio Rodríguez
+auto-wbc-flag-variation-autographs,WBC-54,,true,,Andrew Fischer
+auto-wbc-flag-variation-autographs,WBC-55,,true,,Munetaka Murakami
+auto-wbc-flag-variation-autographs,WBC-58,,true,,Nolan Arenado
+auto-wbc-flag-variation-autographs,WBC-59,,true,,Enrique Bradfield Jr.
+auto-wbc-flag-variation-autographs,WBC-60,,true,,Gunnar Henderson
+auto-wbc-flag-variation-autographs,WBC-61,,true,,Ceddanne Rafaela
+auto-wbc-flag-variation-autographs,WBC-67,,true,,Tarik Skubal
+auto-wbc-flag-variation-autographs,WBC-68,,true,,Brice Turang
+auto-wbc-flag-variation-autographs,WBC-70,,true,,Manny Machado
+auto-wbc-flag-variation-autographs,WBC-71,,true,,Mason Miller
+auto-wbc-flag-variation-autographs,WBC-72,,true,,Junior Caminero
+auto-wbc-flag-variation-autographs,WBC-75,,true,,Owen Caissie
+auto-wbc-flag-variation-autographs,WBC-77,,true,,Aaron Nola
+auto-wbc-flag-variation-autographs,WBC-81,,true,,Druw Jones
+auto-wbc-flag-variation-autographs,WBC-83,,true,,Jonathan Aranda
+auto-wbc-flag-variation-autographs,WBC-84,,true,,Matthew Boyd
+auto-wbc-flag-variation-autographs,WBC-85,,true,,Logan Webb
+auto-wbc-flag-variation-autographs,WBC-88,,true,,Denzel Clarke
+auto-wbc-flag-variation-autographs,WBC-89,,true,,Ozzie Albies
+auto-wbc-flag-variation-autographs,WBC-90,,true,,Byron Buxton
+auto-wbc-flag-variation-autographs,WBC-91,,true,,Kyle Schwarber
+auto-wbc-flag-variation-autographs,WBC-93,,true,,Wilyer Abreu
+auto-wbc-flag-variation-autographs,WBC-95,,true,,Andrés Giménez
+auto-wbc-flag-variation-autographs,WBC-98,,true,,Jung Hoo Lee
+auto-wbc-flag-variation-autographs,WBC-99,,true,,Aaron Judge
+auto-chrome-rookie-autographs,CRA-AP,,true,,Andrew Painter
+auto-chrome-rookie-autographs,CRA-BC,,true,,Bubba Chandler
+auto-chrome-rookie-autographs,CRA-BE,,true,,Bryce Eldridge
+auto-chrome-rookie-autographs,CRA-CB,,true,,Chase Burns
+auto-chrome-rookie-autographs,CRA-CBE,,true,,Carson Benge
+auto-chrome-rookie-autographs,CRA-CD,,true,,Chase DeLauter
+auto-chrome-rookie-autographs,CRA-CM,,true,,Christian Moore
+auto-chrome-rookie-autographs,CRA-CMO,,true,,Colson Montgomery
+auto-chrome-rookie-autographs,CRA-CS,,true,,Cam Schlittler
+auto-chrome-rookie-autographs,CRA-CWI,,true,,Carson Williams
+auto-chrome-rookie-autographs,CRA-JC,,true,,Jac Caglianone
+auto-chrome-rookie-autographs,CRA-JC,,true,,Jimmy Crooks
+auto-chrome-rookie-autographs,CRA-JMI,,true,,Jacob Misiorowski
+auto-chrome-rookie-autographs,CRA-JT,,true,,Jonah Tong
+auto-chrome-rookie-autographs,CRA-JWE,,true,,JJ Wetherholt
+auto-chrome-rookie-autographs,CRA-KG,,true,,Konnor Griffin
+auto-chrome-rookie-autographs,CRA-KM,,true,,Kevin McGonigle
+auto-chrome-rookie-autographs,CRA-KO,,true,,Kazuma Okamoto
+auto-chrome-rookie-autographs,CRA-LM,,true,,Luis Morales
+auto-chrome-rookie-autographs,CRA-MM,,true,,Munetaka Murakami
+auto-chrome-rookie-autographs,CRA-NM,,true,,Nolan McLean
+auto-chrome-rookie-autographs,CRA-OC,,true,,Owen Caissie
+auto-chrome-rookie-autographs,CRA-RA,,true,,Roman Anthony
+auto-chrome-rookie-autographs,CRA-SB,,true,,Samuel Basallo
+auto-chrome-rookie-autographs,CRA-SS,,true,,Sung-Mun Song
+auto-chrome-rookie-autographs,CRA-TB,,true,,Travis Bazzana
+auto-chrome-rookie-autographs,CRA-TI,,true,,Tatsuya Imai
+auto-chrome-rookie-autographs,CRA-TY,,true,,Trey Yesavage
+auto-bowman-gpk-autographs,BGP-AA,,true,,Aiva Arquette
+auto-bowman-gpk-autographs,BGP-AJ,,true,,Aaron Judge
+auto-bowman-gpk-autographs,BGP-BW,,true,,Bobby Witt Jr.
+auto-bowman-gpk-autographs,BGP-CC,,true,,Corbin Carroll
+auto-bowman-gpk-autographs,BGP-CK,,true,,Clayton Kershaw
+auto-bowman-gpk-autographs,BGP-CR,,true,,Cal Raleigh
+auto-bowman-gpk-autographs,BGP-CRI,,true,,Cal Ripken Jr.
+auto-bowman-gpk-autographs,BGP-CW,,true,,Carson Williams
+auto-bowman-gpk-autographs,BGP-ED,,true,,Elly De La Cruz
+auto-bowman-gpk-autographs,BGP-EH,,true,,Ethan Holliday
+auto-bowman-gpk-autographs,BGP-EW,,true,,Eli Willits
+auto-bowman-gpk-autographs,BGP-FT,,true,,Frank Thomas
+auto-bowman-gpk-autographs,BGP-GB,,true,,George Brett
+auto-bowman-gpk-autographs,BGP-GM,,true,,Greg Maddux
+auto-bowman-gpk-autographs,BGP-JB,,true,,Johnny Bench
+auto-bowman-gpk-autographs,BGP-JC,,true,,Jac Caglianone
+auto-bowman-gpk-autographs,BGP-JM,,true,,Jacob Misiorowski
+auto-bowman-gpk-autographs,BGP-JP,,true,,JoJo Parker
+auto-bowman-gpk-autographs,BGP-JR,,true,,Jose Ramirez
+auto-bowman-gpk-autographs,BGP-KO,,true,,Kazuma Okamoto
+auto-bowman-gpk-autographs,BGP-KS,,true,,Kyle Schwarber
+auto-bowman-gpk-autographs,BGP-LW,,true,,Larry Walker
+auto-bowman-gpk-autographs,BGP-MM,,true,,Munetaka Murakami
+auto-bowman-gpk-autographs,BGP-MMA,,true,,Manny Machado
+auto-bowman-gpk-autographs,BGP-MMC,,true,,Mark McGwire
+auto-bowman-gpk-autographs,BGP-MP,,true,,Mike Piazza
+auto-bowman-gpk-autographs,BGP-MS,,true,,Mike Schmidt
+auto-bowman-gpk-autographs,BGP-MT,,true,,Mike Trout
+auto-bowman-gpk-autographs,BGP-NK,,true,,Nick Kurtz
+auto-bowman-gpk-autographs,BGP-PC,,true,,Pete Crow-Armstrong
+auto-bowman-gpk-autographs,BGP-PS,,true,,Paul Skenes
+auto-bowman-gpk-autographs,BGP-RA,,true,,Roman Anthony
+auto-bowman-gpk-autographs,BGP-RCL,,true,,Roger Clemens
+auto-bowman-gpk-autographs,BGP-RJ,,true,,Reggie Jackson
+auto-bowman-gpk-autographs,BGP-SM,,true,,Shotaro Morii
+auto-bowman-gpk-autographs,BGP-SO,,true,,Shohei Ohtani
+auto-bowman-gpk-autographs,BGP-TI,,true,,Tatsuya Imai
+auto-bowman-gpk-autographs,BGP-VG,,true,,Vladimir Guerrero
+auto-bowman-gpk-autographs,BGP-WC,,true,,Will Clark
+auto-bowman-gpk-autographs,BGP-YY,,true,,Yoshinobu Yamamoto
+auto-big-break-autographs,BBA-AF,,true,,Alex Freeland
+auto-big-break-autographs,BBA-CC,,true,,Charlie Condon
+auto-big-break-autographs,BBA-CD,,true,,Chase DeLauter
+auto-big-break-autographs,BBA-CJ,,true,,Carter Jensen
+auto-big-break-autographs,BBA-CM,,true,,Colson Montgomery
+auto-big-break-autographs,BBA-DG,,true,,Denzer Guzman
+auto-big-break-autographs,BBA-EH,,true,,Ethan Holliday
+auto-big-break-autographs,BBA-JC,,true,,Jac Caglianone
+auto-big-break-autographs,BBA-JT,,true,,James Tibbs III
+auto-big-break-autographs,BBA-LP,,true,,Luis Peña
+auto-big-break-autographs,BBA-SK,,true,,Seong-Jun Kim
+auto-big-break-autographs,BBA-SS,,true,,Sal Stewart
+auto-big-break-autographs,BBA-TB,,true,,Travis Bazzana
+auto-2026-mlb-spring-breakout-autographs,SB-1,,true,,Konnor Griffin
+auto-2026-mlb-spring-breakout-autographs,SB-2,,true,,JJ Wetherholt
+auto-2026-mlb-spring-breakout-autographs,SB-3,,true,,Leo De Vries
+auto-2026-mlb-spring-breakout-autographs,SB-4,,true,,Ethan Holliday
+auto-2026-mlb-spring-breakout-autographs,SB-5,,true,,Max Clark
+auto-2026-mlb-spring-breakout-autographs,SB-6,,true,,Seth Hernandez
+auto-2026-mlb-spring-breakout-autographs,SB-7,,true,,James Tibbs III
+auto-2026-mlb-spring-breakout-autographs,SB-8,,true,,Luis Hernandez
+auto-2026-mlb-spring-breakout-autographs,SB-9,,true,,JoJo Parker
+auto-2026-mlb-spring-breakout-autographs,SB-10,,true,,Gavin Fien
+auto-2026-mlb-spring-breakout-autographs,SB-12,,true,,Ethan Salas
+auto-travel-tags-autographs,TT-1,,true,,Juan Soto
+auto-travel-tags-autographs,TT-3,,true,,Roki Sasaki
+auto-travel-tags-autographs,TT-4,,true,,Tatsuya Imai
+auto-travel-tags-autographs,TT-5,,true,,Paul Skenes
+auto-travel-tags-autographs,TT-6,,true,,Luis Hernandez
+auto-travel-tags-autographs,TT-7,,true,,Edward Florentino
+auto-travel-tags-autographs,TT-9,,true,,Leo De Vries
+auto-travel-tags-autographs,TT-12,,true,,Shotaro Morii
+auto-travel-tags-autographs,TT-13,,true,,Josuar Gonzalez
+auto-travel-tags-autographs,TT-15,,true,,Munetaka Murakami
+auto-it-came-to-the-league-autographs,IT-3,,true,,Jac Caglianone
+auto-it-came-to-the-league-autographs,IT-4,,true,,Kevin McGonigle
+auto-it-came-to-the-league-autographs,IT-10,,true,,Munetaka Murakami
+auto-it-came-to-the-league-autographs,IT-12,,true,,Konnor Griffin
+auto-it-came-to-the-league-autographs,IT-13,,true,,JJ Wetherholt
+auto-it-came-to-the-league-autographs,IT-15,,true,,Luis Hernandez
+auto-it-came-to-the-league-autographs,IT-17,,true,,Leo De Vries
+auto-it-came-to-the-league-autographs,IT-18,,true,,Josuar Gonzalez
+auto-it-came-to-the-league-autographs,IT-19,,true,,Ethan Holliday
+auto-it-came-to-the-league-autographs,IT-20,,true,,Max Clark
+auto-across-the-seams,AS-AJ,,true,,Aaron Judge
+auto-across-the-seams,AS-BH,,true,,Bryce Harper
+auto-across-the-seams,AS-BW,,true,,Bobby Witt Jr.
+auto-across-the-seams,AS-CC,,true,,Charlie Condon
+auto-across-the-seams,AS-CCA,,true,,Corbin Carroll
+auto-across-the-seams,AS-ED,,true,,Elly De La Cruz
+auto-across-the-seams,AS-EH,,true,,Ethan Holliday
+auto-across-the-seams,AS-FR,,true,,Francisco Renteria
+auto-across-the-seams,AS-FT,,true,,Fernando Tatis Jr.
+auto-across-the-seams,AS-JC,,true,,Jac Caglianone
+auto-across-the-seams,AS-JCA,,true,,Junior Caminero
+auto-across-the-seams,AS-JS,,true,,Juan Soto
+auto-across-the-seams,AS-JW,,true,,JJ Wetherholt
+auto-across-the-seams,AS-KG,,true,,Konnor Griffin
+auto-across-the-seams,AS-MM,,true,,Munetaka Murakami
+auto-across-the-seams,AS-MT,,true,,Mike Trout
+auto-across-the-seams,AS-PC,,true,,Pete Crow-Armstrong
+auto-across-the-seams,AS-RAN,,true,,Roman Anthony
+auto-across-the-seams,AS-SB,,true,,Samuel Basallo
+auto-across-the-seams,AS-SO,,true,,Shohei Ohtani
+auto-across-the-seams,AS-TY,,true,,Trey Yesavage
+auto-across-the-seams,AS-WL,,true,,Wyatt Langford
+auto-retrofractor-autographs,BRA-JPA,,true,,Jim Palmer
+auto-rookie-image-variation-autographs,CRA-BE,,true,,Bryce Eldridge
+auto-rookie-image-variation-autographs,CRA-CBE,,true,,Carson Benge
+auto-rookie-image-variation-autographs,CRA-CM,,true,,Christian Moore
+auto-rookie-image-variation-autographs,CRA-CS,,true,,Cam Schlittler
+auto-rookie-image-variation-autographs,CRA-JC,,true,,Jac Caglianone
+auto-rookie-image-variation-autographs,CRA-JCR,,true,,Justin Crawford
+auto-rookie-image-variation-autographs,CRA-JT,,true,,Jonah Tong
+auto-rookie-image-variation-autographs,CRA-JW,,true,,JJ Wetherholt
+auto-rookie-image-variation-autographs,CRA-KG,,true,,Konnor Griffin
+auto-rookie-image-variation-autographs,CRA-KM,,true,,Kevin McGonigle
+auto-rookie-image-variation-autographs,CRA-MM,,true,,Munetaka Murakami
+auto-rookie-image-variation-autographs,CRA-RA,,true,,Roman Anthony
+auto-rookie-image-variation-autographs,CRA-SB,,true,,Samuel Basallo
+auto-rookie-image-variation-autographs,CRA-TI,,true,,Tatsuya Imai
+auto-jumbo-chrome-autograph-relics,JCAR-AF,,true,,Alex Freeland
+auto-jumbo-chrome-autograph-relics,JCAR-AM,,true,,Aidan Miller
+auto-jumbo-chrome-autograph-relics,JCAR-BW,,true,,Bobby Witt Jr.
+auto-jumbo-chrome-autograph-relics,JCAR-CB,,true,,Chase Burns
+auto-jumbo-chrome-autograph-relics,JCAR-CC,,true,,Corbin Carroll
+auto-jumbo-chrome-autograph-relics,JCAR-CCO,,true,,Charlie Condon
+auto-jumbo-chrome-autograph-relics,JCAR-CD,,true,,Chase DeLauter
+auto-jumbo-chrome-autograph-relics,JCAR-CH,,true,,Cade Horton
+auto-jumbo-chrome-autograph-relics,JCAR-CW,,true,,Carson Williams
+auto-jumbo-chrome-autograph-relics,JCAR-ED,,true,,Elly De La Cruz
+auto-jumbo-chrome-autograph-relics,JCAR-FT,,true,,Fernando Tatis Jr.
+auto-jumbo-chrome-autograph-relics,JCAR-JC,,true,,Jac Caglianone
+auto-jumbo-chrome-autograph-relics,JCAR-JCA,,true,,Junior Caminero
+auto-jumbo-chrome-autograph-relics,JCAR-JG,,true,,Josuar Gonzalez
+auto-jumbo-chrome-autograph-relics,JCAR-JM,,true,,Jakob Marsee
+auto-jumbo-chrome-autograph-relics,JCAR-JMI,,true,,Jacob Misiorowski
+auto-jumbo-chrome-autograph-relics,JCAR-JT,,true,,Jonah Tong
+auto-jumbo-chrome-autograph-relics,JCAR-JW,,true,,JJ Wetherholt
+auto-jumbo-chrome-autograph-relics,JCAR-JWO,,true,,James Wood
+auto-jumbo-chrome-autograph-relics,JCAR-KG,,true,,Konnor Griffin
+auto-jumbo-chrome-autograph-relics,JCAR-KM,,true,,Kevin McGonigle
+auto-jumbo-chrome-autograph-relics,JCAR-LD,,true,,Leo De Vries
+auto-jumbo-chrome-autograph-relics,JCAR-MC,,true,,Max Clark
+auto-jumbo-chrome-autograph-relics,JCAR-MM,,true,,Munetaka Murakami
+auto-jumbo-chrome-autograph-relics,JCAR-MMI,,true,,Mason Miller
+auto-jumbo-chrome-autograph-relics,JCAR-MT,,true,,Mike Trout
+auto-jumbo-chrome-autograph-relics,JCAR-NM,,true,,Nolan McLean
+auto-jumbo-chrome-autograph-relics,JCAR-PS,,true,,Paul Skenes
+auto-jumbo-chrome-autograph-relics,JCAR-RA,,true,,Roman Anthony
+auto-jumbo-chrome-autograph-relics,JCAR-SB,,true,,Samuel Basallo
+auto-jumbo-chrome-autograph-relics,JCAR-TB,,true,,Travis Bazzana
+auto-jumbo-chrome-autograph-relics,JCAR-TT,,true,,Trea Turner
+auto-jumbo-chrome-autograph-relics,JCAR-TY,,true,,Trey Yesavage
+auto-jumbo-chrome-autograph-relics,JCAR-WJ,,true,,Walker Jenkins
+auto-jumbo-chrome-autograph-relics,JCAR-WL,,true,,Wyatt Langford
+insert-big-break,BB-1,,false,,Alex Freeland
+insert-big-break,BB-2,,false,,Billy Carlson
+insert-big-break,BB-3,,false,,Carter Jensen
+insert-big-break,BB-4,,false,,Charlie Condon
+insert-big-break,BB-5,,false,,Chase Burns
+insert-big-break,BB-6,,false,,Chase DeLauter
+insert-big-break,BB-7,,false,,Colson Montgomery
+insert-big-break,BB-8,,false,,Denzer Guzman
+insert-big-break,BB-9,,false,,Ethan Holliday
+insert-big-break,BB-10,,false,,Gavin Kilen
+insert-big-break,BB-11,,false,,Jac Caglianone
+insert-big-break,BB-12,,false,,Jacob Misiorowski
+insert-big-break,BB-13,,false,,Joswa Lugo
+insert-big-break,BB-14,,false,,Kade Anderson
+insert-big-break,BB-15,,false,,Kyle Teel
+insert-big-break,BB-16,,false,,Leo De Vries
+insert-big-break,BB-17,,false,,Luis Peña
+insert-big-break,BB-18,,false,,Sal Stewart
+insert-big-break,BB-19,,false,,Seong-Jun Kim
+insert-big-break,BB-20,,false,,Slade Caldwell
+insert-big-break,BB-21,,false,,Travis Bazzana
+insert-big-break,BB-22,,false,,Wei-En Lin
+insert-big-break,BB-23,,false,,Yorger Bautista
+insert-big-break,BB-24,,false,,Josuar Gonzalez
+insert-big-break,BB-25,,false,,James Tibbs III
+insert-stars-of-the-future,SF-1,,false,,Roman Anthony
+insert-stars-of-the-future,SF-2,,false,,Munetaka Murakami
+insert-stars-of-the-future,SF-3,,false,,Kevin McGonigle
+insert-stars-of-the-future,SF-4,,false,,Jac Caglianone
+insert-stars-of-the-future,SF-5,,false,,Carter Jensen
+insert-stars-of-the-future,SF-6,,false,,Jacob Misiorowski
+insert-stars-of-the-future,SF-7,,false,,Nolan McLean
+insert-stars-of-the-future,SF-8,,false,,Justin Crawford
+insert-stars-of-the-future,SF-9,,false,,JJ Wetherholt
+insert-stars-of-the-future,SF-10,,false,,Trey Yesavage
+insert-stars-of-the-future,SF-11,,false,,Konnor Griffin
+insert-stars-of-the-future,SF-12,,false,,Jesús Made
+insert-stars-of-the-future,SF-13,,false,,Max Clark
+insert-stars-of-the-future,SF-14,,false,,Eli Willits
+insert-stars-of-the-future,SF-15,,false,,Walker Jenkins
+insert-stars-of-the-future,SF-16,,false,,Ethan Holliday
+insert-stars-of-the-future,SF-17,,false,,JoJo Parker
+insert-stars-of-the-future,SF-18,,false,,Luis Hernandez
+insert-stars-of-the-future,SF-19,,false,,Franklin Arias
+insert-stars-of-the-future,SF-20,,false,,George Lombard Jr.
+insert-travel-tags,TT-1,,false,,Juan Soto
+insert-travel-tags,TT-2,,false,,Shohei Ohtani
+insert-travel-tags,TT-3,,false,,Roki Sasaki
+insert-travel-tags,TT-4,,false,,Tatsuya Imai
+insert-travel-tags,TT-5,,false,,Paul Skenes
+insert-travel-tags,TT-6,,false,,Luis Hernandez
+insert-travel-tags,TT-7,,false,,Edward Florentino
+insert-travel-tags,TT-8,,false,,Kazuma Okamoto
+insert-travel-tags,TT-9,,false,,Leo De Vries
+insert-travel-tags,TT-10,,false,,Yoshinobu Yamamoto
+insert-travel-tags,TT-11,,false,,Junior Caminero
+insert-travel-tags,TT-12,,false,,Shotaro Morii
+insert-travel-tags,TT-13,,false,,Josuar Gonzalez
+insert-travel-tags,TT-14,,false,,Ronald Acuña Jr.
+insert-travel-tags,TT-15,,false,,Munetaka Murakami
+insert-it-came-to-the-league,IT-1,,false,,Franklin Arias
+insert-it-came-to-the-league,IT-2,,false,,Jamie Arnold
+insert-it-came-to-the-league,IT-3,,false,,Jac Caglianone
+insert-it-came-to-the-league,IT-4,,false,,Kevin McGonigle
+insert-it-came-to-the-league,IT-5,,false,,Travis Bazzana
+insert-it-came-to-the-league,IT-6,,false,,Roman Anthony
+insert-it-came-to-the-league,IT-7,,false,,Carson Benge
+insert-it-came-to-the-league,IT-8,,false,,Alex Freeland
+insert-it-came-to-the-league,IT-9,,false,,Kazuma Okamoto
+insert-it-came-to-the-league,IT-10,,false,,Munetaka Murakami
+insert-it-came-to-the-league,IT-11,,false,,Colson Montgomery
+insert-it-came-to-the-league,IT-12,,false,,Konnor Griffin
+insert-it-came-to-the-league,IT-13,,false,,JJ Wetherholt
+insert-it-came-to-the-league,IT-14,,false,,Tatsuya Imai
+insert-it-came-to-the-league,IT-15,,false,,Luis Hernandez
+insert-it-came-to-the-league,IT-16,,false,,Sal Stewart
+insert-it-came-to-the-league,IT-17,,false,,Leo De Vries
+insert-it-came-to-the-league,IT-18,,false,,Josuar Gonzalez
+insert-it-came-to-the-league,IT-19,,false,,Ethan Holliday
+insert-it-came-to-the-league,IT-20,,false,,Max Clark
+insert-bowman-gpk,GPK-1,,false,,Aaron Judge
+insert-bowman-gpk,GPK-2,,false,,Aiva Arquette
+insert-bowman-gpk,GPK-3,,false,,Alex Rodriguez
+insert-bowman-gpk,GPK-4,,false,,Bobby Witt Jr.
+insert-bowman-gpk,GPK-5,,false,,Cal Ripken Jr.
+insert-bowman-gpk,GPK-6,,false,,Cal Raleigh
+insert-bowman-gpk,GPK-7,,false,,Carson Williams
+insert-bowman-gpk,GPK-8,,false,,Bo Bichette
+insert-bowman-gpk,GPK-9,,false,,Clayton Kershaw
+insert-bowman-gpk,GPK-10,,false,,Corbin Carroll
+insert-bowman-gpk,GPK-11,,false,,Eli Willits
+insert-bowman-gpk,GPK-12,,false,,Elly De La Cruz
+insert-bowman-gpk,GPK-13,,false,,Ethan Holliday
+insert-bowman-gpk,GPK-14,,false,,Frank Thomas
+insert-bowman-gpk,GPK-15,,false,,George Brett
+insert-bowman-gpk,GPK-16,,false,,Greg Maddux
+insert-bowman-gpk,GPK-17,,false,,Jac Caglianone
+insert-bowman-gpk,GPK-18,,false,,José Ramírez
+insert-bowman-gpk,GPK-19,,false,,Jacob Misiorowski
+insert-bowman-gpk,GPK-20,,false,,Jesús Made
+insert-bowman-gpk,GPK-21,,false,,Johnny Bench
+insert-bowman-gpk,GPK-22,,false,,JoJo Parker
+insert-bowman-gpk,GPK-23,,false,,Reggie Jackson
+insert-bowman-gpk,GPK-24,,false,,Kazuma Okamoto
+insert-bowman-gpk,GPK-25,,false,,Kyle Schwarber
+insert-bowman-gpk,GPK-26,,false,,Larry Walker
+insert-bowman-gpk,GPK-27,,false,,Manny Ramirez
+insert-bowman-gpk,GPK-28,,false,,Manny Machado
+insert-bowman-gpk,GPK-29,,false,,Mark McGwire
+insert-bowman-gpk,GPK-30,,false,,Mike Trout
+insert-bowman-gpk,GPK-31,,false,,Mike Piazza
+insert-bowman-gpk,GPK-32,,false,,Mike Schmidt
+insert-bowman-gpk,GPK-33,,false,,Yoshinobu Yamamoto
+insert-bowman-gpk,GPK-34,,false,,Munetaka Murakami
+insert-bowman-gpk,GPK-35,,false,,Nick Kurtz
+insert-bowman-gpk,GPK-36,,false,,Nolan Ryan
+insert-bowman-gpk,GPK-37,,false,,Paul Skenes
+insert-bowman-gpk,GPK-38,,false,,Pete Crow-Armstrong
+insert-bowman-gpk,GPK-39,,false,,Rod Carew
+insert-bowman-gpk,GPK-40,,false,,Roger Clemens
+insert-bowman-gpk,GPK-41,,false,,Roman Anthony
+insert-bowman-gpk,GPK-42,,false,,Sebastian Walcott
+insert-bowman-gpk,GPK-43,,false,,Shohei Ohtani
+insert-bowman-gpk,GPK-44,,false,,Shotaro Morii
+insert-bowman-gpk,GPK-45,,false,,Tarik Skubal
+insert-bowman-gpk,GPK-46,,false,,Tatsuya Imai
+insert-bowman-gpk,GPK-47,,false,,Vladimir Guerrero
+insert-bowman-gpk,GPK-48,,false,,Will Clark
+insert-bowman-gpk,GPK-49,,false,,Yadier Molina
+insert-bowman-gpk,GPK-50,,false,,Aaron Judge/Shohei Ohtani
+insert-final-draft,FD-1,,false,,Mike Trout
+insert-final-draft,FD-2,,false,,Greg Maddux
+insert-final-draft,FD-3,,false,,Pete Alonso
+insert-final-draft,FD-4,,false,,Pedro Martínez
+insert-final-draft,FD-5,,false,,Sammy Sosa
+insert-final-draft,FD-6,,false,,Alex Bregman
+insert-final-draft,FD-7,,false,,Miguel Cabrera
+insert-final-draft,FD-8,,false,,Kevin McGonigle
+insert-final-draft,FD-9,,false,,Tatsuya Imai
+insert-final-draft,FD-10,,false,,Bobby Witt Jr.
+insert-final-draft,FD-11,,false,,Yoshinobu Yamamoto
+insert-final-draft,FD-12,,false,,Mookie Betts
+insert-final-draft,FD-13,,false,,Bo Bichette
+insert-final-draft,FD-14,,false,,Aaron Judge
+insert-final-draft,FD-15,,false,,Fernando Tatis Jr.
+insert-final-draft,FD-16,,false,,Ichiro
+insert-final-draft,FD-17,,false,,JJ Wetherholt
+insert-final-draft,FD-18,,false,,Albert Pujols
+insert-final-draft,FD-19,,false,,Kazuma Okamoto
+insert-final-draft,FD-20,,false,,Vladimir Guerrero Jr.
+insert-crystallized,BWC-1,,false,,Kevin McGonigle
+insert-crystallized,BWC-2,,false,,JJ Wetherholt
+insert-crystallized,BWC-3,,false,,Carson Benge
+insert-crystallized,BWC-4,,false,,Munetaka Murakami
+insert-crystallized,BWC-5,,false,,Kazuma Okamoto
+insert-crystallized,BWC-6,,false,,Justin Crawford
+insert-crystallized,BWC-7,,false,,Chase DeLauter
+insert-crystallized,BWC-8,,false,,Kyle Teel
+insert-crystallized,BWC-9,,false,,Carson Williams
+insert-crystallized,BWC-10,,false,,Konnor Griffin
+insert-crystallized,BWC-11,,false,,Josuar Gonzalez
+insert-crystallized,BWC-12,,false,,Wehiwa Aloy
+insert-crystallized,BWC-13,,false,,Leo De Vries
+insert-crystallized,BWC-14,,false,,Yoshinobu Yamamoto
+insert-crystallized,BWC-15,,false,,Luis Hernandez
+insert-crystallized,BWC-16,,false,,Nick Kurtz
+insert-crystallized,BWC-17,,false,,Mike Trout
+insert-crystallized,BWC-18,,false,,Fernando Tatis Jr.
+insert-crystallized,BWC-19,,false,,Julio Rodríguez
+insert-crystallized,BWC-20,,false,,Elly De La Cruz
+insert-bowman-spotlights,BS-1,,false,,Konnor Griffin
+insert-bowman-spotlights,BS-2,,false,,Munetaka Murakami
+insert-bowman-spotlights,BS-3,,false,,Wandy Asigen
+insert-bowman-spotlights,BS-4,,false,,Colt Emerson
+insert-bowman-spotlights,BS-5,,false,,Andrew Fischer
+insert-bowman-spotlights,BS-6,,false,,Shohei Ohtani
+insert-bowman-spotlights,BS-7,,false,,Carson Benge
+insert-bowman-spotlights,BS-8,,false,,Aaron Judge
+insert-bowman-spotlights,BS-9,,false,,Bryce Harper
+insert-bowman-spotlights,BS-10,,false,,Max Clark
+insert-bowman-spotlights,BS-11,,false,,Kevin McGonigle
+insert-bowman-spotlights,BS-12,,false,,Kazuma Okamoto
+insert-bowman-spotlights,BS-13,,false,,Carter Jensen
+insert-bowman-spotlights,BS-14,,false,,JJ Wetherholt
+insert-bowman-spotlights,BS-15,,false,,Luis Hernandez
+insert-2026-mlb-spring-breakout,SB-1,,false,,Konnor Griffin
+insert-2026-mlb-spring-breakout,SB-2,,false,,JJ Wetherholt
+insert-2026-mlb-spring-breakout,SB-3,,false,,Leo De Vries
+insert-2026-mlb-spring-breakout,SB-4,,false,,Ethan Holliday
+insert-2026-mlb-spring-breakout,SB-5,,false,,Max Clark
+insert-2026-mlb-spring-breakout,SB-6,,false,,Seth Hernandez
+insert-2026-mlb-spring-breakout,SB-7,,false,,James Tibbs III
+insert-2026-mlb-spring-breakout,SB-8,,false,,Luis Hernandez
+insert-2026-mlb-spring-breakout,SB-9,,false,,JoJo Parker
+insert-2026-mlb-spring-breakout,SB-10,,false,,Gavin Fien
+insert-2026-mlb-spring-breakout,SB-11,,false,,Zach Root
+insert-2026-mlb-spring-breakout,SB-12,,false,,Ethan Salas
+insert-2026-mlb-spring-breakout,SB-13,,false,,Colt Emerson
+insert-2026-mlb-spring-breakout,SB-14,,false,,John Gil
+insert-2026-mlb-spring-breakout,SB-15,,false,,Yorger Bautista

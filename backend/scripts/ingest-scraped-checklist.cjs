@@ -51,54 +51,82 @@ async function main() {
 
   let base = 0, insertBase = 0, autoBase = 0, wrote = 0, failed = 0, skipped = 0;
   const preview = [];
+  const byParallel = new Map();
 
   for (const row of rows) {
-    // CF-CHECKLIST-SECTION-IS-THE-PARALLEL (Drew, 2026-08-13). This used to
-    // hardcode parallel="Base" for EVERY category and only flip isAuto, so
-    // every section of a set collapsed onto one slug. 2026 Bowman lists Justin
-    // Gonzales three times:
+    // CF-CHECKLIST-VARIATION-IS-A-PARALLEL (Drew, 2026-08-25). The converter
+    // now classifies each section by whether its card numbers already exist in
+    // an anchor section, and writes the resulting rung into the CSV's parallel
+    // column — so a Packfractor is a rung ON BCP-151 rather than a category
+    // beside it. When the manifest says that column is authoritative, read it
+    // instead of re-deriving a label from the category slug.
     //
-    //   auto-chrome-prospect-autographs             CPA-JG
-    //   auto-chrome-prospect-gold-ink-autographs    CPA-JG
-    //   auto-chrome-prospect-packfractor-autographs CPA-JG
+    // Deriving from the slug is what produced parallels like "Chrome Prospect
+    // Packfractor Autographs": the anchor's own name baked into the rung, a
+    // slug no parsed sale title can ever match. The rung is "PackFractor".
     //
-    // all three slugging to hiq:baseball:2026:bowman:cpa-jg:base:auto. The
-    // checklist knows there are three distinct cards; the catalog stored one,
-    // with each ingest overwriting the last. That is why "show me every auto
-    // option for this player" cannot be answered from the catalog today, and
-    // it applies to insert sections just as much as autographs.
-    //
-    // The section name IS the parallel. The converter already carries it in
-    // the category slug (`auto-chrome-prospect-gold-ink-autographs`), so the
-    // fix is to turn that back into a parallel label rather than discard it.
-    // "Base Set" / "Chrome Prospects" style sections are the plain card and
-    // stay "Base" — only genuinely distinct variants get their own parallel.
+    // Opt-in, because the other scrapers' parallel columns mean something
+    // different — the Pokemon checklists write "Normal" for the base tier,
+    // which would slug to `normal` instead of `base` if read literally. Those
+    // files carry no flag and keep the derivation below, unchanged.
     const cat = String(row.category || "").toLowerCase();
     let isAutoRow = false;
     let parallel = "Base";
 
-    // Sections that name the base card of their own numbering run, not a
-    // variant of it. Anything else in an insert-/auto- category is a real,
-    // separately-traded card and earns its own slug.
-    const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospects?|prospects?|chrome[- ]prospect[- ]autographs?|rookie[- ]autographs?|chrome[- ]rookie[- ]autographs?)$/;
+    if (manifest.parallelColumnAuthoritative === true) {
+      if (cat !== "base" && !cat.startsWith("insert-") && !cat.startsWith("auto-")) { skipped++; continue; }
+      isAutoRow = cat.startsWith("auto-");
+      // Blank is the honest value for a card list that never stated a finish;
+      // normalizeParallel() already reads "" as the base tier.
+      parallel = String(row.parallel || "").trim();
+      if (cat === "base") base++;
+      else if (cat.startsWith("insert-")) insertBase++;
+      else autoBase++;
+    } else {
+      // CF-CHECKLIST-SECTION-IS-THE-PARALLEL (Drew, 2026-08-13). This used to
+      // hardcode parallel="Base" for EVERY category and only flip isAuto, so
+      // every section of a set collapsed onto one slug. 2026 Bowman lists Justin
+      // Gonzales three times:
+      //
+      //   auto-chrome-prospect-autographs             CPA-JG
+      //   auto-chrome-prospect-gold-ink-autographs    CPA-JG
+      //   auto-chrome-prospect-packfractor-autographs CPA-JG
+      //
+      // all three slugging to hiq:baseball:2026:bowman:cpa-jg:base:auto. The
+      // checklist knows there are three distinct cards; the catalog stored one,
+      // with each ingest overwriting the last. That is why "show me every auto
+      // option for this player" cannot be answered from the catalog today, and
+      // it applies to insert sections just as much as autographs.
+      //
+      // The section name IS the parallel. The converter already carries it in
+      // the category slug (`auto-chrome-prospect-gold-ink-autographs`), so the
+      // fix is to turn that back into a parallel label rather than discard it.
+      // "Base Set" / "Chrome Prospects" style sections are the plain card and
+      // stay "Base" — only genuinely distinct variants get their own parallel.
 
-    const sectionLabel = (slug) => slug
-      .replace(/^(insert|auto)-/, "")
-      .split("-").filter(Boolean)
-      .map((w) => (w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)))
-      .join(" ");
+      // Sections that name the base card of their own numbering run, not a
+      // variant of it. Anything else in an insert-/auto- category is a real,
+      // separately-traded card and earns its own slug.
+      const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospects?|prospects?|chrome[- ]prospect[- ]autographs?|rookie[- ]autographs?|chrome[- ]rookie[- ]autographs?)$/;
 
-    if (cat === "base") base++;
-    else if (cat.startsWith("insert-")) {
-      insertBase++;
-      const label = sectionLabel(cat);
-      if (!PLAIN_SECTION.test(label.toLowerCase())) parallel = label;
-    } else if (cat.startsWith("auto-")) {
-      autoBase++;
-      isAutoRow = true;
-      const label = sectionLabel(cat);
-      if (!PLAIN_SECTION.test(label.toLowerCase())) parallel = label;
-    } else { skipped++; continue; }
+      const sectionLabel = (slug) => slug
+        .replace(/^(insert|auto)-/, "")
+        .split("-").filter(Boolean)
+        .map((w) => (w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)))
+        .join(" ");
+
+      if (cat === "base") base++;
+      else if (cat.startsWith("insert-")) {
+        insertBase++;
+        const label = sectionLabel(cat);
+        if (!PLAIN_SECTION.test(label.toLowerCase())) parallel = label;
+      } else if (cat.startsWith("auto-")) {
+        autoBase++;
+        isAutoRow = true;
+        const label = sectionLabel(cat);
+        if (!PLAIN_SECTION.test(label.toLowerCase())) parallel = label;
+      } else { skipped++; continue; }
+    }
 
     const printRun = row.printRun && row.printRun.trim() ? Number(row.printRun) : null;
     // Canonicalize setKey from manifest (setName is display-only; passing
@@ -130,6 +158,12 @@ async function main() {
     if (!entry) { skipped++; continue; }
 
     if (preview.length < 8) preview.push(`${entry.id}  ${row.player}`);
+    // A dry-run is only useful if it shows the rows it wants to create. Group
+    // by the parallel actually derived so the ladder is readable at a glance,
+    // and keep one worked example of each rung.
+    const pk = `${entry.parallel || "(blank)"}${isAutoRow ? "  [auto]" : ""}`;
+    if (!byParallel.has(pk)) byParallel.set(pk, { n: 0, eg: `${entry.id}   ${row.player}` });
+    byParallel.get(pk).n++;
 
     if (APPLY) {
       try {
@@ -144,6 +178,13 @@ async function main() {
 
   console.log(`\npreview:`);
   for (const p of preview) console.log(`  ${p}`);
+  // A dry-run is only worth running if it shows the rows it wants to create.
+  // Grouping by the derived parallel makes the whole ladder readable at a
+  // glance — a rung filed under the wrong name is obvious here and nowhere else.
+  console.log(`\nproposed rows by parallel (${byParallel.size} distinct):`);
+  for (const [k, v] of [...byParallel.entries()].sort((a, b) => b[1].n - a[1].n)) {
+    console.log(`  ${String(v.n).padStart(5)}  ${k.padEnd(30)} e.g. ${v.eg}`);
+  }
   console.log(`\n[done] base=${base} insert=${insertBase} auto=${autoBase} skipped=${skipped}`);
   if (APPLY) console.log(`  wrote=${wrote} failed=${failed}`);
   else console.log(`  (dry-run; total would-upsert=${base + insertBase + autoBase})`);
