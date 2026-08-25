@@ -115,6 +115,7 @@ on:
           - rehome-catalog-rows-to-own-partition
           - reslug-tcg-out-of-sports-namespace
           - retire-unreferenced-graded-rows
+          - retire-impossible-grade-rows
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
