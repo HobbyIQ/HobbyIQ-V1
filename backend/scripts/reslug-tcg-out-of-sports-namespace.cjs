@@ -51,7 +51,9 @@ const { inferSetKeyFromTitle } =
   require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
-const APPLY = String(process.env.APPLY || "") === "true";
+// The runner sets BACKFILL_APPLY, not APPLY. Reading only APPLY would make
+// this dry-run forever under the workflow while looking like it had run.
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 16);
 const LIMIT = Number(process.env.LIMIT || 0);
 const SPORTS = String(process.env.SPORTS || "anime-tcg,pokemon,non-sport,tcg-other,motorsport,combat-sport")
