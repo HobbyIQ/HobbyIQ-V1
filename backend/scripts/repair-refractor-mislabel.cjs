@@ -31,6 +31,7 @@
  *   SLOT / SLOTS    partition the year list across parallel dispatches
  */
 const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const { parseListingIdentity } = require(path.join(ROOT, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
@@ -264,6 +265,27 @@ async function yearsPresent(sold) {
   console.log("");
   console.log("TOTAL " + JSON.stringify(total));
   if (!APPLY) console.log("REPORT ONLY - nothing written.");
+
+  // CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. Three of this job's workers have already
+  // died mid-scan on a 429 and abandoned every year they had not reached; that
+  // failure at least exits 3. This covers the quieter one — finishing the scan
+  // but not writing what the scan decided on.
+  //
+  // "Intended" is every row this run made a decision about: the moves it chose,
+  // PLUS the ones it deliberately held (guard) or could not place (no
+  // destination row). Declaring those keeps them out of the shortfall — they
+  // are accounted for, not vanished — while still failing the run if a move it
+  // committed to never reached the database.
+  if (APPLY) {
+    const moves = total.toBase + total.toColour + total.other;
+    reportWrites({
+      job: "repair-refractor-mislabel",
+      intended: moves + total.held + total.noDest,
+      written: total.wrote,
+      skipped: total.held + total.noDest,
+      failed: total.failed,
+    });
+  }
 })().catch((e) => {
   console.error("FATAL:", e?.stack || e?.message || String(e));
   process.exit(3);

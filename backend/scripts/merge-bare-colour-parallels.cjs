@@ -31,6 +31,7 @@
  *   SLOT / SLOTS    partition the year list across parallel dispatches
  */
 const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "").split(",").map(Number).filter(Boolean);
@@ -177,6 +178,21 @@ async function yearsPresent(sold) {
   console.log("");
   console.log("TOTAL " + JSON.stringify(total));
   if (!APPLY) console.log("REPORT ONLY - nothing written.");
+
+  // Every bare colour this run made a decision about is "intended": the ones it
+  // merged, plus the ones it deliberately left alone because the product is not
+  // chrome stock, plus the ones with no destination row to merge into. Declared
+  // is accounted for; only a merge that was chosen and then never landed is a
+  // shortfall. See CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW.
+  if (APPLY) {
+    reportWrites({
+      job: "merge-bare-colour-parallels",
+      intended: total.bare,
+      written: total.wrote,
+      skipped: total.notChrome + total.noDest,
+      failed: total.failed,
+    });
+  }
 })().catch((e) => {
   console.error("FATAL:", e?.stack || e?.message || String(e));
   process.exit(3);
