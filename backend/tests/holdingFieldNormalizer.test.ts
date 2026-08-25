@@ -462,3 +462,33 @@ describe("skipRules option — lets tests / edge cases suppress individual rules
     expect(r.fields.setName).toBe("2026 Bowman");
   });
 });
+
+// CF-A-TRAILING-COMMA-IS-NOT-PART-OF-A-NAME (Drew, 2026-08-25, on his own
+// holding reading "Marconi German,"). The slug survived because slugify()
+// drops punctuation, which is exactly why this sat there unnoticed -- it is
+// visible on every card detail screen and in every string-compare player lookup.
+describe("playerName edge punctuation", () => {
+  const name = (n: string) => normalizeHoldingFields({ playerName: n }).fields.playerName;
+
+  it("strips separators that came along from the listing title", () => {
+    expect(name("Marconi German,")).toBe("Marconi German");
+    expect(name("Mike Trout;")).toBe("Mike Trout");
+    expect(name(" Jac Caglianone .")).toBe("Jac Caglianone");
+    expect(name("  Shohei Ohtani  ")).toBe("Shohei Ohtani");
+    expect(name("-Aaron Judge")).toBe("Aaron Judge");
+  });
+
+  it("leaves punctuation that is part of the name", () => {
+    // A trailing period is only noise when it stands alone after a space.
+    expect(name("Ken Griffey Jr.")).toBe("Ken Griffey Jr.");
+    expect(name("Cal Ripken Jr.")).toBe("Cal Ripken Jr.");
+    expect(name("A.J. Pierzynski")).toBe("A.J. Pierzynski");
+    expect(name("Jose D'Angelo")).toBe("Jose D'Angelo");
+  });
+
+  it("is idempotent, like every other rule here", () => {
+    for (const n of ["Marconi German,", "Ken Griffey Jr.", "A.J. Pierzynski"]) {
+      expect(name(name(n))).toBe(name(n));
+    }
+  });
+});

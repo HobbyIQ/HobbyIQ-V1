@@ -476,6 +476,37 @@ const RULES: Rule[] = [
       return fields;
     },
   },
+
+  // CF-A-TRAILING-COMMA-IS-NOT-PART-OF-A-NAME (Drew, 2026-08-25, on his own
+  // holding reading "Marconi German,").
+  //
+  // eBay titles put the player's name next to a team, a grade or a set, and
+  // the separator comes along with it. The slug survives -- slugify() drops
+  // punctuation -- so this never broke pricing, which is exactly why it sat
+  // there: it is visible on every card detail screen and in every player
+  // lookup that compares strings rather than slugs.
+  //
+  // Trailing commas, semicolons, colons, hyphens and stray quotes are always
+  // noise. A trailing PERIOD is not: "Ken Griffey Jr." and "A.J. Pierzynski"
+  // are real, so a period is only removed when it stands alone after a space.
+  {
+    name: "playerName_strip_edge_punctuation",
+    apply(fields, changes) {
+      const raw = fields.playerName;
+      if (!raw) return fields;
+      const cleaned = String(raw)
+        .replace(/\s+\.\s*$/, "")        // " Jac Caglianone ." but not "Jr."
+        .replace(/[,;:\-–—"'`]+\s*$/, "")
+        .replace(/^\s*[,;:\-–—"'`]+/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (cleaned && cleaned !== raw) {
+        changes.push({ rule: "playerName_strip_edge_punctuation", field: "playerName", before: raw, after: cleaned });
+        return { ...fields, playerName: cleaned };
+      }
+      return fields;
+    },
+  },
 ];
 
 /**
