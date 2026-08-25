@@ -972,7 +972,7 @@ export async function persistVendorSalesToPool(
             reason: "parser-low-confidence",
             stagingId: stagingRowId,
             saleInput: {
-              cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+              cardId: `hiq:${slug.slice(4)}`,
               playerName,
               cardYear,
               setName: setKey,
@@ -1030,7 +1030,7 @@ export async function persistVendorSalesToPool(
             reason: "sample-audit",
             stagingId: stagingRowId,
             saleInput: {
-              cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+              cardId: `hiq:${slug.slice(4)}`,
               playerName,
               cardYear,
               setName: setKey,
@@ -1152,7 +1152,7 @@ export async function persistVendorSalesToPool(
                 reason: "price-outlier",
                 stagingId: stagingRowId,
                 saleInput: {
-                  cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+                  cardId: `hiq:${slug.slice(4)}`,
                   playerName,
                   cardYear,
                   setName: setKey,
@@ -1208,7 +1208,7 @@ export async function persistVendorSalesToPool(
                   reason: "image-mismatch",
                   stagingId: stagingRowId,
                   saleInput: {
-                    cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+                    cardId: `hiq:${slug.slice(4)}`,
                     playerName,
                     cardYear,
                     setName: setKey,
@@ -1347,11 +1347,26 @@ export async function persistVendorSalesToPool(
 
       const doc = {
         id: `${source}::${sourceExternalId}`,
-        // Prefer the vendor's real cardId when known (CH path) so the
-        // vendor-cardId lookup finds these rows too. Fall back to the
-        // hobbyiqCardId-derived pseudo-cardId (Cardsight-search path
-        // where no stable cardId exists).
-        cardId: identity.vendorCardId ?? `hiq:${slug.slice(4)}`,
+        // CF-WE-KEY-ON-OUR-OWN-IDENTITY (Drew, 2026-08-25: "why are we using
+        // CH and Cardsight? We USE OUR OWN POOL NOT VENDORS").
+        //
+        // This used to read `identity.vendorCardId ?? \`hiq:${slug.slice(4)}\``
+        // -- the vendor's id PREFERRED over ours as the partition key. Since
+        // Cosmos scopes uniqueness per partition, the same logical card then
+        // exists once per vendor id that ever mentioned it. One Marconi German
+        // #CPA-MG carried 693 catalog rows, 432 of them shadows of exactly
+        // this kind, which is why its pools fragmented no matter how many
+        // parallel bugs got fixed upstream.
+        //
+        // The vendor id is not thrown away -- it stays in vendorCardId and
+        // sourceExternalId, where it belongs as a lookup convenience. It is
+        // not allowed to BE the identity. The only reader that resolves by
+        // vendor id (persistVendorCatalog) queries vendorMappings, not cardId,
+        // so nothing depended on this.
+        //
+        // Note `hiq:${slug.slice(4)}` is just `slug` reassembled; the old
+        // expression's only effect was the vendor preference.
+        cardId: `hiq:${slug.slice(4)}`,
         hobbyiqCardId: slug,
         contentHash,
         playerName,

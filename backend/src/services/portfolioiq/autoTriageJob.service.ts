@@ -130,7 +130,7 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
 
       // Promote to sold_comps with the corrected identity.
       await recordSoldComp({
-        cardId: row.raw.identityHint.vendorCardId ?? `hiq:${newSlug.slice(4)}`,
+        cardId: `hiq:${newSlug.slice(4)}`,
         playerName: row.clean?.playerName ?? row.raw.identityHint.playerName ?? "(unknown)",
         cardYear: row.clean?.cardYear ?? row.raw.identityHint.cardYear ?? null,
         setName: row.clean?.setName ?? null,

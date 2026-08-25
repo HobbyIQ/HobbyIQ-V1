@@ -138,7 +138,7 @@ export async function runPromotionBatch(opts: {
       // mirrored blob URL as the imageUrl so downstream renders our
       // permanent copy, not the vendor's expiring one.
       const wrote = await recordSoldComp({
-        cardId: row.raw.identityHint.vendorCardId ?? `hiq:${row.hobbyiqCardId.slice(4)}`,
+        cardId: `hiq:${row.hobbyiqCardId.slice(4)}`,
         playerName: clean.playerName,
         cardYear: clean.cardYear,
         setName: clean.setName ?? null,
