@@ -109,6 +109,7 @@ on:
           - attest-unnumbered-by-player
           - resolve-sales-without-identity
           - retire-flattened-attestations
+          - repair-refractor-mislabel
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true

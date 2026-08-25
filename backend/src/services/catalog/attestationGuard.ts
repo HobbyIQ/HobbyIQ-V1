@@ -30,7 +30,7 @@ import { isParserProbablyWrong } from "../portfolioiq/parserSuspicionDetector";
 /** Parallel vocabulary that carries no colour word with it, so the shipped
  *  colour+context detector cannot see it. */
 const PARALLEL_HINT_RE =
-  /\b(camo|mojo|disco|hyper|scope|sparkle|velocity|tie[- ]?dye|speckle|atomic|cracked[- ]ice|reactive|shimmer|wave|prizm|refractor|x-?fractor|holo(?:foil|gram)?|foil|lava|pulsar|snakeskin|dragon[- ]scale|kaleidoscope|nebula|genesis|fast[- ]break|die[- ]?cut|sapphire|superfractor|negative|prismatic|rainbow|starburst|downtown|kaboom)\b/i;
+  /\b(camo|mojo|disco|hyper|scope|sparkle|velocity|tie[- ]?dye|speckle|atomic|cracked[- ]ice|reactive|shimmer|wave|prizm|refractor|x-?fractor|holo(?:foil|gram)?|foil|lava|pulsar|snakeskin|dragon[- ]scale|kaleidoscope|nebula|genesis|fast[- ]break|die[- ]?cut|sapphire|superfractor|negative|prismatic|rainbow|starburst|downtown|kaboom|[a-z]+fractor)\b/i;
 
 const AUTO_IN_TITLE_RE = /\bauto\b|autograph|hard[-\s]signed/i;
 
