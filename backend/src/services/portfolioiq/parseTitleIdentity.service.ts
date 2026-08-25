@@ -702,6 +702,32 @@ function extractParallel(title: string): string {
   const T = title.replace(/\bref\b\.?(?!ractor)/gi, "Refractor");
   if (/superfractor|super\s+fractor/i.test(T)) return "SuperFractor";
 
+  // CF-THE-FRACTOR-FAMILY-IS-OPEN-ENDED (Drew, 2026-08-25). Mined from the
+  // 10,144 sales the refractor repair held back rather than guessed at one
+  // title at a time -- which is how Packfractor was found, and how the next
+  // one would have been missed:
+  //
+  //   "2024 Topps Chrome Logofractor Future Stars Auto ... /99"  -> Base
+  //   "... Milwaukee Brewers Chrome PackFractor /89"             -> Base
+  //
+  // Both read the PRINT RUN and lost the parallel, so a /99 Logofractor auto
+  // was filed as base. Topps keeps minting these, and enumerating them has
+  // lost every previous race with the marketing department, so match the
+  // shape: any word ending in "fractor" names itself. Re- is the plain
+  // refractor and is handled by the colour rules below; Super- already
+  // returned above; X-Fractor is hyphenated so the letter-run cannot reach it.
+  const fractorFamily = T.match(/\b([a-z]+)fractor\b/i);
+  if (fractorFamily && !/^(?:re|super|x)$/i.test(fractorFamily[1])) {
+    return capFirst(fractorFamily[1].toLowerCase()) + "fractor";
+  }
+
+  // CF-MOJO-IS-A-PARALLEL (same mining pass). Bowman Mega Box Mojo is a real
+  // parallel and the single most common miss in the held set:
+  //   "2022 Bowman Chrome - Mega Box Chrome Mojo Autographs Joshua Baez"
+  //   "2023 Bowman Chrome Keiner Delgado Auto /150 Choice Mojo #CPA-KD"
+  if (/mojo\s+refractor/i.test(T)) return "Mojo Refractor";
+  if (/\bmojo\b/i.test(T)) return "Mojo";
+
   // ─── Paper-auto Border ladder (runs FIRST to win vs refractor rules) ─
   // CF-PAPER-AUTO-BORDERS (Drew, 2026-07-29). Bowman paper autos
   // (BPA-/BDA-/BCRA- prefixes; on flagship Bowman + Bowman Draft, on
