@@ -56,6 +56,28 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
   }).database("hobbyiq").container("card_catalog");
 
+  // CF-THE-REHOME-SCAN-CAN-BE-THROTTLED-TOO (Drew, 2026-08-25). The per-row
+  // read/write/delete already retry through the connection policy -- a 429
+  // there is counted and moved past. The SCAN did not, so a single throttled
+  // page killed the whole run with FATAL and abandoned every row it had not
+  // reached yet. Run 32910343326 died exactly that way mid-2021.
+  //
+  // normalize-catalog-format learned this same lesson hours earlier and carries
+  // the same wrapper. Same claim from the server, same answer: not now, ask
+  // again.
+  const queryWithRetry = async (spec, opts) => {
+    let wait = 1000;
+    for (let attempt = 0; ; attempt++) {
+      try { return await cat.items.query(spec, opts).fetchNext(); }
+      catch (e) {
+        const throttled = /request rate is too large|429/i.test(String(e?.message));
+        if (!throttled || attempt >= 12) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
   let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0, verifyFailed = 0;
   // CF-COUNT-WHAT-THE-LOOP-TOUCHES. `candidates` counts rows the SCAN found;
   // `attempted` counts rows the work loop actually took up. They differ the
@@ -73,10 +95,10 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
 
   let token, pages = 0;
   do {
-    const page = await cat.items.query(
+    const page = await queryWithRetry(
       { query: `SELECT * FROM c WHERE ${where.join(" AND ")}` },
       { maxItemCount: 200, continuationToken: token },
-    ).fetchNext();
+    );
     token = page.continuationToken;
 
     const work = [];
