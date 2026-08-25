@@ -153,9 +153,9 @@ on:
         default: "refractor"
         type: string
       setkey_like:
-        description: "For dedupe-catalog-partition-shadows: substring the setKey must contain (e.g. bowman)."
+        description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition."
         required: false
-        default: "bowman"
+        default: ""
         type: string
       years:
         description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
