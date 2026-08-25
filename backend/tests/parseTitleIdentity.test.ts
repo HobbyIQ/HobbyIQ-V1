@@ -398,6 +398,23 @@ describe("parseListingIdentity — parallel extraction", () => {
     expect(parseListingIdentity("2026 Bowman Chrome 1st - Marconi German - True Base Auto - CPA-MG - Raw").parallel).toBe("Base");
   });
 
+  it("reads the -fractor family by shape, not by name", () => {
+    // Mined from the 10,144 sales the refractor repair held back. Both read
+    // their PRINT RUN and lost the parallel, so a /99 Logofractor auto was
+    // filed as base.
+    expect(parseListingIdentity("2024 Topps Chrome Logofractor Future Stars Auto #FSA-CR Ceddanne Rafaela /99 RC").parallel).toBe("Logofractor");
+    expect(parseListingIdentity("#CPA-BA Brailyn Antunez 2026 Bowman SN Milwaukee Brewers Chrome PackFractor /89 - Raw").parallel).toBe("Packfractor");
+    // ...without swallowing the three that already had homes.
+    expect(parseListingIdentity("2026 Bowman Chrome #CPA-OC 1st Auto Refractor /499").parallel).toBe("Refractor");
+    expect(parseListingIdentity("2026 Bowman Chrome #CPA-OC 1st Auto SuperFractor 1/1").parallel).toBe("SuperFractor");
+    expect(parseListingIdentity("2026 Bowman Chrome Baseball #CPA-MG Gold Refractor").parallel).toBe("Gold Refractor");
+  });
+
+  it("reads Mojo, the most common miss in the held set", () => {
+    expect(parseListingIdentity("2022 Bowman Chrome - Mega Box Chrome Mojo Autographs Joshua Baez #BCMA-JB").parallel).toBe("Mojo");
+    expect(parseListingIdentity("2023 Bowman Chrome Keiner Delgado Auto /150 Choice Mojo #CPA-KD (RC, AU) Yankees").parallel).toBe("Mojo");
+  });
+
   it("an insert set name is not a parallel", () => {
     // Found by sampling 8,500 real rows after the colour rules were widened:
     // "Red Hot Rookies" is the INSERT's name, so this is a plain Refractor of
