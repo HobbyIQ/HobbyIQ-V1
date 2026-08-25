@@ -110,6 +110,7 @@ on:
           - resolve-sales-without-identity
           - retire-flattened-attestations
           - repair-refractor-mislabel
+          - merge-bare-colour-parallels
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -143,6 +144,11 @@ on:
         description: "For attest-* scripts: how many independent sales must agree before a card is created. 2 is the default; 1 accepts a single sale and is much riskier."
         required: false
         default: "2"
+      scope:
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool)."
+        required: false
+        default: "refractor"
+        type: string
       years:
         description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
         required: false
@@ -376,6 +382,9 @@ jobs:
           # corroboration threshold and optional year scoping.
           MIN_SALES: ${{ inputs.min_sales }}
           YEARS: ${{ inputs.years }}
+          # repair-refractor-mislabel: "refractor" (plain segment only) or
+          # "all" (every slug whose parallel disagrees with its own title).
+          SCOPE: ${{ inputs.scope }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4

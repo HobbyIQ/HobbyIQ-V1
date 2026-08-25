@@ -61,6 +61,25 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
   }).database("hobbyiq");
   const cat = db.container("card_catalog");
   let throttled = 0, exhausted = 0, retryAfter = 0;
+
+  // CF-THE-SCAN-CAN-BE-THROTTLED-TOO, applied here as well. The bulk WRITES
+  // retry (that was this morning's fix) but the QUERY did not, so a slot could
+  // still die with FATAL mid-scan and abandon every unit it had not reached --
+  // which is exactly what one of the 16 just did. Same claim from the server,
+  // same answer: not now, ask again.
+  const queryWithRetry = async (spec, opts) => {
+    let wait = 1000;
+    for (let attempt = 0; ; attempt++) {
+      try { return await cat.items.query(spec, opts).fetchNext(); }
+      catch (e) {
+        const t = /request rate is too large|429/i.test(String(e?.message));
+        if (!t || attempt >= 12) throw e;
+        throttled++;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
   const bins = await buildUnits(cat);
   const mine = bins[SLOT];
   if (!mine) { console.error(`FATAL: SLOT ${SLOT} out of range for SLOTS ${SLOTS}`); process.exit(1); }
@@ -74,7 +93,7 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
     const bounded = unit.lo !== null && unit.lo !== undefined;
     let token;
     do {
-      const it = cat.items.query(
+      const page = await queryWithRetry(
         { query: `SELECT * FROM c WHERE c.year=@y AND STARTSWITH(c.id,'hiq:')
                   AND (NOT IS_DEFINED(c.verificationStatus) OR c.verificationStatus != 'rejected')
                   ${bounded ? "AND c.setKey >= @lo AND c.setKey < @hi" : ""}`,
@@ -83,7 +102,6 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
             : [{ name: "@y", value: y }] },
         { maxItemCount: 1000, continuationToken: token },
       );
-      const page = await it.fetchNext();
       token = page.continuationToken;
       const batch = [];
       for (const r of page.resources) {
