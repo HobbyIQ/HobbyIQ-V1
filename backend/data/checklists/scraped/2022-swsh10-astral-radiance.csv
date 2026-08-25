@@ -1,161 +1,161 @@
 category,cardNumber,parallel,isAuto,printRun,player
 insert-holofoil,001189,Holofoil,false,,Beedrill V
-base,002189,Normal,false,,Hisuian Voltorb
+base,002189,,false,,Hisuian Voltorb
 insert-reverse-holofoil,002189,Reverse Holofoil,false,,Hisuian Voltorb
-base,003189,Normal,false,,Hisuian Electrode
+base,003189,,false,,Hisuian Electrode
 insert-reverse-holofoil,003189,Reverse Holofoil,false,,Hisuian Electrode
-base,004189,Normal,false,,Scyther
+base,004189,,false,,Scyther
 insert-reverse-holofoil,004189,Reverse Holofoil,false,,Scyther
-base,005189,Normal,false,,Scyther
+base,005189,,false,,Scyther
 insert-reverse-holofoil,005189,Reverse Holofoil,false,,Scyther
-base,006189,Normal,false,,Yanma
+base,006189,,false,,Yanma
 insert-reverse-holofoil,006189,Reverse Holofoil,false,,Yanma
-base,007189,Normal,false,,Yanmega
+base,007189,,false,,Yanmega
 insert-reverse-holofoil,007189,Reverse Holofoil,false,,Yanmega
-base,008189,Normal,false,,Heracross
+base,008189,,false,,Heracross
 insert-reverse-holofoil,008189,Reverse Holofoil,false,,Heracross
-base,009189,Normal,false,,Kricketot
+base,009189,,false,,Kricketot
 insert-reverse-holofoil,009189,Reverse Holofoil,false,,Kricketot
-base,010189,Normal,false,,Kricketune
+base,010189,,false,,Kricketune
 insert-reverse-holofoil,010189,Reverse Holofoil,false,,Kricketune
-base,011189,Normal,false,,Combee
+base,011189,,false,,Combee
 insert-reverse-holofoil,011189,Reverse Holofoil,false,,Combee
-base,012189,Normal,false,,Vespiquen
+base,012189,,false,,Vespiquen
 insert-reverse-holofoil,012189,Reverse Holofoil,false,,Vespiquen
-base,013189,Normal,false,,Leafeon
+base,013189,,false,,Leafeon
 insert-reverse-holofoil,013189,Reverse Holofoil,false,,Leafeon
-base,014189,Normal,false,,Shaymin
+base,014189,,false,,Shaymin
 insert-reverse-holofoil,014189,Reverse Holofoil,false,,Shaymin
-base,015189,Normal,false,,Petilil
+base,015189,,false,,Petilil
 insert-reverse-holofoil,015189,Reverse Holofoil,false,,Petilil
 insert-holofoil,016189,Holofoil,false,,Hisuian Lilligant
 insert-holofoil,017189,Holofoil,false,,Hisuian Lilligant V
 insert-holofoil,018189,Holofoil,false,,Hisuian Lilligant VSTAR
-base,019189,Normal,false,,Rowlet
+base,019189,,false,,Rowlet
 insert-reverse-holofoil,019189,Reverse Holofoil,false,,Rowlet
-base,020189,Normal,false,,Dartrix
+base,020189,,false,,Dartrix
 insert-reverse-holofoil,020189,Reverse Holofoil,false,,Dartrix
-base,021189,Normal,false,,Ponyta
+base,021189,,false,,Ponyta
 insert-reverse-holofoil,021189,Reverse Holofoil,false,,Ponyta
-base,022189,Normal,false,,Rapidash
+base,022189,,false,,Rapidash
 insert-reverse-holofoil,022189,Reverse Holofoil,false,,Rapidash
-base,023189,Normal,false,,Cyndaquil
+base,023189,,false,,Cyndaquil
 insert-reverse-holofoil,023189,Reverse Holofoil,false,,Cyndaquil
-base,024189,Normal,false,,Quilava
+base,024189,,false,,Quilava
 insert-reverse-holofoil,024189,Reverse Holofoil,false,,Quilava
 insert-holofoil,025189,Holofoil,false,,Heatran V
 insert-holofoil,026189,Holofoil,false,,Heatran VMAX
 insert-holofoil,027189,Holofoil,false,,Radiant Heatran
-base,028189,Normal,false,,Psyduck
+base,028189,,false,,Psyduck
 insert-reverse-holofoil,028189,Reverse Holofoil,false,,Psyduck
-base,029189,Normal,false,,Golduck
+base,029189,,false,,Golduck
 insert-reverse-holofoil,029189,Reverse Holofoil,false,,Golduck
 insert-holofoil,030189,Holofoil,false,,Starmie V
-base,031189,Normal,false,,Swinub
+base,031189,,false,,Swinub
 insert-reverse-holofoil,031189,Reverse Holofoil,false,,Swinub
-base,032189,Normal,false,,Piloswine
+base,032189,,false,,Piloswine
 insert-reverse-holofoil,032189,Reverse Holofoil,false,,Piloswine
-base,033189,Normal,false,,Mamoswine
+base,033189,,false,,Mamoswine
 insert-reverse-holofoil,033189,Reverse Holofoil,false,,Mamoswine
-base,034189,Normal,false,,Mantine
+base,034189,,false,,Mantine
 insert-reverse-holofoil,034189,Reverse Holofoil,false,,Mantine
-base,035189,Normal,false,,Barboach
+base,035189,,false,,Barboach
 insert-reverse-holofoil,035189,Reverse Holofoil,false,,Barboach
-base,036189,Normal,false,,Whiscash
+base,036189,,false,,Whiscash
 insert-reverse-holofoil,036189,Reverse Holofoil,false,,Whiscash
-base,037189,Normal,false,,Regice
+base,037189,,false,,Regice
 insert-reverse-holofoil,037189,Reverse Holofoil,false,,Regice
-base,038189,Normal,false,,Glaceon
+base,038189,,false,,Glaceon
 insert-reverse-holofoil,038189,Reverse Holofoil,false,,Glaceon
 insert-holofoil,039189,Holofoil,false,,Origin Forme Palkia V
 insert-holofoil,040189,Holofoil,false,,Origin Forme Palkia VSTAR
-base,041189,Normal,false,,Oshawott
+base,041189,,false,,Oshawott
 insert-reverse-holofoil,041189,Reverse Holofoil,false,,Oshawott
-base,042189,Normal,false,,Dewott
+base,042189,,false,,Dewott
 insert-reverse-holofoil,042189,Reverse Holofoil,false,,Dewott
-base,043189,Normal,false,,Hisuian Basculin
+base,043189,,false,,Hisuian Basculin
 insert-reverse-holofoil,043189,Reverse Holofoil,false,,Hisuian Basculin
-base,044189,Normal,false,,Hisuian Basculegion
+base,044189,,false,,Hisuian Basculegion
 insert-reverse-holofoil,044189,Reverse Holofoil,false,,Hisuian Basculegion
 insert-holofoil,045189,Holofoil,false,,Keldeo
 insert-holofoil,046189,Holofoil,false,,Radiant Greninja
-base,047189,Normal,false,,Bergmite
+base,047189,,false,,Bergmite
 insert-reverse-holofoil,047189,Reverse Holofoil,false,,Bergmite
-base,048189,Normal,false,,Hisuian Avalugg
+base,048189,,false,,Hisuian Avalugg
 insert-reverse-holofoil,048189,Reverse Holofoil,false,,Hisuian Avalugg
 insert-holofoil,049189,Holofoil,false,,Galarian Mr. Rime V
 insert-holofoil,050189,Holofoil,false,,Luxray V
-base,051189,Normal,false,,Regieleki
+base,051189,,false,,Regieleki
 insert-reverse-holofoil,051189,Reverse Holofoil,false,,Regieleki
 insert-holofoil,052189,Holofoil,false,,Hisuian Typhlosion
 insert-holofoil,053189,Holofoil,false,,Hisuian Typhlosion V
 insert-holofoil,054189,Holofoil,false,,Hisuian Typhlosion VSTAR
-base,055189,Normal,false,,Togepi
+base,055189,,false,,Togepi
 insert-reverse-holofoil,055189,Reverse Holofoil,false,,Togepi
-base,056189,Normal,false,,Togetic
+base,056189,,false,,Togetic
 insert-reverse-holofoil,056189,Reverse Holofoil,false,,Togetic
 insert-holofoil,057189,Holofoil,false,,Togekiss
-base,058189,Normal,false,,Misdreavus
+base,058189,,false,,Misdreavus
 insert-reverse-holofoil,058189,Reverse Holofoil,false,,Misdreavus
-base,059189,Normal,false,,Mismagius
+base,059189,,false,,Mismagius
 insert-reverse-holofoil,059189,Reverse Holofoil,false,,Mismagius
-base,060189,Normal,false,,Ralts
+base,060189,,false,,Ralts
 insert-reverse-holofoil,060189,Reverse Holofoil,false,,Ralts
-base,061189,Normal,false,,Kirlia
+base,061189,,false,,Kirlia
 insert-reverse-holofoil,061189,Reverse Holofoil,false,,Kirlia
 insert-holofoil,062189,Holofoil,false,,Gallade
-base,063189,Normal,false,,Drifloon
+base,063189,,false,,Drifloon
 insert-reverse-holofoil,063189,Reverse Holofoil,false,,Drifloon
-base,064189,Normal,false,,Drifblim
+base,064189,,false,,Drifblim
 insert-reverse-holofoil,064189,Reverse Holofoil,false,,Drifblim
-base,065189,Normal,false,,Uxie
+base,065189,,false,,Uxie
 insert-reverse-holofoil,065189,Reverse Holofoil,false,,Uxie
 insert-holofoil,066189,Holofoil,false,,Mesprit
-base,067189,Normal,false,,Azelf
+base,067189,,false,,Azelf
 insert-reverse-holofoil,067189,Reverse Holofoil,false,,Azelf
 insert-holofoil,068189,Holofoil,false,,Diancie
 insert-holofoil,069189,Holofoil,false,,Wyrdeer
-base,070189,Normal,false,,Hisuian Growlithe
+base,070189,,false,,Hisuian Growlithe
 insert-reverse-holofoil,070189,Reverse Holofoil,false,,Hisuian Growlithe
-base,071189,Normal,false,,Hisuian Arcanine
+base,071189,,false,,Hisuian Arcanine
 insert-reverse-holofoil,071189,Reverse Holofoil,false,,Hisuian Arcanine
 insert-holofoil,072189,Holofoil,false,,Machamp V
 insert-holofoil,073189,Holofoil,false,,Machamp VMAX
-base,074189,Normal,false,,Sudowoodo
+base,074189,,false,,Sudowoodo
 insert-reverse-holofoil,074189,Reverse Holofoil,false,,Sudowoodo
-base,075189,Normal,false,,Regirock
+base,075189,,false,,Regirock
 insert-reverse-holofoil,075189,Reverse Holofoil,false,,Regirock
-base,076189,Normal,false,,Cranidos
+base,076189,,false,,Cranidos
 insert-reverse-holofoil,076189,Reverse Holofoil,false,,Cranidos
 insert-holofoil,077189,Holofoil,false,,Rampardos
 insert-holofoil,078189,Holofoil,false,,Lucario V
-base,079189,Normal,false,,Hippopotas
+base,079189,,false,,Hippopotas
 insert-reverse-holofoil,079189,Reverse Holofoil,false,,Hippopotas
-base,080189,Normal,false,,Hippowdon
+base,080189,,false,,Hippowdon
 insert-reverse-holofoil,080189,Reverse Holofoil,false,,Hippowdon
 insert-holofoil,081189,Holofoil,false,,Radiant Hawlucha
 insert-holofoil,082189,Holofoil,false,,Hisuian Decidueye
 insert-holofoil,083189,Holofoil,false,,Hisuian Decidueye V
 insert-holofoil,084189,Holofoil,false,,Hisuian Decidueye VSTAR
-base,085189,Normal,false,,Kleavor
+base,085189,,false,,Kleavor
 insert-reverse-holofoil,085189,Reverse Holofoil,false,,Kleavor
 insert-holofoil,086189,Holofoil,false,,Kleavor
 insert-holofoil,087189,Holofoil,false,,Kleavor V
-base,088189,Normal,false,,Hisuian Qwilfish
+base,088189,,false,,Hisuian Qwilfish
 insert-reverse-holofoil,088189,Reverse Holofoil,false,,Hisuian Qwilfish
-base,089189,Normal,false,,Hisuian Qwilfish
+base,089189,,false,,Hisuian Qwilfish
 insert-reverse-holofoil,089189,Reverse Holofoil,false,,Hisuian Qwilfish
-base,090189,Normal,false,,Hisuian Overqwil
+base,090189,,false,,Hisuian Overqwil
 insert-reverse-holofoil,090189,Reverse Holofoil,false,,Hisuian Overqwil
-base,091189,Normal,false,,Hisuian Overqwil
+base,091189,,false,,Hisuian Overqwil
 insert-reverse-holofoil,091189,Reverse Holofoil,false,,Hisuian Overqwil
-base,092189,Normal,false,,Hisuian Sneasel
+base,092189,,false,,Hisuian Sneasel
 insert-reverse-holofoil,092189,Reverse Holofoil,false,,Hisuian Sneasel
 insert-holofoil,093189,Holofoil,false,,Hisuian Sneasler
 insert-holofoil,094189,Holofoil,false,,Hisuian Sneasler V
-base,095189,Normal,false,,Poochyena
+base,095189,,false,,Poochyena
 insert-reverse-holofoil,095189,Reverse Holofoil,false,,Poochyena
-base,096189,Normal,false,,Mightyena
+base,096189,,false,,Mightyena
 insert-reverse-holofoil,096189,Reverse Holofoil,false,,Mightyena
 insert-holofoil,097189,Holofoil,false,,Absol
 insert-holofoil,098189,Holofoil,false,,Darkrai V
@@ -163,108 +163,108 @@ insert-holofoil,099189,Holofoil,false,,Darkrai VSTAR
 insert-holofoil,100189,Holofoil,false,,Hisuian Samurott
 insert-holofoil,101189,Holofoil,false,,Hisuian Samurott V
 insert-holofoil,102189,Holofoil,false,,Hisuian Samurott VSTAR
-base,103189,Normal,false,,Nickit
+base,103189,,false,,Nickit
 insert-reverse-holofoil,103189,Reverse Holofoil,false,,Nickit
-base,104189,Normal,false,,Thievul
+base,104189,,false,,Thievul
 insert-reverse-holofoil,104189,Reverse Holofoil,false,,Thievul
-base,105189,Normal,false,,Magnemite
+base,105189,,false,,Magnemite
 insert-reverse-holofoil,105189,Reverse Holofoil,false,,Magnemite
-base,106189,Normal,false,,Magneton
+base,106189,,false,,Magneton
 insert-reverse-holofoil,106189,Reverse Holofoil,false,,Magneton
 insert-holofoil,107189,Holofoil,false,,Magnezone
-base,108189,Normal,false,,Registeel
+base,108189,,false,,Registeel
 insert-reverse-holofoil,108189,Reverse Holofoil,false,,Registeel
-base,109189,Normal,false,,Shieldon
+base,109189,,false,,Shieldon
 insert-reverse-holofoil,109189,Reverse Holofoil,false,,Shieldon
 insert-holofoil,110189,Holofoil,false,,Bastiodon
-base,111189,Normal,false,,Bronzor
+base,111189,,false,,Bronzor
 insert-reverse-holofoil,111189,Reverse Holofoil,false,,Bronzor
-base,112189,Normal,false,,Bronzong
+base,112189,,false,,Bronzong
 insert-reverse-holofoil,112189,Reverse Holofoil,false,,Bronzong
 insert-holofoil,113189,Holofoil,false,,Origin Forme Dialga V
 insert-holofoil,114189,Holofoil,false,,Origin Forme Dialga VSTAR
-base,115189,Normal,false,,Pawniard
+base,115189,,false,,Pawniard
 insert-reverse-holofoil,115189,Reverse Holofoil,false,,Pawniard
-base,116189,Normal,false,,Bisharp
+base,116189,,false,,Bisharp
 insert-reverse-holofoil,116189,Reverse Holofoil,false,,Bisharp
 insert-holofoil,117189,Holofoil,false,,Garchomp V
-base,118189,Normal,false,,Regidrago
+base,118189,,false,,Regidrago
 insert-reverse-holofoil,118189,Reverse Holofoil,false,,Regidrago
-base,119189,Normal,false,,Eevee
+base,119189,,false,,Eevee
 insert-reverse-holofoil,119189,Reverse Holofoil,false,,Eevee
-base,120189,Normal,false,,Hoothoot
+base,120189,,false,,Hoothoot
 insert-reverse-holofoil,120189,Reverse Holofoil,false,,Hoothoot
-base,121189,Normal,false,,Noctowl
+base,121189,,false,,Noctowl
 insert-reverse-holofoil,121189,Reverse Holofoil,false,,Noctowl
-base,122189,Normal,false,,Teddiursa
+base,122189,,false,,Teddiursa
 insert-reverse-holofoil,122189,Reverse Holofoil,false,,Teddiursa
-base,123189,Normal,false,,Ursaring
+base,123189,,false,,Ursaring
 insert-reverse-holofoil,123189,Reverse Holofoil,false,,Ursaring
-base,124189,Normal,false,,Ursaluna
+base,124189,,false,,Ursaluna
 insert-reverse-holofoil,124189,Reverse Holofoil,false,,Ursaluna
-base,125189,Normal,false,,Stantler
+base,125189,,false,,Stantler
 insert-reverse-holofoil,125189,Reverse Holofoil,false,,Stantler
 insert-holofoil,126189,Holofoil,false,,Miltank
-base,127189,Normal,false,,Glameow
+base,127189,,false,,Glameow
 insert-reverse-holofoil,127189,Reverse Holofoil,false,,Glameow
-base,128189,Normal,false,,Purugly
+base,128189,,false,,Purugly
 insert-reverse-holofoil,128189,Reverse Holofoil,false,,Purugly
-base,129189,Normal,false,,Chatot
+base,129189,,false,,Chatot
 insert-reverse-holofoil,129189,Reverse Holofoil,false,,Chatot
 insert-holofoil,130189,Holofoil,false,,Regigigas
-base,131189,Normal,false,,Rufflet
+base,131189,,false,,Rufflet
 insert-reverse-holofoil,131189,Reverse Holofoil,false,,Rufflet
-base,132189,Normal,false,,Hisuian Braviary
+base,132189,,false,,Hisuian Braviary
 insert-reverse-holofoil,132189,Reverse Holofoil,false,,Hisuian Braviary
 insert-holofoil,133189,Holofoil,false,,Oranguru V
 insert-holofoil,134189,Holofoil,false,,Wyrdeer V
 insert-holofoil,135189,Holofoil,false,,Adaman
-base,136189,Normal,false,,Canceling Cologne
+base,136189,,false,,Canceling Cologne
 insert-reverse-holofoil,136189,Reverse Holofoil,false,,Canceling Cologne
-base,137189,Normal,false,,Choy
+base,137189,,false,,Choy
 insert-reverse-holofoil,137189,Reverse Holofoil,false,,Choy
-base,138189,Normal,false,,Cyllene
+base,138189,,false,,Cyllene
 insert-reverse-holofoil,138189,Reverse Holofoil,false,,Cyllene
-base,139189,Normal,false,,Dark Patch
+base,139189,,false,,Dark Patch
 insert-reverse-holofoil,139189,Reverse Holofoil,false,,Dark Patch
-base,140189,Normal,false,,Energy Loto
+base,140189,,false,,Energy Loto
 insert-reverse-holofoil,140189,Reverse Holofoil,false,,Energy Loto
-base,141189,Normal,false,,Feather Ball
+base,141189,,false,,Feather Ball
 insert-reverse-holofoil,141189,Reverse Holofoil,false,,Feather Ball
-base,142189,Normal,false,,Gapejaw Bog
+base,142189,,false,,Gapejaw Bog
 insert-reverse-holofoil,142189,Reverse Holofoil,false,,Gapejaw Bog
-base,143189,Normal,false,,Gardenia's Vigor
+base,143189,,false,,Gardenia's Vigor
 insert-reverse-holofoil,143189,Reverse Holofoil,false,,Gardenia's Vigor
-base,144189,Normal,false,,Grant
+base,144189,,false,,Grant
 insert-reverse-holofoil,144189,Reverse Holofoil,false,,Grant
-base,145189,Normal,false,,Gutsy Pickaxe
+base,145189,,false,,Gutsy Pickaxe
 insert-reverse-holofoil,145189,Reverse Holofoil,false,,Gutsy Pickaxe
-base,146189,Normal,false,,Hisuian Heavy Ball
+base,146189,,false,,Hisuian Heavy Ball
 insert-reverse-holofoil,146189,Reverse Holofoil,false,,Hisuian Heavy Ball
 insert-holofoil,147189,Holofoil,false,,Irida
-base,148189,Normal,false,,Jubilife Village
+base,148189,,false,,Jubilife Village
 insert-reverse-holofoil,148189,Reverse Holofoil,false,,Jubilife Village
-base,149189,Normal,false,,Kamado
+base,149189,,false,,Kamado
 insert-reverse-holofoil,149189,Reverse Holofoil,false,,Kamado
-base,150189,Normal,false,,Roxanne
+base,150189,,false,,Roxanne
 insert-reverse-holofoil,150189,Reverse Holofoil,false,,Roxanne
-base,151189,Normal,false,,Spicy Seasoned Curry
+base,151189,,false,,Spicy Seasoned Curry
 insert-reverse-holofoil,151189,Reverse Holofoil,false,,Spicy Seasoned Curry
-base,152189,Normal,false,,Supereffective Glasses
+base,152189,,false,,Supereffective Glasses
 insert-reverse-holofoil,152189,Reverse Holofoil,false,,Supereffective Glasses
-base,153189,Normal,false,,Sweet Honey
+base,153189,,false,,Sweet Honey
 insert-reverse-holofoil,153189,Reverse Holofoil,false,,Sweet Honey
-base,154189,Normal,false,,Switch Cart
+base,154189,,false,,Switch Cart
 insert-reverse-holofoil,154189,Reverse Holofoil,false,,Switch Cart
-base,155189,Normal,false,,Temple of Sinnoh
+base,155189,,false,,Temple of Sinnoh
 insert-reverse-holofoil,155189,Reverse Holofoil,false,,Temple of Sinnoh
-base,156189,Normal,false,,Trekking Shoes
+base,156189,,false,,Trekking Shoes
 insert-reverse-holofoil,156189,Reverse Holofoil,false,,Trekking Shoes
-base,157189,Normal,false,,Unidentified Fossil
+base,157189,,false,,Unidentified Fossil
 insert-reverse-holofoil,157189,Reverse Holofoil,false,,Unidentified Fossil
-base,158189,Normal,false,,Wait and See Turbo
+base,158189,,false,,Wait and See Turbo
 insert-reverse-holofoil,158189,Reverse Holofoil,false,,Wait and See Turbo
-base,159189,Normal,false,,Zisu
+base,159189,,false,,Zisu
 insert-reverse-holofoil,159189,Reverse Holofoil,false,,Zisu
 insert-holofoil,160189,Holofoil,false,,Beedrill V
 insert-holofoil,161189,Holofoil,false,,Beedrill V

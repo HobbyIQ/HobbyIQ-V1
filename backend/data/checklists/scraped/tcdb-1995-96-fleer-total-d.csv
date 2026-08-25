@@ -1,13 +1,13 @@
 category,cardNumber,parallel,isAuto,printRun,player
-insert-total-d,1,Base,false,,Mookie Blaylock
-insert-total-d,2,Base,false,,Patrick Ewing
-insert-total-d,3,Base,false,,Michael Jordan
-insert-total-d,4,Base,false,,Alonzo Mourning
-insert-total-d,5,Base,false,,Dikembe Mutombo
-insert-total-d,6,Base,false,,Hakeem Olajuwon
-insert-total-d,7,Base,false,,Shaquille O'Neal
-insert-total-d,8,Base,false,,Gary Payton
-insert-total-d,9,Base,false,,Scottie Pippen
-insert-total-d,10,Base,false,,David Robinson
-insert-total-d,11,Base,false,,Dennis Rodman
-insert-total-d,12,Base,false,,John Stockton
+insert-total-d,1,Total D,false,,Mookie Blaylock
+insert-total-d,2,Total D,false,,Patrick Ewing
+insert-total-d,3,Total D,false,,Michael Jordan
+insert-total-d,4,Total D,false,,Alonzo Mourning
+insert-total-d,5,Total D,false,,Dikembe Mutombo
+insert-total-d,6,Total D,false,,Hakeem Olajuwon
+insert-total-d,7,Total D,false,,Shaquille O'Neal
+insert-total-d,8,Total D,false,,Gary Payton
+insert-total-d,9,Total D,false,,Scottie Pippen
+insert-total-d,10,Total D,false,,David Robinson
+insert-total-d,11,Total D,false,,Dennis Rodman
+insert-total-d,12,Total D,false,,John Stockton

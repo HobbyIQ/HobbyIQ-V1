@@ -1,215 +1,215 @@
 category,cardNumber,parallel,isAuto,printRun,player
-base,BDP1,Base,false,,Matt Kemp
-base,BDP2,Base,false,,Taylor Tankersley
-base,BDP3,Base,false,,Mike Napoli
-base,BDP4,Base,false,,Brian Bannister
-base,BDP5,Base,false,,Melky Cabrera
-base,BDP6,Base,false,,Bill Bray
-base,BDP7,Base,false,,Brian Anderson
-base,BDP8,Base,false,,Jered Weaver
-base,BDP9,Base,false,,Chris Duncan
-base,BDP10,Base,false,,Boof Bonser
-base,BDP11,Base,false,,Mike Rouse
-base,BDP12,Base,false,,David Pauley
-base,BDP13,Base,false,,Russ Martin
-base,BDP14,Base,false,,Jeremy Sowers
-base,BDP15,Base,false,,Kevin Reese
-base,BDP16,Base,false,,John Rheinecker
-base,BDP17,Base,false,,Tommy Murphy
-base,BDP18,Base,false,,Sean Marshall
-base,BDP19,Base,false,,Jason Kubel
-base,BDP20,Base,false,,Chad Billingsley
-base,BDP21,Base,false,,Kendry Morales
-base,BDP22,Base,false,,Jon Lester
-base,BDP23,Base,false,,Brandon Fahey
-base,BDP24,Base,false,,Josh Johnson
-base,BDP25,Base,false,,Kevin Frandsen
-base,BDP26,Base,false,,Casey Janssen
-base,BDP27,Base,false,,Scott Thorman
-base,BDP28,Base,false,,Scott Mathieson
-base,BDP29,Base,false,,Jeremy Hermida
-base,BDP30,Base,false,,Dustin Nippert
-base,BDP31,Base,false,,Kevin Thompson
-base,BDP32,Base,false,,Bobby Livingston
-base,BDP33,Base,false,,Travis Ishikawa
-base,BDP34,Base,false,,Jeff Mathis
-base,BDP35,Base,false,,Charlie Haeger
-base,BDP36,Base,false,,Josh Willingham
-base,BDP37,Base,false,,Taylor Buchholz
-base,BDP38,Base,false,,Joel Guzman
-base,BDP39,Base,false,,Zach Jackson
-base,BDP40,Base,false,,Howie Kendrick
-base,BDP41,Base,false,,T.J. Beam
-base,BDP42,Base,false,,Ty Taubenheim
-base,BDP43,Base,false,,Erick Aybar
-base,BDP44,Base,false,,Anibal Sanchez
-base,BDP45,Base,false,,Michael Pelfrey
-base,BDP46,Base,false,,Shawn Hill
-base,BDP47,Base,false,,Chris Roberson
-base,BDP48,Base,false,,Carlos Villanueva
-base,BDP49,Base,false,,Andre Ethier
-base,BDP50,Base,false,,Anthony Reyes
-base,BDP51,Base,false,,Franklin Gutierrez
-base,BDP52,Base,false,,Angel Guzman
-base,BDP53,Base,false,,Michael O'Connor
-base,BDP54,Base,false,,James Shields
-base,BDP55,Base,false,,Nate McLouth
-insert-draft-picks,DP1,Base,false,,Tyler Colvin
-insert-draft-picks,DP2,Base,false,,Chris Marrero
-insert-draft-picks,DP3,Base,false,,Preston Mattingly
-insert-draft-picks,DP4,Base,false,,Chris Parmelee
-insert-draft-picks,DP5,Base,false,,Jason Place
-insert-draft-picks,DP6,Base,false,,Billy Rowell
-insert-draft-picks,DP7,Base,false,,Travis Snider
-insert-draft-picks,DP8,Base,false,,Colton Willems
-insert-draft-picks,DP9,Base,false,,Chase Fontaine
-insert-draft-picks,DP10,Base,false,,Jon Jay
-insert-draft-picks,DP11,Base,false,,Wade Leblanc
-insert-draft-picks,DP12,Base,false,,Justin Masterson
-insert-draft-picks,DP13,Base,false,,Gary Daley
-insert-draft-picks,DP14,Base,false,,Justin Edwards
-insert-draft-picks,DP15,Base,false,,Shelby Ford
-insert-draft-picks,DP16,Base,false,,Cyle Hankerd
-insert-draft-picks,DP17,Base,false,,Zack McAllister
-insert-draft-picks,DP18,Base,false,,Tyler Robertson
-insert-draft-picks,DP19,Base,false,,Joe Smith
-insert-draft-picks,DP20,Base,false,,Nate Culp
-insert-draft-picks,DP21,Base,false,,John Holdzkom
-insert-draft-picks,DP22,Base,false,,Lee Hyde
-insert-draft-picks,DP23,Base,false,,Chad Lee
-insert-draft-picks,DP24,Base,false,,Ryan Morris
-insert-draft-picks,DP25,Base,false,,D'Arby Myers
-insert-draft-picks,DP26,Base,false,,Garrett Olson
-insert-draft-picks,DP27,Base,false,,Jon Still
-insert-draft-picks,DP28,Base,false,,Patrick Bresnehan
-insert-draft-picks,DP29,Base,false,,Chris Davis
-insert-draft-picks,DP30,Base,false,,Kevin Gunderson
-insert-draft-picks,DP31,Base,false,,Bobby Henson
-insert-draft-picks,DP32,Base,false,,George Kontos
-insert-draft-picks,DP33,Base,false,,Jermaine Mitchell
-insert-draft-picks,DP34,Base,false,,Sean O'Malley
-insert-draft-picks,DP35,Base,false,,Dustin Richardson
-insert-draft-picks,DP36,Base,false,,Andy Underwood
-insert-draft-picks,DP37,Base,false,,Nevin Ashley
-insert-draft-picks,DP38,Base,false,,Jeff Christy
-insert-draft-picks,DP39,Base,false,,Zack Daeges
-insert-draft-picks,DP40,Base,false,,Justin Jacobs
-insert-draft-picks,DP41,Base,false,,Jim Negrych
-insert-draft-picks,DP42,Base,false,,Tyler Norrick
-insert-draft-picks,DP43,Base,false,,Adam Davis
-insert-draft-picks,DP44,Base,false,,Evan Anundsen
-insert-draft-picks,DP45,Base,false,,Cedric Hunter
-insert-draft-picks,DP46,Base,false,,Kyle Drabek
-insert-draft-picks,DP47,Base,false,,Hector Ambriz
-insert-draft-picks,DP48,Base,false,,Bryant Thompson
-insert-draft-picks,DP49,Base,false,,Clayton Tanner
-insert-draft-picks,DP50,Base,false,,David Christensen
-insert-draft-picks,DP51,Base,false,,Helder Velazquez
-insert-draft-picks,DP52,Base,false,,Matt McBride
-insert-draft-picks,DP53,Base,false,,Quintin Berry
-insert-draft-picks,DP54,Base,false,,Steven Wright
-insert-draft-picks,DP55,Base,false,,David Hatcher
-insert-draft-picks,DP56,Base,false,,Scott Cousins
-insert-draft-picks,DP57,Base,false,,Robert Stubbs
-insert-draft-picks,DP58,Base,false,,Chris Valaika
-insert-draft-picks,DP59,Base,false,,Tyler Reves
-insert-draft-picks,DP60,Base,false,,John Shelby
-insert-draft-picks,DP61,Base,false,,Jordan Newton
-insert-draft-picks,DP62,Base,false,,Ricky Orta
-insert-draft-picks,DP63,Base,false,,Jason Donald
-insert-draft-picks,DP64,Base,false,,David Huff
-insert-draft-picks,DP65,Base,false,,Brett Sinkbeil
-insert-draft-picks,DP66,Base,false,,Evan Longoria Autograph
-insert-draft-picks,DP67,Base,false,,Cody Johnson Autograph
-insert-draft-picks,DP68,Base,false,,Kris Johnson Autograph
-insert-draft-picks,DP69,Base,false,,Kasey Kiker Autograph
-insert-draft-picks,DP70,Base,false,,Ronny Bourquin Autograph
-insert-draft-picks,DP71,Base,false,,Adrian Cardenas Autograph
-insert-draft-picks,DP72,Base,false,,Matt Antonelli Autograph
-insert-draft-picks,DP73,Base,false,,Brooks Brown Autograph
-insert-draft-picks,DP74,Base,false,,Steven Evarts Autograph
-insert-draft-picks,DP75,Base,false,,Joshua Butler Autograph
-insert-draft-picks,DP76,Base,false,,Chad Huffman Autograph
-insert-draft-picks,DP77,Base,false,,Steven Wright Autograph
-insert-draft-picks,DP78,Base,false,,Cory Rasmus Autograph
-insert-draft-picks,DP79,Base,false,,Brad Furnish Autograph
-insert-draft-picks,DP80,Base,false,,Andrew Carpenter Autograph
-insert-draft-picks,DP81,Base,false,,Dustin Evans Autograph
-insert-draft-picks,DP82,Base,false,,Tommy Hickman Autograph
-insert-draft-picks,DP83,Base,false,,Matt Long Autograph
-insert-draft-picks,DP84,Base,false,,Clayton Kershaw Autograph
-insert-draft-picks,DP85,Base,false,,Kyle McCulloch Autograph
-insert-draft-picks,DP86,Base,false,,Pedro Beato Autograph
-insert-draft-picks,DP87,Base,false,,Kyler Burke Autograph
-insert-draft-picks,DP88,Base,false,,Stephen Englund Autograph
-insert-draft-picks,DP89,Base,false,,Michael Felix Autograph
-insert-draft-picks,DP90,Base,false,,Sean Watson Autograph
-insert-draft-picks,DP91,Base,false,,Joshua Rodriguez Autograph
-insert-draft-picks,DP92,Base,false,,Keith Weiser Autograph
-insert-draft-picks,DP93,Base,false,,Chad Tracy Autograph
-insert-draft-picks,DP94,Base,false,,Matthew Sulentic Autograph
-insert-draft-picks,DP95,Base,false,,Adam Ottavino Autograph
-insert-futures-game-prospects,FG1,Base,false,,Nick Adenhart
-insert-futures-game-prospects,FG2,Base,false,,Joel Guzman
-insert-futures-game-prospects,FG3,Base,false,,Ryan Braun
-insert-futures-game-prospects,FG4,Base,false,,Carlos Carrasco
-insert-futures-game-prospects,FG5,Base,false,,Neil Walker
-insert-futures-game-prospects,FG6,Base,false,,Pablo Sandoval
-insert-futures-game-prospects,FG7,Base,false,,Gio Gonzalez
-insert-futures-game-prospects,FG8,Base,false,,Joey Votto
-insert-futures-game-prospects,FG9,Base,false,,Luis Cruz
-insert-futures-game-prospects,FG10,Base,false,,Nolan Reimold
-insert-futures-game-prospects,FG11,Base,false,,Juan Salas
-insert-futures-game-prospects,FG12,Base,false,,Josh Fields
-insert-futures-game-prospects,FG13,Base,false,,Yovani Gallardo
-insert-futures-game-prospects,FG14,Base,false,,Radhames Liz
-insert-futures-game-prospects,FG15,Base,false,,Troy Tulowitzki
-insert-futures-game-prospects,FG16,Base,false,,Cameron Maybin
-insert-futures-game-prospects,FG17,Base,false,,Edgar Martinez
-insert-futures-game-prospects,FG18,Base,false,,Hunter Pence
-insert-futures-game-prospects,FG19,Base,false,,Philip Hughes
-insert-futures-game-prospects,FG20,Base,false,,Trent Oeltjen
-insert-futures-game-prospects,FG21,Base,false,,Nick Pereira
-insert-futures-game-prospects,FG22,Base,false,,Wladimir Balentien
-insert-futures-game-prospects,FG23,Base,false,,Stephen Drew
-insert-futures-game-prospects,FG24,Base,false,,Davis Romero
-insert-futures-game-prospects,FG25,Base,false,,Joe Koshansky
-insert-futures-game-prospects,FG26,Base,false,,Chin Lung Hu
-insert-futures-game-prospects,FG27,Base,false,,Jason Hirsh
-insert-futures-game-prospects,FG28,Base,false,,Jose Tabata
-insert-futures-game-prospects,FG29,Base,false,,Eric Hurley
-insert-futures-game-prospects,FG30,Base,false,,Yung Chi Chen
-insert-futures-game-prospects,FG31,Base,false,,Howie Kendrick
-insert-futures-game-prospects,FG32,Base,false,,Humberto Sanchez
-insert-futures-game-prospects,FG33,Base,false,,Alex Gordon
-insert-futures-game-prospects,FG34,Base,false,,Yunel Escobar
-insert-futures-game-prospects,FG35,Base,false,,Travis Buck
-insert-futures-game-prospects,FG36,Base,false,,Billy Butler
-insert-futures-game-prospects,FG37,Base,false,,Homer Bailey
-insert-futures-game-prospects,FG38,Base,false,,George Kottaras
-insert-futures-game-prospects,FG39,Base,false,,Kurt Suzuki
-insert-futures-game-prospects,FG40,Base,false,,Joaquin Arias
-insert-futures-game-prospects,FG41,Base,false,,Matt Lindstrom
-insert-futures-game-prospects,FG42,Base,false,,Sean Smith
-insert-futures-game-prospects,FG43,Base,false,,Carlos Gonzalez
-insert-futures-game-prospects,FG44,Base,false,,Jaime Garcia
-insert-futures-game-prospects,FG45,Base,false,,Jose Garcia
-insert-head-of-the-class,1,Base,false,,card. Dual autograph uses sticker signatures. Numbered to 174.
-insert-signs-of-the-future,19,Base,false,,cards. Cards use sticker autographs.
-insert-signs-of-the-future,2006,Base,false,,Bowman Chrome Draft Evan Longoria 1st Bowman Auto Rays DP66 RC
-insert-signs-of-the-future,2006,Base,false,,Bowman Draft Picks & Prospects #DP72 Matt Antonelli Chrome Draft Picks
-insert-signs-of-the-future,2006,Base,false,,Bowman Draft Picks Future Jay Bruce Autograph Card BGS 9.5 Auto 10
-insert-signs-of-the-future,2006,Base,false,,Bowman Chrome Draft Picks Refractors #66 Evan Longoria AUTO /500 Beckett 9
-insert-signs-of-the-future,2006,Base,false,,Bowman Chrome Draft Picks Autograph #DP84 Clayton Kershaw Beautiful Card!!!
-insert-signs-of-the-future,2006,Base,false,,Bowman Draft Picks and Prospect baseball sealed hobby box
-insert-signs-of-the-future,2006,Base,false,,"Bowman Draft Baseball Factory Sealed Hobby Box..Kershaw, Longoria Auto RCs?"
-insert-signs-of-the-future,1,Base,false,,Star - Avoid this product like the plague
-insert-signs-of-the-future,2,Base,false,,Stars - Below Average Product
-insert-signs-of-the-future,3,Base,false,,Stars - Average Product
-insert-signs-of-the-future,4,Base,false,,Stars - Excellent Product
-insert-signs-of-the-future,5,Base,false,,Stars - Incredible Product
-insert-signs-of-the-future,2006,Base,false,,Bowman Draft Picks & Prospects - Chrome Jason Kubel #BDP19 Gold...
-insert-signs-of-the-future,2006,Base,false,,Bowman Chrome Draft Gold Refractors #34 Jeff Mathis #'d/50
-insert-signs-of-the-future,2006,Base,false,,Bowman Chrome Futures Game Prospects Gold Refractor Billy Butler BGS 9.5
-insert-signs-of-the-future,2006,Base,false,,Bowman Draft Picks & Prospects - Chrome Futures Game Cameron Maybin...
-insert-signs-of-the-future,30,Base,false,,days
+base,BDP1,,false,,Matt Kemp
+base,BDP2,,false,,Taylor Tankersley
+base,BDP3,,false,,Mike Napoli
+base,BDP4,,false,,Brian Bannister
+base,BDP5,,false,,Melky Cabrera
+base,BDP6,,false,,Bill Bray
+base,BDP7,,false,,Brian Anderson
+base,BDP8,,false,,Jered Weaver
+base,BDP9,,false,,Chris Duncan
+base,BDP10,,false,,Boof Bonser
+base,BDP11,,false,,Mike Rouse
+base,BDP12,,false,,David Pauley
+base,BDP13,,false,,Russ Martin
+base,BDP14,,false,,Jeremy Sowers
+base,BDP15,,false,,Kevin Reese
+base,BDP16,,false,,John Rheinecker
+base,BDP17,,false,,Tommy Murphy
+base,BDP18,,false,,Sean Marshall
+base,BDP19,,false,,Jason Kubel
+base,BDP20,,false,,Chad Billingsley
+base,BDP21,,false,,Kendry Morales
+base,BDP22,,false,,Jon Lester
+base,BDP23,,false,,Brandon Fahey
+base,BDP24,,false,,Josh Johnson
+base,BDP25,,false,,Kevin Frandsen
+base,BDP26,,false,,Casey Janssen
+base,BDP27,,false,,Scott Thorman
+base,BDP28,,false,,Scott Mathieson
+base,BDP29,,false,,Jeremy Hermida
+base,BDP30,,false,,Dustin Nippert
+base,BDP31,,false,,Kevin Thompson
+base,BDP32,,false,,Bobby Livingston
+base,BDP33,,false,,Travis Ishikawa
+base,BDP34,,false,,Jeff Mathis
+base,BDP35,,false,,Charlie Haeger
+base,BDP36,,false,,Josh Willingham
+base,BDP37,,false,,Taylor Buchholz
+base,BDP38,,false,,Joel Guzman
+base,BDP39,,false,,Zach Jackson
+base,BDP40,,false,,Howie Kendrick
+base,BDP41,,false,,T.J. Beam
+base,BDP42,,false,,Ty Taubenheim
+base,BDP43,,false,,Erick Aybar
+base,BDP44,,false,,Anibal Sanchez
+base,BDP45,,false,,Michael Pelfrey
+base,BDP46,,false,,Shawn Hill
+base,BDP47,,false,,Chris Roberson
+base,BDP48,,false,,Carlos Villanueva
+base,BDP49,,false,,Andre Ethier
+base,BDP50,,false,,Anthony Reyes
+base,BDP51,,false,,Franklin Gutierrez
+base,BDP52,,false,,Angel Guzman
+base,BDP53,,false,,Michael O'Connor
+base,BDP54,,false,,James Shields
+base,BDP55,,false,,Nate McLouth
+insert-draft-picks,DP1,Draft Picks,false,,Tyler Colvin
+insert-draft-picks,DP2,Draft Picks,false,,Chris Marrero
+insert-draft-picks,DP3,Draft Picks,false,,Preston Mattingly
+insert-draft-picks,DP4,Draft Picks,false,,Chris Parmelee
+insert-draft-picks,DP5,Draft Picks,false,,Jason Place
+insert-draft-picks,DP6,Draft Picks,false,,Billy Rowell
+insert-draft-picks,DP7,Draft Picks,false,,Travis Snider
+insert-draft-picks,DP8,Draft Picks,false,,Colton Willems
+insert-draft-picks,DP9,Draft Picks,false,,Chase Fontaine
+insert-draft-picks,DP10,Draft Picks,false,,Jon Jay
+insert-draft-picks,DP11,Draft Picks,false,,Wade Leblanc
+insert-draft-picks,DP12,Draft Picks,false,,Justin Masterson
+insert-draft-picks,DP13,Draft Picks,false,,Gary Daley
+insert-draft-picks,DP14,Draft Picks,false,,Justin Edwards
+insert-draft-picks,DP15,Draft Picks,false,,Shelby Ford
+insert-draft-picks,DP16,Draft Picks,false,,Cyle Hankerd
+insert-draft-picks,DP17,Draft Picks,false,,Zack McAllister
+insert-draft-picks,DP18,Draft Picks,false,,Tyler Robertson
+insert-draft-picks,DP19,Draft Picks,false,,Joe Smith
+insert-draft-picks,DP20,Draft Picks,false,,Nate Culp
+insert-draft-picks,DP21,Draft Picks,false,,John Holdzkom
+insert-draft-picks,DP22,Draft Picks,false,,Lee Hyde
+insert-draft-picks,DP23,Draft Picks,false,,Chad Lee
+insert-draft-picks,DP24,Draft Picks,false,,Ryan Morris
+insert-draft-picks,DP25,Draft Picks,false,,D'Arby Myers
+insert-draft-picks,DP26,Draft Picks,false,,Garrett Olson
+insert-draft-picks,DP27,Draft Picks,false,,Jon Still
+insert-draft-picks,DP28,Draft Picks,false,,Patrick Bresnehan
+insert-draft-picks,DP29,Draft Picks,false,,Chris Davis
+insert-draft-picks,DP30,Draft Picks,false,,Kevin Gunderson
+insert-draft-picks,DP31,Draft Picks,false,,Bobby Henson
+insert-draft-picks,DP32,Draft Picks,false,,George Kontos
+insert-draft-picks,DP33,Draft Picks,false,,Jermaine Mitchell
+insert-draft-picks,DP34,Draft Picks,false,,Sean O'Malley
+insert-draft-picks,DP35,Draft Picks,false,,Dustin Richardson
+insert-draft-picks,DP36,Draft Picks,false,,Andy Underwood
+insert-draft-picks,DP37,Draft Picks,false,,Nevin Ashley
+insert-draft-picks,DP38,Draft Picks,false,,Jeff Christy
+insert-draft-picks,DP39,Draft Picks,false,,Zack Daeges
+insert-draft-picks,DP40,Draft Picks,false,,Justin Jacobs
+insert-draft-picks,DP41,Draft Picks,false,,Jim Negrych
+insert-draft-picks,DP42,Draft Picks,false,,Tyler Norrick
+insert-draft-picks,DP43,Draft Picks,false,,Adam Davis
+insert-draft-picks,DP44,Draft Picks,false,,Evan Anundsen
+insert-draft-picks,DP45,Draft Picks,false,,Cedric Hunter
+insert-draft-picks,DP46,Draft Picks,false,,Kyle Drabek
+insert-draft-picks,DP47,Draft Picks,false,,Hector Ambriz
+insert-draft-picks,DP48,Draft Picks,false,,Bryant Thompson
+insert-draft-picks,DP49,Draft Picks,false,,Clayton Tanner
+insert-draft-picks,DP50,Draft Picks,false,,David Christensen
+insert-draft-picks,DP51,Draft Picks,false,,Helder Velazquez
+insert-draft-picks,DP52,Draft Picks,false,,Matt McBride
+insert-draft-picks,DP53,Draft Picks,false,,Quintin Berry
+insert-draft-picks,DP54,Draft Picks,false,,Steven Wright
+insert-draft-picks,DP55,Draft Picks,false,,David Hatcher
+insert-draft-picks,DP56,Draft Picks,false,,Scott Cousins
+insert-draft-picks,DP57,Draft Picks,false,,Robert Stubbs
+insert-draft-picks,DP58,Draft Picks,false,,Chris Valaika
+insert-draft-picks,DP59,Draft Picks,false,,Tyler Reves
+insert-draft-picks,DP60,Draft Picks,false,,John Shelby
+insert-draft-picks,DP61,Draft Picks,false,,Jordan Newton
+insert-draft-picks,DP62,Draft Picks,false,,Ricky Orta
+insert-draft-picks,DP63,Draft Picks,false,,Jason Donald
+insert-draft-picks,DP64,Draft Picks,false,,David Huff
+insert-draft-picks,DP65,Draft Picks,false,,Brett Sinkbeil
+insert-draft-picks,DP66,Draft Picks,false,,Evan Longoria Autograph
+insert-draft-picks,DP67,Draft Picks,false,,Cody Johnson Autograph
+insert-draft-picks,DP68,Draft Picks,false,,Kris Johnson Autograph
+insert-draft-picks,DP69,Draft Picks,false,,Kasey Kiker Autograph
+insert-draft-picks,DP70,Draft Picks,false,,Ronny Bourquin Autograph
+insert-draft-picks,DP71,Draft Picks,false,,Adrian Cardenas Autograph
+insert-draft-picks,DP72,Draft Picks,false,,Matt Antonelli Autograph
+insert-draft-picks,DP73,Draft Picks,false,,Brooks Brown Autograph
+insert-draft-picks,DP74,Draft Picks,false,,Steven Evarts Autograph
+insert-draft-picks,DP75,Draft Picks,false,,Joshua Butler Autograph
+insert-draft-picks,DP76,Draft Picks,false,,Chad Huffman Autograph
+insert-draft-picks,DP77,Draft Picks,false,,Steven Wright Autograph
+insert-draft-picks,DP78,Draft Picks,false,,Cory Rasmus Autograph
+insert-draft-picks,DP79,Draft Picks,false,,Brad Furnish Autograph
+insert-draft-picks,DP80,Draft Picks,false,,Andrew Carpenter Autograph
+insert-draft-picks,DP81,Draft Picks,false,,Dustin Evans Autograph
+insert-draft-picks,DP82,Draft Picks,false,,Tommy Hickman Autograph
+insert-draft-picks,DP83,Draft Picks,false,,Matt Long Autograph
+insert-draft-picks,DP84,Draft Picks,false,,Clayton Kershaw Autograph
+insert-draft-picks,DP85,Draft Picks,false,,Kyle McCulloch Autograph
+insert-draft-picks,DP86,Draft Picks,false,,Pedro Beato Autograph
+insert-draft-picks,DP87,Draft Picks,false,,Kyler Burke Autograph
+insert-draft-picks,DP88,Draft Picks,false,,Stephen Englund Autograph
+insert-draft-picks,DP89,Draft Picks,false,,Michael Felix Autograph
+insert-draft-picks,DP90,Draft Picks,false,,Sean Watson Autograph
+insert-draft-picks,DP91,Draft Picks,false,,Joshua Rodriguez Autograph
+insert-draft-picks,DP92,Draft Picks,false,,Keith Weiser Autograph
+insert-draft-picks,DP93,Draft Picks,false,,Chad Tracy Autograph
+insert-draft-picks,DP94,Draft Picks,false,,Matthew Sulentic Autograph
+insert-draft-picks,DP95,Draft Picks,false,,Adam Ottavino Autograph
+insert-futures-game-prospects,FG1,Futures Game Prospects,false,,Nick Adenhart
+insert-futures-game-prospects,FG2,Futures Game Prospects,false,,Joel Guzman
+insert-futures-game-prospects,FG3,Futures Game Prospects,false,,Ryan Braun
+insert-futures-game-prospects,FG4,Futures Game Prospects,false,,Carlos Carrasco
+insert-futures-game-prospects,FG5,Futures Game Prospects,false,,Neil Walker
+insert-futures-game-prospects,FG6,Futures Game Prospects,false,,Pablo Sandoval
+insert-futures-game-prospects,FG7,Futures Game Prospects,false,,Gio Gonzalez
+insert-futures-game-prospects,FG8,Futures Game Prospects,false,,Joey Votto
+insert-futures-game-prospects,FG9,Futures Game Prospects,false,,Luis Cruz
+insert-futures-game-prospects,FG10,Futures Game Prospects,false,,Nolan Reimold
+insert-futures-game-prospects,FG11,Futures Game Prospects,false,,Juan Salas
+insert-futures-game-prospects,FG12,Futures Game Prospects,false,,Josh Fields
+insert-futures-game-prospects,FG13,Futures Game Prospects,false,,Yovani Gallardo
+insert-futures-game-prospects,FG14,Futures Game Prospects,false,,Radhames Liz
+insert-futures-game-prospects,FG15,Futures Game Prospects,false,,Troy Tulowitzki
+insert-futures-game-prospects,FG16,Futures Game Prospects,false,,Cameron Maybin
+insert-futures-game-prospects,FG17,Futures Game Prospects,false,,Edgar Martinez
+insert-futures-game-prospects,FG18,Futures Game Prospects,false,,Hunter Pence
+insert-futures-game-prospects,FG19,Futures Game Prospects,false,,Philip Hughes
+insert-futures-game-prospects,FG20,Futures Game Prospects,false,,Trent Oeltjen
+insert-futures-game-prospects,FG21,Futures Game Prospects,false,,Nick Pereira
+insert-futures-game-prospects,FG22,Futures Game Prospects,false,,Wladimir Balentien
+insert-futures-game-prospects,FG23,Futures Game Prospects,false,,Stephen Drew
+insert-futures-game-prospects,FG24,Futures Game Prospects,false,,Davis Romero
+insert-futures-game-prospects,FG25,Futures Game Prospects,false,,Joe Koshansky
+insert-futures-game-prospects,FG26,Futures Game Prospects,false,,Chin Lung Hu
+insert-futures-game-prospects,FG27,Futures Game Prospects,false,,Jason Hirsh
+insert-futures-game-prospects,FG28,Futures Game Prospects,false,,Jose Tabata
+insert-futures-game-prospects,FG29,Futures Game Prospects,false,,Eric Hurley
+insert-futures-game-prospects,FG30,Futures Game Prospects,false,,Yung Chi Chen
+insert-futures-game-prospects,FG31,Futures Game Prospects,false,,Howie Kendrick
+insert-futures-game-prospects,FG32,Futures Game Prospects,false,,Humberto Sanchez
+insert-futures-game-prospects,FG33,Futures Game Prospects,false,,Alex Gordon
+insert-futures-game-prospects,FG34,Futures Game Prospects,false,,Yunel Escobar
+insert-futures-game-prospects,FG35,Futures Game Prospects,false,,Travis Buck
+insert-futures-game-prospects,FG36,Futures Game Prospects,false,,Billy Butler
+insert-futures-game-prospects,FG37,Futures Game Prospects,false,,Homer Bailey
+insert-futures-game-prospects,FG38,Futures Game Prospects,false,,George Kottaras
+insert-futures-game-prospects,FG39,Futures Game Prospects,false,,Kurt Suzuki
+insert-futures-game-prospects,FG40,Futures Game Prospects,false,,Joaquin Arias
+insert-futures-game-prospects,FG41,Futures Game Prospects,false,,Matt Lindstrom
+insert-futures-game-prospects,FG42,Futures Game Prospects,false,,Sean Smith
+insert-futures-game-prospects,FG43,Futures Game Prospects,false,,Carlos Gonzalez
+insert-futures-game-prospects,FG44,Futures Game Prospects,false,,Jaime Garcia
+insert-futures-game-prospects,FG45,Futures Game Prospects,false,,Jose Garcia
+insert-head-of-the-class,1,Head OF The Class,false,,card. Dual autograph uses sticker signatures. Numbered to 174.
+insert-signs-of-the-future,19,Signs OF The Future,false,,cards. Cards use sticker autographs.
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Chrome Draft Evan Longoria 1st Bowman Auto Rays DP66 RC
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Draft Picks & Prospects #DP72 Matt Antonelli Chrome Draft Picks
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Draft Picks Future Jay Bruce Autograph Card BGS 9.5 Auto 10
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Chrome Draft Picks Refractors #66 Evan Longoria AUTO /500 Beckett 9
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Chrome Draft Picks Autograph #DP84 Clayton Kershaw Beautiful Card!!!
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Draft Picks and Prospect baseball sealed hobby box
+insert-signs-of-the-future,2006,Signs OF The Future,false,,"Bowman Draft Baseball Factory Sealed Hobby Box..Kershaw, Longoria Auto RCs?"
+insert-signs-of-the-future,1,Signs OF The Future,false,,Star - Avoid this product like the plague
+insert-signs-of-the-future,2,Signs OF The Future,false,,Stars - Below Average Product
+insert-signs-of-the-future,3,Signs OF The Future,false,,Stars - Average Product
+insert-signs-of-the-future,4,Signs OF The Future,false,,Stars - Excellent Product
+insert-signs-of-the-future,5,Signs OF The Future,false,,Stars - Incredible Product
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Draft Picks & Prospects - Chrome Jason Kubel #BDP19 Gold...
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Chrome Draft Gold Refractors #34 Jeff Mathis #'d/50
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Chrome Futures Game Prospects Gold Refractor Billy Butler BGS 9.5
+insert-signs-of-the-future,2006,Signs OF The Future,false,,Bowman Draft Picks & Prospects - Chrome Futures Game Cameron Maybin...
+insert-signs-of-the-future,30,Signs OF The Future,false,,days
