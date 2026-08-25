@@ -366,20 +366,41 @@ describe("parseListingIdentity — parallel extraction", () => {
       "ERIC HARTMAN 2026 Bowman 1st Chrome Prospect Auto Atlanta Braves #CPA-EHA",
     ).parallel).toBe("Base");
   });
-  it("Owen Carey CPA-OC auto → Refractor (the anomaly is Hartman's alone)", () => {
+  // RETRACTED 2026-08-25. These three used to assert the 2026-07-31 rule that a
+  // chrome auto with no colour word IS a Refractor, on the premise that the
+  // base tier of the CPA- ladder is a /499 Refractor. Drew overturned the
+  // premise: "no refractor is a base. Refractor is a parallel or a finish and
+  // is out of /499 for autos". Refractor sits ABOVE base, so a chrome auto
+  // naming no parallel is a BASE auto. Kept as tests, inverted, so the old
+  // behaviour cannot quietly return.
+  it("a chrome auto naming no parallel is Base, not Refractor", () => {
     expect(parseListingIdentity(
       "2026 Bowman Chrome Owen Carey 1st Bowman RC Auto Prospect Autographs #CPA-OC",
-    ).parallel).toBe("Refractor");
-  });
-  it("Bowman Draft CPA-JHA auto → Refractor (unchanged)", () => {
+    ).parallel).toBe("Base");
     expect(parseListingIdentity(
       "2025 Bowman Draft #CPA-JHA Josiah Hartshorn 1st Prospect Chrome Auto",
-    ).parallel).toBe("Refractor");
-  });
-  it("a DIFFERENT year's CPA-EHA is not covered by the anomaly", () => {
+    ).parallel).toBe("Base");
     expect(parseListingIdentity(
       "2028 Bowman Chrome Prospect Autographs #CPA-EHA 1st Auto",
-    ).parallel).toBe("Refractor");
+    ).parallel).toBe("Base");
+  });
+
+  it("a chrome auto that NAMES a parallel still gets it", () => {
+    // The retraction must not cost us the parallels the ladder does have.
+    expect(parseListingIdentity("2026 Bowman Chrome #CPA-OC 1st Auto Refractor /499").parallel).toBe("Refractor");
+    expect(parseListingIdentity("Eric Hartman Red /5 #CPA-EHA").parallel).toBe("Red Refractor");
+    expect(parseListingIdentity("2026 BOWMAN CHROME PROSPECTS #CPA-MG Marconi German RC 1st Auto Purple /250").parallel).toBe("Purple Refractor");
+    expect(parseListingIdentity("2026 Bowman Chrome Prospects #CPA-XX Player 1st Auto Aqua /125").parallel).toBe("Aqua Refractor");
+  });
+
+  it("an explicit Base in the title is never overridden", () => {
+    expect(parseListingIdentity("2022 Bowman Chrome Prospects Baseball #CPA-MG Base").parallel).toBe("Base");
+    expect(parseListingIdentity("2026 Bowman Chrome 1st - Marconi German - True Base Auto - CPA-MG - Raw").parallel).toBe("Base");
+  });
+
+  it("a team name is not a parallel", () => {
+    expect(parseListingIdentity("2026 Bowman Chrome #CPA-XX Player 1st Auto Toronto Blue Jays").parallel).toBe("Base");
+    expect(parseListingIdentity("2026 Bowman Chrome #CPA-XX Player 1st Auto Boston Red Sox").parallel).toBe("Base");
   });
   it("no year in the title still resolves to Base (sellers omit it)", () => {
     expect(parseListingIdentity(
