@@ -32,5 +32,8 @@
       "playerCount": 30,
       "printRun": null
     }
-  ]
+  ],
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.590Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

@@ -7,5 +7,8 @@
   "setName": "1995-96 Fleer - Total D Basketball Checklist",
   "productKey": "1995-96-fleer-total-d",
   "setKey": "fleer",
-  "rowCount": 12
+  "rowCount": 12,
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.782Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

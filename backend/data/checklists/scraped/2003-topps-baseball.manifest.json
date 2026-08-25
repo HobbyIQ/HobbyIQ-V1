@@ -29,5 +29,8 @@
     "Team Topps Legends Autographs": 28,
     "Turn Back the Clock Autographs": 14
   },
-  "fetchedAt": "2026-08-14T00:11:19.530Z"
+  "fetchedAt": "2026-08-14T00:11:19.530Z",
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.636Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

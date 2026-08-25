@@ -30,5 +30,8 @@
     "Walmart Cards": 54,
     "World Series Champion Relics": 18
   },
-  "fetchedAt": "2026-08-14T00:11:39.037Z"
+  "fetchedAt": "2026-08-14T00:11:39.037Z",
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.679Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }

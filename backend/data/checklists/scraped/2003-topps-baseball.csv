@@ -1,1155 +1,1155 @@
 category,cardNumber,parallel,isAuto,printRun,player
-base,1,Base,false,,Alex Rodriguez
-base,2,Base,false,,Dan Wilson
-base,3,Base,false,,Jimmy Rollins
-base,4,Base,false,,Jermaine Dye
-base,5,Base,false,,Steve Karsay
-base,6,Base,false,,Timo Perez
-base,8,Base,false,,Jose Vidro
-base,9,Base,false,,Eddie Guardado
-base,10,Base,false,,Mark Prior
-base,11,Base,false,,Curt Schilling
-base,12,Base,false,,Dennis Cook
-base,13,Base,false,,Andruw Jones
-base,14,Base,false,,David Segui
-base,15,Base,false,,Trot Nixon
-base,16,Base,false,,Kerry Wood
-base,17,Base,false,,Magglio Ordonez
-base,18,Base,false,,Jason Larue
-base,19,Base,false,,Danys Baez
-base,20,Base,false,,Todd Helton
-base,21,Base,false,,Denny Neagle
-base,22,Base,false,,Dave Mlicki
-base,23,Base,false,,Roberto Hernandez
-base,24,Base,false,,Odalis Perez
-base,25,Base,false,,Nick Neugebauer
-base,26,Base,false,,David Ortiz
-base,27,Base,false,,Andres Galarraga
-base,28,Base,false,,Edgardo Alfonzo
-base,29,Base,false,,Chad Bradford
-base,30,Base,false,,Jason Giambi
-base,31,Base,false,,Brian Giles
-base,32,Base,false,,Deivi Cruz
-base,33,Base,false,,Robb Nen
-base,34,Base,false,,Jeff Nelson
-base,35,Base,false,,Edgar Renteria
-base,36,Base,false,,Aubrey Huff
-base,37,Base,false,,Brandon Duckworth
-base,38,Base,false,,Juan Gonzalez
-base,39,Base,false,,Sidney Ponson
-base,40,Base,false,,Eric Hinske
-base,41,Base,false,,Kevin Appier
-base,42,Base,false,,Danny Bautista
-base,43,Base,false,,Javy Lopez
-base,44,Base,false,,Jeff Conine
-base,45,Base,false,,Carlos Baerga
-base,46,Base,false,,Ugueth Urbina
-base,47,Base,false,,Mark Buehrle
-base,48,Base,false,,Aaron Boone
-base,49,Base,false,,Jason Simontacchi
-base,50,Base,false,,Sammy Sosa
-base,51,Base,false,,Jose Jimenez
-base,52,Base,false,,Bobby Higginson
-base,53,Base,false,,Luis Castillo
-base,54,Base,false,,Orlando Merced
-base,55,Base,false,,Brian Jordan
-base,56,Base,false,,Eric Young
-base,57,Base,false,,Bobby Kielty
-base,58,Base,false,,Luis Rivas
-base,59,Base,false,,Brad Wilkerson
-base,60,Base,false,,Roberto Alomar
-base,61,Base,false,,Roger Clemens
-base,62,Base,false,,Scott Hatteberg
-base,63,Base,false,,Andy Ashby
-base,64,Base,false,,Mike Williams
-base,65,Base,false,,Ron Gant
-base,66,Base,false,,Benito Santiago
-base,67,Base,false,,Bret Boone
-base,68,Base,false,,Matt Morris
-base,69,Base,false,,Troy Glaus
-base,70,Base,false,,Austin Kearns
-base,71,Base,false,,Jim Thome
-base,72,Base,false,,Rickey Henderson
-base,73,Base,false,,Luis Gonzalez
-base,74,Base,false,,Brad Fullmer
-base,75,Base,false,,Herb Perry
-base,76,Base,false,,Randy Wolf
-base,77,Base,false,,Miguel Tejada
-base,78,Base,false,,Jimmy Anderson
-base,79,Base,false,,Ramon E. Martinez
-base,80,Base,false,,Ivan Rodriguez
-base,81,Base,false,,John Flaherty
-base,82,Base,false,,Shannon Stewart
-base,83,Base,false,,Orlando Palmeiro
-base,84,Base,false,,Rafael Furcal
-base,85,Base,false,,Kenny Rogers
-base,86,Base,false,,Terry Adams
-base,87,Base,false,,Mo Vaughn
-base,88,Base,false,,Jose Cruz Jr.
-base,89,Base,false,,Mike Matheny
-base,90,Base,false,,Alfonso Soriano
-base,91,Base,false,,Orlando Cabrera
-base,92,Base,false,,Jeffrey Hammonds
-base,93,Base,false,,Hideo Nomo
-base,94,Base,false,,Carlos Febles
-base,95,Base,false,,Billy Wagner
-base,96,Base,false,,Alex Gonzalez
-base,97,Base,false,,Todd Zeile
-base,98,Base,false,,Omar Vizquel
-base,99,Base,false,,Jose Rijo
-base,100,Base,false,,Ichiro Suzuki
-base,101,Base,false,,Steve Cox
-base,102,Base,false,,Hideki Irabu
-base,103,Base,false,,Roy Halladay
-base,104,Base,false,,David Eckstein
-base,105,Base,false,,Greg Maddux
-base,106,Base,false,,Jay Gibbons
-base,107,Base,false,,Travis Driskill
-base,108,Base,false,,Fred Mcgriff
-base,109,Base,false,,Frank Thomas
-base,110,Base,false,,Shawn Green
-base,111,Base,false,,Ruben Quevedo
-base,112,Base,false,,Jacque Jones
-base,113,Base,false,,Tomo Ohka
-base,114,Base,false,,Joe McEwing
-base,115,Base,false,,Ramiro Mendoza
-base,116,Base,false,,Mark Mulder
-base,117,Base,false,,Mike Lieberthal
-base,118,Base,false,,Jack Wilson
-base,119,Base,false,,Randall Simon
-base,120,Base,false,,Bernie Williams
-base,121,Base,false,,Marvin Benard
-base,122,Base,false,,Jamie Moyer
-base,123,Base,false,,Andy Benes
-base,124,Base,false,,Tino Martinez
-base,125,Base,false,,Esteban Yan
-base,126,Base,false,,Juan Uribe
-base,127,Base,false,,Jason Isringhausen
-base,128,Base,false,,Chris Carpenter
-base,129,Base,false,,Mike Cameron
-base,130,Base,false,,Gary Sheffield
-base,131,Base,false,,Geronimo Gil
-base,132,Base,false,,Brian Daubach
-base,133,Base,false,,Corey Patterson
-base,134,Base,false,,Aaron Rowand
-base,135,Base,false,,Chris Reitsma
-base,136,Base,false,,Bob Wickman
-base,137,Base,false,,Cesar Izturis
-base,138,Base,false,,Jason Jennings
-base,139,Base,false,,Brandon Inge
-base,140,Base,false,,Larry Walker
-base,141,Base,false,,Ramon Santiago
-base,142,Base,false,,Vladimir Nunez
-base,143,Base,false,,Jose Vizcaino
-base,144,Base,false,,Mark Quinn
-base,145,Base,false,,Michael Tucker
-base,146,Base,false,,Darren Dreifort
-base,147,Base,false,,Ben Sheets
-base,148,Base,false,,Corey Koskie
-base,149,Base,false,,Tony Armas Jr.
-base,150,Base,false,,Kazuhisa Ishii
-base,151,Base,false,,Al Leiter
-base,152,Base,false,,Steve Trachsel
-base,153,Base,false,,Mike Stanton
-base,154,Base,false,,David Justice
-base,155,Base,false,,Marlon Anderson
-base,156,Base,false,,Jason Kendall
-base,157,Base,false,,Brian Lawrence
-base,158,Base,false,,J.T. Snow
-base,159,Base,false,,Edgar Martinez
-base,160,Base,false,,Pat Burrell
-base,161,Base,false,,Kerry Robinson
-base,162,Base,false,,Greg Vaughn
-base,163,Base,false,,Carl Everett
-base,164,Base,false,,Vernon Wells
-base,165,Base,false,,Jose Mesa
-base,166,Base,false,,Troy Percival
-base,167,Base,false,,Erubiel Durazo
-base,168,Base,false,,Jason Marquis
-base,169,Base,false,,Jerry Hairston Jr.
-base,170,Base,false,,Vladimir Guerrero
-base,171,Base,false,,Byung-Hyun Kim
-base,172,Base,false,,Marcus Giles
-base,173,Base,false,,Johnny Damon
-base,174,Base,false,,Jon Lieber
-base,175,Base,false,,Terrence Long
-base,176,Base,false,,Sean Casey
-base,177,Base,false,,Adam Dunn
-base,178,Base,false,,Juan Pierre
-base,179,Base,false,,Wendell Magee
-base,180,Base,false,,Barry Zito
-base,181,Base,false,,Aramis Ramirez
-base,182,Base,false,,Pokey Reese
-base,183,Base,false,,Jeff Kent
-base,184,Base,false,,Russ Ortiz
-base,185,Base,false,,Ruben Sierra
-base,186,Base,false,,Brent Abernathy
-base,187,Base,false,,Ismael Valdes
-base,188,Base,false,,Tom Wilson
-base,189,Base,false,,Craig Counsell
-base,190,Base,false,,Mike Mussina
-base,191,Base,false,,Ramon Hernandez
-base,192,Base,false,,Adam Kennedy
-base,193,Base,false,,Tony Womack
-base,194,Base,false,,Wes Helms
-base,195,Base,false,,Tony Batista
-base,196,Base,false,,Rolando Arrojo
-base,197,Base,false,,Kyle Farnsworth
-base,198,Base,false,,Gary Bennett
-base,199,Base,false,,Scott Sullivan
-base,200,Base,false,,Albert Pujols
-base,201,Base,false,,Kirk Rueter
-base,202,Base,false,,Phil Nevin
-base,203,Base,false,,Kip Wells
-base,204,Base,false,,Ron Coomer
-base,205,Base,false,,Jeromy Burnitz
-base,206,Base,false,,Kyle Lohse
-base,207,Base,false,,Mike Dejean
-base,208,Base,false,,Paul Lo Duca
-base,209,Base,false,,Carlos Beltran
-base,210,Base,false,,Roy Oswalt
-base,211,Base,false,,Mike Lowell
-base,212,Base,false,,Robert Fick
-base,213,Base,false,,Todd Jones
-base,214,Base,false,,CC Sabathia
-base,215,Base,false,,Danny Graves
-base,216,Base,false,,Todd Hundley
-base,217,Base,false,,Tim Wakefield
-base,218,Base,false,,Derek Lowe
-base,219,Base,false,,Kevin Millwood
-base,220,Base,false,,Jorge Posada
-base,221,Base,false,,Bobby Jones
-base,222,Base,false,,Carlos Guillen
-base,223,Base,false,,Fernando Vina
-base,224,Base,false,,Ryan Rupe
-base,225,Base,false,,Kelvim Escobar
-base,226,Base,false,,Ramon Ortiz
-base,227,Base,false,,Junior Spivey
-base,228,Base,false,,Juan Cruz
-base,229,Base,false,,Melvin Mora
-base,230,Base,false,,Lance Berkman
-base,231,Base,false,,Brent Butler
-base,232,Base,false,,Shane Halter
-base,233,Base,false,,Derrek Lee
-base,234,Base,false,,Matt Lawton
-base,235,Base,false,,Chuck Knoblauch
-base,236,Base,false,,Eric Gagne UER
-base,237,Base,false,,Alex Sanchez
-base,238,Base,false,,Denny Hocking
-base,239,Base,false,,Eric Milton
-base,240,Base,false,,Rey Ordonez
-base,241,Base,false,,Orlando Hernandez
-base,242,Base,false,,Robert Person
-base,243,Base,false,,Sean Burroughs
-base,244,Base,false,,Jeff Cirillo
-base,245,Base,false,,Mike Lamb
-base,246,Base,false,,Jose Valentin
-base,247,Base,false,,Ellis Burks
-base,248,Base,false,,Shawn Chacon
-base,249,Base,false,,Josh Beckett
-base,250,Base,false,,Nomar Garciaparra
-base,251,Base,false,,Craig Biggio
-base,252,Base,false,,Joe Randa
-base,253,Base,false,,Mark Grudzielanek
-base,254,Base,false,,Glendon Rusch
-base,255,Base,false,,Michael Barrett
-base,256,Base,false,,Omar Daal
-base,257,Base,false,,Elmer Dessens
-base,258,Base,false,,Wade Miller
-base,259,Base,false,,Adrian Beltre
-base,260,Base,false,,Vicente Padilla
-base,261,Base,false,,Kazuhiro Sasaki
-base,262,Base,false,,Mike Scioscia MG
-base,263,Base,false,,Bobby Cox MG
-base,264,Base,false,,Mike Hargrove MG
-base,265,Base,false,,Grady Little MG
-base,266,Base,false,,Alex Gonzalez
-base,267,Base,false,,Jerry Manuel MG
-base,268,Base,false,,Bob Boone MG
-base,269,Base,false,,Joel Skinner MG
-base,270,Base,false,,Clint Hurdle MG
-base,271,Base,false,,Miguel Batista
-base,272,Base,false,,Bob Brenly MG
-base,273,Base,false,,Jeff Torborg MG
-base,274,Base,false,,Jimy Williams MG
-base,275,Base,false,,Tony Pena MG
-base,276,Base,false,,Jim Tracy MG
-base,277,Base,false,,Jerry Royster MG
-base,278,Base,false,,Ron Gardenhire MG
-base,279,Base,false,,Frank Robinson MG
-base,280,Base,false,,John Halama
-base,281,Base,false,,Joe Torre MG
-base,282,Base,false,,Art Howe MG
-base,283,Base,false,,Larry Bowa MG
-base,284,Base,false,,Lloyd Mcclendon MG
-base,285,Base,false,,Bruce Bochy MG
-base,286,Base,false,,Dusty Baker MG
-base,287,Base,false,,Lou Piniella MG
-base,288,Base,false,,Tony Larussa MG
-base,289,Base,false,,Todd Walker
-base,290,Base,false,,Jerry Narron MG
-base,291,Base,false,,Carlos Tosca MG
-base,292,Base,false,,Chris Duncan RC
-base,293,Base,false,,Franklin Gutierrez RC
-base,294,Base,false,,Adam LaRoche RC
-base,295,Base,false,,Manny Ramirez RC
-base,296,Base,false,,Il Kim RC
-base,297,Base,false,,Wayne Lydon RC
-base,298,Base,false,,Daryl Clark RC
-base,299,Base,false,,Sean Pierce RC
-base,300,Base,false,,Andy Marte RC
-base,301,Base,false,,Matt Peterson RC
-base,302,Base,false,,Gonzalo Lopez RC
-base,303,Base,false,,Bernie Castro RC
-base,304,Base,false,,Cliff Lee RC
-base,305,Base,false,,Jason Perry RC
-base,306,Base,false,,Jaime Bubela RC
-base,307,Base,false,,Alex Rios RC
-base,308,Base,false,,Brendan Harris RC
-base,309,Base,false,,Ramon Nivar RC
-base,310,Base,false,,Terry Tiffee RC
-base,311,Base,false,,Kevin Youkilis RC
-base,312,Base,false,,Ruddy Lugo RC
-base,313,Base,false,,C.J. Wilson RC
-base,314,Base,false,,Mike McNutt RC
-base,315,Base,false,,Jeff Clark RC
-base,316,Base,false,,Mark Malaska RC
-base,317,Base,false,,Doug Waechter RC
-base,318,Base,false,,Derell McCall RC
-base,319,Base,false,,Scott Tyler RC
-base,320,Base,false,,Craig Brazell RC
-base,321,Base,false,,Walter Young RC
-base,322,Base,false,,Marlon Byrd / Jorge Padilla
-base,323,Base,false,,Chris Snelling / Shin-Soo Choo
-base,324,Base,false,,Hank Blalock / Mark Teixeira
-base,325,Base,false,,Josh Hamilton / Carl Crawford
-base,326,Base,false,,Orlando Hudson / Josh Phelps
-base,327,Base,false,,Jack Cust / Rene Reyes
-base,328,Base,false,,Angel Berroa / Alexis Gomez
-base,329,Base,false,,Michael Cuddyer / Michael Restovich
-base,330,Base,false,,Juan Rivera / Marcus Thames
-base,331,Base,false,,Brandon Puffer / Jung Bong
-base,332,Base,false,,Mike Cameron HL
-base,333,Base,false,,Shawn Green HL
-base,334,Base,false,,Oakland Athletics HL
-base,335,Base,false,,Jason Giambi HL
-base,336,Base,false,,Derek Lowe HL
-base,337,Base,false,,Manny Ramirez/Mike Sweeney/Bernie Williams LL
-base,338,Base,false,,Alfonso Soriano/Alex Rodriguez/Derek Jeter LL
-base,339,Base,false,,Alex Rodriguez/Jim Thome/Rafael Palmeiro LL
-base,340,Base,false,,Alex Rodriguez/Magglio Ordonez/Miguel Tejada LL
-base,341,Base,false,,Pedro Martinez / Derek Lowe / Barry Zito LL
-base,342,Base,false,,Pedro Martinez/Roger Clemens/Mike Mussina LL
-base,343,Base,false,,Larry Walker/Vladimir Guerrero/Todd Helton LL
-base,344,Base,false,,Sammy Sosa/Albert Pujols/Shawn Green LL
-base,345,Base,false,,Sammy Sosa/Lance Berkman/Shawn Green LL
-base,346,Base,false,,Lance Berkman / Albert Pujols / Pat Burrell LL
-base,347,Base,false,,Randy Johnson / Greg Maddux / Tom Glavine LL
-base,348,Base,false,,Randy Johnson/Curt Schilling/Kerry Wood LL
-base,349,Base,false,,"Francisco Rodriguez, Darin Erstad, Tim Salmon HL"
-base,350,Base,false,,Twins & Cardinals Team Shots HL
-base,351,Base,false,,Angels & Giants Team Shots HL
-base,352,Base,false,,"Jim Edmonds, Scott Rolen, Team Shot HL"
-base,353,Base,false,,Adam Kennedy HL
-base,354,Base,false,,J.T. Snow HL
-base,355,Base,false,,Kenny Lofton HL
-base,356,Base,false,,Jason Giambi AS
-base,357,Base,false,,Alfonso Soriano AS
-base,358,Base,false,,Alex Rodriguez AS
-base,359,Base,false,,Eric Chavez AS
-base,360,Base,false,,Torii Hunter AS
-base,361,Base,false,,Bernie Williams AS
-base,362,Base,false,,Garret Anderson AS
-base,363,Base,false,,Jorge Posada AS
-base,364,Base,false,,Derek Lowe AS
-base,365,Base,false,,Barry Zito AS
-base,366,Base,false,,Manny Ramirez AS
-base,367,Base,false,,Mike Scioscia AS
-base,368,Base,false,,Francisco Rodriguez
-base,369,Base,false,,Chris Hammond
-base,370,Base,false,,Chipper Jones
-base,371,Base,false,,Chris Singleton
-base,372,Base,false,,Cliff Floyd
-base,373,Base,false,,Bobby Hill
-base,374,Base,false,,Antonio Osuna
-base,375,Base,false,,Barry Larkin
-base,376,Base,false,,Charles Nagy
-base,377,Base,false,,Denny Stark
-base,378,Base,false,,Dean Palmer
-base,379,Base,false,,Eric Owens
-base,380,Base,false,,Randy Johnson
-base,381,Base,false,,Jeff Suppan
-base,382,Base,false,,Eric Karros
-base,383,Base,false,,Luis Vizcaino
-base,384,Base,false,,Johan Santana
-base,385,Base,false,,Javier Vazquez
-base,386,Base,false,,John Thomson
-base,387,Base,false,,Nick Johnson
-base,388,Base,false,,Mark Ellis
-base,389,Base,false,,Doug Glanville
-base,390,Base,false,,Ken Griffey Jr.
-base,391,Base,false,,Bubba Trammell
-base,392,Base,false,,Livan Hernandez
-base,393,Base,false,,Desi Relaford
-base,394,Base,false,,Eli Marrero
-base,395,Base,false,,Jared Sandberg
-base,396,Base,false,,Barry Bonds
-base,397,Base,false,,Esteban Loaiza
-base,398,Base,false,,Aaron Sele
-base,399,Base,false,,Geoff Blum
-base,400,Base,false,,Derek Jeter
-base,401,Base,false,,Eric Byrnes
-base,402,Base,false,,Mike Timlin
-base,403,Base,false,,Mark Kotsay
-base,404,Base,false,,Rich Aurilia
-base,405,Base,false,,Joel Pineiro
-base,406,Base,false,,Chuck Finley
-base,407,Base,false,,Bengie Molina
-base,408,Base,false,,Steve Finley
-base,409,Base,false,,Julio Franco
-base,410,Base,false,,Marty Cordova
-base,411,Base,false,,Shea Hillenbrand
-base,412,Base,false,,Mark Bellhorn
-base,413,Base,false,,Jon Garland
-base,414,Base,false,,Reggie Taylor
-base,415,Base,false,,Milton Bradley
-base,416,Base,false,,Carlos Pena
-base,417,Base,false,,Andy Fox
-base,418,Base,false,,Brad Ausmus
-base,419,Base,false,,Brent Mayne
-base,420,Base,false,,Paul Quantrill
-base,421,Base,false,,Carlos Delgado
-base,422,Base,false,,Kevin Mench
-base,423,Base,false,,Joe Kennedy
-base,424,Base,false,,Mike Crudale
-base,425,Base,false,,Mark Mclemore
-base,426,Base,false,,Bill Mueller
-base,427,Base,false,,Rob Mackowiak
-base,428,Base,false,,Ricky Ledee
-base,429,Base,false,,Ted Lilly
-base,430,Base,false,,Sterling Hitchcock
-base,431,Base,false,,Scott Strickland
-base,432,Base,false,,Damion Easley
-base,433,Base,false,,Torii Hunter
-base,434,Base,false,,Brad Radke
-base,435,Base,false,,Geoff Jenkins
-base,436,Base,false,,Paul Byrd
-base,437,Base,false,,Morgan Ensberg
-base,438,Base,false,,Mike Maroth
-base,439,Base,false,,Mike Hampton
-base,440,Base,false,,Adam Hyzdu
-base,441,Base,false,,Vance Wilson
-base,442,Base,false,,Todd Ritchie
-base,443,Base,false,,Tom Gordon
-base,444,Base,false,,John Burkett
-base,445,Base,false,,Rodrigo Lopez
-base,446,Base,false,,Tim Spooneybarger
-base,447,Base,false,,Quinton McCracken
-base,448,Base,false,,Tim Salmon
-base,449,Base,false,,Jarrod Washburn
-base,450,Base,false,,Pedro Martinez
-base,451,Base,false,,Dustan Mohr
-base,452,Base,false,,Julio Lugo
-base,453,Base,false,,Scott Stewart
-base,454,Base,false,,Armando Benitez
-base,455,Base,false,,Raul Mondesi
-base,456,Base,false,,Robin Ventura
-base,457,Base,false,,Bobby Abreu
-base,458,Base,false,,Josh Fogg
-base,459,Base,false,,Ryan Klesko
-base,460,Base,false,,Tsuyoshi Shinjo
-base,461,Base,false,,Jim Edmonds
-base,462,Base,false,,Cliff Politte
-base,463,Base,false,,Chan Ho Park
-base,464,Base,false,,John Mabry
-base,465,Base,false,,Woody Williams
-base,466,Base,false,,Jason Michaels
-base,467,Base,false,,Scott Schoeneweis
-base,468,Base,false,,Brian Anderson
-base,469,Base,false,,Brett Tomko
-base,470,Base,false,,Scott Erickson
-base,471,Base,false,,Kevin Millar
-base,472,Base,false,,Dan Wright
-base,473,Base,false,,Jason Schmidt
-base,474,Base,false,,Scott Williamson
-base,475,Base,false,,Einar Diaz
-base,476,Base,false,,Jay Payton
-base,477,Base,false,,Juan Acevedo
-base,478,Base,false,,Ben Grieve
-base,479,Base,false,,Raul Ibanez
-base,480,Base,false,,Richie Sexson
-base,481,Base,false,,Rick Reed
-base,482,Base,false,,Pedro Astacio
-base,483,Base,false,,Adam Piatt
-base,484,Base,false,,Bud Smith
-base,485,Base,false,,Tomas Perez
-base,486,Base,false,,Adam Eaton
-base,487,Base,false,,Rafael Palmeiro
-base,488,Base,false,,Jason Tyner
-base,489,Base,false,,Scott Rolen
-base,490,Base,false,,Randy Winn
-base,491,Base,false,,Ryan Jensen
-base,492,Base,false,,Trevor Hoffman
-base,493,Base,false,,Craig Wilson
-base,494,Base,false,,Jeremy Giambi
-base,495,Base,false,,Daryle Ward
-base,496,Base,false,,Shane Spencer
-base,497,Base,false,,Andy Pettitte
-base,498,Base,false,,John Franco
-base,499,Base,false,,Felipe Lopez
-base,500,Base,false,,Mike Piazza
-base,501,Base,false,,Cristian Guzman
-base,502,Base,false,,Jose Hernandez
-base,503,Base,false,,Octavio Dotel
-base,504,Base,false,,Brad Penny
-base,505,Base,false,,Dave Veres
-base,506,Base,false,,Ryan Dempster
-base,507,Base,false,,Joe Crede
-base,508,Base,false,,Chad Hermansen
-base,509,Base,false,,Gary Matthews Jr.
-base,510,Base,false,,Matt Franco
-base,511,Base,false,,Ben Weber
-base,512,Base,false,,Dave Berg
-base,513,Base,false,,Michael Young
-base,514,Base,false,,Frank Catalanotto
-base,515,Base,false,,Darin Erstad
-base,516,Base,false,,Matt Williams
-base,517,Base,false,,B.J. Surhoff
-base,518,Base,false,,Kerry Ligtenberg
-base,519,Base,false,,Mike Bordick
-base,520,Base,false,,Arthur Rhodes
-base,521,Base,false,,Joe Girardi
-base,522,Base,false,,D'Angelo Jimenez
-base,523,Base,false,,Paul Konerko
-base,524,Base,false,,Jose Macias
-base,525,Base,false,,Joe Mays
-base,526,Base,false,,Marquis Grissom
-base,527,Base,false,,Neifi Perez
-base,528,Base,false,,Preston Wilson
-base,529,Base,false,,Jeff Weaver
-base,530,Base,false,,Eric Chavez
-base,531,Base,false,,Placido Polanco
-base,532,Base,false,,Matt Mantei
-base,533,Base,false,,James Baldwin
-base,534,Base,false,,Toby Hall
-base,535,Base,false,,Brendan Donnelly
-base,536,Base,false,,Benji Gil
-base,537,Base,false,,Damian Moss
-base,538,Base,false,,Jorge Julio
-base,539,Base,false,,Matt Clement
-base,540,Base,false,,Brian Moehler
-base,541,Base,false,,Lee Stevens
-base,542,Base,false,,Jimmy Haynes
-base,543,Base,false,,Terry Mulholland
-base,544,Base,false,,Dave Roberts
-base,545,Base,false,,J.C. Romero
-base,546,Base,false,,Bartolo Colon
-base,547,Base,false,,Roger Cedeno
-base,548,Base,false,,Mariano Rivera
-base,549,Base,false,,Billy Koch
-base,550,Base,false,,Manny Ramirez
-base,551,Base,false,,Travis Lee
-base,552,Base,false,,Oliver Perez
-base,553,Base,false,,Tim Worrell
-base,554,Base,false,,Rafael Soriano
-base,555,Base,false,,Damian Miller
-base,556,Base,false,,John Smoltz
-base,557,Base,false,,Willis Roberts
-base,558,Base,false,,Tim Hudson
-base,559,Base,false,,Moises Alou
-base,560,Base,false,,Gary Glover
-base,561,Base,false,,Corky Miller
-base,562,Base,false,,Ben Broussard
-base,563,Base,false,,Gabe Kapler
-base,564,Base,false,,Chris Woodward
-base,565,Base,false,,Paul Wilson
-base,566,Base,false,,Todd Hollandsworth
-base,567,Base,false,,So Taguchi
-base,568,Base,false,,John Olerud
-base,569,Base,false,,Reggie Sanders
-base,570,Base,false,,Jake Peavy
-base,571,Base,false,,Kris Benson
-base,572,Base,false,,Todd Pratt
-base,573,Base,false,,Ray Durham
-base,574,Base,false,,David Wells
-base,575,Base,false,,Chris Widger
-base,576,Base,false,,Shawn Wooten
-base,577,Base,false,,Tom Glavine
-base,578,Base,false,,Antonio Alfonseca
-base,579,Base,false,,Keith Foulke
-base,580,Base,false,,Shawn Estes
-base,581,Base,false,,Mark Grace
-base,582,Base,false,,Dmitri Young
-base,583,Base,false,,A.J. Burnett
-base,584,Base,false,,Richard Hidalgo
-base,585,Base,false,,Mike Sweeney
-base,586,Base,false,,Alex Cora
-base,587,Base,false,,Matt Stairs
-base,588,Base,false,,Doug Mientkiewicz
-base,589,Base,false,,Fernando Tatis
-base,590,Base,false,,Dave Weathers
-base,591,Base,false,,Cory Lidle
-base,592,Base,false,,Dan Plesac
-base,593,Base,false,,Jeff Bagwell
-base,594,Base,false,,Steve Sparks
-base,595,Base,false,,Sandy Alomar Jr.
-base,596,Base,false,,John Lackey
-base,597,Base,false,,Rick Helling
-base,598,Base,false,,Mark Derosa
-base,599,Base,false,,Carlos Lee
-base,600,Base,false,,Garret Anderson
-base,601,Base,false,,Vinny Castilla
-base,602,Base,false,,Ryan Drese
-base,603,Base,false,,Latroy Hawkins
-base,604,Base,false,,David Bell
-base,605,Base,false,,Freddy Garcia
-base,606,Base,false,,Miguel Cairo
-base,607,Base,false,,Scott Spiezio
-base,608,Base,false,,Mike Remlinger
-base,609,Base,false,,Tony Graffanino
-base,610,Base,false,,Russell Branyan
-base,611,Base,false,,Chris Magruder
-base,612,Base,false,,Jose Contreras
-base,613,Base,false,,Carl Pavano
-base,614,Base,false,,Kevin Brown
-base,615,Base,false,,Tyler Houston
-base,616,Base,false,,A.J. Pierzynski
-base,617,Base,false,,Tony Fiore
-base,618,Base,false,,Peter Bergeron
-base,619,Base,false,,Rondell White
-base,620,Base,false,,Brett Myers
-base,621,Base,false,,Kevin Young
-base,622,Base,false,,Kenny Lofton
-base,623,Base,false,,Ben Davis
-base,624,Base,false,,J.D. Drew
-base,625,Base,false,,Chris Gomez
-base,626,Base,false,,Karim Garcia
-base,627,Base,false,,Ricky Gutierrez
-base,628,Base,false,,Mark Redman
-base,629,Base,false,,Juan Encarnacion
-base,630,Base,false,,Anaheim Angels TC
-base,631,Base,false,,Arizona Diamondbacks TC
-base,632,Base,false,,Atlanta Braves TC
-base,633,Base,false,,Baltimore Orioles TC
-base,634,Base,false,,Boston Red Sox TC
-base,635,Base,false,,Chicago Cubs TC
-base,636,Base,false,,Chicago White Sox TC
-base,637,Base,false,,Cincinnati Reds TC
-base,638,Base,false,,Cleveland Indians TC
-base,639,Base,false,,Colorado Rockies TC
-base,640,Base,false,,Detroit Tigers TC
-base,641,Base,false,,Florida Marlins TC
-base,642,Base,false,,Houston Astros TC
-base,643,Base,false,,Kansas City Royals TC
-base,644,Base,false,,Los Angeles Dodgers TC
-base,645,Base,false,,Milwaukee Brewers TC
-base,646,Base,false,,Minnesota Twins TC
-base,647,Base,false,,Montreal Expos TC
-base,648,Base,false,,New York Mets TC
-base,649,Base,false,,New York Yankees TC
-base,650,Base,false,,Oakland Athletics TC
-base,651,Base,false,,Philadelphia Phillies TC
-base,652,Base,false,,Pittsburgh Pirates TC
-base,653,Base,false,,San Diego Padres TC
-base,654,Base,false,,San Francisco Giants TC
-base,655,Base,false,,Seattle Mariners TC
-base,656,Base,false,,St. Louis Cardinals TC
-base,657,Base,false,,Tampa Bay Devil Rays TC
-base,658,Base,false,,Texas Rangers TC
-base,659,Base,false,,Toronto Blue Jays TC
-base,660,Base,false,,Bryan Bullington RC
-base,661,Base,false,,Jeremy Guthrie RC
-base,662,Base,false,,Joey Gomes RC
-base,663,Base,false,,Evel Bastida-Martinez RC
-base,664,Base,false,,Brian Wright RC
-base,665,Base,false,,B.J. Upton RC
-base,666,Base,false,,Jeff Francis RC
-base,667,Base,false,,Drew Meyer RC
-base,668,Base,false,,Jeremy Hermida RC
-base,669,Base,false,,Khalil Greene RC
-base,670,Base,false,,Darrell Rasner RC
-base,671,Base,false,,Cole Hamels RC
-base,672,Base,false,,James Loney RC
-base,673,Base,false,,Sergio Santos RC
-base,674,Base,false,,Jason Pridie RC
-base,675,Base,false,,Brandon Phillips/Victor Martinez
-base,676,Base,false,,Hee Seop Choi / Nic Jackson
-base,677,Base,false,,Dontrelle Willis / Jason Stokes
-base,678,Base,false,,Chad Tracy/Lyle Overbay
-base,679,Base,false,,Joe Borchard/Corwin Malone
-base,680,Base,false,,Joe Mauer/Justin Morneau
-base,681,Base,false,,Drew Henson/Brandon Claussen
-base,682,Base,false,,Chase Utley / Gavin Floyd
-base,683,Base,false,,Taggert Bozied / Xavier Nady
-base,684,Base,false,,Aaron Heilman/Jose Reyes
-base,685,Base,false,,Kenny Rogers AW
-base,686,Base,false,,Bengie Molina AW
-base,687,Base,false,,John Olerud AW
-base,688,Base,false,,Bret Boone AW
-base,689,Base,false,,Eric Chavez AW
-base,690,Base,false,,Alex Rodriguez AW
-base,691,Base,false,,Darin Erstad AW
-base,692,Base,false,,Ichiro Suzuki AW
-base,693,Base,false,,Torii Hunter AW
-base,694,Base,false,,Greg Maddux AW
-base,695,Base,false,,Brad Ausmus AW
-base,696,Base,false,,Todd Helton AW
-base,697,Base,false,,Fernando Vina AW
-base,698,Base,false,,Scott Rolen AW
-base,699,Base,false,,Edgar Renteria AW
-base,700,Base,false,,Andruw Jones AW
-base,701,Base,false,,Larry Walker AW
-base,702,Base,false,,Jim Edmonds AW
-base,703,Base,false,,Barry Zito AW
-base,704,Base,false,,Randy Johnson AW
-base,705,Base,false,,Miguel Tejada AW
-base,706,Base,false,,Barry Bonds AW
-base,707,Base,false,,Eric Hinske AW
-base,708,Base,false,,Jason Jennings AW
-base,709,Base,false,,Todd Helton AS
-base,710,Base,false,,Jeff Kent AS
-base,711,Base,false,,Edgar Renteria AS
-base,712,Base,false,,Scott Rolen AS
-base,713,Base,false,,Barry Bonds AS
-base,714,Base,false,,Sammy Sosa AS
-base,715,Base,false,,Vladimir Guerrero AS
-base,716,Base,false,,Mike Piazza AS
-base,717,Base,false,,Curt Schilling AS
-base,718,Base,false,,Randy Johnson AS
-base,719,Base,false,,Bobby Cox AS
-insert-base-variations,1,Base,false,,Alex Rodriguez
-insert-base-variations,10,Base,false,,Mark Prior
-insert-base-variations,11,Base,false,,Curt Schilling
-insert-base-variations,20,Base,false,,Todd Helton
-insert-base-variations,30,Base,false,,Jason Giambi
-insert-base-variations,50,Base,false,,Sammy Sosa
-insert-base-variations,61,Base,false,,Roger Clemens
-insert-base-variations,73,Base,false,,Luis Gonzalez
-insert-base-variations,77,Base,false,,Miguel Tejada
-insert-base-variations,80,Base,false,,Ivan Rodriguez
-insert-base-variations,90,Base,false,,Alfonso Soriano
-insert-base-variations,100,Base,false,,Ichiro Suzuki
-insert-base-variations,130,Base,false,,Gary Sheffield
-insert-base-variations,150,Base,false,,Kazuhisa Ishii
-insert-base-variations,160,Base,false,,Pat Burrell
-insert-base-variations,170,Base,false,,Vladimir Guerrero
-insert-base-variations,177,Base,false,,Adam Dunn
-insert-base-variations,180,Base,false,,Barry Zito
-insert-base-variations,200,Base,false,,Albert Pujols
-insert-base-variations,230,Base,false,,Lance Berkman
-insert-base-variations,250,Base,false,,Nomar Garciaparra
-insert-base-variations,300,Base,false,,Andy Marte
-insert-base-variations,321,Base,false,,Walter Young
-insert-base-variations,322,Base,false,,Marlon Byrd / Jorge Padilla
-insert-base-variations,324,Base,false,,Hank Blalock / Mark Teixeira
-insert-base-variations,368,Base,false,,Francisco Rodriguez
-insert-base-variations,370,Base,false,,Chipper Jones
-insert-base-variations,380,Base,false,,Randy Johnson
-insert-base-variations,387,Base,false,,Nick Johnson
-insert-base-variations,390,Base,false,,"Ken Griffey, Jr."
-insert-base-variations,396,Base,false,,Barry Bonds
-insert-base-variations,400,Base,false,,Derek Jeter
-insert-base-variations,421,Base,false,,Carlos Delgado
-insert-base-variations,433,Base,false,,Torii Hunter
-insert-base-variations,450,Base,false,,Pedro Martinez
-insert-base-variations,461,Base,false,,Jim Edmonds
-insert-base-variations,489,Base,false,,Scott Rolen
-insert-base-variations,500,Base,false,,Mike Piazza
-insert-base-variations,515,Base,false,,Darin Erstad
-insert-base-variations,530,Base,false,,Eric Chavez
-insert-base-variations,550,Base,false,,Manny Ramirez
-insert-base-variations,558,Base,false,,Tim Hudson
-insert-base-variations,585,Base,false,,Mike Sweeney
-insert-base-variations,593,Base,false,,Jeff Bagwell
-insert-base-variations,600,Base,false,,Garret Anderson
-insert-all-stars,1,Base,false,,Alfonso Soriano
-insert-all-stars,2,Base,false,,Barry Bonds
-insert-all-stars,3,Base,false,,Ichiro Suzuki
-insert-all-stars,4,Base,false,,Alex Rodriguez
-insert-all-stars,5,Base,false,,Miguel Tejada
-insert-all-stars,6,Base,false,,Nomar Garciaparra
-insert-all-stars,7,Base,false,,Jason Giambi
-insert-all-stars,8,Base,false,,Manny Ramirez
-insert-all-stars,9,Base,false,,Derek Jeter
-insert-all-stars,10,Base,false,,Garret Anderson
-insert-all-stars,11,Base,false,,Barry Zito
-insert-all-stars,12,Base,false,,Sammy Sosa
-insert-all-stars,13,Base,false,,Adam Dunn
-insert-all-stars,14,Base,false,,Vladimir Guerrero
-insert-all-stars,15,Base,false,,Mike Piazza
-insert-all-stars,16,Base,false,,Shawn Green
-insert-all-stars,17,Base,false,,Luis Gonzalez
-insert-all-stars,18,Base,false,,Todd Helton
-insert-all-stars,19,Base,false,,Torii Hunter
-insert-all-stars,20,Base,false,,Curt Schilling
-auto-autographs,AK1,Base,true,,Austin Kearns F1
-auto-autographs,AK2,Base,true,,Austin Kearns C2
-auto-autographs,MT1,Base,true,,Miguel Tejada A1
-auto-autographs,MT2,Base,true,,Miguel Tejada C2
-auto-autographs,PL1,Base,true,,Paul Lo Duca F1
-auto-autographs,PL2,Base,true,,Paul Lo Duca C2
-insert-blue-backs,BB1,Base,false,,Albert Pujols
-insert-blue-backs,BB2,Base,false,,Ichiro Suzuki
-insert-blue-backs,BB3,Base,false,,Sammy Sosa
-insert-blue-backs,BB4,Base,false,,Kazuhisa Ishii
-insert-blue-backs,BB5,Base,false,,Alex Rodriguez
-insert-blue-backs,BB6,Base,false,,Derek Jeter
-insert-blue-backs,BB7,Base,false,,Vladimir Guerrero
-insert-blue-backs,BB8,Base,false,,Ken Griffey Jr.
-insert-blue-backs,BB9,Base,false,,Jason Giambi
-insert-blue-backs,BB10,Base,false,,Todd Helton
-insert-blue-backs,BB11,Base,false,,Mike Piazza
-insert-blue-backs,BB12,Base,false,,Nomar Garciaparra
-insert-blue-backs,BB13,Base,false,,Chipper Jones
-insert-blue-backs,BB14,Base,false,,Ivan Rodriguez
-insert-blue-backs,BB15,Base,false,,Luis Gonzalez
-insert-blue-backs,BB16,Base,false,,Pat Burrell
-insert-blue-backs,BB17,Base,false,,Mark Prior
-insert-blue-backs,BB18,Base,false,,Adam Dunn
-insert-blue-backs,BB19,Base,false,,Jeff Bagwell
-insert-blue-backs,BB20,Base,false,,Austin Kearns
-insert-blue-backs,BB21,Base,false,,Alfonso Soriano
-insert-blue-backs,BB22,Base,false,,Jim Thome
-insert-blue-backs,BB23,Base,false,,Bernie Williams
-insert-blue-backs,BB24,Base,false,,Pedro Martinez
-insert-blue-backs,BB25,Base,false,,Lance Berkman
-insert-blue-backs,BB26,Base,false,,Randy Johnson
-insert-blue-backs,BB27,Base,false,,Rafael Palmeiro
-insert-blue-backs,BB28,Base,false,,Richie Sexson
-insert-blue-backs,BB29,Base,false,,Troy Glaus
-insert-blue-backs,BB30,Base,false,,Shawn Green
-insert-blue-backs,BB31,Base,false,,Larry Walker
-insert-blue-backs,BB32,Base,false,,Eric Hinske
-insert-blue-backs,BB33,Base,false,,Andruw Jones
-insert-blue-backs,BB34,Base,false,,Barry Bonds
-insert-blue-backs,BB35,Base,false,,Curt Schilling
-insert-blue-backs,BB36,Base,false,,Greg Maddux
-insert-blue-backs,BB37,Base,false,,Jimmy Rollins
-insert-blue-backs,BB38,Base,false,,Eric Chavez
-insert-blue-backs,BB39,Base,false,,Scott Rolen
-insert-blue-backs,BB40,Base,false,,Mike Sweeney
-insert-box-bottoms,1,Base,false,,Alex Rodriguez
-insert-box-bottoms,10,Base,false,,Mark Prior
-insert-box-bottoms,11,Base,false,,Curt Schilling
-insert-box-bottoms,20,Base,false,,Todd Helton
-insert-box-bottoms,50,Base,false,,Sammy Sosa
-insert-box-bottoms,73,Base,false,,Luis Gonzalez
-insert-box-bottoms,77,Base,false,,Miguel Tejada
-insert-box-bottoms,80,Base,false,,Ivan Rodriguez
-insert-box-bottoms,90,Base,false,,Alfonso Soriano
-insert-box-bottoms,150,Base,false,,Kazuhisa Ishii
-insert-box-bottoms,160,Base,false,,Pat Burrell
-insert-box-bottoms,177,Base,false,,Adam Dunn
-insert-box-bottoms,180,Base,false,,Barry Zito
-insert-box-bottoms,200,Base,false,,Albert Pujols
-insert-box-bottoms,230,Base,false,,Lance Berkman
-insert-box-bottoms,250,Base,false,,Nomar Garciaparra
-insert-box-bottoms,368,Base,false,,Francisco Rodriguez
-insert-box-bottoms,370,Base,false,,Chipper Jones
-insert-box-bottoms,380,Base,false,,Randy Johnson
-insert-box-bottoms,387,Base,false,,Nick Johnson
-insert-box-bottoms,390,Base,false,,Ken Griffey Jr.
-insert-box-bottoms,396,Base,false,,Barry Bonds
-insert-box-bottoms,433,Base,false,,Torii Hunter
-insert-box-bottoms,450,Base,false,,Pedro Martinez
-insert-box-bottoms,489,Base,false,,Scott Rolen
-insert-box-bottoms,500,Base,false,,Mike Piazza
-insert-box-bottoms,530,Base,false,,Eric Chavez
-insert-box-bottoms,550,Base,false,,Manny Ramirez
-insert-box-bottoms,558,Base,false,,Tim Hudson
-insert-box-bottoms,585,Base,false,,Mike Sweeney
-insert-box-bottoms,593,Base,false,,Jeff Bagwell
-insert-box-bottoms,600,Base,false,,Garret Anderson
-insert-draft-picks-bonus,1,Base,false,,Brandon Wood
-insert-draft-picks-bonus,2,Base,false,,Ryan Wagner
-insert-draft-picks-bonus,3,Base,false,,Sean Rodriguez
-insert-draft-picks-bonus,4,Base,false,,Chris Lubanski
-insert-draft-picks-bonus,5,Base,false,,Chad Billingsley
-insert-draft-picks-bonus,6,Base,false,,Javi Herrera
-insert-draft-picks-bonus,7,Base,false,,Brian McFall
-insert-draft-picks-bonus,8,Base,false,,Nick Markakis
-insert-draft-picks-bonus,9,Base,false,,Adam Miller
-insert-draft-picks-bonus,10,Base,false,,Daric Barton
-insert-first-year-player-bonus,1,Base,false,,Ismael Castro
-insert-first-year-player-bonus,2,Base,false,,Branden Florence
-insert-first-year-player-bonus,3,Base,false,,Michael Garciaparra
-insert-first-year-player-bonus,4,Base,false,,Pete LaForest
-insert-first-year-player-bonus,5,Base,false,,Hanley Ramirez
-insert-first-year-player-bonus,6,Base,false,,Rajai Davis
-insert-first-year-player-bonus,7,Base,false,,Gary Schneidmiller
-insert-first-year-player-bonus,8,Base,false,,Corey Shafer
-insert-first-year-player-bonus,9,Base,false,,Thomari Story-Harden
-insert-first-year-player-bonus,10,Base,false,,Bryan Grace
-insert-hit-parade,1,Base,false,,Barry Bonds
-insert-hit-parade,2,Base,false,,Sammy Sosa
-insert-hit-parade,3,Base,false,,Rafael Palmeiro
-insert-hit-parade,4,Base,false,,Fred McGriff
-insert-hit-parade,5,Base,false,,Ken Griffey Jr.
-insert-hit-parade,6,Base,false,,Juan Gonzalez
-insert-hit-parade,7,Base,false,,Andres Galarraga
-insert-hit-parade,8,Base,false,,Jeff Bagwell
-insert-hit-parade,9,Base,false,,Frank Thomas
-insert-hit-parade,10,Base,false,,Matt Williams
-insert-hit-parade,11,Base,false,,Barry Bonds
-insert-hit-parade,12,Base,false,,Rafael Palmeiro
-insert-hit-parade,13,Base,false,,Fred McGriff
-insert-hit-parade,14,Base,false,,Andres Galarraga
-insert-hit-parade,15,Base,false,,Ken Griffey Jr.
-insert-hit-parade,16,Base,false,,Sammy Sosa
-insert-hit-parade,17,Base,false,,Jeff Bagwell
-insert-hit-parade,18,Base,false,,Juan Gonzalez
-insert-hit-parade,19,Base,false,,Frank Thomas
-insert-hit-parade,20,Base,false,,Matt Williams
-insert-hit-parade,21,Base,false,,Rickey Henderson
-insert-hit-parade,22,Base,false,,Rafael Palmeiro
-insert-hit-parade,23,Base,false,,Roberto Alomar
-insert-hit-parade,24,Base,false,,Barry Bonds
-insert-hit-parade,25,Base,false,,Mark Grace
-insert-hit-parade,26,Base,false,,Fred McGriff
-insert-hit-parade,27,Base,false,,Julio Franco
-insert-hit-parade,28,Base,false,,Craig Biggio
-insert-hit-parade,29,Base,false,,Andres Galarraga
-insert-hit-parade,30,Base,false,,Barry Larkin
-insert-hobby-masters,HM1,Base,false,,Ichiro Suzuki
-insert-hobby-masters,HM2,Base,false,,Kazuhisa Ishii
-insert-hobby-masters,HM3,Base,false,,Derek Jeter
-insert-hobby-masters,HM4,Base,false,,Sammy Sosa
-insert-hobby-masters,HM5,Base,false,,Alex Rodriguez
-insert-hobby-masters,HM6,Base,false,,Mike Piazza
-insert-hobby-masters,HM7,Base,false,,Chipper Jones
-insert-hobby-masters,HM8,Base,false,,Vladimir Guerrero
-insert-hobby-masters,HM9,Base,false,,Nomar Garciaparra
-insert-hobby-masters,HM10,Base,false,,Todd Helton
-insert-hobby-masters,HM11,Base,false,,Jason Giambi
-insert-hobby-masters,HM12,Base,false,,Ken Griffey Jr.
-insert-hobby-masters,HM13,Base,false,,Albert Pujols
-insert-hobby-masters,HM14,Base,false,,Ivan Rodriguez
-insert-hobby-masters,HM15,Base,false,,Mark Prior
-insert-hobby-masters,HM16,Base,false,,Adam Dunn
-insert-hobby-masters,HM17,Base,false,,Randy Johnson
-insert-hobby-masters,HM18,Base,false,,Barry Bonds
-insert-hobby-masters,HM19,Base,false,,Alfonso Soriano
-insert-hobby-masters,HM20,Base,false,,Pat Burrell
-insert-own-the-game,OG1,Base,false,,Ichiro Suzuki
-insert-own-the-game,OG2,Base,false,,Todd Helton
-insert-own-the-game,OG3,Base,false,,Larry Walker
-insert-own-the-game,OG4,Base,false,,Mike Sweeney
-insert-own-the-game,OG5,Base,false,,Sammy Sosa
-insert-own-the-game,OG6,Base,false,,Lance Berkman
-insert-own-the-game,OG7,Base,false,,Alex Rodriguez
-insert-own-the-game,OG8,Base,false,,Jim Thome
-insert-own-the-game,OG9,Base,false,,Shawn Green
-insert-own-the-game,OG10,Base,false,,Nomar Garciaparra
-insert-own-the-game,OG11,Base,false,,Miguel Tejada
-insert-own-the-game,OG12,Base,false,,Jason Giambi
-insert-own-the-game,OG13,Base,false,,Magglio Ordonez
-insert-own-the-game,OG14,Base,false,,Manny Ramirez
-insert-own-the-game,OG15,Base,false,,Alfonso Soriano
-insert-own-the-game,OG16,Base,false,,Johnny Damon
-insert-own-the-game,OG17,Base,false,,Derek Jeter
-insert-own-the-game,OG18,Base,false,,Albert Pujols
-insert-own-the-game,OG19,Base,false,,Luis Castillo
-insert-own-the-game,OG20,Base,false,,Barry Bonds
-insert-own-the-game,OG21,Base,false,,Garret Anderson
-insert-own-the-game,OG22,Base,false,,Jimmy Rollins
-insert-own-the-game,OG23,Base,false,,Curt Schilling
-insert-own-the-game,OG24,Base,false,,Barry Zito
-insert-own-the-game,OG25,Base,false,,Randy Johnson
-insert-own-the-game,OG26,Base,false,,Tom Glavine
-insert-own-the-game,OG27,Base,false,,Roger Clemens
-insert-own-the-game,OG28,Base,false,,Pedro Martinez
-insert-own-the-game,OG29,Base,false,,Derek Lowe
-insert-own-the-game,OG30,Base,false,,John Smoltz
-insert-prime-cuts-pine-tar-relics,AD1,Base,false,,Adam Dunn 1
-insert-prime-cuts-pine-tar-relics,AD2,Base,false,,Adam Dunn 2
-insert-prime-cuts-pine-tar-relics,AP1,Base,false,,Albert Pujols 1
-insert-prime-cuts-pine-tar-relics,AP2,Base,false,,Albert Pujols 2
-insert-prime-cuts-pine-tar-relics,AR1,Base,false,,Alex Rodriguez 1
-insert-prime-cuts-pine-tar-relics,AR2,Base,false,,Alex Rodriguez 2
-insert-prime-cuts-pine-tar-relics,AS1,Base,false,,Alfonso Soriano 1
-insert-prime-cuts-pine-tar-relics,AS2,Base,false,,Alfonso Soriano 2
-insert-prime-cuts-pine-tar-relics,EC1,Base,false,,Eric Chavez 1
-insert-prime-cuts-pine-tar-relics,EC2,Base,false,,Eric Chavez 2
-insert-prime-cuts-pine-tar-relics,LB1,Base,false,,Lance Berkman 1
-insert-prime-cuts-pine-tar-relics,LB2,Base,false,,Lance Berkman 2
-insert-prime-cuts-pine-tar-relics,MP2,Base,false,,Mike Piazza 1
-insert-prime-cuts-pine-tar-relics,NG1,Base,false,,Nomar Garciaparra 1
-insert-prime-cuts-pine-tar-relics,NG2,Base,false,,Nomar Garciaparra 2
-insert-prime-cuts-pine-tar-relics,RA1,Base,false,,Roberto Alomar 1
-insert-prime-cuts-pine-tar-relics,RA2,Base,false,,Roberto Alomar 2
-insert-prime-cuts-pine-tar-relics,RP1,Base,false,,Rafael Palmeiro 1
-insert-prime-cuts-pine-tar-relics,RP2,Base,false,,Rafael Palmeiro 2
-insert-prime-cuts-relics,AD1,Base,false,,Adam Dunn
-insert-prime-cuts-relics,AD2,Base,false,,Adam Dunn
-insert-prime-cuts-relics,AR1,Base,false,,Alex Rodriguez
-insert-prime-cuts-relics,AR2,Base,false,,Alex Rodriguez
-insert-prime-cuts-relics,MP2,Base,false,,Mike Piazza
-insert-prime-cuts-relics,NG1,Base,false,,Nomar Garciaparra
-insert-prime-cuts-relics,NG2,Base,false,,Nomar Garciaparra
-insert-prime-cuts-relics,RA1,Base,false,,Roberto Alomar
-insert-prime-cuts-relics,RA2,Base,false,,Roberto Alomar
-insert-prime-cuts-trademark-relics,AD1,Base,false,,Adam Dunn 1
-insert-prime-cuts-trademark-relics,AD2,Base,false,,Adam Dunn 2
-insert-prime-cuts-trademark-relics,AP1,Base,false,,Albert Pujols 1
-insert-prime-cuts-trademark-relics,AP2,Base,false,,Albert Pujols 2
-insert-prime-cuts-trademark-relics,AR1,Base,false,,Alex Rodriguez 1
-insert-prime-cuts-trademark-relics,AR2,Base,false,,Alex Rodriguez 2
-insert-prime-cuts-trademark-relics,AS1,Base,false,,Alfonso Soriano 1
-insert-prime-cuts-trademark-relics,AS2,Base,false,,Alfonso Soriano 2
-insert-prime-cuts-trademark-relics,EC1,Base,false,,Eric Chavez 1
-insert-prime-cuts-trademark-relics,EC2,Base,false,,Eric Chavez 2
-insert-prime-cuts-trademark-relics,LB1,Base,false,,Lance Berkman 1
-insert-prime-cuts-trademark-relics,LB2,Base,false,,Lance Berkman 2
-insert-prime-cuts-trademark-relics,MP2,Base,false,,Mike Piazza 1
-insert-prime-cuts-trademark-relics,NG1,Base,false,,Nomar Garciaparra 1
-insert-prime-cuts-trademark-relics,NG2,Base,false,,Nomar Garciaparra 2
-insert-prime-cuts-trademark-relics,RA1,Base,false,,Roberto Alomar 1
-insert-prime-cuts-trademark-relics,RA2,Base,false,,Roberto Alomar 2
-insert-prime-cuts-trademark-relics,RP1,Base,false,,Rafael Palmeiro 1
-insert-prime-cuts-trademark-relics,RP2,Base,false,,Rafael Palmeiro 2
-insert-record-breakers,AR1,Base,false,,Alex Rodriguez
-insert-record-breakers,AR2,Base,false,,Alex Rodriguez
-insert-record-breakers,BB1,Base,false,,Barry Bonds
-insert-record-breakers,BB2,Base,false,,Barry Bonds
-insert-record-breakers,CD1,Base,false,,Carlos Delgado
-insert-record-breakers,CD2,Base,false,,Carlos Delgado
-insert-record-breakers,FR1,Base,false,,Frank Robinson
-insert-record-breakers,FR2,Base,false,,Frank Robinson
-insert-record-breakers,GB1,Base,false,,George Brett
-insert-record-breakers,GB2,Base,false,,George Brett
-insert-record-breakers,GF1,Base,false,,George Foster
-insert-record-breakers,GF2,Base,false,,George Foster
-insert-record-breakers,JB1,Base,false,,Jeff Bagwell
-insert-record-breakers,JB2,Base,false,,Jeff Bagwell
-insert-record-breakers,JM1,Base,false,,Juan Marichal
-insert-record-breakers,JM2,Base,false,,Juan Marichal
-insert-record-breakers,KG1,Base,false,,Ken Griffey Jr.
-insert-record-breakers,KG2,Base,false,,Ken Griffey Jr.
-insert-record-breakers,LBR1,Base,false,,Lou Brock
-insert-record-breakers,LBR2,Base,false,,Lou Brock
-insert-record-breakers,LB1,Base,false,,Lance Berkman
-insert-record-breakers,LB2,Base,false,,Lance Berkman
-insert-record-breakers,LG1,Base,false,,Luis Gonzalez
-insert-record-breakers,LG2,Base,false,,Luis Gonzalez
-insert-record-breakers,RH1,Base,false,,Rickey Henderson
-insert-record-breakers,RH2,Base,false,,Rickey Henderson
-insert-record-breakers,RJ1,Base,false,,Randy Johnson
-insert-record-breakers,RJ2,Base,false,,Randy Johnson
-insert-record-breakers,RS1,Base,false,,Richie Sexson
-insert-record-breakers,RS2,Base,false,,Richie Sexson
-insert-record-breakers,RY1,Base,false,,Robin Yount
-insert-record-breakers,RY2,Base,false,,Robin Yount
-insert-record-breakers,SG1,Base,false,,Shawn Green
-insert-record-breakers,SG2,Base,false,,Shawn Green
-insert-record-breakers,SS1,Base,false,,Sammy Sosa
-insert-record-breakers,SS2,Base,false,,Sammy Sosa
-insert-record-breakers,TG1,Base,false,,Tony Gwynn
-insert-record-breakers,TG2,Base,false,,Tony Gwynn
-insert-record-breakers,TH1,Base,false,,Todd Helton
-insert-record-breakers,TH2,Base,false,,Todd Helton
-insert-record-breakers,TS1,Base,false,,Tom Seaver
-insert-record-breakers,TS2,Base,false,,Tom Seaver
-insert-record-breakers,VG1,Base,false,,Vladimir Guerrero
-insert-record-breakers,VG2,Base,false,,Vladimir Guerrero
-insert-record-breakers-relics,AR1,Base,false,,"Alex Rodriguez UNI, B1"
-insert-record-breakers-relics,AR2,Base,false,,"Alex Rodriguez UNI, B2"
-insert-record-breakers-relics,CD1,Base,false,,"Carlos Delgado UNI, B1"
-insert-record-breakers-relics,CD2,Base,false,,"Carlos Delgado UNI, B2"
-insert-record-breakers-relics,FR1,Base,false,,"Frank Robinson BAT, C1"
-insert-record-breakers-relics,FR2,Base,false,,"Frank Robinson BAT, 2"
-insert-record-breakers-relics,GB1,Base,false,,"George Brett BAT, C1"
-insert-record-breakers-relics,GB2,Base,false,,"George Brett BAT, 2"
-insert-record-breakers-relics,RY1,Base,false,,"Robin Yount UNI, B1"
-insert-record-breakers-relics,RY2,Base,false,,"Robin Yount BAT, 2"
-insert-record-breakers-relics,TG2,Base,false,,"Tony Gwynn Avg BAT, 2"
-insert-record-breakers-relics,TH1,Base,false,,"Todd Helton UNI, B1"
-insert-record-breakers-relics,TH2,Base,false,,"Todd Helton UNI, B2"
-insert-record-breakers-nolan-ryan,1,Base,false,,Nolan Ryan Angels
-insert-record-breakers-nolan-ryan,2,Base,false,,Nolan Ryan Angels
-insert-record-breakers-nolan-ryan,3,Base,false,,Nolan Ryan Angels
-insert-record-breakers-nolan-ryan,4,Base,false,,Nolan Ryan Angels
-insert-record-breakers-nolan-ryan,5,Base,false,,Nolan Ryan Astros
-insert-record-breakers-nolan-ryan,6,Base,false,,Nolan Ryan Rangers
-insert-record-breakers-nolan-ryan,7,Base,false,,Nolan Ryan Rangers
-insert-red-backs,1,Base,false,,Nomar Garciaparra
-insert-red-backs,2,Base,false,,Ichiro Suzuki
-insert-red-backs,3,Base,false,,Alex Rodriguez
-insert-red-backs,4,Base,false,,Sammy Sosa
-insert-red-backs,5,Base,false,,Barry Bonds
-insert-red-backs,6,Base,false,,Vladimir Guerrero
-insert-red-backs,7,Base,false,,Derek Jeter
-insert-red-backs,8,Base,false,,Miguel Tejada
-insert-red-backs,9,Base,false,,Alfonso Soriano
-insert-red-backs,10,Base,false,,Manny Ramirez
-insert-red-backs,11,Base,false,,Adam Dunn
-insert-red-backs,12,Base,false,,Jason Giambi
-insert-red-backs,13,Base,false,,Mike Piazza
-insert-red-backs,14,Base,false,,Scott Rolen
-insert-red-backs,15,Base,false,,Shawn Green
-insert-red-backs,16,Base,false,,Randy Johnson
-insert-red-backs,17,Base,false,,Todd Helton
-insert-red-backs,18,Base,false,,Garret Anderson
-insert-red-backs,19,Base,false,,Curt Schilling
-insert-red-backs,20,Base,false,,Albert Pujols
-insert-red-backs,21,Base,false,,Chipper Jones
-insert-red-backs,22,Base,false,,Luis Gonzalez
-insert-red-backs,23,Base,false,,Mark Prior
-insert-red-backs,24,Base,false,,Jim Thome
-insert-red-backs,25,Base,false,,Ivan Rodriguez
-insert-red-backs,26,Base,false,,Torii Hunter
-insert-red-backs,27,Base,false,,Lance Berkman
-insert-red-backs,28,Base,false,,Troy Glaus
-insert-red-backs,29,Base,false,,Andruw Jones
-insert-red-backs,30,Base,false,,Barry Zito
-insert-red-backs,31,Base,false,,Jeff Bagwell
-insert-red-backs,32,Base,false,,Magglio Ordonez
-insert-red-backs,33,Base,false,,Pat Burrell
-insert-red-backs,34,Base,false,,Mike Sweeney
-insert-red-backs,35,Base,false,,Rafael Palmeiro
-insert-red-backs,36,Base,false,,Larry Walker
-insert-red-backs,37,Base,false,,Carlos Delgado
-insert-red-backs,38,Base,false,,Brian Giles
-insert-red-backs,39,Base,false,,Pedro Martinez
-insert-red-backs,40,Base,false,,Greg Maddux
-auto-team-topps-legends-autographs,TT1R,Base,true,,Willie Mays 52 B1
-auto-team-topps-legends-autographs,TT6F,Base,true,,Whitey Ford 67 D1
-auto-team-topps-legends-autographs,TT7R,Base,true,,Nolan Ryan 68 C1
-auto-team-topps-legends-autographs,TT8R,Base,true,,Carl Yastrzemski 60 E1
-auto-team-topps-legends-autographs,TT10R,Base,true,,Frank Robinson 57 E1
-auto-team-topps-legends-autographs,TT11R,Base,true,,Tom Seaver 67 B1
-auto-team-topps-legends-autographs,TT13F,Base,true,,Warren Spahn 65 E1
-auto-team-topps-legends-autographs,TT15,Base,true,,Reggie Jackson
-auto-team-topps-legends-autographs,TT18F,Base,true,,Bob Gibson 75 C1
-auto-team-topps-legends-autographs,TT20R,Base,true,,Harmon Killebrew 55 2
-auto-team-topps-legends-autographs,TT21R,Base,true,,Bob Feller 52 C1
-auto-team-topps-legends-autographs,TT23F,Base,true,,Gil McDougald 60 G1
-auto-team-topps-legends-autographs,TT25F,Base,true,,Luis Tiant 83 F1
-auto-team-topps-legends-autographs,TT27R,Base,true,,Andy Pafko 52 B1
-auto-team-topps-legends-autographs,TT28R,Base,true,,Herb Score 56 D1
-auto-team-topps-legends-autographs,TT29F,Base,true,,Bill Skowron 67 E1
-auto-team-topps-legends-autographs,TT31F,Base,true,,Clete Boyer 71 C1
-auto-team-topps-legends-autographs,TT33R,Base,true,,Vida Blue 70 F1
-auto-team-topps-legends-autographs,TT35R,Base,true,,Joe Pepitone 62 F1
-auto-team-topps-legends-autographs,TT36F,Base,true,,Enos Slaughter 59 D1
-auto-team-topps-legends-autographs,TT38,Base,true,,Fergie Jenkins 66 S2
-auto-team-topps-legends-autographs,TT43R,Base,true,,Bobby Thomson 52 B1
-auto-team-topps-legends-autographs,TT46F,Base,true,,Robin Roberts 66 E1
-auto-team-topps-legends-autographs,TT47F,Base,true,,Frank Howard 73 D1
-auto-team-topps-legends-autographs,TT48F,Base,true,,Bobby Richardson 66 F1
-auto-team-topps-legends-autographs,TT49R,Base,true,,Tony Kubek 57 A1
-auto-team-topps-legends-autographs,TT50R,Base,true,,Mickey Lolich 64 C1
-auto-team-topps-legends-autographs,TT51R,Base,true,,Ralph Branca 52 A1
-auto-turn-back-the-clock-autographs,2003,Base,true,,Topps Series 1 Baseball Jumbo Hobby Box
-auto-turn-back-the-clock-autographs,2003,Base,true,,TOPPS KANEBO JAPAN SERIES 2 JAPANESE PARALLEL #6 BARRY BONDS CENTERED NM-MT
-auto-turn-back-the-clock-autographs,2003,Base,true,,TOPPS BLACK FOIL BORDER 1ST YEAR PARALLEL #27 ANDRES GALARRAGA EXPOS #01/52
-auto-turn-back-the-clock-autographs,2003,Base,true,,Topps All American - Tom Brady #41 Foil
-auto-turn-back-the-clock-autographs,2003,Base,true,,Topps Black - Ricky Ledee #428 35/52
-auto-turn-back-the-clock-autographs,2003,Base,true,,"Topps Matrix Lebron James /Carmelo Anthony Graded 10,9 Two Cards"
-auto-turn-back-the-clock-autographs,2003,Base,true,,Topps Baseball Factory Sealed Set - 720 Cards.
-auto-turn-back-the-clock-autographs,1,Base,true,,Star - Avoid this product like the plague
-auto-turn-back-the-clock-autographs,2,Base,true,,Stars - Below Average Product
-auto-turn-back-the-clock-autographs,3,Base,true,,Stars - Average Product
-auto-turn-back-the-clock-autographs,4,Base,true,,Stars - Excellent Product
-auto-turn-back-the-clock-autographs,5,Base,true,,Stars - Incredible Product
-auto-turn-back-the-clock-autographs,2003,Base,true,,Topps Garbage Pail Kids All-New Series 1 Hobby Box
-auto-turn-back-the-clock-autographs,30,Base,true,,days
+base,1,,false,,Alex Rodriguez
+base,2,,false,,Dan Wilson
+base,3,,false,,Jimmy Rollins
+base,4,,false,,Jermaine Dye
+base,5,,false,,Steve Karsay
+base,6,,false,,Timo Perez
+base,8,,false,,Jose Vidro
+base,9,,false,,Eddie Guardado
+base,10,,false,,Mark Prior
+base,11,,false,,Curt Schilling
+base,12,,false,,Dennis Cook
+base,13,,false,,Andruw Jones
+base,14,,false,,David Segui
+base,15,,false,,Trot Nixon
+base,16,,false,,Kerry Wood
+base,17,,false,,Magglio Ordonez
+base,18,,false,,Jason Larue
+base,19,,false,,Danys Baez
+base,20,,false,,Todd Helton
+base,21,,false,,Denny Neagle
+base,22,,false,,Dave Mlicki
+base,23,,false,,Roberto Hernandez
+base,24,,false,,Odalis Perez
+base,25,,false,,Nick Neugebauer
+base,26,,false,,David Ortiz
+base,27,,false,,Andres Galarraga
+base,28,,false,,Edgardo Alfonzo
+base,29,,false,,Chad Bradford
+base,30,,false,,Jason Giambi
+base,31,,false,,Brian Giles
+base,32,,false,,Deivi Cruz
+base,33,,false,,Robb Nen
+base,34,,false,,Jeff Nelson
+base,35,,false,,Edgar Renteria
+base,36,,false,,Aubrey Huff
+base,37,,false,,Brandon Duckworth
+base,38,,false,,Juan Gonzalez
+base,39,,false,,Sidney Ponson
+base,40,,false,,Eric Hinske
+base,41,,false,,Kevin Appier
+base,42,,false,,Danny Bautista
+base,43,,false,,Javy Lopez
+base,44,,false,,Jeff Conine
+base,45,,false,,Carlos Baerga
+base,46,,false,,Ugueth Urbina
+base,47,,false,,Mark Buehrle
+base,48,,false,,Aaron Boone
+base,49,,false,,Jason Simontacchi
+base,50,,false,,Sammy Sosa
+base,51,,false,,Jose Jimenez
+base,52,,false,,Bobby Higginson
+base,53,,false,,Luis Castillo
+base,54,,false,,Orlando Merced
+base,55,,false,,Brian Jordan
+base,56,,false,,Eric Young
+base,57,,false,,Bobby Kielty
+base,58,,false,,Luis Rivas
+base,59,,false,,Brad Wilkerson
+base,60,,false,,Roberto Alomar
+base,61,,false,,Roger Clemens
+base,62,,false,,Scott Hatteberg
+base,63,,false,,Andy Ashby
+base,64,,false,,Mike Williams
+base,65,,false,,Ron Gant
+base,66,,false,,Benito Santiago
+base,67,,false,,Bret Boone
+base,68,,false,,Matt Morris
+base,69,,false,,Troy Glaus
+base,70,,false,,Austin Kearns
+base,71,,false,,Jim Thome
+base,72,,false,,Rickey Henderson
+base,73,,false,,Luis Gonzalez
+base,74,,false,,Brad Fullmer
+base,75,,false,,Herb Perry
+base,76,,false,,Randy Wolf
+base,77,,false,,Miguel Tejada
+base,78,,false,,Jimmy Anderson
+base,79,,false,,Ramon E. Martinez
+base,80,,false,,Ivan Rodriguez
+base,81,,false,,John Flaherty
+base,82,,false,,Shannon Stewart
+base,83,,false,,Orlando Palmeiro
+base,84,,false,,Rafael Furcal
+base,85,,false,,Kenny Rogers
+base,86,,false,,Terry Adams
+base,87,,false,,Mo Vaughn
+base,88,,false,,Jose Cruz Jr.
+base,89,,false,,Mike Matheny
+base,90,,false,,Alfonso Soriano
+base,91,,false,,Orlando Cabrera
+base,92,,false,,Jeffrey Hammonds
+base,93,,false,,Hideo Nomo
+base,94,,false,,Carlos Febles
+base,95,,false,,Billy Wagner
+base,96,,false,,Alex Gonzalez
+base,97,,false,,Todd Zeile
+base,98,,false,,Omar Vizquel
+base,99,,false,,Jose Rijo
+base,100,,false,,Ichiro Suzuki
+base,101,,false,,Steve Cox
+base,102,,false,,Hideki Irabu
+base,103,,false,,Roy Halladay
+base,104,,false,,David Eckstein
+base,105,,false,,Greg Maddux
+base,106,,false,,Jay Gibbons
+base,107,,false,,Travis Driskill
+base,108,,false,,Fred Mcgriff
+base,109,,false,,Frank Thomas
+base,110,,false,,Shawn Green
+base,111,,false,,Ruben Quevedo
+base,112,,false,,Jacque Jones
+base,113,,false,,Tomo Ohka
+base,114,,false,,Joe McEwing
+base,115,,false,,Ramiro Mendoza
+base,116,,false,,Mark Mulder
+base,117,,false,,Mike Lieberthal
+base,118,,false,,Jack Wilson
+base,119,,false,,Randall Simon
+base,120,,false,,Bernie Williams
+base,121,,false,,Marvin Benard
+base,122,,false,,Jamie Moyer
+base,123,,false,,Andy Benes
+base,124,,false,,Tino Martinez
+base,125,,false,,Esteban Yan
+base,126,,false,,Juan Uribe
+base,127,,false,,Jason Isringhausen
+base,128,,false,,Chris Carpenter
+base,129,,false,,Mike Cameron
+base,130,,false,,Gary Sheffield
+base,131,,false,,Geronimo Gil
+base,132,,false,,Brian Daubach
+base,133,,false,,Corey Patterson
+base,134,,false,,Aaron Rowand
+base,135,,false,,Chris Reitsma
+base,136,,false,,Bob Wickman
+base,137,,false,,Cesar Izturis
+base,138,,false,,Jason Jennings
+base,139,,false,,Brandon Inge
+base,140,,false,,Larry Walker
+base,141,,false,,Ramon Santiago
+base,142,,false,,Vladimir Nunez
+base,143,,false,,Jose Vizcaino
+base,144,,false,,Mark Quinn
+base,145,,false,,Michael Tucker
+base,146,,false,,Darren Dreifort
+base,147,,false,,Ben Sheets
+base,148,,false,,Corey Koskie
+base,149,,false,,Tony Armas Jr.
+base,150,,false,,Kazuhisa Ishii
+base,151,,false,,Al Leiter
+base,152,,false,,Steve Trachsel
+base,153,,false,,Mike Stanton
+base,154,,false,,David Justice
+base,155,,false,,Marlon Anderson
+base,156,,false,,Jason Kendall
+base,157,,false,,Brian Lawrence
+base,158,,false,,J.T. Snow
+base,159,,false,,Edgar Martinez
+base,160,,false,,Pat Burrell
+base,161,,false,,Kerry Robinson
+base,162,,false,,Greg Vaughn
+base,163,,false,,Carl Everett
+base,164,,false,,Vernon Wells
+base,165,,false,,Jose Mesa
+base,166,,false,,Troy Percival
+base,167,,false,,Erubiel Durazo
+base,168,,false,,Jason Marquis
+base,169,,false,,Jerry Hairston Jr.
+base,170,,false,,Vladimir Guerrero
+base,171,,false,,Byung-Hyun Kim
+base,172,,false,,Marcus Giles
+base,173,,false,,Johnny Damon
+base,174,,false,,Jon Lieber
+base,175,,false,,Terrence Long
+base,176,,false,,Sean Casey
+base,177,,false,,Adam Dunn
+base,178,,false,,Juan Pierre
+base,179,,false,,Wendell Magee
+base,180,,false,,Barry Zito
+base,181,,false,,Aramis Ramirez
+base,182,,false,,Pokey Reese
+base,183,,false,,Jeff Kent
+base,184,,false,,Russ Ortiz
+base,185,,false,,Ruben Sierra
+base,186,,false,,Brent Abernathy
+base,187,,false,,Ismael Valdes
+base,188,,false,,Tom Wilson
+base,189,,false,,Craig Counsell
+base,190,,false,,Mike Mussina
+base,191,,false,,Ramon Hernandez
+base,192,,false,,Adam Kennedy
+base,193,,false,,Tony Womack
+base,194,,false,,Wes Helms
+base,195,,false,,Tony Batista
+base,196,,false,,Rolando Arrojo
+base,197,,false,,Kyle Farnsworth
+base,198,,false,,Gary Bennett
+base,199,,false,,Scott Sullivan
+base,200,,false,,Albert Pujols
+base,201,,false,,Kirk Rueter
+base,202,,false,,Phil Nevin
+base,203,,false,,Kip Wells
+base,204,,false,,Ron Coomer
+base,205,,false,,Jeromy Burnitz
+base,206,,false,,Kyle Lohse
+base,207,,false,,Mike Dejean
+base,208,,false,,Paul Lo Duca
+base,209,,false,,Carlos Beltran
+base,210,,false,,Roy Oswalt
+base,211,,false,,Mike Lowell
+base,212,,false,,Robert Fick
+base,213,,false,,Todd Jones
+base,214,,false,,CC Sabathia
+base,215,,false,,Danny Graves
+base,216,,false,,Todd Hundley
+base,217,,false,,Tim Wakefield
+base,218,,false,,Derek Lowe
+base,219,,false,,Kevin Millwood
+base,220,,false,,Jorge Posada
+base,221,,false,,Bobby Jones
+base,222,,false,,Carlos Guillen
+base,223,,false,,Fernando Vina
+base,224,,false,,Ryan Rupe
+base,225,,false,,Kelvim Escobar
+base,226,,false,,Ramon Ortiz
+base,227,,false,,Junior Spivey
+base,228,,false,,Juan Cruz
+base,229,,false,,Melvin Mora
+base,230,,false,,Lance Berkman
+base,231,,false,,Brent Butler
+base,232,,false,,Shane Halter
+base,233,,false,,Derrek Lee
+base,234,,false,,Matt Lawton
+base,235,,false,,Chuck Knoblauch
+base,236,,false,,Eric Gagne UER
+base,237,,false,,Alex Sanchez
+base,238,,false,,Denny Hocking
+base,239,,false,,Eric Milton
+base,240,,false,,Rey Ordonez
+base,241,,false,,Orlando Hernandez
+base,242,,false,,Robert Person
+base,243,,false,,Sean Burroughs
+base,244,,false,,Jeff Cirillo
+base,245,,false,,Mike Lamb
+base,246,,false,,Jose Valentin
+base,247,,false,,Ellis Burks
+base,248,,false,,Shawn Chacon
+base,249,,false,,Josh Beckett
+base,250,,false,,Nomar Garciaparra
+base,251,,false,,Craig Biggio
+base,252,,false,,Joe Randa
+base,253,,false,,Mark Grudzielanek
+base,254,,false,,Glendon Rusch
+base,255,,false,,Michael Barrett
+base,256,,false,,Omar Daal
+base,257,,false,,Elmer Dessens
+base,258,,false,,Wade Miller
+base,259,,false,,Adrian Beltre
+base,260,,false,,Vicente Padilla
+base,261,,false,,Kazuhiro Sasaki
+base,262,,false,,Mike Scioscia MG
+base,263,,false,,Bobby Cox MG
+base,264,,false,,Mike Hargrove MG
+base,265,,false,,Grady Little MG
+base,266,,false,,Alex Gonzalez
+base,267,,false,,Jerry Manuel MG
+base,268,,false,,Bob Boone MG
+base,269,,false,,Joel Skinner MG
+base,270,,false,,Clint Hurdle MG
+base,271,,false,,Miguel Batista
+base,272,,false,,Bob Brenly MG
+base,273,,false,,Jeff Torborg MG
+base,274,,false,,Jimy Williams MG
+base,275,,false,,Tony Pena MG
+base,276,,false,,Jim Tracy MG
+base,277,,false,,Jerry Royster MG
+base,278,,false,,Ron Gardenhire MG
+base,279,,false,,Frank Robinson MG
+base,280,,false,,John Halama
+base,281,,false,,Joe Torre MG
+base,282,,false,,Art Howe MG
+base,283,,false,,Larry Bowa MG
+base,284,,false,,Lloyd Mcclendon MG
+base,285,,false,,Bruce Bochy MG
+base,286,,false,,Dusty Baker MG
+base,287,,false,,Lou Piniella MG
+base,288,,false,,Tony Larussa MG
+base,289,,false,,Todd Walker
+base,290,,false,,Jerry Narron MG
+base,291,,false,,Carlos Tosca MG
+base,292,,false,,Chris Duncan RC
+base,293,,false,,Franklin Gutierrez RC
+base,294,,false,,Adam LaRoche RC
+base,295,,false,,Manny Ramirez RC
+base,296,,false,,Il Kim RC
+base,297,,false,,Wayne Lydon RC
+base,298,,false,,Daryl Clark RC
+base,299,,false,,Sean Pierce RC
+base,300,,false,,Andy Marte RC
+base,301,,false,,Matt Peterson RC
+base,302,,false,,Gonzalo Lopez RC
+base,303,,false,,Bernie Castro RC
+base,304,,false,,Cliff Lee RC
+base,305,,false,,Jason Perry RC
+base,306,,false,,Jaime Bubela RC
+base,307,,false,,Alex Rios RC
+base,308,,false,,Brendan Harris RC
+base,309,,false,,Ramon Nivar RC
+base,310,,false,,Terry Tiffee RC
+base,311,,false,,Kevin Youkilis RC
+base,312,,false,,Ruddy Lugo RC
+base,313,,false,,C.J. Wilson RC
+base,314,,false,,Mike McNutt RC
+base,315,,false,,Jeff Clark RC
+base,316,,false,,Mark Malaska RC
+base,317,,false,,Doug Waechter RC
+base,318,,false,,Derell McCall RC
+base,319,,false,,Scott Tyler RC
+base,320,,false,,Craig Brazell RC
+base,321,,false,,Walter Young RC
+base,322,,false,,Marlon Byrd / Jorge Padilla
+base,323,,false,,Chris Snelling / Shin-Soo Choo
+base,324,,false,,Hank Blalock / Mark Teixeira
+base,325,,false,,Josh Hamilton / Carl Crawford
+base,326,,false,,Orlando Hudson / Josh Phelps
+base,327,,false,,Jack Cust / Rene Reyes
+base,328,,false,,Angel Berroa / Alexis Gomez
+base,329,,false,,Michael Cuddyer / Michael Restovich
+base,330,,false,,Juan Rivera / Marcus Thames
+base,331,,false,,Brandon Puffer / Jung Bong
+base,332,,false,,Mike Cameron HL
+base,333,,false,,Shawn Green HL
+base,334,,false,,Oakland Athletics HL
+base,335,,false,,Jason Giambi HL
+base,336,,false,,Derek Lowe HL
+base,337,,false,,Manny Ramirez/Mike Sweeney/Bernie Williams LL
+base,338,,false,,Alfonso Soriano/Alex Rodriguez/Derek Jeter LL
+base,339,,false,,Alex Rodriguez/Jim Thome/Rafael Palmeiro LL
+base,340,,false,,Alex Rodriguez/Magglio Ordonez/Miguel Tejada LL
+base,341,,false,,Pedro Martinez / Derek Lowe / Barry Zito LL
+base,342,,false,,Pedro Martinez/Roger Clemens/Mike Mussina LL
+base,343,,false,,Larry Walker/Vladimir Guerrero/Todd Helton LL
+base,344,,false,,Sammy Sosa/Albert Pujols/Shawn Green LL
+base,345,,false,,Sammy Sosa/Lance Berkman/Shawn Green LL
+base,346,,false,,Lance Berkman / Albert Pujols / Pat Burrell LL
+base,347,,false,,Randy Johnson / Greg Maddux / Tom Glavine LL
+base,348,,false,,Randy Johnson/Curt Schilling/Kerry Wood LL
+base,349,,false,,"Francisco Rodriguez, Darin Erstad, Tim Salmon HL"
+base,350,,false,,Twins & Cardinals Team Shots HL
+base,351,,false,,Angels & Giants Team Shots HL
+base,352,,false,,"Jim Edmonds, Scott Rolen, Team Shot HL"
+base,353,,false,,Adam Kennedy HL
+base,354,,false,,J.T. Snow HL
+base,355,,false,,Kenny Lofton HL
+base,356,,false,,Jason Giambi AS
+base,357,,false,,Alfonso Soriano AS
+base,358,,false,,Alex Rodriguez AS
+base,359,,false,,Eric Chavez AS
+base,360,,false,,Torii Hunter AS
+base,361,,false,,Bernie Williams AS
+base,362,,false,,Garret Anderson AS
+base,363,,false,,Jorge Posada AS
+base,364,,false,,Derek Lowe AS
+base,365,,false,,Barry Zito AS
+base,366,,false,,Manny Ramirez AS
+base,367,,false,,Mike Scioscia AS
+base,368,,false,,Francisco Rodriguez
+base,369,,false,,Chris Hammond
+base,370,,false,,Chipper Jones
+base,371,,false,,Chris Singleton
+base,372,,false,,Cliff Floyd
+base,373,,false,,Bobby Hill
+base,374,,false,,Antonio Osuna
+base,375,,false,,Barry Larkin
+base,376,,false,,Charles Nagy
+base,377,,false,,Denny Stark
+base,378,,false,,Dean Palmer
+base,379,,false,,Eric Owens
+base,380,,false,,Randy Johnson
+base,381,,false,,Jeff Suppan
+base,382,,false,,Eric Karros
+base,383,,false,,Luis Vizcaino
+base,384,,false,,Johan Santana
+base,385,,false,,Javier Vazquez
+base,386,,false,,John Thomson
+base,387,,false,,Nick Johnson
+base,388,,false,,Mark Ellis
+base,389,,false,,Doug Glanville
+base,390,,false,,Ken Griffey Jr.
+base,391,,false,,Bubba Trammell
+base,392,,false,,Livan Hernandez
+base,393,,false,,Desi Relaford
+base,394,,false,,Eli Marrero
+base,395,,false,,Jared Sandberg
+base,396,,false,,Barry Bonds
+base,397,,false,,Esteban Loaiza
+base,398,,false,,Aaron Sele
+base,399,,false,,Geoff Blum
+base,400,,false,,Derek Jeter
+base,401,,false,,Eric Byrnes
+base,402,,false,,Mike Timlin
+base,403,,false,,Mark Kotsay
+base,404,,false,,Rich Aurilia
+base,405,,false,,Joel Pineiro
+base,406,,false,,Chuck Finley
+base,407,,false,,Bengie Molina
+base,408,,false,,Steve Finley
+base,409,,false,,Julio Franco
+base,410,,false,,Marty Cordova
+base,411,,false,,Shea Hillenbrand
+base,412,,false,,Mark Bellhorn
+base,413,,false,,Jon Garland
+base,414,,false,,Reggie Taylor
+base,415,,false,,Milton Bradley
+base,416,,false,,Carlos Pena
+base,417,,false,,Andy Fox
+base,418,,false,,Brad Ausmus
+base,419,,false,,Brent Mayne
+base,420,,false,,Paul Quantrill
+base,421,,false,,Carlos Delgado
+base,422,,false,,Kevin Mench
+base,423,,false,,Joe Kennedy
+base,424,,false,,Mike Crudale
+base,425,,false,,Mark Mclemore
+base,426,,false,,Bill Mueller
+base,427,,false,,Rob Mackowiak
+base,428,,false,,Ricky Ledee
+base,429,,false,,Ted Lilly
+base,430,,false,,Sterling Hitchcock
+base,431,,false,,Scott Strickland
+base,432,,false,,Damion Easley
+base,433,,false,,Torii Hunter
+base,434,,false,,Brad Radke
+base,435,,false,,Geoff Jenkins
+base,436,,false,,Paul Byrd
+base,437,,false,,Morgan Ensberg
+base,438,,false,,Mike Maroth
+base,439,,false,,Mike Hampton
+base,440,,false,,Adam Hyzdu
+base,441,,false,,Vance Wilson
+base,442,,false,,Todd Ritchie
+base,443,,false,,Tom Gordon
+base,444,,false,,John Burkett
+base,445,,false,,Rodrigo Lopez
+base,446,,false,,Tim Spooneybarger
+base,447,,false,,Quinton McCracken
+base,448,,false,,Tim Salmon
+base,449,,false,,Jarrod Washburn
+base,450,,false,,Pedro Martinez
+base,451,,false,,Dustan Mohr
+base,452,,false,,Julio Lugo
+base,453,,false,,Scott Stewart
+base,454,,false,,Armando Benitez
+base,455,,false,,Raul Mondesi
+base,456,,false,,Robin Ventura
+base,457,,false,,Bobby Abreu
+base,458,,false,,Josh Fogg
+base,459,,false,,Ryan Klesko
+base,460,,false,,Tsuyoshi Shinjo
+base,461,,false,,Jim Edmonds
+base,462,,false,,Cliff Politte
+base,463,,false,,Chan Ho Park
+base,464,,false,,John Mabry
+base,465,,false,,Woody Williams
+base,466,,false,,Jason Michaels
+base,467,,false,,Scott Schoeneweis
+base,468,,false,,Brian Anderson
+base,469,,false,,Brett Tomko
+base,470,,false,,Scott Erickson
+base,471,,false,,Kevin Millar
+base,472,,false,,Dan Wright
+base,473,,false,,Jason Schmidt
+base,474,,false,,Scott Williamson
+base,475,,false,,Einar Diaz
+base,476,,false,,Jay Payton
+base,477,,false,,Juan Acevedo
+base,478,,false,,Ben Grieve
+base,479,,false,,Raul Ibanez
+base,480,,false,,Richie Sexson
+base,481,,false,,Rick Reed
+base,482,,false,,Pedro Astacio
+base,483,,false,,Adam Piatt
+base,484,,false,,Bud Smith
+base,485,,false,,Tomas Perez
+base,486,,false,,Adam Eaton
+base,487,,false,,Rafael Palmeiro
+base,488,,false,,Jason Tyner
+base,489,,false,,Scott Rolen
+base,490,,false,,Randy Winn
+base,491,,false,,Ryan Jensen
+base,492,,false,,Trevor Hoffman
+base,493,,false,,Craig Wilson
+base,494,,false,,Jeremy Giambi
+base,495,,false,,Daryle Ward
+base,496,,false,,Shane Spencer
+base,497,,false,,Andy Pettitte
+base,498,,false,,John Franco
+base,499,,false,,Felipe Lopez
+base,500,,false,,Mike Piazza
+base,501,,false,,Cristian Guzman
+base,502,,false,,Jose Hernandez
+base,503,,false,,Octavio Dotel
+base,504,,false,,Brad Penny
+base,505,,false,,Dave Veres
+base,506,,false,,Ryan Dempster
+base,507,,false,,Joe Crede
+base,508,,false,,Chad Hermansen
+base,509,,false,,Gary Matthews Jr.
+base,510,,false,,Matt Franco
+base,511,,false,,Ben Weber
+base,512,,false,,Dave Berg
+base,513,,false,,Michael Young
+base,514,,false,,Frank Catalanotto
+base,515,,false,,Darin Erstad
+base,516,,false,,Matt Williams
+base,517,,false,,B.J. Surhoff
+base,518,,false,,Kerry Ligtenberg
+base,519,,false,,Mike Bordick
+base,520,,false,,Arthur Rhodes
+base,521,,false,,Joe Girardi
+base,522,,false,,D'Angelo Jimenez
+base,523,,false,,Paul Konerko
+base,524,,false,,Jose Macias
+base,525,,false,,Joe Mays
+base,526,,false,,Marquis Grissom
+base,527,,false,,Neifi Perez
+base,528,,false,,Preston Wilson
+base,529,,false,,Jeff Weaver
+base,530,,false,,Eric Chavez
+base,531,,false,,Placido Polanco
+base,532,,false,,Matt Mantei
+base,533,,false,,James Baldwin
+base,534,,false,,Toby Hall
+base,535,,false,,Brendan Donnelly
+base,536,,false,,Benji Gil
+base,537,,false,,Damian Moss
+base,538,,false,,Jorge Julio
+base,539,,false,,Matt Clement
+base,540,,false,,Brian Moehler
+base,541,,false,,Lee Stevens
+base,542,,false,,Jimmy Haynes
+base,543,,false,,Terry Mulholland
+base,544,,false,,Dave Roberts
+base,545,,false,,J.C. Romero
+base,546,,false,,Bartolo Colon
+base,547,,false,,Roger Cedeno
+base,548,,false,,Mariano Rivera
+base,549,,false,,Billy Koch
+base,550,,false,,Manny Ramirez
+base,551,,false,,Travis Lee
+base,552,,false,,Oliver Perez
+base,553,,false,,Tim Worrell
+base,554,,false,,Rafael Soriano
+base,555,,false,,Damian Miller
+base,556,,false,,John Smoltz
+base,557,,false,,Willis Roberts
+base,558,,false,,Tim Hudson
+base,559,,false,,Moises Alou
+base,560,,false,,Gary Glover
+base,561,,false,,Corky Miller
+base,562,,false,,Ben Broussard
+base,563,,false,,Gabe Kapler
+base,564,,false,,Chris Woodward
+base,565,,false,,Paul Wilson
+base,566,,false,,Todd Hollandsworth
+base,567,,false,,So Taguchi
+base,568,,false,,John Olerud
+base,569,,false,,Reggie Sanders
+base,570,,false,,Jake Peavy
+base,571,,false,,Kris Benson
+base,572,,false,,Todd Pratt
+base,573,,false,,Ray Durham
+base,574,,false,,David Wells
+base,575,,false,,Chris Widger
+base,576,,false,,Shawn Wooten
+base,577,,false,,Tom Glavine
+base,578,,false,,Antonio Alfonseca
+base,579,,false,,Keith Foulke
+base,580,,false,,Shawn Estes
+base,581,,false,,Mark Grace
+base,582,,false,,Dmitri Young
+base,583,,false,,A.J. Burnett
+base,584,,false,,Richard Hidalgo
+base,585,,false,,Mike Sweeney
+base,586,,false,,Alex Cora
+base,587,,false,,Matt Stairs
+base,588,,false,,Doug Mientkiewicz
+base,589,,false,,Fernando Tatis
+base,590,,false,,Dave Weathers
+base,591,,false,,Cory Lidle
+base,592,,false,,Dan Plesac
+base,593,,false,,Jeff Bagwell
+base,594,,false,,Steve Sparks
+base,595,,false,,Sandy Alomar Jr.
+base,596,,false,,John Lackey
+base,597,,false,,Rick Helling
+base,598,,false,,Mark Derosa
+base,599,,false,,Carlos Lee
+base,600,,false,,Garret Anderson
+base,601,,false,,Vinny Castilla
+base,602,,false,,Ryan Drese
+base,603,,false,,Latroy Hawkins
+base,604,,false,,David Bell
+base,605,,false,,Freddy Garcia
+base,606,,false,,Miguel Cairo
+base,607,,false,,Scott Spiezio
+base,608,,false,,Mike Remlinger
+base,609,,false,,Tony Graffanino
+base,610,,false,,Russell Branyan
+base,611,,false,,Chris Magruder
+base,612,,false,,Jose Contreras
+base,613,,false,,Carl Pavano
+base,614,,false,,Kevin Brown
+base,615,,false,,Tyler Houston
+base,616,,false,,A.J. Pierzynski
+base,617,,false,,Tony Fiore
+base,618,,false,,Peter Bergeron
+base,619,,false,,Rondell White
+base,620,,false,,Brett Myers
+base,621,,false,,Kevin Young
+base,622,,false,,Kenny Lofton
+base,623,,false,,Ben Davis
+base,624,,false,,J.D. Drew
+base,625,,false,,Chris Gomez
+base,626,,false,,Karim Garcia
+base,627,,false,,Ricky Gutierrez
+base,628,,false,,Mark Redman
+base,629,,false,,Juan Encarnacion
+base,630,,false,,Anaheim Angels TC
+base,631,,false,,Arizona Diamondbacks TC
+base,632,,false,,Atlanta Braves TC
+base,633,,false,,Baltimore Orioles TC
+base,634,,false,,Boston Red Sox TC
+base,635,,false,,Chicago Cubs TC
+base,636,,false,,Chicago White Sox TC
+base,637,,false,,Cincinnati Reds TC
+base,638,,false,,Cleveland Indians TC
+base,639,,false,,Colorado Rockies TC
+base,640,,false,,Detroit Tigers TC
+base,641,,false,,Florida Marlins TC
+base,642,,false,,Houston Astros TC
+base,643,,false,,Kansas City Royals TC
+base,644,,false,,Los Angeles Dodgers TC
+base,645,,false,,Milwaukee Brewers TC
+base,646,,false,,Minnesota Twins TC
+base,647,,false,,Montreal Expos TC
+base,648,,false,,New York Mets TC
+base,649,,false,,New York Yankees TC
+base,650,,false,,Oakland Athletics TC
+base,651,,false,,Philadelphia Phillies TC
+base,652,,false,,Pittsburgh Pirates TC
+base,653,,false,,San Diego Padres TC
+base,654,,false,,San Francisco Giants TC
+base,655,,false,,Seattle Mariners TC
+base,656,,false,,St. Louis Cardinals TC
+base,657,,false,,Tampa Bay Devil Rays TC
+base,658,,false,,Texas Rangers TC
+base,659,,false,,Toronto Blue Jays TC
+base,660,,false,,Bryan Bullington RC
+base,661,,false,,Jeremy Guthrie RC
+base,662,,false,,Joey Gomes RC
+base,663,,false,,Evel Bastida-Martinez RC
+base,664,,false,,Brian Wright RC
+base,665,,false,,B.J. Upton RC
+base,666,,false,,Jeff Francis RC
+base,667,,false,,Drew Meyer RC
+base,668,,false,,Jeremy Hermida RC
+base,669,,false,,Khalil Greene RC
+base,670,,false,,Darrell Rasner RC
+base,671,,false,,Cole Hamels RC
+base,672,,false,,James Loney RC
+base,673,,false,,Sergio Santos RC
+base,674,,false,,Jason Pridie RC
+base,675,,false,,Brandon Phillips/Victor Martinez
+base,676,,false,,Hee Seop Choi / Nic Jackson
+base,677,,false,,Dontrelle Willis / Jason Stokes
+base,678,,false,,Chad Tracy/Lyle Overbay
+base,679,,false,,Joe Borchard/Corwin Malone
+base,680,,false,,Joe Mauer/Justin Morneau
+base,681,,false,,Drew Henson/Brandon Claussen
+base,682,,false,,Chase Utley / Gavin Floyd
+base,683,,false,,Taggert Bozied / Xavier Nady
+base,684,,false,,Aaron Heilman/Jose Reyes
+base,685,,false,,Kenny Rogers AW
+base,686,,false,,Bengie Molina AW
+base,687,,false,,John Olerud AW
+base,688,,false,,Bret Boone AW
+base,689,,false,,Eric Chavez AW
+base,690,,false,,Alex Rodriguez AW
+base,691,,false,,Darin Erstad AW
+base,692,,false,,Ichiro Suzuki AW
+base,693,,false,,Torii Hunter AW
+base,694,,false,,Greg Maddux AW
+base,695,,false,,Brad Ausmus AW
+base,696,,false,,Todd Helton AW
+base,697,,false,,Fernando Vina AW
+base,698,,false,,Scott Rolen AW
+base,699,,false,,Edgar Renteria AW
+base,700,,false,,Andruw Jones AW
+base,701,,false,,Larry Walker AW
+base,702,,false,,Jim Edmonds AW
+base,703,,false,,Barry Zito AW
+base,704,,false,,Randy Johnson AW
+base,705,,false,,Miguel Tejada AW
+base,706,,false,,Barry Bonds AW
+base,707,,false,,Eric Hinske AW
+base,708,,false,,Jason Jennings AW
+base,709,,false,,Todd Helton AS
+base,710,,false,,Jeff Kent AS
+base,711,,false,,Edgar Renteria AS
+base,712,,false,,Scott Rolen AS
+base,713,,false,,Barry Bonds AS
+base,714,,false,,Sammy Sosa AS
+base,715,,false,,Vladimir Guerrero AS
+base,716,,false,,Mike Piazza AS
+base,717,,false,,Curt Schilling AS
+base,718,,false,,Randy Johnson AS
+base,719,,false,,Bobby Cox AS
+insert-base-variations,1,Base Variations,false,,Alex Rodriguez
+insert-base-variations,10,Base Variations,false,,Mark Prior
+insert-base-variations,11,Base Variations,false,,Curt Schilling
+insert-base-variations,20,Base Variations,false,,Todd Helton
+insert-base-variations,30,Base Variations,false,,Jason Giambi
+insert-base-variations,50,Base Variations,false,,Sammy Sosa
+insert-base-variations,61,Base Variations,false,,Roger Clemens
+insert-base-variations,73,Base Variations,false,,Luis Gonzalez
+insert-base-variations,77,Base Variations,false,,Miguel Tejada
+insert-base-variations,80,Base Variations,false,,Ivan Rodriguez
+insert-base-variations,90,Base Variations,false,,Alfonso Soriano
+insert-base-variations,100,Base Variations,false,,Ichiro Suzuki
+insert-base-variations,130,Base Variations,false,,Gary Sheffield
+insert-base-variations,150,Base Variations,false,,Kazuhisa Ishii
+insert-base-variations,160,Base Variations,false,,Pat Burrell
+insert-base-variations,170,Base Variations,false,,Vladimir Guerrero
+insert-base-variations,177,Base Variations,false,,Adam Dunn
+insert-base-variations,180,Base Variations,false,,Barry Zito
+insert-base-variations,200,Base Variations,false,,Albert Pujols
+insert-base-variations,230,Base Variations,false,,Lance Berkman
+insert-base-variations,250,Base Variations,false,,Nomar Garciaparra
+insert-base-variations,300,Base Variations,false,,Andy Marte
+insert-base-variations,321,Base Variations,false,,Walter Young
+insert-base-variations,322,Base Variations,false,,Marlon Byrd / Jorge Padilla
+insert-base-variations,324,Base Variations,false,,Hank Blalock / Mark Teixeira
+insert-base-variations,368,Base Variations,false,,Francisco Rodriguez
+insert-base-variations,370,Base Variations,false,,Chipper Jones
+insert-base-variations,380,Base Variations,false,,Randy Johnson
+insert-base-variations,387,Base Variations,false,,Nick Johnson
+insert-base-variations,390,Base Variations,false,,"Ken Griffey, Jr."
+insert-base-variations,396,Base Variations,false,,Barry Bonds
+insert-base-variations,400,Base Variations,false,,Derek Jeter
+insert-base-variations,421,Base Variations,false,,Carlos Delgado
+insert-base-variations,433,Base Variations,false,,Torii Hunter
+insert-base-variations,450,Base Variations,false,,Pedro Martinez
+insert-base-variations,461,Base Variations,false,,Jim Edmonds
+insert-base-variations,489,Base Variations,false,,Scott Rolen
+insert-base-variations,500,Base Variations,false,,Mike Piazza
+insert-base-variations,515,Base Variations,false,,Darin Erstad
+insert-base-variations,530,Base Variations,false,,Eric Chavez
+insert-base-variations,550,Base Variations,false,,Manny Ramirez
+insert-base-variations,558,Base Variations,false,,Tim Hudson
+insert-base-variations,585,Base Variations,false,,Mike Sweeney
+insert-base-variations,593,Base Variations,false,,Jeff Bagwell
+insert-base-variations,600,Base Variations,false,,Garret Anderson
+insert-all-stars,1,All Stars,false,,Alfonso Soriano
+insert-all-stars,2,All Stars,false,,Barry Bonds
+insert-all-stars,3,All Stars,false,,Ichiro Suzuki
+insert-all-stars,4,All Stars,false,,Alex Rodriguez
+insert-all-stars,5,All Stars,false,,Miguel Tejada
+insert-all-stars,6,All Stars,false,,Nomar Garciaparra
+insert-all-stars,7,All Stars,false,,Jason Giambi
+insert-all-stars,8,All Stars,false,,Manny Ramirez
+insert-all-stars,9,All Stars,false,,Derek Jeter
+insert-all-stars,10,All Stars,false,,Garret Anderson
+insert-all-stars,11,All Stars,false,,Barry Zito
+insert-all-stars,12,All Stars,false,,Sammy Sosa
+insert-all-stars,13,All Stars,false,,Adam Dunn
+insert-all-stars,14,All Stars,false,,Vladimir Guerrero
+insert-all-stars,15,All Stars,false,,Mike Piazza
+insert-all-stars,16,All Stars,false,,Shawn Green
+insert-all-stars,17,All Stars,false,,Luis Gonzalez
+insert-all-stars,18,All Stars,false,,Todd Helton
+insert-all-stars,19,All Stars,false,,Torii Hunter
+insert-all-stars,20,All Stars,false,,Curt Schilling
+auto-autographs,AK1,Autographs,true,,Austin Kearns F1
+auto-autographs,AK2,Autographs,true,,Austin Kearns C2
+auto-autographs,MT1,Autographs,true,,Miguel Tejada A1
+auto-autographs,MT2,Autographs,true,,Miguel Tejada C2
+auto-autographs,PL1,Autographs,true,,Paul Lo Duca F1
+auto-autographs,PL2,Autographs,true,,Paul Lo Duca C2
+insert-blue-backs,BB1,Blue Backs,false,,Albert Pujols
+insert-blue-backs,BB2,Blue Backs,false,,Ichiro Suzuki
+insert-blue-backs,BB3,Blue Backs,false,,Sammy Sosa
+insert-blue-backs,BB4,Blue Backs,false,,Kazuhisa Ishii
+insert-blue-backs,BB5,Blue Backs,false,,Alex Rodriguez
+insert-blue-backs,BB6,Blue Backs,false,,Derek Jeter
+insert-blue-backs,BB7,Blue Backs,false,,Vladimir Guerrero
+insert-blue-backs,BB8,Blue Backs,false,,Ken Griffey Jr.
+insert-blue-backs,BB9,Blue Backs,false,,Jason Giambi
+insert-blue-backs,BB10,Blue Backs,false,,Todd Helton
+insert-blue-backs,BB11,Blue Backs,false,,Mike Piazza
+insert-blue-backs,BB12,Blue Backs,false,,Nomar Garciaparra
+insert-blue-backs,BB13,Blue Backs,false,,Chipper Jones
+insert-blue-backs,BB14,Blue Backs,false,,Ivan Rodriguez
+insert-blue-backs,BB15,Blue Backs,false,,Luis Gonzalez
+insert-blue-backs,BB16,Blue Backs,false,,Pat Burrell
+insert-blue-backs,BB17,Blue Backs,false,,Mark Prior
+insert-blue-backs,BB18,Blue Backs,false,,Adam Dunn
+insert-blue-backs,BB19,Blue Backs,false,,Jeff Bagwell
+insert-blue-backs,BB20,Blue Backs,false,,Austin Kearns
+insert-blue-backs,BB21,Blue Backs,false,,Alfonso Soriano
+insert-blue-backs,BB22,Blue Backs,false,,Jim Thome
+insert-blue-backs,BB23,Blue Backs,false,,Bernie Williams
+insert-blue-backs,BB24,Blue Backs,false,,Pedro Martinez
+insert-blue-backs,BB25,Blue Backs,false,,Lance Berkman
+insert-blue-backs,BB26,Blue Backs,false,,Randy Johnson
+insert-blue-backs,BB27,Blue Backs,false,,Rafael Palmeiro
+insert-blue-backs,BB28,Blue Backs,false,,Richie Sexson
+insert-blue-backs,BB29,Blue Backs,false,,Troy Glaus
+insert-blue-backs,BB30,Blue Backs,false,,Shawn Green
+insert-blue-backs,BB31,Blue Backs,false,,Larry Walker
+insert-blue-backs,BB32,Blue Backs,false,,Eric Hinske
+insert-blue-backs,BB33,Blue Backs,false,,Andruw Jones
+insert-blue-backs,BB34,Blue Backs,false,,Barry Bonds
+insert-blue-backs,BB35,Blue Backs,false,,Curt Schilling
+insert-blue-backs,BB36,Blue Backs,false,,Greg Maddux
+insert-blue-backs,BB37,Blue Backs,false,,Jimmy Rollins
+insert-blue-backs,BB38,Blue Backs,false,,Eric Chavez
+insert-blue-backs,BB39,Blue Backs,false,,Scott Rolen
+insert-blue-backs,BB40,Blue Backs,false,,Mike Sweeney
+insert-box-bottoms,1,Box Bottoms,false,,Alex Rodriguez
+insert-box-bottoms,10,Box Bottoms,false,,Mark Prior
+insert-box-bottoms,11,Box Bottoms,false,,Curt Schilling
+insert-box-bottoms,20,Box Bottoms,false,,Todd Helton
+insert-box-bottoms,50,Box Bottoms,false,,Sammy Sosa
+insert-box-bottoms,73,Box Bottoms,false,,Luis Gonzalez
+insert-box-bottoms,77,Box Bottoms,false,,Miguel Tejada
+insert-box-bottoms,80,Box Bottoms,false,,Ivan Rodriguez
+insert-box-bottoms,90,Box Bottoms,false,,Alfonso Soriano
+insert-box-bottoms,150,Box Bottoms,false,,Kazuhisa Ishii
+insert-box-bottoms,160,Box Bottoms,false,,Pat Burrell
+insert-box-bottoms,177,Box Bottoms,false,,Adam Dunn
+insert-box-bottoms,180,Box Bottoms,false,,Barry Zito
+insert-box-bottoms,200,Box Bottoms,false,,Albert Pujols
+insert-box-bottoms,230,Box Bottoms,false,,Lance Berkman
+insert-box-bottoms,250,Box Bottoms,false,,Nomar Garciaparra
+insert-box-bottoms,368,Box Bottoms,false,,Francisco Rodriguez
+insert-box-bottoms,370,Box Bottoms,false,,Chipper Jones
+insert-box-bottoms,380,Box Bottoms,false,,Randy Johnson
+insert-box-bottoms,387,Box Bottoms,false,,Nick Johnson
+insert-box-bottoms,390,Box Bottoms,false,,Ken Griffey Jr.
+insert-box-bottoms,396,Box Bottoms,false,,Barry Bonds
+insert-box-bottoms,433,Box Bottoms,false,,Torii Hunter
+insert-box-bottoms,450,Box Bottoms,false,,Pedro Martinez
+insert-box-bottoms,489,Box Bottoms,false,,Scott Rolen
+insert-box-bottoms,500,Box Bottoms,false,,Mike Piazza
+insert-box-bottoms,530,Box Bottoms,false,,Eric Chavez
+insert-box-bottoms,550,Box Bottoms,false,,Manny Ramirez
+insert-box-bottoms,558,Box Bottoms,false,,Tim Hudson
+insert-box-bottoms,585,Box Bottoms,false,,Mike Sweeney
+insert-box-bottoms,593,Box Bottoms,false,,Jeff Bagwell
+insert-box-bottoms,600,Box Bottoms,false,,Garret Anderson
+insert-draft-picks-bonus,1,Draft Picks Bonus,false,,Brandon Wood
+insert-draft-picks-bonus,2,Draft Picks Bonus,false,,Ryan Wagner
+insert-draft-picks-bonus,3,Draft Picks Bonus,false,,Sean Rodriguez
+insert-draft-picks-bonus,4,Draft Picks Bonus,false,,Chris Lubanski
+insert-draft-picks-bonus,5,Draft Picks Bonus,false,,Chad Billingsley
+insert-draft-picks-bonus,6,Draft Picks Bonus,false,,Javi Herrera
+insert-draft-picks-bonus,7,Draft Picks Bonus,false,,Brian McFall
+insert-draft-picks-bonus,8,Draft Picks Bonus,false,,Nick Markakis
+insert-draft-picks-bonus,9,Draft Picks Bonus,false,,Adam Miller
+insert-draft-picks-bonus,10,Draft Picks Bonus,false,,Daric Barton
+insert-first-year-player-bonus,1,First Year Player Bonus,false,,Ismael Castro
+insert-first-year-player-bonus,2,First Year Player Bonus,false,,Branden Florence
+insert-first-year-player-bonus,3,First Year Player Bonus,false,,Michael Garciaparra
+insert-first-year-player-bonus,4,First Year Player Bonus,false,,Pete LaForest
+insert-first-year-player-bonus,5,First Year Player Bonus,false,,Hanley Ramirez
+insert-first-year-player-bonus,6,First Year Player Bonus,false,,Rajai Davis
+insert-first-year-player-bonus,7,First Year Player Bonus,false,,Gary Schneidmiller
+insert-first-year-player-bonus,8,First Year Player Bonus,false,,Corey Shafer
+insert-first-year-player-bonus,9,First Year Player Bonus,false,,Thomari Story-Harden
+insert-first-year-player-bonus,10,First Year Player Bonus,false,,Bryan Grace
+insert-hit-parade,1,Hit Parade,false,,Barry Bonds
+insert-hit-parade,2,Hit Parade,false,,Sammy Sosa
+insert-hit-parade,3,Hit Parade,false,,Rafael Palmeiro
+insert-hit-parade,4,Hit Parade,false,,Fred McGriff
+insert-hit-parade,5,Hit Parade,false,,Ken Griffey Jr.
+insert-hit-parade,6,Hit Parade,false,,Juan Gonzalez
+insert-hit-parade,7,Hit Parade,false,,Andres Galarraga
+insert-hit-parade,8,Hit Parade,false,,Jeff Bagwell
+insert-hit-parade,9,Hit Parade,false,,Frank Thomas
+insert-hit-parade,10,Hit Parade,false,,Matt Williams
+insert-hit-parade,11,Hit Parade,false,,Barry Bonds
+insert-hit-parade,12,Hit Parade,false,,Rafael Palmeiro
+insert-hit-parade,13,Hit Parade,false,,Fred McGriff
+insert-hit-parade,14,Hit Parade,false,,Andres Galarraga
+insert-hit-parade,15,Hit Parade,false,,Ken Griffey Jr.
+insert-hit-parade,16,Hit Parade,false,,Sammy Sosa
+insert-hit-parade,17,Hit Parade,false,,Jeff Bagwell
+insert-hit-parade,18,Hit Parade,false,,Juan Gonzalez
+insert-hit-parade,19,Hit Parade,false,,Frank Thomas
+insert-hit-parade,20,Hit Parade,false,,Matt Williams
+insert-hit-parade,21,Hit Parade,false,,Rickey Henderson
+insert-hit-parade,22,Hit Parade,false,,Rafael Palmeiro
+insert-hit-parade,23,Hit Parade,false,,Roberto Alomar
+insert-hit-parade,24,Hit Parade,false,,Barry Bonds
+insert-hit-parade,25,Hit Parade,false,,Mark Grace
+insert-hit-parade,26,Hit Parade,false,,Fred McGriff
+insert-hit-parade,27,Hit Parade,false,,Julio Franco
+insert-hit-parade,28,Hit Parade,false,,Craig Biggio
+insert-hit-parade,29,Hit Parade,false,,Andres Galarraga
+insert-hit-parade,30,Hit Parade,false,,Barry Larkin
+insert-hobby-masters,HM1,Hobby Masters,false,,Ichiro Suzuki
+insert-hobby-masters,HM2,Hobby Masters,false,,Kazuhisa Ishii
+insert-hobby-masters,HM3,Hobby Masters,false,,Derek Jeter
+insert-hobby-masters,HM4,Hobby Masters,false,,Sammy Sosa
+insert-hobby-masters,HM5,Hobby Masters,false,,Alex Rodriguez
+insert-hobby-masters,HM6,Hobby Masters,false,,Mike Piazza
+insert-hobby-masters,HM7,Hobby Masters,false,,Chipper Jones
+insert-hobby-masters,HM8,Hobby Masters,false,,Vladimir Guerrero
+insert-hobby-masters,HM9,Hobby Masters,false,,Nomar Garciaparra
+insert-hobby-masters,HM10,Hobby Masters,false,,Todd Helton
+insert-hobby-masters,HM11,Hobby Masters,false,,Jason Giambi
+insert-hobby-masters,HM12,Hobby Masters,false,,Ken Griffey Jr.
+insert-hobby-masters,HM13,Hobby Masters,false,,Albert Pujols
+insert-hobby-masters,HM14,Hobby Masters,false,,Ivan Rodriguez
+insert-hobby-masters,HM15,Hobby Masters,false,,Mark Prior
+insert-hobby-masters,HM16,Hobby Masters,false,,Adam Dunn
+insert-hobby-masters,HM17,Hobby Masters,false,,Randy Johnson
+insert-hobby-masters,HM18,Hobby Masters,false,,Barry Bonds
+insert-hobby-masters,HM19,Hobby Masters,false,,Alfonso Soriano
+insert-hobby-masters,HM20,Hobby Masters,false,,Pat Burrell
+insert-own-the-game,OG1,Own The Game,false,,Ichiro Suzuki
+insert-own-the-game,OG2,Own The Game,false,,Todd Helton
+insert-own-the-game,OG3,Own The Game,false,,Larry Walker
+insert-own-the-game,OG4,Own The Game,false,,Mike Sweeney
+insert-own-the-game,OG5,Own The Game,false,,Sammy Sosa
+insert-own-the-game,OG6,Own The Game,false,,Lance Berkman
+insert-own-the-game,OG7,Own The Game,false,,Alex Rodriguez
+insert-own-the-game,OG8,Own The Game,false,,Jim Thome
+insert-own-the-game,OG9,Own The Game,false,,Shawn Green
+insert-own-the-game,OG10,Own The Game,false,,Nomar Garciaparra
+insert-own-the-game,OG11,Own The Game,false,,Miguel Tejada
+insert-own-the-game,OG12,Own The Game,false,,Jason Giambi
+insert-own-the-game,OG13,Own The Game,false,,Magglio Ordonez
+insert-own-the-game,OG14,Own The Game,false,,Manny Ramirez
+insert-own-the-game,OG15,Own The Game,false,,Alfonso Soriano
+insert-own-the-game,OG16,Own The Game,false,,Johnny Damon
+insert-own-the-game,OG17,Own The Game,false,,Derek Jeter
+insert-own-the-game,OG18,Own The Game,false,,Albert Pujols
+insert-own-the-game,OG19,Own The Game,false,,Luis Castillo
+insert-own-the-game,OG20,Own The Game,false,,Barry Bonds
+insert-own-the-game,OG21,Own The Game,false,,Garret Anderson
+insert-own-the-game,OG22,Own The Game,false,,Jimmy Rollins
+insert-own-the-game,OG23,Own The Game,false,,Curt Schilling
+insert-own-the-game,OG24,Own The Game,false,,Barry Zito
+insert-own-the-game,OG25,Own The Game,false,,Randy Johnson
+insert-own-the-game,OG26,Own The Game,false,,Tom Glavine
+insert-own-the-game,OG27,Own The Game,false,,Roger Clemens
+insert-own-the-game,OG28,Own The Game,false,,Pedro Martinez
+insert-own-the-game,OG29,Own The Game,false,,Derek Lowe
+insert-own-the-game,OG30,Own The Game,false,,John Smoltz
+insert-prime-cuts-pine-tar-relics,AD1,Prime Cuts Pine Tar Relics,false,,Adam Dunn 1
+insert-prime-cuts-pine-tar-relics,AD2,Prime Cuts Pine Tar Relics,false,,Adam Dunn 2
+insert-prime-cuts-pine-tar-relics,AP1,Prime Cuts Pine Tar Relics,false,,Albert Pujols 1
+insert-prime-cuts-pine-tar-relics,AP2,Prime Cuts Pine Tar Relics,false,,Albert Pujols 2
+insert-prime-cuts-pine-tar-relics,AR1,Prime Cuts Pine Tar Relics,false,,Alex Rodriguez 1
+insert-prime-cuts-pine-tar-relics,AR2,Prime Cuts Pine Tar Relics,false,,Alex Rodriguez 2
+insert-prime-cuts-pine-tar-relics,AS1,Prime Cuts Pine Tar Relics,false,,Alfonso Soriano 1
+insert-prime-cuts-pine-tar-relics,AS2,Prime Cuts Pine Tar Relics,false,,Alfonso Soriano 2
+insert-prime-cuts-pine-tar-relics,EC1,Prime Cuts Pine Tar Relics,false,,Eric Chavez 1
+insert-prime-cuts-pine-tar-relics,EC2,Prime Cuts Pine Tar Relics,false,,Eric Chavez 2
+insert-prime-cuts-pine-tar-relics,LB1,Prime Cuts Pine Tar Relics,false,,Lance Berkman 1
+insert-prime-cuts-pine-tar-relics,LB2,Prime Cuts Pine Tar Relics,false,,Lance Berkman 2
+insert-prime-cuts-pine-tar-relics,MP2,Prime Cuts Pine Tar Relics,false,,Mike Piazza 1
+insert-prime-cuts-pine-tar-relics,NG1,Prime Cuts Pine Tar Relics,false,,Nomar Garciaparra 1
+insert-prime-cuts-pine-tar-relics,NG2,Prime Cuts Pine Tar Relics,false,,Nomar Garciaparra 2
+insert-prime-cuts-pine-tar-relics,RA1,Prime Cuts Pine Tar Relics,false,,Roberto Alomar 1
+insert-prime-cuts-pine-tar-relics,RA2,Prime Cuts Pine Tar Relics,false,,Roberto Alomar 2
+insert-prime-cuts-pine-tar-relics,RP1,Prime Cuts Pine Tar Relics,false,,Rafael Palmeiro 1
+insert-prime-cuts-pine-tar-relics,RP2,Prime Cuts Pine Tar Relics,false,,Rafael Palmeiro 2
+insert-prime-cuts-relics,AD1,Prime Cuts Relics,false,,Adam Dunn
+insert-prime-cuts-relics,AD2,Prime Cuts Relics,false,,Adam Dunn
+insert-prime-cuts-relics,AR1,Prime Cuts Relics,false,,Alex Rodriguez
+insert-prime-cuts-relics,AR2,Prime Cuts Relics,false,,Alex Rodriguez
+insert-prime-cuts-relics,MP2,Prime Cuts Relics,false,,Mike Piazza
+insert-prime-cuts-relics,NG1,Prime Cuts Relics,false,,Nomar Garciaparra
+insert-prime-cuts-relics,NG2,Prime Cuts Relics,false,,Nomar Garciaparra
+insert-prime-cuts-relics,RA1,Prime Cuts Relics,false,,Roberto Alomar
+insert-prime-cuts-relics,RA2,Prime Cuts Relics,false,,Roberto Alomar
+insert-prime-cuts-trademark-relics,AD1,Prime Cuts Trademark Relics,false,,Adam Dunn 1
+insert-prime-cuts-trademark-relics,AD2,Prime Cuts Trademark Relics,false,,Adam Dunn 2
+insert-prime-cuts-trademark-relics,AP1,Prime Cuts Trademark Relics,false,,Albert Pujols 1
+insert-prime-cuts-trademark-relics,AP2,Prime Cuts Trademark Relics,false,,Albert Pujols 2
+insert-prime-cuts-trademark-relics,AR1,Prime Cuts Trademark Relics,false,,Alex Rodriguez 1
+insert-prime-cuts-trademark-relics,AR2,Prime Cuts Trademark Relics,false,,Alex Rodriguez 2
+insert-prime-cuts-trademark-relics,AS1,Prime Cuts Trademark Relics,false,,Alfonso Soriano 1
+insert-prime-cuts-trademark-relics,AS2,Prime Cuts Trademark Relics,false,,Alfonso Soriano 2
+insert-prime-cuts-trademark-relics,EC1,Prime Cuts Trademark Relics,false,,Eric Chavez 1
+insert-prime-cuts-trademark-relics,EC2,Prime Cuts Trademark Relics,false,,Eric Chavez 2
+insert-prime-cuts-trademark-relics,LB1,Prime Cuts Trademark Relics,false,,Lance Berkman 1
+insert-prime-cuts-trademark-relics,LB2,Prime Cuts Trademark Relics,false,,Lance Berkman 2
+insert-prime-cuts-trademark-relics,MP2,Prime Cuts Trademark Relics,false,,Mike Piazza 1
+insert-prime-cuts-trademark-relics,NG1,Prime Cuts Trademark Relics,false,,Nomar Garciaparra 1
+insert-prime-cuts-trademark-relics,NG2,Prime Cuts Trademark Relics,false,,Nomar Garciaparra 2
+insert-prime-cuts-trademark-relics,RA1,Prime Cuts Trademark Relics,false,,Roberto Alomar 1
+insert-prime-cuts-trademark-relics,RA2,Prime Cuts Trademark Relics,false,,Roberto Alomar 2
+insert-prime-cuts-trademark-relics,RP1,Prime Cuts Trademark Relics,false,,Rafael Palmeiro 1
+insert-prime-cuts-trademark-relics,RP2,Prime Cuts Trademark Relics,false,,Rafael Palmeiro 2
+insert-record-breakers,AR1,Record Breakers,false,,Alex Rodriguez
+insert-record-breakers,AR2,Record Breakers,false,,Alex Rodriguez
+insert-record-breakers,BB1,Record Breakers,false,,Barry Bonds
+insert-record-breakers,BB2,Record Breakers,false,,Barry Bonds
+insert-record-breakers,CD1,Record Breakers,false,,Carlos Delgado
+insert-record-breakers,CD2,Record Breakers,false,,Carlos Delgado
+insert-record-breakers,FR1,Record Breakers,false,,Frank Robinson
+insert-record-breakers,FR2,Record Breakers,false,,Frank Robinson
+insert-record-breakers,GB1,Record Breakers,false,,George Brett
+insert-record-breakers,GB2,Record Breakers,false,,George Brett
+insert-record-breakers,GF1,Record Breakers,false,,George Foster
+insert-record-breakers,GF2,Record Breakers,false,,George Foster
+insert-record-breakers,JB1,Record Breakers,false,,Jeff Bagwell
+insert-record-breakers,JB2,Record Breakers,false,,Jeff Bagwell
+insert-record-breakers,JM1,Record Breakers,false,,Juan Marichal
+insert-record-breakers,JM2,Record Breakers,false,,Juan Marichal
+insert-record-breakers,KG1,Record Breakers,false,,Ken Griffey Jr.
+insert-record-breakers,KG2,Record Breakers,false,,Ken Griffey Jr.
+insert-record-breakers,LBR1,Record Breakers,false,,Lou Brock
+insert-record-breakers,LBR2,Record Breakers,false,,Lou Brock
+insert-record-breakers,LB1,Record Breakers,false,,Lance Berkman
+insert-record-breakers,LB2,Record Breakers,false,,Lance Berkman
+insert-record-breakers,LG1,Record Breakers,false,,Luis Gonzalez
+insert-record-breakers,LG2,Record Breakers,false,,Luis Gonzalez
+insert-record-breakers,RH1,Record Breakers,false,,Rickey Henderson
+insert-record-breakers,RH2,Record Breakers,false,,Rickey Henderson
+insert-record-breakers,RJ1,Record Breakers,false,,Randy Johnson
+insert-record-breakers,RJ2,Record Breakers,false,,Randy Johnson
+insert-record-breakers,RS1,Record Breakers,false,,Richie Sexson
+insert-record-breakers,RS2,Record Breakers,false,,Richie Sexson
+insert-record-breakers,RY1,Record Breakers,false,,Robin Yount
+insert-record-breakers,RY2,Record Breakers,false,,Robin Yount
+insert-record-breakers,SG1,Record Breakers,false,,Shawn Green
+insert-record-breakers,SG2,Record Breakers,false,,Shawn Green
+insert-record-breakers,SS1,Record Breakers,false,,Sammy Sosa
+insert-record-breakers,SS2,Record Breakers,false,,Sammy Sosa
+insert-record-breakers,TG1,Record Breakers,false,,Tony Gwynn
+insert-record-breakers,TG2,Record Breakers,false,,Tony Gwynn
+insert-record-breakers,TH1,Record Breakers,false,,Todd Helton
+insert-record-breakers,TH2,Record Breakers,false,,Todd Helton
+insert-record-breakers,TS1,Record Breakers,false,,Tom Seaver
+insert-record-breakers,TS2,Record Breakers,false,,Tom Seaver
+insert-record-breakers,VG1,Record Breakers,false,,Vladimir Guerrero
+insert-record-breakers,VG2,Record Breakers,false,,Vladimir Guerrero
+insert-record-breakers-relics,AR1,Record Breakers Relics,false,,"Alex Rodriguez UNI, B1"
+insert-record-breakers-relics,AR2,Record Breakers Relics,false,,"Alex Rodriguez UNI, B2"
+insert-record-breakers-relics,CD1,Record Breakers Relics,false,,"Carlos Delgado UNI, B1"
+insert-record-breakers-relics,CD2,Record Breakers Relics,false,,"Carlos Delgado UNI, B2"
+insert-record-breakers-relics,FR1,Record Breakers Relics,false,,"Frank Robinson BAT, C1"
+insert-record-breakers-relics,FR2,Record Breakers Relics,false,,"Frank Robinson BAT, 2"
+insert-record-breakers-relics,GB1,Record Breakers Relics,false,,"George Brett BAT, C1"
+insert-record-breakers-relics,GB2,Record Breakers Relics,false,,"George Brett BAT, 2"
+insert-record-breakers-relics,RY1,Record Breakers Relics,false,,"Robin Yount UNI, B1"
+insert-record-breakers-relics,RY2,Record Breakers Relics,false,,"Robin Yount BAT, 2"
+insert-record-breakers-relics,TG2,Record Breakers Relics,false,,"Tony Gwynn Avg BAT, 2"
+insert-record-breakers-relics,TH1,Record Breakers Relics,false,,"Todd Helton UNI, B1"
+insert-record-breakers-relics,TH2,Record Breakers Relics,false,,"Todd Helton UNI, B2"
+insert-record-breakers-nolan-ryan,1,Record Breakers Nolan Ryan,false,,Nolan Ryan Angels
+insert-record-breakers-nolan-ryan,2,Record Breakers Nolan Ryan,false,,Nolan Ryan Angels
+insert-record-breakers-nolan-ryan,3,Record Breakers Nolan Ryan,false,,Nolan Ryan Angels
+insert-record-breakers-nolan-ryan,4,Record Breakers Nolan Ryan,false,,Nolan Ryan Angels
+insert-record-breakers-nolan-ryan,5,Record Breakers Nolan Ryan,false,,Nolan Ryan Astros
+insert-record-breakers-nolan-ryan,6,Record Breakers Nolan Ryan,false,,Nolan Ryan Rangers
+insert-record-breakers-nolan-ryan,7,Record Breakers Nolan Ryan,false,,Nolan Ryan Rangers
+insert-red-backs,1,Red Backs,false,,Nomar Garciaparra
+insert-red-backs,2,Red Backs,false,,Ichiro Suzuki
+insert-red-backs,3,Red Backs,false,,Alex Rodriguez
+insert-red-backs,4,Red Backs,false,,Sammy Sosa
+insert-red-backs,5,Red Backs,false,,Barry Bonds
+insert-red-backs,6,Red Backs,false,,Vladimir Guerrero
+insert-red-backs,7,Red Backs,false,,Derek Jeter
+insert-red-backs,8,Red Backs,false,,Miguel Tejada
+insert-red-backs,9,Red Backs,false,,Alfonso Soriano
+insert-red-backs,10,Red Backs,false,,Manny Ramirez
+insert-red-backs,11,Red Backs,false,,Adam Dunn
+insert-red-backs,12,Red Backs,false,,Jason Giambi
+insert-red-backs,13,Red Backs,false,,Mike Piazza
+insert-red-backs,14,Red Backs,false,,Scott Rolen
+insert-red-backs,15,Red Backs,false,,Shawn Green
+insert-red-backs,16,Red Backs,false,,Randy Johnson
+insert-red-backs,17,Red Backs,false,,Todd Helton
+insert-red-backs,18,Red Backs,false,,Garret Anderson
+insert-red-backs,19,Red Backs,false,,Curt Schilling
+insert-red-backs,20,Red Backs,false,,Albert Pujols
+insert-red-backs,21,Red Backs,false,,Chipper Jones
+insert-red-backs,22,Red Backs,false,,Luis Gonzalez
+insert-red-backs,23,Red Backs,false,,Mark Prior
+insert-red-backs,24,Red Backs,false,,Jim Thome
+insert-red-backs,25,Red Backs,false,,Ivan Rodriguez
+insert-red-backs,26,Red Backs,false,,Torii Hunter
+insert-red-backs,27,Red Backs,false,,Lance Berkman
+insert-red-backs,28,Red Backs,false,,Troy Glaus
+insert-red-backs,29,Red Backs,false,,Andruw Jones
+insert-red-backs,30,Red Backs,false,,Barry Zito
+insert-red-backs,31,Red Backs,false,,Jeff Bagwell
+insert-red-backs,32,Red Backs,false,,Magglio Ordonez
+insert-red-backs,33,Red Backs,false,,Pat Burrell
+insert-red-backs,34,Red Backs,false,,Mike Sweeney
+insert-red-backs,35,Red Backs,false,,Rafael Palmeiro
+insert-red-backs,36,Red Backs,false,,Larry Walker
+insert-red-backs,37,Red Backs,false,,Carlos Delgado
+insert-red-backs,38,Red Backs,false,,Brian Giles
+insert-red-backs,39,Red Backs,false,,Pedro Martinez
+insert-red-backs,40,Red Backs,false,,Greg Maddux
+auto-team-topps-legends-autographs,TT1R,Team Topps Legends Autographs,true,,Willie Mays 52 B1
+auto-team-topps-legends-autographs,TT6F,Team Topps Legends Autographs,true,,Whitey Ford 67 D1
+auto-team-topps-legends-autographs,TT7R,Team Topps Legends Autographs,true,,Nolan Ryan 68 C1
+auto-team-topps-legends-autographs,TT8R,Team Topps Legends Autographs,true,,Carl Yastrzemski 60 E1
+auto-team-topps-legends-autographs,TT10R,Team Topps Legends Autographs,true,,Frank Robinson 57 E1
+auto-team-topps-legends-autographs,TT11R,Team Topps Legends Autographs,true,,Tom Seaver 67 B1
+auto-team-topps-legends-autographs,TT13F,Team Topps Legends Autographs,true,,Warren Spahn 65 E1
+auto-team-topps-legends-autographs,TT15,Team Topps Legends Autographs,true,,Reggie Jackson
+auto-team-topps-legends-autographs,TT18F,Team Topps Legends Autographs,true,,Bob Gibson 75 C1
+auto-team-topps-legends-autographs,TT20R,Team Topps Legends Autographs,true,,Harmon Killebrew 55 2
+auto-team-topps-legends-autographs,TT21R,Team Topps Legends Autographs,true,,Bob Feller 52 C1
+auto-team-topps-legends-autographs,TT23F,Team Topps Legends Autographs,true,,Gil McDougald 60 G1
+auto-team-topps-legends-autographs,TT25F,Team Topps Legends Autographs,true,,Luis Tiant 83 F1
+auto-team-topps-legends-autographs,TT27R,Team Topps Legends Autographs,true,,Andy Pafko 52 B1
+auto-team-topps-legends-autographs,TT28R,Team Topps Legends Autographs,true,,Herb Score 56 D1
+auto-team-topps-legends-autographs,TT29F,Team Topps Legends Autographs,true,,Bill Skowron 67 E1
+auto-team-topps-legends-autographs,TT31F,Team Topps Legends Autographs,true,,Clete Boyer 71 C1
+auto-team-topps-legends-autographs,TT33R,Team Topps Legends Autographs,true,,Vida Blue 70 F1
+auto-team-topps-legends-autographs,TT35R,Team Topps Legends Autographs,true,,Joe Pepitone 62 F1
+auto-team-topps-legends-autographs,TT36F,Team Topps Legends Autographs,true,,Enos Slaughter 59 D1
+auto-team-topps-legends-autographs,TT38,Team Topps Legends Autographs,true,,Fergie Jenkins 66 S2
+auto-team-topps-legends-autographs,TT43R,Team Topps Legends Autographs,true,,Bobby Thomson 52 B1
+auto-team-topps-legends-autographs,TT46F,Team Topps Legends Autographs,true,,Robin Roberts 66 E1
+auto-team-topps-legends-autographs,TT47F,Team Topps Legends Autographs,true,,Frank Howard 73 D1
+auto-team-topps-legends-autographs,TT48F,Team Topps Legends Autographs,true,,Bobby Richardson 66 F1
+auto-team-topps-legends-autographs,TT49R,Team Topps Legends Autographs,true,,Tony Kubek 57 A1
+auto-team-topps-legends-autographs,TT50R,Team Topps Legends Autographs,true,,Mickey Lolich 64 C1
+auto-team-topps-legends-autographs,TT51R,Team Topps Legends Autographs,true,,Ralph Branca 52 A1
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,Topps Series 1 Baseball Jumbo Hobby Box
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,TOPPS KANEBO JAPAN SERIES 2 JAPANESE PARALLEL #6 BARRY BONDS CENTERED NM-MT
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,TOPPS BLACK FOIL BORDER 1ST YEAR PARALLEL #27 ANDRES GALARRAGA EXPOS #01/52
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,Topps All American - Tom Brady #41 Foil
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,Topps Black - Ricky Ledee #428 35/52
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,"Topps Matrix Lebron James /Carmelo Anthony Graded 10,9 Two Cards"
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,Topps Baseball Factory Sealed Set - 720 Cards.
+auto-turn-back-the-clock-autographs,1,Turn Back The Clock Autographs,true,,Star - Avoid this product like the plague
+auto-turn-back-the-clock-autographs,2,Turn Back The Clock Autographs,true,,Stars - Below Average Product
+auto-turn-back-the-clock-autographs,3,Turn Back The Clock Autographs,true,,Stars - Average Product
+auto-turn-back-the-clock-autographs,4,Turn Back The Clock Autographs,true,,Stars - Excellent Product
+auto-turn-back-the-clock-autographs,5,Turn Back The Clock Autographs,true,,Stars - Incredible Product
+auto-turn-back-the-clock-autographs,2003,Turn Back The Clock Autographs,true,,Topps Garbage Pail Kids All-New Series 1 Hobby Box
+auto-turn-back-the-clock-autographs,30,Turn Back The Clock Autographs,true,,days

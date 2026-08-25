@@ -1,11 +1,11 @@
 category,cardNumber,parallel,isAuto,printRun,player
-insert-total-o,1,Base,false,,Grant Hill
-insert-total-o,2,Base,false,,Michael Jordan
-insert-total-o,3,Base,false,,Jamal Mashburn
-insert-total-o,4,Base,false,,Reggie Miller
-insert-total-o,5,Base,false,,Hakeem Olajuwon
-insert-total-o,6,Base,false,,Shaquille O'Neal
-insert-total-o,7,Base,false,,Mitch Richmond
-insert-total-o,8,Base,false,,David Robinson
-insert-total-o,9,Base,false,,Glenn Robinson
-insert-total-o,10,Base,false,,Jerry Stackhouse
+insert-total-o,1,Total O,false,,Grant Hill
+insert-total-o,2,Total O,false,,Michael Jordan
+insert-total-o,3,Total O,false,,Jamal Mashburn
+insert-total-o,4,Total O,false,,Reggie Miller
+insert-total-o,5,Total O,false,,Hakeem Olajuwon
+insert-total-o,6,Total O,false,,Shaquille O'Neal
+insert-total-o,7,Total O,false,,Mitch Richmond
+insert-total-o,8,Total O,false,,David Robinson
+insert-total-o,9,Total O,false,,Glenn Robinson
+insert-total-o,10,Total O,false,,Jerry Stackhouse

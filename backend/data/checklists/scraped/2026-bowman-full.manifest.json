@@ -138,5 +138,8 @@
       "section": "Bowman Spotlights",
       "cards": 15
     }
-  ]
+  ],
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.740Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical"
 }
