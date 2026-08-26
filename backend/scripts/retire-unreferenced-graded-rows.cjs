@@ -52,6 +52,23 @@ const CONCURRENCY = Number(process.env.CONCURRENCY || 64);
 const LIMIT = Number(process.env.LIMIT || 0);
 const MANIFEST = process.env.MANIFEST || "/tmp/retire-graded-manifest.txt";
 
+// CF-RETIRE-SPLITS-ACROSS-SLOTS (Drew, 2026-08-26). One worker deletes ~22,100
+// rows/min, so 15.4M is roughly 11 hours. Racing several unpartitioned workers
+// over the same scan buys nothing -- one deletes, the rest collect 404s -- so
+// split the setKey space server-side, exactly as the re-home does. Slots never
+// overlap and need no coordination. SLOTS=1 is the previous behaviour.
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+
+function slotRange(slot, slots) {
+  if (!Number.isFinite(slots) || slots <= 1) return null;
+  const A = "abcdefghijklmnopqrstuvwxyz".split("");
+  const per = Math.ceil(A.length / slots);
+  const lo = slot === 0 ? "" : (A[slot * per] ?? "~");
+  const hi = slot === slots - 1 ? "~" : (A[(slot + 1) * per] ?? "~");
+  return { lo, hi };
+}
+
 /** Graded rows stranded under a foreign partition key. */
 const TARGET =
   "STARTSWITH(c.id,'hiq:') AND c.id != c.cardId AND IS_DEFINED(c.cardId) " +
@@ -100,10 +117,16 @@ const TARGET =
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, gone = 0, kept = 0;
   const out = APPLY ? null : fs.createWriteStream(MANIFEST, { flags: "w" });
 
+  const range = slotRange(SLOT, SLOTS);
+  const scopedTarget = range
+    ? `${TARGET} AND c.setKey >= '${range.lo}' AND c.setKey < '${range.hi}'`
+    : TARGET;
+  if (range) console.log(`slot ${SLOT}/${SLOTS}  setKey range [${range.lo || "''"} .. ${range.hi})`);
+
   let token, pages = 0;
   do {
     const page = await queryWithRetry(cat,
-      { query: `SELECT c.id, c.cardId, c.gradeTier, c.source FROM c WHERE ${TARGET}` },
+      { query: `SELECT c.id, c.cardId, c.gradeTier, c.source FROM c WHERE ${scopedTarget}` },
       { maxItemCount: 500, continuationToken: token });
     token = page.continuationToken;
 
