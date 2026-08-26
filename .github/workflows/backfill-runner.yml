@@ -476,7 +476,7 @@ jobs:
           echo "retire_deleted=$MOVED"
           if [ "$MOVED" -gt 0 ]; then
             echo "::notice::deleted $MOVED — re-dispatching to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main               -f script=retire-unreferenced-graded-rows -f apply=true               -f concurrency="${{ inputs.concurrency }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main               -f script=retire-unreferenced-graded-rows -f apply=true               -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::nothing deleted — done, no re-dispatch."
           fi
