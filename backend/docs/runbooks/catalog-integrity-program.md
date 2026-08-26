@@ -1,0 +1,215 @@
+# Catalog Integrity Program
+
+**Goal:** one uniform catalog where every row is addressable by its own slug, and
+15.7M sold comps each attached to the right card — or named as a gap worth filling.
+
+All figures measured against production 2026-08-26. Nothing here is estimated
+unless labelled. Update the numbers in place as phases complete.
+
+---
+
+## Where it stands
+
+| | |
+|---|---|
+| `card_catalog` | 47.6M (from 48.5M — retire running) |
+| `sold_comps` carrying a slug | 15,673,468 (98.45%) |
+| Sales landing on **evidence** | **37.83%** |
+| Sales landing on derived rows | 33.99% (self-confirming) |
+| Sales orphaned | **21.79%** |
+| Unknown source | 6.39% |
+
+A naive "did it land on any row" check reports **78.21%**. Roughly half of that
+is the catalog agreeing with rows the sales themselves seeded. Only the evidence
+number is worth quoting.
+
+---
+
+## The programme
+
+Ordered by **dependency**, not priority. Each phase is blocked by the one above
+it. That ordering is the lesson of 2026-08-22 → 26, when repairs kept being
+undone by a generator nobody had stopped.
+
+### 01 — Stop the catalog re-breaking itself · COMPLETE
+
+A nightly grade explosion wrote 19,043,573 rows in 16 hours — 11,441,770 into
+vendor partitions, including 1,462,513 PSA 9.5 rows for a grade PSA does not
+issue. It undid repairs roughly ten times faster than they could be applied.
+
+Separately `getCatalogEntry` partitioned on **sport** and returned `null` for
+every row in the container, so the live sales firehose had been told nothing
+exists.
+
+- [x] `Catalog Grade Explosion` workflow disabled
+- [x] explode rewritten to the contract (#1278)
+- [x] `getCatalogEntry` fixed and deployed (#1277)
+- [x] write-contract guard merged (#1279)
+
+**Verified:** lookup proved against live rows — old path `null`, new path found.
+
+### 02 — Retire the rows nothing references · RUNNING
+
+16,273,427 graded rows sit under a vendor partition key — a third of the
+container. No matcher lookup builds a graded slug, pricing derives grades as
+`raw anchor × multiplier`, and of 15.7M slugged sales only ~1,284 reference a
+graded slug. Those 1,284 are loaded at startup and skipped.
+
+- [x] bounded 50k pass verified
+- [ ] full retire (4 slots, self-relaunching) — ~15.4M remaining, ~3h
+
+**Verified:** bounded pass — total dropped 50,046, target dropped 50,049. Equal
+deltas prove only target rows were removed.
+
+### 03 — Retire the grades that cannot exist · READY (PR #1270)
+
+1,462,513 rows assert PSA 9.5. PSA's scale runs 8, 8.5, 9, 10 — the jump is the
+reason a PSA 10 carries its premium.
+
+- [ ] merge #1270
+- [ ] dispatch `retire-impossible-grade-rows`
+
+**Guard:** re-counts referencing sales on every run and refuses if non-zero
+(`:psa-9-5 → 0 sales`). The predicate can only condemn a scale the ladder
+asserts, so an unknown grader is skipped, never deleted.
+
+### 04 — Re-measure landing · NEXT
+
+The single number that says whether any of this worked. Every slug decision made
+during ingest until 2026-08-26 was taken while the catalog lookup returned
+`null` — so the current 37.83% was produced half-blind.
+
+This tells us how much of the 21.79% orphan slice was the broken lookup versus
+genuine missing checklists, and that decides phase 05 vs 06.
+
+- [ ] run `audit-sales-landing-by-authority.cjs`
+
+**Baseline to beat:** 37.83% evidence · 21.79% orphan.
+
+### 05 — Re-derive sale slugs against the clean catalog · BLOCKED BY 04
+
+Nothing in `sold_comps` gets deleted — it is 8 years of observed transactions and
+is not reproducible. The work is re-derivation: recompute each sale's slug now
+that the catalog is addressable and the lookup answers.
+
+Sales slug to the **base card** and keep the grade in `gradeCompany` /
+`gradeValue`, so retiring graded rows cannot orphan one.
+
+- [ ] re-slug pass
+- [ ] 295 sales claiming PSA 9.5
+- [ ] 564 slugs containing `:null:`
+- [ ] 243,230 rows with no slug at all
+
+### 06 — Split the orphans, then acquire · BLOCKED BY 05
+
+An orphan is either our malformed slug (a repair) or a checklist we genuinely do
+not hold (an acquisition). `audit-orphan-causes.cjs` already separates them.
+Only then is fetching worthwhile — past evidence is that most "missing"
+checklists were already held under a different key.
+
+Source health, tested 2026-08-25:
+
+| source | status | covers |
+|---|---|---|
+| cardboardconnection | **dead (HTTP 000)** | was the broad first stop |
+| hobbymonitor | live | modern only — "will never hold 1995 Fleer" |
+| beckett | live | XLSX; the only surviving vintage path |
+| checklistcentral.cards | live, not wired | supplied 2026-08-25 |
+| keymancollectibles.com | live, not wired | supplied 2026-08-25 |
+| tcdb.com | HTTP 403 on direct GET | use `scrape-tcdb.cjs` |
+
+Any new fetcher emits the canonical CSV format — that is a rule, not a
+preference. See `feedback_every_ingest_uses_the_one_checklist_format`.
+
+### 07 — Pay down the writer debt · OPEN (59 of 61)
+
+Two of 61 catalog writers build rows through `deriveCatalogEntry`. The other 59
+hand-roll their own shape, which is where every defect in this programme
+originated. The guard stops writer #62 adding a fourth addressing scheme; it does
+not convert the 59. **Until they are converted, this programme can recur.**
+
+- [ ] convert writers, shrinking `BYPASSING` in `oneWayToBuildACatalogRow.test.ts`
+
+---
+
+## Decisions outstanding
+
+Each changes what gets built. Recommendations given; none should be Claude's call.
+
+**1. Do grade rows come back at all?**
+A full explode is 18,172,721 eligible identities × 11 tiers = **199,899,931
+rows**. Pricing does not read them; the matcher does not look them up. The
+current 25.8M was only 13% of a completed run.
+→ *Recommend: do not regenerate. Price grades from base × calibration multiplier,
+as `canonicalFmv` already does.*
+
+**2. What happens to the 3.4M derived rows?**
+Rows the catalog built from sales (`ingest-auto-seed`, `sold-comps-stub`,
+`sales-attested`). They make a sale match a row it created itself — but for some
+cards they are the only row that exists.
+→ *Recommend: keep, exclude from the match numerator. Deleting trades a
+measurement problem for a coverage hole.*
+
+**3. Is `attest-unnumbered-by-player` a sanctioned exception?**
+Creates catalog rows from corroborated sales (N independent sales must agree).
+Still sales→catalog, but the least bad version.
+→ *Recommend: keep, tagged derived, never allowed to outvote a checklist.*
+
+**4. When does RU come back down?**
+`card_catalog` at 400,000 (floor ~40,000 RU/s) for the retire; peak observed
+usage was ~10,855 RU/s. `sold_comps` at 100,000; backlog says 8,000.
+→ *Recommend: card_catalog → 40,000 once phase 02 completes. Review sold_comps
+separately.*
+
+---
+
+## Definition of done
+
+| Surface | Condition | Now |
+|---|---|---|
+| card_catalog | every row `id === cardId === slug` | 15.4M short |
+| card_catalog | no grade a company does not issue | 1,462,513 short |
+| card_catalog | one format — setName, parallel, displayName, searchTokens | **done** |
+| checklists | one CSV convention, parallel column authoritative | **25 / 25** |
+| sold_comps | every slug resolves, or the gap is named | 21.79% orphan |
+| sold_comps | landing measured against evidence, not derived rows | 37.83% |
+| writers | all catalog writes through the canonical builder | 2 / 61 |
+
+---
+
+## The contract
+
+`id === cardId === the hiq slug.` Every row is its own single-document
+partition, which is what makes the ~1 RU point read work. `deriveCatalogEntry`
+builds it; `upsertCatalogEntry` writes it.
+
+Before 2026-08-26 three live paths each believed something different:
+
+```
+catalogMatcher.service.ts   item(slug, slug)          canonical
+explodeCatalogGrades.cjs    cardId = parent.cardId    co-located ladder
+cardCatalog.service.ts      item(slug, SPORT)         stale; null for every row
+```
+
+Every repair was correct under one belief and wrong under another. That — not
+any single bug — is what cost four days.
+
+---
+
+## Shipped toward this
+
+Merged 2026-08-25 → 26. Each is a property now defended by a test, not a fix
+that can quietly regress.
+
+| PR | |
+|---|---|
+| #1256 | A job that dropped half its writes turns red instead of green |
+| #1257 | A checklist variation is a rung on a card, not a new card |
+| #1262 | One checklist format — 5,207 rewrites, every one slug-identical |
+| #1259 #1263 | One Piece is not a Bowman card — ingest fixed, 2,433 rows repaired |
+| #1260 | Dedupe counters that did not add up; a keyless row is not stuck |
+| #1271 #1272 #1273 #1274 #1275 #1276 | Re-home: scan retry, year splitting, self-relaunch, termination |
+| #1277 | `getCatalogEntry` returned null for every row in a 48M container |
+| #1278 | The grade explode writes to the contract, with full checklist fields |
+| #1279 | The write contract is guarded — debt may shrink, never grow |
+| #1280 #1281 #1282 | Retire unreferenced graded rows, self-relaunching, split across slots |
