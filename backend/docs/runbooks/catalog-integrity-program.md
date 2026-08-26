@@ -12,7 +12,7 @@ unless labelled. Update the numbers in place as phases complete.
 
 | | |
 |---|---|
-| `card_catalog` | 47.6M (from 48.5M — retire running) |
+| `card_catalog` | **37.3M** (from 48.5M — 11.1M retired) |
 | `sold_comps` carrying a slug | 15,673,468 (98.45%) |
 | Sales landing on **evidence** | **37.83%** |
 | Sales landing on derived rows | 33.99% (self-confirming) |
@@ -48,7 +48,7 @@ exists.
 
 **Verified:** lookup proved against live rows — old path `null`, new path found.
 
-### 02 — Retire the rows nothing references · RUNNING
+### 02 — Retire the rows nothing references · RUNNING (63.6%)
 
 16,273,427 graded rows sit under a vendor partition key — a third of the
 container. No matcher lookup builds a graded slug, pricing derives grades as
@@ -56,18 +56,35 @@ container. No matcher lookup builds a graded slug, pricing derives grades as
 graded slug. Those 1,284 are loaded at startup and skipped.
 
 - [x] bounded 50k pass verified
-- [ ] full retire (4 slots, self-relaunching) — ~15.4M remaining, ~3h
+- [x] sharded by gradeTier, not setKey (#1286)
+- [x] tier discovery retries; slots staggered (#1287)
+- [x] 2,000-row pages — the job is scan-bound, not RU-bound (#1288)
+- [x] exits at a 140-min budget so the relaunch survives the ceiling (#1289)
+- [ ] full retire (11 slots) — **5,921,439 remaining**, ~2h at 50,429 rows/min
+
+**Throughput, measured this evening.** setKey ranges put 89% of the work on
+one of four slots and could not reach 66,711 rows with no setKey at all:
+
+| fleet | rows/min |
+|---|---:|
+| 4 slots, setKey | ~1 slot's worth |
+| 4 slots, gradeTier | 18,675 |
+| 8 slots, 2,000-row pages | 27,522 |
+| 11 slots | **50,429** |
 
 **Verified:** bounded pass — total dropped 50,046, target dropped 50,049. Equal
 deltas prove only target rows were removed.
 
-### 03 — Retire the grades that cannot exist · READY (PR #1270)
+### 03 — Retire the grades that cannot exist · COMPLETE
 
 1,462,513 rows assert PSA 9.5. PSA's scale runs 8, 8.5, 9, 10 — the jump is the
 reason a PSA 10 carries its premium.
 
-- [ ] merge #1270
-- [ ] dispatch `retire-impossible-grade-rows`
+- [x] merge #1270
+- [x] dispatch `retire-impossible-grade-rows`
+
+**Verified:** 1,462,513 → **0**. Every PSA 9.5 row is gone, and the guard
+re-counted referencing sales as zero on every run before deleting.
 
 **Guard:** re-counts referencing sales on every run and refuses if non-zero
 (`:psa-9-5 → 0 sales`). The predicate can only condemn a scale the ladder
@@ -167,8 +184,8 @@ separately.*
 
 | Surface | Condition | Now |
 |---|---|---|
-| card_catalog | every row `id === cardId === slug` | 15.4M short |
-| card_catalog | no grade a company does not issue | 1,462,513 short |
+| card_catalog | every row `id === cardId === slug` | 5.9M short |
+| card_catalog | no grade a company does not issue | **done** |
 | card_catalog | one format — setName, parallel, displayName, searchTokens | **done** |
 | checklists | one CSV convention, parallel column authoritative | **25 / 25** |
 | sold_comps | every slug resolves, or the gap is named | 21.79% orphan |
@@ -213,3 +230,8 @@ that can quietly regress.
 | #1278 | The grade explode writes to the contract, with full checklist fields |
 | #1279 | The write contract is guarded — debt may shrink, never grow |
 | #1280 #1281 #1282 | Retire unreferenced graded rows, self-relaunching, split across slots |
+| #1285 | The retire relaunch forgot which slot it was, and re-dispatched as slot 0 of 16 |
+| #1286 | Shard by grade tier — setKey put 89% on one worker and could not reach 66,711 rows |
+| #1287 | The one query left unretried took a 429 and exited 3 |
+| #1288 | Bigger pages: the job is scan-bound, not RU-bound (2,500 RU/s of 400,000) |
+| #1289 | Stop on our own clock, or the whole fleet dies silently at the 150-min ceiling |
