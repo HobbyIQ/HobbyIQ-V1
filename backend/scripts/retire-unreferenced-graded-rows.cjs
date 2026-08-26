@@ -75,6 +75,20 @@ const TARGET =
   const cat = db.container("card_catalog"), sc = db.container("sold_comps");
   const f = (n) => Number(n).toLocaleString();
 
+  const isThrottle = (e) => /request rate is too large|429/i.test(String(e?.message));
+
+  const fetchAllWithRetry = async (container, spec) => {
+    let wait = 1000;
+    for (let attempt = 0; ; attempt++) {
+      try { return await container.items.query(spec).fetchAll(); }
+      catch (e) {
+        if (!isThrottle(e) || attempt >= 12) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
   const queryWithRetry = async (container, spec, opts) => {
     let wait = 1000;
     for (let attempt = 0; ; attempt++) {
@@ -122,9 +136,14 @@ const TARGET =
   let scopedTarget = TARGET;
   let scopedParams = [];
   if (SLOTS > 1) {
-    const { resources: tierRows } = await cat.items
-      .query(`SELECT c.gradeTier AS t, COUNT(1) AS n FROM c WHERE ${TARGET} GROUP BY c.gradeTier`)
-      .fetchAll();
+    // CF-RETIRE-TIER-DISCOVERY-RETRIES (Drew, 2026-08-26). This GROUP BY is a
+    // full scan of the target set, and every slot issues it at once on dispatch.
+    // Unretried, one slot took a 429 and exited 3 within 36 seconds -- the only
+    // query in the script that was not already behind a retry. Stagger the
+    // starts so four full scans do not land on the same second, then retry.
+    if (SLOT > 0) await new Promise((r) => setTimeout(r, SLOT * 20000));
+    const { resources: tierRows } = await fetchAllWithRetry(cat,
+      { query: `SELECT c.gradeTier AS t, COUNT(1) AS n FROM c WHERE ${TARGET} GROUP BY c.gradeTier` });
     // Deal biggest-first so the eleven ~809k tiers spread evenly instead of
     // landing alphabetically -- plain a-z order put 4 of them on one slot and
     // 2 on another, which is the same imbalance in a smaller costume.
