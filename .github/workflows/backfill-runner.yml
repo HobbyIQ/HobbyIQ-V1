@@ -116,6 +116,7 @@ on:
           - reslug-tcg-out-of-sports-namespace
           - retire-unreferenced-graded-rows
           - retire-impossible-grade-rows
+          - materialize-graded-identities
           - reslugAllSoldComps
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -458,6 +459,28 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      - name: Self-relaunch graded identities until the pool is fully minted
+        # Same contract as the retire: the script stops at its own 140-minute
+        # budget and PRINTS its summary, so "written N" exists to be read. A
+        # process killed by the step ceiling never prints one, which is how a
+        # fleet stops silently while every run stays green.
+        if: ${{ always() && inputs.script == 'materialize-graded-identities' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          MADE=$(grep -aoE "^  written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MADE=${MADE:-0}
+          echo "graded_identities_written=$MADE"
+          if [ "$MADE" -gt 0 ]; then
+            echo "::notice::minted $MADE — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-graded-identities -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::minted nothing — done, no re-dispatch."
+          fi
 
       - name: Self-relaunch the retire until nothing is left to retire
         # CF-RETIRE-SELF-RELAUNCH (Drew, 2026-08-26). 16.2M deletes at ~35k/min
