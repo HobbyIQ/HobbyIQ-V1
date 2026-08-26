@@ -57,6 +57,14 @@ const MANIFEST = process.env.MANIFEST || "/tmp/retire-graded-manifest.txt";
 // over the same scan buys nothing -- one deletes, the rest collect 404s -- so
 // split the setKey space server-side, exactly as the re-home does. Slots never
 // overlap and need no coordination. SLOTS=1 is the previous behaviour.
+// CF-RETIRE-BIGGER-PAGES (Drew, 2026-08-26). Four balanced workers deleted
+// 18,675 rows/min -- about 2,500 RU/s against a container provisioned at
+// 400,000. The job is not RU-bound, it is bound by scan round-trips: each
+// page is a cross-partition scan of a 39M container and the deletes that
+// follow finish long before the next page arrives. Bigger pages amortise the
+// scan over more deletes.
+const PAGE = Number(process.env.PAGE_SIZE || 2000);
+
 const SLOT = Number(process.env.SLOT ?? 0);
 const SLOTS = Number(process.env.SLOTS ?? 1);
 
@@ -166,7 +174,7 @@ const TARGET =
   do {
     const page = await queryWithRetry(cat,
       { query: `SELECT c.id, c.cardId, c.gradeTier, c.source FROM c WHERE ${scopedTarget}`, parameters: scopedParams },
-      { maxItemCount: 500, continuationToken: token });
+      { maxItemCount: PAGE, continuationToken: token });
     token = page.continuationToken;
 
     const work = [];
