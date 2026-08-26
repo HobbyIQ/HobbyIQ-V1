@@ -460,31 +460,26 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          REMAINING=$(node -e "
-            const { CosmosClient } = require('@azure/cosmos');
-            (async () => {
-              const c = new CosmosClient({ connectionString: process.env.COSMOS_CONNECTION_STRING,
-                connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 40, maxWaitTimeInSeconds: 180 } } });
-              const cat = c.database('hobbyiq').container('card_catalog');
-              const ys = String(process.env.REHOME_YEARS || '').split(',').map(x => Number(x.trim())).filter(Boolean);
-              const yc = ys.length ? ' AND c.year IN (' + ys.join(',') + ')' : '';
-              const { resources } = await cat.items.query({
-                query: \"SELECT TOP 1 c.id FROM c WHERE STARTSWITH(c.id,'hiq:') AND c.id != c.cardId AND IS_DEFINED(c.cardId) AND c.cardId != null\" + yc,
-              }, { enableCrossPartitionQuery: true }).fetchAll();
-              console.log(resources.length > 0 ? 'MORE' : 'DONE');
-            })().catch(e => { console.error('probe-error:', e.message); process.exit(2); });
-          " 2>&1)
-          RC=$?
-          echo "rehome_probe=$REMAINING (rc=$RC) years=$REHOME_YEARS slot=${{ inputs.slot }}/${{ inputs.slots }}"
-          if [ "$RC" -ne 0 ]; then
-            echo "::warning::Re-home probe FAILED — skipping self-relaunch. Manual re-dispatch needed."
-            exit 0
-          fi
-          if [ "$REMAINING" = "MORE" ]; then
-            echo "::notice::rows remain for years=$REHOME_YEARS — re-dispatching same slot"
+          # CF-A-RELAUNCH-MUST-TERMINATE (Drew, 2026-08-26). This probe used to
+          # ask whether the YEAR still had rows, which is not this run's
+          # question. Slot 3 of 4 covers setKeys [v..~) and is nearly empty:
+          # for 2008 it found 1 row, moved 0, then saw the year was not done
+          # and re-dispatched ITSELF -- forever, in ~90 second cycles, burning
+          # runner minutes and crowding out the slots doing real work.
+          #
+          # The right question is whether THIS RUN made progress. If a run
+          # re-homed nothing, its slice is drained (or broken) and relaunching
+          # it changes nothing. That terminates by construction and needs no
+          # copy of the slot arithmetic, which is what I was avoiding when I
+          # made it year-scoped in the first place.
+          MOVED=$(grep -aoE "re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=${MOVED:-0}
+          echo "rehome_moved=$MOVED years=$REHOME_YEARS slot=${{ inputs.slot }}/${{ inputs.slots }}"
+          if [ "$MOVED" -gt 0 ]; then
+            echo "::notice::this slot moved $MOVED rows — re-dispatching to continue"
             gh workflow run backfill-runner.yml               --repo "$GITHUB_REPOSITORY"               --ref main               -f script=rehome-catalog-rows-to-own-partition               -f apply=true               -f years="$REHOME_YEARS"               -f slot="${{ inputs.slot }}"               -f slots="${{ inputs.slots }}"               -f concurrency="${{ inputs.concurrency }}"
           else
-            echo "::notice::years=$REHOME_YEARS COMPLETE — no re-dispatch."
+            echo "::notice::this slot moved nothing — slice drained, no re-dispatch."
           fi
 
       - name: Self-relaunch until composite backfill fully drains
