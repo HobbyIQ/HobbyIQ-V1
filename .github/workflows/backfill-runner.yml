@@ -436,6 +436,57 @@ jobs:
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
+      - name: Self-relaunch the re-home until its slice drains
+        # CF-REHOME-SELF-RELAUNCH (Drew, 2026-08-25). 17.7M rows do not move
+        # inside one 150-minute step. Without this the job stops dead at the
+        # ceiling and needs a human to re-dispatch -- at 3am, which is not a
+        # plan, it is a hope.
+        #
+        # `always()` so a TIMED-OUT backfill step still re-dispatches. That is
+        # the whole point: the expected end of a run is the ceiling, not
+        # completion. The re-home is convergent -- a re-homed row has
+        # id == cardId and drops out of the query -- so a relaunch resumes
+        # rather than repeating.
+        #
+        # The probe is scoped to the YEAR, not the slot range. A slot whose own
+        # range is already empty will relaunch once, scan nothing and exit in
+        # seconds; that is cheaper than duplicating the slot arithmetic here and
+        # risking it drifting from the script's.
+        if: ${{ always() && inputs.script == 'rehome-catalog-rows-to-own-partition' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REHOME_YEARS: ${{ inputs.years }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          REMAINING=$(node -e "
+            const { CosmosClient } = require('@azure/cosmos');
+            (async () => {
+              const c = new CosmosClient({ connectionString: process.env.COSMOS_CONNECTION_STRING,
+                connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 40, maxWaitTimeInSeconds: 180 } } });
+              const cat = c.database('hobbyiq').container('card_catalog');
+              const ys = String(process.env.REHOME_YEARS || '').split(',').map(x => Number(x.trim())).filter(Boolean);
+              const yc = ys.length ? ' AND c.year IN (' + ys.join(',') + ')' : '';
+              const { resources } = await cat.items.query({
+                query: \"SELECT TOP 1 c.id FROM c WHERE STARTSWITH(c.id,'hiq:') AND c.id != c.cardId AND IS_DEFINED(c.cardId) AND c.cardId != null\" + yc,
+              }, { enableCrossPartitionQuery: true }).fetchAll();
+              console.log(resources.length > 0 ? 'MORE' : 'DONE');
+            })().catch(e => { console.error('probe-error:', e.message); process.exit(2); });
+          " 2>&1)
+          RC=$?
+          echo "rehome_probe=$REMAINING (rc=$RC) years=$REHOME_YEARS slot=${{ inputs.slot }}/${{ inputs.slots }}"
+          if [ "$RC" -ne 0 ]; then
+            echo "::warning::Re-home probe FAILED — skipping self-relaunch. Manual re-dispatch needed."
+            exit 0
+          fi
+          if [ "$REMAINING" = "MORE" ]; then
+            echo "::notice::rows remain for years=$REHOME_YEARS — re-dispatching same slot"
+            gh workflow run backfill-runner.yml               --repo "$GITHUB_REPOSITORY"               --ref main               -f script=rehome-catalog-rows-to-own-partition               -f apply=true               -f years="$REHOME_YEARS"               -f slot="${{ inputs.slot }}"               -f slots="${{ inputs.slots }}"               -f concurrency="${{ inputs.concurrency }}"
+          else
+            echo "::notice::years=$REHOME_YEARS COMPLETE — no re-dispatch."
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
