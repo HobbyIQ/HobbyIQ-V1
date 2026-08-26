@@ -83,22 +83,65 @@ async function getContainer(): Promise<Container | null> {
 }
 
 /**
- * Look up a catalog entry by slug. Null when the entry doesn't exist
- * or Cosmos is unavailable. Fast: point-read on (id, partition=sport)
- * — parse sport from the slug so we get the point-read instead of
- * a cross-partition scan.
+ * Look up a catalog entry by slug. Null when the entry genuinely does not
+ * exist, or Cosmos is unavailable.
+ *
+ * CF-GETCATALOGENTRY-WAS-A-NULL-GENERATOR (Drew, 2026-08-26). This read
+ * partitioned on SPORT, parsed out of the slug. card_catalog has not
+ * partitioned on /sport since CF-CATALOG-CARDID-PARTITION-KEY — it partitions
+ * on /cardId, which the comment 130 lines below this one already said. So every
+ * call raised a partition-key mismatch, the bare `catch` swallowed it, and the
+ * function returned null for EVERY row in the container.
+ *
+ * It is called by persistVendorSalesToPool — the live sales firehose. That path
+ * has been asking "does the catalog have this card?", being told no about
+ * everything, and proceeding as though nothing exists. A lookup that always
+ * fails is worse than one that throws, because nothing downstream can tell the
+ * difference between "no such card" and "I did not really look".
+ *
+ * Two reads, deliberately in this order:
+ *   1. point read on (slug, slug) — ~1 RU, and correct for every row written
+ *      through deriveCatalogEntry, which sets cardId = id.
+ *   2. on a miss, ONE query by id. 16.4M rows still sit under a foreign
+ *      partition key (a vendor id inherited from the grade explode) and cannot
+ *      be point-read at all until the re-home reaches them. Without this
+ *      fallback the fix would only work for rows that were never broken.
+ *
+ * The fallback is the expensive half and it disappears on its own: as rows are
+ * re-homed, step 1 starts hitting and step 2 stops running.
  */
 export async function getCatalogEntry(slug: string): Promise<CardCatalogEntry | null> {
   if (!slug || !slug.startsWith("hiq:")) return null;
   const c = await getContainer();
   if (!c) return null;
-  const parts = slug.split(":");
-  if (parts.length < 2) return null;
-  const sport = parts[1];
+
   try {
-    const { resource } = await c.item(slug, sport).read<CardCatalogEntry>();
-    return resource ?? null;
-  } catch {
+    const { resource } = await c.item(slug, slug).read<CardCatalogEntry>();
+    if (resource) return resource;
+  } catch (err) {
+    // 404 is "not at its own address", which is a real possibility here and
+    // means fall through. Anything else is a fault worth surfacing rather than
+    // silently reporting the card as missing.
+    const code = (err as { code?: number })?.code;
+    if (code !== undefined && code !== 404) {
+      console.warn(JSON.stringify({
+        event: "catalog.point_read_failed", source: "cardCatalog.service", slug, code,
+      }));
+      return null;
+    }
+  }
+
+  try {
+    const { resources } = await c.items.query<CardCatalogEntry>({
+      query: "SELECT TOP 1 * FROM c WHERE c.id = @id",
+      parameters: [{ name: "@id", value: slug }],
+    }).fetchAll();
+    return resources[0] ?? null;
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "catalog.fallback_query_failed", source: "cardCatalog.service", slug,
+      message: (err as Error)?.message,
+    }));
     return null;
   }
 }
