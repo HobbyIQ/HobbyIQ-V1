@@ -12,12 +12,12 @@ unless labelled. Update the numbers in place as phases complete.
 
 | | |
 |---|---|
-| `card_catalog` | **37.3M** (from 48.5M — 11.1M retired) |
+| `card_catalog` | **31.4M** (from 48.5M — 17.1M retired) |
 | `sold_comps` carrying a slug | 15,673,468 (98.45%) |
-| Sales landing on **evidence** | **37.83%** |
-| Sales landing on derived rows | 33.99% (self-confirming) |
-| Sales orphaned | **21.79%** |
-| Unknown source | 6.39% |
+| Sales landing on **evidence** | **39.42%** (was 37.83%) |
+| Sales landing on derived rows | 31.55% (was 33.99%) |
+| Sales orphaned | **22.07%** (was 21.79%) |
+| Unknown source | 6.96% |
 
 A naive "did it land on any row" check reports **78.21%**. Roughly half of that
 is the catalog agreeing with rows the sales themselves seeded. Only the evidence
@@ -48,7 +48,7 @@ exists.
 
 **Verified:** lookup proved against live rows — old path `null`, new path found.
 
-### 02 — Retire the rows nothing references · RUNNING (63.6%)
+### 02 — Retire the rows nothing references · COMPLETE
 
 16,273,427 graded rows sit under a vendor partition key — a third of the
 container. No matcher lookup builds a graded slug, pricing derives grades as
@@ -60,7 +60,11 @@ graded slug. Those 1,284 are loaded at startup and skipped.
 - [x] tier discovery retries; slots staggered (#1287)
 - [x] 2,000-row pages — the job is scan-bound, not RU-bound (#1288)
 - [x] exits at a 140-min budget so the relaunch survives the ceiling (#1289)
-- [ ] full retire (11 slots) — **5,921,439 remaining**, ~2h at 50,429 rows/min
+- [x] full retire (11 slots) — **16,273,427 → 1,018**
+
+**Verified:** every one of the 1,018 survivors is referenced by a sale, and
+the guard protects exactly those. Unprotected leftovers: **0**. The residual
+is the protection working, not a stall.
 
 **Throughput, measured this evening.** setKey ranges put 89% of the work on
 one of four slots and could not reach 66,711 rows with no setKey at all:
@@ -90,7 +94,7 @@ re-counted referencing sales as zero on every run before deleting.
 (`:psa-9-5 → 0 sales`). The predicate can only condemn a scale the ladder
 asserts, so an unknown grader is skipped, never deleted.
 
-### 04 — Re-measure landing · NEXT
+### 04 — Re-measure landing · COMPLETE
 
 The single number that says whether any of this worked. Every slug decision made
 during ingest until 2026-08-26 was taken while the catalog lookup returned
@@ -99,7 +103,25 @@ during ingest until 2026-08-26 was taken while the catalog lookup returned
 This tells us how much of the 21.79% orphan slice was the broken lookup versus
 genuine missing checklists, and that decides phase 05 vs 06.
 
-- [ ] run `audit-sales-landing-by-authority.cjs`
+- [x] run `audit-sales-landing-by-authority.cjs`
+
+| | baseline | now | Δ |
+|---|---:|---:|---:|
+| **evidence** | 37.83% | **39.42%** | +1.6 |
+| derived | 33.99% | 31.55% | −2.4 |
+| orphan | 21.79% | 22.07% | +0.3 |
+
+n=2,501 distinct slugs, so ±1–2 points is sampling noise.
+
+**The cleanup barely moved matching, and that is the expected result.** The
+17.1M rows retired were unreachable graded rows that no lookup ever built a
+slug for, so removing them could not improve landing. Phase 02's value is
+that the catalog stopped re-breaking itself and now has one addressing
+scheme at a third of the size — not a better match rate.
+
+**This decides 05 vs 06:** orphan did not fall, so the 22% is not mostly our
+malformed slugs being fixed by a working lookup. Re-slug first (05), then
+split what remains into repair vs acquisition (06).
 
 **Baseline to beat:** 37.83% evidence · 21.79% orphan.
 
@@ -184,12 +206,12 @@ separately.*
 
 | Surface | Condition | Now |
 |---|---|---|
-| card_catalog | every row `id === cardId === slug` | 5.9M short |
+| card_catalog | every row `id === cardId === slug` | **done** (1,018 protected) |
 | card_catalog | no grade a company does not issue | **done** |
 | card_catalog | one format — setName, parallel, displayName, searchTokens | **done** |
 | checklists | one CSV convention, parallel column authoritative | **25 / 25** |
-| sold_comps | every slug resolves, or the gap is named | 21.79% orphan |
-| sold_comps | landing measured against evidence, not derived rows | 37.83% |
+| sold_comps | every slug resolves, or the gap is named | 22.07% orphan |
+| sold_comps | landing measured against evidence, not derived rows | 39.42% |
 | writers | all catalog writes through the canonical builder | 2 / 61 |
 
 ---
