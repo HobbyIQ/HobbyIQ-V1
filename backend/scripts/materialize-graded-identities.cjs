@@ -54,6 +54,12 @@ const {
   canonicalGradeCompany,
   isIssuedGrade,
 } = require(path.join(backend, "dist/services/catalog/gradeLadder.service.js"));
+// CF-ONE-WAY-TO-BUILD-A-CATALOG-ROW. Writer #62 is exactly what the write
+// contract guard exists to stop, and it caught this script hand-rolling
+// `container.upsert`. Route through the one write path instead: it unions
+// vendorIds rather than dropping them, and refuses to let a lower-confidence
+// row overwrite a higher-confidence one.
+const { upsertCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 64));
@@ -204,7 +210,7 @@ async function main() {
           row.gradedIdentitySource = "sold_comps";   // provenance: a sale proved this pairing
 
           if (!APPLY) { written++; return; }
-          await retry(() => cat.items.upsert(row));
+          await retry(() => upsertCatalogEntry(row));
           written++;
         } catch (e) {
           failed++;
