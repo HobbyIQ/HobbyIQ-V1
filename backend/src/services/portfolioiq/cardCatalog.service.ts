@@ -46,8 +46,12 @@ export interface CardCatalogEntry {
   parallelSlug: string;              // slug form ("blue-refractor")
   isAuto: boolean;
   printRun: number | null;
-  playerName: string;
-  playerSlug: string;                // for player search
+  // 2,645,310 rows (8.4%) carry no player: unnamed checklist slots, team and
+  // logo cards, and parallel rows seeded before a name was known. The type
+  // said `string` and the data disagreed, which is a second reason writers
+  // built their own doc rather than satisfy this one.
+  playerName: string | null;
+  playerSlug: string | null;         // for player search
   // Vendor cross-reference. Keys are source names; values are the
   // vendor's opaque card id for this catalog entry. Populate as we
   // encounter each vendor.
@@ -58,13 +62,76 @@ export interface CardCatalogEntry {
     phash?: string;
     verifiedAt: string;
   };
-  // Provenance
-  source: "seed" | "ch-catalog" | "cs-catalog" | "user-verified" | "auto-inferred";
+  // Provenance.
+  //
+  // CF-THE-TYPE-MUST-BE-ABLE-TO-EXPRESS-THE-ROWS (Drew, 2026-08-26). This was
+  // a five-value union: "seed" | "ch-catalog" | "cs-catalog" | "user-verified"
+  // | "auto-inferred". Measured against production it admitted 45 rows out of
+  // 31,444,200 -- 100.0% of the catalog carried a source this type could not
+  // express, across 99 distinct values (baseballcardpedia 13.9M, bccp 1.6M,
+  // checklistcenter 1.5M, ingest-auto-seed 933k, cardsight 720k, ...).
+  //
+  // That is why 59 of 61 writers bypass upsertCatalogEntry: routing through it
+  // meant lying about where the row came from, so everyone wrote their own doc
+  // instead -- and every one of those hand-rolled shapes is what the repair
+  // sweeps have been chasing. A type nobody can satisfy does not enforce a
+  // contract, it just moves the writes somewhere unguarded.
+  //
+  // Left open deliberately rather than enumerated: sources are minted by
+  // scrapers and dated batches ("beckett-scraped-2026-08-26"), and a closed
+  // union would need editing for each one -- which is the exact friction that
+  // produced the bypassing in the first place. Convention is
+  // `<origin>` for identities and `<origin>-graded` for their grade rows.
+  source: string;
   confidence: number;                // 0-1
   observedAt: string;
   lastSeenAt: string;
   // Live counter for how many sold_comps rows point at this entry
   compCount?: number;
+
+  // CF-THE-TYPE-MUST-BE-ABLE-TO-EXPRESS-THE-ROWS (Drew, 2026-08-26).
+  //
+  // Everything below is present on real rows and was absent from this type,
+  // measured over 31,449,325 production rows:
+  //
+  //   searchTokens        99.0%        subsetName      49.8%
+  //   setName             98.9%        gradeTier       28.0%
+  //   searchText          89.9%        parentSlug      28.0%
+  //   displayName         89.6%        gradeCompany    25.6%
+  //   verificationStatus  87.1%        team             6.1%
+  //   catalogVersion      85.8%        imageUrl         3.0%
+  //
+  // This is the rest of the answer to why 59 of 61 writers hand-roll their
+  // own doc. A writer that routed through this type would have DROPPED
+  // searchTokens and setName -- the fields catalog search and the matcher
+  // discriminate on -- so going around it was self-preservation, not
+  // laziness. A canonical path that silently loses 99%-present fields does
+  // not get adopted, and cannot be enforced.
+  //
+  // All optional, so this widening cannot break an existing constructor.
+  setName?: string;
+  displayName?: string;
+  searchTokens?: string[];
+  searchText?: string;
+  subsetName?: string | null;
+  team?: string | null;
+  imageUrl?: string | null;
+  brand?: string;
+  // Null for a flagship that has no parent — deriveParentSetKey returns null
+  // there, and a `string`-only field would force every caller to lie or cast.
+  parentSetKey?: string | null;
+  verificationStatus?: string;
+  catalogVersion?: number;
+  firstSeenAt?: string;
+  observedCompCount?: number;
+
+  // Grade rows: a graded card is its parent card plus a grade. parentSlug
+  // points at the identity this one grades. See materialize-graded-identities.
+  parentSlug?: string;
+  gradeTier?: string;
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  gradeQualifier?: string | null;
 }
 
 let _cached: Container | null = null;

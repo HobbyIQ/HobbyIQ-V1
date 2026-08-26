@@ -94,7 +94,6 @@ const BYPASSING = new Set([
   "backend/scripts/seedCatalogFromUnmatchedPool.cjs",
   "backend/scripts/tca-match-enricher.cjs",
   "backend/scripts/tcdbBatchFill.cjs",
-  "backend/src/services/catalog/ensureCatalogRow.service.ts",
   "backend/src/services/portfolioiq/catalogReview.service.ts",
   "backend/src/services/portfolioiq/checklistDiff.service.ts",
   "backend/src/services/portfolioiq/ebayAutoHolding.service.ts",
