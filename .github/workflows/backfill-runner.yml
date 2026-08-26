@@ -114,6 +114,7 @@ on:
           - dedupe-catalog-partition-shadows
           - rehome-catalog-rows-to-own-partition
           - reslug-tcg-out-of-sports-namespace
+          - retire-unreferenced-graded-rows
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -176,6 +177,11 @@ on:
         required: false
         default: ""
         type: string
+      parents_only:
+        description: "For rehome-catalog-rows-to-own-partition: only move identity rows, skipping graded rows (which are regenerable from their parent)."
+        required: false
+        default: false
+        type: boolean
       retire_no_partition_key:
         description: "For dedupe-catalog-partition-shadows: also retire duplicate rows that carry NO partition key. They ARE addressable; off by default because it is a delete."
         required: false
@@ -421,6 +427,8 @@ jobs:
           SCAN_LIMIT: ${{ inputs.scan_limit }}
           # reslug-tcg-out-of-sports-namespace: which non-sport categories.
           SPORTS: ${{ inputs.sports }}
+          # rehome: only move identity rows; graded rows are regenerable.
+          PARENTS_ONLY: ${{ inputs.parents_only == true && 'true' || 'false' }}
           # dedupe-catalog-partition-shadows: opt in to deleting keyless rows.
           RETIRE_NO_PARTITION_KEY: ${{ inputs.retire_no_partition_key == true && 'true' || 'false' }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
