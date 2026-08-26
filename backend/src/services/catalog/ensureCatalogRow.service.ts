@@ -14,6 +14,7 @@
 
 import { CosmosClient, type Container, type JSONObject } from "@azure/cosmos";
 import { deriveBrand, deriveParentSetKey, normalizeSetKey, slugify } from "../portfolioiq/hobbyIqCardId.service.js";
+import { upsertCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
 
 let _container: Container | null = null;
 async function getContainer(): Promise<Container | null> {
@@ -88,7 +89,7 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
   const cardNumber = String(input.cardNumber ?? "").trim().toUpperCase();
   if (!cardNumber || !setKey) return;
   const now = new Date().toISOString();
-  const doc: JSONObject = {
+  const doc: Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> = {
     id: input.slug,
     cardId: input.slug,
     hobbyiqCardId: input.slug,
@@ -109,7 +110,7 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
     confidence: 0.85,
     observedCompCount: 1,
     firstSeenAt: now,
-    lastSeenAt: now,
+    vendorIds: {},
     searchText: [input.year, cardNumber, input.playerName ?? "", parallel].filter(Boolean).join(" ").toLowerCase(),
     searchTokens: Array.from(new Set([
       String(input.year), cardNumber.toLowerCase(), brand,
@@ -117,10 +118,21 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
       ...parallel.toLowerCase().split(/\s+/).filter(Boolean),
       ...setKey.split("-").filter(Boolean),
     ])),
-  } as JSONObject;
+  };
 
   try {
-    await container.items.upsert(doc);
+    // CF-ONE-WAY-TO-BUILD-A-CATALOG-ROW. This used to call
+    // container.items.upsert directly, which is why it sat on the BYPASSING
+    // debt list. It could not do otherwise until now: CardCatalogEntry could
+    // express neither this row's source ("ingest-auto-seed" was not in the
+    // five-value union) nor its searchTokens/setName, so routing through the
+    // canonical path would have dropped the fields search depends on.
+    //
+    // With the type able to express a real row, this goes through the one
+    // write path and gains its merge semantics -- vendorIds union, and a
+    // 0.85-confidence auto-seed can no longer overwrite a checklist row that
+    // arrived between the read above and this write.
+    await upsertCatalogEntry(doc);
     markKnown(input.slug);
   } catch (err) {
     // Silent — sample-log so we can see the rate without spamming.
