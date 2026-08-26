@@ -444,6 +444,28 @@ jobs:
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
+      - name: Self-relaunch the retire until nothing is left to retire
+        # CF-RETIRE-SELF-RELAUNCH (Drew, 2026-08-26). 16.2M deletes at ~35k/min
+        # outlive the 150-minute ceiling several times over. Same rule as the
+        # re-home: relaunch only if THIS run made progress, so a drained slice
+        # stops instead of spinning.
+        if: ${{ always() && inputs.script == 'retire-unreferenced-graded-rows' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          MOVED=$(grep -aoE "^  deleted +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=${MOVED:-0}
+          echo "retire_deleted=$MOVED"
+          if [ "$MOVED" -gt 0 ]; then
+            echo "::notice::deleted $MOVED — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main               -f script=retire-unreferenced-graded-rows -f apply=true               -f concurrency="${{ inputs.concurrency }}"
+          else
+            echo "::notice::nothing deleted — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch the re-home until its slice drains
         # CF-REHOME-SELF-RELAUNCH (Drew, 2026-08-25). 17.7M rows do not move
         # inside one 150-minute step. Without this the job stops dead at the
