@@ -60,15 +60,6 @@ const MANIFEST = process.env.MANIFEST || "/tmp/retire-graded-manifest.txt";
 const SLOT = Number(process.env.SLOT ?? 0);
 const SLOTS = Number(process.env.SLOTS ?? 1);
 
-function slotRange(slot, slots) {
-  if (!Number.isFinite(slots) || slots <= 1) return null;
-  const A = "abcdefghijklmnopqrstuvwxyz".split("");
-  const per = Math.ceil(A.length / slots);
-  const lo = slot === 0 ? "" : (A[slot * per] ?? "~");
-  const hi = slot === slots - 1 ? "~" : (A[(slot + 1) * per] ?? "~");
-  return { lo, hi };
-}
-
 /** Graded rows stranded under a foreign partition key. */
 const TARGET =
   "STARTSWITH(c.id,'hiq:') AND c.id != c.cardId AND IS_DEFINED(c.cardId) " +
@@ -117,16 +108,45 @@ const TARGET =
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, gone = 0, kept = 0;
   const out = APPLY ? null : fs.createWriteStream(MANIFEST, { flags: "w" });
 
-  const range = slotRange(SLOT, SLOTS);
-  const scopedTarget = range
-    ? `${TARGET} AND c.setKey >= '${range.lo}' AND c.setKey < '${range.hi}'`
-    : TARGET;
-  if (range) console.log(`slot ${SLOT}/${SLOTS}  setKey range [${range.lo || "''"} .. ${range.hi})`);
+  // CF-RETIRE-SHARDS-BY-GRADE-TIER (Drew, 2026-08-26). setKey was the wrong
+  // axis. Measured over 9,281,956 target rows, the four letter ranges held
+  // 887,326 / 1 / 8,245,353 / 0 -- 'o'..'v' is panini, prizm, topps, select,
+  // so one worker did 89% of the work while two exited in 11 seconds. Worse,
+  // 66,711 target rows carry no setKey at all and no letter range can ever
+  // reach them.
+  //
+  // gradeTier is the right axis: TARGET already requires it to be defined, so
+  // every target row is reachable, and it is measured uniform -- 11 tiers at
+  // ~809,200 rows each, 9.0% apiece. Tiers are read at startup rather than
+  // hardcoded so a tier we stop issuing cannot silently strand its rows.
+  let scopedTarget = TARGET;
+  let scopedParams = [];
+  if (SLOTS > 1) {
+    const { resources: tierRows } = await cat.items
+      .query(`SELECT c.gradeTier AS t, COUNT(1) AS n FROM c WHERE ${TARGET} GROUP BY c.gradeTier`)
+      .fetchAll();
+    // Deal biggest-first so the eleven ~809k tiers spread evenly instead of
+    // landing alphabetically -- plain a-z order put 4 of them on one slot and
+    // 2 on another, which is the same imbalance in a smaller costume.
+    const all = tierRows
+      .filter((r) => typeof r.t === "string")
+      .sort((a, b) => b.n - a.n || a.t.localeCompare(b.t));
+    const mine = all.filter((_, i) => i % SLOTS === SLOT);
+    if (mine.length === 0) {
+      console.log(`slot ${SLOT}/${SLOTS} owns none of ${all.length} tiers — nothing to do`);
+      return;
+    }
+    scopedParams = mine.map((r, i) => ({ name: `@t${i}`, value: r.t }));
+    scopedTarget = `${TARGET} AND c.gradeTier IN (${scopedParams.map((p) => p.name).join(",")})`;
+    const owned = mine.reduce((s, r) => s + r.n, 0);
+    console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${all.length} tiers, ${f(owned)} rows`);
+    console.log(`  ${mine.map((r) => `${r.t}=${f(r.n)}`).join("  ")}`);
+  }
 
   let token, pages = 0;
   do {
     const page = await queryWithRetry(cat,
-      { query: `SELECT c.id, c.cardId, c.gradeTier, c.source FROM c WHERE ${scopedTarget}` },
+      { query: `SELECT c.id, c.cardId, c.gradeTier, c.source FROM c WHERE ${scopedTarget}`, parameters: scopedParams },
       { maxItemCount: 500, continuationToken: token });
     token = page.continuationToken;
 
