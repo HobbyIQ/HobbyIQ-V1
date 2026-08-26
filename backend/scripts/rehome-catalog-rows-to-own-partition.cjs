@@ -150,7 +150,35 @@ function slotRange(slot, slots) {
             // rather than deleting a row whose twin we did not inspect.
             let existing = null;
             try { existing = (await cat.item(r.id, r.id).read()).resource ?? null; } catch (e) { if (e.code !== 404) throw e; }
-            if (existing) { alreadyThere++; return; }
+            // CF-FINISH-THE-HALF-MOVED-ROWS (Drew, 2026-08-26). This used to
+            // skip whenever a row already sat at (id,id), on the reasoning that
+            // a twin belongs to the dedupe job. That reasoning strands the row
+            // forever, and the stranded population GROWS every time a run is
+            // interrupted -- because "canonical written, original not yet
+            // deleted" is exactly the state a cancelled run leaves behind, and
+            // this job was cancelled repeatedly tonight. One 2013 slot found
+            // 180 such rows and moved 0 of them.
+            //
+            // It is safe to finish the move. The canonical row is not a guess:
+            // we have just READ it, at the address this row is trying to reach.
+            // The copy sitting in the vendor partition is redundant, and the
+            // only thing it holds that the canonical row might not is its own
+            // partition key -- a vendor id -- so that gets carried across
+            // before the delete, same as the normal path.
+            if (existing) {
+              alreadyThere++;
+              const vids = { ...(existing.vendorIds ?? {}) };
+              if (!String(oldKey).startsWith("hiq:")) {
+                const k = String(r.source ?? "vendor");
+                if (!vids[k]) vids[k] = oldKey;
+              }
+              if (Object.keys(vids).length !== Object.keys(existing.vendorIds ?? {}).length) {
+                await cat.items.upsert({ ...existing, vendorIds: vids });
+              }
+              await cat.item(r.id, oldKey).delete();
+              rehomed++;
+              return;
+            }
 
             // The old partition key was a vendor id. A CH lookup resolves by
             // vendor cardId, so it has to survive the move.
@@ -194,7 +222,7 @@ function slotRange(slot, slots) {
   console.log(`\n${APPLY ? "APPLY" : "DRY-RUN"}  ${scope}`);
   console.log(`  rows in a foreign partition   ${candidates.toLocaleString()}`);
   console.log(`  re-homed to their own slug    ${rehomed.toLocaleString()}`);
-  console.log(`  already had a row at (id,id)  ${alreadyThere.toLocaleString()}   (duplicate case -> dedupe job)`);
+  console.log(`  ...of those, leftover twins    ${alreadyThere.toLocaleString()}   (canonical already present; redundant copy removed)`);
   console.log(`  copy could not be read back   ${verifyFailed.toLocaleString()}   (NOT deleted)`);
   console.log(`  failed                        ${failed.toLocaleString()}`);
   if (LIMIT && candidates > attempted) {
