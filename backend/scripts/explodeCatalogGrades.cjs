@@ -24,6 +24,8 @@
  */
 
 const { CosmosClient } = require("@azure/cosmos");
+const { isIssuedGrade, canonicalGradeCompany } =
+  require(require("node:path").resolve(__dirname, "..", "dist/services/catalog/gradeLadder.service.js"));
 
 const argOf = (name, def) => {
   const a = process.argv.find((x) => x.startsWith(`--${name}=`));
@@ -60,33 +62,48 @@ function buildGradedRow(identityRow, tier) {
   const parentSlug = identityRow.hobbyiqCardId;
   if (!parentSlug) return null;
   const slug = `${parentSlug}:${tier.slug}`;
+
+  // CF-EXPLODE-WRITES-TO-THE-CONTRACT (Drew, 2026-08-26). Two changes, both
+  // about not manufacturing the problems this catalog spent four days on.
+  //
+  // PARTITION. This used to set `cardId: identityRow.cardId` -- co-locating a
+  // card's whole ladder in the parent's partition, so the ladder could be read
+  // in one query. A reasonable design, and not the one the rest of the system
+  // holds: catalogMatcher point-reads (slug, slug), and deriveCatalogEntry sets
+  // cardId = id. Worse, inheriting the parent's key propagates the parent's
+  // breakage -- a parent stranded under a vendor Bubble id gave every one of
+  // its graded children the same wrong address. That is how 16.4M rows became
+  // invisible to the matcher. Each row now owns its partition, which is what
+  // makes the ~1 RU point read work.
+  //
+  // FIELDS. The old builder hand-listed the fields to carry, so anything the
+  // checklist knew and this list did not -- subsetName, displayName,
+  // playerSlug, imageUrl, cardYear -- was silently dropped from every graded
+  // row. Spread the parent instead: a graded card IS its parent card plus a
+  // grade, and the matcher discriminates on exactly the fields that were being
+  // thrown away. New fields now propagate without editing this function.
+  const {
+    _rid, _self, _etag, _attachments, _ts,
+    id: _oldId, cardId: _oldCardId, hobbyiqCardId: _oldSlug,
+    gradeCompany: _gc, gradeValue: _gv, gradeQualifier: _gq, gradeTier: _gt,
+    ...parent
+  } = identityRow;
+
   return {
+    ...parent,
     id: slug,
-    // Use parent cardId as partition key so all grades of a card land in same partition
-    cardId: identityRow.cardId,
+    cardId: slug,
     hobbyiqCardId: slug,
     parentSlug,
-    sport: identityRow.sport,
-    year: identityRow.year,
-    setKey: identityRow.setKey,
-    setName: identityRow.setName,
-    cardNumber: identityRow.cardNumber,
-    playerName: identityRow.playerName,
-    team: identityRow.team,
-    parallel: identityRow.parallel,
-    parallelSlug: identityRow.parallelSlug,
-    isAuto: identityRow.isAuto,
-    printRun: identityRow.printRun,
     gradeCompany: tier.gradeCompany,
     gradeValue: tier.gradeValue,
     gradeQualifier: tier.gradeQualifier,
     gradeTier: tier.tier,
     source: `${identityRow.source ?? "unknown"}-graded`,
     catalogVersion: 2,
-    catalogBatch: "grade-explode-2026-08-10",
+    catalogBatch: "grade-explode-contract-2026-08-26",
     verificationStatus: identityRow.verificationStatus ?? "verified",
-    builtAt: "2026-08-10T00:00:00.000Z",
-    // Search tokens: parent tokens + grade tokens
+    builtAt: new Date().toISOString(),
     searchTokens: [
       ...(identityRow.searchTokens ?? []),
       tier.tier,
@@ -96,14 +113,29 @@ function buildGradedRow(identityRow, tier) {
   };
 }
 
-(async () => {
+// CF-ONE-GRADE-LADDER. The tier table above is what SOMEBODY once believed each
+// grader issues; gradeLadder.service is what they actually issue. Filtering
+// here rather than editing the table means a tier nobody issues cannot be
+// reintroduced by a future edit -- PSA 9.5 got into that table and produced
+// 1,462,513 ungradeable rows before anyone noticed.
+const ISSUED_TIERS = GRADE_TIERS.filter((t) => {
+  if (t.gradeCompany === null) return true;              // raw
+  const ok = isIssuedGrade(t.gradeCompany, t.gradeValue);
+  if (!ok) {
+    console.warn(`[grade-explode] DROPPED tier ${t.tier}: ` +
+      `${canonicalGradeCompany(t.gradeCompany) ?? t.gradeCompany} does not issue ${t.gradeValue}`);
+  }
+  return ok;
+});
+
+async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const c = new CosmosClient(conn);
   const cat = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
 
   console.log(`[grade-explode] MODE=${APPLY ? "APPLY" : "DRY-RUN"} concurrency=${CONCURRENCY} limit=${LIMIT || "unlimited"}`);
-  console.log(`[grade-explode] tiers: ${GRADE_TIERS.length}`);
+  console.log(`[grade-explode] tiers: ${ISSUED_TIERS.length} of ${GRADE_TIERS.length} (impossible grades dropped)`);
   console.log(`[grade-explode] source-filter: ${SOURCE_FILTER || "(none)"}`);
 
   // Query identity rows (skip already-exploded graded rows).
@@ -151,7 +183,7 @@ function buildGradedRow(identityRow, tier) {
     for (const row of rows) {
       scanned++;
       if (!row.hobbyiqCardId) { skipped++; continue; }
-      for (const tier of GRADE_TIERS) {
+      for (const tier of ISSUED_TIERS) {
         const g = buildGradedRow(row, tier);
         if (g) graded.push(g);
       }
@@ -221,4 +253,9 @@ function buildGradedRow(identityRow, tier) {
   console.log(`Graded rows built:   ${generated.toLocaleString()}`);
   console.log(`${APPLY ? "Upserted" : "Would-upsert"}: ${(APPLY ? upserted : generated).toLocaleString()}`);
   console.log(`Errors:              ${errors.toLocaleString()}`);
-})().catch((e) => { console.error(e); process.exit(1); });
+}
+
+// Only a direct run does the work; the builder is also imported by tests.
+if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
+
+module.exports = { buildGradedRow, GRADE_TIERS, ISSUED_TIERS };
