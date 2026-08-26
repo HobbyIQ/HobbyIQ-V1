@@ -65,6 +65,20 @@ const MANIFEST = process.env.MANIFEST || "/tmp/retire-graded-manifest.txt";
 // scan over more deletes.
 const PAGE = Number(process.env.PAGE_SIZE || 2000);
 
+// CF-RETIRE-EXITS-BEFORE-THE-CEILING (Drew, 2026-08-26). The workflow kills
+// the step at 150 minutes, and the self-relaunch decides whether to continue
+// by grepping the "deleted N" summary out of the log. That line prints only on
+// normal completion, so a run that hits the ceiling is SIGKILLed before it,
+// the relaunch reads MOVED=0, and logs "nothing deleted -- done, no
+// re-dispatch."
+//
+// At 8 workers each owns ~880,000 rows and needs ~4.3h, so EVERY worker would
+// hit the ceiling and the fleet would stop with millions of rows left -- eight
+// green runs whose last log line says "done". Stop on our own clock instead,
+// print the summary, and let the relaunch carry on.
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED = Date.now();
+
 const SLOT = Number(process.env.SLOT ?? 0);
 const SLOTS = Number(process.env.SLOTS ?? 1);
 
@@ -128,6 +142,7 @@ const TARGET =
   console.log(`  ${f(protectedSlugs.size)} graded slugs are referenced by at least one sale — these will be SKIPPED\n`);
 
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, gone = 0, kept = 0;
+  let hitBudget = false;
   const out = APPLY ? null : fs.createWriteStream(MANIFEST, { flags: "w" });
 
   // CF-RETIRE-SHARDS-BY-GRADE-TIER (Drew, 2026-08-26). setKey was the wrong
@@ -198,10 +213,13 @@ const TARGET =
       if (LIMIT && deleted >= LIMIT) { token = undefined; break; }
     }
     if (++pages % 20 === 0) process.stderr.write(`\r  scanned ${f(scanned)}  deleted ${f(deleted)}  kept ${f(kept)}   `);
+    if (Date.now() - STARTED > RUN_MS) { hitBudget = true; token = undefined; }
   } while (token);
   process.stderr.write("\n");
   if (out) out.end();
 
+  if (hitBudget) console.log(`
+stopped at the ${RUN_MS / 60000}-minute budget with work left — the relaunch continues from here`);
   console.log(`\n${APPLY ? "APPLY" : "MANIFEST ONLY — nothing deleted"}`);
   console.log(`  matched the target        ${f(scanned)}`);
   console.log(`  protected (a sale uses it) ${f(kept)}`);
