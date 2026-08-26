@@ -92,6 +92,11 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
   const where = ["STARTSWITH(c.id,'hiq:')", "c.id != c.cardId", "IS_DEFINED(c.cardId)", "c.cardId != null"];
   if (YEARS.length) where.push(`c.year IN (${YEARS.join(",")})`);
   if (SETKEY_LIKE) where.push(`CONTAINS(LOWER(c.setKey ?? ''), '${SETKEY_LIKE.replace(/'/g, "")}')`);
+  const range = slotRange(SLOT, SLOTS);
+  if (range) {
+    where.push(`c.setKey >= '${range.lo}' AND c.setKey < '${range.hi}'`);
+    console.log(`slot ${SLOT}/${SLOTS}  setKey range [${range.lo || "''"} .. ${range.hi})`);
+  }
 
   let token, pages = 0;
   do {

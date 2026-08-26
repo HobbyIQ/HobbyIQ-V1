@@ -136,11 +136,11 @@ on:
         required: false
         default: ""
       slot:
-        description: "For normalize-catalog-format: which partition this run owns (0..slots-1). Dispatch once per slot."
+        description: "Which partition this run owns (0..slots-1). Dispatch once per slot. Used by normalize-catalog-format and rehome-catalog-rows-to-own-partition."
         required: false
         default: "0"
       slots:
-        description: "For normalize-catalog-format: total partitions. 37.3M rows / 16 is ~2.3M per run, which fits the 150-min step ceiling."
+        description: "Total partitions. normalize splits by year; rehome splits a YEAR by setKey letter range, so SLOTS=4 with the same YEARS runs one year four ways."
         required: false
         default: "16"
       min_sales:
