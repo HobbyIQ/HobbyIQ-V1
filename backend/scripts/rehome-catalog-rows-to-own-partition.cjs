@@ -48,6 +48,31 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "").toLowerCase();
 // Cap the SCAN itself, so a dry-run can size a slice without walking all of it.
 const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
 
+// CF-REHOME-SPLITS-A-YEAR (Drew, 2026-08-25). 95% of the remaining rows sit in
+// ~28 years and one worker moves ~1,875 rows/min, so 2025 alone (3.4M) needs a
+// dozen sequential 150-minute runs. Dispatching more YEARS does not help: the
+// 58 untouched years hold 733,121 rows between them, 5% of the job. So split a
+// YEAR, the way normalize-catalog-format splits a mega-year -- bound the scan by
+// setKey letter range, server-side, so slots never overlap and need no
+// coordination. SLOTS=1 (the default) is the old single-pass behaviour exactly.
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+
+/**
+ * Split the setKey space into SLOTS contiguous ranges that tile it with no gap
+ * and no overlap: slot 0 starts open-ended below "a" so setKeys beginning with
+ * a digit are not stranded, and the last slot runs to "~" so nothing past "z"
+ * is either.
+ */
+function slotRange(slot, slots) {
+  if (!Number.isFinite(slots) || slots <= 1) return null;
+  const A = "abcdefghijklmnopqrstuvwxyz".split("");
+  const per = Math.ceil(A.length / slots);
+  const lo = slot === 0 ? "" : (A[slot * per] ?? "~");
+  const hi = slot === slots - 1 ? "~" : (A[(slot + 1) * per] ?? "~");
+  return { lo, hi };
+}
+
 (async () => {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
