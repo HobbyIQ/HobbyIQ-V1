@@ -28,7 +28,10 @@ const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const fs = require("fs");
 
-const APPLY = process.env.APPLY === "true";
+// The runner sets BACKFILL_APPLY / RESLUG_APPLY, never APPLY. Reading only
+// APPLY would make this dry-run forever under the workflow while looking
+// like it had run -- the same trap reslug-tcg-out-of-sports-namespace hit.
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.RESLUG_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
 const MAX_ROWS = Number(process.env.MAX_ROWS || 0);
 const SHARD_HEX = (process.env.SHARD_HEX || "").split(",").map(s => s.trim()).filter(Boolean);

@@ -116,6 +116,7 @@ on:
           - reslug-tcg-out-of-sports-namespace
           - retire-unreferenced-graded-rows
           - retire-impossible-grade-rows
+          - reslugAllSoldComps
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -183,6 +184,16 @@ on:
         required: false
         default: false
         type: boolean
+      shard_hex:
+        description: "For reslugAllSoldComps: contentHash first-char shards, e.g. 0,1,2,3. 16 shards total; run disjoint sets in parallel. Empty = all."
+        required: false
+        default: ""
+        type: string
+      max_rows:
+        description: "For reslugAllSoldComps: cap rows scanned (0 = no cap)."
+        required: false
+        default: "0"
+        type: string
       retire_no_partition_key:
         description: "For dedupe-catalog-partition-shadows: also retire duplicate rows that carry NO partition key. They ARE addressable; off by default because it is a delete."
         required: false
@@ -428,6 +439,9 @@ jobs:
           SCAN_LIMIT: ${{ inputs.scan_limit }}
           # reslug-tcg-out-of-sports-namespace: which non-sport categories.
           SPORTS: ${{ inputs.sports }}
+          # reslugAllSoldComps: contentHash first-char shard, 16 total.
+          SHARD_HEX: ${{ inputs.shard_hex }}
+          MAX_ROWS: ${{ inputs.max_rows }}
           # rehome: only move identity rows; graded rows are regenerable.
           PARENTS_ONLY: ${{ inputs.parents_only == true && 'true' || 'false' }}
           # dedupe-catalog-partition-shadows: opt in to deleting keyless rows.
