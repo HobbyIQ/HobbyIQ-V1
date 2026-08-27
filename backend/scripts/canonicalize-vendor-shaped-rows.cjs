@@ -206,6 +206,10 @@ async function main() {
             // upsertCatalogEntry returns the written row, so a separate verify
             // read was a third round-trip per card that proved nothing the
             // return value did not already prove.
+            // `known: null` -- the twin read above already established that
+            // nothing sits at this slug. Without it upsertCatalogEntry looks
+            // again and then runs a cross-partition scan on the miss, once per
+            // card, which is what held re-homing to 1,700 rows/min.
             const written = await retry(() => upsertCatalogEntry({
               ...rest, id: slug, cardId: slug, hobbyiqCardId: slug,
               vendorIds: {
@@ -213,7 +217,7 @@ async function main() {
                 ...(row.source && row.cardId ? { [row.source]: String(row.cardId) } : {}),
               },
               canonicalizedFrom: row.id,
-            }));
+            }, { known: null }));
             if (!written) { failed++; return; }
             rehomed++;
           } else if (!APPLY) { retiredRedundant++; return; }

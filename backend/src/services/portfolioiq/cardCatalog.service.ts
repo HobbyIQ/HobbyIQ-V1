@@ -220,11 +220,25 @@ export async function getCatalogEntry(slug: string): Promise<CardCatalogEntry | 
  * entry has higher confidence than the existing, the higher wins.
  * Returns the resulting entry (either the incoming or the pre-existing).
  */
-export async function upsertCatalogEntry(entry: Omit<CardCatalogEntry, "observedAt" | "lastSeenAt">): Promise<CardCatalogEntry | null> {
+export async function upsertCatalogEntry(
+  entry: Omit<CardCatalogEntry, "observedAt" | "lastSeenAt">,
+  opts?: { known?: CardCatalogEntry | null },
+): Promise<CardCatalogEntry | null> {
   const c = await getContainer();
   if (!c) return null;
   const now = new Date().toISOString();
-  const existing = await getCatalogEntry(entry.id);
+  // CF-DO-NOT-LOOK-TWICE (Drew, 2026-08-26). getCatalogEntry point-reads and,
+  // on a miss, falls back to a CROSS-PARTITION "SELECT TOP 1 * WHERE c.id".
+  // That fallback exists for rows still sitting under a foreign partition key,
+  // and it fires on every miss -- so a caller writing a NEW slug pays a
+  // cross-partition scan for a row it already knows is absent.
+  //
+  // canonicalize-vendor-shaped-rows does exactly that 2.7M times: it point-
+  // reads the target slug to check for a twin, then calls this, which looks
+  // again and then scans. Re-homing ran at 1,700 rows/min against a scan that
+  // sustains 22,000. `known` lets a caller pass the lookup it already did --
+  // including `null` for "I checked, it is not there".
+  const existing = opts && "known" in opts ? opts.known ?? null : await getCatalogEntry(entry.id);
   // Merge vendor IDs so we never lose a cross-reference. Keep the
   // higher-confidence source's canonical parallel + printRun.
   // CF-THE-CLEANEST-ONE-WINS (Drew, 2026-08-26).
