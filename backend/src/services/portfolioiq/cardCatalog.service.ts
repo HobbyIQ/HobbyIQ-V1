@@ -29,6 +29,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { authorityRank } from "../catalog/catalogAuthority.service.js";
 
 export interface CardCatalogEntry {
   id: string;                        // hobbyiqCardId slug (also the doc id)
@@ -226,7 +227,27 @@ export async function upsertCatalogEntry(entry: Omit<CardCatalogEntry, "observed
   const existing = await getCatalogEntry(entry.id);
   // Merge vendor IDs so we never lose a cross-reference. Keep the
   // higher-confidence source's canonical parallel + printRun.
-  const winnerIsIncoming = !existing || entry.confidence > existing.confidence;
+  // CF-THE-CLEANEST-ONE-WINS (Drew, 2026-08-26).
+  //
+  // This compared CONFIDENCE alone, which lets the wrong row win exactly where
+  // it matters most. `ingest-auto-seed` writes at 0.85 and is DERIVED — built
+  // from the sales themselves — so a mis-slugged comp seeds a row and that row
+  // then confirms the comp. An incoming CHECKLIST row transcribed from the
+  // manufacturer's own list would lose to it on any confidence below 0.85.
+  //
+  // catalogAuthority already declares the ordering and says plainly that
+  // derived rows "must never outvote a checklist"; it simply was not enforced
+  // on the write path. Rank by authority first — checklist 3, vendor 2,
+  // derived 1, unknown 0 — and only break ties within a class on confidence.
+  //
+  // This is the whole point of ingesting checklists: a checklist is the only
+  // artifact that can CONTRADICT a sale. If it cannot win, ingesting it just
+  // adds rows that agree with whatever was already there.
+  const incomingRank = authorityRank(entry.source);
+  const existingRank = existing ? authorityRank(existing.source) : -1;
+  const winnerIsIncoming = !existing
+    || incomingRank > existingRank
+    || (incomingRank === existingRank && entry.confidence > existing.confidence);
   const merged: CardCatalogEntry = winnerIsIncoming
     ? {
         ...entry,
