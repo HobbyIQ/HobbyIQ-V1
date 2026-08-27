@@ -43,6 +43,39 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const { upsertCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { CosmosClient } = require("@azure/cosmos");
+
+/**
+ * CF-EVERY-CHECKLIST-ROW-IS-A-MISS.
+ *
+ * upsertCatalogEntry with no `known` hint calls getCatalogEntry, which point-
+ * reads and then, ON A MISS, falls back to a CROSS-PARTITION
+ * `SELECT TOP 1 * WHERE c.id = @id` across 31.2M documents.
+ *
+ * That fallback exists to find rows still sitting under a foreign partition
+ * key. A checklist ingest is the pathological caller for it: every row it
+ * writes is a NEW slug, so every row misses, so every row pays the scan.
+ * Measured: 9,297 rows in 43 minutes. 216/min puts one Beckett pass at 38
+ * hours, which is why two full runs landed 8 files out of 409.
+ *
+ * So do the point read here (1 RU) and hand the answer over. A miss stays a
+ * miss instead of escalating. The authority merge is unaffected -- a row at
+ * its own address is still found, and 98.9% of the catalog is at its own
+ * address now.
+ */
+const lookup = (() => {
+  let container = null;
+  return async (slug) => {
+    if (!container) {
+      container = new CosmosClient({
+        connectionString: process.env.COSMOS_CONNECTION_STRING,
+        connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
+      }).database("hobbyiq").container("card_catalog");
+    }
+    try { return (await container.item(slug, slug).read()).resource ?? null; }
+    catch (e) { if (e.code === 404) return null; throw e; }
+  };
+})();
 
 const DIR = process.env.DIR || "";
 const SOURCE = process.env.SOURCE || "";
@@ -176,6 +209,7 @@ async function main() {
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
           if (!APPLY) { written++; return; }
 
+          const known = await lookup(slug);
           await upsertCatalogEntry({
             id: slug, cardId: slug, hobbyiqCardId: slug,
             sport: product.sport, year: product.year,
@@ -197,7 +231,7 @@ async function main() {
               ...(r.parallel ? r.parallel.toLowerCase().split(/\s+/) : []),
               ...product.setKey.split("-"),
             ].filter(Boolean))),
-          });
+          }, { known });
           written++;
         } catch (e) {
           failed++;
