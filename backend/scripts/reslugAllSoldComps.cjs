@@ -39,6 +39,19 @@ const SHARD_HEX = (process.env.SHARD_HEX || "").split(",").map(s => s.trim()).fi
 // RESOLVE=false restores the pure-prefix behaviour for comparison.
 const RESOLVE = String(process.env.RESOLVE ?? "true") !== "false";
 
+// CF-RESLUG-EXITS-BEFORE-THE-CEILING (Drew, 2026-08-27: "and fix the workflow
+// after"). The workflow kills the step at 150 minutes and this script had
+// neither a budget nor a relaunch, so a shard that outran the ceiling was
+// SIGKILLed with no summary and nothing re-dispatched it.
+//
+// It only became reachable once the catalog resolver was wired in: the same
+// pass went from 40,000 rows in 21s to 40,000 in 260s, which turns 8 shards of
+// ~2M rows into 3.6h apiece against a 2.5h ceiling. The dispatch that found
+// this had to be split 16 ways by hand to stay under it -- exactly the sum
+// nobody should have to do before pressing go.
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED_AT = Date.now();
+
 const distPath = path.resolve(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js");
 if (!fs.existsSync(distPath)) { console.error(`missing dist at ${distPath} — run \`npx tsc\``); process.exit(2); }
 const { computeHobbyIqCardId, normalizeSetKey } = require(distPath);
@@ -130,8 +143,10 @@ async function main() {
   const rewriteCounts = new Map();
   const demoteCounts = new Map();
 
+  let hitBudget = false;
   while (it.hasMoreResults()) {
     if (MAX_ROWS && scanned >= MAX_ROWS) break;
+    if (Date.now() - STARTED_AT > RUN_MS) { hitBudget = true; break; }
     const { resources } = await fetchNextWithRetry();
     for (const r of resources) {
       if (MAX_ROWS && scanned >= MAX_ROWS) break;
@@ -310,6 +325,7 @@ async function main() {
   await Promise.all(inflight);
 
   const dur = ((Date.now() - startedAt)/1000).toFixed(0);
+  if (hitBudget) console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget with work left — the relaunch continues from here`);
   console.log(`\n[done ${dur}s] scanned=${scanned} computed=${computed} changed=${changed} touched=${touched} failed=${failed} skipped=${skipped} demoted-skipped=${demoted}`);
   console.log(`  catalog overruled the prefix rule: ${resolverWins}   declined: ${resolverSilent}   errored: ${resolverFailed}   cached: ${resolverCached}`);
   if (demoted) {
