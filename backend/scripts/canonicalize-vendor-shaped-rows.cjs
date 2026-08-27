@@ -1,0 +1,241 @@
+#!/usr/bin/env node
+/**
+ * CF-ALL-OF-THE-CATALOG-IN-ONE-PLACE (Drew, 2026-08-26).
+ *
+ * 5,369,164 catalog rows -- 17% of the container -- cannot be reached by a
+ * point read, because their address is not their identity:
+ *
+ *     id     = cardhedge::1775832219776x807179689237410600::2be9b853
+ *     cardId = 1775832219776x807179689237410600
+ *
+ * Two distinct populations, measured:
+ *
+ *     id !== cardId (wrong partition)      2,835,432
+ *     cardId missing entirely (undefined)  2,533,732
+ *
+ * NOTHING HAS EVER TARGETED THESE. Phase 02's retire required
+ * IS_DEFINED(c.gradeTier), so it only ever saw graded rows -- of the 2,835,432
+ * mis-partitioned rows exactly 1,018 were graded, and the other 2,834,414 were
+ * never touched. rehome-catalog-rows-to-own-partition requires
+ * STARTSWITH(c.id,'hiq:'), and these ids are vendor-shaped, so it cannot reach
+ * them either. Two sweeps ran to completion over this population and both were
+ * structurally blind to it.
+ *
+ * WHAT THIS DOES. A row is canonical when it lives at its own slug. For each
+ * broken row:
+ *
+ *   1. Determine its canonical slug -- hobbyiqCardId if it carries one
+ *      (2,502,339 do), otherwise derive it from its own fields.
+ *   2. If a canonical row ALREADY exists at that slug, this row is a redundant
+ *      copy: retire it. Sampled at 79%.
+ *   3. Otherwise this row is the only record of that card: write it to its own
+ *      slug through upsertCatalogEntry, then retire the vendor-shaped original.
+ *      Sampled at 21%.
+ *   4. If no slug can be determined, leave it and COUNT it. A row we cannot
+ *      name is not a row we may delete.
+ *
+ * COPY BEFORE DELETE, ALWAYS. The canonical write is awaited and verified
+ * before the original is removed. A crash between them leaves a duplicate,
+ * which the next pass retires; the reverse order would lose the only copy.
+ * Half-moved rows are what stranded the last re-home.
+ *
+ * SHARDED ON SOURCE, because it is measured and every target row has one
+ * (rows with no source are their own bucket). setKey ranges put 89% of the
+ * retire on one worker and could not reach 66,711 rows at all -- shard axes
+ * get a GROUP BY before a fleet is dispatched, not after.
+ *
+ * Env:
+ *   COSMOS_CONNECTION_STRING  required
+ *   APPLY / BACKFILL_APPLY    actually write (default: report only)
+ *   SLOT / SLOTS              shard across workers by source (biggest-first)
+ *   CONCURRENCY=48
+ *   RUN_MINUTES=140           stop before the 150-min step ceiling
+ *   LIMIT=0                   stop after N rows resolved (0 = no limit)
+ */
+const path = require("node:path");
+const backend = path.resolve(__dirname, "..");
+const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { upsertCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
+const LIMIT = Number(process.env.LIMIT || 0);
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED = Date.now();
+
+/** Not at its own address: wrong partition key, or none at all. */
+const BROKEN = "((c.id != c.cardId) OR NOT IS_DEFINED(c.cardId) OR c.cardId = null)";
+
+const f = (n) => Number(n).toLocaleString();
+
+/** The slug this row should live at, or null when it cannot be named. */
+function canonicalSlugFor(row) {
+  if (typeof row.hobbyiqCardId === "string" && row.hobbyiqCardId.startsWith("hiq:")) {
+    return row.hobbyiqCardId;
+  }
+  if (typeof row.id === "string" && row.id.startsWith("hiq:")) return row.id;
+  // Derive from the row's own fields. Anything missing means we cannot name it,
+  // and an unnameable row is never deleted.
+  const setKey = row.setKey ?? row.setName;
+  if (!row.sport || !row.year || !setKey || row.cardNumber === undefined || row.cardNumber === null) return null;
+  try {
+    const slug = computeHobbyIqCardId({
+      sport: row.sport,
+      year: Number(row.year),
+      setKey,
+      cardNumber: String(row.cardNumber),
+      parallel: row.parallel ?? "Base",
+      isAuto: Boolean(row.isAuto),
+      printRun: row.printRun ?? null,
+    });
+    return typeof slug === "string" && slug.startsWith("hiq:") ? slug : null;
+  } catch { return null; }
+}
+
+async function main() {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  const cat = new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
+  }).database("hobbyiq").container("card_catalog");
+
+  const retry = async (fn, tries = 12) => {
+    let wait = 1000;
+    for (let a = 0; ; a++) {
+      try { return await fn(); }
+      catch (e) {
+        if (!/request rate is too large|429/i.test(String(e?.message)) || a >= tries) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
+  // ── shard on source, measured at startup ─────────────────────────────────
+  let scoped = BROKEN;
+  let params = [];
+  if (SLOTS > 1) {
+    if (SLOT > 0) await new Promise((r) => setTimeout(r, SLOT * 15000));
+    const { resources: rows } = await retry(() => cat.items
+      .query(`SELECT c.source AS s, COUNT(1) AS n FROM c WHERE ${BROKEN} GROUP BY c.source`).fetchAll());
+    const all = rows.filter((r) => typeof r.s === "string").sort((a, b) => b.n - a.n || a.s.localeCompare(b.s));
+    const mine = all.filter((_, i) => i % SLOTS === SLOT);
+    // Rows with no source at all belong to exactly one slot, or they would be
+    // done N times or not at all.
+    const takesNullSource = SLOT === 0;
+    if (!mine.length && !takesNullSource) {
+      console.log(`slot ${SLOT}/${SLOTS} owns no source — nothing to do`);
+      return;
+    }
+    params = mine.map((r, i) => ({ name: `@s${i}`, value: r.s }));
+    const inList = params.length ? `c.source IN (${params.map((p) => p.name).join(",")})` : "false";
+    scoped = takesNullSource
+      ? `${BROKEN} AND (${inList} OR NOT IS_DEFINED(c.source) OR c.source = null)`
+      : `${BROKEN} AND ${inList}`;
+    console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${all.length} sources, ${f(mine.reduce((s, r) => s + r.n, 0))} rows${takesNullSource ? " (+ rows with no source)" : ""}`);
+  }
+
+  let scanned = 0, retiredRedundant = 0, rehomed = 0, unnameable = 0, failed = 0;
+  let stopReason = null;
+  const unnameableSample = [];
+
+  let token;
+  do {
+    const page = await retry(() => cat.items
+      .query({ query: `SELECT * FROM c WHERE ${scoped}`, parameters: params },
+        { maxItemCount: 400, continuationToken: token }).fetchNext());
+    token = page.continuationToken;
+
+    for (let i = 0; i < page.resources.length; i += CONCURRENCY) {
+      await Promise.all(page.resources.slice(i, i + CONCURRENCY).map(async (row) => {
+        scanned++;
+        const slug = canonicalSlugFor(row);
+        if (!slug) {
+          unnameable++;
+          if (unnameableSample.length < 8) unnameableSample.push(`${String(row.id).slice(0, 62)}  src=${row.source}`);
+          return;
+        }
+        try {
+          const twin = await retry(() => cat.item(slug, slug).read().catch((e) => {
+            if (e.code === 404) return { resource: undefined };
+            throw e;
+          }));
+
+          if (!twin.resource) {
+            // Only copy of this card. Write it to its own slug FIRST.
+            if (!APPLY) { rehomed++; return; }
+            const {
+              _rid, _self, _etag, _attachments, _ts,
+              id: _oldId, cardId: _oldCardId,
+              ...rest
+            } = row;
+            await retry(() => upsertCatalogEntry({
+              ...rest, id: slug, cardId: slug, hobbyiqCardId: slug,
+              vendorIds: {
+                ...(row.vendorIds ?? {}),
+                ...(row.source && row.cardId ? { [row.source]: String(row.cardId) } : {}),
+              },
+              canonicalizedFrom: row.id,
+            }));
+            // Verify it landed before removing the original.
+            const check = await retry(() => cat.item(slug, slug).read().catch(() => ({ resource: undefined })));
+            if (!check.resource) { failed++; return; }
+            rehomed++;
+          } else if (!APPLY) { retiredRedundant++; return; }
+          else retiredRedundant++;
+
+          // The original is now redundant either way.
+          if (APPLY) {
+            const pk = row.cardId === undefined || row.cardId === null ? undefined : row.cardId;
+            await retry(() => cat.item(row.id, pk).delete()).catch((e) => {
+              if (e.code !== 404) throw e;
+            });
+          }
+        } catch (e) {
+          failed++;
+          if (failed <= 5) console.error(`  failed ${String(row.id).slice(0, 60)}: ${String(e.message || e).slice(0, 70)}`);
+        }
+      }));
+      if (LIMIT && (rehomed + retiredRedundant) >= LIMIT) { stopReason = "limit"; break; }
+      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; break; }
+    }
+    if (stopReason) break;
+  } while (token);
+
+  if (stopReason === "budget") {
+    console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget with work left — the relaunch continues from here`);
+  } else if (stopReason === "limit") {
+    console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run, not the whole shard`);
+  }
+
+  console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written or deleted"}`);
+  console.log(`  scanned                        ${f(scanned)}`);
+  console.log(`  re-homed to their own slug     ${f(rehomed)}`);
+  console.log(`  retired as redundant copies    ${f(retiredRedundant)}`);
+  console.log(`  UNNAMEABLE (left alone)        ${f(unnameable)}`);
+  console.log(`  failed                         ${f(failed)}`);
+  if (unnameableSample.length) {
+    console.log(`\n  unnameable sample — these are not deletable, they need a parser:`);
+    for (const u of unnameableSample) console.log(`    ${u}`);
+  }
+  if (APPLY) {
+    reportWrites({
+      job: "canonicalize-vendor-shaped-rows",
+      intended: scanned,
+      written: rehomed + retiredRedundant,
+      skipped: unnameable,
+      failed,
+    });
+  }
+}
+
+module.exports = { canonicalSlugFor, BROKEN };
+
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); process.exit(3); });
+}
