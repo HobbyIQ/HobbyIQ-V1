@@ -43,6 +43,8 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const PHASES = String(process.env.PHASES || "beckett,insider").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORT = process.env.SPORT || "baseball";
 const PAGES = process.env.PAGES || "29";
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
 const WORKDIR = process.env.WORKDIR || path.join(os.tmpdir(), "hiq-checklists");
 // The runner caches WORKDIR across relaunches. Re-scraping what is already
 // staged costs 76 of the 140 available minutes and acquires nothing new.
@@ -120,6 +122,11 @@ function run(script, args, env) {
         BACKFILL_APPLY: APPLY ? "true" : "false",
         RUN_MINUTES: String(budget),
         CONCURRENCY: process.env.CONCURRENCY || "48",
+        // The ingest has always sharded by file; nobody was passing it the
+        // shard. One worker on 409 files makes "does it fit in one budget
+        // window?" an open question every run. Eight workers on the same cached
+        // CSVs makes it arithmetic.
+        SLOT: String(SLOT), SLOTS: String(SLOTS),
       });
       done.push(`ingested:${source}`);
     } catch (e) { console.error(`  ${source} ingest failed: ` + String(e.message).slice(0, 160)); }

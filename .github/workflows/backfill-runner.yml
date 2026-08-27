@@ -543,7 +543,7 @@ jobs:
           echo "phases_done=$N"
           if [ "$N" -gt 0 ]; then
             echo "::notice::completed $N phase(s) — re-dispatching to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::no phase completed — done, no re-dispatch."
           fi
