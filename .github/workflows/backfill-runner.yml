@@ -121,6 +121,7 @@ on:
           - repair-parallel-subset-fold
           - ingest-checklists-end-to-end
           - reslugAllSoldComps
+          - annotate-checklist-backing
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -589,6 +590,29 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f mode="${{ inputs.mode }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::canonicalized nothing — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the checklist-backing annotation until the slot is clean
+        # Terminates on its OWN resume predicate rather than on a count that
+        # happens to be zero. The script only takes rows with no
+        # checklistBacking yet, so "scanned 0" means the slot is finished --
+        # whereas relaunching on "annotated > 0" would loop forever once the
+        # budget stop sent the next run back to the first product.
+        if: ${{ always() && inputs.script == 'annotate-checklist-backing' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          SEEN=$(grep -aoE "^  derived rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          SEEN=${SEEN:-0}
+          echo "checklist_backing_scanned=$SEEN"
+          if [ "$SEEN" -gt 0 ]; then
+            echo "::notice::annotated $SEEN rows — re-dispatching to continue this slot"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing left unannotated in this slot — done."
           fi
 
       - name: Self-relaunch graded identities until the pool is fully minted
