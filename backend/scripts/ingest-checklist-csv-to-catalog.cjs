@@ -247,7 +247,12 @@ async function main() {
     if (!stopReason && APPLY) {
       try { fs.writeFileSync(csvPath + ".ingested", String(written)); } catch { /* a lost marker only costs a redo */ }
     }
-    process.stderr.write(`\r  ${files_ok}/${files.length}  rows=${f(rows)} written=${f(written)}   `);
+    // Rate, live. Printing throughput only in the final summary means the
+    // answer to "does this fit in the budget?" arrives when the budget is
+    // already spent -- which is how a 216 rows/min run went two full cycles
+    // before anyone could see it was 175x too slow.
+    const mins = Math.max(1 / 60, (Date.now() - STARTED) / 60000);
+    process.stderr.write(`\r  ${files_ok}/${files.length}  rows=${f(rows)} written=${f(written)}  ${f(Math.round(written / mins))}/min   `);
   }
   process.stderr.write("\n");
 
@@ -260,6 +265,18 @@ async function main() {
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);
+  {
+    // The number that decides whether another cycle is needed, stated rather
+    // than left to be inferred from a wall-clock subtraction.
+    const mins = Math.max(1 / 60, (Date.now() - STARTED) / 60000);
+    const rate = Math.round(written / mins);
+    const left = files.length - files_ok;
+    console.log(`  throughput             ${f(rate)} rows/min`);
+    if (left > 0 && rate > 0 && files_ok > 0) {
+      const perFile = rows / Math.max(1, files_ok);
+      console.log(`  files left             ${f(left)}   ~${f(Math.ceil((left * perFile) / rate))} more minutes at this rate`);
+    }
+  }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);
