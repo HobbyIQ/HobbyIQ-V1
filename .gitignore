@@ -68,3 +68,6 @@ filtered-triage-secret-hits.txt
 # data, add a *.example.json alongside instead of committing runtime state.
 backend/.data/*.json
 
+
+# Windows `> nul` redirects create a real file under Git Bash (27MB and counting)
+nul
