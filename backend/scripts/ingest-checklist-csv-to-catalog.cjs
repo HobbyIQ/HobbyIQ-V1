@@ -151,8 +151,21 @@ async function main() {
     process.exit(2);
   }
 
-  let files = fs.readdirSync(DIR).filter((n) => n.endsWith(".csv")).sort();
+  const allFiles = fs.readdirSync(DIR).filter((n) => n.endsWith(".csv")).sort();
+  let files = allFiles;
   if (SLOTS > 1) files = files.filter((_, i) => i % SLOTS === SLOT);
+
+  // A SHARD IS NOT A RUN. The workflow's `slots` input defaults to 16 and the
+  // wrapper hands the child its whole environment, so an un-sharded dispatch
+  // silently took 1/16 of the files -- 26 of 409 -- and then printed a clean
+  // reconciliation, a full phases-done line and a green check. The totals were
+  // all internally consistent; they were just consistent about a sixteenth of
+  // the job. Say the denominator out loud so that can never read as complete.
+  if (SLOTS > 1) {
+    console.log(`SHARD ${SLOT}/${SLOTS} — this run owns ${f(files.length)} of ${f(allFiles.length)} files.`);
+    console.log(`  The other ${f(allFiles.length - files.length)} belong to sibling slots and are NOT ingested here.`);
+    console.log(`  Dispatch every slot 0..${SLOTS - 1}, or pass slots=1 for the whole set.\n`);
+  }
 
   // A file that finished completely leaves a marker beside its CSV, and the
   // marker rides the same cache the CSVs do. Without this, a budget stop sends
@@ -260,7 +273,7 @@ async function main() {
   else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
-  console.log(`  files ingested         ${f(files_ok)}`);
+  console.log(`  files ingested         ${f(files_ok)}${SLOTS > 1 ? `   of ${f(allFiles.length)} in the directory — SHARD ${SLOT}/${SLOTS}, NOT the whole set` : ""}`);
   console.log(`  files already done     ${f(alreadyDone)}   <- resumed past these`);
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
   console.log(`  csv rows read          ${f(rows)}`);
