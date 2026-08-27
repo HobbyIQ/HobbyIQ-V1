@@ -362,3 +362,100 @@ that can quietly regress.
 | #1287 | The one query left unretried took a 429 and exited 3 |
 | #1288 | Bigger pages: the job is scan-bound, not RU-bound (2,500 RU/s of 400,000) |
 | #1289 | Stop on our own clock, or the whole fleet dies silently at the 150-min ceiling |
+
+---
+
+## The parallel field is not uniform — measured 2026-08-27
+
+Found chasing a live report: a Marconi German BCP-100 Gold showing BASE comps.
+Three separate defects, all in `parallel`, all breaking the match.
+
+### 1. The subset is folded into the parallel name
+
+```
+catalog:  parallel="Chrome Prospects Lava Refractor"  subsetName="Base"
+sale:     parallel="Lava Refractor"
+```
+
+A sale computes `...:lava-refractor:...`; the catalog only holds
+`...:chrome-prospects-lava-refractor:...`. No row exists at the sale's slug, so
+pricing falls back to base comps — the reported symptom.
+
+**Safe to collapse**, because the stripped form already dominates:
+
+```
+"Chrome Prospects Blue Refractor"    410   vs  "Blue Refractor"  103,561
+"Chrome Prospects Gold Refractor"    443   vs  "Gold Refractor"  118,877
+```
+
+The folded form is a splinter, so collapsing REUNITES one card's pool. This is
+the opposite of the BCP case below, where merging would destroy distinct cards.
+The difference: here the two names denote the same card.
+
+Scope: `Chrome Prospects ` 30,422 · `Chrome Prospect ` 637 · `Paper Prospects `
+4,170 · `Prospects ` 3,762. Sources: checklistcenter 12,397, baseballcardpedia
+8,220, plus their `-graded` twins.
+
+### 2. The print run is glued into the parallel name
+
+```
+Chrome Prospects Sunflower Seed Refractor: Ten Copie
+Chrome Prospects X Fractor: 725 Copie
+Chrome Prospects Reptillian Refractor: 8125 Copie
+```
+
+A parser swallowed "Ten Copies" / "725 Copies" into the name and truncated the
+plural. Every one is a unique parallel no sale can match, and it ate the one
+field a sale title cannot yield. Strip the suffix AND recover `printRun` from it.
+
+### 3. `Base ` is a DIFFERENT problem — do not strip it
+
+```
+Base Cards       12,493
+Base Autograph   10,969
+Base Refractor    3,064
+Base Sapphire       608
+```
+
+`Base Cards` and `Base Autograph` are not parallels at all; they are category
+names sitting in the parallel field. `Base Refractor` and `Base Sapphire` may be
+legitimate. The same prefix rule would corrupt 47,332 rows. Needs its own
+analysis before anything is written.
+
+---
+
+## BCP- is not only Bowman Chrome — 2026-08-27
+
+`CHROME_PREFIX_OVERRIDES` rests on "BCP- only ever = Bowman Chrome". The
+checklists say otherwise, and the numbering RUNS ON from flagship into Chrome:
+
+```
+year   bowman      bowman-chrome   overlap
+2021   BCP-1..150  BCP-151..250    0
+2023   BCP-1..150  BCP-151..253    0
+2024   BCP-1..152  BCP-153..254    0
+2026   BCP-1..150  BCP-151..252    0
+```
+
+Zero overlap every year, but the boundary MOVES (150 / 152). The blanket
+override sends **64,059 sales** to the wrong product — 30,016 of them say
+"2026 Bowman Baseball" in their own setName, and 1,446 are basketball.
+
+**Do not fix this with another rule.** A boundary table was written and
+discarded: it is the same shape as the rule that caused the bug, and it will
+drift the same way. `resolveSetKeyFromCatalog` already exists, is
+index-friendly, respects authority — and NOTHING CALLS IT. Given the vendor's
+set text it answers correctly:
+
+```
+BCP-100 + "2026 Bowman Baseball"  ->  bowman  (narrowed-by-text)
+```
+
+Without that text it returns `ambiguous`, because BCP-100 legitimately exists in
+six products. Critically, every `bowman-chrome` candidate for it is DERIVED
+(`ingest-auto-seed`, `sold-comps-stub`) — rows the mis-slugged sales created
+themselves. The loop manufactured its own ambiguity. Filtering candidates to
+checklist authority is what makes the resolver decisive.
+
+**Next:** wire `resolveSetKeyFromCatalog` into the sale-slugging path, passing
+the vendor set text, and have it ignore derived rows when adjudicating.
