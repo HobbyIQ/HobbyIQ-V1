@@ -119,6 +119,7 @@ on:
           - materialize-graded-identities
           - canonicalize-vendor-shaped-rows
           - repair-parallel-subset-fold
+          - ingest-checklists-end-to-end
           - reslugAllSoldComps
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -493,6 +494,27 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f shard_hex="${{ inputs.shard_hex }}"
           else
             echo "::notice::nothing re-slugged — done, no re-dispatch."
+          fi
+      - name: Self-relaunch the checklist ingest until every phase completes
+        # Acquire + convert + ingest is far longer than one 150-minute step, so
+        # the script slices RUN_MINUTES across phases and prints what it
+        # reached. --skipExisting means a relaunch resumes rather than
+        # re-scraping what is already on the runner disk.
+        if: ${{ always() && inputs.script == 'ingest-checklists-end-to-end' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "checklist_phases_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          N=${N:-0}
+          echo "phases_done=$N"
+          if [ "$N" -gt 0 ]; then
+            echo "::notice::completed $N phase(s) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}"
+          else
+            echo "::notice::no phase completed — done, no re-dispatch."
           fi
       - name: Self-relaunch the parallel repair until nothing is folded
         # Stops at its own 140-minute budget and PRINTS its summary, so
