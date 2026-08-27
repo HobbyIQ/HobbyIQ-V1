@@ -97,6 +97,27 @@ const BROKEN = MODE === "nopk"
 
 const f = (n) => Number(n).toLocaleString();
 
+// CF-A-ROW-CAN-EXIST-AT-AN-ID-THE-SDK-CANNOT-ADDRESS (Drew, 2026-08-27:
+// "fix it").
+//
+// Cosmos forbids / \ # ? in a Resource ID, and the SDK builds a URL path from
+// the id -- so item(id, pk) throws client-side before any request is made.
+// Rows nonetheless EXIST carrying them:
+//
+//     card::hiq:baseball:2018:bowman:108/165
+//
+// 16,112 catalog rows and 51,095 sales carry a "/" in cardNumber, and they are
+// not all mistakes: "AAC/BG" and "PTD-AR/NG" are real dual-player card
+// numbers, and "N/A" is a placeholder. computeHobbyIqCardId already sanitises
+// these correctly (108/165 -> 108165), so the slug generator is not the
+// source; these rows predate it or came in through another path.
+//
+// The bug being fixed here is narrower: this script THREW on them, which
+// failed the whole run and cost three dispatches before anyone read the log.
+// A row we cannot address is a real class of thing -- count it and move on, so
+// the pass finishes and the population stays visible.
+const ILLEGAL_ID = /[/\\#?]/;
+
 /** The slug this row should live at, or null when it cannot be named. */
 function canonicalSlugFor(row) {
   if (typeof row.hobbyiqCardId === "string" && row.hobbyiqCardId.startsWith("hiq:")) {
@@ -166,6 +187,8 @@ async function main() {
   }
 
   let scanned = 0, retiredRedundant = 0, rehomed = 0, unnameable = 0, failed = 0, alreadyOk = 0;
+  let unaddressable = 0;
+  const unaddressableSample = [];
   let stopReason = null;
   const unnameableSample = [];
 
@@ -179,6 +202,13 @@ async function main() {
     for (let i = 0; i < page.resources.length; i += CONCURRENCY) {
       await Promise.all(page.resources.slice(i, i + CONCURRENCY).map(async (row) => {
         scanned++;
+        // Unaddressable by the SDK: reading or deleting it throws before a
+        // request is sent, so there is nothing this pass can do with it.
+        if (ILLEGAL_ID.test(String(row.id ?? "")) || ILLEGAL_ID.test(String(row.cardId ?? ""))) {
+          unaddressable++;
+          if (unaddressableSample.length < 8) unaddressableSample.push(String(row.id).slice(0, 70));
+          return;
+        }
         // The scan predicate is indexable but coarse. Confirm the row really
         // is mis-addressed before touching it: a row already at its own slug
         // is left exactly as it is.
@@ -253,7 +283,12 @@ async function main() {
   console.log(`  retired as redundant copies    ${f(retiredRedundant)}`);
   console.log(`  already at their own slug      ${f(alreadyOk)}`);
   console.log(`  UNNAMEABLE (left alone)        ${f(unnameable)}`);
+  console.log(`  UNADDRESSABLE id (skipped)     ${f(unaddressable)}   <- / \\ # ? in the id; the SDK cannot reference it`);
   console.log(`  failed                         ${f(failed)}`);
+  if (unaddressableSample.length) {
+    console.log(`\n  unaddressable sample — these need a migration, not a sweep:`);
+    for (const u of unaddressableSample) console.log(`    ${u}`);
+  }
   if (unnameableSample.length) {
     console.log(`\n  unnameable sample — these are not deletable, they need a parser:`);
     for (const u of unnameableSample) console.log(`    ${u}`);
