@@ -140,7 +140,7 @@ const slug = (s) => String(s || "").toLowerCase()
 // way. Including them ingests each card two or three times. Beckett names this
 // sheet inconsistently across products ('Team Sets' in Bowman Chrome, 'Teams'
 // in Mega Box), so match on shape rather than one literal.
-const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets", "Teams", "Checklist"]);
+const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets", "Teams", "Checklist", "Master"]);
 
 // CF-CHECKLIST-VARIATION-IS-A-PARALLEL (Drew, 2026-08-25). Sections that name
 // the plain card of their own numbering run rather than a variant of it. These
@@ -323,6 +323,79 @@ function classifySections(sections) {
   return report;
 }
 
+// CF-THE-LADDER-IS-A-LADDER-NOT-A-SECTION (Drew, 2026-08-26).
+//
+// A single populated cell is treated as a section header, and a Beckett sheet
+// lists its parallels in exactly that shape:
+//
+//     Base Set                 <- a section
+//     100 cards.
+//     Parallels:               <- ...and then ELEVEN more single-cell rows
+//     Refractors - /499
+//     Gold Refractors - /50
+//     Superfractors - 1/1
+//     BCP-1  Jackson Holliday  <- the cards
+//
+// so every rung became its own section. 2023 Bowman Chrome converted to
+// categories like "auto-superfractors-11" and "insert-100-cards", and all 97
+// rungs in the workbook were dropped -- every one of 1,372 rows emitted with a
+// blank parallel. Bowman Chrome IS its refractor ladder, so that was the whole
+// checklist missing while the row count still looked plausible.
+//
+// The ladder belongs to the section it sits in, not to the sheet. The
+// Autographs sheet holds 42 rungs across ~12 subsections, each with its own
+// "Parallels:" block, so applying the sheet's rungs to every card would be a
+// cross join -- exactly the template `no-synthetic-parallels` forbids.
+// Scoped per section it is not a template: Beckett is publishing which
+// parallels that specific run of cards has.
+const LADDER_HEAD = /^parallels?\s*:/i;
+
+// Beckett publishes unannounced content as a placeholder rather than omitting
+// the heading:
+//
+//     It Came for the League Checklist
+//     15 cards.
+//     Parallels:
+//     TBA                      <- the ladder is not announced yet
+//     CFL-1  Corbin Carroll    <- but the CARDS are here
+//
+// "TBA" is not a rung, so it fell through to the section-header branch and
+// BECAME the section -- stealing the name from "It Came for the League" and
+// filing its 15 cards under a set called "TBA". A placeholder is skipped and
+// the ladder stays open; only a real heading closes it.
+const PLACEHOLDER = /^(tba|n\/?a|none|list tba\.?|checklist tba\.?|coming soon)\.?$/i;
+
+// "Gold Refractors - /50" -> /50. "Superfractors - 1/1" -> a one-of-one.
+// Distribution notes ("hobby only", "HTA only") are not different parallels
+// and are stripped from the name but kept as a note.
+function parseRung(line) {
+  const raw = String(line || "").trim();
+  if (!raw || LADDER_HEAD.test(raw)) return null;
+  const noteMatch = raw.match(/\(([^)]*)\)\s*$/);
+  const note = noteMatch ? noteMatch[1] : null;
+  let s = raw.replace(/\([^)]*\)\s*$/, "").trim();
+
+  let printRun = null;
+  const oneOf = s.match(/[–—-]\s*1\s*\/\s*1\s*$/);
+  const numbered = s.match(/[–—-]\s*\/\s*(\d[\d,]*)\s*$/);
+  if (oneOf) {
+    printRun = 1;
+    s = s.slice(0, oneOf.index).trim();
+  } else if (numbered) {
+    printRun = Number(numbered[1].replace(/,/g, ""));
+    s = s.slice(0, numbered.index).trim();
+  }
+  s = s.replace(/[–—-]\s*$/, "").trim();
+
+  if (!s || s.length < 3) return null;
+  // A rung names a finish. Without this, "100 cards." and stray prose would
+  // become parallels and every card would gain a parallel called "cards".
+  if (!/refractor|prizm|foil|shimmer|wave|atomic|mojo|superfractor|parallel|logo|variation|sparkle|speckle/i.test(s)) {
+    return null;
+  }
+  return { name: s, printRun: printRun, note: note };
+}
+
 function main() {
   const files = readZip(fs.readFileSync(path.resolve(XLSX)));
   const sheets = sheetsByName(files);
@@ -333,11 +406,31 @@ function main() {
   for (const [name, rows] of Object.entries(sheets)) {
     if (SKIP_SHEETS.has(name)) continue;
     let section = name;
+    // The ladder belongs to the section it sits under, and resets with it.
+    let inLadder = false;
+    let pendingLadder = [];
     for (const row of rows) {
       if (!nonEmpty(row)) continue;
       if (isCountLine(row)) continue;
-      // A single populated cell is a section header.
-      if (nonEmpty(row) === 1 && row[0]) { section = row[0]; continue; }
+      // A single populated cell is a section header, the "Parallels:" marker,
+      // or a rung of the ladder that marker opened. Treating all three as
+      // section headers is what turned 97 rungs into 97 sections.
+      if (nonEmpty(row) === 1 && row[0]) {
+        const cell = String(row[0]).trim();
+        if (LADDER_HEAD.test(cell)) { inLadder = true; pendingLadder = []; continue; }
+        // A placeholder never names a section, in or out of a ladder.
+        if (PLACEHOLDER.test(cell)) continue;
+        if (inLadder) {
+          const rung = parseRung(cell);
+          if (rung) { pendingLadder.push(rung); continue; }
+        }
+        section = cell;
+        inLadder = false;
+        pendingLadder = [];
+        continue;
+      }
+      // A card row closes the ladder: everything after it belongs to the cards.
+      inLadder = false;
       const cardNumber = String(row[0] || "").trim();
       let player = String(row[1] || "").replace(/,\s*$/, "").trim();
       if (!cardNumber || !player) continue;
@@ -351,6 +444,8 @@ function main() {
           sheet: name, section: section, key: key,
           category: categoryFor(name, section),
           numbers: new Set(), cards: 0,
+          // Whatever "Parallels:" block preceded this section's first card.
+          ladder: pendingLadder,
         });
       }
       const sec = sections.get(key);
@@ -368,18 +463,41 @@ function main() {
   for (const rec of records) {
     const sec = sections.get(rec.sectionKey);
     const target = sec.parallelOf || sec;
+    const isAuto = target.category.startsWith("auto-") ? "true" : "false";
+    // The plain card. Parallel stays BLANK, never "Base" — normalizeParallel()
+    // already reads "" as the base tier, so the blank lies about nothing.
     out.push({
       category: target.category,
       cardNumber: rec.cardNumber,
-      // Beckett publishes card LISTS, not ladders. A row we were never told the
-      // finish of leaves parallel BLANK — asserting "Base" claims knowledge the
-      // source never gave us. normalizeParallel() already reads "" as the base
-      // tier, so the blank costs nothing downstream and lies about nothing.
       parallel: sec.parallelOf ? sec.rung : "",
-      isAuto: target.category.startsWith("auto-") ? "true" : "false",
-      printRun: "",   // Beckett xlsx are card lists only — never guessed
+      isAuto: isAuto,
+      printRun: "",
       player: rec.player,
     });
+
+    // CF-EMIT-THE-WHOLE-LADDER. Newer Beckett workbooks DO publish the ladder:
+    // 2023 Bowman Chrome names 97 rungs with print runs, 11 on the base set
+    // alone. Dropping them emitted every card with a blank parallel and lost
+    // the set's entire refractor ladder -- and print run is the one field that
+    // cannot be reconstructed from a sale title.
+    //
+    // Scoped to the section's OWN ladder, never the sheet's. The Autographs
+    // sheet carries 42 rungs across ~12 subsections; applying all of them to
+    // every card would be the cross join that no-synthetic-parallels forbids.
+    // Per section it is not a template -- it is Beckett stating which
+    // parallels this specific run of cards has.
+    if (!sec.parallelOf) {
+      for (const rung of sec.ladder || []) {
+        out.push({
+          category: target.category,
+          cardNumber: rec.cardNumber,
+          parallel: rung.name,
+          isAuto: isAuto,
+          printRun: rung.printRun == null ? "" : String(rung.printRun),
+          player: rec.player,
+        });
+      }
+    }
   }
 
   // Guard against the duplicate-id class of bug: the same card appearing twice
@@ -449,4 +567,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION };
+module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD };
