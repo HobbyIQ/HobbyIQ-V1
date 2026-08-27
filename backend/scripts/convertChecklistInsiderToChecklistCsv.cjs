@@ -21,12 +21,23 @@
  * card-number overlap is precisely what classifySections already does. A
  * second implementation would drift from the first.
  *
- * THE LADDER IS NOT CROSS-JOINED. A page may also carry a parallels LADDER --
- * 2023 Bowman Inception lists "Blue Foil /99", "Gold Foil /50" and 8 more,
- * with 295 base cards and no per-card parallel rows. Multiplying 295 x 10 would
- * manufacture 2,950 card rows no source ever published, which is the template
- * `no-synthetic-parallels` exists to forbid. The ladder stays in the JSONL and
- * is REPORTED here; only rows a source actually published become CSV.
+ * THE LADDER BECOMES CARDS, SCOPED PER LIST (Drew, 2026-08-26: "no, we need
+ * all the parallels"). This file first refused to expand the ladder, reading
+ * `no-synthetic-parallels` as forbidding it. That reading was too broad: the
+ * rule forbids TEMPLATES -- a generic parallel list applied to sets with no
+ * evidence. A ladder the source publishes FOR THIS PRODUCT, with print runs
+ * and pack odds, is scraped evidence about this specific run of cards.
+ *
+ * It matters most where nothing else can help. 2026 Bowman Chrome Mega Box
+ * carries 12 Mojo rungs on its page and ZERO in its workbook; Beckett
+ * publishes none because Topps has not released them; and 7,786 sales name
+ * "Mojo Refractor". The page ladder is the only source that exists, and print
+ * run is the one field no sale title can be made to yield.
+ *
+ * Scoped by the list's OWN name: "<Product> Base Parallels List" applies to
+ * base cards, an Autographs list to autographs. 77 of 603 products publish
+ * more than one, and applying every rung to every card WOULD be the cross join
+ * the rule forbids.
  *
  * BLANK MEANS UNKNOWN. A card whose parallel we do not know emits an empty
  * parallel column -- never the literal "Base". That distinction is what lets a
@@ -98,30 +109,68 @@ function sectionsFor(cards) {
   return sections;
 }
 
+/**
+ * Which sections a published ladder applies to.
+ *
+ * The ladder names its own scope: "2025 Bowman Chrome Mega Box Baseball Base
+ * Parallels List" is the BASE run's ladder, and 77 of 603 products publish
+ * more than one. Applying every rung to every card would put an autograph
+ * ladder on base cards -- the cross join no-synthetic-parallels forbids, and
+ * the same mistake the Beckett sheet-wide ladder would have made.
+ */
+function ladderAppliesTo(listName, category) {
+  const l = String(listName || "").toLowerCase();
+  if (/\bauto(graph)?s?\b/.test(l)) return category.startsWith("auto-");
+  if (/\binserts?\b/.test(l)) return category.startsWith("insert-");
+  if (/\brelics?\b|\bmemorabilia\b/.test(l)) return category.startsWith("insert-");
+  // Default is the base run: nearly every list is "<Product> Base Parallels
+  // List", and a rung with no stated scope belongs to the cards the product
+  // is built around, not to its inserts.
+  return category === "base";
+}
+
 function toCsvRows(product) {
   const cards = product.cards ?? [];
-  if (!cards.length) return { rows: [], anchors: 0, parallels: 0 };
+  if (!cards.length) return { rows: [], anchors: 0, parallels: 0, expanded: 0, rungs: 0 };
   const sections = sectionsFor(cards);
   classifySections(sections);
 
+  // Rungs the PAGE published, with print run and pack odds. The workbook does
+  // not carry these -- 2026 Bowman Chrome Mega Box has 12 Mojo rungs on the
+  // page and zero in its xlsx -- and print run is the one field that cannot be
+  // reconstructed from a sale title.
+  const ladder = (product.parallels ?? []).filter((p) => p && p.parallel);
+
   const rows = [];
-  let anchors = 0, parallels = 0;
+  let anchors = 0, parallels = 0, expanded = 0;
   for (const sec of sections.values()) {
     if (sec.rung) parallels++; else anchors++;
+    const mine = sec.parallelOf ? [] : ladder.filter((p) => ladderAppliesTo(p.list, sec.category));
     for (const c of sec.rows) {
+      const isAuto = c.isAuto === true ? "true" : c.isAuto === false ? "false" : "";
+      // The plain card. Blank is "unknown", and is never the string "Base".
       rows.push({
         category: sec.category,
         cardNumber: String(c.cardNumber ?? "").trim(),
-        // A rung name when this section folded onto an anchor; blank otherwise.
-        // Blank is "unknown", and is never the string "Base".
         parallel: sec.rung ?? "",
-        isAuto: c.isAuto === true ? "true" : c.isAuto === false ? "false" : "",
+        isAuto,
         printRun: c.printRun ?? "",
         player: String(c.player ?? "").trim(),
       });
+      for (const rung of mine) {
+        rows.push({
+          category: sec.category,
+          cardNumber: String(c.cardNumber ?? "").trim(),
+          parallel: String(rung.parallel).replace(/\s*-\s*1$/, "").trim(),
+          isAuto,
+          printRun: rung.printRun == null ? "" : String(rung.printRun),
+          player: String(c.player ?? "").trim(),
+        });
+        expanded++;
+      }
     }
   }
-  return { rows, anchors, parallels };
+  return { rows, anchors, parallels, expanded, rungs: ladder.length };
 }
 
 function writeCsv(file, rows) {
@@ -146,7 +195,7 @@ function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
   let products = 0, written = 0, cardRows = 0, ladderRungs = 0, stubs = 0, unparsed = 0, empty = 0, deduped = 0;
-  let totalAnchors = 0, totalParallels = 0;
+  let totalAnchors = 0, totalParallels = 0, totalExpanded = 0;
 
   for (const line of fs.readFileSync(IN, "utf8").split("\n")) {
     if (!line.trim()) continue;
@@ -156,12 +205,11 @@ function main() {
     if (p.isStub) { stubs++; continue; }
     if (p.bookUnparsed) { unparsed++; continue; }
 
-    // Counted and reported, never multiplied into cards.
     ladderRungs += (p.parallels ?? []).length;
 
-    const { rows, anchors, parallels } = toCsvRows(p);
+    const { rows, anchors, parallels, expanded } = toCsvRows(p);
     if (!rows.length) { empty++; continue; }
-    totalAnchors += anchors; totalParallels += parallels;
+    totalAnchors += anchors; totalParallels += parallels; totalExpanded += expanded;
 
     const file = path.join(OUT_DIR, `${slugify(p.slug || `${p.year}-${products}`)}.csv`);
     const { written: n, dropped } = writeCsv(file, rows);
@@ -181,11 +229,12 @@ function main() {
   console.log(`  workbook unparsed        ${f(unparsed)}`);
   console.log(`  readable but no rows     ${f(empty)}`);
   console.log(`  dropped by dedup         ${f(deduped)}`);
-  console.log(`\n  ladder rungs NOT expressed as cards: ${f(ladderRungs)}`);
-  console.log(`  (a ladder without per-card rows is a template — see no-synthetic-parallels)`);
+  console.log(`\n  ladder rungs published by the page ${f(ladderRungs)}`);
+  console.log(`  rows generated from the ladder     ${f(totalExpanded)}`);
+  console.log(`  (scoped per list — a Base ladder never lands on autographs)`);
   console.log(`\n  format: category,cardNumber,parallel,isAuto,printRun,player`);
 }
 
-module.exports = { toCsvRows, sectionsFor, sheetNameFor };
+module.exports = { toCsvRows, sectionsFor, sheetNameFor, ladderAppliesTo };
 
 if (require.main === module) main();

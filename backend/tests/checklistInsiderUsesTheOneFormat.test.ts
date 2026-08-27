@@ -17,7 +17,7 @@
 import { describe, expect, it } from "vitest";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { toCsvRows, sheetNameFor } = require("../scripts/convertChecklistInsiderToChecklistCsv.cjs");
+const { toCsvRows, sheetNameFor, ladderAppliesTo } = require("../scripts/convertChecklistInsiderToChecklistCsv.cjs");
 
 /** 2023 Panini Elite Extra Edition in miniature: one plain run + parallels sharing its numbers. */
 const PARALLEL_PRODUCT = {
@@ -73,17 +73,58 @@ describe("blank means unknown, never the string Base", () => {
     expect(rows.some((r: { parallel: string }) => r.parallel === "Base")).toBe(false);
   });
 
-  it("emits an empty parallel for an unsectioned product", () => {
+  it("still emits the plain card alongside its rungs", () => {
     const { rows } = toCsvRows(LADDER_ONLY_PRODUCT);
-    expect(rows.every((r: { parallel: string }) => r.parallel === "")).toBe(true);
+    const plain = rows.filter((r: { parallel: string }) => r.parallel === "");
+    expect(plain).toHaveLength(4);
+    expect(rows.some((r: { parallel: string }) => r.parallel === "Base")).toBe(false);
   });
 });
 
-describe("a ladder is not a set of cards", () => {
-  it("never multiplies base cards by ladder rungs", () => {
-    // 4 cards x 2 ladder rungs = 8 rows would be 8 cards no source published.
+/**
+ * POLICY REVERSAL, Drew 2026-08-26: "no, we need all the parallels".
+ *
+ * This file previously asserted the opposite — that a ladder is never expanded
+ * into cards. That reading of `no-synthetic-parallels` was too broad. The rule
+ * forbids TEMPLATES: a generic parallel list applied to sets with no evidence.
+ * A ladder published BY THE SOURCE FOR THIS PRODUCT, with print runs and pack
+ * odds, is scraped evidence about this specific run of cards.
+ *
+ * It matters most exactly where nothing else can help: 2026 Bowman Chrome Mega
+ * Box has 12 Mojo rungs on its page and ZERO in its workbook, Beckett publishes
+ * none because Topps has not released them, and 7,786 sales name "Mojo
+ * Refractor". The page ladder is the only source that exists.
+ */
+describe("a published ladder becomes cards", () => {
+  it("expands each card across the product's own rungs", () => {
+    // 4 cards x (1 plain + 2 rungs) = 12.
+    const { rows, expanded } = toCsvRows(LADDER_ONLY_PRODUCT);
+    expect(rows).toHaveLength(12);
+    expect(expanded).toBe(8);
+  });
+
+  it("carries the print run the ladder states", () => {
     const { rows } = toCsvRows(LADDER_ONLY_PRODUCT);
-    expect(rows).toHaveLength(4);
+    const gold = rows.filter((r: { parallel: string }) => r.parallel === "Gold Foil");
+    expect(gold).toHaveLength(4);
+    expect(gold.every((r: { printRun: string }) => r.printRun === "50")).toBe(true);
+  });
+
+  it("scopes a Base ladder to base cards, never to autographs", () => {
+    // The cross join this rule actually forbids: 77 of 603 products publish
+    // more than one list, and an autograph ladder on base cards is a template.
+    expect(ladderAppliesTo("2025 Bowman Chrome Base Parallels List", "base")).toBe(true);
+    expect(ladderAppliesTo("2025 Bowman Chrome Base Parallels List", "auto-cpa")).toBe(false);
+    expect(ladderAppliesTo("Chrome Prospect Autographs Parallels List", "auto-cpa")).toBe(true);
+    expect(ladderAppliesTo("Chrome Prospect Autographs Parallels List", "base")).toBe(false);
+  });
+
+  it("strips the trailing -1 the source appends to a one-of-one", () => {
+    const { rows } = toCsvRows({
+      slug: "x", parallels: [{ list: "Base Parallels List", parallel: "Rose Gold Mojo Refractor - 1", printRun: 1 }],
+      cards: [{ subset: null, cardNumber: "1", player: "A", printRun: null, isAuto: null }],
+    });
+    expect(rows.some((r: { parallel: string }) => r.parallel === "Rose Gold Mojo Refractor")).toBe(true);
   });
 });
 
