@@ -35,10 +35,18 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.RESLUG_APPLY || p
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
 const MAX_ROWS = Number(process.env.MAX_ROWS || 0);
 const SHARD_HEX = (process.env.SHARD_HEX || "").split(",").map(s => s.trim()).filter(Boolean);
+// Ask the catalog when the prefix override disagrees with the row's own text.
+// RESOLVE=false restores the pure-prefix behaviour for comparison.
+const RESOLVE = String(process.env.RESOLVE ?? "true") !== "false";
 
 const distPath = path.resolve(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js");
 if (!fs.existsSync(distPath)) { console.error(`missing dist at ${distPath} — run \`npx tsc\``); process.exit(2); }
-const { computeHobbyIqCardId } = require(distPath);
+const { computeHobbyIqCardId, normalizeSetKey } = require(distPath);
+// CF-ASK-THE-CATALOG-NOT-A-PREFIX (Drew, 2026-08-27: "let's fix this
+// immediately"). resolveSetKeyFromCatalog has existed, index-friendly and
+// authority-aware, and nothing called it.
+const { resolveSetKeyFromCatalog } = require(
+  path.resolve(__dirname, "..", "dist", "services", "catalog", "resolveSetKey.service.js"));
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -107,6 +115,16 @@ async function main() {
   }
 
   let scanned = 0, computed = 0, changed = 0, touched = 0, failed = 0, skipped = 0, demoted = 0;
+  // How often the catalog overruled the prefix rule, and how often it declined.
+  let resolverWins = 0, resolverSilent = 0, resolverFailed = 0;
+
+  // A resolver call is a cross-partition catalog query, roughly a second.
+  // Sales repeat the same card 6.5 times on average, so uncached the same
+  // question gets asked over and over: 15,000 rows took 566s with the resolver
+  // against 21s for 40,000 without it. Keyed on the IDENTITY being asked
+  // about, not on the sale.
+  const verdictCache = new Map();
+  let resolverCached = 0;
   const startedAt = Date.now();
   const inflight = [];
   const rewriteCounts = new Map();
@@ -173,6 +191,74 @@ async function main() {
         else newSlug = fromKey;
       }
       if (!newSlug) { skipped++; continue; }
+
+      // CF-ASK-THE-CATALOG-NOT-A-PREFIX. computeHobbyIqCardId applies
+      // CHROME_PREFIX_OVERRIDES, which assumes "BCP- only ever = Bowman
+      // Chrome". The checklists say otherwise -- BOTH products publish BCP-,
+      // zero overlap, and the boundary MOVES between years (150 in 2021-23 and
+      // 2026, 152 in 2024-25). So the rule rewrites 64,059 sales onto a product
+      // they never came from; 30,016 of them say "2026 Bowman Baseball" in
+      // their OWN setName, and 1,446 are basketball.
+      //
+      // Not fixed with another rule -- a boundary table was written and
+      // discarded for being the same shape as the bug. The catalog knows,
+      // because a checklist told it. Ask it, and only when there is a conflict
+      // worth asking about: the override actually moved the setKey away from
+      // what the row's own text says. That keeps this to the ~0.4% of rows in
+      // dispute instead of a query per sale.
+      const saidSet = String(r.setName || r.setKey || "");
+      const overrodeTo = setOf(newSlug);
+      // normalizeSetKey does NOT apply CHROME_PREFIX_OVERRIDES; compute() does.
+      // Comparing compute() against itself can never differ, which is why this
+      // fired zero times on the first attempt.
+      const plainKey = normalizeSetKey(saidSet);
+      // Narrow to the case that is actually in dispute: a chrome-family
+      // cardNumber prefix on a row whose own text does NOT say chrome. Asking
+      // on every disagreement cost 106s per 1,500 rows against 21s per 40,000
+      // without -- unusable across 15.9M. This is the ~0.4% that the prefix
+      // override actually rewrites.
+      const chromePrefix = /^(bcp|cpa|bcpa|bdc|cda|bdcpa|tcpa|cra)(-|d)/i.test(String(r.cardNumber || ""));
+      const textSaysChrome = /chrome/i.test(saidSet);
+      if (RESOLVE && chromePrefix && !textSaysChrome && plainKey && overrodeTo && plainKey !== overrodeTo) {
+        try {
+          const ck = [r.sport, r.cardYear, String(r.cardNumber).toLowerCase(), saidSet.toLowerCase()].join("|");
+          let verdict;
+          if (verdictCache.has(ck)) {
+            verdict = verdictCache.get(ck);
+            resolverCached++;
+          } else {
+            verdict = await resolveSetKeyFromCatalog({
+            sport: r.sport,
+            year: Number(r.cardYear),
+            cardNumber: String(r.cardNumber),
+            playerName: r.playerName ?? null,
+              sourceSetText: saidSet || null,
+            });
+            verdictCache.set(ck, verdict);
+          }
+          // Only a checklist-backed answer may overrule; the resolver already
+          // drops rows that may not adjudicate, and returns null when it
+          // cannot say. Null means keep whatever we had.
+          if (verdict && verdict.setKey && verdict.setKey !== overrodeTo) {
+            const resolved = computeHobbyIqCardId({
+              sport: r.sport,
+              year: Number(r.cardYear),
+              setKey: verdict.setKey,
+              cardNumber: String(r.cardNumber),
+              parallel: r.parallel ?? "Base",
+              isAuto: Boolean(r.isAuto),
+              printRun: r.printRun ?? null,
+              authoritativeSetKey: true,
+            });
+            if (resolved && resolved.startsWith("hiq:")) {
+              newSlug = resolved;
+              resolverWins++;
+            }
+          } else if (verdict && verdict.resolution) {
+            resolverSilent++;
+          }
+        } catch { resolverFailed++; }
+      }
       computed++;
       if (newSlug === r.hobbyiqCardId) { skipped++; continue; }
 
@@ -225,6 +311,7 @@ async function main() {
 
   const dur = ((Date.now() - startedAt)/1000).toFixed(0);
   console.log(`\n[done ${dur}s] scanned=${scanned} computed=${computed} changed=${changed} touched=${touched} failed=${failed} skipped=${skipped} demoted-skipped=${demoted}`);
+  console.log(`  catalog overruled the prefix rule: ${resolverWins}   declined: ${resolverSilent}   errored: ${resolverFailed}   cached: ${resolverCached}`);
   if (demoted) {
     console.log(`\n  SKIPPED as demotions (only-improve rule):`);
     for (const [k, n] of [...demoteCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)) {
