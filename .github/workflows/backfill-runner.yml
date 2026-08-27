@@ -117,6 +117,7 @@ on:
           - retire-unreferenced-graded-rows
           - retire-impossible-grade-rows
           - materialize-graded-identities
+          - canonicalize-vendor-shaped-rows
           - reslugAllSoldComps
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -459,6 +460,29 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      - name: Self-relaunch canonicalize until no vendor-shaped rows remain
+        # Stops at its own 140-minute budget and PRINTS its summary, so
+        # "re-homed N" exists for this step to read. A run killed by the step
+        # ceiling prints nothing and the relaunch reads 0 -- which is how a
+        # fleet stops silently with every run green.
+        if: ${{ always() && inputs.script == 'canonicalize-vendor-shaped-rows' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          A=$(grep -aoE "^  re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          B=$(grep -aoE "^  retired as redundant copies +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=$(( ${A:-0} + ${B:-0} ))
+          echo "canonicalized=$MOVED"
+          if [ "$MOVED" -gt 0 ]; then
+            echo "::notice::canonicalized $MOVED — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::canonicalized nothing — done, no re-dispatch."
+          fi
 
       - name: Self-relaunch graded identities until the pool is fully minted
         # Same contract as the retire: the script stops at its own 140-minute
