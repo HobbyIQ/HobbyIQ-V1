@@ -187,6 +187,10 @@ on:
         required: false
         default: false
         type: boolean
+      mode:
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. Empty = the script's default."
+        required: false
+        default: ""
       shard_hex:
         description: "For reslugAllSoldComps: contentHash first-char shards, e.g. 0,1,2,3. 16 shards total; run disjoint sets in parallel. Empty = all."
         required: false
@@ -444,6 +448,9 @@ jobs:
           SPORTS: ${{ inputs.sports }}
           # reslugAllSoldComps: contentHash first-char shard, 16 total.
           SHARD_HEX: ${{ inputs.shard_hex }}
+          # Without this the script silently runs its DEFAULT mode and reports
+          # success having touched none of the population you dispatched it for.
+          MODE: ${{ inputs.mode }}
           MAX_ROWS: ${{ inputs.max_rows }}
           # rehome: only move identity rows; graded rows are regenerable.
           PARENTS_ONLY: ${{ inputs.parents_only == true && 'true' || 'false' }}
@@ -505,7 +512,7 @@ jobs:
           echo "parallel_repaired=$MOVED"
           if [ "$MOVED" -gt 0 ]; then
             echo "::notice::repaired $MOVED — re-dispatching to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-subset-fold -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-subset-fold -f apply=true -f concurrency="${{ inputs.concurrency }}" -f mode="${{ inputs.mode }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::repaired nothing — done, no re-dispatch."
           fi
@@ -527,7 +534,7 @@ jobs:
           echo "canonicalized=$MOVED"
           if [ "$MOVED" -gt 0 ]; then
             echo "::notice::canonicalized $MOVED — re-dispatching to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f mode="${{ inputs.mode }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::canonicalized nothing — done, no re-dispatch."
           fi
