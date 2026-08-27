@@ -462,6 +462,31 @@ jobs:
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
+      - name: Self-relaunch the re-slug until nothing changes
+        # touched=N is the line this greps, and the script only prints it on a
+        # clean exit -- which is why it now stops at its own 140-minute budget
+        # rather than being SIGKILLed at the 150-minute ceiling with nothing
+        # printed and nothing re-dispatched.
+        #
+        # Convergent, so re-running is safe: a row whose slug already matches
+        # what the generator produces is counted as skipped, not rewritten, so
+        # a relaunch that finds nothing left to change stops the loop.
+        if: ${{ always() && inputs.script == 'reslugAllSoldComps' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          MOVED=$(grep -aoE "touched=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+")
+          MOVED=${MOVED:-0}
+          echo "reslug_touched=$MOVED"
+          if [ "$MOVED" -gt 0 ]; then
+            echo "::notice::re-slugged $MOVED — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f shard_hex="${{ inputs.shard_hex }}"
+          else
+            echo "::notice::nothing re-slugged — done, no re-dispatch."
+          fi
       - name: Self-relaunch the parallel repair until nothing is folded
         # Stops at its own 140-minute budget and PRINTS its summary, so
         # "moved to the unfolded slug N" exists for this step to read. A run
