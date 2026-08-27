@@ -120,6 +120,18 @@ async function main() {
 
   let files = fs.readdirSync(DIR).filter((n) => n.endsWith(".csv")).sort();
   if (SLOTS > 1) files = files.filter((_, i) => i % SLOTS === SLOT);
+
+  // A file that finished completely leaves a marker beside its CSV, and the
+  // marker rides the same cache the CSVs do. Without this, a budget stop sends
+  // the next run back to file 1 to re-do the same head of the list forever,
+  // never reaching the tail.
+  const REINGEST = String(process.env.REINGEST || "") === "true";
+  let alreadyDone = 0;
+  if (!REINGEST) {
+    const before = files.length;
+    files = files.filter((n) => !fs.existsSync(path.join(DIR, n + ".ingested")));
+    alreadyDone = before - files.length;
+  }
   console.log(`${f(files.length)} files  source=${SOURCE} (${authority})  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
@@ -196,6 +208,11 @@ async function main() {
       if (LIMIT && written >= LIMIT) { stopReason = "limit"; notReached += batch.length - processed; break; }
       if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += batch.length - processed; break; }
     }
+    // Marked only when the whole file was processed: a budget stop mid-file
+    // must NOT claim the file is done, or its tail is silently lost.
+    if (!stopReason && APPLY) {
+      try { fs.writeFileSync(csvPath + ".ingested", String(written)); } catch { /* a lost marker only costs a redo */ }
+    }
     process.stderr.write(`\r  ${files_ok}/${files.length}  rows=${f(rows)} written=${f(written)}   `);
   }
   process.stderr.write("\n");
@@ -205,6 +222,7 @@ async function main() {
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  files ingested         ${f(files_ok)}`);
+  console.log(`  files already done     ${f(alreadyDone)}   <- resumed past these`);
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);

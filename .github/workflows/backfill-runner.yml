@@ -407,6 +407,36 @@ jobs:
           fi
           echo "Script confirmed: $SCRIPT"
 
+          # The wrapper SHELLS OUT, so its own presence proves nothing about
+          # the scripts it calls. ingest-checklists-end-to-end passed this
+          # check, scraped 349 products, then died on a child that had never
+          # been committed. Check the children too.
+          if [ "${{ inputs.script }}" = "ingest-checklists-end-to-end" ]; then
+            for CHILD in scrape-beckett-checklists scrape-checklistinsider \
+                         convertChecklistInsiderToChecklistCsv \
+                         ingest-checklist-csv-to-catalog; do
+              if [ ! -f "backend/scripts/$CHILD.cjs" ]; then
+                echo "::error::$CHILD.cjs is missing — the wrapper would acquire and then have nowhere to land the rows"
+                exit 1
+              fi
+            done
+            echo "Child scripts confirmed: 4"
+          fi
+
+      # A relaunch starts with an empty /tmp, so without this the job re-scrapes
+      # 718 Beckett set pages and 604 insider pages every single time: 76 minutes
+      # of a 140-minute budget spent re-acquiring what the previous run already
+      # had. --skipExisting tests the staged CSV path BEFORE fetching, so a
+      # restored directory skips the fetch entirely, not just the parse.
+      - name: Restore staged checklists across relaunches
+        if: ${{ inputs.script == 'ingest-checklists-end-to-end' }}
+        uses: actions/cache@v4
+        with:
+          path: /tmp/hiq-checklists
+          key: hiq-checklists-${{ github.run_id }}
+          restore-keys: |
+            hiq-checklists-
+
       - name: Run backfill (${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }})
         # Both RESLUG_APPLY and APPROVE_APPLY env vars are set so this
         # single step works for both reslug-* and approve-* scripts;

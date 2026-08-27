@@ -44,10 +44,14 @@ const PHASES = String(process.env.PHASES || "beckett,insider").split(",").map((s
 const SPORT = process.env.SPORT || "baseball";
 const PAGES = process.env.PAGES || "29";
 const WORKDIR = process.env.WORKDIR || path.join(os.tmpdir(), "hiq-checklists");
+// The runner caches WORKDIR across relaunches. Re-scraping what is already
+// staged costs 76 of the 140 available minutes and acquires nothing new.
+const FORCE_ACQUIRE = String(process.env.FORCE_ACQUIRE || "") === "true";
 
 const f = (n) => Number(n).toLocaleString();
 const left = () => RUN_MS - (Date.now() - STARTED);
 const mins = (ms) => Math.max(1, Math.floor(ms / 60000));
+const staged = (p) => { try { return fs.statSync(p).size > 0; } catch { return false; } };
 
 function run(script, args, env) {
   const out = execFileSync(process.execPath, [path.join(HERE, script), ...args], {
@@ -85,7 +89,11 @@ function run(script, args, env) {
   if (PHASES.includes("insider") && left() > 20 * 60000) {
     console.log("\n── phase 2: checklistinsider ──");
     try {
-      run("scrape-checklistinsider.cjs", ["--delayMs=700", `--out=${insiderJsonl}`]);
+      if (staged(insiderJsonl) && !FORCE_ACQUIRE) {
+        console.log(`  ${(fs.statSync(insiderJsonl).size / 1e6).toFixed(1)} MB already staged — skipping the scrape (FORCE_ACQUIRE=true re-fetches)`);
+      } else {
+        run("scrape-checklistinsider.cjs", ["--delayMs=700", `--out=${insiderJsonl}`]);
+      }
       run("convertChecklistInsiderToChecklistCsv.cjs", [`--in=${insiderJsonl}`, `--outDir=${insiderDir}`]);
       done.push("insider-acquired");
     } catch (e) { console.error("  insider acquire failed: " + String(e.message).slice(0, 120)); }
