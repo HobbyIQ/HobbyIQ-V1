@@ -118,6 +118,7 @@ on:
           - retire-impossible-grade-rows
           - materialize-graded-identities
           - canonicalize-vendor-shaped-rows
+          - repair-parallel-subset-fold
           - reslugAllSoldComps
       apply:
         description: "Actually write (true) or dry-run only (false)"
@@ -461,6 +462,28 @@ jobs:
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
+      - name: Self-relaunch the parallel repair until nothing is folded
+        # Stops at its own 140-minute budget and PRINTS its summary, so
+        # "moved to the unfolded slug N" exists for this step to read. A run
+        # killed by the 150-minute step ceiling prints nothing, the relaunch
+        # reads 0, and the fleet stops silently with every run green.
+        if: ${{ always() && inputs.script == 'repair-parallel-subset-fold' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          A=$(grep -aoE "^  moved to the unfolded slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          B=$(grep -aoE "^  merged into an existing row +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=$(( ${A:-0} + ${B:-0} ))
+          echo "parallel_repaired=$MOVED"
+          if [ "$MOVED" -gt 0 ]; then
+            echo "::notice::repaired $MOVED — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-subset-fold -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::repaired nothing — done, no re-dispatch."
+          fi
       - name: Self-relaunch canonicalize until no vendor-shaped rows remain
         # Stops at its own 140-minute budget and PRINTS its summary, so
         # "re-homed N" exists for this step to read. A run killed by the step
