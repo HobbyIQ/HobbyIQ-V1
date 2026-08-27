@@ -171,6 +171,111 @@ not convert the 59. **Until they are converted, this programme can recur.**
 
 ---
 
+## What the shape report says — 2026-08-26 night
+
+Run it rather than re-deriving any of this:
+
+```
+COSMOS_CONNECTION_STRING=... node backend/scripts/audit-catalog-shape.cjs
+```
+
+### The catalog is not "in one place" yet
+
+```
+at its own address    26,277,904   83.2%
+wrong partition key    2,779,314    8.8%
+NO partition key       2,528,735    8.0%
+UNREACHABLE            5,308,049   16.8%
+```
+
+**Two sweeps ran to completion over this population while blind to it.** Phase
+02's retire required `IS_DEFINED(c.gradeTier)`, so of 2,835,432 mis-partitioned
+rows it saw exactly **1,018**. `rehome-catalog-rows-to-own-partition` requires
+`STARTSWITH(c.id,'hiq:')`, and these ids are vendor-shaped
+(`cardhedge::1775832219776x807179689237410600::2be9b853`), so it saw none.
+Both reported success. `canonicalize-vendor-shaped-rows` (#1297) is the pass
+that actually reaches them.
+
+### "Duplicate" is still a conclusion, not an observation
+
+```
+identity rows          19,758,271
+distinct slugs         19,703,623
+TRUE duplicates            54,648   0.3%
+sitting at a vendor id  2,455,003
+```
+
+Baseball reads as ~2.4M duplicate rows. **Only 54,648 have a canonical twin.**
+The other ~2.4M are the ONLY record of that card, sitting at a vendor id — a
+dedup keyed on `hobbyiqCardId` deletes them and destroys 2.4M real cards. Same
+shape as the 3.1x grade-ladder bloat. Re-home, never delete.
+
+*Also retired: an earlier "79% are redundant" figure. It came from `SELECT TOP`
+in index order, which is not a sample. Measured properly it is ~3%.*
+
+### The gap is COVERAGE, not matching
+
+```
+sport         catalog   share |     sales   share | sales per row
+baseball   29,523,607   93.5% | 7,745,367   48.6% |  0.26
+pokemon       230,490    0.7% | 3,015,971   18.9% | 13.09
+football    1,048,397    3.3% | 2,465,949   15.5% |  2.35
+basketball    403,874    1.3% | 2,126,568   13.4% |  5.27
+```
+
+We do not have 31M cards. We have **29.5M baseball rows** — 28% of them grade
+variants — and almost nothing for the half of the market that is Pokemon,
+football and basketball. **No amount of re-slugging fixes a coverage hole.**
+
+### Baseball's own gap is MODERN, not vintage
+
+Full set difference, every card, not sampled:
+
+```
+2025  orphanSales= 197,018  of 1,221,513  (16%)
+2026  orphanSales= 110,786  of   839,112  (13%)
+2024  orphanSales= 109,261  of   834,897  (13%)
+2023  orphanSales=  70,074  of   464,849  (15%)
+
+top sets: 2023 bowman-chrome (7,954) · 2026 bowman (7,885)
+          2026 topps-finest (7,791) · 2026 bowman-chrome-mega-box (7,137)
+```
+
+This matters because it says which source to reach for. Vintage acquisition
+does not move this number.
+
+### Checklist sources, tested 2026-08-26
+
+| source | state | covers |
+|---|---|---|
+| cardboardconnection | **dead** | was the broad first stop |
+| hobbymonitor | live | modern only |
+| checklistinsider | live, **wired + converter** | modern; 603 products, 2,394,639 rows |
+| checklistcentral | live, **not worth wiring** | 2024-25 only, several "Coming Soon" |
+| keymancollectibles | live, **wired** (#1298) | 1921-2029, but yields 14 of 397 pages |
+| beckett | live | XLSX, the only other vintage path |
+
+`keymancollectibles` was over-estimated: it indexes 397 vintage sets but the
+site uses a different layout per era and the parser reads one of them. It is
+also aimed at vintage, which the measurement above says is not where baseball's
+orphans are.
+
+**Still open: 2023.** checklistinsider has only 8 products for 2023, so the
+single largest set gap (`2023 bowman-chrome`) has no source yet.
+
+### The canonical type could not express a real row
+
+`CardCatalogEntry.source` was a five-value union admitting **45 rows out of
+31,444,200** — 100.0% of the catalog carried a source the type forbade. It also
+omitted `searchTokens` (99.0%), `setName` (98.9%) and `displayName` (89.6%).
+
+A writer routing through `upsertCatalogEntry` had to lie about provenance AND
+would silently drop the fields search discriminates on. **That is why 59 of 61
+writers bypass it — self-preservation, not laziness.** Widened in #1296;
+`ensureCatalogRow` converted; BYPASSING 59 -> 58.
+
+---
+
 ## Decisions outstanding
 
 Each changes what gets built. Recommendations given; none should be Claude's call.
