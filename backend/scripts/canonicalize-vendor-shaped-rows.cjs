@@ -190,6 +190,10 @@ async function main() {
   let unaddressable = 0;
   const unaddressableSample = [];
   let stopReason = null;
+  // A copy that landed but whose delete threw is a leftover DUPLICATE, not a
+  // lost card, and not a failed write. It was being counted as both rehomed
+  // AND failed, which is what tripped the reconciliation "OVER by 1".
+  let deleteFailed = 0, notReached = 0;
   const unnameableSample = [];
 
   let token;
@@ -257,7 +261,9 @@ async function main() {
           if (APPLY) {
             const pk = row.cardId === undefined || row.cardId === null ? undefined : row.cardId;
             await retry(() => cat.item(row.id, pk).delete()).catch((e) => {
-              if (e.code !== 404) throw e;
+              if (e.code === 404) return;   // already gone; the copy stands
+              deleteFailed++;
+              if (deleteFailed <= 5) console.error(`  delete left a duplicate ${String(row.id).slice(0, 60)}: ${String(e.message || e).slice(0, 60)}`);
             });
           }
         } catch (e) {
@@ -265,8 +271,9 @@ async function main() {
           if (failed <= 5) console.error(`  failed ${String(row.id).slice(0, 60)}: ${String(e.message || e).slice(0, 70)}`);
         }
       }));
-      if (LIMIT && (rehomed + retiredRedundant) >= LIMIT) { stopReason = "limit"; break; }
-      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; break; }
+      const processed = Math.min(i + CONCURRENCY, page.resources.length);
+      if (LIMIT && (rehomed + retiredRedundant) >= LIMIT) { stopReason = "limit"; notReached += page.resources.length - processed; break; }
+      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += page.resources.length - processed; break; }
     }
     if (stopReason) break;
   } while (token);
@@ -284,6 +291,7 @@ async function main() {
   console.log(`  already at their own slug      ${f(alreadyOk)}`);
   console.log(`  UNNAMEABLE (left alone)        ${f(unnameable)}`);
   console.log(`  UNADDRESSABLE id (skipped)     ${f(unaddressable)}   <- / \\ # ? in the id; the SDK cannot reference it`);
+  console.log(`  delete left a duplicate        ${f(deleteFailed)}   <- copy landed, original remains; a re-sweep clears it`);
   console.log(`  failed                         ${f(failed)}`);
   if (unaddressableSample.length) {
     console.log(`\n  unaddressable sample — these need a migration, not a sweep:`);
@@ -298,7 +306,9 @@ async function main() {
       job: "canonicalize-vendor-shaped-rows",
       intended: scanned,
       written: rehomed + retiredRedundant,
-      skipped: unnameable,
+      // Every bucket a scanned row can land in, or the total under-accounts
+      // and the guard fires on a clean run.
+      skipped: unnameable + alreadyOk + unaddressable + notReached,
       failed,
     });
   }

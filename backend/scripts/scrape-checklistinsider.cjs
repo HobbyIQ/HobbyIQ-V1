@@ -351,7 +351,12 @@ async function get(url, asBuffer = false, attempt = 0) {
   try {
     const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(60_000) });
     if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // A silent null here is exactly how a 403 reported itself as "0 set pages
+      // in scope" -- an empty scrape indistinguishable from a successful one.
+      console.log(`   HTTP ${res.status} ${String(url).slice(0, 90)}`);
+      return null;
+    }
     return asBuffer ? Buffer.from(await res.arrayBuffer()) : await res.text();
   } catch (e) {
     if (attempt < 3) { await sleep(3000 * (attempt + 1)); return get(url, asBuffer, attempt + 1); }
@@ -462,6 +467,14 @@ async function main() {
     .filter((s) => (!SPORT || s.sport === SPORT) && (!YEAR || String(s.year) === YEAR))
     .filter((s) => !ONLY || ONLY.has(s.slug));
   console.log(`set pages in scope: ${sets.length.toLocaleString()} of ${urls.length.toLocaleString()} sitemap urls\n`);
+  // Exiting 0 here let the end-to-end wrapper record "insider-acquired" and
+  // walk on to an ingest with nothing staged. An empty scrape is a failure.
+  if (!sets.length) {
+    console.error("FATAL: 0 set pages in scope — the sitemap yielded no product pages.");
+    console.error("       The index answers 200 from a residential IP, so suspect an IP block");
+    console.error("       on the runner before suspecting the filter. Read the HTTP lines above.");
+    process.exit(1);
+  }
 
   const stream = fs.createWriteStream(OUT, { flags: "w" });
   let done = 0, withLadder = 0, withBook = 0, stubs = 0, ladderRows = 0, cardRows = 0, failed = 0, bookFailed = 0, diagged = 0, bookRuns = 0, noCardNumbers = 0;

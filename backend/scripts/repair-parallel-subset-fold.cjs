@@ -81,6 +81,19 @@ const FOLDED_PREFIXES = [
   "Prospects ",
 ];
 
+// CF-THE-GLUE-IS-NOT-ONLY-ON-PREFIXED-ROWS (Drew, 2026-08-27: "is x fractor
+// down to colored x fractors?").
+//
+// The first pass only SCANNED rows starting with a subset prefix, so a run
+// glued onto a row without one was never looked at:
+//
+//     "X Fractor: 5625 Copies"    539 rows, untouched
+//
+// unfold() always handled it; the scan simply never fed it those rows. The
+// prefix scan is index-friendly (STARTSWITH); this one is not, so it is a
+// separate MODE rather than a widening of the same query.
+const GLUE_PREDICATE = "CONTAINS(c.parallel, ' Copies') OR CONTAINS(c.parallel, ' Copie')";
+
 /** Words the source spells out instead of writing a number. */
 const WORD_RUN = {
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
@@ -147,9 +160,14 @@ async function main() {
 
   // STARTSWITH is index-friendly; a field-to-field or function-wrapped
   // predicate is a full scan of 31.6M documents.
-  const mine = SLOTS > 1 ? FOLDED_PREFIXES.filter((_, i) => i % SLOTS === SLOT) : FOLDED_PREFIXES;
+  // MODE=glue sweeps the print-run glue wherever it sits, including rows with
+  // no subset prefix. MODE=prefix (default) is the index-friendly pass.
+  const MODE = String(process.env.MODE || "prefix").toLowerCase();
+  const mine = MODE === "glue"
+    ? [null]
+    : (SLOTS > 1 ? FOLDED_PREFIXES.filter((_, i) => i % SLOTS === SLOT) : FOLDED_PREFIXES);
   if (!mine.length) { console.log(`slot ${SLOT}/${SLOTS} owns no prefix — nothing to do`); return; }
-  console.log(`slot ${SLOT}/${SLOTS}  prefixes: ${mine.join(", ")}\n`);
+  console.log(`slot ${SLOT}/${SLOTS}  mode=${MODE}  ${MODE === "glue" ? "print-run glue, any row" : "prefixes: " + mine.join(", ")}\n`);
 
   let scanned = 0, moved = 0, mergedIntoExisting = 0, unchanged = 0, failed = 0, runsRecovered = 0;
   let stopReason = null;
@@ -158,8 +176,10 @@ async function main() {
     if (stopReason) break;
     let token;
     do {
-      const page = await retry(() => cat.items.query(
-        { query: `SELECT * FROM c WHERE STARTSWITH(c.parallel, @p)`, parameters: [{ name: "@p", value: prefix }] },
+      const spec = prefix === null
+        ? { query: `SELECT * FROM c WHERE ${GLUE_PREDICATE}` }
+        : { query: `SELECT * FROM c WHERE STARTSWITH(c.parallel, @p)`, parameters: [{ name: "@p", value: prefix }] };
+      const page = await retry(() => cat.items.query(spec,
         { maxItemCount: 400, continuationToken: token }).fetchNext());
       token = page.continuationToken;
 
