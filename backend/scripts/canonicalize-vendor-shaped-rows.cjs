@@ -67,8 +67,33 @@ const SLOTS = Number(process.env.SLOTS ?? 1);
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 
-/** Not at its own address: wrong partition key, or none at all. */
-const BROKEN = "((c.id != c.cardId) OR NOT IS_DEFINED(c.cardId) OR c.cardId = null)";
+/**
+ * Not at its own address.
+ *
+ * CF-AN-UNINDEXABLE-PREDICATE-IS-A-FULL-SCAN (Drew, 2026-08-26). This was
+ * `c.id != c.cardId OR NOT IS_DEFINED(c.cardId)`, which is correct and
+ * unusably slow: comparing two FIELDS cannot be served from an index, so every
+ * page was a full scan of 31.6M documents pulling SELECT *. Four workers
+ * managed ~700 rows/min where the retire did 28,000, and 5.2M rows would have
+ * taken five days.
+ *
+ * Measured, the two populations are almost exactly the same rows:
+ *
+ *     id != cardId          2,700,294
+ *     id is not a hiq slug  2,703,875   <- STARTSWITH, index-friendly
+ *
+ * because a row whose address is not its identity is precisely a row carrying
+ * a vendor-shaped id. So select on STARTSWITH, which a range index serves, and
+ * keep the field comparison as a per-row CHECK rather than a scan predicate —
+ * that way an id that happens to start with "hiq:" but still disagrees with
+ * its cardId is skipped rather than wrongly rewritten.
+ *
+ * MODE picks which half to work: "vendor" (default) or "nopk".
+ */
+const MODE = String(process.env.MODE || "vendor").toLowerCase();
+const BROKEN = MODE === "nopk"
+  ? "(NOT IS_DEFINED(c.cardId) OR c.cardId = null)"
+  : "(NOT STARTSWITH(c.id,'hiq:'))";
 
 const f = (n) => Number(n).toLocaleString();
 
@@ -140,7 +165,7 @@ async function main() {
     console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${all.length} sources, ${f(mine.reduce((s, r) => s + r.n, 0))} rows${takesNullSource ? " (+ rows with no source)" : ""}`);
   }
 
-  let scanned = 0, retiredRedundant = 0, rehomed = 0, unnameable = 0, failed = 0;
+  let scanned = 0, retiredRedundant = 0, rehomed = 0, unnameable = 0, failed = 0, alreadyOk = 0;
   let stopReason = null;
   const unnameableSample = [];
 
@@ -154,6 +179,10 @@ async function main() {
     for (let i = 0; i < page.resources.length; i += CONCURRENCY) {
       await Promise.all(page.resources.slice(i, i + CONCURRENCY).map(async (row) => {
         scanned++;
+        // The scan predicate is indexable but coarse. Confirm the row really
+        // is mis-addressed before touching it: a row already at its own slug
+        // is left exactly as it is.
+        if (row.cardId !== undefined && row.cardId !== null && row.id === row.cardId) { alreadyOk++; return; }
         const slug = canonicalSlugFor(row);
         if (!slug) {
           unnameable++;
@@ -174,7 +203,10 @@ async function main() {
               id: _oldId, cardId: _oldCardId,
               ...rest
             } = row;
-            await retry(() => upsertCatalogEntry({
+            // upsertCatalogEntry returns the written row, so a separate verify
+            // read was a third round-trip per card that proved nothing the
+            // return value did not already prove.
+            const written = await retry(() => upsertCatalogEntry({
               ...rest, id: slug, cardId: slug, hobbyiqCardId: slug,
               vendorIds: {
                 ...(row.vendorIds ?? {}),
@@ -182,9 +214,7 @@ async function main() {
               },
               canonicalizedFrom: row.id,
             }));
-            // Verify it landed before removing the original.
-            const check = await retry(() => cat.item(slug, slug).read().catch(() => ({ resource: undefined })));
-            if (!check.resource) { failed++; return; }
+            if (!written) { failed++; return; }
             rehomed++;
           } else if (!APPLY) { retiredRedundant++; return; }
           else retiredRedundant++;
@@ -217,6 +247,7 @@ async function main() {
   console.log(`  scanned                        ${f(scanned)}`);
   console.log(`  re-homed to their own slug     ${f(rehomed)}`);
   console.log(`  retired as redundant copies    ${f(retiredRedundant)}`);
+  console.log(`  already at their own slug      ${f(alreadyOk)}`);
   console.log(`  UNNAMEABLE (left alone)        ${f(unnameable)}`);
   console.log(`  failed                         ${f(failed)}`);
   if (unnameableSample.length) {
