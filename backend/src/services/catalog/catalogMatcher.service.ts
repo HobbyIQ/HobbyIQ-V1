@@ -105,7 +105,7 @@ export interface CatalogMatchResult {
   slug: string;
   found: boolean;         // true when a catalog row was matched (or freshly seeded and found on re-read)
   confidence: number;     // 0-1
-  matchedBy: "exact" | "fuzzy-parallel" | "family-fallback" | "seeded" | "not-found";
+  matchedBy: "exact" | "fuzzy-parallel" | "long-form" | "family-fallback" | "seeded" | "not-found";
   catalogId?: string;
 }
 
@@ -147,6 +147,55 @@ export function sameParallelTokens(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false;
   for (const t of a) if (!b.has(t)) return false;
   return true;
+}
+
+/**
+ * CF-LONG-FORM-IS-ONE-FAMILY-WORD (Drew, 2026-08-28: "lets do it"). The
+ * family words a checklist ladder appends to a colour: "Gold" and "Gold
+ * Refractor" are one card on Chrome products, per the standing Colour ≡
+ * Refractor ruling. The ruling is PER-CARD only — Panini Prizm carries bare
+ * colours that are NOT refractors — which is exactly why the resolver below
+ * demands a UNIQUE candidate: a card whose ladder holds both "gold" and
+ * "gold-refractor" produces two candidates and is refused, never guessed.
+ */
+export const PARALLEL_FAMILY_WORDS = [
+  "refractor", "prizm", "holo", "wave", "shimmer", "lava", "foil", "foilboard",
+  "x-fractor", "sapphire", "chrome", "ice", "mojo", "camo", "pattern",
+] as const;
+
+/**
+ * The unique long-form rung rule, measured before it was written: across
+ * 1.96M derived spellings the ambiguity rate of "text ± one family word hits
+ * exactly one rung" was 0.2%. Both directions are tried — a sale saying
+ * "Gold" matching the ladder's "Gold Refractor", and a sale saying "Gold
+ * Refractor" matching a ladder that spells it bare — because checklist
+ * sources disagree on which form they print. Returns the single matching
+ * candidate, or null when zero or several match (several = refuse, the
+ * Prizm guard).
+ */
+export function resolveLongFormRung<T extends { id: string; seg: string }>(
+  want: Set<string>,
+  candidates: ReadonlyArray<T>,
+): T | null {
+  const hits: T[] = [];
+  for (const c of candidates) {
+    const got = parallelTokenSet(c.seg);
+    if (sameParallelTokens(got, want)) continue;   // equality is Step 2's job
+    let match = false;
+    for (const fam of PARALLEL_FAMILY_WORDS) {
+      const famToks = fam.split("-");
+      // ladder = want + family ("gold" -> "gold-refractor")
+      const wantPlus = new Set([...want, ...famToks]);
+      if (want.size + famToks.length === wantPlus.size && sameParallelTokens(got, wantPlus)) { match = true; break; }
+      // ladder = want - family ("gold refractor" -> bare "gold")
+      if (famToks.every((t) => want.has(t))) {
+        const wantMinus = new Set([...want].filter((t) => !famToks.includes(t)));
+        if (wantMinus.size > 0 && sameParallelTokens(got, wantMinus)) { match = true; break; }
+      }
+    }
+    if (match) hits.push(c);
+  }
+  return hits.length === 1 ? hits[0]! : null;
 }
 
 /**
@@ -903,7 +952,11 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       }).fetchAll();
 
       const want = parallelTokenSet(parallelSlug);
-      const ranked = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string; printRun?: number | null }>)
+      // The pool: every candidate that survives the id / print-run / grade
+      // discipline, BEFORE the parallel decides. Token equality (Step 2) and
+      // the unique long-form rule (Step 2b) both draw from this one pool, so
+      // the long-form rule inherits every guard equality has.
+      const pool = (resources as Array<{ id: string; parallelSlug?: string; parallel?: string; printRun?: number | null }>)
         .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
         // CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (Drew, 2026-08-14). Check the
         // candidate's ID, not its parallel field. Catalog rows can disagree
@@ -914,9 +967,6 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
         // base-sapphire-refractor at matchedBy=fuzzy-parallel, because the
         // field matched even though the slug we adopted did not.
         //
-        // The id is authoritative here precisely because it is the thing being
-        // adopted. The field is kept only as a fallback for non-slug ids.
-        .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want))
         // CF-THE-PRINT-RUN-IS-A-DISCRIMINATOR (Drew, 2026-08-24:
         // "2025 Bowman Draft Chrome Prospect Auto - Eli Willits Yellow
         // Refractor /75 ... This is the best format bc we can match to it
@@ -951,6 +1001,11 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
           const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
           return graded(a) - graded(b) || a.id.localeCompare(b.id);
         });
+      // Step 2 proper: exact token equality — the candidate's ID is what we
+      // adopt, so the id's own segment is what we compare (CF-CANDIDATE-ID-
+      // IS-WHAT-WE-ADOPT, 2026-08-14).
+      const ranked = pool.filter((r) =>
+        sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want));
       const best = ranked[0] ?? null;
       if (best) {
         return {
@@ -959,6 +1014,29 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
           confidence: 0.72,
           matchedBy: "fuzzy-parallel",
           catalogId: best.id,
+        };
+      }
+      // Step 2b — CF-LONG-FORM-IS-ONE-FAMILY-WORD (Drew, 2026-08-28). A sale
+      // saying "Gold" and a ladder saying "Gold Refractor" are one card on
+      // this card's own ladder, when and only when exactly ONE rung matches
+      // after adding or removing a single family word. The unique-match guard
+      // IS the Prizm safety: a card carrying both "gold" and "gold-refractor"
+      // yields two candidates and refuses. Confidence 0.8 — above the rebind
+      // gate, below equality's 0.72... no: equality stays 0.72 for
+      // compatibility; long-form is deliberately 0.8-adjacent but marked with
+      // its own matchedBy so telemetry can grade it separately before any
+      // gate depends on the distinction.
+      const lf = resolveLongFormRung(
+        want,
+        pool.map((r) => ({ id: r.id, seg: parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "") })),
+      );
+      if (lf) {
+        return {
+          slug: lf.id,
+          found: true,
+          confidence: 0.8,
+          matchedBy: "long-form",
+          catalogId: lf.id,
         };
       }
     } catch {
@@ -1093,6 +1171,21 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
     }
   }
 
+  // CF-NOT-FOUND-IS-THE-ACQUISITION-FEED (Drew, 2026-08-28). Every comp the
+  // matcher cannot place names a checklist we do not hold. Sampled at 2% so
+  // 500k daily comps cannot flood App Insights; the KQL GROUP BY (sport,
+  // year, setKey) over these events IS the acquisition list, written by live
+  // traffic instead of batch audits.
+  if (Math.random() < 0.02) {
+    console.log(JSON.stringify({
+      event: "catalog_resolve_not_found",
+      source: "catalogMatcher.canonicalize",
+      sport: components.sport,
+      year: components.year,
+      setKey: components.setKey,
+      parallel: components.parallel ?? null,
+    }));
+  }
   return {
     slug: canonicalSlug,
     found: false,
