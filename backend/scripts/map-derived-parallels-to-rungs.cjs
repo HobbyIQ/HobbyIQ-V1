@@ -42,7 +42,9 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
-const SPORT = process.env.SPORT || "baseball";
+// The workflow passes the existing `sports` input as SPORTS; accept both so
+// non-baseball dispatches need no new plumbing.
+const SPORT = process.env.SPORT || process.env.SPORTS || "baseball";
 const REDO = String(process.env.REDO || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
 const LIMIT = Number(process.env.LIMIT || 0);
