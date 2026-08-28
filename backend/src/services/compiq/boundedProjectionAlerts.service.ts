@@ -120,6 +120,36 @@ export function recordCostBasisDivergenceIfNoteworthy(input: Omit<CostBasisDiver
   const absDollar = Math.abs(fmv - costBasis);
   if (absPct < divergencePctThreshold()) return false;
   if (absDollar < divergenceDollarFloor()) return false;
+
+  // CF-DIGEST-IS-FOR-MARKET-MOVES (Drew, 2026-08-28). This digest was added
+  // for the Hartman case — an engine that priced $339 past $1,475/$2,500
+  // exact-identity sales — and it "fixed" that bug by EMAILING DREW about it
+  // every reprice cycle. A divergence is only a market signal when the price
+  // itself came from the exact-identity pool (unified engine, or a tier the
+  // exact-pool supremacy post-pass settled). A divergence produced by a
+  // fallback rung is an engine bug report: telemetry, ops KQL, never a
+  // user-facing digest.
+  const method = String(input.fmvMethod ?? "");
+  const basis = String(input.fmvBasisNote ?? "");
+  const fromExactPool =
+    method === "unified-market-value" || basis.includes("exact-pool supremacy");
+  if (!fromExactPool) {
+    console.warn(JSON.stringify({
+      event: "engine_divergence_suspect",
+      note: "fallback-rung price diverged from cost basis; engine quality signal, digest suppressed",
+      userId: input.userId,
+      holdingId: input.holdingId,
+      cardTitle: input.cardTitle,
+      slug: input.slug,
+      costBasis: Math.round(costBasis * 100) / 100,
+      fmv: Math.round(fmv * 100) / 100,
+      gainLossPct: Math.round(gainLossPct * 1000) / 1000,
+      fmvMethod: input.fmvMethod,
+      fmvBasisNote: input.fmvBasisNote,
+      fmvCompCount: input.fmvCompCount,
+    }));
+    return false;
+  }
   const alert: CostBasisDivergenceAlert = {
     ...input,
     gainLossPct,
