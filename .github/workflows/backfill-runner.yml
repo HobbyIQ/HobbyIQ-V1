@@ -128,6 +128,8 @@ on:
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
+          - map-yearprefixed-setkeys
+          - conform-holdings-to-catalog
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
