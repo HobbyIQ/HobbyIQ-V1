@@ -102,13 +102,20 @@ async function main() {
   for (const p of top) {
     // the ladder: checklist rows only, with print runs
     const { resources: rows } = await retry(() => cat.items.query({
-      query: `SELECT c.parallel, c.printRun, c.source FROM c WHERE c.sport=@s AND c.year=@y AND c.setKey=@k`,
-      parameters: [{ name: "@s", value: SPORT }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }],
+      // The ladder is gathered from the SET FAMILY, not the bare key. Confetti
+      // and Sandglitter checklist rows live under topps-series-1/2 while the
+      // derived rows sit under bare topps -- the same scoping blind spot that
+      // once called 2024 Topps 86.8% unconfirmed. Derived rows stay exact-key:
+      // widening the QUERY side would blur which product a spelling belongs to.
+      query: `SELECT c.parallel, c.setKey, c.source, COUNT(1) AS n FROM c WHERE c.sport=@s AND c.year=@y AND (c.setKey=@k OR STARTSWITH(c.setKey, @ks) OR STARTSWITH(c.setKey, @ku)) GROUP BY c.parallel, c.setKey, c.source`,
+      parameters: [{ name: "@s", value: SPORT }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@ks", value: p.setKey + "-series" }, { name: "@ku", value: p.setKey + "-update" }],
     }).fetchAll());
     const rungs = new Map();  // slug -> {name, runs:Set, n}
     const derived = [];
     for (const r of rows) {
       const isChecklist = catalogAuthorityOf(r.source) === "checklist";
+      // A derived row from a SIBLING setKey is not this product's spelling.
+      if (!isChecklist && r.setKey !== p.setKey) continue;
       const name = deglue(r.parallel);
       if (!name) continue;
       if (isChecklist) {
@@ -116,12 +123,18 @@ async function main() {
         if (!k) continue;
         if (!rungs.has(k)) rungs.set(k, { name, runs: new Set(), n: 0 });
         const g = rungs.get(k);
-        g.n++;
-        if (r.printRun > 0 && r.printRun <= 100000) g.runs.add(r.printRun);
+        g.n += r.n || 1;
       } else if (catalogAuthorityOf(r.source) === "derived") {
-        derived.push(name);
+        for (let x = 0; x < (r.n || 1); x++) derived.push(name);
       }
     }
+    // print runs, second aggregate: MAX cannot digest nulls, so numbered rows only
+    const { resources: runRows } = await retry(() => cat.items.query({
+      query: `SELECT c.parallel, MAX(c.printRun) AS run FROM c WHERE c.sport=@s AND c.year=@y AND (c.setKey=@k OR STARTSWITH(c.setKey, @ks) OR STARTSWITH(c.setKey, @ku)) AND IS_NUMBER(c.printRun) AND c.printRun > 0 AND c.printRun <= 100000 GROUP BY c.parallel`,
+      parameters: [{ name: "@s", value: SPORT }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@ks", value: p.setKey + "-series" }, { name: "@ku", value: p.setKey + "-update" }],
+    }).fetchAll());
+    for (const r of runRows) { const k = slug(deglue(r.parallel)); if (rungs.has(k)) rungs.get(k).runs.add(r.run); }
+
     if (!rungs.size) continue;
     productsWithLadder++;
     rungCount += rungs.size;
