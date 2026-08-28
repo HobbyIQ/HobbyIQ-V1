@@ -125,6 +125,7 @@ on:
           - retire-prose-parallel-rows
           - retire-numbered-base-rows
           - conform-card-profile
+          - map-derived-parallels-to-rungs
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -593,6 +594,25 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f mode="${{ inputs.mode }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::canonicalized nothing — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the parallel mapping until the slot is clean
+        # Unresolved rows are stamped, so the pending query drains to zero and
+        # a run that scans nothing IS a finished slot.
+        if: ${{ always() && inputs.script == 'map-derived-parallels-to-rungs' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          SEEN=$(grep -aoE "^  derived rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          SEEN=${SEEN:-0}
+          echo "parallel_map_scanned=$SEEN"
+          if [ "$SEEN" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::slot drained — done."
           fi
 
       - name: Self-relaunch the profile conformance until the slot is clean
