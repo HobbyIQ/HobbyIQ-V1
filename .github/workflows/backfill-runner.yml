@@ -596,6 +596,25 @@ jobs:
             echo "::notice::canonicalized nothing — done, no re-dispatch."
           fi
 
+      - name: Self-relaunch the numbered-Base retirement until nothing retires
+        # Whitelisted without a relaunch step, so six shards ran one cycle and
+        # stopped at 290k remaining while every run stayed green.
+        if: ${{ always() && inputs.script == 'retire-numbered-base-rows' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "RETIRED — numbered .Base.[^0-9]+[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "numbered_base_retired=$N"
+          if [ "$N" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-numbered-base-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing retired this cycle — done."
+          fi
+
       - name: Self-relaunch the parallel mapping until the slot is clean
         # Unresolved rows are stamped, so the pending query drains to zero and
         # a run that scans nothing IS a finished slot.
@@ -610,7 +629,7 @@ jobs:
           SEEN=${SEEN:-0}
           echo "parallel_map_scanned=$SEEN"
           if [ "$SEEN" -gt 0 ]; then
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot drained — done."
           fi
@@ -653,7 +672,7 @@ jobs:
           echo "checklist_backing_scanned=$SEEN"
           if [ "$SEEN" -gt 0 ]; then
             echo "::notice::annotated $SEEN rows — re-dispatching to continue this slot"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::nothing left unannotated in this slot — done."
           fi
