@@ -43,7 +43,7 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 // bcp included in the DEFAULT, in the code, not the comment: an earlier patch
 // edited the Env doc line and left this default untouched, and phase 3 sat
 // configured-off through every relaunch while the log said nothing.
-const PHASES = String(process.env.PHASES || "beckett,insider,bcp").split(",").map((s) => s.trim()).filter(Boolean);
+const PHASES = String(process.env.PHASES || "beckett,insider,bcp,tcgdexja").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORT = process.env.SPORT || "baseball";
 const PAGES = process.env.PAGES || "29";
 const SLOT = Number(process.env.SLOT ?? 0);
@@ -76,6 +76,7 @@ function run(script, args, env) {
   const insiderDir = path.join(WORKDIR, "insider-csv");
   const insiderJsonl = path.join(WORKDIR, "insider.jsonl");
   const bcpDir = path.join(WORKDIR, "bcp-ladders");
+  const tcgdexJaDir = path.join(WORKDIR, "tcgdex-ja");
   console.log(`workdir ${WORKDIR}   budget ${RUN_MS / 60000}m   ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   const done = [];
@@ -115,6 +116,22 @@ function run(script, args, env) {
     } catch (e) { console.error("  bcp acquire failed: " + String(e.message).slice(0, 120)); }
   }
 
+  if (PHASES.includes("tcgdexja") && left() > 5 * 60000) {
+    console.log("\n── phase 4: tcgdex Japanese sets ──");
+    // Japanese-exclusive sets bridged to English species names via dexId.
+    // Staged output rides the cache; a directory that already holds CSVs is
+    // not re-fetched -- the API is a volunteer-run free service.
+    try {
+      const already = fs.existsSync(tcgdexJaDir) ? fs.readdirSync(tcgdexJaDir).filter((n) => n.endsWith(".csv")).length : 0;
+      if (already >= 5 && !FORCE_ACQUIRE) {
+        console.log(`  ${already} sets already staged — skipping the scrape (FORCE_ACQUIRE=true re-fetches)`);
+      } else {
+        run("scrape-tcgdex-ja.cjs", [`--outDir=${tcgdexJaDir}`, "--delayMs=150"]);
+      }
+      done.push("tcgdexja-acquired");
+    } catch (e) { console.error("  tcgdex-ja acquire failed: " + String(e.message).slice(0, 120)); }
+  }
+
   // ── ingest ────────────────────────────────────────────────────────────────
   // Beckett first: it carries the ladder and print runs. Both are checklist
   // authority, so within the class confidence breaks the tie and the more
@@ -127,6 +144,7 @@ function run(script, args, env) {
     [bcpDir, `baseballcardpedia-ladders-${stamp}`],
     [beckettDir, `beckett-checklist-${stamp}`],
     [insiderDir, `checklistinsider-${stamp}`],
+    [tcgdexJaDir, `tcgdex-ja-${stamp}`],
   ]) {
     if (!fs.existsSync(dir)) { console.log(`\n  skipping ${source} — nothing staged at ${dir}`); continue; }
     const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv")).length;
