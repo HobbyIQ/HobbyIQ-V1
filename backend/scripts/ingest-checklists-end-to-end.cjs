@@ -26,7 +26,7 @@
  *   COSMOS_CONNECTION_STRING  required
  *   APPLY / BACKFILL_APPLY    actually write (default: report only)
  *   RUN_MINUTES=140
- *   PHASES=beckett,insider    which sources to acquire (default both)
+ *   PHASES=beckett,insider,bcp    which sources to acquire (default both)
  *   SPORT=baseball            scope the Beckett archive
  *   PAGES=29                  Beckett archive depth
  *   WORKDIR                   where to stage (default: OS temp)
@@ -72,6 +72,7 @@ function run(script, args, env) {
   const beckettDir = path.join(WORKDIR, "beckett");
   const insiderDir = path.join(WORKDIR, "insider-csv");
   const insiderJsonl = path.join(WORKDIR, "insider.jsonl");
+  const bcpDir = path.join(WORKDIR, "bcp-ladders");
   console.log(`workdir ${WORKDIR}   budget ${RUN_MS / 60000}m   ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   const done = [];
@@ -101,6 +102,16 @@ function run(script, args, env) {
     } catch (e) { console.error("  insider acquire failed: " + String(e.message).slice(0, 120)); }
   }
 
+  if (PHASES.includes("bcp") && left() > 5 * 60000) {
+    console.log("\n── phase 3: baseballcardpedia ladders ──");
+    // The one source that carries 2016-2024 flagship parallel ladders. The
+    // original bcp scraper SKIPPED parallel sections; this one reads only them.
+    try {
+      run("scrape-bcp-ladders.cjs", ["--years=2016-2026", `--outDir=${bcpDir}`, "--delayMs=800"]);
+      done.push("bcp-acquired");
+    } catch (e) { console.error("  bcp acquire failed: " + String(e.message).slice(0, 120)); }
+  }
+
   // ── ingest ────────────────────────────────────────────────────────────────
   // Beckett first: it carries the ladder and print runs. Both are checklist
   // authority, so within the class confidence breaks the tie and the more
@@ -109,6 +120,7 @@ function run(script, args, env) {
   for (const [dir, source] of [
     [beckettDir, `beckett-checklist-${stamp}`],
     [insiderDir, `checklistinsider-${stamp}`],
+    [bcpDir, `baseballcardpedia-ladders-${stamp}`],
   ]) {
     if (!fs.existsSync(dir)) { console.log(`\n  skipping ${source} — nothing staged at ${dir}`); continue; }
     const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv")).length;
