@@ -129,6 +129,7 @@ on:
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
           - map-yearprefixed-setkeys
+          - apply-setkey-rulings
           - conform-holdings-to-catalog
       apply:
         description: "Actually write (true) or dry-run only (false)"
