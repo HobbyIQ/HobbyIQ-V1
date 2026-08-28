@@ -50,6 +50,11 @@ const RESOLVE = String(process.env.RESOLVE ?? "true") !== "false";
 // this had to be split 16 ways by hand to stay under it -- exactly the sum
 // nobody should have to do before pressing go.
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+// CF-SHARD-THE-REMATCH (2026-08-28): 15.9M sales on one worker is a day.
+// Page-modulo split, same pattern as every other fleet.
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+let _seen = 0;
 const STARTED_AT = Date.now();
 
 const distPath = path.resolve(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js");
@@ -149,6 +154,7 @@ async function main() {
     if (Date.now() - STARTED_AT > RUN_MS) { hitBudget = true; break; }
     const { resources } = await fetchNextWithRetry();
     for (const r of resources) {
+      if (SLOTS > 1 && (_seen++ % SLOTS) !== SLOT) continue;
       if (MAX_ROWS && scanned >= MAX_ROWS) break;
       scanned++;
       // Skip when we can't build inputs (setKey OR setName required)
