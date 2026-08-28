@@ -329,7 +329,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       hobbyiqCardId: slug,
       grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
     });
-    const canonical = u.marketValue ?? u.fmv;
+    // CF-NEVER-A-BARE-MEDIAN (Drew, 2026-08-28). u.fmv is the recency-decayed
+    // weighted median -- an INPUT to the projection, never the answer. The
+    // doctrine is FMV = projected next sale: marketValue (trend-lifted
+    // current) first, predictedPrice (the projection itself) second. The
+    // bare median survives only as the last resort when the engine could
+    // produce neither, and the basis trace already exposes that case.
+    const canonical = u.marketValue ?? u.predictedPrice ?? u.fmv;
     if (canonical !== null && canonical > 0 && u.confidence >= 0.3) {
       return {
         slug,
