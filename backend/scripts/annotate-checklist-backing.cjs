@@ -99,7 +99,9 @@ const DERIVED = "(c.source='ingest-auto-seed' OR STARTSWITH(c.source,'catalog-ex
  * it, each run takes only what is still unannotated, and a run that scans zero
  * rows IS the signal that the slot is finished.
  */
-const REANNOTATE = String(process.env.REANNOTATE || "") === "true";
+// REANNOTATE arrives as its own env or through the runner's mode input,
+// the same plumbing the map redo uses.
+const REANNOTATE = String(process.env.REANNOTATE || "") === "true" || String(process.env.MODE || "").toLowerCase() === "reannotate";
 const PENDING = REANNOTATE ? "" : " AND NOT IS_DEFINED(c.checklistBacking)";
 
 const norm = (s) => String(s ?? "").toLowerCase().trim();
