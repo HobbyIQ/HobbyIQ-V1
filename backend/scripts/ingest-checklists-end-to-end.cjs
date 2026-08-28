@@ -134,6 +134,11 @@ function run(script, args, env) {
         BACKFILL_APPLY: APPLY ? "true" : "false",
         RUN_MINUTES: String(budget),
         CONCURRENCY: process.env.CONCURRENCY || "48",
+        // MODE=reingest re-upserts every staged file, ignoring resume markers.
+        // The restoration path for checklist rows deleted by a pass that turned
+        // out to have the wrong premise (numbered Base IS legitimate where the
+        // product checklist lists it -- Drew, 2026-08-28).
+        REINGEST: String(process.env.MODE || "").toLowerCase() === "reingest" ? "true" : "",
         // The ingest has always sharded by file; nobody was passing it the
         // shard. One worker on 409 files makes "does it fit in one budget
         // window?" an open question every run. Eight workers on the same cached
