@@ -1,0 +1,232 @@
+#!/usr/bin/env node
+/**
+ * CF-ONE-POKEMON-VOCABULARY (Drew, 2026-08-28, pokemon unification).
+ *
+ * Two pipelines built two identity vocabularies for the same sets:
+ *
+ *     derived   2022-pokemon-astral-radiance-...   (year-prefixed prose)
+ *     checklist swsh10-astral-radiance             (TCG code)
+ *
+ * They share ZERO setKeys, which is why pokemon annotated 100.0% unconfirmed
+ * while holding 111,892 checklist rows. The checklist vocabulary is canonical
+ * -- the checklist is the spine -- so derived rows move onto it.
+ *
+ * A KEY MOVES ONLY ON A UNIQUE NAME MATCH. Both keys are normalized (year and
+ * "pokemon" prefix stripped, TCG code prefix stripped, "japanese" folded) and a
+ * derived key moves only when exactly one checklist key normalizes identically
+ * AND the years agree on the rows being moved. Ambiguity is stamped and
+ * reported, never guessed -- the measured split:
+ *
+ *     unique match   162 keys /  8,608 rows   <- this pass moves these
+ *     ambiguous       90 keys                 <- reported for a ruling
+ *     no match       614 keys / 69,294 rows   <- mostly 1995-97 Japanese
+ *                                                vintage: ACQUISITION, not
+ *                                                mapping. No source we hold
+ *                                                covers them.
+ *
+ * Copy-before-delete, sales re-pointed before the old row goes.
+ *
+ * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; SLOT/SLOTS;
+ *      CONCURRENCY=48; RUN_MINUTES=140; LIMIT=0
+ */
+const path = require("node:path");
+const backend = path.resolve(__dirname, "..");
+const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
+const LIMIT = Number(process.env.LIMIT || 0);
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED = Date.now();
+const f = (n) => Number(n).toLocaleString();
+
+const DERIVED = "(c.source='ingest-auto-seed' OR STARTSWITH(c.source,'sales-attested') " +
+  "OR STARTSWITH(c.source,'sold-comps-stub') OR STARTSWITH(c.source,'catalog-explode') " +
+  "OR STARTSWITH(c.source,'tree-builder'))";
+
+/** tcgdex says lost-origin, pokemon-tcg-data says swsh11-lost-origin -- the
+ *  same set twice WITHIN the checklist class. The code-prefixed form is
+ *  strictly more specific, so it wins (only-improve). Two code-prefixed
+ *  candidates, or none, stays ambiguous. */
+const CODE = /^(swshp?|svp?|smp?|xyp?|bwp?|dpp?|pl|hgss|col|ex|base|neo|gym)[0-9]/;
+const pickTarget = (targets) => {
+  if (targets.size === 1) return [...targets][0];
+  const coded = [...targets].filter((t) => CODE.test(t));
+  return coded.length === 1 ? coded[0] : null;
+};
+/** Strip both vocabularies down to the set's bare name. */
+const norm = (k) => String(k)
+  .replace(/^\d{4}-pokemon-/, "")
+  .replace(/^(swshp?|svp?|smp?|xyp?|bwp?|dpp?|pl|hgss|col|ex|base|neo|gym)\d*[a-z]?-/, "")
+  .replace(/-japanese-/, "-").replace(/^japanese-/, "")
+  .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+async function main() {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  const db = new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
+  }).database("hobbyiq");
+  const cat = db.container("card_catalog"), comps = db.container("sold_comps");
+  const retry = async (fn, tries = 12) => {
+    let wait = 1000;
+    for (let a = 0; ; a++) {
+      try { return await fn(); }
+      catch (e) {
+        if (!/request rate is too large|429|ETIMEDOUT|ECONNRESET/i.test(String(e?.message)) || a >= tries) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
+  // the target vocabulary: checklist setKeys, grouped by normalized name
+  const { resources: ck } = await retry(() => cat.items.query(
+    `SELECT c.setKey, c.source, COUNT(1) AS n FROM c WHERE c.sport='pokemon' GROUP BY c.setKey, c.source`).fetchAll());
+  const byNorm = new Map();
+  for (const r of ck) {
+    if (catalogAuthorityOf(r.source) !== "checklist" || !r.setKey) continue;
+    const nk = norm(r.setKey);
+    if (!byNorm.has(nk)) byNorm.set(nk, new Set());
+    byNorm.get(nk).add(r.setKey);
+  }
+
+  const { resources: dk } = await retry(() => cat.items.query(
+    `SELECT c.setKey, COUNT(1) AS n FROM c WHERE c.sport='pokemon' AND ${DERIVED} GROUP BY c.setKey`).fetchAll());
+  const plan = [];
+  let ambiguous = 0, noMatch = 0, noMatchRows = 0;
+  const ambiguousEx = [];
+  for (const r of dk.sort((a, b) => b.n - a.n)) {
+    if (!r.setKey) continue;
+    const targets = byNorm.get(norm(r.setKey));
+    if (!targets) { noMatch++; noMatchRows += r.n; continue; }
+    const picked = pickTarget(targets);
+    if (!picked) { ambiguous++; if (ambiguousEx.length < 6) ambiguousEx.push(`${r.setKey} -> ${[...targets].slice(0, 3).join(" | ")}`); continue; }
+    const target = picked;
+    if (target !== r.setKey) plan.push({ from: r.setKey, to: target, n: r.n });
+  }
+  const mine = SLOTS > 1 ? plan.filter((_, i) => i % SLOTS === SLOT) : plan;
+  console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} mappable keys  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
+  console.log(`  ambiguous ${f(ambiguous)}   no-match ${f(noMatch)} keys / ${f(noMatchRows)} rows (acquisition)\n`);
+
+  let scanned = 0, moved = 0, redundant = 0, salesRepointed = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
+  let stopReason = null;
+
+  for (const p of mine) {
+    if (stopReason) break;
+    let token;
+    do {
+      const page = await retry(() => cat.items.query({
+        query: `SELECT * FROM c WHERE c.sport='pokemon' AND c.setKey=@k AND ${DERIVED}`,
+        parameters: [{ name: "@k", value: p.from }],
+      }, { maxItemCount: 300, continuationToken: token }).fetchNext());
+      token = page.continuationToken;
+
+      for (let i = 0; i < page.resources.length; i += CONCURRENCY) {
+        await Promise.all(page.resources.slice(i, i + CONCURRENCY).map(async (d) => {
+          scanned++;
+          try {
+            const parts = String(d.id).split(":");
+            if (parts.length < 7) { malformed++; return; }
+            // The id is the truth: a row whose setKey FIELD drifted from its
+            // own id still moves, resolved from the id segment.
+            let from = parts[3], to = p.to;
+            if (from !== p.from) {
+              const t2 = byNorm.get(norm(from));
+              const picked2 = t2 ? pickTarget(t2) : null;
+              if (!picked2) { drifted++; return; }
+              to = picked2;
+            }
+            if (from === to) {
+              // The id already speaks the checklist vocabulary; only the
+              // FIELD is stale. Heal the field rather than skip the row.
+              if (d.setKey !== to && APPLY) {
+                await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([{ op: "set", path: "/setKey", value: to }]));
+              }
+              redundant++;
+              return;
+            }
+            parts[3] = to;
+            const newSlug = parts.join(":");
+            if (!APPLY) { moved++; return; }
+
+            const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
+            if (!existing) {
+              const { _rid, _self, _etag, _attachments, _ts, ...rest } = d;
+              await retry(() => cat.items.upsert({
+                ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
+                setKey: to,
+                mappedFrom: d.id, mappedReason: "pokemon setKey unified to checklist vocabulary",
+                mappedAt: new Date().toISOString(),
+              }));
+            } else { redundant++; }
+
+            let sToken;
+            do {
+              const sp = await retry(() => comps.items.query({
+                query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
+                parameters: [{ name: "@s", value: d.id }],
+              }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
+              sToken = sp.continuationToken;
+              for (const x of sp.resources) {
+                await retry(() => comps.item(x.id, x.cardId).patch([
+                  { op: "set", path: "/hobbyiqCardId", value: newSlug },
+                  { op: "set", path: "/normalizedSetKey", value: to },
+                  { op: "set", path: "/reslugedFrom", value: d.id },
+                  { op: "set", path: "/reslugedReason", value: "pokemon setKey unified" },
+                  { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+                ]));
+                salesRepointed++;
+              }
+            } while (sToken);
+
+            await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+            moved++;
+          } catch (e) {
+            failed++;
+            if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
+          }
+        }));
+        const processed = Math.min(i + CONCURRENCY, page.resources.length);
+        if (LIMIT && moved >= LIMIT) { stopReason = "limit"; notReached += page.resources.length - processed; break; }
+        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += page.resources.length - processed; break; }
+      }
+      if (stopReason) break;
+    } while (token);
+    process.stderr.write(`\r  ${p.from.slice(0, 42)} -> ${p.to.slice(0, 30)}  moved=${f(moved)}   `);
+  }
+  process.stderr.write("\n");
+
+  if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
+
+  console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
+  console.log(`  derived rows scanned    ${f(scanned)}`);
+  console.log(`  MOVED to checklist key  ${f(moved)}`);
+  console.log(`  redundant (row existed) ${f(redundant)}`);
+  console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  malformed id (left)     ${f(malformed)}`);
+  console.log(`  drifted, unmappable     ${f(drifted)}`);
+  console.log(`  failed                  ${f(failed)}`);
+  if (ambiguousEx.length) {
+    console.log(`\n  ambiguous keys, for a ruling:`);
+    for (const e of ambiguousEx) console.log(`    ${e.slice(0, 96)}`);
+  }
+  if (APPLY) {
+    reportWrites({
+      job: "map-pokemon-setkeys-to-checklist", intended: scanned, written: moved,
+      skipped: redundant + notReached + malformed + drifted, failed,
+    });
+  }
+}
+
+module.exports = { norm };
+
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+}

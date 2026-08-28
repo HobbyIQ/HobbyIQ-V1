@@ -1,0 +1,193 @@
+#!/usr/bin/env node
+/**
+ * CF-A-NUMBER-GLUED-TO-ITS-TOTAL (Drew, 2026-08-28, pokemon unification).
+ *
+ * pokemon-tcg-data checklist rows store "026189" where the card is 026/189 --
+ * the printed number CONCATENATED with the set's printed total, sometimes
+ * zero-padded to 3+3, sometimes not ("26189"). A sale says "154"; the checklist
+ * says "154165"; card-level confirmation can never meet. This is why pokemon
+ * annotated 100.0% unconfirmed while holding 111,892 checklist rows.
+ *
+ * THE TOTAL IDENTIFIES ITSELF. Within one set every card shares the same
+ * printedTotal, so the constant trailing digits of a set's numbers ARE the
+ * total. No external lookup: for suffix lengths 4..2, if one suffix value
+ * covers >= 90% of the set's numeric card numbers, that suffix is the total
+ * and the prefix (leading zeros stripped) is the card number.
+ *
+ * WHAT IT REFUSES:
+ *   - a set with no dominant suffix is REPORTED, not guessed
+ *   - non-numeric numbers (TG09, promos) are left untouched
+ *   - a prefix that strips to nothing, or exceeds the total, disqualifies the
+ *     ROW (secret rares exceed the total legitimately -- kept, flagged)
+ *
+ * Copy-before-delete on the re-slug; sales re-pointed first. printedTotal is
+ * kept on the row as its own field -- it is real information, just not a card
+ * number.
+ *
+ * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; SLOT/SLOTS;
+ *      CONCURRENCY=48; RUN_MINUTES=140; LIMIT=0
+ */
+const path = require("node:path");
+const backend = path.resolve(__dirname, "..");
+const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
+const LIMIT = Number(process.env.LIMIT || 0);
+const SLOT = Number(process.env.SLOT ?? 0);
+const SLOTS = Number(process.env.SLOTS ?? 1);
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED = Date.now();
+const f = (n) => Number(n).toLocaleString();
+
+/** The dominant constant suffix of a set's numeric card numbers, or null. */
+function deriveTotal(numbers) {
+  const numeric = numbers.filter((n) => /^\d{4,7}$/.test(n));
+  if (numeric.length < 10) return null;
+  for (const len of [4, 3, 2]) {
+    const tally = new Map();
+    for (const n of numeric) {
+      if (n.length <= len) continue;
+      const suf = n.slice(-len);
+      tally.set(suf, (tally.get(suf) ?? 0) + 1);
+    }
+    const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] >= numeric.length * 0.9) return top[0];
+  }
+  return null;
+}
+
+async function main() {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  const db = new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
+  }).database("hobbyiq");
+  const cat = db.container("card_catalog"), comps = db.container("sold_comps");
+  const retry = async (fn, tries = 12) => {
+    let wait = 1000;
+    for (let a = 0; ; a++) {
+      try { return await fn(); }
+      catch (e) {
+        if (!/request rate is too large|429|ETIMEDOUT|ECONNRESET/i.test(String(e?.message)) || a >= tries) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
+
+  const { resources: sets } = await retry(() => cat.items.query(
+    `SELECT c.setKey, COUNT(1) AS n FROM c WHERE c.sport='pokemon'
+     AND STARTSWITH(c.source,'pokemon-tcg-data') GROUP BY c.setKey`).fetchAll());
+  const all = sets.filter((s) => s.setKey).sort((a, b) => b.n - a.n || String(a.setKey).localeCompare(String(b.setKey)));
+  const mine = SLOTS > 1 ? all.filter((_, i) => i % SLOTS === SLOT) : all;
+  console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} sets  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
+
+  let scanned = 0, repaired = 0, salesRepointed = 0, noSuffix = 0, nonNumeric = 0, secretRare = 0, failed = 0, notReached = 0;
+  const noSuffixEx = [];
+  let stopReason = null;
+
+  for (const s of mine) {
+    if (stopReason) break;
+    const { resources: rows } = await retry(() => cat.items.query({
+      query: `SELECT c.id, c.cardId, c.cardNumber FROM c
+              WHERE c.sport='pokemon' AND c.setKey=@k AND STARTSWITH(c.source,'pokemon-tcg-data')`,
+      parameters: [{ name: "@k", value: s.setKey }],
+    }).fetchAll());
+    const total = deriveTotal(rows.map((r) => String(r.cardNumber)));
+    if (!total) {
+      noSuffix++;
+      if (noSuffixEx.length < 6) noSuffixEx.push(`${s.setKey} (${rows.length} rows)`);
+      scanned += rows.length;
+      continue;
+    }
+
+    for (let i = 0; i < rows.length; i += CONCURRENCY) {
+      await Promise.all(rows.slice(i, i + CONCURRENCY).map(async (d) => {
+        scanned++;
+        try {
+          const num = String(d.cardNumber);
+          if (!/^\d{4,7}$/.test(num)) { nonNumeric++; return; }
+          if (!num.endsWith(total) || num.length <= total.length) {
+            // Secret rares run past the printed total ("205/165" glues without
+            // the set's suffix). Real cards; flagged, not mangled.
+            secretRare++;
+            return;
+          }
+          const bare = String(Number(num.slice(0, -total.length)));
+          if (!bare || bare === "0" || bare === "NaN") { failed++; return; }
+          const parts = String(d.id).split(":");
+          if (parts.length < 7) { failed++; return; }
+          parts[4] = bare;
+          const newSlug = parts.join(":");
+          if (newSlug === d.id) return;
+          if (!APPLY) { repaired++; return; }
+
+          const { resource: full } = await retry(() => cat.item(d.id, d.cardId ?? d.id).read());
+          if (!full) return;
+          const { _rid, _self, _etag, _attachments, _ts, ...rest } = full;
+          await retry(() => cat.items.upsert({
+            ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
+            cardNumber: bare, printedTotal: Number(total),
+            repairedFrom: d.id, repairedReason: "pokemon number unglued from printed total",
+            repairedAt: new Date().toISOString(),
+          }));
+          let sToken;
+          do {
+            const sp = await retry(() => comps.items.query({
+              query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
+              parameters: [{ name: "@s", value: d.id }],
+            }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
+            sToken = sp.continuationToken;
+            for (const x of sp.resources) {
+              await retry(() => comps.item(x.id, x.cardId).patch([
+                { op: "set", path: "/hobbyiqCardId", value: newSlug },
+                { op: "set", path: "/reslugedFrom", value: d.id },
+                { op: "set", path: "/reslugedReason", value: "pokemon number unglued" },
+                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+              ]));
+              salesRepointed++;
+            }
+          } while (sToken);
+          await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+          repaired++;
+        } catch (e) {
+          failed++;
+          if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
+        }
+      }));
+      const processed = Math.min(i + CONCURRENCY, rows.length);
+      if (LIMIT && repaired >= LIMIT) { stopReason = "limit"; notReached += rows.length - processed; break; }
+      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += rows.length - processed; break; }
+    }
+    process.stderr.write(`\r  ${s.setKey}  /${total}  scanned=${f(scanned)} repaired=${f(repaired)}   `);
+  }
+  process.stderr.write("\n");
+
+  if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
+
+  console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
+  console.log(`  rows scanned            ${f(scanned)}`);
+  console.log(`  numbers UNGLUED         ${f(repaired)}`);
+  console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  non-numeric (kept)      ${f(nonNumeric)}   <- TG09, promos: already real numbers`);
+  console.log(`  secret rares (kept)     ${f(secretRare)}   <- run past the total; real cards`);
+  console.log(`  sets with no suffix     ${f(noSuffix)}   <- reported, never guessed`);
+  console.log(`  failed                  ${f(failed)}`);
+  for (const e of noSuffixEx) console.log(`      ${e}`);
+  if (APPLY) {
+    reportWrites({
+      job: "repair-pokemon-glued-numbers", intended: scanned, written: repaired,
+      skipped: nonNumeric + secretRare + notReached, failed,
+    });
+  }
+}
+
+module.exports = { deriveTotal };
+
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+}

@@ -126,6 +126,8 @@ on:
           - retire-numbered-base-rows
           - conform-card-profile
           - map-derived-parallels-to-rungs
+          - repair-pokemon-glued-numbers
+          - map-pokemon-setkeys-to-checklist
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -613,6 +615,40 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-numbered-base-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::nothing retired this cycle — done."
+          fi
+
+      - name: Self-relaunch the pokemon number repair until nothing unglues
+        if: ${{ always() && inputs.script == 'repair-pokemon-glued-numbers' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "numbers UNGLUED[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "progress=$N"
+          if [ "$N" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-pokemon-glued-numbers -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing changed this cycle — done."
+          fi
+
+      - name: Self-relaunch the pokemon setKey mapping until nothing moves
+        if: ${{ always() && inputs.script == 'map-pokemon-setkeys-to-checklist' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "MOVED to checklist key[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "progress=$N"
+          if [ "$N" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-pokemon-setkeys-to-checklist -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing changed this cycle — done."
           fi
 
       - name: Self-relaunch the parallel mapping until the slot is clean
