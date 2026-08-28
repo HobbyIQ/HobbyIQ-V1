@@ -3,7 +3,7 @@
 // spellings before the rule was written; the unique-match guard is the Prizm
 // safety and these tests are its contract.
 import { describe, it, expect } from "vitest";
-import { resolveLongFormRung, parallelTokenSet } from "../src/services/catalog/catalogMatcher.service.js";
+import { resolveLongFormRung, parallelTokenSet, widenedSetKeyPrefixes } from "../src/services/catalog/catalogMatcher.service.js";
 
 const cand = (seg: string) => ({ id: `hiq:baseball:2023:topps-chrome:150:${seg}:no-auto`, seg });
 
@@ -56,5 +56,26 @@ describe("resolveLongFormRung", () => {
       cand("base"),
     ]);
     expect(hit).toBeNull();
+  });
+});
+
+describe("widenedSetKeyPrefixes — CF-VERIFIED-REFINEMENTS-ONLY", () => {
+  it("widens only into -series and -update, never the bare hyphen", () => {
+    expect(widenedSetKeyPrefixes("topps")).toEqual(["topps-series", "topps-update"]);
+  });
+  it("topps-chrome can never be reached from topps", () => {
+    for (const p of widenedSetKeyPrefixes("topps")) {
+      expect("topps-chrome".startsWith(p)).toBe(false);
+      expect("topps-chrome-sapphire".startsWith(p)).toBe(false);
+    }
+  });
+  it("bowman widens to prefixes that match nothing real — harmless by construction", () => {
+    for (const p of widenedSetKeyPrefixes("bowman")) {
+      expect("bowman-chrome".startsWith(p)).toBe(false);
+      expect("bowman-sapphire".startsWith(p)).toBe(false);
+    }
+  });
+  it("empty input widens to nothing", () => {
+    expect(widenedSetKeyPrefixes("")).toEqual([]);
   });
 });
