@@ -107,6 +107,24 @@ const PENDING = REANNOTATE ? "" : " AND NOT IS_DEFINED(c.checklistBacking)";
 const norm = (s) => String(s ?? "").toLowerCase().trim();
 const cardKey = (n, p) => `${norm(n)}|${norm(p)}`;
 
+/**
+ * CF-PLAYER-CONTAINMENT (Drew, 2026-08-28: "how can we get a better baseball
+ * match"). 65% of sampled unconfirmed rows were player-KEY-only misses:
+ * derived slugs carry variation glue ("joey-votto-bat-knob", "adrian-
+ * beltre-hl") that exact equality can never meet. Containment with a length
+ * guard (>= 5 chars, so "jr" never bridges two people) matches the holdings
+ * resolver's standard. CPA-AN stays two people: "angel-nunez" is not
+ * contained in "alejandro-nunez".
+ */
+const playerAgrees = (a, b) => {
+  const x = norm(a), y = norm(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const shorter = x.length <= y.length ? x : y;
+  const longer = x.length <= y.length ? y : x;
+  return shorter.length >= 5 && longer.includes(shorter);
+};
+
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -164,7 +182,7 @@ async function main() {
     // The product's checklist AND its set family, once. STARTSWITH uses the
     // range index; a function-wrapped or field-to-field predicate here would
     // full-scan 31.2M documents per product.
-    const cards = new Set(), pars = new Map(), family = new Map();
+    const cards = new Set(), pars = new Map(), family = new Map(), byNumber = new Map();
     let cToken;
     do {
       const page = await retry(() => cat.items.query({
@@ -177,6 +195,9 @@ async function main() {
       for (const r of page.resources) {
         if (catalogAuthorityOf(r.source) !== "checklist") continue;
         const k = cardKey(r.cardNumber, r.playerSlug);
+        const numKey = norm(r.cardNumber);
+        if (!byNumber.has(numKey)) byNumber.set(numKey, new Set());
+        byNumber.get(numKey).add(norm(r.playerSlug));
         if (r.setKey === p.setKey) {
           cards.add(k);
           if (!pars.has(k)) pars.set(k, new Set());
@@ -206,7 +227,10 @@ async function main() {
           scanned++;
           const k = cardKey(d.cardNumber, d.playerSlug);
           let backing, familyIn = null;
-          if (cards.has(k)) {
+          const numK = norm(d.cardNumber);
+          const exactHit = cards.has(k);
+          const containHit = !exactHit && byNumber.has(numK) && [...byNumber.get(numK)].some((cp) => playerAgrees(cp, d.playerSlug));
+          if (exactHit || containHit) {
             backing = pars.get(k)?.has(norm(d.parallel)) ? "checklist-confirmed" : "card-confirmed";
           } else if (family.has(k)) {
             backing = "family-match";

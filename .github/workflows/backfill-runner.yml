@@ -125,6 +125,7 @@ on:
           - retire-prose-parallel-rows
           - retire-numbered-base-rows
           - conform-card-profile
+          - backfill-playerslug
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
@@ -671,6 +672,23 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot drained — done."
+          fi
+
+      - name: Self-relaunch the playerSlug backfill until the field exists everywhere
+        if: ${{ always() && inputs.script == 'backfill-playerslug' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "playerSlug derived +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "playerslug_derived=$N"
+          if [ "$N" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-playerslug -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing derived — done."
           fi
 
       - name: Self-relaunch the profile conformance until the slot is clean
