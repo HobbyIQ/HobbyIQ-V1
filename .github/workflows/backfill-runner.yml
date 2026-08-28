@@ -124,6 +124,7 @@ on:
           - annotate-checklist-backing
           - retire-prose-parallel-rows
           - retire-numbered-base-rows
+          - conform-card-profile
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -592,6 +593,26 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f mode="${{ inputs.mode }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::canonicalized nothing — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the profile conformance until the slot is clean
+        # Same termination as the annotation: the resume predicate only takes
+        # unstamped rows, so a run that scans zero rows IS a finished slot.
+        if: ${{ always() && inputs.script == 'conform-card-profile' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          SEEN=$(grep -aoE "^  rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          SEEN=${SEEN:-0}
+          echo "profile_conform_scanned=$SEEN"
+          if [ "$SEEN" -gt 0 ]; then
+            echo "::notice::conformed a batch — re-dispatching to continue this slot"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-card-profile -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::nothing left unstamped in this slot — done."
           fi
 
       - name: Self-relaunch the checklist-backing annotation until the slot is clean
