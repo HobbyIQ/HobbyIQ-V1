@@ -40,7 +40,10 @@ const HERE = __dirname;
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
-const PHASES = String(process.env.PHASES || "beckett,insider").split(",").map((s) => s.trim()).filter(Boolean);
+// bcp included in the DEFAULT, in the code, not the comment: an earlier patch
+// edited the Env doc line and left this default untouched, and phase 3 sat
+// configured-off through every relaunch while the log said nothing.
+const PHASES = String(process.env.PHASES || "beckett,insider,bcp").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORT = process.env.SPORT || "baseball";
 const PAGES = process.env.PAGES || "29";
 const SLOT = Number(process.env.SLOT ?? 0);
@@ -117,10 +120,13 @@ function run(script, args, env) {
   // authority, so within the class confidence breaks the tie and the more
   // complete row wins.
   const stamp = new Date().toISOString().slice(0, 10);
+  // bcp FIRST: it is ~22 files and minutes of work, and twice now the
+  // beckett+insider re-ingest consumed the whole budget before reaching it.
+  // The tiny source must never be starved by the big ones.
   for (const [dir, source] of [
+    [bcpDir, `baseballcardpedia-ladders-${stamp}`],
     [beckettDir, `beckett-checklist-${stamp}`],
     [insiderDir, `checklistinsider-${stamp}`],
-    [bcpDir, `baseballcardpedia-ladders-${stamp}`],
   ]) {
     if (!fs.existsSync(dir)) { console.log(`\n  skipping ${source} — nothing staged at ${dir}`); continue; }
     const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv")).length;
