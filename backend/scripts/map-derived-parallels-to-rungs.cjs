@@ -45,7 +45,9 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 // The workflow passes the existing `sports` input as SPORTS; accept both so
 // non-baseball dispatches need no new plumbing.
 const SPORT = process.env.SPORT || process.env.SPORTS || "baseball";
-const REDO = String(process.env.REDO || "") === "true";
+// REDO comes as its own env, or through the runner's existing `mode` input
+// (MODE=redo) so a re-map dispatch needs no new workflow plumbing.
+const REDO = String(process.env.REDO || "") === "true" || String(process.env.MODE || "").toLowerCase() === "redo";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
 const LIMIT = Number(process.env.LIMIT || 0);
 const SLOT = Number(process.env.SLOT ?? 0);
