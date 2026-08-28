@@ -54,6 +54,7 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const REDO = String(process.env.REDO || "") === "true";
@@ -121,7 +122,7 @@ async function main() {
   do {
     const page = await retry(() => cat.items.query({
       query: `SELECT c.id, c.cardId, c.year, c.setKey, c.setName, c.cardNumber, c.playerName, c.playerSlug,
-                     c.parallel, c.parallelSlug, c.searchTokens, c.displayName, c.gradeTier
+                     c.parallel, c.parallelSlug, c.searchTokens, c.displayName, c.gradeTier, c.source
               FROM c WHERE STARTSWITH(c.id, 'hiq:')${PENDING}`,
     }, { maxItemCount: 500, continuationToken: token }).fetchNext());
     token = page.continuationToken;
@@ -145,7 +146,11 @@ async function main() {
           //    restate the identity when it is blank or disagrees
           const display = String(d.parallel ?? "").trim();
           let displayOut = display;
-          if (!display || slugify(display) !== p.parallelSeg) {
+          // A checklist row's parallel is the checklist's own words --
+          // restating it from the slug segment invents vocabulary the source
+          // never printed. Only derived/vendor rows get their display derived.
+          const isChecklistRow = catalogAuthorityOf(d.source) === "checklist";
+          if (!isChecklistRow && (!display || slugify(display) !== p.parallelSeg)) {
             displayOut = titleCase(p.parallelSeg);
             ops.push({ op: "set", path: "/parallel", value: displayOut });
             fixedDisplay++;

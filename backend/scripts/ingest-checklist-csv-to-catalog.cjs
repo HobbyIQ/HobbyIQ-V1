@@ -224,25 +224,25 @@ async function main() {
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
           if (!APPLY) { written++; return; }
 
-          // A BLANK PARALLEL IS NOT A BASE CARD WHEN THE CARD IS NUMBERED.
+          // TRUST THE CHECKLIST (Drew, 2026-08-28: "we have to stop looking for
+          // just base and trust the checklist").
           //
-          // `r.parallel || "Base"` treats an empty cell as the plain card, and
-          // for an unnumbered base-set row that is right. For a SERIAL-NUMBERED
-          // row it is provably wrong: base cards are not numbered, so /1 is a
-          // Superfractor and /5 is a numbered parallel whose NAME the source
-          // did not give us. Calling those Base files a parallel into the base
-          // card's own comp pool -- the pool the most sales land in.
+          // An earlier guard here refused any blank-parallel row that carried a
+          // print run, reasoning "base cards are never serial numbered". That
+          // is a false universal: National Treasures and Impeccable number
+          // their base sets, and Bowman base autos carry runs. The checklist's
+          // own structure is the authority -- a row in the base section IS the
+          // base card, with exactly the print run the checklist states, and no
+          // pass gets an opinion about what Base "should" look like.
           //
-          // Measured before this guard existed: 828,893 catalog rows claimed
-          // Base while numbered /1 to /999, and this ingest had contributed
-          // 140,991 of them in one night.
-          //
-          // Blank means UNKNOWN, never Base. We cannot name the parallel, so we
-          // decline to mint an identity that would collide with the base card,
-          // and count it where it can be seen.
+          // The guard survives only where the checklist itself said nothing: a
+          // row whose CATEGORY is unknown AND whose parallel is blank AND that
+          // carries a run has no structural claim to Base, so it is counted
+          // rather than minted.
           const parallelBlank = !r.parallel || !String(r.parallel).trim();
           const numbered = r.printRun && Number(r.printRun) > 0;
-          if (parallelBlank && numbered) { unnamedParallel++; return; }
+          const categoryBlank = !r.category || !String(r.category).trim();
+          if (parallelBlank && numbered && categoryBlank) { unnamedParallel++; return; }
 
           const known = await lookup(slug);
           await upsertCatalogEntry({
@@ -250,7 +250,12 @@ async function main() {
             sport: product.sport, year: product.year,
             setKey: product.setKey, setName: product.setName,
             cardNumber: String(r.cardNumber).toUpperCase(),
-            parallel: r.parallel || "Base",
+            // EXACTLY the checklist's words. Identity grammar (the :base:
+            // segment) lives in the slug; injecting "Base" into the stored
+            // field puts a word in the checklist's mouth ("you keep adding
+            // words like that and it messes up the checklists" -- Drew,
+            // 2026-08-28). Blank stays blank.
+            parallel: r.parallel || null,
             parallelSlug: slugify(r.parallel || "Base"),
             isAuto: r.isAuto === "true",
             printRun: r.printRun ? Number(r.printRun) : null,
