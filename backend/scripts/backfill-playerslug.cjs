@@ -59,9 +59,17 @@ async function main() {
   let token;
   do {
     const page = await retry(() => cat.items.query({
+      // MODE=flagship scopes to the products where the scorecard's
+      // unconfirmed rows actually live -- 21M rows at fleet rates is 20
+      // hours, and the 14 Topps-family products that dominate the
+      // unconfirmed list do not need to wait behind vendor-row cosmetics.
       query: `SELECT c.id, c.cardId, c.playerName, c.searchTokens FROM c
               WHERE IS_DEFINED(c.playerName) AND c.playerName != null
-                AND (NOT IS_DEFINED(c.playerSlug) OR c.playerSlug = null OR c.playerSlug = "")`,
+                AND (NOT IS_DEFINED(c.playerSlug) OR c.playerSlug = null OR c.playerSlug = "")${
+                  String(process.env.MODE || "").toLowerCase() === "flagship"
+                    ? " AND c.sport = 'baseball' AND (c.setKey = 'topps' OR STARTSWITH(c.setKey, 'topps-series') OR STARTSWITH(c.setKey, 'topps-update') OR c.setKey = 'topps-allen-and-ginter')"
+                    : ""
+                }`,
     }, { maxItemCount: 500, continuationToken: token }).fetchNext());
     token = page.continuationToken;
 
