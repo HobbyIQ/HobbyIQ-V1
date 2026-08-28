@@ -185,6 +185,8 @@ async function main() {
   // intended-minus-everything-else makes the reconciliation balance by
   // construction and so can never disagree with itself.
   let notReached = 0;
+  // Numbered rows whose parallel the source left blank. NOT base cards.
+  let unnamedParallel = 0;
   let stopReason = null;
 
   for (const name of files) {
@@ -221,6 +223,26 @@ async function main() {
           });
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
           if (!APPLY) { written++; return; }
+
+          // A BLANK PARALLEL IS NOT A BASE CARD WHEN THE CARD IS NUMBERED.
+          //
+          // `r.parallel || "Base"` treats an empty cell as the plain card, and
+          // for an unnumbered base-set row that is right. For a SERIAL-NUMBERED
+          // row it is provably wrong: base cards are not numbered, so /1 is a
+          // Superfractor and /5 is a numbered parallel whose NAME the source
+          // did not give us. Calling those Base files a parallel into the base
+          // card's own comp pool -- the pool the most sales land in.
+          //
+          // Measured before this guard existed: 828,893 catalog rows claimed
+          // Base while numbered /1 to /999, and this ingest had contributed
+          // 140,991 of them in one night.
+          //
+          // Blank means UNKNOWN, never Base. We cannot name the parallel, so we
+          // decline to mint an identity that would collide with the base card,
+          // and count it where it can be seen.
+          const parallelBlank = !r.parallel || !String(r.parallel).trim();
+          const numbered = r.printRun && Number(r.printRun) > 0;
+          if (parallelBlank && numbered) { unnamedParallel++; return; }
 
           const known = await lookup(slug);
           await upsertCatalogEntry({
@@ -291,10 +313,11 @@ async function main() {
     }
   }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
+  console.log(`  numbered, parallel blank ${f(unnamedParallel)}   <- NOT written as Base; the name is unknown`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);
   if (APPLY) {
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached, failed });
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel, failed });
   }
 }
 
