@@ -2999,6 +2999,12 @@ async function autoPriceHolding(
           gradeBreakdown,
           source: "portfolio.autoPriceHolding",
           cardId: cardId,
+          // CF-EXACT-IDENTITY-SUPREMACY (Drew, 2026-08-28): the holding's
+          // canonical slug lets every projected grade tier defer to its own
+          // exact (slug, grade) pool when that pool is deep. This is the
+          // notify path — the Ohtani refractor prices from its 130-comp
+          // exact pool here, never from base's.
+          hobbyiqCardId: (holding as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? null,
         });
         const targetLabel = `${normalizedGradeCompany} ${normalizedGradeValue}`;
         const match = compiled.estimates.find((e) => {
