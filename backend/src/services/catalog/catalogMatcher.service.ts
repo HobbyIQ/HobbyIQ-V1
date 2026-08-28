@@ -105,7 +105,7 @@ export interface CatalogMatchResult {
   slug: string;
   found: boolean;         // true when a catalog row was matched (or freshly seeded and found on re-read)
   confidence: number;     // 0-1
-  matchedBy: "exact" | "fuzzy-parallel" | "long-form" | "family-fallback" | "seeded" | "not-found";
+  matchedBy: "exact" | "fuzzy-parallel" | "long-form" | "family-refined" | "family-fallback" | "seeded" | "not-found";
   catalogId?: string;
 }
 
@@ -162,6 +162,21 @@ export const PARALLEL_FAMILY_WORDS = [
   "refractor", "prizm", "holo", "wave", "shimmer", "lava", "foil", "foilboard",
   "x-fractor", "sapphire", "chrome", "ice", "mojo", "camo", "pattern",
 ] as const;
+
+/**
+ * CF-VERIFIED-REFINEMENTS-ONLY (Drew rulings, 2026-08-28). The set-family
+ * prefixes a bare key may widen into: the SERIES split (one continuous
+ * numbering, measured — 2024 Topps S1 1,724 numbers, S2 443, ZERO overlap)
+ * and the UPDATE series. A bare `STARTSWITH(setKey + "-")` would pull
+ * topps-chrome into topps and let a chrome ladder answer flagship comps —
+ * the bowman-chrome ≠ bowman merge in mirror image, refused here the same
+ * way the batch mappers refuse it.
+ */
+export function widenedSetKeyPrefixes(setKey: string): string[] {
+  const k = String(setKey ?? "").trim();
+  if (!k) return [];
+  return [`${k}-series`, `${k}-update`];
+}
 
 /**
  * The unique long-form rung rule, measured before it was written: across
@@ -1038,6 +1053,52 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
           matchedBy: "long-form",
           catalogId: lf.id,
         };
+      }
+      // Step 2c — CF-VERIFIED-REFINEMENTS-ONLY (Drew, 2026-08-28). When the
+      // exact setKey holds NO candidates for this card at all, the checklist
+      // may key the same card under a verified refinement: topps comps whose
+      // rows live under topps-series-1/2 or topps-update. One liberty at a
+      // time: within the widened family only EXACT parallel-token equality
+      // may adopt — no long-form, no fuzz, because a set change and a
+      // parallel inference at once is two guesses stacked. Same print-run
+      // rejection and ungraded preference as the exact pool.
+      if (pool.length === 0) {
+        const prefixes = widenedSetKeyPrefixes(components.setKey);
+        if (prefixes.length === 2) {
+          const { resources: widened } = await container.items.query({
+            query: "SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND (STARTSWITH(c.setKey, @p0) OR STARTSWITH(c.setKey, @p1)) OFFSET 0 LIMIT 300",
+            parameters: [
+              { name: "@s", value: components.sport },
+              { name: "@y", value: components.year },
+              { name: "@n", value: components.cardNumber.toUpperCase() },
+              { name: "@a", value: components.isAuto },
+              { name: "@p0", value: prefixes[0]! },
+              { name: "@p1", value: prefixes[1]! },
+            ],
+          }).fetchAll();
+          const widenedBest = (widened as Array<{ id: string; parallelSlug?: string; parallel?: string; printRun?: number | null }>)
+            .filter((r) => typeof r?.id === "string" && r.id.startsWith("hiq:"))
+            .filter((r) => sameParallelTokens(parallelTokenSet(parallelSegmentOf(r.id) ?? slugify(r.parallelSlug ?? r.parallel ?? "")), want))
+            .filter((r) => {
+              const wantRun = components.printRun;
+              const got = typeof r.printRun === "number" ? r.printRun : null;
+              if (typeof wantRun !== "number" || wantRun <= 0 || got === null) return true;
+              return got === wantRun;
+            })
+            .sort((a, b) => {
+              const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
+              return graded(a) - graded(b) || a.id.localeCompare(b.id);
+            })[0] ?? null;
+          if (widenedBest) {
+            return {
+              slug: widenedBest.id,
+              found: true,
+              confidence: 0.8,
+              matchedBy: "family-refined",
+              catalogId: widenedBest.id,
+            };
+          }
+        }
       }
     } catch {
       // Query failure is non-fatal — fall through.
