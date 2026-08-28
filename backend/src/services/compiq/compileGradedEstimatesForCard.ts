@@ -92,11 +92,80 @@ export interface CompileGradedEstimatesInput {
   source: string;
   /** Telemetry cardId tag. */
   cardId: string;
+  /**
+   * CF-EXACT-IDENTITY-SUPREMACY (Drew, 2026-08-28). The canonical hiq slug,
+   * when the caller knows it. When present, every projected grade tier is
+   * checked against the EXACT (slug, grade) pool in sold_comps: a tier whose
+   * exact pool holds >= 3 comps takes the unified engine's answer, and no
+   * sibling / composed / premium rung may set its level. The Hartman case
+   * (engine $339 past $1,475/$2,500 exact sales) and the Ohtani refractor
+   * (base-like price beside a 130-comp exact pool) are both this rule
+   * missing. Absent or non-hiq: the legacy behavior is untouched.
+   */
+  hobbyiqCardId?: string | null;
 }
 
 export interface CompileGradedEstimatesResult {
   estimates: GradedProjectionResult[];
   mutationDetected: boolean;
+}
+
+/** "PSA 10" / "BGS 9.5" / "CGC 9.5" — company + numeric grade. "Raw" never matches. */
+const GRADE_LABEL = /^([A-Za-z]{2,4})\s+(\d+(?:\.\d+)?)$/;
+
+/**
+ * CF-EXACT-IDENTITY-SUPREMACY (Drew, 2026-08-28) — the invariant, applied as
+ * a post-pass so the legacy engine's internals stay untouched: for each
+ * projected grade tier, when the EXACT (slug, grade) pool answers with >= 3
+ * comps, that answer replaces the projection. The unified engine already obeys
+ * the doctrine (trend-lifted current, projected next sale, never a bare
+ * median), so supremacy here is inheritance, not new math.
+ *
+ * Failure of any lookup leaves that tier's legacy estimate untouched —
+ * supremacy must never turn a number into a null.
+ */
+export async function applyExactPoolSupremacy(
+  estimates: GradedProjectionResult[],
+  hobbyiqCardId: string | null | undefined,
+  source: string,
+): Promise<GradedProjectionResult[]> {
+  const slug = String(hobbyiqCardId ?? "").trim();
+  if (!slug.startsWith("hiq:") || estimates.length === 0) return estimates;
+  let computeUnifiedPrice: typeof import("./unifiedPricing.service.js")["computeUnifiedPrice"];
+  try {
+    ({ computeUnifiedPrice } = await import("./unifiedPricing.service.js"));
+  } catch {
+    return estimates;
+  }
+  return Promise.all(estimates.map(async (est) => {
+    const m = GRADE_LABEL.exec(String(est.grade ?? "").trim());
+    if (!m) return est;
+    try {
+      const u = await computeUnifiedPrice(slug, {
+        hobbyiqCardId: slug,
+        grade: { company: m[1].toUpperCase(), value: Number(m[2]) },
+      });
+      const value = u?.marketValue ?? u?.predictedPrice ?? null;
+      const comps = u?.totalSampleCount ?? 0;
+      if (value != null && value > 0 && comps >= 3 && (u?.confidence ?? 0) >= 0.3) {
+        const low = u?.fmv != null && u.fmv > 0 ? Math.min(u.fmv, value) : value;
+        const high = u?.predictedPrice != null && u.predictedPrice > 0 ? Math.max(u.predictedPrice, value) : value;
+        return {
+          ...est,
+          estimatedValue: value,
+          estimateLow: low,
+          estimateHigh: high,
+          confidenceTier: "estimate" as const,
+          basis: `exact-pool supremacy: ${comps} comps on this exact card+grade; superseded [${est.basis}]`,
+        };
+      }
+    } catch (err) {
+      console.warn(
+        `[${source}] exact-pool supremacy lookup failed for ${est.grade} (non-fatal, legacy estimate kept): ${(err as Error)?.message ?? err}`,
+      );
+    }
+    return est;
+  }));
 }
 
 export async function compileGradedEstimatesForCard(
@@ -384,8 +453,15 @@ export async function compileGradedEstimatesForCard(
         parallelId: parallelId ?? null,
       }));
     }
+    // Supremacy runs LAST, over whatever the legacy engine produced, so a
+    // deep exact pool always has the final word on its own tier.
+    const estimates = await applyExactPoolSupremacy(
+      built.estimates,
+      input.hobbyiqCardId,
+      source,
+    );
     return {
-      estimates: built.estimates,
+      estimates,
       mutationDetected: built.mutationDetected,
     };
   } catch (err) {
