@@ -122,6 +122,7 @@ on:
           - ingest-checklists-end-to-end
           - reslugAllSoldComps
           - annotate-checklist-backing
+          - retire-prose-parallel-rows
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
