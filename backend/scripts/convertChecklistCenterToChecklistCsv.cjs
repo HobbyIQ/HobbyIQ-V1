@@ -28,12 +28,44 @@
  *   - the manifest omitted setKey, so the ingest fell to normalizeSetKey and every
  *     Leaf product collapsed onto `leaf`  -> setKey comes from the URL slug.
  *
+ * CF-THE-LABEL-IS-PART-OF-THE-RUNG (2026-08-29, D3b). The html path is what
+ * converts the 180 pages without a workbook (2018-2020 Bowman, 2024 Leaf Metal
+ * ...), and four things it did to a page's own text were measured wrong:
+ *   - a ladder labelled "Refractor Parallels: Refractor #/499; Purple #/250;
+ *     Gold #/50 ..." emitted bare "Purple" and "Gold". The label is the finish
+ *     family and the page states it once for the whole ladder; the workbook for
+ *     the same product says "Purple Refractor". A bare colour and "<Colour>
+ *     Refractor" are one card and the LONG form is kept (colour = refractor
+ *     ruling), so the family is appended to every rung that does not already
+ *     carry a finish of its own (SuperFractor, X-Fractor, Printing Plates stay).
+ *     Only a label made of finish words applies (Refractor, Prizm, Wave, Lava,
+ *     RayWave, Geometric, Ice, Flash ...): "Prime Number Parallels" names an
+ *     insert set, not a finish, and its rungs stay as written;
+ *   - "SuperFractor 1/1" came out as "SuperFractor 1" with NO print run: the
+ *     "/1" was stripped as a run suffix and never read as one. "1/1" is a print
+ *     run of one;
+ *   - Topps Chrome's odds footnotes carry semicolons INSIDE the parentheses
+ *     ("Refractor (1:3 Hobby; 1:1 Jumbo; 1:3.5 Value)") and the split made
+ *     "1:1 Jumbo" a rung. The split now happens outside parentheses only;
+ *   - 14 product URLs carry the sport twice ("2020-bowman-baseball-baseball")
+ *     and the setKey kept one of them (`bowman-baseball`, `leaf-metal-baseball`),
+ *     so those products landed under a setKey nothing else uses. Every trailing
+ *     sport word comes off.
+ * And on the xlsx path, Select's "Base Set - Concourse - Gold Prizms" lost its
+ * qualifier but kept the separator ("- Gold Prizms"); the separator goes too.
+ *
  * Pre-flight: a product over the ingest's explosion gate (150 distinct rungs or
  * 2,000 card numbers) is refused HERE, printed, and not written. A refusal you
  * see at convert time is a bug report; one at ingest time is a wasted budget.
  *
+ * Every product prints one line -- `sections`, `laddersFound`, `ladderRows`
+ * (the rows a section ladder added on top of the card list; 0 on the xlsx
+ * path, where every row is a published line and nothing is expanded) -- so a
+ * log says what the expansion did before the ingest gate judges it.
+ *
  * Args: --pagesDir=C:/tmp/clc-pages  --outDir=C:/tmp/clc-csv  --limit=N
- *       --years=2020-2026  --onlyXlsx / --onlyHtml
+ *       --years=2020-2026  --onlyXlsx / --onlyHtml  --report (convert, count,
+ *       write nothing)
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -44,6 +76,7 @@ const OUT_DIR = arg("outDir", "C:/tmp/clc-csv");
 const LIMIT = Number(arg("limit", "0"));
 const YEARS = String(arg("years", ""));
 const ONLY = process.argv.includes("--onlyXlsx") ? "xlsx" : process.argv.includes("--onlyHtml") ? "html" : "";
+const REPORT = process.argv.includes("--report");
 const LIST = path.join(__dirname, "..", "data", "checklistcenter-products.json");
 const PAR_MAX = 150, NUM_MAX = 2000;
 const f = (n) => Number(n).toLocaleString();
@@ -54,6 +87,7 @@ const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
 const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
+const SPORTS = "baseball|football|basketball|hockey|soccer|wrestling|golf|racing|mma|pokemon";
 
 /** name / note / printRun -- the clean-parallel-annotations rule: a parenthetical
  *  anywhere and an "Est. print run" tail are footnotes, never part of the name;
@@ -67,12 +101,16 @@ function clean(raw) {
   if (parens.length) note = [parens.join("; "), note].filter(Boolean).join("; ");
   name = name.replace(/\s+/g, " ").replace(/[-\u2013\u2014:]\s*$/, "").trim();
   let printRun = null;
-  const runSrc = [name.match(/#?\s*\/\s*(\d[\d,]{0,6})\s*$/) ? name : null, note].filter(Boolean);
+  // "SuperFractor 1/1", "Platinum 1/1", "Gold Vinyl 1/1": a print run of one.
+  const oneOfOne = name.match(/^(.*?\S)\s+1\s*\/\s*1$/);
+  if (oneOfOne) { printRun = 1; name = oneOfOne[1]; }
+  // "#/-5" (2025 Topps Chrome FrozenFractor): a stray dash before the run.
+  const runSrc = printRun ? [] : [name.match(/#?\s*\/\s*-?(\d[\d,]{0,6})\s*$/) ? name : null, note].filter(Boolean);
   for (const src of runSrc) {
-    const m = String(src).match(/(?:^|\s)#?\s*\/\s*(\d[\d,]{0,6})\s*$/) || String(src).match(/^(?:#\s*)?\/?\s*(\d[\d,]{0,6})\s*(?:copies|cards|made)?\.?$/i) || String(src).match(/^(?:serial\s+)?numbered to\s*(\d[\d,]{0,6})\.?$/i) || String(src).match(/^\d+\s*\/\s*(\d[\d,]{0,6})$/);
+    const m = String(src).match(/(?:^|\s)#?\s*\/\s*-?(\d[\d,]{0,6})\s*$/) || String(src).match(/^(?:#\s*)?\/?\s*(\d[\d,]{0,6})\s*(?:copies|cards|made)?\.?$/i) || String(src).match(/^(?:serial\s+)?numbered to\s*(\d[\d,]{0,6})\.?$/i) || String(src).match(/^\d+\s*\/\s*(\d[\d,]{0,6})$/);
     if (m) { printRun = Number(m[1].replace(/,/g, "")) || null; break; }
   }
-  name = name.replace(/\s*#?\s*\/\s*\d[\d,]{0,6}\s*$/, "").trim();          // "Gold /50" -> "Gold", run kept
+  name = name.replace(/\s*#?\s*\/\s*-?\d[\d,]{0,6}\s*$/, "").trim();        // "Gold /50" -> "Gold", run kept
   name = name.replace(/\s+or less$/i, "").trim();                           // "Red #/99 or Less" -> "Red"
   return { name, note, printRun };
 }
@@ -93,15 +131,53 @@ function acceptRung(name, playerNames, rejected, why) {
   return true;
 }
 
+/** Split a ladder on ';' -- outside parentheses only. "Refractor (1:3 Hobby;
+ *  1:1 Jumbo)" is one rung with a footnote, not three. */
+function splitRungs(text) {
+  const out = []; let depth = 0, cur = "";
+  for (const ch of String(text)) {
+    if (ch === "(") depth++; else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === ";" && depth === 0) { out.push(cur); cur = ""; } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/** The finish family a ladder label states for every rung under it.
+ *  "Refractor Parallels" -> "Refractor"; "Prizms Parallels" -> "Prizm";
+ *  "Ice Prizm Parallels" -> "Ice Prizm"; "Parallels" -> "" (no family);
+ *  "Prime Number Parallels" -> "" (an insert set's name, not a finish). */
+const FAMILY_WORDS = new Set(["refractor", "refractors", "prizm", "prizms", "wave", "raywave", "lava", "geometric", "ice", "flash", "shimmer", "holo", "foil", "pulsar", "mojo", "sapphire", "x-fractor", "xfractor", "speckle", "sparkle", "mini-diamond", "reptilian"]);
+function ladderFamily(label) {
+  const fam = String(label ?? "").replace(/:$/, "").replace(/\s*parallels?$/i, "").replace(/\s+/g, " ").trim();
+  if (!fam) return "";
+  const words = fam.toLowerCase().split(" ");
+  if (!words.every((w) => FAMILY_WORDS.has(w))) return "";
+  return fam.replace(/\bPrizms\b/gi, "Prizm").replace(/\bRefractors\b/gi, "Refractor");
+}
+
+/** "Gold" under "Refractor Parallels" -> "Gold Refractor". A rung that already
+ *  names its finish (Refractor, SuperFractor, X-Fractor, Printing Plates, "Blue
+ *  Prizm") is left as written; "Ice" under "Ice Prizm" is the family itself. */
+function applyFamily(name, family) {
+  if (!family || !name) return name;
+  const n = name.toLowerCase(), fam = family.toLowerCase();
+  if (n === fam || n.endsWith(" " + fam)) return name;
+  if (fam.startsWith(n + " ")) return family;
+  if (/fractor|\bplates?\b|\bprizms?\b/.test(n)) return name;
+  return `${name} ${family}`;
+}
+
 /** One ladder string ("Red #/99; Gold /50 (Hobby only); Superfractor 1/1") -> rungs. */
 function parseLadderText(text, playerNames, rejected, label) {
   const out = [];
-  for (const piece of String(text).split(";")) {
+  const family = ladderFamily(label);
+  for (const piece of splitRungs(text)) {
     const raw = piece.replace(/\s+/g, " ").trim();
     if (!raw) continue;
     const { name, note, printRun } = clean(raw);
     if (!acceptRung(name, playerNames, rejected, label)) continue;
-    out.push({ name, note, printRun });
+    out.push({ name: applyFamily(name, family), note, printRun });
   }
   return out;
 }
@@ -158,11 +234,15 @@ function parseHtml(html, product) {
   return { subsets, rejected };
 }
 
-function parseXlsx(xlsxPath, product) {
+/** The first sheet of a CLC workbook as a 2-D array (header row first). */
+function readXlsxRows(xlsxPath) {
   const XLSX = require("xlsx");
   const wb = XLSX.readFile(xlsxPath);
   const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+}
+
+function parseXlsxRows(rows) {
   const header = (rows[0] || []).map((h) => String(h).trim().toLowerCase());
   const iSet = header.indexOf("set"), iNum = header.indexOf("number"), iName = header.indexOf("name"), iPR = header.indexOf("print run");
   if (iSet < 0 || iNum < 0 || iName < 0) return null;
@@ -179,6 +259,8 @@ function parseXlsx(xlsxPath, product) {
   return { bySet };
 }
 
+function parseXlsx(xlsxPath) { return parseXlsxRows(readXlsxRows(xlsxPath)); }
+
 function sectionSplit(setValue, sections) {
   // sections: the distinct leading words shared across many Set values (e.g. "Base", "Chrome Prospects")
   for (const sec of sections) if (setValue === sec) return { section: sec, finish: "" };
@@ -192,9 +274,13 @@ function categoryOf(section) {
   return "insert:" + s;
 }
 
-function emit(product, subsets, rejected, srcKind) {
+/** The html path: a subset's ladder applied to that subset's own cards.
+ *  Returns the CSV rows and the counters; writes nothing. */
+function convertHtml(html, product) {
+  const { subsets, rejected } = parseHtml(html, product);
+  if (!subsets.length) return null;
   const rowsOut = [];
-  let baseEmitted = false, refusedSubsets = 0;
+  let baseEmitted = false, refusedSubsets = 0, laddersFound = 0, ladderRows = 0;
   const pars = new Set(), nums = new Set(); // product-wide, for the report only -- the gate is per subset
   // CF-RIGHT-GUARD-RIGHT-SCOPE (2026-08-29, D3 dry run). Each subset's ladder
   // lands on that subset's own cards, so a product's distinct-rung count grows
@@ -211,11 +297,12 @@ function emit(product, subsets, rejected, srcKind) {
       console.log(`!! REFUSED subset ${product.sourceSlug} [${sub.title}]: distinct rungs=${subPars.size} cardNumbers=${subNums.size} (gate ${PAR_MAX}/${NUM_MAX})`);
       refusedSubsets++; continue;
     }
+    laddersFound += sub.ladders.length;
     for (const r of rungs) pars.add(r.name);
     for (const c of sub.cards) {
       nums.add(c.num);
       rowsOut.push([category, c.num, category === "base" ? "Base" : "", isAuto, "", c.player, ""]);
-      for (const r of rungs) rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]);
+      for (const r of rungs) { rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]); ladderRows++; }
     }
     if (category === "base") baseEmitted = true;
   }
@@ -223,7 +310,7 @@ function emit(product, subsets, rejected, srcKind) {
     console.log(`!! REFUSED ${product.sourceSlug}: every subset over the gate (${refusedSubsets} refused)`);
     return null;
   }
-  return writeOut(product, rowsOut, rejected, srcKind, { pars: pars.size, nums: nums.size, baseEmitted });
+  return { rows: rowsOut, rejected, stats: { sections: subsets.length, laddersFound, ladderRows, refusedSubsets, pars: pars.size, nums: nums.size, baseEmitted } };
 }
 
 /** Write the canonical CSV + manifest for one product. Shared by the html
@@ -232,22 +319,26 @@ function emit(product, subsets, rejected, srcKind) {
 function writeOut(product, rowsOut, rejected, srcKind, stats) {
   const meta = productMeta(product);
   const stem = `${meta.year}-${meta.setKey}-${meta.sport}`;
-  fs.mkdirSync(OUT_DIR, { recursive: true });
-  fs.writeFileSync(path.join(OUT_DIR, `${stem}.csv`), ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote", ...rowsOut.map((r) => r.map(csvEsc).join(","))].join("\n") + "\n");
-  fs.writeFileSync(path.join(OUT_DIR, `${stem}.manifest.json`), JSON.stringify({ scrapedAt: new Date().toISOString(), sourceUrl: product.url, sport: meta.sport, year: meta.year, setName: product.productName ?? meta.setName, productKey: stem, setKey: meta.setKey, rowCount: rowsOut.length, parallelColumnAuthoritative: true, source: srcKind, rejected: rejected.slice(0, 50) }, null, 1));
-  return { stem, rows: rowsOut.length, pars: stats.pars, nums: stats.nums, baseEmitted: stats.baseEmitted, rejected: rejected.length };
+  if (!REPORT) {
+    fs.mkdirSync(OUT_DIR, { recursive: true });
+    fs.writeFileSync(path.join(OUT_DIR, `${stem}.csv`), ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote", ...rowsOut.map((r) => r.map(csvEsc).join(","))].join("\n") + "\n");
+    fs.writeFileSync(path.join(OUT_DIR, `${stem}.manifest.json`), JSON.stringify({ scrapedAt: new Date().toISOString(), sourceUrl: product.url, sport: meta.sport, year: meta.year, setName: product.productName ?? meta.setName, productKey: stem, setKey: meta.setKey, rowCount: rowsOut.length, parallelColumnAuthoritative: true, source: srcKind, sections: stats.sections, laddersFound: stats.laddersFound, ladderRows: stats.ladderRows, rejected: rejected.slice(0, 50) }, null, 1));
+  }
+  return { stem, rows: rowsOut.length, ...stats, rejected: rejected.length };
 }
 
-/** sport / year / setKey from the URL slug -- never normalizeSetKey (D6). */
+/** sport / year / setKey from the URL slug -- never normalizeSetKey (D6).
+ *  Every trailing sport word comes off: "2020-bowman-baseball-baseball" is
+ *  `bowman`, not `bowman-baseball`. */
 function productMeta(product) {
   const slug = String(product.sourceSlug || "").replace(/-card-checklist$/, "").replace(/-checklist$/, "");
   const ym = slug.match(/^(19|20)\d{2}(?:-\d{2})?/);
   const year = product.year || (ym ? Number(ym[0].slice(0, 4)) : null);
   let rest = slug.replace(/^(19|20)\d{2}(?:-\d{2})?-/, "");
-  const sportMatch = rest.match(/-(baseball|football|basketball|hockey|soccer|wrestling|golf|racing|mma|pokemon)$/);
-  const sport = product.sport || (sportMatch ? sportMatch[1] : "baseball");
-  if (sportMatch) rest = rest.slice(0, -sportMatch[0].length);
-  return { year, sport, setKey: rest, setName: rest.replace(/-/g, " ") };
+  const sportRx = new RegExp(`-(${SPORTS})$`);
+  let sport = product.sport || null;
+  for (let m = rest.match(sportRx); m; m = rest.match(sportRx)) { sport = sport || m[1]; rest = rest.slice(0, -m[0].length); }
+  return { year, sport: sport || "baseball", setKey: rest, setName: rest.replace(/-/g, " ") };
 }
 
 /** CF-THE-XLSX-ALREADY-SAYS-WHICH-CARD (2026-08-29, D3 dry run #4). A CLC
@@ -268,8 +359,11 @@ function productMeta(product) {
  *     "Gold Shimmer Refractor" keep their Gold).
  *   - auto comes from the finish as well as the section: "Auto Silver
  *     Prismatic" (Leaf) / "... Retail Autographs Purple Border" mark the row
- *     isAuto and lose the auto word from the parallel name. */
-function emitXlsx(product, x) {
+ *     isAuto and lose the auto word from the parallel name.
+ *  Returns the CSV rows and the counters; writes nothing. */
+function convertXlsx(rows2d, product) {
+  const x = parseXlsxRows(rows2d);
+  if (!x) return null;
   const setValues = [...x.bySet.keys()];
   const sections = [...new Set(setValues.map((sv) => { const w1 = sv.split(" ")[0]; return /^base$/i.test(w1) ? "Base" : sv.split(" ").slice(0, 2).join(" "); }))];
   // (section, num) -> { player, category, finishes: [{ name, note, printRun }] }
@@ -309,7 +403,9 @@ function emitXlsx(product, x) {
     nums.add(card.num);
     for (const r of card.finishes) {
       let name = r.name;
-      if (qualifier) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1) : name;
+      // "Set - Concourse - Gold Prizms" minus its qualifier "Set - Concourse" is
+      // "Gold Prizms", not "- Gold Prizms": the separator goes with it.
+      if (qualifier) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
       let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
       if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
       if (/autograph/i.test(name) && !isAuto) isAuto = true;
@@ -320,7 +416,7 @@ function emitXlsx(product, x) {
     if (card.category === "base") baseEmitted = true;
   }
   if (!rowsOut.length) return null;
-  return writeOut(product, rowsOut, [], "xlsx", { pars: pars.size, nums: nums.size, baseEmitted });
+  return { rows: rowsOut, rejected: [], stats: { sections: sections.length, laddersFound: 0, ladderRows: 0, refusedSubsets: 0, pars: pars.size, nums: nums.size, baseEmitted } };
 }
 
 function main() {
@@ -328,28 +424,30 @@ function main() {
   let products = list.products;
   if (YEARS) { const [a, b] = YEARS.split("-").map(Number); products = products.filter((p) => p.year >= a && p.year <= (b || a)); }
   if (LIMIT) products = products.slice(0, LIMIT);
-  console.log(`[clc-convert] ${f(products.length)} products  pages: ${PAGES_DIR}  out: ${OUT_DIR}\n`);
-  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0;
+  console.log(`[clc-convert] ${f(products.length)} products  pages: ${PAGES_DIR}  out: ${REPORT ? "(report only, nothing written)" : OUT_DIR}\n`);
+  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0, ladderRowsTotal = 0;
   for (const p of products) {
     const year = String(p.year || "unknown");
     const hPath = path.join(PAGES_DIR, "html", year, `${p.sourceSlug}.html`), xPath = path.join(PAGES_DIR, "xlsx", year, `${p.sourceSlug}.xlsx`);
-    let result = null;
+    let result = null, srcKind = "";
     if (ONLY !== "html" && fs.existsSync(xPath)) {
       try {
-        const x = parseXlsx(xPath, p);
-        if (x) { result = emitXlsx(p, x); if (result) viaXlsx++; }
+        const out = convertXlsx(readXlsxRows(xPath), p);
+        if (out) { result = writeOut(p, out.rows, out.rejected, "xlsx", out.stats); srcKind = "xlsx"; viaXlsx++; }
       } catch (e) { console.log(`   xlsx parse failed ${p.sourceSlug}: ${String(e.message).slice(0, 60)}`); }
     }
     if (!result && ONLY !== "xlsx" && fs.existsSync(hPath)) {
-      const html = fs.readFileSync(hPath, "utf8");
-      const { subsets, rejected } = parseHtml(html, p);
-      if (subsets.length) { result = emit(p, subsets, rejected, "html"); if (result) { viaHtml++; rejectedTotal += rejected.length; } }
+      const out = convertHtml(fs.readFileSync(hPath, "utf8"), p);
+      if (out) { result = writeOut(p, out.rows, out.rejected, "html", out.stats); srcKind = "html"; viaHtml++; rejectedTotal += out.rejected.length; }
     }
     if (!fs.existsSync(hPath) && !fs.existsSync(xPath)) { noPage++; continue; }
     if (!result) { refused++; continue; }
-    written++; rows += result.rows;
+    written++; rows += result.rows; ladderRowsTotal += result.ladderRows;
+    console.log(`  ${result.stem.padEnd(48)} ${srcKind.padEnd(4)} rows=${String(f(result.rows)).padStart(8)}  sections=${String(result.sections).padStart(3)}  laddersFound=${String(result.laddersFound).padStart(3)}  ladderRows=${String(f(result.ladderRows)).padStart(8)}  rungs=${result.pars}  numbers=${result.nums}${result.refusedSubsets ? `  REFUSED subsets=${result.refusedSubsets}` : ""}`);
   }
-  console.log(`\n[clc-convert] written=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
+  console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-main();
+module.exports = { clean, splitRungs, ladderFamily, applyFamily, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, productMeta, categoryOf };
+
+if (require.main === module) main();
