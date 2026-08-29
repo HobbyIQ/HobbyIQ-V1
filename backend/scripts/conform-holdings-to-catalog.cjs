@@ -67,6 +67,27 @@ function resolveRung(parallelText, rungSegs) {
   return null;
 }
 
+/**
+ * CF-A-HOLDING-NEVER-ADOPTS-A-VENDOR-ROW (Drew, 2026-08-30: "bobby witt came
+ * out of bowman draft … first edition is another bowman set"). The 2020
+ * Bowman Draft BD152 base row was missing; the only base row left was a
+ * CardHedge-minted "bowman-draft-1st-edition" twin, and the pass would have
+ * moved the holding onto it. Two rules:
+ *   1. only checklist-authority rows are identity targets -- a vendor- or
+ *      sale-minted row is a hint, never an identity;
+ *   2. a correction never changes the PRODUCT (the setKey segment) of an
+ *      existing hiq identity -- a missing checklist row is an acquisition
+ *      gap, not a reason to move a holding to another set.
+ */
+function identityTargets(rows) {
+  return (rows ?? []).filter((r) => catalogAuthorityOf(String(r.source ?? "")) === "checklist");
+}
+const setKeyOf = (hiq) => { const seg = String(hiq ?? "").split(":"); return seg.length >= 4 && seg[0] === "hiq" ? seg[3] : ""; };
+function productChanged(existing, resolved) {
+  const a = setKeyOf(existing), b = setKeyOf(resolved);
+  return Boolean(a) && Boolean(b) && a !== b;
+}
+
 /** Token overlap between the holding's set text and a candidate setKey/setName. */
 function setAgrees(holdingSetText, setKey, setName) {
   const h = new Set(slug(holdingSetText).split("-").filter((w) => w && !/^\d{4}$/.test(w) && w !== "baseball"));
@@ -101,6 +122,8 @@ async function main() {
   console.log(`${docs.length} portfolio docs  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let holdings = 0, resolvedExact = 0, resolvedFuzzy = 0, corrected = 0, agreed = 0, unresolved = 0, legacyCleared = 0, failed = 0;
+  let vendorRowsIgnored = 0, vendorRowsRefused = 0, productChangeRefused = 0;
+  const refusedEx = [];
   const unresolvedEx = [], correctedEx = [];
 
   for (const doc of docs) {
@@ -128,6 +151,10 @@ async function main() {
           return ps && (ps === player || ps.includes(player) || player.includes(ps));
         });
         if (!mine.length) { unresolved++; if (unresolvedEx.length < 8) unresolvedEx.push(`no catalog card: ${h.playerName} ${year} #${num}`); continue; }
+        const vendorOnly = mine.length - identityTargets(mine).length;
+        const targets = identityTargets(mine);
+        if (!targets.length) { unresolved++; vendorRowsRefused++; if (unresolvedEx.length < 8) unresolvedEx.push(`only vendor-minted rows (${[...new Set(mine.map((r) => r.source))].slice(0, 3).join(",")}): ${h.playerName} ${year} #${num}`); continue; }
+        if (vendorOnly) vendorRowsIgnored += vendorOnly;
 
         // 3. set agreement -> one setKey
         // Holdings carry the product in EITHER field, and some carry a
@@ -136,7 +163,7 @@ async function main() {
         // alone matched nothing and stranded 76 of 92 holdings.
         const setTexts = [h.setName, h.product].map((x) => String(x ?? "").trim()).filter(Boolean);
         const bySet = new Map();
-        for (const r of mine) if (setTexts.some((st) => setAgrees(st, r.setKey, r.setName))) {
+        for (const r of targets) if (setTexts.some((st) => setAgrees(st, r.setKey, r.setName))) {
           if (!bySet.has(r.setKey)) bySet.set(r.setKey, []);
           bySet.get(r.setKey).push(r);
         }
@@ -148,7 +175,7 @@ async function main() {
           const target = [...bySet.keys()].filter((k) => {
             const kt = new Set(slug(k).split("-").filter(Boolean));
             return setTexts.some((st) => {
-              const ht = new Set(slug(st).split("-").filter((w) => w && !/^d{4}$/.test(w) && w !== "baseball"));
+              const ht = new Set(slug(st).split("-").filter((w) => w && !/^\d{4}$/.test(w) && w !== "baseball"));
               return ht.size === kt.size && [...ht].every((w) => kt.has(w));
             });
           });
@@ -173,6 +200,11 @@ async function main() {
         if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++;
 
         if (existing === resolved) { agreed++; }
+        else if (existing && productChanged(existing, resolved)) {
+          productChangeRefused++;
+          if (refusedEx.length < 8) refusedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}: ${existing} -> ${resolved} would change the product (${setKeyOf(existing)} -> ${setKeyOf(resolved)}); refused -- a missing checklist row is an acquisition gap`);
+          continue;
+        }
         else if (existing && rung.conf < 0.95) { /* disagreement below the replace gate: report as fuzzy, no write */ }
         else {
           corrected++;
@@ -203,16 +235,20 @@ async function main() {
   console.log(`  CORRECTED identity      ${f(corrected)}`);
   console.log(`  legacy field cleared    ${f(legacyCleared)}`);
   console.log(`  unresolved (reported)   ${f(unresolved)}`);
+  console.log(`  vendor rows ignored     ${f(vendorRowsIgnored)}   <- never an identity target`);
+  console.log(`  only vendor rows        ${f(vendorRowsRefused)}   <- counted in unresolved`);
+  console.log(`  product change REFUSED  ${f(productChangeRefused)}   <- an existing identity keeps its set`);
   console.log(`  failed                  ${f(failed)}`);
   // CF-EVERY-WRITE-JOB-RECONCILES: intended = every holding scanned; written =
   // identities corrected (+ legacy fields cleared); skipped = agreed +
   // unresolved + resolved-but-unchanged; failed declared. Disjoint by design.
   if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: corrected + legacyCleared, skipped: holdings - corrected - legacyCleared - failed, failed });
+  if (refusedEx.length) { console.log(`\n  refused:`); for (const e of refusedEx) console.log(`     ${e}`); }
   if (correctedEx.length) { console.log(`\n  corrections:`); for (const e of correctedEx) console.log(`     ${e}`); }
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }
 }
 
-module.exports = { resolveRung, setAgrees };
+module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf };
 
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
