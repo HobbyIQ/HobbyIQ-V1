@@ -82,11 +82,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   They also inflate "card-confirmed" (any number, any player in the set matches), so
   the 89.2% scorecard was partly propped by them and will drop, then be re-earned.
   `retire-exploded-checklist-rows` (#1371) computes the list at run time (>150
-  parallels or >2,000 card numbers per product+source; sizing fixed #1376); dry run
-  on 4 slots running. checklistinsider is only PARTLY exploded (real rungs on every
+  parallels or >2,000 card numbers per product+source; sizing fixed #1376). Dry run:
+  **255 products / 13.2M rows** of the old `baseballcardpedia` source (95% of it —
+  the whole scrape was a cross-join) → **APPLY running on 8 slots**. checklistinsider is only PARTLY exploded (real rungs on every
   card + a garbage tail), so it gets MODE=tail (#1375): retire a flagged product's
-  (product, parallel) groups with < 5 rows or card-line parallels, keep the rest;
-  tail dry run running. The ingest now refuses such a file whole (#1373).
+  (product, parallel) groups with < 5 rows or card-line parallels, keep the rest.
+  Dry run: 510 flagged products, ~34.5k tail rows retired, 5.996M real rungs kept →
+  **APPLY running on 4 slots**. The ingest now refuses such a file whole (#1373).
 - ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
   checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
 - ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
@@ -95,8 +97,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 - ◐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
   (#1368) and the explosion gate (#1373): the e2e bcp phase now takes years /
   titles / phases from the runner (#1377); dispatched 13:18Z for 2005–2015 flagship
-  + the 17 exploded non-flagship titles (A&G, Gypsy Queen, Donruss, Score, UD
-  Premier, Co-Signers, Stadium Club …).
+  + the 17 exploded non-flagship titles. Run 1 landed the 12 reachable titles
+  (57,038 rows; A&G / Updates-and-Highlights titles 404) but NO flagship years —
+  `--titles` had replaced the per-year list (#1380 fixes: titles add). Run 2
+  dispatched 13:27Z for 2005–2015 flagship + A&G `%27s` title variants.
+  FINDING: the ingest keys re-scraped products through `normalizeSetKey`, which
+  collapses products into families (Topps Co-Signers → `topps`, UD Premier →
+  `upper-deck`, every Donruss → `panini-donruss`) — sales do the same, so they
+  match, but the identity is wrong. Vocabulary decision, listed under D.
 
 **C. Rebuild passes on the clean spine**
 - ☐ C1 `conform-card-profile` — displayName/searchTokens re-derived from the id for
@@ -117,13 +125,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   sales all carry a slug; (sport, year, setKey, cardNumber) → the checklist's
   player(s) → the ONE in the title; exploded addresses skipped. 1/64 sample dry run
   running for precision; full run after B1 retires the explosion.
-- ☐ D2 Identity triangulation harness: 200 cards × (sale, holding, search) must
-  resolve to the SAME checklist-minted card — the acceptance line, as a number
+- ◐ D2 `identity-triangulation` (#1381) — BUILT: 200 checklist cards with sales ×
+  (sale-shaped canonicalize, holding-shaped canonicalize, title search) vs the
+  checklist id; baseline run in flight (before the spine passes), re-run after C.
 - ☐ D3 checklistcenter → canonical CSV converter (it produced 27,662 annotated and
   ~26k mis-parsed rows; the old ingester raw-upserts and must not be rerun)
 - ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
   canonical engine (docs/pricing-obedience-audit.md)
 - ☐ D5 Phase 07 — 58 writers bypassing upsertCatalogEntry
+- ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
+  a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
+  panini-donruss) on both sales and checklists. Decide: identity key = the
+  product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
 
