@@ -150,7 +150,7 @@ function run(script, args, env) {
     const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv")).length;
     if (!csvs) { console.log(`\n  skipping ${source} — 0 CSVs`); continue; }
     const budget = mins(left() / 2);
-    if (budget < 2) { console.log(`\n  out of budget before ${source}`); break; }
+    if (budget < 2) { console.log(`\n  out of budget before ${source}\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`); break; }
     console.log(`\n── ingest ${source}  (${f(csvs)} files, ${budget}m budget) ──`);
     try {
       run("ingest-checklist-csv-to-catalog.cjs", [], {

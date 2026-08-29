@@ -98,7 +98,7 @@ async function main() {
 
   console.log(`slot ${SLOT}/${SLOTS}  mode=${MODE || "staging"}  statuses=${STATUSES.join(",")}  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
   let scanned = 0, matched = 0, unmatchedIn = 0, flagged = 0, deduped = 0, invalid = 0, needsParse = 0, failed = 0, notReached = 0;
-  let pagesSeen = 0;
+  let pagesSeen = 0, otherShards = 0;
   let stopReason = null;
   let token;
 
@@ -111,7 +111,7 @@ async function main() {
     const page = await retry(() => (MODE === "chdaily" ? chd : stg).items.query(query, { maxItemCount: 300, continuationToken: token }).fetchNext());
     token = page.continuationToken;
     const mine = SLOTS > 1 ? page.resources.filter((_, i) => (i + scanned) % SLOTS === SLOT) : page.resources;
-    scanned += page.resources.length - mine.length;
+    otherShards += page.resources.length - mine.length;
 
     for (let i = 0; i < mine.length; i += CONCURRENCY) {
       await Promise.all(mine.slice(i, i + CONCURRENCY).map(async (row) => {
@@ -152,7 +152,18 @@ async function main() {
           // 1.46M awaiting-verify rows carry no parsed player at all -- the
           // parser-low-confidence class. That is the title parser's job (the
           // promoter's pipeline), not a direct write; counted, never guessed.
-          if (!input.playerName) { needsParse++; return; }
+          if (!input.playerName) {
+            needsParse++;
+            // CF-NEEDS-PARSE-LEAVES-THE-QUEUE (2026-08-29). 1.46M awaiting-verify
+            // rows have no parsed player. Leaving their status untouched made every
+            // relaunch re-walk all of them for ~100 writes. They move to needs-parse,
+            // a status this script never scans; the promoter's parser owns them.
+            if (APPLY && flip) await retry(() => stg.item(flip.id, flip.pk).patch([
+              { op: "replace", path: "/status", value: "needs-parse" },
+              { op: "add", path: "/statusUpdatedAt", value: new Date().toISOString() },
+            ])).catch(() => { /* stale status only costs a re-scan */ });
+            return;
+          }
           if (!input.cardId) { invalid++; return; }
           if (!APPLY) { matched++; return; }
 
@@ -198,7 +209,7 @@ async function main() {
   if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
   else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
-  console.log(`  rows scanned            ${f(scanned)}`);
+  console.log(`  rows scanned            ${f(scanned)}   (+${f(otherShards)} belonging to other shards, not counted)`);
   console.log(`  INTO POOL, matched      ${f(matched)}   <- the rebuild paying out`);
   console.log(`  INTO POOL, unmatched    ${f(unmatchedIn)}   <- catalogMatched=false; the rematch owns these`);
   console.log(`  of which flagged        ${f(flagged)}   <- pending-verify; excluded from pricing until cleared`);

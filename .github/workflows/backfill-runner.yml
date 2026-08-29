@@ -522,28 +522,30 @@ jobs:
         # Convergent, so re-running is safe: a row whose slug already matches
         # what the generator produces is counted as skipped, not rewritten, so
         # a relaunch that finds nothing left to change stops the loop.
-        if: ${{ always() && inputs.script == 'reslugAllSoldComps' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'reslugAllSoldComps' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         working-directory: backend
         run: |
           set +e
-          MOVED=$(grep -aoE "touched=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+")
-          MOVED=${MOVED:-0}
-          echo "reslug_touched=$MOVED"
-          if [ "$MOVED" -gt 0 ]; then
-            echo "::notice::re-slugged $MOVED — re-dispatching to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f shard_hex="${{ inputs.shard_hex }}"
+          N=$(grep -aoE "touched=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          echo "reslug_touched=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
+          # stopped at its budget with work left. Gating on "did anything" looped
+          # forever once a slot was down to rows it cannot change.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (touched=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f shard_hex="${{ inputs.shard_hex }}"
           else
-            echo "::notice::nothing re-slugged — done, no re-dispatch."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (touched=${N:-0}) — done, no re-dispatch."
           fi
       - name: Self-relaunch the checklist ingest until every phase completes
         # Acquire + convert + ingest is far longer than one 150-minute step, so
         # the script slices RUN_MINUTES across phases and prints what it
         # reached. --skipExisting means a relaunch resumes rather than
         # re-scraping what is already on the runner disk.
-        if: ${{ always() && inputs.script == 'ingest-checklists-end-to-end' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'ingest-checklists-end-to-end' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -551,20 +553,22 @@ jobs:
         run: |
           set +e
           N=$(grep -aoE "checklist_phases_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
-          N=${N:-0}
-          echo "phases_done=$N"
-          if [ "$N" -gt 0 ]; then
-            echo "::notice::completed $N phase(s) — re-dispatching to continue"
+          echo "phases_done=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
+          # stopped at its budget with work left. Gating on "did anything" looped
+          # forever once a slot was down to rows it cannot change.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (phases_done=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
-            echo "::notice::no phase completed — done, no re-dispatch."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (phases_done=${N:-0}) — done, no re-dispatch."
           fi
       - name: Self-relaunch the parallel repair until nothing is folded
         # Stops at its own 140-minute budget and PRINTS its summary, so
         # "moved to the unfolded slug N" exists for this step to read. A run
         # killed by the 150-minute step ceiling prints nothing, the relaunch
         # reads 0, and the fleet stops silently with every run green.
-        if: ${{ always() && inputs.script == 'repair-parallel-subset-fold' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-parallel-subset-fold' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -586,7 +590,7 @@ jobs:
         # "re-homed N" exists for this step to read. A run killed by the step
         # ceiling prints nothing and the relaunch reads 0 -- which is how a
         # fleet stops silently with every run green.
-        if: ${{ always() && inputs.script == 'canonicalize-vendor-shaped-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'canonicalize-vendor-shaped-rows' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -607,7 +611,7 @@ jobs:
       - name: Self-relaunch the numbered-Base retirement until nothing retires
         # Whitelisted without a relaunch step, so six shards ran one cycle and
         # stopped at 290k remaining while every run stayed green.
-        if: ${{ always() && inputs.script == 'retire-numbered-base-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-numbered-base-rows' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -624,7 +628,7 @@ jobs:
           fi
 
       - name: Self-relaunch the pokemon number repair until nothing unglues
-        if: ${{ always() && inputs.script == 'repair-pokemon-glued-numbers' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-pokemon-glued-numbers' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -641,7 +645,7 @@ jobs:
           fi
 
       - name: Self-relaunch the pokemon setKey mapping until nothing moves
-        if: ${{ always() && inputs.script == 'map-pokemon-setkeys-to-checklist' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'map-pokemon-setkeys-to-checklist' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -660,44 +664,49 @@ jobs:
       - name: Self-relaunch the parallel mapping until the slot is clean
         # Unresolved rows are stamped, so the pending query drains to zero and
         # a run that scans nothing IS a finished slot.
-        if: ${{ always() && inputs.script == 'map-derived-parallels-to-rungs' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'map-derived-parallels-to-rungs' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         working-directory: backend
         run: |
           set +e
-          SEEN=$(grep -aoE "^  derived rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          SEEN=${SEEN:-0}
-          echo "parallel_map_scanned=$SEEN"
-          if [ "$SEEN" -gt 0 ]; then
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
+          N=$(grep -aoE "MOVED to a checklist rung +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "parallel_map_moved=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
+          # stopped at its budget with work left. Gating on "did anything" looped
+          # forever once a slot was down to rows it cannot change.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
           else
-            echo "::notice::slot drained — done."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the one-pool emission until staging drains
         # Staging rows flip to in-pool as they are written, so the query drains
         # to zero and a run that writes nothing IS a finished pass.
-        if: ${{ always() && inputs.script == 'emit-staging-to-pool' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'emit-staging-to-pool' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         working-directory: backend
         run: |
           set +e
-          M=$(grep -aoE "INTO POOL, matched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          U=$(grep -aoE "INTO POOL, unmatched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          N=$(( ${M:-0} + ${U:-0} ))
-          echo "pool_emitted=$N"
-          if [ "$N" -gt 0 ]; then
+          N=$(( $(grep -aoE "INTO POOL, matched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || echo 0) + $(grep -aoE "INTO POOL, unmatched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || echo 0) ))
+          echo "pool_emitted=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
+          # stopped at its budget with work left. Gating on "did anything" looped
+          # forever once a slot was down to rows it cannot change.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (emitted=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=emit-staging-to-pool -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
           else
-            echo "::notice::nothing emitted — staging drained for this mode."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (emitted=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the playerSlug backfill until the field exists everywhere
-        if: ${{ always() && inputs.script == 'backfill-playerslug' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'backfill-playerslug' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -716,7 +725,7 @@ jobs:
       - name: Self-relaunch the profile conformance until the slot is clean
         # Same termination as the annotation: the resume predicate only takes
         # unstamped rows, so a run that scans zero rows IS a finished slot.
-        if: ${{ always() && inputs.script == 'conform-card-profile' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'conform-card-profile' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -739,21 +748,23 @@ jobs:
         # checklistBacking yet, so "scanned 0" means the slot is finished --
         # whereas relaunching on "annotated > 0" would loop forever once the
         # budget stop sent the next run back to the first product.
-        if: ${{ always() && inputs.script == 'annotate-checklist-backing' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'annotate-checklist-backing' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         working-directory: backend
         run: |
           set +e
-          SEEN=$(grep -aoE "^  derived rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          SEEN=${SEEN:-0}
-          echo "checklist_backing_scanned=$SEEN"
-          if [ "$SEEN" -gt 0 ]; then
-            echo "::notice::annotated $SEEN rows — re-dispatching to continue this slot"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
+          N=$(grep -aoE "^  annotated +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "checklist_backing_annotated=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
+          # stopped at its budget with work left. Gating on "did anything" looped
+          # forever once a slot was down to rows it cannot change.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (annotated=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
           else
-            echo "::notice::nothing left unannotated in this slot — done."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (annotated=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch graded identities until the pool is fully minted
@@ -761,7 +772,7 @@ jobs:
         # budget and PRINTS its summary, so "written N" exists to be read. A
         # process killed by the step ceiling never prints one, which is how a
         # fleet stops silently while every run stays green.
-        if: ${{ always() && inputs.script == 'materialize-graded-identities' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'materialize-graded-identities' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -783,7 +794,7 @@ jobs:
         # outlive the 150-minute ceiling several times over. Same rule as the
         # re-home: relaunch only if THIS run made progress, so a drained slice
         # stops instead of spinning.
-        if: ${{ always() && inputs.script == 'retire-unreferenced-graded-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-unreferenced-graded-rows' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -816,7 +827,7 @@ jobs:
         # range is already empty will relaunch once, scan nothing and exit in
         # seconds; that is cheaper than duplicating the slot arithmetic here and
         # risking it drifting from the script's.
-        if: ${{ always() && inputs.script == 'rehome-catalog-rows-to-own-partition' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'rehome-catalog-rows-to-own-partition' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
           REHOME_YEARS: ${{ inputs.years }}
@@ -858,7 +869,7 @@ jobs:
         # `c.composite`, v3 checks `c.composite.era`) and only in apply
         # mode. `always()` so a timed-out backfill step still triggers a
         # re-dispatch — resumable-by-design.
-        if: ${{ always() && (inputs.script == 'backfill-composite-fields' || inputs.script == 'backfill-composite-v3') && inputs.apply == true }}
+        if: ${{ !cancelled() && (inputs.script == 'backfill-composite-fields' || inputs.script == 'backfill-composite-v3') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
           COMPOSITE_SCRIPT: ${{ inputs.script }}
@@ -916,7 +927,7 @@ jobs:
         # the "next start date" as its new BULK_START_DATE. Reads the
         # printed "next start date:" line from the log, then re-dispatches
         # if the date is still > END_DATE (2018-01-01 default).
-        if: ${{ always() && inputs.script == 'bulk-import-ch-daily-to-sold-comps' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'bulk-import-ch-daily-to-sold-comps' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -952,7 +963,7 @@ jobs:
         # script self-caps to ~25 min per invocation; this step re-dispatches
         # the workflow immediately so it continues in a fresh runner. Loops
         # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ always() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
+        if: ${{ !cancelled() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
