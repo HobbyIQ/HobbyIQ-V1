@@ -334,7 +334,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   normalised) and the retire's per-product ≥ 95% floor shipped. **Order:**
   deploy (33274840453) → re-ingest `MODE=reingest PHASES=clc` (report-only
   shard 0/8 dispatched 22:55Z, 33274846587, to read the `kept` counters)
-  → APPLY ×8 → `audit-source-coverage` → retire with the floor. Also seen in the same run: the bcp ladders re-ingest now
+  → APPLY ×8 → `audit-source-coverage` → retire with the floor. **Dry shard
+  0/8 (33274846587) ran the whole CLC phase: 547 products fetched (html
+  547, xlsx 351), the html path now expands section ladders (2018 Bowman:
+  27 rungs × 706 numbers = 7,084 ladder rows; 2020 Bowman 28 × 734), shard 0
+  read 491,013 csv rows and would write 489,042, explosion gate refused 0 —
+  so the whole set is ≈3.9M rows (2.87M before the ladder fix). APPLY ×8
+  dispatched 00:05Z (relaunch children follow the marker).** Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -714,7 +720,7 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     cell `/50` as the Excel date serial 18264 before any parser saw it
     (`raw: true`), and the preview cap read `req.user.tier` (never existed)
     so every preview projected against the free cap. Deploy #2
-    33275053457 carries it (expect `162e769`).
+    33275053457 carries it — **live 23:35Z, health serves `162e769`.**
     `feat/d12a`) + **D12-b** (**delivered on branch `feat/d12b`, unmerged — 7
     commits, tsc 0, the six import suites + the D9 eBay fixture green, a
     mutation check per commit**). The import resolves through the catalog:
@@ -1039,8 +1045,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   and 158,741 un-numbered printing plates (+7,149 at "/4") → D15's third
   script `conform-one-of-one-parallels`. `merge-bare-colour-parallels` 2025:
   8,877 chrome bare-colour rows, 1,861 with a long-form twin → APPLY
-  dispatched 22:52Z (33274680156); the 7,016 with no long-form row need a
-  rename mode (queued). Web picker fix #1466 deployed (SWA run 33273147531).
+  dispatched 22:52Z (33274680156) — **wrote 1,873, reconciled (intended
+  59,676 = written 1,873 + skipped 57,803)**; the 7,068 with no long-form row
+  need a rename mode (queued). `repair-trailing-comma-player-names` APPLY
+  (33275249458): **11,702 repaired, 1,804 of them graded children, 0 failed,
+  reconciled** — "Ethan Petry," is "Ethan Petry" again. Web picker fix #1466 deployed (SWA run 33273147531).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
