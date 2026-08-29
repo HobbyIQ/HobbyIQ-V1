@@ -126,7 +126,10 @@ async function main() {
   const q = async (c, query, parameters = []) => (await retry(() => c.items.query({ query, parameters }, { maxItemCount: 1000 }).fetchAll())).resources;
 
   // ── the sample: checklist-backed rows, spread across sports × years ──
-  const perBucket = Math.max(10, Math.ceil((LIMIT * 3) / Math.max(1, SPORTS.length * YEARS.length)));
+  // Only ~1 in 7 checklist-confirmed rows has >= 3 raw sales in 180d (first
+  // run: 45 of 323 candidates), so the pull is ~15x LIMIT — cheap, these are
+  // indexed TOP reads — or the default LIMIT is never reached.
+  const perBucket = Math.max(50, Math.ceil((LIMIT * 15) / Math.max(1, SPORTS.length * YEARS.length)));
   const candidates = [];
   for (const sp of SPORTS) for (const y of YEARS) {
     const rows = await q(cat, `SELECT TOP ${perBucket} c.id, c.sport, c.setKey FROM c WHERE c.sport = @sp AND c.year = @y AND c.checklistBacking = 'checklist-confirmed' AND NOT IS_DEFINED(c.gradeTier)`, [{ name: "@sp", value: sp }, { name: "@y", value: y }]);
