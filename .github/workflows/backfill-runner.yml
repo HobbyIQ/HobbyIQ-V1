@@ -129,6 +129,9 @@ on:
 
 
           - fold-unnumbered-twins
+
+
+          - audit-all-holdings
           - rename-setkey
           - parse-player-from-checklist
           - identity-triangulation
