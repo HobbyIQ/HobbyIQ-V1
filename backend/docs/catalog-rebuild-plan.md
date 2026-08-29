@@ -65,9 +65,9 @@ user-owned cards may seed).
 
 ## RUNNING (self-driving; each step fires on the last one's completion)
 
-1. **R5 rematch** — `reslugAllSoldComps`, 8 slots, **re-dispatched 2026-08-29
-   10:40Z** under the fixed relaunch (the 02:31Z fleet gave 15/16 of the pool
-   one pass only). Unplaced pool rows 17,104 → 11,629 so far.
+1. ~~R5 rematch~~ **DONE 11:52Z** — 8 slots, 15,852,221 rows scanned,
+   18,885 re-slugged (only-improve), 0 failed, 0 relaunches (every slot
+   finished inside its budget). Unplaced pool rows 17,104 → **11,598**.
 4. → RU rollback (Drew's go given, after the rematch + emission drain):
    card_catalog 400k→~2.5k, **sold_comps 100k→8k** (raised 40k→100k TEMP
    2026-08-29 02:52Z — it was pinned at 100% with 24k 429s/5min under the
@@ -92,8 +92,27 @@ user-owned cards may seed).
 
 ## NEEDS DREW (not code)
 
+- **RU rollback go** (the 08-29 raise was "temp"): sold_comps 100k→8k,
+  title_parse_cache 2,000→400, card_catalog 400k→40k. Rematch + emission are
+  done; nothing is running.
+- **Holdings APPLY go**: `conform-holdings-to-catalog` replace gate 0.95, no
+  vendor calls; dry-run 31/92 resolved, 12 corrections. Rewrites `portfolio`.
+- **"Clean the names" ruling — ~400k spine rows carry page annotations inside
+  the parallel name** (bccp 236,838; checklistinsider 84,232; baseballcardpedia
+  53,181; checklistcenter 27,662): "Refractor - Est. print run ~4,000 to 6,000",
+  "Purple (exclusive to packs sold at Meijer stores)", "Platinum ()", "Royal
+  Blue (Series One: 7025 copies)". The rung exists, under an unmatchable slug —
+  Ohtani's 2018 Topps Chrome Refractor is exactly this, which is why his
+  sale-minted row stayed card-confirmed. Proposal: name = text before " (" /
+  " - Est."; annotation kept verbatim in `parallelNote`; numeric print run →
+  `printRun`; scraper/converter fixes + a re-slug repair over the ~400k rows,
+  then the mapper folds the derived twins. Largest lever on rung-confirmed (6%).
+
 - **755,755 pre-existing `ingest-auto-seed` rows** (sale-minted before
-  2026-08-29 01:40Z, all sports): delete-vs-keep. They are the self-confirming
+  2026-08-29 01:40Z, all sports): delete-vs-keep — NOT all junk: Ohtani's
+  Refractor identity row is one, card-confirmed. Recommendation: retire only
+  the unconfirmed ones now (110k baseball, 34k pokémon); fold the
+  card-confirmed ones onto checklist rungs via "clean the names" first. They are the self-confirming
   class; 114k of baseball's 249k unconfirmed are these. A retire is one
   dispatch away (`retire-autoseed-window` with an earlier SINCE) once ruled.
 - Pokémon promo ambiguity: `*-black-star-promos` derived keys match several
