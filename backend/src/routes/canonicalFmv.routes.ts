@@ -25,7 +25,8 @@ import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
-import { computeHobbyIqFmv } from "../services/portfolioiq/hobbyIqFmv.service.js";
+import { valueIdentity } from "../services/compiq/oneValuationPath.service.js";
+import { toCanonicalFmvResponse, toHobbyIqFmvResponse } from "../services/compiq/oneValuationPathAdapters.js";
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { canonicalCardSearch } from "../services/portfolioiq/canonicalCardSearch.service.js";
 import { computeTrending, computeRelatedCards, computeTrendingPlayers } from "../services/portfolioiq/discoverySurfaces.service.js";
@@ -111,6 +112,15 @@ router.post("/compute-hobbyiq-slug", requireSession, async (req: Request, res: R
 //     maxAgeDays?: number,          // freshness cutoff (default 180)
 //     previewLimit?: number,        // recentComps preview size (default 10)
 //   }
+//
+// CF-ONE-VALUATION-PATH (D16, 2026-08-30). Answered from the ONE valuation
+// path (oneValuationPath.service), the same result /price-by-id,
+// /canonical-fmv and /observed-grade-curve derive from. The direct
+// computeHobbyIqFmv call that lived here labelled 80% of its answers
+// `unified-market-value` — outside its own HobbyIqFmvMethod union — and read
+// the pool at a different window from the curve (D14 probe). `maxAgeDays` is
+// no longer honoured: the engine's window is the density cascade's, and a
+// caller-chosen window would be a second computation.
 router.post("/hobbyiq-fmv", requireSession, requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
   try {
     const hobbyiqCardId = String(req.body?.hobbyiqCardId ?? "").trim();
@@ -118,11 +128,15 @@ router.post("/hobbyiq-fmv", requireSession, requireRateLimited("priceChecksPerDa
       res.status(400).json({ success: false, error: "hobbyiqCardId required (must start with 'hiq:')" });
       return;
     }
-    const result = await computeHobbyIqFmv({
-      hobbyiqCardId,
-      gradeCompany: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
-      gradeValue: typeof req.body?.gradeValue === "number" ? req.body.gradeValue : null,
-      maxAgeDays: typeof req.body?.maxAgeDays === "number" ? req.body.maxAgeDays : undefined,
+    const v = await valueIdentity({
+      id: hobbyiqCardId,
+      grade: {
+        company: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
+        value: typeof req.body?.gradeValue === "number" ? req.body.gradeValue : null,
+      },
+      playerName: typeof req.body?.playerName === "string" ? req.body.playerName : null,
+    });
+    const result = toHobbyIqFmvResponse(v, {
       previewLimit: typeof req.body?.previewLimit === "number" ? req.body.previewLimit : undefined,
     });
     res.json({ success: true, ...result });
@@ -142,6 +156,29 @@ router.post("/canonical-fmv", requireSession, requireRateLimited("priceChecksPer
     if (!cardId) {
       res.status(400).json({ success: false, error: "cardId required" });
       return;
+    }
+    // CF-ONE-VALUATION-PATH (D16, 2026-08-30). An hiq: slug — or a vendor id
+    // the catalog can name — is answered from the ONE valuation path, in this
+    // route's shape (method: direct-comp for the exact pool, the ladder's own
+    // rung names otherwise; rungLabel on every answer). The body's parallel /
+    // year / product / player / cardNumber describe the slug, which already
+    // IS the identity; a mismatch between them cannot move the price. The
+    // canonical ladder below serves only vendor ids the catalog cannot name.
+    {
+      const bodyPrintRun = Number(req.body?.printRun);
+      const v = await valueIdentity({
+        id: cardId,
+        grade: {
+          company: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
+          value: typeof req.body?.gradeValue === "number" ? req.body.gradeValue : null,
+        },
+        printRun: Number.isFinite(bodyPrintRun) && bodyPrintRun > 0 ? bodyPrintRun : null,
+        playerName: typeof req.body?.player === "string" ? req.body.player : null,
+      });
+      if (v.identity.slug || cardId.startsWith("hiq:")) {
+        res.json(toCanonicalFmvResponse(v));
+        return;
+      }
     }
     const result = await computeCanonicalFmv({
       cardId,
