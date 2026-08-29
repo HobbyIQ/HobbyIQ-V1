@@ -400,3 +400,59 @@ describe("D17 — /card-detail: the header is /hobbyiq-fmv's number, the ladder 
     expect(h.calls.ladder).toEqual([]);
   });
 });
+
+async function panel(id: string) {
+  const r = await request(app).get(`/api/compiq/card-panel/${encodeURIComponent(id)}`).set(H);
+  expect(r.status).toBe(200);
+  return r.body;
+}
+
+describe("D17 — /card-panel: the tiers are the one entry's curve, served under the slug", () => {
+  it("(slug): every entry equals /observed-grade-curve's; the Raw tile equals the four routes' headline; identity from the catalog", async () => {
+    const { pb, gc } = await four(GOLD);
+    const p = await panel(GOLD);
+    expect(p.cardId).toBe(GOLD);
+    expect(p.gradeCurve.entries).toEqual(gc.entries);
+    expect(p.gradeCurve.totalSampleCount).toBe(gc.totalSampleCount);
+    const raw = (p.gradeCurve.entries as Array<Record<string, unknown>>).find((e) => e.grader === "Raw")!;
+    expect(raw.trendAdjustedValue).toBe(pb.marketValue);
+    expect(raw.rungLabel).toBe(pb.rungLabel);
+    expect(p.identity.cardId).toBe(GOLD);
+    expect(p.identity.player).toBe("Test Player");
+    expect(p.identity.set).toBe("2018 Bowman Chrome");
+    expect(p.identity.number).toBe("49");
+    expect(p.identity.variant).toBe("Gold Refractor");
+    expect(p.identity.year).toBe(2018);
+    expect(p.identity.slug).toBe(GOLD);
+    expect(p.referencePrices).toEqual([]);
+    expect(Array.isArray(p.samePlayerSiblings)).toBe(true);
+    expect(p.rungLabel).toBe(pb.rungLabel);
+    expect(p.gradeCurve.siblingFallback).toBeNull();
+    expect(h.calls.canonical).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.curve).toBe(0);
+    expect(h.calls.ladder).toEqual([]);
+  });
+
+  it("a vendor id resolves to its catalog slug first: the panel is served under the slug, entries identical", async () => {
+    const asSlug = await panel(GOLD);
+    const p = await panel(VENDOR);
+    expect(p.cardId).toBe(GOLD);
+    expect(p.gradeCurve.entries).toEqual(asSlug.gradeCurve.entries);
+    expect(h.calls.curve).toBe(0);
+  });
+
+  it("no exact pool: every tier unavailable, the same reason as the four routes, no second engine fills a tier", async () => {
+    const e = await four(EMPTY);
+    const p = await panel(EMPTY);
+    expect(p.cardId).toBe(EMPTY);
+    expect(p.fmvReason).toBe(e.pb.fmvReason);
+    expect(p.gradeCurve.fmvReason).toBe("no-exact-pool");
+    for (const t of p.gradeCurve.entries as Array<Record<string, unknown>>) {
+      expect(t.valueSource).toBe("unavailable");
+      expect(t.value ?? null).toBeNull();
+    }
+    expect(h.calls.curve).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+  });
+});

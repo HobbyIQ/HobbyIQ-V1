@@ -136,4 +136,21 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     expect(body.includes("computeCardDetail(")).toBe(true);
     for (const call of D17_ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
   });
+
+  it("/card-panel/:cardId: valueIdentity answers the slug branch under the slug; the legacy build and the grade-rescue overlay follow it, for vendor ids only", () => {
+    const compiq = read("src/routes/compiq.routes.ts");
+    const body = handlerBody(compiq, "get", "/card-panel/:cardId");
+    const entry = body.indexOf("valueIdentity(");
+    const legacy = body.indexOf("buildObservedGradeCurve(");
+    const rescue = body.indexOf("overlayGradeRescue(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    expect(rescue).toBeGreaterThan(legacy);
+    const slugBranch = body.slice(0, legacy);
+    for (const call of D17_ENGINE_CALLS) expect(slugBranch.includes(call), `${call} before the legacy build`).toBe(false);
+    expect(slugBranch.includes("overlayGradeRescue(")).toBe(false);
+    expect(slugBranch).toMatch(/return res\.json\(body\)/);
+    // The slug -> majority vendor-id resolver is gone from this handler.
+    expect(body.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+  });
 });
