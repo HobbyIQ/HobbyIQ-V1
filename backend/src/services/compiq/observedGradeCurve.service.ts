@@ -98,7 +98,7 @@ import { lookupGradeRatio, lookupGradeRatioByTier, classifyFamily, lookupValueBa
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
  *  order grades on the confidence rail (higher = better condition). */
-const CANONICAL_GRADES: ReadonlyArray<{
+export const CANONICAL_GRADES: ReadonlyArray<{
   label: string;
   grader: string;
   psaEquivalent: number;
@@ -495,7 +495,7 @@ function computePercentile(prices: number[], p: number): number | null {
 //    ≤ 0.60 → 3 dots  ("moderate — actionable but expect variance")
 //    ≤ 0.80 → 4 dots  ("solid — pool is representative")
 //    ≤ 1.00 → 5 dots  ("dense — high confidence")
-function computeConfidence(sampleCount: number, newestDate: string | null): number {
+export function computeConfidence(sampleCount: number, newestDate: string | null): number {
   let base: number;
   if (sampleCount === 0) return 0;
   if (sampleCount === 1) base = 0.15;
@@ -1918,8 +1918,14 @@ export async function buildObservedGradeCurve(
     // MV + trend. Adaptive-tight (7d) would exclude PSA 10 for Ohtani
     // (newest sale 9 days ago) from unified.gradeCurve entirely →
     // no leading-edge, no trend, no MV correction. 180d catches all.
+    // CF-ONE-VALUATION-PATH (D16, 2026-08-30). Was `fixedWindowDays: 180`:
+    // every tier of this curve read the pool at 180d while the headline for
+    // the same tier (hobbyiq-fmv, the persist site) read it at the density
+    // cascade's window — the D14 probe's grade-curve-vs-hobbyiq-fmv gap.
+    // Per-tier windows run that same cascade for every tier from one 180d
+    // read, so a tier here IS its headline.
     const hiqOpt: Parameters<typeof computeUnifiedPrice>[1] = {
-      fixedWindowDays: 180,
+      perTierWindows: true,
     };
     const unionSlug = resolveUnionSlug(cardId, opts.hobbyiqCardId);
     if (unionSlug) hiqOpt.hobbyiqCardId = unionSlug;
@@ -1979,81 +1985,17 @@ export async function buildObservedGradeCurve(
   }
 
   // ── CF-SITE-CURVE-NO-BLANK-TIERS (2026-08-22) ─────────────────────────
-  //
-  // fillEstimatedFallback only fires when an OBSERVED Raw entry exists
-  // (`else if (rawObserved !== null)`), because that is the anchor it scales
-  // from. A card with no raw sales therefore leaves every graded tier at
-  // valueSource "unavailable" — and the web curve HIDES those
-  // (GradeCurveView filters `valueSource !== "unavailable" || sampleCount > 0`).
-  //
-  // Measured on 25 real holding cards 2026-08-22: 145 tiers hidden across 11
-  // cards, and THREE cards rendered a completely empty grade curve — Nick
-  // Kurtz, Cam Caminiti, Victor Figueroa. Caminiti has a $205.48 last sale
-  // sitting in the pool. Showing nothing is the one answer the product cannot
-  // give.
-  //
-  // So: one last pass over whatever is still unavailable, anchored on the best
-  // evidence we already hold. Costs no additional query — the unified call
-  // above has already run and its market value is captured.
-  //
-  // Empirical ratios ONLY, via empiricalGradeMultiplier: a grade with no
-  // calibration stays unavailable rather than being projected off the
-  // hardcoded matrix. Marked "estimated", which the web already renders as an
-  // "Est." badge with a confidence bar — no frontend change needed.
-  try {
-    const { empiricalGradeMultiplier } = await import("./canonicalFmv.service.js");
-    const seg = String(opts.hobbyiqCardId ?? cardId).split(":");
-    const sportForRatio = opts.sport ?? (seg[0] === "hiq" ? seg[1] ?? null : null);
-    const familyForRatio = classifyFamily(
-      opts.setName ?? (seg[0] === "hiq" ? seg[3] ?? null : null),
-    );
-
-    const ratioFor = (grader: string, value: number | null): number | null =>
-      empiricalGradeMultiplier(grader, value, familyForRatio, sportForRatio);
-
-    // Anchor precedence: observed Raw, then the best-sampled observed graded
-    // tier divided back by its own ratio, then the unified market value.
-    let anchor: number | null = null;
-    const rawEntry = curve.entries.find((e) => e.grade === "Raw");
-    if (rawEntry?.valueSource === "observed" && typeof rawEntry.value === "number" && rawEntry.value > 0) {
-      anchor = rawEntry.value;
-    }
-    if (anchor === null) {
-      const observedGraded = curve.entries
-        .filter((e) => e.grade !== "Raw" && e.valueSource === "observed" && typeof e.value === "number" && e.value > 0)
-        .sort((a, b) => (b.sampleCount ?? 0) - (a.sampleCount ?? 0));
-      for (const e of observedGraded) {
-        const r = ratioFor(e.grader, Number(String(e.grade).replace(/[^0-9.]/g, "")) || null);
-        if (r !== null && r > 0) { anchor = (e.value as number) / r; break; }
-      }
-    }
-    if (anchor === null && unifiedAnchor !== null && unifiedAnchor > 0) {
-      anchor = unifiedAnchor;
-    }
-
-    if (anchor !== null && Number.isFinite(anchor) && anchor > 0) {
-      for (const entry of curve.entries) {
-        if (entry.valueSource !== "unavailable") continue;
-        if (entry.grade === "Raw") {
-          (entry as { value: number | null }).value = Math.round(anchor * 100) / 100;
-          (entry as { valueSource: string }).valueSource = "estimated";
-          (entry as { estimatedFrom: string | null }).estimatedFrom = "anchor-projection";
-          (entry as { confidenceScore: number | null }).confidenceScore = 0.4;
-          continue;
-        }
-        const gradeNum = Number(String(entry.grade).replace(/[^0-9.]/g, ""));
-        const r = ratioFor(entry.grader, Number.isFinite(gradeNum) ? gradeNum : null);
-        if (r === null || !Number.isFinite(r) || r <= 0) continue;   // no calibration → stays hidden
-        const projected = anchor * r;
-        if (!Number.isFinite(projected) || projected <= 0) continue;
-        (entry as { value: number | null }).value = Math.round(projected * 100) / 100;
-        (entry as { valueSource: string }).valueSource = "estimated";
-        (entry as { estimatedFrom: string | null }).estimatedFrom = "anchor-projection";
-        (entry as { estimatedMultiplier: number | null }).estimatedMultiplier = r;
-        (entry as { confidenceScore: number | null }).confidenceScore = 0.35;
-      }
-    }
-  } catch { /* silent-safe — a blank tier is bad, a broken curve is worse */ }
+  // One last pass over whatever is still unavailable, anchored on the best
+  // evidence we already hold (observed Raw, then an observed graded tier
+  // divided back by its ratio, then the unified market value captured
+  // above). Empirical ratios ONLY. Extracted to fillUnavailableTiersFromAnchor
+  // (D16) so the one valuation path's curve runs the identical fill.
+  await fillUnavailableTiersFromAnchor(curve.entries, {
+    anchorFallback: unifiedAnchor,
+    setName: opts.setName ?? null,
+    sport: opts.sport ?? null,
+    slug: String(opts.hobbyiqCardId ?? cardId),
+  });
 
   // CF-GRADE-CURVE-MONOTONIC (Drew, 2026-08-06, revised same day).
   // Grade tiles must ascend WITHIN a grader (PSA 8 ≤ PSA 9 ≤ PSA 10,
@@ -2075,28 +2017,7 @@ export async function buildObservedGradeCurve(
   // are skipped for the floor role (their own value is still enforced
   // against a trusted-tier floor if one exists).
   const MONOTONIC_TRUST_MIN = 5;
-  // CF-GRADE-SORT-BUGFIX (Drew, 2026-08-08). Prior form
-  //   parseFloat(String(e.grade)) || 0
-  // returned 0 for every tier because e.grade is "PSA 10" / "BGS 9.5" —
-  // parseFloat starts at "P" / "B" (non-digit), returns NaN, and NaN || 0
-  // resolves to 0. All tiers within a grader got sort key 0 → iteration
-  // order fell back to array order (CANONICAL_GRADES = DESCENDING). PSA 10
-  // was iterated first, set the floor at $7,100, then PSA 9's real $2,700
-  // got FLOORED UP to $7,100. That was the last mile of the anchor-collapse
-  // bug on Ohtani 2018 BC RC PSA 9. Extract the trailing numeric tier
-  // ("PSA 10" → 10, "BGS 9.5" → 9.5) so ascending sort works as intended.
-  const extractGradeNum = (grade: string | number | null): number => {
-    if (typeof grade === "number") return grade;
-    const text = String(grade ?? "");
-    const m = text.match(/(\d+(?:\.\d+)?)/);
-    const n = m ? parseFloat(m[1]) : 0;
-    // CF-BGS-BLACK-LABEL-SPLIT: "BGS 10 Black Label" parses to 10, tying with
-    // "BGS 10" and leaving their order arbitrary. A Black Label outranks a
-    // Pristine 10 — measured 3.0x — so nudge it above, which also stops the
-    // ceiling pass below from clamping it down to the Pristine value.
-    if (/black\s*label/i.test(text)) return n + 0.25;
-    return n;
-  };
+  // extractGradeNum / isBlackLabelTier: module-level helpers (below).
   const graders = new Set(curve.entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
     const tierRows = curve.entries
@@ -2126,37 +2047,138 @@ export async function buildObservedGradeCurve(
   }
 
   // ── CF-PROJECTED-TIERS-MONOTONIC (2026-08-22) ─────────────────────────
-  //
-  // The floor pass above only advances its floor on OBSERVED tiers with
-  // sampleCount >= MONOTONIC_TRUST_MIN, which is right: a real low-grade sale
-  // may legitimately exceed a thin high-grade one, and grade monotonicity is
-  // not an invariant of observed data.
-  //
-  // But when a card has no graded sales, EVERY tier is projected from one
-  // anchor times a ratio, nothing is ever trusted as a floor, and the ratio
-  // table's own inconsistencies pass straight through to the user:
-  //
-  //   SGC 10  $1,086.21   estimated
-  //   SGC  9  $2,121.39   estimated   <- a 9 worth 2x its own 10
-  //
-  // Nothing was observed there. That is not a market inversion, it is two
-  // calibration cells disagreeing, and a 9 above its own 10 discredits every
-  // other number on the card.
-  //
-  // So: projected tiers may not exceed the nearest HIGHER tier of the same
-  // grader. Walk each grader top-down and cap. Observed tiers are never
-  // touched — they set the ceiling, they do not receive one — so a genuine
-  // observed inversion still shows, exactly as the doctrine requires.
-  const isBlackLabelTier = (e: { grade: string | number }) =>
-    /black\s*label/i.test(String(e.grade ?? ""));
+  // Projected tiers may not exceed the nearest HIGHER tier of the same
+  // grader; observed tiers are never touched. Extracted to capProjectedTiers
+  // (D16) so the one valuation path's curve applies the identical rule.
+  capProjectedTiers(curve.entries);
 
+  // CF-RUNG-LABEL (D4 PR 1). Name the rung on every tier the overlay did
+  // not already label: an observed tier is this service's own exact-pool
+  // read carried by the trajectory; an estimated tier is a fill; an
+  // unavailable tier has no rung. A consumer (portfolioStore's tile path)
+  // reads this field — it does not infer the rung from valueSource.
+  for (const e of curve.entries) {
+    if (e.rungLabel) continue;
+    e.rungLabel = e.valueSource === "observed"
+      ? "exact-pool-trajectory"
+      : e.valueSource === "estimated" ? "grade-curve-estimate" : null;
+  }
+
+  return curve;
+}
+
+// ─── Shared curve passes (D16: one valuation path) ──────────────────────────
+//
+// buildObservedGradeCurve and the one valuation path's curve
+// (oneValuationPath.service) run the SAME fill and the SAME cap, defined once
+// here. The observed-tier floor pass (CF-GRADE-CURVE-MONOTONIC) is deliberately
+// NOT shared: it rewrites an observed tier's number, and the one valuation
+// path never rewrites what the engine computed (grade monotonicity is not an
+// invariant).
+
+/** CF-GRADE-SORT-BUGFIX (Drew, 2026-08-08). "PSA 10" → 10, "BGS 9.5" → 9.5.
+ *  parseFloat started at "P" and returned 0 for every tier, so the monotonic
+ *  walk ran in array order (descending) and floored PSA 9 up to PSA 10.
+ *  CF-BGS-BLACK-LABEL-SPLIT: "BGS 10 Black Label" outranks a Pristine 10
+ *  (measured 3.0x), so it is nudged above. */
+export function extractGradeNum(grade: string | number | null): number {
+  if (typeof grade === "number") return grade;
+  const text = String(grade ?? "");
+  const m = text.match(/(\d+(?:\.\d+)?)/);
+  const n = m ? parseFloat(m[1]) : 0;
+  if (/black\s*label/i.test(text)) return n + 0.25;
+  return n;
+}
+
+export function isBlackLabelTier(e: { grade: string | number }): boolean {
+  return /black\s*label/i.test(String(e.grade ?? ""));
+}
+
+/**
+ * CF-SITE-CURVE-NO-BLANK-TIERS (2026-08-22). Fill every tier still
+ * "unavailable" from the best anchor the curve already holds, × the EMPIRICAL
+ * grade ratio (GRADE_CALIBRATION via empiricalGradeMultiplier) — a grade with
+ * no calibration stays unavailable rather than being projected off a
+ * hardcoded matrix. Anchor precedence: observed Raw; then the best-sampled
+ * observed graded tier divided back by its own ratio; then `anchorFallback`
+ * (the unified market value the caller captured). Marks filled tiers
+ * "estimated" / estimatedFrom "anchor-projection". Returns the anchor used.
+ */
+export async function fillUnavailableTiersFromAnchor(
+  entries: ObservedGradeEntry[],
+  opts: { anchorFallback: number | null; setName?: string | null; sport?: string | null; slug?: string | null },
+): Promise<number | null> {
+  try {
+    const { empiricalGradeMultiplier } = await import("./canonicalFmv.service.js");
+    const seg = String(opts.slug ?? "").split(":");
+    const sportForRatio = opts.sport ?? (seg[0] === "hiq" ? seg[1] ?? null : null);
+    const familyForRatio = classifyFamily(
+      opts.setName ?? (seg[0] === "hiq" ? seg[3] ?? null : null),
+    );
+
+    const ratioFor = (grader: string, value: number | null): number | null =>
+      empiricalGradeMultiplier(grader, value, familyForRatio, sportForRatio);
+
+    let anchor: number | null = null;
+    const rawEntry = entries.find((e) => e.grade === "Raw");
+    if (rawEntry?.valueSource === "observed" && typeof rawEntry.value === "number" && rawEntry.value > 0) {
+      anchor = rawEntry.value;
+    }
+    if (anchor === null) {
+      const observedGraded = entries
+        .filter((e) => e.grade !== "Raw" && e.valueSource === "observed" && typeof e.value === "number" && e.value > 0)
+        .sort((a, b) => (b.sampleCount ?? 0) - (a.sampleCount ?? 0));
+      for (const e of observedGraded) {
+        const r = ratioFor(e.grader, Number(String(e.grade).replace(/[^0-9.]/g, "")) || null);
+        if (r !== null && r > 0) { anchor = (e.value as number) / r; break; }
+      }
+    }
+    if (anchor === null && opts.anchorFallback !== null && opts.anchorFallback > 0) {
+      anchor = opts.anchorFallback;
+    }
+
+    if (anchor !== null && Number.isFinite(anchor) && anchor > 0) {
+      for (const entry of entries) {
+        if (entry.valueSource !== "unavailable") continue;
+        if (entry.grade === "Raw") {
+          (entry as { value: number | null }).value = Math.round(anchor * 100) / 100;
+          (entry as { valueSource: string }).valueSource = "estimated";
+          (entry as { estimatedFrom: string | null }).estimatedFrom = "anchor-projection";
+          (entry as { confidenceScore: number | null }).confidenceScore = 0.4;
+          continue;
+        }
+        const gradeNum = Number(String(entry.grade).replace(/[^0-9.]/g, ""));
+        const r = ratioFor(entry.grader, Number.isFinite(gradeNum) ? gradeNum : null);
+        if (r === null || !Number.isFinite(r) || r <= 0) continue;   // no calibration → stays hidden
+        const projected = anchor * r;
+        if (!Number.isFinite(projected) || projected <= 0) continue;
+        (entry as { value: number | null }).value = Math.round(projected * 100) / 100;
+        (entry as { valueSource: string }).valueSource = "estimated";
+        (entry as { estimatedFrom: string | null }).estimatedFrom = "anchor-projection";
+        (entry as { estimatedMultiplier: number | null }).estimatedMultiplier = r;
+        (entry as { confidenceScore: number | null }).confidenceScore = 0.35;
+      }
+    }
+    return anchor;
+  } catch { return null; /* silent-safe — a blank tier is bad, a broken curve is worse */ }
+}
+
+/**
+ * CF-PROJECTED-TIERS-MONOTONIC (2026-08-22). When a card has no graded sales,
+ * every tier is projected from one anchor × a ratio, and the ratio table's own
+ * inconsistencies pass straight through (SGC 9 $2,121 above SGC 10 $1,086 —
+ * two calibration cells disagreeing, not a market inversion). So projected
+ * tiers may not exceed the nearest HIGHER tier of the same grader. Observed
+ * tiers are never touched — they set the ceiling, they do not receive one —
+ * so a genuine observed inversion still shows, exactly as the doctrine
+ * requires. Black Label sits out of the walk (a qualifier on the 10, no
+ * calibration cell of its own) and takes one floor: not below the Pristine
+ * 10 it outranks, and only when it is itself an estimate.
+ */
+export function capProjectedTiers(entries: ObservedGradeEntry[]): void {
+  const graders = new Set(entries.map((e) => e.grader).filter((g): g is string => !!g && g !== "Raw"));
   for (const grader of graders) {
-    // Black Label sits OUT of this walk. It is a qualifier on the 10, not a
-    // grade above it, and it has no calibration cell of its own — so its
-    // projection is the least reliable number in the grader and must not cap
-    // anything. Left in, it projected $4,009.50 and dragged a legitimate
-    // BGS 10 of $5,904.90 down to meet it, which is precisely backwards.
-    const rows = curve.entries
+    const rows = entries
       .filter((e) => e.grader === grader && !isBlackLabelTier(e))
       .map((e) => ({ e, gv: extractGradeNum(e.grade) }))
       .sort((a, b) => b.gv - a.gv);   // highest grade first
@@ -2175,12 +2197,8 @@ export async function buildObservedGradeCurve(
       ceiling = ceiling === null ? own : Math.min(ceiling, own);
     }
 
-    // The one constraint that DOES bind Black Label, and it is a floor rather
-    // than a ceiling: it cannot be worth less than the Pristine 10 it outranks.
-    // Measured 3.0x above it on real sales. Only raises an ESTIMATED Black
-    // Label — an observed one is evidence and stands however it lands.
-    const black = curve.entries.find((e) => e.grader === grader && isBlackLabelTier(e));
-    const plainTen = curve.entries.find(
+    const black = entries.find((e) => e.grader === grader && isBlackLabelTier(e));
+    const plainTen = entries.find(
       (e) => e.grader === grader && !isBlackLabelTier(e) && extractGradeNum(e.grade) === 10,
     );
     if (black && plainTen && black.valueSource === "estimated") {
@@ -2192,20 +2210,6 @@ export async function buildObservedGradeCurve(
       }
     }
   }
-
-  // CF-RUNG-LABEL (D4 PR 1). Name the rung on every tier the overlay did
-  // not already label: an observed tier is this service's own exact-pool
-  // read carried by the trajectory; an estimated tier is a fill; an
-  // unavailable tier has no rung. A consumer (portfolioStore's tile path)
-  // reads this field — it does not infer the rung from valueSource.
-  for (const e of curve.entries) {
-    if (e.rungLabel) continue;
-    e.rungLabel = e.valueSource === "observed"
-      ? "exact-pool-trajectory"
-      : e.valueSource === "estimated" ? "grade-curve-estimate" : null;
-  }
-
-  return curve;
 }
 
 /**
