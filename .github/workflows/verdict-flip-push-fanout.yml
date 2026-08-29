@@ -10,13 +10,16 @@ name: Verdict Flip Push Fan-out
 #
 # SCAFFOLD-ONLY until APNs is wired. See the script header for the three
 # prereqs (APNs auth key, apnsDeviceToken plumbing, user opt-in pref).
+#
+# D13 (2026-08-29) — RETIRED FROM THE CRON. The script is a permanent
+# dry-run: `dryRun = args.dryRun !== false` with parseArgs defaulting
+# dryRun:true (verdict-flip-push-fanout.cjs:68,149) and no APNs call
+# anywhere — a nightly that can only print push intents is not an alert,
+# and a green run here implied delivery that never happened. The
+# `schedule:` is removed; manual dispatch is kept for scaffold work.
 
 on:
-  schedule:
-    # 9:30 UTC maps to 5:30 AM EDT.
-    - cron: '30 9 * * *'
-    # 10:30 UTC maps to 5:30 AM EST.
-    - cron: '30 10 * * *'
+  # schedule removed 2026-08-29 (D13) — see header.
   workflow_dispatch:
 
 jobs:

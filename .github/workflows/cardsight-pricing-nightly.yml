@@ -1,5 +1,12 @@
 name: Cardsight Pricing Nightly Sync
 
+# D13 (2026-08-29) — RETIRED FROM THE CRON. Cardsight was retired from
+# matching on 2026-08-16 (off in code; the CARDSIGHT_* env vars are inert
+# but still set). This workflow kept calling the retired vendor's API every
+# night and writing a trickle into sold_comps (2 rows on 08-24, 3 on 08-27,
+# measured read-only 2026-08-29). The `schedule:` is removed; manual
+# dispatch is kept for a deliberate, scoped re-crawl only.
+#
 # CF-CARDSIGHT-PRICING-NIGHTLY (Drew, 2026-07-26). Runs Cardsight
 # Phase B (pricing) per sport with a rolling 7-day lookback window.
 # Cardsight adds sales that CardHedge misses (Heritage / PWCC / Goldin
@@ -20,8 +27,7 @@ name: Cardsight Pricing Nightly Sync
 # other sports still run in sequence (matrix.fail-fast: false).
 
 on:
-  schedule:
-    - cron: '0 3 * * *'   # 03:00 UTC = 11:00 PM ET
+  # schedule removed 2026-08-29 (D13) — see header.
   workflow_dispatch:
     inputs:
       period:
