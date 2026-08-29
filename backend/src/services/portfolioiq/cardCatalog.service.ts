@@ -371,7 +371,7 @@ export function deriveCatalogEntry(input: {
   const year = typeof input.year === "number" && Number.isFinite(input.year) ? input.year : null;
   const setKey = String(input.setKey ?? "").trim();
   const cardNumber = String(input.cardNumber ?? "").trim();
-  const playerName = String(input.playerName ?? "").trim();
+  const playerName = cleanPlayerName(input.playerName);
   if (!year || !setKey || !cardNumber || !playerName) return null;
 
   const slug = computeHobbyIqCardId({
@@ -432,6 +432,21 @@ export function deriveCatalogEntry(input: {
     source: input.source,
     confidence: input.confidence,
   } as Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> & { cardYear: number };
+}
+
+/**
+ * CF-A-NAME-DOES-NOT-END-IN-A-COMMA (D15, 2026-08-29). Beckett's workbook
+ * writes the player cell as "Max Williams," and the one checklist CSV carried
+ * it through to 9,199 catalog rows -- Drew saw it in the 2025 Bowman Draft
+ * CPA-MWI picker. A trailing run of commas / semicolons / whitespace is not
+ * part of any name. A trailing "." IS ("Jr." -- 656,452 rows) and an embedded
+ * comma is not this defect (no "Last, First" row was found), so neither is
+ * touched. Applied here by deriveCatalogEntry and by the CSV ingest's row
+ * parse; scripts/repair-trailing-comma-player-names.cjs heals the rows that
+ * were already written.
+ */
+export function cleanPlayerName(raw: string | null | undefined): string {
+  return String(raw ?? "").trim().replace(/[\s,;]+$/, "");
 }
 
 function playerSlugify(name: string): string {
