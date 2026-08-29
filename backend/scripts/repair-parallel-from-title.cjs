@@ -40,6 +40,7 @@ const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").sp
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const COLOURS = ["Gold", "Gold Refractor", "Blue", "Blue Refractor", "Green", "Green Refractor", "Orange", "Orange Refractor", "Red", "Red Refractor", "Purple", "Purple Refractor", "Black", "Black Refractor", "Sapphire", "Silver", "Pink", "Pink Refractor", "Yellow", "Yellow Refractor", "Aqua", "Aqua Refractor"];
+const BARE_COLOURS = new Set(["gold", "blue", "green", "orange", "red", "purple", "black", "silver", "pink", "yellow", "aqua", "sapphire"]);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
 const started = Date.now();
@@ -93,6 +94,10 @@ async function main() {
           // row to a bare refractor:num-150 would mint a rung no checklist has.
           // Only a title that names NO finish, or a DIFFERENT one, overrules.
           if (fromTitle && oldLower.endsWith(" " + newLower)) { stats.keptRefinement++; continue; }
+          // the short form of the same refinement: a bare colour IS "<Colour>
+          // Refractor" (project_colour_equals_refractor_ruling), so "Blue" vs a
+          // title saying "Refractor" agrees too (dry run #2: 92 rows)
+          if (fromTitle && newLower === "refractor" && BARE_COLOURS.has(oldLower)) { stats.keptRefinement++; continue; }
           let newSlug;
           try { newSlug = computeHobbyIqCardId({ ...comp, parallel: newParallel }); } catch { stats.failed++; continue; }
           if (!newSlug || !newSlug.startsWith("hiq:") || newSlug === slug) { stats.kept++; continue; }
