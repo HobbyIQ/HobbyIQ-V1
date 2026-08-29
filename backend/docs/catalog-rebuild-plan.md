@@ -1426,7 +1426,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   05:50Z); the 2026 Topps Series 1 prefixes (BSA, 91A, MLMA, HLAR, 75YA …)
   and 2025 Chrome Update (CRDA, AC, RA, 90CUA) are ruled auto 2-0 / 1-0 by
   the checklists; BDA on 2025 bowman/basketball has no other family (630
-  rows). isAuto dry with CPA forced (33280807658) still running. Drew (22:30Z): "I see 2 max williams superfractors …
+  rows). isAuto dry with CPA forced (33280807658) still running.
+  **`conform-card-profile` dry (33281366096, 06:40Z): profileVersion 3,
+  360k+ rows scanned in report-only (every row rewritten by design), 0
+  failed → APPLY ×8 dispatched 06:48Z (33281825609 … 33281846820; the
+  progress-gated relaunch continues each shard).** In flight at 06:50Z: the
+  eight cross-source fold shards, the eight one-of-one shards, the eight
+  card-profile shards, the fold relaunch, the vendor-source retire dry, the
+  CPA-forced isAuto dry — 27 runner jobs. Order from here: card-profile →
+  isAuto APPLY (CPA forced) → materialize-graded-identities (after one-of-one)
+  → D3c re-ingest → conform-holdings APPLY → reprice-all → audit-all-holdings;
+  the two retires (old-CLC floor-gated; vendor-minted) wait on Drew's
+  dispatch (classifier) and the vendor dry run's banner. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
