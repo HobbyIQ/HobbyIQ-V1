@@ -459,8 +459,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   `…:gold-refractor:auto:num-50` [checklist, printRun 50]; the un-numbered
   twin must fold into the numbered checklist row (sales re-pointed) and the
   holding must re-derive to it (a key needs both halves). A REPORT-ONLY
-  `conform-holdings-to-catalog` (33263873824) shows whether the matcher
-  gets there on its own; the fold belongs to the C-chain's conform pass.
+  `conform-holdings-to-catalog` (33263873824) **confirmed it does not**: 92
+  holdings, 39 resolved exact, 2 corrected (Antonio Gomez BSPA-AG → sapphire),
+  38 "already agreed" — the Marconi holding among them, because the exact
+  un-numbered id EXISTS — and 52 unresolved (the acquisition/ruling list:
+  1997 Fleer, 2005 Bowman Chrome Draft, set splits bowman-draft|bowman-chrome|
+  sapphire, black-diamond rungs …). `merge-unambiguous-printrun` (2026-08-18)
+  already applies the right rule to the POOL (one numbered variant → merge;
+  two or more → leave alone) but never touched the catalog twin and is not
+  runner-wired. **#1441 `fold-unnumbered-twins`** applies the same rule to the
+  CATALOG through moveCatalogRow: a non-checklist un-numbered row with exactly
+  one numbered checklist twin (and no un-numbered checklist row) folds into
+  it — authority keeps the checklist row, sales re-pointed before the delete,
+  graded children retired; ambiguous /N sets and checklist-source twins are
+  left alone. Report-only run = 33264277457 → APPLY → conform-holdings APPLY
+  (the holding re-derives to num-50 once the twin is gone) → reprice.
   Also noted: COUNT(source = checklistcenter-2026-08-29) is 1,714,619 against
   2,869,277 written — the authority contest keeps a higher-ranked existing
   source on rows the CLC ingest merged into, so a source count understates
