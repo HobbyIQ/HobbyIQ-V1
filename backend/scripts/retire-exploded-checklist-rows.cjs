@@ -58,6 +58,11 @@ const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor",
 const PLAYERRUNG_MIN = Number(process.env.PLAYERRUNG_MIN || 5);
 const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
+// CF-A-WHOLE-SOURCE-NEEDS-ITS-NAME (2026-08-29): MODE=source retires EVERY row of
+// the named sources. Dispatched without SOURCES it fell to the "baseballcardpedia"
+// default and reported 13,142,137 rows (1,927 products) -- a dry run, nothing
+// written, but one input away from deleting the spine. Name the sources or stop.
+if (MODE === "source" && !process.env.SOURCES) { console.error("FATAL: MODE=source retires whole sources -- set SOURCES explicitly (e.g. SOURCES=checklistcenter,checklistcenter-html)"); process.exit(1); }
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
