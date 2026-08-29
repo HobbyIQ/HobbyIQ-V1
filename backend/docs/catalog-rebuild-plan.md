@@ -89,6 +89,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   (product, parallel) groups with < 5 rows or card-line parallels, keep the rest.
   Dry run: 510 flagged products, ~34.5k tail rows retired, 5.996M real rungs kept →
   **APPLY running on 4 slots**. The ingest now refuses such a file whole (#1373).
+  **Player-name rungs (the #1392/#1396 shape, spine-wide):** dry run #2 (4 slots,
+  14:36Z) found 22 products carrying player-name parallels — 17 are roster
+  explosions (2012 Topps 170, 2013 Topps 174, 2011 Topps 156, both A&G 131,
+  2011 Heritage 71 …; slot 3 alone would retire 471,494 rows) and 5 are ONE
+  mis-parsed row whose playerName is a real rung ("Die Cut" ×2, "Artist's
+  Proof", "Triple Exposure", 2004 Bowman Chrome ×2) — retiring those would delete
+  the real parallel. #1405: PLAYERRUNG_MIN=5 hits or the product is kept. Dry
+  run #3 (slot 3/4) = 33258362517 → APPLY ×4.
 - ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
   checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
 - ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
@@ -145,7 +153,9 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   — scoring is a pure tested function; a row is no longer rewarded for set-key
   tokens or parallel words the query never said, and Base is preferred when the
   query says base or names no finish (4 tests reproduce the baseline misses).
-  Harness re-run dispatches itself after the #1398 deploy. **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
+  Harness re-run #1 (33257676925) died on a Cosmos 429 — `sold_comps` sits at its
+  10k floor under the fleets and the harness had no retry; #1402 gives every read
+  retry/backoff + SDK retry options. Re-run #2 = 33257941327 (in flight 14:34Z). **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
   sale → same card 86.0%, holding → 90.5%, search → 30.5%, ALL THREE 26.0%.**
   Findings, each its own fix: (i) SEARCH ranks a rarer parallel row above the
   base row the title names ("#217 X-Fractor" → platinum-anniversary refractor;
@@ -163,15 +173,70 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   smoke test 6 products / 48,437 rows / 0 refused); dry run over 2020–2026 in
   flight → APPLY → MODE=source retire of the old `checklistcenter*` rows AFTER the
   clean rows land. Scoped 13:50Z: 547 product URLs
+  **Dry run #1 (33257173424, 14:36Z): 531 pages fetched (351 xlsx, 180 html-only,
+  0 failed), 500 products converted (279 xlsx / 221 html), 3,198,710 CSV rows →
+  3,194,074 catalog rows would land; 36 products REFUSED** by the >150-rung /
+  >2,000-number explosion gate (2025 Topps Series 1: 514 rungs; 2024 A&G: 2,115
+  numbers; 2025 Panini Flawless 152 rungs at the ingest). Right guard, wrong scope:
+  a CLC xlsx lands each insert set's ladder on that set's OWN cards — the rung
+  count grows with the insert sets and says nothing about a cross-join, which
+  still puts 600 "rungs" inside ONE category. #1405 scopes the gate per subset
+  (converter) / per category (ingest); a category over the line is dropped and
+  the rest of the file lands. Dry run #2 = 33258360806 (14:43Z) → APPLY →
+  MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
+  skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
   swallowed multi-ladder paragraphs; converter = scrape-checklistcenter-products +
   convertChecklistCenterToChecklistCsv (bcp rung guards, `;`-only split, setKey from
   the URL slug, never normalizeSetKey) + e2e phase `clc` + MODE=source retire of the
   old rows AFTER the clean re-ingest. ~590 lines, 5 files.
-- ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
-  canonical engine (docs/pricing-obedience-audit.md)
-- ☐ D5 Phase 07 — 58 writers bypassing upsertCatalogEntry
+- ◐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
+  canonical engine (docs/pricing-obedience-audit.md). **Scoped 2026-08-29 (agent
+  read of every consumer):** the graded compiler is inert in prod (its flag is
+  off), and the digest was SILENT — its gate read `pricingMeta.method`, which
+  nothing writes; fixed #1400 (fmvMethod derived from `pricingSource ===
+  "unified-pricing"`; the gate also accepts a basis note starting `unified:`),
+  and #1401 re-pinned the three digest tests that had been red since #1342.
+  Plan, 7 PRs, in order: (1) rung label — name the tier that priced a holding;
+  (2) digest gate = #1400 ☑; (3) route slugs — every pricing route resolves the
+  hiq slug before pricing; (4) ONE grade curve, and an iOS field-population
+  contract: `resolvedMarketValue` is a computed chain in
+  `HobbyIQ/CompIQCardGrades.swift:184-190` (trendAdjustedValue → value →
+  weightedMedianPrice → plainMedianPrice), so the curve entry must pin which
+  fields each valueSource populates (`tests/gradeCurveEntryFieldPopulation.test.ts`);
+  (5) adapter for the legacy shape; (6) retire the Cardsight seam; (7) delete
+  `gradedPriceProjection`. Next: PR 1 + PR 3 (independent).
+- ◐ D5 Phase 07 — the catalog writers. **Scoped 2026-08-29 (agent replicated the
+  guard test's walk, read-only): 68 files match the guard, 5 are false positives
+  (they write `sold_comps`), 2 of the 3 "canonical" passes are COMMENT matches —
+  the honest number is 60 real `card_catalog` writers, 1 compliant
+  (`ensureCatalogRow`).** The guard misses `.item().patch/replace/delete` (37 more
+  mutators, every `retire-*` script). Classes: (c) LIVE MINTERS — 4 in src;
+  (d) live patchers — 15 runner scripts (safe, cannot mint); (b) row movers — 7
+  new + 8 allowlisted, one shape copied 15 times (6 of 7 drop `searchTokens` on a
+  setKey move, 5 of 7 never retire graded children, none union `vendorIds`, 5 do
+  no authority check); (a) dead — 20 files, ~4,000 lines (vendor enumerators dead
+  by #1362, sales seeders dead by #1353, superseded ingesters, one-shot fixes).
+  **PR 6 ☑ #1403/#1404: the two hash-id runtime minters are gone** —
+  `ebayAutoHolding` wrote `ebay-browse:<sha>` rows from eBay item-specifics on
+  every enriched import (a vendor feed), `ebayReviewQueue` wrote a duplicate
+  `user-verified:<sha>` row beside the canonical seed path; neither id was a slug,
+  so no reader could find them. Guard test `noHashIdCatalogMinters.test.ts`.
+  Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
+  extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
+  var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
+  `catalogRowOps.service.ts` (moveCatalogRow / retireCatalogRow: id fields,
+  parallelSlug/playerSlug/cardYear re-derived, searchTokens/searchText/displayName
+  rebuilt, authorityRank collision, vendorIds union, sales re-pointed, graded
+  children retired, copy-before-delete) + tests; PR 3 convert the 7 rogue movers
+  (guard goes green); PR 7 `approveVendorUnmatched` — NEEDS DREW: a vendor sale
+  that failed to match becomes an identity row on one admin click, stamped
+  `admin-approved` (authority rank 0) — refuse like #1362, or route through the
+  merge so it loses to a checklist row; PR 4 convert the 8 allowlisted movers;
+  PR 5 delete class (a) — HOLD `create-tiffany-cards-from-base` /
+  `create-product-line-cards-from-base` (synthetic parallels; Drew ruling) and the
+  two `*-product-structure` importers (D3 may consume).
 - ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
   purchase/sale matches to any existing `sold_comps` row so there are NO
   duplicates in the system; if it is not there, a new sale is created (through
