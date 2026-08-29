@@ -50,8 +50,12 @@ user-owned cards may seed).
    02:31Z (only-improve; also re-resolves the 14.6k sales the retire unplaced)
 2. Baseball re-annotation v3 fleet draining → compile the final scorecard
 3. Pokémon: mapper chain (era fix) → re-annotate → pokémon scorecard
-4. → RU rollback (Drew's go given, after the rematch settles): card_catalog
-   400k→~2.5k, sold_comps 40k→8k — data plane, CI principal has no control plane
+4. → RU rollback (Drew's go given, after the rematch + emission drain):
+   card_catalog 400k→~2.5k, **sold_comps 100k→8k** (raised 40k→100k TEMP
+   2026-08-29 02:52Z — it was pinned at 100% with 24k 429s/5min under the
+   rematch + emission), **title_parse_cache 2,000→400** (manual, same
+   moment). Locally `az cosmosdb sql container throughput update`; from CI
+   the data plane — the CI principal has no control plane
 5. → holdings APPLY (`conform-holdings-to-catalog`, replace gate 0.95)
 
 ## NEXT BUILDS (in order)
