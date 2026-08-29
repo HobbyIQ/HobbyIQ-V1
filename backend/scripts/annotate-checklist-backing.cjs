@@ -122,7 +122,15 @@ const playerAgrees = (a, b) => {
   if (x === y) return true;
   const shorter = x.length <= y.length ? x : y;
   const longer = x.length <= y.length ? y : x;
-  return shorter.length >= 5 && longer.includes(shorter);
+  // CF-TWO-TOKENS-TO-BRIDGE (2026-08-28, scorecard v2 spot-check). The
+  // 5-char guard let "limited-to-999-copies-exclusive-to-packs-sold-at-
+  // walmart" get card-confirmed off a short slug found inside garbage. A
+  // bridge now needs a first AND last name: the contained slug must carry at
+  // least two tokens. "payton-tolle" bridges; "walmart" and "rose" never do.
+  const tokens = shorter.split("-").filter(Boolean);
+  if (tokens.length < 2 || shorter.length < 7) return false;
+  // and it must match on token boundaries, not mid-word
+  return (`-${longer}-`).includes(`-${shorter}-`);
 };
 
 async function main() {
