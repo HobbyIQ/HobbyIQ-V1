@@ -127,6 +127,7 @@ on:
           - conform-card-profile
           - backfill-playerslug
           - emit-staging-to-pool
+          - retire-autoseed-window
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
