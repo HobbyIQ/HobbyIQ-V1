@@ -1168,6 +1168,24 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the 200-sample default; expect disagreement → ~0% on priced slugs (the
   four are one call), null ≤ the catalog-miss rate, labels 100% in
   vocabulary, `grade-curve under a vendor id` 0%.
+    **Merged #1483 (01:45Z 08-30); deploy #3 33277935264.** After it lands the
+    same-slug replay (`SLUGS_FILE=backend/docs/d16-probe-sample-slugs.txt
+    LIMIT=50`) is the after-number against 34.0%. Judgment calls to read
+    (NEEDS DREW if any should go the other way): thin pools (n = 1–2) now
+    price from the unified weighted-median rung on every route (the persist
+    site's ≥ 1 rule) — `/hobbyiq-fmv` used to drift-adjust the last sale
+    below conf 0.3; a graded tier with no pool uses this identity's observed
+    tiers × the empirical ratio (`grade-curve-estimate`), never the hardcoded
+    cross-grade rescale; the observed-tier floor clamp is not applied on the
+    one path (it rewrote an observed number); `/hobbyiq-fmv maxAgeDays` is no
+    longer honoured (a caller-chosen window is a second computation); the
+    catalog check FAILS CLOSED — a slug the catalog does not hold, or a
+    catalog outage, nulls all four routes with `fmvReason`; `/card-detail`,
+    `/card-panel`, the bulk curves and the portfolio persist site still run
+    their own calls with the same window policy — routing them through the
+    entry is the follow-up. The per-tier overlay also moves `/card-panel`
+    tier numbers and the portfolio tile on the next reprice (dense tiers
+    from a 180d fit to their density window).
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
