@@ -54,6 +54,10 @@ export const EXPORT_COLUMNS: ReadonlyArray<ExportColumn> = [
   { header: "holdingId",            key: "id",                  group: "identity" },
   { header: "cardId",      key: "cardId",     group: "identity" },
   { header: "gradeId",     key: "gradeId",    group: "identity" },
+  // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29): the canonical
+  // slug round-trips. On import it is the identity when the catalog holds
+  // it; cardId alone (a vendor id on older holdings) is only a hint.
+  { header: "hobbyiqCardId", key: "hobbyiqCardId", group: "identity" },
   // ─── Card identity (user-editable; resolver fallback) ──────────────────
   { header: "playerName",           key: "playerName",          group: "identity-edit" },
   { header: "cardYear",             key: "cardYear",            group: "identity-edit" },

@@ -123,9 +123,16 @@ export function parseHoldingsFile(
   input: Buffer | string,
   format: FileFormat,
 ): FileParseResult {
+  // CF-IMPORT-SERIAL-IS-TEXT (D12-b, 2026-08-29). SheetJS's CSV reader
+  // types cells on the way in, and "/50" in a Serial column came out as the
+  // number 18264 — Excel's serial for 1950-01-01 — so the print run never
+  // reached the resolver and "12/50" became December 1950. Every column has
+  // its own parser below (parseNumeric / parseDate / parseBoolean); the CSV
+  // reader's job is to deliver the text. `raw: true` makes it do only that.
+  // (xlsx cells carry the type Excel stored; that is the user's file.)
   const wb = format === "xlsx"
     ? XLSX.read(input as Buffer, { type: "buffer", cellDates: false })
-    : XLSX.read(input as string, { type: "string", cellDates: false });
+    : XLSX.read(input as string, { type: "string", cellDates: false, raw: true });
 
   // Use the first sheet (CF-EXPORT-BE writes "Holdings"; arbitrary sheets vary)
   const sheetName = wb.SheetNames[0];

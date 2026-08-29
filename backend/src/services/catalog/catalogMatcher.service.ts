@@ -59,6 +59,7 @@ export type CatalogMatchSource =
   | "ebay-user-sale"      // User sold on eBay — sale price is theirs
   | "manual-user-entry"   // User typed the sale by hand
   | "ebay-title"          // fuzzy title parse — NEVER seeds
+  | "import"              // spreadsheet import (D12-b) — unverified user text, NEVER seeds
   | "unknown";            // NEVER seeds
 
 const TRUSTED_SOURCES: ReadonlySet<CatalogMatchSource> = new Set([
