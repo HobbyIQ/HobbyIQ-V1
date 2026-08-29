@@ -17,6 +17,12 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
+import {
+  filterCrossSetKeyComps,
+  foldPlayerName,
+  majorityPlayerFold,
+  describeCrossSetKeyPool,
+} from "./crossSetKeyRule.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 import { projectNextSaleFromComps } from "../compiq/nextSaleProjection.service.js";
@@ -65,6 +71,12 @@ export interface HobbyIqFmvInput {
   maxAgeDays?: number;
   /** Max comps to include in the recentComps preview (for iOS render). */
   previewLimit?: number;
+  /** CF-CROSS-SETKEY-STAYS-HOME (D4 PR 5, 2026-08-29). The card's player,
+   *  as the caller knows it (a holding's playerName). The cross-setkey rung
+   *  prices only from comps of the SAME player; when this is absent the
+   *  rung learns the player from the exact slug's own pool, and when that
+   *  is empty too it refuses to cross. */
+  playerName?: string | null;
 }
 
 export interface HobbyIqFmvComp {
@@ -96,7 +108,7 @@ export interface HobbyIqFmvTrend {
 /** Which rung of the fallback ladder produced the number. */
 export type HobbyIqFmvMethod =
   | "direct-slug"                // exact slug + grade match (highest confidence)
-  | "cross-setkey"               // same year+cardNumber+parallel+isAuto+sport, ANY setKey — rescues cards where ingest fragmentation put the same physical card under different product slugs (e.g. "bowman" vs "bowman-chrome" vs "chrome-prospects-autographs" for the same CPA-EHA auto). Higher confidence than sibling-parallel because parallel still matches; slightly lower than direct-slug because setKey unification means the pool crosses ingest variants.
+  | "cross-setkey"               // same year+cardNumber+parallel+isAuto+sport+PLAYER, setKeys inside the target's PRODUCT FAMILY only (CF-CROSS-SETKEY-STAYS-HOME: bowman-chrome-prospects ↔ bowman-chrome; never bowman ↔ bowman-chrome, never sapphire), print run never contradicting — rescues ingest fragmentation that put one physical card under two spellings of its product. Higher confidence than sibling-parallel because parallel still matches; slightly lower than direct-slug because the pool crosses ingest variants.
   | "cross-printrun"             // same identity ignoring printRun (specific variants exist, this one doesn't)
   | "same-printrun-cross-parallel" // same cardNumber + auto + printRun, other parallels (best sibling for numbered cards)
   | "printrun-discovery"         // target has no printRun; find the DOMINANT printRun for this identity and use it
@@ -638,13 +650,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   }
 
   // ─── Rung 1: exact slug + grade ─────────────────────────────────────
-  rows = await queryPool(
+  const exactSlugRowsAnyGrade = await queryPool(
     container,
     "c.hobbyiqCardId = @slug",
     [{ name: "@slug", value: slug }],
     cutoffIso,
   );
-  rows = filterByGrade(rows, gradeCompany, gradeValue);
+  rows = filterByGrade(exactSlugRowsAnyGrade, gradeCompany, gradeValue);
   if (rows.length > 0) {
     return buildResult(slug, rows, "direct-slug",
       `Direct match: ${rows.length} sale${rows.length === 1 ? "" : "s"} of this exact card`,
@@ -695,22 +707,48 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       (r) => slugify(r.parallel ?? "") === targetParallelSlug,
     );
     targetParallelHadIdentityComps = parallelMatched.length > 0;
+    // CF-CROSS-SETKEY-STAYS-HOME (D4 PR 5, 2026-08-29). "ANY setKey" was
+    // the whole rung, and it is how the wrong card got in: card numbers
+    // are initials (CPA-MG is one player in Bowman Chrome and another in
+    // the next product), Bowman paper and Bowman Chrome are different
+    // cards at different prices, and a /75 is not a /50. A comp may cross
+    // a setKey only inside the product family the matcher honours
+    // (productFamily.service), only for the SAME player (folded), and
+    // never with a print run that contradicts the target's. The player
+    // comes from the caller (a holding's playerName) or from the exact
+    // slug's own pool; with neither, the rung is refused — not guessed.
+    // The rule is pure (crossSetKeyRule.ts) and pinned in
+    // tests/siblingEstimateNeverOutranksExactPool.test.ts.
+    const targetPlayerFold = foldPlayerName(input.playerName) || majorityPlayerFold(exactSlugRowsAnyGrade);
+    const crossTarget = {
+      sport: parsed.sport,
+      year: parsed.year,
+      setKey: parsed.setKey,
+      cardNumber: parsed.cardNumber,
+      isAuto: parsed.isAuto,
+      parallel: targetParallelSlug,
+      printRun: parsed.printRun ?? null,
+      playerFold: targetPlayerFold,
+    };
+    const verdict = filterCrossSetKeyComps(crossTarget, parallelMatched);
+    if (verdict.refused) {
+      console.log(JSON.stringify({
+        event: "cross_setkey_refused",
+        source: "hobbyIqFmv",
+        slug,
+        reason: verdict.refused,
+        candidates: parallelMatched.length,
+      }));
+    }
     // Only count as a hit if this rung finds MORE than direct-slug did
     // AND the target slug isn't already the "canonical" hit — otherwise
     // we'd return the same pool with a lower-confidence label. The
     // guard `direct-slug returned 0` is enforced by the empty-rows
     // check preceding this block.
-    const graded = filterByGrade(parallelMatched, gradeCompany, gradeValue);
+    const graded = filterByGrade(verdict.kept, gradeCompany, gradeValue);
     if (graded.length > 0) {
-      // Count distinct slugs unified — surfaced in basisNote so the
-      // user can see how many ingest variants contributed.
-      const distinctSlugs = new Set(graded.map((r) => (r as { hobbyiqCardId?: string }).hobbyiqCardId));
-      const variantCount = distinctSlugs.size;
-      const variantSuffix = variantCount > 1
-        ? ` (unified across ${variantCount} ingest variants)`
-        : "";
       return buildResult(slug, graded, "cross-setkey",
-        `Estimated from ${graded.length} sale${graded.length === 1 ? "" : "s"} of this exact card${variantSuffix}`,
+        describeCrossSetKeyPool(crossTarget, graded, verdict.excluded),
         confidenceForRung("cross-setkey", graded.length),
         input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }

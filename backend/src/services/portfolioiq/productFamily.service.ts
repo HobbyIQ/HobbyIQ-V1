@@ -42,6 +42,36 @@ export function parseProductFamily(setSlug: string): ProductFamily {
   };
 }
 
+// CF-CROSS-SETKEY-STAYS-HOME (D4 PR 5, 2026-08-29). The product FAMILY a
+// pricing rung may cross setKeys within — the ladder the catalog matcher
+// already honours (project_product_family_ladder): the first two segments.
+//   bowman-chrome-prospects / bowman-chrome-updates / bowman-chrome-mega-box
+//     -> bowman-chrome           (one family)
+//   topps-chrome-update          -> topps-chrome
+//   bowman-draft-chrome          -> bowman-draft (a second spelling of it)
+//   bowman                       -> bowman        (NOT bowman-chrome: paper
+//                                   and Chrome are different cards at
+//                                   different prices — Drew, 2026-08-22)
+//   topps                        -> topps         (NOT topps-chrome)
+//   *sapphire*                   -> itself        (its own checklist; never
+//                                   crosses — Drew, 2026-08-22)
+export function productFamilyKey(setKey: string): string {
+  const s = String(setKey || "").trim().toLowerCase();
+  if (!s) return "";
+  const segments = s.split("-").filter(Boolean);
+  if (segments.includes("sapphire")) return s;
+  return segments.slice(0, 2).join("-");
+}
+
+/** True iff two setKeys sit in the same product family (see
+ *  productFamilyKey). A bare brand is its own family, so bowman never
+ *  meets bowman-chrome and topps never meets topps-chrome. */
+export function sameProductFamily(a: string, b: string): boolean {
+  const ka = productFamilyKey(a);
+  const kb = productFamilyKey(b);
+  return ka !== "" && ka === kb;
+}
+
 /** Given a set slug, return all sibling sub-products under the same
  *  parent brand. Useful for "widen the pool" queries. */
 export function siblingsOfParent(parent: string, allSlugs: string[]): string[] {

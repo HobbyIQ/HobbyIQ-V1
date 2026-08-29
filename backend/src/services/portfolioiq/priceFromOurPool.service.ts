@@ -147,6 +147,9 @@ export async function priceHoldingFromOurPool(
       hobbyiqCardId: slug,
       gradeCompany: company,
       gradeValue: value,
+      // CF-CROSS-SETKEY-STAYS-HOME (D4 PR 5): the holding's player, so the
+      // cross-setkey rung can refuse another player's card number.
+      playerName: typeof holding.playerName === "string" ? holding.playerName : null,
     });
 
     if (result.method === "no-basis" || result.fmv === null || result.fmv <= 0) {
