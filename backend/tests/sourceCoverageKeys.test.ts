@@ -30,7 +30,7 @@ describe("normalised parallel", () => {
   });
 
   it("subset words exclude colour and finish words", () => {
-    expect(subsets.has("chrome")).toBe(false);
+    expect(subsets.has("chrome")).toBe(true);   // a product word ("Chrome Prospects"), strippable as a prefix; the last token is never stripped
     expect(subsets.has("prospects")).toBe(true);
     expect(subsets.has("gold")).toBe(false);
     expect(subsets.has("concourse")).toBe(true);
