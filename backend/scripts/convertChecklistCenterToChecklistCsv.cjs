@@ -223,12 +223,19 @@ function emit(product, subsets, rejected, srcKind) {
     console.log(`!! REFUSED ${product.sourceSlug}: every subset over the gate (${refusedSubsets} refused)`);
     return null;
   }
+  return writeOut(product, rowsOut, rejected, srcKind, { pars: pars.size, nums: nums.size, baseEmitted });
+}
+
+/** Write the canonical CSV + manifest for one product. Shared by the html
+ *  path (a ladder applied to a subset's cards) and the xlsx path (one row per
+ *  published line). */
+function writeOut(product, rowsOut, rejected, srcKind, stats) {
   const meta = productMeta(product);
   const stem = `${meta.year}-${meta.setKey}-${meta.sport}`;
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(path.join(OUT_DIR, `${stem}.csv`), ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote", ...rowsOut.map((r) => r.map(csvEsc).join(","))].join("\n") + "\n");
   fs.writeFileSync(path.join(OUT_DIR, `${stem}.manifest.json`), JSON.stringify({ scrapedAt: new Date().toISOString(), sourceUrl: product.url, sport: meta.sport, year: meta.year, setName: product.productName ?? meta.setName, productKey: stem, setKey: meta.setKey, rowCount: rowsOut.length, parallelColumnAuthoritative: true, source: srcKind, rejected: rejected.slice(0, 50) }, null, 1));
-  return { stem, rows: rowsOut.length, pars: pars.size, nums: nums.size, baseEmitted, rejected: rejected.length };
+  return { stem, rows: rowsOut.length, pars: stats.pars, nums: stats.nums, baseEmitted: stats.baseEmitted, rejected: rejected.length };
 }
 
 /** sport / year / setKey from the URL slug -- never normalizeSetKey (D6). */
@@ -241,6 +248,79 @@ function productMeta(product) {
   const sport = product.sport || (sportMatch ? sportMatch[1] : "baseball");
   if (sportMatch) rest = rest.slice(0, -sportMatch[0].length);
   return { year, sport, setKey: rest, setName: rest.replace(/-/g, " ") };
+}
+
+/** CF-THE-XLSX-ALREADY-SAYS-WHICH-CARD (2026-08-29, D3 dry run #4). A CLC
+ *  xlsx is the manufacturer's own list: every row is one (card, finish) pair.
+ *  The first converter grouped rows by section, pooled every finish seen in
+ *  the section into one ladder and multiplied it onto every card -- a
+ *  cross-join it built itself: 2025 Topps Series 1 base became 350 cards x 360
+ *  "rungs" ("Team Card Holo Foil" on Mike Trout #1), 2026 Bowman base #1 got
+ *  "Chrome Prospects Gold Refractor" and BCP-1 got "Gold Pattern Refractor".
+ *  So: one CSV row per xlsx line, nothing multiplied, no count gate (nothing
+ *  can explode). Two per-card rules on the finish text:
+ *   - a TYPE qualifier is stripped: when a card's finishes are "Future Stars",
+ *     "Future Stars Gold /2025", ... the bare label every other finish extends
+ *     is the card's type (Future Stars, Chrome Prospects, Paper Prospects),
+ *     not a parallel; the bare one is the base version, the rest lose the
+ *     prefix. Without a bare label, the longest common leading words are
+ *     stripped only when none of them is a parallel word ("Gold Refractor" /
+ *     "Gold Shimmer Refractor" keep their Gold).
+ *   - auto comes from the finish as well as the section: "Auto Silver
+ *     Prismatic" (Leaf) / "... Retail Autographs Purple Border" mark the row
+ *     isAuto and lose the auto word from the parallel name. */
+function emitXlsx(product, x) {
+  const setValues = [...x.bySet.keys()];
+  const sections = [...new Set(setValues.map((sv) => { const w1 = sv.split(" ")[0]; return /^base$/i.test(w1) ? "Base" : sv.split(" ").slice(0, 2).join(" "); }))];
+  // (section, num) -> { player, category, finishes: [{ name, note, printRun }] }
+  const byCard = new Map();
+  for (const [sv, cards] of x.bySet) {
+    const { section, finish } = sectionSplit(sv, sections);
+    const category = categoryOf(section);
+    const sectionAuto = /\b(auto|autograph|signature)/i.test(section);
+    for (const c of cards) {
+      const key = section + "\u0000" + c.num;
+      const card = byCard.get(key) ?? { section, category, sectionAuto, num: c.num, player: c.player, finishes: [] };
+      if (finish) { const { name, note, printRun } = clean(finish); card.finishes.push({ name, note, printRun: printRun ?? c.printRun ?? null }); }
+      else card.finishes.push({ name: "", note: null, printRun: c.printRun ?? null });
+      byCard.set(key, card);
+    }
+  }
+  const rowsOut = [];
+  const pars = new Set(), nums = new Set();
+  let baseEmitted = false;
+  const AUTO_RX = /^(auto|autos|autograph|autographs)\s+|\s+(auto|autos|autograph|autographs)$/i;
+  for (const card of byCard.values()) {
+    const names = card.finishes.map((r) => r.name);
+    const nonEmpty = names.filter(Boolean);
+    // rule 1: a bare label every other finish extends
+    // the bare label MOST other finishes extend (BCP-1 carries 64 "Chrome
+    // Prospects ..." and 20 "Mega Chrome Prospects ...": the mega-box family
+    // keeps its own name, the card type still comes off the rest)
+    const extendsOf = (t) => nonEmpty.filter((o) => o !== t && o.startsWith(t + " ")).length;
+    let qualifier = nonEmpty.length > 1 ? (nonEmpty.filter((t) => extendsOf(t) * 2 >= nonEmpty.length - 1).sort((p, q) => extendsOf(q) - extendsOf(p))[0] ?? null) : null;
+    // rule 2: longest common leading words, none of them a parallel word
+    if (!qualifier && nonEmpty.length > 1) {
+      const words = nonEmpty.map((n) => n.split(" "));
+      let k = 0;
+      while (words.every((w) => w.length > k + 1 && w[k] === words[0][k])) k++;
+      if (k > 0) { const lead = words[0].slice(0, k); if (!lead.some((w) => PARALLEL_WORDS.has(w.toLowerCase()))) qualifier = lead.join(" "); }
+    }
+    nums.add(card.num);
+    for (const r of card.finishes) {
+      let name = r.name;
+      if (qualifier) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1) : name;
+      let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
+      if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
+      if (/autograph/i.test(name) && !isAuto) isAuto = true;
+      if (!name) name = card.category === "base" ? "Base" : "";
+      if (name) pars.add(name);
+      rowsOut.push([card.category, card.num, name, isAuto ? "true" : "false", r.printRun ?? "", card.player, r.note ?? ""]);
+    }
+    if (card.category === "base") baseEmitted = true;
+  }
+  if (!rowsOut.length) return null;
+  return writeOut(product, rowsOut, [], "xlsx", { pars: pars.size, nums: nums.size, baseEmitted });
 }
 
 function main() {
@@ -257,23 +337,7 @@ function main() {
     if (ONLY !== "html" && fs.existsSync(xPath)) {
       try {
         const x = parseXlsx(xPath, p);
-        if (x) {
-          const setValues = [...x.bySet.keys()];
-          const firstWords = new Map();
-          for (const sv of setValues) { const w = sv.split(" ").slice(0, 2).join(" "); firstWords.set(w, (firstWords.get(w) || 0) + 1); }
-          const sections = [...new Set(setValues.map((sv) => { const w1 = sv.split(" ")[0]; return /^base$/i.test(w1) ? "Base" : sv.split(" ").slice(0, 2).join(" "); }))];
-          const bySection = new Map();
-          for (const [sv, cards] of x.bySet) {
-            const { section, finish } = sectionSplit(sv, sections);
-            const sec = bySection.get(section) ?? { title: section, cards: new Map(), ladders: [{ label: "xlsx", rungs: [] }], category: categoryOf(section) };
-            for (const c of cards) sec.cards.set(c.num, { num: c.num, player: c.player });
-            if (finish) { const { name, note, printRun } = clean(finish); const rejected = []; if (acceptRung(name, new Set([...sec.cards.values()].map((c) => c.player).filter(isPersonName).map(foldName)), rejected, "xlsx")) { if (!sec.ladders[0].rungs.some((r) => r.name === name)) sec.ladders[0].rungs.push({ name, note, printRun: printRun ?? cards[0]?.printRun ?? null }); } }
-            bySection.set(section, sec);
-          }
-          const subsets = [...bySection.values()].map((s) => ({ title: s.title, category: s.category, cards: [...s.cards.values()], ladders: s.ladders }));
-          result = emit(p, subsets, [], "xlsx");
-          if (result) viaXlsx++;
-        }
+        if (x) { result = emitXlsx(p, x); if (result) viaXlsx++; }
       } catch (e) { console.log(`   xlsx parse failed ${p.sourceSlug}: ${String(e.message).slice(0, 60)}`); }
     }
     if (!result && ONLY !== "xlsx" && fs.existsSync(hPath)) {
