@@ -126,6 +126,7 @@ on:
           - retire-numbered-base-rows
           - conform-card-profile
           - backfill-playerslug
+          - emit-staging-to-pool
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
@@ -672,6 +673,26 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot drained — done."
+          fi
+
+      - name: Self-relaunch the one-pool emission until staging drains
+        # Staging rows flip to in-pool as they are written, so the query drains
+        # to zero and a run that writes nothing IS a finished pass.
+        if: ${{ always() && inputs.script == 'emit-staging-to-pool' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          M=$(grep -aoE "INTO POOL, matched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          U=$(grep -aoE "INTO POOL, unmatched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(( ${M:-0} + ${U:-0} ))
+          echo "pool_emitted=$N"
+          if [ "$N" -gt 0 ]; then
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=emit-staging-to-pool -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
+          else
+            echo "::notice::nothing emitted — staging drained for this mode."
           fi
 
       - name: Self-relaunch the playerSlug backfill until the field exists everywhere
