@@ -22,12 +22,13 @@
  *     a chrome ladder must never resolve a flagship spelling
  *   - a resolution that lands on the SAME slug is a no-op, not a rewrite
  *
- * MOVE SEMANTICS, copy before delete, sales first:
- *   1. if a row already sits at the target slug (usually the checklist row
- *      itself), the derived row is REDUNDANT: re-point sales, delete it
- *   2. else copy the derived row to the target slug (source unchanged --
- *      resolution does not launder provenance), re-point sales, delete old
- *   A crash leaves a duplicate, never a lost card or a stranded sale.
+ * MOVE SEMANTICS are catalogRowOps.moveCatalogRow (D5 PR 2): copy before
+ * delete, sales first, graded children of the old slug retired. A row already
+ * at the target slug (usually the checklist rung itself) is decided by
+ * authority: the derived row folds onto it (redundant) unless it outranks the
+ * incumbent, in which case it replaces it. Source is unchanged either way --
+ * resolution does not launder provenance. A crash leaves a duplicate, never a
+ * lost card or a stranded sale.
  *
  * Env:
  *   COSMOS_CONNECTION_STRING  required
@@ -40,6 +41,7 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // The workflow passes the existing `sports` input as SPORTS; accept both so
@@ -116,7 +118,7 @@ async function main() {
   }
   console.log(`slot ${SLOT}/${SLOTS}  sport=${SPORT}  ${mine.length} products / ${f(mine.reduce((s, p) => s + p.n, 0))} rows  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
-  let scanned = 0, moved = 0, redundant = 0, unresolved = 0, salesRepointed = 0, noLadder = 0, failed = 0, notReached = 0;
+  let scanned = 0, moved = 0, redundant = 0, replaced = 0, atRung = 0, unresolved = 0, salesRepointed = 0, gradedRetired = 0, noLadder = 0, failed = 0, notReached = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -154,45 +156,18 @@ async function main() {
             const target = resolve(d.parallel, rungs, squashIndex);
             const currentSeg = String(d.id).split(":")[5];
             if (!target || target === currentSeg) {
-              unresolved += target ? 0 : 1;
+              // stamped either way: unresolved is the acquisition list; at-rung is done
+              if (target) atRung++; else unresolved++;
               if (APPLY) await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([{ op: "set", path: "/parallelMapV", value: MAP_VERSION }])).catch(() => {});
               return;
             }
-            const newSlug = String(d.id).replace(`:${currentSeg}:`, `:${target}:`);
-            if (newSlug === d.id) { unresolved++; return; }
-            if (!APPLY) { moved++; return; }
-
-            const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
-            if (!existing) {
-              const { _rid, _self, _etag, _attachments, _ts, ...rest } = d;
-              await retry(() => cat.items.upsert({
-                ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
-                parallelSlug: target, parallelMapV: MAP_VERSION,
-                mappedFrom: d.id, mappedReason: "checklist-ladder resolution",
-                mappedAt: new Date().toISOString(),
-              }));
-            } else { redundant++; }
-
-            // sales first, then the old row
-            let sToken;
-            do {
-              const sp = await retry(() => comps.items.query({
-                query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
-                parameters: [{ name: "@s", value: d.id }],
-              }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-              sToken = sp.continuationToken;
-              for (const s of sp.resources) {
-                await retry(() => comps.item(s.id, s.cardId).patch([
-                  { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                  { op: "set", path: "/reslugedFrom", value: d.id },
-                  { op: "set", path: "/reslugedReason", value: "parallel mapped to checklist rung" },
-                  { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-                ]));
-                salesRepointed++;
-              }
-            } while (sToken);
-
-            await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+            const r = await moveCatalogRow(cat, d, String(d.id).replace(`:${currentSeg}:`, `:${target}:`), { parallelMapV: MAP_VERSION }, {
+              reason: "parallel mapped to checklist rung", dryRun: !APPLY, salesContainer: comps, retry,
+            });
+            salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
+            // the rung row existed: this row folded onto it (redundant) or, outranking it, replaced it -- slices of MOVED
+            if (r.action === "fold") redundant++;
+            else if (r.action === "replace") { replaced++; if (replaced <= 3) console.log(`  replaced at ${r.newSlug.slice(0, 58)}: ${r.decision}`); }
             moved++;
           } catch (e) {
             failed++;
@@ -215,15 +190,18 @@ async function main() {
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  derived rows scanned      ${f(scanned)}`);
   console.log(`  MOVED to a checklist rung ${f(moved)}`);
-  console.log(`  redundant (rung existed)  ${f(redundant)}`);
+  console.log(`  ...folded, rung existed   ${f(redundant)}   <- slice of MOVED; the rung row kept its address`);
+  console.log(`  ...replaced the rung row  ${f(replaced)}   <- slice of MOVED; this row outranked it`);
   console.log(`  sales re-pointed          ${f(salesRepointed)}`);
+  console.log(`  graded children retired   ${f(gradedRetired)}`);
+  console.log(`  already at the rung       ${f(atRung)}   <- stamped, nothing to move`);
   console.log(`  unresolved (stamped)      ${f(unresolved)}   <- the acquisition list`);
   console.log(`  rows in ladder-less products ${f(noLadder)}   <- acquisition, whole products`);
   console.log(`  failed                    ${f(failed)}`);
   if (APPLY) {
     reportWrites({
       job: "map-derived-parallels-to-rungs", intended: scanned, written: moved,
-      skipped: unresolved + redundant + notReached, failed,
+      skipped: unresolved + atRung + notReached, failed,
     });
   }
 }

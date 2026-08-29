@@ -20,9 +20,10 @@
  *   - a prefix that strips to nothing, or exceeds the total, disqualifies the
  *     ROW (secret rares exceed the total legitimately -- kept, flagged)
  *
- * Copy-before-delete on the re-slug; sales re-pointed first. printedTotal is
- * kept on the row as its own field -- it is real information, just not a card
- * number.
+ * The re-slug is catalogRowOps.moveCatalogRow (D5 PR 2): copy before delete,
+ * sales re-pointed first, graded children of the old slug retired, a row
+ * already at the clean number decided by authority. printedTotal is kept on
+ * the row as its own field -- it is real information, just not a card number.
  *
  * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; SLOT/SLOTS;
  *      CONCURRENCY=48; RUN_MINUTES=140; LIMIT=0
@@ -31,6 +32,7 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -85,7 +87,7 @@ async function main() {
   const mine = SLOTS > 1 ? all.filter((_, i) => i % SLOTS === SLOT) : all;
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} sets  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
-  let scanned = 0, repaired = 0, salesRepointed = 0, noSuffix = 0, nonNumeric = 0, secretRare = 0, failed = 0, notReached = 0;
+  let scanned = 0, repaired = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedRetired = 0, noSuffix = 0, nonNumeric = 0, secretRare = 0, failed = 0, notReached = 0;
   const noSuffixEx = [];
   let stopReason = null;
 
@@ -123,35 +125,17 @@ async function main() {
           parts[4] = bare;
           const newSlug = parts.join(":");
           if (newSlug === d.id) return;
-          if (!APPLY) { repaired++; return; }
 
+          // The listing is a projection; the move needs the whole row.
           const { resource: full } = await retry(() => cat.item(d.id, d.cardId ?? d.id).read());
           if (!full) return;
-          const { _rid, _self, _etag, _attachments, _ts, ...rest } = full;
-          await retry(() => cat.items.upsert({
-            ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
-            cardNumber: bare, printedTotal: Number(total),
-            repairedFrom: d.id, repairedReason: "pokemon number unglued from printed total",
-            repairedAt: new Date().toISOString(),
-          }));
-          let sToken;
-          do {
-            const sp = await retry(() => comps.items.query({
-              query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
-              parameters: [{ name: "@s", value: d.id }],
-            }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-            sToken = sp.continuationToken;
-            for (const x of sp.resources) {
-              await retry(() => comps.item(x.id, x.cardId).patch([
-                { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                { op: "set", path: "/reslugedFrom", value: d.id },
-                { op: "set", path: "/reslugedReason", value: "pokemon number unglued" },
-                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-              ]));
-              salesRepointed++;
-            }
-          } while (sToken);
-          await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+          const r = await moveCatalogRow(cat, full, newSlug, { cardNumber: bare, printedTotal: Number(total) }, {
+            reason: "pokemon number unglued from printed total", dryRun: !APPLY, salesContainer: comps, retry,
+          });
+          salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
+          // a row already sat at the clean number: folded onto it, or replaced it -- slices of UNGLUED
+          if (r.action === "fold") folded++;
+          else if (r.action === "replace") { replaced++; if (replaced <= 3) console.log(`  replaced at ${r.newSlug.slice(0, 58)}: ${r.decision}`); }
           repaired++;
         } catch (e) {
           failed++;
@@ -172,7 +156,10 @@ async function main() {
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  rows scanned            ${f(scanned)}`);
   console.log(`  numbers UNGLUED         ${f(repaired)}`);
+  console.log(`  ...folded onto existing ${f(folded)}   <- slice of UNGLUED; the row at the clean number kept its address`);
+  console.log(`  ...replaced existing    ${f(replaced)}   <- slice of UNGLUED; this row outranked it`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  graded children retired ${f(gradedRetired)}`);
   console.log(`  non-numeric (kept)      ${f(nonNumeric)}   <- TG09, promos: already real numbers`);
   console.log(`  secret rares (kept)     ${f(secretRare)}   <- run past the total; real cards`);
   console.log(`  sets with no suffix     ${f(noSuffix)}   <- reported, never guessed`);
