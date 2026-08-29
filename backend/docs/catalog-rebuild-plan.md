@@ -350,7 +350,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   already holds those ids); tcgdex 1,003 / 1,003 kept; explosion gate
   refused 0 everywhere. When all eight shards land → `audit-source-coverage`
   (old checklistcenter/-html vs checklistcenter-2026-08-29, exact +
-  normalised keys) → retire only products ≥ 95%. Also seen in the same run: the bcp ladders re-ingest now
+  normalised keys) → retire only products ≥ 95%. **All eight shards landed by
+  02:15Z**, every one reconciled (CLC phase per shard 313k–416k written /
+  30k–104k kept-by-authority; the gate refused one cross-join insert, 2023
+  Leaf Eclectic "leaf-metal" 154 parallels × 25 numbers, and one 2016 Topps
+  "double-play-rip-cards" 920 parallels × 1 number). `audit-source-coverage`
+  dispatched 02:28Z (33278726520). Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -1176,7 +1181,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     union 0% (was 88%); grade curve under a vendor id 0% (was 86%); all four
     routes show the identical rung distribution — leading-edge ×21,
     weighted-median ×16, projection ×13.** The 200-sample runner probe re-run
-    (33278464941) is the official after-number against 43.0%. D17 (building,
+    (33278464941) is the official after-number: **routes disagree by >25% on
+    0 of 200 (was 86 of 200 = 43.0%)** — the scorecard's first line is closed. D17 (building,
     `feat/d17`, the one builder running per Drew's "use what we have before
     credits"): `/card-detail`, `/card-panel`, the bulk curves, the portfolio
     persist site and the price-alert evaluator through the same entry.
