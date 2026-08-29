@@ -1669,6 +1669,34 @@ export async function flagCompAsWrong(input: {
  * Read comps for a specific cardId — engine hot path. Partition-hit,
  * sub-10ms. Ordered by soldAt DESC (newest first).
  */
+/**
+ * CF-ROUTE-SLUGS (D4 "one valuation path", PR 3 — 2026-08-29). The canonical
+ * hiq slug for a VENDOR cardId, read off the sold_comps rows that carry both
+ * ids (hobbyiqCardId is backfilled on 2.4M rows). /cardId is the partition
+ * key, so this is a single-partition point read — cheap enough for a route.
+ *
+ * Returns the id itself when it is already a slug; null when no row maps the
+ * id or Cosmos is unavailable. Never throws: a missing slug degrades one
+ * rung, it must never cost the price.
+ */
+export async function lookupHobbyIqCardIdForVendorCardId(cardId: string): Promise<string | null> {
+  const id = String(cardId ?? "").trim();
+  if (!id) return null;
+  if (id.startsWith("hiq:")) return id;
+  const container = await getContainer();
+  if (!container) return null;
+  try {
+    const { resources } = await container.items.query<{ hobbyiqCardId?: string | null }>({
+      query: "SELECT TOP 1 c.hobbyiqCardId FROM c WHERE c.cardId = @id AND IS_DEFINED(c.hobbyiqCardId) AND STARTSWITH(c.hobbyiqCardId, \"hiq:\")",
+      parameters: [{ name: "@id", value: id }],
+    }, { partitionKey: id, maxItemCount: 1 }).fetchAll();
+    const slug = resources[0]?.hobbyiqCardId;
+    return typeof slug === "string" && slug.startsWith("hiq:") ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function readCompsByCardId(input: {
   cardId: string;
   fromDate?: string;         // ISO; defaults to 180d ago
